@@ -32,7 +32,7 @@ function guard(msg) {
 
 // ── Send helpers ───────────────────────────────────────────────────────────
 const send = (chatId, text, opts = {}) =>
-  bot.sendMessage(chatId, text, { parse_mode: 'Markdown', ...opts });
+  bot.sendMessage(chatId, text, { parse_mode: 'HTML', ...opts });
 
 const sendDoc = (chatId, buffer, filename, caption = '') =>
   bot.sendDocument(chatId, buffer, { caption }, { filename, contentType: 'application/pdf' });
