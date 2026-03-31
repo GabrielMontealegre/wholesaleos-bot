@@ -366,7 +366,16 @@ cron.schedule('0 8 * * *', async () => {
 });
 
 // Express server — uses server.js which serves dashboard + all API routes
-const app = require('./server');
+const express = require('express');
+const path = require('path');
+const app = express();
+app.use(express.json());
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+app.get('/dashboard/', (_, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
+app.get('/', (_, res) => res.json({ status: 'WholesaleOS Running', leads: db.getLeads().length }));
+app.get('/health', (_, res) => res.json({ ok: true }));
+app.get('/api/leads', (_, res) => res.json({ leads: db.getLeads() }));
+app.get('/api/stats', (_, res) => res.json(db.getStats()));
 
 if (USE_WEBHOOK) {
   app.post(`/bot${TOKEN}`, (req, res) => { bot.processUpdate(req.body); res.sendStatus(200); });
