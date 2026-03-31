@@ -19,7 +19,7 @@ const USE_WEBHOOK = !!RAILWAY_URL;
 
 let bot;
 if (USE_WEBHOOK) {
-  bot = new TelegramBot(TOKEN, { webHook: { port: PORT } });
+  bot = new TelegramBot(TOKEN, { webHook: false });
 } else {
   bot = new TelegramBot(TOKEN, { polling: true });
 }
@@ -297,9 +297,10 @@ const app = express();
 app.use(express.json());
 
 if (USE_WEBHOOK) {
-  bot.setWebHook(`${RAILWAY_URL}/bot${TOKEN}`);
   app.post(`/bot${TOKEN}`, (req, res) => { bot.processUpdate(req.body); res.sendStatus(200); });
+  setTimeout(() => { bot.setWebHook(`${RAILWAY_URL}/bot${TOKEN}`); }, 2000);
 }
+
 
 app.get('/', (_, res) => res.json({status:'WholesaleOS Running', leads:db.getLeads().length, mode:ai.MODE()}));
 app.get('/health', (_, res) => res.json({ok:true}));
