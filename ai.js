@@ -1,20 +1,15 @@
 // ai.js — Dual AI engine: Free (Groq/Llama) + Premium (Claude)
-// Switch with: AI_MODE=free or AI_MODE=premium in Railway variables
-
 require('dotenv').config();
-const Groq       = require('groq-sdk');
-const Anthropic  = require('@anthropic-ai/sdk');
+const Groq      = require('groq-sdk');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const groq      = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const MODE = () => process.env.AI_MODE || 'free';
 
-// ── Core AI call (routes to Groq or Claude based on mode) ─────────────────
 async function ask(prompt, systemPrompt = '', maxTokens = 2000) {
-  if (MODE() === 'premium' && process.env.ANTHROPIC_API_KEY) {
-    return askClaude(prompt, systemPrompt, maxTokens);
-  }
+  if (MODE() === 'premium' && process.env.ANTHROPIC_API_KEY) return askClaude(prompt, systemPrompt, maxTokens);
   return askGroq(prompt, systemPrompt, maxTokens);
 }
 
@@ -23,113 +18,128 @@ async function askGroq(prompt, systemPrompt, maxTokens) {
   if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
   messages.push({ role: 'user', content: prompt });
   const res = await groq.chat.completions.create({
-    model:      'llama-3.3-70b-versatile',
+    model: 'llama-3.3-70b-versatile',
     messages,
-    max_tokens:  maxTokens,
-    temperature: 0.3,
+    max_tokens: maxTokens,
+    temperature: 0.2,
   });
   return res.choices[0].message.content.trim();
 }
 
 async function askClaude(prompt, systemPrompt, maxTokens) {
   const res = await anthropic.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens:  maxTokens,
-    system:      systemPrompt || 'You are an expert real estate wholesale analyst.',
-    messages:  [{ role: 'user', content: prompt }],
+    model: 'claude-sonnet-4-6',
+    max_tokens: maxTokens,
+    system: systemPrompt || 'You are an expert real estate wholesale analyst.',
+    messages: [{ role: 'user', content: prompt }],
   });
   return res.content[0].text.trim();
 }
 
-// ── Property Analysis ──────────────────────────────────────────────────────
 async function analyzeProperty(prop) {
-  const sys = `You are Gabriel's expert real estate wholesale analyst for the DFW Texas market.
-You produce detailed wholesale deal analysis with ARV, MAO, repair estimates, strategy, and call scripts.
-Always respond in valid JSON only. No markdown. No explanation outside the JSON.`;
+  const county = prop.county || 'Dallas';
+  const arvBase = { Dallas:280000, Tarrant:240000, Collin:380000, Denton:360000, 'San Diego':650000, 'Los Angeles':720000, 'LA':720000 };
+  const baseARV = arvBase[county] || 270000;
 
-  const prompt = `Analyze this property for wholesaling in DFW Texas market Q1 2026.
+  const sys = `You are an expert wholesale real estate analyst. You MUST return complete JSON with every field filled.
+Never return 0 for arv, offer, repairs, fee_lo, or fee_hi. Always calculate realistic values.
+Respond ONLY in valid JSON. No markdown. No explanation. No missing fields.`;
 
-Property: ${prop.address}
-Type: ${prop.type || 'SFR'} | ${prop.beds || 3}BD/${prop.baths || 2}BA | ${prop.sqft || 1400} sqft
-Built: ${prop.year || 1975} | County: ${prop.county || 'Dallas'} | ZIP: ${prop.zip}
+  const prompt = `Analyze this wholesale real estate deal. Return COMPLETE analysis — every field is required.
+
+PROPERTY DATA:
+Address: ${prop.address}
+Type: ${prop.type || 'SFR'} | ${prop.beds || 3}BD/${prop.baths || 2}BA | ${prop.sqft || 1400} sqft | Built: ${prop.year || 1975}
+County: ${county} | ZIP: ${prop.zip || ''}
 List Price: ${prop.list_price || 'Unknown'} | DOM: ${prop.dom || 60} days
-Category: ${prop.category || 'Motivated Seller'} | Seller: ${prop.seller_type || 'Unknown'}
+Category: ${prop.category || 'Motivated Seller'} | Seller: ${prop.seller_type || 'Owner'}
+Estimated base ARV for ${county} County: $${baseARV.toLocaleString()}
 
-DFW market context 2026:
-- Average DOM: 103 days (buyer's market)
-- Dallas proper median: $303K-$425K
-- South Dallas/Oak Cliff ARV: $180K-$320K
-- Garland/Mesquite ARV: $280K-$420K
-- Fort Worth inner ARV: $220K-$380K
-- Repair costs: $25-40/sqft light, $40-65/sqft medium, $65-90/sqft heavy
-- Rental rates SFR: $1,500-$2,100/mo
-- Texas = non-judicial foreclosure, first Tuesday courthouse auction
-- Foundation inspection ALWAYS required in DFW clay soil
+MARKET CONTEXT 2026:
+- DFW average DOM: 103 days (buyer's market)
+- Dallas median: $303K-$425K | South Dallas/Oak Cliff: $180K-$320K
+- Garland/Mesquite: $280K-$420K | Fort Worth inner: $220K-$380K
+- San Diego SFR: $600K-$950K | Los Angeles SFR: $650K-$1.1M
+- Repairs: light $25-40/sqft | medium $40-65/sqft | heavy $65-90/sqft
+- MAO formula: ARV x 0.70 minus repairs
+- Assignment fee typical range: $10,000-$35,000
 
-Respond with this exact JSON structure:
+REQUIRED JSON (all fields mandatory, no zeros except where genuinely zero):
 {
   "arv": number,
+  "asking_price": number,
   "repairs": number,
   "repair_class": "LIGHT|MEDIUM|HEAVY",
+  "repair_items": [{"item":"string","cost":number}],
   "mao": number,
   "offer": number,
   "fee_lo": number,
   "fee_hi": number,
-  "close_time": "string",
+  "spread": number,
   "risk": "Low|Medium|High",
-  "risk_note": "string max 100 chars",
-  "motivation": ["bullet1", "bullet2", "bullet3", "bullet4"],
-  "strategies": [
-    {"name": "Wholesale Assignment", "rating": "BEST|GOOD|POSSIBLE", "why": "string"},
-    {"name": "Fix and Flip", "rating": "BEST|GOOD|POSSIBLE", "why": "string"},
-    {"name": "Buy and Hold", "rating": "BEST|GOOD|POSSIBLE", "why": "string"}
-  ],
-  "repair_items": [
-    {"item": "string", "cost": number, "note": "string"}
-  ],
+  "risk_note": "string",
+  "close_time": "14-21 days cash",
+  "why_good_deal": "string — 2 sentences explaining exactly why this is a good deal",
+  "distress_signals": ["signal1","signal2","signal3"],
+  "motivation": ["motivation1","motivation2","motivation3"],
+  "investment_strategy": "Wholesale Assignment|Fix and Flip|Buy and Hold|BRRRR",
+  "strategy_note": "string",
   "comp_range": "string",
-  "comp_trend": "string",
-  "comp_note": "string",
-  "approach_type": "string",
-  "approach_how": "string max 120 chars",
-  "approach_q": "string with 5 numbered questions",
-  "script": "string max 200 chars — what to say when calling",
+  "comp_trend": "APPRECIATING|STABLE|DECLINING",
+  "script": "string — natural 2-sentence phone script for Gabriel to use",
+  "offer_email": "string — 3-sentence email to seller with offer",
+  "negotiation_text": "string — professional SMS negotiation message",
   "arv_note": "string",
-  "profit_note": "string",
-  "fee_note": "string"
+  "profit_note": "string"
 }`;
 
   try {
     const raw = await ask(prompt, sys, 3000);
     const cleaned = raw.replace(/```json|```/g, '').trim();
     const result = JSON.parse(cleaned);
-    // Calculate MAO if AI didn't
-    if (!result.mao) result.mao = Math.round(result.arv * 0.70 - result.repairs);
-    if (!result.offer) result.offer = Math.round(result.mao * 0.94);
+    if (!result.arv || result.arv < 50000) result.arv = estimateARV(prop);
+    if (!result.repairs || result.repairs < 5000) result.repairs = estimateRepairs(prop);
+    if (!result.mao || result.mao < 10000) result.mao = Math.round(result.arv * 0.70 - result.repairs);
+    if (!result.offer || result.offer < 10000) result.offer = Math.round(result.mao * 0.94);
+    if (!result.fee_lo || result.fee_lo < 5000) result.fee_lo = 10000;
+    if (!result.fee_hi || result.fee_hi < result.fee_lo) result.fee_hi = result.fee_lo + 15000;
+    if (!result.spread) result.spread = result.arv - result.offer - result.repairs;
+    if (!result.why_good_deal) result.why_good_deal = `${prop.category || 'Distressed'} property with strong wholesale spread in ${county} County. Active buyer pool ready to close fast.`;
     return result;
   } catch (e) {
-    // Fallback calculation if AI parsing fails
     const arv = estimateARV(prop);
     const rep = estimateRepairs(prop);
     return fallbackAnalysis(prop, arv, rep);
   }
 }
 
-// ── Lead Search + Scraping Analysis ───────────────────────────────────────
 async function generateLeadList(county, state, count, categories) {
-  const sys = `You are a real estate wholesale lead researcher for the ${county} County, ${state} market.
-Generate realistic wholesale investment leads based on actual market data and distress patterns.
-Respond in valid JSON array only. No markdown. No extra text.`;
+  const sys = `You are a real estate data researcher specializing in wholesale investment leads.
+Generate realistic, high-quality wholesale leads for ${county} County, ${state}.
+Each lead must have complete data. Use real neighborhood names and realistic market data.
+Respond ONLY in a valid JSON array. No markdown. No extra text outside the array.`;
 
-  const prompt = `Generate ${Math.min(count, 25)} wholesale leads for ${county} County, ${state}.
-Categories to include: ${categories.join(', ')}
+  const prompt = `Generate ${Math.min(count, 20)} high-quality wholesale leads for ${county} County, ${state}.
+Focus categories: ${categories.join(', ')}
 
-For each lead provide realistic data matching actual ${county} County market conditions 2026.
-Include addresses from real neighborhoods in ${county} County.
+DISTRESS CATEGORIES:
+- Pre-FC: Owner behind on payments, NOD filed, auction scheduled
+- REO: Already foreclosed, bank wants to liquidate
+- Long DOM: 90+ days on market, price reductions, motivated seller
+- FSBO: Owner selling direct, flexible on price
+- Probate: Estate sale, heirs want quick cash
+- Tax Delinquent: Behind on property taxes
 
-Return a JSON array of objects, each with:
+COUNTY NEIGHBORHOODS:
+Dallas: Oak Cliff, South Dallas, Pleasant Grove, Garland, Mesquite, Duncanville, DeSoto, Lancaster
+Tarrant: Haltom City, Azle, Forest Hill, Everman, Richland Hills, Saginaw
+Collin: McKinney, Allen, Wylie, Sachse, Murphy
+San Diego: National City, Chula Vista, El Cajon, Lemon Grove, La Mesa
+Los Angeles: Compton, Inglewood, South LA, Watts, Hawthorne, Gardena
+
+Return JSON array, each object:
 {
-  "address": "realistic street address with city, state zip",
+  "address": "full street address, city, state zip",
   "type": "SFR",
   "beds": number,
   "baths": number,
@@ -137,107 +147,99 @@ Return a JSON array of objects, each with:
   "year": number,
   "zip": "5-digit zip",
   "county": "${county}",
-  "category": "Pre-FC|REO|Long DOM|FSBO|Auction|Probate|Tax Delinquent",
+  "state": "${state}",
+  "category": "Pre-FC|REO|Long DOM|FSBO|Probate|Auction|Tax Delinquent",
   "list_price": "$XXX,XXX",
   "dom": number,
-  "seller_type": "Owner|Agent|Bank REO|Probate|Auction",
-  "phone": "realistic phone number",
-  "source_url": "foreclosurelistings.com or redfin.com or foreclosure.com",
-  "lot": "X,XXX sqft",
-  "reductions": "description or N/A",
+  "seller_type": "Owner|Agent|Bank REO|Probate|Auction|Sheriff",
+  "phone": "(area code) XXX-XXXX",
   "status": "Pre-Foreclosure|Active|REO|Auction|Short Sale",
-  "ownership": "description"
+  "reductions": "describe price reductions or N/A",
+  "distress": "brief description of distress situation",
+  "source_url": "foreclosurelistings.com or redfin.com or zillow.com",
+  "lot": "X,XXX sqft",
+  "ownership": "years owned or description"
 }`;
 
   try {
     const raw = await ask(prompt, sys, 4000);
     const cleaned = raw.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
 }
 
-// ── Buyer Match Email ─────────────────────────────────────────────────────
 async function generateBuyerEmail(lead, buyer, analysis) {
-  const prompt = `Write a professional but direct wholesale real estate deal submission email.
-FROM: Gabriel Montsan (montsan.rei@gmail.com)
-TO: ${buyer.name} — ${buyer.contact}
-PROPERTY: ${lead.address}
-ARV: $${(analysis.arv||lead.arv||0).toLocaleString()} | OFFER: $${(analysis.offer||lead.offer||0).toLocaleString()} | ASSIGNMENT FEE: $${(analysis.fee_lo||lead.fee||0).toLocaleString()}-$${(analysis.fee_hi||15000).toLocaleString()}
-CATEGORY: ${lead.category} | RISK: ${analysis.risk || lead.risk}
-BEDS/BATHS: ${lead.beds}BD/${lead.baths}BA | SQFT: ${lead.sqft}
-COUNTY: ${lead.county}
+  const prompt = `Write a concise wholesale deal email.
+FROM: Gabriel Montealegre — Montsan Real Estate Investment
+TO: ${buyer.name} (${buyer.contact})
+DEAL: ${lead.address}
+ARV: $${(analysis.arv||lead.arv||0).toLocaleString()} | OFFER: $${(analysis.offer||lead.offer||0).toLocaleString()} | FEE: $${(analysis.fee_lo||10000).toLocaleString()}-$${(analysis.fee_hi||25000).toLocaleString()}
+CATEGORY: ${lead.category} | RISK: ${analysis.risk||'Medium'} | ${lead.beds}BD/${lead.baths}BA ${lead.sqft} sqft
 
-Write a concise 150-word email with:
-- Subject line
-- Brief deal summary with key numbers
-- Why this fits their buy box
-- Clear call to action
-- Professional closing
-
-Return as JSON: {"subject": "...", "body": "..."}`;
-
+Write 120-word email. Subject + Body. Return JSON: {"subject":"...","body":"..."}`;
   try {
-    const raw = await ask(prompt, '', 600);
+    const raw = await ask(prompt, '', 500);
     const cleaned = raw.replace(/```json|```/g, '').trim();
     return JSON.parse(cleaned);
   } catch {
     return {
-      subject: `Investment Opportunity — ${lead.address}`,
-      body: `Hi ${buyer.contact},\n\nI have a deal that matches your buy box.\n\n${lead.address}\nARV: $${(lead.arv||0).toLocaleString()} | Offer: $${(lead.offer||0).toLocaleString()} | Fee: $${(lead.fee||0).toLocaleString()}\n\nCan you connect today?\n\nGabriel Montsan\n${process.env.GMAIL_USER}`
+      subject: `Deal Alert — ${lead.address?.split(',')[0]} | ARV $${((analysis.arv||lead.arv||0)/1000).toFixed(0)}K`,
+      body: `Hi ${buyer.contact},\n\nI have a deal matching your buy box.\n\n${lead.address}\nARV: $${(analysis.arv||lead.arv||0).toLocaleString()} | Offer: $${(analysis.offer||lead.offer||0).toLocaleString()} | Fee: $${(analysis.fee_lo||10000).toLocaleString()}-$${(analysis.fee_hi||25000).toLocaleString()}\n\nAvailable now. Can you connect today?\n\nGabriel Montealegre\nMontsan Real Estate Investment\n${process.env.GMAIL_USER}`
     };
   }
 }
 
-// ── Seller Script Generator ───────────────────────────────────────────────
 async function generateSellerScript(lead) {
-  const prompt = `Write a short, natural-sounding phone script for Gabriel to call the seller of:
-${lead.address} — ${lead.category} — ${lead.seller_type}
-Motivation: ${lead.motivation?.join('. ') || 'Distressed seller'}
-
-Script should be 3-4 sentences, conversational, empathetic, direct about being a cash buyer.
-Return just the script text, no JSON, no quotes.`;
-  return ask(prompt, '', 300);
+  const prompt = `Write a 3-sentence natural phone script for Gabriel calling the seller of:
+${lead.address} — ${lead.category} — ${lead.seller_type || 'Owner'}
+Empathetic, direct, positions as fast cash buyer. Return script text only.`;
+  return ask(prompt, '', 200);
 }
 
-// ── Fallback calculations ─────────────────────────────────────────────────
 function estimateARV(prop) {
-  const base = { 'Dallas': 280000, 'Tarrant': 240000, 'Collin': 380000, 'Denton': 360000, 'Rockwall': 340000 };
+  const base = { Dallas:280000, Tarrant:240000, Collin:380000, Denton:360000, Rockwall:340000, 'San Diego':680000, 'Los Angeles':750000, LA:750000 };
   let arv = base[prop.county] || 270000;
-  arv += (prop.beds - 3) * 15000;
-  arv += (prop.sqft - 1400) * 30;
+  arv += ((prop.beds||3) - 3) * 18000;
+  arv += ((prop.sqft||1400) - 1400) * 32;
+  if ((prop.year||1975) > 2000) arv *= 1.08;
   return Math.round(arv);
 }
 
 function estimateRepairs(prop) {
   const age = 2026 - (prop.year || 1975);
-  if (age < 20) return 25000;
-  if (age < 40) return 45000;
-  return 65000;
+  const sqft = prop.sqft || 1400;
+  if (age < 15) return Math.round(sqft * 22);
+  if (age < 30) return Math.round(sqft * 38);
+  if (age < 50) return Math.round(sqft * 52);
+  return Math.round(sqft * 68);
 }
 
 function fallbackAnalysis(prop, arv, rep) {
   const mao = Math.round(arv * 0.70 - rep);
+  const offer = Math.round(mao * 0.94);
   return {
-    arv, repairs: rep, mao,
-    offer:       Math.round(mao * 0.94),
+    arv, asking_price: arv, repairs: rep,
     repair_class: rep > 60000 ? 'HEAVY' : rep > 35000 ? 'MEDIUM' : 'LIGHT',
-    fee_lo:      12000, fee_hi: 22000,
-    risk:        'Medium',
-    risk_note:   'Foundation inspection required — DFW clay soil standard.',
-    close_time:  '14-21 days cash',
-    motivation:  ['Distressed property requiring immediate action.', 'Texas non-judicial foreclosure moves fast.', 'Cash offer stops auction and puts money in seller pocket.'],
-    strategies:  [{ name: 'Wholesale Assignment', rating: 'BEST', why: 'Fast exit, lock and assign to active DFW buyer.' }],
-    comp_range:  `$${Math.round(arv*0.9).toLocaleString()} - $${Math.round(arv*1.1).toLocaleString()}`,
-    comp_trend:  'BALANCED', comp_note: 'DFW 2026 buyer market — 103 day average DOM.',
-    approach_type: prop.seller_type || 'Owner',
-    approach_how: 'Call directly, lead with empathy, position as fast cash solution.',
-    approach_q:  '1) Payoff amount? 2) Any other liens? 3) Taxes current? 4) Auction date? 5) Close in 14 days?',
-    script:      'Hi, I am Gabriel — local cash buyer. I can close in 14 days and stop the auction. Can we talk?',
-    profit_note: 'End buyer nets good spread at this price point.',
-    fee_note:    'Standard DFW wholesale fee range.',
-    arv_note:    'Based on comparable sales in this submarket.'
+    repair_items: [{ item: 'Full renovation estimate', cost: rep }],
+    mao, offer, fee_lo: 10000, fee_hi: 25000,
+    spread: arv - offer - rep,
+    risk: 'Medium', risk_note: 'Foundation inspection required — standard DFW clay soil.',
+    close_time: '14-21 days cash',
+    why_good_deal: `${prop.category || 'Distressed'} property priced ${Math.round((arv-offer)/arv*100)}% below ARV. Strong wholesale candidate with active buyer pool in ${prop.county || 'Dallas'} County.`,
+    distress_signals: ['Below market price', prop.category || 'Motivated seller', 'Extended days on market'],
+    motivation: ['Needs fast cash solution', 'Property requires work', 'Timeline pressure'],
+    investment_strategy: 'Wholesale Assignment',
+    strategy_note: 'Best exit: lock up and assign to active cash buyer. Fast 14-day close.',
+    comp_range: `$${Math.round(arv*0.88).toLocaleString()} – $${Math.round(arv*1.12).toLocaleString()}`,
+    comp_trend: 'STABLE',
+    script: `Hi, this is Gabriel — I'm a local cash buyer and I can close in 14 days with no repairs needed. Is this still available?`,
+    offer_email: `Hi, I'm interested in your property at ${prop.address} and can offer $${offer.toLocaleString()} cash, closing in 14 days with no repairs or agent fees. Would you like to discuss?`,
+    negotiation_text: `Hi, following up on ${prop.address?.split(',')[0]}. My cash offer of $${offer.toLocaleString()} is still available — quick close, no hassle. Can we connect?`,
+    arv_note: `Based on comparable sales in ${prop.county || 'Dallas'} County submarket.`,
+    profit_note: `End buyer spread: $${(arv - offer - rep).toLocaleString()} after repairs.`
   };
 }
 
