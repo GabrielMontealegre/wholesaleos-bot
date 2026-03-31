@@ -30,7 +30,7 @@ app.get('/', (_, res) => res.json({
   status: 'Montsan REI Bot — Online',
   dashboard: '/dashboard/',
   leads: db.getLeads().length,
-  version: '3.0'
+  version: '5.0'
 }));
 
 // ── API: Leads ──────────────────────────────────────────
@@ -159,6 +159,38 @@ app.put('/api/settings', (req, res) => {
   dbData.settings = { ...(dbData.settings || {}), ...req.body };
   db.writeDB(dbData);
   res.json(dbData.settings);
+});
+
+// ── API: CSV Import ─────────────────────────────────────
+app.post('/api/leads/import', (req, res) => {
+  try {
+    const { leads } = req.body;
+    if (!leads || !Array.isArray(leads)) return res.status(400).json({ error: 'No leads array' });
+    const existing = new Set(db.getLeads().map(l => l.address?.toLowerCase().trim()));
+    let imported = 0;
+    for (const lead of leads) {
+      if (!lead.address) continue;
+      if (existing.has(lead.address.toLowerCase().trim())) continue;
+      db.addLead({ ...lead, status: lead.status || 'New Lead', source: lead.source || 'CSV Import' });
+      imported++;
+    }
+    res.json({ ok: true, imported, total: leads.length, skipped: leads.length - imported });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── API: AI Note generation ─────────────────────────────
+app.post('/api/ai/note', async (req, res) => {
+  try {
+    const { type, title, date, context } = req.body;
+    const { ask } = require('./ai');
+    const prompt = `Generate a concise professional note for a real estate ${type} item.
+Title: ${title}
+Date: ${date || 'N/A'}
+Context: ${context || 'No additional context'}
+Write 1-2 sentences. Be specific and actionable. Return just the note text.`;
+    const note = await ask(prompt, '', 200);
+    res.json({ note });
+  } catch (err) { res.json({ note: 'AI note generation unavailable.' }); }
 });
 
 // ── API: Search ─────────────────────────────────────────
