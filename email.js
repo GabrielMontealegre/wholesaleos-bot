@@ -1,28 +1,48 @@
-// email.js — Gmail sender using nodemailer
-// Uses Gmail App Password (not your real password)
+// email.js — Gmail API via OAuth2
+// No SMTP — uses HTTPS so Railway cannot block it
+// Sends from montsan.rei@gmail.com — unlimited, no daily cap
 
 require('dotenv').config();
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+async function createTransporter() {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+  const accessToken = await new Promise((resolve, reject) => {
+    oauth2Client.getAccessToken((err, token) => {
+      if (err) reject(new Error('Failed to get access token: ' + err.message));
+      else resolve(token);
+    });
+  });
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      type:         'OAuth2',
+      user:         process.env.GMAIL_USER,
+      clientId:     process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      accessToken,
+    },
+  });
+}
 
 async function sendEmail({ to, subject, body, attachments = [] }) {
-  const mailOptions = {
-    from:        `Gabriel Montsan — WholesaleOS <${process.env.GMAIL_USER}>`,
-    to,
-    subject,
-    text:        body,
-    html:        body.replace(/\n/g, '<br>'),
-    attachments,
-  };
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const transporter = await createTransporter();
+    const info = await transporter.sendMail({
+      from:        `Gabriel Montsan — WholesaleOS <${process.env.GMAIL_USER}>`,
+      to, subject,
+      text:        body,
+      html:        body.replace(/\n/g, '<br>'),
+      attachments,
+    });
+    console.log('Email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (err) {
     console.error('Email error:', err.message);
@@ -33,7 +53,6 @@ async function sendEmail({ to, subject, body, attachments = [] }) {
 async function sendDealToBuyer(buyer, lead, analysis, pdfBuffer = null) {
   const { generateBuyerEmail } = require('./ai');
   const emailData = await generateBuyerEmail(lead, buyer, analysis);
-
   const attachments = [];
   if (pdfBuffer) {
     attachments.push({
@@ -42,65 +61,24 @@ async function sendDealToBuyer(buyer, lead, analysis, pdfBuffer = null) {
       contentType: 'application/pdf',
     });
   }
-
-  return sendEmail({
-    to:          buyer.email,
-    subject:     emailData.subject,
-    body:        emailData.body,
-    attachments,
-  });
+  return sendEmail({ to: buyer.email, subject: emailData.subject, body: emailData.body, attachments });
 }
 
 async function sendSellerOutreach(lead, script) {
   if (!lead.email) return { success: false, error: 'No seller email on file' };
-  const body = `Hi,
-
-${script}
-
-Please call or text me at your earliest convenience.
-
-Gabriel Montsan
-Wholesale Real Estate Investor
-${process.env.GMAIL_USER}
-
-P.S. — I buy homes in any condition, any situation, with cash. No repairs needed, no agent fees.`;
-
-  return sendEmail({
-    to:      lead.email,
-    subject: `Regarding your property at ${lead.address}`,
-    body,
-  });
+  const body = `Hi,\n\n${script}\n\nPlease call or text me at your earliest convenience.\n\nGabriel Montsan\nWholesale Real Estate Investor\n${process.env.GMAIL_USER}\n\nP.S. I buy homes in any condition with cash. No repairs, no agent fees.`;
+  return sendEmail({ to: lead.email, subject: `Regarding your property at ${lead.address}`, body });
 }
 
 async function sendContractEmail(assignment, buyer, contractBuffer) {
-  const body = `Hi ${buyer.contact},
-
-Please find attached the assignment agreement for:
-
-Property: ${assignment.property}
-Assignment Fee: $${assignment.assignmentFee?.toLocaleString()}
-Earnest Money: $${assignment.earnestMoney?.toLocaleString()}
-Target Closing: ${assignment.closingDate}
-
-Please review and sign at your earliest convenience. If you have any questions call or text me directly.
-
-Gabriel Montsan
-${process.env.GMAIL_USER}`;
-
-  return sendEmail({
-    to:      buyer.email,
-    subject: `Assignment Agreement — ${assignment.property}`,
-    body,
-    attachments: contractBuffer ? [{
-      filename:    `Assignment_${assignment.property.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)}.pdf`,
-      content:     contractBuffer,
-      contentType: 'application/pdf',
-    }] : [],
-  });
+  const body = `Hi ${buyer.contact},\n\nPlease find attached the assignment agreement for:\n\nProperty: ${assignment.property}\nAssignment Fee: $${assignment.assignmentFee?.toLocaleString()}\nEarnest Money: $${assignment.earnestMoney?.toLocaleString()}\nTarget Closing: ${assignment.closingDate}\n\nPlease review and sign at your earliest convenience.\n\nGabriel Montsan\n${process.env.GMAIL_USER}`;
+  const attachments = contractBuffer ? [{ filename: `Assignment_${assignment.property.replace(/[^a-zA-Z0-9]/g,'_').slice(0,40)}.pdf`, content: contractBuffer, contentType: 'application/pdf' }] : [];
+  return sendEmail({ to: buyer.email, subject: `Assignment Agreement — ${assignment.property}`, body, attachments });
 }
 
 async function testConnection() {
   try {
+    const transporter = await createTransporter();
     await transporter.verify();
     return { success: true };
   } catch (err) {
