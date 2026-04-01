@@ -292,6 +292,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
+      <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import CSV/Excel</div>
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-item" onclick="navigate('bot',this)"><span class="nav-icon">🤖</span>Bot Status</div>
       <div class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
@@ -415,6 +416,10 @@ function initApp() {
   document.getElementById('user-role-label').textContent = 'Admin · Gabriel';
   render();
   checkDailyUpdate();
+  // SYNC: load from Railway database immediately on open
+  loadLeadsFromAPI();
+  // Auto-refresh every 30 seconds to pick up new Telegram leads
+  setInterval(loadLeadsFromAPI, 30000);
 }
 
 function updateSidebarStats() {
@@ -428,7 +433,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
 }
@@ -443,6 +448,7 @@ function render() {
     pipeline: renderPipeline,
     followups: renderFollowups,
     calendar: renderCalendar,
+    import: renderImport,
     buyers: renderBuyers,
     assignments: renderAssignments,
     contracts: renderContracts,
@@ -590,6 +596,7 @@ function renderLeads() {
             <option>Pre-FC</option><option>REO</option><option>Long DOM</option><option>FSBO</option><option>Probate</option>
           </select>
           <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
+          <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
           <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
         </div>
       </div>
@@ -637,33 +644,73 @@ function renderLeadDetail(l) {
   const fu = APP.followups.filter(f => f.leadId === l.id);
   const tz = getSellerTZ(l.phone, l.state || 'TX');
   const safeTocall = isSafeCallTime(l.state || 'TX');
-  const mao = Math.round((l.arv||0)*0.70 - (l.repairs||0));
+  const mao = l.mao || Math.round((l.arv||0)*0.70 - (l.repairs||0));
+  const spread = l.spread || ((l.arv||0) - (l.offer||0) - (l.repairs||0));
   return `<div class="detail-panel">
     <div class="detail-addr">${l.address?.split(',')[0]||'N/A'}</div>
     <div class="detail-meta">${l.address?.split(',').slice(1).join(',').trim()||''} · ${l.category||''} · ${l.seller_type||'Owner'}</div>
+
+    <!-- COMM ICONS -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;padding:10px;background:#f5f5f7;border-radius:10px">
+      <a href="tel:${l.phone||''}" onclick="logAction('call','${l.id}')" title="Call ${l.phone||'No phone'}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:${safeTocall?'#34c759':'#ff9500'};border-radius:8px;text-decoration:none;cursor:pointer">
+        <span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">${safeTocall?'CALL NOW':'OFF HRS'}</span>
+      </a>
+      <a href="sms:${l.phone||''}" onclick="logAction('text','${l.id}')" title="Text" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none">
+        <span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span>
+      </a>
+      <a href="mailto:${l.email||''}" onclick="logAction('email','${l.id}')" title="Email" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none">
+        <span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span>
+      </a>
+      <div onclick="openAIOutreach('${l.id}')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer">
+        <span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span>
+      </div>
+    </div>
+
+    <!-- DEAL NUMBERS -->
     <div class="detail-grid">
       <div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$${(l.arv||0).toLocaleString()}</div></div>
       <div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$${(l.offer||0).toLocaleString()}</div></div>
+      <div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">${l.repair_class||''} $${(l.repairs||0).toLocaleString()}</div></div>
       <div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$${mao.toLocaleString()}</div></div>
       <div class="detail-metric"><div class="dm-label">Your Fee</div><div class="dm-value orange">$${(l.fee_lo||0).toLocaleString()}–$${(l.fee_hi||0).toLocaleString()}</div></div>
+      <div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ${spread > 50000?'green':''}">$${spread.toLocaleString()}</div></div>
     </div>
+
+    <!-- WHY GOOD DEAL -->
+    ${l.why_good_deal ? `<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>✅ Why this is a good deal:</strong> ${l.why_good_deal}</div>` : ''}
+
+    <!-- DISTRESS + STRATEGY -->
+    ${(l.distress_signals||l.motivation) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      ${(l.distress_signals||l.motivation||[]).map(s=>`<span class="badge b-red">${s}</span>`).join('')}
+      ${l.investment_strategy ? `<span class="badge b-blue">${l.investment_strategy}</span>` : ''}
+    </div>` : ''}
+
+    <!-- SELLER CONTACT -->
     <div class="section-title">Seller Contact</div>
     <div class="seller-card">
-      <div class="seller-name">${l.seller_type||'Owner'} ${l.owner_name?'— '+l.owner_name:''}</div>
       <div class="seller-info">
+        <strong>${l.owner_name||l.seller_type||'Owner'}</strong><br>
         📞 <a href="tel:${l.phone}" style="color:#0071e3;text-decoration:none">${l.phone||'No phone'}</a>
         <span class="tz-badge">${tz.tz}</span>
-        ${safeTocall?'<span style="color:#34c759;font-size:10px;margin-left:6px">✓ Safe to call now</span>':'<span style="color:#ff3b30;font-size:10px;margin-left:6px">⚠ Off hours</span>'}
-        <br>${l.email||'No email on file'}
-        <br>Your time: ${tz.losCabosTime} (Los Cabos)
+        ${safeTocall?'<span style="color:#34c759;font-size:10px;margin-left:4px">✓ Safe to call</span>':'<span style="color:#ff3b30;font-size:10px;margin-left:4px">⚠ Off hours (${tz.losCabosTime} your time)</span>'}
+        <br>📧 ${l.email||'No email on file'}
+        <br>Your time: <strong>${tz.losCabosTime}</strong> (Los Cabos MST)
       </div>
     </div>
+
+    <!-- ACTIONS -->
     <div class="action-row">
       <button class="btn btn-dark btn-sm" onclick="generateContract('${l.id}')">📄 Contract</button>
       <button class="btn btn-blue btn-sm" onclick="openSendDeal(null,'${l.id}')">💼 Match Buyers</button>
       <button class="btn btn-outline btn-sm" onclick="openFollowUp('${l.id}')">🔔 Follow-Up</button>
-      <button class="btn btn-outline btn-sm" onclick="openUpdateStatus('${l.id}')">Update Status</button>
+      <button class="btn btn-outline btn-sm" onclick="openUpdateStatus('${l.id}')">Status</button>
     </div>
+
+    <!-- CALL SCRIPT -->
+    ${l.script ? `<div class="section-title" style="margin-top:10px">📞 Call Script</div>
+    <div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.7;margin-bottom:10px">${l.script}</div>` : ''}
+
+    <!-- BUYER MATCHES -->
     <div class="section-title">Buy Box Matches (${buyers.length})</div>
     ${buyers.slice(0,3).map(b => {
       const s = matchScore(b, l);
@@ -675,12 +722,24 @@ function renderLeadDetail(l) {
         </div>
       </div>`;
     }).join('')}
-    ${buyers.length===0?'<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers. Add buyers with matching price range.</div>':''}
-    ${fu.length>0?`<div class="section-title" style="margin-top:10px">Follow-Up Sequence</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${fu.map(f=>`<span class="badge ${f.status==='done'?'b-green':f.status==='pending'?'b-orange':'b-gray'}">${f.type} Day ${f.day}</span>`).join('')}</div>`:''}
-    ${l.script?`<div class="section-title" style="margin-top:10px">Call Script</div><div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.6">${l.script}</div>`:''}
+    ${buyers.length===0?'<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>':''}
+
+    <!-- NOTES -->
+    <div class="section-title" style="margin-top:12px">Notes</div>
+    <textarea id="lead-notes-${l.id}" class="form-textarea" style="min-height:70px;width:100%;margin-bottom:6px" placeholder="Add notes about this deal...">${l.notes||''}</textarea>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-dark btn-sm" onclick="saveLeadNotes('${l.id}')">Save Notes</button>
+      <button class="btn btn-outline btn-sm" onclick="generateLeadAINote('${l.id}')">🤖 AI Note</button>
+    </div>
+
+    <!-- FOLLOW-UP STATUS -->
+    ${fu.length>0?`<div class="section-title" style="margin-top:12px">Follow-Up Sequence</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${fu.map(f=>`<span class="badge ${f.status==='done'?'b-green':f.status==='pending'?'b-orange':'b-gray'}">${f.type} D${f.day}</span>`).join('')}</div>`:''}
+
+    <div style="font-size:10px;color:#86868b;margin-top:10px">ID: ${l.id} · Added: ${l.created||'N/A'} · Source: ${l.source||'Bot'}</div>
   </div>`;
 }
+
 
 // ══════════════════════════════════════════════════════════
 //  PIPELINE
@@ -762,9 +821,35 @@ function renderFollowups() {
 //  CALENDAR
 // ══════════════════════════════════════════════════════════
 function renderCalendar() {
+  const viewMode = APP.calView || 'month';
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:17px;font-weight:700">${months[now.getMonth()]} ${now.getFullYear()}</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:3px;background:#f5f5f7;border-radius:8px;padding:3px">
+        <button class="btn btn-sm ${viewMode==='week'?'btn-dark':'btn-outline'}" onclick="setCalView('week')">Week</button>
+        <button class="btn btn-sm ${viewMode==='month'?'btn-dark':'btn-outline'}" onclick="setCalView('month')">Month</button>
+        <button class="btn btn-sm ${viewMode==='year'?'btn-dark':'btn-outline'}" onclick="setCalView('year')">Year</button>
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="openAddEvent(null)">+ Add Event</button>
+    </div>
+  </div>
+  ${viewMode==='week' ? renderWeekView() : viewMode==='year' ? renderYearView() : renderMonthView()}
+  <div style="display:flex;gap:16px;margin-top:12px">
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#e8f0fe;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Call</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#e6f9ed;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Offer/Deadline</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#f3e8ff;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Closing</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#fff3e0;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Follow-Up</span></div>
+  </div>`;
+}
+
+function setCalView(v) { APP.calView = v; render(); }
+
+function renderMonthView() {
   const now = new Date();
   const year = now.getFullYear(), month = now.getMonth();
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month+1, 0).getDate();
@@ -776,25 +861,98 @@ function renderCalendar() {
     const isToday = ds === new Date().toISOString().slice(0,10);
     cells += `<div style="min-height:80px;background:#fff;border:1px solid ${isToday?'#0071e3':'#f2f2f7'};border-radius:8px;padding:6px;cursor:pointer" onclick="openAddEvent('${ds}')">
       <div style="font-size:11px;font-weight:${isToday?700:400};color:${isToday?'#0071e3':'#3a3a3c'}">${d}</div>
-      ${dayEvents.map(e => `<div style="font-size:9px;padding:2px 5px;border-radius:3px;margin-top:2px;${e.type==='call'?'background:#e8f0fe;color:#1a73e8':e.type==='close'?'background:#f3e8ff;color:#7c3aed':'background:#e6f9ed;color:#1b8f3d'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.title}</div>`).join('')}
+      ${dayEvents.map(e => `<div style="font-size:9px;padding:2px 5px;border-radius:3px;margin-top:2px;${e.type==='call'?'background:#e8f0fe;color:#1a73e8':e.type==='close'?'background:#f3e8ff;color:#7c3aed':e.type==='follow'?'background:#fff3e0;color:#e65100':'background:#e6f9ed;color:#1b8f3d'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openEventDetail('${e.id}');event.stopPropagation()" title="${e.title}">${e.title}</div>`).join('')}
     </div>`;
   }
-  return `
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <div style="font-size:17px;font-weight:700">${months[month]} ${year}</div>
-    <button class="btn btn-dark btn-sm" onclick="openAddEvent(null)">+ Add Event</button>
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+    ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:600;color:#86868b;padding:4px">${d}</div>`).join('')}
   </div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
-    ${days.map(d=>`<div style="text-align:center;font-size:10px;font-weight:600;color:#86868b;padding:4px">${d}</div>`).join('')}
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>
-  <div style="display:flex;gap:16px;margin-top:12px">
-    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#e8f0fe;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Call</span></div>
-    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#e6f9ed;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Offer/Deadline</span></div>
-    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#f3e8ff;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Closing</span></div>
-    <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:#fff3e0;border-radius:2px"></div><span style="font-size:11px;color:#86868b">Follow-Up</span></div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>`;
+}
+
+function renderWeekView() {
+  const now = new Date();
+  const day = now.getDay();
+  const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - day);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i);
+    days.push(d);
+  }
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+    ${days.map((d, i) => {
+      const ds = d.toISOString().slice(0,10);
+      const evts = APP.calendar.filter(e => e.date === ds);
+      const isToday = ds === now.toISOString().slice(0,10);
+      return `<div style="background:#fff;border:1px solid ${isToday?'#0071e3':'#e5e5ea'};border-radius:10px;padding:10px;min-height:180px;cursor:pointer" onclick="openAddEvent('${ds}')">
+        <div style="font-size:10px;font-weight:600;color:#86868b">${dayNames[i]}</div>
+        <div style="font-size:16px;font-weight:700;color:${isToday?'#0071e3':'#1d1d1f'};margin-bottom:8px">${d.getDate()}</div>
+        ${evts.map(e => `<div style="font-size:10px;padding:4px 6px;border-radius:6px;margin-bottom:4px;${e.type==='call'?'background:#e8f0fe;color:#1a73e8':e.type==='close'?'background:#f3e8ff;color:#7c3aed':'background:#e6f9ed;color:#1b8f3d'};cursor:pointer" onclick="openEventDetail('${e.id}');event.stopPropagation()">${e.title}</div>`).join('')}
+      </div>`;
+    }).join('')}
   </div>`;
 }
+
+function renderYearView() {
+  const year = new Date().getFullYear();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    ${months.map((m, mi) => {
+      const evts = APP.calendar.filter(e => e.date?.startsWith(`${year}-${String(mi+1).padStart(2,'0')}`));
+      return `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:12px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px">${m} ${year}</div>
+        <div style="font-size:11px;color:${evts.length>0?'#0071e3':'#86868b'}">${evts.length} event${evts.length!==1?'s':''}</div>
+        ${evts.slice(0,3).map(e=>`<div style="font-size:10px;color:#3a3a3c;padding:2px 0;border-top:1px solid #f9f9f9;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.date?.slice(8)} ${e.title}</div>`).join('')}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function openEventDetail(id) {
+  const evt = APP.calendar.find(e => e.id === id);
+  if (!evt) return;
+  showModal(`
+    <div class="modal-title">📅 ${evt.title}</div>
+    <div style="font-size:12px;color:#86868b;margin-bottom:14px">${evt.date} ${evt.time?'· '+evt.time:''} · ${evt.type}</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <div class="form-label">Notes</div>
+      <textarea class="form-textarea" id="evt-notes" style="min-height:100px" placeholder="Add notes about this event...">${evt.notes||''}</textarea>
+    </div>
+    <div style="background:#f0f6ff;border:1px solid #0071e3;border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:#0071e3">
+      <strong>AI Note:</strong> ${evt.ai_note || 'No AI note yet.'}
+      <button class="btn btn-outline btn-sm" style="margin-left:8px;font-size:10px" onclick="generateEventAINote('${id}')">Generate AI Note</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-dark" onclick="saveEventNotes('${id}')">Save Notes</button>
+    </div>`);
+}
+
+function saveEventNotes(id) {
+  const evt = APP.calendar.find(e => e.id === id);
+  if (evt) { evt.notes = document.getElementById('evt-notes')?.value || ''; save('calendar', APP.calendar); }
+  closeModal(); toast('Notes saved', 'success');
+}
+
+async function generateEventAINote(id) {
+  const evt = APP.calendar.find(e => e.id === id);
+  if (!evt) return;
+  toast('Generating AI note...', '');
+  try {
+    const res = await fetch('/api/ai/note', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ type: 'calendar', title: evt.title, date: evt.date, context: evt.notes })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      evt.ai_note = data.note;
+      save('calendar', APP.calendar);
+      openEventDetail(id);
+    }
+  } catch { toast('AI note generation failed', 'error'); }
+}
+
 
 // ══════════════════════════════════════════════════════════
 //  BUYERS
@@ -1391,7 +1549,16 @@ function sortLeads(col) {
 
 function filterLeads() { render(); }
 function filterByStatus(v) { APP.leads; render(); }
-function globalSearch(v) { APP.search = v; render(); }
+function globalSearch(v) {
+  APP.search = v.toLowerCase().trim();
+  // Update URL hash for shareability
+  if (APP.page === 'leads' || APP.page === 'dashboard') {
+    if (APP.page !== 'leads') navigate('leads', document.querySelector('[onclick*="leads"]'));
+    else render();
+  } else {
+    render();
+  }
+}
 
 function exportCSV() {
   const headers = ['address','category','arv','offer','fee_lo','fee_hi','dom','status','risk','phone','county'];
@@ -1561,21 +1728,422 @@ function addListeners() {
   }
 }
 
-// Load leads from API on init
+// Full sync from Railway database — runs on init and every 30s
 async function loadLeadsFromAPI() {
   try {
-    const res = await fetch('/api/leads');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.leads && data.leads.length > 0) {
+    const [leadsRes, statsRes] = await Promise.all([
+      fetch('/api/leads'),
+      fetch('/api/stats')
+    ]);
+    if (leadsRes.ok) {
+      const data = await leadsRes.json();
+      if (data.leads && data.leads.length >= APP.leads.length) {
         APP.leads = data.leads;
         save('leads', APP.leads);
         document.getElementById('nav-lead-count').textContent = APP.leads.length;
         document.getElementById('sb-leads').textContent = APP.leads.length;
+        // Re-render if on leads or dashboard page
+        if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
+      }
+    }
+    if (statsRes.ok) {
+      const stats = await statsRes.json();
+      if (stats.followups_due > 0) {
+        document.getElementById('nav-fu-count').textContent = stats.followups_due;
       }
     }
   } catch {}
 }
+
+// ══════════════════════════════════════════════════════════
+//  CSV / EXCEL IMPORT
+// ══════════════════════════════════════════════════════════
+function renderImport() {
+  return `
+  <div style="max-width:800px">
+    <div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:20px">💡</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#1a73e8;margin-bottom:3px">How CSV Import Works</div>
+        <div style="font-size:12px;color:#3a3a3c;line-height:1.7">
+          1. Drop or select your CSV/Excel file below<br>
+          2. The system reads every row and maps the columns automatically<br>
+          3. Preview the data — fix anything before importing<br>
+          4. Click Import — all leads are added to your CRM instantly<br>
+          5. Each imported lead gets a 30-day follow-up sequence created automatically
+        </div>
+      </div>
+    </div>
+
+    <div id="import-drop-zone" style="border:2px dashed #d1d1d6;border-radius:14px;padding:48px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px;background:#fff" onclick="document.getElementById('import-file-input').click()" ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)">
+      <div style="font-size:48px;margin-bottom:12px">📂</div>
+      <div style="font-size:15px;font-weight:600;color:#1d1d1f;margin-bottom:6px">Drop your file here or click to browse</div>
+      <div style="font-size:12px;color:#86868b">Supports CSV (.csv) and Excel (.xlsx, .xls) · Up to 10,000 rows</div>
+      <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFileSelected(this)">
+    </div>
+
+    <div id="import-preview" style="display:none">
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden;margin-bottom:12px">
+        <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#1d1d1f" id="import-file-name">File loaded</div>
+            <div style="font-size:11px;color:#86868b;margin-top:2px" id="import-row-count">0 rows detected</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="importReset()">✕ Clear</button>
+            <button class="btn btn-dark" id="import-btn" onclick="importConfirm()">Import All Leads →</button>
+          </div>
+        </div>
+        <div style="padding:12px 16px;background:#f9f9f9;border-bottom:1px solid #f2f2f7">
+          <div style="font-size:11px;font-weight:600;color:#86868b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Column Mapping (AI Auto-Detected)</div>
+          <div id="import-mapping" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead id="import-thead"></thead>
+            <tbody id="import-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="import-result" style="display:none"></div>
+
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Expected Column Names</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${[
+          ['address','Property address (required)'],
+          ['price / list_price','Listing price'],
+          ['arv','After Repair Value'],
+          ['beds / bedrooms','Bedroom count'],
+          ['baths / bathrooms','Bathroom count'],
+          ['sqft / sq_ft','Square footage'],
+          ['phone / seller_phone','Seller phone'],
+          ['email / seller_email','Seller email'],
+          ['county','County name'],
+          ['category / type','Pre-FC, REO, FSBO...'],
+          ['dom / days_on_market','Days on market'],
+          ['owner / owner_name','Owner name'],
+        ].map(([col,desc]) => \`<div style="background:#f5f5f7;border-radius:8px;padding:8px 10px">
+          <div style="font-family:monospace;font-size:10px;color:#1d1d1f;font-weight:600">\${col}</div>
+          <div style="font-size:10px;color:#86868b;margin-top:1px">\${desc}</div>
+        </div>\`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#86868b">The system automatically maps common column name variations. Extra columns are preserved in the notes field.</div>
+    </div>
+  </div>`;
+}
+
+function importDragOver(e) {
+  e.preventDefault();
+  document.getElementById('import-drop-zone').style.borderColor = '#0071e3';
+  document.getElementById('import-drop-zone').style.background = '#f0f6ff';
+}
+function importDragLeave(e) {
+  document.getElementById('import-drop-zone').style.borderColor = '#d1d1d6';
+  document.getElementById('import-drop-zone').style.background = '#fff';
+}
+function importDrop(e) {
+  e.preventDefault();
+  importDragLeave(e);
+  const file = e.dataTransfer.files[0];
+  if (file) processImportFile(file);
+}
+function importFileSelected(input) {
+  const file = input.files[0];
+  if (file) processImportFile(file);
+}
+
+function processImportFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['csv','xlsx','xls'].includes(ext)) { toast('Please use a CSV or Excel file', 'error'); return; }
+  
+  document.getElementById('import-file-name').textContent = file.name;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let rows = [];
+    if (ext === 'csv') {
+      rows = parseCSV(e.target.result);
+    } else {
+      toast('Excel detected — converting... (paste as CSV for best results)', '');
+      rows = parseCSV(e.target.result);
+    }
+    if (rows.length < 2) { toast('File appears empty or unreadable', 'error'); return; }
+    showImportPreview(file.name, rows);
+  };
+  if (ext === 'csv') reader.readAsText(file);
+  else reader.readAsBinaryString(file);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/
+?
+/);
+  return lines.map(line => {
+    const result = [];
+    let cell = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { result.push(cell.trim()); cell = ''; }
+      else { cell += ch; }
+    }
+    result.push(cell.trim());
+    return result;
+  });
+}
+
+// Map common CSV column names to our fields
+function mapColumns(headers) {
+  const map = {};
+  const aliases = {
+    address:['address','property address','prop address','street','location','property'],
+    list_price:['price','list price','list_price','asking price','asking','listed price'],
+    arv:['arv','after repair value','after_repair_value','market value'],
+    beds:['beds','bedrooms','bed','br','bds'],
+    baths:['baths','bathrooms','bath','ba'],
+    sqft:['sqft','sq ft','square feet','square_feet','sf','size'],
+    year:['year','year built','yr built','built'],
+    phone:['phone','seller phone','contact phone','tel','telephone','mobile','cell'],
+    email:['email','seller email','contact email','e-mail'],
+    county:['county','county name','area'],
+    category:['category','type','lead type','deal type','status type'],
+    dom:['dom','days on market','days_on_market','days listed'],
+    owner_name:['owner','owner name','seller name','seller','contact name'],
+    zip:['zip','zip code','postal','postal code'],
+  };
+  headers.forEach((h, i) => {
+    const lower = h.toLowerCase().trim();
+    for (const [field, names] of Object.entries(aliases)) {
+      if (names.some(n => lower.includes(n) || n.includes(lower))) {
+        if (!map[field]) map[field] = i;
+        break;
+      }
+    }
+  });
+  return map;
+}
+
+let IMPORT_DATA = { rows: [], headers: [], mapping: {}, fileName: '' };
+
+function showImportPreview(fileName, rows) {
+  const headers = rows[0];
+  const dataRows = rows.slice(1).filter(r => r.some(c => c));
+  const mapping = mapColumns(headers);
+  
+  IMPORT_DATA = { rows: dataRows, headers, mapping, fileName };
+  
+  document.getElementById('import-row-count').textContent = `${dataRows.length} leads detected`;
+  
+  // Show mapping pills
+  const mapDiv = document.getElementById('import-mapping');
+  mapDiv.innerHTML = Object.entries(mapping).map(([field, idx]) =>
+    `<span style="background:#e8f0fe;color:#1a73e8;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px">${field} ← ${headers[idx]}</span>`
+  ).join('') || '<span style="font-size:11px;color:#ff3b30">No columns recognized. Make sure your file has headers.</span>';
+  
+  // Show table preview
+  const thead = document.getElementById('import-thead');
+  const tbody = document.getElementById('import-tbody');
+  
+  thead.innerHTML = '<tr>' + headers.map(h => `<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:#86868b;background:#fafafa;border-bottom:1px solid #f2f2f7;white-space:nowrap">${h}</th>`).join('') + '</tr>';
+  
+  tbody.innerHTML = dataRows.slice(0, 10).map(row =>
+    '<tr>' + row.map(cell => `<td style="padding:8px 10px;font-size:11px;color:#3a3a3c;border-bottom:1px solid #f9f9f9;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${cell||''}</td>`).join('') + '</tr>'
+  ).join('');
+  
+  if (dataRows.length > 10) {
+    tbody.innerHTML += `<tr><td colspan="${headers.length}" style="text-align:center;padding:10px;font-size:11px;color:#86868b">... and ${dataRows.length - 10} more rows</td></tr>`;
+  }
+  
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-btn').textContent = `Import ${dataRows.length} Leads →`;
+}
+
+async function importConfirm() {
+  const { rows, headers, mapping } = IMPORT_DATA;
+  if (!rows.length) { toast('No data to import', 'error'); return; }
+  
+  const btn = document.getElementById('import-btn');
+  btn.textContent = 'Importing...';
+  btn.disabled = true;
+  
+  const leads = rows.map(row => {
+    const g = field => mapping[field] !== undefined ? (row[mapping[field]] || '').trim() : '';
+    const lead = {
+      id: 'IMP' + Date.now() + Math.random().toString(36).slice(2,5),
+      address:    g('address') || 'Unknown Address',
+      list_price: g('list_price'),
+      arv:        parseInt(g('arv')) || 0,
+      offer:      Math.round((parseInt(g('arv'))||0) * 0.65),
+      beds:       parseInt(g('beds')) || 3,
+      baths:      parseInt(g('baths')) || 2,
+      sqft:       parseInt(g('sqft')) || 1400,
+      year:       parseInt(g('year')) || 1980,
+      phone:      g('phone'),
+      email:      g('email'),
+      county:     g('county') || 'Unknown',
+      category:   g('category') || 'Imported',
+      dom:        parseInt(g('dom')) || 0,
+      owner_name: g('owner_name'),
+      zip:        g('zip'),
+      status:     'New Lead',
+      risk:       'Medium',
+      fee_lo:     Math.round((parseInt(g('arv'))||0) * 0.05) || 5000,
+      fee_hi:     Math.round((parseInt(g('arv'))||0) * 0.10) || 15000,
+      repairs:    0,
+      created:    new Date().toISOString().slice(0,10),
+      source:     'CSV Import — ' + IMPORT_DATA.fileName,
+    };
+    return lead;
+  }).filter(l => l.address !== 'Unknown Address' || rows.length === 1);
+  
+  // Add to local state
+  const existing = new Set(APP.leads.map(l => l.address.toLowerCase()));
+  const newLeads = leads.filter(l => !existing.has(l.address.toLowerCase()));
+  APP.leads = [...newLeads, ...APP.leads];
+  save('leads', APP.leads);
+  
+  // Try to sync to server
+  let serverSynced = 0;
+  try {
+    const res = await fetch('/api/leads/import', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ leads: newLeads })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      serverSynced = data.imported || 0;
+    }
+  } catch {}
+  
+  // Update UI
+  document.getElementById('nav-lead-count').textContent = APP.leads.length;
+  document.getElementById('sb-leads').textContent = APP.leads.length;
+  
+  // Create follow-up sequences for all imported leads
+  newLeads.forEach(l => createFollowUpSequence(l.id));
+  
+  // Show result
+  const resultDiv = document.getElementById('import-result');
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = `
+    <div style="background:#e6f9ed;border:1px solid #34c759;border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">✅</div>
+      <div style="font-size:15px;font-weight:700;color:#1b8f3d;margin-bottom:4px">${newLeads.length} leads imported successfully</div>
+      <div style="font-size:12px;color:#3a3a3c;margin-bottom:12px">
+        ${leads.length - newLeads.length > 0 ? `${leads.length - newLeads.length} duplicates skipped · ` : ''}
+        ${serverSynced > 0 ? `${serverSynced} synced to bot · ` : ''}
+        30-day follow-up sequences created for all leads
+      </div>
+      <button class="btn btn-dark" onclick="navigate('leads',document.querySelector('[onclick*=leads]'))">View Imported Leads →</button>
+    </div>`;
+  
+  btn.textContent = 'Import Complete ✓';
+  toast(`${newLeads.length} leads imported!`, 'success');
+}
+
+function importReset() {
+  IMPORT_DATA = { rows: [], headers: [], mapping: {}, fileName: '' };
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-result').style.display = 'none';
+  document.getElementById('import-file-input').value = '';
+}
+
+// ══════════════════════════════════════════════════════════
+//  COMMUNICATION LOG
+// ══════════════════════════════════════════════════════════
+function logAction(type, leadId) {
+  const lead = APP.leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const icons = {call:'📞', text:'💬', email:'📧'};
+  const labels = {call:'Call initiated', text:'Text message opened', email:'Email composed'};
+  toast(`${icons[type]} ${labels[type]} — ${lead.address?.split(',')[0]||'Lead'}`, 'success');
+  // Log to follow-up history
+  const fu = APP.followups.find(f => f.leadId === leadId && f.status === 'pending');
+  if (fu && type === fu.type?.split('+')[0]) {
+    fu.status = 'done';
+    save('followups', APP.followups);
+  }
+  // Update lead status if New Lead
+  if (lead.status === 'New Lead' && type !== 'email') {
+    lead.status = 'Contacted';
+    save('leads', APP.leads);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  NOTES + AI OUTREACH
+// ══════════════════════════════════════════════════════════
+function saveLeadNotes(id) {
+  const lead = APP.leads.find(l => l.id === id);
+  const ta = document.getElementById('lead-notes-' + id);
+  if (lead && ta) {
+    lead.notes = ta.value;
+    save('leads', APP.leads);
+    // Sync to server
+    fetch('/api/leads/' + id, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ notes: ta.value })
+    }).catch(() => {});
+    toast('Notes saved', 'success');
+  }
+}
+
+async function generateLeadAINote(id) {
+  const lead = APP.leads.find(l => l.id === id);
+  if (!lead) return;
+  toast('Generating AI analysis note...', '');
+  const note = `${lead.why_good_deal || ''} ARV: $${(lead.arv||0).toLocaleString()} | Offer: $${(lead.offer||0).toLocaleString()} | ${lead.repair_class||'Medium'} repairs $${(lead.repairs||0).toLocaleString()}. ${lead.strategy_note||''} ${lead.profit_note||''}`.trim();
+  const ta = document.getElementById('lead-notes-' + id);
+  if (ta) {
+    const existing = ta.value ? ta.value + '\n\n[AI Analysis] ' : '[AI Analysis] ';
+    ta.value = existing + note;
+    lead.notes = ta.value;
+    save('leads', APP.leads);
+  }
+  toast('AI note added', 'success');
+}
+
+function openAIOutreach(leadId) {
+  const lead = APP.leads.find(l => l.id === leadId);
+  if (!lead) return;
+  showModal(`
+    <div class="modal-title">🤖 AI Outreach — ${lead.address?.split(',')[0]||'Lead'}</div>
+    <div class="sub-tabs" style="margin-bottom:12px">
+      <div class="sub-tab active" onclick="subTab(this,'ao-offer')">Offer Email</div>
+      <div class="sub-tab" onclick="subTab(this,'ao-nego')">Negotiation Text</div>
+      <div class="sub-tab" onclick="subTab(this,'ao-script')">Call Script</div>
+    </div>
+    <div id="ao-offer">
+      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px;white-space:pre-wrap">${lead.offer_email || `Hi,\n\nI'm interested in your property at ${lead.address}. I can offer $${(lead.offer||0).toLocaleString()} cash, close in 14 days, no repairs needed, no agent fees.\n\nWould you like to discuss?\n\nGabriel Montealegre | Montsan Real Estate Investment`}</div>
+      <button class="btn btn-dark btn-sm" onclick="copyText('ao-offer')">Copy Email</button>
+      <a href="mailto:${lead.email||''}" class="btn btn-blue btn-sm" style="margin-left:6px">Open in Email Client</a>
+    </div>
+    <div id="ao-nego" style="display:none">
+      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px">${lead.negotiation_text || `Hi, following up on ${lead.address?.split(',')[0]}. My cash offer of $${(lead.offer||0).toLocaleString()} is still available — quick close, no hassle. Can we connect today?`}</div>
+      <button class="btn btn-dark btn-sm" onclick="copyText('ao-nego')">Copy Text</button>
+      <a href="sms:${lead.phone||''}" class="btn btn-blue btn-sm" style="margin-left:6px">Open in Messages</a>
+    </div>
+    <div id="ao-script" style="display:none">
+      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px">${lead.script || `Hi, this is Gabriel — I'm a local cash buyer. I can close in 14 days on your property at ${lead.address?.split(',')[0]} with no repairs or fees. Is this still available?`}</div>
+      <button class="btn btn-dark btn-sm" onclick="copyText('ao-script')">Copy Script</button>
+      <a href="tel:${lead.phone||''}" class="btn btn-green btn-sm" style="margin-left:6px">Call Now</a>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+    </div>`);
+}
+
+function copyText(divId) {
+  const el = document.getElementById(divId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent || el.innerText).then(() => toast('Copied!', 'success'));
+}
+
 </script>
 </body>
 </html>
