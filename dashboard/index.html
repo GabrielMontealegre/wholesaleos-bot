@@ -643,101 +643,91 @@ function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
   const fu = APP.followups.filter(f => f.leadId === l.id);
   const tz = getSellerTZ(l.phone, l.state || 'TX');
-  const safeTocall = isSafeCallTime(l.state || 'TX');
+  const safe = isSafeCallTime(l.state || 'TX');
   const mao = l.mao || Math.round((l.arv||0)*0.70 - (l.repairs||0));
   const spread = l.spread || ((l.arv||0) - (l.offer||0) - (l.repairs||0));
-  return `<div class="detail-panel">
-    <div class="detail-addr">${l.address?.split(',')[0]||'N/A'}</div>
-    <div class="detail-meta">${l.address?.split(',').slice(1).join(',').trim()||''} · ${l.category||''} · ${l.seller_type||'Owner'}</div>
+  const lid = l.id;
 
-    <!-- COMM ICONS -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;padding:10px;background:#f5f5f7;border-radius:10px">
-      <a href="tel:${l.phone||''}" onclick="logAction('call','${l.id}')" title="Call ${l.phone||'No phone'}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:${safeTocall?'#34c759':'#ff9500'};border-radius:8px;text-decoration:none;cursor:pointer">
-        <span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">${safeTocall?'CALL NOW':'OFF HRS'}</span>
-      </a>
-      <a href="sms:${l.phone||''}" onclick="logAction('text','${l.id}')" title="Text" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none">
-        <span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span>
-      </a>
-      <a href="mailto:${l.email||''}" onclick="logAction('email','${l.id}')" title="Email" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none">
-        <span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span>
-      </a>
-      <div onclick="openAIOutreach('${l.id}')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer">
-        <span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span>
-      </div>
-    </div>
+  let html = '<div class="detail-panel">';
+  html += '<div class="detail-addr">' + (l.address||'').split(',')[0] + '</div>';
+  html += '<div class="detail-meta">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div>';
 
-    <!-- DEAL NUMBERS -->
-    <div class="detail-grid">
-      <div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$${(l.arv||0).toLocaleString()}</div></div>
-      <div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$${(l.offer||0).toLocaleString()}</div></div>
-      <div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">${l.repair_class||''} $${(l.repairs||0).toLocaleString()}</div></div>
-      <div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$${mao.toLocaleString()}</div></div>
-      <div class="detail-metric"><div class="dm-label">Your Fee</div><div class="dm-value orange">$${(l.fee_lo||0).toLocaleString()}–$${(l.fee_hi||0).toLocaleString()}</div></div>
-      <div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ${spread > 50000?'green':''}">$${spread.toLocaleString()}</div></div>
-    </div>
+  // QUICK ACTION BUTTONS
+  html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
+  html += '<a href="tel:' + (l.phone||'') + '" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
+  html += '<a href="mailto:' + (l.email||'') + '" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
+  html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
+  html += '</div>';
 
-    <!-- WHY GOOD DEAL -->
-    ${l.why_good_deal ? `<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>✅ Why this is a good deal:</strong> ${l.why_good_deal}</div>` : ''}
+  // DEAL NUMBERS
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$' + (l.arv||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$' + (l.offer||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">' + (l.repair_class||'') + ' $' + (l.repairs||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + mao.toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Fee</div><div class="dm-value orange">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + spread.toLocaleString() + '</div></div>';
+  html += '</div>';
 
-    <!-- DISTRESS + STRATEGY -->
-    ${(l.distress_signals||l.motivation) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-      ${(l.distress_signals||l.motivation||[]).map(s=>`<span class="badge b-red">${s}</span>`).join('')}
-      ${l.investment_strategy ? `<span class="badge b-blue">${l.investment_strategy}</span>` : ''}
-    </div>` : ''}
+  // WHY GOOD DEAL
+  if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
-    <!-- SELLER CONTACT -->
-    <div class="section-title">Seller Contact</div>
-    <div class="seller-card">
-      <div class="seller-info">
-        <strong>${l.owner_name||l.seller_type||'Owner'}</strong><br>
-        📞 <a href="tel:${l.phone}" style="color:#0071e3;text-decoration:none">${l.phone||'No phone'}</a>
-        <span class="tz-badge">${tz.tz}</span>
-        ${safeTocall?'<span style="color:#34c759;font-size:10px;margin-left:4px">✓ Safe to call</span>':'<span style="color:#ff3b30;font-size:10px;margin-left:4px">⚠ Off hours (${tz.losCabosTime} your time)</span>'}
-        <br>📧 ${l.email||'No email on file'}
-        <br>Your time: <strong>${tz.losCabosTime}</strong> (Los Cabos MST)
-      </div>
-    </div>
+  // DISTRESS BADGES
+  const sigs = (l.distress_signals||l.motivation||[]);
+  if (sigs.length) {
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
+    sigs.forEach(s => { html += '<span class="badge b-red">' + s + '</span>'; });
+    if (l.investment_strategy) html += '<span class="badge b-blue">' + l.investment_strategy + '</span>';
+    html += '</div>';
+  }
 
-    <!-- ACTIONS -->
-    <div class="action-row">
-      <button class="btn btn-dark btn-sm" onclick="generateContract('${l.id}')">📄 Contract</button>
-      <button class="btn btn-blue btn-sm" onclick="openSendDeal(null,'${l.id}')">💼 Match Buyers</button>
-      <button class="btn btn-outline btn-sm" onclick="openFollowUp('${l.id}')">🔔 Follow-Up</button>
-      <button class="btn btn-outline btn-sm" onclick="openUpdateStatus('${l.id}')">Status</button>
-    </div>
+  // SELLER
+  html += '<div class="section-title">Seller Contact</div>';
+  html += '<div class="seller-card"><div class="seller-info">';
+  html += '<strong>' + (l.owner_name||l.seller_type||'Owner') + '</strong><br>';
+  html += '📞 ' + (l.phone||'No phone') + ' <span class="tz-badge">' + tz.tz + '</span>';
+  html += safe ? ' <span style="color:#34c759;font-size:10px">✓ Safe to call</span>' : ' <span style="color:#ff3b30;font-size:10px">⚠ Off hours</span>';
+  html += '<br>📧 ' + (l.email||'No email') + '<br>Your time: <strong>' + tz.losCabosTime + '</strong> (Los Cabos)';
+  html += '</div></div>';
 
-    <!-- CALL SCRIPT -->
-    ${l.script ? `<div class="section-title" style="margin-top:10px">📞 Call Script</div>
-    <div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.7;margin-bottom:10px">${l.script}</div>` : ''}
+  // ACTIONS
+  html += '<div class="action-row">';
+  html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
+  html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">💼 Match</button>';
+  html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">🔔 Follow-Up</button>';
+  html += '<button class="btn btn-outline btn-sm" data-action="status" data-lid="' + lid + '">Status</button>';
+  html += '</div>';
 
-    <!-- BUYER MATCHES -->
-    <div class="section-title">Buy Box Matches (${buyers.length})</div>
-    ${buyers.slice(0,3).map(b => {
+  // SCRIPT
+  if (l.script) html += '<div class="section-title" style="margin-top:10px">Call Script</div><div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.7;margin-bottom:10px">' + l.script + '</div>';
+
+  // BUYER MATCHES
+  html += '<div class="section-title">Buy Box Matches (' + buyers.length + ')</div>';
+  if (buyers.length) {
+    buyers.slice(0,3).forEach(b => {
       const s = matchScore(b, l);
-      return `<div class="buyer-match-card">
-        <div><div class="bm-name">${b.name}</div><div class="bm-meta">${b.type} · ${b.contact}</div></div>
-        <div style="text-align:right;min-width:70px">
-          <div class="bm-score">${s}% fit</div>
-          <button class="btn btn-dark btn-sm" style="margin-top:3px" onclick="sendDealToBuyer('${l.id}','${b.id}')">Send ↗</button>
-        </div>
-      </div>`;
-    }).join('')}
-    ${buyers.length===0?'<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>':''}
+      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + b.type + ' &middot; ' + b.contact + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
+    });
+  } else {
+    html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
+  }
 
-    <!-- NOTES -->
-    <div class="section-title" style="margin-top:12px">Notes</div>
-    <textarea id="lead-notes-${l.id}" class="form-textarea" style="min-height:70px;width:100%;margin-bottom:6px" placeholder="Add notes about this deal...">${l.notes||''}</textarea>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-dark btn-sm" onclick="saveLeadNotes('${l.id}')">Save Notes</button>
-      <button class="btn btn-outline btn-sm" onclick="generateLeadAINote('${l.id}')">🤖 AI Note</button>
-    </div>
+  // NOTES
+  html += '<div class="section-title" style="margin-top:12px">Notes</div>';
+  html += '<textarea id="lead-notes-' + lid + '" class="form-textarea" style="min-height:70px;width:100%;margin-bottom:6px" placeholder="Add notes...">' + (l.notes||'') + '</textarea>';
+  html += '<div style="display:flex;gap:6px"><button class="btn btn-dark btn-sm" data-action="savenotes" data-lid="' + lid + '">Save Notes</button><button class="btn btn-outline btn-sm" data-action="ainote" data-lid="' + lid + '">AI Note</button></div>';
 
-    <!-- FOLLOW-UP STATUS -->
-    ${fu.length>0?`<div class="section-title" style="margin-top:12px">Follow-Up Sequence</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${fu.map(f=>`<span class="badge ${f.status==='done'?'b-green':f.status==='pending'?'b-orange':'b-gray'}">${f.type} D${f.day}</span>`).join('')}</div>`:''}
+  // FOLLOWUPS
+  if (fu.length) {
+    html += '<div class="section-title" style="margin-top:12px">Follow-Up Sequence</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+    fu.forEach(f => { html += '<span class="badge ' + (f.status==='done'?'b-green':f.status==='pending'?'b-orange':'b-gray') + '">' + f.type + ' D' + f.day + '</span>'; });
+    html += '</div>';
+  }
 
-    <div style="font-size:10px;color:#86868b;margin-top:10px">ID: ${l.id} · Added: ${l.created||'N/A'} · Source: ${l.source||'Bot'}</div>
-  </div>`;
+  html += '<div style="font-size:10px;color:#86868b;margin-top:10px">ID: ' + lid + ' · Added: ' + (l.created||'N/A') + '</div>';
+  html += '</div>';
+  return html;
 }
 
 
@@ -1726,6 +1716,28 @@ function addListeners() {
     zone.addEventListener('dragleave', () => zone.style.borderColor='#d1d1d6');
     zone.addEventListener('drop', e => { e.preventDefault(); zone.style.borderColor='#d1d1d6'; toast('Contract uploaded — AI is reading it...','success'); });
   }
+  // Event delegation for data-action buttons in lead detail panel
+  const content = document.getElementById('content');
+  if (content) {
+    content.addEventListener('click', e => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const action = el.dataset.action;
+      const lid = el.dataset.lid;
+      const bid = el.dataset.bid;
+      if (action === 'call') logAction('call', lid);
+      if (action === 'text') logAction('text', lid);
+      if (action === 'email') logAction('email', lid);
+      if (action === 'ai') openAIOutreach(lid);
+      if (action === 'contract') generateContract(lid);
+      if (action === 'match') openSendDeal(null, lid);
+      if (action === 'followup') openFollowUp(lid);
+      if (action === 'status') openUpdateStatus(lid);
+      if (action === 'savenotes') saveLeadNotes(lid);
+      if (action === 'ainote') generateLeadAINote(lid);
+      if (action === 'senddeal') sendDealToBuyer(lid, bid);
+    });
+  }
 }
 
 // Full sync from Railway database — runs on init and every 30s
@@ -1825,10 +1837,7 @@ function renderImport() {
           ['category / type','Pre-FC, REO, FSBO...'],
           ['dom / days_on_market','Days on market'],
           ['owner / owner_name','Owner name'],
-        ].map(([col,desc]) => \`<div style="background:#f5f5f7;border-radius:8px;padding:8px 10px">
-          <div style="font-family:monospace;font-size:10px;color:#1d1d1f;font-weight:600">\${col}</div>
-          <div style="font-size:10px;color:#86868b;margin-top:1px">\${desc}</div>
-        </div>\`).join('')}
+        ].map(([col,desc]) => '<div style="background:#f5f5f7;border-radius:8px;padding:8px 10px"><div style="font-family:monospace;font-size:10px;color:#1d1d1f;font-weight:600">'+col+'</div><div style="font-size:10px;color:#86868b;margin-top:1px">'+desc+'</div></div>').join('')}
       </div>
       <div style="margin-top:10px;font-size:11px;color:#86868b">The system automatically maps common column name variations. Extra columns are preserved in the notes field.</div>
     </div>
@@ -1878,9 +1887,7 @@ function processImportFile(file) {
 }
 
 function parseCSV(text) {
-  const lines = text.trim().split(/
-?
-/);
+  const lines = text.trim().split(/\r?\n/);
   return lines.map(line => {
     const result = [];
     let cell = '', inQuotes = false;
