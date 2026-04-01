@@ -2,29 +2,29 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express     = require('express');
 const cron        = require('node-cron');
-
+ 
 const db      = require('./db');
 const ai      = require('./ai');
 const { generateLeadsPDF, generateSinglePropertyPDF } = require('./pdf');
 const { sendDealToBuyer, sendSellerOutreach, testConnection } = require('./email');
-
+ 
 const TOKEN    = process.env.TELEGRAM_BOT_TOKEN;
 const OWNER_ID = process.env.BOT_OWNER_ID;
 const PORT     = process.env.PORT || 3000;
 const RAILWAY_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
   : null;
-
+ 
 // Use webhook if we have a public URL, otherwise polling
 const USE_WEBHOOK = !!RAILWAY_URL;
-
+ 
 let bot;
 if (USE_WEBHOOK) {
   bot = new TelegramBot(TOKEN, { webHook: { port: PORT } });
 } else {
   bot = new TelegramBot(TOKEN, { polling: true });
 }
-
+ 
 function isOwner(msg) {
   if (!OWNER_ID) return true;
   return String(msg.from.id) === String(OWNER_ID);
@@ -38,41 +38,41 @@ const send = (chatId, text, opts = {}) =>
 const sendDoc = (chatId, buffer, filename, caption = '') =>
   bot.sendDocument(chatId, buffer, { caption }, { filename, contentType: 'application/pdf' });
 function typing(chatId) { bot.sendChatAction(chatId, 'typing').catch(()=>{}); }
-
+ 
 // /start or /help
 bot.onText(/\/(start|help)/, async (msg) => {
   if (!guard(msg)) return;
   send(msg.chat.id, `<b>WholesaleOS Bot</b> — Gabriel's Deal Machine
-
+ 
 <b>FIND LEADS</b>
 /leads Dallas 50 — find 50 leads in Dallas County
 /leads Tarrant 100 Pre-FC — specific category
 /leads Collin 200 — up to 200 leads PDF delivered
-
+ 
 <b>MANAGE LEADS</b>
 /pipeline — view deal pipeline
 /lead [keyword] — view lead details
 /status [lead] [status] — update lead status
-
+ 
 <b>BUYERS</b>
 /buyers — list all buyers
 /match [lead] — match lead to buyers
 /send [lead] [buyer] — send deal to buyer
-
+ 
 <b>EMAIL</b>
 /reach [lead] — send outreach to seller
-
+ 
 <b>CALENDAR</b>
 /calendar — upcoming events
 /remind 2026-04-15 Offer deadline Garland
-
+ 
 <b>SETTINGS</b>
 /stats — dashboard summary
 /mode free — switch to Llama free
 /mode premium — switch to Claude paid
 /test — test all connections`);
 });
-
+ 
 // /stats
 bot.onText(/\/stats/, async (msg) => {
   if (!guard(msg)) return;
@@ -97,7 +97,7 @@ bot.onText(/\/stats/, async (msg) => {
   }
   send(msg.chat.id, text);
 });
-
+ 
 // /mode
 bot.onText(/\/mode (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -107,7 +107,7 @@ bot.onText(/\/mode (.+)/, async (msg, match) => {
   db.setSetting('ai_mode', mode);
   send(msg.chat.id, `Switched to <b>${mode === 'premium' ? 'Claude Premium' : 'Llama 3.3 Free'}</b>`);
 });
-
+ 
 // /test
 bot.onText(/\/test/, async (msg) => {
   if (!guard(msg)) return;
@@ -121,7 +121,7 @@ bot.onText(/\/test/, async (msg) => {
   const emailIcon = emailTest.success ? '✅' : '❌';
   send(msg.chat.id, `<b>Connection Test Results</b>\n\n${aiIcon} AI (${ai.MODE()}): ${aiOk ? 'Connected' : 'Error — check API key'}\n${emailIcon} Gmail: ${emailTest.success ? 'Connected' : emailTest.error}\n✅ Database: ${dbLeads} leads loaded\n✅ Telegram: Connected\n\n${aiOk && emailTest.success ? '🟢 All systems ready!' : '🔴 Some connections need attention.'}`);
 });
-
+ 
 // /pipeline
 bot.onText(/\/pipeline/, async (msg) => {
   if (!guard(msg)) return;
@@ -140,7 +140,7 @@ bot.onText(/\/pipeline/, async (msg) => {
   if (leads.length === 0) text += '<i>No leads yet. Use /leads to find deals.</i>';
   send(msg.chat.id, text);
 });
-
+ 
 // /lead
 bot.onText(/\/lead (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -160,7 +160,7 @@ bot.onText(/\/lead (.+)/, async (msg, match) => {
   text += `\n<i>ID: ${lead.id}</i>`;
   send(msg.chat.id, text);
 });
-
+ 
 // /leads
 bot.onText(/\/leads (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -244,7 +244,7 @@ bot.onText(/\/leads (.+)/, async (msg, match) => {
     send(msg.chat.id, `Error: ${err.message}\n\nTry /test to check connections.`);
   }
 });
-
+ 
 // /clearleads — remove duplicate/fake leads and reset
 bot.onText(/\/clearleads/, async (msg) => {
   if (!guard(msg)) return;
@@ -253,7 +253,7 @@ bot.onText(/\/clearleads/, async (msg) => {
   const remaining = db.getLeads().length;
   send(msg.chat.id, `Cleaned up ${removed} generic/duplicate leads.\n\n${remaining} leads remaining in database.\n\nNow run /leads to get fresh real leads.`);
 });
-
+ 
 // /buyers
 bot.onText(/\/buyers/, async (msg) => {
   if (!guard(msg)) return;
@@ -265,7 +265,7 @@ bot.onText(/\/buyers/, async (msg) => {
   });
   send(msg.chat.id, text);
 });
-
+ 
 // /addbuyer
 bot.onText(/\/addbuyer (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -276,7 +276,7 @@ bot.onText(/\/addbuyer (.+)/, async (msg, match) => {
   const saved = db.addBuyer(buyer);
   send(msg.chat.id, `Buyer added!\n\n<b>${saved.name}</b>\n${saved.contact} | ${saved.phone}`);
 });
-
+ 
 // /match
 bot.onText(/\/match (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -291,7 +291,7 @@ bot.onText(/\/match (.+)/, async (msg, match) => {
   matches.forEach(b => { text += `<b>${b.name}</b>\n${b.contact} — ${b.phone}\n/send ${lead.id.slice(-6)} ${b.name.split(' ')[0]}\n\n`; });
   send(msg.chat.id, text);
 });
-
+ 
 // /send
 bot.onText(/\/send (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -318,7 +318,7 @@ bot.onText(/\/send (.+)/, async (msg, match) => {
     }
   } catch (err) { send(msg.chat.id, `Error: ${err.message}`); }
 });
-
+ 
 // /reach
 bot.onText(/\/reach (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -333,7 +333,7 @@ bot.onText(/\/reach (.+)/, async (msg, match) => {
   if (result.success) { send(msg.chat.id, `Outreach sent to ${lead.email}`); db.updateLead(lead.id, {status:'Contacted'}); }
   else send(msg.chat.id, `Email failed: ${result.error}`);
 });
-
+ 
 // /status
 bot.onText(/\/status (.+?) (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -347,7 +347,7 @@ bot.onText(/\/status (.+?) (.+)/, async (msg, match) => {
   db.updateLead(lead.id, {status: matched});
   send(msg.chat.id, `<b>${lead.address.split(',')[0]}</b> updated to <b>${matched}</b>`);
 });
-
+ 
 // /calendar
 bot.onText(/\/calendar/, async (msg) => {
   if (!guard(msg)) return;
@@ -362,7 +362,7 @@ bot.onText(/\/calendar/, async (msg) => {
   });
   send(msg.chat.id, text);
 });
-
+ 
 // /remind
 bot.onText(/\/remind (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -373,7 +373,7 @@ bot.onText(/\/remind (.+)/, async (msg, match) => {
   const evt   = db.addEvent({date, title, type, time:''});
   send(msg.chat.id, `Event added!\n${evt.date} — ${evt.title}`);
 });
-
+ 
 // /addlead
 bot.onText(/\/addlead (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
@@ -388,7 +388,7 @@ bot.onText(/\/addlead (.+)/, async (msg, match) => {
   let text = `Lead Added!\n\n<b>${saved.address}</b>\n\nARV: <b>$${(analysis.arv||0).toLocaleString()}</b>\nOffer: <b>$${(analysis.offer||0).toLocaleString()}</b>\nFee: <b>$${(analysis.fee_lo||0).toLocaleString()} – $${(analysis.fee_hi||0).toLocaleString()}</b>\nRisk: <b>${analysis.risk||'Medium'}</b>\n\nScript: <i>${analysis.script||'Call seller directly.'}</i>\n\nID: ${saved.id}`;
   send(msg.chat.id, text);
 });
-
+ 
 // Natural language fallback
 bot.on('message', async (msg) => {
   if (!guard(msg)) return;
@@ -402,7 +402,7 @@ bot.on('message', async (msg) => {
   if (text.includes('calendar')) return bot.emit('text', msg, ['/calendar','/calendar']);
   send(msg.chat.id, 'Commands:\n/leads Dallas 50\n/pipeline\n/buyers\n/stats\n/help');
 });
-
+ 
 // Daily morning briefing
 cron.schedule('0 8 * * *', async () => {
   if (!OWNER_ID) return;
@@ -413,17 +413,28 @@ cron.schedule('0 8 * * *', async () => {
   text += '\nType /leads Dallas 50 to find new deals today.';
   send(OWNER_ID, text);
 });
-
+ 
 // Express server — uses server.js which serves dashboard + all API routes
 const app = require('./server');
-
+ 
 if (USE_WEBHOOK) {
   app.post(`/bot${TOKEN}`, (req, res) => { bot.processUpdate(req.body); res.sendStatus(200); });
   setTimeout(() => { bot.setWebHook(`${RAILWAY_URL}/bot${TOKEN}`); }, 2000);
 }
-
-app.listen(PORT, () => console.log(`WholesaleOS Bot started on port ${PORT}`));
-
+ 
+const server = app.listen(PORT, () => console.log(`WholesaleOS Bot started on port ${PORT}`));
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} in use — retrying in 3 seconds...`);
+    setTimeout(() => {
+      server.close();
+      app.listen(PORT, () => console.log(`WholesaleOS Bot started on port ${PORT} (retry)`));
+    }, 3000);
+  } else {
+    console.error('Server error:', err);
+  }
+});
+ 
 console.log('WholesaleOS Telegram Bot is running...');
 console.log(`AI Mode: ${ai.MODE()}`);
 console.log(`Gmail: ${process.env.GMAIL_USER}`);
