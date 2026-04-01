@@ -1790,8 +1790,13 @@ function renderImport() {
     <div id="import-drop-zone" style="border:2px dashed #d1d1d6;border-radius:14px;padding:48px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px;background:#fff" onclick="document.getElementById('import-file-input').click()" ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)">
       <div style="font-size:48px;margin-bottom:12px">📂</div>
       <div style="font-size:15px;font-weight:600;color:#1d1d1f;margin-bottom:6px">Drop your file here or click to browse</div>
-      <div style="font-size:12px;color:#86868b">Supports CSV (.csv) and Excel (.xlsx, .xls) · Up to 10,000 rows</div>
-      <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFileSelected(this)">
+      <div style="font-size:12px;color:#86868b;margin-bottom:8px">Supports CSV · Excel (.xlsx, .xls) · PDF lead lists · Up to 10,000 rows</div>
+      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
+        <span style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📊 CSV</span>
+        <span style="background:#e6f9ed;color:#1b8f3d;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📗 Excel</span>
+        <span style="background:#fdecea;color:#c0392b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📄 PDF</span>
+      </div>
+      <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="importFileSelected(this)">
     </div>
 
     <div id="import-preview" style="display:none">
@@ -1866,24 +1871,117 @@ function importFileSelected(input) {
 
 function processImportFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
-  if (!['csv','xlsx','xls'].includes(ext)) { toast('Please use a CSV or Excel file', 'error'); return; }
-  
+  if (!['csv','xlsx','xls','pdf'].includes(ext)) { toast('Please use CSV, Excel, or PDF', 'error'); return; }
   document.getElementById('import-file-name').textContent = file.name;
-  
+
+  if (ext === 'pdf') {
+    processPDFImport(file);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = function(e) {
     let rows = [];
     if (ext === 'csv') {
       rows = parseCSV(e.target.result);
     } else {
-      toast('Excel detected — converting... (paste as CSV for best results)', '');
+      // Excel: try to parse as CSV (works for simple exports)
       rows = parseCSV(e.target.result);
+      if (rows.length < 2) {
+        toast('Excel file detected. For best results, save as CSV first (File → Save As → CSV).', '');
+        showPDFManualEntry(file.name, 'Excel file detected. Please save as CSV for automatic import, or manually enter the lead data below.');
+        return;
+      }
     }
     if (rows.length < 2) { toast('File appears empty or unreadable', 'error'); return; }
     showImportPreview(file.name, rows);
   };
   if (ext === 'csv') reader.readAsText(file);
   else reader.readAsBinaryString(file);
+}
+
+async function processPDFImport(file) {
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-result').style.display = 'none';
+
+  // Show AI processing state
+  const zone = document.getElementById('import-drop-zone');
+  zone.innerHTML = '<div style="font-size:36px;margin-bottom:8px">🤖</div><div style="font-size:14px;font-weight:600;color:#0071e3;margin-bottom:4px">AI Reading PDF...</div><div style="font-size:12px;color:#86868b">Extracting lead data from your PDF. This takes 20-30 seconds.</div><div style="margin-top:12px;height:4px;background:#e5e5ea;border-radius:2px;overflow:hidden"><div id="pdf-progress" style="height:100%;background:#0071e3;border-radius:2px;width:0%;transition:width 0.5s"></div></div>';
+
+  // Simulate progress
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 15, 85);
+    const bar = document.getElementById('pdf-progress');
+    if (bar) bar.style.width = progress + '%';
+  }, 400);
+
+  try {
+    // Read PDF as base64 and send to AI endpoint
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
+
+      try {
+        const res = await fetch('/api/leads/import-pdf', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ filename: file.name, base64, size: file.size })
+        });
+
+        clearInterval(progressInterval);
+        const bar = document.getElementById('pdf-progress');
+        if (bar) bar.style.width = '100%';
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.leads && data.leads.length > 0) {
+            // Show extracted leads
+            zone.innerHTML = '<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:14px;font-weight:600;color:#34c759">PDF Processed!</div><div style="font-size:12px;color:#86868b;margin-top:4px">Found ' + data.leads.length + ' leads</div>';
+            setTimeout(() => {
+              // Reset zone and show preview
+              resetImportZone();
+              // Create fake CSV rows from extracted leads
+              const headers = ['address','beds','baths','sqft','year','phone','category','list_price','dom','county','arv','offer','fee_lo','fee_hi'];
+              const rows = [headers, ...data.leads.map(l => headers.map(h => l[h]||''))];
+              showImportPreview(file.name + ' (AI extracted)', rows);
+            }, 1000);
+          } else {
+            resetImportZone();
+            showPDFManualEntry(file.name, data.message || 'Could not extract structured data from PDF. Please enter leads manually below.');
+          }
+        } else {
+          resetImportZone();
+          showPDFManualEntry(file.name, 'PDF processing unavailable. Please manually enter lead data or convert to CSV.');
+        }
+      } catch(err) {
+        clearInterval(progressInterval);
+        resetImportZone();
+        showPDFManualEntry(file.name, 'AI PDF extraction failed. Please convert your PDF to CSV or manually enter leads.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } catch(err) {
+    clearInterval(progressInterval);
+    resetImportZone();
+    toast('PDF processing failed. Try converting to CSV.', 'error');
+  }
+}
+
+function resetImportZone() {
+  const zone = document.getElementById('import-drop-zone');
+  zone.innerHTML = '<div style="font-size:48px;margin-bottom:12px">📂</div><div style="font-size:15px;font-weight:600;color:#1d1d1f;margin-bottom:6px">Drop your file here or click to browse</div><div style="font-size:12px;color:#86868b;margin-bottom:8px">Supports CSV · Excel (.xlsx, .xls) · PDF lead lists</div><div style="display:flex;justify-content:center;gap:8px"><span style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📊 CSV</span><span style="background:#e6f9ed;color:#1b8f3d;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📗 Excel</span><span style="background:#fdecea;color:#c0392b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📄 PDF</span></div><input type="file" id="import-file-input" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="importFileSelected(this)">';
+  zone.onclick = () => document.getElementById('import-file-input')?.click();
+}
+
+function showPDFManualEntry(filename, message) {
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-file-name').textContent = filename;
+  document.getElementById('import-row-count').textContent = message;
+  document.getElementById('import-mapping').innerHTML = '<div style="background:#fff3e0;border:1px solid #ff9500;border-radius:8px;padding:10px;font-size:12px;color:#e65100;width:100%">💡 ' + message + '</div>';
+  document.getElementById('import-thead').innerHTML = '';
+  document.getElementById('import-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px"><button class="btn btn-dark" onclick="openAddLead()">+ Add Lead Manually</button></td></tr>';
+  document.getElementById('import-btn').style.display = 'none';
 }
 
 function parseCSV(text) {
@@ -2050,6 +2148,66 @@ async function importConfirm() {
   
   btn.textContent = 'Import Complete ✓';
   toast(`${newLeads.length} leads imported!`, 'success');
+}
+
+
+function processPDFImport(file) {
+  document.getElementById('import-drop-zone').style.display = 'none';
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-file-name').textContent = file.name;
+  document.getElementById('import-row-count').textContent = 'AI is reading your PDF...';
+  document.getElementById('import-mapping').innerHTML = '<span style="font-size:11px;color:#0071e3">🤖 Extracting lead data from PDF...</span>';
+  document.getElementById('import-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#86868b">Processing... 30-60 seconds</td></tr>';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    // Extract text from PDF data URL
+    const base64 = e.target.result.split(',')[1] || e.target.result;
+    let extractedLeads = [];
+
+    try {
+      const res = await fetch('/api/leads/extract-pdf', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ filename: file.name, base64preview: base64.slice(0, 5000) })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        extractedLeads = data.leads || [];
+      }
+    } catch {}
+
+    if (extractedLeads.length === 0) {
+      document.getElementById('import-row-count').textContent = 'Could not auto-extract. Use CSV export instead.';
+      document.getElementById('import-mapping').innerHTML = '<span style="color:#ff3b30;font-size:11px">PDF extraction needs CSV format. Open your PDF, select all text, paste into a .txt file, save as .csv and re-import.</span>';
+      document.getElementById('import-btn').style.display = 'none';
+      return;
+    }
+
+    IMPORT_DATA = {
+      rows: extractedLeads.map(l => [l.address||'',l.category||'',l.list_price||'',String(l.beds||''),String(l.baths||''),l.phone||'']),
+      headers: ['address','category','list_price','beds','baths','phone'],
+      mapping: {address:0,category:1,list_price:2,beds:3,baths:4,phone:5},
+      fileName: file.name, pdfLeads: extractedLeads
+    };
+
+    document.getElementById('import-row-count').textContent = extractedLeads.length + ' leads extracted from PDF';
+    document.getElementById('import-mapping').innerHTML = '<span style="background:#e6f9ed;color:#1b8f3d;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px">✅ AI extracted ' + extractedLeads.length + ' leads from PDF</span>';
+    document.getElementById('import-btn').textContent = 'Import ' + extractedLeads.length + ' Leads →';
+    document.getElementById('import-btn').style.display = 'inline-block';
+
+    const thead = document.getElementById('import-thead');
+    const tbody = document.getElementById('import-tbody');
+    thead.innerHTML = '<tr><th style="padding:8px 10px;font-size:10px;color:#86868b;background:#fafafa">Address</th><th style="padding:8px 10px;font-size:10px;color:#86868b;background:#fafafa">Category</th><th style="padding:8px 10px;font-size:10px;color:#86868b;background:#fafafa">Price</th><th style="padding:8px 10px;font-size:10px;color:#86868b;background:#fafafa">Beds/Baths</th><th style="padding:8px 10px;font-size:10px;color:#86868b;background:#fafafa">Phone</th></tr>';
+    tbody.innerHTML = extractedLeads.slice(0,15).map(l =>
+      '<tr><td style="padding:8px 10px;font-size:11px">' + (l.address||'N/A') +
+      '</td><td style="padding:8px 10px;font-size:11px">' + (l.category||'Imported') +
+      '</td><td style="padding:8px 10px;font-size:11px">' + (l.list_price||'') +
+      '</td><td style="padding:8px 10px;font-size:11px">' + (l.beds||'') + 'BD/' + (l.baths||'') + 'BA' +
+      '</td><td style="padding:8px 10px;font-size:11px">' + (l.phone||'') + '</td></tr>'
+    ).join('') + (extractedLeads.length > 15 ? '<tr><td colspan="5" style="text-align:center;padding:8px;font-size:11px;color:#86868b">...and ' + (extractedLeads.length-15) + ' more</td></tr>' : '');
+  };
+  reader.readAsDataURL(file);
 }
 
 function importReset() {
