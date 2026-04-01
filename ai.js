@@ -36,6 +36,7 @@ async function askClaude(prompt, systemPrompt, maxTokens) {
   return res.content[0].text.trim();
 }
 
+// ── COMPLETE Property Analysis — every field required ────────────────────
 async function analyzeProperty(prop) {
   const county = prop.county || 'Dallas';
   const arvBase = { Dallas:280000, Tarrant:240000, Collin:380000, Denton:360000, 'San Diego':650000, 'Los Angeles':720000, 'LA':720000 };
@@ -61,21 +62,21 @@ MARKET CONTEXT 2026:
 - Garland/Mesquite: $280K-$420K | Fort Worth inner: $220K-$380K
 - San Diego SFR: $600K-$950K | Los Angeles SFR: $650K-$1.1M
 - Repairs: light $25-40/sqft | medium $40-65/sqft | heavy $65-90/sqft
-- MAO formula: ARV x 0.70 minus repairs
+- MAO formula: ARV × 0.70 minus repairs
 - Assignment fee typical range: $10,000-$35,000
 
 REQUIRED JSON (all fields mandatory, no zeros except where genuinely zero):
 {
-  "arv": number,
-  "asking_price": number,
-  "repairs": number,
+  "arv": number (realistic market value after repairs),
+  "asking_price": number (from list_price or estimate),
+  "repairs": number (realistic repair estimate),
   "repair_class": "LIGHT|MEDIUM|HEAVY",
   "repair_items": [{"item":"string","cost":number}],
-  "mao": number,
-  "offer": number,
-  "fee_lo": number,
-  "fee_hi": number,
-  "spread": number,
+  "mao": number (arv * 0.70 - repairs),
+  "offer": number (mao * 0.94),
+  "fee_lo": number (min assignment fee),
+  "fee_hi": number (max assignment fee),
+  "spread": number (arv - offer - repairs),
   "risk": "Low|Medium|High",
   "risk_note": "string",
   "close_time": "14-21 days cash",
@@ -97,6 +98,7 @@ REQUIRED JSON (all fields mandatory, no zeros except where genuinely zero):
     const raw = await ask(prompt, sys, 3000);
     const cleaned = raw.replace(/```json|```/g, '').trim();
     const result = JSON.parse(cleaned);
+    // Ensure no zero values
     if (!result.arv || result.arv < 50000) result.arv = estimateARV(prop);
     if (!result.repairs || result.repairs < 5000) result.repairs = estimateRepairs(prop);
     if (!result.mao || result.mao < 10000) result.mao = Math.round(result.arv * 0.70 - result.repairs);
@@ -104,7 +106,7 @@ REQUIRED JSON (all fields mandatory, no zeros except where genuinely zero):
     if (!result.fee_lo || result.fee_lo < 5000) result.fee_lo = 10000;
     if (!result.fee_hi || result.fee_hi < result.fee_lo) result.fee_hi = result.fee_lo + 15000;
     if (!result.spread) result.spread = result.arv - result.offer - result.repairs;
-    if (!result.why_good_deal) result.why_good_deal = `${prop.category || 'Distressed'} property with strong wholesale spread in ${county} County. Active buyer pool ready to close fast.`;
+    if (!result.why_good_deal) result.why_good_deal = `${prop.category || 'Distressed'} property with ${result.arv > 0 ? Math.round((result.arv - result.offer)/result.arv*100) + '% discount to ARV' : 'strong spread'}. Strong wholesale candidate in active ${county} County market.`;
     return result;
   } catch (e) {
     const arv = estimateARV(prop);
@@ -113,44 +115,50 @@ REQUIRED JSON (all fields mandatory, no zeros except where genuinely zero):
   }
 }
 
+// ── Lead List Generation — high quality with full context ────────────────
 async function generateLeadList(county, state, count, categories) {
   const sys = `You are a real estate data researcher specializing in wholesale investment leads.
 Generate realistic, high-quality wholesale leads for ${county} County, ${state}.
 Each lead must have complete data. Use real neighborhood names and realistic market data.
 Respond ONLY in a valid JSON array. No markdown. No extra text outside the array.`;
 
-  const prompt = `Generate ${Math.min(count, 20)} high-quality wholesale leads for ${county} County, ${state}.
-Focus categories: ${categories.join(', ')}
-
-DISTRESS CATEGORIES:
-- Pre-FC: Owner behind on payments, NOD filed, auction scheduled
-- REO: Already foreclosed, bank wants to liquidate
+  const distressGuide = `
+DISTRESS CATEGORIES TO PRIORITIZE:
+- Pre-FC (Pre-Foreclosure): Owner behind on payments, NOD filed, auction scheduled
+- REO (Bank Owned): Already foreclosed, bank wants to liquidate
 - Long DOM: 90+ days on market, price reductions, motivated seller
-- FSBO: Owner selling direct, flexible on price
+- FSBO: Owner selling direct, no agent, usually flexible on price  
 - Probate: Estate sale, heirs want quick cash
-- Tax Delinquent: Behind on property taxes
+- Tax Delinquent: Behind on property taxes, risk of tax sale
+- Auction: Heading to courthouse or online auction
 
 COUNTY NEIGHBORHOODS:
 Dallas: Oak Cliff, South Dallas, Pleasant Grove, Garland, Mesquite, Duncanville, DeSoto, Lancaster
-Tarrant: Haltom City, Azle, Forest Hill, Everman, Richland Hills, Saginaw
-Collin: McKinney, Allen, Wylie, Sachse, Murphy
-San Diego: National City, Chula Vista, El Cajon, Lemon Grove, La Mesa
-Los Angeles: Compton, Inglewood, South LA, Watts, Hawthorne, Gardena
+Tarrant: Haltom City, Azle, Forest Hill, Everman, Richland Hills, Saginaw, White Settlement
+Collin: McKinney, Allen, Wylie, Sachse, Murphy, Farmersville
+San Diego: National City, Chula Vista, El Cajon, Lemon Grove, La Mesa, Spring Valley
+Los Angeles: Compton, Inglewood, South LA, Watts, Hawthorne, Gardena, Carson`;
+
+  const prompt = `Generate ${Math.min(count, 20)} high-quality wholesale leads for ${county} County, ${state}.
+Focus categories: ${categories.join(', ')}
+${distressGuide}
+
+Each lead MUST include accurate, complete data. No placeholder values.
 
 Return JSON array, each object:
 {
-  "address": "full street address, city, state zip",
+  "address": "full street address, city, state zip — use real ${county} County neighborhoods",
   "type": "SFR",
   "beds": number,
   "baths": number,
   "sqft": number,
   "year": number,
-  "zip": "5-digit zip",
+  "zip": "5-digit zip code for ${county} County",
   "county": "${county}",
   "state": "${state}",
   "category": "Pre-FC|REO|Long DOM|FSBO|Probate|Auction|Tax Delinquent",
   "list_price": "$XXX,XXX",
-  "dom": number,
+  "dom": number (days on market — foreclosures often 30-90 days),
   "seller_type": "Owner|Agent|Bank REO|Probate|Auction|Sheriff",
   "phone": "(area code) XXX-XXXX",
   "status": "Pre-Foreclosure|Active|REO|Auction|Short Sale",
@@ -221,22 +229,22 @@ function fallbackAnalysis(prop, arv, rep) {
   const mao = Math.round(arv * 0.70 - rep);
   const offer = Math.round(mao * 0.94);
   return {
-    arv, asking_price: arv, repairs: rep,
-    repair_class: rep > 60000 ? 'HEAVY' : rep > 35000 ? 'MEDIUM' : 'LIGHT',
+    arv, asking_price: arv, repairs: rep, repair_class: rep > 60000 ? 'HEAVY' : rep > 35000 ? 'MEDIUM' : 'LIGHT',
     repair_items: [{ item: 'Full renovation estimate', cost: rep }],
-    mao, offer, fee_lo: 10000, fee_hi: 25000,
+    mao, offer,
+    fee_lo: 10000, fee_hi: 25000,
     spread: arv - offer - rep,
     risk: 'Medium', risk_note: 'Foundation inspection required — standard DFW clay soil.',
     close_time: '14-21 days cash',
-    why_good_deal: `${prop.category || 'Distressed'} property priced ${Math.round((arv-offer)/arv*100)}% below ARV. Strong wholesale candidate with active buyer pool in ${prop.county || 'Dallas'} County.`,
-    distress_signals: ['Below market price', prop.category || 'Motivated seller', 'Extended days on market'],
+    why_good_deal: `${prop.category || 'Distressed'} property priced below market with ${Math.round((arv - offer)/arv*100)}% discount to ARV. Strong wholesale candidate with active buyer pool in ${prop.county || 'Dallas'} County.`,
+    distress_signals: ['Below market list price', prop.category || 'Motivated seller', 'Extended days on market'],
     motivation: ['Needs fast cash solution', 'Property requires work', 'Timeline pressure'],
     investment_strategy: 'Wholesale Assignment',
     strategy_note: 'Best exit: lock up and assign to active cash buyer. Fast 14-day close.',
     comp_range: `$${Math.round(arv*0.88).toLocaleString()} – $${Math.round(arv*1.12).toLocaleString()}`,
     comp_trend: 'STABLE',
     script: `Hi, this is Gabriel — I'm a local cash buyer and I can close in 14 days with no repairs needed. Is this still available?`,
-    offer_email: `Hi, I'm interested in your property at ${prop.address} and can offer $${offer.toLocaleString()} cash, closing in 14 days with no repairs or agent fees. Would you like to discuss?`,
+    offer_email: `Hi, I'm interested in your property at ${prop.address} and can offer $${offer.toLocaleString()} cash, closing in 14 days with no repairs or agent fees required. Would you like to discuss?`,
     negotiation_text: `Hi, following up on ${prop.address?.split(',')[0]}. My cash offer of $${offer.toLocaleString()} is still available — quick close, no hassle. Can we connect?`,
     arv_note: `Based on comparable sales in ${prop.county || 'Dallas'} County submarket.`,
     profit_note: `End buyer spread: $${(arv - offer - rep).toLocaleString()} after repairs.`

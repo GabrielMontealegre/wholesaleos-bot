@@ -50,7 +50,21 @@ function updateLead(id, updates) {
 }
 
 function leadExists(address) {
-  return getLeads().some(l => l.address?.toLowerCase().trim() === address?.toLowerCase().trim());
+  if (!address) return false;
+  // Normalize: lowercase, remove extra spaces
+  const norm = a => (a||'').toLowerCase().trim().replace(/\s+/g,' ');
+  const newAddr = norm(address);
+  return getLeads().some(l => norm(l.address) === newAddr);
+}
+
+function clearFakeLeads() {
+  // Remove leads with obviously fake/generic addresses
+  const db = readDB();
+  const fakePatterns = [/^\d{3,4}\s+(oak|maple|elm|cedar|palm|pine|main|first|second)\s+(st|ave|blvd|dr)/i];
+  const before = (db.leads||[]).length;
+  db.leads = (db.leads||[]).filter(l => !fakePatterns.some(p => p.test(l.address||'')));
+  if (db.leads.length < before) { writeDB(db); }
+  return before - db.leads.length;
 }
 
 // ── Buyers ─────────────────────────────────────────────
@@ -134,7 +148,7 @@ function setSetting(key, val) {
 
 module.exports = {
   readDB, writeDB,
-  getLeads, addLead, updateLead, leadExists,
+  getLeads, addLead, updateLead, leadExists, clearFakeLeads,
   getBuyers, addBuyer, matchBuyersToLead,
   getAssignments,
   getUpcomingEvents, addEvent,
