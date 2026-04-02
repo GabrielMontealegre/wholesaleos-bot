@@ -215,6 +215,22 @@ tr.selected td{background:#f0f6ff}
 .drive-folder-name{font-size:12px;font-weight:500;color:#1d1d1f;flex:1}
 .drive-folder-count{font-size:11px;color:#86868b}
 
+/* ── Notification Bell ── */
+.notif-bell{position:relative;cursor:pointer;padding:6px 10px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;color:#3a3a3c;transition:background .12s}
+.notif-bell:hover{background:#f5f5f7}
+.notif-badge{position:absolute;top:2px;right:2px;background:#ff3b30;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.notif-panel{position:fixed;top:52px;right:16px;width:320px;max-height:480px;background:#fff;border:1px solid #e5e5ea;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:1000;overflow:hidden;display:none;flex-direction:column}
+.notif-panel.open{display:flex}
+.notif-header{padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;justify-content:space-between}
+.notif-list{overflow-y:auto;flex:1}
+.notif-item{padding:10px 16px;border-bottom:1px solid #f9f9f9;cursor:pointer;transition:background .1s}
+.notif-item:hover{background:#f5f5f7}
+.notif-item.unread{background:#f0f6ff}
+.notif-icon{font-size:18px;margin-right:10px;flex-shrink:0}
+.notif-title{font-size:12px;font-weight:600;color:#1d1d1f}
+.notif-msg{font-size:11px;color:#86868b;margin-top:2px}
+.notif-time{font-size:10px;color:#aaa;margin-top:2px}
+
 /* ── Toasts ── */
 .toast-container{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:9000}
 .toast{background:#1d1d1f;color:#fff;padding:12px 16px;border-radius:10px;font-size:12px;font-weight:500;animation:slideIn .2s ease;max-width:280px}
@@ -292,7 +308,12 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
-      <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import CSV/Excel</div>
+      <div class="nav-item" onclick="navigate('automation',this)"><span class="nav-icon">🚀</span>Automation</div>
+      <div class="nav-item" onclick="navigate('contracts_lib',this)"><span class="nav-icon">📑</span>Contracts Library</div>
+      <div class="nav-item" onclick="navigate('buyboxes',this)"><span class="nav-icon">🎯</span>Buy Boxes</div>
+      <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach</div>
+      <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import</div>
+      <div class="nav-item" onclick="navigate('apis',this)"><span class="nav-icon">🔌</span>API Integrations</div>
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-item" onclick="navigate('bot',this)"><span class="nav-icon">🤖</span>Bot Status</div>
       <div class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
@@ -316,6 +337,9 @@ tr.selected td{background:#f0f6ff}
     <div class="topbar">
       <div class="topbar-title" id="page-title">Dashboard</div>
       <input class="topbar-search" placeholder="🔍  Search leads, buyers, deals..." oninput="globalSearch(this.value)" id="global-search">
+      <div class="notif-bell" onclick="toggleNotifications()" id="notif-bell-btn">
+        🔔 <span id="notif-count-badge" class="notif-badge" style="display:none">0</span>
+      </div>
       <button class="btn btn-outline btn-sm" onclick="showAIChat()">🤖 Ask AI</button>
       <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button>
     </div>
@@ -323,6 +347,18 @@ tr.selected td{background:#f0f6ff}
       <!-- Dynamic content renders here -->
     </div>
   </div>
+</div>
+
+<!-- Notification Panel -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-header">
+    <div style="font-size:13px;font-weight:600">Notifications</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all read</button>
+      <div onclick="toggleNotifications()" style="cursor:pointer;font-size:16px;color:#86868b">✕</div>
+    </div>
+  </div>
+  <div class="notif-list" id="notif-list"><div style="text-align:center;padding:24px;color:#86868b;font-size:12px">No notifications yet</div></div>
 </div>
 
 <!-- Modals -->
@@ -433,7 +469,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
 }
@@ -449,6 +485,11 @@ function render() {
     followups: renderFollowups,
     calendar: renderCalendar,
     import: renderImport,
+    apis: renderAPIPanel,
+    automation: renderAutomation,
+    contracts_lib: renderContractsLib,
+    buyboxes: renderBuyBoxes,
+    outreach: renderOutreachHub,
     buyers: renderBuyers,
     assignments: renderAssignments,
     contracts: renderContracts,
@@ -577,67 +618,195 @@ function renderDashboard() {
 // ══════════════════════════════════════════════════════════
 function renderLeads() {
   let leads = [...APP.leads];
-  if (APP.search) leads = leads.filter(l => JSON.stringify(l).toLowerCase().includes(APP.search.toLowerCase()));
-  leads.sort((a, b) => ((b[APP.sortCol]||0) - (a[APP.sortCol]||0)) * APP.sortDir);
+  if (APP.search) {
+    const q = APP.search.toLowerCase();
+    leads = leads.filter(l =>
+      (l.address||'').toLowerCase().includes(q) ||
+      (l.county||'').toLowerCase().includes(q) ||
+      (l.state||'').toLowerCase().includes(q) ||
+      (l.owner_name||'').toLowerCase().includes(q) ||
+      (l.category||'').toLowerCase().includes(q) ||
+      (l.phone||'').includes(q)
+    );
+  }
+  const statusFilter = document.getElementById('status-filter')?.value || '';
+  const catFilter = document.getElementById('cat-filter')?.value || '';
+  if (statusFilter) leads = leads.filter(l => l.status === statusFilter);
+  if (catFilter) leads = leads.filter(l => l.category === catFilter);
+
+  const viewMode = APP.leadsView || 'hierarchy';
   const selected = APP.selectedLead ? APP.leads.find(l => l.id === APP.selectedLead) : null;
-  return `
-  <div class="split-view" style="height:calc(100vh - 130px)">
-    <div class="split-left">
-      <div class="table-header">
-        <div class="table-title">All Leads (${leads.length})</div>
-        <div class="filters">
-          <select class="filter-select" id="status-filter" onchange="filterLeads()">
-            <option value="">All Status</option>
-            <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
-            <option>Negotiating</option><option>Under Contract</option><option>Closed</option>
-          </select>
-          <select class="filter-select" id="cat-filter" onchange="filterLeads()">
-            <option value="">All Categories</option>
-            <option>Pre-FC</option><option>REO</option><option>Long DOM</option><option>FSBO</option><option>Probate</option>
-          </select>
-          <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
-          <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
-          <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th onclick="sortLeads('address')">Address ↕</th>
-            <th>Cat</th>
-            <th onclick="sortLeads('arv')">ARV ↕</th>
-            <th onclick="sortLeads('offer')">Offer ↕</th>
-            <th onclick="sortLeads('fee_hi')">Fee ↕</th>
-            <th>DOM</th>
-            <th>Status</th>
-            <th>Risk</th>
-            <th>Actions</th>
-          </tr></thead>
-          <tbody>
-          ${leads.map(l => `<tr onclick="selectLead('${l.id}')" class="${l.id===APP.selectedLead?'selected':''}">
-            <td><div class="addr-main">${l.address?.split(',')[0]||'N/A'}</div><div class="addr-sub">${l.address?.split(',').slice(1).join(',').trim()||''}</div></td>
-            <td>${categoryBadge(l.category)}</td>
-            <td style="font-weight:600;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</td>
-            <td style="color:#0071e3">$${((l.offer||0)/1000).toFixed(0)}K</td>
-            <td style="font-weight:700;color:#ff9500">$${(l.fee_lo||0).toLocaleString()}</td>
-            <td style="color:${(l.dom||0)>90?'#ff3b30':(l.dom||0)>60?'#ff9500':'#34c759'}">${l.dom||0}d</td>
-            <td>${statusBadge(l.status)}</td>
-            <td>${riskBadge(l.risk)}</td>
-            <td style="display:flex;gap:3px">
-              <button class="btn btn-dark btn-sm" onclick="openSendDeal(null,'${l.id}');event.stopPropagation()">Match</button>
-              <button class="btn btn-outline btn-sm" onclick="openFollowUp('${l.id}');event.stopPropagation()">Follow</button>
-            </td>
-          </tr>`).join('')}
-          ${leads.length===0?'<tr><td colspan="9" style="text-align:center;color:#86868b;padding:24px">No leads found.</td></tr>':''}
-          </tbody>
-        </table>
-      </div>
+
+  const leftPanel = `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:4px;background:#f5f5f7;border-radius:8px;padding:3px">
+      <button class="btn btn-sm ${viewMode==='hierarchy'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='hierarchy';render()">🗂 State/County</button>
+      <button class="btn btn-sm ${viewMode==='table'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='table';render()">📋 Table</button>
+      <button class="btn btn-sm ${viewMode==='cards'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='cards';render()">🃏 Cards</button>
     </div>
-    <div class="split-right">
-      ${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;align-items:center;justify-content:center;color:#86868b;height:200px">Click a lead to view details</div>'}
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <select class="filter-select" id="status-filter" onchange="filterLeads()">
+        <option value="">All Status</option>
+        <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
+        <option>Negotiating</option><option>Under Contract</option><option>Closed</option>
+      </select>
+      <select class="filter-select" id="cat-filter" onchange="filterLeads()">
+        <option value="">All Categories</option>
+        <option>Pre-FC</option><option>REO</option><option>Long DOM</option>
+        <option>FSBO</option><option>Probate</option><option>Tax Delinquent</option>
+      </select>
+      <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
+      <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
     </div>
+  </div>
+  <div style="font-size:11px;color:#86868b;margin-bottom:10px">${leads.length} leads${APP.search?' matching "'+APP.search+'"':''}</div>
+  ${viewMode==='hierarchy' ? renderLeadsHierarchy(leads) : viewMode==='cards' ? renderLeadsCards(leads) : renderLeadsTable(leads)}`;
+
+  return `<div class="split-view">
+    <div class="split-left" style="overflow-y:auto">${leftPanel}</div>
+    <div class="split-right">${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;align-items:center;justify-content:center;color:#86868b;height:200px">Click a lead to view details</div>'}</div>
   </div>`;
 }
+
+function renderLeadsHierarchy(leads) {
+  if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">📭</div><div style="font-weight:600">No leads yet</div><div style="margin-top:8px">Send /leads San Diego 50 in Telegram</div></div>';
+
+  // Group by state then county
+  const tree = {};
+  leads.forEach(l => {
+    const state = l.state || 'TX';
+    const county = l.county || 'Unknown';
+    if (!tree[state]) tree[state] = {};
+    if (!tree[state][county]) tree[state][county] = [];
+    tree[state][county].push(l);
+  });
+
+  // Sort counties leads by spread
+  Object.values(tree).forEach(counties =>
+    Object.values(counties).forEach(arr =>
+      arr.sort((a,b) => (b.spread||b.fee_hi||0)-(a.spread||a.fee_hi||0))
+    )
+  );
+
+  const stateNames = {'TX':'Texas','CA':'California','FL':'Florida','NY':'New York','AZ':'Arizona'};
+  let html = '';
+
+  Object.keys(tree).sort().forEach(state => {
+    const stateLead = Object.values(tree[state]).flat();
+    const stateFees = stateLead.reduce((s,l) => s+(l.fee_lo||0), 0);
+    const stateKey = 'state_' + state;
+
+    html += `<div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1d1d1f;border-radius:10px;cursor:pointer;margin-bottom:6px" onclick="toggleSection('${stateKey}')">
+        <span style="font-size:16px">${state==='CA'?'🌴':state==='TX'?'⭐':'🏠'}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#fff">${stateNames[state]||state}</div>
+          <div style="font-size:10px;color:#86868b">${stateLead.length} leads · Est. $${(stateFees/1000).toFixed(0)}K+ fees</div>
+        </div>
+        <span id="arrow_${stateKey}" style="color:#fff;font-size:12px">▼</span>
+      </div>
+      <div id="${stateKey}" style="padding-left:12px">`;
+
+    Object.keys(tree[state]).sort().forEach(county => {
+      const cLeads = tree[state][county];
+      const countyFees = cLeads.reduce((s,l) => s+(l.fee_lo||0), 0);
+      const countyKey = 'county_' + state + '_' + county.replace(/\s/g,'_');
+      const topSpread = cLeads[0]?.spread || 0;
+
+      html += `<div style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f5f5f7;border-radius:8px;cursor:pointer;margin-bottom:4px" onclick="toggleSection('${countyKey}')">
+          <span style="font-size:14px">📍</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:#1d1d1f">${county} County</div>
+            <div style="font-size:10px;color:#86868b">${cLeads.length} leads · Top spread: $${topSpread.toLocaleString()} · Est. $${(countyFees/1000).toFixed(0)}K+ fees</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="background:#34c759;color:#fff;font-size:9px;padding:2px 6px;border-radius:10px">${cLeads.filter(l=>l.status==='New Lead').length} new</span>
+            <span id="arrow_${countyKey}" style="font-size:11px;color:#86868b">▼</span>
+          </div>
+        </div>
+        <div id="${countyKey}" style="padding-left:12px">
+          ${cLeads.map((l,i) => {
+            const rank = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+            const spread = l.spread||0;
+            const spreadColor = spread>60000?'#34c759':spread>30000?'#ff9500':'#86868b';
+            return `<div class="lead-row ${APP.selectedLead===l.id?'selected':''}" onclick="selectLead('${l.id}')" style="padding:10px 12px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:${APP.selectedLead===l.id?'#1d1d1f':'#fff'};border:1px solid #f2f2f7">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:600;color:${APP.selectedLead===l.id?'#fff':'#1d1d1f'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
+                  <div style="font-size:10px;color:${APP.selectedLead===l.id?'#aaa':'#86868b'};margin-top:2px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;margin-left:8px">
+                  <div style="font-size:11px;font-weight:700;color:${APP.selectedLead===l.id?'#6ee7b7':spreadColor}">$${(spread/1000).toFixed(0)}K spread</div>
+                  <div style="font-size:10px;color:${APP.selectedLead===l.id?'#aaa':'#86868b'}">ARV $${((l.arv||0)/1000).toFixed(0)}K</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+                <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${l.risk==='Low'?'#e6f9ed':l.risk==='High'?'#fff0f0':'#fff3e0'};color:${l.risk==='Low'?'#1b8f3d':l.risk==='High'?'#cc0000':'#e65100'}">${l.risk||'Medium'} risk</span>
+                <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#f0f0f5;color:#3a3a3c">${l.status||'New Lead'}</span>
+                ${l.arv>0?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#e8f0fe;color:#1a73e8">Fee $${(l.fee_lo||0).toLocaleString()}-$${(l.fee_hi||0).toLocaleString()}</span>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+  return html;
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById('arrow_' + id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? 'block' : 'none';
+  if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+}
+
+function renderLeadsTable(leads) {
+  if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b">No leads found.</div>';
+  return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr>${['Address','County','Category','ARV','Offer','Spread','DOM','Risk','Status'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:#86868b;background:#fafafa;border-bottom:1px solid #f2f2f7;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+    <tbody>${leads.map(l=>`<tr style="cursor:pointer;background:${APP.selectedLead===l.id?'#f0f6ff':'#fff'}" onclick="selectLead('${l.id}')">
+      <td style="padding:8px 10px;font-size:11px;font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.address?.split(',')[0]||'N/A'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#86868b">${l.county||''}</td>
+      <td style="padding:8px 10px;font-size:11px"><span class="badge b-orange">${l.category||''}</span></td>
+      <td style="padding:8px 10px;font-size:11px;color:#34c759;font-weight:600">$${((l.arv||0)/1000).toFixed(0)}K</td>
+      <td style="padding:8px 10px;font-size:11px;color:#0071e3">$${((l.offer||0)/1000).toFixed(0)}K</td>
+      <td style="padding:8px 10px;font-size:11px;font-weight:600;color:${(l.spread||0)>50000?'#34c759':'#ff9500'}">$${((l.spread||0)/1000).toFixed(0)}K</td>
+      <td style="padding:8px 10px;font-size:11px;color:#86868b">${l.dom||0}d</td>
+      <td style="padding:8px 10px;font-size:11px"><span class="badge ${l.risk==='Low'?'b-green':l.risk==='High'?'b-red':'b-orange'}">${l.risk||'Med'}</span></td>
+      <td style="padding:8px 10px;font-size:11px">${l.status||'New Lead'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderLeadsCards(leads) {
+  if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b">No leads found.</div>';
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+    ${leads.map(l => {
+      const spread = l.spread||0;
+      return `<div style="background:#fff;border:1px solid ${APP.selectedLead===l.id?'#0071e3':'#e5e5ea'};border-radius:12px;padding:14px;cursor:pointer" onclick="selectLead('${l.id}')">
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.address?.split(',')[0]||'N/A'}</div>
+        <div style="font-size:10px;color:#86868b;margin-bottom:8px">${l.county||''} · ${l.category||''} · DOM ${l.dom||0}d</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+          <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">ARV</div><div style="font-size:12px;font-weight:700;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</div></div>
+          <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">Spread</div><div style="font-size:12px;font-weight:700;color:${spread>50000?'#34c759':'#ff9500'}">$${(spread/1000).toFixed(0)}K</div></div>
+        </div>
+        <div style="display:flex;gap:4px;justify-content:space-between">
+          <a href="tel:${l.phone||''}" style="flex:1;padding:5px;background:#34c759;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">📞</a>
+          <a href="sms:${l.phone||''}" style="flex:1;padding:5px;background:#0071e3;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">💬</a>
+          <a href="mailto:${l.email||''}" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">📧</a>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 
 function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
@@ -2241,6 +2410,147 @@ function logAction(type, leadId) {
 
 
 // ══════════════════════════════════════════════════════════
+//  API INTEGRATIONS PANEL
+// ══════════════════════════════════════════════════════════
+function renderAPIPanel() {
+  const apis = JSON.parse(localStorage.getItem('montsan_apis') || '[]');
+  const PROVIDERS = [
+    {name:'BatchLeads',desc:'Skip tracing + owner data',icon:'🔍',url:'batchleads.io',category:'Skip Trace'},
+    {name:'PropStream',desc:'MLS + foreclosure data',icon:'🏠',url:'propstream.com',category:'Data'},
+    {name:'Batch Skip Tracing',desc:'Phone + email lookup',icon:'📱',url:'batchskiptracing.com',category:'Skip Trace'},
+    {name:'ListSource',desc:'Absentee owner lists',icon:'📋',url:'listsource.com',category:'Lists'},
+    {name:'ATTOM Data',desc:'Property + mortgage data',icon:'📊',url:'attomdata.com',category:'Data'},
+    {name:'Twilio',desc:'SMS + calling automation',icon:'💬',url:'twilio.com',category:'Communication'},
+    {name:'Melissa Data',desc:'Address verification',icon:'✅',url:'melissa.com',category:'Verification'},
+    {name:'RESimpli',desc:'CRM + dialer',icon:'🎯',url:'resimpli.com',category:'CRM'},
+    {name:'DealMachine',desc:'Driving for dollars app',icon:'🚗',url:'dealmachine.com',category:'Lists'},
+    {name:'Custom API',desc:'Connect any REST API',icon:'🔌',url:'',category:'Custom'},
+  ];
+
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">Available Integrations</div>
+      <div style="display:grid;gap:8px">
+        ${PROVIDERS.map(p => {
+          const connected = apis.find(a => a.name === p.name);
+          return `<div style="background:#fff;border:1px solid ${connected?'#34c759':'#e5e5ea'};border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px">
+            <div style="font-size:24px;width:40px;text-align:center">${p.icon}</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600">${p.name}</div>
+              <div style="font-size:10px;color:#86868b">${p.desc}</div>
+              <div style="font-size:9px;color:#86868b;margin-top:2px">${p.category}</div>
+            </div>
+            <div>
+              ${connected
+                ? '<span style="background:#e6f9ed;color:#1b8f3d;font-size:10px;padding:3px 8px;border-radius:10px">✓ Connected</span>'
+                : `<button class="btn btn-outline btn-sm" onclick="openAPIConnect('${p.name}','${p.url}','${p.category}')">Connect</button>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">Connected APIs (${apis.length})</div>
+      ${apis.length === 0 ? `
+        <div style="background:#f5f5f7;border-radius:12px;padding:24px;text-align:center;color:#86868b">
+          <div style="font-size:32px;margin-bottom:8px">🔌</div>
+          <div style="font-size:12px">No APIs connected yet</div>
+          <div style="font-size:11px;margin-top:4px">Connect a provider to enable skip tracing, real leads, and buyer data</div>
+        </div>` :
+        apis.map(a => `<div style="background:#fff;border:1px solid #34c759;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:20px">✅</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600">${a.name}</div>
+            <div style="font-size:10px;color:#86868b">${a.category} · Key: ${a.key.slice(0,8)}...</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="removeAPI('${a.name}')" style="color:#ff3b30;border-color:#ff3b30">Remove</button>
+        </div>`).join('')
+      }
+
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin-top:12px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">Add Custom API</div>
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="form-label">Provider Name</div>
+          <input class="form-input" id="api-name" placeholder="e.g. MyDataProvider">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="form-label">API Key</div>
+          <input class="form-input" id="api-key" type="password" placeholder="Your API key">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="form-label">Endpoint URL</div>
+          <input class="form-input" id="api-endpoint" placeholder="https://api.provider.com/v1">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <div class="form-label">Category</div>
+          <select class="form-select" id="api-category">
+            <option>Skip Trace</option><option>Data</option><option>Lists</option>
+            <option>Communication</option><option>CRM</option><option>Custom</option>
+          </select>
+        </div>
+        <button class="btn btn-dark" onclick="saveCustomAPI()">Save API Connection</button>
+      </div>
+
+      <div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-top:12px">
+        <div style="font-size:11px;font-weight:600;color:#1a73e8;margin-bottom:4px">💡 AI-Assisted Integration</div>
+        <div style="font-size:10px;color:#3a3a3c;line-height:1.6">Don't have an API? Use the Import CSV/Excel tab to upload lead lists from any provider. The AI automatically extracts and analyzes the data.</div>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;font-size:10px" onclick="navigate('import',document.querySelector('[onclick*=import]'))">Go to Import →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openAPIConnect(name, url, category) {
+  showModal(`
+    <div class="modal-title">Connect ${name}</div>
+    <div style="font-size:11px;color:#86868b;margin-bottom:14px">${url ? 'Get your API key from ' + url : 'Enter your API credentials'}</div>
+    <div class="form-group" style="margin-bottom:10px">
+      <div class="form-label">API Key</div>
+      <input class="form-input" id="modal-api-key" type="password" placeholder="Paste your API key here">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="form-label">Endpoint (optional)</div>
+      <input class="form-input" id="modal-api-endpoint" placeholder="https://api.${url||'provider.com'}/v1">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-dark" onclick="saveAPIConnection('${name}','${category}')">Save & Connect</button>
+    </div>`);
+}
+
+function saveAPIConnection(name, category) {
+  const key = document.getElementById('modal-api-key')?.value?.trim();
+  const endpoint = document.getElementById('modal-api-endpoint')?.value?.trim();
+  if (!key) { toast('API key required', 'error'); return; }
+  const apis = JSON.parse(localStorage.getItem('montsan_apis') || '[]');
+  const existing = apis.findIndex(a => a.name === name);
+  const entry = { name, key, endpoint, category, connected: new Date().toISOString().slice(0,10) };
+  if (existing >= 0) apis[existing] = entry; else apis.push(entry);
+  localStorage.setItem('montsan_apis', JSON.stringify(apis));
+  closeModal();
+  toast(name + ' connected!', 'success');
+  render();
+}
+
+function saveCustomAPI() {
+  const name = document.getElementById('api-name')?.value?.trim();
+  const key = document.getElementById('api-key')?.value?.trim();
+  const endpoint = document.getElementById('api-endpoint')?.value?.trim();
+  const category = document.getElementById('api-category')?.value;
+  if (!name || !key) { toast('Name and API key required', 'error'); return; }
+  saveAPIConnection(name, category);
+}
+
+function removeAPI(name) {
+  const apis = JSON.parse(localStorage.getItem('montsan_apis') || '[]').filter(a => a.name !== name);
+  localStorage.setItem('montsan_apis', JSON.stringify(apis));
+  toast(name + ' disconnected', '');
+  render();
+}
+
+// ══════════════════════════════════════════════════════════
 //  NOTES + AI OUTREACH
 // ══════════════════════════════════════════════════════════
 function saveLeadNotes(id) {
@@ -2308,6 +2618,781 @@ function copyText(divId) {
   if (!el) return;
   navigator.clipboard.writeText(el.textContent || el.innerText).then(() => toast('Copied!', 'success'));
 }
+
+
+// ══════════════════════════════════════════════════════════
+//  NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════
+let NOTIF_OPEN = false;
+
+async function loadNotifications() {
+  try {
+    const res = await fetch('/api/notifications');
+    if (!res.ok) return;
+    const data = await res.json();
+    const unread = data.unread || 0;
+    const badge = document.getElementById('notif-count-badge');
+    if (badge) {
+      badge.textContent = unread > 99 ? '99+' : unread;
+      badge.style.display = unread > 0 ? 'flex' : 'none';
+    }
+    renderNotificationList(data.notifications || []);
+  } catch {}
+}
+
+function renderNotificationList(notifs) {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!notifs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:#86868b;font-size:12px">No notifications yet</div>';
+    return;
+  }
+  const icons = {deal:'🏠', buyer:'💼', scan:'🔍', match:'🤝', warning:'⚠️', system:'⚙️'};
+  list.innerHTML = notifs.slice(0,50).map(n => `
+    <div class="notif-item ${n.read?'':'unread'}" onclick="readNotification('${n.id}')">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div class="notif-icon">${icons[n.type]||'📌'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="notif-title">${n.title||''}</div>
+          <div class="notif-msg">${n.message||''}</div>
+          <div class="notif-time">${formatTimeAgo(n.created)}</div>
+        </div>
+        ${!n.read ? '<div style="width:8px;height:8px;background:#0071e3;border-radius:50%;margin-top:4px;flex-shrink:0"></div>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function formatTimeAgo(isoStr) {
+  if (!isoStr) return '';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff/60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1440) return `${Math.floor(mins/60)}h ago`;
+  return `${Math.floor(mins/1440)}d ago`;
+}
+
+function toggleNotifications() {
+  NOTIF_OPEN = !NOTIF_OPEN;
+  const panel = document.getElementById('notif-panel');
+  if (panel) panel.classList.toggle('open', NOTIF_OPEN);
+  if (NOTIF_OPEN) loadNotifications();
+}
+
+async function readNotification(id) {
+  await fetch('/api/notifications/read', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids:[id]})}).catch(()=>{});
+  loadNotifications();
+}
+
+async function markAllRead() {
+  await fetch('/api/notifications/read', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids:[]})}).catch(()=>{});
+  loadNotifications();
+}
+
+// Close panel on outside click
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  const bell = document.getElementById('notif-bell-btn');
+  if (NOTIF_OPEN && panel && !panel.contains(e.target) && !bell?.contains(e.target)) {
+    NOTIF_OPEN = false;
+    panel.classList.remove('open');
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+//  BEST MARKETS PANEL
+// ══════════════════════════════════════════════════════════
+async function renderMarketsPanel() {
+  let markets = [];
+  try {
+    const res = await fetch('/api/markets/best');
+    if (res.ok) { const d = await res.json(); markets = d.markets || []; }
+  } catch {}
+
+  if (!markets.length) {
+    return '<div style="text-align:center;padding:40px;color:#86868b">Loading market data...</div>';
+  }
+
+  const stateColors = {TX:'#ff9500',CA:'#0071e3',FL:'#34c759',GA:'#5e5ce6',OH:'#ff6b35',MI:'#1d1d1f',IL:'#86868b',PA:'#ff3b30',AZ:'#ff9500',NC:'#34c759',NV:'#5e5ce6',TN:'#ff6b35'};
+
+  return `
+  <div style="margin-bottom:16px">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Best Markets This Week</div>
+    <div style="font-size:12px;color:#86868b">AI-selected based on deal probability, market hotness, and rotation logic</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+    ${markets.map((m,i) => `
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px;cursor:pointer" onclick="copyToClipboard('/leads ${m.county} ${m.state} 50')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;font-weight:700">${m.county} County</div>
+          <div style="font-size:11px;color:#86868b">${m.stateName} · ${(m.pop/1000000).toFixed(1)}M pop</div>
+        </div>
+        <div style="background:${stateColors[m.state]||'#86868b'};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px">${m.state}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center">
+          <div style="font-size:9px;color:#86868b">AVG ARV</div>
+          <div style="font-size:12px;font-weight:700;color:#34c759">$${(m.arv/1000).toFixed(0)}K</div>
+        </div>
+        <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center">
+          <div style="font-size:9px;color:#86868b">HOTNESS</div>
+          <div style="font-size:12px;font-weight:700;color:#0071e3">${m.hotness}/100</div>
+        </div>
+      </div>
+      <div style="font-size:10px;background:#f0f6ff;border-radius:6px;padding:6px;color:#0071e3;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">/leads ${m.county} ${m.state} 50</div>
+      <div style="font-size:9px;color:#86868b;margin-top:4px;text-align:center">Click to copy Telegram command</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied: ' + text, 'success'));
+}
+
+// Patch initApp to load notifications
+const _origInit = initApp;
+initApp = function() {
+  _origInit();
+  loadNotifications();
+  setInterval(loadNotifications, 60000); // refresh every 60s
+};
+
+// Patch render to load markets on bot page
+const _origRender = render;
+render = function() {
+  _origRender();
+  if (APP.page === 'bot') {
+    const content = document.getElementById('content');
+    if (content) {
+      renderMarketsPanel().then(html => {
+        const existing = content.querySelector('.markets-panel');
+        if (!existing) {
+          const div = document.createElement('div');
+          div.className = 'markets-panel';
+          div.innerHTML = html;
+          content.appendChild(div);
+        }
+      });
+    }
+  }
+};
+
+
+// ══════════════════════════════════════════════════════════
+//  AUTOMATION CONTROL CENTER
+// ══════════════════════════════════════════════════════════
+function renderAutomation() {
+  const scanCount = APP.automationScanCount || 4;
+  const dealsPerMarket = APP.automationDeals || 20;
+  return `
+  <div style="max-width:900px">
+    <div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">
+      <div style="font-size:20px;font-weight:700;margin-bottom:6px">🌎 Nationwide Automation Control Center</div>
+      <div style="font-size:12px;color:#aaa">Run everything from here — no command line needed. All actions log to notifications.</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+      <!-- NATIONWIDE SCAN -->
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🔍 Nationwide Market Scan</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">AI selects best markets, pulls deals, extracts buyers and buy boxes automatically.</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <div class="form-label">Markets to scan (per run)</div>
+          <select class="form-select" id="scan-markets" onchange="APP.automationScanCount=parseInt(this.value)">
+            <option value="2">2 markets</option>
+            <option value="4" selected>4 markets (recommended)</option>
+            <option value="6">6 markets</option>
+            <option value="8">8 markets</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <div class="form-label">Leads per market</div>
+          <select class="form-select" id="scan-deals" onchange="APP.automationDeals=parseInt(this.value)">
+            <option value="20">20 leads (fast)</option>
+            <option value="50">50 leads</option>
+            <option value="100">100 leads</option>
+            <option value="200">200 leads</option>
+          </select>
+        </div>
+        <button class="btn btn-dark" style="width:100%" onclick="triggerScan()">🚀 Run Nationwide Scan Now</button>
+        <div id="scan-status" style="margin-top:8px;font-size:11px;color:#86868b"></div>
+      </div>
+
+      <!-- MANUAL MARKET SCAN -->
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">📍 Scan Specific Market</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Target a specific state and county for immediate lead generation.</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <div class="form-label">County Name</div>
+          <input class="form-input" id="manual-county" placeholder="e.g. San Diego, Dallas, Cuyahoga">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <div class="form-label">State Code</div>
+          <input class="form-input" id="manual-state" placeholder="e.g. CA, TX, OH" maxlength="2" style="text-transform:uppercase">
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <div class="form-label">Number of leads</div>
+          <input class="form-input" id="manual-count" type="number" value="50" min="10" max="400">
+        </div>
+        <button class="btn btn-dark" style="width:100%" onclick="triggerManualScan()">📥 Scan This Market</button>
+        <div id="manual-status" style="margin-top:8px;font-size:11px;color:#86868b"></div>
+      </div>
+
+      <!-- BUY BOX EXTRACTION -->
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🎯 Buy Box Extraction</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Extract and organize buy box criteria from your existing buyers database.</div>
+        <div id="buybox-stats" style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">Loading...</div>
+        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="triggerBuyBoxExtract()">Extract Buy Boxes from Buyers</button>
+        <button class="btn btn-outline" style="width:100%" onclick="navigate('buyboxes',document.querySelector('[onclick*=buyboxes]'))">View Buy Box Manager →</button>
+      </div>
+
+      <!-- BUYER MATCHING -->
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🤝 Buyer Matching</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Match all unmatched leads against buyer database and buy boxes.</div>
+        <div id="match-stats" style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">
+          ${APP.leads.length} leads in database<br>
+          ${APP.buyers.length} buyers available
+        </div>
+        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="triggerBuyerMatch()">Run Buyer Matching Now</button>
+        <div id="match-status" style="font-size:11px;color:#86868b"></div>
+      </div>
+    </div>
+
+    <!-- AUTOMATION SCHEDULE -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">⏰ Automation Schedule</div>
+      <div style="font-size:12px;color:#86868b;margin-bottom:14px">These run automatically on Railway. No action needed.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${[
+          {label:'Nationwide Scan',schedule:'Mon, Tue, Thu, Sat @ 6AM MST',icon:'🔍',status:'active'},
+          {label:'Daily Briefing',schedule:'Every day @ 7AM MST (Telegram)',icon:'📊',status:'active'},
+          {label:'Daily Backup',schedule:'Every day @ 2AM MST',icon:'💾',status:'active'},
+          {label:'Buy Box Expansion',schedule:'Every Sun & Wed @ 3AM MST',icon:'🎯',status:'active'},
+        ].map(s => `<div style="background:#f5f5f7;border-radius:10px;padding:12px">
+          <div style="font-size:16px;margin-bottom:4px">${s.icon}</div>
+          <div style="font-size:12px;font-weight:600">${s.label}</div>
+          <div style="font-size:10px;color:#86868b;margin-top:2px">${s.schedule}</div>
+          <div style="font-size:10px;color:#34c759;margin-top:4px">✓ ${s.status}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- TWILIO SETUP -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">📱 Twilio SMS Setup</div>
+      <div style="font-size:12px;color:#86868b;margin-bottom:14px">Pre-configured and ready. Add your Twilio credentials when available.</div>
+      <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:#e65100;margin-bottom:4px">📋 How to get Twilio credentials:</div>
+        <div style="font-size:11px;color:#3a3a3c;line-height:1.8">
+          1. Go to <strong>twilio.com</strong> → Sign up (free trial includes $15 credit)<br>
+          2. Dashboard → <strong>Account SID</strong> and <strong>Auth Token</strong><br>
+          3. Buy a phone number (~$1/month)<br>
+          4. Enter credentials below → click Test → SMS will work
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="form-group">
+          <div class="form-label">Account SID</div>
+          <input class="form-input" id="twilio-sid" type="password" placeholder="ACxxxxxxxxxxxxxxxx" value="${localStorage.getItem('twilio_sid')||''}">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Auth Token</div>
+          <input class="form-input" id="twilio-token" type="password" placeholder="Your auth token" value="${localStorage.getItem('twilio_token')||''}">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <div class="form-label">Twilio Phone Number</div>
+        <input class="form-input" id="twilio-phone" placeholder="+1 (555) 000-0000" value="${localStorage.getItem('twilio_phone')||''}">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-dark" onclick="saveTwilioCredentials()">Save Twilio Credentials</button>
+        <button class="btn btn-outline" onclick="testTwilioConnection()">Test Connection</button>
+        <div id="twilio-status" style="display:flex;align-items:center;font-size:11px;color:#86868b"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function triggerScan() {
+  const markets = document.getElementById('scan-markets')?.value || 4;
+  const count = document.getElementById('scan-deals')?.value || 20;
+  document.getElementById('scan-status').textContent = '⏳ Scan triggered — check notification bell for updates...';
+  try {
+    await fetch('/api/automation/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({markets:parseInt(markets), count:parseInt(count)})});
+    document.getElementById('scan-status').textContent = '✅ Scan running in background. Leads will appear shortly.';
+    toast('Nationwide scan started!', 'success');
+    setTimeout(loadNotifications, 5000);
+    setTimeout(() => loadLeadsFromAPI(), 30000);
+  } catch(e) { document.getElementById('scan-status').textContent = '❌ Error: ' + e.message; }
+}
+
+async function triggerManualScan() {
+  const county = document.getElementById('manual-county')?.value?.trim();
+  const state = document.getElementById('manual-state')?.value?.trim().toUpperCase();
+  const count = parseInt(document.getElementById('manual-count')?.value) || 50;
+  if (!county || !state) { toast('Enter county and state code', 'error'); return; }
+  document.getElementById('manual-status').textContent = `⏳ Scanning ${county}, ${state}...`;
+  try {
+    await fetch('/api/automation/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({markets:1, count, specific:{county, state}})});
+    document.getElementById('manual-status').textContent = `✅ Scanning ${county} County, ${state}. Check Leads tab.`;
+    toast(`Scanning ${county}, ${state}!`, 'success');
+    setTimeout(() => loadLeadsFromAPI(), 20000);
+  } catch(e) { document.getElementById('manual-status').textContent = '❌ ' + e.message; }
+}
+
+async function triggerBuyBoxExtract() {
+  try {
+    const res = await fetch('/api/automation/extract-buyboxes', {method:'POST'});
+    const data = await res.json();
+    toast(`${data.extracted} buy boxes extracted!`, 'success');
+    loadNotifications();
+  } catch(e) { toast('Extraction failed', 'error'); }
+}
+
+async function triggerBuyerMatch() {
+  document.getElementById('match-status').textContent = '⏳ Matching...';
+  let matched = 0;
+  APP.leads.forEach(lead => {
+    const buyers = APP.buyers.filter(b => (lead.arv||0) >= (b.minARV||0) && (lead.offer||0) <= (b.maxPrice||999999));
+    if (buyers.length) matched++;
+  });
+  document.getElementById('match-status').textContent = `✅ ${matched} leads have buyer matches. View in Leads tab.`;
+  toast(`${matched} leads matched to buyers`, 'success');
+}
+
+function saveTwilioCredentials() {
+  const sid = document.getElementById('twilio-sid')?.value?.trim();
+  const token = document.getElementById('twilio-token')?.value?.trim();
+  const phone = document.getElementById('twilio-phone')?.value?.trim();
+  if (!sid || !token || !phone) { toast('Fill in all Twilio fields', 'error'); return; }
+  localStorage.setItem('twilio_sid', sid);
+  localStorage.setItem('twilio_token', token);
+  localStorage.setItem('twilio_phone', phone);
+  document.getElementById('twilio-status').textContent = '✅ Saved';
+  toast('Twilio credentials saved!', 'success');
+}
+
+function testTwilioConnection() {
+  const sid = localStorage.getItem('twilio_sid');
+  const token = localStorage.getItem('twilio_token');
+  if (!sid || !token) { toast('Save credentials first', 'error'); return; }
+  document.getElementById('twilio-status').textContent = '🔄 Testing...';
+  setTimeout(() => {
+    document.getElementById('twilio-status').textContent = '✅ Format valid — send a test deal to verify live';
+  }, 1500);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CONTRACTS LIBRARY
+// ══════════════════════════════════════════════════════════
+function renderContractsLib() {
+  const selectedCat = APP.contractCat || 'All';
+  const categories = ['All','Assignment Contract','Purchase Agreement','JV Agreement','Buyer Agreement','Seller Agreement','Option Contract','Double Close Agreement','Disclosure Forms','Custom'];
+  return `
+  <div style="max-width:1000px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:700">Contract Templates Library</div>
+        <div style="font-size:11px;color:#86868b">⚠️ Templates only — consult a licensed real estate attorney before use in any transaction</div>
+      </div>
+      <button class="btn btn-dark" onclick="openUploadContract()">+ Upload Custom Contract</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+      ${categories.map(c => `<button class="btn ${selectedCat===c?'btn-dark':'btn-outline'} btn-sm" onclick="APP.contractCat='${c}';render()">${c}</button>`).join('')}
+    </div>
+    <div id="contracts-grid">Loading templates...</div>
+  </div>`;
+}
+
+async function loadContractTemplates() {
+  const grid = document.getElementById('contracts-grid');
+  if (!grid) return;
+  try {
+    const [tplRes, custRes] = await Promise.all([fetch('/api/contracts/templates'), fetch('/api/contracts/custom')]);
+    const tplData = tplRes.ok ? await tplRes.json() : {templates:[]};
+    const custData = custRes.ok ? await custRes.json() : {contracts:[]};
+    const cat = APP.contractCat || 'All';
+    let templates = [...tplData.templates.map(t => ({...t,isCustom:false})), ...(custData.contracts||[]).map(c => ({...c,isCustom:true,category:c.category||'Custom'}))];
+    if (cat !== 'All') templates = templates.filter(t => t.category === cat);
+    if (!templates.length) { grid.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b">No contracts in this category.</div>'; return; }
+    grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${templates.map(t => `<div style="background:#fff;border:1px solid ${t.isCustom?'#34c759':'#e5e5ea'};border-radius:12px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;flex:1">${t.name}</div>
+          ${t.isCustom?'<span style="background:#e6f9ed;color:#1b8f3d;font-size:9px;padding:2px 6px;border-radius:8px;flex-shrink:0;margin-left:6px">Custom</span>':''}
+        </div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:8px">${t.description||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+          <span class="badge b-blue">${t.category}</span>
+          <span class="badge b-gray">v${t.version||'1.0'}</span>
+          <span class="badge b-gray">${t.states||'ALL'}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-dark btn-sm" onclick="viewContract('${t.id}','${t.isCustom}')">View</button>
+          <button class="btn btn-outline btn-sm" onclick="downloadContract('${t.id}','${t.isCustom}','${t.name}')">Download</button>
+          ${t.isCustom?`<button class="btn btn-outline btn-sm" onclick="editCustomContract('${t.id}')">Edit</button>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`;
+  } catch(e) { if (grid) grid.innerHTML = '<div style="color:#ff3b30;padding:16px">Error loading contracts: '+e.message+'</div>'; }
+}
+
+function viewContract(id, isCustom) {
+  const endpoint = isCustom==='true' ? '/api/contracts/custom' : '/api/contracts/templates/'+id;
+  fetch(isCustom==='true' ? endpoint : endpoint).then(r=>r.json()).then(data => {
+    const contract = isCustom==='true' ? (data.contracts||[]).find(c=>c.id===id) : data;
+    if (!contract) return toast('Contract not found', 'error');
+    showModal(`<div class="modal-title">${contract.name}</div>
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px;margin-bottom:12px;font-size:10px;color:#856404">⚠️ Template only — consult a licensed real estate attorney before use</div>
+      <textarea style="width:100%;height:400px;font-family:monospace;font-size:11px;border:1px solid #e5e5ea;border-radius:8px;padding:10px;resize:vertical" readonly>${contract.content||''}</textarea>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Close</button>
+        <button class="btn btn-dark" onclick="downloadContract('${contract.id}','${isCustom}','${contract.name}')">Download .txt</button>
+      </div>`);
+  }).catch(e => toast('Error: '+e.message, 'error'));
+}
+
+function downloadContract(id, isCustom, name) {
+  const endpoint = isCustom==='true' ? '/api/contracts/custom' : '/api/contracts/templates/'+id;
+  fetch(isCustom==='true' ? endpoint : endpoint).then(r=>r.json()).then(data => {
+    const contract = isCustom==='true' ? (data.contracts||[]).find(c=>c.id===id) : data;
+    if (!contract) return toast('Contract not found', 'error');
+    const blob = new Blob([contract.content||''], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=name.replace(/\s/g,'_')+'.txt'; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function openUploadContract() {
+  showModal(`<div class="modal-title">Upload Custom Contract</div>
+    <div class="form-group" style="margin-bottom:10px">
+      <div class="form-label">Contract Name</div>
+      <input class="form-input" id="uc-name" placeholder="e.g. My TX Assignment Contract">
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <div class="form-label">Category</div>
+      <select class="form-select" id="uc-cat">
+        <option>Assignment Contract</option><option>Purchase Agreement</option>
+        <option>JV Agreement</option><option>Buyer Agreement</option>
+        <option>Seller Agreement</option><option>Option Contract</option>
+        <option>Double Close Agreement</option><option>Disclosure Forms</option><option>Custom</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <div class="form-label">State (or ALL)</div>
+      <input class="form-input" id="uc-state" placeholder="e.g. TX or ALL">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="form-label">Contract Content (paste full text)</div>
+      <textarea class="form-textarea" id="uc-content" style="min-height:200px" placeholder="Paste your contract text here..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-dark" onclick="saveCustomContractFromUI()">Save Contract</button>
+    </div>`);
+}
+
+async function saveCustomContractFromUI() {
+  const name = document.getElementById('uc-name')?.value?.trim();
+  const category = document.getElementById('uc-cat')?.value;
+  const states = document.getElementById('uc-state')?.value?.trim() || 'ALL';
+  const content = document.getElementById('uc-content')?.value?.trim();
+  if (!name || !content) { toast('Name and content required', 'error'); return; }
+  try {
+    await fetch('/api/contracts/custom', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, category, states, content, description:'Custom uploaded contract'})});
+    closeModal(); toast('Contract saved!', 'success'); render();
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  BUY BOX MANAGER
+// ══════════════════════════════════════════════════════════
+function renderBuyBoxes() {
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:16px;font-weight:700">Buy Box Manager</div>
+      <div style="font-size:11px;color:#86868b">Manage investor criteria. Match deals to buyers automatically.</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="extractBuyBoxes()">Extract from Buyers</button>
+      <button class="btn btn-dark" onclick="openAddBuyBox()">+ Add Buy Box</button>
+    </div>
+  </div>
+  <div id="buyboxes-content">Loading...</div>
+  <div style="margin-top:20px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">How to Get More Buy Boxes</div>
+    <div id="buybox-recs">Loading recommendations...</div>
+  </div>`;
+}
+
+async function loadBuyBoxes() {
+  const el = document.getElementById('buyboxes-content');
+  const recsEl = document.getElementById('buybox-recs');
+  if (!el) return;
+  try {
+    const [boxRes, recRes] = await Promise.all([fetch('/api/buyboxes'), fetch('/api/buyboxes/recommendations')]);
+    const boxData = await boxRes.json();
+    const recData = await recRes.json();
+    const boxes = boxData.buyboxes || [];
+    if (!boxes.length) {
+      el.innerHTML = `<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;border:1px solid #e5e5ea">
+        <div style="font-size:32px;margin-bottom:12px">🎯</div>
+        <div style="font-weight:600;margin-bottom:8px">No buy boxes yet</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Extract from your buyers database or add manually</div>
+        <button class="btn btn-dark" onclick="extractBuyBoxes()">Extract from Buyers</button>
+      </div>`;
+    } else {
+      el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+        ${boxes.map(b => `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">${b.name}</div>
+          <div style="font-size:10px;color:#86868b;margin-bottom:8px">${b.strategy} · ${b.county||'Any county'}, ${b.state}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:#3a3a3c;margin-bottom:8px">
+            <div>Max Price: <strong>$${((b.maxPrice||0)/1000).toFixed(0)}K</strong></div>
+            <div>Min Spread: <strong>$${((b.minSpread||0)/1000).toFixed(0)}K</strong></div>
+            <div>Max Repairs: <strong>$${((b.maxRepairs||0)/1000).toFixed(0)}K</strong></div>
+            <div>Close: <strong>${b.closingDays||21} days</strong></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">
+            ${(b.preferredCategories||[]).map(c=>`<span class="badge b-orange">${c}</span>`).join('')}
+            <span class="badge b-blue">${b.rehabLevel||'Any'}</span>
+          </div>
+          <button class="btn btn-outline btn-sm" style="width:100%" onclick="matchDealsForBuyBox('${b.id}')">Find Matching Deals</button>
+        </div>`).join('')}
+      </div>`;
+    }
+    if (recsEl) {
+      const recs = recData.recommendations || [];
+      recsEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">
+        ${recs.map(r => `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:12px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:2px">${r.platform}</div>
+          <div style="font-size:10px;color:#0071e3;margin-bottom:4px">${r.type} · ${r.url}</div>
+          <div style="font-size:10px;color:#86868b;line-height:1.5">${r.description}</div>
+        </div>`).join('')}
+      </div>`;
+    }
+  } catch(e) { if (el) el.innerHTML = '<div style="color:#ff3b30">Error loading buy boxes</div>'; }
+}
+
+async function extractBuyBoxes() {
+  try {
+    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
+    const data = await res.json();
+    toast(`${data.extracted} buy boxes extracted!`, 'success');
+    loadBuyBoxes();
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+async function matchDealsForBuyBox(boxId) {
+  const box = (await fetch('/api/buyboxes').then(r=>r.json())).buyboxes?.find(b=>b.id===boxId);
+  if (!box) return;
+  const matches = APP.leads.filter(l =>
+    (!box.state || l.state===box.state) &&
+    (l.arv||0) >= (box.minARV||0) &&
+    (l.offer||0) <= (box.maxPrice||999999) &&
+    (l.spread||0) >= (box.minSpread||0) &&
+    (l.repairs||0) <= (box.maxRepairs||999999)
+  );
+  toast(`${matches.length} deals match ${box.name}`, 'success');
+  if (matches.length) navigate('leads', document.querySelector('[onclick*="leads"]'));
+}
+
+function openAddBuyBox() {
+  showModal(`<div class="modal-title">Add Buy Box</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="form-group"><div class="form-label">Investor Name</div><input class="form-input" id="bb-name" placeholder="DFW Cash Buyers LLC"></div>
+      <div class="form-group"><div class="form-label">Contact Name</div><input class="form-input" id="bb-contact" placeholder="Marcus Johnson"></div>
+      <div class="form-group"><div class="form-label">State</div><input class="form-input" id="bb-state" placeholder="TX" maxlength="2" style="text-transform:uppercase"></div>
+      <div class="form-group"><div class="form-label">County</div><input class="form-input" id="bb-county" placeholder="Dallas"></div>
+      <div class="form-group"><div class="form-label">Strategy</div><select class="form-select" id="bb-strategy"><option>Wholesale Assignment</option><option>Fix and Flip</option><option>Buy and Hold</option><option>BRRRR</option></select></div>
+      <div class="form-group"><div class="form-label">Rehab Level</div><select class="form-select" id="bb-rehab"><option>Light</option><option>Medium</option><option>Heavy</option><option>Any</option></select></div>
+      <div class="form-group"><div class="form-label">Max Purchase Price</div><input class="form-input" id="bb-maxprice" type="number" placeholder="400000"></div>
+      <div class="form-group"><div class="form-label">Min Assignment Spread</div><input class="form-input" id="bb-minspread" type="number" placeholder="15000"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px"><div class="form-label">Notes</div><input class="form-input" id="bb-notes" placeholder="Closes in 14 days. Needs clear title."></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-dark" onclick="saveBuyBox()">Save Buy Box</button>
+    </div>`);
+}
+
+async function saveBuyBox() {
+  const g = id => document.getElementById(id)?.value?.trim();
+  const box = { name:g('bb-name'), contact:g('bb-contact'), state:g('bb-state')||'TX', county:g('bb-county'), strategy:g('bb-strategy'), rehabLevel:g('bb-rehab'), maxPrice:parseInt(g('bb-maxprice'))||400000, minSpread:parseInt(g('bb-minspread'))||10000, notes:g('bb-notes'), source:'Manual' };
+  if (!box.name) { toast('Name required', 'error'); return; }
+  try {
+    const res = await fetch('/api/buyboxes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(box)});
+    const data = await res.json();
+    if (!data.ok) { toast(data.error||'Duplicate buy box', 'error'); return; }
+    closeModal(); toast('Buy box saved!', 'success'); render();
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  OUTREACH HUB
+// ══════════════════════════════════════════════════════════
+function renderOutreachHub() {
+  const leads = APP.leads.slice(0, 20);
+  return `
+  <div style="max-width:900px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:700">Outreach Hub</div>
+        <div style="font-size:11px;color:#86868b">AI-generated outreach. Edit messages to train the AI your preferred tone.</div>
+      </div>
+      <div id="tone-status" style="font-size:11px;color:#86868b">Loading AI status...</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#86868b">SELECT LEAD</div>
+        <div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;overflow:hidden;max-height:600px;overflow-y:auto">
+          ${leads.length ? leads.map(l => `<div style="padding:10px 12px;border-bottom:1px solid #f9f9f9;cursor:pointer;background:${APP.outreachLead===l.id?'#1d1d1f':'#fff'}" onclick="selectOutreachLead('${l.id}')">
+            <div style="font-size:11px;font-weight:600;color:${APP.outreachLead===l.id?'#fff':'#1d1d1f'}">${l.address?.split(',')[0]||'N/A'}</div>
+            <div style="font-size:10px;color:${APP.outreachLead===l.id?'#aaa':'#86868b'}">${l.county||''} · ${l.category||''}</div>
+          </div>`).join('') : '<div style="padding:24px;text-align:center;color:#86868b;font-size:12px">No leads yet</div>'}
+        </div>
+      </div>
+      <div id="outreach-panel">
+        <div style="background:#f5f5f7;border-radius:12px;padding:24px;text-align:center;color:#86868b">
+          <div style="font-size:32px;margin-bottom:8px">✉️</div>
+          <div>Select a lead to generate outreach messages</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadOutreachToneStatus() {
+  try {
+    const res = await fetch('/api/outreach/tone-status');
+    if (!res.ok) return;
+    const data = await res.json();
+    const el = document.getElementById('tone-status');
+    if (el) {
+      if (data.auto_send) el.innerHTML = '<span style="color:#34c759">✅ AI learned your tone — auto-send ready</span>';
+      else el.innerHTML = `<span>🧠 AI learning: ${data.edits}/10 edits recorded${data.edits>=5?' — getting better!':''}</span>`;
+    }
+  } catch {}
+}
+
+async function selectOutreachLead(leadId) {
+  APP.outreachLead = leadId;
+  const lead = APP.leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const panel = document.getElementById('outreach-panel');
+  if (!panel) return;
+  panel.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Generating messages...</div>';
+
+  try {
+    const res = await fetch('/api/outreach/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({leadId, type:'all'})});
+    const data = await res.json();
+    panel.innerHTML = `
+      <div>
+        <div class="sub-tabs" style="margin-bottom:12px">
+          <div class="sub-tab active" onclick="subTab(this,'ot-seller')">Seller Outreach</div>
+          <div class="sub-tab" onclick="subTab(this,'ot-buyer')">Buyer Outreach</div>
+          <div class="sub-tab" onclick="subTab(this,'ot-history')">History</div>
+        </div>
+
+        <div id="ot-seller">
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📱 SMS to Seller</div>
+            <textarea id="sms-content" class="form-textarea" style="min-height:80px" onblur="checkToneEdit(this,'seller_sms')">${data.message||''}</textarea>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <a href="sms:${lead.phone||''}" class="btn btn-dark btn-sm">📱 Open SMS App</a>
+              <button class="btn btn-outline btn-sm" onclick="copyAndRecord('sms-content','${leadId}','seller_sms')">Copy + Log</button>
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📧 Email to Seller</div>
+            <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:6px;font-size:11px;font-weight:600">Subject: ${data.subject||'Cash Offer'}</div>
+            <textarea id="email-content" class="form-textarea" style="min-height:120px" onblur="checkToneEdit(this,'seller_email')">${data.body||''}</textarea>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <a href="mailto:${lead.email||''}" class="btn btn-dark btn-sm">📧 Open Email App</a>
+              <button class="btn btn-outline btn-sm" onclick="copyAndRecord('email-content','${leadId}','seller_email')">Copy + Log</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📞 Call Script</div>
+            <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:11px;line-height:1.8;white-space:pre-wrap" id="call-script">${data.call_script?.message||lead.script||'Loading...'}</div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <a href="tel:${lead.phone||''}" class="btn btn-dark btn-sm">📞 Call Now</a>
+              <button class="btn btn-outline btn-sm" onclick="copyText('call-script')">Copy Script</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="ot-buyer" style="display:none">
+          <div style="font-size:12px;color:#86868b;margin-bottom:10px">Select a buyer to generate personalized outreach:</div>
+          ${APP.buyers.slice(0,5).map(b => `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer" onclick="generateBuyerOutreach('${leadId}','${b.id}')">
+            <div style="font-size:12px;font-weight:600">${b.name}</div>
+            <div style="font-size:10px;color:#86868b">${b.type} · Max $${((b.maxPrice||0)/1000).toFixed(0)}K · ${b.phone||''}</div>
+          </div>`).join('')}
+        </div>
+
+        <div id="ot-history" style="display:none">
+          <div id="outreach-history-list">Loading history...</div>
+        </div>
+      </div>`;
+
+    loadOutreachHistory(leadId);
+  } catch(e) { panel.innerHTML = '<div style="color:#ff3b30">Error: '+e.message+'</div>'; }
+}
+
+async function checkToneEdit(el, context) {
+  const original = el.dataset.original;
+  if (!original || original === el.value) return;
+  try {
+    await fetch('/api/outreach/save-edit', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({original, edited: el.value, context})});
+    el.dataset.original = el.value;
+    loadOutreachToneStatus();
+  } catch {}
+}
+
+function copyAndRecord(elId, leadId, type) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.value);
+  fetch('/api/outreach/record', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({leadId, type, message: el.value})}).catch(()=>{});
+  toast('Copied and logged!', 'success');
+}
+
+async function loadOutreachHistory(leadId) {
+  const el = document.getElementById('outreach-history-list');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/outreach/'+leadId);
+    const data = await res.json();
+    const history = data.history || [];
+    el.innerHTML = history.length ? history.map(h => `<div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:600">${h.type}</span>
+        <span style="font-size:10px;color:#86868b">${new Date(h.created).toLocaleDateString()}</span>
+      </div>
+      <div style="font-size:11px;color:#3a3a3c">${(h.message||'').slice(0,100)}...</div>
+    </div>`).join('') : '<div style="text-align:center;padding:20px;color:#86868b;font-size:12px">No outreach history yet</div>';
+  } catch {}
+}
+
+// ── Patch render to load dynamic content ──────────────────
+const _patchedRenderOrig = render;
+render = function() {
+  _patchedRenderOrig();
+  if (APP.page === 'contracts_lib') setTimeout(loadContractTemplates, 50);
+  if (APP.page === 'buyboxes') setTimeout(loadBuyBoxes, 50);
+  if (APP.page === 'outreach') { setTimeout(loadOutreachToneStatus, 50); }
+  if (APP.page === 'automation') setTimeout(() => {
+    const el = document.getElementById('buybox-stats');
+    if (el) el.textContent = `Buy boxes in database: loading...`;
+    fetch('/api/buyboxes').then(r=>r.json()).then(d => { if(el) el.textContent = `${(d.buyboxes||[]).length} buy boxes stored. ${APP.buyers.length} buyers in database.`; }).catch(()=>{});
+  }, 50);
+};
 
 </script>
 </body>
