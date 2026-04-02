@@ -5,16 +5,14 @@ const cron        = require('node-cron');
 
 const db      = require('./db');
 const ai      = require('./ai');
+const { selectMarketsForWeek, getMarketData } = require('./markets');
 const { generateLeadsPDF, generateSinglePropertyPDF } = require('./pdf');
 const { sendDealToBuyer, sendSellerOutreach, testConnection } = require('./email');
 
 const TOKEN    = process.env.TELEGRAM_BOT_TOKEN;
 const OWNER_ID = process.env.BOT_OWNER_ID;
 const PORT     = process.env.PORT || 3000;
-const RAILWAY_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : null;
-
+const RAILWAY_URL = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null;
 const USE_WEBHOOK = !!RAILWAY_URL;
 
 let bot;
@@ -24,202 +22,270 @@ if (USE_WEBHOOK) {
   bot = new TelegramBot(TOKEN, { polling: true });
 }
 
-function isOwner(msg) {
-  if (!OWNER_ID) return true;
-  return String(msg.from.id) === String(OWNER_ID);
-}
-function guard(msg) {
-  if (!isOwner(msg)) { bot.sendMessage(msg.chat.id, 'Unauthorized.'); return false; }
-  return true;
-}
-const send = (chatId, text, opts = {}) =>
-  bot.sendMessage(chatId, text, { parse_mode: 'HTML', ...opts }).catch(e => console.error('Send error:', e.message));
-const sendDoc = (chatId, buffer, filename, caption = '') =>
-  bot.sendDocument(chatId, buffer, { caption }, { filename, contentType: 'application/pdf' });
+function isOwner(msg) { return !OWNER_ID || String(msg.from.id) === String(OWNER_ID); }
+function guard(msg) { if (!isOwner(msg)) { bot.sendMessage(msg.chat.id, 'Unauthorized.'); return false; } return true; }
+const send = (chatId, text, opts={}) => bot.sendMessage(chatId, text, { parse_mode:'HTML', ...opts }).catch(e => console.error('Send error:', e.message));
+const sendDoc = (chatId, buf, filename, caption='') => bot.sendDocument(chatId, buf, { caption }, { filename, contentType:'application/pdf' });
 function typing(chatId) { bot.sendChatAction(chatId, 'typing').catch(()=>{}); }
 
+// ── Core lead generation function (reused by bot commands + crons) ────────
+async function runLeadSearch(county, state, count, cats, chatId=null) {
+  const notify = msg => chatId ? send(chatId, msg) : console.log(msg);
+  notify(`Searching <b>${county} County, ${state}</b> for <b>${count} leads</b>...\nAI: <b>${ai.MODE()==='premium'?'Claude':'Llama 3.3 Free'}</b>`);
+  if (chatId) bot.sendChatAction(chatId, 'upload_document');
+
+  const allLeads = [], allAnalyses = [];
+  const batchSize = 20, batches = Math.ceil(count/batchSize);
+  const market = getMarketData(county, state);
+
+  for (let b = 0; b < batches; b++) {
+    const bCount = Math.min(batchSize, count - b*batchSize);
+    if (chatId) bot.sendChatAction(chatId, 'upload_document');
+    const rawLeads = await ai.generateLeadList(county, state, bCount, cats);
+
+    for (const rawLead of rawLeads) {
+      if (db.leadExists(rawLead.address)) continue;
+      let analysis = {};
+      try { analysis = await ai.analyzeProperty({...rawLead, county, state}); } catch(e) { console.error('Analysis:', e.message); }
+
+      const finalArv   = (analysis.arv   > 50000) ? analysis.arv   : (rawLead.arv   > 50000 ? rawLead.arv   : market.arv);
+      const finalRep   = (analysis.repairs> 1000) ? analysis.repairs : (rawLead.repairs>0 ? rawLead.repairs : Math.round((rawLead.sqft||1400)*42));
+      const finalOffer = (analysis.offer  > 10000) ? analysis.offer  : (rawLead.offer  > 10000 ? rawLead.offer  : Math.round((finalArv*0.70-finalRep)*0.94));
+      const finalSpread= finalArv - finalOffer - finalRep;
+
+      const saved = db.addLead({
+        ...rawLead, state, county,
+        arv: Math.round(finalArv), offer: Math.round(finalOffer), repairs: Math.round(finalRep),
+        repair_class: analysis.repair_class || rawLead.repair_class || 'MEDIUM',
+        mao: Math.round(finalArv*0.70-finalRep),
+        fee_lo: analysis.fee_lo || rawLead.fee_lo || Math.round(finalSpread*0.35),
+        fee_hi: analysis.fee_hi || rawLead.fee_hi || Math.round(finalSpread*0.55),
+        spread: Math.round(finalSpread),
+        risk: analysis.risk || rawLead.risk || 'Medium',
+        why_good_deal: analysis.why_good_deal || rawLead.why_good_deal || `${rawLead.category||'Distressed'} property at discount in ${county} County.`,
+        distress_signals: analysis.distress_signals || rawLead.distress_signals || [rawLead.category||'Motivated Seller'],
+        motivation: analysis.motivation || rawLead.motivation || [],
+        investment_strategy: analysis.investment_strategy || rawLead.investment_strategy || 'Wholesale Assignment',
+        script: analysis.script || rawLead.script || '',
+        offer_email: analysis.offer_email || rawLead.offer_email || '',
+        negotiation_text: analysis.negotiation_text || rawLead.negotiation_text || '',
+        strategy_note: analysis.strategy_note || '',
+        profit_note: analysis.profit_note || rawLead.profit_note || '',
+        arv_note: analysis.arv_note || rawLead.arv_note || '',
+      });
+      allLeads.push(saved); allAnalyses.push(analysis);
+    }
+    if (b < batches-1) notify(`Batch ${b+1}/${batches} — ${allLeads.length} leads so far...`);
+  }
+
+  if (!allLeads.length) return { leads: [], analyses: [] };
+
+  // Auto-extract buyers for this market
+  try {
+    const buyers = ai.generateMarketBuyers(county, state, 8);
+    const added = db.addBuyersBulk(buyers);
+    if (added > 0) {
+      db.addNotification('buyer', `${added} buyers added`, `Auto-extracted ${added} cash buyers for ${county} County, ${state}`, {county, state});
+    }
+  } catch(e) { console.error('Buyer extraction:', e.message); }
+
+  // Track scanned market + notification
+  db.addScannedMarket(state, county);
+  db.addNotification('deal', `${allLeads.length} leads added`, `${county} County, ${state} — ${allLeads.length} new wholesale leads`, {county, state, count: allLeads.length});
+
+  allLeads.sort((a,b) => (b.spread||0)-(a.spread||0));
+  return { leads: allLeads, analyses: allAnalyses };
+}
+
+// ── /start or /help ───────────────────────────────────────────────────────
 bot.onText(/\/(start|help)/, async (msg) => {
   if (!guard(msg)) return;
-  send(msg.chat.id, `<b>WholesaleOS Bot</b> — Gabriel's Deal Machine\n\n<b>FIND LEADS</b>\n/leads Dallas 50\n/leads San Diego 100\n/leads Tarrant 200\n\n<b>MANAGE</b>\n/pipeline\n/lead [address]\n/status [lead] [status]\n/clearleads — remove fake leads\n\n<b>BUYERS</b>\n/buyers\n/match [lead]\n/send [lead] [buyer]\n\n<b>EMAIL</b>\n/reach [lead]\n\n<b>CALENDAR</b>\n/calendar\n/remind 2026-04-15 Offer deadline\n\n<b>SETTINGS</b>\n/stats\n/mode free\n/mode premium\n/test`);
+  send(msg.chat.id, `<b>WholesaleOS Bot</b> — Nationwide Deal Machine\n\n<b>FIND LEADS (all 50 states)</b>\n/leads Dallas TX 50\n/leads San Diego CA 100\n/leads Cuyahoga OH 200\n/leads Harris TX 400\n\n<b>MANAGE</b>\n/pipeline — deal pipeline\n/lead [address] — view lead\n/status [lead] [status]\n/clearleads — remove duplicates\n\n<b>BUYERS</b>\n/buyers — buyer database\n/match [lead] — find buyers\n/send [lead] [buyer]\n\n<b>SCANNING</b>\n/scan — run 4-market nationwide scan now\n/markets — show best markets this week\n\n<b>SETTINGS</b>\n/stats — full dashboard\n/mode free|premium\n/test — test connections`);
 });
 
+// ── /stats ────────────────────────────────────────────────────────────────
 bot.onText(/\/stats/, async (msg) => {
   if (!guard(msg)) return;
   typing(msg.chat.id);
   const s = db.getStats();
-  const upcoming = db.getUpcomingEvents(7);
-  let text = `<b>WholesaleOS Dashboard</b>\n\nTotal Leads: <b>${s.total_leads}</b>\nNew: <b>${s.new_leads}</b>\nUnder Contract: <b>${s.under_contract}</b>\nClosed: <b>${s.closed_deals}</b>\nFees Collected: <b>$${s.fees_collected.toLocaleString()}</b>\nPipeline: <b>$${s.fees_pipeline.toLocaleString()}</b>\nBuyers: <b>${s.active_buyers}</b>\nAI: <b>${ai.MODE() === 'premium' ? 'Claude Premium' : 'Llama 3.3 Free'}</b>\n\n`;
-  if (upcoming.length > 0) {
-    text += `<b>Upcoming</b>\n`;
-    upcoming.slice(0,5).forEach(e => { text += `${e.type==='close'?'🎉':e.type==='offer'?'📋':'📞'} ${e.date} — ${e.title}\n`; });
-  }
+  const tree = db.getLeadsByStateCounty();
+  const states = Object.keys(tree);
+  let text = `<b>WholesaleOS — Nationwide Dashboard</b>\n\n`;
+  text += `Total Leads: <b>${s.total_leads}</b> across <b>${states.length}</b> states\n`;
+  text += `New: <b>${s.new_leads}</b> | Under Contract: <b>${s.under_contract}</b>\n`;
+  text += `Pipeline Fees: <b>$${s.fees_pipeline.toLocaleString()}</b>\n`;
+  text += `Buyers: <b>${s.active_buyers}</b> | AI: <b>${ai.MODE()==='premium'?'Claude':'Llama Free'}</b>\n\n`;
+  states.slice(0,5).forEach(st => {
+    const counties = Object.keys(tree[st]);
+    const total = counties.reduce((s,c) => s+tree[st][c].length, 0);
+    text += `📍 ${st}: ${total} leads (${counties.join(', ')})\n`;
+  });
   send(msg.chat.id, text);
 });
 
+// ── /mode ─────────────────────────────────────────────────────────────────
 bot.onText(/\/mode (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
   const mode = match[1].trim().toLowerCase();
   if (!['free','premium'].includes(mode)) return send(msg.chat.id, 'Use /mode free or /mode premium');
   process.env.AI_MODE = mode;
   db.setSetting('ai_mode', mode);
-  send(msg.chat.id, `Switched to <b>${mode === 'premium' ? 'Claude Premium' : 'Llama 3.3 Free'}</b>`);
+  send(msg.chat.id, `Switched to <b>${mode==='premium'?'Claude Premium':'Llama 3.3 Free'}</b>`);
 });
 
+// ── /test ─────────────────────────────────────────────────────────────────
 bot.onText(/\/test/, async (msg) => {
   if (!guard(msg)) return;
   typing(msg.chat.id);
   send(msg.chat.id, 'Testing all connections...');
   let aiOk = false;
-  try { const r = await ai.ask('Reply OK', '', 10); aiOk = r.toLowerCase().includes('ok'); } catch {}
+  try { const r = await ai.ask('Reply OK','',10); aiOk = r.toLowerCase().includes('ok'); } catch {}
   const emailTest = await testConnection();
   const dbLeads = db.getLeads().length;
-  send(msg.chat.id, `<b>Connection Test Results</b>\n\n${aiOk?'✅':'❌'} AI (${ai.MODE()}): ${aiOk?'Connected':'Error'}\n${emailTest.success?'✅':'❌'} Gmail: ${emailTest.success?'Connected':emailTest.error}\n✅ Database: ${dbLeads} leads\n✅ Telegram: Connected\n\n${aiOk&&emailTest.success?'🟢 All systems ready!':'🔴 Some connections need attention.'}`);
+  send(msg.chat.id, `<b>Connection Test</b>\n\n${aiOk?'✅':'❌'} AI (${ai.MODE()}): ${aiOk?'Connected':'Error'}\n${emailTest.success?'✅':'❌'} Gmail: ${emailTest.success?'Connected':emailTest.error}\n✅ Database: ${dbLeads} leads\n✅ Telegram: Connected\n\n${aiOk&&emailTest.success?'🟢 All systems ready!':'🔴 Check connections above'}`);
 });
 
+// ── /leads ────────────────────────────────────────────────────────────────
+bot.onText(/\/leads (.+)/, async (msg, match) => {
+  if (!guard(msg)) return;
+  const parts = match[1].trim().split(/\s+/);
+  const numIdx = parts.findIndex(p => !isNaN(parseInt(p)) && parseInt(p) > 0);
+  let county, count, state, cats;
+
+  if (numIdx > 0) {
+    const countyParts = parts.slice(0, numIdx);
+    // Check if last county part is a state code (2 uppercase letters)
+    const lastPart = countyParts[countyParts.length-1];
+    if (/^[A-Z]{2}$/.test(lastPart)) {
+      state = lastPart;
+      county = countyParts.slice(0,-1).join(' ');
+    } else {
+      county = countyParts.join(' ');
+      state = null;
+    }
+    count = Math.min(parseInt(parts[numIdx])||20, 400);
+    cats  = parts.slice(numIdx+1).filter(p=>p.length>1);
+  } else {
+    county = parts.join(' ').replace(/\d+/g,'').trim() || 'Dallas';
+    count = 20; state = null; cats = [];
+  }
+  if (!cats.length) cats = ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent'];
+
+  // Auto-detect state if not provided
+  if (!state) {
+    const CA = ['San Diego','Los Angeles','LA','Orange','Riverside','Sacramento','San Francisco','Alameda','Santa Clara','San Bernardino','Ventura','Kern','Fresno'];
+    const FL = ['Miami-Dade','Broward','Palm Beach','Hillsborough','Orange','Pinellas','Duval','Polk'];
+    const GA = ['Fulton','DeKalb','Gwinnett','Clayton','Cobb','Chatham'];
+    const OH = ['Cuyahoga','Franklin','Hamilton','Summit','Montgomery','Stark'];
+    const MI = ['Wayne','Oakland','Macomb','Genesee','Kent'];
+    const IL = ['Cook','DuPage','Lake','Will','Kane'];
+    const AZ = ['Maricopa','Pima','Pinal'];
+    const NC = ['Mecklenburg','Wake','Guilford','Forsyth','Durham'];
+    const NV = ['Clark','Washoe'];
+    const TN = ['Shelby','Davidson','Hamilton','Knox'];
+    if (CA.includes(county)) state='CA';
+    else if (FL.some(c=>county.includes(c))) state='FL';
+    else if (GA.includes(county)) state='GA';
+    else if (OH.includes(county)) state='OH';
+    else if (MI.includes(county)) state='MI';
+    else if (IL.includes(county)) state='IL';
+    else if (AZ.includes(county)) state='AZ';
+    else if (NC.includes(county)) state='NC';
+    else if (NV.includes(county)) state='NV';
+    else if (TN.includes(county)) state='TN';
+    else state='TX';
+  }
+
+  try {
+    const { leads, analyses } = await runLeadSearch(county, state, count, cats, msg.chat.id);
+    if (!leads.length) return send(msg.chat.id, 'No new leads found. Send /clearleads then try again.');
+
+    send(msg.chat.id, `Found <b>${leads.length} leads</b> — generating PDF...`);
+    bot.sendChatAction(msg.chat.id, 'upload_document');
+    const pdfBuffer = await generateLeadsPDF(leads, analyses, `${county} County, ${state} — ${leads.length} Wholesale Leads`);
+    await sendDoc(msg.chat.id, pdfBuffer, `${county}_${state}_${leads.length}_Leads.pdf`,
+      `<b>${county} County, ${state} — ${leads.length} Leads</b>\nSorted by spread. Total est. fees: $${leads.reduce((s,l)=>s+(l.fee_lo||0),0).toLocaleString()}+`);
+
+    let summary = `\n<b>Top 5 — ${county} County, ${state}</b>\n\n`;
+    leads.slice(0,5).forEach((l,i) => {
+      summary += `<b>${i+1}. ${l.address.split(',')[0]}</b>\nARV: $${(l.arv||0).toLocaleString()} | Spread: $${(l.spread||0).toLocaleString()} | ${l.category} | ${l.risk}\n\n`;
+    });
+    send(msg.chat.id, summary);
+  } catch(err) {
+    console.error('Lead error:', err);
+    send(msg.chat.id, `Error: ${err.message}\n\nTry /test to check connections.`);
+  }
+});
+
+// ── /markets — show best markets for this week ────────────────────────────
+bot.onText(/\/markets/, async (msg) => {
+  if (!guard(msg)) return;
+  typing(msg.chat.id);
+  const scanned = db.getScannedMarkets();
+  const markets = selectMarketsForWeek(8, scanned);
+  let text = `<b>Best Markets This Week</b>\n\n`;
+  markets.forEach((m,i) => {
+    text += `<b>${i+1}. ${m.county} County, ${m.stateName}</b>\nARV: $${m.arv.toLocaleString()} | Hotness: ${m.hotness}/100 | Pop: ${(m.pop/1000000).toFixed(1)}M\n`;
+    text += `Run: /leads ${m.county} ${m.state} 50\n\n`;
+  });
+  send(msg.chat.id, text);
+});
+
+// ── /scan — run manual nationwide scan ────────────────────────────────────
+bot.onText(/\/scan/, async (msg) => {
+  if (!guard(msg)) return;
+  send(msg.chat.id, '🔍 Starting nationwide scan — selecting 4 best markets...\nThis takes 5-10 minutes.');
+  runNationwideScan(msg.chat.id);
+});
+
+// ── /clearleads ───────────────────────────────────────────────────────────
+bot.onText(/\/clearleads/, async (msg) => {
+  if (!guard(msg)) return;
+  const { clearFakeLeads } = require('./db');
+  const removed = clearFakeLeads();
+  send(msg.chat.id, `Cleaned ${removed} generic leads.\n${db.getLeads().length} leads remaining.\n\nRun /leads or /scan to get fresh leads.`);
+});
+
+// ── /pipeline ─────────────────────────────────────────────────────────────
 bot.onText(/\/pipeline/, async (msg) => {
   if (!guard(msg)) return;
   const leads = db.getLeads();
   const stages = ['New Lead','Contacted','Offer Sent','Negotiating','Under Contract','Closed'];
   let text = '<b>Deal Pipeline</b>\n\n';
   stages.forEach(stage => {
-    const items = leads.filter(l => l.status === stage);
+    const items = leads.filter(l => l.status===stage);
     if (!items.length) return;
     const icons = {'New Lead':'🆕','Contacted':'📞','Offer Sent':'📋','Negotiating':'🤝','Under Contract':'✍️','Closed':'✅'};
     text += `${icons[stage]} <b>${stage}</b> (${items.length})\n`;
-    items.slice(0,3).forEach(l => { text += `  • ${l.address.split(',')[0]} — $${(l.fee_lo||0).toLocaleString()}\n`; });
-    if (items.length > 3) text += `  <i>...and ${items.length-3} more</i>\n`;
+    items.slice(0,3).forEach(l => { text += `  • ${l.address.split(',')[0]} — $${(l.spread||l.fee_lo||0).toLocaleString()} spread\n`; });
+    if (items.length>3) text += `  <i>...and ${items.length-3} more</i>\n`;
     text += '\n';
   });
-  if (!leads.length) text += '<i>No leads yet. Use /leads to find deals.</i>';
+  if (!leads.length) text += '<i>No leads yet. Use /leads or /scan.</i>';
   send(msg.chat.id, text);
 });
 
+// ── /lead ─────────────────────────────────────────────────────────────────
 bot.onText(/\/lead (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
   const leads = db.getLeads();
-  const lead = leads.find(l => l.id === match[1].trim() || l.address?.toLowerCase().includes(match[1].trim().toLowerCase()));
+  const lead = leads.find(l => l.id===match[1].trim() || l.address?.toLowerCase().includes(match[1].trim().toLowerCase()));
   if (!lead) return send(msg.chat.id, 'Lead not found.');
-  send(msg.chat.id, `<b>${lead.address}</b>\n\n${lead.type||'SFR'} | ${lead.beds||'?'}BD/${lead.baths||'?'}BA | ${(lead.sqft||0).toLocaleString()} sqft\nCategory: <b>${lead.category}</b> | Status: <b>${lead.status}</b>\nDOM: <b>${lead.dom||0}d</b> | Risk: <b>${lead.risk||'Medium'}</b>\n\nARV: <b>$${(lead.arv||0).toLocaleString()}</b>\nOffer: <b>$${(lead.offer||0).toLocaleString()}</b>\nFee: <b>$${(lead.fee_lo||0).toLocaleString()}–$${(lead.fee_hi||0).toLocaleString()}</b>\n\nPhone: ${lead.phone||'N/A'}\n\n<i>ID: ${lead.id}</i>`);
+  send(msg.chat.id, `<b>${lead.address}</b>\n\n${lead.type||'SFR'} | ${lead.beds||'?'}BD/${lead.baths||'?'}BA | ${(lead.sqft||0).toLocaleString()} sqft\nCategory: <b>${lead.category}</b> | Status: <b>${lead.status}</b>\nDOM: <b>${lead.dom||0}d</b> | Risk: <b>${lead.risk||'Medium'}</b>\n\nARV: <b>$${(lead.arv||0).toLocaleString()}</b>\nOffer: <b>$${(lead.offer||0).toLocaleString()}</b>\nSpread: <b>$${(lead.spread||0).toLocaleString()}</b>\nFee: <b>$${(lead.fee_lo||0).toLocaleString()}–$${(lead.fee_hi||0).toLocaleString()}</b>\n\nPhone: ${lead.phone||'N/A'}\n\n<i>${lead.why_good_deal||''}</i>\n\nID: ${lead.id}`);
 });
 
-bot.onText(/\/leads (.+)/, async (msg, match) => {
-  if (!guard(msg)) return;
-  const parts = match[1].trim().split(/\s+/);
-  const numIdx = parts.findIndex(p => !isNaN(parseInt(p)) && parseInt(p) > 0);
-  let county, count, cats;
-  if (numIdx > 0) {
-    county = parts.slice(0, numIdx).join(' ');
-    count  = Math.min(parseInt(parts[numIdx]) || 20, 400);
-    cats   = parts.slice(numIdx+1).filter(p => p.length > 1);
-  } else {
-    county = parts.join(' ').replace(/\d+/g,'').trim() || 'Dallas';
-    count  = 20;
-    cats   = [];
-  }
-  if (!cats.length) cats = ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent'];
-  const CA = ['San Diego','Los Angeles','LA','Orange','Riverside','Sacramento','San Francisco','Alameda','Santa Clara','San Bernardino','Ventura','Kern'];
-  const FL = ['Miami','Broward','Palm Beach','Hillsborough','Pinellas'];
-  const state = CA.includes(county) ? 'CA' : FL.includes(county) ? 'FL' : 'TX';
-
-  send(msg.chat.id, `Searching <b>${county} County</b> for <b>${count} leads</b>...\nAI: <b>${ai.MODE()==='premium'?'Claude':'Llama 3.3 Free'}</b>\n\nThis takes 1-3 min. PDF coming.`);
-  bot.sendChatAction(msg.chat.id, 'upload_document');
-
-  try {
-    const allLeads = [], allAnalyses = [];
-    const batchSize = 20, batches = Math.ceil(count/batchSize);
-    const arvBase = {Dallas:280000,Tarrant:240000,Collin:380000,'San Diego':680000,'Los Angeles':750000,LA:750000};
-
-    for (let b = 0; b < batches; b++) {
-      const bCount = Math.min(batchSize, count - b*batchSize);
-      bot.sendChatAction(msg.chat.id, 'upload_document');
-      const rawLeads = await ai.generateLeadList(county, state, bCount, cats);
-
-      for (const rawLead of rawLeads) {
-        if (db.leadExists(rawLead.address)) continue;
-        let analysis = {};
-        try { analysis = await ai.analyzeProperty({...rawLead, county, state}); } catch(e) { console.error('Analysis error:', e.message); }
-
-        const baseArv = arvBase[county] || 270000;
-        const sqft = rawLead.sqft || 1400;
-        const age = 2026 - (rawLead.year || 1975);
-        const estArv = Math.round(baseArv + ((rawLead.beds||3)-3)*18000 + (sqft-1400)*32);
-        const estRep = age < 15 ? sqft*22 : age < 30 ? sqft*38 : sqft*52;
-
-        const finalArv   = (analysis.arv   > 50000) ? analysis.arv   : estArv;
-        const finalRep   = (analysis.repairs > 1000) ? analysis.repairs : Math.round(estRep);
-        const finalOffer = (analysis.offer  > 10000) ? analysis.offer  : Math.round((finalArv*0.70 - finalRep)*0.94);
-        const finalFeeL  = analysis.fee_lo || 10000;
-        const finalFeeH  = analysis.fee_hi || 25000;
-
-        const saved = db.addLead({
-          ...rawLead, state,
-          arv: finalArv, offer: finalOffer, repairs: finalRep,
-          repair_class: analysis.repair_class || 'MEDIUM',
-          mao: Math.round(finalArv*0.70 - finalRep),
-          fee_lo: finalFeeL, fee_hi: finalFeeH,
-          spread: Math.round(finalArv - finalOffer - finalRep),
-          risk: analysis.risk || 'Medium',
-          why_good_deal: analysis.why_good_deal || `${rawLead.category||'Distressed'} property at ${Math.round((finalArv-finalOffer)/finalArv*100)}% below ARV in ${county} County.`,
-          distress_signals: analysis.distress_signals || [rawLead.category||'Motivated Seller'],
-          motivation: analysis.motivation || [],
-          investment_strategy: analysis.investment_strategy || 'Wholesale Assignment',
-          script: analysis.script || `Hi, I'm Gabriel — local cash buyer. I can close in 14 days on ${rawLead.address?.split(',')[0]}. Is this still available?`,
-          offer_email: analysis.offer_email || '',
-          negotiation_text: analysis.negotiation_text || '',
-          strategy_note: analysis.strategy_note || '',
-          profit_note: analysis.profit_note || '',
-          arv_note: analysis.arv_note || ''
-        });
-        allLeads.push(saved); allAnalyses.push(analysis);
-      }
-      if (b < batches-1) send(msg.chat.id, `Batch ${b+1}/${batches} — ${allLeads.length} leads so far...`);
-    }
-
-    if (!allLeads.length) return send(msg.chat.id, 'No new leads found. Send /clearleads then try again.');
-    allLeads.sort((a,b) => (b.fee_hi||0) - (a.fee_hi||0));
-
-    send(msg.chat.id, `Found <b>${allLeads.length} leads</b> — generating PDF...`);
-    bot.sendChatAction(msg.chat.id, 'upload_document');
-    const pdfBuffer = await generateLeadsPDF(allLeads, allAnalyses, `${county} County — ${allLeads.length} Wholesale Leads`);
-    await sendDoc(msg.chat.id, pdfBuffer, `${county}_${allLeads.length}_Leads.pdf`,
-      `<b>${county} County — ${allLeads.length} Leads</b>\nTotal est. fees: $${allLeads.reduce((s,l)=>s+(l.fee_lo||0),0).toLocaleString()}+`);
-
-    let summary = `\n<b>Top 5 — ${county} County</b>\n\n`;
-    allLeads.slice(0,5).forEach((l,i) => {
-      summary += `<b>${i+1}. ${l.address.split(',')[0]}</b>\nARV: $${(l.arv||0).toLocaleString()} | Fee: $${(l.fee_lo||0).toLocaleString()}-$${(l.fee_hi||0).toLocaleString()} | ${l.category} | ${l.risk}\n\n`;
-    });
-    send(msg.chat.id, summary);
-  } catch (err) {
-    console.error('Lead error:', err);
-    send(msg.chat.id, `Error: ${err.message}\n\nTry /test to check connections.`);
-  }
-});
-
-bot.onText(/\/clearleads/, async (msg) => {
-  if (!guard(msg)) return;
-  const { clearFakeLeads } = require('./db');
-  const removed = clearFakeLeads();
-  send(msg.chat.id, `Cleaned ${removed} fake leads.\n${db.getLeads().length} leads remaining.\n\nNow run /leads to get fresh leads.`);
-});
-
+// ── /buyers ───────────────────────────────────────────────────────────────
 bot.onText(/\/buyers/, async (msg) => {
   if (!guard(msg)) return;
   const buyers = db.getBuyers();
-  if (!buyers.length) return send(msg.chat.id, 'No buyers yet.\n/addbuyer Name|Type|Contact|Phone|Email|$100K-$400K');
-  let text = `<b>Buyers (${buyers.length})</b>\n\n`;
-  buyers.forEach(b => { text += `<b>${b.name}</b>\n${b.contact} | ${b.phone}\nMax: $${(b.maxPrice||0).toLocaleString()} | ${b.status}\n\n`; });
+  if (!buyers.length) return send(msg.chat.id, 'No buyers yet. Run /leads or /scan to auto-populate buyers.');
+  let text = `<b>Buyers Database (${buyers.length})</b>\n\n`;
+  buyers.slice(0,10).forEach(b => { text += `<b>${b.name}</b>\n${b.type} | ${b.contact} | Max: $${(b.maxPrice||0).toLocaleString()}\n\n`; });
+  if (buyers.length>10) text += `<i>...and ${buyers.length-10} more. See dashboard for full list.</i>`;
   send(msg.chat.id, text);
 });
 
-bot.onText(/\/addbuyer (.+)/, async (msg, match) => {
-  if (!guard(msg)) return;
-  const parts = match[1].split('|').map(p => p.trim());
-  if (parts.length < 4) return send(msg.chat.id, 'Format: /addbuyer Name|Type|Contact|Phone|Email|$100K-$400K');
-  const prices = (parts[5]||'$100K-$400K').match(/\d+/g)||['100','400'];
-  const saved = db.addBuyer({name:parts[0], type:parts[1]||'Cash Buyer', contact:parts[2], phone:parts[3], email:parts[4]||'', maxPrice:parseInt(prices[1]||'400')*1000, minARV:parseInt(prices[0]||'100')*1000, markets:'DFW Metro', criteria:parts[5]||''});
-  send(msg.chat.id, `Buyer added!\n<b>${saved.name}</b>\n${saved.contact} | ${saved.phone}`);
-});
-
+// ── /match ────────────────────────────────────────────────────────────────
 bot.onText(/\/match (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
   typing(msg.chat.id);
@@ -227,45 +293,13 @@ bot.onText(/\/match (.+)/, async (msg, match) => {
   const lead = leads.find(l => l.id===match[1].trim() || l.address?.toLowerCase().includes(match[1].trim().toLowerCase()));
   if (!lead) return send(msg.chat.id, 'Lead not found.');
   const matches = db.matchBuyersToLead(lead);
-  if (!matches.length) return send(msg.chat.id, 'No matching buyers.');
-  let text = `<b>Matches for ${lead.address.split(',')[0]}</b>\nARV: $${(lead.arv||0).toLocaleString()}\n\n`;
-  matches.forEach(b => { text += `<b>${b.name}</b>\n${b.contact} — ${b.phone}\n/send ${lead.id.slice(-6)} ${b.name.split(' ')[0]}\n\n`; });
+  if (!matches.length) return send(msg.chat.id, 'No matching buyers. Run /scan to auto-populate buyers.');
+  let text = `<b>Matches for ${lead.address.split(',')[0]}</b>\nARV: $${(lead.arv||0).toLocaleString()} | Spread: $${(lead.spread||0).toLocaleString()}\n\n`;
+  matches.slice(0,5).forEach(b => { text += `<b>${b.name}</b>\n${b.type} | ${b.contact} — ${b.phone}\n\n`; });
   send(msg.chat.id, text);
 });
 
-bot.onText(/\/send (.+)/, async (msg, match) => {
-  if (!guard(msg)) return;
-  const parts = match[1].trim().split(/\s+/);
-  if (parts.length < 2) return send(msg.chat.id, 'Format: /send [lead] [buyer]');
-  const leads = db.getLeads(), buyers = db.getBuyers();
-  const lead  = leads.find(l => l.id===parts[0] || l.id.endsWith(parts[0]) || l.address?.toLowerCase().includes(parts[0].toLowerCase()));
-  const buyer = buyers.find(b => b.name?.toLowerCase().includes(parts.slice(1).join(' ').toLowerCase()));
-  if (!lead)  return send(msg.chat.id, 'Lead not found.');
-  if (!buyer) return send(msg.chat.id, 'Buyer not found.');
-  if (!buyer.email) return send(msg.chat.id, `${buyer.name} has no email.`);
-  typing(msg.chat.id);
-  send(msg.chat.id, `Sending to <b>${buyer.name}</b>...`);
-  try {
-    const analysis = {arv:lead.arv, offer:lead.offer, repairs:lead.repairs, risk:lead.risk, fee_lo:lead.fee_lo, fee_hi:lead.fee_hi};
-    const pdfBuffer = await generateSinglePropertyPDF(lead, analysis);
-    const result = await sendDealToBuyer(buyer, lead, analysis, pdfBuffer);
-    send(msg.chat.id, result.success ? `Deal sent to <b>${buyer.name}</b>!` : `Email failed: ${result.error}`);
-  } catch (err) { send(msg.chat.id, `Error: ${err.message}`); }
-});
-
-bot.onText(/\/reach (.+)/, async (msg, match) => {
-  if (!guard(msg)) return;
-  const leads = db.getLeads();
-  const lead = leads.find(l => l.id===match[1].trim() || l.address?.toLowerCase().includes(match[1].trim().toLowerCase()));
-  if (!lead) return send(msg.chat.id, 'Lead not found.');
-  if (!lead.email) return send(msg.chat.id, `No email. Call: ${lead.phone||'N/A'}`);
-  typing(msg.chat.id);
-  const script = await ai.generateSellerScript(lead);
-  const result = await sendSellerOutreach(lead, script);
-  if (result.success) { send(msg.chat.id, `Outreach sent to ${lead.email}`); db.updateLead(lead.id, {status:'Contacted'}); }
-  else send(msg.chat.id, `Failed: ${result.error}`);
-});
-
+// ── /status ───────────────────────────────────────────────────────────────
 bot.onText(/\/status (.+?) (.+)/, async (msg, match) => {
   if (!guard(msg)) return;
   const leads = db.getLeads();
@@ -278,10 +312,11 @@ bot.onText(/\/status (.+?) (.+)/, async (msg, match) => {
   send(msg.chat.id, `Updated to <b>${matched}</b>`);
 });
 
+// ── /calendar & /remind ───────────────────────────────────────────────────
 bot.onText(/\/calendar/, async (msg) => {
   if (!guard(msg)) return;
   const events = db.getUpcomingEvents(30);
-  if (!events.length) return send(msg.chat.id, 'No events.\n/remind 2026-04-15 Offer deadline');
+  if (!events.length) return send(msg.chat.id, 'No events.\n/remind 2026-04-15 Offer deadline Dallas');
   let text = '<b>Calendar — 30 Days</b>\n\n';
   events.forEach(e => { text += `${e.type==='close'?'🎉':e.type==='offer'?'📋':'📞'} <b>${e.date}</b> — ${e.title}\n`; });
   send(msg.chat.id, text);
@@ -292,28 +327,87 @@ bot.onText(/\/remind (.+)/, async (msg, match) => {
   const parts = match[1].trim().split(/\s+/);
   const date  = parts.find(p => /\d{4}-\d{2}-\d{2}/.test(p)) || parts[0];
   const title = parts.filter(p => !p.match(/\d{4}-\d{2}-\d{2}/)).join(' ');
-  const type  = title.toLowerCase().includes('clos')?'close':title.toLowerCase().includes('offer')?'offer':'call';
-  const evt   = db.addEvent({date, title, type, time:''});
+  const evt   = db.addEvent({date, title, type:title.toLowerCase().includes('clos')?'close':title.toLowerCase().includes('offer')?'offer':'call', time:''});
   send(msg.chat.id, `Added: ${evt.date} — ${evt.title}`);
 });
 
+// ── Natural language fallback ─────────────────────────────────────────────
 bot.on('message', async (msg) => {
   if (!guard(msg)) return;
   if (!msg.text || msg.text.startsWith('/')) return;
   const t = msg.text.toLowerCase();
-  if (t.includes('free')) { process.env.AI_MODE='free'; return send(msg.chat.id, 'Switched to Llama Free'); }
-  if (t.includes('premium')||t.includes('claude')) { process.env.AI_MODE='premium'; return send(msg.chat.id, 'Switched to Claude Premium'); }
-  send(msg.chat.id, '/leads San Diego 50\n/leads Dallas 50\n/pipeline\n/buyers\n/stats\n/help');
+  if (t.includes('free')) { process.env.AI_MODE='free'; return send(msg.chat.id,'Switched to Llama Free'); }
+  if (t.includes('premium')||t.includes('claude')) { process.env.AI_MODE='premium'; return send(msg.chat.id,'Switched to Claude Premium'); }
+  send(msg.chat.id, '/leads Dallas TX 50\n/leads San Diego CA 100\n/scan — auto nationwide\n/markets — best this week\n/pipeline\n/buyers\n/stats\n/help');
 });
 
-cron.schedule('0 8 * * *', async () => {
+// ══════════════════════════════════════════════════════════
+//  AUTOMATED SCANNING SYSTEM
+// ══════════════════════════════════════════════════════════
+
+async function runNationwideScan(chatId=null) {
+  const notify = msg => chatId ? send(chatId, msg) : console.log('[SCAN]', msg);
+  try {
+    const scanned = db.getScannedMarkets();
+    const markets = selectMarketsForWeek(4, scanned);
+    notify(`🌎 Scanning <b>${markets.length}</b> markets:\n${markets.map(m=>`• ${m.county}, ${m.stateName}`).join('\n')}`);
+
+    let totalLeads = 0, totalBuyers = 0;
+    for (const market of markets) {
+      try {
+        notify(`Scanning ${market.county} County, ${market.stateName}...`);
+        const cats = ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent'];
+        const { leads } = await runLeadSearch(market.county, market.state, 20, cats, null);
+        totalLeads += leads.length;
+        if (chatId) bot.sendChatAction(chatId, 'typing');
+        await new Promise(r => setTimeout(r, 2000));
+      } catch(e) { console.error(`Scan error for ${market.county}:`, e.message); }
+    }
+
+    const buyers = db.getBuyers().length;
+    const summary = `✅ <b>Nationwide Scan Complete</b>\n\n📊 ${totalLeads} new leads added\n💼 ${buyers} total buyers in database\n📍 Markets: ${markets.map(m=>m.county+', '+m.state).join(' | ')}\n\nCheck your dashboard for ranked leads.`;
+    notify(summary);
+    db.addNotification('scan', 'Nationwide scan complete', `${totalLeads} leads added across ${markets.length} markets`);
+  } catch(e) { notify(`Scan error: ${e.message}`); }
+}
+
+// ── CRONS ─────────────────────────────────────────────────────────────────
+
+// Daily 7AM briefing (MST)
+cron.schedule('0 14 * * *', async () => {
   if (!OWNER_ID) return;
   const stats = db.getStats(), events = db.getUpcomingEvents(3);
-  let text = `Good morning Gabriel!\n\nLeads: ${stats.total_leads} | Pipeline: $${stats.fees_pipeline.toLocaleString()}\n\n`;
-  if (events.length) { text += '<b>Next 3 days:</b>\n'; events.forEach(e => { text += `${e.date} — ${e.title}\n`; }); }
+  const unread = db.getNotifications(true).length;
+  let text = `Good morning Gabriel! 🌅\n\n📊 <b>Today's Summary</b>\nLeads: ${stats.total_leads} | Pipeline: $${stats.fees_pipeline.toLocaleString()}\n${unread > 0 ? `🔔 ${unread} new notifications` : '✅ All caught up'}\n\n`;
+  if (events.length) { text += '<b>Upcoming:</b>\n'; events.forEach(e => { text += `${e.date} — ${e.title}\n`; }); }
+  text += '\n/leads [County] [State] [count] to find deals\n/scan for auto nationwide scan';
   send(OWNER_ID, text);
 });
 
+// 4x per week scan (Mon, Tue, Thu, Sat at 6AM MST = 1PM UTC)
+cron.schedule('0 13 * * 1,2,4,6', async () => {
+  console.log('[CRON] Starting scheduled nationwide scan...');
+  if (OWNER_ID) send(OWNER_ID, '🔄 Scheduled nationwide scan starting...');
+  await runNationwideScan(OWNER_ID || null);
+});
+
+// Daily 2AM backup
+cron.schedule('0 9 * * *', async () => {
+  try {
+    const leads = db.getLeads(), buyers = db.getBuyers();
+    const today = new Date().toISOString().slice(0,10);
+    const todayLeads = leads.filter(l => l.created===today);
+    const dbData = db.readDB();
+    if (!dbData.backups) dbData.backups = [];
+    dbData.backups.push({ date: today, leads: todayLeads.length, buyers: buyers.length, total_leads: leads.length });
+    if (dbData.backups.length > 90) dbData.backups = dbData.backups.slice(-90);
+    db.writeDB(dbData);
+    console.log(`[BACKUP] ${today}: ${todayLeads.length} new leads, ${leads.length} total`);
+    db.addNotification('system', 'Daily backup complete', `${todayLeads.length} new leads today, ${leads.length} total`);
+  } catch(e) { console.error('Backup error:', e.message); }
+});
+
+// ── EXPRESS SERVER ────────────────────────────────────────────────────────
 const app = require('./server');
 
 if (USE_WEBHOOK) {
@@ -322,14 +416,10 @@ if (USE_WEBHOOK) {
 }
 
 try {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`WholesaleOS Bot started on port ${PORT}`);
-  });
-} catch(err) {
-  console.error('Server start error:', err.message);
-}
+  app.listen(PORT, '0.0.0.0', () => { console.log(`WholesaleOS Bot started on port ${PORT}`); });
+} catch(err) { console.error('Server start error:', err.message); }
 
-console.log('WholesaleOS Telegram Bot is running...');
+console.log('WholesaleOS Nationwide Bot running...');
 console.log(`AI Mode: ${ai.MODE()}`);
 console.log(`Gmail: ${process.env.GMAIL_USER}`);
 console.log(`Mode: ${USE_WEBHOOK ? 'Webhook' : 'Polling'}`);

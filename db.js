@@ -146,9 +146,100 @@ function setSetting(key, val) {
   writeDB(db);
 }
 
+// ── Notifications system ────────────────────────────────
+function addNotification(type, title, message, data={}) {
+  const db = readDB();
+  if (!db.notifications) db.notifications = [];
+  const notif = {
+    id: 'N' + Date.now(),
+    type, // 'deal','buyer','scan','match','warning','system'
+    title, message,
+    data,
+    read: false,
+    created: new Date().toISOString()
+  };
+  db.notifications.unshift(notif);
+  if (db.notifications.length > 200) db.notifications = db.notifications.slice(0,200);
+  writeDB(db);
+  return notif;
+}
+
+function getNotifications(unreadOnly=false) {
+  const db = readDB();
+  const notifs = db.notifications || [];
+  return unreadOnly ? notifs.filter(n => !n.read) : notifs;
+}
+
+function markNotificationsRead(ids=[]) {
+  const db = readDB();
+  if (!db.notifications) return;
+  db.notifications.forEach(n => {
+    if (ids.length === 0 || ids.includes(n.id)) n.read = true;
+  });
+  writeDB(db);
+}
+
+function getScannedMarkets() {
+  return (readDB().scanned_markets || []);
+}
+
+function addScannedMarket(stateCode, county) {
+  const db = readDB();
+  if (!db.scanned_markets) db.scanned_markets = [];
+  const key = stateCode + '_' + county;
+  if (!db.scanned_markets.includes(key)) {
+    db.scanned_markets.push(key);
+    if (db.scanned_markets.length > 100) db.scanned_markets = db.scanned_markets.slice(-100);
+    writeDB(db);
+  }
+}
+
+// ── Lead hierarchy: State → County ─────────────────────
+function getLeadsByStateCounty() {
+  const leads = getLeads();
+  const tree = {};
+  leads.forEach(l => {
+    const state = l.state || 'TX';
+    const county = l.county || 'Unknown';
+    if (!tree[state]) tree[state] = {};
+    if (!tree[state][county]) tree[state][county] = [];
+    tree[state][county].push(l);
+  });
+  // Sort each county's leads by spread desc
+  Object.values(tree).forEach(counties =>
+    Object.values(counties).forEach(leads =>
+      leads.sort((a,b) => (b.spread||0)-(a.spread||0))
+    )
+  );
+  return tree;
+}
+
+// ── Bulk add buyers (dedup by name+phone) ─────────────
+function addBuyersBulk(buyers) {
+  const db = readDB();
+  if (!db.buyers) db.buyers = [];
+  const existing = new Set(db.buyers.map(b => (b.name+b.phone).toLowerCase()));
+  let added = 0;
+  for (const buyer of buyers) {
+    const key = ((buyer.name||'')+(buyer.phone||'')).toLowerCase();
+    if (!key || existing.has(key)) continue;
+    buyer.id = 'B' + Date.now() + Math.random().toString(36).slice(2,5);
+    buyer.status = buyer.status || 'Active';
+    buyer.created = new Date().toISOString().slice(0,10);
+    db.buyers.push(buyer);
+    existing.add(key);
+    added++;
+  }
+  writeDB(db);
+  return added;
+}
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
+  getLeadsByStateCounty, addBuyersBulk,
+  addNotification, getNotifications, markNotificationsRead,
+  getScannedMarkets, addScannedMarket,
   getBuyers, addBuyer, matchBuyersToLead,
   getAssignments,
   getUpcomingEvents, addEvent,

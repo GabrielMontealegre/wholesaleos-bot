@@ -86,9 +86,6 @@ app.put('/api/buyers/:id', (req, res) => {
   res.json(dbData.buyers[idx]);
 });
 
-// ── API: Stats ──────────────────────────────────────────
-app.get('/api/stats', (req, res) => res.json(db.getStats()));
-
 // ── API: Calendar ───────────────────────────────────────
 app.get('/api/calendar', (req, res) => {
   const dbData = db.readDB();
@@ -276,6 +273,211 @@ Otherwise return: {"leads": [...array of leads...]}`;
   } catch (err) {
     res.json({ leads: [], message: 'PDF processing failed: ' + err.message });
   }
+});
+
+// ── API: Leads by State/County hierarchy ────────────────
+app.get('/api/leads/hierarchy', (req, res) => {
+  try {
+    const tree = db.getLeadsByStateCounty();
+    res.json({ tree, total: db.getLeads().length });
+  } catch(err) { res.json({ tree: {}, total: 0 }); }
+});
+
+// ── API: Stats with followups_due ────────────────────────
+app.get('/api/stats', (req, res) => {
+  const stats = db.getStats();
+  const today = new Date().toISOString().slice(0,10);
+  const dbData = db.readDB();
+  stats.followups_due = (dbData.followups||[]).filter(f => f.status==='pending' && f.nextDate<=today).length;
+  stats.backups = (dbData.backups||[]).slice(-7);
+  res.json(stats);
+});
+
+// ── API: Notifications ──────────────────────────────────
+app.get('/api/notifications', (req, res) => {
+  const unreadOnly = req.query.unread === 'true';
+  const notifs = db.getNotifications(unreadOnly);
+  res.json({ notifications: notifs, unread: notifs.filter(n=>!n.read).length });
+});
+
+app.post('/api/notifications/read', (req, res) => {
+  const { ids } = req.body;
+  db.markNotificationsRead(ids||[]);
+  res.json({ ok: true });
+});
+
+// ── API: Markets ─────────────────────────────────────────
+app.get('/api/markets/best', (req, res) => {
+  try {
+    const { selectMarketsForWeek } = require('./markets');
+    const scanned = db.getScannedMarkets();
+    const markets = selectMarketsForWeek(12, scanned);
+    res.json({ markets });
+  } catch(err) { res.json({ markets: [] }); }
+});
+
+// ── API: Scan status ─────────────────────────────────────
+app.get('/api/scan/status', (req, res) => {
+  const dbData = db.readDB();
+  res.json({
+    scanned_markets: db.getScannedMarkets().length,
+    last_backup: (dbData.backups||[]).slice(-1)[0] || null,
+    total_leads: db.getLeads().length,
+    total_buyers: db.getBuyers().length,
+  });
+});
+
+// ── API: Buy Boxes ──────────────────────────────────────
+app.get('/api/buyboxes', (req, res) => {
+  const { getBuyBoxes } = require('./modules/buybox');
+  res.json({ buyboxes: getBuyBoxes() });
+});
+
+app.post('/api/buyboxes', (req, res) => {
+  const { addBuyBox } = require('./modules/buybox');
+  const box = addBuyBox(req.body);
+  if (!box) return res.json({ ok: false, error: 'Duplicate buy box' });
+  db.addNotification('buyer', 'New buy box added', `${req.body.name} — ${req.body.county||'Unknown'}, ${req.body.state||'TX'}`);
+  res.json({ ok: true, buybox: box });
+});
+
+app.post('/api/buyboxes/extract', (req, res) => {
+  const { extractFromBuyers } = require('./modules/buybox');
+  const count = extractFromBuyers();
+  if (count > 0) db.addNotification('buyer', `${count} buy boxes extracted`, 'Extracted from existing buyers database');
+  res.json({ ok: true, extracted: count });
+});
+
+app.get('/api/buyboxes/recommendations', (req, res) => {
+  const { getBuyBoxRecommendations } = require('./modules/buybox');
+  res.json({ recommendations: getBuyBoxRecommendations() });
+});
+
+app.post('/api/buyboxes/match/:leadId', (req, res) => {
+  const lead = db.getLeads().find(l => l.id === req.params.leadId);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  const { matchBuyBoxesToLead } = require('./modules/buybox');
+  res.json({ matches: matchBuyBoxesToLead(lead) });
+});
+
+// ── API: Outreach ─────────────────────────────────────────
+app.get('/api/outreach/:leadId', (req, res) => {
+  const { getOutreachHistory } = require('./modules/outreach');
+  res.json({ history: getOutreachHistory(req.params.leadId) });
+});
+
+app.post('/api/outreach/generate', (req, res) => {
+  const { generateSellerSMS, generateSellerEmail, generateBuyerSMS, generateBuyerEmail, generateCallScript } = require('./modules/outreach');
+  const { leadId, type } = req.body;
+  const lead = db.getLeads().find(l => l.id === leadId);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  let result = {};
+  if (type === 'seller_sms') result = { message: generateSellerSMS(lead) };
+  else if (type === 'seller_email') result = generateSellerEmail(lead);
+  else if (type === 'call_script') result = { message: generateCallScript(lead) };
+  else result = { seller_sms: generateSellerSMS(lead), seller_email: generateSellerEmail(lead), call_script: generateCallScript(lead) };
+  res.json(result);
+});
+
+app.post('/api/outreach/save-edit', (req, res) => {
+  const { saveToneEdit } = require('./modules/outreach');
+  const { original, edited, context } = req.body;
+  saveToneEdit(original, edited, context);
+  res.json({ ok: true });
+});
+
+app.post('/api/outreach/record', (req, res) => {
+  const { saveOutreachRecord } = require('./modules/outreach');
+  const { leadId, type, message } = req.body;
+  const record = saveOutreachRecord(leadId, type, message);
+  res.json({ ok: true, record });
+});
+
+app.get('/api/outreach/tone-status', (req, res) => {
+  const { getToneLearnings, getAutoSendEnabled } = require('./modules/outreach');
+  const learnings = getToneLearnings();
+  res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
+});
+
+// ── API: Contracts Library ────────────────────────────────
+app.get('/api/contracts/templates', (req, res) => {
+  const { getTemplates } = require('./modules/contract_templates');
+  res.json({ templates: getTemplates() });
+});
+
+app.get('/api/contracts/templates/:id', (req, res) => {
+  const { getTemplate } = require('./modules/contract_templates');
+  const t = getTemplate(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Template not found' });
+  res.json(t);
+});
+
+app.get('/api/contracts/custom', (req, res) => {
+  const dbData = db.readDB();
+  res.json({ contracts: dbData.custom_contracts || [] });
+});
+
+app.post('/api/contracts/custom', (req, res) => {
+  const dbData = db.readDB();
+  if (!dbData.custom_contracts) dbData.custom_contracts = [];
+  const contract = { id: 'CC' + Date.now(), ...req.body, created: new Date().toISOString().slice(0,10), version: 1 };
+  dbData.custom_contracts.push(contract);
+  db.writeDB(dbData);
+  res.json({ ok: true, contract });
+});
+
+app.put('/api/contracts/custom/:id', (req, res) => {
+  const dbData = db.readDB();
+  const idx = (dbData.custom_contracts||[]).findIndex(c => c.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  dbData.custom_contracts[idx] = { ...dbData.custom_contracts[idx], ...req.body, version: (dbData.custom_contracts[idx].version||1)+1, updated: new Date().toISOString().slice(0,10) };
+  db.writeDB(dbData);
+  res.json({ ok: true, contract: dbData.custom_contracts[idx] });
+});
+
+// ── API: Automation Control ───────────────────────────────
+app.post('/api/automation/scan', async (req, res) => {
+  res.json({ ok: true, message: 'Scan triggered — check notifications for progress' });
+  // Fire and forget
+  setTimeout(async () => {
+    try {
+      const { selectMarketsForWeek, getMarketData } = require('./markets');
+      const ai = require('./ai');
+      const { generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
+      const scanned = db.getScannedMarkets();
+      const markets = selectMarketsForWeek(req.body?.markets||4, scanned);
+      let totalLeads = 0;
+      for (const market of markets) {
+        const leads = await ai.generateLeadList(market.county, market.state, req.body?.count||20, ['Pre-FC','REO','Long DOM','FSBO','Probate']);
+        let added = 0;
+        for (const lead of leads) {
+          if (db.leadExists(lead.address)) continue;
+          let analysis = {};
+          try { analysis = await ai.analyzeProperty({...lead, county:market.county, state:market.state}); } catch {}
+          const mData = getMarketData(market.county, market.state);
+          const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : mData.arv);
+          const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
+          const off = analysis.offer > 10000 ? analysis.offer : Math.round((arv*0.70-rep)*0.94);
+          const sprd = arv-off-rep;
+          db.addLead({...lead, county:market.county, state:market.state, arv, offer:off, repairs:rep, mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55), spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High', why_good_deal:analysis.why_good_deal||lead.why_good_deal||`${lead.category} in ${market.county} County`, distress_signals:analysis.distress_signals||[lead.category], investment_strategy:'Wholesale Assignment', script:analysis.script||lead.script||'', source:'AI Generated'});
+          added++;
+        }
+        const boxes = generateMarketBuyBoxes(market.county, market.state, 3);
+        addBuyBoxesBulk(boxes);
+        db.addScannedMarket(market.state, market.county);
+        totalLeads += added;
+        db.addNotification('deal', `${added} leads — ${market.county}, ${market.state}`, `Automation scan complete for ${market.county} County`);
+      }
+      db.addNotification('scan', 'Automation scan complete', `${totalLeads} total leads added across ${markets.length} markets`);
+    } catch(e) { db.addNotification('warning', 'Scan error', e.message); }
+  }, 100);
+});
+
+app.post('/api/automation/extract-buyboxes', (req, res) => {
+  const { extractFromBuyers, generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
+  const fromBuyers = extractFromBuyers();
+  db.addNotification('buyer', `${fromBuyers} buy boxes extracted`, 'Extracted from buyers database');
+  res.json({ ok: true, extracted: fromBuyers });
 });
 
 // ── API: Search ─────────────────────────────────────────
