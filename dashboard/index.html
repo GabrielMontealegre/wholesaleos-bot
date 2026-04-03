@@ -929,21 +929,39 @@ function renderLeadsCards(leads) {
   return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
     ${leads.map(l => {
       const spread = l.spread||0;
-      return `<div style="background:#fff;border:1px solid ${APP.selectedLead===l.id?'#0071e3':'#e5e5ea'};border-radius:12px;padding:14px;cursor:pointer" onclick="selectLead('${l.id}')">
-        <div style="font-size:12px;font-weight:600;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.address?.split(',')[0]||'N/A'}</div>
+      const q = computeLeadQuality(l);
+      return `<div style="background:#fff;border:1px solid ${APP.selectedLead===l.id?'#0071e3':'#e5e5ea'};border-radius:12px;padding:14px;cursor:pointer" onclick="openLeadModal('${l.id}')">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="background:${q.color};color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px">${q.emoji} ${q.label}</span>
+          ${l.dealType ? `<span style="background:#e8f0fe;color:#0071e3;font-size:9px;padding:1px 5px;border-radius:5px">${l.dealType}</span>` : ''}
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.address?.split(',')[0]||'N/A'}</div>
         <div style="font-size:10px;color:#86868b;margin-bottom:8px">${l.county||''} · ${l.category||''} · DOM ${l.dom||0}d</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
           <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">ARV</div><div style="font-size:12px;font-weight:700;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</div></div>
           <div style="background:#f5f5f7;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">Spread</div><div style="font-size:12px;font-weight:700;color:${spread>50000?'#34c759':'#ff9500'}">$${(spread/1000).toFixed(0)}K</div></div>
         </div>
         <div style="display:flex;gap:4px;justify-content:space-between">
-          <a href="tel:${l.phone||''}" style="flex:1;padding:5px;background:#34c759;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">📞</a>
-          <a href="sms:${l.phone||''}" style="flex:1;padding:5px;background:#0071e3;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">💬</a>
-          <a href="mailto:${l.email||''}" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px">📧</a>
+          <a href="tel:${l.phone||''}" style="flex:1;padding:5px;background:#34c759;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📞</a>
+          <a href="sms:${l.phone||''}" style="flex:1;padding:5px;background:#0071e3;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">💬</a>
+          <a href="mailto:${l.email||''}" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📧</a>
         </div>
       </div>`;
     }).join('')}
   </div>`;
+}
+
+function openLeadModal(leadId) {
+  APP.selectedLead = leadId;
+  const l = APP.leads.find(x => x.id === leadId);
+  if (!l) return;
+  const mc = document.getElementById('modal-content');
+  mc.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'max-height:80vh;overflow-y:auto';
+  wrapper.innerHTML = renderLeadDetail(l);
+  mc.appendChild(wrapper);
+  document.getElementById('modal-overlay').style.display = 'flex';
 }
 
 
@@ -1454,25 +1472,108 @@ async function triggerDriveBackup() {
 // ── REVIEW QUEUE ─────────────────────────────────────────
 function renderReviewQueue() {
   setTimeout(loadReviewQueue, 50);
+  const hotCities = [
+    {city:'losangeles',state:'CA',label:'Los Angeles, CA'},{city:'phoenix',state:'AZ',label:'Phoenix, AZ'},
+    {city:'dallas',state:'TX',label:'Dallas, TX'},{city:'houston',state:'TX',label:'Houston, TX'},
+    {city:'atlanta',state:'GA',label:'Atlanta, GA'},{city:'miami',state:'FL',label:'Miami, FL'},
+    {city:'tampa',state:'FL',label:'Tampa, FL'},{city:'orlando',state:'FL',label:'Orlando, FL'},
+    {city:'lasvegas',state:'NV',label:'Las Vegas, NV'},{city:'denver',state:'CO',label:'Denver, CO'},
+    {city:'charlotte',state:'NC',label:'Charlotte, NC'},{city:'nashville',state:'TN',label:'Nashville, TN'},
+    {city:'sandiego',state:'CA',label:'San Diego, CA'},{city:'chicago',state:'IL',label:'Chicago, IL'},
+    {city:'seattle',state:'WA',label:'Seattle, WA'},{city:'memphis',state:'TN',label:'Memphis, TN'},
+    {city:'columbus',state:'OH',label:'Columbus, OH'},{city:'indianapolis',state:'IN',label:'Indianapolis, IN'},
+    {city:'sanantonio',state:'TX',label:'San Antonio, TX'},{city:'austin',state:'TX',label:'Austin, TX'},
+    {city:'jacksonville',state:'FL',label:'Jacksonville, FL'},{city:'raleigh',state:'NC',label:'Raleigh, NC'},
+    {city:'minneapolis',state:'MN',label:'Minneapolis, MN'},{city:'kansascity',state:'MO',label:'Kansas City, MO'},
+    {city:'sacramento',state:'CA',label:'Sacramento, CA'},
+  ];
   return `
-  <div style="max-width:900px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:16px;font-weight:700">Review Queue</div>
-        <div style="font-size:11px;color:#86868b">Unverified deals from Craigslist, HUD, FSBO, Landwatch — accept, reject, or skip each one.</div>
+  <div style="max-width:960px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">Buyer & Deal Discovery</div>
+    <div style="font-size:11px;color:#86868b;margin-bottom:16px">Choose exactly where to search. Each city uses ~10 ScraperAPI credits.</div>
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#127919; Targeted Scrape — Pick Your Markets</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" onclick="selectAllScrapeMarkets(true)">Select All</button>
+        <button class="btn btn-outline btn-sm" onclick="selectAllScrapeMarkets(false)">Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="selectScrapeMarketsByState('TX')">Texas</button>
+        <button class="btn btn-outline btn-sm" onclick="selectScrapeMarketsByState('FL')">Florida</button>
+        <button class="btn btn-outline btn-sm" onclick="selectScrapeMarketsByState('CA')">California</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:6px;margin-bottom:12px" id="scrape-market-grid">
+        ${hotCities.map(m => '<label style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#f5f5f7;border-radius:6px;cursor:pointer;font-size:11px"><input type="checkbox" class="scrape-market-cb" data-city="'+m.city+'" data-state="'+m.state+'" style="cursor:pointer"> '+m.label+'</label>').join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:10px;color:#86868b;margin-bottom:3px">Custom City (Craigslist subdomain)</div><input id="custom-scrape-city" type="text" class="form-input" placeholder="e.g. memphis" style="font-size:11px;padding:5px 8px;width:140px"></div>
+        <div><div style="font-size:10px;color:#86868b;margin-bottom:3px">State</div><input id="custom-scrape-state" type="text" class="form-input" placeholder="TN" style="font-size:11px;padding:5px 8px;width:55px;text-transform:uppercase" maxlength="2"></div>
+        <button class="btn btn-outline btn-sm" onclick="addCustomScrapeMarket()">+ Add City</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-dark btn-sm" onclick="triggerBuyerScrape(false)">🔍 Scrape Buyers Now</button>
-        <button class="btn btn-outline btn-sm" onclick="triggerDealScrape(false)">🏠 Scrape Deals Now</button>
-        <button class="btn btn-outline btn-sm" onclick="triggerBuyerScrape(true)">🌎 All 50 States</button>
+        <button class="btn btn-dark" onclick="runTargetedBuyerScrape()">&#128269; Find Buyers in Selected Cities</button>
+        <button class="btn btn-outline" onclick="runTargetedDealScrape()">&#127968; Find Deals in Selected Cities</button>
+        <button class="btn btn-outline btn-sm" onclick="triggerBuyerScrape(true)">&#127758; All 50 States (~750 credits)</button>
       </div>
+      <div id="scrape-status" style="margin-top:10px;font-size:11px;color:#86868b"></div>
     </div>
-    <div id="review-queue-list">
-      <div style="text-align:center;padding:40px;color:#86868b">Loading review queue...</div>
-    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128203; Review Queue <span style="font-weight:400;font-size:11px;color:#86868b">— Unverified deals waiting for your decision</span></div>
+    <div id="review-queue-list"><div style="text-align:center;padding:40px;color:#86868b">Loading...</div></div>
   </div>`;
 }
 
+function selectAllScrapeMarkets(checked) {
+  document.querySelectorAll('.scrape-market-cb').forEach(function(cb){cb.checked=checked;});
+}
+function selectScrapeMarketsByState(state) {
+  document.querySelectorAll('.scrape-market-cb').forEach(function(cb){cb.checked=(cb.dataset.state===state);});
+}
+function addCustomScrapeMarket() {
+  var city=(document.getElementById('custom-scrape-city')?.value||'').trim().toLowerCase().replace(/\s+/g,'');
+  var state=(document.getElementById('custom-scrape-state')?.value||'').trim().toUpperCase();
+  if(!city||!state||state.length!==2){toast('Enter a valid city and 2-letter state','error');return;}
+  var grid=document.getElementById('scrape-market-grid');
+  if(!grid)return;
+  var existing=grid.querySelector('[data-city="'+city+'"][data-state="'+state+'"]');
+  if(existing){existing.checked=true;toast(city+' already listed — checked it for you','success');return;}
+  var label=document.createElement('label');
+  label.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 8px;background:#e8f0fe;border-radius:6px;cursor:pointer;font-size:11px;border:1px solid #0071e3';
+  label.innerHTML='<input type="checkbox" class="scrape-market-cb" data-city="'+city+'" data-state="'+state+'" checked style="cursor:pointer"> '+city+', '+state+' (custom)';
+  grid.appendChild(label);
+  document.getElementById('custom-scrape-city').value='';
+  document.getElementById('custom-scrape-state').value='';
+  toast('Added '+city+', '+state,'success');
+}
+function getSelectedMarkets() {
+  var markets=[];
+  document.querySelectorAll('.scrape-market-cb:checked').forEach(function(cb){
+    markets.push({city:cb.dataset.city,state:cb.dataset.state,label:cb.dataset.city+', '+cb.dataset.state});
+  });
+  return markets;
+}
+async function runTargetedBuyerScrape() {
+  var markets=getSelectedMarkets();
+  if(!markets.length){toast('Select at least one city first','error');return;}
+  var statusEl=document.getElementById('scrape-status');
+  if(statusEl)statusEl.textContent='Starting buyer scrape for '+markets.length+' city/cities... (~'+markets.length*10+' API credits)';
+  try {
+    var res=await fetch('/api/scraper/buyers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markets})});
+    var data=await res.json();
+    if(statusEl)statusEl.innerHTML='<span style="color:#34c759">&#10003; '+(data.message||'Scrape started! Check Buyers tab in 5-10 min.')+'</span>';
+    toast('Buyer scrape started!','success');
+  } catch(e){if(statusEl)statusEl.textContent='Error: '+e.message;toast('Error: '+e.message,'error');}
+}
+async function runTargetedDealScrape() {
+  var markets=getSelectedMarkets();
+  if(!markets.length){toast('Select at least one city first','error');return;}
+  var statusEl=document.getElementById('scrape-status');
+  if(statusEl)statusEl.textContent='Starting deal scrape for '+markets.length+' city/cities...';
+  try {
+    var res=await fetch('/api/scraper/deals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markets})});
+    var data=await res.json();
+    if(statusEl)statusEl.innerHTML='<span style="color:#34c759">&#10003; '+(data.message||'Deal scrape started! Check Review Queue in 5-10 min.')+'</span>';
+    toast('Deal scrape started!','success');
+    setTimeout(loadReviewQueue,12000);
+  } catch(e){if(statusEl)statusEl.textContent='Error: '+e.message;}
+}
 async function loadReviewQueue() {
   const el = document.getElementById('review-queue-list');
   if (!el) return;
