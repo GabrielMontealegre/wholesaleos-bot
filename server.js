@@ -645,10 +645,11 @@ app.post('/api/search/leads', async (req, res) => {
       const { getMarketData } = require('./markets');
       const { generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
       const isLand = type === 'land';
+      const isBuyers = type === 'buyers';
       let leads = [];
       if (isLand) {
         leads = ai.generateLandLeads(county, state, count||50);
-      } else {
+      } else if (!isBuyers) {
         leads = await ai.generateLeadList(county, state, count||50, ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent']);
       }
       const market = getMarketData(county, state);
@@ -674,8 +675,8 @@ app.post('/api/search/leads', async (req, res) => {
         });
         added++;
       }
-      // Auto-add buyers
-      const buyers = require('./ai').generateMarketBuyers(county, state, 8);
+      // Always auto-add buyers regardless of search type
+      const buyers = require('./ai').generateMarketBuyers(county, state, 12);
       const buyersAdded = db.addBuyersBulk(buyers);
       const boxes = generateMarketBuyBoxes(county, state, 5);
       addBuyBoxesBulk(boxes);
@@ -823,6 +824,91 @@ app.post('/api/leads/fix-states', (req, res) => {
   });
   if (fixed > 0) db.writeDB(dbData);
   res.json({ ok: true, fixed });
+});
+
+
+// ── Gmail API endpoints ───────────────────────────────────
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
+
+function getGmailTransport() {
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+  const user = process.env.GMAIL_USER;
+  if (!clientId || !clientSecret || !refreshToken || !user) return null;
+  const oauth2 = new google.auth.OAuth2(clientId, clientSecret, 'https://developers.google.com/oauthplayground');
+  oauth2.setCredentials({ refresh_token: refreshToken });
+  return { oauth2, user };
+}
+
+app.get('/api/gmail/inbox', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    const list = await gmail.users.messages.list({ userId: 'me', maxResults: 20, labelIds: ['INBOX'] });
+    const messages = await Promise.all((list.data.messages||[]).map(async (m) => {
+      const msg = await gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From','Subject','Date'] });
+      const headers = msg.data.payload.headers;
+      const get = (name) => (headers.find(h=>h.name===name)||{value:''}).value;
+      return { id: m.id, threadId: msg.data.threadId, from: get('From'), subject: get('Subject'), date: get('Date'), snippet: msg.data.snippet, unread: (msg.data.labelIds||[]).includes('UNREAD') };
+    }));
+    res.json({ messages });
+  } catch(e) { res.status(503).json({ error: e.message }); }
+});
+
+app.get('/api/gmail/message/:id', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    const msg = await gmail.users.messages.get({ userId: 'me', id: req.params.id, format: 'full' });
+    const headers = msg.data.payload.headers;
+    const get = (name) => (headers.find(h=>h.name===name)||{value:''}).value;
+    let body = '';
+    const parts = msg.data.payload.parts || [msg.data.payload];
+    for (const part of parts) {
+      if (part.mimeType === 'text/plain' && part.body.data) {
+        body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        break;
+      }
+    }
+    if (!body && msg.data.payload.body && msg.data.payload.body.data) {
+      body = Buffer.from(msg.data.payload.body.data, 'base64').toString('utf-8');
+    }
+    res.json({ id: msg.data.id, threadId: msg.data.threadId, from: get('From'), subject: get('Subject'), date: get('Date'), body });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/gmail/send', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured. Please set up Gmail OAuth2 tokens in Railway Variables.' });
+    const { to, subject, body } = req.body;
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { type: 'OAuth2', user: cfg.user, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN }
+    });
+    await transport.sendMail({ from: cfg.user, to, subject, text: body });
+    db.addNotification('system', 'Email sent', 'To: ' + to + ' - ' + subject);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/gmail/reply', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
+    const { to, body, threadId } = req.body;
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { type: 'OAuth2', user: cfg.user, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN }
+    });
+    await transport.sendMail({ from: cfg.user, to, subject: 'Re: (continuing conversation)', text: body });
+    db.addNotification('system', 'Reply sent', 'To: ' + to);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── API: Search ─────────────────────────────────────────
