@@ -6,6 +6,20 @@
 const axios   = require('axios');
 const cheerio = require('cheerio');
 
+// ── ScraperAPI wrapper ───────────────────────────────────────────────────────
+// Set SCRAPERAPI_KEY in Railway Variables to enable proxy-based scraping
+// Free tier: 1,000 requests/month — sign up at scraperapi.com
+function scraperGet(url, options={}) {
+  const apiKey = process.env.SCRAPERAPI_KEY;
+  if (apiKey) {
+    // Route through ScraperAPI residential proxy
+    const proxyUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(url)}&render=false`;
+    return axios.get(proxyUrl, { timeout: options.timeout || 30000 });
+  }
+  // Fallback: direct request (works for non-blocked sites)
+  return axios.get(url, { headers: HEADERS, timeout: options.timeout || 15000 });
+}
+
 // ── Hot markets (daily scrape) ───────────────────────────────────────────────
 const HOT_MARKETS = [
   { city:'losangeles', state:'CA', label:'Los Angeles, CA' },
@@ -73,7 +87,7 @@ async function scrapeCraigslistBuyers(markets) {
     for (const q of queries.slice(0,2)) {
       try {
         const url=`https://${market.city}.craigslist.org/search/rea?query=${q}&sort=date`;
-        const res=await axios.get(url,{headers:HEADERS,timeout:15000});
+        const res=await scraperGet(url,{timeout:20000});
         const $=cheerio.load(res.data);
         const posts=[];
         $('li.cl-static-search-result,.result-row').each(function(){
@@ -85,7 +99,7 @@ async function scrapeCraigslistBuyers(markets) {
           try {
             await sleep(700);
             const fullUrl=post.link.startsWith('http')?post.link:`https://${market.city}.craigslist.org${post.link}`;
-            const pRes=await axios.get(fullUrl,{headers:HEADERS,timeout:12000});
+            const pRes=await scraperGet(fullUrl,{timeout:20000});
             const p$=cheerio.load(pRes.data);
             const body=p$('#postingbody,.body').text();
             const phone=extractPhone(body);
@@ -127,7 +141,7 @@ async function scrapeCraigslistDeals(markets) {
     for (const cat of cats) {
       try {
         const url=`https://${market.city}.craigslist.org/search${cat.path}?sort=date&postedToday=1`;
-        const res=await axios.get(url,{headers:HEADERS,timeout:15000});
+        const res=await scraperGet(url,{timeout:20000});
         const $=cheerio.load(res.data);
         const posts=[];
         $('li.cl-static-search-result,.result-row').each(function(){
@@ -143,7 +157,7 @@ async function scrapeCraigslistDeals(markets) {
             const fullUrl=post.link.startsWith('http')?post.link:`https://${market.city}.craigslist.org${post.link}`;
             if(seen.has(fullUrl)) continue;
             seen.add(fullUrl);
-            const pRes=await axios.get(fullUrl,{headers:HEADERS,timeout:12000});
+            const pRes=await scraperGet(fullUrl,{timeout:20000});
             const p$=cheerio.load(pRes.data);
             const body=p$('#postingbody,.body').text();
             const phone=extractPhone(body);
@@ -174,7 +188,7 @@ async function scrapeHUDHomes() {
   for (const state of states) {
     try {
       const url=`https://www.hudhomestore.gov/Listing/PropertyListing.aspx?sState=${state}&iBedrooms=0&sBaths=0&sPropertyType=SFR&sPropCond=&sHudHomeType=&iIncentive=0&sListingId=&iBuyerType=0&iPage=1&sCity=&sZip=&sCounty=`;
-      const res=await axios.get(url,{headers:HEADERS,timeout:20000});
+      const res=await scraperGet(url,{timeout:25000});
       const $=cheerio.load(res.data);
       $('tr').each(function(){
         const cells=$(this).find('td');
@@ -208,7 +222,7 @@ async function scrapeFSBO() {
   for (const state of states) {
     try {
       const url=`https://www.forsalebyowner.com/real-estate/${state.toLowerCase()}/`;
-      const res=await axios.get(url,{headers:HEADERS,timeout:15000});
+      const res=await scraperGet(url,{timeout:20000});
       const $=cheerio.load(res.data);
       $('[class*="listing"],[class*="property-card"],article').each(function(){
         const address=$(this).find('[class*="address"],h2,h3').first().text().trim();
@@ -238,7 +252,7 @@ async function scrapeLandWatch() {
   for (const [abbr,name] of Object.entries(stateMap)) {
     try {
       const url=`https://www.landwatch.com/${name}-land-for-sale`;
-      const res=await axios.get(url,{headers:HEADERS,timeout:15000});
+      const res=await scraperGet(url,{timeout:20000});
       const $=cheerio.load(res.data);
       $('[class*="propCard"],[class*="listing-card"],article').each(function(){
         const address=$(this).find('[class*="title"],h2,h3').first().text().trim();
@@ -267,13 +281,13 @@ async function scrapeLandWatch() {
 async function getRedfinComps(address, state) {
   try {
     const geoUrl=`https://www.redfin.com/stingray/do/location-autocomplete?location=${encodeURIComponent(address+' '+state)}&v=2`;
-    const geoRes=await axios.get(geoUrl,{headers:{...HEADERS,'Accept':'application/json'},timeout:10000});
+    const geoRes=await scraperGet(geoUrl,{timeout:15000});
     const geoText=geoRes.data.toString().replace(/^[^{]*/,'');
     const geoData=JSON.parse(geoText);
     const row=geoData?.payload?.sections?.[0]?.rows?.[0];
     if(!row||!row.url) return null;
 
-    const propRes=await axios.get(`https://www.redfin.com${row.url}`,{headers:HEADERS,timeout:12000});
+    const propRes=await scraperGet(`https://www.redfin.com${row.url}`,{timeout:15000});
     const $=cheerio.load(propRes.data);
     const price=parseInt($('[data-rf-test-id="abp-price"],.price').first().text().replace(/[^0-9]/g,''))||0;
     const beds=parseInt($('[data-rf-test-id="abp-beds"]').text())||0;
@@ -298,7 +312,7 @@ async function getRealtorComps(address, state) {
   try {
     const slug=address.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
     const url=`https://www.realtor.com/realestateandhomes-search/${slug}_${state}`;
-    const res=await axios.get(url,{headers:HEADERS,timeout:12000});
+    const res=await scraperGet(url,{timeout:15000});
     const $=cheerio.load(res.data);
     const priceText=$('[data-testid="list-price"],.price').first().text().trim();
     const price=parseInt(priceText.replace(/[^0-9]/g,''))||0;
@@ -322,7 +336,7 @@ async function getZillowData(address, state) {
   try {
     const searchTerm=`${address} ${state}`;
     const url=`https://www.zillow.com/search/GetSearchPageState.htm?searchQueryState=${encodeURIComponent(JSON.stringify({pagination:{currentPage:1},usersSearchTerm:searchTerm,mapBounds:{west:-180,east:180,south:-90,north:90},isMapVisible:false,filterState:{sortSelection:{value:'globalrelevanceex'}},isListVisible:true}))}&wants={"cat1":["listResults"]}&requestId=1`;
-    const res=await axios.get(url,{headers:{...HEADERS,'Accept':'application/json'},timeout:12000});
+    const res=await scraperGet(url,{timeout:15000});
     const results=res.data?.cat1?.searchResults?.listResults;
     if(!results||!results.length) return null;
     const prop=results[0];
