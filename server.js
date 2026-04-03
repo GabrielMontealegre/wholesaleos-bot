@@ -1124,14 +1124,17 @@ const scraper = require('./modules/scraper');
 // Trigger buyer scrape manually
 app.post('/api/scraper/buyers', async (req, res) => {
   try {
-    const markets = req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
-    res.json({ ok: true, message: `Buyer scrape started for ${markets.length} markets` });
-    // Run async after response
+    // Accept custom markets array, fall back to hot markets or all states
+    const customMarkets = req.body.markets;
+    const markets = Array.isArray(customMarkets) && customMarkets.length > 0
+      ? customMarkets
+      : req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
+    res.json({ ok: true, message: `Buyer scrape started for ${markets.length} market${markets.length===1?'':'s'}` });
     setImmediate(async () => {
       try {
         const buyers = await scraper.scrapeCraigslistBuyers(markets);
         let added = 0;
-        const existing = db.getBuyers().map(b => `${b.phone}${b.email}`);
+        const existing = db.getBuyers().map(b => `${b.phone||''}${b.email||''}`);
         for (const b of buyers) {
           const key = `${b.phone||''}${b.email||''}`;
           if (key.length > 3 && !existing.includes(key)) {
@@ -1150,8 +1153,11 @@ app.post('/api/scraper/buyers', async (req, res) => {
 // Trigger deal scrape manually
 app.post('/api/scraper/deals', async (req, res) => {
   try {
-    const markets = req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
-    res.json({ ok: true, message: `Deal scrape started for ${markets.length} markets` });
+    const customMarkets = req.body.markets;
+    const markets = Array.isArray(customMarkets) && customMarkets.length > 0
+      ? customMarkets
+      : req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
+    res.json({ ok: true, message: `Deal scrape started for ${markets.length} market${markets.length===1?'':'s'}` });
     setImmediate(async () => {
       try {
         const [clDeals, hudDeals, fsboDeals, landDeals] = await Promise.allSettled([
