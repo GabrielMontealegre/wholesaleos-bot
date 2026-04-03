@@ -298,6 +298,8 @@ tr.selected td{background:#f0f6ff}
     <div class="sidebar-nav">
       <div class="nav-section">Main</div>
       <div class="nav-item active" onclick="navigate('dashboard',this)"><span class="nav-icon">🏠</span>Dashboard</div>
+      <div class="nav-item" onclick="navigate('search',this)"><span class="nav-icon">🔍</span>Search Deals</div>
+      <div class="nav-item" onclick="navigate('states',this)"><span class="nav-icon">🗺</span>All States</div>
       <div class="nav-item" onclick="navigate('leads',this)"><span class="nav-icon">📋</span>Leads<span class="nav-badge" id="nav-lead-count">0</span></div>
       <div class="nav-item" onclick="navigate('pipeline',this)"><span class="nav-icon">📊</span>Pipeline</div>
       <div class="nav-section">Outreach</div>
@@ -317,6 +319,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-item" onclick="navigate('bot',this)"><span class="nav-icon">🤖</span>Bot Status</div>
       <div class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
+      <div class="nav-item" id="nav-users-item" onclick="navigate('users',this)"><span class="nav-icon">👥</span>Users</div>
     </div>
     <div class="sidebar-stats">
       <div class="stat-mini">
@@ -375,6 +378,9 @@ tr.selected td{background:#f0f6ff}
 // ══════════════════════════════════════════════════════════
 const APP = {
   pin: localStorage.getItem('montsan_pin') || '1234',
+  currentUser: null,
+  userId: 'admin',
+  isAdmin: true,
   role: localStorage.getItem('montsan_role') || 'admin',
   pinInput: '',
   page: 'dashboard',
@@ -427,17 +433,106 @@ function updatePinDots() {
   }
 }
 
-function checkPin() {
+async function checkPin() {
+  const pin = APP.pinInput;
+  if (!pin || pin.length < 4) return;
+  try {
+    const res = await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})});
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok) {
+        APP.currentUser = data.user;
+        APP.userId = data.user.id;
+        APP.isAdmin = data.user.role === 'admin';
+        document.getElementById('user-role-label').textContent = data.user.role === 'admin' ? 'Admin · Gabriel' : data.user.name;
+        document.getElementById('pin-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        if (data.user.firstLogin && data.user.role !== 'admin') setTimeout(function() { promptSetPin(data.user.id); }, 500);
+        initApp();
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fallback local check
   if (APP.pinInput === APP.pin) {
+    APP.currentUser = {id:'admin',name:'Gabriel',role:'admin',color:'#1d1d1f'};
+    APP.userId = 'admin'; APP.isAdmin = true;
     document.getElementById('pin-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    initApp();
-  } else {
-    document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
-    APP.pinInput = '';
-    updatePinDots();
-    setTimeout(() => document.getElementById('pin-error').textContent = '', 2000);
+    initApp(); return;
   }
+  document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+  APP.pinInput = ''; updatePinDots();
+  setTimeout(function() { document.getElementById('pin-error').textContent = ''; }, 2000);
+}
+
+function promptSetPin(userId) {
+  APP._setPinUserId = userId;
+  buildModalSimple('Welcome! Set Your PIN',
+    '<div class="form-group" style="margin-bottom:10px"><div class="form-label">Your Name</div><input class="form-input" id="sp-name" placeholder="Enter your name"></div>' +
+    '<div class="form-group" style="margin-bottom:14px"><div class="form-label">Choose a 4-Digit PIN</div><input class="form-input" id="sp-pin" type="password" maxlength="4" placeholder="4 digits"></div>',
+    'Save My PIN', function() { saveUserPin(APP._setPinUserId); }
+  );
+}
+
+async function saveUserPin(userId) {
+  const name = (document.getElementById('sp-name')||{}).value||'';
+  const pin = (document.getElementById('sp-pin')||{}).value||'';
+  if (!name) { toast('Please enter your name','error'); return; }
+  if (pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) { toast('PIN must be exactly 4 digits','error'); return; }
+  try {
+    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin,firstLogin:false})});
+    const data = await res.json();
+    if (data.error) { toast(data.error,'error'); return; }
+    APP.currentUser = Object.assign({},APP.currentUser,{name,pin});
+    document.getElementById('user-role-label').textContent = name;
+    closeModal(); toast('Welcome, '+name+'!','success');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+function buildModalSimple(title, bodyHtml, btnText, btnFn) {
+  const mc = document.getElementById('modal-content');
+  mc.innerHTML = '<div class="modal-title">'+title+'</div>'+bodyHtml+
+    '<div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="bms-btn">'+btnText+'</button></div>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('bms-btn').onclick = btnFn;
+}
+
+function buildModal(parts) {
+  const mc = document.getElementById('modal-content');
+  mc.innerHTML = '';
+  parts.forEach(function(p) {
+    const el = document.createElement(p.tag||'div');
+    if (p.cls) el.className = p.cls;
+    if (p.style) el.style.cssText = p.style;
+    if (p.text) el.textContent = p.text;
+    if (p.html) el.innerHTML = p.html;
+    mc.appendChild(el);
+  });
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function editUser(userId, currentName) {
+  APP._editUserId = userId;
+  buildModal([
+    {tag:'div',cls:'modal-title',text:'Edit User'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Name</div><input class="form-input" id="eu-name">'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Reset PIN (blank to keep)</div><input class="form-input" id="eu-pin" type="password" maxlength="4" placeholder="4-digit PIN">'},
+    {tag:'div',cls:'modal-actions',html:'<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="eu-save">Save</button>'}
+  ]);
+  document.getElementById('eu-name').value = currentName||'';
+  document.getElementById('eu-save').onclick = function() { saveEditUser(APP._editUserId); };
+}
+
+function addNewUser() {
+  buildModal([
+    {tag:'div',cls:'modal-title',text:'Add New User'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Name</div><input class="form-input" id="nu-name" placeholder="User name">'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Initial PIN (4 digits)</div><input class="form-input" id="nu-pin" type="password" maxlength="4" placeholder="e.g. 5678">'},
+    {tag:'div',style:'font-size:10px;color:#86868b;margin-bottom:14px',text:'User prompted to set own PIN on first login.'},
+    {tag:'div',cls:'modal-actions',html:'<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="nu-save">Create User</button>'}
+  ]);
+  document.getElementById('nu-save').onclick = saveNewUser;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -469,7 +564,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
 }
@@ -485,6 +580,9 @@ function render() {
     followups: renderFollowups,
     calendar: renderCalendar,
     import: renderImport,
+    search: renderSearchDeals,
+    states: renderAllStates,
+    users: function() { return renderUsersPanel(); },
     apis: renderAPIPanel,
     automation: renderAutomation,
     contracts_lib: renderContractsLib,
@@ -1921,9 +2019,10 @@ function addListeners() {
 // Full sync from Railway database — runs on init and every 30s
 async function loadLeadsFromAPI() {
   try {
+    const uid = APP.userId || 'admin';
     const [leadsRes, statsRes] = await Promise.all([
-      fetch('/api/leads'),
-      fetch('/api/stats')
+      fetch('/api/leads/user/' + uid),
+      fetch('/api/stats/' + uid)
     ]);
     if (leadsRes.ok) {
       const data = await leadsRes.json();
@@ -1932,17 +2031,16 @@ async function loadLeadsFromAPI() {
         save('leads', APP.leads);
         document.getElementById('nav-lead-count').textContent = APP.leads.length;
         document.getElementById('sb-leads').textContent = APP.leads.length;
-        // Re-render if on leads or dashboard page
         if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
       }
     }
     if (statsRes.ok) {
       const stats = await statsRes.json();
-      if (stats.followups_due > 0) {
-        document.getElementById('nav-fu-count').textContent = stats.followups_due;
-      }
+      if (stats.followups_due > 0) document.getElementById('nav-fu-count').textContent = stats.followups_due;
+      APP.statsCache = stats;
     }
-  } catch {}
+    fetch('/api/leads/fix-states', {method:'POST'}).catch(function(){});
+  } catch(e) {}
 }
 
 // ══════════════════════════════════════════════════════════
@@ -3759,6 +3857,226 @@ async function openBuyerIntroEmail(buyerId) {
       </div>`);
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
+
+
+// ══════════════════════════════════════════════════════════
+//  SEARCH DEALS
+// ══════════════════════════════════════════════════════════
+function renderSearchDeals() {
+  setTimeout(loadSearchHistory, 50);
+  return '<div style="max-width:700px">' +
+    '<div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">' +
+    '<div style="font-size:20px;font-weight:700;margin-bottom:6px">Search Deals — No Telegram Needed</div>' +
+    '<div style="font-size:12px;color:#aaa">Run searches directly from the dashboard. Results appear in your Leads tab.</div></div>' +
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:16px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+    '<div class="form-group"><div class="form-label">County</div><input class="form-input" id="ds-county" placeholder="e.g. San Diego, Dallas"></div>' +
+    '<div class="form-group"><div class="form-label">State Code</div><input class="form-input" id="ds-state" placeholder="e.g. CA, TX, OH" maxlength="2" style="text-transform:uppercase"></div></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+    '<div class="form-group"><div class="form-label">Deal Type</div><select class="form-select" id="ds-type"><option value="wholesale">Wholesaling Deals</option><option value="land">Land Deals</option><option value="buyers">Find Buyers</option></select></div>' +
+    '<div class="form-group"><div class="form-label">Number of Leads</div><select class="form-select" id="ds-count"><option value="20">20 leads (fast)</option><option value="50" selected>50 leads</option><option value="100">100 leads</option><option value="200">200 leads</option></select></div></div>' +
+    '<button class="btn btn-dark" style="width:100%;padding:12px;font-size:14px" onclick="runDashboardSearch()">Search Now</button></div>' +
+    '<div id="ds-progress" style="display:none;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:600;margin-bottom:12px" id="ds-status-text">Starting...</div>' +
+    '<div style="background:#f5f5f7;border-radius:8px;height:8px;overflow:hidden;margin-bottom:8px"><div id="ds-progress-bar" style="background:#34c759;height:8px;border-radius:8px;width:0%;transition:width 0.5s"></div></div>' +
+    '<div style="font-size:11px;color:#86868b" id="ds-progress-detail">Initializing...</div></div>' +
+    '<div id="ds-result" style="display:none"></div>' +
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px"><div style="font-size:13px;font-weight:600;margin-bottom:10px">Recent Searches</div><div id="ds-history">Loading...</div></div></div>';
+}
+
+async function runDashboardSearch() {
+  const county = (document.getElementById('ds-county')||{value:''}).value.trim();
+  const state = ((document.getElementById('ds-state')||{value:''}).value.trim()).toUpperCase();
+  const type = (document.getElementById('ds-type')||{value:'wholesale'}).value;
+  const count = parseInt((document.getElementById('ds-count')||{value:'50'}).value) || 50;
+  if (!county || !state || state.length !== 2) { toast('Enter county and 2-letter state code','error'); return; }
+  document.getElementById('ds-progress').style.display = 'block';
+  document.getElementById('ds-result').style.display = 'none';
+  document.getElementById('ds-status-text').textContent = 'Searching '+county+' County, '+state+'...';
+  const steps = [[10,'Connecting to AI...'],[25,'Analyzing market...'],[40,'Generating leads...'],[60,'Running deal analysis...'],[78,'Finding buyers...'],[90,'Saving to database...']];
+  let si = 0;
+  const pi = setInterval(function() {
+    if (si < steps.length) { document.getElementById('ds-progress-bar').style.width = steps[si][0]+'%'; document.getElementById('ds-progress-detail').textContent = steps[si][1]; si++; }
+  }, 4000);
+  try {
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type, userId: APP.userId||'admin'})});
+    let polls = 0;
+    const pollFn = setInterval(async function() {
+      polls++;
+      try {
+        const nr = await fetch('/api/notifications');
+        const nd = await nr.json();
+        const recent = (nd.notifications||[]).find(function(n) { return n.type==='deal' && n.data && n.data.county===county && n.data.state===state; });
+        if (recent || polls > 25) {
+          clearInterval(pollFn); clearInterval(pi);
+          document.getElementById('ds-progress-bar').style.width = '100%';
+          document.getElementById('ds-progress-detail').textContent = 'Complete!';
+          const added = (recent&&recent.data&&recent.data.added) || '?';
+          document.getElementById('ds-status-text').textContent = 'Done — '+added+' new leads added';
+          document.getElementById('ds-result').style.display = 'block';
+          document.getElementById('ds-result').innerHTML = '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700;color:#1b8f3d;margin-bottom:4px">'+added+' leads added for '+county+', '+state+'</div><button class="btn btn-dark" style="margin-top:8px" onclick="goToLeads()">View Leads</button></div>';
+          await loadLeadsFromAPI();
+          loadNotifications();
+        }
+      } catch(e2) {}
+    }, 3000);
+    const hist = JSON.parse(localStorage.getItem('ds_history')||'[]');
+    hist.unshift({county, state, type, count, time: new Date().toLocaleString()});
+    localStorage.setItem('ds_history', JSON.stringify(hist.slice(0,10)));
+    loadSearchHistory();
+  } catch(e) { clearInterval(pi); document.getElementById('ds-status-text').textContent = 'Error: '+e.message; }
+}
+
+function loadSearchHistory() {
+  const el = document.getElementById('ds-history');
+  if (!el) return;
+  const hist = JSON.parse(localStorage.getItem('ds_history')||'[]');
+  if (!hist.length) { el.innerHTML = '<div style="font-size:11px;color:#86868b">No searches yet</div>'; return; }
+  el.innerHTML = hist.map(function(h) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f7;font-size:11px"><span>'+h.county+', '+h.state+' — '+h.count+' '+h.type+' leads</span><span style="color:#86868b">'+h.time+'</span></div>';
+  }).join('');
+}
+
+function goToLeads() { APP.page = 'leads'; render(); }
+
+// ══════════════════════════════════════════════════════════
+//  ALL STATES BROWSER
+// ══════════════════════════════════════════════════════════
+var ALL_STATES_DATA = [];
+
+function renderAllStates() {
+  setTimeout(loadAllStates, 50);
+  return '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><div style="font-size:16px;font-weight:700">All States — Click to Populate</div><div style="font-size:11px;color:#86868b">Click any state to auto-generate 150 leads. First click only.</div></div><input class="topbar-search" style="width:200px" placeholder="Filter states..." id="states-filter" oninput="filterStates(this.value)"></div><div id="states-grid"><div style="text-align:center;padding:40px;color:#86868b">Loading states...</div></div></div>';
+}
+
+async function loadAllStates() {
+  const grid = document.getElementById('states-grid');
+  if (!grid) return;
+  try {
+    const res = await fetch('/api/states');
+    if (!res.ok) return;
+    const data = await res.json();
+    ALL_STATES_DATA = data.states || [];
+    renderStatesGrid(ALL_STATES_DATA);
+  } catch(e) {}
+}
+
+function renderStatesGrid(states) {
+  const grid = document.getElementById('states-grid');
+  if (!grid) return;
+  const container = document.createElement('div');
+  container.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px';
+  states.forEach(function(s) {
+    const hasLeads = s.leadCount > 0;
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border:2px solid '+(hasLeads?'#34c759':'#e5e5ea')+';border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s';
+    card.innerHTML = '<div style="font-size:11px;font-weight:700;color:#86868b;margin-bottom:2px">'+s.code+'</div><div style="font-size:13px;font-weight:600;margin-bottom:6px">'+s.name+'</div><div style="font-size:10px;color:'+(hasLeads?'#34c759':'#86868b')+';font-weight:600">'+(hasLeads?s.leadCount+' leads':'Click to populate')+'</div>'+(hasLeads?'<div style="font-size:9px;color:#86868b;margin-top:2px">'+s.counties.length+' counties</div>':'');
+    card.addEventListener('mouseenter', function() { this.style.borderColor = '#0071e3'; });
+    card.addEventListener('mouseleave', function() { this.style.borderColor = hasLeads?'#34c759':'#e5e5ea'; });
+    (function(code, name) { card.addEventListener('click', function() { populateState(code, name); }); })(s.code, s.name);
+    container.appendChild(card);
+  });
+  grid.innerHTML = '';
+  grid.appendChild(container);
+}
+
+function filterStates(q) {
+  if (!q) { renderStatesGrid(ALL_STATES_DATA); return; }
+  renderStatesGrid(ALL_STATES_DATA.filter(function(s) { return s.name.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()); }));
+}
+
+async function populateState(code, name) {
+  const s = ALL_STATES_DATA.find(function(x) { return x.code === code; });
+  if (s && s.populated && s.leadCount > 0) { toast(name+' already has '+s.leadCount+' leads. Go to Leads tab.',''); return; }
+  toast('Populating '+name+' with 150 leads… Check notifications when done.','');
+  try {
+    await fetch('/api/states/populate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stateCode:code, userId:APP.userId||'admin'})});
+    setTimeout(loadAllStates, 15000);
+    setTimeout(loadAllStates, 45000);
+    loadNotifications();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  USER MANAGEMENT (Admin only)
+// ══════════════════════════════════════════════════════════
+async function renderUsersPanel() {
+  if (!APP.isAdmin) return '<div style="text-align:center;padding:40px;color:#86868b">Admin access required</div>';
+  let usersHtml = '<div style="padding:20px;color:#86868b;text-align:center">Loading…</div>';
+  let pendingHtml = '';
+  try {
+    const [ur, pr] = await Promise.all([fetch('/api/users'), fetch('/api/buyers/pending')]);
+    if (ur.ok) {
+      const ud = await ur.json();
+      usersHtml = '<div style="display:grid;gap:8px">' + (ud.users||[]).map(function(u) {
+        const editBtn = u.role !== 'admin' ? '<button class="btn btn-outline btn-sm" data-uid="'+u.id+'" data-uname="'+u.name+'" onclick="editUser(this.dataset.uid,this.dataset.uname)">Edit</button>' : '<span style="font-size:10px;color:#86868b">Admin</span>';
+        return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;background:'+(u.color||'#86868b')+';border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+u.initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600">'+u.name+'</div><div style="font-size:10px;color:#86868b">'+u.role+(u.firstLogin?' · ⚠️ PIN not set':' · ✓ Active')+'</div></div>'+editBtn+'</div>';
+      }).join('') + '</div>';
+    }
+    if (pr.ok) {
+      const pd = await pr.json();
+      if ((pd.pending||[]).length) {
+        pendingHtml = '<div style="margin-top:20px"><div style="font-size:14px;font-weight:600;margin-bottom:10px">Pending Buyers ('+pd.pending.length+')</div>' + pd.pending.map(function(p) {
+          return '<div style="background:#fff3e0;border:1px solid #ff9500;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:12px;font-weight:600">'+p.name+'</div><div style="font-size:10px;color:#86868b">By '+p.submittedBy+'</div></div><div style="display:flex;gap:6px"><button class="btn btn-outline btn-sm" style="background:#34c759;color:#fff;border-color:#34c759" data-pid="'+p.id+'" onclick="approveBuyer(this.dataset.pid)">Approve</button><button class="btn btn-outline btn-sm" style="color:#ff3b30" data-pid="'+p.id+'" onclick="rejectBuyer(this.dataset.pid)">Reject</button></div></div>';
+        }).join('') + '</div>';
+      }
+    }
+  } catch(e) {}
+  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin (1234) sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
+}
+
+async function saveEditUser(userId) {
+  const name = (document.getElementById('eu-name')||{value:''}).value.trim();
+  const pin = (document.getElementById('eu-pin')||{value:''}).value.trim();
+  const updates = {};
+  if (name) updates.name = name;
+  if (pin) { if (pin.length !== 4) { toast('PIN must be 4 digits','error'); return; } updates.pin = pin; }
+  if (!Object.keys(updates).length) { closeModal(); return; }
+  try {
+    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updates)});
+    const data = await res.json();
+    if (data.error) { toast(data.error,'error'); return; }
+    closeModal(); toast('User updated!','success'); render();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function saveNewUser() {
+  const name = (document.getElementById('nu-name')||{value:''}).value.trim();
+  const pin = (document.getElementById('nu-pin')||{value:''}).value.trim();
+  if (!name || pin.length !== 4) { toast('Name and 4-digit PIN required','error'); return; }
+  try {
+    const res = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin})});
+    const data = await res.json();
+    if (data.error) { toast(data.error,'error'); return; }
+    closeModal(); toast('User created!','success'); render();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function approveBuyer(pid) {
+  await fetch('/api/buyers/pending/'+pid+'/approve',{method:'POST'}).catch(function(){});
+  toast('Buyer approved!','success'); render();
+}
+
+async function rejectBuyer(pid) {
+  await fetch('/api/buyers/pending/'+pid+'/reject',{method:'POST'}).catch(function(){});
+  toast('Buyer rejected',''); render();
+}
+
+// ── Patch render for new pages ────────────────────────────
+var _renderPatchV11 = render;
+render = function() {
+  _renderPatchV11();
+  var usersTab = document.getElementById('nav-users-item');
+  if (usersTab) usersTab.style.display = APP.isAdmin ? 'flex' : 'none';
+  if (APP.page === 'search') setTimeout(loadSearchHistory, 50);
+  if (APP.page === 'states') setTimeout(loadAllStates, 50);
+  if (APP.page === 'users' && APP.isAdmin) {
+    renderUsersPanel().then(function(html) {
+      var el = document.getElementById('content');
+      if (el) el.innerHTML = html;
+    });
+  }
+};
 
 </script>
 </body>
