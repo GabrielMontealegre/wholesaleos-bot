@@ -976,6 +976,80 @@ app.post('/api/gmail/reply', async (req, res) => {
 });
 
 
+// ── Property Intelligence ─────────────────────────────────────────────────
+app.get('/api/property/intel/:leadId', async (req, res) => {
+  try {
+    const lead = db.getLeads().find(l => l.id === req.params.leadId);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    const scraper = require('./scraper');
+    const intel   = await scraper.fetchPropertyIntelligence(lead.address, lead.county, lead.state, lead.beds);
+    const dbData  = db.readDB();
+    const idx     = (dbData.leads||[]).findIndex(l => l.id === lead.id);
+    if (idx >= 0) { dbData.leads[idx] = { ...dbData.leads[idx], ...intel, intel_fetched: new Date().toISOString() }; db.writeDB(dbData); }
+    res.json({ ok: true, intel });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/outreach/deep', async (req, res) => {
+  try {
+    const { leadId } = req.body;
+    const lead = db.getLeads().find(l => l.id === leadId);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    const ai = require('./ai');
+    const intel = { avgCompPrice: lead.avgCompPrice, compSource: lead.compSource, comps: lead.comps, rentEstimate: lead.rent_estimate, lastSalePrice: lead.lastSalePrice, lastSaleYear: lead.lastSaleYear, zestimate: lead.zestimate };
+    const result = await ai.generateDeepOutreach(lead, intel);
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/outreach/buyer-intro', async (req, res) => {
+  try {
+    const { buyerId } = req.body;
+    const buyer = db.getBuyers().find(b => b.id === buyerId);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    const ai = require('./ai');
+    const result = await ai.generateBuyerIntroOutreach(buyer);
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/review-queue', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    res.json({ queue: dbData.reviewQueue || [], count: (dbData.reviewQueue||[]).length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/review-queue/action', (req, res) => {
+  try {
+    const { id, action } = req.body;
+    const dbData = db.readDB();
+    if (!dbData.reviewQueue) return res.json({ ok: true });
+    const item = dbData.reviewQueue.find(d => d.id === id);
+    if (!item) return res.status(404).json({ error: 'Not found' });
+    dbData.reviewQueue = dbData.reviewQueue.filter(d => d.id !== id);
+    if (action === 'accept') {
+      if (!dbData.leads) dbData.leads = [];
+      dbData.leads.push({ ...item, status: 'New', validationStatus: 'manual_accepted', created: new Date().toISOString().slice(0,10) });
+      db.addNotification('deal', 'Lead accepted from review queue', item.address||'Unknown');
+    }
+    db.writeDB(dbData);
+    res.json({ ok: true, action, remaining: dbData.reviewQueue.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/scrape/buyers', async (req, res) => {
+  try {
+    const scraper = require('./scraper');
+    res.json({ ok: true, message: 'Buyer scrape started in background' });
+    scraper.runDailyBuyerScrape(db).then(added => {
+      if (added > 0) db.addNotification('buyer', added+' new buyers scraped', 'Manual buyer scrape complete');
+    }).catch(e => console.error('Manual scrape error:', e.message));
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+
 // ── Google Drive API ──────────────────────────────────────
 function getDriveClient() {
   const clientId = process.env.GMAIL_CLIENT_ID;
@@ -1044,4 +1118,181 @@ app.get('/api/search', (req, res) => {
   res.json({ results: [...leads.map(l=>({...l,_type:'lead'})), ...buyers.map(b=>({...b,_type:'buyer'}))] });
 });
 
+// ── Scraper routes ───────────────────────────────────────
+const scraper = require('./modules/scraper');
+
+// Trigger buyer scrape manually
+app.post('/api/scraper/buyers', async (req, res) => {
+  try {
+    const markets = req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
+    res.json({ ok: true, message: `Buyer scrape started for ${markets.length} markets` });
+    // Run async after response
+    setImmediate(async () => {
+      try {
+        const buyers = await scraper.scrapeCraigslistBuyers(markets);
+        let added = 0;
+        const existing = db.getBuyers().map(b => `${b.phone}${b.email}`);
+        for (const b of buyers) {
+          const key = `${b.phone||''}${b.email||''}`;
+          if (key.length > 3 && !existing.includes(key)) {
+            b.id = require('uuid').v4();
+            db.addBuyer(b);
+            added++;
+          }
+        }
+        db.addNotification('buyer', `${added} real buyers found`, `Craigslist scrape across ${markets.length} markets`);
+        console.log(`Buyer scrape complete: ${added} new buyers added`);
+      } catch(e) { console.error('Buyer scrape error:', e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Trigger deal scrape manually
+app.post('/api/scraper/deals', async (req, res) => {
+  try {
+    const markets = req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
+    res.json({ ok: true, message: `Deal scrape started for ${markets.length} markets` });
+    setImmediate(async () => {
+      try {
+        const [clDeals, hudDeals, fsboDeals, landDeals] = await Promise.allSettled([
+          scraper.scrapeCraigslistDeals(markets),
+          scraper.scrapeHUDHomes(),
+          scraper.scrapeFSBO(),
+          scraper.scrapeLandWatch(),
+        ]);
+        const allDeals = [
+          ...(clDeals.value||[]),
+          ...(hudDeals.value||[]),
+          ...(fsboDeals.value||[]),
+          ...(landDeals.value||[]),
+        ];
+        // Store in review queue
+        const dbData = db.readDB();
+        if (!dbData.reviewQueue) dbData.reviewQueue = [];
+        let added = 0;
+        const existingUrls = new Set(dbData.reviewQueue.map(r => r.sourceUrl));
+        for (const deal of allDeals) {
+          if (!existingUrls.has(deal.sourceUrl)) {
+            deal.id = require('uuid').v4();
+            dbData.reviewQueue.push(deal);
+            added++;
+          }
+        }
+        db.writeDB(dbData);
+        db.addNotification('deal', `${added} deals in Review Queue`, `From Craigslist, HUD, FSBO, Landwatch`);
+        console.log(`Deal scrape complete: ${added} new deals in review queue`);
+      } catch(e) { console.error('Deal scrape error:', e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Get review queue
+app.get('/api/review-queue', (req, res) => {
+  const dbData = db.readDB();
+  res.json({ queue: dbData.reviewQueue || [], count: (dbData.reviewQueue||[]).length });
+});
+
+// Accept a review queue item → validate + enrich → add as real lead
+app.post('/api/review-queue/:id/accept', async (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const idx = (dbData.reviewQueue||[]).findIndex(r => r.id === req.params.id);
+    if (idx === -1) return res.json({ ok: false, error: 'Not found' });
+    const item = dbData.reviewQueue[idx];
+
+    // Enrich with real data
+    const enriched = await scraper.validateAndEnrichLead(item.address, item.state || '');
+    const classification = scraper.classifyDeal({ ...item, arvEstimate: enriched.arvEstimate });
+
+    const lead = {
+      ...item,
+      id: require('uuid').v4(),
+      arv: enriched.arvEstimate || item.listPrice || 0,
+      offer: Math.round((enriched.arvEstimate || item.listPrice || 0) * 0.65),
+      repairs: Math.round((enriched.arvEstimate || item.listPrice || 0) * 0.10),
+      beds: enriched.beds || item.beds || 0,
+      baths: enriched.baths || item.baths || 0,
+      sqft: enriched.sqft || item.sqft || 0,
+      rentEstimate: enriched.rentEstimate || 0,
+      photoUrl: enriched.photoUrl || '',
+      zillowUrl: enriched.zillowUrl || '',
+      redfinUrl: enriched.redfinUrl || '',
+      streetViewUrl: enriched.streetViewUrl || '',
+      comps: enriched.comps || [],
+      dealType: classification.type,
+      dealTypeReason: classification.reason,
+      dataSource: enriched.dataSource || item.source,
+      verified: enriched.valid,
+      status: 'New Lead',
+      userId: req.body.userId || 'admin',
+      created: new Date().toISOString(),
+    };
+    // Compute fee
+    const spread = lead.arv - lead.offer - lead.repairs;
+    lead.spread = spread;
+    lead.fee_lo = Math.round(spread * 0.35);
+    lead.fee_hi = Math.round(spread * 0.55);
+
+    db.addLead(lead);
+    dbData.reviewQueue.splice(idx, 1);
+    db.writeDB(dbData);
+    db.addNotification('deal', 'Lead accepted from Review Queue', lead.address);
+    res.json({ ok: true, lead });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Reject a review queue item
+app.post('/api/review-queue/:id/reject', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    dbData.reviewQueue = (dbData.reviewQueue||[]).filter(r => r.id !== req.params.id);
+    db.writeDB(dbData);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Skip (keep in queue for later)
+app.post('/api/review-queue/:id/skip', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const item = (dbData.reviewQueue||[]).find(r => r.id === req.params.id);
+    if (item) { item.skipped = true; item.skippedAt = new Date().toISOString(); }
+    db.writeDB(dbData);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Enrich a single existing lead on demand
+app.post('/api/leads/:id/enrich', async (req, res) => {
+  try {
+    const lead = db.getLeads().find(l => l.id === req.params.id);
+    if (!lead) return res.json({ ok: false, error: 'Lead not found' });
+    const enriched = await scraper.validateAndEnrichLead(lead.address, lead.state || '');
+    const classification = scraper.classifyDeal({ ...lead, arvEstimate: enriched.arvEstimate || lead.arv });
+    const updates = {
+      photoUrl: enriched.photoUrl || lead.photoUrl || '',
+      zillowUrl: enriched.zillowUrl || lead.zillowUrl || '',
+      redfinUrl: enriched.redfinUrl || lead.redfinUrl || '',
+      streetViewUrl: enriched.streetViewUrl || lead.streetViewUrl || '',
+      comps: enriched.comps || lead.comps || [],
+      rentEstimate: enriched.rentEstimate || lead.rentEstimate || 0,
+      dealType: classification.type,
+      dealTypeReason: classification.reason,
+      dataSource: enriched.dataSource || lead.dataSource || '',
+    };
+    if (enriched.arvEstimate && !lead.arv) {
+      updates.arv = enriched.arvEstimate;
+      updates.offer = Math.round(enriched.arvEstimate * 0.65);
+      updates.repairs = Math.round(enriched.arvEstimate * 0.10);
+      const spread = updates.arv - updates.offer - updates.repairs;
+      updates.spread = spread;
+      updates.fee_lo = Math.round(spread * 0.35);
+      updates.fee_hi = Math.round(spread * 0.55);
+    }
+    db.updateLead(lead.id, updates);
+    res.json({ ok: true, updates });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 module.exports = app;
+

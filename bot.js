@@ -80,14 +80,15 @@ async function runLeadSearch(county, state, count, cats, chatId=null) {
 
   if (!allLeads.length) return { leads: [], analyses: [] };
 
-  // Auto-extract buyers for this market
+  // Real buyer scrape for this market (no fake buyers)
   try {
-    const buyers = ai.generateMarketBuyers(county, state, 8);
-    const added = db.addBuyersBulk(buyers);
+    const scraper = require('./scraper');
+    const buyers  = await scraper.scrapeCraigslistBuyers({ clRegion: county.toLowerCase().replace(/\s/g,''), county, state });
+    const added   = buyers.length > 0 ? db.addBuyersBulk(buyers) : 0;
     if (added > 0) {
-      db.addNotification('buyer', `${added} buyers added`, `Auto-extracted ${added} cash buyers for ${county} County, ${state}`, {county, state});
+      db.addNotification('buyer', `${added} real buyers found`, `Scraped ${added} cash buyers for ${county} County, ${state}`, {county, state});
     }
-  } catch(e) { console.error('Buyer extraction:', e.message); }
+  } catch(e) { console.error('Buyer scrape error:', e.message); }
 
   // Track scanned market + notification
   db.addScannedMarket(state, county);
@@ -391,6 +392,56 @@ cron.schedule('0 13 * * 1,2,4,6', async () => {
   await runNationwideScan(OWNER_ID || null);
 });
 
+// Daily buyer scrape at 6AM MST (1PM UTC) — 15 hot markets
+cron.schedule('0 13 * * *', async () => {
+  console.log('[CRON] Daily buyer scrape starting...');
+  try {
+    const scraper = require('./scraper');
+    const added   = await scraper.runDailyBuyerScrape(db);
+    if (added > 0) {
+      db.addNotification('buyer', `${added} new buyers found`, `Daily Craigslist + Connected Investors scrape complete`);
+      if (OWNER_ID) send(OWNER_ID, `💼 Daily buyer scrape: ${added} new cash buyers added to database`);
+    }
+  } catch(e) { console.error('[CRON] Buyer scrape error:', e.message); }
+});
+
+// Weekly all-50-states buyer scrape — every Wednesday at 7AM MST (2PM UTC)
+cron.schedule('0 14 * * 3', async () => {
+  console.log('[CRON] Weekly all-states buyer scrape starting...');
+  try {
+    const scraper = require('./scraper');
+    const added   = await scraper.runWeeklyBuyerScrape(db);
+    if (added > 0) {
+      db.addNotification('buyer', `${added} buyers added (weekly scan)`, 'All 50 states Craigslist scrape complete');
+      if (OWNER_ID) send(OWNER_ID, `🗺 Weekly buyer scrape: ${added} new buyers added from all 50 states`);
+    }
+  } catch(e) { console.error('[CRON] Weekly buyer scrape error:', e.message); }
+});
+
+// Daily deal scrape at 7AM MST (2PM UTC) — Craigslist + HUD + FSBO
+cron.schedule('0 14 * * *', async () => {
+  console.log('[CRON] Daily deal scrape starting...');
+  try {
+    const scraper = require('./scraper');
+    const { validated, reviewQueue } = await scraper.runDailyDealScrape(db);
+    // Save validated deals
+    for (const deal of validated) {
+      try { db.saveLead({ ...deal, id: require('crypto').randomUUID(), status: 'New', created: new Date().toISOString().slice(0,10) }); } catch(e2) {}
+    }
+    // Save review queue to DB
+    if (reviewQueue.length > 0) {
+      const dbData = db.readDB();
+      if (!dbData.reviewQueue) dbData.reviewQueue = [];
+      dbData.reviewQueue = [...reviewQueue.map(d => ({ ...d, id: require('crypto').randomUUID(), queuedAt: new Date().toISOString() })), ...dbData.reviewQueue].slice(0, 500);
+      db.writeDB(dbData);
+    }
+    if (validated.length > 0 || reviewQueue.length > 0) {
+      db.addNotification('deal', `${validated.length} deals scraped`, `${validated.length} validated, ${reviewQueue.length} need review`);
+      if (OWNER_ID) send(OWNER_ID, `🏠 Daily deal scrape: ${validated.length} new deals added, ${reviewQueue.length} need your review`);
+    }
+  } catch(e) { console.error('[CRON] Deal scrape error:', e.message); }
+});
+
 // Daily 2AM backup
 cron.schedule('0 9 * * *', async () => {
   try {
@@ -406,6 +457,95 @@ cron.schedule('0 9 * * *', async () => {
     db.addNotification('system', 'Daily backup complete', `${todayLeads.length} new leads today, ${leads.length} total`);
   } catch(e) { console.error('Backup error:', e.message); }
 });
+
+// ── CRAIGSLIST BUYER SCRAPER — Daily 6AM MST (1PM UTC) hot markets ──────────
+cron.schedule('0 13 * * *', async () => {
+  console.log('[CRON] Starting daily Craigslist buyer scrape — 15 hot markets...');
+  try {
+    const { scrapeCraigslistBuyers, HOT_MARKETS } = require('./modules/scraper');
+    const buyers = await scrapeCraigslistBuyers(HOT_MARKETS);
+    let added = 0;
+    const existing = db.getBuyers().map(b => `${b.phone||''}${b.email||''}`);
+    for (const b of buyers) {
+      const key = `${b.phone||''}${b.email||''}`;
+      if (key.length > 3 && !existing.includes(key)) {
+        b.id = require('uuid').v4();
+        db.addBuyer(b);
+        added++;
+      }
+    }
+    db.addNotification('buyer', `${added} real buyers found`, `Daily Craigslist scrape — 15 hot markets`);
+    if (OWNER_ID && added > 0) send(OWNER_ID, `💼 <b>${added} new buyers found</b> from Craigslist today. Check Buyers tab.`);
+    console.log(`[CRON] Buyer scrape complete: ${added} new buyers`);
+  } catch(e) { console.error('[CRON] Buyer scrape error:', e.message); }
+});
+
+// ── CRAIGSLIST DEAL SCRAPER — Daily 6:30AM MST (1:30PM UTC) hot markets ─────
+cron.schedule('30 13 * * *', async () => {
+  console.log('[CRON] Starting daily deal scrape — Craigslist, HUD, FSBO, Landwatch...');
+  try {
+    const { scrapeCraigslistDeals, scrapeHUDHomes, scrapeFSBO, scrapeLandWatch, HOT_MARKETS } = require('./modules/scraper');
+    const [clRes, hudRes, fsboRes, landRes] = await Promise.allSettled([
+      scrapeCraigslistDeals(HOT_MARKETS),
+      scrapeHUDHomes(),
+      scrapeFSBO(),
+      scrapeLandWatch(),
+    ]);
+    const allDeals = [
+      ...(clRes.value||[]),
+      ...(hudRes.value||[]),
+      ...(fsboRes.value||[]),
+      ...(landRes.value||[]),
+    ];
+    const dbData = db.readDB();
+    if (!dbData.reviewQueue) dbData.reviewQueue = [];
+    const existingUrls = new Set(dbData.reviewQueue.map(r => r.sourceUrl));
+    let added = 0;
+    for (const deal of allDeals) {
+      if (!existingUrls.has(deal.sourceUrl)) {
+        deal.id = require('uuid').v4();
+        dbData.reviewQueue.push(deal);
+        added++;
+      }
+    }
+    db.writeDB(dbData);
+    db.addNotification('deal', `${added} deals in Review Queue`, `From Craigslist, HUD, FSBO, Landwatch`);
+    if (OWNER_ID && added > 0) send(OWNER_ID, `🏠 <b>${added} new deals</b> in Review Queue. Go to dashboard to review.`);
+    console.log(`[CRON] Deal scrape complete: ${added} new deals queued`);
+  } catch(e) { console.error('[CRON] Deal scrape error:', e.message); }
+});
+
+// ── ALL-50-STATE SCRAPE — Twice weekly Wed & Sun 7AM MST (2PM UTC) ───────────
+cron.schedule('0 14 * * 0,3', async () => {
+  console.log('[CRON] Starting full 50-state buyer + deal scrape...');
+  try {
+    const { scrapeCraigslistBuyers, scrapeCraigslistDeals, ALL_STATE_MARKETS } = require('./modules/scraper');
+    if (OWNER_ID) send(OWNER_ID, '🌎 Full 50-state scrape starting — buyers + deals...');
+    const [buyersRes, dealsRes] = await Promise.allSettled([
+      scrapeCraigslistBuyers(ALL_STATE_MARKETS),
+      scrapeCraigslistDeals(ALL_STATE_MARKETS),
+    ]);
+    const buyers = buyersRes.value || [];
+    const deals  = dealsRes.value  || [];
+    let buyersAdded = 0;
+    const existing = db.getBuyers().map(b => `${b.phone||''}${b.email||''}`);
+    for (const b of buyers) {
+      const key = `${b.phone||''}${b.email||''}`;
+      if (key.length > 3 && !existing.includes(key)) { b.id = require('uuid').v4(); db.addBuyer(b); buyersAdded++; }
+    }
+    const dbData = db.readDB();
+    if (!dbData.reviewQueue) dbData.reviewQueue = [];
+    const existingUrls = new Set(dbData.reviewQueue.map(r => r.sourceUrl));
+    let dealsAdded = 0;
+    for (const deal of deals) {
+      if (!existingUrls.has(deal.sourceUrl)) { deal.id = require('uuid').v4(); dbData.reviewQueue.push(deal); dealsAdded++; }
+    }
+    db.writeDB(dbData);
+    db.addNotification('system', `50-state scrape complete`, `${buyersAdded} buyers + ${dealsAdded} deals`);
+    if (OWNER_ID) send(OWNER_ID, `✅ 50-state scrape done: <b>${buyersAdded} buyers</b> + <b>${dealsAdded} deals</b> added.`);
+  } catch(e) { console.error('[CRON] 50-state scrape error:', e.message); }
+});
+
 
 // ── EXPRESS SERVER ────────────────────────────────────────────────────────
 const app = require('./server');
