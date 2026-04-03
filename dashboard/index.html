@@ -302,7 +302,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('states',this)"><span class="nav-icon">🗺</span>All States</div>
       <div class="nav-item" onclick="navigate('leads',this)"><span class="nav-icon">📋</span>Leads<span class="nav-badge" id="nav-lead-count">0</span></div>
       <div class="nav-item" onclick="navigate('pipeline',this)"><span class="nav-icon">📊</span>Pipeline</div>
-      <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Gmail</div>
+      <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Email</div>
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-section">Outreach</div>
       <div class="nav-item" onclick="navigate('followups',this)"><span class="nav-icon">🔔</span>Follow-Ups<span class="nav-badge green" id="nav-fu-count">0</span></div>
@@ -596,7 +596,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Gmail',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
 }
@@ -4342,37 +4342,34 @@ function showMatchTab(tab) {
 //  GMAIL TAB
 // ============================================================
 function renderGmail() {
-  return '<div style="max-width:1100px">' +
-    '<div style="display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - 120px)">' +
-    // Left sidebar
-    '<div style="display:flex;flex-direction:column;gap:10px">' +
-    '<button class="btn btn-dark" style="width:100%" onclick="openGmailCompose()">+ Compose</button>' +
-    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden">' +
-    ['Inbox','Sent','Drafts','Starred'].map(function(f,i) {
-      return '<div style="padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f7;' + (i===0?'background:#f0f6ff;font-weight:600;color:#0071e3':'') + '" onclick="loadGmailFolder(\'' + f.toLowerCase() + '\',this)">' + f + '</div>';
-    }).join('') +
+  return '<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:220px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">' +
+    // Left sidebar: folders + compose
+    '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">' +
+    '<div style="padding:14px">' +
+    '<button class="btn btn-dark" style="width:100%;margin-bottom:12px" onclick="openGmailCompose()">+ Compose</button>' +
+    (function(){var fs=['Inbox','Sent','Drafts','Starred'];return fs.map(function(f,i){var s='padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;font-weight:'+(i===0?'600':'400')+';color:'+(i===0?'#0071e3':'#3a3a3c')+';background:'+(i===0?'#e8f0fe':'transparent');return '<div style="'+s+'" onclick="loadGmailFolder(this.dataset.folder,this)" data-folder="'+f.toLowerCase()+'">'+f+'</div>';}).join('');})() +
     '</div>' +
-    '<div style="padding:10px;background:#e6f9ed;border:1px solid #34c759;border-radius:10px;font-size:10px;color:#1b8f3d" id="gmail-status-mini">Checking Gmail...</div>' +
+    '<div style="margin-top:auto;padding:10px;margin:10px;background:#e6f9ed;border:1px solid #34c759;border-radius:8px;font-size:10px;color:#1b8f3d" id="gmail-status-mini">Checking connection...</div>' +
     '</div>' +
-    // Right area: email list + thread pane side by side
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0">' +
-    // Email list
-    '<div style="display:flex;flex-direction:column;min-height:0">' +
-    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:100%">' +
-    '<div style="padding:12px 14px;border-bottom:1px solid #f5f5f7;font-size:12px;font-weight:600;color:#86868b;display:flex;justify-content:space-between;flex-shrink:0"><span>INBOX</span><button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
-    '<div id="gmail-emails" style="overflow-y:auto;flex:1"><div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">&#128236;</div><div style="font-weight:600;margin-bottom:8px">Loading inbox...</div></div></div>' +
-    '</div></div>' +
-    // Thread pane — always present, never display:none
-    '<div style="display:flex;flex-direction:column;min-height:0">' +
-    '<div id="gmail-thread" style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;height:100%;overflow-y:auto;box-sizing:border-box">' +
+    // Center: compact email list
+    '<div style="display:grid;grid-template-columns:300px 1fr;min-height:0">' +
+    '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;min-height:0">' +
+    '<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:600;color:#86868b;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">' +
+    '<span id="gmail-folder-label">INBOX</span>' +
+    '<button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
+    '<div id="gmail-emails" style="overflow-y:auto;flex:1"></div>' +
+    '</div>' +
+    // Right: email thread/reader
+    '<div style="display:flex;flex-direction:column;min-height:0;overflow-y:auto">' +
+    '<div id="gmail-thread" style="padding:20px;height:100%;box-sizing:border-box">' +
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#86868b">' +
-    '<div style="font-size:36px;margin-bottom:10px">&#128233;</div>' +
-    '<div style="font-size:13px;font-weight:600;margin-bottom:4px">Select an email</div>' +
-    '<div style="font-size:11px">Click any email to read it here</div>' +
+    '<div style="font-size:48px;margin-bottom:12px">&#128233;</div>' +
+    '<div style="font-size:14px;font-weight:600;margin-bottom:4px">No email selected</div>' +
+    '<div style="font-size:12px">Click any email in the list to read it here</div>' +
     '</div></div>' +
     '</div>' +
     '</div>' +
-    '</div></div>';
+    '</div>';
 }
 function showGmailSetup() {
   buildModalSimple('Connect Gmail to Dashboard',
@@ -4395,33 +4392,43 @@ function showGmailSetup() {
 async function loadGmailEmails() {
   var el = document.getElementById('gmail-emails');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading emails...</div>';
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:#86868b;font-size:12px">Loading...</div>';
   try {
     var res = await fetch('/api/gmail/inbox');
     if (!res.ok) {
-      el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b"><div style="margin-bottom:8px">Cannot load emails — check Gmail token in Railway</div><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Guide</button></div>';
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:12px">Cannot load emails — check Gmail token in Railway</div>';
       return;
     }
     var data = await res.json();
     var messages = data.messages || [];
-    if (!messages.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Inbox is empty</div>'; return; }
+    if (!messages.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:12px">Inbox is empty</div>'; return; }
     el.innerHTML = '';
     messages.forEach(function(m) {
       var row = document.createElement('div');
-      row.style.cssText = 'padding:12px 14px;border-bottom:1px solid #f5f5f7;cursor:pointer;' + (m.unread ? 'background:#f0f6ff;' : '');
+      var isActive = APP._activeEmailId === m.id;
+      row.style.cssText = 'padding:10px 14px;border-bottom:1px solid #f5f5f7;cursor:pointer;' +
+        (isActive ? 'background:#e8f0fe;' : m.unread ? 'background:#f8fbff;' : '');
       row.innerHTML =
-        '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
-        '<div style="font-size:12px;font-weight:' + (m.unread ? '700' : '500') + ';max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (m.from || 'Unknown') + '</div>' +
-        '<div style="font-size:10px;color:#86868b;flex-shrink:0">' + (m.date ? m.date.slice(0, 16) : '') + '</div></div>' +
-        '<div style="font-size:12px;' + (m.unread ? 'font-weight:600;color:#1d1d1f' : 'color:#3a3a3c') + ';margin-bottom:2px">' + (m.subject || 'No subject') + '</div>' +
-        '<div style="font-size:10px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.snippet || '') + '</div>';
-      row.addEventListener('mouseenter', function() { this.style.background = '#f5f5f7'; });
-      row.addEventListener('mouseleave', function() { this.style.background = m.unread ? '#f0f6ff' : ''; });
-      row.addEventListener('click', (function(mid) { return function() { openGmailThread(mid); }; })(m.id));
+        '<div style="font-size:11px;font-weight:' + (m.unread ? '700' : '500') + ';color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">' +
+          (m.from || 'Unknown').replace(/<[^>]+>/g,'').split('<')[0].trim() +
+        '</div>' +
+        '<div style="font-size:11px;color:' + (m.unread ? '#1d1d1f' : '#3a3a3c') + ';font-weight:' + (m.unread ? '600' : '400') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">' +
+          (m.subject || 'No subject') +
+        '</div>' +
+        '<div style="font-size:10px;color:#86868b">' + (m.date ? new Date(m.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '') + '</div>';
+      row.addEventListener('mouseenter', function() { if (APP._activeEmailId !== m.id) this.style.background = '#f5f5f7'; });
+      row.addEventListener('mouseleave', function() { if (APP._activeEmailId !== m.id) this.style.background = m.unread ? '#f8fbff' : ''; });
+      row.addEventListener('click', (function(mid) { return function() {
+        APP._activeEmailId = mid;
+        // Highlight selected row
+        document.querySelectorAll('#gmail-emails > div').forEach(function(r) { r.style.background = ''; });
+        this.style.background = '#e8f0fe';
+        openGmailThread(mid);
+      }; })(m.id));
       el.appendChild(row);
     });
   } catch(e) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Error: ' + e.message + '<br><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Guide</button></div>';
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:12px">Error: ' + e.message + '</div>';
   }
 }
 
@@ -4502,14 +4509,63 @@ async function openGmailThread(messageId) {
 
 
 function openGmailCompose() {
-  buildModal([
-    {tag:'div',cls:'modal-title',text:'Compose Email'},
-    {tag:'div',cls:'form-group',html:'<div class="form-label">To</div><input class="form-input" id="gc-to" placeholder="recipient@email.com">'},
-    {tag:'div',cls:'form-group',html:'<div class="form-label">Subject</div><input class="form-input" id="gc-subject" placeholder="Subject">'},
-    {tag:'div',cls:'form-group',html:'<div class="form-label">Message</div><textarea class="form-textarea" id="gc-body" style="min-height:160px" placeholder="Write your message..."></textarea>'},
-    {tag:'div',cls:'modal-actions',html:'<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="gc-send">Send Email</button>'}
-  ]);
-  document.getElementById('gc-send').onclick = sendGmailCompose;
+  const mc = document.getElementById('modal-content');
+  mc.innerHTML = '';
+
+  const title = document.createElement('div');
+  title.className = 'modal-title';
+  title.textContent = 'Compose Email';
+
+  const toGroup = document.createElement('div');
+  toGroup.className = 'form-group';
+  toGroup.innerHTML = '<div class="form-label">To</div>';
+  const toInput = document.createElement('input');
+  toInput.className = 'form-input';
+  toInput.id = 'gc-to';
+  toInput.placeholder = 'recipient@email.com';
+  toGroup.appendChild(toInput);
+
+  const subGroup = document.createElement('div');
+  subGroup.className = 'form-group';
+  subGroup.innerHTML = '<div class="form-label">Subject</div>';
+  const subInput = document.createElement('input');
+  subInput.className = 'form-input';
+  subInput.id = 'gc-subject';
+  subInput.placeholder = 'Subject';
+  subGroup.appendChild(subInput);
+
+  const bodyGroup = document.createElement('div');
+  bodyGroup.className = 'form-group';
+  bodyGroup.innerHTML = '<div class="form-label">Message</div>';
+  const bodyTa = document.createElement('textarea');
+  bodyTa.className = 'form-textarea';
+  bodyTa.id = 'gc-body';
+  bodyTa.style.minHeight = '160px';
+  bodyTa.placeholder = 'Write your message...';
+  bodyGroup.appendChild(bodyTa);
+
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-outline';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = closeModal;
+  const sendBtn = document.createElement('button');
+  sendBtn.className = 'btn btn-dark';
+  sendBtn.id = 'gc-send';
+  sendBtn.textContent = 'Send Email';
+  sendBtn.onclick = sendGmailCompose;
+  actions.appendChild(cancelBtn);
+  actions.appendChild(sendBtn);
+
+  mc.appendChild(title);
+  mc.appendChild(toGroup);
+  mc.appendChild(subGroup);
+  mc.appendChild(bodyGroup);
+  mc.appendChild(actions);
+
+  document.getElementById('modal-overlay').style.display = 'flex';
+  toInput.focus();
 }
 
 async function sendGmailCompose() {
@@ -4541,8 +4597,20 @@ async function sendGmailReply(messageId, threadId, replyTo) {
 }
 
 function loadGmailFolder(folder, el) {
-  document.querySelectorAll('#gmail-list > div:first-child').forEach(function(d){d.style.background='';d.style.fontWeight='';d.style.color='';});
-  if(el){el.style.background='#f0f6ff';el.style.fontWeight='600';el.style.color='#0071e3';}
+  // Update folder label
+  var label = document.getElementById('gmail-folder-label');
+  if (label) label.textContent = folder.toUpperCase();
+  // Highlight active folder
+  if (el) {
+    el.closest('div[style*="padding:14px"]') && el.parentNode.querySelectorAll('div[style*="border-radius:8px"]').forEach(function(d) {
+      d.style.background = 'transparent';
+      d.style.color = '#3a3a3c';
+      d.style.fontWeight = '400';
+    });
+    el.style.background = '#e8f0fe';
+    el.style.color = '#0071e3';
+    el.style.fontWeight = '600';
+  }
   loadGmailEmails();
 }
 
