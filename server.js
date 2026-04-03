@@ -877,17 +877,47 @@ app.get('/api/gmail/message/:id', async (req, res) => {
     const msg = await gmail.users.messages.get({ userId: 'me', id: req.params.id, format: 'full' });
     const headers = msg.data.payload.headers;
     const get = (name) => (headers.find(h=>h.name===name)||{value:''}).value;
-    let body = '';
-    const parts = msg.data.payload.parts || [msg.data.payload];
-    for (const part of parts) {
-      if (part.mimeType === 'text/plain' && part.body.data) {
-        body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-        break;
+
+    // Recursively extract body from potentially nested multipart messages
+    function extractBody(payload) {
+      if (!payload) return '';
+      // Direct body data (non-multipart)
+      if (payload.body && payload.body.data) {
+        const decoded = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+        if (payload.mimeType === 'text/html') {
+          // Strip HTML tags for plain text display
+          return decoded.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<\/p>/gi, '\n\n')
+                        .replace(/<\/div>/gi, '\n')
+                        .replace(/<[^>]+>/g, '')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+        }
+        return decoded;
       }
+      // Multipart: recurse into parts, prefer text/plain
+      if (payload.parts && payload.parts.length) {
+        const plainPart = payload.parts.find(p => p.mimeType === 'text/plain');
+        if (plainPart) return extractBody(plainPart);
+        const htmlPart = payload.parts.find(p => p.mimeType === 'text/html');
+        if (htmlPart) return extractBody(htmlPart);
+        // Recurse into nested multipart (multipart/alternative, multipart/related, etc.)
+        for (const part of payload.parts) {
+          const result = extractBody(part);
+          if (result) return result;
+        }
+      }
+      return '';
     }
-    if (!body && msg.data.payload.body && msg.data.payload.body.data) {
-      body = Buffer.from(msg.data.payload.body.data, 'base64').toString('utf-8');
-    }
+
+    const body = extractBody(msg.data.payload) || '(No readable content in this email)';
     res.json({ id: msg.data.id, threadId: msg.data.threadId, from: get('From'), subject: get('Subject'), date: get('Date'), body });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -937,10 +967,17 @@ function getDriveClient() {
 app.get('/api/drive/status', async (req, res) => {
   try {
     const drive = getDriveClient();
-    if (!drive) return res.json({ connected: false });
+    if (!drive) return res.json({ connected: false, reason: 'GDRIVE_REFRESH_TOKEN not set in Railway Variables' });
     const about = await drive.about.get({ fields: 'user' });
     res.json({ connected: true, email: about.data.user.emailAddress });
-  } catch(e) { res.json({ connected: false, error: e.message }); }
+  } catch(e) {
+    // Common causes: token expired, wrong scope, revoked access
+    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired — regenerate at OAuth Playground' :
+                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope — re-authorize with https://www.googleapis.com/auth/drive scope' :
+                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret — check Railway Variables' :
+                   e.message;
+    res.json({ connected: false, reason });
+  }
 });
 
 app.post('/api/drive/backup', async (req, res) => {
