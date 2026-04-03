@@ -4266,16 +4266,68 @@ async function openGmailThread(messageId) {
   var threadEl = document.getElementById('gmail-thread');
   if (!threadEl) return;
   threadEl.style.display = 'block';
-  threadEl.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading thread...</div>';
+  threadEl.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading...</div>';
   try {
     var res = await fetch('/api/gmail/message/' + messageId);
-    if (!res.ok) { threadEl.innerHTML = '<div style="color:#ff3b30">Error loading email</div>'; return; }
+    if (!res.ok) { threadEl.innerHTML = '<div style="color:#ff3b30">Error loading email. Try refreshing.</div>'; return; }
     var data = await res.json();
-    threadEl.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px"><div><div style="font-size:14px;font-weight:700">' + (data.subject||'No subject') + '</div><div style="font-size:11px;color:#86868b">From: ' + (data.from||'') + ' - ' + (data.date||'') + '</div></div><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'gmail-thread\').style.display=\'none\'">Close</button></div>' +
-      '<div style="background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:14px;max-height:300px;overflow-y:auto">' + (data.body||'').replace(/\n/g,'<br>') + '</div>' +
-      '<div style="border-top:1px solid #e5e5ea;padding-top:12px"><div style="font-size:12px;font-weight:600;margin-bottom:8px">Reply</div><textarea class="form-textarea" id="gmail-reply-body" style="min-height:80px;margin-bottom:8px" placeholder="Type your reply..."></textarea><div style="display:flex;gap:8px"><button class="btn btn-dark btn-sm" onclick="sendGmailReply(\'' + messageId + '\',\'' + (data.threadId||messageId) + '\',\'' + (data.from||'').replace(/'/g,'') + '\')">Send Reply</button><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'gmail-thread\').style.display=\'none\'">Cancel</button></div></div>';
+
+    threadEl.innerHTML = '';
+
+    // Header row
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e5e5ea';
+    var headerLeft = document.createElement('div');
+    headerLeft.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:4px">' + (data.subject||'No subject') + '</div>' +
+      '<div style="font-size:11px;color:#86868b">From: ' + (data.from||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+      '<div style="font-size:10px;color:#aaa">' + (data.date||'') + '</div>';
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'btn btn-outline btn-sm';
+    closeBtn.textContent = 'Close';
+    closeBtn.onclick = function() { threadEl.style.display = 'none'; };
+    header.appendChild(headerLeft); header.appendChild(closeBtn);
+    threadEl.appendChild(header);
+
+    // Body
+    var body = document.createElement('div');
+    body.style.cssText = 'background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:16px;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word';
+    body.textContent = data.body || '(No body content)';
+    threadEl.appendChild(body);
+
+    // Reply section
+    var replySection = document.createElement('div');
+    replySection.style.cssText = 'border-top:1px solid #e5e5ea;padding-top:12px';
+    var replyLabel = document.createElement('div');
+    replyLabel.style.cssText = 'font-size:12px;font-weight:600;margin-bottom:8px';
+    replyLabel.textContent = 'Reply';
+    var replyTa = document.createElement('textarea');
+    replyTa.id = 'gmail-reply-body';
+    replyTa.className = 'form-textarea';
+    replyTa.style.cssText = 'min-height:80px;margin-bottom:8px;width:100%';
+    replyTa.placeholder = 'Type your reply...';
+    var replyBtns = document.createElement('div');
+    replyBtns.style.cssText = 'display:flex;gap:8px';
+    var sendBtn = document.createElement('button');
+    sendBtn.className = 'btn btn-dark btn-sm';
+    sendBtn.textContent = 'Send Reply';
+    // Store reply data on button to avoid closure issues
+    sendBtn.dataset.msgId = messageId;
+    sendBtn.dataset.threadId = data.threadId || messageId;
+    sendBtn.dataset.to = data.from || '';
+    sendBtn.onclick = function() {
+      sendGmailReply(this.dataset.msgId, this.dataset.threadId, this.dataset.to);
+    };
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-outline btn-sm';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = function() { threadEl.style.display = 'none'; };
+    replyBtns.appendChild(sendBtn); replyBtns.appendChild(cancelBtn);
+    replySection.appendChild(replyLabel); replySection.appendChild(replyTa); replySection.appendChild(replyBtns);
+    threadEl.appendChild(replySection);
+
   } catch(e) { threadEl.innerHTML = '<div style="color:#ff3b30">Error: ' + e.message + '</div>'; }
 }
+
 
 function openGmailCompose() {
   buildModal([
