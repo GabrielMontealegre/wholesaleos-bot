@@ -302,26 +302,26 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('states',this)"><span class="nav-icon">🗺</span>All States</div>
       <div class="nav-item" onclick="navigate('leads',this)"><span class="nav-icon">📋</span>Leads<span class="nav-badge" id="nav-lead-count">0</span></div>
       <div class="nav-item" onclick="navigate('pipeline',this)"><span class="nav-icon">📊</span>Pipeline</div>
+      <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Gmail</div>
+      <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-section">Outreach</div>
       <div class="nav-item" onclick="navigate('followups',this)"><span class="nav-icon">🔔</span>Follow-Ups<span class="nav-badge green" id="nav-fu-count">0</span></div>
       <div class="nav-item" onclick="navigate('calendar',this)"><span class="nav-icon">📅</span>Calendar</div>
+      <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach Hub</div>
       <div class="nav-section">Deals</div>
-      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes</div>
+      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
       <div class="nav-item" onclick="navigate('automation',this)"><span class="nav-icon">🚀</span>Automation</div>
       <div class="nav-item" onclick="navigate('contracts_lib',this)"><span class="nav-icon">📑</span>Contracts Library</div>
       <div class="nav-item" onclick="navigate('buyboxes',this)"><span class="nav-icon">🎯</span>Buy Boxes</div>
-      <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach</div>
       <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import</div>
       <div class="nav-item" onclick="navigate('apis',this)"><span class="nav-icon">🔌</span>API Integrations</div>
-      <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-item" onclick="navigate('bot',this)"><span class="nav-icon">🤖</span>Bot Status</div>
       <div class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
       <div class="nav-item" id="nav-users-item" onclick="navigate('users',this)"><span class="nav-icon">👥</span>Users</div>
       <div class="nav-item" onclick="navigate('matching',this)"><span class="nav-icon">🔗</span>Matching</div>
-      <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Gmail</div>
     </div>
     <div class="sidebar-stats">
       <div class="stat-mini">
@@ -567,8 +567,28 @@ function initApp() {
 
 function updateSidebarStats() {
   document.getElementById('sb-leads').textContent = APP.leads.length;
-  const fees = APP.assignments.filter(a => a.status === 'Closed').reduce((s, a) => s + (a.fee || 0), 0);
-  document.getElementById('sb-fees').textContent = '$' + (fees > 1000 ? (fees/1000).toFixed(0)+'K' : fees.toLocaleString());
+  // ⑤ Pipeline opportunity: show potential fees from active leads, not just closed
+  const closedFees = APP.assignments.filter(a => a.status === 'Closed').reduce((s, a) => s + (a.fee || 0), 0);
+  const pipelineFees = APP.leads.filter(l => (l.fee_lo||0) > 0 && l.status !== 'Dead' && l.status !== 'Closed').reduce((s, l) => s + (l.fee_lo||0), 0);
+  const feesEl = document.getElementById('sb-fees');
+  if (feesEl) {
+    if (closedFees > 0) {
+      feesEl.textContent = '$' + (closedFees > 1000 ? (closedFees/1000).toFixed(0)+'K' : closedFees.toLocaleString());
+    } else if (pipelineFees > 0) {
+      feesEl.textContent = '~$' + (pipelineFees > 1000 ? (pipelineFees/1000).toFixed(0)+'K' : pipelineFees.toLocaleString());
+      feesEl.title = 'Potential pipeline fees from active leads';
+    } else {
+      feesEl.textContent = '$0';
+    }
+  }
+  // ③ Buyers badge — new buyers added today
+  const today = new Date().toDateString();
+  const newBuyers = (APP.buyers||[]).filter(b => b.created && new Date(b.created).toDateString() === today).length;
+  const badgeEl = document.getElementById('nav-buyer-count');
+  if (badgeEl) {
+    if (newBuyers > 0) { badgeEl.textContent = newBuyers; badgeEl.style.display = ''; }
+    else { badgeEl.style.display = 'none'; }
+  }
 }
 
 function navigate(page, el) {
@@ -1239,9 +1259,10 @@ async function generateEventAINote(id) {
 // ══════════════════════════════════════════════════════════
 function renderBuyers() {
   return `
-  <div style="display:flex;gap:8px;margin-bottom:16px">
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button>
     <button class="btn btn-outline" onclick="openScrapeBuyer()">🔍 Scrape Buy Box</button>
+    <button class="btn btn-outline" onclick="extractBuyBoxesFromBuyersTab()">🎯 Extract Buy Boxes</button>
   </div>
   <div class="sub-tabs">
     <div class="sub-tab active" onclick="subTab(this,'b-cash')">Cash Buyers (${APP.buyers.filter(b=>b.type==='Cash Buyer').length})</div>
@@ -1257,6 +1278,18 @@ function renderBuyers() {
   <div id="b-all" style="display:none">
     ${APP.buyers.map(b => renderBuyerCard(b)).join('')}
   </div>`;
+}
+
+async function extractBuyBoxesFromBuyersTab() {
+  toast('Extracting buy boxes from buyers...', 'success');
+  try {
+    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
+    const data = await res.json();
+    const count = data.extracted || data.count || 0;
+    if (count > 0) toast(`✅ ${count} buy box${count===1?'':'es'} extracted from buyers database`, 'success');
+    else toast('No new buy boxes found — all already extracted', 'success');
+    loadLeadsFromAPI();
+  } catch(e) { toast('Extract failed — check connection', 'error'); }
 }
 
 function renderBuyerCard(b) {
@@ -1368,14 +1401,27 @@ async function checkDriveConnection() {
       if (data.connected && banner) {
         banner.style.background = '#e6f9ed';
         banner.style.borderColor = '#34c759';
-        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#1b8f3d;margin-bottom:4px">✅ Google Drive Connected</div><div style="font-size:12px;color:#3a3a3c">Syncing to: ' + (data.email||'montsan.rei@gmail.com') + '</div><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="triggerDriveBackup()">Backup Now</button>';
+        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#1b8f3d;margin-bottom:4px">✅ Google Drive Connected</div>' +
+          '<div style="font-size:12px;color:#3a3a3c">Syncing to: ' + (data.email||'montsan.rei@gmail.com') + '</div>' +
+          '<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="triggerDriveBackup()">Backup Now</button>';
         if (syncStatus) syncStatus.style.display = 'block';
       } else if (banner) {
-        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:8px">Google Drive — Not Connected</div><div style="font-size:12px;color:#86868b;margin-bottom:12px">Add GDRIVE_REFRESH_TOKEN to Railway Variables to enable automatic backups.</div><button class="btn btn-dark" onclick="showDriveSetup()">Connect Google Drive</button>';
+        const reason = data.reason || 'Add GDRIVE_REFRESH_TOKEN to Railway Variables to enable automatic backups.';
+        banner.style.background = '#fff3e0';
+        banner.style.borderColor = '#ff9500';
+        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:6px">Google Drive — Not Connected</div>' +
+          '<div style="font-size:12px;color:#3a3a3c;margin-bottom:10px;line-height:1.6">⚠️ ' + reason + '</div>' +
+          '<button class="btn btn-dark" onclick="showDriveSetup()">Setup Guide</button>';
       }
     }
   } catch(e) {
-    if (banner) banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:8px">Google Drive — Not Connected</div><div style="font-size:12px;color:#86868b;margin-bottom:12px">Add GDRIVE_REFRESH_TOKEN to Railway Variables.</div><button class="btn btn-dark" onclick="showDriveSetup()">Setup Guide</button>';
+    if (banner) {
+      banner.style.background = '#fff3e0';
+      banner.style.borderColor = '#ff9500';
+      banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:6px">Google Drive — Not Connected</div>' +
+        '<div style="font-size:12px;color:#3a3a3c;margin-bottom:10px">Cannot reach server: ' + e.message + '</div>' +
+        '<button class="btn btn-dark" onclick="showDriveSetup()">Setup Guide</button>';
+    }
   }
 }
 
@@ -3381,35 +3427,137 @@ async function saveBuyBox() {
 //  OUTREACH HUB
 // ══════════════════════════════════════════════════════════
 function renderOutreachHub() {
-  const leads = APP.leads.slice(0, 20);
+  const states = [...new Set(APP.leads.map(l=>l.state).filter(Boolean))].sort();
   return `
-  <div style="max-width:900px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div style="max-width:960px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>
         <div style="font-size:16px;font-weight:700">Outreach Hub</div>
-        <div style="font-size:11px;color:#86868b">AI-generated outreach. Edit messages to train the AI your preferred tone.</div>
+        <div style="font-size:11px;color:#86868b">AI-generated outreach. Edit messages to train the AI your tone.</div>
       </div>
       <div id="tone-status" style="font-size:11px;color:#86868b">Loading AI status...</div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:16px">
       <div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#86868b">SELECT LEAD</div>
-        <div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;overflow:hidden;max-height:600px;overflow-y:auto">
-          ${leads.length ? leads.map(l => `<div style="padding:10px 12px;border-bottom:1px solid #f9f9f9;cursor:pointer;background:${APP.outreachLead===l.id?'#1d1d1f':'#fff'}" onclick="selectOutreachLead('${l.id}')">
-            <div style="font-size:11px;font-weight:600;color:${APP.outreachLead===l.id?'#fff':'#1d1d1f'}">${l.address?.split(',')[0]||'N/A'}</div>
-            <div style="font-size:10px;color:${APP.outreachLead===l.id?'#aaa':'#86868b'}">${l.county||''} · ${l.category||''}</div>
-          </div>`).join('') : '<div style="padding:24px;text-align:center;color:#86868b;font-size:12px">No leads yet</div>'}
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+          <input id="outreach-search" type="text" class="form-input" placeholder="Search address, county..." style="font-size:11px;padding:6px 10px" oninput="filterOutreachLeads()" />
+          <div style="display:flex;gap:6px">
+            <select id="outreach-state-filter" class="form-input" style="font-size:11px;padding:5px 8px;flex:1" onchange="filterOutreachLeads()">
+              <option value="">All States</option>
+              ${states.map(s=>`<option value="${s}">${s}</option>`).join('')}
+            </select>
+            <select id="outreach-county-filter" class="form-input" style="font-size:11px;padding:5px 8px;flex:1" onchange="filterOutreachLeads()">
+              <option value="">All Counties</option>
+            </select>
+          </div>
+          <div style="font-size:10px;color:#86868b" id="outreach-lead-count">${APP.leads.length} leads</div>
+        </div>
+        <div id="outreach-lead-list" style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;overflow:hidden;max-height:560px;overflow-y:auto">
+          ${buildOutreachLeadList(APP.leads)}
         </div>
       </div>
       <div id="outreach-panel">
-        <div style="background:#f5f5f7;border-radius:12px;padding:24px;text-align:center;color:#86868b">
+        <div style="background:#f5f5f7;border-radius:12px;padding:32px;text-align:center;color:#86868b">
           <div style="font-size:32px;margin-bottom:8px">✉️</div>
-          <div>Select a lead to generate outreach messages</div>
+          <div>Select a lead to generate outreach</div>
         </div>
       </div>
     </div>
   </div>`;
+}
+
+function buildOutreachLeadList(leads) {
+  if (!leads.length) return '<div style="padding:24px;text-align:center;color:#86868b;font-size:12px">No leads found</div>';
+  return leads.map(l => {
+    var q = computeLeadQuality(l);
+    var active = APP.outreachLead === l.id;
+    return '<div style="padding:9px 12px;border-bottom:1px solid #f9f9f9;cursor:pointer;background:'+(active?'#1d1d1f':'#fff')+'" onclick="selectOutreachLead(\''+l.id+'\')">'+
+      '<div style="font-size:11px;font-weight:600;color:'+(active?'#fff':'#1d1d1f')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(l.address?.split(',')[0]||'N/A')+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:2px">'+
+        '<span style="font-size:9px;background:'+(active?'rgba(255,255,255,0.15)':q.color)+';color:'+(active?'#fff':'#fff')+';padding:1px 6px;border-radius:8px;font-weight:700">'+q.label+'</span>'+
+        '<span style="font-size:10px;color:'+(active?'#aaa':'#86868b')+'">'+(l.county||'')+' · '+(l.state||'')+'</span>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function filterOutreachLeads() {
+  var q = (document.getElementById('outreach-search')?.value||'').toLowerCase();
+  var st = document.getElementById('outreach-state-filter')?.value||'';
+  var co = document.getElementById('outreach-county-filter')?.value||'';
+  // Update county options when state changes
+  if (st) {
+    var counties = [...new Set(APP.leads.filter(l=>l.state===st).map(l=>l.county).filter(Boolean))].sort();
+    var cEl = document.getElementById('outreach-county-filter');
+    if (cEl) {
+      cEl.innerHTML = '<option value="">All Counties</option>' + counties.map(c=>'<option value="'+c+(co===c?'" selected':'"')+'>'+c+'</option>').join('');
+    }
+  }
+  var filtered = APP.leads.filter(function(l) {
+    var matchQ = !q || (l.address||'').toLowerCase().includes(q) || (l.county||'').toLowerCase().includes(q) || (l.state||'').toLowerCase().includes(q);
+    var matchS = !st || l.state === st;
+    var matchC = !co || l.county === co;
+    return matchQ && matchS && matchC;
+  });
+  var listEl = document.getElementById('outreach-lead-list');
+  var countEl = document.getElementById('outreach-lead-count');
+  if (listEl) listEl.innerHTML = buildOutreachLeadList(filtered);
+  if (countEl) countEl.textContent = filtered.length + ' of ' + APP.leads.length + ' leads';
+}
+
+async function generateBuyerOutreach(leadId, buyerId) {
+  var lead = APP.leads.find(function(l){return l.id===leadId;});
+  var buyer = APP.buyers.find(function(b){return b.id===buyerId;});
+  if (!lead || !buyer) return;
+  var panel = document.getElementById('outreach-panel');
+  if (!panel) return;
+  // Show a loading state inside the existing panel without wiping the whole thing
+  var buyerPanel = document.getElementById('ot-buyers');
+  if (buyerPanel) {
+    var loadDiv = document.createElement('div');
+    loadDiv.id = 'buyer-outreach-result';
+    loadDiv.style.cssText = 'margin-top:12px;background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px';
+    loadDiv.innerHTML = '<div style="color:#86868b;font-size:12px">Generating buyer outreach for '+buyer.name+'...</div>';
+    var existing = buyerPanel.querySelector('#buyer-outreach-result');
+    if (existing) existing.remove();
+    buyerPanel.appendChild(loadDiv);
+  }
+  // Generate varied outreach based on buyer type
+  var buyerType = buyer.type || 'Cash Buyer';
+  var spread = (lead.arv||0) - (lead.offer||0) - (lead.repairs||0);
+  var feeRange = '$'+(lead.fee_lo||0).toLocaleString()+'-$'+(lead.fee_hi||0).toLocaleString();
+  var addr = (lead.address||'').split(',')[0];
+  var messages = {
+    'Cash Buyer': {
+      subject: 'Off-Market Opportunity — '+addr,
+      body: 'Hi '+buyer.name+',\n\nI have an off-market property in '+(lead.county||lead.state||'your area')+' that fits your buy box. Quick numbers:\n\n• ARV: $'+(lead.arv||0).toLocaleString()+'\n• Asking: $'+(lead.offer||0).toLocaleString()+'\n• Est. Repairs: $'+(lead.repairs||0).toLocaleString()+'\n• Assignment fee: '+feeRange+'\n\nAddress shared upon signed NDA/intent. Want details?\n\nGabriel | Montsan REI'
+    },
+    'Hedge Fund': {
+      subject: 'Portfolio Add — '+(lead.state||'Off-Market')+' Distressed Asset',
+      body: 'Hello '+buyer.name+' team,\n\nPresenting an off-market acquisition opportunity in '+(lead.county||lead.state||'your target market')+':\n\n• ARV: $'+(lead.arv||0).toLocaleString()+'\n• Acquisition price: $'+(lead.offer||0).toLocaleString()+'\n• Rehab est.: $'+(lead.repairs||0).toLocaleString()+'\n• Projected spread: $'+spread.toLocaleString()+'\n\nThis fits your stated criteria. Assignment fee '+feeRange+'. Full package on request.\n\nGabriel Montealegre | Montsan REI\nmontsan.rei@gmail.com'
+    },
+    'Fix & Flip': {
+      subject: 'Flip Deal — '+addr+' — Numbers Make Sense',
+      body: 'Hey '+buyer.name+',\n\nGot a flip deal in '+(lead.county||lead.state||'your area')+'. Here\'s the math:\n\nARV: $'+(lead.arv||0).toLocaleString()+' | Buy at: $'+(lead.offer||0).toLocaleString()+' | Repairs ~$'+(lead.repairs||0).toLocaleString()+'\nProfit potential: $'+Math.round(spread*0.6).toLocaleString()+'+\n\nAssignment '+feeRange+'. Interested? I\'ll send full details.\n\nGabriel — Montsan REI'
+    }
+  };
+  var msg = messages[buyerType] || messages['Cash Buyer'];
+  var resultDiv = document.getElementById('buyer-outreach-result');
+  if (!resultDiv) return;
+  var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(buyer.email||'')+'&su='+encodeURIComponent(msg.subject)+'&body='+encodeURIComponent(msg.body);
+  resultDiv.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<div style="font-size:12px;font-weight:600">📧 Outreach: '+buyer.name+'</div>'+
+      '<span style="font-size:10px;background:#e5e5ea;padding:2px 8px;border-radius:10px">'+buyerType+'</span>'+
+    '</div>'+
+    '<div style="background:#f0f6ff;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">'+msg.subject+'</div>'+
+    '<textarea id="buyer-email-body" class="form-textarea" style="min-height:160px;font-size:11px;line-height:1.7;width:100%;margin-bottom:8px">'+msg.body+'</textarea>'+
+    '<div style="display:flex;gap:8px">'+
+      '<a href="'+gmailUrl+'" target="_blank" class="btn btn-dark btn-sm">Open in Gmail</a>'+
+      '<button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById(\'buyer-email-body\').value);toast(\'Copied!\',\'success\')">Copy</button>'+
+      '<button class="btn btn-outline btn-sm" onclick="generateBuyerOutreach(\''+leadId+'\',\''+buyerId+'\')">↻ Regenerate</button>'+
+    '</div>';
 }
 
 async function loadOutreachToneStatus() {
@@ -3934,6 +4082,15 @@ async function runDashboardSearch() {
           document.getElementById('ds-result').style.display = 'block';
           document.getElementById('ds-result').innerHTML = '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700;color:#1b8f3d;margin-bottom:4px">'+added+' leads added for '+county+', '+state+'</div><button class="btn btn-dark" style="margin-top:8px" onclick="goToLeads()">View Leads</button></div>';
           await loadLeadsFromAPI();
+          // ⑥ Buyer count notification
+          const buyersBefore = APP.buyers.length;
+          setTimeout(async function() {
+            await loadLeadsFromAPI();
+            const buyersNow = APP.buyers.length;
+            const newB = buyersNow - buyersBefore;
+            if (newB > 0) toast('💼 ' + newB + ' new buyer' + (newB===1?'':'s') + ' added from ' + county + ', ' + state, 'success');
+            updateSidebarStats();
+          }, 2000);
           loadNotifications();
         }
       } catch(e2) {}
@@ -4185,32 +4342,38 @@ function showMatchTab(tab) {
 //  GMAIL TAB
 // ============================================================
 function renderGmail() {
-  var gmailUser = 'montsan.rei@gmail.com';
-  return '<div style="max-width:900px">' +
-    '<div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">' +
-    '<div style="font-size:20px;font-weight:700;margin-bottom:4px">Gmail Integration</div>' +
-    '<div style="font-size:12px;color:#aaa">Manage your real estate emails directly from the dashboard</div></div>' +
-    '<div style="display:grid;grid-template-columns:200px 1fr;gap:16px">' +
-    // Sidebar
-    '<div>' +
-    '<button class="btn btn-dark" style="width:100%;margin-bottom:12px" onclick="openGmailCompose()">+ Compose</button>' +
+  return '<div style="max-width:1100px">' +
+    '<div style="display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - 120px)">' +
+    // Left sidebar
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<button class="btn btn-dark" style="width:100%" onclick="openGmailCompose()">+ Compose</button>' +
     '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden">' +
     ['Inbox','Sent','Drafts','Starred'].map(function(f,i) {
-      return '<div style="padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f7;' + (i===0?'background:#f0f6ff;font-weight:600;color:#0071e3':'') + '" onclick="loadGmailFolder(\''+f.toLowerCase()+'\',this)">' + f + '</div>';
+      return '<div style="padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f7;' + (i===0?'background:#f0f6ff;font-weight:600;color:#0071e3':'') + '" onclick="loadGmailFolder(\'' + f.toLowerCase() + '\',this)">' + f + '</div>';
     }).join('') +
     '</div>' +
-    '<div style="margin-top:16px;padding:10px;background:#e6f9ed;border:1px solid #34c759;border-radius:10px;font-size:10px;color:#1b8f3d" id="gmail-status-mini">Checking Gmail...</div>' +
+    '<div style="padding:10px;background:#e6f9ed;border:1px solid #34c759;border-radius:10px;font-size:10px;color:#1b8f3d" id="gmail-status-mini">Checking Gmail...</div>' +
     '</div>' +
+    // Right area: email list + thread pane side by side
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0">' +
     // Email list
-    '<div>' +
-    '<div id="gmail-list" style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden">' +
-    '<div style="padding:14px;border-bottom:1px solid #f5f5f7;font-size:12px;font-weight:600;color:#86868b;display:flex;justify-content:space-between"><span>INBOX</span><button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
-    '<div id="gmail-emails"><div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">📬</div><div style="font-weight:600;margin-bottom:8px">Gmail not connected</div><div style="font-size:12px;margin-bottom:14px">Connect Gmail to view your inbox here</div><button class="btn btn-dark" onclick="showGmailSetup()">Connect Gmail</button></div></div>' +
+    '<div style="display:flex;flex-direction:column;min-height:0">' +
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:100%">' +
+    '<div style="padding:12px 14px;border-bottom:1px solid #f5f5f7;font-size:12px;font-weight:600;color:#86868b;display:flex;justify-content:space-between;flex-shrink:0"><span>INBOX</span><button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
+    '<div id="gmail-emails" style="overflow-y:auto;flex:1"><div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">&#128236;</div><div style="font-weight:600;margin-bottom:8px">Loading inbox...</div></div></div>' +
+    '</div></div>' +
+    // Thread pane — always present, never display:none
+    '<div style="display:flex;flex-direction:column;min-height:0">' +
+    '<div id="gmail-thread" style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;height:100%;overflow-y:auto;box-sizing:border-box">' +
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#86868b">' +
+    '<div style="font-size:36px;margin-bottom:10px">&#128233;</div>' +
+    '<div style="font-size:13px;font-weight:600;margin-bottom:4px">Select an email</div>' +
+    '<div style="font-size:11px">Click any email to read it here</div>' +
+    '</div></div>' +
     '</div>' +
-    '<div id="gmail-thread" style="display:none;background:#fff;border:1px solid #e5e5ea;border-radius:12px;margin-top:12px;padding:16px"></div>' +
-    '</div></div></div>';
+    '</div>' +
+    '</div></div>';
 }
-
 function showGmailSetup() {
   buildModalSimple('Connect Gmail to Dashboard',
     '<div style="line-height:2;font-size:12px">' +
@@ -4265,36 +4428,45 @@ async function loadGmailEmails() {
 async function openGmailThread(messageId) {
   var threadEl = document.getElementById('gmail-thread');
   if (!threadEl) return;
-  threadEl.style.display = 'block';
   threadEl.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading...</div>';
   try {
     var res = await fetch('/api/gmail/message/' + messageId);
-    if (!res.ok) { threadEl.innerHTML = '<div style="color:#ff3b30">Error loading email. Try refreshing.</div>'; return; }
+    if (!res.ok) { threadEl.innerHTML = '<div style="color:#ff3b30;padding:12px">Error loading email. Try refreshing.</div>'; return; }
     var data = await res.json();
 
     threadEl.innerHTML = '';
 
-    // Header row
+    // Header
     var header = document.createElement('div');
     header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e5e5ea';
     var headerLeft = document.createElement('div');
-    headerLeft.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:4px">' + (data.subject||'No subject') + '</div>' +
+    headerLeft.innerHTML =
+      '<div style="font-size:13px;font-weight:700;margin-bottom:4px;line-height:1.4">' + (data.subject||'No subject') + '</div>' +
       '<div style="font-size:11px;color:#86868b">From: ' + (data.from||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
-      '<div style="font-size:10px;color:#aaa">' + (data.date||'') + '</div>';
+      '<div style="font-size:10px;color:#aaa;margin-top:2px">' + (data.date||'') + '</div>';
     var closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-outline btn-sm';
-    closeBtn.textContent = 'Close';
-    closeBtn.onclick = function() { threadEl.style.display = 'none'; };
-    header.appendChild(headerLeft); header.appendChild(closeBtn);
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'Close';
+    closeBtn.onclick = function() {
+      threadEl.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#86868b">' +
+        '<div style="font-size:36px;margin-bottom:10px">&#128233;</div>' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:4px">Select an email</div>' +
+        '<div style="font-size:11px">Click any email to read it here</div>' +
+        '</div>';
+    };
+    header.appendChild(headerLeft);
+    header.appendChild(closeBtn);
     threadEl.appendChild(header);
 
     // Body
     var body = document.createElement('div');
     body.style.cssText = 'background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:16px;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word';
-    body.textContent = data.body || '(No body content)';
+    body.textContent = data.body || '(No plain-text body — email may be HTML only)';
     threadEl.appendChild(body);
 
-    // Reply section
+    // Reply
     var replySection = document.createElement('div');
     replySection.style.cssText = 'border-top:1px solid #e5e5ea;padding-top:12px';
     var replyLabel = document.createElement('div');
@@ -4310,22 +4482,22 @@ async function openGmailThread(messageId) {
     var sendBtn = document.createElement('button');
     sendBtn.className = 'btn btn-dark btn-sm';
     sendBtn.textContent = 'Send Reply';
-    // Store reply data on button to avoid closure issues
     sendBtn.dataset.msgId = messageId;
     sendBtn.dataset.threadId = data.threadId || messageId;
     sendBtn.dataset.to = data.from || '';
-    sendBtn.onclick = function() {
-      sendGmailReply(this.dataset.msgId, this.dataset.threadId, this.dataset.to);
-    };
+    sendBtn.onclick = function() { sendGmailReply(this.dataset.msgId, this.dataset.threadId, this.dataset.to); };
     var cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-outline btn-sm';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.onclick = function() { threadEl.style.display = 'none'; };
-    replyBtns.appendChild(sendBtn); replyBtns.appendChild(cancelBtn);
-    replySection.appendChild(replyLabel); replySection.appendChild(replyTa); replySection.appendChild(replyBtns);
+    cancelBtn.onclick = function() { closeBtn.click(); };
+    replyBtns.appendChild(sendBtn);
+    replyBtns.appendChild(cancelBtn);
+    replySection.appendChild(replyLabel);
+    replySection.appendChild(replyTa);
+    replySection.appendChild(replyBtns);
     threadEl.appendChild(replySection);
 
-  } catch(e) { threadEl.innerHTML = '<div style="color:#ff3b30">Error: ' + e.message + '</div>'; }
+  } catch(e) { threadEl.innerHTML = '<div style="color:#ff3b30;padding:12px">Error: ' + e.message + '</div>'; }
 }
 
 
@@ -4359,7 +4531,11 @@ async function sendGmailReply(messageId, threadId, replyTo) {
   try {
     var res = await fetch('/api/gmail/reply', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({messageId,threadId,to:replyTo,body})});
     var data = await res.json();
-    if (data.ok) { toast('Reply sent!','success'); document.getElementById('gmail-thread').style.display='none'; }
+    if (data.ok) {
+      toast('Reply sent!','success');
+      var threadEl = document.getElementById('gmail-thread');
+      if (threadEl) threadEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#86868b"><div style="font-size:36px;margin-bottom:10px">&#128233;</div><div style="font-size:13px;font-weight:600;margin-bottom:4px">Select an email</div><div style="font-size:11px">Click any email to read it here</div></div>';
+    }
     else { toast(data.error||'Failed to send','error'); }
   } catch(e) { toast('Error: '+e.message,'error'); }
 }
@@ -4384,7 +4560,16 @@ async function runAutomationSearch() {
     await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||'admin'})});
     if (statusEl) statusEl.textContent = 'Running... Check notification bell for completion.';
     setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); }, 15000);
-    setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); if(statusEl) statusEl.textContent='Done - check Leads and Buyers tabs'; }, 45000);
+    setTimeout(async function() {
+      const buyersBefore = APP.buyers.length;
+      await loadLeadsFromAPI();
+      loadNotifications();
+      const newB = APP.buyers.length - buyersBefore;
+      if (newB > 0) toast('💼 ' + newB + ' new buyer' + (newB===1?'':'s') + ' found — check Buyers tab', 'success');
+      else toast('Search complete — check Leads tab', 'success');
+      updateSidebarStats();
+      if(statusEl) statusEl.textContent='Done — check Leads and Buyers tabs';
+    }, 45000);
   } catch(e) { if(statusEl) statusEl.textContent='Error: '+e.message; }
 }
 
