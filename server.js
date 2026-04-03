@@ -842,6 +842,17 @@ function getGmailTransport() {
   return { oauth2, user };
 }
 
+app.get('/api/gmail/test', async (req, res) => {
+  const vars = { clientId: !!process.env.GMAIL_CLIENT_ID, clientSecret: !!process.env.GMAIL_CLIENT_SECRET, refreshToken: !!process.env.GMAIL_REFRESH_TOKEN, user: process.env.GMAIL_USER };
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.json({ ok: false, vars, error: 'Missing variables' });
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    res.json({ ok: true, email: profile.data.emailAddress, messagesTotal: profile.data.messagesTotal, vars });
+  } catch(e) { res.json({ ok: false, error: e.message, vars }); }
+});
+
 app.get('/api/gmail/inbox', async (req, res) => {
   try {
     const cfg = getGmailTransport();
