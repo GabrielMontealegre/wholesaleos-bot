@@ -1320,35 +1320,86 @@ function renderContracts() {
 //  GOOGLE DRIVE
 // ══════════════════════════════════════════════════════════
 function renderDrive() {
+  setTimeout(checkDriveConnection, 100);
   const folders = ['Deals','Buyers','Closed Deals','Database','Operations','Contracts'];
-  const counts = {Deals:APP.leads.length, Buyers:APP.buyers.length, 'Closed Deals':APP.assignments.filter(a=>a.status==='Closed').length, Database:APP.leads.length, Operations:0, Contracts:APP.contracts.length};
+  const counts = {Deals:APP.leads.length, Buyers:APP.buyers.length, 'Closed Deals':APP.assignments.filter(a=>a.status==='Closed').length, Database:APP.leads.length, Operations:0, Contracts:0};
   return `
-  <div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:12px;padding:14px;margin-bottom:16px">
-    <div style="font-size:13px;font-weight:600;color:#1a73e8;margin-bottom:4px">🔗 Google Drive Integration</div>
-    <div style="font-size:12px;color:#3a3a3c">Connect your Google Drive to automatically sync all deals, contracts, and buyer data. The system will create and maintain a structured folder hierarchy under <strong>Montsan REI</strong>.</div>
-    <button class="btn btn-blue" style="margin-top:10px" onclick="connectGoogleDrive()">Connect Google Drive</button>
-  </div>
-  <div style="font-size:13px;font-weight:600;color:#1d1d1f;margin-bottom:10px">Folder Structure — Montsan REI/</div>
-  ${folders.map(f => `<div class="drive-folder">
-    <div class="drive-folder-icon">📁</div>
-    <div>
-      <div class="drive-folder-name">${f}</div>
-      <div style="font-size:10px;color:#86868b">Auto-organized by county → date → deal name</div>
+  <div style="max-width:800px">
+    <div id="drive-connection-banner" style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:4px">Google Drive — Checking connection...</div>
+      <div style="font-size:12px;color:#86868b">Connecting to your Google Drive account</div>
     </div>
-    <div class="drive-folder-count">${counts[f]||0} files</div>
-    <div style="width:8px;height:8px;border-radius:50%;background:#86868b;margin-left:8px" title="Not connected"></div>
-  </div>`).join('')}
-  <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px;margin-top:16px">
-    <div style="font-size:12px;font-weight:600;margin-bottom:8px">Auto-upload schedule</div>
-    <div style="font-size:11px;color:#3a3a3c;line-height:1.8">
-      📅 <strong>Daily at 7:00 AM MST (Los Cabos)</strong> — Lead database export<br>
-      📋 <strong>On contract generate</strong> — Upload to Contracts/ folder<br>
-      💼 <strong>On deal close</strong> — Move to Closed Deals/ with full conversation history<br>
-      📊 <strong>Weekly Sunday</strong> — Full CRM export and backup
+    <div style="background:#f5f5f7;border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Folder Structure — Montsan REI/</div>
+      ${folders.map(f => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e5e5ea">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">📁</span>
+            <div>
+              <div style="font-size:13px;font-weight:600">${f}</div>
+              <div style="font-size:10px;color:#86868b">Auto-organized by county → date → deal name</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#86868b">${(counts[f]||0)} files</div>
+        </div>`).join('')}
+    </div>
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Auto-upload Schedule</div>
+      <div style="font-size:11px;color:#3a3a3c;line-height:2.2">
+        📊 <strong>Daily 7AM MST</strong> — Lead database export<br>
+        📄 <strong>On contract generate</strong> — Upload to Contracts/ folder<br>
+        🎉 <strong>On deal close</strong> — Move to Closed Deals/ with full history<br>
+        🗄️ <strong>Weekly Sunday</strong> — Full CRM export and backup
+      </div>
+    </div>
+    <div id="drive-sync-status" style="display:none;background:#e6f9ed;border:1px solid #34c759;border-radius:10px;padding:12px;font-size:12px;color:#1b8f3d">
+      ✅ Google Drive connected — syncing automatically
     </div>
   </div>`;
 }
 
+async function checkDriveConnection() {
+  const banner = document.getElementById('drive-connection-banner');
+  const syncStatus = document.getElementById('drive-sync-status');
+  try {
+    const res = await fetch('/api/drive/status');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.connected && banner) {
+        banner.style.background = '#e6f9ed';
+        banner.style.borderColor = '#34c759';
+        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#1b8f3d;margin-bottom:4px">✅ Google Drive Connected</div><div style="font-size:12px;color:#3a3a3c">Syncing to: ' + (data.email||'montsan.rei@gmail.com') + '</div><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="triggerDriveBackup()">Backup Now</button>';
+        if (syncStatus) syncStatus.style.display = 'block';
+      } else if (banner) {
+        banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:8px">Google Drive — Not Connected</div><div style="font-size:12px;color:#86868b;margin-bottom:12px">Add GDRIVE_REFRESH_TOKEN to Railway Variables to enable automatic backups.</div><button class="btn btn-dark" onclick="showDriveSetup()">Connect Google Drive</button>';
+      }
+    }
+  } catch(e) {
+    if (banner) banner.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:8px">Google Drive — Not Connected</div><div style="font-size:12px;color:#86868b;margin-bottom:12px">Add GDRIVE_REFRESH_TOKEN to Railway Variables.</div><button class="btn btn-dark" onclick="showDriveSetup()">Setup Guide</button>';
+  }
+}
+
+function showDriveSetup() {
+  buildModalSimple('Connect Google Drive',
+    '<div style="line-height:2;font-size:12px"><div style="background:#f5f5f7;border-radius:8px;padding:12px;margin-bottom:12px">' +
+    '<strong>Step 1:</strong> Go to <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:#0071e3">OAuth Playground</a><br>' +
+    '<strong>Step 2:</strong> Gear icon → Use your own credentials → enter Client ID + Secret<br>' +
+    '<strong>Step 3:</strong> Find Drive API v3 → check <code>https://www.googleapis.com/auth/drive</code><br>' +
+    '<strong>Step 4:</strong> Authorize → Exchange code for tokens → copy Refresh Token<br>' +
+    '<strong>Step 5:</strong> Railway Variables → add <code>GDRIVE_REFRESH_TOKEN</code> → paste token → save<br>' +
+    '</div></div>',
+    'Open OAuth Playground', function() { window.open('https://developers.google.com/oauthplayground','_blank'); closeModal(); }
+  );
+}
+
+async function triggerDriveBackup() {
+  toast('Starting backup to Google Drive...', '');
+  try {
+    const res = await fetch('/api/drive/backup', {method:'POST'});
+    const data = await res.json();
+    toast(data.ok ? 'Backup complete!' : ('Backup failed: ' + (data.error||'unknown')), data.ok ? 'success' : 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
 // ══════════════════════════════════════════════════════════
 //  BOT STATUS
 // ══════════════════════════════════════════════════════════
@@ -4186,23 +4237,29 @@ async function loadGmailEmails() {
   try {
     var res = await fetch('/api/gmail/inbox');
     if (!res.ok) {
-      el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b"><div style="margin-bottom:8px">Gmail not connected</div><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Gmail</button></div>';
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b"><div style="margin-bottom:8px">Cannot load emails — check Gmail token in Railway</div><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Guide</button></div>';
       return;
     }
     var data = await res.json();
     var messages = data.messages || [];
-    if (!messages.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">No emails found</div>'; return; }
-    el.innerHTML = messages.map(function(m) {
-      return '<div style="padding:12px 14px;border-bottom:1px solid #f5f5f7;cursor:pointer;' + (m.unread?'background:#fafeff;':'') + '" onclick="openGmailThread(\'' + m.id + '\')">' +
+    if (!messages.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Inbox is empty</div>'; return; }
+    el.innerHTML = '';
+    messages.forEach(function(m) {
+      var row = document.createElement('div');
+      row.style.cssText = 'padding:12px 14px;border-bottom:1px solid #f5f5f7;cursor:pointer;' + (m.unread ? 'background:#f0f6ff;' : '');
+      row.innerHTML =
         '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
-        '<div style="font-size:12px;font-weight:' + (m.unread?'700':'500') + '">' + (m.from||'Unknown') + '</div>' +
-        '<div style="font-size:10px;color:#86868b">' + (m.date||'') + '</div></div>' +
-        '<div style="font-size:12px;' + (m.unread?'font-weight:600;color:#1d1d1f':'color:#3a3a3c') + ';margin-bottom:2px">' + (m.subject||'No subject') + '</div>' +
-        '<div style="font-size:10px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.snippet||'') + '</div>' +
-        '</div>';
-    }).join('');
+        '<div style="font-size:12px;font-weight:' + (m.unread ? '700' : '500') + ';max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (m.from || 'Unknown') + '</div>' +
+        '<div style="font-size:10px;color:#86868b;flex-shrink:0">' + (m.date ? m.date.slice(0, 16) : '') + '</div></div>' +
+        '<div style="font-size:12px;' + (m.unread ? 'font-weight:600;color:#1d1d1f' : 'color:#3a3a3c') + ';margin-bottom:2px">' + (m.subject || 'No subject') + '</div>' +
+        '<div style="font-size:10px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.snippet || '') + '</div>';
+      row.addEventListener('mouseenter', function() { this.style.background = '#f5f5f7'; });
+      row.addEventListener('mouseleave', function() { this.style.background = m.unread ? '#f0f6ff' : ''; });
+      row.addEventListener('click', (function(mid) { return function() { openGmailThread(mid); }; })(m.id));
+      el.appendChild(row);
+    });
   } catch(e) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Gmail not connected. <button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup</button></div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Error: ' + e.message + '<br><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Guide</button></div>';
   }
 }
 
