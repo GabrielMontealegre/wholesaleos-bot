@@ -911,6 +911,58 @@ app.post('/api/gmail/reply', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ── Google Drive API ──────────────────────────────────────
+function getDriveClient() {
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GDRIVE_REFRESH_TOKEN;
+  if (!clientId || !clientSecret || !refreshToken) return null;
+  const oauth2 = new google.auth.OAuth2(clientId, clientSecret, 'https://developers.google.com/oauthplayground');
+  oauth2.setCredentials({ refresh_token: refreshToken });
+  return google.drive({ version: 'v3', auth: oauth2 });
+}
+
+app.get('/api/drive/status', async (req, res) => {
+  try {
+    const drive = getDriveClient();
+    if (!drive) return res.json({ connected: false });
+    const about = await drive.about.get({ fields: 'user' });
+    res.json({ connected: true, email: about.data.user.emailAddress });
+  } catch(e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/drive/backup', async (req, res) => {
+  try {
+    const drive = getDriveClient();
+    if (!drive) return res.json({ ok: false, error: 'Drive not configured. Add GDRIVE_REFRESH_TOKEN to Railway.' });
+    const leads = db.getLeads();
+    const buyers = db.getBuyers();
+    const today = new Date().toISOString().slice(0, 10);
+    const csvHeader = "Address,County,State,Category,ARV,Offer,Spread,Status,DOM,Phone";
+    const csvRows = leads.map(l => [l.address||"",l.county||"",l.state||"",l.category||"",l.arv||0,l.offer||0,l.spread||0,l.status||"",l.dom||0,l.phone||""].map(v=>String(v).replace(/,/g,"")).join(",")).join("\n");
+    const csvContent = csvHeader + "\n" + csvRows;
+    // Find or create WholesaleOS folder
+    let folderId;
+    const folderSearch = await drive.files.list({ q: "name='Montsan REI' and mimeType='application/vnd.google-apps.folder' and trashed=false", fields: 'files(id,name)' });
+    if (folderSearch.data.files.length > 0) {
+      folderId = folderSearch.data.files[0].id;
+    } else {
+      const folder = await drive.files.create({ requestBody: { name: 'Montsan REI', mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' });
+      folderId = folder.data.id;
+    }
+    // Upload leads CSV
+    const { Readable } = require('stream');
+    const stream = Readable.from([csvContent]);
+    await drive.files.create({
+      requestBody: { name: 'leads_backup_' + today + '.csv', parents: [folderId] },
+      media: { mimeType: 'text/csv', body: stream }
+    });
+    db.addNotification('system', 'Google Drive backup complete', leads.length + ' leads exported to Montsan REI/ folder');
+    res.json({ ok: true, leads: leads.length, folder: 'Montsan REI' });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── API: Search ─────────────────────────────────────────
 app.get('/api/search', (req, res) => {
   const { q } = req.query;
