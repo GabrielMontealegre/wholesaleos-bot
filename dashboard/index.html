@@ -84,8 +84,8 @@ input,select,textarea,button{font-family:inherit;font-size:13px}
 .stat-change.neg{color:#ff3b30}
 
 /* ── Split Layout ── */
-.split-view{display:grid;grid-template-columns:1fr 340px;gap:12px;flex:1;min-height:0}
-.split-left{background:#fff;border-radius:12px;border:1px solid #e5e5ea;overflow:hidden;display:flex;flex-direction:column}
+.split-view{display:grid;grid-template-columns:1fr 340px;gap:12px;height:calc(100vh - 120px);min-height:0}
+.split-left{background:#fff;border-radius:12px;border:1px solid #e5e5ea;overflow-y:auto;display:flex;flex-direction:column}
 .split-right{display:flex;flex-direction:column;gap:12px;overflow-y:auto}
 
 /* ── Table ── */
@@ -645,15 +645,18 @@ function renderLeads() {
       <button class="btn btn-sm ${viewMode==='cards'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='cards';render()">🃏 Cards</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <select class="filter-select" id="status-filter" onchange="filterLeads()">
+      <select class="filter-select" id="status-filter" onchange="filterLeads();updateFilterLabel(this,'All Status')">
         <option value="">All Status</option>
         <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
         <option>Negotiating</option><option>Under Contract</option><option>Closed</option>
+        <option value="">— Clear Filter —</option>
       </select>
-      <select class="filter-select" id="cat-filter" onchange="filterLeads()">
+      <select class="filter-select" id="cat-filter" onchange="filterLeads();updateFilterLabel(this,'All Categories')">
         <option value="">All Categories</option>
         <option>Pre-FC</option><option>REO</option><option>Long DOM</option>
         <option>FSBO</option><option>Probate</option><option>Tax Delinquent</option>
+        <option>Land — Development Opportunity</option>
+        <option value="">— Clear Filter —</option>
       </select>
       <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
       <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
@@ -772,7 +775,9 @@ function renderLeadsTable(leads) {
   return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
     <thead><tr>${['Address','County','Category','ARV','Offer','Spread','DOM','Risk','Status'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:#86868b;background:#fafafa;border-bottom:1px solid #f2f2f7;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
     <tbody>${leads.map(l=>`<tr style="cursor:pointer;background:${APP.selectedLead===l.id?'#f0f6ff':'#fff'}" onclick="selectLead('${l.id}')">
-      <td style="padding:8px 10px;font-size:11px;font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.address?.split(',')[0]||'N/A'}</td>
+      <td style="padding:8px 10px;font-size:11px;font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        ${(()=>{const q=computeLeadQuality(l);return '<span style="background:'+q.color+';color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:6px;margin-right:4px">'+q.emoji+'</span>';})()}${l.address?.split(',')[0]||'N/A'}
+      </td>
       <td style="padding:8px 10px;font-size:11px;color:#86868b">${l.county||''}</td>
       <td style="padding:8px 10px;font-size:11px"><span class="badge b-orange">${l.category||''}</span></td>
       <td style="padding:8px 10px;font-size:11px;color:#34c759;font-weight:600">$${((l.arv||0)/1000).toFixed(0)}K</td>
@@ -818,7 +823,11 @@ function renderLeadDetail(l) {
   const lid = l.id;
 
   let html = '<div class="detail-panel">';
-  html += '<div class="detail-addr">' + (l.address||'').split(',')[0] + '</div>';
+  const qualScore = computeLeadQuality(l);
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
+  html += '<div class="detail-addr" style="margin-bottom:0">' + (l.address||'').split(',')[0] + '</div>';
+  html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
+  html += '</div>';
   html += '<div class="detail-meta">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div>';
 
   // QUICK ACTION BUTTONS
@@ -2415,7 +2424,13 @@ function logAction(type, leadId) {
 function renderAPIPanel() {
   const apis = JSON.parse(localStorage.getItem('montsan_apis') || '[]');
   const PROVIDERS = [
-    {name:'BatchLeads',desc:'Skip tracing + owner data',icon:'🔍',url:'batchleads.io',category:'Skip Trace'},
+    {name:'BatchLeads',icon:'🔍',url:'batchleads.io',category:'Skip Trace',value:'High Value',valueColor:'#34c759',
+     desc:'Skip tracing + owner data + cash buyer lists',
+     what:'Owner name, phone, email, mailing address, mortgage info, equity estimates, cash buyer lists by zip',
+     why:'Best all-in-one for wholesaling. Get seller phone numbers and find buyers in the same platform.',
+     pricing:[{tier:'Starter',price:'$97/mo',records:'500 skip traces/mo'},{tier:'Pro',price:'$197/mo',records:'2,000 skip traces/mo'},{tier:'Enterprise',price:'$397/mo',records:'Unlimited'}],
+     recommend:'Start with Starter ($97). Upgrade when pulling 500+ skip traces/month.',
+     roi:'1 closed deal pays for 12+ months of subscription.'},
     {name:'PropStream',desc:'MLS + foreclosure data',icon:'🏠',url:'propstream.com',category:'Data'},
     {name:'Batch Skip Tracing',desc:'Phone + email lookup',icon:'📱',url:'batchskiptracing.com',category:'Skip Trace'},
     {name:'ListSource',desc:'Absentee owner lists',icon:'📋',url:'listsource.com',category:'Lists'},
@@ -2586,32 +2601,58 @@ async function generateLeadAINote(id) {
 function openAIOutreach(leadId) {
   const lead = APP.leads.find(l => l.id === leadId);
   if (!lead) return;
+  const q = computeLeadQuality(lead);
+  const addr = lead.address?.split(',')[0] || 'Lead';
+
+  // Generate human-tone messages
+  const sms = generateHumanSMS(lead, q);
+  const emailObj = generateHumanEmail(lead, q);
+  const script = generateHumanScript(lead, q);
+
   showModal(`
-    <div class="modal-title">🤖 AI Outreach — ${lead.address?.split(',')[0]||'Lead'}</div>
+    <div class="modal-title">🤖 AI Outreach — ${addr}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="background:${q.color};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px">${q.emoji} ${q.label}</span>
+      <span style="font-size:10px;color:#86868b">Score: ${q.score}/100 · ${q.reasons[0]||''}</span>
+    </div>
     <div class="sub-tabs" style="margin-bottom:12px">
-      <div class="sub-tab active" onclick="subTab(this,'ao-offer')">Offer Email</div>
-      <div class="sub-tab" onclick="subTab(this,'ao-nego')">Negotiation Text</div>
-      <div class="sub-tab" onclick="subTab(this,'ao-script')">Call Script</div>
+      <div class="sub-tab active" onclick="subTab(this,'ao-email')">📧 Email</div>
+      <div class="sub-tab" onclick="subTab(this,'ao-sms')">💬 SMS</div>
+      <div class="sub-tab" onclick="subTab(this,'ao-script')">📞 Call Script</div>
     </div>
-    <div id="ao-offer">
-      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px;white-space:pre-wrap">${lead.offer_email || `Hi,\n\nI'm interested in your property at ${lead.address}. I can offer $${(lead.offer||0).toLocaleString()} cash, close in 14 days, no repairs needed, no agent fees.\n\nWould you like to discuss?\n\nGabriel Montealegre | Montsan Real Estate Investment`}</div>
-      <button class="btn btn-dark btn-sm" onclick="copyText('ao-offer')">Copy Email</button>
-      <a href="mailto:${lead.email||''}" class="btn btn-blue btn-sm" style="margin-left:6px">Open in Email Client</a>
+
+    <div id="ao-email">
+      <div style="background:#f0f6ff;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">Subject: ${emailObj.subject}</div>
+      <textarea id="ao-email-body" class="form-textarea" style="min-height:180px;font-size:12px;line-height:1.7" data-original="${emailObj.body.replace(/"/g,"'")}">${emailObj.body}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-dark btn-sm" onclick="copyAndLearn('ao-email-body','seller_email')">Copy + Learn</button>
+        <a href="mailto:${lead.email||''}" class="btn btn-blue btn-sm">Open Email App</a>
+        <button class="btn btn-outline btn-sm" onclick="regenerateOutreach('${leadId}','email')">↻ Regenerate</button>
+      </div>
     </div>
-    <div id="ao-nego" style="display:none">
-      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px">${lead.negotiation_text || `Hi, following up on ${lead.address?.split(',')[0]}. My cash offer of $${(lead.offer||0).toLocaleString()} is still available — quick close, no hassle. Can we connect today?`}</div>
-      <button class="btn btn-dark btn-sm" onclick="copyText('ao-nego')">Copy Text</button>
-      <a href="sms:${lead.phone||''}" class="btn btn-blue btn-sm" style="margin-left:6px">Open in Messages</a>
+
+    <div id="ao-sms" style="display:none">
+      <textarea id="ao-sms-body" class="form-textarea" style="min-height:80px;font-size:12px" data-original="${sms.replace(/"/g,"'")}">${sms}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-dark btn-sm" onclick="copyAndLearn('ao-sms-body','seller_sms')">Copy + Learn</button>
+        <a href="sms:${lead.phone||''}" class="btn btn-blue btn-sm">Open Messages</a>
+        <button class="btn btn-outline btn-sm" onclick="regenerateOutreach('${leadId}','sms')">↻ Regenerate</button>
+      </div>
     </div>
+
     <div id="ao-script" style="display:none">
-      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:10px">${lead.script || `Hi, this is Gabriel — I'm a local cash buyer. I can close in 14 days on your property at ${lead.address?.split(',')[0]} with no repairs or fees. Is this still available?`}</div>
-      <button class="btn btn-dark btn-sm" onclick="copyText('ao-script')">Copy Script</button>
-      <a href="tel:${lead.phone||''}" class="btn btn-green btn-sm" style="margin-left:6px">Call Now</a>
+      <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:11px;line-height:1.9;white-space:pre-wrap;max-height:300px;overflow-y:auto" id="ao-script-content">${script}</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-dark btn-sm" onclick="copyText('ao-script-content')">Copy Script</button>
+        <a href="tel:${lead.phone||''}" class="btn btn-green btn-sm">Call Now</a>
+      </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Close</button>
     </div>`);
 }
+
 
 function copyText(divId) {
   const el = document.getElementById(divId);
@@ -2838,6 +2879,17 @@ function renderAutomation() {
         </div>
         <button class="btn btn-dark" style="width:100%" onclick="triggerManualScan()">📥 Scan This Market</button>
         <div id="manual-status" style="margin-top:8px;font-size:11px;color:#86868b"></div>
+      </div>
+
+      <!-- LAND DEALS -->
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🌱 Find Land Deals</div>
+        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Discover land opportunities based on development potential, population growth, and builder activity — not distress signals.</div>
+        <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">
+          Signals used: New subdivisions nearby · Infrastructure projects · Rezoning activity · Builder acquisition clusters · Solar farm zones · Agricultural land near city limits
+        </div>
+        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="findLandDeals()">🌱 Find Land Deals</button>
+        <div style="font-size:10px;color:#86868b">Land deals appear in Leads tab tagged as "Land — Development Opportunity"</div>
       </div>
 
       <!-- BUY BOX EXTRACTION -->
@@ -3393,6 +3445,320 @@ render = function() {
     fetch('/api/buyboxes').then(r=>r.json()).then(d => { if(el) el.textContent = `${(d.buyboxes||[]).length} buy boxes stored. ${APP.buyers.length} buyers in database.`; }).catch(()=>{});
   }, 50);
 };
+
+
+// ══════════════════════════════════════════════════════════
+//  CLIENT-SIDE QUALITY SCORING & MESSAGE GENERATION
+// ══════════════════════════════════════════════════════════
+function computeLeadQuality(lead) {
+  let score = 0;
+  const reasons = [];
+  const spread = lead.spread || 0;
+  const cat = (lead.category||'').toLowerCase();
+
+  if (spread > 80000)      { score += 30; reasons.push('Exceptional $' + Math.round(spread/1000) + 'K spread'); }
+  else if (spread > 50000) { score += 22; reasons.push('Strong $' + Math.round(spread/1000) + 'K spread'); }
+  else if (spread > 25000) { score += 14; reasons.push('Decent spread'); }
+  else if (spread > 10000) { score += 6; }
+
+  if (cat.includes('pre-fc')||cat.includes('foreclosure')) { score += 25; reasons.push('Pre-foreclosure'); }
+  else if (cat === 'reo')           { score += 20; reasons.push('Bank-owned REO'); }
+  else if (cat === 'probate')       { score += 18; reasons.push('Probate'); }
+  else if (cat.includes('tax'))     { score += 16; reasons.push('Tax delinquent'); }
+  else if (cat === 'auction')       { score += 15; reasons.push('Auction'); }
+  else if (cat === 'fsbo')          { score += 12; reasons.push('FSBO'); }
+  else if (cat.includes('long'))    { score += 10; reasons.push('Long DOM'); }
+
+  const dom = lead.dom || 0;
+  if (dom > 120) { score += 15; reasons.push(dom + ' days on market'); }
+  else if (dom > 60) { score += 10; }
+  else if (dom > 30) { score += 5; }
+
+  if (lead.phone) score += 5;
+  if (lead.email) score += 5;
+  if (lead.arv > 0 && lead.offer > 0) score += 5;
+  if (lead.risk === 'Low') score += 10;
+  else if (lead.risk === 'High') score -= 10;
+
+  score = Math.max(0, Math.min(100, score));
+  let label, color, emoji;
+  if (score >= 65)      { label = 'High Quality'; color = '#34c759'; emoji = '🔥'; }
+  else if (score >= 35) { label = 'Medium Quality'; color = '#ff9500'; emoji = '⚡'; }
+  else                  { label = 'Low Quality'; color = '#86868b'; emoji = '❄️'; }
+  return { score, label, color, emoji, reasons };
+}
+
+const _SMS_OPENERS = ["Hey, hope you're doing well —","Hi there, quick question —","Hey, I came across something interesting —","Hi, I wanted to reach out directly —"];
+const _EMAIL_OPENS = ["I hope this finds you well.","Hope you're having a good week.","I came across your property and wanted to reach out.","I noticed your property and figured I'd get in touch directly."];
+function _rnd(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+function generateHumanSMS(lead, q) {
+  const addr = lead.address?.split(',')[0] || 'your property';
+  if (!q) q = computeLeadQuality(lead);
+  if (q.score >= 65) {
+    return `${_rnd(_SMS_OPENERS)} I came across ${addr} and I'm genuinely interested. Would you be open to a quick conversation?`;
+  } else if (q.score >= 35) {
+    return `Hi, I noticed ${addr} and wanted to check in — have you had any thoughts about selling? No pressure, just curious.`;
+  } else {
+    return `Hi, I'm a local investor and I came across your property at ${addr}. If you ever consider selling, I'd love to connect. No rush at all.`;
+  }
+}
+
+function generateHumanEmail(lead, q) {
+  const addr = lead.address?.split(',')[0] || 'the property';
+  const city = lead.address?.split(',')[1]?.trim() || lead.county || 'your area';
+  if (!q) q = computeLeadQuality(lead);
+  const subjects = ['Quick question about ' + addr, 'Regarding ' + addr + ' — local investor', 'Interested in ' + addr, addr + ' — would love to connect'];
+  let body;
+  if (q.score >= 65) {
+    body = `Hi,
+
+${_rnd(_EMAIL_OPENS)}
+
+My name is Gabriel Montealegre and I invest in real estate in ${city}. I came across your property at ${addr} and I'm genuinely interested in learning more.
+
+I work with cash and can move quickly when the right situation comes up. I'm not an agent — just a local investor who prefers straightforward conversations.
+
+Would you be open to a quick call? Even 10 minutes would be great.
+
+No pressure at all — just figured a direct conversation beats going through channels.
+
+Best,
+Gabriel Montealegre
+Montsan Real Estate Investment
+montsan.rei@gmail.com`;
+  } else if (q.score >= 35) {
+    body = `Hi,
+
+${_rnd(_EMAIL_OPENS)}
+
+I'm Gabriel, a local real estate investor. I noticed your property at ${addr} and wanted to reach out directly.
+
+I work with sellers in various situations — sometimes people want to move quickly, sometimes they're just exploring options. Either way, I'm happy to have a no-pressure conversation.
+
+Would you be open to connecting?
+
+Best,
+Gabriel Montealegre
+Montsan Real Estate Investment
+montsan.rei@gmail.com`;
+  } else {
+    body = `Hi,
+
+My name is Gabriel and I invest in real estate locally. I came across ${addr} and wanted to introduce myself.
+
+If you ever think about selling — now or down the road — feel free to reach out. No agents, no pressure.
+
+Best,
+Gabriel Montealegre
+Montsan Real Estate Investment
+montsan.rei@gmail.com`;
+  }
+  return { subject: _rnd(subjects), body };
+}
+
+function generateHumanScript(lead, q) {
+  const addr = lead.address?.split(',')[0] || 'the property';
+  if (!q) q = computeLeadQuality(lead);
+  const cat = lead.category || '';
+  let note = '';
+  if (cat.includes('Probate')) note = '⚠️ Estate situation — be extra respectful and patient.';
+  else if (cat.includes('Pre-FC')) note = '⚠️ Pre-foreclosure — lead with empathy. They may be stressed.';
+  else if (cat === 'FSBO') note = '💡 FSBO — they value directness and saving on commissions.';
+  else if (cat === 'Auction') note = '⚡ Auction timeline — be a solution, not a salesperson.';
+
+  const noteLine = note ? '\n' + note : '';
+  const scriptBody = 'CALL SCRIPT — ' + addr + '\n' + q.emoji + ' ' + q.label + ' (' + q.score + '/100)' + noteLine + `
+
+─── OPENER ───────────────────────
+"Hi, may I speak with the owner of the property on ${addr}?"
+
+[Who's calling?]
+"My name is Gabriel — I'm a local real estate investor. Would you have just a couple minutes?"
+
+─── BUILD RAPPORT ─────────────────
+"How long have you had the property?"  [listen]
+"Are you still living there or is it vacant?"  [listen]
+
+─── SOFT QUALIFICATION ────────────
+"I don't want to be forward, but — have you had any thoughts about selling at some point?"
+
+[If yes] "What's driving that — is there a timeline, or more of a when-the-time-is-right situation?"
+[If no]  "No worries at all. Would it be okay if I kept your number? Sometimes things change."
+
+─── IF INTERESTED ─────────────────
+"Is there still a mortgage on it, or do you own it outright?"
+"What are you hoping to get out of it, roughly? Just want to make sure anything I offer makes sense for you."
+
+─── CLOSE ─────────────────────────
+[Motivated] "I'd love to come take a look — would this week work?"
+[Not ready] "No rush. I'll send a quick text with my info — reach out whenever."
+
+─── OBJECTIONS ────────────────────
+"Not interested" → "Totally fair — thanks for your time. If anything changes, I'm here."
+"I have an agent" → "No problem. I sometimes work with agents. Just wanted to say hi."
+"What's your offer?" → "I'd need to see it first to be fair to you. Could we do a quick walkthrough?"`;
+  return scriptBody;}
+
+function copyAndLearn(elId, context) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const original = el.dataset.original || '';
+  const edited = el.value;
+  navigator.clipboard.writeText(edited).catch(()=>{});
+  if (original && original !== edited) {
+    fetch('/api/outreach/save-edit', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({original, edited, context})}).catch(()=>{});
+  }
+  toast('Copied!', 'success');
+}
+
+function regenerateOutreach(leadId, type) {
+  const lead = APP.leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const q = computeLeadQuality(lead);
+  if (type === 'email') {
+    const emailObj = generateHumanEmail(lead, q);
+    const el = document.getElementById('ao-email-body');
+    if (el) { el.value = emailObj.body; el.dataset.original = emailObj.body; }
+  } else if (type === 'sms') {
+    const sms = generateHumanSMS(lead, q);
+    const el = document.getElementById('ao-sms-body');
+    if (el) { el.value = sms; el.dataset.original = sms; }
+  }
+  toast('Regenerated!', 'success');
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  FILTER LABEL UPDATES
+// ══════════════════════════════════════════════════════════
+function updateFilterLabel(select, defaultLabel) {
+  // Update the visual appearance to show active filter
+  const val = select.value;
+  if (!val) {
+    select.style.fontWeight = '400';
+    select.style.color = '#86868b';
+  } else {
+    select.style.fontWeight = '600';
+    select.style.color = '#1d1d1f';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  LAND DEALS
+// ══════════════════════════════════════════════════════════
+async function findLandDeals() {
+  const county = prompt('County name (e.g. San Diego, Dallas):');
+  if (!county) return;
+  const state = prompt('State code (e.g. CA, TX):');
+  if (!state) return;
+  toast('Finding land deals in ' + county + ', ' + state + '...', '');
+  try {
+    const res = await fetch('/api/leads/land', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state: state.toUpperCase(), count: 10})});
+    const data = await res.json();
+    toast(data.added + ' land deals added to Leads tab!', 'success');
+    await loadLeadsFromAPI();
+    loadNotifications();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  PROTECTED DEAL SENDING
+// ══════════════════════════════════════════════════════════
+async function sendProtectedDeal(leadId, buyerId) {
+  const lead = APP.leads.find(l => l.id === leadId);
+  const buyer = APP.buyers.find(b => b.id === buyerId);
+  if (!lead || !buyer) return toast('Lead or buyer not found', 'error');
+
+  const q = computeLeadQuality(lead);
+  const city = lead.address?.split(',')[1]?.trim() || lead.county || 'the area';
+  const state = lead.state || '';
+  const arv = ((lead.arv||0)/1000).toFixed(0);
+  const repairs = ((lead.repairs||0)/1000).toFixed(0);
+  const spread = ((lead.spread||0)/1000).toFixed(0);
+  const feeLo = ((lead.fee_lo||0)/1000).toFixed(0);
+  const feeHi = ((lead.fee_hi||0)/1000).toFixed(0);
+
+  const subject = `Deal Alert — ${lead.type||'SFR'} in ${city}, ${state} | ARV $${arv}K`;
+  const body = `Hey ${buyer.contact?.split(' ')[0]||'there'},
+
+I've got a deal I think you'll want to look at.
+
+📍 Location: ${city}, ${state}
+🏠 Property: ${lead.type||'SFR'} — ${lead.beds||'?'}BD/${lead.baths||'?'}BA — ${(lead.sqft||0).toLocaleString()} sqft
+📋 Situation: ${lead.category} — ${lead.dom||0} days on market
+${q.emoji} Deal Quality: ${q.label}
+
+💰 Numbers:
+• ARV: $${arv}K
+• Repairs: $${repairs}K (${lead.repair_class||'Medium'})
+• Spread: $${spread}K
+• Assignment fee: $${feeLo}K–$${feeHi}K
+
+✅ ${lead.why_good_deal||'Strong wholesale opportunity.'}
+
+Address shared upon confirmation of interest. Want me to send full details?
+
+Gabriel Montealegre
+Montsan Real Estate Investment
+montsan.rei@gmail.com`;
+
+  showModal(`
+    <div class="modal-title">📬 Send Deal to ${buyer.name}</div>
+    <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:#e65100">
+      🔒 <strong>Address Protected</strong> — Buyer receives city + numbers only. Full address shared after they confirm interest.
+    </div>
+    <div style="background:#f5f5f7;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;color:#0071e3;margin-bottom:6px">Subject: ${subject}</div>
+      <div style="font-size:11px;line-height:1.8;white-space:pre-wrap;max-height:280px;overflow-y:auto">${body}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <a href="mailto:${buyer.email||''}" class="btn btn-dark" onclick="logDealSent('${leadId}','${buyerId}')">Send via Email</a>
+      <button class="btn btn-outline" onclick="copyDealText('${leadId}','${buyerId}')">Copy Text</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+function logDealSent(leadId, buyerId) {
+  fetch('/api/deals/send', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({leadId, buyerId})}).catch(()=>{});
+  toast('Deal sent and logged!', 'success');
+  setTimeout(closeModal, 500);
+}
+
+function copyDealText(leadId, buyerId) {
+  const lead = APP.leads.find(l => l.id === leadId);
+  const buyer = APP.buyers.find(b => b.id === buyerId);
+  if (!lead || !buyer) return;
+  const city = lead.address?.split(',')[1]?.trim() || lead.county;
+  const text = `Deal Alert — ${lead.type||'SFR'} in ${city} | ARV $${((lead.arv||0)/1000).toFixed(0)}K | Spread $${((lead.spread||0)/1000).toFixed(0)}K | ${lead.category}. Interested?`;
+  navigator.clipboard.writeText(text).then(() => toast('Copied!', 'success'));
+}
+
+// ══════════════════════════════════════════════════════════
+//  BUYER INTRO EMAIL
+// ══════════════════════════════════════════════════════════
+async function openBuyerIntroEmail(buyerId) {
+  const buyer = APP.buyers.find(b => b.id === buyerId);
+  if (!buyer) return;
+  try {
+    const res = await fetch('/api/buyers/' + buyerId + '/intro-email');
+    const data = await res.json();
+    showModal(`
+      <div class="modal-title">✉️ Buyer Introduction Email</div>
+      <div style="font-size:11px;color:#86868b;margin-bottom:10px">First-contact email — introduces you, asks their buying criteria</div>
+      <div style="background:#f0f6ff;border-radius:6px;padding:8px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">Subject: ${data.subject}</div>
+      <textarea class="form-textarea" style="min-height:220px;font-size:11px;line-height:1.7" id="intro-email-body">${data.body}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <a href="mailto:${buyer.email||''}" class="btn btn-dark">Send Email</a>
+        <button class="btn btn-outline" onclick="document.getElementById('intro-email-body')&&navigator.clipboard.writeText(document.getElementById('intro-email-body').value).then(()=>toast('Copied!','success'))">Copy</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="btn btn-outline" onclick="closeModal()">Close</button>
+      </div>`);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
 
 </script>
 </body>
