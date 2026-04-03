@@ -320,6 +320,8 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('bot',this)"><span class="nav-icon">🤖</span>Bot Status</div>
       <div class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
       <div class="nav-item" id="nav-users-item" onclick="navigate('users',this)"><span class="nav-icon">👥</span>Users</div>
+      <div class="nav-item" onclick="navigate('matching',this)"><span class="nav-icon">🔗</span>Matching</div>
+      <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Gmail</div>
     </div>
     <div class="sidebar-stats">
       <div class="stat-mini">
@@ -466,6 +468,16 @@ async function checkPin() {
   setTimeout(function() { document.getElementById('pin-error').textContent = ''; }, 2000);
 }
 
+// Keyboard PIN input
+document.addEventListener('keydown', function(e) {
+  var ps = document.getElementById('pin-screen');
+  if (!ps || ps.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') { pinPress(parseInt(e.key)); }
+  else if (e.key === 'Backspace') { pinPress('x'); }
+  else if (e.key === 'Enter') { checkPin(); }
+});
+
+
 function promptSetPin(userId) {
   APP._setPinUserId = userId;
   buildModalSimple('Welcome! Set Your PIN',
@@ -564,7 +576,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Gmail',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
 }
@@ -583,6 +595,8 @@ function render() {
     search: renderSearchDeals,
     states: renderAllStates,
     users: function() { return renderUsersPanel(); },
+    matching: renderMatching,
+    gmail: renderGmail,
     apis: renderAPIPanel,
     automation: renderAutomation,
     contracts_lib: renderContractsLib,
@@ -2922,150 +2936,79 @@ render = function() {
 //  AUTOMATION CONTROL CENTER
 // ══════════════════════════════════════════════════════════
 function renderAutomation() {
-  const scanCount = APP.automationScanCount || 4;
-  const dealsPerMarket = APP.automationDeals || 20;
-  return `
-  <div style="max-width:900px">
-    <div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">
-      <div style="font-size:20px;font-weight:700;margin-bottom:6px">🌎 Nationwide Automation Control Center</div>
-      <div style="font-size:12px;color:#aaa">Run everything from here — no command line needed. All actions log to notifications.</div>
-    </div>
+  return '<div style="max-width:960px">' +
+    '<div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">' +
+    '<div style="font-size:20px;font-weight:700;margin-bottom:4px">Automation Command Center</div>' +
+    '<div style="font-size:12px;color:#aaa">Run everything from here. No Telegram needed. All results go to your Leads and Buyers tabs.</div></div>' +
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">' +
 
-      <!-- NATIONWIDE SCAN -->
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🔍 Nationwide Market Scan</div>
-        <div style="font-size:12px;color:#86868b;margin-bottom:14px">AI selects best markets, pulls deals, extracts buyers and buy boxes automatically.</div>
-        <div class="form-group" style="margin-bottom:10px">
-          <div class="form-label">Markets to scan (per run)</div>
-          <select class="form-select" id="scan-markets" onchange="APP.automationScanCount=parseInt(this.value)">
-            <option value="2">2 markets</option>
-            <option value="4" selected>4 markets (recommended)</option>
-            <option value="6">6 markets</option>
-            <option value="8">8 markets</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <div class="form-label">Leads per market</div>
-          <select class="form-select" id="scan-deals" onchange="APP.automationDeals=parseInt(this.value)">
-            <option value="20">20 leads (fast)</option>
-            <option value="50">50 leads</option>
-            <option value="100">100 leads</option>
-            <option value="200">200 leads</option>
-          </select>
-        </div>
-        <button class="btn btn-dark" style="width:100%" onclick="triggerScan()">🚀 Run Nationwide Scan Now</button>
-        <div id="scan-status" style="margin-top:8px;font-size:11px;color:#86868b"></div>
-      </div>
+    // MAIN SEARCH
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;grid-column:1/-1">' +
+    '<div style="font-size:15px;font-weight:700;margin-bottom:4px">Search & Find</div>' +
+    '<div style="font-size:11px;color:#86868b;margin-bottom:14px">Enter a market, choose what to find, and run. Results appear in your Leads and Buyers tabs automatically.</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">' +
+    '<div class="form-group"><div class="form-label">County</div><input class="form-input" id="ac-county" placeholder="e.g. San Diego"></div>' +
+    '<div class="form-group"><div class="form-label">State</div><input class="form-input" id="ac-state" placeholder="CA" maxlength="2" style="text-transform:uppercase"></div>' +
+    '<div class="form-group"><div class="form-label">What to Find</div><select class="form-select" id="ac-type">' +
+    '<option value="wholesale">Wholesaling Deals</option>' +
+    '<option value="land">Land Deals</option>' +
+    '<option value="buyers">Cash Buyers</option>' +
+    '<option value="trailer">Trailer Parks / Mobile Homes</option>' +
+    '<option value="multifamily">Multi-Family Properties</option>' +
+    '<option value="commercial">Commercial Properties</option>' +
+    '<option value="prefc">Pre-Foreclosures Only</option>' +
+    '<option value="reo">REO / Bank-Owned Only</option>' +
+    '<option value="fsbo">FSBO Only</option>' +
+    '<option value="probate">Probate Deals</option>' +
+    '</select></div>' +
+    '<div class="form-group"><div class="form-label">Count</div><select class="form-select" id="ac-count">' +
+    '<option value="20">20 (fast)</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option>' +
+    '</select></div></div>' +
+    '<button class="btn btn-dark" style="width:100%;padding:12px" onclick="runAutomationSearch()">Run Search Now</button>' +
+    '<div id="ac-status" style="margin-top:8px;font-size:11px;color:#86868b"></div></div>' +
 
-      <!-- MANUAL MARKET SCAN -->
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">📍 Scan Specific Market</div>
-        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Target a specific state and county for immediate lead generation.</div>
-        <div class="form-group" style="margin-bottom:10px">
-          <div class="form-label">County Name</div>
-          <input class="form-input" id="manual-county" placeholder="e.g. San Diego, Dallas, Cuyahoga">
-        </div>
-        <div class="form-group" style="margin-bottom:10px">
-          <div class="form-label">State Code</div>
-          <input class="form-input" id="manual-state" placeholder="e.g. CA, TX, OH" maxlength="2" style="text-transform:uppercase">
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <div class="form-label">Number of leads</div>
-          <input class="form-input" id="manual-count" type="number" value="50" min="10" max="400">
-        </div>
-        <button class="btn btn-dark" style="width:100%" onclick="triggerManualScan()">📥 Scan This Market</button>
-        <div id="manual-status" style="margin-top:8px;font-size:11px;color:#86868b"></div>
-      </div>
+    // NATIONWIDE SCAN
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">' +
+    '<div style="font-size:15px;font-weight:700;margin-bottom:4px">Nationwide Scan</div>' +
+    '<div style="font-size:12px;color:#86868b;margin-bottom:12px">AI selects best markets automatically.</div>' +
+    '<div class="form-group" style="margin-bottom:10px"><div class="form-label">Markets per run</div><select class="form-select" id="ns-markets"><option value="2">2 markets</option><option value="4" selected>4 markets</option><option value="6">6 markets</option><option value="8">8 markets</option></select></div>' +
+    '<div class="form-group" style="margin-bottom:10px"><div class="form-label">Deal type</div><select class="form-select" id="ns-type"><option value="wholesale">Wholesaling Deals</option><option value="land">Land Deals</option><option value="buyers">Buyers Only</option></select></div>' +
+    '<div class="form-group" style="margin-bottom:14px"><div class="form-label">Leads per market</div><select class="form-select" id="ns-count"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>' +
+    '<button class="btn btn-dark" style="width:100%" onclick="triggerScan()">Run Nationwide Scan</button>' +
+    '<div id="scan-status" style="margin-top:8px;font-size:11px;color:#86868b"></div></div>' +
 
-      <!-- LAND DEALS -->
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🌱 Find Land Deals</div>
-        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Discover land opportunities based on development potential, population growth, and builder activity — not distress signals.</div>
-        <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">
-          Signals used: New subdivisions nearby · Infrastructure projects · Rezoning activity · Builder acquisition clusters · Solar farm zones · Agricultural land near city limits
-        </div>
-        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="findLandDeals()">🌱 Find Land Deals</button>
-        <div style="font-size:10px;color:#86868b">Land deals appear in Leads tab tagged as "Land — Development Opportunity"</div>
-      </div>
+    // BUY BOX TOOLS
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">' +
+    '<div style="font-size:15px;font-weight:700;margin-bottom:4px">Buy Boxes & Matching</div>' +
+    '<div style="font-size:12px;color:#86868b;margin-bottom:12px">Extract buy boxes and match deals to buyers.</div>' +
+    '<button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="triggerBuyBoxExtract()">Extract Buy Boxes from Buyers</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-bottom:8px" onclick="triggerBuyerMatch()">Run Buyer Matching</button>' +
+    '<button class="btn btn-outline" style="width:100%" onclick="goToMatching()">View All Matches</button>' +
+    '<div id="match-status" style="margin-top:8px;font-size:11px;color:#86868b"></div></div>' +
 
-      <!-- BUY BOX EXTRACTION -->
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🎯 Buy Box Extraction</div>
-        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Extract and organize buy box criteria from your existing buyers database.</div>
-        <div id="buybox-stats" style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">Loading...</div>
-        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="triggerBuyBoxExtract()">Extract Buy Boxes from Buyers</button>
-        <button class="btn btn-outline" style="width:100%" onclick="navigate('buyboxes',document.querySelector('[onclick*=buyboxes]'))">View Buy Box Manager →</button>
-      </div>
+    '</div>' +
 
-      <!-- BUYER MATCHING -->
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">🤝 Buyer Matching</div>
-        <div style="font-size:12px;color:#86868b;margin-bottom:14px">Match all unmatched leads against buyer database and buy boxes.</div>
-        <div id="match-stats" style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#3a3a3c">
-          ${APP.leads.length} leads in database<br>
-          ${APP.buyers.length} buyers available
-        </div>
-        <button class="btn btn-dark" style="width:100%;margin-bottom:8px" onclick="triggerBuyerMatch()">Run Buyer Matching Now</button>
-        <div id="match-status" style="font-size:11px;color:#86868b"></div>
-      </div>
-    </div>
+    // SCHEDULE
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:16px">' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:12px">Automatic Schedule</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">' +
+    [{label:'Nationwide Scan',schedule:'Mon, Tue, Thu, Sat @ 6AM MST',icon:'🔍'},{label:'Daily Briefing',schedule:'Every day @ 7AM MST',icon:'📊'},{label:'Daily Backup',schedule:'Every day @ 2AM MST',icon:'💾'},{label:'Buy Box Scan',schedule:'Sun & Wed @ 3AM MST',icon:'🎯'}].map(function(s) {
+      return '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:16px;margin-bottom:4px">' + s.icon + '</div><div style="font-size:12px;font-weight:600">' + s.label + '</div><div style="font-size:10px;color:#86868b;margin-top:2px">' + s.schedule + '</div><div style="font-size:10px;color:#34c759;margin-top:4px">Active</div></div>';
+    }).join('') +
+    '</div></div>' +
 
-    <!-- AUTOMATION SCHEDULE -->
-    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px">⏰ Automation Schedule</div>
-      <div style="font-size:12px;color:#86868b;margin-bottom:14px">These run automatically on Railway. No action needed.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-        ${[
-          {label:'Nationwide Scan',schedule:'Mon, Tue, Thu, Sat @ 6AM MST',icon:'🔍',status:'active'},
-          {label:'Daily Briefing',schedule:'Every day @ 7AM MST (Telegram)',icon:'📊',status:'active'},
-          {label:'Daily Backup',schedule:'Every day @ 2AM MST',icon:'💾',status:'active'},
-          {label:'Buy Box Expansion',schedule:'Every Sun & Wed @ 3AM MST',icon:'🎯',status:'active'},
-        ].map(s => `<div style="background:#f5f5f7;border-radius:10px;padding:12px">
-          <div style="font-size:16px;margin-bottom:4px">${s.icon}</div>
-          <div style="font-size:12px;font-weight:600">${s.label}</div>
-          <div style="font-size:10px;color:#86868b;margin-top:2px">${s.schedule}</div>
-          <div style="font-size:10px;color:#34c759;margin-top:4px">✓ ${s.status}</div>
-        </div>`).join('')}
-      </div>
-    </div>
-
-    <!-- TWILIO SETUP -->
-    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px">📱 Twilio SMS Setup</div>
-      <div style="font-size:12px;color:#86868b;margin-bottom:14px">Pre-configured and ready. Add your Twilio credentials when available.</div>
-      <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-size:11px;font-weight:600;color:#e65100;margin-bottom:4px">📋 How to get Twilio credentials:</div>
-        <div style="font-size:11px;color:#3a3a3c;line-height:1.8">
-          1. Go to <strong>twilio.com</strong> → Sign up (free trial includes $15 credit)<br>
-          2. Dashboard → <strong>Account SID</strong> and <strong>Auth Token</strong><br>
-          3. Buy a phone number (~$1/month)<br>
-          4. Enter credentials below → click Test → SMS will work
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div class="form-group">
-          <div class="form-label">Account SID</div>
-          <input class="form-input" id="twilio-sid" type="password" placeholder="ACxxxxxxxxxxxxxxxx" value="${localStorage.getItem('twilio_sid')||''}">
-        </div>
-        <div class="form-group">
-          <div class="form-label">Auth Token</div>
-          <input class="form-input" id="twilio-token" type="password" placeholder="Your auth token" value="${localStorage.getItem('twilio_token')||''}">
-        </div>
-      </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <div class="form-label">Twilio Phone Number</div>
-        <input class="form-input" id="twilio-phone" placeholder="+1 (555) 000-0000" value="${localStorage.getItem('twilio_phone')||''}">
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-dark" onclick="saveTwilioCredentials()">Save Twilio Credentials</button>
-        <button class="btn btn-outline" onclick="testTwilioConnection()">Test Connection</button>
-        <div id="twilio-status" style="display:flex;align-items:center;font-size:11px;color:#86868b"></div>
-      </div>
-    </div>
-  </div>`;
+    // TWILIO
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:4px">Twilio SMS Setup</div>' +
+    '<div style="font-size:12px;color:#86868b;margin-bottom:12px">Add credentials when ready. SMS outreach will work instantly.</div>' +
+    '<div style="background:#fff3e0;border:1px solid #ff9500;border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:#e65100"><strong>How to get Twilio:</strong> twilio.com - Sign up (free $15 credit) - Dashboard - Account SID + Auth Token + buy a phone number (~$1/mo)</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><div class="form-group"><div class="form-label">Account SID</div><input class="form-input" id="twilio-sid" type="password" placeholder="ACxxxxxxxx"></div><div class="form-group"><div class="form-label">Auth Token</div><input class="form-input" id="twilio-token" type="password" placeholder="Auth token"></div></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><div class="form-label">Phone Number</div><input class="form-input" id="twilio-phone" placeholder="+1 (555) 000-0000"></div>' +
+    '<div style="display:flex;gap:8px"><button class="btn btn-dark" onclick="saveTwilioCredentials()">Save</button><button class="btn btn-outline" onclick="testTwilioConnection()">Test</button><span id="twilio-status" style="font-size:11px;color:#86868b;display:flex;align-items:center"></span></div>' +
+    '</div></div>';
 }
+
 
 async function triggerScan() {
   const markets = document.getElementById('scan-markets')?.value || 4;
@@ -3433,67 +3376,91 @@ async function loadOutreachToneStatus() {
 
 async function selectOutreachLead(leadId) {
   APP.outreachLead = leadId;
-  const lead = APP.leads.find(l => l.id === leadId);
+  var lead = APP.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
-  const panel = document.getElementById('outreach-panel');
+  var panel = document.getElementById('outreach-panel');
   if (!panel) return;
-  panel.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Generating messages...</div>';
-
-  try {
-    const res = await fetch('/api/outreach/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({leadId, type:'all'})});
-    const data = await res.json();
-    panel.innerHTML = `
-      <div>
-        <div class="sub-tabs" style="margin-bottom:12px">
-          <div class="sub-tab active" onclick="subTab(this,'ot-seller')">Seller Outreach</div>
-          <div class="sub-tab" onclick="subTab(this,'ot-buyer')">Buyer Outreach</div>
-          <div class="sub-tab" onclick="subTab(this,'ot-history')">History</div>
-        </div>
-
-        <div id="ot-seller">
-          <div style="margin-bottom:12px">
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📱 SMS to Seller</div>
-            <textarea id="sms-content" class="form-textarea" style="min-height:80px" onblur="checkToneEdit(this,'seller_sms')">${data.message||''}</textarea>
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <a href="sms:${lead.phone||''}" class="btn btn-dark btn-sm">📱 Open SMS App</a>
-              <button class="btn btn-outline btn-sm" onclick="copyAndRecord('sms-content','${leadId}','seller_sms')">Copy + Log</button>
-            </div>
-          </div>
-          <div style="margin-bottom:12px">
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📧 Email to Seller</div>
-            <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:6px;font-size:11px;font-weight:600">Subject: ${data.subject||'Cash Offer'}</div>
-            <textarea id="email-content" class="form-textarea" style="min-height:120px" onblur="checkToneEdit(this,'seller_email')">${data.body||''}</textarea>
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <a href="mailto:${lead.email||''}" class="btn btn-dark btn-sm">📧 Open Email App</a>
-              <button class="btn btn-outline btn-sm" onclick="copyAndRecord('email-content','${leadId}','seller_email')">Copy + Log</button>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📞 Call Script</div>
-            <div style="background:#f5f5f7;border-radius:8px;padding:12px;font-size:11px;line-height:1.8;white-space:pre-wrap" id="call-script">${data.call_script?.message||lead.script||'Loading...'}</div>
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <a href="tel:${lead.phone||''}" class="btn btn-dark btn-sm">📞 Call Now</a>
-              <button class="btn btn-outline btn-sm" onclick="copyText('call-script')">Copy Script</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="ot-buyer" style="display:none">
-          <div style="font-size:12px;color:#86868b;margin-bottom:10px">Select a buyer to generate personalized outreach:</div>
-          ${APP.buyers.slice(0,5).map(b => `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer" onclick="generateBuyerOutreach('${leadId}','${b.id}')">
-            <div style="font-size:12px;font-weight:600">${b.name}</div>
-            <div style="font-size:10px;color:#86868b">${b.type} · Max $${((b.maxPrice||0)/1000).toFixed(0)}K · ${b.phone||''}</div>
-          </div>`).join('')}
-        </div>
-
-        <div id="ot-history" style="display:none">
-          <div id="outreach-history-list">Loading history...</div>
-        </div>
-      </div>`;
-
-    loadOutreachHistory(leadId);
-  } catch(e) { panel.innerHTML = '<div style="color:#ff3b30">Error: '+e.message+'</div>'; }
+  panel.innerHTML = '<div style="text-align:center;padding:24px;color:#86868b">Generating messages...</div>';
+  var q = computeLeadQuality(lead);
+  var smsText = generateHumanSMS(lead, q);
+  var emailObj = generateHumanEmail(lead, q);
+  var scriptText = generateHumanScript(lead, q);
+  var container = document.createElement('div');
+  // Quality badge
+  var badgeRow = document.createElement('div');
+  badgeRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px;background:#f5f5f7;border-radius:10px';
+  badgeRow.innerHTML = '<span style="background:' + q.color + ';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px">' + q.emoji + ' ' + q.label + '</span><span style="font-size:11px;color:#3a3a3c">' + q.score + '/100</span><span style="font-size:11px;color:#86868b;flex:1">' + (q.reasons[0] || '') + '</span><span style="font-size:10px;color:#86868b">' + (lead.phone || 'No phone') + '</span>';
+  container.appendChild(badgeRow);
+  // Tabs
+  var tabBar = document.createElement('div');
+  tabBar.className = 'sub-tabs';
+  tabBar.style.marginBottom = '14px';
+  [{id:'ot-sms',label:'SMS'},{id:'ot-email',label:'Email'},{id:'ot-script',label:'Script'},{id:'ot-buyers',label:'Buyers'},{id:'ot-hist',label:'History'}].forEach(function(t,i) {
+    var tab = document.createElement('div');
+    tab.className = 'sub-tab' + (i===0?' active':'');
+    tab.textContent = t.label;
+    tab.onclick = (function(tid,tref){return function(){subTab(tref,tid);if(tid==='ot-hist')loadOutreachHistory(leadId);};})(t.id,tab);
+    tabBar.appendChild(tab);
+  });
+  container.appendChild(tabBar);
+  // SMS panel
+  var smsDiv = document.createElement('div'); smsDiv.id='ot-sms';
+  smsDiv.innerHTML = '<div style="font-size:10px;color:#86868b;margin-bottom:6px">Relationship-first. No offer in first contact. Edit to train AI tone.</div>';
+  var smsTa = document.createElement('textarea'); smsTa.id='sms-content'; smsTa.className='form-textarea'; smsTa.style.cssText='min-height:90px;font-size:12px;line-height:1.7;width:100%;margin-bottom:8px'; smsTa.value=smsText; smsTa.dataset.original=smsText;
+  smsTa.onblur = function(){checkToneEdit(this,'seller_sms');};
+  var smsBtns = document.createElement('div'); smsBtns.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+  var smsA = document.createElement('a'); smsA.href='sms:'+(lead.phone||''); smsA.className='btn btn-dark btn-sm'; smsA.textContent='Open SMS App';
+  var smsC = document.createElement('button'); smsC.className='btn btn-outline btn-sm'; smsC.textContent='Copy + Log'; smsC.onclick=function(){copyAndRecord('sms-content',leadId,'seller_sms');};
+  var smsR = document.createElement('button'); smsR.className='btn btn-outline btn-sm'; smsR.textContent='Regenerate'; smsR.onclick=function(){refreshSMSPanel(leadId);};
+  smsBtns.appendChild(smsA); smsBtns.appendChild(smsC); smsBtns.appendChild(smsR);
+  smsDiv.appendChild(smsTa); smsDiv.appendChild(smsBtns); container.appendChild(smsDiv);
+  // Email panel
+  var emailDiv = document.createElement('div'); emailDiv.id='ot-email'; emailDiv.style.display='none';
+  var subjBar = document.createElement('div'); subjBar.style.cssText='background:#f0f6ff;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3'; subjBar.textContent='Subject: '+emailObj.subject;
+  var emailTa = document.createElement('textarea'); emailTa.id='email-content'; emailTa.className='form-textarea'; emailTa.style.cssText='min-height:200px;font-size:12px;line-height:1.7;width:100%;margin-bottom:8px'; emailTa.value=emailObj.body; emailTa.dataset.original=emailObj.body;
+  emailTa.onblur = function(){checkToneEdit(this,'seller_email');};
+  var emailBtns = document.createElement('div'); emailBtns.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+  var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(lead.email||'')+'&su='+encodeURIComponent(emailObj.subject)+'&body='+encodeURIComponent(emailObj.body);
+  var emailA = document.createElement('a'); emailA.href=gmailUrl; emailA.target='_blank'; emailA.className='btn btn-dark btn-sm'; emailA.textContent='Open in Gmail';
+  var emailC = document.createElement('button'); emailC.className='btn btn-outline btn-sm'; emailC.textContent='Copy + Log'; emailC.onclick=function(){copyAndRecord('email-content',leadId,'seller_email');};
+  var emailR = document.createElement('button'); emailR.className='btn btn-outline btn-sm'; emailR.textContent='Regenerate'; emailR.onclick=function(){refreshEmailPanel(leadId);};
+  emailBtns.appendChild(emailA); emailBtns.appendChild(emailC); emailBtns.appendChild(emailR);
+  emailDiv.appendChild(subjBar); emailDiv.appendChild(emailTa); emailDiv.appendChild(emailBtns); container.appendChild(emailDiv);
+  // Script panel
+  var scriptDiv = document.createElement('div'); scriptDiv.id='ot-script'; scriptDiv.style.display='none';
+  scriptDiv.innerHTML='<div style="font-size:10px;color:#86868b;margin-bottom:6px">Conversational. Build rapport before any numbers.</div>';
+  var sc = document.createElement('div'); sc.id='call-script-content'; sc.style.cssText='background:#f5f5f7;border-radius:8px;padding:14px;font-size:11px;line-height:1.9;white-space:pre-wrap;max-height:400px;overflow-y:auto;margin-bottom:8px'; sc.textContent=scriptText;
+  var scriptBtns = document.createElement('div'); scriptBtns.style.cssText='display:flex;gap:8px';
+  var callA = document.createElement('a'); callA.href='tel:'+(lead.phone||''); callA.className='btn btn-green btn-sm'; callA.textContent='Call Now';
+  var copyScr = document.createElement('button'); copyScr.className='btn btn-outline btn-sm'; copyScr.textContent='Copy Script'; copyScr.onclick=function(){copyText('call-script-content');};
+  scriptBtns.appendChild(callA); scriptBtns.appendChild(copyScr);
+  scriptDiv.appendChild(sc); scriptDiv.appendChild(scriptBtns); container.appendChild(scriptDiv);
+  // Buyers panel
+  var buyersDiv = document.createElement('div'); buyersDiv.id='ot-buyers'; buyersDiv.style.display='none';
+  buyersDiv.innerHTML='<div style="font-size:11px;color:#86868b;margin-bottom:10px">Click buyer to generate protected deal email (address withheld until confirmed):</div>';
+  var matched = APP.buyers.filter(function(b){return(!b.state||b.state===lead.state)&&(lead.offer||0)<=(b.maxPrice||999999)&&(lead.arv||0)>=(b.minARV||0);}).slice(0,8);
+  var show = matched.length ? matched : APP.buyers.slice(0,8);
+  if(matched.length){var mn=document.createElement('div');mn.style.cssText='background:#e6f9ed;border-radius:6px;padding:6px 10px;font-size:10px;color:#1b8f3d;margin-bottom:8px';mn.textContent=matched.length+' buyers match this deal';buyersDiv.appendChild(mn);}
+  show.forEach(function(b){
+    var card=document.createElement('div');card.style.cssText='background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer';
+    card.innerHTML='<div style="font-size:12px;font-weight:600">'+b.name+'</div><div style="font-size:10px;color:#86868b">'+(b.type||'')+' - Max $'+((b.maxPrice||0)/1000).toFixed(0)+'K - '+(b.county||'')+'</div>';
+    card.addEventListener('mouseenter',function(){this.style.background='#f5f5f7';});
+    card.addEventListener('mouseleave',function(){this.style.background='#fff';});
+    card.addEventListener('click',(function(bid){return function(){generateBuyerOutreach(leadId,bid);};})(b.id));
+    buyersDiv.appendChild(card);
+  });
+  if(!APP.buyers.length) buyersDiv.innerHTML+='<div style="font-size:11px;color:#86868b">No buyers yet. Run Automation scan first.</div>';
+  container.appendChild(buyersDiv);
+  // History panel
+  var histDiv=document.createElement('div'); histDiv.id='ot-hist'; histDiv.style.display='none';
+  histDiv.innerHTML='<div id="outreach-history-list" style="font-size:11px;color:#86868b;text-align:center;padding:16px">Click History tab to load</div>';
+  container.appendChild(histDiv);
+  panel.innerHTML=''; panel.appendChild(container);
 }
+
+function refreshSMSPanel(leadId){var lead=APP.leads.find(function(l){return l.id===leadId;});if(!lead)return;var el=document.getElementById('sms-content');if(el){var q=computeLeadQuality(lead);var t=generateHumanSMS(lead,q);el.value=t;el.dataset.original=t;}toast('SMS regenerated','success');}
+function refreshEmailPanel(leadId){var lead=APP.leads.find(function(l){return l.id===leadId;});if(!lead)return;var el=document.getElementById('email-content');if(el){var q=computeLeadQuality(lead);var obj=generateHumanEmail(lead,q);el.value=obj.body;el.dataset.original=obj.body;}toast('Email regenerated','success');}
+
 
 async function checkToneEdit(el, context) {
   const original = el.dataset.original;
@@ -3899,7 +3866,7 @@ async function runDashboardSearch() {
     if (si < steps.length) { document.getElementById('ds-progress-bar').style.width = steps[si][0]+'%'; document.getElementById('ds-progress-detail').textContent = steps[si][1]; si++; }
   }, 4000);
   try {
-    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type, userId: APP.userId||'admin'})});
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type: type==='buyers'?'buyers':type, userId: APP.userId||'admin', findBuyers: true})});
     let polls = 0;
     const pollFn = setInterval(async function() {
       polls++;
@@ -3937,6 +3904,7 @@ function loadSearchHistory() {
   }).join('');
 }
 
+function goToMatching() { APP.page="matching"; render(); }
 function goToLeads() { APP.page = 'leads'; render(); }
 
 // ══════════════════════════════════════════════════════════
@@ -4070,6 +4038,8 @@ render = function() {
   if (usersTab) usersTab.style.display = APP.isAdmin ? 'flex' : 'none';
   if (APP.page === 'search') setTimeout(loadSearchHistory, 50);
   if (APP.page === 'states') setTimeout(loadAllStates, 50);
+  if (APP.page === 'matching') setTimeout(function(){showMatchTab('all');}, 50);
+  if (APP.page === 'gmail') setTimeout(loadGmailEmails, 500);
   if (APP.page === 'users' && APP.isAdmin) {
     renderUsersPanel().then(function(html) {
       var el = document.getElementById('content');
@@ -4077,6 +4047,238 @@ render = function() {
     });
   }
 };
+
+// ============================================================
+//  MATCHING TAB
+// ============================================================
+function renderMatching() {
+  setTimeout(loadMatchingData, 50);
+  return '<div><div style="font-size:16px;font-weight:700;margin-bottom:4px">Deal Matching Engine</div><div style="font-size:11px;color:#86868b;margin-bottom:16px">Auto-match deals to buyers by buy box criteria. Click any row to see details.</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:16px" id="match-tabs">' +
+    '<button class="btn btn-dark btn-sm" id="mt-all" onclick="showMatchTab(\'all\')">All Matches</button>' +
+    '<button class="btn btn-outline btn-sm" id="mt-buyers" onclick="showMatchTab(\'buyers\')">By Buyer</button>' +
+    '<button class="btn btn-outline btn-sm" id="mt-boxes" onclick="showMatchTab(\'boxes\')">By Buy Box</button>' +
+    '</div>' +
+    '<div id="match-content"><div style="text-align:center;padding:40px;color:#86868b">Loading matches...</div></div></div>';
+}
+
+function loadMatchingData() {
+  var el = document.getElementById('match-content');
+  if (!el) return;
+  showMatchTab('all');
+}
+
+function showMatchTab(tab) {
+  var btns = {all:'mt-all',buyers:'mt-buyers',boxes:'mt-boxes'};
+  Object.keys(btns).forEach(function(k) {
+    var btn = document.getElementById(btns[k]);
+    if (btn) { btn.className = k===tab ? 'btn btn-dark btn-sm' : 'btn btn-outline btn-sm'; }
+  });
+  var el = document.getElementById('match-content');
+  if (!el) return;
+  var leads = APP.leads;
+  var buyers = APP.buyers;
+  if (!leads.length || !buyers.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;border:1px solid #e5e5ea"><div style="font-size:32px;margin-bottom:12px">🔗</div><div style="font-weight:600;margin-bottom:8px">No matches yet</div><div style="font-size:12px;color:#86868b">Add leads and buyers first. Run a scan from the Automation tab.</div></div>';
+    return;
+  }
+  if (tab === 'all') {
+    var rows = [];
+    buyers.forEach(function(b) {
+      var matched = leads.filter(function(l) {
+        return (!b.state||b.state===l.state) && (l.offer||0)<=(b.maxPrice||999999) && (l.arv||0)>=(b.minARV||0) && (l.repairs||0)<=(b.maxRepairs||999999);
+      });
+      matched.slice(0,3).forEach(function(l) {
+        rows.push({buyer:b, lead:l, score: Math.min(100, 50 + (matched.length>5?20:matched.length*4))});
+      });
+    });
+    rows.sort(function(a,b){return b.score-a.score;});
+    if (!rows.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b">No matches found. Check that buyers and leads share the same state.</div>'; return; }
+    el.innerHTML = '<div style="background:#fff;border-radius:12px;border:1px solid #e5e5ea;overflow:hidden">' +
+      '<div style="display:grid;grid-template-columns:2fr 2fr 1fr 80px;padding:10px 14px;background:#f5f5f7;font-size:10px;font-weight:700;color:#86868b">'+
+      '<div>DEAL</div><div>BUYER</div><div>MATCH</div><div>ACTION</div></div>' +
+      rows.slice(0,30).map(function(r) {
+        return '<div style="display:grid;grid-template-columns:2fr 2fr 1fr 80px;padding:10px 14px;border-top:1px solid #f5f5f7;align-items:center">' +
+          '<div><div style="font-size:12px;font-weight:600">' + (r.lead.address||'').split(',')[0] + '</div><div style="font-size:10px;color:#86868b">' + (r.lead.county||'') + ', ' + (r.lead.state||'') + ' - $' + ((r.lead.spread||0)/1000).toFixed(0) + 'K spread</div></div>' +
+          '<div><div style="font-size:12px;font-weight:600">' + r.buyer.name + '</div><div style="font-size:10px;color:#86868b">' + (r.buyer.type||'') + ' - Max $' + ((r.buyer.maxPrice||0)/1000).toFixed(0) + 'K</div></div>' +
+          '<div><span style="background:' + (r.score>=80?'#34c759':r.score>=60?'#ff9500':'#86868b') + ';color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px">' + r.score + '%</span></div>' +
+          '<div><button class="btn btn-outline btn-sm" onclick="sendProtectedDeal(\'' + r.lead.id + '\',\'' + r.buyer.id + '\')">Send</button></div>' +
+          '</div>';
+      }).join('') + '</div>';
+  } else if (tab === 'buyers') {
+    el.innerHTML = '<div style="display:grid;gap:10px">' +
+      buyers.map(function(b) {
+        var matched = leads.filter(function(l){return (!b.state||b.state===l.state)&&(l.offer||0)<=(b.maxPrice||999999)&&(l.arv||0)>=(b.minARV||0);});
+        return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+          '<div><div style="font-size:13px;font-weight:700">' + b.name + '</div><div style="font-size:11px;color:#86868b">' + (b.type||'') + ' - ' + (b.county||'') + ', ' + (b.state||'') + '</div></div>' +
+          '<span style="background:' + (matched.length>5?'#34c759':matched.length>0?'#ff9500':'#86868b') + ';color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">' + matched.length + ' matches</span></div>' +
+          (matched.length ? '<div style="display:grid;gap:6px">' + matched.slice(0,3).map(function(l){return '<div style="background:#f5f5f7;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11px"><span>' + (l.address||'').split(',')[0] + ' - $' + ((l.spread||0)/1000).toFixed(0) + 'K spread</span><button class="btn btn-outline btn-sm" onclick="sendProtectedDeal(\'' + l.id + '\',\'' + b.id + '\')">Send Deal</button></div>';}).join('') + (matched.length>3?'<div style="font-size:10px;color:#86868b;padding:4px">...and '+(matched.length-3)+' more matches</div>':'') + '</div>' : '<div style="font-size:11px;color:#86868b">No matching deals yet in this buyer\'s market/price range</div>') +
+          '</div>';
+      }).join('') + '</div>';
+  } else {
+    fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(data) {
+      var boxes = data.buyboxes || [];
+      if (!boxes.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b">No buy boxes yet. Go to Buy Boxes tab to extract from buyers.</div>'; return; }
+      el.innerHTML = '<div style="display:grid;gap:10px">' +
+        boxes.map(function(box) {
+          var matched = leads.filter(function(l){return (!box.state||box.state===l.state)&&(l.offer||0)<=(box.maxPrice||999999)&&(l.arv||0)>=(box.minARV||0)&&(l.repairs||0)<=(box.maxRepairs||999999);});
+          return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><div style="font-size:13px;font-weight:700">' + box.name + '</div><div style="font-size:10px;color:#86868b">' + box.strategy + ' - ' + (box.county||'') + ', ' + (box.state||'') + '</div></div><span style="background:' + (matched.length>3?'#34c759':matched.length>0?'#ff9500':'#86868b') + ';color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">' + matched.length + ' deals</span></div>' +
+            '<div style="font-size:10px;color:#86868b">Max Price: $' + ((box.maxPrice||0)/1000).toFixed(0) + 'K | Max Repairs: $' + ((box.maxRepairs||0)/1000).toFixed(0) + 'K | Min Spread: $' + ((box.minSpread||0)/1000).toFixed(0) + 'K</div></div>';
+        }).join('') + '</div>';
+    }).catch(function() { el.innerHTML = '<div style="color:#ff3b30">Error loading buy boxes</div>'; });
+  }
+}
+
+// ============================================================
+//  GMAIL TAB
+// ============================================================
+function renderGmail() {
+  var gmailUser = 'montsan.rei@gmail.com';
+  return '<div style="max-width:900px">' +
+    '<div style="background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">' +
+    '<div style="font-size:20px;font-weight:700;margin-bottom:4px">Gmail Integration</div>' +
+    '<div style="font-size:12px;color:#aaa">Manage your real estate emails directly from the dashboard</div></div>' +
+    '<div style="display:grid;grid-template-columns:200px 1fr;gap:16px">' +
+    // Sidebar
+    '<div>' +
+    '<button class="btn btn-dark" style="width:100%;margin-bottom:12px" onclick="openGmailCompose()">+ Compose</button>' +
+    '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden">' +
+    ['Inbox','Sent','Drafts','Starred'].map(function(f,i) {
+      return '<div style="padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f5f7;' + (i===0?'background:#f0f6ff;font-weight:600;color:#0071e3':'') + '" onclick="loadGmailFolder(\''+f.toLowerCase()+'\',this)">' + f + '</div>';
+    }).join('') +
+    '</div>' +
+    '<div style="margin-top:16px;padding:12px;background:#fff3e0;border:1px solid #ff9500;border-radius:10px;font-size:10px;color:#e65100">' +
+    '<strong>Setup required:</strong><br>1. Go to Railway Variables<br>2. Regenerate Gmail refresh token<br>3. See Automation tab for instructions</div>' +
+    '</div>' +
+    // Email list
+    '<div>' +
+    '<div id="gmail-list" style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden">' +
+    '<div style="padding:14px;border-bottom:1px solid #f5f5f7;font-size:12px;font-weight:600;color:#86868b;display:flex;justify-content:space-between"><span>INBOX</span><button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
+    '<div id="gmail-emails"><div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">📬</div><div style="font-weight:600;margin-bottom:8px">Gmail not connected</div><div style="font-size:12px;margin-bottom:14px">Connect Gmail to view your inbox here</div><button class="btn btn-dark" onclick="showGmailSetup()">Connect Gmail</button></div></div>' +
+    '</div>' +
+    '<div id="gmail-thread" style="display:none;background:#fff;border:1px solid #e5e5ea;border-radius:12px;margin-top:12px;padding:16px"></div>' +
+    '</div></div></div>';
+}
+
+function showGmailSetup() {
+  buildModalSimple('Connect Gmail to Dashboard',
+    '<div style="line-height:2;font-size:12px">' +
+    '<div style="background:#f5f5f7;border-radius:8px;padding:12px;margin-bottom:12px">' +
+    '<strong>Step 1:</strong> Go to <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:#0071e3">developers.google.com/oauthplayground</a><br>' +
+    '<strong>Step 2:</strong> Click gear icon - check "Use your own OAuth credentials"<br>' +
+    '<strong>Step 3:</strong> Enter Client ID and Client Secret from Railway Variables<br>' +
+    '<strong>Step 4:</strong> Authorize scope: <code>https://mail.google.com/</code><br>' +
+    '<strong>Step 5:</strong> Click "Exchange authorization code for tokens"<br>' +
+    '<strong>Step 6:</strong> Copy the Refresh Token<br>' +
+    '<strong>Step 7:</strong> Paste it in Railway Variables as GMAIL_REFRESH_TOKEN<br>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#86868b">This takes about 5 minutes. Once done, Gmail will be fully integrated.</div>' +
+    '</div>',
+    'Open OAuth Playground', function() { window.open('https://developers.google.com/oauthplayground','_blank'); closeModal(); }
+  );
+}
+
+async function loadGmailEmails() {
+  var el = document.getElementById('gmail-emails');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading emails...</div>';
+  try {
+    var res = await fetch('/api/gmail/inbox');
+    if (!res.ok) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b"><div style="margin-bottom:8px">Gmail not connected</div><button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup Gmail</button></div>';
+      return;
+    }
+    var data = await res.json();
+    var messages = data.messages || [];
+    if (!messages.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">No emails found</div>'; return; }
+    el.innerHTML = messages.map(function(m) {
+      return '<div style="padding:12px 14px;border-bottom:1px solid #f5f5f7;cursor:pointer;' + (m.unread?'background:#fafeff;':'') + '" onclick="openGmailThread(\'' + m.id + '\')">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
+        '<div style="font-size:12px;font-weight:' + (m.unread?'700':'500') + '">' + (m.from||'Unknown') + '</div>' +
+        '<div style="font-size:10px;color:#86868b">' + (m.date||'') + '</div></div>' +
+        '<div style="font-size:12px;' + (m.unread?'font-weight:600;color:#1d1d1f':'color:#3a3a3c') + ';margin-bottom:2px">' + (m.subject||'No subject') + '</div>' +
+        '<div style="font-size:10px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.snippet||'') + '</div>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Gmail not connected. <button class="btn btn-outline btn-sm" onclick="showGmailSetup()">Setup</button></div>';
+  }
+}
+
+async function openGmailThread(messageId) {
+  var threadEl = document.getElementById('gmail-thread');
+  if (!threadEl) return;
+  threadEl.style.display = 'block';
+  threadEl.innerHTML = '<div style="text-align:center;padding:20px;color:#86868b">Loading thread...</div>';
+  try {
+    var res = await fetch('/api/gmail/message/' + messageId);
+    if (!res.ok) { threadEl.innerHTML = '<div style="color:#ff3b30">Error loading email</div>'; return; }
+    var data = await res.json();
+    threadEl.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px"><div><div style="font-size:14px;font-weight:700">' + (data.subject||'No subject') + '</div><div style="font-size:11px;color:#86868b">From: ' + (data.from||'') + ' - ' + (data.date||'') + '</div></div><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'gmail-thread\').style.display=\'none\'">Close</button></div>' +
+      '<div style="background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:14px;max-height:300px;overflow-y:auto">' + (data.body||'').replace(/\n/g,'<br>') + '</div>' +
+      '<div style="border-top:1px solid #e5e5ea;padding-top:12px"><div style="font-size:12px;font-weight:600;margin-bottom:8px">Reply</div><textarea class="form-textarea" id="gmail-reply-body" style="min-height:80px;margin-bottom:8px" placeholder="Type your reply..."></textarea><div style="display:flex;gap:8px"><button class="btn btn-dark btn-sm" onclick="sendGmailReply(\'' + messageId + '\',\'' + (data.threadId||messageId) + '\',\'' + (data.from||'').replace(/'/g,'') + '\')">Send Reply</button><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'gmail-thread\').style.display=\'none\'">Cancel</button></div></div>';
+  } catch(e) { threadEl.innerHTML = '<div style="color:#ff3b30">Error: ' + e.message + '</div>'; }
+}
+
+function openGmailCompose() {
+  buildModal([
+    {tag:'div',cls:'modal-title',text:'Compose Email'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">To</div><input class="form-input" id="gc-to" placeholder="recipient@email.com">'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Subject</div><input class="form-input" id="gc-subject" placeholder="Subject">'},
+    {tag:'div',cls:'form-group',html:'<div class="form-label">Message</div><textarea class="form-textarea" id="gc-body" style="min-height:160px" placeholder="Write your message..."></textarea>'},
+    {tag:'div',cls:'modal-actions',html:'<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-dark" id="gc-send">Send Email</button>'}
+  ]);
+  document.getElementById('gc-send').onclick = sendGmailCompose;
+}
+
+async function sendGmailCompose() {
+  var to = (document.getElementById('gc-to')||{value:''}).value.trim();
+  var subject = (document.getElementById('gc-subject')||{value:''}).value.trim();
+  var body = (document.getElementById('gc-body')||{value:''}).value.trim();
+  if (!to || !subject || !body) { toast('Fill in all fields','error'); return; }
+  try {
+    var res = await fetch('/api/gmail/send', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({to,subject,body})});
+    var data = await res.json();
+    if (data.ok) { closeModal(); toast('Email sent!','success'); }
+    else { toast(data.error||'Failed to send','error'); }
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function sendGmailReply(messageId, threadId, replyTo) {
+  var body = (document.getElementById('gmail-reply-body')||{value:''}).value.trim();
+  if (!body) { toast('Write a reply first','error'); return; }
+  try {
+    var res = await fetch('/api/gmail/reply', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({messageId,threadId,to:replyTo,body})});
+    var data = await res.json();
+    if (data.ok) { toast('Reply sent!','success'); document.getElementById('gmail-thread').style.display='none'; }
+    else { toast(data.error||'Failed to send','error'); }
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+function loadGmailFolder(folder, el) {
+  document.querySelectorAll('#gmail-list > div:first-child').forEach(function(d){d.style.background='';d.style.fontWeight='';d.style.color='';});
+  if(el){el.style.background='#f0f6ff';el.style.fontWeight='600';el.style.color='#0071e3';}
+  loadGmailEmails();
+}
+
+
+async function runAutomationSearch() {
+  var county = (document.getElementById('ac-county')||{value:''}).value.trim();
+  var state = ((document.getElementById('ac-state')||{value:''}).value.trim()).toUpperCase();
+  var type = (document.getElementById('ac-type')||{value:'wholesale'}).value;
+  var count = parseInt((document.getElementById('ac-count')||{value:'50'}).value)||50;
+  var statusEl = document.getElementById('ac-status');
+  if (!county || !state || state.length!==2) { toast('Enter county and 2-letter state','error'); return; }
+  if (statusEl) statusEl.textContent = 'Searching ' + county + ', ' + state + ' for ' + type + '...';
+  toast('Search started for ' + county + ', ' + state, 'success');
+  try {
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||'admin'})});
+    if (statusEl) statusEl.textContent = 'Running... Check notification bell for completion.';
+    setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); }, 15000);
+    setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); if(statusEl) statusEl.textContent='Done - check Leads and Buyers tabs'; }, 45000);
+  } catch(e) { if(statusEl) statusEl.textContent='Error: '+e.message; }
+}
 
 </script>
 </body>
