@@ -925,14 +925,23 @@ app.get('/api/gmail/message/:id', async (req, res) => {
 app.post('/api/gmail/send', async (req, res) => {
   try {
     const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured. Please set up Gmail OAuth2 tokens in Railway Variables.' });
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured.' });
     const { to, subject, body } = req.body;
-    const transport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { type: 'OAuth2', user: cfg.user, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN }
-    });
-    await transport.sendMail({ from: cfg.user, to, subject, text: body });
-    db.addNotification('system', 'Email sent', 'To: ' + to + ' - ' + subject);
+    if (!to || !subject || !body) return res.status(400).json({ error: 'Missing to, subject, or body.' });
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    // Build RFC 2822 message
+    const messageParts = [
+      'From: ' + cfg.user,
+      'To: ' + to,
+      'Subject: ' + subject,
+      'Content-Type: text/plain; charset=utf-8',
+      'MIME-Version: 1.0',
+      '',
+      body
+    ];
+    const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
+    db.addNotification('system', 'Email sent', 'To: ' + to + ' — ' + subject);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -940,13 +949,27 @@ app.post('/api/gmail/send', async (req, res) => {
 app.post('/api/gmail/reply', async (req, res) => {
   try {
     const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
-    const { to, body, threadId } = req.body;
-    const transport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { type: 'OAuth2', user: cfg.user, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN }
-    });
-    await transport.sendMail({ from: cfg.user, to, subject: 'Re: (continuing conversation)', text: body });
+    if (!cfg) return res.status(503).json({ error: 'Gmail not configured.' });
+    const { to, body, threadId, messageId } = req.body;
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    // Fetch original to get subject for Re: prefix
+    let subject = 'Re: (your message)';
+    try {
+      const orig = await gmail.users.messages.get({ userId: 'me', id: messageId, format: 'metadata', metadataHeaders: ['Subject'] });
+      const origSubject = (orig.data.payload.headers.find(h=>h.name==='Subject')||{value:''}).value;
+      subject = origSubject.startsWith('Re:') ? origSubject : 'Re: ' + origSubject;
+    } catch(e2) {}
+    const messageParts = [
+      'From: ' + cfg.user,
+      'To: ' + to,
+      'Subject: ' + subject,
+      'Content-Type: text/plain; charset=utf-8',
+      'MIME-Version: 1.0',
+      '',
+      body
+    ];
+    const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    await gmail.users.messages.send({ userId: 'me', requestBody: { raw, threadId } });
     db.addNotification('system', 'Reply sent', 'To: ' + to);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
