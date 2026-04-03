@@ -588,6 +588,243 @@ app.post('/api/deals/send', (req, res) => {
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── API: Auth / Users ────────────────────────────────────
+app.post('/api/auth/login', (req, res) => {
+  const { pin } = req.body;
+  const user = db.getUserByPin(String(pin));
+  if (!user) return res.status(401).json({ error: 'Invalid PIN' });
+  res.json({ ok: true, user: { id: user.id, name: user.name, role: user.role, color: user.color, initials: user.initials, firstLogin: user.firstLogin } });
+});
+
+app.get('/api/users', (req, res) => {
+  // Admin only endpoint
+  const users = db.getUsers().map(u => ({ id:u.id, name:u.name, role:u.role, color:u.color, initials:u.initials, firstLogin:u.firstLogin, created:u.created }));
+  res.json({ users });
+});
+
+app.put('/api/users/:id', (req, res) => {
+  const result = db.updateUser(req.params.id, req.body);
+  if (result?.error) return res.status(400).json(result);
+  res.json({ ok: true, user: result });
+});
+
+app.post('/api/users', (req, res) => {
+  const result = db.addUser(req.body);
+  if (result?.error) return res.status(400).json(result);
+  res.json({ ok: true, user: result });
+});
+
+// ── API: User-scoped leads ────────────────────────────────
+app.get('/api/leads/user/:userId', (req, res) => {
+  const leads = db.getLeadsForUser(req.params.userId);
+  res.json({ leads, total: leads.length });
+});
+
+app.get('/api/leads/hierarchy/:userId', (req, res) => {
+  const tree = db.getLeadsByStateCountyForUser(req.params.userId);
+  res.json({ tree, total: db.getLeadsForUser(req.params.userId).length });
+});
+
+app.get('/api/stats/:userId', (req, res) => {
+  const stats = db.getStatsForUser(req.params.userId);
+  const today = new Date().toISOString().slice(0,10);
+  const dbData = db.readDB();
+  stats.followups_due = (dbData.followups||[]).filter(f => f.status==='pending' && f.nextDate<=today).length;
+  res.json(stats);
+});
+
+// ── API: Dashboard search (no Telegram needed) ────────────
+app.post('/api/search/leads', async (req, res) => {
+  const { county, state, count, type, userId } = req.body;
+  if (!county || !state) return res.status(400).json({ error: 'County and state required' });
+  res.json({ ok: true, message: 'Search started', county, state, count: count||50 });
+  // Fire search in background
+  setTimeout(async () => {
+    try {
+      const ai = require('./ai');
+      const { getMarketData } = require('./markets');
+      const { generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
+      const isLand = type === 'land';
+      let leads = [];
+      if (isLand) {
+        leads = ai.generateLandLeads(county, state, count||50);
+      } else {
+        leads = await ai.generateLeadList(county, state, count||50, ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent']);
+      }
+      const market = getMarketData(county, state);
+      let added = 0;
+      for (const lead of leads) {
+        if (db.leadExists(lead.address)) continue;
+        let analysis = {};
+        try { analysis = await ai.analyzeProperty({...lead, county, state}); } catch {}
+        const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : market.arv);
+        const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
+        const off = analysis.offer > 10000 ? analysis.offer : Math.round((arv*0.70-rep)*0.94);
+        const sprd = Math.max(0, arv-off-rep);
+        db.addLead({...lead, county, state, arv, offer:off, repairs:rep,
+          mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55),
+          spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High',
+          why_good_deal:analysis.why_good_deal||lead.why_good_deal||'',
+          distress_signals:analysis.distress_signals||lead.distress_signals||[],
+          investment_strategy:analysis.investment_strategy||'Wholesale Assignment',
+          script:analysis.script||lead.script||'', offer_email:analysis.offer_email||lead.offer_email||'',
+          negotiation_text:analysis.negotiation_text||lead.negotiation_text||'',
+          source: isLand ? 'Land — Dashboard Search' : 'AI Generated — Dashboard Search',
+          userId: userId || 'admin',
+        });
+        added++;
+      }
+      // Auto-add buyers
+      const buyers = require('./ai').generateMarketBuyers(county, state, 8);
+      const buyersAdded = db.addBuyersBulk(buyers);
+      const boxes = generateMarketBuyBoxes(county, state, 5);
+      addBuyBoxesBulk(boxes);
+      db.addScannedMarket(state, county);
+      db.markStatePopulated(state);
+      db.checkLeadLimit();
+      db.addNotification('deal', added + ' leads found — ' + county + ', ' + state,
+        'Dashboard search complete. ' + buyersAdded + ' buyers added.', {county, state, added, userId: userId||'admin'});
+    } catch(e) { db.addNotification('warning','Search error', e.message); }
+  }, 100);
+});
+
+// ── API: State auto-populate ──────────────────────────────
+app.post('/api/states/populate', async (req, res) => {
+  const { stateCode, userId } = req.body;
+  if (!stateCode) return res.status(400).json({ error: 'State code required' });
+  const { getStateMarkets } = require('./markets');
+  const stateData = getStateMarkets(stateCode);
+  if (!stateData) return res.status(404).json({ error: 'State not found' });
+  const alreadyDone = db.isStatePopulated(stateCode);
+  if (alreadyDone) return res.json({ ok: true, message: 'Already populated', alreadyDone: true });
+  res.json({ ok: true, message: 'Populating ' + stateData.name + ' with 150 leads...', stateName: stateData.name });
+  setTimeout(async () => {
+    try {
+      const ai = require('./ai');
+      const { getMarketData } = require('./markets');
+      const counties = Object.keys(stateData.counties||{});
+      // Pick top 2 counties by hotness
+      const topCounties = counties
+        .map(c => ({ county: c.replace(/_/g,' '), hotness: stateData.counties[c].hotness||70 }))
+        .sort((a,b) => b.hotness-a.hotness).slice(0,2);
+      let totalAdded = 0;
+      for (const { county } of topCounties) {
+        const perCounty = Math.round(150 / topCounties.length);
+        const leads = await ai.generateLeadList(county, stateCode, perCounty, ['Pre-FC','REO','Long DOM','FSBO','Probate']);
+        const market = getMarketData(county, stateCode);
+        for (const lead of leads) {
+          if (db.leadExists(lead.address)) continue;
+          let analysis = {};
+          try { analysis = await ai.analyzeProperty({...lead, county, state:stateCode}); } catch {}
+          const arv = analysis.arv > 50000 ? analysis.arv : market.arv;
+          const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
+          const off = Math.round((arv*0.70-rep)*0.94);
+          const sprd = Math.max(0, arv-off-rep);
+          db.addLead({...lead, county, state:stateCode, arv, offer:off, repairs:rep,
+            mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55),
+            spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High',
+            why_good_deal:analysis.why_good_deal||lead.why_good_deal||'',
+            distress_signals:analysis.distress_signals||[lead.category],
+            investment_strategy:'Wholesale Assignment',
+            script:analysis.script||lead.script||'',
+            source:'AI Generated — State Population',
+            userId: userId||'admin',
+          });
+          totalAdded++;
+        }
+        const buyers = require('./ai').generateMarketBuyers(county, stateCode, 5);
+        db.addBuyersBulk(buyers);
+        db.addScannedMarket(stateCode, county);
+      }
+      db.markStatePopulated(stateCode);
+      db.checkLeadLimit();
+      db.addNotification('deal', stateData.name + ' populated — ' + totalAdded + ' leads', 'Auto-population complete for ' + stateData.name, {state:stateCode, added:totalAdded});
+    } catch(e) { db.addNotification('warning','Population error for '+stateCode, e.message); }
+  }, 100);
+});
+
+// ── API: Pending buyers ───────────────────────────────────
+app.get('/api/buyers/pending', (req, res) => {
+  res.json({ pending: db.getPendingBuyers() });
+});
+
+app.post('/api/buyers/pending', (req, res) => {
+  const { buyer, userId } = req.body;
+  const pending = db.addPendingBuyer(buyer, userId||'guest');
+  res.json({ ok: true, pending });
+});
+
+app.post('/api/buyers/pending/:id/approve', (req, res) => {
+  const buyer = db.approvePendingBuyer(req.params.id);
+  if (!buyer) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true, buyer });
+});
+
+app.post('/api/buyers/pending/:id/reject', (req, res) => {
+  db.rejectPendingBuyer(req.params.id);
+  res.json({ ok: true });
+});
+
+// ── API: State/County data ────────────────────────────────
+app.get('/api/states', (req, res) => {
+  const { MARKETS } = require('./markets');
+  const populated = db.readDB().populated_states || [];
+  const states = Object.entries(MARKETS).map(([code, data]) => ({
+    code, name: data.name,
+    counties: Object.keys(data.counties||{}).map(c => c.replace(/_/g,' ')),
+    populated: populated.includes(code),
+    leadCount: db.getLeads().filter(l => l.state===code).length,
+  })).sort((a,b) => a.name.localeCompare(b.name));
+  res.json({ states });
+});
+
+// ── API: Fix state/county data ────────────────────────────
+app.post('/api/leads/fix-states', (req, res) => {
+  const dbData = db.readDB();
+  const STATE_MAP = {
+    'Wayne':'MI','Cuyahoga':'OH','Franklin':'OH','Hamilton':'OH','Cook':'IL',
+    'Philadelphia':'PA','Allegheny':'PA','Kings':'NY','Bronx':'NY','Queens':'NY',
+    'Multnomah':'OR','King':'WA','Clark':'NV','Maricopa':'AZ','Pima':'AZ',
+    'Fulton':'GA','DeKalb':'GA','Gwinnett':'GA','Jefferson':'AL',
+    'Hennepin':'MN','Ramsey':'MN','Milwaukee':'WI','Dane':'WI',
+    'Shelby':'TN','Davidson':'TN','Orleans':'LA','Jefferson Parish':'LA',
+    'Baltimore City':'MD','Prince Georges':'MD','Essex':'NJ','Hudson':'NJ',
+    'Denver':'CO','Bernalillo':'NM','Salt Lake':'UT','Ada':'ID',
+    'Hillsborough':'FL','Miami-Dade':'FL','Broward':'FL','Palm Beach':'FL',
+    'Mecklenburg':'NC','Wake':'NC','Richland':'SC','Charleston':'SC',
+    'Richmond City':'VA','Henrico':'VA','Harris':'TX','Bexar':'TX',
+    'Travis':'TX','Dallas':'TX','Tarrant':'TX','Collin':'TX',
+    'San Diego':'CA','Los Angeles':'CA','Riverside':'CA','Sacramento':'CA',
+  };
+  let fixed = 0;
+  (dbData.leads||[]).forEach(lead => {
+    const county = lead.county||'';
+    // Fix "Detroit Michigan" style county names
+    if (county.includes(' ')) {
+      const parts = county.split(' ');
+      const lastWord = parts[parts.length-1];
+      const STATE_NAMES = {Michigan:'MI',Ohio:'OH',Illinois:'IL',Pennsylvania:'PA',New:'NY',California:'CA',Texas:'TX',Florida:'FL',Georgia:'GA',Arizona:'AZ',Nevada:'NV',Colorado:'CO',Oregon:'OR',Washington:'WA',Tennessee:'TN',Minnesota:'MN',Wisconsin:'WI'};
+      if (STATE_NAMES[lastWord]) {
+        lead.state = STATE_NAMES[lastWord];
+        lead.county = parts.slice(0,-1).join(' ');
+        fixed++;
+      } else if (STATE_NAMES[parts[1]]) {
+        lead.state = STATE_NAMES[parts[1]];
+        lead.county = parts[0];
+        fixed++;
+      }
+    }
+    // Fix county→state mapping
+    const correctState = STATE_MAP[county];
+    if (correctState && lead.state !== correctState) {
+      lead.state = correctState;
+      fixed++;
+    }
+  });
+  if (fixed > 0) db.writeDB(dbData);
+  res.json({ ok: true, fixed });
+});
+
 // ── API: Search ─────────────────────────────────────────
 app.get('/api/search', (req, res) => {
   const { q } = req.query;
