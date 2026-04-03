@@ -480,6 +480,114 @@ app.post('/api/automation/extract-buyboxes', (req, res) => {
   res.json({ ok: true, extracted: fromBuyers });
 });
 
+// ── API: Lead Quality Score ──────────────────────────────
+app.get('/api/leads/:id/quality', (req, res) => {
+  const lead = db.getLeads().find(l => l.id === req.params.id);
+  if (!lead) return res.status(404).json({ error: 'Not found' });
+  const { scoreLeadQuality } = require('./modules/outreach');
+  res.json(scoreLeadQuality(lead));
+});
+
+// ── API: Outreach generation ──────────────────────────────
+app.post('/api/outreach/generate', (req, res) => {
+  const { leadId, buyerId } = req.body;
+  const lead = db.getLeads().find(l => l.id === leadId);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  const { scoreLeadQuality, generateSellerSMS, generateSellerEmail, generateCallScript, generateBuyerSMS, generateBuyerEmail } = require('./modules/outreach');
+  const quality = scoreLeadQuality(lead);
+  const result = {
+    quality,
+    seller_sms: generateSellerSMS(lead, quality),
+    seller_email: generateSellerEmail(lead, quality),
+    call_script: generateCallScript(lead, quality),
+  };
+  if (buyerId) {
+    const buyer = db.getBuyers().find(b => b.id === buyerId);
+    if (buyer) {
+      result.buyer_sms = generateBuyerSMS(lead, buyer);
+      result.buyer_email = generateBuyerEmail(lead, buyer);
+    }
+  }
+  res.json(result);
+});
+
+app.post('/api/outreach/intro-email', (req, res) => {
+  const { buyerId } = req.body;
+  const buyer = db.getBuyers().find(b => b.id === buyerId);
+  if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+  const { generateBuyerIntroEmail } = require('./modules/outreach');
+  res.json(generateBuyerIntroEmail(buyer));
+});
+
+app.post('/api/outreach/save-edit', (req, res) => {
+  const { original, edited, context } = req.body;
+  const { saveToneEdit } = require('./modules/outreach');
+  saveToneEdit(original, edited, context);
+  res.json({ ok: true });
+});
+
+app.post('/api/outreach/record', (req, res) => {
+  const { leadId, type, message } = req.body;
+  const { saveOutreachRecord } = require('./modules/outreach');
+  const record = saveOutreachRecord(leadId, type, message);
+  res.json({ ok: true, record });
+});
+
+app.get('/api/outreach/:leadId', (req, res) => {
+  const { getOutreachHistory } = require('./modules/outreach');
+  res.json({ history: getOutreachHistory(req.params.leadId) });
+});
+
+app.get('/api/outreach/tone-status', (req, res) => {
+  const { getToneLearnings, getAutoSendEnabled } = require('./modules/outreach');
+  const learnings = getToneLearnings();
+  res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
+});
+
+// ── API: Land deals ───────────────────────────────────────
+app.post('/api/leads/land', async (req, res) => {
+  try {
+    const { county, state, count } = req.body;
+    const { generateLandLeads } = require('./ai');
+    const leads = generateLandLeads(county || 'Dallas', state || 'TX', count || 10);
+    let added = 0;
+    for (const lead of leads) {
+      if (db.leadExists(lead.address)) continue;
+      db.addLead(lead);
+      added++;
+    }
+    db.addNotification('deal', `${added} land deals added`, `${county}, ${state} — land opportunities`);
+    res.json({ ok: true, added, leads: leads.slice(0, added) });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── API: Buyer intro email ────────────────────────────────
+app.get('/api/buyers/:id/intro-email', (req, res) => {
+  const buyer = db.getBuyers().find(b => b.id === req.params.id);
+  if (!buyer) return res.status(404).json({ error: 'Not found' });
+  const { generateBuyerIntroEmail } = require('./modules/outreach');
+  res.json(generateBuyerIntroEmail(buyer));
+});
+
+// ── API: Deal send (address-protected) ───────────────────
+app.post('/api/deals/send', (req, res) => {
+  try {
+    const { leadId, buyerId } = req.body;
+    const lead = db.getLeads().find(l => l.id === leadId);
+    const buyer = db.getBuyers().find(b => b.id === buyerId);
+    if (!lead || !buyer) return res.status(404).json({ error: 'Lead or buyer not found' });
+    const { generateBuyerEmail } = require('./modules/outreach');
+    const email = generateBuyerEmail(lead, buyer);
+    // Log deal sent
+    const dbData = db.readDB();
+    if (!dbData.deals_sent) dbData.deals_sent = [];
+    dbData.deals_sent.push({ leadId, buyerId, buyerName: buyer.name, sent: new Date().toISOString(), version: email.subject });
+    db.writeDB(dbData);
+    db.addNotification('match', `Deal sent to ${buyer.name}`, `${lead.address?.split(',')[0]} — city-only version sent`);
+    res.json({ ok: true, email });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── API: Search ─────────────────────────────────────────
 app.get('/api/search', (req, res) => {
   const { q } = req.query;

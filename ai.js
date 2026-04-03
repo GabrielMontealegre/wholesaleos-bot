@@ -308,4 +308,78 @@ function fallbackAnalysis(prop, arv, rep) {
   };
 }
 
-module.exports = { ask, analyzeProperty, generateLeadList, generateBuyerEmail, generateSellerScript, generateMarketBuyers, selectMarketsForWeek, MODE };
+// ── Land deal discovery ──────────────────────────────────────────────────
+const LAND_GROWTH_SIGNALS = [
+  'near new residential subdivision','adjacent to planned development',
+  'rezoning activity nearby','infrastructure expansion zone',
+  'population growth corridor','builder acquisition cluster',
+  'new highway interchange planned','commercial development expanding',
+  'solar farm acquisition target','agricultural land near city limits',
+];
+
+function generateLandLeads(county, state, count=10) {
+  const { getMarketData } = require('./markets');
+  const market = getMarketData(county, state);
+  const leads = [];
+  const strategies = ['Hold for appreciation','Subdivide and sell lots','Flip to builder','Long-term land bank'];
+  const zonings = ['Residential Agricultural','Unzoned','Rural','Commercial-adjacent','Mixed Use Transitional'];
+  const roadAccess = ['Paved road frontage','Dirt road access','Landlocked — easement needed','Highway frontage'];
+
+  for (let i = 0; i < count; i++) {
+    const acres = (Math.random() * 40 + 2).toFixed(1);
+    const askingPerAcre = Math.round((market.arv * 0.008) + Math.random() * 5000);
+    const asking = Math.round(acres * askingPerAcre);
+    const estValue = Math.round(asking * (1.25 + Math.random() * 0.5));
+    const devScore = Math.floor(Math.random() * 40 + 60);
+    const signal = LAND_GROWTH_SIGNALS[i % LAND_GROWTH_SIGNALS.length];
+    const zoning = zonings[i % zonings.length];
+    const strategy = strategies[i % strategies.length];
+    const road = roadAccess[i % roadAccess.length];
+    const zipBase = market.zip_prefix?.[0] || '750';
+    const zip = zipBase + String(Math.floor(Math.random()*99)).padStart(2,'0');
+    const city = market.neighborhoods[Math.floor(Math.random()*market.neighborhoods.length)] || county;
+    const streetNum = Math.floor(Math.random()*9000+100);
+    const spread = estValue - asking;
+
+    leads.push({
+      address: `${streetNum} County Rd, ${city}, ${state} ${zip}`,
+      type: 'Land',
+      isLand: true,
+      beds: 0, baths: 0,
+      sqft: 0,
+      acres: parseFloat(acres),
+      year: 0,
+      zip, county, state,
+      category: 'Land — Development Opportunity',
+      list_price: '$' + asking.toLocaleString(),
+      dom: Math.floor(Math.random()*120+30),
+      seller_type: 'Owner',
+      phone: '(' + Math.floor(Math.random()*800+200) + ') ' + Math.floor(Math.random()*900+100) + '-' + Math.floor(Math.random()*9000+1000),
+      status: 'Active',
+      zoning,
+      road_access: road,
+      utilities: Math.random() > 0.4 ? 'Water and electric nearby' : 'Utilities not on site',
+      arv: estValue,
+      offer: Math.round(asking * 0.82),
+      repairs: 0,
+      asking_price: asking,
+      spread,
+      fee_lo: Math.round(spread * 0.3),
+      fee_hi: Math.round(spread * 0.5),
+      mao: Math.round(estValue * 0.75),
+      risk: devScore > 75 ? 'Low' : devScore > 55 ? 'Medium' : 'High',
+      dev_score: devScore,
+      growth_signals: [signal, `${(Math.random()*15+5).toFixed(0)}% population growth nearby`, 'Builder activity detected in county'],
+      investment_strategy: strategy,
+      why_good_deal: `${acres} acres in ${county} County ${signal}. Development potential score ${devScore}/100. Listed at ${Math.round((estValue-asking)/estValue*100)}% below estimated market value with strong ${strategy.toLowerCase()} potential.`,
+      distress_signals: [signal, zoning, road],
+      script: `Hi, I'm Gabriel — a local land investor. I came across your parcel near ${city} and I'm interested in learning more. Would you be open to a quick conversation?`,
+      offer_email: `Hi, I came across your land parcel in ${county} County and I'm genuinely interested. I invest in land and I'd love to learn more about it. Would you be open to a conversation?`,
+      negotiation_text: `Hi, following up on the land parcel in ${city}. I'm still very interested — flexible on timing. Can we connect?`,
+      source: 'AI Generated — Land',
+    });
+  }
+  return leads;
+}
+
+module.exports = { ask, analyzeProperty, generateLeadList, generateLandLeads, generateBuyerEmail, generateSellerScript, generateMarketBuyers, selectMarketsForWeek, MODE };
