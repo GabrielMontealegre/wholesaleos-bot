@@ -1435,6 +1435,22 @@ app.delete('/api/leads/:id', (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// Bulk status change
+app.post('/api/leads/bulk-status', (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!ids || !ids.length || !status) return res.json({ ok: false, error: 'Missing ids or status' });
+    const idSet = new Set(ids);
+    const dbData = db.readDB();
+    let updated = 0;
+    (dbData.leads || []).forEach(l => {
+      if (idSet.has(l.id)) { l.status = status; updated++; }
+    });
+    db.writeDB(dbData);
+    res.json({ ok: true, updated });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // Delete multiple leads
 app.post('/api/leads/delete-bulk', (req, res) => {
   try {
