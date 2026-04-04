@@ -851,7 +851,7 @@ function renderLeads() {
       <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeLeads()" title="Delete all AI-generated fake leads">🗑 Delete Fake</button>
     </div>
   <!-- BULK ACTION TOOLBAR — shows when leads are selected -->
-  <div id="bulk-toolbar" style="display:none;background:#1d1d1f;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+  <div id="bulk-toolbar" style="display:none;background:#1d1d1f;border-radius:10px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap">
     <span id="bulk-count" style="font-size:12px;font-weight:600;color:#fff">0 selected</span>
     <div style="flex:1"></div>
     <select id="bulk-status-select" class="form-input" style="font-size:11px;padding:4px 8px;width:140px;background:#3a3a3c;color:#fff;border-color:#555">
@@ -877,93 +877,98 @@ function renderLeads() {
 }
 
 function renderLeadsHierarchy(leads) {
-  if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">📭</div><div style="font-weight:600">No leads yet</div><div style="margin-top:8px">Send /leads San Diego 50 in Telegram</div></div>';
+  if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">📭</div><div style="font-weight:600">No leads yet</div><div style="margin-top:8px">Import from Propwire or run a data source pull</div></div>';
 
-  // Group by state then county
+  // Build state → county → lead tree
   const tree = {};
   leads.forEach(l => {
-    const state = l.state || 'TX';
-    const county = l.county || 'Unknown';
+    const state = l.state || 'Unknown';
+    const county = l.county || 'Unknown County';
     if (!tree[state]) tree[state] = {};
     if (!tree[state][county]) tree[state][county] = [];
     tree[state][county].push(l);
   });
 
-  // Sort counties leads by spread
-  Object.values(tree).forEach(counties =>
-    Object.values(counties).forEach(arr =>
-      arr.sort((a,b) => (b.spread||b.fee_hi||0)-(a.spread||a.fee_hi||0))
-    )
-  );
-
-  const stateNames = {'TX':'Texas','CA':'California','FL':'Florida','NY':'New York','AZ':'Arizona'};
+  const stateNames = {'TX':'Texas','CA':'California','FL':'Florida','NY':'New York','AZ':'Arizona','GA':'Georgia','NV':'Nevada','CO':'Colorado','NC':'North Carolina','TN':'Tennessee','IL':'Illinois','MI':'Michigan','OH':'Ohio','WA':'Washington','MO':'Missouri','IN':'Indiana','PA':'Pennsylvania','VA':'Virginia'};
   let html = '';
 
   Object.keys(tree).sort().forEach(state => {
     const stateLead = Object.values(tree[state]).flat();
     const stateFees = stateLead.reduce((s,l) => s+(l.fee_lo||0), 0);
     const stateKey = 'state_' + state;
+    const stateIcon = state==='CA'?'🌴':state==='TX'?'⭐':'🏠';
 
     html += `<div style="margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1d1d1f;border-radius:10px;cursor:pointer;margin-bottom:6px" onclick="toggleSection('${stateKey}')">
-        <span style="font-size:16px">${state==='CA'?'🌴':state==='TX'?'⭐':'🏠'}</span>
+        <input type="checkbox" class="lead-cb-group" data-group="state-${state}" onclick="event.stopPropagation();toggleGroupSelection('state-${state}',this.checked)" style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
+        <span style="font-size:16px">${stateIcon}</span>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#fff">${stateNames[state]||state}</div>
-          <div style="font-size:10px;color:#86868b">${stateLead.length} leads · Est. $${(stateFees/1000).toFixed(0)}K+ fees</div>
+          <div style="font-size:10px;color:#aaa">${stateLead.length} leads · Est. $${(stateFees/1000).toFixed(0)}K+ fees</div>
         </div>
-        <span id="arrow_${stateKey}" style="color:#fff;font-size:12px">▼</span>
+        <span style="color:#aaa;font-size:12px" id="${stateKey}-arrow">▼</span>
       </div>
-      <div id="${stateKey}" style="padding-left:12px">`;
+      <div id="${stateKey}" style="display:block">`;
 
     Object.keys(tree[state]).sort().forEach(county => {
       const cLeads = tree[state][county];
-      const countyFees = cLeads.reduce((s,l) => s+(l.fee_lo||0), 0);
       const countyKey = 'county_' + state + '_' + county.replace(/\s/g,'_');
-      const topSpread = cLeads[0]?.spread || 0;
+      const topSpread = Math.max(...cLeads.map(l=>l.spread||0));
+      const countyFees = cLeads.reduce((s,l)=>s+(l.fee_lo||0),0);
+      cLeads.sort((a,b) => (b.spread||0)-(a.spread||0));
+      const newCount = cLeads.filter(l=>l.status==='New Lead'||!l.status).length;
 
-      html += `<div style="margin-bottom:8px">
+      html += `<div style="margin-left:16px;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f5f5f7;border-radius:8px;cursor:pointer;margin-bottom:4px" onclick="toggleSection('${countyKey}')">
-          <span style="font-size:14px">📍</span>
-          <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;color:#1d1d1f">${county} County</div>
+          <input type="checkbox" class="lead-cb-group" data-group="county-${state}-${county}" onclick="event.stopPropagation();toggleGroupSelection('county-${state}-${county}',this.checked)" style="width:13px;height:13px;cursor:pointer;flex-shrink:0">
+          <span style="font-size:12px">📍</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:#1d1d1f">${county}</div>
             <div style="font-size:10px;color:#86868b">${cLeads.length} leads · Top spread: $${topSpread.toLocaleString()} · Est. $${(countyFees/1000).toFixed(0)}K+ fees</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <span style="background:#34c759;color:#fff;font-size:9px;padding:2px 6px;border-radius:10px">${cLeads.filter(l=>l.status==='New Lead').length} new</span>
-            <span id="arrow_${countyKey}" style="font-size:11px;color:#86868b">▼</span>
+          ${newCount>0?`<span style="background:#34c759;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px">${newCount} new</span>`:''}
+          <span style="color:#86868b;font-size:10px" id="${countyKey}-arrow">▶</span>
+        </div>
+        <div id="${countyKey}" style="display:none;margin-left:8px">`;
+
+      cLeads.forEach(l => {
+        const spread = l.spread || ((l.arv||0)-(l.offer||0)-(l.repairs||0));
+        const spreadColor = spread>60000?'#34c759':spread>30000?'#ff9500':'#86868b';
+        const q = computeLeadQuality(l);
+        const isSelected = APP._selectedLeads && APP._selectedLeads.has(l.id);
+        const isActive = APP.selectedLead === l.id;
+        const rank = q.score>=70?'🔥':q.score>=40?'⚡':'❄️';
+
+        html += `<div class="lead-row ${isActive?'selected':''}" onclick="handleLeadRowClick(event,'${l.id}')" style="display:flex;align-items:stretch;border-radius:8px;margin-bottom:3px;cursor:pointer;background:${isSelected?'#e8f0fe':isActive?'#1d1d1f':'#fff'};border:1px solid ${isSelected?'#0071e3':'#f2f2f7'}">
+          <div style="display:flex;align-items:center;padding:0 8px;flex-shrink:0" onclick="event.stopPropagation()">
+            <input type="checkbox" class="lead-cb" data-id="${l.id}" onchange="toggleLeadSelection('${l.id}',this.checked)" style="width:14px;height:14px;cursor:pointer" ${isSelected?'checked':''}>
           </div>
-        </div>
-        <div id="${countyKey}" style="padding-left:12px">
-          ${cLeads.map((l,i) => {
-            const rank = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-            const spread = l.spread||0;
-            const spreadColor = spread>60000?'#34c759':spread>30000?'#ff9500':'#86868b';
-            return `<div class="lead-row ${APP.selectedLead===l.id?'selected':''}" onclick="handleLeadRowClick(event,'${l.id}')" style="padding:10px 12px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'#e8f0fe':APP.selectedLead===l.id?'#1d1d1f':'#fff'};border:1px solid ${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'#0071e3':'#f2f2f7'}">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
-                <input type="checkbox" class="lead-cb" data-id="${l.id}" onchange="toggleLeadSelection('${l.id}',this.checked)" onclick="event.stopPropagation()" style="cursor:pointer;width:14px;height:14px;margin-top:2px;flex-shrink:0" ${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'checked':''}>
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:600;color:${APP.selectedLead===l.id?'#fff':'#1d1d1f'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
-                  <div style="font-size:10px;color:${APP.selectedLead===l.id?'#aaa':'#86868b'};margin-top:2px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
-                </div>
-                <div style="text-align:right;flex-shrink:0;margin-left:8px">
-                  <div style="font-size:11px;font-weight:700;color:${APP.selectedLead===l.id?'#6ee7b7':spreadColor}">$${(spread/1000).toFixed(0)}K spread</div>
-                  <div style="font-size:10px;color:${APP.selectedLead===l.id?'#aaa':'#86868b'}">ARV $${((l.arv||0)/1000).toFixed(0)}K</div>
-                </div>
+          <div style="flex:1;padding:8px 8px 8px 0;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:600;color:${isActive?'#fff':'#1d1d1f'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
+                <div style="font-size:10px;color:${isActive?'#aaa':'#86868b'};margin-top:1px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
               </div>
-              <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-                <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${l.risk==='Low'?'#e6f9ed':l.risk==='High'?'#fff0f0':'#fff3e0'};color:${l.risk==='Low'?'#1b8f3d':l.risk==='High'?'#cc0000':'#e65100'}">${l.risk||'Medium'} risk</span>
-                <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#f0f0f5;color:#3a3a3c">${l.status||'New Lead'}</span>
-                ${l.arv>0?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#e8f0fe;color:#1a73e8">Fee $${(l.fee_lo||0).toLocaleString()}-$${(l.fee_hi||0).toLocaleString()}</span>`:''}
+              <div style="text-align:right;flex-shrink:0;margin-left:8px">
+                <div style="font-size:11px;font-weight:700;color:${isActive?'#6ee7b7':spreadColor}">$${(spread/1000).toFixed(0)}K spread</div>
+                <div style="font-size:10px;color:${isActive?'#aaa':'#86868b'}">ARV $${((l.arv||0)/1000).toFixed(0)}K</div>
               </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
+            </div>
+            <div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">
+              <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${l.risk==='Low'?'#e6f9ed':l.risk==='High'?'#fff0f0':'#fff3e0'};color:${l.risk==='Low'?'#1b8f3d':l.risk==='High'?'#cc0000':'#e65100'}">${l.risk||'Medium'} risk</span>
+              ${l.category?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#fff3e0;color:#e65100">${l.category}</span>`:''}
+              ${l.arv>0?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#e8f0fe;color:#1a73e8">Fee $${(l.fee_lo||0).toLocaleString()}-$${(l.fee_hi||0).toLocaleString()}</span>`:''}
+            </div>
+          </div>
+        </div>`;
+      });
+
+      html += `</div></div>`;
     });
 
     html += `</div></div>`;
   });
+
   return html;
 }
 
@@ -5454,7 +5459,7 @@ function updateBulkToolbar() {
   var count = APP._selectedLeads ? APP._selectedLeads.size : 0;
   var toolbar = document.getElementById('bulk-toolbar');
   var countEl = document.getElementById('bulk-count');
-  if (toolbar) toolbar.style.display = count > 0 ? 'flex' : 'none';
+  if (toolbar) { toolbar.style.display = count > 0 ? 'flex' : 'none'; }
   if (countEl) countEl.textContent = count + ' lead' + (count === 1 ? '' : 's') + ' selected';
   // Sync checkboxes
   document.querySelectorAll('.lead-cb').forEach(function(cb) {
@@ -5560,6 +5565,39 @@ function bulkOutreach() {
   APP._outreachBulkIds = ids;
   navigate('outreach', document.querySelector('.nav-item[onclick*="outreach"]'));
   toast(ids.length + ' leads ready for outreach — select a lead to generate scripts', 'success');
+}
+
+
+function toggleGroupSelection(group, checked) {
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  // Find all lead checkboxes that belong to this group's visible section
+  // group format: "state-TX" or "county-TX-Dallas"
+  var parts = group.split('-');
+  var type = parts[0]; // "state" or "county"
+
+  var matchLeads;
+  if (type === 'state') {
+    var state = parts[1];
+    matchLeads = APP.leads.filter(function(l){ return l.state === state; });
+  } else {
+    var state2 = parts[1];
+    var county = parts.slice(2).join('-');
+    matchLeads = APP.leads.filter(function(l){ return l.state === state2 && l.county === county; });
+  }
+
+  matchLeads.forEach(function(l) {
+    if (checked) APP._selectedLeads.add(l.id);
+    else APP._selectedLeads.delete(l.id);
+  });
+
+  // Update visible checkboxes
+  document.querySelectorAll('.lead-cb').forEach(function(cb) {
+    if (matchLeads.find(function(l){ return l.id === cb.dataset.id; })) {
+      cb.checked = checked;
+    }
+  });
+
+  updateBulkToolbar();
 }
 
 </script>
