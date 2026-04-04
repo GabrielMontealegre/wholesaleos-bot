@@ -84,9 +84,9 @@ input,select,textarea,button{font-family:inherit;font-size:13px}
 .stat-change.neg{color:#ff3b30}
 
 /* ── Split Layout ── */
-.split-view{display:grid;grid-template-columns:1fr 340px;gap:12px;height:calc(100vh - 120px);min-height:0}
+.split-view{display:grid;grid-template-columns:420px 1fr;gap:12px;height:calc(100vh - 120px);min-height:0}
 .split-left{background:#fff;border-radius:12px;border:1px solid #e5e5ea;overflow-y:auto;display:flex;flex-direction:column}
-.split-right{display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.split-right{display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-width:0}
 
 /* ── Table ── */
 .table-header{padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
@@ -802,7 +802,7 @@ function renderLeads() {
 
   return `<div class="split-view">
     <div class="split-left" style="overflow-y:auto">${leftPanel}</div>
-    <div class="split-right">${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;align-items:center;justify-content:center;color:#86868b;height:200px">Click a lead to view details</div>'}</div>
+    <div class="split-right" id="lead-detail-panel">${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>'}</div>
   </div>`;
 }
 
@@ -1329,6 +1329,7 @@ function renderBuyerCard(b) {
       <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
         <button class="btn btn-dark btn-sm" onclick="openSendDeal('${b.id}',null)">Send Deal</button>
         <button class="btn btn-outline btn-sm" onclick="editBuyer('${b.id}')">Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30;font-size:10px" onclick="deleteBuyer('${b.id}')">🗑 Delete</button>
       </div>
     </div>
   </div>`;
@@ -1377,7 +1378,79 @@ function renderDrive() {
   const folders = ['Deals','Buyers','Closed Deals','Database','Operations','Contracts'];
   const counts = {Deals:APP.leads.length, Buyers:APP.buyers.length, 'Closed Deals':APP.assignments.filter(a=>a.status==='Closed').length, Database:APP.leads.length, Operations:0, Contracts:0};
   return `
+  <div style="max-width:900px">
+
+    <!-- PROPWIRE IMPORT — PRIMARY FREE DATA SOURCE -->
+    <div style="background:linear-gradient(135deg,#0071e3,#5e5ce6);border-radius:14px;padding:20px;margin-bottom:20px;color:#fff">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="font-size:28px">🏠</div>
+        <div>
+          <div style="font-size:15px;font-weight:700">Propwire Import — 157 Million Real Properties</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8)">Free · No credit card · All 50 states · Pre-foreclosures, vacants, tax delinquent, absentee owners</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;line-height:2">
+        <strong>How to get free real leads right now:</strong><br>
+        1. Go to <a href="https://propwire.com" target="_blank" style="color:#fff;text-decoration:underline">propwire.com</a> → Create free account (no credit card)<br>
+        2. Search by county + lead type (pre-foreclosure, vacant, absentee owner, tax delinquent, etc.)<br>
+        3. Click <strong>Export</strong> → Download CSV → Come back here<br>
+        4. Drop the CSV below → System auto-maps every column + attaches Zillow/Redfin links automatically
+      </div>
+      <div id="propwire-drop-zone"
+        ondragover="event.preventDefault();this.style.background='rgba(255,255,255,0.25)'"
+        ondragleave="this.style.background='rgba(255,255,255,0.1)'"
+        ondrop="handlePropwireDrop(event)"
+        style="background:rgba(255,255,255,0.1);border:2px dashed rgba(255,255,255,0.5);border-radius:10px;padding:24px;text-align:center;cursor:pointer"
+        onclick="document.getElementById('propwire-file-input').click()">
+        <div style="font-size:32px;margin-bottom:8px">📁</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Drop Propwire CSV here or click to browse</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7)">Supports any Propwire export — auto-detects all columns</div>
+        <input type="file" id="propwire-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handlePropwireFile(this.files[0])">
+      </div>
+      <div id="propwire-status" style="margin-top:10px;font-size:12px;min-height:20px"></div>
+    </div>
+
+    <!-- FREE AUTOMATED DATA SOURCES -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">🤖 Automated Free Data Sources</div>
+      <div style="font-size:11px;color:#86868b;margin-bottom:14px">Click to pull real data automatically — no manual work needed</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px">
+        ${[
+          {id:'hud', icon:'🏛', name:'HUD Homestore', desc:'Government REO foreclosures', states:'All 50 states', confidence:'95%'},
+          {id:'cook', icon:'🌆', name:'Cook County (Chicago)', desc:'Pre-foreclosure filings', states:'Illinois', confidence:'95%'},
+          {id:'wayne', icon:'🚗', name:'Wayne County (Detroit)', desc:'Tax auction properties', states:'Michigan', confidence:'85%'},
+          {id:'clark', icon:'🎰', name:'Clark County (Las Vegas)', desc:'Distressed properties', states:'Nevada', confidence:'90%'},
+          {id:'maricopa', icon:'☀️', name:'Maricopa County (Phoenix)', desc:'Tax lien sales', states:'Arizona', confidence:'80%'},
+          {id:'connected-investors', icon:'💼', name:'Connected Investors', desc:'Real cash buyer profiles', states:'All states', confidence:'75%'},
+          {id:'biggerpockets', icon:'💰', name:'BiggerPockets', desc:'Investor marketplace', states:'All states', confidence:'70%'},
+        ].map(src => `
+          <div style="background:#f5f5f7;border-radius:10px;padding:12px">
+            <div style="font-size:20px;margin-bottom:6px">${src.icon}</div>
+            <div style="font-size:12px;font-weight:700;margin-bottom:2px">${src.name}</div>
+            <div style="font-size:10px;color:#86868b;margin-bottom:4px">${src.desc}</div>
+            <div style="font-size:10px;color:#34c759;margin-bottom:8px">${src.states} · ${src.confidence} reliable</div>
+            <button class="btn btn-dark btn-sm" style="width:100%" onclick="runDataSource('${src.id}')">Pull Now</button>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-dark" style="width:100%" onclick="runAllDataSources()">🚀 Run All Sources At Once</button>
+      <div id="datasource-status" style="margin-top:10px;font-size:11px;color:#86868b;min-height:20px"></div>
+    </div>
+
+    <!-- DELETE FAKE DATA -->
+    <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:6px">🗑 Remove AI-Generated Fake Data</div>
+      <div style="font-size:11px;color:#3a3a3c;margin-bottom:12px">Your current leads and buyers were generated by AI and are not real. Remove them before importing real data.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="clearFakeLeads()">Delete All Fake Leads (${APP.leads.filter(l=>!l.source||l.source==='AI Generated'||l.source.includes('AI')).length} leads)</button>
+        <button class="btn btn-outline btn-sm" onclick="clearFakeBuyers()">Delete All Fake Buyers (${APP.buyers.filter(b=>!b.source||!['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)).length} buyers)</button>
+      </div>
+    </div>
+
+    <!-- EXISTING CSV IMPORT -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 Other CSV / Excel Import</div>
+  </div>
   <div style="max-width:800px">
+
     <div id="drive-connection-banner" style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
       <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:4px">Google Drive — Checking connection...</div>
       <div style="font-size:12px;color:#86868b">Connecting to your Google Drive account</div>
@@ -1553,26 +1626,68 @@ async function runTargetedBuyerScrape() {
   var markets=getSelectedMarkets();
   if(!markets.length){toast('Select at least one city first','error');return;}
   var statusEl=document.getElementById('scrape-status');
-  if(statusEl)statusEl.textContent='Starting buyer scrape for '+markets.length+' city/cities... (~'+markets.length*10+' API credits)';
+  if(statusEl)statusEl.innerHTML='<span style="color:#ff9500">⏳ Starting buyer scrape for '+markets.length+' city/cities... (~'+markets.length*10+' API credits)</span>';
   try {
     var res=await fetch('/api/scraper/buyers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markets})});
     var data=await res.json();
-    if(statusEl)statusEl.innerHTML='<span style="color:#34c759">&#10003; '+(data.message||'Scrape started! Check Buyers tab in 5-10 min.')+'</span>';
+    if(statusEl)statusEl.innerHTML='<span style="color:#ff9500">🔄 Scraping buyers from Craigslist in '+markets.length+' markets — this takes 5-10 minutes...</span>';
     toast('Buyer scrape started!','success');
-  } catch(e){if(statusEl)statusEl.textContent='Error: '+e.message;toast('Error: '+e.message,'error');}
+    // Poll for progress every 15 seconds
+    var pollCount = 0;
+    var poll = setInterval(async function() {
+      pollCount++;
+      try {
+        var pr = await fetch('/api/scraper/progress');
+        var pd = await pr.json();
+        if(pd.buyers && pd.buyers.status === 'complete') {
+          clearInterval(poll);
+          if(statusEl) statusEl.innerHTML='<span style="color:#34c759">✅ Done! '+pd.buyers.found+' new buyers found across '+pd.buyers.markets+' markets. Check Buyers tab.</span>';
+          toast('✅ '+pd.buyers.found+' real buyers added!','success');
+          loadLeadsFromAPI();
+          updateSidebarStats();
+        } else if(pollCount > 40) { // 10 min timeout
+          clearInterval(poll);
+          if(statusEl) statusEl.innerHTML='<span style="color:#86868b">Scrape running in background — check Buyers tab in a few minutes.</span>';
+        } else {
+          var elapsed = Math.round(pollCount * 15 / 60 * 10)/10;
+          if(statusEl) statusEl.innerHTML='<span style="color:#ff9500">🔄 Scraping in progress ('+elapsed+' min)... check Buyers tab when done.</span>';
+        }
+      } catch(e2){}
+    }, 15000);
+  } catch(e){if(statusEl)statusEl.innerHTML='<span style="color:#ff3b30">Error: '+e.message+'</span>';toast('Error: '+e.message,'error');}
 }
 async function runTargetedDealScrape() {
   var markets=getSelectedMarkets();
   if(!markets.length){toast('Select at least one city first','error');return;}
   var statusEl=document.getElementById('scrape-status');
-  if(statusEl)statusEl.textContent='Starting deal scrape for '+markets.length+' city/cities...';
+  if(statusEl)statusEl.innerHTML='<span style="color:#ff9500">⏳ Starting deal scrape for '+markets.length+' city/cities...</span>';
   try {
     var res=await fetch('/api/scraper/deals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({markets})});
     var data=await res.json();
-    if(statusEl)statusEl.innerHTML='<span style="color:#34c759">&#10003; '+(data.message||'Deal scrape started! Check Review Queue in 5-10 min.')+'</span>';
+    if(statusEl)statusEl.innerHTML='<span style="color:#ff9500">🔄 Scraping deals from Craigslist, HUD, FSBO, Landwatch — 5-10 minutes...</span>';
     toast('Deal scrape started!','success');
-    setTimeout(loadReviewQueue,12000);
-  } catch(e){if(statusEl)statusEl.textContent='Error: '+e.message;}
+    var pollCount = 0;
+    var poll = setInterval(async function() {
+      pollCount++;
+      try {
+        var pr = await fetch('/api/scraper/progress');
+        var pd = await pr.json();
+        if(pd.deals && pd.deals.status === 'complete') {
+          clearInterval(poll);
+          if(statusEl) statusEl.innerHTML='<span style="color:#34c759">✅ Done! '+pd.deals.found+' new deals in Review Queue below.</span>';
+          toast('✅ '+pd.deals.found+' deals added to Review Queue!','success');
+          loadReviewQueue();
+        } else if(pollCount > 40) {
+          clearInterval(poll);
+          if(statusEl) statusEl.innerHTML='<span style="color:#86868b">Scrape running in background — refresh Review Queue below.</span>';
+          loadReviewQueue();
+        } else {
+          var elapsed = Math.round(pollCount * 15 / 60 * 10)/10;
+          if(statusEl) statusEl.innerHTML='<span style="color:#ff9500">🔄 Scraping in progress ('+elapsed+' min)...</span>';
+        }
+      } catch(e2){}
+    }, 15000);
+  } catch(e){if(statusEl)statusEl.innerHTML='<span style="color:#ff3b30">Error: '+e.message+'</span>';}
 }
 async function loadReviewQueue() {
   const el = document.getElementById('review-queue-list');
@@ -2118,8 +2233,28 @@ function riskBadge(r) {
 
 function selectLead(id) {
   APP.selectedLead = id;
-  if (APP.page !== 'leads') navigate('leads', document.querySelector('[onclick*="leads"]'));
-  else render();
+  if (APP.page !== 'leads') {
+    navigate('leads', document.querySelector('[onclick*="navigate(\'leads\'"]'));
+    return;
+  }
+  // Update right panel directly — no full page re-render
+  const rightPanel = document.getElementById('lead-detail-panel') || document.querySelector('.split-right');
+  if (rightPanel) {
+    const lead = APP.leads.find(l => l.id === id);
+    if (lead) {
+      rightPanel.innerHTML = renderLeadDetail(lead);
+      rightPanel.scrollTop = 0;
+      // Update highlight in list
+      document.querySelectorAll('.lead-row').forEach(function(r) {
+        const isSelected = r.getAttribute('onclick')?.includes(id);
+        r.classList.toggle('selected', isSelected);
+        r.style.background = isSelected ? '#1d1d1f' : '';
+        r.style.color = isSelected ? '#fff' : '';
+      });
+    }
+  } else {
+    openLeadModal(id);
+  }
 }
 
 function sendDealToBuyer(leadId, buyerId) {
@@ -4672,6 +4807,16 @@ render = function() {
   if (APP.page === 'states') setTimeout(loadAllStates, 50);
   if (APP.page === 'matching') setTimeout(function(){showMatchTab('all');}, 50);
   if (APP.page === 'gmail') { setTimeout(loadGmailEmails, 300); setTimeout(checkGmailStatus, 600); }
+  if (APP.page === 'contracts_lib') setTimeout(loadContractTemplates, 50);
+  if (APP.page === 'buyboxes') setTimeout(loadBuyBoxes, 50);
+  if (APP.page === 'outreach') setTimeout(loadOutreachToneStatus, 50);
+  if (APP.page === 'review') setTimeout(loadReviewQueue, 50);
+  if (APP.page === 'automation') setTimeout(function() {
+    var el = document.getElementById('buybox-stats');
+    if (el) fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(d){
+      el.textContent = (d.buyboxes||[]).length + ' buy boxes · ' + APP.buyers.length + ' buyers in database';
+    }).catch(function(){});
+  }, 50);
   if (APP.page === 'users' && APP.isAdmin) {
     renderUsersPanel().then(function(html) {
       var el = document.getElementById('content');
@@ -5079,6 +5224,165 @@ async function checkGmailStatus() {
     if (mini) { mini.style.background='#fff3e0'; mini.textContent='Cannot reach server'; }
   }
 }
+
+
+
+// ═══════════════════════════════════════════════════════
+//  PROPWIRE IMPORT
+// ═══════════════════════════════════════════════════════
+
+function handlePropwireDrop(event) {
+  event.preventDefault();
+  document.getElementById('propwire-drop-zone').style.background = 'rgba(255,255,255,0.1)';
+  const file = event.dataTransfer?.files?.[0];
+  if (file) handlePropwireFile(file);
+}
+
+function handlePropwireFile(file) {
+  if (!file) return;
+  const statusEl = document.getElementById('propwire-status');
+  if (statusEl) statusEl.innerHTML = '<span style="color:#fff">⏳ Reading file: ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)...</span>';
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const csvText = e.target.result;
+    if (statusEl) statusEl.innerHTML = '<span style="color:#fff">🔄 Importing ' + file.name + ' into WholesaleOS...</span>';
+    try {
+      const res = await fetch('/api/import/propwire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: csvText,
+      });
+      const data = await res.json();
+      if (data.ok) {
+        statusEl.innerHTML = '<span style="color:#a8ff8b">✅ ' + data.added + ' real leads imported! (' + data.parsed + ' rows processed)</span>';
+        toast('✅ ' + data.added + ' real Propwire leads imported!', 'success');
+        await loadLeadsFromAPI();
+        updateSidebarStats();
+        if (data.sample && data.sample.length) {
+          statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.7)">Sample: ' + data.sample.map(l=>l.address?.split(',')[0]).join(' · ') + '</span>';
+        }
+      } else {
+        statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + (data.error||'Unknown error') + '</span>';
+        toast('Import failed: ' + (data.error||'Check CSV format'), 'error');
+      }
+    } catch(e) {
+      statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + e.message + '</span>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════
+//  FREE DATA SOURCES
+// ═══════════════════════════════════════════════════════
+
+async function runDataSource(sourceId) {
+  const statusEl = document.getElementById('datasource-status');
+  if (statusEl) statusEl.innerHTML = '⏳ Starting ' + sourceId + ' pull...';
+  try {
+    const res = await fetch('/api/datasources/' + sourceId, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+    const data = await res.json();
+    if (statusEl) statusEl.innerHTML = '🔄 ' + sourceId + ' running in background — check Review Queue in 5-10 min';
+    toast(sourceId + ' pull started!', 'success');
+    // Poll for completion
+    var polls = 0;
+    var poll = setInterval(async function() {
+      polls++;
+      var pr = await fetch('/api/scraper/progress').then(r=>r.json()).catch(()=>null);
+      if (pr && pr[sourceId] && pr[sourceId].status === 'complete') {
+        clearInterval(poll);
+        if (statusEl) statusEl.innerHTML = '✅ ' + sourceId + ' complete: ' + (pr[sourceId].leads||0) + ' leads + ' + (pr[sourceId].buyers||0) + ' buyers added';
+        loadReviewQueue();
+      } else if (polls > 30) clearInterval(poll);
+    }, 10000);
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '❌ Error: ' + e.message;
+  }
+}
+
+async function runAllDataSources() {
+  const statusEl = document.getElementById('datasource-status');
+  if (statusEl) statusEl.innerHTML = '⏳ Starting all data sources: HUD, Cook County, Wayne County, Clark County, Maricopa, Connected Investors, BiggerPockets...';
+  try {
+    const res = await fetch('/api/datasources/run-all', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+    const data = await res.json();
+    if (statusEl) statusEl.innerHTML = '🔄 All sources running — check Review Queue and Buyers in 10-15 minutes. You will get a Telegram notification when done.';
+    toast('All data sources started!', 'success');
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '❌ Error: ' + e.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DELETE LEADS & BUYERS
+// ═══════════════════════════════════════════════════════
+
+async function deleteLead(leadId) {
+  if (!confirm('Delete this lead? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/leads/' + leadId, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      APP.leads = APP.leads.filter(l => l.id !== leadId);
+      toast('Lead deleted', 'success');
+      render();
+      updateSidebarStats();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteBuyer(buyerId) {
+  if (!confirm('Delete this buyer? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/buyers/' + buyerId, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      APP.buyers = APP.buyers.filter(b => b.id !== buyerId);
+      toast('Buyer deleted', 'success');
+      render();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function clearFakeLeads() {
+  const fakeCount = APP.leads.filter(l => !l.source || l.source === 'AI Generated' || l.source.includes('AI')).length;
+  if (!confirm('This will permanently delete ' + fakeCount + ' AI-generated fake leads. Continue?')) return;
+  try {
+    const res = await fetch('/api/leads/clear/fake', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      toast('✅ Removed ' + data.removed + ' fake leads. ' + data.remaining + ' leads remain.', 'success');
+      await loadLeadsFromAPI();
+      render();
+      updateSidebarStats();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function clearFakeBuyers() {
+  const fakeCount = APP.buyers.filter(b => !b.source || !['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)).length;
+  if (!confirm('This will permanently delete ' + fakeCount + ' AI-generated fake buyers. Continue?')) return;
+  try {
+    const res = await fetch('/api/buyers/clear/fake', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      toast('✅ Removed ' + data.removed + ' fake buyers. ' + data.remaining + ' remain.', 'success');
+      await loadLeadsFromAPI();
+      render();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Add delete button to lead detail
+const _origRenderLeadDetail = renderLeadDetail;
+renderLeadDetail = function(l) {
+  const html = _origRenderLeadDetail(l);
+  // Inject delete button after the detail panel opens
+  return html.replace(
+    '</div>\n  <div class="detail-panel">',
+    '</div>\n  <div class="detail-panel"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="deleteLead(\''+l.id+'\')">🗑 Delete Lead</button></div>'
+  );
+};
 
 </script>
 </body>
