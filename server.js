@@ -1315,21 +1315,33 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
 const datasources = require('./modules/datasources');
 
 // Propwire CSV import endpoint
-app.post('/api/import/propwire', express.text({ limit: '50mb', type: '*/*' }), async (req, res) => {
+app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), async (req, res) => {
   try {
     const csvText = req.body;
     if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
+
     const leads = datasources.parsePropwireCSV(csvText);
-    if (!leads.length) return res.json({ ok: false, error: 'No leads parsed — check CSV format' });
-    let added = 0;
+    if (!leads.length) return res.json({ ok: false, error: 'No leads parsed — check your CSV format. Make sure it is a Propwire export.' });
+
+    // Smarter dedup: normalize address for comparison
+    const existing = db.getLeads();
+    const normalize = (s) => (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const existingAddrs = new Set(existing.map(l => normalize(l.address)));
+
+    let added = 0, skipped = 0;
     for (const lead of leads) {
-      if (!db.leadExists(lead.address)) {
+      const key = normalize(lead.address);
+      if (key.length > 5 && !existingAddrs.has(key)) {
         db.addLead(lead);
+        existingAddrs.add(key);
         added++;
+      } else {
+        skipped++;
       }
     }
-    db.addNotification('deal', `${added} real leads imported from Propwire`, `${leads.length} total rows processed`);
-    res.json({ ok: true, parsed: leads.length, added, sample: leads.slice(0,3) });
+
+    db.addNotification('deal', `${added} real leads imported from Propwire`, `${leads.length} rows processed, ${skipped} duplicates skipped`);
+    res.json({ ok: true, parsed: leads.length, added, skipped, sample: leads.slice(0,3).map(l=>({address:l.address,category:l.category,arv:l.arv})) });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -1440,9 +1452,18 @@ app.delete('/api/leads/clear/fake', (req, res) => {
   try {
     const dbData = db.readDB();
     const before = (dbData.leads || []).length;
-    dbData.leads = (dbData.leads || []).filter(l =>
-      l.source && l.source !== 'AI Generated' && !l.source.includes('AI') && l.source !== 'AI Generated — Land'
-    );
+    const REAL_SOURCES = ['Propwire','HUD Homestore','Craigslist','Cook County Open Data',
+      'Wayne County Treasurer','Clark County ArcGIS','Maricopa County Treasurer',
+      'FSBO.com','Landwatch','Connected Investors','BiggerPockets','Manual'];
+    dbData.leads = (dbData.leads || []).filter(l => {
+      const src = l.source || '';
+      // Keep if source is a real data source
+      if (REAL_SOURCES.includes(src)) return true;
+      // Keep if source contains 'County' or 'HUD' (government sources)
+      if (src.includes('County') || src.includes('HUD') || src.includes('Propwire')) return true;
+      // Remove AI-generated and empty-source leads
+      return false;
+    });
     db.writeDB(dbData);
     res.json({ ok: true, removed: before - dbData.leads.length, remaining: dbData.leads.length });
   } catch(e) { res.json({ ok: false, error: e.message }); }
