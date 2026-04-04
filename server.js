@@ -1082,29 +1082,31 @@ app.post('/api/drive/backup', async (req, res) => {
     const drive = getDriveClient();
     if (!drive) return res.json({ ok: false, error: 'Drive not configured. Add GDRIVE_REFRESH_TOKEN to Railway.' });
     const leads = db.getLeads();
-    const buyers = db.getBuyers();
     const today = new Date().toISOString().slice(0, 10);
-    const csvHeader = "Address,County,State,Category,ARV,Offer,Spread,Status,DOM,Phone";
-    const csvRows = leads.map(l => [l.address||"",l.county||"",l.state||"",l.category||"",l.arv||0,l.offer||0,l.spread||0,l.status||"",l.dom||0,l.phone||""].map(v=>String(v).replace(/,/g,"")).join(",")).join("\n");
-    const csvContent = csvHeader + "\n" + csvRows;
-    // Find or create WholesaleOS folder
+    const headers = ['Address','County','State','Category','ARV','Offer','Repairs','Spread','Fee Lo','Fee Hi','Status','DOM','Phone','Email','Source','Deal Type','Created'];
+    const rows = leads.map(l => [
+      (l.address||'').replace(/,/g,' '),
+      (l.county||'').replace(/,/g,' '),
+      l.state||'',
+      l.category||'',
+      l.arv||0, l.offer||0, l.repairs||0, l.spread||0, l.fee_lo||0, l.fee_hi||0,
+      l.status||'New Lead', l.dom||0,
+      l.phone||'', l.email||'',
+      l.source||'AI Generated', l.dealType||'',
+      (l.created||'').slice(0,10),
+    ].map(v => '"'+String(v).replace(/"/g,"'")+'"').join(','));
+    const csvContent = [headers.join(','), ...rows].join('\n');
     let folderId;
     const folderSearch = await drive.files.list({ q: "name='Montsan REI' and mimeType='application/vnd.google-apps.folder' and trashed=false", fields: 'files(id,name)' });
-    if (folderSearch.data.files.length > 0) {
-      folderId = folderSearch.data.files[0].id;
-    } else {
-      const folder = await drive.files.create({ requestBody: { name: 'Montsan REI', mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' });
-      folderId = folder.data.id;
-    }
-    // Upload leads CSV
+    if (folderSearch.data.files.length > 0) { folderId = folderSearch.data.files[0].id; }
+    else { const folder = await drive.files.create({ requestBody: { name: 'Montsan REI', mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' }); folderId = folder.data.id; }
     const { Readable } = require('stream');
-    const stream = Readable.from([csvContent]);
     await drive.files.create({
       requestBody: { name: 'leads_backup_' + today + '.csv', parents: [folderId] },
-      media: { mimeType: 'text/csv', body: stream }
+      media: { mimeType: 'text/csv', body: Readable.from([csvContent]) }
     });
-    db.addNotification('system', 'Google Drive backup complete', leads.length + ' leads exported to Montsan REI/ folder');
-    res.json({ ok: true, leads: leads.length, folder: 'Montsan REI' });
+    db.addNotification('system', 'Google Drive backup complete', leads.length + ' leads exported to Montsan REI/');
+    res.json({ ok: true, leads: leads.length, rows: rows.length, folder: 'Montsan REI' });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -1118,6 +1120,13 @@ app.get('/api/search', (req, res) => {
   res.json({ results: [...leads.map(l=>({...l,_type:'lead'})), ...buyers.map(b=>({...b,_type:'buyer'}))] });
 });
 
+
+// ── Scrape progress tracking ─────────────────────────────
+const scrapeProgress = { buyers: null, deals: null };
+
+app.get('/api/scraper/progress', (req, res) => {
+  res.json({ buyers: scrapeProgress.buyers, deals: scrapeProgress.deals });
+});
 // ── Scraper routes ───────────────────────────────────────
 const scraper = require('./modules/scraper');
 
@@ -1130,6 +1139,7 @@ app.post('/api/scraper/buyers', async (req, res) => {
       ? customMarkets
       : req.body.allStates ? scraper.ALL_STATE_MARKETS : scraper.HOT_MARKETS;
     res.json({ ok: true, message: `Buyer scrape started for ${markets.length} market${markets.length===1?'':'s'}` });
+    scrapeProgress.buyers = { status: 'running', markets: markets.length, started: new Date().toISOString() };
     setImmediate(async () => {
       try {
         const buyers = await scraper.scrapeCraigslistBuyers(markets);
@@ -1143,6 +1153,7 @@ app.post('/api/scraper/buyers', async (req, res) => {
             added++;
           }
         }
+        scrapeProgress.buyers = { status: 'complete', found: added, markets: markets.length, time: new Date().toISOString() };
         db.addNotification('buyer', `${added} real buyers found`, `Craigslist scrape across ${markets.length} markets`);
         console.log(`Buyer scrape complete: ${added} new buyers added`);
       } catch(e) { console.error('Buyer scrape error:', e.message); }
@@ -1300,5 +1311,168 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// ── Free Data Sources ────────────────────────────────────
+const datasources = require('./modules/datasources');
+
+// Propwire CSV import endpoint
+app.post('/api/import/propwire', express.text({ limit: '50mb', type: '*/*' }), async (req, res) => {
+  try {
+    const csvText = req.body;
+    if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
+    const leads = datasources.parsePropwireCSV(csvText);
+    if (!leads.length) return res.json({ ok: false, error: 'No leads parsed — check CSV format' });
+    let added = 0;
+    for (const lead of leads) {
+      if (!db.leadExists(lead.address)) {
+        db.addLead(lead);
+        added++;
+      }
+    }
+    db.addNotification('deal', `${added} real leads imported from Propwire`, `${leads.length} total rows processed`);
+    res.json({ ok: true, parsed: leads.length, added, sample: leads.slice(0,3) });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Run all free data sources
+app.post('/api/datasources/run-all', async (req, res) => {
+  try {
+    const states = req.body.states || null;
+    res.json({ ok: true, message: 'All free data sources started. Check Review Queue and Buyers in 5-10 minutes.' });
+    setImmediate(async () => {
+      try {
+        const results = await datasources.runAllFreeSources({ states });
+        // Add leads to review queue
+        const dbData = db.readDB();
+        if (!dbData.reviewQueue) dbData.reviewQueue = [];
+        const existingUrls = new Set(dbData.reviewQueue.map(r => r.sourceUrl).filter(Boolean));
+        let leadsAdded = 0;
+        for (const lead of results.leads) {
+          if (!existingUrls.has(lead.sourceUrl) && !db.leadExists(lead.address)) {
+            dbData.reviewQueue.push(lead);
+            leadsAdded++;
+          }
+        }
+        db.writeDB(dbData);
+        // Add buyers
+        let buyersAdded = 0;
+        const existingBuyers = db.getBuyers().map(b => `${b.phone||''}${b.email||''}${b.name||''}`);
+        for (const buyer of results.buyers) {
+          const key = `${buyer.phone||''}${buyer.email||''}${buyer.name||''}`;
+          if (key.length > 3 && !existingBuyers.includes(key)) {
+            db.addBuyer(buyer);
+            buyersAdded++;
+          }
+        }
+        db.addNotification('system', `Data pull complete`, `${leadsAdded} leads in Review Queue + ${buyersAdded} buyers added. Errors: ${results.errors.length}`);
+        console.log(`[DataSources] ${leadsAdded} leads, ${buyersAdded} buyers. Errors: ${results.errors.join('; ')}`);
+      } catch(e) { console.error('[DataSources] Error:', e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Run specific source
+app.post('/api/datasources/:source', async (req, res) => {
+  try {
+    const { source } = req.params;
+    const states = req.body.states || null;
+    res.json({ ok: true, message: `${source} scrape started` });
+    setImmediate(async () => {
+      try {
+        let leads = [], buyers = [];
+        if (source === 'hud') leads = await datasources.scrapeHUDHomestore(states);
+        else if (source === 'cook') leads = await datasources.getCookCountyForeclosures();
+        else if (source === 'wayne') leads = await datasources.getWayneCountyAuctions();
+        else if (source === 'clark') leads = await datasources.getClarkCountyProperties();
+        else if (source === 'maricopa') leads = await datasources.getMaricopaForeclosures();
+        else if (source === 'connected-investors') buyers = await datasources.scrapeConnectedInvestors(states);
+        else if (source === 'biggerpockets') buyers = await datasources.scrapeBiggerPockets();
+
+        const dbData = db.readDB();
+        if (!dbData.reviewQueue) dbData.reviewQueue = [];
+        let added = 0;
+        for (const lead of leads) {
+          if (!db.leadExists(lead.address)) {
+            dbData.reviewQueue.push(lead);
+            added++;
+          }
+        }
+        db.writeDB(dbData);
+
+        let buyersAdded = 0;
+        const existing = db.getBuyers().map(b => b.name||'');
+        for (const buyer of buyers) {
+          if (!existing.includes(buyer.name)) { db.addBuyer(buyer); buyersAdded++; }
+        }
+
+        db.addNotification('system', `${source} complete`, `${added} leads + ${buyersAdded} buyers`);
+        scrapeProgress[source] = { status: 'complete', leads: added, buyers: buyersAdded, time: new Date().toISOString() };
+      } catch(e) { console.error(`[${source}]`, e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Delete endpoints ─────────────────────────────────────
+// Delete single lead
+app.delete('/api/leads/:id', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(l => l.id !== req.params.id);
+    db.writeDB(dbData);
+    res.json({ ok: true, removed: before - dbData.leads.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Delete multiple leads
+app.post('/api/leads/delete-bulk', (req, res) => {
+  try {
+    const ids = new Set(req.body.ids || []);
+    const dbData = db.readDB();
+    const before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(l => !ids.has(l.id));
+    db.writeDB(dbData);
+    res.json({ ok: true, removed: before - dbData.leads.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Delete all AI-generated fake leads
+app.delete('/api/leads/clear/fake', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(l =>
+      l.source && l.source !== 'AI Generated' && !l.source.includes('AI') && l.source !== 'AI Generated — Land'
+    );
+    db.writeDB(dbData);
+    res.json({ ok: true, removed: before - dbData.leads.length, remaining: dbData.leads.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Delete single buyer
+app.delete('/api/buyers/:id', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const before = (dbData.buyers || []).length;
+    dbData.buyers = (dbData.buyers || []).filter(b => b.id !== req.params.id);
+    db.writeDB(dbData);
+    res.json({ ok: true, removed: before - dbData.buyers.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Delete all fake/AI buyers
+app.delete('/api/buyers/clear/fake', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const before = (dbData.buyers || []).length;
+    // Keep only buyers from real sources
+    dbData.buyers = (dbData.buyers || []).filter(b =>
+      b.source && ['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)
+    );
+    db.writeDB(dbData);
+    res.json({ ok: true, removed: before - dbData.buyers.length, remaining: dbData.buyers.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 module.exports = app;
+
 

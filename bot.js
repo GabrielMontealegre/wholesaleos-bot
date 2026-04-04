@@ -458,7 +458,39 @@ cron.schedule('0 9 * * *', async () => {
   } catch(e) { console.error('Backup error:', e.message); }
 });
 
-// ── CRAIGSLIST BUYER SCRAPER — Daily 6AM MST (1PM UTC) hot markets ──────────
+// ── FREE DATA SOURCES — Daily 7AM MST (2PM UTC) ───────────────────────────
+cron.schedule('0 14 * * *', async () => {
+  console.log('[CRON] Starting daily free data sources pull...');
+  try {
+    const ds = require('./modules/datasources');
+    const results = await ds.runAllFreeSources();
+    // Add to review queue
+    const dbData = db.readDB();
+    if (!dbData.reviewQueue) dbData.reviewQueue = [];
+    const existingUrls = new Set(dbData.reviewQueue.map(r => r.sourceUrl).filter(Boolean));
+    let leadsAdded = 0;
+    for (const lead of results.leads) {
+      if (!existingUrls.has(lead.sourceUrl) && !db.leadExists(lead.address)) {
+        dbData.reviewQueue.push(lead);
+        leadsAdded++;
+      }
+    }
+    db.writeDB(dbData);
+    // Add buyers
+    let buyersAdded = 0;
+    const existing = db.getBuyers().map(b => `${b.name||''}${b.phone||''}`);
+    for (const buyer of results.buyers) {
+      const key = `${buyer.name||''}${buyer.phone||''}`;
+      if (!existing.includes(key) && key.length > 3) { db.addBuyer(buyer); buyersAdded++; }
+    }
+    db.addNotification('system', `Daily data pull complete`, `${leadsAdded} leads + ${buyersAdded} buyers. Sources: HUD, Cook County, Wayne County, Clark County, Maricopa, Connected Investors, BiggerPockets`);
+    if (OWNER_ID && (leadsAdded + buyersAdded) > 0) {
+      send(OWNER_ID, `📊 <b>Daily data pull complete</b>\n🏠 ${leadsAdded} new leads in Review Queue\n💼 ${buyersAdded} new buyers added\n\nCheck dashboard → Review Queue`);
+    }
+    console.log(`[CRON] Data pull: ${leadsAdded} leads, ${buyersAdded} buyers`);
+  } catch(e) { console.error('[CRON] Data sources error:', e.message); }
+});
+
 cron.schedule('0 13 * * *', async () => {
   console.log('[CRON] Starting daily Craigslist buyer scrape — 15 hot markets...');
   try {
