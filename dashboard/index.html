@@ -1377,79 +1377,7 @@ function renderDrive() {
   setTimeout(checkDriveConnection, 100);
   const folders = ['Deals','Buyers','Closed Deals','Database','Operations','Contracts'];
   const counts = {Deals:APP.leads.length, Buyers:APP.buyers.length, 'Closed Deals':APP.assignments.filter(a=>a.status==='Closed').length, Database:APP.leads.length, Operations:0, Contracts:0};
-  return `
-  <div style="max-width:900px">
-
-    <!-- PROPWIRE IMPORT — PRIMARY FREE DATA SOURCE -->
-    <div style="background:linear-gradient(135deg,#0071e3,#5e5ce6);border-radius:14px;padding:20px;margin-bottom:20px;color:#fff">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <div style="font-size:28px">🏠</div>
-        <div>
-          <div style="font-size:15px;font-weight:700">Propwire Import — 157 Million Real Properties</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8)">Free · No credit card · All 50 states · Pre-foreclosures, vacants, tax delinquent, absentee owners</div>
-        </div>
-      </div>
-      <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;line-height:2">
-        <strong>How to get free real leads right now:</strong><br>
-        1. Go to <a href="https://propwire.com" target="_blank" style="color:#fff;text-decoration:underline">propwire.com</a> → Create free account (no credit card)<br>
-        2. Search by county + lead type (pre-foreclosure, vacant, absentee owner, tax delinquent, etc.)<br>
-        3. Click <strong>Export</strong> → Download CSV → Come back here<br>
-        4. Drop the CSV below → System auto-maps every column + attaches Zillow/Redfin links automatically
-      </div>
-      <div id="propwire-drop-zone"
-        ondragover="event.preventDefault();this.style.background='rgba(255,255,255,0.25)'"
-        ondragleave="this.style.background='rgba(255,255,255,0.1)'"
-        ondrop="handlePropwireDrop(event)"
-        style="background:rgba(255,255,255,0.1);border:2px dashed rgba(255,255,255,0.5);border-radius:10px;padding:24px;text-align:center;cursor:pointer"
-        onclick="document.getElementById('propwire-file-input').click()">
-        <div style="font-size:32px;margin-bottom:8px">📁</div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Drop Propwire CSV here or click to browse</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7)">Supports any Propwire export — auto-detects all columns</div>
-        <input type="file" id="propwire-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handlePropwireFile(this.files[0])">
-      </div>
-      <div id="propwire-status" style="margin-top:10px;font-size:12px;min-height:20px"></div>
-    </div>
-
-    <!-- FREE AUTOMATED DATA SOURCES -->
-    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px">🤖 Automated Free Data Sources</div>
-      <div style="font-size:11px;color:#86868b;margin-bottom:14px">Click to pull real data automatically — no manual work needed</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px">
-        ${[
-          {id:'hud', icon:'🏛', name:'HUD Homestore', desc:'Government REO foreclosures', states:'All 50 states', confidence:'95%'},
-          {id:'cook', icon:'🌆', name:'Cook County (Chicago)', desc:'Pre-foreclosure filings', states:'Illinois', confidence:'95%'},
-          {id:'wayne', icon:'🚗', name:'Wayne County (Detroit)', desc:'Tax auction properties', states:'Michigan', confidence:'85%'},
-          {id:'clark', icon:'🎰', name:'Clark County (Las Vegas)', desc:'Distressed properties', states:'Nevada', confidence:'90%'},
-          {id:'maricopa', icon:'☀️', name:'Maricopa County (Phoenix)', desc:'Tax lien sales', states:'Arizona', confidence:'80%'},
-          {id:'connected-investors', icon:'💼', name:'Connected Investors', desc:'Real cash buyer profiles', states:'All states', confidence:'75%'},
-          {id:'biggerpockets', icon:'💰', name:'BiggerPockets', desc:'Investor marketplace', states:'All states', confidence:'70%'},
-        ].map(src => `
-          <div style="background:#f5f5f7;border-radius:10px;padding:12px">
-            <div style="font-size:20px;margin-bottom:6px">${src.icon}</div>
-            <div style="font-size:12px;font-weight:700;margin-bottom:2px">${src.name}</div>
-            <div style="font-size:10px;color:#86868b;margin-bottom:4px">${src.desc}</div>
-            <div style="font-size:10px;color:#34c759;margin-bottom:8px">${src.states} · ${src.confidence} reliable</div>
-            <button class="btn btn-dark btn-sm" style="width:100%" onclick="runDataSource('${src.id}')">Pull Now</button>
-          </div>`).join('')}
-      </div>
-      <button class="btn btn-dark" style="width:100%" onclick="runAllDataSources()">🚀 Run All Sources At Once</button>
-      <div id="datasource-status" style="margin-top:10px;font-size:11px;color:#86868b;min-height:20px"></div>
-    </div>
-
-    <!-- DELETE FAKE DATA -->
-    <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:6px">🗑 Remove AI-Generated Fake Data</div>
-      <div style="font-size:11px;color:#3a3a3c;margin-bottom:12px">Your current leads and buyers were generated by AI and are not real. Remove them before importing real data.</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="clearFakeLeads()">Delete All Fake Leads (${APP.leads.filter(l=>!l.source||l.source==='AI Generated'||l.source.includes('AI')).length} leads)</button>
-        <button class="btn btn-outline btn-sm" onclick="clearFakeBuyers()">Delete All Fake Buyers (${APP.buyers.filter(b=>!b.source||!['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)).length} buyers)</button>
-      </div>
-    </div>
-
-    <!-- EXISTING CSV IMPORT -->
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 Other CSV / Excel Import</div>
-  </div>
-  <div style="max-width:800px">
+  return `  <div style="max-width:800px">
 
     <div id="drive-connection-banner" style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
       <div style="font-size:14px;font-weight:700;color:#e65100;margin-bottom:4px">Google Drive — Checking connection...</div>
@@ -2234,19 +2162,24 @@ function riskBadge(r) {
 function selectLead(id) {
   APP.selectedLead = id;
   if (APP.page !== 'leads') {
-    navigate('leads', document.querySelector('[onclick*="navigate(\'leads\'"]'));
+    APP.page = 'leads';
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    var leadsNav = document.querySelector('.nav-item[onclick*="leads"]');
+    if (leadsNav) leadsNav.classList.add('active');
+    var titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = 'Leads';
+    render();
+    setTimeout(function(){ selectLead(id); }, 100);
     return;
   }
-  // Update right panel directly — no full page re-render
-  const rightPanel = document.getElementById('lead-detail-panel') || document.querySelector('.split-right');
+  var rightPanel = document.getElementById('lead-detail-panel') || document.querySelector('.split-right');
   if (rightPanel) {
-    const lead = APP.leads.find(l => l.id === id);
+    var lead = APP.leads.find(function(l){ return l.id === id; });
     if (lead) {
       rightPanel.innerHTML = renderLeadDetail(lead);
       rightPanel.scrollTop = 0;
-      // Update highlight in list
       document.querySelectorAll('.lead-row').forEach(function(r) {
-        const isSelected = r.getAttribute('onclick')?.includes(id);
+        var isSelected = (r.getAttribute('onclick') || '').includes(id);
         r.classList.toggle('selected', isSelected);
         r.style.background = isSelected ? '#1d1d1f' : '';
         r.style.color = isSelected ? '#fff' : '';
@@ -2516,81 +2449,81 @@ async function loadLeadsFromAPI() {
 // ══════════════════════════════════════════════════════════
 function renderImport() {
   return `
-  <div style="max-width:800px">
+  <div style="max-width:900px">
+
+    <!-- PROPWIRE IMPORT -->
+    <div style="background:linear-gradient(135deg,#0071e3,#5e5ce6);border-radius:14px;padding:20px;margin-bottom:20px;color:#fff">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="font-size:28px">🏠</div>
+        <div>
+          <div style="font-size:15px;font-weight:700">Propwire Import — Real Leads, Free</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8)">157 million properties · All 50 states · Pre-foreclosures, vacants, tax delinquent, absentee owners</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;line-height:2">
+        <strong>Steps to get real leads:</strong><br>
+        1. Go to <a href="https://propwire.com" target="_blank" style="color:#fff;text-decoration:underline">propwire.com</a> → Create free account (no credit card)<br>
+        2. Search Dallas County → Click Lead Types → select Pre-Foreclosure, Vacant, Tax Delinquent, Absentee Owner, High Equity<br>
+        3. Click the download/export button → save the CSV file<br>
+        4. Drop the CSV file in the box below — system handles everything automatically
+      </div>
+      <div id="propwire-drop-zone"
+        ondragover="event.preventDefault();this.style.background='rgba(255,255,255,0.25)'"
+        ondragleave="this.style.background='rgba(255,255,255,0.12)'"
+        ondrop="handlePropwireDrop(event)"
+        style="background:rgba(255,255,255,0.12);border:2px dashed rgba(255,255,255,0.5);border-radius:10px;padding:24px;text-align:center;cursor:pointer"
+        onclick="document.getElementById('propwire-file-input').click()">
+        <div style="font-size:32px;margin-bottom:8px">📁</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Drop Propwire CSV here or click to browse</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7)">Supports any Propwire export — auto-detects all columns and calculates deal metrics</div>
+        <input type="file" id="propwire-file-input" accept=".csv" style="display:none" onchange="handlePropwireFile(this.files[0])">
+      </div>
+      <div id="propwire-status" style="margin-top:10px;font-size:12px;min-height:20px"></div>
+    </div>
+
+    <!-- FREE AUTOMATED DATA SOURCES -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">🤖 Automated Free Data Sources</div>
+      <div style="font-size:11px;color:#86868b;margin-bottom:14px">Pull real data from government and public sources automatically</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+        ${[
+          {id:'hud',icon:'🏛',name:'HUD Homestore',desc:'Govt foreclosures · All 50 states',conf:'95%'},
+          {id:'cook',icon:'🌆',name:'Cook County IL',desc:'Pre-FC filings · Chicago',conf:'95%'},
+          {id:'wayne',icon:'🚗',name:'Wayne County MI',desc:'Tax auctions · Detroit',conf:'85%'},
+          {id:'clark',icon:'🎰',name:'Clark County NV',desc:'Distressed · Las Vegas',conf:'90%'},
+          {id:'maricopa',icon:'☀️',name:'Maricopa County AZ',desc:'Tax liens · Phoenix',conf:'80%'},
+          {id:'connected-investors',icon:'💼',name:'Connected Investors',desc:'Real cash buyers',conf:'75%'},
+          {id:'biggerpockets',icon:'💰',name:'BiggerPockets',desc:'Investor marketplace',conf:'70%'},
+        ].map(src => '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:18px;margin-bottom:4px">'+src.icon+'</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">'+src.name+'</div><div style="font-size:10px;color:#86868b;margin-bottom:2px">'+src.desc+'</div><div style="font-size:10px;color:#34c759;margin-bottom:8px">'+src.conf+' reliable</div><button class="btn btn-dark btn-sm" style="width:100%;font-size:10px" onclick="runDataSource(\''+src.id+'\')">Pull Now</button></div>').join('')}
+      </div>
+      <button class="btn btn-dark" style="width:100%;margin-bottom:6px" onclick="runAllDataSources()">🚀 Run All Sources At Once</button>
+      <div id="datasource-status" style="font-size:11px;color:#86868b;min-height:20px;padding:4px 0"></div>
+    </div>
+
+    <!-- DELETE FAKE DATA -->
+    <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:4px">🗑 Remove AI-Generated Fake Data</div>
+      <div style="font-size:11px;color:#3a3a3c;margin-bottom:12px">Your current leads and buyers were generated by AI and are not real. Delete them before importing real data from Propwire.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeLeads()">🗑 Delete All Fake Leads (${APP.leads.filter(l=>!l.source||l.source==='AI Generated'||l.source.includes('AI Generated')).length} AI leads)</button>
+        <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeBuyers()">🗑 Delete All Fake Buyers (${APP.buyers.filter(b=>!b.source||!['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)).length} AI buyers)</button>
+      </div>
+    </div>
+
+    <!-- EXISTING CSV IMPORT -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">📋 Import Other CSV / Excel Files</div>
     <div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
       <div style="font-size:20px">💡</div>
       <div>
-        <div style="font-size:13px;font-weight:600;color:#1a73e8;margin-bottom:3px">How CSV Import Works</div>
+        <div style="font-size:13px;font-weight:600;color:#1a73e8;margin-bottom:3px">Import from BatchLeads, PropStream, or any CSV</div>
         <div style="font-size:12px;color:#3a3a3c;line-height:1.7">
-          1. Drop or select your CSV/Excel file below<br>
-          2. The system reads every row and maps the columns automatically<br>
-          3. Preview the data — fix anything before importing<br>
-          4. Click Import — all leads are added to your CRM instantly<br>
-          5. Each imported lead gets a 30-day follow-up sequence created automatically
+          Drop any CSV or Excel file below — system auto-maps columns from BatchLeads, PropStream, or any real estate platform
         </div>
       </div>
     </div>
-
-    <div id="import-drop-zone" style="border:2px dashed #d1d1d6;border-radius:14px;padding:48px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px;background:#fff" onclick="document.getElementById('import-file-input').click()" ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)">
-      <div style="font-size:48px;margin-bottom:12px">📂</div>
-      <div style="font-size:15px;font-weight:600;color:#1d1d1f;margin-bottom:6px">Drop your file here or click to browse</div>
-      <div style="font-size:12px;color:#86868b;margin-bottom:8px">Supports CSV · Excel (.xlsx, .xls) · PDF lead lists · Up to 10,000 rows</div>
-      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
-        <span style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📊 CSV</span>
-        <span style="background:#e6f9ed;color:#1b8f3d;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📗 Excel</span>
-        <span style="background:#fdecea;color:#c0392b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📄 PDF</span>
-      </div>
-      <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="importFileSelected(this)">
-    </div>
-
-    <div id="import-preview" style="display:none">
-      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden;margin-bottom:12px">
-        <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:#1d1d1f" id="import-file-name">File loaded</div>
-            <div style="font-size:11px;color:#86868b;margin-top:2px" id="import-row-count">0 rows detected</div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-outline btn-sm" onclick="importReset()">✕ Clear</button>
-            <button class="btn btn-dark" id="import-btn" onclick="importConfirm()">Import All Leads →</button>
-          </div>
-        </div>
-        <div style="padding:12px 16px;background:#f9f9f9;border-bottom:1px solid #f2f2f7">
-          <div style="font-size:11px;font-weight:600;color:#86868b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Column Mapping (AI Auto-Detected)</div>
-          <div id="import-mapping" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
-        <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
-          <table style="width:100%;border-collapse:collapse">
-            <thead id="import-thead"></thead>
-            <tbody id="import-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="import-result" style="display:none"></div>
-
-    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Expected Column Names</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        ${[
-          ['address','Property address (required)'],
-          ['price / list_price','Listing price'],
-          ['arv','After Repair Value'],
-          ['beds / bedrooms','Bedroom count'],
-          ['baths / bathrooms','Bathroom count'],
-          ['sqft / sq_ft','Square footage'],
-          ['phone / seller_phone','Seller phone'],
-          ['email / seller_email','Seller email'],
-          ['county','County name'],
-          ['category / type','Pre-FC, REO, FSBO...'],
-          ['dom / days_on_market','Days on market'],
-          ['owner / owner_name','Owner name'],
-        ].map(([col,desc]) => '<div style="background:#f5f5f7;border-radius:8px;padding:8px 10px"><div style="font-family:monospace;font-size:10px;color:#1d1d1f;font-weight:600">'+col+'</div><div style="font-size:10px;color:#86868b;margin-top:1px">'+desc+'</div></div>').join('')}
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:#86868b">The system automatically maps common column name variations. Extra columns are preserved in the notes field.</div>
-    </div>
-  </div>`;
+  </div>
+  <div style="max-width:800px">
+  `;
 }
 
 function importDragOver(e) {
