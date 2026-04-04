@@ -660,6 +660,59 @@ function isSafeCallTime(state) {
 // ══════════════════════════════════════════════════════════
 //  BUYER MATCHING
 // ══════════════════════════════════════════════════════════
+function computeLeadQuality(lead) {
+  var score = 0;
+  var reasons = [];
+  var spread = lead.spread || ((lead.arv||0) - (lead.offer||0) - (lead.repairs||0));
+  var cat = (lead.category||'').toLowerCase();
+  var dom = lead.dom || 0;
+  var arv = lead.arv || 0;
+  var offer = lead.offer || 0;
+
+  // Spread scoring
+  if (spread > 80000)      { score += 35; reasons.push('Exceptional $' + Math.round(spread/1000) + 'K spread'); }
+  else if (spread > 50000) { score += 25; reasons.push('Strong $' + Math.round(spread/1000) + 'K spread'); }
+  else if (spread > 25000) { score += 15; reasons.push('Good $' + Math.round(spread/1000) + 'K spread'); }
+  else if (spread > 10000) { score += 5;  reasons.push('Moderate spread'); }
+
+  // Category scoring
+  if (cat.includes('pre-fc') || cat.includes('foreclosure')) { score += 20; reasons.push('Pre-foreclosure — motivated seller'); }
+  else if (cat.includes('probate'))    { score += 18; reasons.push('Probate — estate liquidation'); }
+  else if (cat.includes('tax'))        { score += 16; reasons.push('Tax delinquent — under pressure'); }
+  else if (cat.includes('vacant'))     { score += 14; reasons.push('Vacant — carrying costs'); }
+  else if (cat.includes('absentee'))   { score += 12; reasons.push('Absentee owner'); }
+  else if (cat.includes('fsbo'))       { score += 10; reasons.push('FSBO — no agent'); }
+  else if (cat.includes('reo'))        { score += 15; reasons.push('REO — bank-owned'); }
+  else if (cat.includes('auction'))    { score += 14; reasons.push('Auction — must sell'); }
+  else if (cat.includes('long dom'))   { score += 10; reasons.push('Long DOM — frustrated seller'); }
+
+  // DOM scoring
+  if (dom > 120)      { score += 15; reasons.push(dom + ' days on market'); }
+  else if (dom > 60)  { score += 10; reasons.push(dom + ' days on market'); }
+  else if (dom > 30)  { score += 5; }
+
+  // Equity scoring
+  if (arv > 0 && offer > 0) {
+    var equityPct = Math.round((arv - offer) / arv * 100);
+    if (equityPct >= 40)     { score += 15; reasons.push(equityPct + '% equity'); }
+    else if (equityPct >= 25){ score += 8; reasons.push(equityPct + '% equity'); }
+  }
+
+  // Source bonus
+  if (lead.source === 'Propwire')            { score += 5; }
+  if (lead.source && lead.source.includes('County')) { score += 3; }
+  if (lead.verified)                          { score += 5; }
+
+  score = Math.min(100, Math.max(0, score));
+
+  var label, color, emoji;
+  if (score >= 70)      { label = 'High';   color = '#34c759'; emoji = '🔥'; }
+  else if (score >= 40) { label = 'Medium'; color = '#ff9500'; emoji = '⚡'; }
+  else                  { label = 'Low';    color = '#86868b'; emoji = '❄️'; }
+
+  return { score, label, color, emoji, reasons };
+}
+
 function matchBuyers(lead) {
   return APP.buyers.filter(b => {
     const priceOk = (!b.maxPrice || lead.arv * 0.85 <= b.maxPrice) && (!b.minARV || lead.arv >= b.minARV);
@@ -795,6 +848,7 @@ function renderLeads() {
       <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
       <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
+      <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeLeads()" title="Delete all AI-generated fake leads">🗑 Delete Fake</button>
     </div>
   </div>
   <div style="font-size:11px;color:#86868b;margin-bottom:10px">${leads.length} leads${APP.search?' matching "'+APP.search+'"':''}</div>
@@ -5174,11 +5228,16 @@ function handlePropwireDrop(event) {
 function handlePropwireFile(file) {
   if (!file) return;
   const statusEl = document.getElementById('propwire-status');
-  if (statusEl) statusEl.innerHTML = '<span style="color:#fff">⏳ Reading file: ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)...</span>';
+  const kb = (file.size/1024).toFixed(0);
+  const mb = (file.size/1024/1024).toFixed(1);
+  const sizeStr = file.size > 1024*1024 ? mb + ' MB' : kb + ' KB';
+  if (statusEl) statusEl.innerHTML = '<span style="color:#fff">⏳ Reading ' + file.name + ' (' + sizeStr + ')...</span>';
+
   const reader = new FileReader();
   reader.onload = async function(e) {
     const csvText = e.target.result;
-    if (statusEl) statusEl.innerHTML = '<span style="color:#fff">🔄 Importing ' + file.name + ' into WholesaleOS...</span>';
+    const rowCount = csvText.split('\n').length - 1;
+    if (statusEl) statusEl.innerHTML = '<span style="color:#fff">🔄 Processing ' + rowCount.toLocaleString() + ' rows... this may take a moment for large files</span>';
     try {
       const res = await fetch('/api/import/propwire', {
         method: 'POST',
@@ -5187,20 +5246,25 @@ function handlePropwireFile(file) {
       });
       const data = await res.json();
       if (data.ok) {
-        statusEl.innerHTML = '<span style="color:#a8ff8b">✅ ' + data.added + ' real leads imported! (' + data.parsed + ' rows processed)</span>';
-        toast('✅ ' + data.added + ' real Propwire leads imported!', 'success');
+        const msg = '✅ ' + data.added.toLocaleString() + ' leads imported! (' + data.parsed.toLocaleString() + ' rows, ' + (data.skipped||0) + ' duplicates skipped)';
+        if (statusEl) statusEl.innerHTML = '<span style="color:#a8ff8b">' + msg + '</span>';
+        if (data.sample && data.sample.length && statusEl) {
+          statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.8)">✓ ' + data.sample.map(function(l){return (l.address||'').split(',')[0];}).join(' · ') + '</span>';
+        }
+        toast('✅ ' + data.added.toLocaleString() + ' real leads imported from Propwire!', 'success');
         await loadLeadsFromAPI();
         updateSidebarStats();
-        if (data.sample && data.sample.length) {
-          statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.7)">Sample: ' + data.sample.map(l=>l.address?.split(',')[0]).join(' · ') + '</span>';
-        }
+        render();
       } else {
-        statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + (data.error||'Unknown error') + '</span>';
-        toast('Import failed: ' + (data.error||'Check CSV format'), 'error');
+        if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ ' + (data.error||'Import failed — make sure this is a Propwire CSV export') + '</span>';
+        toast('Import failed: ' + (data.error||'Check file format'), 'error');
       }
     } catch(e) {
-      statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + e.message + '</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + e.message + '</span>';
     }
+  };
+  reader.onerror = function() {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Could not read file</span>';
   };
   reader.readAsText(file);
 }
@@ -5278,16 +5342,19 @@ async function deleteBuyer(buyerId) {
 }
 
 async function clearFakeLeads() {
-  const fakeCount = APP.leads.filter(l => !l.source || l.source === 'AI Generated' || l.source.includes('AI')).length;
-  if (!confirm('This will permanently delete ' + fakeCount + ' AI-generated fake leads. Continue?')) return;
+  const fakeCount = APP.leads.filter(l => !l.source || l.source === 'AI Generated' || (l.source && l.source.includes('AI Generated'))).length;
+  const realCount = APP.leads.length - fakeCount;
+  if (!confirm('Delete ' + fakeCount + ' AI-generated fake leads? Your ' + realCount + ' real leads will be kept.')) return;
   try {
     const res = await fetch('/api/leads/clear/fake', { method: 'DELETE' });
     const data = await res.json();
     if (data.ok) {
-      toast('✅ Removed ' + data.removed + ' fake leads. ' + data.remaining + ' leads remain.', 'success');
+      toast('✅ Deleted ' + data.removed + ' fake leads. ' + data.remaining + ' real leads remain.', 'success');
       await loadLeadsFromAPI();
       render();
       updateSidebarStats();
+    } else {
+      toast('Error: ' + (data.error || 'Unknown'), 'error');
     }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
@@ -5316,6 +5383,20 @@ renderLeadDetail = function(l) {
     '</div>\n  <div class="detail-panel"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="deleteLead(\''+l.id+'\')">🗑 Delete Lead</button></div>'
   );
 };
+
+
+// ── Aliases for renamed functions ──────────────────────────────────────────
+// generateHumanSMS/Email/Script were renamed to generateSmart* in outreach rebuild
+function generateHumanSMS(lead, q) { return generateSmartSMS(lead, q || computeLeadQuality(lead)); }
+function generateHumanEmail(lead, q) { return generateSmartEmail(lead, q || computeLeadQuality(lead)); }
+function generateHumanScript(lead, q) { return generateSmartScript(lead, q || computeLeadQuality(lead)); }
+
+// editCustomContract stub - opens contract for editing
+function editCustomContract(id) {
+  var contract = (APP.contracts || []).find(function(c){ return c.id === id; });
+  if (!contract) { toast('Contract not found', 'error'); return; }
+  toast('Edit contract: ' + (contract.name || id), 'success');
+}
 
 </script>
 </body>
