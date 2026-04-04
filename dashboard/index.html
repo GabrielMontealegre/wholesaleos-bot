@@ -850,8 +850,24 @@ function renderLeads() {
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
       <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeLeads()" title="Delete all AI-generated fake leads">🗑 Delete Fake</button>
     </div>
+  <!-- BULK ACTION TOOLBAR — shows when leads are selected -->
+  <div id="bulk-toolbar" style="display:none;background:#1d1d1f;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+    <span id="bulk-count" style="font-size:12px;font-weight:600;color:#fff">0 selected</span>
+    <div style="flex:1"></div>
+    <select id="bulk-status-select" class="form-input" style="font-size:11px;padding:4px 8px;width:140px;background:#3a3a3c;color:#fff;border-color:#555">
+      <option value="">Change Status...</option>
+      <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
+      <option>Negotiating</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
+    </select>
+    <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="bulkChangeStatus()">✓ Apply</button>
+    <button class="btn btn-sm" style="background:#0071e3;color:#fff;font-size:11px" onclick="bulkExport()">⬇ Export Selected</button>
+    <button class="btn btn-sm" style="background:#5e5ce6;color:#fff;font-size:11px" onclick="bulkOutreach()">✉ Outreach All</button>
+    <button class="btn btn-sm" style="background:#ff3b30;color:#fff;font-size:11px" onclick="bulkDelete()">🗑 Delete Selected</button>
+    <button class="btn btn-sm" style="background:transparent;color:#aaa;border:1px solid #555;font-size:11px" onclick="clearLeadSelection()">✕ Clear</button>
   </div>
-  <div style="font-size:11px;color:#86868b;margin-bottom:10px">${leads.length} leads${APP.search?' matching "'+APP.search+'"':''}</div>
+  <div style="font-size:11px;color:#86868b;margin-bottom:10px" id="leads-count-label">
+    </div>
+  ${leads.length} leads${APP.search?' matching "'+APP.search+'"':''}</div>
   ${viewMode==='hierarchy' ? renderLeadsHierarchy(leads) : viewMode==='cards' ? renderLeadsCards(leads) : renderLeadsTable(leads)}`;
 
   return `<div class="split-view">
@@ -922,8 +938,10 @@ function renderLeadsHierarchy(leads) {
             const rank = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
             const spread = l.spread||0;
             const spreadColor = spread>60000?'#34c759':spread>30000?'#ff9500':'#86868b';
-            return `<div class="lead-row ${APP.selectedLead===l.id?'selected':''}" onclick="selectLead('${l.id}')" style="padding:10px 12px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:${APP.selectedLead===l.id?'#1d1d1f':'#fff'};border:1px solid #f2f2f7">
+            return `<div class="lead-row ${APP.selectedLead===l.id?'selected':''}" onclick="handleLeadRowClick(event,'${l.id}')" style="padding:10px 12px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'#e8f0fe':APP.selectedLead===l.id?'#1d1d1f':'#fff'};border:1px solid ${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'#0071e3':'#f2f2f7'}">
               <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
+                <input type="checkbox" class="lead-cb" data-id="${l.id}" onchange="toggleLeadSelection('${l.id}',this.checked)" onclick="event.stopPropagation()" style="cursor:pointer;width:14px;height:14px;margin-top:2px;flex-shrink:0" ${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'checked':''}>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:12px;font-weight:600;color:${APP.selectedLead===l.id?'#fff':'#1d1d1f'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
                   <div style="font-size:10px;color:${APP.selectedLead===l.id?'#aaa':'#86868b'};margin-top:2px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
@@ -961,10 +979,18 @@ function toggleSection(id) {
 function renderLeadsTable(leads) {
   if (!leads.length) return '<div style="text-align:center;padding:40px;color:#86868b">No leads found.</div>';
   return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-    <thead><tr>${['Address','County','Category','ARV','Offer','Spread','DOM','Risk','Status'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:#86868b;background:#fafafa;border-bottom:1px solid #f2f2f7;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
-    <tbody>${leads.map(l=>`<tr style="cursor:pointer;background:${APP.selectedLead===l.id?'#f0f6ff':'#fff'}" onclick="selectLead('${l.id}')">
+    <thead><tr>
+      <th style="padding:8px 10px;background:#fafafa;border-bottom:1px solid #f2f2f7;width:32px">
+        <input type="checkbox" id="select-all-leads" onchange="toggleSelectAllLeads(this.checked)" style="cursor:pointer;width:14px;height:14px">
+      </th>
+      ${['Address','County','Category','ARV','Offer','Spread','DOM','Risk','Status'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:#86868b;background:#fafafa;border-bottom:1px solid #f2f2f7;white-space:nowrap">${h}</th>`).join('')}
+    </tr></thead>
+    <tbody>${leads.map(l=>{const q=computeLeadQuality(l); return `<tr style="cursor:pointer;background:${APP.selectedLead===l.id?'#f0f6ff':APP._selectedLeads&&APP._selectedLeads.has(l.id)?'#e8f0fe':'#fff'}" onclick="handleLeadRowClick(event,'${l.id}')">
+      <td style="padding:8px 10px" onclick="event.stopPropagation()">
+        <input type="checkbox" class="lead-cb" data-id="${l.id}" onchange="toggleLeadSelection('${l.id}',this.checked)" style="cursor:pointer;width:14px;height:14px" ${APP._selectedLeads&&APP._selectedLeads.has(l.id)?'checked':''}>
+      </td>
       <td style="padding:8px 10px;font-size:11px;font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        ${(()=>{const q=computeLeadQuality(l);return '<span style="background:'+q.color+';color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:6px;margin-right:4px">'+q.emoji+'</span>';})()}${l.address?.split(',')[0]||'N/A'}
+        <span style="background:${q.color};color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:6px;margin-right:4px">${q.emoji}</span>${l.address?.split(',')[0]||'N/A'}
       </td>
       <td style="padding:8px 10px;font-size:11px;color:#86868b">${l.county||''}</td>
       <td style="padding:8px 10px;font-size:11px"><span class="badge b-orange">${l.category||''}</span></td>
@@ -974,7 +1000,7 @@ function renderLeadsTable(leads) {
       <td style="padding:8px 10px;font-size:11px;color:#86868b">${l.dom||0}d</td>
       <td style="padding:8px 10px;font-size:11px"><span class="badge ${l.risk==='Low'?'b-green':l.risk==='High'?'b-red':'b-orange'}">${l.risk||'Med'}</span></td>
       <td style="padding:8px 10px;font-size:11px">${l.status||'New Lead'}</td>
-    </tr>`).join('')}</tbody>
+    </tr>`;}).join('')}</tbody>
   </table></div>`;
 }
 
@@ -5396,6 +5422,144 @@ function editCustomContract(id) {
   var contract = (APP.contracts || []).find(function(c){ return c.id === id; });
   if (!contract) { toast('Contract not found', 'error'); return; }
   toast('Edit contract: ' + (contract.name || id), 'success');
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  MULTI-SELECT & BULK ACTIONS
+// ═══════════════════════════════════════════════════════
+
+// Initialize selection set
+if (!APP._selectedLeads) APP._selectedLeads = new Set();
+
+function toggleLeadSelection(id, checked) {
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  if (checked) APP._selectedLeads.add(id);
+  else APP._selectedLeads.delete(id);
+  updateBulkToolbar();
+}
+
+function toggleSelectAllLeads(checked) {
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  var cbs = document.querySelectorAll('.lead-cb');
+  cbs.forEach(function(cb) {
+    cb.checked = checked;
+    if (checked) APP._selectedLeads.add(cb.dataset.id);
+    else APP._selectedLeads.delete(cb.dataset.id);
+  });
+  updateBulkToolbar();
+}
+
+function updateBulkToolbar() {
+  var count = APP._selectedLeads ? APP._selectedLeads.size : 0;
+  var toolbar = document.getElementById('bulk-toolbar');
+  var countEl = document.getElementById('bulk-count');
+  if (toolbar) toolbar.style.display = count > 0 ? 'flex' : 'none';
+  if (countEl) countEl.textContent = count + ' lead' + (count === 1 ? '' : 's') + ' selected';
+  // Sync checkboxes
+  document.querySelectorAll('.lead-cb').forEach(function(cb) {
+    cb.checked = APP._selectedLeads && APP._selectedLeads.has(cb.dataset.id);
+  });
+  var allCb = document.getElementById('select-all-leads');
+  if (allCb) {
+    var visibleCbs = document.querySelectorAll('.lead-cb').length;
+    allCb.checked = visibleCbs > 0 && count >= visibleCbs;
+    allCb.indeterminate = count > 0 && count < visibleCbs;
+  }
+}
+
+function handleLeadRowClick(event, id) {
+  // If clicking checkbox area, let checkbox handle it
+  if (event.target.type === 'checkbox') return;
+  // If Ctrl/Cmd held, toggle selection without opening detail
+  if (event.ctrlKey || event.metaKey) {
+    if (!APP._selectedLeads) APP._selectedLeads = new Set();
+    if (APP._selectedLeads.has(id)) APP._selectedLeads.delete(id);
+    else APP._selectedLeads.add(id);
+    updateBulkToolbar();
+    return;
+  }
+  // Normal click: open detail
+  selectLead(id);
+}
+
+function clearLeadSelection() {
+  APP._selectedLeads = new Set();
+  updateBulkToolbar();
+  document.querySelectorAll('.lead-cb').forEach(function(cb) { cb.checked = false; });
+  var allCb = document.getElementById('select-all-leads');
+  if (allCb) { allCb.checked = false; allCb.indeterminate = false; }
+}
+
+async function bulkDelete() {
+  var ids = Array.from(APP._selectedLeads || []);
+  if (!ids.length) return;
+  if (!confirm('Delete ' + ids.length + ' selected leads? This cannot be undone.')) return;
+  try {
+    var res = await fetch('/api/leads/delete-bulk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids})
+    });
+    var data = await res.json();
+    if (data.ok) {
+      APP.leads = APP.leads.filter(function(l){ return !APP._selectedLeads.has(l.id); });
+      APP._selectedLeads = new Set();
+      toast('✅ Deleted ' + data.removed + ' leads', 'success');
+      render();
+      updateSidebarStats();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function bulkChangeStatus() {
+  var ids = Array.from(APP._selectedLeads || []);
+  var status = document.getElementById('bulk-status-select')?.value;
+  if (!ids.length || !status) { toast('Select leads and a status first', 'error'); return; }
+  try {
+    var res = await fetch('/api/leads/bulk-status', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids, status})
+    });
+    var data = await res.json();
+    if (data.ok) {
+      APP.leads.forEach(function(l){ if (APP._selectedLeads.has(l.id)) l.status = status; });
+      toast('✅ Updated ' + ids.length + ' leads to "' + status + '"', 'success');
+      clearLeadSelection();
+      render();
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function bulkExport() {
+  var ids = new Set(APP._selectedLeads || []);
+  if (!ids.size) { toast('Select leads to export', 'error'); return; }
+  var selected = APP.leads.filter(function(l){ return ids.has(l.id); });
+  var headers = ['Address','County','State','Category','ARV','Offer','Repairs','Spread','Fee Lo','Fee Hi','DOM','Status','Phone','Email','Source','Deal Type'];
+  var rows = selected.map(function(l){
+    return [
+      (l.address||'').replace(/,/g,' '), l.county||'', l.state||'', l.category||'',
+      l.arv||0, l.offer||0, l.repairs||0, l.spread||0, l.fee_lo||0, l.fee_hi||0,
+      l.dom||0, l.status||'', l.phone||'', l.email||'', l.source||'', l.dealType||''
+    ].map(function(v){ return '"'+String(v).replace(/"/g,"'")+'"'; }).join(',');
+  });
+  var csv = headers.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'wholesaleos_leads_' + selected.length + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('✅ Exported ' + selected.length + ' leads', 'success');
+}
+
+function bulkOutreach() {
+  var ids = Array.from(APP._selectedLeads || []);
+  if (!ids.length) { toast('Select leads first', 'error'); return; }
+  // Navigate to Outreach Hub with these leads pre-filtered
+  APP._outreachBulkIds = ids;
+  navigate('outreach', document.querySelector('.nav-item[onclick*="outreach"]'));
+  toast(ids.length + ' leads ready for outreach — select a lead to generate scripts', 'success');
 }
 
 </script>
