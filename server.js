@@ -1359,7 +1359,9 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
 });
 
 // ── Free Data Sources ────────────────────────────────────
-const datasources = require('./modules/datasources');
+function getDatasources() {
+  return require('./modules/datasources');
+}
 
 // Propwire CSV import endpoint
 app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), async (req, res) => {
@@ -1367,7 +1369,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
     const csvText = req.body;
     if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
 
-    const rawResult = datasources.parsePropwireCSV(csvText);
+    const rawResult = getDatasources().parsePropwireCSV(csvText);
     // Handle both old format (array) and new format ({leads, stats})
     const leads = Array.isArray(rawResult) ? rawResult : (rawResult.leads || []);
     const stats = Array.isArray(rawResult) ? { total: leads.length, kept: leads.length, skipped_type: 0, skipped_price: 0 } : (rawResult.stats || {});
@@ -1422,7 +1424,7 @@ app.post('/api/datasources/run-all', async (req, res) => {
     res.json({ ok: true, message: 'All free data sources started. Check Review Queue and Buyers in 5-10 minutes.' });
     setImmediate(async () => {
       try {
-        const results = await datasources.runAllFreeSources({ states });
+        const results = await getDatasources().runAllFreeSources({ states });
         // Add leads to review queue
         const dbData = db.readDB();
         if (!dbData.reviewQueue) dbData.reviewQueue = [];
@@ -1461,13 +1463,13 @@ app.post('/api/datasources/:source', async (req, res) => {
     setImmediate(async () => {
       try {
         let leads = [], buyers = [];
-        if (source === 'redfin') leads = await datasources.scrapeRedfin();
-        else if (source === 'zillow') leads = await datasources.scrapeZillowDeals();
-        else if (source === 'craigslist') leads = await datasources.scrapeCraigslistDeals();
-        else if (source === 'connected-investors') buyers = await datasources.scrapeConnectedInvestors(states);
+        if (source === 'redfin') leads = await getDatasources().scrapeRedfin();
+        else if (source === 'zillow') leads = await getDatasources().scrapeZillowDeals();
+        else if (source === 'craigslist') leads = await getDatasources().scrapeCraigslistDeals();
+        else if (source === 'connected-investors') buyers = await getDatasources().scrapeConnectedInvestors(states);
         // Legacy names kept for compatibility
-        else if (source === 'hud' || source === 'cook' || source === 'wayne' || source === 'clark' || source === 'maricopa') leads = await datasources.scrapeRedfin();
-        else if (source === 'biggerpockets') buyers = await datasources.scrapeConnectedInvestors(states);
+        else if (source === 'hud' || source === 'cook' || source === 'wayne' || source === 'clark' || source === 'maricopa') leads = await getDatasources().scrapeRedfin();
+        else if (source === 'biggerpockets') buyers = await getDatasources().scrapeConnectedInvestors(states);
 
         const dbData = db.readDB();
         if (!dbData.reviewQueue) dbData.reviewQueue = [];
