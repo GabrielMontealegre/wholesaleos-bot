@@ -947,6 +947,52 @@ app.post('/api/gmail/send', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// Delete Gmail messages (move to trash)
+app.post('/api/gmail/delete-bulk', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.json({ ok: false, error: 'Gmail not configured' });
+    const { ids } = req.body;
+    if (!ids || !ids.length) return res.json({ ok: false, error: 'No message IDs provided' });
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    // Move each to trash (safer than permanent delete)
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        await gmail.users.messages.trash({ userId: 'me', id });
+        deleted++;
+      } catch(e) { console.log('Trash error for', id, e.message); }
+    }
+    res.json({ ok: true, deleted });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Get messages list by folder
+app.get('/api/gmail/messages', async (req, res) => {
+  try {
+    const cfg = getGmailTransport();
+    if (!cfg) return res.json({ messages: [], error: 'Gmail not configured' });
+    const folder = req.query.folder || 'inbox';
+    const limit = parseInt(req.query.limit) || 20;
+    const labelMap = { inbox: 'INBOX', sent: 'SENT', drafts: 'DRAFT', starred: 'STARRED' };
+    const label = labelMap[folder] || 'INBOX';
+    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
+    const listRes = await gmail.users.messages.list({ userId: 'me', labelIds: [label], maxResults: limit });
+    const messages = listRes.data.messages || [];
+    // Fetch metadata for each message
+    const details = await Promise.all(messages.slice(0,limit).map(async m => {
+      try {
+        const msg = await gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From','To','Subject','Date'] });
+        const get = (name) => (msg.data.payload.headers.find(h=>h.name===name)||{value:''}).value;
+        const isRead = !msg.data.labelIds.includes('UNREAD');
+        return { id: m.id, from: get('From'), to: get('To'), subject: get('Subject'), date: get('Date'), snippet: msg.data.snippet, read: isRead };
+      } catch(e) { return { id: m.id, subject: '(error loading)', snippet: e.message, read: true }; }
+    }));
+    res.json({ ok: true, messages: details });
+  } catch(e) { res.json({ ok: false, messages: [], error: e.message }); }
+});
+
 app.post('/api/gmail/reply', async (req, res) => {
   try {
     const cfg = getGmailTransport();
@@ -1321,8 +1367,10 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
     const csvText = req.body;
     if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
 
-    const result = datasources.parsePropwireCSV(csvText);
-    const { leads, stats } = result;
+    const rawResult = datasources.parsePropwireCSV(csvText);
+    // Handle both old format (array) and new format ({leads, stats})
+    const leads = Array.isArray(rawResult) ? rawResult : (rawResult.leads || []);
+    const stats = Array.isArray(rawResult) ? { total: leads.length, kept: leads.length, skipped_type: 0, skipped_price: 0 } : (rawResult.stats || {});
 
     if (!leads || !leads.length) return res.json({
       ok: false,
