@@ -369,7 +369,9 @@ tr.selected td{background:#f0f6ff}
 
 <!-- Modals -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-  <div class="modal" id="modal-content"></div>
+  <div class="modal" id="modal-content" style="position:relative">
+    <button onclick="closeModal()" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;line-height:1;z-index:10" title="Close">✕</button>
+  </div>
 </div>
 
 <!-- Toast container -->
@@ -4917,40 +4919,39 @@ function showMatchTab(tab) {
 //  GMAIL TAB
 // ============================================================
 function renderGmail() {
-  const templates = APP._emailTemplates || [
-    {id:'t1', name:'Cash Offer Introduction', subject:'Cash Offer for Your Property at {address}', body:'Hi {owner},\n\nMy name is Gabriel with Montsan REI. I came across your property at {address} and would like to make you a cash offer.\n\nWe can close in 14 days or on your timeline. No repairs needed, no realtor fees.\n\nWould you be open to a quick call to discuss? My offer would be around {offer}.\n\nBest,\nGabriel Montealegre\nMontsan REI\n(+52) Los Cabos, MX', category:'Outreach'},
-    {id:'t2', name:'Follow-Up After No Response', subject:'Following up — {address}', body:'Hi {owner},\n\nI reached out last week about your property at {address}. I wanted to follow up in case my message got lost.\n\nWe are still very interested and can move quickly with a cash offer. No obligations whatsoever.\n\nWould 10 minutes this week work for a quick call?\n\nBest,\nGabriel', category:'Follow-Up'},
-    {id:'t3', name:'Pre-Foreclosure Outreach', subject:'I can help you avoid foreclosure — {address}', body:'Hi {owner},\n\nI understand you may be going through a difficult time with your property at {address}. I would like to help.\n\nWe buy houses for cash and can close quickly — often in time to stop foreclosure proceedings. There are no fees, no repairs required, and no pressure.\n\nPlease call or text me at your convenience.\n\nGabriel Montealegre | Montsan REI', category:'Outreach'},
-    {id:'t4', name:'Wholesale Deal to Buyer', subject:'New Deal Available — {address} | {spread} Spread', body:'Hi {buyer},\n\nI have a new wholesale deal available and thought of you based on your buy box.\n\nProperty: {address}\nARV: {arv}\nOffer Price: {offer}\nEstimated Repairs: {repairs}\nPotential Spread: {spread}\n\nThis will not last long. Reply or call me to lock it in.\n\nGabriel | Montsan REI', category:'Buyers'},
-    {id:'t5', name:'Contract Sent Confirmation', subject:'Contract Sent — {address}', body:'Hi {owner},\n\nAs discussed, I have sent the purchase contract for {address} to your email.\n\nPlease review and sign at your earliest convenience. If you have any questions, I am available by phone or email.\n\nThank you for the opportunity. Looking forward to closing this with you.\n\nGabriel Montealegre\nMontsan REI', category:'Contracts'},
-  ];
-
-  const folders = [
-    {id:'inbox', icon:'📥', label:'Inbox'},
-    {id:'sent', icon:'📤', label:'Sent'},
-    {id:'drafts', icon:'📝', label:'Drafts'},
-    {id:'templates', icon:'📋', label:'Templates'},
-    {id:'starred', icon:'⭐', label:'Starred'},
+  const TEMPLATES = [
+    {id:'t1',name:'Cash Offer Intro',subject:'Cash Offer for {address}',body:'Hi {owner},\n\nMy name is Gabriel with Montsan REI. I came across your property at {address} and would like to make you a cash offer of approximately {offer}.\n\nWe close in 14 days, no repairs needed, no agent fees.\n\nWould you be open to a quick call?\n\nBest,\nGabriel Montealegre | Montsan REI'},
+    {id:'t2',name:'Follow-Up',subject:'Following up — {address}',body:'Hi {owner},\n\nJust following up on my message about {address}. Still very interested and can move quickly.\n\nNo pressure at all — just wanted to make sure you saw my note.\n\nBest, Gabriel'},
+    {id:'t3',name:'Pre-Foreclosure Help',subject:'I can help — {address}',body:'Hi {owner},\n\nI understand you may be in a difficult situation with {address}. We buy houses for cash and can close quickly — often in time to stop foreclosure.\n\nNo fees, no repairs, no pressure.\n\nGabriel Montealegre | Montsan REI'},
+    {id:'t4',name:'Deal to Buyer',subject:'New Deal — {address} | ${spread} spread',body:'Hi,\n\nNew wholesale deal available:\n\nAddress: {address}\nARV: {arv}\nOffer: {offer}\nRepairs: {repairs}\nSpread: {spread}\n\nReply to lock it in.\n\nGabriel | Montsan REI'},
+    {id:'t5',name:'Contract Confirmation',subject:'Contract Sent — {address}',body:'Hi {owner},\n\nThe purchase contract for {address} has been sent to your email. Please review and sign at your convenience.\n\nQuestions? Call or email me anytime.\n\nGabriel Montealegre | Montsan REI'},
   ];
 
   const activeFolder = APP._emailFolder || 'inbox';
   const showCompose = APP._emailCompose || false;
+  const showTemplates = APP._showTemplatePanel || false;
+  const selectedEmails = APP._selectedEmails || new Set();
 
-  return `<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:200px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">
+  return `<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:190px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">
 
     <!-- LEFT SIDEBAR -->
     <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#fafafa">
-      <div style="padding:16px">
-        <button class="btn btn-dark" style="width:100%;font-size:13px;padding:10px" onclick="openEmailCompose()">✏️ Compose</button>
+      <div style="padding:14px">
+        <button class="btn btn-dark" style="width:100%;font-size:12px;padding:9px" onclick="APP._emailCompose=true;APP._emailDraft={to:'',subject:'',body:''};APP._showTemplatePanel=false;render()">✏️ Compose</button>
       </div>
       <div style="flex:1;overflow-y:auto">
-        ${folders.map(f => `<div onclick="APP._emailFolder='${f.id}';render()" style="padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:${f.id===activeFolder?'700':'500'};background:${f.id===activeFolder?'#e8f0fe':'transparent'};color:${f.id===activeFolder?'#0071e3':'#3a3a3c'};border-radius:8px;margin:2px 8px">${f.icon} ${f.label}</div>`).join('')}
-        <div style="padding:16px 16px 8px;font-size:10px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:0.5px">Templates</div>
-        ${templates.map(t => `<div onclick="useTemplate('${t.id}')" style="padding:8px 16px;cursor:pointer;font-size:11px;color:#3a3a3c;border-radius:8px;margin:1px 8px" title="${t.name}">📋 ${t.name.length > 22 ? t.name.slice(0,22)+'...' : t.name}</div>`).join('')}
-        <div onclick="openTemplateEditor()" style="padding:8px 16px;cursor:pointer;font-size:11px;color:#0071e3;border-radius:8px;margin:1px 8px">+ New Template</div>
+        ${[
+          {id:'inbox',icon:'📥',label:'Inbox'},
+          {id:'sent',icon:'📤',label:'Sent'},
+          {id:'drafts',icon:'📝',label:'Drafts'},
+          {id:'starred',icon:'⭐',label:'Starred'},
+        ].map(f=>`<div onclick="APP._emailFolder='${f.id}';APP._emailCompose=false;render()" style="padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:${f.id===activeFolder&&!showCompose?'700':'500'};background:${f.id===activeFolder&&!showCompose?'#e8f0fe':'transparent'};color:${f.id===activeFolder&&!showCompose?'#0071e3':'#3a3a3c'};border-radius:8px;margin:1px 6px">${f.icon} ${f.label}</div>`).join('')}
+        <div style="padding:12px 14px 6px;font-size:9px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:0.5px">Templates</div>
+        ${TEMPLATES.map(t=>`<div onclick="applyEmailTemplate('${t.id}')" title="${t.name}" style="padding:7px 14px;cursor:pointer;font-size:11px;color:#3a3a3c;border-radius:6px;margin:1px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ${t.name}</div>`).join('')}
+        <div onclick="openTemplateEditor()" style="padding:7px 14px;cursor:pointer;font-size:11px;color:#0071e3;border-radius:6px;margin:1px 6px">+ New Template</div>
       </div>
-      <div style="padding:12px 16px;border-top:1px solid #e5e5ea">
-        <div id="gmail-status-small" style="font-size:10px;color:#86868b">Checking Gmail...</div>
+      <div style="padding:10px 14px;border-top:1px solid #e5e5ea">
+        <div id="gmail-status-small" style="font-size:10px;color:#34c759">● Gmail connected</div>
       </div>
     </div>
 
@@ -4959,66 +4960,57 @@ function renderGmail() {
 
       ${showCompose ? `
       <!-- COMPOSE PANEL -->
-      <div style="flex:1;display:flex;flex-direction:column;padding:0">
-        <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
-          <button onclick="APP._emailCompose=false;render()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#86868b">←</button>
-          <div style="font-size:14px;font-weight:700">New Email</div>
-          <div style="flex:1"></div>
-          <button class="btn btn-sm" style="background:#34c759;color:#fff" onclick="sendEmailFromCompose()">📤 Send</button>
-          <button class="btn btn-outline btn-sm" onclick="saveEmailDraft()">Save Draft</button>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:8px;background:#fafafa">
+          <button onclick="APP._emailCompose=false;render()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#86868b;padding:0" title="Close">✕</button>
+          <div style="font-size:13px;font-weight:700;flex:1">New Email</div>
+          <button class="btn btn-outline btn-sm" style="font-size:11px" onclick="APP._showTemplatePanel=!APP._showTemplatePanel;render()">📋 Templates</button>
+          <button class="btn btn-outline btn-sm" style="font-size:11px" onclick="generateAIEmail()">🤖 AI Draft</button>
+          <button class="btn btn-outline btn-sm" style="font-size:11px" onclick="saveEmailDraft()">Save Draft</button>
+          <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="sendEmailFromCompose()">📤 Send</button>
         </div>
-        <div style="padding:12px;border-bottom:1px solid #f2f2f7">
-          <input id="email-to" placeholder="To: seller@email.com" style="width:100%;border:none;outline:none;font-size:13px;padding:6px 0" value="${APP._emailDraft?.to||''}">
+
+        ${showTemplates ? `
+        <div style="border-bottom:1px solid #f2f2f7;padding:10px 16px;background:#f9f9f9">
+          <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#86868b">PICK A TEMPLATE</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${TEMPLATES.map(t=>`<button class="btn btn-outline btn-sm" style="font-size:10px" onclick="applyEmailTemplate('${t.id}')">${t.name}</button>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <div style="padding:10px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:8px">
+          <div style="font-size:11px;color:#86868b;width:50px;flex-shrink:0">To</div>
+          <input id="email-to" placeholder="recipient@email.com" value="${(APP._emailDraft&&APP._emailDraft.to)||''}" style="flex:1;border:none;outline:none;font-size:13px">
         </div>
-        <div style="padding:12px;border-bottom:1px solid #f2f2f7">
-          <input id="email-subject" placeholder="Subject" style="width:100%;border:none;outline:none;font-size:13px;padding:6px 0;font-weight:600" value="${APP._emailDraft?.subject||''}">
+        <div style="padding:10px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:8px">
+          <div style="font-size:11px;color:#86868b;width:50px;flex-shrink:0">Subject</div>
+          <input id="email-subject" placeholder="Subject" value="${(APP._emailDraft&&APP._emailDraft.subject)||''}" style="flex:1;border:none;outline:none;font-size:13px;font-weight:600">
         </div>
-        <div style="padding:8px 12px;border-bottom:1px solid #f2f2f7;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="insertTemplate()">📋 Template</button>
-          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="insertLeadData()">🏠 Insert Lead Data</button>
-          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="generateAIEmail()">🤖 AI Draft</button>
-          <label class="btn btn-outline btn-sm" style="font-size:10px;cursor:pointer">📎 Attach <input type="file" style="display:none" onchange="handleEmailAttachment(this.files)"></label>
-          <div id="email-attachments" style="font-size:10px;color:#86868b;padding:4px 0"></div>
+        <div style="padding:8px 16px;border-bottom:1px solid #f2f2f7;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="insertLeadData()">🏠 Lead Data</button>
+          <label class="btn btn-outline btn-sm" style="font-size:10px;cursor:pointer">📎 Attach<input type="file" style="display:none" onchange="handleEmailAttachment(this.files)" multiple></label>
+          <span id="email-attachments" style="font-size:10px;color:#86868b"></span>
         </div>
-        <textarea id="email-body" style="flex:1;border:none;outline:none;padding:16px;font-size:13px;line-height:1.7;resize:none;font-family:inherit" placeholder="Write your message...">${APP._emailDraft?.body||''}</textarea>
+        <textarea id="email-body" oninput="APP._emailDraft&&(APP._emailDraft.body=this.value)" style="flex:1;border:none;outline:none;padding:14px 16px;font-size:13px;line-height:1.7;resize:none;font-family:inherit" placeholder="Write your message...">${(APP._emailDraft&&APP._emailDraft.body)||''}</textarea>
       </div>
       ` : `
-      <!-- EMAIL LIST / TEMPLATE LIST -->
-      <div style="flex:1;overflow-y:auto">
-        ${activeFolder === 'templates' ? `
-        <!-- TEMPLATES VIEW -->
-        <div style="padding:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div style="font-size:14px;font-weight:700">Email Templates</div>
-            <button class="btn btn-dark btn-sm" onclick="openTemplateEditor()">+ New Template</button>
-          </div>
-          ${templates.map(t => `
-          <div style="background:#f5f5f7;border-radius:12px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-              <div>
-                <div style="font-size:12px;font-weight:700">${t.name}</div>
-                <div style="font-size:10px;color:#86868b">${t.category} · Subject: ${t.subject.slice(0,40)}...</div>
-              </div>
-              <div style="display:flex;gap:6px">
-                <button class="btn btn-dark btn-sm" style="font-size:10px" onclick="useTemplate('${t.id}')">Use</button>
-                <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="editTemplate('${t.id}')">Edit</button>
-              </div>
-            </div>
-            <div style="font-size:11px;color:#3a3a3c;background:#fff;border-radius:8px;padding:8px;max-height:60px;overflow:hidden">${t.body.slice(0,150)}...</div>
-          </div>`).join('')}
+      <!-- EMAIL LIST -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="select-all-emails" onchange="toggleAllEmails(this.checked)" style="width:14px;height:14px;cursor:pointer">
+          <div style="font-size:13px;font-weight:700;flex:1;text-transform:capitalize">${activeFolder}</div>
+          <button id="delete-selected-emails-btn" class="btn btn-outline btn-sm" style="font-size:10px;color:#ff3b30;border-color:#ff3b30;display:none" onclick="deleteSelectedEmails()">🗑 Delete Selected</button>
+          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="loadEmailFolder('${activeFolder}')">↻ Refresh</button>
         </div>
-        ` : `
-        <!-- INBOX/SENT/DRAFTS VIEW -->
-        <div id="email-list-content" style="padding:12px">
+        <div id="email-list-content" style="flex:1;overflow-y:auto">
           <div style="text-align:center;padding:40px;color:#86868b">
-            <div style="font-size:32px;margin-bottom:12px">${activeFolder==='inbox'?'📥':activeFolder==='sent'?'📤':'📝'}</div>
+            <div style="font-size:28px;margin-bottom:10px">${activeFolder==='inbox'?'📥':activeFolder==='sent'?'📤':'📝'}</div>
             <div style="font-weight:600;margin-bottom:6px">Loading ${activeFolder}...</div>
+            <div style="font-size:11px">Connecting to Gmail...</div>
           </div>
         </div>
-        `}
       </div>
       `}
-
     </div>
   </div>`;
 }
@@ -5339,17 +5331,22 @@ function handlePropwireFile(file) {
       });
       const data = await res.json();
       if (data.ok) {
-        const msg = '✅ ' + data.added.toLocaleString() + ' wholesale deals imported! ' +
-          '(' + data.parsed.toLocaleString() + ' rows → ' + data.filtered.toLocaleString() + ' passed filter → ' + data.added.toLocaleString() + ' added' +
-          (data.deleted_stale > 0 ? ', ' + data.deleted_stale + ' stale leads cleared' : '') + ')';
+        // Handle both old format (data.parsed) and new format (data.stats.total)
+        const parsed = data.parsed || (data.stats && data.stats.total) || rowCount;
+        const filtered = data.filtered || (data.stats && data.stats.kept) || data.added || 0;
+        const added = data.added || 0;
+        const deleted = data.deleted_stale || 0;
+        const msg = '✅ ' + added.toLocaleString() + ' wholesale deals imported! (' +
+          parsed.toLocaleString() + ' rows → ' + filtered.toLocaleString() + ' passed filter' +
+          (deleted > 0 ? ', ' + deleted + ' stale cleared' : '') + ')';
         if (statusEl) {
           statusEl.innerHTML = '<span style="color:#a8ff8b">' + msg + '</span>';
           if (data.sample && data.sample.length) {
             statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.8)">Sample: ' +
-              data.sample.map(function(l){ return (l.address||'').split(',')[0] + ' — $' + Math.round((l.arv||0)/1000) + 'K ARV, $' + Math.round((l.spread||0)/1000) + 'K spread'; }).join(' · ') + '</span>';
+              data.sample.map(function(l){ return (l.address||'').split(',')[0] + ' — $' + Math.round((l.arv||0)/1000) + 'K ARV'; }).join(' · ') + '</span>';
           }
         }
-        toast('✅ ' + data.added.toLocaleString() + ' real wholesale deals imported!', 'success');
+        toast('✅ ' + added.toLocaleString() + ' real wholesale deals imported!', 'success');
         await loadLeadsFromAPI();
         updateLeadBadge();
         updateSidebarStats();
@@ -5358,8 +5355,9 @@ function handlePropwireFile(file) {
         if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ ' + (data.error||'Import failed') + '</span>';
         toast('Import failed: ' + (data.error||'Check file format'), 'error');
       }
-    } catch(e) {
-      if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + e.message + '</span>';
+    } catch(err) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ Error: ' + err.message + '</span>';
+      toast('Error: ' + err.message, 'error');
     }
   };
   reader.onerror = function() {
@@ -5861,6 +5859,166 @@ function openTemplateEditor(id) {
 function editTemplate(id) {
   openTemplateEditor(id);
 }
+
+
+// ── Email Platform Helpers ───────────────────────────────
+if (!APP._selectedEmails) APP._selectedEmails = new Set();
+if (!APP._emailDraft) APP._emailDraft = {to:'',subject:'',body:''};
+
+function applyEmailTemplate(id) {
+  var TEMPLATES = [
+    {id:'t1',subject:'Cash Offer for {address}',body:'Hi {owner},\n\nMy name is Gabriel with Montsan REI. I came across your property at {address} and would like to make you a cash offer of approximately {offer}.\n\nWe close in 14 days, no repairs needed, no agent fees.\n\nWould you be open to a quick call?\n\nBest,\nGabriel Montealegre | Montsan REI'},
+    {id:'t2',subject:'Following up — {address}',body:'Hi {owner},\n\nJust following up on my message about {address}. Still very interested and can move quickly.\n\nBest, Gabriel'},
+    {id:'t3',subject:'I can help — {address}',body:'Hi {owner},\n\nI understand you may be in a difficult situation with {address}. We buy houses for cash and can close quickly.\n\nNo fees, no repairs, no pressure.\n\nGabriel Montealegre | Montsan REI'},
+    {id:'t4',subject:'New Deal — {address}',body:'Hi,\n\nNew wholesale deal available:\n\nAddress: {address}\nARV: {arv}\nOffer: {offer}\nRepairs: {repairs}\nSpread: {spread}\n\nReply to lock it in.\n\nGabriel | Montsan REI'},
+    {id:'t5',subject:'Contract Sent — {address}',body:'Hi {owner},\n\nThe purchase contract for {address} has been sent to your email. Please review and sign.\n\nGabriel Montealegre | Montsan REI'},
+  ];
+  var t = TEMPLATES.find(function(x){ return x.id === id; });
+  if (!t) return;
+
+  var lead = APP._currentLead ? APP.leads.find(function(l){ return l.id === APP._currentLead; }) : null;
+  var body = t.body, subject = t.subject;
+  if (lead) {
+    var map = {
+      '{address}': (lead.address||'').split(',')[0],
+      '{owner}': lead.owner_name || 'there',
+      '{offer}': lead.offer ? '$' + (lead.offer||0).toLocaleString() : 'a competitive price',
+      '{arv}': '$' + (lead.arv||0).toLocaleString(),
+      '{repairs}': '$' + (lead.repairs||0).toLocaleString(),
+      '{spread}': '$' + (lead.spread||0).toLocaleString(),
+    };
+    Object.keys(map).forEach(function(k) { body = body.split(k).join(map[k]); subject = subject.split(k).join(map[k]); });
+  }
+
+  if (!APP._emailDraft) APP._emailDraft = {};
+  APP._emailDraft.subject = subject;
+  APP._emailDraft.body = body;
+  APP._emailCompose = true;
+  APP._showTemplatePanel = false;
+  render();
+  setTimeout(function() {
+    var subj = document.getElementById('email-subject');
+    var body2 = document.getElementById('email-body');
+    if (subj) subj.value = subject;
+    if (body2) body2.value = body;
+  }, 50);
+}
+
+function toggleAllEmails(checked) {
+  APP._selectedEmails = new Set();
+  var cbs = document.querySelectorAll('.email-cb');
+  cbs.forEach(function(cb) {
+    cb.checked = checked;
+    if (checked && cb.dataset.id) APP._selectedEmails.add(cb.dataset.id);
+  });
+  var btn = document.getElementById('delete-selected-emails-btn');
+  if (btn) btn.style.display = APP._selectedEmails.size > 0 ? '' : 'none';
+}
+
+function toggleEmailSelection(id, checked) {
+  if (!APP._selectedEmails) APP._selectedEmails = new Set();
+  if (checked) APP._selectedEmails.add(id);
+  else APP._selectedEmails.delete(id);
+  var btn = document.getElementById('delete-selected-emails-btn');
+  if (btn) btn.style.display = APP._selectedEmails.size > 0 ? '' : 'none';
+}
+
+async function deleteSelectedEmails() {
+  var ids = Array.from(APP._selectedEmails || []);
+  if (!ids.length) return;
+  if (!confirm('Delete ' + ids.length + ' email(s)? This cannot be undone.')) return;
+  try {
+    var res = await fetch('/api/gmail/delete-bulk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids})
+    });
+    var data = await res.json();
+    if (data.ok) {
+      toast('✅ Deleted ' + ids.length + ' email(s)', 'success');
+      APP._selectedEmails = new Set();
+      loadEmailFolder(APP._emailFolder || 'inbox');
+    } else {
+      toast('Delete failed: ' + (data.error||'Gmail error'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function loadEmailFolder(folder) {
+  var el = document.getElementById('email-list-content');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:#86868b">⏳ Loading ' + folder + '...</div>';
+  try {
+    var res = await fetch('/api/gmail/messages?folder=' + (folder||'inbox') + '&limit=30');
+    var data = await res.json();
+    var messages = data.messages || [];
+    if (!messages.length) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b"><div style="font-size:28px;margin-bottom:10px">📭</div><div>No messages in ' + folder + '</div></div>';
+      return;
+    }
+    el.innerHTML = messages.map(function(m) {
+      var isRead = m.read || false;
+      return '<div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #f5f5f7;cursor:pointer;background:' + (isRead?'#fff':'#f0f6ff') + '" onclick="viewEmail(\'' + m.id + '\')">' +
+        '<input type="checkbox" class="email-cb" data-id="' + m.id + '" onchange="toggleEmailSelection(\'' + m.id + '\',this.checked)" onclick="event.stopPropagation()" style="width:14px;height:14px;cursor:pointer;margin-right:10px;flex-shrink:0">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">' +
+            '<div style="font-size:12px;font-weight:' + (isRead?'500':'700') + ';color:#1d1d1f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (m.from||m.to||'Unknown') + '</div>' +
+            '<div style="font-size:10px;color:#86868b;flex-shrink:0;margin-left:8px">' + (m.date||'') + '</div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:#3a3a3c;font-weight:' + (isRead?'400':'600') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (m.subject||'(no subject)') + '</div>' +
+          '<div style="font-size:10px;color:#86868b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (m.snippet||'') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:#ff3b30">❌ ' + e.message + '</div>';
+  }
+}
+
+async function viewEmail(id) {
+  try {
+    var res = await fetch('/api/gmail/message/' + id);
+    var data = await res.json();
+    if (!data.ok) { toast('Could not load email', 'error'); return; }
+    var m = data.message;
+    showModal('<div style="padding:4px">' +
+      '<div style="font-size:14px;font-weight:700;margin-bottom:8px">' + (m.subject||'(no subject)') + '</div>' +
+      '<div style="font-size:11px;color:#86868b;margin-bottom:4px">From: ' + (m.from||'') + '</div>' +
+      '<div style="font-size:11px;color:#86868b;margin-bottom:12px">Date: ' + (m.date||'') + '</div>' +
+      '<div style="font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:60vh;overflow-y:auto;border-top:1px solid #f2f2f7;padding-top:12px">' + (m.body||m.snippet||'') + '</div>' +
+      '<div style="margin-top:14px;display:flex;gap:8px">' +
+        '<button class="btn btn-dark btn-sm" onclick="replyToEmail(\'' + id + '\')">↩ Reply</button>' +
+        '<button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="deleteSingleEmail(\'' + id + '\')">🗑 Delete</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="closeModal()">Close</button>' +
+      '</div>' +
+    '</div>');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function replyToEmail(id) {
+  closeModal();
+  APP._emailCompose = true;
+  APP._emailDraft = { to:'', subject:'Re: (original)', body:'' };
+  render();
+}
+
+async function deleteSingleEmail(id) {
+  if (!confirm('Delete this email?')) return;
+  closeModal();
+  try {
+    var res = await fetch('/api/gmail/delete-bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids:[id]}) });
+    var data = await res.json();
+    if (data.ok) { toast('✅ Email deleted', 'success'); loadEmailFolder(APP._emailFolder||'inbox'); }
+    else toast('Delete failed: ' + (data.error||'Gmail error'), 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Auto-load email folder when email tab opens
+var _origNavigate = navigate;
+navigate = function(page, el) {
+  _origNavigate(page, el);
+  if (page === 'gmail') setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300);
+};
 
 </script>
 </body>
