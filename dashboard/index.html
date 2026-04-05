@@ -1185,10 +1185,10 @@ function renderLeadDetail(l) {
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:8px">Deal Math Breakdown</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">';
   html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + da_arv.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + repairs.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + mao.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + offer.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + spread.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + da_repairs.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + da_mao.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + da_offer.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + da_spread.toLocaleString() + '</div>';
   html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div>';
   html += '</div></div>';
 
