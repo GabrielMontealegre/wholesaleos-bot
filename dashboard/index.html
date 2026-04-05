@@ -6589,6 +6589,63 @@ navigate = function(page, el) {
   if (page === 'dialer') setTimeout(function(){ initDialer(); }, 200);
 };
 
+// makeCall — shows floating overlay, does NOT navigate away from current page
+var _origMakeCall = makeCall;
+makeCall = async function(phone, leadId, name, address) {
+  if (!phone || phone === 'null' || phone === '') {
+    toast('No phone number — skip trace this lead first', 'error');
+    return;
+  }
+  if (leadId && leadId !== 'null') APP._currentLead = leadId;
+  try {
+    var res = await fetch('/api/dialer/call', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ to: phone, leadId: leadId || null })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      showFloatingCallPanel(name || 'Unknown', phone, data.callSid);
+      toast('📞 Calling ' + (name||phone) + '...', 'success');
+    } else {
+      toast('Call failed: ' + (data.error || 'Add Twilio credentials to Railway'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+function showFloatingCallPanel(name, phone, callSid) {
+  var existing = document.getElementById('floating-call-panel');
+  if (existing) existing.remove();
+  var panel = document.createElement('div');
+  panel.id = 'floating-call-panel';
+  panel.style.cssText = 'position:fixed;bottom:24px;right:24px;width:270px;background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:18px;padding:20px;color:#fff;z-index:99999;box-shadow:0 8px 40px rgba(0,0,0,0.4)';
+  panel.innerHTML = '<div style="font-size:10px;color:#aaa;margin-bottom:4px">📞 ACTIVE CALL</div>' +
+    '<div style="font-size:15px;font-weight:700;margin-bottom:2px">' + (name||'Unknown') + '</div>' +
+    '<div style="font-size:11px;color:#aaa;margin-bottom:12px">' + (phone||'') + '</div>' +
+    '<div id="fcp-timer" style="font-size:28px;font-weight:300;text-align:center;margin-bottom:12px;font-family:monospace">0:00</div>' +
+    '<div style="font-size:9px;color:rgba(255,255,255,0.4);text-align:center;margin-bottom:14px">🔴 Recording</div>' +
+    '<div style="display:flex;justify-content:center;gap:12px">' +
+      '<button onclick="window._toggleMute(this)" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:16px;cursor:pointer">🔇</button>' +
+      '<button onclick="window._endFloatingCall()" style="width:56px;height:56px;border-radius:50%;background:#ff3b30;border:none;color:#fff;font-size:20px;cursor:pointer">📵</button>' +
+      '<button onclick="window._toggleHold(this)" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:16px;cursor:pointer">⏸</button>' +
+    '</div>';
+  document.body.appendChild(panel);
+  var secs = 0;
+  var timer = setInterval(function() {
+    secs++;
+    var el = document.getElementById('fcp-timer');
+    if (!el) { clearInterval(timer); return; }
+    el.textContent = Math.floor(secs/60) + ':' + (secs%60<10?'0':'') + secs%60;
+  }, 1000);
+  window._endFloatingCall = function() {
+    clearInterval(timer);
+    var p = document.getElementById('floating-call-panel');
+    if (p) p.remove();
+  };
+}
+
+window._toggleMute = function(btn) { btn.textContent = btn.textContent === '🔇' ? '🔊' : '🔇'; btn.style.background = btn.textContent === '🔊' ? '#ff9500' : 'rgba(255,255,255,0.15)'; };
+window._toggleHold = function(btn) { btn.textContent = btn.textContent === '⏸' ? '▶' : '⏸'; btn.style.background = btn.textContent === '▶' ? '#ff9500' : 'rgba(255,255,255,0.15)'; };
 </script>
 </body>
 </html>`;
