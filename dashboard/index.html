@@ -1102,9 +1102,9 @@ function renderLeadDetail(l) {
   html += '<div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$' + (l.arv||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$' + (l.offer||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">' + (l.repair_class||'') + ' $' + (l.repairs||0).toLocaleString() + '</div></div>';
-  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + mao.toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + (l.mao||l.offer||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Fee</div><div class="dm-value orange">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div></div>';
-  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + spread.toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + (l.spread||0).toLocaleString() + '</div></div>';
   html += '</div>';
 
   // WHY GOOD DEAL
@@ -1181,11 +1181,16 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:8px">Deal Math Breakdown</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">';
-html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + (l.arv||0).toLocaleString() + '</div>';  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + repairs.toLocaleString() + '</div>';
-html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + (l.repairs||0).toLocaleString() + '</div>';  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + offer.toLocaleString() + '</div>';
-html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + (l.mao||l.offer||0).toLocaleString() + '</div>';  html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div>';
-html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + (l.offer||0).toLocaleString() + '</div>';
-html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + (l.spread||0).toLocaleString() + '</div>';  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
+  html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + (l.arv||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + (l.repairs||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + (l.mao||l.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + (l.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + (l.spread||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div>';
+  html += '</div></div>';
+
+  // Comps placeholder
+  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
   html += '<div style="display:flex;gap:6px">';
   html += '<a href="https://www.zillow.com/homes/' + encodeURIComponent((l.address||'').split(',')[0] + ' ' + (l.state||'')) + '_rb/" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
@@ -6635,9 +6640,9 @@ function renderLeadDetail(l) {
   html += '<div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$' + (l.arv||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$' + (l.offer||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">' + (l.repair_class||'') + ' $' + (l.repairs||0).toLocaleString() + '</div></div>';
-  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + mao.toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + (l.mao||l.offer||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Fee</div><div class="dm-value orange">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div></div>';
-  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + spread.toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + (l.spread||0).toLocaleString() + '</div></div>';
   html += '</div>';
 
   // WHY GOOD DEAL
@@ -6714,11 +6719,11 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:8px">Deal Math Breakdown</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">';
-  html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + da_arv.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + repairs.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + mao.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + offer.toLocaleString() + '</div>';
-  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + spread.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + (l.arv||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + (l.repairs||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + (l.mao||l.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + (l.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + (l.spread||0).toLocaleString() + '</div>';
   html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div>';
   html += '</div></div>';
 
