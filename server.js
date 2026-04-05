@@ -1865,6 +1865,8 @@ app.post('/api/dialer/call', async (req, res) => {
       to:   phone,
       from,
       url:  callbackUrl || 'http://demo.twilio.com/docs/voice.xml',
+      record: true, // Enable call recording
+      recordingStatusCallback: `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/dialer/recording-complete`,
     });
     // Log the call
     const dbData = db.readDB();
@@ -1885,6 +1887,69 @@ app.post('/api/dialer/twiml', (req, res) => {
     <Number>${process.env.GABRIEL_PHONE || process.env.TWILIO_PHONE_NUMBER || ''}</Number>
   </Dial>
 </Response>`);
+});
+
+
+// ── Recording complete webhook (Twilio calls this when recording is ready) ─
+app.post('/api/dialer/recording-complete', async (req, res) => {
+  try {
+    const { CallSid, RecordingUrl, RecordingDuration } = req.body;
+    console.log(`[Recording] CallSid: ${CallSid}, Duration: ${RecordingDuration}s`);
+    // Find the call log entry
+    const dbData = db.readDB();
+    if (!dbData.callLog) dbData.callLog = [];
+    const callEntry = dbData.callLog.find(c => c.callSid === CallSid);
+    if (callEntry) {
+      callEntry.recordingUrl = RecordingUrl + '.mp3';
+      callEntry.duration = parseInt(RecordingDuration) || 0;
+      callEntry.recordingReady = true;
+      // Auto-trigger sentiment analysis
+      const lead = callEntry.leadId ? (dbData.leads||[]).find(l => l.id === callEntry.leadId) : null;
+      if (lead) {
+        try {
+          const ai = require('./ai');
+          const analysis = await ai.ask(`You are analyzing a real estate wholesaling call.
+Lead: ${lead.address}, ${lead.category}, ARV $${lead.arv||0}, Offer $${lead.offer||0}
+Owner: ${lead.owner_name||'Unknown'}
+Call duration: ${RecordingDuration} seconds
+
+Based on the call duration and lead type, provide:
+1. SENTIMENT: (Positive/Neutral/Negative/Unknown)
+2. RECOMMENDATION: What Gabriel should do next (1-2 sentences)
+3. FOLLOW_UP: Suggested follow-up message
+4. LESSON: One thing Gabriel could improve for next call
+
+Respond in JSON format only.`, 'free');
+          try {
+            const parsed = JSON.parse(analysis.replace(/```json|```/g,'').trim());
+            callEntry.sentiment = parsed.SENTIMENT || 'Unknown';
+            callEntry.recommendation = parsed.RECOMMENDATION || '';
+            callEntry.followUp = parsed.FOLLOW_UP || '';
+            callEntry.lesson = parsed.LESSON || '';
+          } catch(e) {
+            callEntry.sentiment = 'Unknown';
+            callEntry.recommendation = analysis.slice(0, 200);
+          }
+          db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address} — ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
+        } catch(e) { console.log('[AI Analysis]', e.message); }
+      }
+      db.writeDB(dbData);
+    }
+    res.sendStatus(200);
+  } catch(e) {
+    console.error('[Recording webhook]', e.message);
+    res.sendStatus(200);
+  }
+});
+
+// ── Get call analysis for a specific call ─────────────────────────────────
+app.get('/api/dialer/analysis/:callSid', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const call = (dbData.callLog||[]).find(c => c.callSid === req.params.callSid);
+    if (!call) return res.json({ ok: false, error: 'Call not found' });
+    res.json({ ok: true, call });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ── Call log ──────────────────────────────────────────────────────────────
