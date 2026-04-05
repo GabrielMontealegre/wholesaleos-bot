@@ -891,7 +891,7 @@ function renderLeads() {
   var detailHTML;
   if (selected) {
     try { detailHTML = renderLeadDetail(selected); }
-    catch(e) { detailHTML = '<div class="detail-panel" style="padding:20px;color:#ff3b30"><strong>Error loading lead detail: ' + e.message + '</strong></div>'; }
+    catch(e) { console.error('renderLeadDetail crash:', e); detailHTML = '<div class="detail-panel" style="padding:20px;color:#ff3b30"><strong>Error: ' + e.message + '</strong><br><pre style="font-size:10px;margin-top:8px;white-space:pre-wrap">' + (e.stack||'').slice(0,400) + '</pre></div>'; }
   } else {
     detailHTML = '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>';
   }
@@ -2317,39 +2317,21 @@ function riskBadge(r) {
 
 function selectLead(id) {
   APP.selectedLead = id;
-  if (APP.page !== 'leads') {
-    APP.page = 'leads';
-    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-    var leadsNav = document.querySelector('.nav-item[onclick*="leads"]');
-    if (leadsNav) leadsNav.classList.add('active');
-    var titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.textContent = 'Leads';
-    render();
-    setTimeout(function(){ selectLead(id); }, 150);
-    return;
-  }
-  // Find the right panel — try multiple selectors
-  var rightPanel = document.getElementById('lead-detail-panel') ||
-                   document.querySelector('.split-right') ||
-                   document.querySelector('[id*="detail-panel"]');
-  if (rightPanel) {
-    var lead = APP.leads.find(function(l){ return l.id === id; });
-    if (lead) {
-      rightPanel.innerHTML = renderLeadDetail(lead);
-      rightPanel.scrollTop = 0;
-      // Highlight selected row — light blue, dark text (readable)
-      document.querySelectorAll('.lead-row').forEach(function(r) {
-        var isSelected = (r.getAttribute('onclick') || '').includes(id) ||
-                         (r.getAttribute('data-id') || '') === id;
-        r.style.background = isSelected ? '#dbeafe' : '';
-        r.style.color = '';
-        r.style.border = isSelected ? '1px solid #0071e3' : '';
-      });
-    }
-  } else {
-    // Fallback: re-render the whole page with selected lead
-    render();
-  }
+  APP.leadsView = 'hierarchy'; // Always switch to hierarchy view when viewing a lead
+  APP.page = 'leads';
+  render();
+  setTimeout(function() {
+    var panel = document.getElementById('lead-detail-panel');
+    if (panel) panel.scrollTop = 0;
+    // Highlight selected row
+    document.querySelectorAll('.lead-row').forEach(function(r) {
+      var rowId = r.getAttribute('data-id') || '';
+      var onclick = r.getAttribute('onclick') || '';
+      var isSelected = rowId === id || onclick.includes("'" + id + "'") || onclick.includes('"' + id + '"');
+      r.style.background = isSelected ? '#dbeafe' : '';
+      r.style.border = isSelected ? '1px solid #0071e3' : '';
+    });
+  }, 50);
 }
 
 function sendDealToBuyer(leadId, buyerId) {
@@ -7873,39 +7855,21 @@ function riskBadge(r) {
 
 function selectLead(id) {
   APP.selectedLead = id;
-  if (APP.page !== 'leads') {
-    APP.page = 'leads';
-    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-    var leadsNav = document.querySelector('.nav-item[onclick*="leads"]');
-    if (leadsNav) leadsNav.classList.add('active');
-    var titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.textContent = 'Leads';
-    render();
-    setTimeout(function(){ selectLead(id); }, 150);
-    return;
-  }
-  // Find the right panel — try multiple selectors
-  var rightPanel = document.getElementById('lead-detail-panel') ||
-                   document.querySelector('.split-right') ||
-                   document.querySelector('[id*="detail-panel"]');
-  if (rightPanel) {
-    var lead = APP.leads.find(function(l){ return l.id === id; });
-    if (lead) {
-      rightPanel.innerHTML = renderLeadDetail(lead);
-      rightPanel.scrollTop = 0;
-      // Highlight selected row — light blue, dark text (readable)
-      document.querySelectorAll('.lead-row').forEach(function(r) {
-        var isSelected = (r.getAttribute('onclick') || '').includes(id) ||
-                         (r.getAttribute('data-id') || '') === id;
-        r.style.background = isSelected ? '#dbeafe' : '';
-        r.style.color = '';
-        r.style.border = isSelected ? '1px solid #0071e3' : '';
-      });
-    }
-  } else {
-    // Fallback: re-render the whole page with selected lead
-    render();
-  }
+  APP.leadsView = 'hierarchy'; // Always switch to hierarchy view when viewing a lead
+  APP.page = 'leads';
+  render();
+  setTimeout(function() {
+    var panel = document.getElementById('lead-detail-panel');
+    if (panel) panel.scrollTop = 0;
+    // Highlight selected row
+    document.querySelectorAll('.lead-row').forEach(function(r) {
+      var rowId = r.getAttribute('data-id') || '';
+      var onclick = r.getAttribute('onclick') || '';
+      var isSelected = rowId === id || onclick.includes("'" + id + "'") || onclick.includes('"' + id + '"');
+      r.style.background = isSelected ? '#dbeafe' : '';
+      r.style.border = isSelected ? '1px solid #0071e3' : '';
+    });
+  }, 50);
 }
 
 function sendDealToBuyer(leadId, buyerId) {
