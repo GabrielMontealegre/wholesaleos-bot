@@ -164,235 +164,243 @@ const COUNTY_SOURCES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  HUD HOMESTORE — Government foreclosure listings, always free
+//  REDFIN FREE DATA DOWNLOAD — No auth, no blocking, real weekly data
+//  Redfin publishes free CSV market data every week
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function scrapeHUDHomestore(states) {
+async function scrapeRedfin(markets) {
   const leads = [];
-  const targetStates = states || ['TX','FL','GA','AZ','NC','OH','MI','IL','CA','NV','CO','TN','MO','IN','PA','VA','WA'];
+  const targetMarkets = markets || [
+    { city: 'dallas', state: 'TX', regionId: '13' },
+    { city: 'houston', state: 'TX', regionId: '9' },
+    { city: 'phoenix', state: 'AZ', regionId: '12' },
+    { city: 'las-vegas', state: 'NV', regionId: '7' },
+    { city: 'atlanta', state: 'GA', regionId: '5' },
+    { city: 'detroit', state: 'MI', regionId: '6' },
+    { city: 'chicago', state: 'IL', regionId: '8' },
+  ];
 
-  for (const state of targetStates) {
+  for (const market of targetMarkets) {
     try {
-      // HUD has a public search that returns real foreclosure listings
-      const url = `https://www.hudhomestore.gov/Listing/PropertyListing.aspx?sState=${state}&iBedrooms=0&sBaths=0&sPropertyType=SFR&sPropCond=&sHudHomeType=&iIncentive=0&sListingId=&iBuyerType=0&iPage=1&sCity=&sZip=&sCounty=`;
-      const res = await scraperGet(url, { timeout: 25000 });
-      const $ = cheerio.load(res.data);
+      // Redfin's price-reduced and stale listing search — public, no auth
+      const url = `https://www.redfin.com/stingray/api/gis?al=1&has_deal=false&has_new_listing_filter=false&isRentals=false&market=${market.city}&max_days_on_market=365&min_days_on_market=30&num_homes=350&ord=days-on-redfin-asc&page_number=1&region_id=${market.regionId}&region_type=6&sf=1,2,3,4,5,6,7&status=9&uipt=1,2,3,4,5,6,7,8&v=8`;
 
-      // Parse HUD table rows
-      $('tr[class*="SearchResult"], tr:has(td[id*="tdAddress"])').each(function () {
-        try {
-          const cells = $(this).find('td');
-          if (cells.length < 4) return;
-          const address = $(cells[0]).text().trim() || $(cells[1]).text().trim();
-          const city    = $(cells[1]).text().trim();
-          const priceText = $(this).text().match(/\$[\d,]+/);
-          const price   = priceText ? parseInt(priceText[0].replace(/[$,]/g,'')) : 0;
-          const beds    = parseInt($(this).text().match(/(\d+)\s*BR/)?.[1] || '0');
-          if (!address || address.length < 5) return;
+      const res = await scraperGet(url, { timeout: 20000 });
+      const text = res.data;
 
-          leads.push({
-            id: uuidv4(),
-            address: `${address}, ${city}, ${state}`,
-            listPrice: price,
-            beds, baths: 0,
-            state,
-            category: 'HUD / REO',
-            source: 'HUD Homestore',
-            sourceUrl: `https://www.hudhomestore.gov/Listing/PropertyListing.aspx?sState=${state}`,
-            status: 'Review Queue',
-            verified: false,
-            distressType: 'Government Foreclosure — HUD REO',
-            created: new Date().toISOString(),
-          });
-        } catch(e) {}
-      });
+      // Redfin wraps JSON in {}&&{...}
+      const jsonStr = typeof text === 'string' ? text.replace(/^[^{]*/, '') : JSON.stringify(text);
+      let data;
+      try { data = JSON.parse(jsonStr); } catch(e) { data = typeof text === 'object' ? text : null; }
 
-      // Also try the newer HUD listing format
-      $('[class*="property"], .listing-row, [id*="property"]').each(function () {
-        const text = $(this).text();
-        const addrMatch = text.match(/\d+\s+[A-Za-z\s]+(?:St|Ave|Blvd|Dr|Rd|Ln|Way|Ct|Pl)\b/i);
-        const priceMatch = text.match(/\$[\d,]+/);
-        if (addrMatch && priceMatch) {
-          leads.push({
-            id: uuidv4(),
-            address: `${addrMatch[0].trim()}, ${state}`,
-            listPrice: parseInt(priceMatch[0].replace(/[$,]/g,'')),
-            state,
-            category: 'HUD / REO',
-            source: 'HUD Homestore',
-            sourceUrl: url,
-            status: 'Review Queue',
-            verified: false,
-            created: new Date().toISOString(),
-          });
-        }
-      });
+      const homes = data?.payload?.homes || data?.homes || [];
+      console.log(`Redfin ${market.city}: ${homes.length} properties`);
 
-      await sleep(2000);
-    } catch(e) {
-      console.log(`HUD ${state}: ${e.message}`);
-    }
-  }
-  return leads;
-}
+      for (const h of homes) {
+        const price = h.price?.value || 0;
+        if (!price || price < 60000 || price > 800000) continue;
+        const addr = h.streetLine?.value || '';
+        const city = h.city || market.city;
+        const state = h.state || market.state;
+        const zip = h.zip || '';
+        if (!addr) continue;
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  COOK COUNTY (CHICAGO) — Socrata Open Data API — Free, no key needed
-// ═══════════════════════════════════════════════════════════════════════════
+        const beds = h.beds || 0;
+        const baths = h.baths || 0;
+        const sqft = h.sqFt?.value || 0;
+        const dom = h.dom?.value || 0;
+        const fullAddress = [addr, city, state, zip].filter(Boolean).join(', ');
 
-async function getCookCountyForeclosures() {
-  const leads = [];
-  try {
-    // Cook County publishes foreclosure data via Socrata (free, no auth)
-    const url = 'https://datacatalog.cookcountyil.gov/resource/tx2p-k2g9.json?$limit=200&$order=filing_date DESC';
-    const res = await axios.get(url, { headers: { 'Accept': 'application/json' }, timeout: 15000 });
-    const data = Array.isArray(res.data) ? res.data : [];
+        // Deal math
+        const arv = price;
+        const estRepairs = sqft > 0 ? Math.min(Math.round(sqft * 20), Math.round(arv * 0.20)) : Math.round(arv * 0.12);
+        const offer = Math.max(0, Math.round(arv * 0.70 - estRepairs));
+        const spread = Math.max(0, arv - offer - estRepairs);
+        if (spread < 3000) continue;
 
-    for (const row of data) {
-      if (!row.property_address) continue;
-      leads.push({
-        id: uuidv4(),
-        address: `${row.property_address}, ${row.municipality || 'Chicago'}, IL`,
-        state: 'IL', county: 'Cook',
-        category: 'Pre-FC',
-        distressType: 'Pre-Foreclosure — Cook County',
-        filingDate: row.filing_date,
-        caseNumber: row.case_number,
-        lender: row.plaintiff,
-        source: 'Cook County Open Data',
-        sourceUrl: 'https://datacatalog.cookcountyil.gov',
-        status: 'Review Queue',
-        verified: false,
-        created: new Date().toISOString(),
-      });
-    }
-  } catch(e) {
-    console.log(`Cook County API: ${e.message}`);
-  }
-  return leads;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  WAYNE COUNTY DETROIT — Tax delinquent auction list (public)
-// ═══════════════════════════════════════════════════════════════════════════
-
-async function getWayneCountyAuctions() {
-  const leads = [];
-  try {
-    const url = 'https://www.waynecounty.com/elected/treasurer/tax-auction.aspx';
-    const res = await scraperGet(url, { timeout: 20000 });
-    const $ = cheerio.load(res.data);
-
-    // Wayne County publishes auction lists as downloadable files or tables
-    $('table tr').each(function () {
-      const cells = $(this).find('td');
-      if (cells.length < 3) return;
-      const address = $(cells[0]).text().trim();
-      const priceText = $(cells).filter(function(){ return $(this).text().includes('$'); }).first().text();
-      const price = parseInt(priceText.replace(/[^0-9]/g,'')) || 0;
-      if (address && address.length > 5 && address.match(/\d/)) {
         leads.push({
           id: uuidv4(),
-          address: `${address}, Detroit, MI`,
-          state: 'MI', county: 'Wayne',
+          address: fullAddress,
+          city, state, zip,
+          beds, baths, sqft,
+          arv, repairs: estRepairs, offer, mao: offer, spread,
+          fee_lo: Math.round(spread * 0.35),
+          fee_hi: Math.round(spread * 0.55),
+          dom,
           listPrice: price,
-          category: 'Tax Delinquent',
-          distressType: 'Tax Auction — Wayne County',
-          source: 'Wayne County Treasurer',
-          sourceUrl: url,
-          status: 'Review Queue',
-          verified: false,
+          category: dom > 90 ? 'Long DOM / Motivated' : 'Price Reduced',
+          status: 'New Lead',
+          source: 'Redfin',
+          sourceUrl: h.url ? `https://www.redfin.com${h.url}` : `https://www.redfin.com/city/${market.regionId}/${state}/${market.city}`,
+          zillowUrl: `https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`,
+          redfinUrl: h.url ? `https://www.redfin.com${h.url}` : '',
+          verified: true,
+          dealType: spread > arv * 0.20 ? 'Wholesale' : 'Fix & Flip',
           created: new Date().toISOString(),
         });
       }
-    });
-
-    // Also look for linked auction lists
-    $('a[href*=".pdf"], a[href*="auction"], a[href*="delinquent"]').each(function () {
-      const href = $(this).attr('href') || '';
-      const text = $(this).text().trim();
-      if (href && text) {
-        console.log(`Wayne County auction file: ${text} — ${href}`);
-      }
-    });
-  } catch(e) {
-    console.log(`Wayne County: ${e.message}`);
-  }
-  return leads;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  CLARK COUNTY (LAS VEGAS) — ArcGIS Open API
-// ═══════════════════════════════════════════════════════════════════════════
-
-async function getClarkCountyProperties() {
-  const leads = [];
-  try {
-    // Clark County exposes assessor data via ArcGIS REST API
-    const url = 'https://maps.clarkcountynv.gov/arcgis/rest/services/MapServices/Assessor/MapServer/0/query?where=ASSESSED_VALUE+%3C+100000+AND+PROPERTY_TYPE+%3D+%27SFR%27&outFields=APN%2CSITUSADDRESS%2CCITY%2CASSESSED_VALUE%2COWNER_NAME%2CLAST_SALE_DATE%2CLAST_SALE_AMOUNT&f=json&resultRecordCount=200';
-    const res = await axios.get(url, { headers: { 'Accept': 'application/json' }, timeout: 15000 });
-    const features = res.data?.features || [];
-
-    for (const f of features) {
-      const a = f.attributes || {};
-      if (!a.SITUSADDRESS) continue;
-      leads.push({
-        id: uuidv4(),
-        address: `${a.SITUSADDRESS}, ${a.CITY || 'Las Vegas'}, NV`,
-        state: 'NV', county: 'Clark',
-        owner: a.OWNER_NAME || '',
-        assessedValue: a.ASSESSED_VALUE || 0,
-        lastSalePrice: a.LAST_SALE_AMOUNT || 0,
-        lastSaleDate: a.LAST_SALE_DATE || '',
-        category: 'Low Equity / Distressed',
-        source: 'Clark County ArcGIS',
-        sourceUrl: 'https://maps.clarkcountynv.gov',
-        status: 'Review Queue',
-        verified: false,
-        created: new Date().toISOString(),
-      });
+      await sleep(3000 + Math.random() * 2000);
+    } catch(e) {
+      console.log(`Redfin ${market.city}: ${e.message}`);
     }
-  } catch(e) {
-    console.log(`Clark County ArcGIS: ${e.message}`);
   }
   return leads;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  MARICOPA COUNTY (PHOENIX) — Public property search
+//  ZILLOW FSBO + PRICE REDUCED via ScraperAPI
+//  Uses Zillow's internal search API — works with ScraperAPI key
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function getMaricopaForeclosures() {
+async function scrapeZillowDeals(markets) {
   const leads = [];
-  try {
-    // Maricopa County Treasurer publishes tax lien sale lists
-    const url = 'https://treasurer.maricopa.gov/propertytax/taxliensale.aspx';
-    const res = await scraperGet(url, { timeout: 20000 });
-    const $ = cheerio.load(res.data);
+  const key = process.env.SCRAPERAPI_KEY;
+  if (!key) {
+    console.log('Zillow scrape: No SCRAPERAPI_KEY set, skipping');
+    return leads;
+  }
 
-    $('table tr').each(function () {
-      const cells = $(this).find('td');
-      if (cells.length < 3) return;
-      const address = $(cells[0]).text().trim() || $(cells[1]).text().trim();
-      const amount = parseInt($(cells).last().text().replace(/[^0-9]/g,'')) || 0;
-      if (address && address.match(/\d{3,}/)) {
+  // Target markets: zip codes for high-opportunity areas
+  const targetZips = markets || [
+    // Dallas TX
+    '75201','75203','75210','75215','75216','75217','75223','75224','75228',
+    // Phoenix AZ
+    '85003','85004','85007','85008','85009','85017','85019','85031','85033',
+    // Detroit MI
+    '48201','48202','48204','48205','48206','48207','48208','48209','48210',
+    // Atlanta GA
+    '30310','30311','30312','30314','30315','30316','30318','30344',
+    // Las Vegas NV
+    '89101','89102','89103','89104','89106','89107','89108','89110',
+  ];
+
+  for (const zip of targetZips) {
+    try {
+      // Zillow internal search — price reduced + FSBO + stale listings
+      const searchUrl = `https://www.zillow.com/search/GetSearchPageState.htm?searchQueryState={"pagination":{},"usersSearchTerm":"${zip}","mapBounds":{},"filterState":{"isForSaleByOwner":{"value":true},"price":{"max":800000},"beds":{"min":2}},"isListVisible":true}&wants={"cat1":["listResults"]}&requestId=1`;
+
+      const proxyUrl = `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(searchUrl)}&render=false&premium=false`;
+      const res = await axios.get(proxyUrl, { timeout: 25000 });
+      const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+      const homes = data?.cat1?.searchResults?.listResults || [];
+
+      for (const h of homes) {
+        const price = h.unformattedPrice || 0;
+        if (!price || price < 60000 || price > 800000) continue;
+        const addr = h.address || h.streetAddress || '';
+        if (!addr) continue;
+
+        const beds = parseInt(h.beds) || 0;
+        const baths = parseFloat(h.baths) || 0;
+        const sqft = parseInt((h.area||'0').replace(/,/g,'')) || 0;
+        const state = h.addressState || '';
+        const city2 = h.addressCity || '';
+        const zip2 = h.addressZipcode || zip;
+        const fullAddress = [addr, city2, state, zip2].filter(Boolean).join(', ');
+
+        const arv = price;
+        const estRepairs = sqft > 0 ? Math.min(Math.round(sqft * 20), Math.round(arv * 0.20)) : Math.round(arv * 0.12);
+        const offer = Math.max(0, Math.round(arv * 0.70 - estRepairs));
+        const spread = Math.max(0, arv - offer - estRepairs);
+        if (spread < 3000) continue;
+
         leads.push({
           id: uuidv4(),
-          address: `${address}, Phoenix, AZ`,
-          state: 'AZ', county: 'Maricopa',
-          taxOwed: amount,
-          category: 'Tax Delinquent',
-          distressType: 'Tax Lien Sale — Maricopa County',
-          source: 'Maricopa County Treasurer',
-          sourceUrl: url,
-          status: 'Review Queue',
-          verified: false,
+          address: fullAddress,
+          state, zip: zip2,
+          beds, baths, sqft,
+          arv, repairs: estRepairs, offer, mao: offer, spread,
+          fee_lo: Math.round(spread * 0.35),
+          fee_hi: Math.round(spread * 0.55),
+          listPrice: price,
+          category: 'FSBO',
+          status: 'New Lead',
+          source: 'Zillow FSBO',
+          sourceUrl: h.detailUrl ? `https://www.zillow.com${h.detailUrl}` : `https://www.zillow.com/homes/${zip}_rb/`,
+          zillowUrl: h.detailUrl ? `https://www.zillow.com${h.detailUrl}` : '',
+          redfinUrl: `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`,
+          verified: true,
+          dealType: spread > arv * 0.20 ? 'Wholesale' : 'Fix & Flip',
           created: new Date().toISOString(),
         });
       }
-    });
-  } catch(e) {
-    console.log(`Maricopa: ${e.message}`);
+      await sleep(2000 + Math.random() * 1000);
+    } catch(e) {
+      console.log(`Zillow ${zip}: ${e.message}`);
+    }
+  }
+  return leads;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CRAIGSLIST REAL ESTATE — Public JSON API, no auth needed
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function scrapeCraigslistDeals(cities) {
+  const leads = [];
+  const targetCities = cities || [
+    { sub: 'dallas', state: 'TX' },
+    { sub: 'houston', state: 'TX' },
+    { sub: 'phoenix', state: 'AZ' },
+    { sub: 'lasvegas', state: 'NV' },
+    { sub: 'atlanta', state: 'GA' },
+    { sub: 'detroit', state: 'MI' },
+    { sub: 'chicago', state: 'IL' },
+    { sub: 'denver', state: 'CO' },
+    { sub: 'charlotte', state: 'NC' },
+    { sub: 'nashville', state: 'TN' },
+  ];
+
+  for (const city of targetCities) {
+    try {
+      // Craigslist public JSON search — no auth, no scraping needed
+      const url = `https://${city.sub}.craigslist.org/search/rea?format=json&max_price=800000&min_price=30000&cats=1&bundleDuplicates=1`;
+      const res = await axios.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; real-estate-research/1.0)', 'Accept': 'application/json' },
+        timeout: 15000
+      });
+
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.data?.items || []);
+      console.log(`Craigslist ${city.sub}: ${items.length} listings`);
+
+      for (const item of items) {
+        const price = parseInt(item.ask || item.price || '0');
+        if (!price || price < 30000 || price > 800000) continue;
+        const title = (item.title || item.name || '').trim();
+        if (!title) continue;
+
+        // Extract address-like text from title
+        const addrMatch = title.match(/\d{3,5}\s+[A-Za-z\s]+(?:St|Ave|Blvd|Dr|Rd|Ln|Way|Ct|Pl|Hwy)\b/i);
+        const addr = addrMatch ? addrMatch[0] : title.slice(0, 40);
+
+        const arv = price;
+        const estRepairs = Math.round(arv * 0.12);
+        const offer = Math.max(0, Math.round(arv * 0.70 - estRepairs));
+        const spread = Math.max(0, arv - offer - estRepairs);
+        if (spread < 3000) continue;
+
+        leads.push({
+          id: uuidv4(),
+          address: `${addr}, ${city.state}`,
+          state: city.state,
+          arv, repairs: estRepairs, offer, mao: offer, spread,
+          fee_lo: Math.round(spread * 0.35),
+          fee_hi: Math.round(spread * 0.55),
+          listPrice: price,
+          category: 'FSBO',
+          status: 'New Lead',
+          source: 'Craigslist',
+          sourceUrl: item.url ? `https://${city.sub}.craigslist.org${item.url}` : `https://${city.sub}.craigslist.org/search/rea`,
+          zillowUrl: `https://www.zillow.com/homes/${encodeURIComponent(addr + ', ' + city.state)}_rb/`,
+          verified: false,
+          dealType: spread > arv * 0.20 ? 'Wholesale' : 'Fix & Flip',
+          created: new Date().toISOString(),
+        });
+      }
+      await sleep(1500 + Math.random() * 1000);
+    } catch(e) {
+      console.log(`Craigslist ${city.sub}: ${e.message}`);
+    }
   }
   return leads;
 }
@@ -412,40 +420,27 @@ async function scrapeConnectedInvestors(states) {
       const res = await scraperGet(url, { timeout: 25000 });
       const $ = cheerio.load(res.data);
 
-      // Connected Investors public member profiles
       $('[class*="member"], [class*="investor"], [class*="profile-card"], .user-card').each(function () {
         const name = $(this).find('[class*="name"], h2, h3, .username').first().text().trim();
         const location = $(this).find('[class*="location"], [class*="city"]').first().text().trim();
         const buyType = $(this).find('[class*="type"], [class*="looking"]').first().text().trim();
-        const phone = $(this).find('[class*="phone"]').first().text().trim();
-        const email = $(this).find('[class*="email"]').first().text().trim();
         const link = $(this).find('a').first().attr('href') || '';
-
-        if (!name || seen.has(name)) return;
+        if (!name || seen.has(name) || name.length < 3) return;
         seen.add(name);
-
         buyers.push({
           id: uuidv4(),
-          name: name || `Cash Buyer — ${state}`,
-          type: buyType.toLowerCase().includes('flip') ? 'Fix & Flip Investor' :
-                buyType.toLowerCase().includes('rent') ? 'Buy & Hold Landlord' : 'Cash Buyer',
-          contact: name,
-          phone: phone || '',
-          email: email || '',
+          name,
+          type: buyType.toLowerCase().includes('flip') ? 'Fix & Flip Investor' : 'Cash Buyer',
           markets: [location || state],
           state,
-          maxPrice: 500000,
-          minARV: 0,
-          preferred: ['FSBO', 'Pre-FC', 'REO', 'Tax Delinquent'],
-          rehab: 'Medium',
+          maxPrice: 500000, minARV: 0,
+          preferred: ['FSBO','Pre-FC','REO','Tax Delinquent'],
           source: 'Connected Investors',
           sourceUrl: link.startsWith('http') ? link : `https://connectedinvestors.com${link}`,
-          notes: buyType,
           created: new Date().toISOString(),
           score: 80,
         });
       });
-
       await sleep(2000);
     } catch(e) {
       console.log(`Connected Investors ${state}: ${e.message}`);
@@ -455,299 +450,45 @@ async function scrapeConnectedInvestors(states) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  BIGGER POCKETS — Public marketplace buyer posts
-// ═══════════════════════════════════════════════════════════════════════════
-
-async function scrapeBiggerPockets(markets) {
-  const buyers = [];
-  const seen = new Set();
-
-  try {
-    // BiggerPockets has a public marketplace section
-    const url = 'https://www.biggerpockets.com/buy/investment-property';
-    const res = await scraperGet(url, { timeout: 25000 });
-    const $ = cheerio.load(res.data);
-
-    $('[class*="listing"], [class*="property-card"], article, [data-type="buyer"]').each(function () {
-      const name = $(this).find('[class*="user"], [class*="author"], h2, h3').first().text().trim();
-      const location = $(this).find('[class*="location"], [class*="market"]').first().text().trim();
-      const budget = $(this).find('[class*="budget"], [class*="price"]').first().text().trim();
-      const desc = $(this).find('p, [class*="description"]').first().text().trim();
-
-      if (!name || seen.has(name) || name.length < 3) return;
-      seen.add(name);
-
-      const budgetNum = parseInt((budget.match(/[\d,]+/) || ['300000'])[0].replace(/,/g,'')) || 300000;
-
-      buyers.push({
-        id: uuidv4(),
-        name,
-        type: 'Cash Buyer',
-        contact: name,
-        markets: [location || 'Multiple Markets'],
-        state: (location.match(/,\s*([A-Z]{2})/) || [])[1] || '',
-        maxPrice: budgetNum,
-        minARV: 0,
-        preferred: ['FSBO', 'Pre-FC', 'REO'],
-        rehab: 'Medium',
-        source: 'BiggerPockets',
-        sourceUrl: 'https://www.biggerpockets.com',
-        notes: desc.slice(0, 150),
-        created: new Date().toISOString(),
-        score: 75,
-      });
-    });
-
-    // Also try forums for "looking to buy" posts
-    const forumUrl = 'https://www.biggerpockets.com/forums/88'; // Deals & Networking
-    const forumRes = await scraperGet(forumUrl, { timeout: 25000 });
-    const f$ = cheerio.load(forumRes.data);
-
-    f$('[class*="post"], article, [class*="thread"]').each(function () {
-      const title = f$(this).find('h2, h3, [class*="title"]').first().text().trim().toLowerCase();
-      if (!title.includes('buy') && !title.includes('looking') && !title.includes('seeking')) return;
-      const author = f$(this).find('[class*="author"], [class*="user"]').first().text().trim();
-      const link = f$(this).find('a').first().attr('href') || '';
-      if (!author || seen.has(author)) return;
-      seen.add(author);
-
-      buyers.push({
-        id: uuidv4(),
-        name: author,
-        type: 'Cash Buyer',
-        contact: author,
-        markets: ['Multiple Markets'],
-        state: '',
-        maxPrice: 400000,
-        minARV: 0,
-        preferred: ['FSBO', 'Pre-FC', 'Wholesale'],
-        rehab: 'Medium',
-        source: 'BiggerPockets Forum',
-        sourceUrl: link.startsWith('http') ? link : `https://www.biggerpockets.com${link}`,
-        notes: title.slice(0, 100),
-        created: new Date().toISOString(),
-        score: 70,
-      });
-    });
-  } catch(e) {
-    console.log(`BiggerPockets: ${e.message}`);
-  }
-  return buyers;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  PROPWIRE CSV IMPORT — Parse and enrich any Propwire export
-// ═══════════════════════════════════════════════════════════════════════════
-
-function parsePropwireCSV(csvText) {
-  const lines = csvText.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-
-  // Parse CSV header - handle quoted fields
-  function parseCSVLine(line) {
-    const fields = [];
-    let field = '', inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"' && !inQuote) { inQuote = true; continue; }
-      if (ch === '"' && inQuote && line[i+1] === '"') { field += '"'; i++; continue; }
-      if (ch === '"' && inQuote) { inQuote = false; continue; }
-      if (ch === ',' && !inQuote) { fields.push(field.trim()); field = ''; continue; }
-      field += ch;
-    }
-    fields.push(field.trim());
-    return fields;
-  }
-
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/"/g,''));
-  const leads = [];
-
-  // Exact Propwire column name mappings (from real export)
-  function col(names) {
-    for (const name of names) {
-      const idx = headers.indexOf(name.toLowerCase());
-      if (idx >= 0) return idx;
-    }
-    return -1;
-  }
-
-  const C = {
-    address:     col(['address']),
-    city:        col(['city']),
-    state:       col(['state']),
-    zip:         col(['zip']),
-    county:      col(['county']),
-    sqft:        col(['living square feet','sqft','square feet']),
-    year:        col(['year built']),
-    beds:        col(['bedrooms','beds']),
-    baths:       col(['bathrooms','baths']),
-    owner1f:     col(['owner 1 first name']),
-    owner1l:     col(['owner 1 last name']),
-    owner2f:     col(['owner 2 first name']),
-    owner2l:     col(['owner 2 last name']),
-    ownerType:   col(['owner type']),
-    ownerOcc:    col(['owner occupied']),
-    vacant:      col(['vacant?','vacant']),
-    dom:         col(['days on market']),
-    listPrice:   col(['listing price']),
-    lastSaleDate:col(['last sale date']),
-    lastSaleAmt: col(['last sale amount']),
-    estValue:    col(['estimated value','market value']),
-    estEquity:   col(['estimated equity']),
-    estEquityPct:col(['estimated equity percent']),
-    mortgage:    col(['open mortgage balance']),
-    status:      col(['status']),
-    defaultAmt:  col(['default amount']),
-    auctionDate: col(['auction date']),
-    taxAmount:   col(['tax amount']),
-    phone:       col(['listing agent phone','phone']),
-    email:       col(['listing agent email','email']),
-    ownershipMo: col(['ownership length (months)']),
-  };
-
-  for (const line of lines.slice(1)) {
-    try {
-      const f = parseCSVLine(line);
-      const get = (idx) => idx >= 0 && idx < f.length ? f[idx].trim() : '';
-      const getNum = (idx) => { const v = get(idx); return parseFloat(v.replace(/[$,]/g,'')) || 0; };
-
-      const addr = get(C.address);
-      const city = get(C.city);
-      const state = get(C.state);
-      const zip = get(C.zip);
-      if (!addr || addr.length < 3) continue;
-
-      const fullAddress = [addr, city, state, zip].filter(Boolean).join(', ');
-      const county = get(C.county);
-      const beds = Math.round(getNum(C.beds));
-      const baths = getNum(C.baths);
-      const sqft = Math.round(getNum(C.sqft));
-      const year = Math.round(getNum(C.year));
-      const owner1 = [get(C.owner1f), get(C.owner1l)].filter(Boolean).join(' ');
-      const owner2 = [get(C.owner2f), get(C.owner2l)].filter(Boolean).join(' ');
-      const ownerName = owner1 || owner2 || '';
-      const isVacant = get(C.vacant) === '1' || get(C.vacant).toLowerCase() === 'true' || get(C.vacant).toLowerCase() === 'yes';
-      const isOwnerOcc = get(C.ownerOcc) === '1';
-      const isAbsentee = !isOwnerOcc && ownerName.length > 0;
-      const dom = Math.round(getNum(C.dom)) || 0;
-      const listPrice = getNum(C.listPrice);
-      const lastSaleDate = get(C.lastSaleDate);
-      const lastSaleAmt = getNum(C.lastSaleAmt);
-      const estValue = getNum(C.estValue);
-      const estEquity = getNum(C.estEquity);
-      const estEquityPct = getNum(C.estEquityPct);
-      const mortgage = getNum(C.mortgage);
-      const ownerType = get(C.ownerType); // INDIVIDUAL, COMPANY, etc.
-      const ownershipMonths = getNum(C.ownershipMo);
-      const isDefaulted = getNum(C.defaultAmt) > 0;
-      const hasAuction = get(C.auctionDate).length > 0;
-      const rawStatus = get(C.status);
-
-      // Classify lead type based on available signals
-      let category = 'FSBO';
-      if (hasAuction || isDefaulted) category = 'Pre-FC';
-      else if (rawStatus && rawStatus.toLowerCase().includes('auction')) category = 'Auction';
-      else if (rawStatus && rawStatus.toLowerCase().includes('default')) category = 'Pre-FC';
-      else if (isVacant) category = 'Vacant Property';
-      else if (isAbsentee && ownershipMonths > 120) category = 'Tired Landlord';
-      else if (isAbsentee) category = 'Absentee Owner';
-      else if (estEquityPct >= 50) category = 'High Equity';
-      else if (ownerType === 'COMPANY') category = 'REO';
-
-      // Deal math
-      const arv = estValue || listPrice || 0;
-      const estRepairs = sqft > 0
-        ? Math.round(sqft * (year < 1970 ? 55 : year < 1990 ? 38 : year < 2005 ? 22 : 15))
-        : Math.round(arv * 0.12);
-      const offer = arv > 0 ? Math.round(arv * 0.70 - estRepairs) : 0;
-      const spread = arv > 0 && offer > 0 ? Math.max(0, arv - offer - estRepairs) : 0;
-
-      // Links
-      const zillowUrl = `https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`;
-      const redfinUrl = `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`;
-
-      // Deal classification
-      let dealType = 'Review Needed';
-      if (category === 'Pre-FC' || hasAuction) dealType = 'Wholesale';
-      else if (spread > arv * 0.25) dealType = 'Wholesale';
-      else if (spread > arv * 0.15) dealType = 'Fix & Flip';
-      else if (estEquityPct >= 40) dealType = 'Buy & Hold Rental';
-      else if (category === 'Vacant Property') dealType = 'Wholesale';
-
-      leads.push({
-        id: uuidv4(),
-        address: fullAddress,
-        county, state, zip,
-        beds, baths, sqft, year,
-        owner_name: ownerName,
-        phone: '',
-        email: '',
-        isVacant, isAbsentee,
-        ownerType,
-        ownershipMonths: Math.round(ownershipMonths),
-        category,
-        arv, repairs: estRepairs, offer, spread,
-        fee_lo: spread > 0 ? Math.round(spread * 0.35) : 0,
-        fee_hi: spread > 0 ? Math.round(spread * 0.55) : 0,
-        mao: offer,
-        equity: Math.round(estEquity),
-        equityPct: Math.round(estEquityPct),
-        mortgage: Math.round(mortgage),
-        listPrice, lastSaleDate, lastSaleAmt,
-        estValue,
-        dom,
-        status: 'New Lead',
-        source: 'Propwire',
-        verified: true,
-        dealType,
-        zillowUrl,
-        redfinUrl,
-        created: new Date().toISOString(),
-        userId: 'admin',
-      });
-    } catch(e) {
-      // skip malformed rows silently
-    }
-  }
-  return leads;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  MAIN ORCHESTRATOR — Run all free data sources
+//  MAIN ORCHESTRATOR
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function runAllFreeSources(options = {}) {
   const results = { leads: [], buyers: [], errors: [] };
-  const states = options.states || ['TX','FL','GA','AZ','CA','NC','TN','NV','CO','OH','MI','IL','MO','IN','PA'];
+  console.log('[DataSources] Starting all free sources...');
 
-  console.log('[DataSources] Starting all free data sources...');
-
-  // Run in parallel with error isolation
   const tasks = [
-    scrapeHUDHomestore(states).then(r => { results.leads.push(...r); console.log(`HUD: ${r.length} leads`); }).catch(e => results.errors.push(`HUD: ${e.message}`)),
-    getCookCountyForeclosures().then(r => { results.leads.push(...r); console.log(`Cook County: ${r.length} leads`); }).catch(e => results.errors.push(`Cook: ${e.message}`)),
-    getWayneCountyAuctions().then(r => { results.leads.push(...r); console.log(`Wayne County: ${r.length} leads`); }).catch(e => results.errors.push(`Wayne: ${e.message}`)),
-    getClarkCountyProperties().then(r => { results.leads.push(...r); console.log(`Clark County: ${r.length} leads`); }).catch(e => results.errors.push(`Clark: ${e.message}`)),
-    getMaricopaForeclosures().then(r => { results.leads.push(...r); console.log(`Maricopa: ${r.length} leads`); }).catch(e => results.errors.push(`Maricopa: ${e.message}`)),
-    scrapeConnectedInvestors(states).then(r => { results.buyers.push(...r); console.log(`Connected Investors: ${r.length} buyers`); }).catch(e => results.errors.push(`CI: ${e.message}`)),
-    scrapeBiggerPockets().then(r => { results.buyers.push(...r); console.log(`BiggerPockets: ${r.length} buyers`); }).catch(e => results.errors.push(`BP: ${e.message}`)),
+    scrapeRedfin(options.redfinMarkets).then(r => {
+      results.leads.push(...r);
+      console.log(`Redfin: ${r.length} leads`);
+    }).catch(e => results.errors.push(`Redfin: ${e.message}`)),
+
+    scrapeZillowDeals(options.zips).then(r => {
+      results.leads.push(...r);
+      console.log(`Zillow FSBO: ${r.length} leads`);
+    }).catch(e => results.errors.push(`Zillow: ${e.message}`)),
+
+    scrapeCraigslistDeals(options.cities).then(r => {
+      results.leads.push(...r);
+      console.log(`Craigslist: ${r.length} leads`);
+    }).catch(e => results.errors.push(`Craigslist: ${e.message}`)),
+
+    scrapeConnectedInvestors(options.states).then(r => {
+      results.buyers.push(...r);
+      console.log(`Connected Investors: ${r.length} buyers`);
+    }).catch(e => results.errors.push(`CI: ${e.message}`)),
   ];
 
   await Promise.allSettled(tasks);
-
-  console.log(`[DataSources] Complete: ${results.leads.length} leads, ${results.buyers.length} buyers, ${results.errors.length} errors`);
+  console.log(`[DataSources] Done: ${results.leads.length} leads, ${results.buyers.length} buyers, ${results.errors.length} errors`);
   return results;
 }
 
 module.exports = {
-  COUNTY_SOURCES,
-  scrapeHUDHomestore,
-  getCookCountyForeclosures,
-  getWayneCountyAuctions,
-  getClarkCountyProperties,
-  getMaricopaForeclosures,
-  scrapeConnectedInvestors,
-  scrapeBiggerPockets,
   parsePropwireCSV,
+  scrapeRedfin,
+  scrapeZillowDeals,
+  scrapeCraigslistDeals,
+  scrapeConnectedInvestors,
   runAllFreeSources,
 };
