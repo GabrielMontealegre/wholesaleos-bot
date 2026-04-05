@@ -1500,6 +1500,41 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
       `${stats.total} rows → ${stats.kept} passed filter → ${added} imported. Removed: ${stats.skipped_type} wrong type, ${stats.skipped_price} bad price/spread, ${deleted} stale leads cleared.`
     );
 
+    // Auto-upload to Google Drive in background
+    setImmediate(async () => {
+      try {
+        const cfg = getGmailTransport();
+        if (cfg && added > 0) {
+          const { google } = require('googleapis');
+          const drive = google.drive({ version: 'v3', auth: cfg.oauth2 });
+          const addedLeads = dbData.leads.filter(l => l.source === 'Propwire');
+          const csvRows = ['Address,County,State,Category,ARV,Offer,Spread,Fee Lo,Fee Hi,Owner,Phone,Email,Equity%,DOM,Deal Type,Source,Zillow,Redfin'];
+          addedLeads.forEach(l => {
+            csvRows.push([
+              '"' + (l.address||'').replace(/"/g,"'") + '"',
+              l.county||'', l.state||'', l.category||'',
+              l.arv||0, l.offer||0, l.spread||0, l.fee_lo||0, l.fee_hi||0,
+              '"' + (l.owner_name||'').replace(/"/g,"'") + '"',
+              l.phone||'', l.email||'',
+              l.equityPct||0, l.dom||0, l.dealType||'',
+              'Propwire',
+              '"' + (l.zillowUrl||'') + '"',
+              '"' + (l.redfinUrl||'') + '"',
+            ].join(','));
+          });
+          const csvContent = csvRows.join('\n');
+          const date = new Date().toISOString().split('T')[0];
+          const fileName = `Propwire Import - ${added} leads - ${date}.csv`;
+          await drive.files.create({
+            requestBody: { name: fileName, mimeType: 'text/csv', parents: [] },
+            media: { mimeType: 'text/csv', body: csvContent },
+          });
+          db.addNotification('system', 'Google Drive updated', `${fileName} uploaded automatically`);
+          console.log('[Drive] Uploaded:', fileName);
+        }
+      } catch(e) { console.log('[Drive] Auto-upload error:', e.message); }
+    });
+
     res.json({
       ok: true,
       parsed: stats.total,
@@ -1677,6 +1712,190 @@ app.delete('/api/buyers/clear/fake', (req, res) => {
     res.json({ ok: true, removed: before - dbData.buyers.length, remaining: dbData.buyers.length });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  COMMUNICATIONS — SMS, Bulk Email, Browser Dialer
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Twilio status ─────────────────────────────────────────────────────────
+app.get('/api/comms/status', (req, res) => {
+  const comms = require('./modules/comms');
+  res.json({
+    twilio: comms.isTwilioConfigured(),
+    twilioPhone: comms.getTwilioPhone(),
+    gmail: !!getGmailTransport(),
+  });
+});
+
+// ── Send single SMS ───────────────────────────────────────────────────────
+app.post('/api/sms/send', async (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const { to, body, leadId } = req.body;
+    if (!to || !body) return res.json({ ok: false, error: 'Missing to or body' });
+    const result = await comms.sendSMS(to, body, leadId, db);
+    res.json(result);
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Preview AI SMS for a lead ─────────────────────────────────────────────
+app.get('/api/sms/preview/:leadId', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const lead  = db.getLeads().find(l => l.id === req.params.leadId);
+    if (!lead) return res.json({ ok: false, error: 'Lead not found' });
+    const body = comms.generateHumanizedSMS(lead);
+    res.json({ ok: true, body, phone: lead.phone });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Preview AI Email for a lead ───────────────────────────────────────────
+app.get('/api/email/preview/:leadId', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const lead  = db.getLeads().find(l => l.id === req.params.leadId);
+    if (!lead) return res.json({ ok: false, error: 'Lead not found' });
+    const email = comms.generateHumanizedEmail(lead);
+    res.json({ ok: true, ...email, to: lead.email });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Bulk SMS ──────────────────────────────────────────────────────────────
+app.post('/api/sms/bulk', async (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const { leadIds, customMessage } = req.body;
+    if (!leadIds || !leadIds.length) return res.json({ ok: false, error: 'No leads selected' });
+    const leads = db.getLeads().filter(l => leadIds.includes(l.id));
+    const withPhone = leads.filter(l => l.phone);
+    if (!withPhone.length) return res.json({ ok: false, error: 'None of the selected leads have phone numbers. Add phone numbers via skip tracing first.' });
+    // Start async — respond immediately
+    res.json({ ok: true, total: withPhone.length, message: `Sending ${withPhone.length} SMS messages in background. Check SMS tab for progress.` });
+    setImmediate(async () => {
+      try {
+        const results = await comms.sendBulkSMS(withPhone, db, { customMessage });
+        db.addNotification('system', `Bulk SMS complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no phone)`);
+        console.log('[BulkSMS]', results);
+      } catch(e) { console.error('[BulkSMS]', e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Bulk Email ────────────────────────────────────────────────────────────
+app.post('/api/email/bulk', async (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const { leadIds, customEmail } = req.body;
+    if (!leadIds || !leadIds.length) return res.json({ ok: false, error: 'No leads selected' });
+    const leads = db.getLeads().filter(l => leadIds.includes(l.id));
+    const withEmail = leads.filter(l => l.email);
+    if (!withEmail.length) return res.json({ ok: false, error: 'None of the selected leads have email addresses. Add emails via skip tracing first.' });
+    const gmailCfg = getGmailTransport();
+    if (!gmailCfg) return res.json({ ok: false, error: 'Gmail not connected. Check Gmail settings.' });
+    res.json({ ok: true, total: withEmail.length, message: `Sending ${withEmail.length} personalized emails in background. Check Email tab for progress.` });
+    setImmediate(async () => {
+      try {
+        const results = await comms.sendBulkEmail(withEmail, gmailCfg, db, { customEmail });
+        db.addNotification('system', `Bulk Email complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no email)`);
+        console.log('[BulkEmail]', results);
+      } catch(e) { console.error('[BulkEmail]', e.message); }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── SMS Conversations ─────────────────────────────────────────────────────
+app.get('/api/sms/conversations', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const convos = comms.getAllSMSConversations(db);
+    res.json({ ok: true, conversations: convos });
+  } catch(e) { res.json({ ok: false, conversations: [], error: e.message }); }
+});
+
+app.get('/api/sms/conversation/:leadId', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const msgs  = comms.getSMSConversation(req.params.leadId, db);
+    res.json({ ok: true, messages: msgs });
+  } catch(e) { res.json({ ok: false, messages: [], error: e.message }); }
+});
+
+// ── Inbound SMS Webhook (Twilio posts here) ───────────────────────────────
+app.post('/api/sms/webhook', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const { From, Body } = req.body;
+    const lead = comms.handleInboundSMS(From, Body, db);
+    console.log(`[SMS Inbound] From: ${From} — "${Body.slice(0,50)}"`);
+    // Respond with empty TwiML so Twilio doesn't send error
+    res.set('Content-Type', 'text/xml');
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  } catch(e) {
+    console.error('[SMS Webhook]', e.message);
+    res.set('Content-Type', 'text/xml');
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  }
+});
+
+// ── Browser Dialer Token ──────────────────────────────────────────────────
+app.get('/api/dialer/token', (req, res) => {
+  try {
+    const comms = require('./modules/comms');
+    const token = comms.generateDialerToken('gabriel');
+    if (!token) return res.json({ ok: false, error: 'Twilio not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET to Railway.' });
+    res.json({ ok: true, token });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Outbound call via Twilio REST (simpler than browser SDK) ─────────────
+app.post('/api/dialer/call', async (req, res) => {
+  try {
+    const { to, leadId } = req.body;
+    const sid   = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from  = process.env.TWILIO_PHONE_NUMBER;
+    if (!sid || !token || !from) return res.json({ ok: false, error: 'Twilio not configured' });
+    const twilio = require('twilio')(sid, token);
+    const cleaned = to.replace(/[^0-9]/g,'');
+    const phone   = cleaned.length === 10 ? '+1' + cleaned : '+' + cleaned;
+    // Call connects Twilio number to seller, then bridges to your phone
+    const callbackUrl = `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/dialer/twiml`;
+    const call = await twilio.calls.create({
+      to:   phone,
+      from,
+      url:  callbackUrl || 'http://demo.twilio.com/docs/voice.xml',
+    });
+    // Log the call
+    const dbData = db.readDB();
+    if (!dbData.callLog) dbData.callLog = [];
+    dbData.callLog.push({ id: uuidv4(), leadId, to: phone, callSid: call.sid, status: call.status, created: new Date().toISOString() });
+    db.writeDB(dbData);
+    res.json({ ok: true, callSid: call.sid, status: call.status });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── TwiML for calls ───────────────────────────────────────────────────────
+app.post('/api/dialer/twiml', (req, res) => {
+  res.set('Content-Type', 'text/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">Hello, this is Gabriel from Montsan REI. Please hold for a moment.</Say>
+  <Dial callerId="${process.env.TWILIO_PHONE_NUMBER || ''}">
+    <Number>${process.env.GABRIEL_PHONE || process.env.TWILIO_PHONE_NUMBER || ''}</Number>
+  </Dial>
+</Response>`);
+});
+
+// ── Call log ──────────────────────────────────────────────────────────────
+app.get('/api/dialer/calls', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const calls  = (dbData.callLog || []).sort((a,b) => new Date(b.created) - new Date(a.created));
+    res.json({ ok: true, calls });
+  } catch(e) { res.json({ ok: false, calls: [], error: e.message }); }
+});
+
 
 module.exports = app;
 
