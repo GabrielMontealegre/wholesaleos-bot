@@ -543,151 +543,170 @@ function parsePropwireCSV(csvText) {
   const lines = csvText.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+  // Parse CSV header - handle quoted fields
+  function parseCSVLine(line) {
+    const fields = [];
+    let field = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQuote) { inQuote = true; continue; }
+      if (ch === '"' && inQuote && line[i+1] === '"') { field += '"'; i++; continue; }
+      if (ch === '"' && inQuote) { inQuote = false; continue; }
+      if (ch === ',' && !inQuote) { fields.push(field.trim()); field = ''; continue; }
+      field += ch;
+    }
+    fields.push(field.trim());
+    return fields;
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/"/g,''));
   const leads = [];
 
-  // Propwire column name mappings
-  const colMap = {
-    address:     ['property address','address','situs address','street address','prop address'],
-    city:        ['city','situs city','property city'],
-    state:       ['state','situs state','property state'],
-    zip:         ['zip','zipcode','zip code','postal code'],
-    county:      ['county','county name'],
-    beds:        ['beds','bedrooms','bed count','# beds'],
-    baths:       ['baths','bathrooms','bath count','# baths'],
-    sqft:        ['sqft','square feet','living sqft','sq ft','square footage'],
-    year:        ['year built','yr built','year','build year'],
-    owner:       ['owner name','owner','taxpayer name','owner 1 last','owner full name'],
-    phone:       ['phone','phone number','owner phone','mobile phone'],
-    email:       ['email','owner email','email address'],
-    equity:      ['equity','estimated equity','est equity'],
-    estValue:    ['estimated value','est value','assessed value','market value','appraised value'],
-    lastSale:    ['last sale date','sale date','last sold date'],
-    lastSaleAmt: ['last sale amount','sale amount','last sold price','sale price'],
-    mortgage:    ['open mortgage','mortgage balance','loan balance'],
-    category:    ['lead type','property type','list type','distress type','status'],
-    vacant:      ['vacant','vacancy','occupancy'],
-    absentee:    ['absentee owner','absentee','owner occupied'],
-    mailAddress: ['mailing address','mail address','owner mailing address'],
-  };
-
-  function findCol(key) {
-    const candidates = colMap[key] || [key];
-    for (const c of candidates) {
-      const idx = headers.findIndex(h => h.includes(c) || c.includes(h));
-      if (idx !== -1) return idx;
+  // Exact Propwire column name mappings (from real export)
+  function col(names) {
+    for (const name of names) {
+      const idx = headers.indexOf(name.toLowerCase());
+      if (idx >= 0) return idx;
     }
     return -1;
   }
 
-  const cols = {};
-  for (const key of Object.keys(colMap)) {
-    cols[key] = findCol(key);
-  }
+  const C = {
+    address:     col(['address']),
+    city:        col(['city']),
+    state:       col(['state']),
+    zip:         col(['zip']),
+    county:      col(['county']),
+    sqft:        col(['living square feet','sqft','square feet']),
+    year:        col(['year built']),
+    beds:        col(['bedrooms','beds']),
+    baths:       col(['bathrooms','baths']),
+    owner1f:     col(['owner 1 first name']),
+    owner1l:     col(['owner 1 last name']),
+    owner2f:     col(['owner 2 first name']),
+    owner2l:     col(['owner 2 last name']),
+    ownerType:   col(['owner type']),
+    ownerOcc:    col(['owner occupied']),
+    vacant:      col(['vacant?','vacant']),
+    dom:         col(['days on market']),
+    listPrice:   col(['listing price']),
+    lastSaleDate:col(['last sale date']),
+    lastSaleAmt: col(['last sale amount']),
+    estValue:    col(['estimated value','market value']),
+    estEquity:   col(['estimated equity']),
+    estEquityPct:col(['estimated equity percent']),
+    mortgage:    col(['open mortgage balance']),
+    status:      col(['status']),
+    defaultAmt:  col(['default amount']),
+    auctionDate: col(['auction date']),
+    taxAmount:   col(['tax amount']),
+    phone:       col(['listing agent phone','phone']),
+    email:       col(['listing agent email','email']),
+    ownershipMo: col(['ownership length (months)']),
+  };
 
   for (const line of lines.slice(1)) {
     try {
-      // Handle quoted CSV fields
-      const fields = [];
-      let field = '', inQuote = false;
-      for (const char of line + ',') {
-        if (char === '"') { inQuote = !inQuote; continue; }
-        if (char === ',' && !inQuote) { fields.push(field.trim()); field = ''; continue; }
-        field += char;
-      }
+      const f = parseCSVLine(line);
+      const get = (idx) => idx >= 0 && idx < f.length ? f[idx].trim() : '';
+      const getNum = (idx) => { const v = get(idx); return parseFloat(v.replace(/[$,]/g,'')) || 0; };
 
-      const get = (key) => cols[key] >= 0 ? (fields[cols[key]] || '').trim() : '';
+      const addr = get(C.address);
+      const city = get(C.city);
+      const state = get(C.state);
+      const zip = get(C.zip);
+      if (!addr || addr.length < 3) continue;
 
-      const addr = get('address');
-      if (!addr || addr.length < 5) continue;
-
-      const city = get('city');
-      const state = get('state');
-      const zip = get('zip');
-      const county = get('county');
-      const beds = parseInt(get('beds')) || 0;
-      const baths = parseFloat(get('baths')) || 0;
-      const sqft = parseInt(get('sqft').replace(/,/g,'')) || 0;
-      const year = parseInt(get('year')) || 0;
-      const estValue = parseInt(get('estValue').replace(/[$,]/g,'')) || 0;
-      const equity = parseInt(get('equity').replace(/[$,]/g,'')) || 0;
-      const lastSaleAmt = parseInt(get('lastSaleAmt').replace(/[$,]/g,'')) || 0;
-      const owner = get('owner');
-      const phone = get('phone').replace(/[^0-9]/g,'');
-      const email = get('email');
-      const categoryRaw = get('category') || 'FSBO';
-      const isVacant = get('vacant').toLowerCase().includes('y') || get('vacant').toLowerCase().includes('vacant');
-      const isAbsentee = get('absentee').toLowerCase().includes('y') || get('absentee').toLowerCase().includes('absentee');
-
-      // Map Propwire categories to WholesaleOS categories
-      const category =
-        categoryRaw.toLowerCase().includes('pre') || categoryRaw.toLowerCase().includes('foreclosure') ? 'Pre-FC' :
-        categoryRaw.toLowerCase().includes('reo') || categoryRaw.toLowerCase().includes('bank') ? 'REO' :
-        categoryRaw.toLowerCase().includes('tax') || categoryRaw.toLowerCase().includes('delinquent') ? 'Tax Delinquent' :
-        categoryRaw.toLowerCase().includes('vacant') || isVacant ? 'Vacant Property' :
-        categoryRaw.toLowerCase().includes('absentee') || isAbsentee ? 'Absentee Owner' :
-        categoryRaw.toLowerCase().includes('probate') || categoryRaw.toLowerCase().includes('inherit') ? 'Probate' :
-        categoryRaw.toLowerCase().includes('land') ? 'Land Deal' :
-        categoryRaw.toLowerCase().includes('high equity') ? 'High Equity' :
-        categoryRaw.toLowerCase().includes('tired') ? 'Tired Landlord' :
-        'FSBO';
-
-      // Estimate ARV from assessed/market value
-      const arv = estValue || lastSaleAmt || 0;
-      // MAO formula: ARV × 0.70 - repairs
-      const estRepairs = sqft ? Math.round(sqft * (year < 1990 ? 45 : year < 2000 ? 30 : 20)) : 25000;
-      const mao = arv > 0 ? Math.round(arv * 0.70 - estRepairs) : 0;
-      const offer = mao > 0 ? Math.round(mao * 0.94) : 0;
-      const spread = arv > 0 && offer > 0 ? arv - offer - estRepairs : 0;
-
-      // Build Zillow and Redfin deep links
       const fullAddress = [addr, city, state, zip].filter(Boolean).join(', ');
-      const zillowUrl = `https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`;
-      const redfinUrl = `https://www.redfin.com/search?searchType=4&market=search&query=${encodeURIComponent(fullAddress)}`;
-      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${encodeURIComponent(fullAddress)}&key=`;
+      const county = get(C.county);
+      const beds = Math.round(getNum(C.beds));
+      const baths = getNum(C.baths);
+      const sqft = Math.round(getNum(C.sqft));
+      const year = Math.round(getNum(C.year));
+      const owner1 = [get(C.owner1f), get(C.owner1l)].filter(Boolean).join(' ');
+      const owner2 = [get(C.owner2f), get(C.owner2l)].filter(Boolean).join(' ');
+      const ownerName = owner1 || owner2 || '';
+      const isVacant = get(C.vacant) === '1' || get(C.vacant).toLowerCase() === 'true' || get(C.vacant).toLowerCase() === 'yes';
+      const isOwnerOcc = get(C.ownerOcc) === '1';
+      const isAbsentee = !isOwnerOcc && ownerName.length > 0;
+      const dom = Math.round(getNum(C.dom)) || 0;
+      const listPrice = getNum(C.listPrice);
+      const lastSaleDate = get(C.lastSaleDate);
+      const lastSaleAmt = getNum(C.lastSaleAmt);
+      const estValue = getNum(C.estValue);
+      const estEquity = getNum(C.estEquity);
+      const estEquityPct = getNum(C.estEquityPct);
+      const mortgage = getNum(C.mortgage);
+      const ownerType = get(C.ownerType); // INDIVIDUAL, COMPANY, etc.
+      const ownershipMonths = getNum(C.ownershipMo);
+      const isDefaulted = getNum(C.defaultAmt) > 0;
+      const hasAuction = get(C.auctionDate).length > 0;
+      const rawStatus = get(C.status);
 
-      // Format phone
-      const fPhone = phone.length === 10 ? `(${phone.slice(0,3)}) ${phone.slice(3,6)}-${phone.slice(6)}` :
-                     phone.length === 11 ? `(${phone.slice(1,4)}) ${phone.slice(4,7)}-${phone.slice(7)}` : phone;
+      // Classify lead type based on available signals
+      let category = 'FSBO';
+      if (hasAuction || isDefaulted) category = 'Pre-FC';
+      else if (rawStatus && rawStatus.toLowerCase().includes('auction')) category = 'Auction';
+      else if (rawStatus && rawStatus.toLowerCase().includes('default')) category = 'Pre-FC';
+      else if (isVacant) category = 'Vacant Property';
+      else if (isAbsentee && ownershipMonths > 120) category = 'Tired Landlord';
+      else if (isAbsentee) category = 'Absentee Owner';
+      else if (estEquityPct >= 50) category = 'High Equity';
+      else if (ownerType === 'COMPANY') category = 'REO';
+
+      // Deal math
+      const arv = estValue || listPrice || 0;
+      const estRepairs = sqft > 0
+        ? Math.round(sqft * (year < 1970 ? 55 : year < 1990 ? 38 : year < 2005 ? 22 : 15))
+        : Math.round(arv * 0.12);
+      const offer = arv > 0 ? Math.round(arv * 0.70 - estRepairs) : 0;
+      const spread = arv > 0 && offer > 0 ? Math.max(0, arv - offer - estRepairs) : 0;
+
+      // Links
+      const zillowUrl = `https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`;
+      const redfinUrl = `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`;
+
+      // Deal classification
+      let dealType = 'Review Needed';
+      if (category === 'Pre-FC' || hasAuction) dealType = 'Wholesale';
+      else if (spread > arv * 0.25) dealType = 'Wholesale';
+      else if (spread > arv * 0.15) dealType = 'Fix & Flip';
+      else if (estEquityPct >= 40) dealType = 'Buy & Hold Rental';
+      else if (category === 'Vacant Property') dealType = 'Wholesale';
 
       leads.push({
         id: uuidv4(),
-        address: [addr, city, state, zip].filter(Boolean).join(', '),
-        county: county || '',
-        state: state || '',
-        zip: zip || '',
+        address: fullAddress,
+        county, state, zip,
         beds, baths, sqft, year,
-        owner_name: owner || '',
-        phone: fPhone,
-        email: email || '',
-        category,
-        distressType: categoryRaw,
+        owner_name: ownerName,
+        phone: '',
+        email: '',
         isVacant, isAbsentee,
-        arv,
-        repairs: estRepairs,
-        mao,
-        offer,
-        spread: Math.max(0, spread),
+        ownerType,
+        ownershipMonths: Math.round(ownershipMonths),
+        category,
+        arv, repairs: estRepairs, offer, spread,
         fee_lo: spread > 0 ? Math.round(spread * 0.35) : 0,
         fee_hi: spread > 0 ? Math.round(spread * 0.55) : 0,
-        lastSalePrice: lastSaleAmt,
-        lastSaleDate: get('lastSale'),
-        equity,
+        mao: offer,
+        equity: Math.round(estEquity),
+        equityPct: Math.round(estEquityPct),
+        mortgage: Math.round(mortgage),
+        listPrice, lastSaleDate, lastSaleAmt,
         estValue,
-        dom: 0,
+        dom,
         status: 'New Lead',
         source: 'Propwire',
+        verified: true,
+        dealType,
         zillowUrl,
         redfinUrl,
-        streetViewUrl,
-        verified: true, // Propwire data is verified
-        dealType: spread > arv * 0.25 ? 'Wholesale' :
-                  category === 'Land Deal' ? 'Land Deal' : 'Review Needed',
         created: new Date().toISOString(),
         userId: 'admin',
       });
     } catch(e) {
-      // Skip malformed rows
+      // skip malformed rows silently
     }
   }
   return leads;
