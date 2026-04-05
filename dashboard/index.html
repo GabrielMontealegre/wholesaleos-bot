@@ -2506,7 +2506,7 @@ async function loadLeadsFromAPI() {
     ]);
     if (leadsRes.ok) {
       const data = await leadsRes.json();
-      if (data.leads && data.leads.length >= APP.leads.length) {
+      if (data.leads) {
         APP.leads = data.leads;
         save('leads', APP.leads);
         document.getElementById('nav-lead-count').textContent = APP.leads.length;
@@ -2538,19 +2538,18 @@ function renderImport() {
 
     <!-- PROPWIRE IMPORT -->
     <div style="background:linear-gradient(135deg,#0071e3,#5e5ce6);border-radius:14px;padding:20px;margin-bottom:20px;color:#fff">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <div style="font-size:28px">🏠</div>
         <div>
-          <div style="font-size:15px;font-weight:700">Propwire Import — Real Leads, Free</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.8)">157 million properties · All 50 states · Pre-foreclosures, vacants, tax delinquent, absentee owners</div>
+          <div style="font-size:15px;font-weight:700">Propwire Import — Your Primary Lead Source</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8)">157 million properties · Free · All 50 states · Already filtered for wholesale deals only</div>
         </div>
       </div>
       <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;line-height:2">
-        <strong>Steps to get real leads:</strong><br>
-        1. Go to <a href="https://propwire.com" target="_blank" style="color:#fff;text-decoration:underline">propwire.com</a> → Create free account (no credit card)<br>
-        2. Search Dallas County → Click Lead Types → select Pre-Foreclosure, Vacant, Tax Delinquent, Absentee Owner, High Equity<br>
-        3. Click the download/export button → save the CSV file<br>
-        4. Drop the CSV file in the box below — system handles everything automatically
+        <strong>Steps:</strong><br>
+        1. Go to <a href="https://propwire.com" target="_blank" style="color:#fff;text-decoration:underline">propwire.com</a> → free account → search your county<br>
+        2. Lead Types: Pre-Foreclosure, Vacant, Tax Delinquent, Absentee Owner, High Equity<br>
+        3. Export CSV → drop it below — system filters automatically, keeps only real wholesale deals
       </div>
       <div id="propwire-drop-zone"
         ondragover="event.preventDefault();this.style.background='rgba(255,255,255,0.25)'"
@@ -2560,52 +2559,41 @@ function renderImport() {
         onclick="document.getElementById('propwire-file-input').click()">
         <div style="font-size:32px;margin-bottom:8px">📁</div>
         <div style="font-size:13px;font-weight:600;margin-bottom:4px">Drop Propwire CSV here or click to browse</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7)">Supports any Propwire export — auto-detects all columns and calculates deal metrics</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7)">Auto-filters: keeps SFR/2-4 units, $60K-$800K, 15%+ equity or distress signal</div>
         <input type="file" id="propwire-file-input" accept=".csv" style="display:none" onchange="handlePropwireFile(this.files[0])">
       </div>
       <div id="propwire-status" style="margin-top:10px;font-size:12px;min-height:20px"></div>
     </div>
 
-    <!-- FREE AUTOMATED DATA SOURCES -->
+    <!-- AUTOMATED SOURCES -->
     <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
       <div style="font-size:14px;font-weight:700;margin-bottom:4px">🤖 Automated Free Data Sources</div>
-      <div style="font-size:11px;color:#86868b;margin-bottom:14px">Pull real data from government and public sources automatically</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+      <div style="font-size:11px;color:#86868b;margin-bottom:16px">Pull real listings automatically — runs daily at 7AM MST or click to run now</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px">
         ${[
-          {id:'hud',icon:'🏛',name:'HUD Homestore',desc:'Govt foreclosures · All 50 states',conf:'95%'},
-          {id:'cook',icon:'🌆',name:'Cook County IL',desc:'Pre-FC filings · Chicago',conf:'95%'},
-          {id:'wayne',icon:'🚗',name:'Wayne County MI',desc:'Tax auctions · Detroit',conf:'85%'},
-          {id:'clark',icon:'🎰',name:'Clark County NV',desc:'Distressed · Las Vegas',conf:'90%'},
-          {id:'maricopa',icon:'☀️',name:'Maricopa County AZ',desc:'Tax liens · Phoenix',conf:'80%'},
-          {id:'connected-investors',icon:'💼',name:'Connected Investors',desc:'Real cash buyers',conf:'75%'},
-          {id:'biggerpockets',icon:'💰',name:'BiggerPockets',desc:'Investor marketplace',conf:'70%'},
-        ].map(src => '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:18px;margin-bottom:4px">'+src.icon+'</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">'+src.name+'</div><div style="font-size:10px;color:#86868b;margin-bottom:2px">'+src.desc+'</div><div style="font-size:10px;color:#34c759;margin-bottom:8px">'+src.conf+' reliable</div><button class="btn btn-dark btn-sm" style="width:100%;font-size:10px" onclick="runDataSource(\''+src.id+'\')">Pull Now</button></div>').join('')}
+          {id:'redfin',icon:'🏡',name:'Redfin Stale Listings',desc:'Long DOM + price reduced deals in 7 major markets',badge:'Free · No auth needed',color:'#34c759'},
+          {id:'zillow',icon:'🏘',name:'Zillow FSBO Deals',desc:'For-sale-by-owner listings via ScraperAPI',badge:'Requires ScraperAPI key',color:'#ff9500'},
+          {id:'craigslist',icon:'📋',name:'Craigslist Housing',desc:'FSBO ads across 10 cities — public JSON API',badge:'Free · Always works',color:'#34c759'},
+          {id:'connected-investors',icon:'💼',name:'Connected Investors',desc:'Real cash buyer profiles for your market',badge:'Free · Buyer source',color:'#0071e3'},
+        ].map(src => '<div style="background:#f5f5f7;border-radius:12px;padding:14px"><div style="font-size:22px;margin-bottom:6px">'+src.icon+'</div><div style="font-size:12px;font-weight:700;margin-bottom:3px">'+src.name+'</div><div style="font-size:10px;color:#86868b;margin-bottom:6px;line-height:1.4">'+src.desc+'</div><div style="font-size:9px;font-weight:600;color:'+src.color+';margin-bottom:10px">'+src.badge+'</div><button class="btn btn-dark btn-sm" style="width:100%;font-size:11px" onclick="runDataSource(\''+src.id+'\')">▶ Pull Now</button></div>').join('')}
       </div>
-      <button class="btn btn-dark" style="width:100%;margin-bottom:6px" onclick="runAllDataSources()">🚀 Run All Sources At Once</button>
-      <div id="datasource-status" style="font-size:11px;color:#86868b;min-height:20px;padding:4px 0"></div>
+      <button class="btn btn-dark" style="width:100%;margin-bottom:8px;font-size:13px" onclick="runAllDataSources()">🚀 Run All Sources At Once</button>
+      <div id="datasource-status" style="font-size:11px;color:#86868b;min-height:18px;padding:2px 0"></div>
     </div>
 
-    <!-- DELETE FAKE DATA -->
-    <div style="background:#fff3e0;border:1px solid #ff9500;border-radius:12px;padding:16px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:4px">🗑 Remove AI-Generated Fake Data</div>
-      <div style="font-size:11px;color:#3a3a3c;margin-bottom:12px">Your current leads and buyers were generated by AI and are not real. Delete them before importing real data from Propwire.</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeLeads()">🗑 Delete All Fake Leads (${APP.leads.filter(l=>!l.source||l.source==='AI Generated'||l.source.includes('AI Generated')).length} AI leads)</button>
-        <button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="clearFakeBuyers()">🗑 Delete All Fake Buyers (${APP.buyers.filter(b=>!b.source||!['Craigslist','Connected Investors','BiggerPockets','Propwire','HUD Homestore','Manual'].includes(b.source)).length} AI buyers)</button>
+    <!-- OTHER CSV IMPORT -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">📋 Import Other CSV / Excel Files</div>
+      <div style="font-size:11px;color:#86868b;margin-bottom:14px">BatchLeads, PropStream, or any real estate platform export</div>
+      <div style="background:#f5f5f7;border:2px dashed #d1d1d6;border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="document.getElementById('csv-import-input').click()">
+        <div style="font-size:24px;margin-bottom:6px">📎</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px">Drop any CSV or Excel file here</div>
+        <div style="font-size:10px;color:#86868b">Auto-detects BatchLeads, PropStream, and custom column layouts</div>
+        <input type="file" id="csv-import-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="processImportFile(this.files[0])">
       </div>
+      <div id="csv-import-status" style="margin-top:8px;font-size:11px;color:#86868b;min-height:16px"></div>
     </div>
 
-    <!-- EXISTING CSV IMPORT -->
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px">📋 Import Other CSV / Excel Files</div>
-    <div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
-      <div style="font-size:20px">💡</div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:#1a73e8;margin-bottom:3px">Import from BatchLeads, PropStream, or any CSV</div>
-        <div style="font-size:12px;color:#3a3a3c;line-height:1.7">
-          Drop any CSV or Excel file below — system auto-maps columns from BatchLeads, PropStream, or any real estate platform
-        </div>
-      </div>
-    </div>
   </div>
   <div style="max-width:800px">
   `;
@@ -4929,34 +4917,110 @@ function showMatchTab(tab) {
 //  GMAIL TAB
 // ============================================================
 function renderGmail() {
-  return '<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:220px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">' +
-    // Left sidebar: folders + compose
-    '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">' +
-    '<div style="padding:14px">' +
-    '<button class="btn btn-dark" style="width:100%;margin-bottom:12px" onclick="openGmailCompose()">+ Compose</button>' +
-    (function(){var fs=['Inbox','Sent','Drafts','Starred'];return fs.map(function(f,i){var s='padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;font-weight:'+(i===0?'600':'400')+';color:'+(i===0?'#0071e3':'#3a3a3c')+';background:'+(i===0?'#e8f0fe':'transparent');return '<div style="'+s+'" onclick="loadGmailFolder(this.dataset.folder,this)" data-folder="'+f.toLowerCase()+'">'+f+'</div>';}).join('');})() +
-    '</div>' +
-    '<div style="margin-top:auto;padding:10px;margin:10px;background:#e6f9ed;border:1px solid #34c759;border-radius:8px;font-size:10px;color:#1b8f3d" id="gmail-status-mini">Checking connection...</div>' +
-    '</div>' +
-    // Center: compact email list
-    '<div style="display:grid;grid-template-columns:300px 1fr;min-height:0">' +
-    '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;min-height:0">' +
-    '<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:600;color:#86868b;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">' +
-    '<span id="gmail-folder-label">INBOX</span>' +
-    '<button class="btn btn-outline btn-sm" onclick="loadGmailEmails()">Refresh</button></div>' +
-    '<div id="gmail-emails" style="overflow-y:auto;flex:1"></div>' +
-    '</div>' +
-    // Right: email thread/reader
-    '<div style="display:flex;flex-direction:column;min-height:0;overflow-y:auto">' +
-    '<div id="gmail-thread" style="padding:20px;height:100%;box-sizing:border-box">' +
-    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#86868b">' +
-    '<div style="font-size:48px;margin-bottom:12px">&#128233;</div>' +
-    '<div style="font-size:14px;font-weight:600;margin-bottom:4px">No email selected</div>' +
-    '<div style="font-size:12px">Click any email in the list to read it here</div>' +
-    '</div></div>' +
-    '</div>' +
-    '</div>' +
-    '</div>';
+  const templates = APP._emailTemplates || [
+    {id:'t1', name:'Cash Offer Introduction', subject:'Cash Offer for Your Property at {address}', body:'Hi {owner},\n\nMy name is Gabriel with Montsan REI. I came across your property at {address} and would like to make you a cash offer.\n\nWe can close in 14 days or on your timeline. No repairs needed, no realtor fees.\n\nWould you be open to a quick call to discuss? My offer would be around {offer}.\n\nBest,\nGabriel Montealegre\nMontsan REI\n(+52) Los Cabos, MX', category:'Outreach'},
+    {id:'t2', name:'Follow-Up After No Response', subject:'Following up — {address}', body:'Hi {owner},\n\nI reached out last week about your property at {address}. I wanted to follow up in case my message got lost.\n\nWe are still very interested and can move quickly with a cash offer. No obligations whatsoever.\n\nWould 10 minutes this week work for a quick call?\n\nBest,\nGabriel', category:'Follow-Up'},
+    {id:'t3', name:'Pre-Foreclosure Outreach', subject:'I can help you avoid foreclosure — {address}', body:'Hi {owner},\n\nI understand you may be going through a difficult time with your property at {address}. I would like to help.\n\nWe buy houses for cash and can close quickly — often in time to stop foreclosure proceedings. There are no fees, no repairs required, and no pressure.\n\nPlease call or text me at your convenience.\n\nGabriel Montealegre | Montsan REI', category:'Outreach'},
+    {id:'t4', name:'Wholesale Deal to Buyer', subject:'New Deal Available — {address} | {spread} Spread', body:'Hi {buyer},\n\nI have a new wholesale deal available and thought of you based on your buy box.\n\nProperty: {address}\nARV: {arv}\nOffer Price: {offer}\nEstimated Repairs: {repairs}\nPotential Spread: {spread}\n\nThis will not last long. Reply or call me to lock it in.\n\nGabriel | Montsan REI', category:'Buyers'},
+    {id:'t5', name:'Contract Sent Confirmation', subject:'Contract Sent — {address}', body:'Hi {owner},\n\nAs discussed, I have sent the purchase contract for {address} to your email.\n\nPlease review and sign at your earliest convenience. If you have any questions, I am available by phone or email.\n\nThank you for the opportunity. Looking forward to closing this with you.\n\nGabriel Montealegre\nMontsan REI', category:'Contracts'},
+  ];
+
+  const folders = [
+    {id:'inbox', icon:'📥', label:'Inbox'},
+    {id:'sent', icon:'📤', label:'Sent'},
+    {id:'drafts', icon:'📝', label:'Drafts'},
+    {id:'templates', icon:'📋', label:'Templates'},
+    {id:'starred', icon:'⭐', label:'Starred'},
+  ];
+
+  const activeFolder = APP._emailFolder || 'inbox';
+  const showCompose = APP._emailCompose || false;
+
+  return `<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:200px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">
+
+    <!-- LEFT SIDEBAR -->
+    <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#fafafa">
+      <div style="padding:16px">
+        <button class="btn btn-dark" style="width:100%;font-size:13px;padding:10px" onclick="openEmailCompose()">✏️ Compose</button>
+      </div>
+      <div style="flex:1;overflow-y:auto">
+        ${folders.map(f => `<div onclick="APP._emailFolder='${f.id}';render()" style="padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:${f.id===activeFolder?'700':'500'};background:${f.id===activeFolder?'#e8f0fe':'transparent'};color:${f.id===activeFolder?'#0071e3':'#3a3a3c'};border-radius:8px;margin:2px 8px">${f.icon} ${f.label}</div>`).join('')}
+        <div style="padding:16px 16px 8px;font-size:10px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:0.5px">Templates</div>
+        ${templates.map(t => `<div onclick="useTemplate('${t.id}')" style="padding:8px 16px;cursor:pointer;font-size:11px;color:#3a3a3c;border-radius:8px;margin:1px 8px" title="${t.name}">📋 ${t.name.length > 22 ? t.name.slice(0,22)+'...' : t.name}</div>`).join('')}
+        <div onclick="openTemplateEditor()" style="padding:8px 16px;cursor:pointer;font-size:11px;color:#0071e3;border-radius:8px;margin:1px 8px">+ New Template</div>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #e5e5ea">
+        <div id="gmail-status-small" style="font-size:10px;color:#86868b">Checking Gmail...</div>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div style="display:flex;flex-direction:column;overflow:hidden">
+
+      ${showCompose ? `
+      <!-- COMPOSE PANEL -->
+      <div style="flex:1;display:flex;flex-direction:column;padding:0">
+        <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
+          <button onclick="APP._emailCompose=false;render()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#86868b">←</button>
+          <div style="font-size:14px;font-weight:700">New Email</div>
+          <div style="flex:1"></div>
+          <button class="btn btn-sm" style="background:#34c759;color:#fff" onclick="sendEmailFromCompose()">📤 Send</button>
+          <button class="btn btn-outline btn-sm" onclick="saveEmailDraft()">Save Draft</button>
+        </div>
+        <div style="padding:12px;border-bottom:1px solid #f2f2f7">
+          <input id="email-to" placeholder="To: seller@email.com" style="width:100%;border:none;outline:none;font-size:13px;padding:6px 0" value="${APP._emailDraft?.to||''}">
+        </div>
+        <div style="padding:12px;border-bottom:1px solid #f2f2f7">
+          <input id="email-subject" placeholder="Subject" style="width:100%;border:none;outline:none;font-size:13px;padding:6px 0;font-weight:600" value="${APP._emailDraft?.subject||''}">
+        </div>
+        <div style="padding:8px 12px;border-bottom:1px solid #f2f2f7;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="insertTemplate()">📋 Template</button>
+          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="insertLeadData()">🏠 Insert Lead Data</button>
+          <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="generateAIEmail()">🤖 AI Draft</button>
+          <label class="btn btn-outline btn-sm" style="font-size:10px;cursor:pointer">📎 Attach <input type="file" style="display:none" onchange="handleEmailAttachment(this.files)"></label>
+          <div id="email-attachments" style="font-size:10px;color:#86868b;padding:4px 0"></div>
+        </div>
+        <textarea id="email-body" style="flex:1;border:none;outline:none;padding:16px;font-size:13px;line-height:1.7;resize:none;font-family:inherit" placeholder="Write your message...">${APP._emailDraft?.body||''}</textarea>
+      </div>
+      ` : `
+      <!-- EMAIL LIST / TEMPLATE LIST -->
+      <div style="flex:1;overflow-y:auto">
+        ${activeFolder === 'templates' ? `
+        <!-- TEMPLATES VIEW -->
+        <div style="padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-size:14px;font-weight:700">Email Templates</div>
+            <button class="btn btn-dark btn-sm" onclick="openTemplateEditor()">+ New Template</button>
+          </div>
+          ${templates.map(t => `
+          <div style="background:#f5f5f7;border-radius:12px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+              <div>
+                <div style="font-size:12px;font-weight:700">${t.name}</div>
+                <div style="font-size:10px;color:#86868b">${t.category} · Subject: ${t.subject.slice(0,40)}...</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-dark btn-sm" style="font-size:10px" onclick="useTemplate('${t.id}')">Use</button>
+                <button class="btn btn-outline btn-sm" style="font-size:10px" onclick="editTemplate('${t.id}')">Edit</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:#3a3a3c;background:#fff;border-radius:8px;padding:8px;max-height:60px;overflow:hidden">${t.body.slice(0,150)}...</div>
+          </div>`).join('')}
+        </div>
+        ` : `
+        <!-- INBOX/SENT/DRAFTS VIEW -->
+        <div id="email-list-content" style="padding:12px">
+          <div style="text-align:center;padding:40px;color:#86868b">
+            <div style="font-size:32px;margin-bottom:12px">${activeFolder==='inbox'?'📥':activeFolder==='sent'?'📤':'📝'}</div>
+            <div style="font-weight:600;margin-bottom:6px">Loading ${activeFolder}...</div>
+          </div>
+        </div>
+        `}
+      </div>
+      `}
+
+    </div>
+  </div>`;
 }
 function showGmailSetup() {
   buildModalSimple('Connect Gmail to Dashboard',
@@ -5259,16 +5323,14 @@ function handlePropwireDrop(event) {
 function handlePropwireFile(file) {
   if (!file) return;
   const statusEl = document.getElementById('propwire-status');
-  const kb = (file.size/1024).toFixed(0);
-  const mb = (file.size/1024/1024).toFixed(1);
-  const sizeStr = file.size > 1024*1024 ? mb + ' MB' : kb + ' KB';
+  const sizeStr = file.size > 1048576 ? (file.size/1048576).toFixed(1)+' MB' : (file.size/1024).toFixed(0)+' KB';
   if (statusEl) statusEl.innerHTML = '<span style="color:#fff">⏳ Reading ' + file.name + ' (' + sizeStr + ')...</span>';
 
   const reader = new FileReader();
   reader.onload = async function(e) {
     const csvText = e.target.result;
-    const rowCount = csvText.split('\n').length - 1;
-    if (statusEl) statusEl.innerHTML = '<span style="color:#fff">🔄 Processing ' + rowCount.toLocaleString() + ' rows... this may take a moment for large files</span>';
+    const rowCount = (csvText.match(/\n/g)||[]).length;
+    if (statusEl) statusEl.innerHTML = '<span style="color:#fff">🔄 Filtering ' + rowCount.toLocaleString() + ' rows — keeping only real wholesale deals...</span>';
     try {
       const res = await fetch('/api/import/propwire', {
         method: 'POST',
@@ -5277,17 +5339,23 @@ function handlePropwireFile(file) {
       });
       const data = await res.json();
       if (data.ok) {
-        const msg = '✅ ' + data.added.toLocaleString() + ' leads imported! (' + data.parsed.toLocaleString() + ' rows, ' + (data.skipped||0) + ' duplicates skipped)';
-        if (statusEl) statusEl.innerHTML = '<span style="color:#a8ff8b">' + msg + '</span>';
-        if (data.sample && data.sample.length && statusEl) {
-          statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.8)">✓ ' + data.sample.map(function(l){return (l.address||'').split(',')[0];}).join(' · ') + '</span>';
+        const msg = '✅ ' + data.added.toLocaleString() + ' wholesale deals imported! ' +
+          '(' + data.parsed.toLocaleString() + ' rows → ' + data.filtered.toLocaleString() + ' passed filter → ' + data.added.toLocaleString() + ' added' +
+          (data.deleted_stale > 0 ? ', ' + data.deleted_stale + ' stale leads cleared' : '') + ')';
+        if (statusEl) {
+          statusEl.innerHTML = '<span style="color:#a8ff8b">' + msg + '</span>';
+          if (data.sample && data.sample.length) {
+            statusEl.innerHTML += '<br><span style="font-size:10px;color:rgba(255,255,255,0.8)">Sample: ' +
+              data.sample.map(function(l){ return (l.address||'').split(',')[0] + ' — $' + Math.round((l.arv||0)/1000) + 'K ARV, $' + Math.round((l.spread||0)/1000) + 'K spread'; }).join(' · ') + '</span>';
+          }
         }
-        toast('✅ ' + data.added.toLocaleString() + ' real leads imported from Propwire!', 'success');
+        toast('✅ ' + data.added.toLocaleString() + ' real wholesale deals imported!', 'success');
         await loadLeadsFromAPI();
+        updateLeadBadge();
         updateSidebarStats();
         render();
       } else {
-        if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ ' + (data.error||'Import failed — make sure this is a Propwire CSV export') + '</span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:#ff6b6b">❌ ' + (data.error||'Import failed') + '</span>';
         toast('Import failed: ' + (data.error||'Check file format'), 'error');
       }
     } catch(e) {
@@ -5598,6 +5666,200 @@ function toggleGroupSelection(group, checked) {
   });
 
   updateBulkToolbar();
+}
+
+
+function updateLeadBadge() {
+  var badge = document.querySelector('.nav-item[onclick*="leads"] .badge, #lead-count-badge, .sidebar-badge');
+  // Update all possible badge locations
+  document.querySelectorAll('[id*="lead-count"], [id*="leads-badge"]').forEach(function(el) {
+    el.textContent = APP.leads.length;
+  });
+  // Update the nav badge specifically
+  var navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(function(item) {
+    if ((item.getAttribute('onclick')||'').includes("'leads'") || (item.getAttribute('onclick')||'').includes('"leads"')) {
+      var existingBadge = item.querySelector('.nav-badge, .badge');
+      if (existingBadge) {
+        existingBadge.textContent = APP.leads.length;
+      }
+    }
+  });
+  // Update sidebar stats
+  var leadsEl = document.querySelector('.stat-leads, #sidebar-leads');
+  if (leadsEl) leadsEl.textContent = APP.leads.length.toLocaleString();
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  EMAIL PLATFORM FUNCTIONS
+// ═══════════════════════════════════════════════════════
+
+if (!APP._emailTemplates) APP._emailTemplates = [];
+if (!APP._emailDraft) APP._emailDraft = { to:'', subject:'', body:'' };
+if (!APP._emailAttachments) APP._emailAttachments = [];
+
+function openEmailCompose(prefill) {
+  APP._emailCompose = true;
+  APP._emailDraft = prefill || { to:'', subject:'', body:'' };
+  APP._emailAttachments = [];
+  if (APP.page !== 'gmail') { APP.page = 'gmail'; }
+  render();
+  setTimeout(function() {
+    var bodyEl = document.getElementById('email-body');
+    if (bodyEl) bodyEl.focus();
+  }, 100);
+}
+
+function composeToLead(leadId) {
+  var lead = APP.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var q = computeLeadQuality(lead);
+  openEmailCompose({
+    to: lead.email || '',
+    subject: 'Cash Offer for Your Property at ' + (lead.address||'').split(',')[0],
+    body: 'Hi ' + (lead.owner_name || 'there') + ',\n\nMy name is Gabriel with Montsan REI. I am interested in your property at ' + (lead.address||'') + ' and would like to make you a cash offer.\n\nI can offer approximately ' + (lead.offer ? '$' + lead.offer.toLocaleString() : 'a competitive cash price') + '. We close in 14 days, no repairs, no agent fees.\n\nWould you be open to a quick call?\n\nBest,\nGabriel Montealegre\nMontsan REI',
+  });
+}
+
+function useTemplate(templateId) {
+  var templates = APP._emailTemplates || [];
+  var builtin = [
+    {id:'t1',name:'Cash Offer Introduction',subject:'Cash Offer for Your Property at {address}',body:'Hi {owner},\n\nMy name is Gabriel with Montsan REI. I came across your property at {address} and would like to make you a cash offer.\n\nWe can close in 14 days or on your timeline. No repairs needed, no realtor fees.\n\nMy offer: {offer}\n\nWould you be open to a quick call?\n\nBest,\nGabriel Montealegre\nMontsan REI'},
+    {id:'t2',name:'Follow-Up After No Response',subject:'Following up — {address}',body:'Hi {owner},\n\nFollowing up on my message about {address}. Still very interested and can move quickly.\n\nNo pressure — just wanted to make sure you received my note.\n\nBest, Gabriel'},
+    {id:'t3',name:'Pre-Foreclosure Outreach',subject:'I can help you avoid foreclosure — {address}',body:'Hi {owner},\n\nI understand you may be in a difficult situation with {address}. We buy houses for cash and can close quickly to help stop foreclosure.\n\nNo fees, no repairs, no pressure.\n\nGabriel Montealegre | Montsan REI'},
+    {id:'t4',name:'Wholesale Deal to Buyer',subject:'New Deal — {address} | {spread} Spread',body:'Hi {buyer},\n\nNew deal available:\n\nProperty: {address}\nARV: {arv}\nOffer: {offer}\nRepairs: {repairs}\nSpread: {spread}\n\nReply to lock it in.\n\nGabriel | Montsan REI'},
+    {id:'t5',name:'Contract Sent Confirmation',subject:'Contract Sent — {address}',body:'Hi {owner},\n\nThe purchase contract for {address} has been sent to your email. Please review and sign at your convenience.\n\nQuestions? Call or email me anytime.\n\nGabriel Montealegre | Montsan REI'},
+  ];
+  var all = builtin.concat(templates);
+  var t = all.find(function(x){ return x.id === templateId; });
+  if (!t) return;
+
+  // Fill in lead data if available
+  var lead = APP._currentLead ? APP.leads.find(function(l){ return l.id === APP._currentLead; }) : null;
+  var body = t.body;
+  var subject = t.subject;
+  if (lead) {
+    var replacements = {
+      '{address}': (lead.address||'').split(',')[0],
+      '{owner}': lead.owner_name || 'there',
+      '{offer}': lead.offer ? '$' + lead.offer.toLocaleString() : 'competitive price',
+      '{arv}': lead.arv ? '$' + lead.arv.toLocaleString() : '',
+      '{repairs}': lead.repairs ? '$' + lead.repairs.toLocaleString() : '',
+      '{spread}': lead.spread ? '$' + lead.spread.toLocaleString() : '',
+    };
+    Object.keys(replacements).forEach(function(k) {
+      body = body.split(k).join(replacements[k]);
+      subject = subject.split(k).join(replacements[k]);
+    });
+  }
+
+  openEmailCompose({ to: lead ? (lead.email||'') : '', subject, body });
+}
+
+function insertTemplate() {
+  var names = ['Cash Offer Introduction','Follow-Up After No Response','Pre-Foreclosure Outreach','Wholesale Deal to Buyer','Contract Sent Confirmation'];
+  var ids = ['t1','t2','t3','t4','t5'];
+  var choice = prompt('Choose template (1-5):\n' + names.map(function(n,i){ return (i+1)+'. '+n; }).join('\n'));
+  var idx = parseInt(choice) - 1;
+  if (idx >= 0 && idx < ids.length) useTemplate(ids[idx]);
+}
+
+function insertLeadData() {
+  var lead = APP._currentLead ? APP.leads.find(function(l){ return l.id === APP._currentLead; }) : APP.leads[0];
+  if (!lead) { toast('No lead selected', 'error'); return; }
+  var bodyEl = document.getElementById('email-body');
+  if (!bodyEl) return;
+  var snippet = '\n\n--- Property Details ---\nAddress: ' + (lead.address||'') + '\nARV: $' + ((lead.arv||0).toLocaleString()) + '\nOffer: $' + ((lead.offer||0).toLocaleString()) + '\nRepairs: $' + ((lead.repairs||0).toLocaleString()) + '\nSpread: $' + ((lead.spread||0).toLocaleString()) + '\n';
+  bodyEl.value += snippet;
+}
+
+async function generateAIEmail() {
+  var lead = APP._currentLead ? APP.leads.find(function(l){ return l.id === APP._currentLead; }) : null;
+  var bodyEl = document.getElementById('email-body');
+  if (!bodyEl) return;
+  bodyEl.value = 'Generating AI email...';
+  try {
+    var res = await fetch('/api/ai/generate-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ lead, type: 'seller_outreach' })
+    });
+    var data = await res.json();
+    if (data.body) {
+      bodyEl.value = data.body;
+      var subjEl = document.getElementById('email-subject');
+      if (subjEl && data.subject) subjEl.value = data.subject;
+    }
+  } catch(e) {
+    bodyEl.value = '';
+    toast('AI email generation failed: ' + e.message, 'error');
+  }
+}
+
+function handleEmailAttachment(files) {
+  if (!files || !files.length) return;
+  if (!APP._emailAttachments) APP._emailAttachments = [];
+  var attachEl = document.getElementById('email-attachments');
+  for (var i = 0; i < files.length; i++) {
+    APP._emailAttachments.push(files[i]);
+  }
+  if (attachEl) {
+    attachEl.innerHTML = APP._emailAttachments.map(function(f){ return '📎 ' + f.name; }).join(' · ');
+  }
+}
+
+async function sendEmailFromCompose() {
+  var to = document.getElementById('email-to')?.value?.trim();
+  var subject = document.getElementById('email-subject')?.value?.trim();
+  var body = document.getElementById('email-body')?.value?.trim();
+  if (!to || !subject || !body) { toast('Fill in To, Subject and Body first', 'error'); return; }
+
+  try {
+    var res = await fetch('/api/gmail/send', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ to, subject, body })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      toast('✅ Email sent to ' + to, 'success');
+      APP._emailCompose = false;
+      APP._emailDraft = { to:'', subject:'', body:'' };
+      render();
+    } else {
+      toast('Failed: ' + (data.error||'Check Gmail connection'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function saveEmailDraft() {
+  APP._emailDraft = {
+    to: document.getElementById('email-to')?.value || '',
+    subject: document.getElementById('email-subject')?.value || '',
+    body: document.getElementById('email-body')?.value || '',
+  };
+  APP._emailFolder = 'drafts';
+  APP._emailCompose = false;
+  toast('Draft saved', 'success');
+  render();
+}
+
+function openTemplateEditor(id) {
+  var name = prompt('Template name:');
+  if (!name) return;
+  var subject = prompt('Email subject (use {address}, {owner}, {offer} as placeholders):');
+  if (!subject) return;
+  var body = prompt('Email body:');
+  if (!body) return;
+  if (!APP._emailTemplates) APP._emailTemplates = [];
+  APP._emailTemplates.push({ id: 'custom_' + Date.now(), name, subject, body, category: 'Custom' });
+  toast('Template saved', 'success');
+  render();
+}
+
+function editTemplate(id) {
+  openTemplateEditor(id);
 }
 
 </script>
