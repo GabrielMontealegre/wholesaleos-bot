@@ -897,7 +897,7 @@ function renderLeads() {
 
   return `<div class="split-view">
     <div class="split-left" style="overflow-y:auto">${leftPanel}</div>
-    <div class="split-right" id="lead-detail-panel">${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>'}</div>
+    <div class="split-right" id="lead-detail-panel">${selected ? (function(){ try { return renderLeadDetail(selected); } catch(e) { return '<div class="detail-panel" style="padding:20px;color:#ff3b30"><strong>Error loading lead: ' + e.message + '</strong><br><pre style="font-size:10px;margin-top:8px">' + (e.stack||'').slice(0,300) + '</pre></div>'; } })() : '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>'}</div>
   </div>`;
 }
 
