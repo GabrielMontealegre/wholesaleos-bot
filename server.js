@@ -1321,28 +1321,49 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
     const csvText = req.body;
     if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
 
-    const leads = datasources.parsePropwireCSV(csvText);
-    if (!leads.length) return res.json({ ok: false, error: 'No leads parsed — check your CSV format. Make sure it is a Propwire export.' });
+    const result = datasources.parsePropwireCSV(csvText);
+    const { leads, stats } = result;
 
-    // Smarter dedup: normalize address for comparison
-    const existing = db.getLeads();
+    if (!leads || !leads.length) return res.json({
+      ok: false,
+      error: `No wholesale deals found in this file. Processed ${stats.total} rows — all were filtered out (${stats.skipped_type} wrong property type, ${stats.skipped_price} outside price range).`
+    });
+
+    // Delete all existing Propwire leads before reimporting to avoid stale bad data
+    const dbData = db.readDB();
+    const before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(l => l.source !== 'Propwire');
+    const deleted = before - dbData.leads.length;
+
+    // Dedup new leads by normalized address
     const normalize = (s) => (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    const existingAddrs = new Set(existing.map(l => normalize(l.address)));
-
-    let added = 0, skipped = 0;
+    const existingAddrs = new Set(dbData.leads.map(l => normalize(l.address)));
+    let added = 0, dupes = 0;
     for (const lead of leads) {
       const key = normalize(lead.address);
       if (key.length > 5 && !existingAddrs.has(key)) {
-        db.addLead(lead);
+        dbData.leads.push(lead);
         existingAddrs.add(key);
         added++;
-      } else {
-        skipped++;
-      }
+      } else { dupes++; }
     }
 
-    db.addNotification('deal', `${added} real leads imported from Propwire`, `${leads.length} rows processed, ${skipped} duplicates skipped`);
-    res.json({ ok: true, parsed: leads.length, added, skipped, sample: leads.slice(0,3).map(l=>({address:l.address,category:l.category,arv:l.arv})) });
+    db.writeDB(dbData);
+    db.addNotification('deal',
+      `${added} real wholesale leads imported from Propwire`,
+      `${stats.total} rows → ${stats.kept} passed filter → ${added} imported. Removed: ${stats.skipped_type} wrong type, ${stats.skipped_price} bad price/spread, ${deleted} stale leads cleared.`
+    );
+
+    res.json({
+      ok: true,
+      parsed: stats.total,
+      filtered: stats.kept,
+      added,
+      dupes,
+      deleted_stale: deleted,
+      stats,
+      sample: leads.slice(0,3).map(l => ({ address: l.address, category: l.category, arv: l.arv, spread: l.spread }))
+    });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -1392,13 +1413,13 @@ app.post('/api/datasources/:source', async (req, res) => {
     setImmediate(async () => {
       try {
         let leads = [], buyers = [];
-        if (source === 'hud') leads = await datasources.scrapeHUDHomestore(states);
-        else if (source === 'cook') leads = await datasources.getCookCountyForeclosures();
-        else if (source === 'wayne') leads = await datasources.getWayneCountyAuctions();
-        else if (source === 'clark') leads = await datasources.getClarkCountyProperties();
-        else if (source === 'maricopa') leads = await datasources.getMaricopaForeclosures();
+        if (source === 'redfin') leads = await datasources.scrapeRedfin();
+        else if (source === 'zillow') leads = await datasources.scrapeZillowDeals();
+        else if (source === 'craigslist') leads = await datasources.scrapeCraigslistDeals();
         else if (source === 'connected-investors') buyers = await datasources.scrapeConnectedInvestors(states);
-        else if (source === 'biggerpockets') buyers = await datasources.scrapeBiggerPockets();
+        // Legacy names kept for compatibility
+        else if (source === 'hud' || source === 'cook' || source === 'wayne' || source === 'clark' || source === 'maricopa') leads = await datasources.scrapeRedfin();
+        else if (source === 'biggerpockets') buyers = await datasources.scrapeConnectedInvestors(states);
 
         const dbData = db.readDB();
         if (!dbData.reviewQueue) dbData.reviewQueue = [];
