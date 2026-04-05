@@ -303,6 +303,8 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('leads',this)"><span class="nav-icon">📋</span>Leads<span class="nav-badge" id="nav-lead-count">0</span></div>
       <div class="nav-item" onclick="navigate('pipeline',this)"><span class="nav-icon">📊</span>Pipeline</div>
       <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Email</div>
+      <div class="nav-item" onclick="navigate('sms',this)"><span class="nav-icon">💬</span>SMS<span class="nav-badge green" id="nav-sms-count" style="display:none">0</span></div>
+      <div class="nav-item" onclick="navigate('dialer',this)"><span class="nav-icon">📞</span>Dialer</div>
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-section">Outreach</div>
       <div class="nav-item" onclick="navigate('followups',this)"><span class="nav-icon">🔔</span>Follow-Ups<span class="nav-badge green" id="nav-fu-count">0</span></div>
@@ -620,6 +622,8 @@ function render() {
     users: function() { return renderUsersPanel(); },
     matching: renderMatching,
     gmail: renderGmail,
+    sms: renderSMS,
+    dialer: renderDialer,
     apis: renderAPIPanel,
     automation: renderAutomation,
     contracts_lib: renderContractsLib,
@@ -818,10 +822,8 @@ function renderLeads() {
       (l.phone||'').includes(q)
     );
   }
-  const statusFilter = document.getElementById('status-filter')?.value || '';
-  const catFilter = document.getElementById('cat-filter')?.value || '';
-  if (statusFilter) leads = leads.filter(l => l.status === statusFilter);
-  if (catFilter) leads = leads.filter(l => l.category === catFilter);
+  // Apply all filters
+  leads = applyLeadsFilter(leads);
 
   const viewMode = APP.leadsView || 'hierarchy';
   const selected = APP.selectedLead ? APP.leads.find(l => l.id === APP.selectedLead) : null;
@@ -833,7 +835,7 @@ function renderLeads() {
       <button class="btn btn-sm ${viewMode==='table'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='table';render()">📋 Table</button>
       <button class="btn btn-sm ${viewMode==='cards'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='cards';render()">🃏 Cards</button>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select class="filter-select" id="status-filter" onchange="filterLeads();updateFilterLabel(this,'All Status')">
         <option value="">All Status</option>
         <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
@@ -842,13 +844,34 @@ function renderLeads() {
       </select>
       <select class="filter-select" id="cat-filter" onchange="filterLeads();updateFilterLabel(this,'All Categories')">
         <option value="">All Categories</option>
-        <option>Pre-FC</option><option>REO</option><option>Long DOM</option>
-        <option>FSBO</option><option>Probate</option><option>Tax Delinquent</option>
-        <option>Land — Development Opportunity</option>
+        <option>Pre-FC</option><option>REO</option><option>Vacant Property</option>
+        <option>Absentee Owner</option><option>Tax Delinquent</option><option>High Equity</option>
+        <option>Tired Landlord</option><option>Long-Term Owner</option><option>FSBO</option>
+        <option>Probate</option><option>Auction</option>
         <option value="">— Clear Filter —</option>
       </select>
-      <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add</button>
-      <button class="btn btn-outline btn-sm" onclick="navigate('import',document.querySelector('[onclick*=import]'))">📥 Import</button>
+      <select class="filter-select" id="deal-filter" onchange="filterLeads()" style="font-size:11px">
+        <option value="">All Deal Types</option>
+        <option value="Wholesale">Wholesale</option>
+        <option value="Fix & Flip">Fix & Flip</option>
+        <option value="Buy & Hold">Buy & Hold</option>
+      </select>
+      <select class="filter-select" id="spread-filter" onchange="filterLeads()" style="font-size:11px">
+        <option value="">Any Spread</option>
+        <option value="10000">$10K+</option>
+        <option value="25000">$25K+</option>
+        <option value="50000">$50K+</option>
+        <option value="75000">$75K+</option>
+        <option value="100000">$100K+</option>
+      </select>
+      <select class="filter-select" id="source-filter" onchange="filterLeads()" style="font-size:11px">
+        <option value="">All Sources</option>
+        <option value="Propwire">Propwire</option>
+        <option value="Redfin">Redfin</option>
+        <option value="Craigslist">Craigslist</option>
+        <option value="Zillow FSBO">Zillow</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="clearAllFilters()" title="Clear all filters" style="font-size:10px">✕ Clear</button>
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
     </div>
   <!-- BULK ACTION TOOLBAR — shows when leads are selected -->
@@ -862,7 +885,8 @@ function renderLeads() {
     </select>
     <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="bulkChangeStatus()">✓ Apply</button>
     <button class="btn btn-sm" style="background:#0071e3;color:#fff;font-size:11px" onclick="bulkExport()">⬇ Export Selected</button>
-    <button class="btn btn-sm" style="background:#5e5ce6;color:#fff;font-size:11px" onclick="bulkOutreach()">✉ Outreach All</button>
+    <button class="btn btn-sm" style="background:#5e5ce6;color:#fff;font-size:11px" onclick="openBulkEmail()">📧 Bulk Email</button>
+    <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="openBulkSMS()">💬 Bulk SMS</button>
     <button class="btn btn-sm" style="background:#ff3b30;color:#fff;font-size:11px" onclick="bulkDelete()">🗑 Delete Selected</button>
     <button class="btn btn-sm" style="background:transparent;color:#aaa;border:1px solid #555;font-size:11px" onclick="clearLeadSelection()">✕ Clear</button>
   </div>
@@ -940,19 +964,19 @@ function renderLeadsHierarchy(leads) {
         const isActive = APP.selectedLead === l.id;
         const rank = q.score>=70?'🔥':q.score>=40?'⚡':'❄️';
 
-        html += `<div class="lead-row ${isActive?'selected':''}" onclick="handleLeadRowClick(event,'${l.id}')" style="display:flex;align-items:stretch;border-radius:8px;margin-bottom:3px;cursor:pointer;background:${isSelected?'#e8f0fe':isActive?'#1d1d1f':'#fff'};border:1px solid ${isSelected?'#0071e3':'#f2f2f7'}">
+        html += `<div class="lead-row ${isActive?'selected':''}" onclick="handleLeadRowClick(event,'${l.id}')" style="display:flex;align-items:stretch;border-radius:8px;margin-bottom:3px;cursor:pointer;background:${isSelected?'#dbeafe':isActive?'#e8f0fe':'#fff'};border:1px solid ${isSelected?'#0071e3':isActive?'#0071e3':'#f2f2f7'}">
           <div style="display:flex;align-items:center;padding:0 8px;flex-shrink:0" onclick="event.stopPropagation()">
             <input type="checkbox" class="lead-cb" data-id="${l.id}" onchange="toggleLeadSelection('${l.id}',this.checked)" style="width:14px;height:14px;cursor:pointer" ${isSelected?'checked':''}>
           </div>
           <div style="flex:1;padding:8px 8px 8px 0;min-width:0">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div style="flex:1;min-width:0">
-                <div style="font-size:12px;font-weight:600;color:${isActive?'#fff':'#1d1d1f'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
-                <div style="font-size:10px;color:${isActive?'#aaa':'#86868b'};margin-top:1px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
+                <div style="font-size:12px;font-weight:600;color:#1d1d1f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rank} ${l.address?.split(',')[0]||'N/A'}</div>
+                <div style="font-size:10px;color:#86868b;margin-top:1px">${l.category||''} · ${l.beds||'?'}BD · DOM: ${l.dom||0}d</div>
               </div>
               <div style="text-align:right;flex-shrink:0;margin-left:8px">
-                <div style="font-size:11px;font-weight:700;color:${isActive?'#6ee7b7':spreadColor}">$${(spread/1000).toFixed(0)}K spread</div>
-                <div style="font-size:10px;color:${isActive?'#aaa':'#86868b'}">ARV $${((l.arv||0)/1000).toFixed(0)}K</div>
+                <div style="font-size:11px;font-weight:700;color:${spreadColor}">$${(spread/1000).toFixed(0)}K spread</div>
+                <div style="font-size:10px;color:#86868b">ARV $${((l.arv||0)/1000).toFixed(0)}K</div>
               </div>
             </div>
             <div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">
@@ -1070,7 +1094,7 @@ function renderLeadDetail(l) {
 
   // QUICK ACTION BUTTONS
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
-  html += '<a href="tel:' + (l.phone||'') + '" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="#" onclick="makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
   html += '<a href="mailto:' + (l.email||'') + '" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
@@ -1128,6 +1152,55 @@ function renderLeadDetail(l) {
   } else {
     html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
   }
+
+  // DEAL ANALYSIS
+  html += '<div class="section-title" style="margin-top:12px">Deal Analysis</div>';
+  html += '<div style="background:#f5f5f7;border-radius:10px;padding:12px;margin-bottom:8px">';
+
+  // Why this is a deal
+  var reasons = [];
+  if (l.category === 'Pre-FC' || l.category === 'Auction') reasons.push('⚡ Pre-foreclosure — seller has a hard deadline and needs to act fast');
+  if (l.category === 'Vacant Property') reasons.push('🏚 Vacant — carrying costs with no income, owner motivated to exit');
+  if (l.category === 'Tax Delinquent') reasons.push('📋 Tax delinquent — county building liens, seller under pressure');
+  if (l.category === 'Tired Landlord') reasons.push('😤 Tired landlord — ' + Math.round((l.ownershipMonths||0)/12) + ' years owning, done with tenants');
+  if (l.category === 'Absentee Owner') reasons.push('🏠 Absentee owner — not living there, less emotional attachment');
+  if (l.category === 'High Equity') reasons.push('💰 High equity (' + (l.equityPct||0) + '%) — room to negotiate and still net well');
+  if ((l.ownershipMonths||0) > 240) reasons.push('📅 Owned ' + Math.round((l.ownershipMonths||0)/12) + ' years — likely no mortgage, can accept any price');
+  if ((l.dom||0) > 90) reasons.push('📆 ' + l.dom + ' days on market — frustrated, price probably dropping');
+  if ((l.equityPct||0) >= 40) reasons.push('✅ ' + (l.equityPct||0) + '% equity — you can offer below market and they still win');
+  if (reasons.length === 0) reasons.push('📊 Standard wholesale criteria met — SFR in target price range with deal room');
+
+  html += '<div style="font-size:11px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Why This Is A Deal</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:5px">';
+  reasons.forEach(function(r) { html += '<div style="font-size:11px;color:#3a3a3c;line-height:1.5">• ' + r + '</div>'; });
+  html += '</div>';
+
+  // Deal math breakdown
+  var da_arv = l.arv||0;
+  var da_repairs = l.repairs||0;
+  var da_offer = l.offer||0;
+  var da_spread = l.spread||0;
+  var da_mao = l.mao||da_offer;
+  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
+  html += '<div style="font-size:11px;font-weight:700;margin-bottom:8px">Deal Math Breakdown</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">';
+  html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + da_arv.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + repairs.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + mao.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + offer.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + spread.toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div>';
+  html += '</div></div>';
+
+  // Comps placeholder
+  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
+  html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
+  html += '<div style="display:flex;gap:6px">';
+  html += '<a href="https://www.zillow.com/homes/' + encodeURIComponent((l.address||'').split(',')[0] + ' ' + (l.state||'')) + '_rb/" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
+  html += '<a href="https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(l.address||'') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">📊 Redfin Comps</a>';
+  html += '<a href="https://rentometer.com/analysis/search?address=' + encodeURIComponent(l.address||'') + '&bedrooms=' + (l.beds||3) + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">💵 Rent Comps</a>';
+  html += '</div></div>';
+  html += '</div>';
 
   // NOTES
   html += '<div class="section-title" style="margin-top:12px">Notes</div>';
@@ -2294,8 +2367,40 @@ function sortLeads(col) {
   render();
 }
 
-function filterLeads() { render(); }
-function filterByStatus(v) { APP.leads; render(); }
+function filterLeads() {
+  APP._leadsFilter = {
+    status:  document.getElementById('status-filter')?.value  || '',
+    cat:     document.getElementById('cat-filter')?.value     || '',
+    deal:    document.getElementById('deal-filter')?.value    || '',
+    spread:  parseInt(document.getElementById('spread-filter')?.value || '0'),
+    source:  document.getElementById('source-filter')?.value  || '',
+  };
+  render();
+}
+
+function clearAllFilters() {
+  ['status-filter','cat-filter','deal-filter','spread-filter','source-filter'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  APP._leadsFilter = {};
+  APP.search = '';
+  var searchEl = document.getElementById('global-search');
+  if (searchEl) searchEl.value = '';
+  render();
+}
+
+function applyLeadsFilter(leads) {
+  var f = APP._leadsFilter || {};
+  return leads.filter(function(l) {
+    if (f.status && l.status !== f.status) return false;
+    if (f.cat && l.category !== f.cat) return false;
+    if (f.deal && l.dealType !== f.deal) return false;
+    if (f.spread && (l.spread||0) < f.spread) return false;
+    if (f.source && (l.source||'') !== f.source) return false;
+    return true;
+  });
+}
 function globalSearch(v) {
   APP.search = v.toLowerCase().trim();
   // Update URL hash for shareability
@@ -6017,6 +6122,484 @@ var _origNavigate = navigate;
 navigate = function(page, el) {
   _origNavigate(page, el);
   if (page === 'gmail') setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300);
+};
+
+
+// ═══════════════════════════════════════════════════════
+//  SMS TAB
+// ═══════════════════════════════════════════════════════
+
+function renderSMS() {
+  return `<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:260px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">
+
+    <!-- LEFT: Conversation List -->
+    <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#fafafa">
+      <div style="padding:14px;border-bottom:1px solid #e5e5ea">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px">💬 SMS</div>
+        <button class="btn btn-dark" style="width:100%;font-size:12px" onclick="openBulkSMS()">📤 Bulk SMS to Selected Leads</button>
+      </div>
+      <div id="sms-conv-list" style="flex:1;overflow-y:auto">
+        <div style="text-align:center;padding:30px;color:#86868b">
+          <div style="font-size:24px;margin-bottom:8px">💬</div>
+          <div style="font-size:12px">Loading conversations...</div>
+        </div>
+      </div>
+      <div style="padding:10px 14px;border-top:1px solid #e5e5ea;font-size:10px;color:#86868b" id="sms-status-bar">
+        Checking Twilio...
+      </div>
+    </div>
+
+    <!-- RIGHT: Active Conversation -->
+    <div style="display:flex;flex-direction:column" id="sms-conv-panel">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#86868b">
+        <div style="text-align:center">
+          <div style="font-size:40px;margin-bottom:12px">💬</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:6px">Select a conversation</div>
+          <div style="font-size:11px">Or use Bulk SMS to send to multiple leads at once</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DIALER TAB
+// ═══════════════════════════════════════════════════════
+
+function renderDialer() {
+  return `<div style="max-width:700px">
+
+    <!-- Status Bar -->
+    <div id="dialer-status-bar" style="background:#f5f5f7;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:24px">📞</div>
+      <div>
+        <div style="font-size:13px;font-weight:700">Browser Dialer</div>
+        <div style="font-size:11px;color:#86868b" id="dialer-status-text">Checking Twilio connection...</div>
+      </div>
+      <div style="margin-left:auto">
+        <span id="dialer-status-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#86868b"></span>
+      </div>
+    </div>
+
+    <!-- Active Call Panel -->
+    <div id="active-call-panel" style="display:none;background:linear-gradient(135deg,#1d1d1f,#3a3a3c);border-radius:14px;padding:30px;text-align:center;color:#fff;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:10px">📞</div>
+      <div id="call-lead-name" style="font-size:18px;font-weight:700;margin-bottom:4px">Connecting...</div>
+      <div id="call-lead-address" style="font-size:12px;color:#aaa;margin-bottom:20px"></div>
+      <div id="call-timer" style="font-size:28px;font-weight:300;margin-bottom:24px;font-family:monospace">0:00</div>
+      <div style="display:flex;justify-content:center;gap:16px">
+        <button onclick="muteCall()" id="btn-mute" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;cursor:pointer" title="Mute">🔇</button>
+        <button onclick="endCall()" style="width:72px;height:72px;border-radius:50%;background:#ff3b30;border:none;color:#fff;font-size:24px;cursor:pointer" title="End Call">📵</button>
+        <button onclick="holdCall()" id="btn-hold" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;cursor:pointer" title="Hold">⏸</button>
+      </div>
+    </div>
+
+    <!-- Manual Dial Pad -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">📱 Manual Dial</div>
+      <input id="dial-number" placeholder="Enter phone number to call" style="width:100%;border:2px solid #e5e5ea;border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:10px;box-sizing:border-box">
+      <button class="btn btn-dark" style="width:100%;font-size:14px;padding:12px" onclick="makeCall(document.getElementById('dial-number').value, null, 'Manual Dial', '')">📞 Call Now</button>
+    </div>
+
+    <!-- Recent Calls -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">📋 Recent Calls</div>
+      <div id="recent-calls-list">
+        <div style="text-align:center;padding:20px;color:#86868b;font-size:12px">Loading call history...</div>
+      </div>
+    </div>
+
+    <!-- Script Panel -->
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">📝 Call Script</div>
+      <div style="font-size:11px;color:#86868b;margin-bottom:12px">Ready when you're on a call</div>
+      <div id="call-script-text" style="background:#f5f5f7;border-radius:10px;padding:14px;font-size:12px;line-height:1.8;color:#3a3a3c">
+        Hi, is this [OWNER NAME]? ... My name is Gabriel, I'm a local real estate investor. I'm not a realtor — I buy homes directly with cash. I came across your property on [ADDRESS] and I wanted to reach out personally to see if you'd be open to a conversation. ... I can make a fair cash offer, close in as little as 14 days, and I buy the property exactly as it sits — no repairs needed. ... Would you be open to hearing what I can offer?
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px;font-size:11px" onclick="generateCallScript()">🤖 Generate AI Script for Current Lead</button>
+    </div>
+
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  BULK SMS MODAL
+// ═══════════════════════════════════════════════════════
+
+function openBulkSMS() {
+  var selected = Array.from(APP._selectedLeads || []);
+  var leads = selected.length > 0
+    ? APP.leads.filter(function(l){ return APP._selectedLeads.has(l.id); })
+    : APP.leads;
+  var withPhone = leads.filter(function(l){ return l.phone; });
+  var noPhone   = leads.length - withPhone.length;
+
+  showModal('<div style="padding:4px;max-width:560px">' +
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px">📤 Bulk SMS</div>' +
+    '<div style="font-size:11px;color:#86868b;margin-bottom:16px">' +
+      (selected.length > 0 ? selected.length + ' leads selected' : 'All leads') +
+      ' · ' + withPhone.length + ' have phone numbers · ' + noPhone + ' will be skipped' +
+    '</div>' +
+    (withPhone.length === 0 ? '<div style="background:#fff0f0;border-radius:10px;padding:14px;font-size:12px;color:#cc0000;margin-bottom:16px">⚠️ None of your selected leads have phone numbers. You need to skip trace your leads first to get phone numbers. Propwire skip trace costs 10¢ per lead.</div>' : '') +
+    '<div style="margin-bottom:12px">' +
+      '<div style="font-size:11px;font-weight:600;margin-bottom:6px">Message Type</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+        '<button id="msg-type-ai" class="btn btn-dark btn-sm" onclick="selectMsgType(\'ai\')" style="flex:1">🤖 AI Personalized (recommended)</button>' +
+        '<button id="msg-type-custom" class="btn btn-outline btn-sm" onclick="selectMsgType(\'custom\')" style="flex:1">✏️ Write my own</button>' +
+      '</div>' +
+      '<div id="custom-msg-area" style="display:none">' +
+        '<textarea id="bulk-sms-body" placeholder="Write your message here... Use {name} and {address} as placeholders" style="width:100%;border:1px solid #e5e5ea;border-radius:10px;padding:10px;font-size:12px;height:100px;resize:none;box-sizing:border-box;font-family:inherit"></textarea>' +
+        '<div style="font-size:10px;color:#86868b;margin-top:4px">Available: {name} {address} {city}</div>' +
+      '</div>' +
+      '<div id="ai-msg-preview" style="background:#f5f5f7;border-radius:10px;padding:12px;font-size:12px;color:#3a3a3c;line-height:1.6">' +
+        '<div style="font-size:10px;color:#86868b;margin-bottom:6px">AI SAMPLE (each message will be unique):</div>' +
+        (withPhone.length > 0 ? generateSMSPreview(withPhone[0]) : 'Select leads with phone numbers to preview') +
+      '</div>' +
+    '</div>' +
+    '<div style="background:#fff3e0;border-radius:8px;padding:10px;font-size:11px;color:#e65100;margin-bottom:14px">📋 Make sure you have explicit permission or a legitimate business reason to contact these property owners. Always include an opt-out option.</div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button class="btn btn-dark" style="flex:1" onclick="confirmBulkSMS(' + JSON.stringify(withPhone.map(function(l){return l.id;})) + ')" ' + (withPhone.length === 0 ? 'disabled style="opacity:0.5;flex:1"' : 'style="flex:1"') + '>📤 Send ' + withPhone.length + ' SMS Messages</button>' +
+      '<button class="btn btn-outline" onclick="closeModal()">Cancel</button>' +
+    '</div>' +
+  '</div>');
+}
+
+function generateSMSPreview(lead) {
+  if (!lead) return 'No lead available';
+  var name   = lead.owner_name ? lead.owner_name.split(' ')[0] : '';
+  var street = (lead.address||'').split(',')[0];
+  var city   = (lead.address||'').split(',')[1]?.trim() || '';
+  return 'Hey' + (name?' '+name:'') + ', my name is Gabriel with Montsan REI. I came across your property on ' + street + (city?' in '+city:'') + ' and would love to chat about making you a cash offer. No agents, no repairs, no hassle. Would you be open to a quick call? — Gabriel';
+}
+
+function selectMsgType(type) {
+  var aiBtn  = document.getElementById('msg-type-ai');
+  var cusBtn = document.getElementById('msg-type-custom');
+  var cusArea = document.getElementById('custom-msg-area');
+  var aiPrev  = document.getElementById('ai-msg-preview');
+  if (type === 'ai') {
+    if (aiBtn)  { aiBtn.className  = 'btn btn-dark btn-sm'; aiBtn.style.flex  = '1'; }
+    if (cusBtn) { cusBtn.className = 'btn btn-outline btn-sm'; cusBtn.style.flex = '1'; }
+    if (cusArea) cusArea.style.display = 'none';
+    if (aiPrev)  aiPrev.style.display  = '';
+  } else {
+    if (aiBtn)  { aiBtn.className  = 'btn btn-outline btn-sm'; aiBtn.style.flex  = '1'; }
+    if (cusBtn) { cusBtn.className = 'btn btn-dark btn-sm'; cusBtn.style.flex = '1'; }
+    if (cusArea) cusArea.style.display = '';
+    if (aiPrev)  aiPrev.style.display  = 'none';
+  }
+}
+
+async function confirmBulkSMS(leadIds) {
+  closeModal();
+  var customBody = document.getElementById('bulk-sms-body')?.value?.trim() || null;
+  toast('📤 Sending ' + leadIds.length + ' SMS messages in background...', 'success');
+  try {
+    var res = await fetch('/api/sms/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadIds, customMessage: customBody || null })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      toast('✅ ' + data.message, 'success');
+    } else {
+      toast('❌ ' + (data.error||'SMS failed'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── Bulk Email Modal ───────────────────────────────────────────────────────
+function openBulkEmail() {
+  var selected = Array.from(APP._selectedLeads || []);
+  var leads = selected.length > 0
+    ? APP.leads.filter(function(l){ return APP._selectedLeads.has(l.id); })
+    : APP.leads;
+  var withEmail = leads.filter(function(l){ return l.email; });
+  var noEmail   = leads.length - withEmail.length;
+
+  showModal('<div style="padding:4px;max-width:560px">' +
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px">📧 Bulk Email</div>' +
+    '<div style="font-size:11px;color:#86868b;margin-bottom:16px">' +
+      (selected.length > 0 ? selected.length + ' leads selected' : 'All leads') +
+      ' · ' + withEmail.length + ' have email addresses · ' + noEmail + ' will be skipped' +
+    '</div>' +
+    (withEmail.length === 0 ? '<div style="background:#fff0f0;border-radius:10px;padding:14px;font-size:12px;color:#cc0000;margin-bottom:16px">⚠️ None of your selected leads have email addresses. Skip trace your leads first.</div>' : '') +
+    '<div style="background:#f5f5f7;border-radius:10px;padding:12px;font-size:12px;margin-bottom:14px">' +
+      '<div style="font-size:10px;color:#86868b;margin-bottom:6px">🤖 AI SAMPLE EMAIL (each will be unique):</div>' +
+      '<strong>Subject:</strong> Interested in your property on [STREET ADDRESS]<br><br>' +
+      'Hi [OWNER FIRST NAME],<br><br>My name is Gabriel Montealegre and I\'m a local real estate investor. Your property caught my attention and I\'d love to make you a direct cash offer — no agents, no repairs, close on your timeline.<br><br>Would you have 10 minutes for a quick call?<br><br>Best, Gabriel | Montsan REI' +
+    '</div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button class="btn btn-dark" style="flex:1" onclick="confirmBulkEmail(' + JSON.stringify(withEmail.map(function(l){return l.id;})) + ')" ' + (withEmail.length === 0 ? 'disabled style="opacity:0.5;flex:1"' : 'style="flex:1"') + '>📧 Send ' + withEmail.length + ' Personalized Emails</button>' +
+      '<button class="btn btn-outline" onclick="closeModal()">Cancel</button>' +
+    '</div>' +
+  '</div>');
+}
+
+async function confirmBulkEmail(leadIds) {
+  closeModal();
+  toast('📧 Sending ' + leadIds.length + ' personalized emails in background...', 'success');
+  try {
+    var res = await fetch('/api/email/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadIds })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      toast('✅ ' + data.message, 'success');
+    } else {
+      toast('❌ ' + (data.error||'Email failed'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DIALER FUNCTIONS
+// ═══════════════════════════════════════════════════════
+
+var _callTimer = null;
+var _callSeconds = 0;
+var _currentCallSid = null;
+var _callMuted = false;
+var _callOnHold = false;
+
+async function initDialer() {
+  try {
+    var res = await fetch('/api/comms/status');
+    var data = await res.json();
+    var statusEl = document.getElementById('dialer-status-text');
+    var dotEl    = document.getElementById('dialer-status-dot');
+    if (data.twilio) {
+      if (statusEl) statusEl.textContent = '✅ Twilio connected · ' + (data.twilioPhone||'');
+      if (dotEl)    dotEl.style.background = '#34c759';
+    } else {
+      if (statusEl) statusEl.textContent = '⚠️ Twilio not configured — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to Railway';
+      if (dotEl)    dotEl.style.background = '#ff9500';
+    }
+    loadRecentCalls();
+  } catch(e) {}
+}
+
+async function makeCall(phone, leadId, name, address) {
+  if (!phone) { toast('No phone number', 'error'); return; }
+  var cleaned = phone.replace(/[^0-9]/g,'');
+  if (cleaned.length < 10) { toast('Invalid phone number', 'error'); return; }
+
+  try {
+    var res = await fetch('/api/dialer/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, leadId })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      _currentCallSid = data.callSid;
+      showActiveCall(name || 'Unknown', address || phone, data.callSid);
+      toast('📞 Calling ' + (name||phone) + '...', 'success');
+    } else {
+      toast('Call failed: ' + (data.error||'Twilio error'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function showActiveCall(name, address, callSid) {
+  var panel = document.getElementById('active-call-panel');
+  if (panel) {
+    panel.style.display = 'block';
+    document.getElementById('call-lead-name').textContent  = name;
+    document.getElementById('call-lead-address').textContent = address;
+    document.getElementById('call-timer').textContent = '0:00';
+  }
+  _callSeconds = 0;
+  clearInterval(_callTimer);
+  _callTimer = setInterval(function() {
+    _callSeconds++;
+    var m = Math.floor(_callSeconds/60);
+    var s = _callSeconds%60;
+    var timerEl = document.getElementById('call-timer');
+    if (timerEl) timerEl.textContent = m + ':' + (s<10?'0':'') + s;
+  }, 1000);
+}
+
+function endCall() {
+  clearInterval(_callTimer);
+  _currentCallSid = null;
+  var panel = document.getElementById('active-call-panel');
+  if (panel) panel.style.display = 'none';
+  toast('Call ended · Duration: ' + Math.floor(_callSeconds/60) + ':' + (_callSeconds%60<10?'0':'') + _callSeconds%60, 'success');
+  _callSeconds = 0;
+  loadRecentCalls();
+}
+
+function muteCall() {
+  _callMuted = !_callMuted;
+  var btn = document.getElementById('btn-mute');
+  if (btn) {
+    btn.textContent = _callMuted ? '🔊' : '🔇';
+    btn.style.background = _callMuted ? '#ff9500' : 'rgba(255,255,255,0.15)';
+  }
+  toast(_callMuted ? 'Muted' : 'Unmuted', 'success');
+}
+
+function holdCall() {
+  _callOnHold = !_callOnHold;
+  var btn = document.getElementById('btn-hold');
+  if (btn) {
+    btn.textContent = _callOnHold ? '▶' : '⏸';
+    btn.style.background = _callOnHold ? '#ff9500' : 'rgba(255,255,255,0.15)';
+  }
+  toast(_callOnHold ? 'On hold' : 'Resumed', 'success');
+}
+
+async function loadRecentCalls() {
+  var el = document.getElementById('recent-calls-list');
+  if (!el) return;
+  try {
+    var res  = await fetch('/api/dialer/calls');
+    var data = await res.json();
+    var calls = data.calls || [];
+    if (!calls.length) {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:#86868b;font-size:12px">No calls yet</div>';
+      return;
+    }
+    el.innerHTML = calls.slice(0,10).map(function(c) {
+      var lead = APP.leads.find(function(l){ return l.id === c.leadId; });
+      var name = lead ? (lead.owner_name||lead.address?.split(',')[0]||c.to) : c.to;
+      var date = new Date(c.created).toLocaleString();
+      return '<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f7;gap:10px">' +
+        '<div style="width:32px;height:32px;border-radius:50%;background:#f5f5f7;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📞</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + name + '</div>' +
+          '<div style="font-size:10px;color:#86868b">' + c.to + ' · ' + date + '</div>' +
+        '</div>' +
+        '<button class="btn btn-outline btn-sm" style="font-size:10px;flex-shrink:0" onclick="makeCall(\'' + c.to + '\',\'' + (c.leadId||'') + '\',\'' + name + '\','  + '\'\'' + ')">↩ Call Back</button>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="padding:16px;color:#86868b;font-size:12px">Could not load call history</div>';
+  }
+}
+
+function generateCallScript() {
+  var lead = APP._currentLead ? APP.leads.find(function(l){ return l.id === APP._currentLead; }) : null;
+  var el = document.getElementById('call-script-text');
+  if (!el) return;
+  if (!lead) { toast('Select a lead first', 'error'); return; }
+  var name   = lead.owner_name ? lead.owner_name.split(' ')[0] : '[Owner]';
+  var street = (lead.address||'').split(',')[0];
+  var cat    = lead.category||'property';
+  var offer  = lead.offer ? '$' + lead.offer.toLocaleString() : 'a competitive price';
+  el.innerHTML = '<strong>OPENING:</strong><br>Hi, is this ' + name + '? ... Hi ' + name + ', my name is Gabriel — I\'m a local cash buyer, not a realtor. I\'m calling about your ' + cat.toLowerCase() + ' at ' + street + '. I came across it and I\'m genuinely interested in making you an offer.<br><br>' +
+    '<strong>IF THEY ASK HOW YOU GOT THEIR NUMBER:</strong><br>I use public records to find property owners who might be open to a conversation. Is this a good time?<br><br>' +
+    '<strong>VALUE PROP:</strong><br>I buy properties directly for cash — no repairs needed, no real estate agents, and I can close as quickly as two weeks or on your schedule. My offer would be around ' + offer + '.<br><br>' +
+    '<strong>CLOSE:</strong><br>Would you be open to meeting for 15 minutes so I can walk through what I can offer? No pressure at all — just want to make sure you have all your options.<br><br>' +
+    '<strong>OBJECTIONS:</strong><br>"Not interested" → I completely understand. Can I leave my number in case your situation changes?<br>"I\'m listed with an agent" → No problem — I work with listed properties too. What\'s the asking price?<br>"What\'s your offer?" → I\'d need to see the property first, but based on what I know, around ' + offer + '.';
+}
+
+// ── Load SMS conversations when SMS tab opens ─────────────────────────────
+async function loadSMSConversations() {
+  var el = document.getElementById('sms-conv-list');
+  var statusEl = document.getElementById('sms-status-bar');
+  if (!el) return;
+  try {
+    var statusRes = await fetch('/api/comms/status');
+    var statusData = await statusRes.json();
+    if (statusEl) statusEl.textContent = statusData.twilio ? '✅ Twilio · ' + (statusData.twilioPhone||'') : '⚠️ Twilio not configured';
+    var res  = await fetch('/api/sms/conversations');
+    var data = await res.json();
+    var convos = data.conversations || [];
+    if (!convos.length) {
+      el.innerHTML = '<div style="text-align:center;padding:30px;color:#86868b;font-size:11px"><div style="font-size:24px;margin-bottom:8px">💬</div>No SMS conversations yet.<br>Select leads and click Bulk SMS to start.</div>';
+      return;
+    }
+    el.innerHTML = convos.map(function(c) {
+      var lead = c.key !== 'unknown' ? APP.leads.find(function(l){ return l.id === c.key; }) : null;
+      var name = lead ? (lead.owner_name||(lead.address||'').split(',')[0]) : (c.lastMessage?.from||c.lastMessage?.to||'Unknown');
+      var last = c.lastMessage?.body||'';
+      var time = c.lastMessage?.created ? new Date(c.lastMessage.created).toLocaleDateString() : '';
+      var unread = c.unread > 0;
+      return '<div onclick="loadSMSThread(\'' + c.key + '\')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid #f2f2f7;background:' + (unread?'#f0f6ff':'transparent') + '">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
+          '<div style="font-size:12px;font-weight:' + (unread?'700':'500') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">' + name + '</div>' +
+          '<div style="font-size:10px;color:#86868b;flex-shrink:0">' + time + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#86868b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + last.slice(0,50) + '</div>' +
+        (unread ? '<span style="background:#0071e3;color:#fff;font-size:9px;padding:1px 6px;border-radius:8px">' + c.unread + ' new</span>' : '') +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="padding:16px;color:#86868b;font-size:11px">Could not load conversations</div>';
+  }
+}
+
+async function loadSMSThread(leadId) {
+  var panel = document.getElementById('sms-conv-panel');
+  if (!panel) return;
+  var lead = APP.leads.find(function(l){ return l.id === leadId; });
+  var name = lead ? (lead.owner_name||(lead.address||'').split(',')[0]) : leadId;
+
+  try {
+    var res  = await fetch('/api/sms/conversation/' + leadId);
+    var data = await res.json();
+    var msgs = data.messages || [];
+
+    panel.innerHTML = '<div style="display:flex;flex-direction:column;height:100%">' +
+      '<div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px;background:#fafafa">' +
+        '<div style="font-size:14px;font-weight:700;flex:1">' + name + '</div>' +
+        (lead?.phone ? '<button class="btn btn-dark btn-sm" onclick="makeCall(\'' + lead.phone + '\',\'' + leadId + '\',\'' + name + '\',\'' + (lead.address||'').split(',')[0] + '\')">📞 Call</button>' : '') +
+      '</div>' +
+      '<div id="sms-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px">' +
+        (msgs.length === 0 ? '<div style="text-align:center;color:#86868b;font-size:11px;padding:30px">No messages yet</div>' :
+          msgs.map(function(m) {
+            var out = m.direction === 'outbound';
+            return '<div style="display:flex;justify-content:' + (out?'flex-end':'flex-start') + '">' +
+              '<div style="max-width:75%;background:' + (out?'#0071e3':'#f5f5f7') + ';color:' + (out?'#fff':'#1d1d1f') + ';border-radius:' + (out?'14px 14px 4px 14px':'14px 14px 14px 4px') + ';padding:10px 14px;font-size:12px;line-height:1.5">' +
+                m.body +
+                '<div style="font-size:9px;opacity:0.7;margin-top:4px;text-align:right">' + new Date(m.created).toLocaleTimeString() + '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('')) +
+      '</div>' +
+      '<div style="padding:12px 16px;border-top:1px solid #f2f2f7;display:flex;gap:8px">' +
+        '<input id="sms-reply-input" placeholder="Type a message..." style="flex:1;border:1px solid #e5e5ea;border-radius:20px;padding:10px 16px;font-size:12px;outline:none" onkeydown="if(event.key===\'Enter\')sendSMSReply(\'' + leadId + '\')">' +
+        '<button class="btn btn-dark btn-sm" onclick="sendSMSReply(\'' + leadId + '\')">Send</button>' +
+      '</div>' +
+    '</div>';
+  } catch(e) {
+    panel.innerHTML = '<div style="padding:30px;color:#86868b">Error loading conversation</div>';
+  }
+}
+
+async function sendSMSReply(leadId) {
+  var input = document.getElementById('sms-reply-input');
+  var body  = input?.value?.trim();
+  if (!body) return;
+  var lead  = APP.leads.find(function(l){ return l.id === leadId; });
+  if (!lead?.phone) { toast('No phone number for this lead', 'error'); return; }
+  try {
+    var res = await fetch('/api/sms/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: lead.phone, body, leadId })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      if (input) input.value = '';
+      loadSMSThread(leadId);
+    } else {
+      toast('Failed: ' + (data.error||'SMS error'), 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Auto-init when tabs open
+var _origNavForComms = navigate;
+navigate = function(page, el) {
+  _origNavForComms(page, el);
+  if (page === 'sms')    setTimeout(function(){ loadSMSConversations(); }, 200);
+  if (page === 'dialer') setTimeout(function(){ initDialer(); }, 200);
 };
 
 </script>
