@@ -557,7 +557,7 @@ function addNewUser() {
 // ══════════════════════════════════════════════════════════
 function initApp() {
   updateSidebarStats();
-  document.getElementById('nav-lead-count').textContent = APP.leads.length;
+  var newLeadsCount = APP.leads.filter(function(l){return !l.status||l.status==='New Lead';}).length; document.getElementById('nav-lead-count').textContent = newLeadsCount; document.getElementById('nav-lead-count').style.display = newLeadsCount > 0 ? '' : 'none';
   const pending = APP.followups.filter(f => f.status === 'pending').length;
   document.getElementById('nav-fu-count').textContent = pending;
   document.getElementById('bot-status-text').textContent = 'Online · Webhook';
@@ -571,7 +571,7 @@ function initApp() {
 }
 
 function updateSidebarStats() {
-  document.getElementById('sb-leads').textContent = APP.leads.length;
+  if(document.getElementById('sb-leads')) document.getElementById('sb-leads').textContent = APP.leads.length;
   // ⑤ Pipeline opportunity: show potential fees from active leads, not just closed
   const closedFees = APP.assignments.filter(a => a.status === 'Closed').reduce((s, a) => s + (a.fee || 0), 0);
   const pipelineFees = APP.leads.filter(l => (l.fee_lo||0) > 0 && l.status !== 'Dead' && l.status !== 'Closed').reduce((s, l) => s + (l.fee_lo||0), 0);
@@ -2038,8 +2038,8 @@ function saveLead() {
   };
   APP.leads.unshift(lead);
   save('leads', APP.leads);
-  document.getElementById('nav-lead-count').textContent = APP.leads.length;
-  document.getElementById('sb-leads').textContent = APP.leads.length;
+  var newLeadsCount = APP.leads.filter(function(l){return !l.status||l.status==='New Lead';}).length; document.getElementById('nav-lead-count').textContent = newLeadsCount; document.getElementById('nav-lead-count').style.display = newLeadsCount > 0 ? '' : 'none';
+  if(document.getElementById('sb-leads')) document.getElementById('sb-leads').textContent = APP.leads.length;
   closeModal();
   render();
   createFollowUpSequence(lead.id);
@@ -2322,31 +2322,13 @@ function selectLead(id) {
   APP.selectedLead = id;
   if (APP.page !== 'leads') {
     APP.page = 'leads';
-    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-    var leadsNav = document.querySelector('.nav-item[onclick*="leads"]');
-    if (leadsNav) leadsNav.classList.add('active');
-    var titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.textContent = 'Leads';
-    render();
-    setTimeout(function(){ selectLead(id); }, 100);
-    return;
   }
-  var rightPanel = document.getElementById('lead-detail-panel') || document.querySelector('.split-right');
-  if (rightPanel) {
-    var lead = APP.leads.find(function(l){ return l.id === id; });
-    if (lead) {
-      rightPanel.innerHTML = renderLeadDetail(lead);
-      rightPanel.scrollTop = 0;
-      document.querySelectorAll('.lead-row').forEach(function(r) {
-        var isSelected = (r.getAttribute('onclick') || '').includes(id);
-        r.classList.toggle('selected', isSelected);
-        r.style.background = isSelected ? '#1d1d1f' : '';
-        r.style.color = isSelected ? '#fff' : '';
-      });
-    }
-  } else {
-    openLeadModal(id);
-  }
+  render();
+  // Scroll right panel to top after render
+  setTimeout(function() {
+    var panel = document.getElementById('lead-detail-panel');
+    if (panel) panel.scrollTop = 0;
+  }, 50);
 }
 
 function sendDealToBuyer(leadId, buyerId) {
@@ -2615,8 +2597,8 @@ async function loadLeadsFromAPI() {
       if (data.leads) {
         APP.leads = data.leads;
         save('leads', APP.leads);
-        document.getElementById('nav-lead-count').textContent = APP.leads.length;
-        document.getElementById('sb-leads').textContent = APP.leads.length;
+        var newLeadsCount = APP.leads.filter(function(l){return !l.status||l.status==='New Lead';}).length; document.getElementById('nav-lead-count').textContent = newLeadsCount; document.getElementById('nav-lead-count').style.display = newLeadsCount > 0 ? '' : 'none';
+        if(document.getElementById('sb-leads')) document.getElementById('sb-leads').textContent = APP.leads.length;
         if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
       }
     }
@@ -2981,8 +2963,8 @@ async function importConfirm() {
   } catch {}
   
   // Update UI
-  document.getElementById('nav-lead-count').textContent = APP.leads.length;
-  document.getElementById('sb-leads').textContent = APP.leads.length;
+  var newLeadsCount = APP.leads.filter(function(l){return !l.status||l.status==='New Lead';}).length; document.getElementById('nav-lead-count').textContent = newLeadsCount; document.getElementById('nav-lead-count').style.display = newLeadsCount > 0 ? '' : 'none';
+  if(document.getElementById('sb-leads')) document.getElementById('sb-leads').textContent = APP.leads.length;
   
   // Create follow-up sequences for all imported leads
   newLeads.forEach(l => createFollowUpSequence(l.id));
@@ -5575,15 +5557,7 @@ async function clearFakeBuyers() {
 }
 
 // Add delete button to lead detail
-const _origRenderLeadDetail = renderLeadDetail;
-renderLeadDetail = function(l) {
-  const html = _origRenderLeadDetail(l);
-  // Inject delete button after the detail panel opens
-  return html.replace(
-    '</div>\n  <div class="detail-panel">',
-    '</div>\n  <div class="detail-panel"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline btn-sm" style="color:#ff3b30;border-color:#ff3b30" onclick="deleteLead(\''+l.id+'\')">🗑 Delete Lead</button></div>'
-  );
-};
+;
 
 
 // ── Aliases for renamed functions ──────────────────────────────────────────
