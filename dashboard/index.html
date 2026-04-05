@@ -404,13 +404,7 @@ const APP = {
 };
 
 function defaultBuyers() {
-  return [
-    {id:'b1',name:'DFW Acquisitions LLC',contact:'Marcus Johnson',phone:'(214) 555-9001',email:'marcus@dfwacq.com',type:'Cash Buyer',markets:['Dallas','Tarrant','Collin'],minARV:150000,maxPrice:400000,preferred:['Pre-FC','REO'],rehab:'Heavy',status:'Active',closings:12,score:95,notes:'Closes in 7-10 days. Reliable.'},
-    {id:'b2',name:'Invitation Homes',contact:'Acquisitions Desk',phone:'(972) 421-3600',email:'acquisitions@invitationhomes.com',type:'Hedge Fund',markets:['DFW','Tarrant','Collin','San Diego','LA'],minARV:250000,maxPrice:600000,preferred:['REO','Turnkey'],rehab:'Light',status:'Active',closings:0,score:82,notes:'REIT. Must match buy box exactly.'},
-    {id:'b3',name:'Lone Star REI',contact:'Sandra Cruz',phone:'(817) 555-4422',email:'sandra@lonestarrei.com',type:'Cash Buyer',markets:['Tarrant','Johnson'],minARV:100000,maxPrice:300000,preferred:['Pre-FC','Long DOM'],rehab:'Medium',status:'Active',closings:8,score:88,notes:'Fort Worth specialist. Fast decisions.'},
-    {id:'b4',name:'Texas Cash Home Buyers',contact:'Roberto Vega',phone:'(214) 555-2288',email:'roberto@txcashhomes.com',type:'Cash Buyer',markets:['Dallas','Ellis','Kaufman'],minARV:80000,maxPrice:250000,preferred:['South Dallas','Oak Cliff'],rehab:'Heavy',status:'Active',closings:5,score:79,notes:'High volume South Dallas.'},
-    {id:'b5',name:'Blackstone Residential',contact:'Tyler Ross',phone:'(212) 555-7700',email:'acquisitions@blackstone-res.com',type:'Hedge Fund',markets:['DFW','San Diego','LA'],minARV:200000,maxPrice:800000,preferred:['Bulk','REO'],rehab:'Light',status:'Potential',closings:0,score:70,notes:'Institutional. Needs 10+ at a time.'},
-  ];
+  return []; // No fake buyers — add real ones from Connected Investors or Facebook groups
 }
 
 function save(key, data) {
@@ -795,13 +789,7 @@ function renderDashboard() {
         ${upcoming.length===0?'<div style="font-size:11px;color:#86868b;text-align:center;padding:12px">No upcoming events</div>':''}
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px" onclick="openAddEvent()">+ Add Event</button>
       </div>
-      <div class="detail-panel">
-        <div class="cal-panel-title">💼 Top Buyer Matches Today</div>
-        ${APP.buyers.slice(0,4).map(b => `<div class="buyer-match-card">
-          <div><div class="bm-name">${b.name}</div><div class="bm-meta">${b.type} · $${(b.minARV/1000).toFixed(0)}K–$${(b.maxPrice/1000).toFixed(0)}K</div></div>
-          <div style="text-align:right"><div class="bm-score">${b.score}%</div><button class="btn btn-dark btn-sm" onclick="openSendDeal('${b.id}')">Send Deal</button></div>
-        </div>`).join('')}
-      </div>
+      
     </div>
   </div>`;
 }
@@ -895,10 +883,19 @@ function renderLeads() {
   ${leads.length} leads${APP.search?' matching "'+APP.search+'"':''}</div>
   ${viewMode==='hierarchy' ? renderLeadsHierarchy(leads) : viewMode==='cards' ? renderLeadsCards(leads) : renderLeadsTable(leads)}`;
 
-  return `<div class="split-view">
-    <div class="split-left" style="overflow-y:auto">${leftPanel}</div>
-    <div class="split-right" id="lead-detail-panel">${selected ? renderLeadDetail(selected) : '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>'}</div>
-  </div>`;
+  // Table and cards: full width, no split panel
+  if (viewMode === 'table' || viewMode === 'cards') {
+    return '<div style="overflow-y:auto">' + leftPanel + '</div>';
+  }
+  // Hierarchy: split view with detail panel
+  var detailHTML;
+  if (selected) {
+    try { detailHTML = renderLeadDetail(selected); }
+    catch(e) { detailHTML = '<div class="detail-panel" style="padding:20px;color:#ff3b30"><strong>Error loading lead detail: ' + e.message + '</strong></div>'; }
+  } else {
+    detailHTML = '<div class="detail-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#86868b;text-align:center"><div style="font-size:40px;margin-bottom:12px">👈</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Click any lead to see full details</div><div style="font-size:11px">ARV, spread, comps, outreach scripts,<br>contacts, and deal analysis</div></div>';
+  }
+  return '<div class="split-view"><div class="split-left" style="overflow-y:auto">' + leftPanel + '</div><div class="split-right" id="lead-detail-panel">' + detailHTML + '</div></div>';
 }
 
 function renderLeadsHierarchy(leads) {
@@ -1054,7 +1051,7 @@ function renderLeadsCards(leads) {
         <div style="display:flex;gap:4px;justify-content:space-between">
           <a href="tel:${l.phone||''}" style="flex:1;padding:5px;background:#34c759;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📞</a>
           <a href="sms:${l.phone||''}" style="flex:1;padding:5px;background:#0071e3;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">💬</a>
-          <a href="mailto:${l.email||''}" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📧</a>
+          <a href="#" onclick="event.stopPropagation()" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📧</a>
         </div>
       </div>`;
     }).join('')}
