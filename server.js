@@ -9,8 +9,9 @@ const db      = require('./db');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 
 // ── CORS for dashboard ─────────────────────────────────
 app.use((req, res, next) => {
