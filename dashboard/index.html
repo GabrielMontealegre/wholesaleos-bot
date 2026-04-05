@@ -836,43 +836,51 @@ function renderLeads() {
       <button class="btn btn-sm ${viewMode==='cards'?'btn-dark':'btn-outline'}" onclick="APP.leadsView='cards';render()">🃏 Cards</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <select class="filter-select" id="status-filter" onchange="filterLeads();updateFilterLabel(this,'All Status')">
-        <option value="">All Status</option>
-        <option>New Lead</option><option>Contacted</option><option>Offer Sent</option>
-        <option>Negotiating</option><option>Under Contract</option><option>Closed</option>
-        <option value="">— Clear Filter —</option>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select class="filter-select" id="status-filter" onchange="filterLeads()">
+        <option value="" ${!(APP._leadsFilter&&APP._leadsFilter.status)?'selected':''}>All Status</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='New Lead'?'selected':''}>New Lead</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='Contacted'?'selected':''}>Contacted</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='Offer Sent'?'selected':''}>Offer Sent</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='Negotiating'?'selected':''}>Negotiating</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='Under Contract'?'selected':''}>Under Contract</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.status==='Closed'?'selected':''}>Closed</option>
       </select>
-      <select class="filter-select" id="cat-filter" onchange="filterLeads();updateFilterLabel(this,'All Categories')">
-        <option value="">All Categories</option>
-        <option>Pre-FC</option><option>REO</option><option>Vacant Property</option>
-        <option>Absentee Owner</option><option>Tax Delinquent</option><option>High Equity</option>
-        <option>Tired Landlord</option><option>Long-Term Owner</option><option>FSBO</option>
-        <option>Probate</option><option>Auction</option>
-        <option value="">— Clear Filter —</option>
+      <select class="filter-select" id="cat-filter" onchange="filterLeads()">
+        <option value="" ${!(APP._leadsFilter&&APP._leadsFilter.cat)?'selected':''}>All Categories</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Pre-FC'?'selected':''}>Pre-FC</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Vacant Property'?'selected':''}>Vacant Property</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Absentee Owner'?'selected':''}>Absentee Owner</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Tax Delinquent'?'selected':''}>Tax Delinquent</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='High Equity'?'selected':''}>High Equity</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Tired Landlord'?'selected':''}>Tired Landlord</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='FSBO'?'selected':''}>FSBO</option>
+        <option ${APP._leadsFilter&&APP._leadsFilter.cat==='Probate'?'selected':''}>Probate</option>
       </select>
       <select class="filter-select" id="deal-filter" onchange="filterLeads()" style="font-size:11px">
-        <option value="">All Deal Types</option>
-        <option value="Wholesale">Wholesale</option>
-        <option value="Fix & Flip">Fix & Flip</option>
-        <option value="Buy & Hold">Buy & Hold</option>
+        <option value="" ${!(APP._leadsFilter&&APP._leadsFilter.deal)?'selected':''}>All Deal Types</option>
+        <option value="Wholesale" ${APP._leadsFilter&&APP._leadsFilter.deal==='Wholesale'?'selected':''}>Wholesale</option>
+        <option value="Fix & Flip" ${APP._leadsFilter&&APP._leadsFilter.deal==='Fix & Flip'?'selected':''}>Fix & Flip</option>
+        <option value="Buy & Hold" ${APP._leadsFilter&&APP._leadsFilter.deal==='Buy & Hold'?'selected':''}>Buy & Hold</option>
       </select>
       <select class="filter-select" id="spread-filter" onchange="filterLeads()" style="font-size:11px">
-        <option value="">Any Spread</option>
-        <option value="10000">$10K+</option>
-        <option value="25000">$25K+</option>
-        <option value="50000">$50K+</option>
-        <option value="75000">$75K+</option>
-        <option value="100000">$100K+</option>
+        <option value="" ${!(APP._leadsFilter&&APP._leadsFilter.spread)?'selected':''}>Any Spread</option>
+        <option value="10000" ${APP._leadsFilter&&APP._leadsFilter.spread===10000?'selected':''}>$10K+</option>
+        <option value="25000" ${APP._leadsFilter&&APP._leadsFilter.spread===25000?'selected':''}>$25K+</option>
+        <option value="50000" ${APP._leadsFilter&&APP._leadsFilter.spread===50000?'selected':''}>$50K+</option>
+        <option value="75000" ${APP._leadsFilter&&APP._leadsFilter.spread===75000?'selected':''}>$75K+</option>
+        <option value="100000" ${APP._leadsFilter&&APP._leadsFilter.spread===100000?'selected':''}>$100K+</option>
       </select>
       <select class="filter-select" id="source-filter" onchange="filterLeads()" style="font-size:11px">
-        <option value="">All Sources</option>
-        <option value="Propwire">Propwire</option>
-        <option value="Redfin">Redfin</option>
-        <option value="Craigslist">Craigslist</option>
-        <option value="Zillow FSBO">Zillow</option>
+        <option value="" ${!(APP._leadsFilter&&APP._leadsFilter.source)?'selected':''}>All Sources</option>
+        <option value="Propwire" ${APP._leadsFilter&&APP._leadsFilter.source==='Propwire'?'selected':''}>Propwire</option>
+        <option value="Redfin" ${APP._leadsFilter&&APP._leadsFilter.source==='Redfin'?'selected':''}>Redfin</option>
+        <option value="Craigslist" ${APP._leadsFilter&&APP._leadsFilter.source==='Craigslist'?'selected':''}>Craigslist</option>
+        <option value="Zillow FSBO" ${APP._leadsFilter&&APP._leadsFilter.source==='Zillow FSBO'?'selected':''}>Zillow</option>
       </select>
-      <button class="btn btn-outline btn-sm" onclick="clearAllFilters()" title="Clear all filters" style="font-size:10px">✕ Clear</button>
+      <button class="btn btn-outline btn-sm" onclick="clearAllFilters()" style="font-size:10px">✕ Clear</button>
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export</button>
+    </div>
     </div>
   <!-- BULK ACTION TOOLBAR — shows when leads are selected -->
   <div id="bulk-toolbar" style="display:none;background:#1d1d1f;border-radius:10px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1054,7 +1062,7 @@ function renderLeadsCards(leads) {
         <div style="display:flex;gap:4px;justify-content:space-between">
           <a href="tel:${l.phone||''}" style="flex:1;padding:5px;background:#34c759;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📞</a>
           <a href="sms:${l.phone||''}" style="flex:1;padding:5px;background:#0071e3;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">💬</a>
-          <a href="mailto:${l.email||''}" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📧</a>
+          <a href="#" onclick="openEmailCompose();event.preventDefault()" style="flex:1;padding:5px;background:#5e5ce6;border-radius:6px;text-align:center;text-decoration:none;font-size:14px" onclick="event.stopPropagation()">📧</a>
         </div>
       </div>`;
     }).join('')}
@@ -1096,7 +1104,7 @@ function renderLeadDetail(l) {
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
   html += '<a href="#" onclick="makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
-  html += '<a href="mailto:' + (l.email||'') + '" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
+  html += '<a href="#" onclick="openEmailCompose();event.preventDefault()" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
   html += '</div>';
 
@@ -1143,17 +1151,6 @@ function renderLeadDetail(l) {
   if (l.script) html += '<div class="section-title" style="margin-top:10px">Call Script</div><div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.7;margin-bottom:10px">' + l.script + '</div>';
 
   // BUYER MATCHES
-  html += '<div class="section-title">Buy Box Matches (' + buyers.length + ')</div>';
-  if (buyers.length) {
-    buyers.slice(0,3).forEach(b => {
-      const s = matchScore(b, l);
-      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + b.type + ' &middot; ' + b.contact + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
-    });
-  } else {
-    html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
-  }
-
-  // DEAL ANALYSIS
   html += '<div class="section-title" style="margin-top:12px">Deal Analysis</div>';
   html += '<div style="background:#f5f5f7;border-radius:10px;padding:12px;margin-bottom:8px">';
   var dealReasons = [];
@@ -3270,7 +3267,7 @@ function openAIOutreach(leadId) {
       <textarea id="ao-email-body" class="form-textarea" style="min-height:180px;font-size:12px;line-height:1.7" data-original="${emailObj.body.replace(/"/g,"'")}">${emailObj.body}</textarea>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btn btn-dark btn-sm" onclick="copyAndLearn('ao-email-body','seller_email')">Copy + Learn</button>
-        <a href="mailto:${lead.email||''}" class="btn btn-blue btn-sm">Open Email App</a>
+        <a href="#" onclick="openEmailCompose();event.preventDefault()" class="btn btn-blue btn-sm">Open Email App</a>
         <button class="btn btn-outline btn-sm" onclick="regenerateOutreach('${leadId}','email')">↻ Regenerate</button>
       </div>
     </div>
@@ -4614,7 +4611,7 @@ montsan.rei@gmail.com`;
       <div style="font-size:11px;line-height:1.8;white-space:pre-wrap;max-height:280px;overflow-y:auto">${body}</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
-      <a href="mailto:${buyer.email||''}" class="btn btn-dark" onclick="logDealSent('${leadId}','${buyerId}')">Send via Email</a>
+      <a href="#" onclick="openEmailCompose();event.preventDefault()" class="btn btn-dark" onclick="logDealSent('${leadId}','${buyerId}')">Send via Email</a>
       <button class="btn btn-outline" onclick="copyDealText('${leadId}','${buyerId}')">Copy Text</button>
     </div>
     <div class="modal-actions">
@@ -4652,7 +4649,7 @@ async function openBuyerIntroEmail(buyerId) {
       <div style="background:#f0f6ff;border-radius:6px;padding:8px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">Subject: ${data.subject}</div>
       <textarea class="form-textarea" style="min-height:220px;font-size:11px;line-height:1.7" id="intro-email-body">${data.body}</textarea>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <a href="mailto:${buyer.email||''}" class="btn btn-dark">Send Email</a>
+        <a href="#" onclick="openEmailCompose();event.preventDefault()" class="btn btn-dark">Send Email</a>
         <button class="btn btn-outline" onclick="document.getElementById('intro-email-body')&&navigator.clipboard.writeText(document.getElementById('intro-email-body').value).then(()=>toast('Copied!','success'))">Copy</button>
       </div>
       <div class="modal-actions" style="margin-top:12px">
