@@ -484,6 +484,131 @@ async function runAllFreeSources(options = {}) {
   return results;
 }
 
+function parsePropwireCSV(csvText) {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { leads: [], stats: { total: 0, kept: 0, skipped_type: 0, skipped_price: 0 } };
+
+  function parseCSVLine(line) {
+    const fields = [];
+    let field = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQuote) { inQuote = true; continue; }
+      if (ch === '"' && inQuote && line[i+1] === '"') { field += '"'; i++; continue; }
+      if (ch === '"' && inQuote) { inQuote = false; continue; }
+      if (ch === ',' && !inQuote) { fields.push(field.trim()); field = ''; continue; }
+      field += ch;
+    }
+    fields.push(field.trim());
+    return fields;
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/"/g,''));
+
+  function col(names) {
+    for (const name of names) {
+      const idx = headers.indexOf(name.toLowerCase());
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  }
+
+  const C = {
+    address: col(['address']), city: col(['city']), state: col(['state']),
+    zip: col(['zip']), county: col(['county']),
+    sqft: col(['living square feet']), year: col(['year built']),
+    beds: col(['bedrooms']), baths: col(['bathrooms']),
+    propType: col(['property type']), landUse: col(['land use']),
+    owner1f: col(['owner 1 first name']), owner1l: col(['owner 1 last name']),
+    ownerType: col(['owner type']), ownerOcc: col(['owner occupied']),
+    vacant: col(['vacant?']), dom: col(['days on market']),
+    listPrice: col(['listing price']), lastSaleDate: col(['last sale date']),
+    lastSaleAmt: col(['last sale amount']), estValue: col(['estimated value']),
+    estEquity: col(['estimated equity']), estEquityPct: col(['estimated equity percent']),
+    mortgage: col(['open mortgage balance']), status: col(['status']),
+    defaultAmt: col(['default amount']), auctionDate: col(['auction date']),
+    ownershipMo: col(['ownership length (months)']),
+  };
+
+  const GOOD_PROP_TYPES = new Set(['single family residence','multi-family 2-4 units','condominium / townhouse','condominium/townhouse','townhouse','duplex','triplex','fourplex']);
+  const MIN_ARV = 60000, MAX_ARV = 800000;
+  const leads = [];
+  const stats = { total: lines.length - 1, kept: 0, skipped_type: 0, skipped_price: 0, skipped_novalue: 0 };
+
+  for (const line of lines.slice(1)) {
+    try {
+      const f = parseCSVLine(line);
+      const get = (idx) => idx >= 0 && idx < f.length ? f[idx].trim() : '';
+      const getNum = (idx) => { const v = get(idx); return parseFloat(v.replace(/[$,]/g,'')) || 0; };
+
+      const addr = get(C.address);
+      if (!addr || addr.length < 3) continue;
+
+      const propType = get(C.propType).toLowerCase();
+      const landUse = get(C.landUse).toLowerCase();
+      if (!GOOD_PROP_TYPES.has(propType)) { stats.skipped_type++; continue; }
+      if (landUse === 'commercial' || landUse === 'industrial') { stats.skipped_type++; continue; }
+
+      const estValue = getNum(C.estValue);
+      if (estValue === 0) { stats.skipped_novalue++; continue; }
+      if (estValue < MIN_ARV || estValue > MAX_ARV) { stats.skipped_price++; continue; }
+
+      const equityPct = getNum(C.estEquityPct);
+      const isVacant = get(C.vacant) === '1';
+      const isDefaulted = getNum(C.defaultAmt) > 0;
+      const hasAuction = get(C.auctionDate).length > 4;
+      const ownershipMonths = getNum(C.ownershipMo);
+      const isOwnerOcc = get(C.ownerOcc) === '1';
+      const isAbsentee = !isOwnerOcc;
+      const hasMotivation = equityPct >= 15 || isVacant || isDefaulted || hasAuction || ownershipMonths > 120;
+      if (!hasMotivation) { stats.skipped_type++; continue; }
+
+      const city = get(C.city), state = get(C.state), zip = get(C.zip), county = get(C.county);
+      const beds = Math.round(getNum(C.beds)), baths = getNum(C.baths);
+      const sqft = Math.round(getNum(C.sqft)), year = Math.round(getNum(C.year));
+      const owner1 = [get(C.owner1f), get(C.owner1l)].filter(Boolean).join(' ').trim();
+      const dom = Math.round(getNum(C.dom)) || 0;
+      const estEquity = getNum(C.estEquity), mortgage = getNum(C.mortgage);
+      const lastSaleDate = get(C.lastSaleDate), lastSaleAmt = getNum(C.lastSaleAmt);
+
+      let category = 'Absentee Owner';
+      if (isDefaulted || hasAuction) category = 'Pre-FC';
+      else if (isVacant) category = 'Vacant Property';
+      else if (ownershipMonths > 240) category = 'Tired Landlord';
+      else if (equityPct >= 50) category = 'High Equity';
+      else if (isAbsentee) category = 'Absentee Owner';
+      else category = 'FSBO';
+
+      const arv = estValue;
+      const repairRate = sqft === 0 ? 0 : year < 1960 ? 60 : year < 1980 ? 45 : year < 1995 ? 28 : year < 2010 ? 18 : 12;
+      const estRepairs = sqft > 0 ? Math.min(Math.round(sqft * repairRate), Math.round(arv * 0.25)) : Math.round(arv * 0.10);
+      const offer = Math.max(0, Math.round(arv * 0.70 - estRepairs));
+      const spread = Math.max(0, arv - offer - estRepairs);
+      if (offer <= 0 || spread < 3000) { stats.skipped_price++; continue; }
+
+      const fullAddress = [addr, city, state, zip].filter(Boolean).join(', ');
+      stats.kept++;
+      leads.push({
+        id: uuidv4(), address: fullAddress, county, state, zip,
+        beds, baths, sqft, year, owner_name: owner1,
+        phone: '', email: '', isVacant, isAbsentee,
+        ownerType: get(C.ownerType), ownershipMonths: Math.round(ownershipMonths),
+        category, arv, repairs: estRepairs, offer, mao: offer, spread,
+        fee_lo: Math.round(spread * 0.35), fee_hi: Math.round(spread * 0.55),
+        equity: Math.round(estEquity), equityPct: Math.round(equityPct),
+        mortgage: Math.round(mortgage), listPrice: getNum(C.listPrice),
+        lastSaleDate, lastSaleAmt, estValue, dom,
+        status: 'New Lead', source: 'Propwire', verified: true,
+        dealType: spread > arv * 0.20 ? 'Wholesale' : spread > arv * 0.12 ? 'Fix & Flip' : 'Buy & Hold',
+        zillowUrl: `https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`,
+        redfinUrl: `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`,
+        created: new Date().toISOString(), userId: 'admin',
+      });
+    } catch(e) { /* skip malformed rows */ }
+  }
+  return { leads, stats };
+}
+
 module.exports = {
   parsePropwireCSV,
   scrapeRedfin,
