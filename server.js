@@ -1358,6 +1358,102 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+
+// ── Propwire CSV Parser (inline — no external dependency) ────────────────
+function parsePropwireCSV(csvText) {
+  const { v4: uuidv4 } = require('uuid');
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { leads: [], stats: { total: 0, kept: 0, skipped_type: 0, skipped_price: 0 } };
+
+  function parseCSVLine(line) {
+    const fields = []; let field = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQuote) { inQuote = true; continue; }
+      if (ch === '"' && inQuote && line[i+1] === '"') { field += '"'; i++; continue; }
+      if (ch === '"' && inQuote) { inQuote = false; continue; }
+      if (ch === ',' && !inQuote) { fields.push(field.trim()); field = ''; continue; }
+      field += ch;
+    }
+    fields.push(field.trim()); return fields;
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/"/g,''));
+  function col(names) { for (const n of names) { const i = headers.indexOf(n.toLowerCase()); if (i>=0) return i; } return -1; }
+
+  const C = {
+    address: col(['address']), city: col(['city']), state: col(['state']),
+    zip: col(['zip']), county: col(['county']),
+    sqft: col(['living square feet']), year: col(['year built']),
+    beds: col(['bedrooms']), baths: col(['bathrooms']),
+    propType: col(['property type']), landUse: col(['land use']),
+    owner1f: col(['owner 1 first name']), owner1l: col(['owner 1 last name']),
+    ownerType: col(['owner type']), ownerOcc: col(['owner occupied']),
+    vacant: col(['vacant?']), dom: col(['days on market']),
+    listPrice: col(['listing price']), lastSaleDate: col(['last sale date']),
+    lastSaleAmt: col(['last sale amount']), estValue: col(['estimated value']),
+    estEquity: col(['estimated equity']), estEquityPct: col(['estimated equity percent']),
+    mortgage: col(['open mortgage balance']), defaultAmt: col(['default amount']),
+    auctionDate: col(['auction date']), ownershipMo: col(['ownership length (months)']),
+  };
+
+  const GOOD = new Set(['single family residence','multi-family 2-4 units','condominium / townhouse','condominium/townhouse','townhouse','duplex','triplex','fourplex']);
+  const leads = [], stats = { total: lines.length-1, kept:0, skipped_type:0, skipped_price:0, skipped_novalue:0 };
+
+  for (const line of lines.slice(1)) {
+    try {
+      const f = parseCSVLine(line);
+      const get = i => i>=0&&i<f.length ? f[i].trim() : '';
+      const num = i => parseFloat((get(i)||'0').replace(/[$,]/g,''))||0;
+      const addr = get(C.address); if (!addr||addr.length<3) continue;
+      if (!GOOD.has(get(C.propType).toLowerCase())) { stats.skipped_type++; continue; }
+      const lu = get(C.landUse).toLowerCase();
+      if (lu==='commercial'||lu==='industrial') { stats.skipped_type++; continue; }
+      const estValue = num(C.estValue);
+      if (!estValue) { stats.skipped_novalue++; continue; }
+      if (estValue<60000||estValue>800000) { stats.skipped_price++; continue; }
+      const equityPct=num(C.estEquityPct), isVacant=get(C.vacant)==='1';
+      const isDefaulted=num(C.defaultAmt)>0, hasAuction=get(C.auctionDate).length>4;
+      const ownershipMonths=num(C.ownershipMo), isOwnerOcc=get(C.ownerOcc)==='1';
+      if (equityPct<15&&!isVacant&&!isDefaulted&&!hasAuction&&ownershipMonths<=120) { stats.skipped_type++; continue; }
+      const city=get(C.city),state=get(C.state),zip=get(C.zip),county=get(C.county);
+      const beds=Math.round(num(C.beds)),baths=num(C.baths),sqft=Math.round(num(C.sqft)),year=Math.round(num(C.year));
+      const owner1=[get(C.owner1f),get(C.owner1l)].filter(Boolean).join(' ').trim();
+      let category='Absentee Owner';
+      if (isDefaulted||hasAuction) category='Pre-FC';
+      else if (isVacant) category='Vacant Property';
+      else if (ownershipMonths>240) category='Tired Landlord';
+      else if (equityPct>=50) category='High Equity';
+      const arv=estValue;
+      const repairRate=sqft===0?0:year<1960?60:year<1980?45:year<1995?28:year<2010?18:12;
+      const estRepairs=sqft>0?Math.min(Math.round(sqft*repairRate),Math.round(arv*0.25)):Math.round(arv*0.10);
+      const offer=Math.max(0,Math.round(arv*0.70-estRepairs));
+      const spread=Math.max(0,arv-offer-estRepairs);
+      if (offer<=0||spread<3000) { stats.skipped_price++; continue; }
+      const fullAddress=[addr,city,state,zip].filter(Boolean).join(', ');
+      stats.kept++;
+      leads.push({
+        id:uuidv4(), address:fullAddress, county, state, zip,
+        beds, baths, sqft, year, owner_name:owner1, phone:'', email:'',
+        isVacant, isAbsentee:!isOwnerOcc, ownerType:get(C.ownerType),
+        ownershipMonths:Math.round(ownershipMonths), category,
+        arv, repairs:estRepairs, offer, mao:offer, spread,
+        fee_lo:Math.round(spread*0.35), fee_hi:Math.round(spread*0.55),
+        equity:Math.round(num(C.estEquity)), equityPct:Math.round(equityPct),
+        mortgage:Math.round(num(C.mortgage)), listPrice:num(C.listPrice),
+        lastSaleDate:get(C.lastSaleDate), lastSaleAmt:num(C.lastSaleAmt),
+        estValue, dom:Math.round(num(C.dom))||0,
+        status:'New Lead', source:'Propwire', verified:true,
+        dealType:spread>arv*0.20?'Wholesale':spread>arv*0.12?'Fix & Flip':'Buy & Hold',
+        zillowUrl:`https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`,
+        redfinUrl:`https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`,
+        created:new Date().toISOString(), userId:'admin',
+      });
+    } catch(e) {}
+  }
+  return { leads, stats };
+}
+
 // ── Free Data Sources ────────────────────────────────────
 function getDatasources() {
   return require('./modules/datasources');
@@ -1369,7 +1465,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
     const csvText = req.body;
     if (!csvText || csvText.length < 10) return res.json({ ok: false, error: 'No CSV data received' });
 
-    const rawResult = getDatasources().parsePropwireCSV(csvText);
+    const rawResult = parsePropwireCSV(csvText);
     // Handle both old format (array) and new format ({leads, stats})
     const leads = Array.isArray(rawResult) ? rawResult : (rawResult.leads || []);
     const stats = Array.isArray(rawResult) ? { total: leads.length, kept: leads.length, skipped_type: 0, skipped_price: 0 } : (rawResult.stats || {});
