@@ -1,4 +1,4 @@
-// server.js — Express server for dashboard + REST API
+// server.js â Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
 require('dotenv').config();
@@ -13,28 +13,28 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 
-// ── CORS for dashboard ─────────────────────────────────
+// ââ CORS for dashboard âââââââââââââââââââââââââââââââââ
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   next();
 });
 
-// ── Serve dashboard static files ───────────────────────
+// ââ Serve dashboard static files âââââââââââââââââââââââ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
 app.get('/dashboard/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
 
-// ── Health check ───────────────────────────────────────
+// ââ Health check âââââââââââââââââââââââââââââââââââââââ
 app.get('/health', (_, res) => res.json({ ok: true, time: new Date().toISOString() }));
 app.get('/', (_, res) => res.json({
-  status: 'Montsan REI Bot — Online',
+  status: 'Montsan REI Bot â Online',
   dashboard: '/dashboard/',
   leads: db.getLeads().length,
   version: '3.0'
 }));
 
-// ── API: Leads ──────────────────────────────────────────
+// ââ API: Leads ââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
   const { status, county, category, limit } = req.query;
@@ -70,7 +70,7 @@ app.delete('/api/leads/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── API: Buyers ─────────────────────────────────────────
+// ââ API: Buyers âââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/buyers', (req, res) => res.json({ buyers: db.getBuyers() }));
 
 app.post('/api/buyers', (req, res) => {
@@ -87,7 +87,7 @@ app.put('/api/buyers/:id', (req, res) => {
   res.json(dbData.buyers[idx]);
 });
 
-// ── API: Calendar ───────────────────────────────────────
+// ââ API: Calendar âââââââââââââââââââââââââââââââââââââââ
 app.get('/api/calendar', (req, res) => {
   const dbData = db.readDB();
   res.json({ events: dbData.calendar || [] });
@@ -98,7 +98,7 @@ app.post('/api/calendar', (req, res) => {
   res.json(evt);
 });
 
-// ── API: Follow-ups ─────────────────────────────────────
+// ââ API: Follow-ups âââââââââââââââââââââââââââââââââââââ
 app.get('/api/followups', (req, res) => {
   const dbData = db.readDB();
   const today = new Date().toISOString().slice(0,10);
@@ -117,7 +117,7 @@ app.put('/api/followups/:id', (req, res) => {
   res.json(fu);
 });
 
-// ── API: Assignments ────────────────────────────────────
+// ââ API: Assignments ââââââââââââââââââââââââââââââââââââ
 app.get('/api/assignments', (req, res) => {
   const dbData = db.readDB();
   res.json({ assignments: dbData.assignments || [] });
@@ -132,7 +132,7 @@ app.post('/api/assignments', (req, res) => {
   res.json(asgn);
 });
 
-// ── API: Contracts ──────────────────────────────────────
+// ââ API: Contracts ââââââââââââââââââââââââââââââââââââââ
 app.post('/api/contracts/fill', async (req, res) => {
   try {
     const { fillContract } = require('./modules/contracts');
@@ -146,7 +146,7 @@ app.post('/api/contracts/fill', async (req, res) => {
   }
 });
 
-// ── API: Settings ───────────────────────────────────────
+// ââ API: Settings âââââââââââââââââââââââââââââââââââââââ
 app.get('/api/settings', (req, res) => {
   const dbData = db.readDB();
   res.json(dbData.settings || {});
@@ -159,7 +159,7 @@ app.put('/api/settings', (req, res) => {
   res.json(dbData.settings);
 });
 
-// ── API: CSV Import ────────────────────────────────────────
+// ââ API: CSV Import ââââââââââââââââââââââââââââââââââââââââ
 app.post('/api/leads/import', (req, res) => {
   try {
     const { leads } = req.body;
@@ -176,7 +176,7 @@ app.post('/api/leads/import', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── API: PDF Lead Extraction ────────────────────────────────
+// ââ API: PDF Lead Extraction ââââââââââââââââââââââââââââââââ
 app.post('/api/leads/extract-pdf', async (req, res) => {
   try {
     const { filename, base64preview } = req.body;
@@ -213,7 +213,7 @@ Make addresses realistic for the market implied by the filename. Return ONLY the
   }
 });
 
-// ── API: AI Note generation ─────────────────────────────────
+// ââ API: AI Note generation âââââââââââââââââââââââââââââââââ
 app.post('/api/ai/note', async (req, res) => {
   try {
     const { type, title, date, context } = req.body;
@@ -228,7 +228,7 @@ Write 1-2 sentences. Be specific and actionable. Return just the note text.`;
   } catch (err) { res.json({ note: 'AI note generation unavailable.' }); }
 });
 
-// ── API: PDF Lead Import ───────────────────────────────────
+// ââ API: PDF Lead Import âââââââââââââââââââââââââââââââââââ
 app.post('/api/leads/import-pdf', async (req, res) => {
   try {
     const { filename, base64, size } = req.body;
@@ -276,7 +276,7 @@ Otherwise return: {"leads": [...array of leads...]}`;
   }
 });
 
-// ── API: Leads by State/County hierarchy ────────────────
+// ââ API: Leads by State/County hierarchy ââââââââââââââââ
 app.get('/api/leads/hierarchy', (req, res) => {
   try {
     const tree = db.getLeadsByStateCounty();
@@ -284,7 +284,7 @@ app.get('/api/leads/hierarchy', (req, res) => {
   } catch(err) { res.json({ tree: {}, total: 0 }); }
 });
 
-// ── API: Stats with followups_due ────────────────────────
+// ââ API: Stats with followups_due ââââââââââââââââââââââââ
 app.get('/api/stats', (req, res) => {
   const stats = db.getStats();
   const today = new Date().toISOString().slice(0,10);
@@ -294,7 +294,7 @@ app.get('/api/stats', (req, res) => {
   res.json(stats);
 });
 
-// ── API: Notifications ──────────────────────────────────
+// ââ API: Notifications ââââââââââââââââââââââââââââââââââ
 app.get('/api/notifications', (req, res) => {
   const unreadOnly = req.query.unread === 'true';
   const notifs = db.getNotifications(unreadOnly);
@@ -307,7 +307,7 @@ app.post('/api/notifications/read', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── API: Markets ─────────────────────────────────────────
+// ââ API: Markets âââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/markets/best', (req, res) => {
   try {
     const { selectMarketsForWeek } = require('./markets');
@@ -317,7 +317,7 @@ app.get('/api/markets/best', (req, res) => {
   } catch(err) { res.json({ markets: [] }); }
 });
 
-// ── API: Scan status ─────────────────────────────────────
+// ââ API: Scan status âââââââââââââââââââââââââââââââââââââ
 app.get('/api/scan/status', (req, res) => {
   const dbData = db.readDB();
   res.json({
@@ -328,7 +328,7 @@ app.get('/api/scan/status', (req, res) => {
   });
 });
 
-// ── API: Buy Boxes ──────────────────────────────────────
+// ââ API: Buy Boxes ââââââââââââââââââââââââââââââââââââââ
 app.get('/api/buyboxes', (req, res) => {
   const { getBuyBoxes } = require('./modules/buybox');
   res.json({ buyboxes: getBuyBoxes() });
@@ -338,7 +338,7 @@ app.post('/api/buyboxes', (req, res) => {
   const { addBuyBox } = require('./modules/buybox');
   const box = addBuyBox(req.body);
   if (!box) return res.json({ ok: false, error: 'Duplicate buy box' });
-  db.addNotification('buyer', 'New buy box added', `${req.body.name} — ${req.body.county||'Unknown'}, ${req.body.state||'TX'}`);
+  db.addNotification('buyer', 'New buy box added', `${req.body.name} â ${req.body.county||'Unknown'}, ${req.body.state||'TX'}`);
   res.json({ ok: true, buybox: box });
 });
 
@@ -361,7 +361,7 @@ app.post('/api/buyboxes/match/:leadId', (req, res) => {
   res.json({ matches: matchBuyBoxesToLead(lead) });
 });
 
-// ── API: Outreach ─────────────────────────────────────────
+// ââ API: Outreach âââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/outreach/:leadId', (req, res) => {
   const { getOutreachHistory } = require('./modules/outreach');
   res.json({ history: getOutreachHistory(req.params.leadId) });
@@ -400,7 +400,7 @@ app.get('/api/outreach/tone-status', (req, res) => {
   res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
 });
 
-// ── API: Contracts Library ────────────────────────────────
+// ââ API: Contracts Library ââââââââââââââââââââââââââââââââ
 app.get('/api/contracts/templates', (req, res) => {
   const { getTemplates } = require('./modules/contract_templates');
   res.json({ templates: getTemplates() });
@@ -436,9 +436,9 @@ app.put('/api/contracts/custom/:id', (req, res) => {
   res.json({ ok: true, contract: dbData.custom_contracts[idx] });
 });
 
-// ── API: Automation Control ───────────────────────────────
+// ââ API: Automation Control âââââââââââââââââââââââââââââââ
 app.post('/api/automation/scan', async (req, res) => {
-  res.json({ ok: true, message: 'Scan triggered — check notifications for progress' });
+  res.json({ ok: true, message: 'Scan triggered â check notifications for progress' });
   // Fire and forget
   setTimeout(async () => {
     try {
@@ -467,7 +467,7 @@ app.post('/api/automation/scan', async (req, res) => {
         addBuyBoxesBulk(boxes);
         db.addScannedMarket(market.state, market.county);
         totalLeads += added;
-        db.addNotification('deal', `${added} leads — ${market.county}, ${market.state}`, `Automation scan complete for ${market.county} County`);
+        db.addNotification('deal', `${added} leads â ${market.county}, ${market.state}`, `Automation scan complete for ${market.county} County`);
       }
       db.addNotification('scan', 'Automation scan complete', `${totalLeads} total leads added across ${markets.length} markets`);
     } catch(e) { db.addNotification('warning', 'Scan error', e.message); }
@@ -481,7 +481,7 @@ app.post('/api/automation/extract-buyboxes', (req, res) => {
   res.json({ ok: true, extracted: fromBuyers });
 });
 
-// ── API: Lead Quality Score ──────────────────────────────
+// ââ API: Lead Quality Score ââââââââââââââââââââââââââââââ
 app.get('/api/leads/:id/quality', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Not found' });
@@ -489,7 +489,7 @@ app.get('/api/leads/:id/quality', (req, res) => {
   res.json(scoreLeadQuality(lead));
 });
 
-// ── API: Outreach generation ──────────────────────────────
+// ââ API: Outreach generation ââââââââââââââââââââââââââââââ
 app.post('/api/outreach/generate', (req, res) => {
   const { leadId, buyerId } = req.body;
   const lead = db.getLeads().find(l => l.id === leadId);
@@ -545,7 +545,7 @@ app.get('/api/outreach/tone-status', (req, res) => {
   res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
 });
 
-// ── API: Land deals ───────────────────────────────────────
+// ââ API: Land deals âââââââââââââââââââââââââââââââââââââââ
 app.post('/api/leads/land', async (req, res) => {
   try {
     const { county, state, count } = req.body;
@@ -557,12 +557,12 @@ app.post('/api/leads/land', async (req, res) => {
       db.addLead(lead);
       added++;
     }
-    db.addNotification('deal', `${added} land deals added`, `${county}, ${state} — land opportunities`);
+    db.addNotification('deal', `${added} land deals added`, `${county}, ${state} â land opportunities`);
     res.json({ ok: true, added, leads: leads.slice(0, added) });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── API: Buyer intro email ────────────────────────────────
+// ââ API: Buyer intro email ââââââââââââââââââââââââââââââââ
 app.get('/api/buyers/:id/intro-email', (req, res) => {
   const buyer = db.getBuyers().find(b => b.id === req.params.id);
   if (!buyer) return res.status(404).json({ error: 'Not found' });
@@ -570,7 +570,7 @@ app.get('/api/buyers/:id/intro-email', (req, res) => {
   res.json(generateBuyerIntroEmail(buyer));
 });
 
-// ── API: Deal send (address-protected) ───────────────────
+// ââ API: Deal send (address-protected) âââââââââââââââââââ
 app.post('/api/deals/send', (req, res) => {
   try {
     const { leadId, buyerId } = req.body;
@@ -584,12 +584,12 @@ app.post('/api/deals/send', (req, res) => {
     if (!dbData.deals_sent) dbData.deals_sent = [];
     dbData.deals_sent.push({ leadId, buyerId, buyerName: buyer.name, sent: new Date().toISOString(), version: email.subject });
     db.writeDB(dbData);
-    db.addNotification('match', `Deal sent to ${buyer.name}`, `${lead.address?.split(',')[0]} — city-only version sent`);
+    db.addNotification('match', `Deal sent to ${buyer.name}`, `${lead.address?.split(',')[0]} â city-only version sent`);
     res.json({ ok: true, email });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── API: Auth / Users ────────────────────────────────────
+// ââ API: Auth / Users ââââââââââââââââââââââââââââââââââââ
 app.post('/api/auth/login', (req, res) => {
   const { pin } = req.body;
   const user = db.getUserByPin(String(pin));
@@ -615,7 +615,7 @@ app.post('/api/users', (req, res) => {
   res.json({ ok: true, user: result });
 });
 
-// ── API: User-scoped leads ────────────────────────────────
+// ââ API: User-scoped leads ââââââââââââââââââââââââââââââââ
 app.get('/api/leads/user/:userId', (req, res) => {
   const leads = db.getLeadsForUser(req.params.userId);
   res.json({ leads, total: leads.length });
@@ -634,7 +634,7 @@ app.get('/api/stats/:userId', (req, res) => {
   res.json(stats);
 });
 
-// ── API: Dashboard search (no Telegram needed) ────────────
+// ââ API: Dashboard search (no Telegram needed) ââââââââââââ
 app.post('/api/search/leads', async (req, res) => {
   const { county, state, count, type, userId } = req.body;
   if (!county || !state) return res.status(400).json({ error: 'County and state required' });
@@ -671,7 +671,7 @@ app.post('/api/search/leads', async (req, res) => {
           investment_strategy:analysis.investment_strategy||'Wholesale Assignment',
           script:analysis.script||lead.script||'', offer_email:analysis.offer_email||lead.offer_email||'',
           negotiation_text:analysis.negotiation_text||lead.negotiation_text||'',
-          source: isLand ? 'Land — Dashboard Search' : 'AI Generated — Dashboard Search',
+          source: isLand ? 'Land â Dashboard Search' : 'AI Generated â Dashboard Search',
           userId: userId || 'admin',
         });
         added++;
@@ -684,13 +684,13 @@ app.post('/api/search/leads', async (req, res) => {
       db.addScannedMarket(state, county);
       db.markStatePopulated(state);
       db.checkLeadLimit();
-      db.addNotification('deal', added + ' leads found — ' + county + ', ' + state,
+      db.addNotification('deal', added + ' leads found â ' + county + ', ' + state,
         'Dashboard search complete. ' + buyersAdded + ' buyers added.', {county, state, added, userId: userId||'admin'});
     } catch(e) { db.addNotification('warning','Search error', e.message); }
   }, 100);
 });
 
-// ── API: State auto-populate ──────────────────────────────
+// ââ API: State auto-populate ââââââââââââââââââââââââââââââ
 app.post('/api/states/populate', async (req, res) => {
   const { stateCode, userId } = req.body;
   if (!stateCode) return res.status(400).json({ error: 'State code required' });
@@ -729,7 +729,7 @@ app.post('/api/states/populate', async (req, res) => {
             distress_signals:analysis.distress_signals||[lead.category],
             investment_strategy:'Wholesale Assignment',
             script:analysis.script||lead.script||'',
-            source:'AI Generated — State Population',
+            source:'AI Generated â State Population',
             userId: userId||'admin',
           });
           totalAdded++;
@@ -740,12 +740,12 @@ app.post('/api/states/populate', async (req, res) => {
       }
       db.markStatePopulated(stateCode);
       db.checkLeadLimit();
-      db.addNotification('deal', stateData.name + ' populated — ' + totalAdded + ' leads', 'Auto-population complete for ' + stateData.name, {state:stateCode, added:totalAdded});
+      db.addNotification('deal', stateData.name + ' populated â ' + totalAdded + ' leads', 'Auto-population complete for ' + stateData.name, {state:stateCode, added:totalAdded});
     } catch(e) { db.addNotification('warning','Population error for '+stateCode, e.message); }
   }, 100);
 });
 
-// ── API: Pending buyers ───────────────────────────────────
+// ââ API: Pending buyers âââââââââââââââââââââââââââââââââââ
 app.get('/api/buyers/pending', (req, res) => {
   res.json({ pending: db.getPendingBuyers() });
 });
@@ -767,7 +767,7 @@ app.post('/api/buyers/pending/:id/reject', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── API: State/County data ────────────────────────────────
+// ââ API: State/County data ââââââââââââââââââââââââââââââââ
 app.get('/api/states', (req, res) => {
   const { MARKETS } = require('./markets');
   const populated = db.readDB().populated_states || [];
@@ -780,7 +780,7 @@ app.get('/api/states', (req, res) => {
   res.json({ states });
 });
 
-// ── API: Fix state/county data ────────────────────────────
+// ââ API: Fix state/county data ââââââââââââââââââââââââââââ
 app.post('/api/leads/fix-states', (req, res) => {
   const dbData = db.readDB();
   const STATE_MAP = {
@@ -816,7 +816,7 @@ app.post('/api/leads/fix-states', (req, res) => {
         fixed++;
       }
     }
-    // Fix county→state mapping
+    // Fix countyâstate mapping
     const correctState = STATE_MAP[county];
     if (correctState && lead.state !== correctState) {
       lead.state = correctState;
@@ -828,7 +828,7 @@ app.post('/api/leads/fix-states', (req, res) => {
 });
 
 
-// ── Gmail API endpoints ───────────────────────────────────
+// ââ Gmail API endpoints âââââââââââââââââââââââââââââââââââ
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 
@@ -942,7 +942,7 @@ app.post('/api/gmail/send', async (req, res) => {
     ];
     const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
-    db.addNotification('system', 'Email sent', 'To: ' + to + ' — ' + subject);
+    db.addNotification('system', 'Email sent', 'To: ' + to + ' â ' + subject);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1023,7 +1023,7 @@ app.post('/api/gmail/reply', async (req, res) => {
 });
 
 
-// ── Property Intelligence ─────────────────────────────────────────────────
+// ââ Property Intelligence âââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/property/intel/:leadId', async (req, res) => {
   try {
     const lead = db.getLeads().find(l => l.id === req.params.leadId);
@@ -1097,7 +1097,7 @@ app.post('/api/scrape/buyers', async (req, res) => {
 
 
 
-// ── Google Drive API ──────────────────────────────────────
+// ââ Google Drive API ââââââââââââââââââââââââââââââââââââââ
 function getDriveClient() {
   const clientId = process.env.GMAIL_CLIENT_ID;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET;
@@ -1116,9 +1116,9 @@ app.get('/api/drive/status', async (req, res) => {
     res.json({ connected: true, email: about.data.user.emailAddress });
   } catch(e) {
     // Common causes: token expired, wrong scope, revoked access
-    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired — regenerate at OAuth Playground' :
-                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope — re-authorize with https://www.googleapis.com/auth/drive scope' :
-                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret — check Railway Variables' :
+    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired â regenerate at OAuth Playground' :
+                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope â re-authorize with https://www.googleapis.com/auth/drive scope' :
+                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret â check Railway Variables' :
                    e.message;
     res.json({ connected: false, reason });
   }
@@ -1157,7 +1157,7 @@ app.post('/api/drive/backup', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── API: Search ─────────────────────────────────────────
+// ââ API: Search âââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/search', (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
@@ -1168,13 +1168,13 @@ app.get('/api/search', (req, res) => {
 });
 
 
-// ── Scrape progress tracking ─────────────────────────────
+// ââ Scrape progress tracking âââââââââââââââââââââââââââââ
 const scrapeProgress = { buyers: null, deals: null };
 
 app.get('/api/scraper/progress', (req, res) => {
   res.json({ buyers: scrapeProgress.buyers, deals: scrapeProgress.deals });
 });
-// ── Scraper routes ───────────────────────────────────────
+// ââ Scraper routes âââââââââââââââââââââââââââââââââââââââ
 const scraper = require('./modules/scraper');
 
 // Trigger buyer scrape manually
@@ -1256,7 +1256,7 @@ app.get('/api/review-queue', (req, res) => {
   res.json({ queue: dbData.reviewQueue || [], count: (dbData.reviewQueue||[]).length });
 });
 
-// Accept a review queue item → validate + enrich → add as real lead
+// Accept a review queue item â validate + enrich â add as real lead
 app.post('/api/review-queue/:id/accept', async (req, res) => {
   try {
     const dbData = db.readDB();
@@ -1359,7 +1359,7 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
 });
 
 
-// ── Propwire CSV Parser (inline — no external dependency) ────────────────
+// ââ Propwire CSV Parser (inline â no external dependency) ââââââââââââââââ
 function parsePropwireCSV(csvText) {
   const { v4: uuidv4 } = require('uuid');
   const lines = csvText.split('\n').filter(l => l.trim());
@@ -1454,7 +1454,7 @@ function parsePropwireCSV(csvText) {
   return { leads, stats };
 }
 
-// ── Free Data Sources ────────────────────────────────────
+// ââ Free Data Sources ââââââââââââââââââââââââââââââââââââ
 function getDatasources() {
   return require('./modules/datasources');
 }
@@ -1472,7 +1472,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
 
     if (!leads || !leads.length) return res.json({
       ok: false,
-      error: `No wholesale deals found in this file. Processed ${stats.total} rows — all were filtered out (${stats.skipped_type} wrong property type, ${stats.skipped_price} outside price range).`
+      error: `No wholesale deals found in this file. Processed ${stats.total} rows â all were filtered out (${stats.skipped_type} wrong property type, ${stats.skipped_price} outside price range).`
     });
 
     // Delete all existing Propwire leads before reimporting to avoid stale bad data
@@ -1497,7 +1497,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
     db.writeDB(dbData);
     db.addNotification('deal',
       `${added} real wholesale leads imported from Propwire`,
-      `${stats.total} rows → ${stats.kept} passed filter → ${added} imported. Removed: ${stats.skipped_type} wrong type, ${stats.skipped_price} bad price/spread, ${deleted} stale leads cleared.`
+      `${stats.total} rows â ${stats.kept} passed filter â ${added} imported. Removed: ${stats.skipped_type} wrong type, ${stats.skipped_price} bad price/spread, ${deleted} stale leads cleared.`
     );
 
     // Auto-upload to Google Drive in background
@@ -1626,7 +1626,7 @@ app.post('/api/datasources/:source', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Delete endpoints ─────────────────────────────────────
+// ââ Delete endpoints âââââââââââââââââââââââââââââââââââââ
 // Delete single lead
 app.delete('/api/leads/:id', (req, res) => {
   try {
@@ -1714,11 +1714,11 @@ app.delete('/api/buyers/clear/fake', (req, res) => {
 });
 
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  COMMUNICATIONS — SMS, Bulk Email, Browser Dialer
-// ═══════════════════════════════════════════════════════════════════════════
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+//  COMMUNICATIONS â SMS, Bulk Email, Browser Dialer
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-// ── Twilio status ─────────────────────────────────────────────────────────
+// ââ Twilio status âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/comms/status', (req, res) => {
   const comms = require('./modules/comms');
   res.json({
@@ -1728,7 +1728,7 @@ app.get('/api/comms/status', (req, res) => {
   });
 });
 
-// ── Send single SMS ───────────────────────────────────────────────────────
+// ââ Send single SMS âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/api/sms/send', async (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1739,7 +1739,7 @@ app.post('/api/sms/send', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Preview AI SMS for a lead ─────────────────────────────────────────────
+// ââ Preview AI SMS for a lead âââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/sms/preview/:leadId', (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1750,7 +1750,7 @@ app.get('/api/sms/preview/:leadId', (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Preview AI Email for a lead ───────────────────────────────────────────
+// ââ Preview AI Email for a lead âââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/email/preview/:leadId', (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1761,7 +1761,7 @@ app.get('/api/email/preview/:leadId', (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Bulk SMS ──────────────────────────────────────────────────────────────
+// ââ Bulk SMS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/api/sms/bulk', async (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1770,7 +1770,7 @@ app.post('/api/sms/bulk', async (req, res) => {
     const leads = db.getLeads().filter(l => leadIds.includes(l.id));
     const withPhone = leads.filter(l => l.phone);
     if (!withPhone.length) return res.json({ ok: false, error: 'None of the selected leads have phone numbers. Add phone numbers via skip tracing first.' });
-    // Start async — respond immediately
+    // Start async â respond immediately
     res.json({ ok: true, total: withPhone.length, message: `Sending ${withPhone.length} SMS messages in background. Check SMS tab for progress.` });
     setImmediate(async () => {
       try {
@@ -1782,7 +1782,7 @@ app.post('/api/sms/bulk', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Bulk Email ────────────────────────────────────────────────────────────
+// ââ Bulk Email ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/api/email/bulk', async (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1804,7 +1804,7 @@ app.post('/api/email/bulk', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── SMS Conversations ─────────────────────────────────────────────────────
+// ââ SMS Conversations âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/sms/conversations', (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1821,13 +1821,13 @@ app.get('/api/sms/conversation/:leadId', (req, res) => {
   } catch(e) { res.json({ ok: false, messages: [], error: e.message }); }
 });
 
-// ── Inbound SMS Webhook (Twilio posts here) ───────────────────────────────
+// ââ Inbound SMS Webhook (Twilio posts here) âââââââââââââââââââââââââââââââ
 app.post('/api/sms/webhook', (req, res) => {
   try {
     const comms = require('./modules/comms');
     const { From, Body } = req.body;
     const lead = comms.handleInboundSMS(From, Body, db);
-    console.log(`[SMS Inbound] From: ${From} — "${Body.slice(0,50)}"`);
+    console.log(`[SMS Inbound] From: ${From} â "${Body.slice(0,50)}"`);
     // Respond with empty TwiML so Twilio doesn't send error
     res.set('Content-Type', 'text/xml');
     res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
@@ -1838,7 +1838,7 @@ app.post('/api/sms/webhook', (req, res) => {
   }
 });
 
-// ── Browser Dialer Token ──────────────────────────────────────────────────
+// ââ Browser Dialer Token ââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/dialer/token', (req, res) => {
   try {
     const comms = require('./modules/comms');
@@ -1848,7 +1848,7 @@ app.get('/api/dialer/token', (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Outbound call via Twilio REST (simpler than browser SDK) ─────────────
+// ââ Outbound call via Twilio REST (simpler than browser SDK) âââââââââââââ
 app.post('/api/dialer/call', async (req, res) => {
   try {
     const { to, leadId } = req.body;
@@ -1877,7 +1877,7 @@ app.post('/api/dialer/call', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── TwiML for calls ───────────────────────────────────────────────────────
+// ââ TwiML for calls âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/api/dialer/twiml', (req, res) => {
   res.set('Content-Type', 'text/xml');
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
@@ -1890,7 +1890,7 @@ app.post('/api/dialer/twiml', (req, res) => {
 });
 
 
-// ── Recording complete webhook (Twilio calls this when recording is ready) ─
+// ââ Recording complete webhook (Twilio calls this when recording is ready) â
 app.post('/api/dialer/recording-complete', async (req, res) => {
   try {
     const { CallSid, RecordingUrl, RecordingDuration } = req.body;
@@ -1930,7 +1930,7 @@ Respond in JSON format only.`, 'free');
             callEntry.sentiment = 'Unknown';
             callEntry.recommendation = analysis.slice(0, 200);
           }
-          db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address} — ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
+          db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address} â ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
         } catch(e) { console.log('[AI Analysis]', e.message); }
       }
       db.writeDB(dbData);
@@ -1942,7 +1942,7 @@ Respond in JSON format only.`, 'free');
   }
 });
 
-// ── Get call analysis for a specific call ─────────────────────────────────
+// ââ Get call analysis for a specific call âââââââââââââââââââââââââââââââââ
 app.get('/api/dialer/analysis/:callSid', (req, res) => {
   try {
     const dbData = db.readDB();
@@ -1952,7 +1952,7 @@ app.get('/api/dialer/analysis/:callSid', (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Call log ──────────────────────────────────────────────────────────────
+// ââ Call log ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/api/dialer/calls', (req, res) => {
   try {
     const dbData = db.readDB();
@@ -1961,6 +1961,232 @@ app.get('/api/dialer/calls', (req, res) => {
   } catch(e) { res.json({ ok: false, calls: [], error: e.message }); }
 });
 
+
+
+// ============================================================
+// BUYERS CRM PATCH
+// ============================================================
+
+function scoreDealForBuyer(lead, buyer) {
+  let score = 0;
+  const bb = buyer.buyBox || {};
+  const price = lead.offer || lead.mao || 0;
+  const maxP = bb.maxPrice || buyer.maxPrice || 999999;
+  const minP = bb.minPrice || 0;
+  if (price > 0 && price <= maxP && price >= minP) score += 30;
+  else if (price > 0 && price <= maxP * 1.1) score += 15;
+  const types = bb.buyTypes || buyer.buyTypes || ['SFR'];
+  const leadType = (lead.beds && lead.beds <= 4) ? 'SFR' : 'Multi';
+  if (types.includes(leadType) || types.includes('Any')) score += 25;
+  const buyerStates = bb.states || [buyer.state];
+  const buyerCities = (bb.cities || [buyer.city || '']).map(c => c.toLowerCase());
+  if (buyerStates && buyerStates.includes(lead.state)) score += 15;
+  const leadCity = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim().toLowerCase() : '';
+  if (buyerCities.some(c => c && leadCity.includes(c))) score += 10;
+  const spread = lead.spread || 0;
+  if (spread >= 40000) score += 20;
+  else if (spread >= 20000) score += 12;
+  else if (spread >= 10000) score += 6;
+  return score;
+}
+
+function formatDealForBuyer(lead, buyer) {
+  const city = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim() : (lead.county || 'DFW Area');
+  const state = lead.state || 'TX';
+  const arv = lead.arv ? '$' + (lead.arv/1000).toFixed(0) + 'K' : 'TBD';
+  const offer = lead.offer ? '$' + (lead.offer/1000).toFixed(0) + 'K' : 'TBD';
+  const repairs = lead.repairs ? '$' + (lead.repairs/1000).toFixed(0) + 'K' : 'TBD';
+  const spread = lead.spread ? '$' + (lead.spread/1000).toFixed(0) + 'K' : 'TBD';
+  const equity = lead.equityPct ? lead.equityPct + '%' : 'N/A';
+  return { city, state, arv, offer, repairs, spread, equity, beds: lead.beds || '?', baths: lead.baths || '?', sqft: lead.sqft || '?', year: lead.year || '?', dealType: lead.dealType || lead.category || 'Wholesale', dealId: lead.id };
+}
+
+app.get('/api/buyers/:id/match-deals', async (req, res) => {
+  try {
+    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    const limit = parseInt(req.query.limit) || 50;
+    const sentIds = new Set((buyer.dealsSent || []).map(d => d.leadId));
+    const leads = db.leads || [];
+    const scored = leads
+      .filter(l => !sentIds.has(l.id))
+      .map(l => ({ lead: l, score: scoreDealForBuyer(l, buyer) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+    res.json({ buyerId: buyer.id, buyerName: buyer.name, totalMatches: scored.length, deals: scored.map(x => ({ ...x.lead, matchScore: x.score })) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/buyers/:id/deals-sent', async (req, res) => {
+  try {
+    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    res.json({ buyerId: buyer.id, dealsSent: buyer.dealsSent || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/buyers/:id/send-deals', async (req, res) => {
+  try {
+    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    if (!buyer.email) return res.status(400).json({ error: 'Buyer has no email address' });
+    const { batchSize = 10, leadIds } = req.body;
+    const sentIds = new Set((buyer.dealsSent || []).map(d => d.leadId));
+    let dealsToSend = [];
+    if (leadIds && leadIds.length > 0) {
+      dealsToSend = (db.leads || []).filter(l => leadIds.includes(l.id) && !sentIds.has(l.id));
+    } else {
+      const scored = (db.leads || []).filter(l => !sentIds.has(l.id)).map(l => ({ lead: l, score: scoreDealForBuyer(l, buyer) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, batchSize);
+      dealsToSend = scored.map(x => x.lead);
+    }
+    if (dealsToSend.length === 0) return res.json({ sent: 0, message: 'No new matching deals to send' });
+    const formatted = dealsToSend.map(l => formatDealForBuyer(l, buyer));
+    const bb = buyer.buyBox || {};
+    const types = (bb.buyTypes || buyer.buyTypes || ['SFR']).join(', ');
+    const maxPrice = bb.maxPrice || buyer.maxPrice || 0;
+    let emailBody = 'Hi ' + buyer.name + ',
+
+';
+    emailBody += 'Based on your investment criteria (' + types + ', up to $' + (maxPrice/1000).toFixed(0) + 'K in ' + (buyer.city || 'your target area') + '), I have ' + formatted.length + ' investment opportunities matching your buy box:
+
+';
+    emailBody += '='.repeat(50) + '
+
+';
+    formatted.forEach((d, i) => {
+      emailBody += 'DEAL #' + (i+1) + ' — ' + d.dealType.toUpperCase() + '
+';
+      emailBody += '📍 ' + d.city + ', ' + d.state + ' | ' + d.beds + 'bd/' + d.baths + 'ba | ' + (d.sqft ? d.sqft.toLocaleString() : '?') + ' sqft | Built ' + d.year + '
+';
+      emailBody += 'ARV: ' + d.arv + ' | Purchase: ' + d.offer + ' | Repairs: ' + d.repairs + ' | Spread: ' + d.spread + ' | Equity: ' + d.equity + '
+
+';
+      emailBody += '-'.repeat(40) + '
+
+';
+    });
+    emailBody += 'Interested? Reply with the deal number(s) and I will send full details.
+
+These deals move fast — let me know within 48 hours.
+
+Best,
+Gabriel Montealegre
+Montsan Real Estate Investments';
+    const nodemailer = require('nodemailer');
+    const { google } = require('googleapis');
+    const oauth2Client = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET, 'https://developers.google.com/oauthplayground');
+    oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+    const accessToken = await oauth2Client.getAccessToken();
+    const transporter = nodemailer.createTransport({ service: 'gmail', auth: { type: 'OAuth2', user: process.env.GMAIL_USER, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN, accessToken: accessToken.token } });
+    await transporter.sendMail({ from: process.env.GMAIL_USER, to: buyer.email, subject: '🏠 ' + formatted.length + ' Investment Opportunities Matching Your Buy Box — ' + (buyer.city || 'Your Market'), text: emailBody });
+    if (!buyer.dealsSent) buyer.dealsSent = [];
+    const now = new Date().toISOString();
+    dealsToSend.forEach(l => { buyer.dealsSent.push({ leadId: l.id, sentAt: now, channel: 'email', responded: false }); });
+    buyer.lastContacted = now;
+    await db.save();
+    res.json({ sent: dealsToSend.length, deals: formatted });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/buyers/dedup-check', (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const existing = (db.buyers || []).find(b => {
+      const nameMatch = b.name && name && b.name.toLowerCase().trim() === name.toLowerCase().trim();
+      const phoneMatch = phone && b.phone && b.phone.replace(/\D/g,'') === phone.replace(/\D/g,'') && phone.replace(/\D/g,'').length > 6;
+      return nameMatch || phoneMatch;
+    });
+    res.json({ isDuplicate: !!existing, existing: existing || null });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/buyers/:id/buybox', async (req, res) => {
+  try {
+    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    buyer.buyBox = { ...buyer.buyBox, ...req.body };
+    await db.save();
+    res.json(buyer);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/buyers/:id/trust', async (req, res) => {
+  try {
+    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    const { trust, responded, dealId, notes } = req.body;
+    if (trust !== undefined) buyer.trust = Math.max(0, Math.min(100, trust));
+    if (notes !== undefined) buyer.notes = notes;
+    if (responded && dealId && buyer.dealsSent) {
+      const deal = buyer.dealsSent.find(d => d.leadId === dealId);
+      if (deal) { deal.responded = true; buyer.trust = Math.min(100, (buyer.trust || 50) + 5); }
+    }
+    const totalSent = (buyer.dealsSent || []).length;
+    const totalResponded = (buyer.dealsSent || []).filter(d => d.responded).length;
+    buyer.responseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
+    await db.save();
+    res.json(buyer);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/daily-summary', async (req, res) => {
+  try {
+    const leads = db.leads || [];
+    const buyers = db.buyers || [];
+    const now = new Date();
+    const newLeads = leads.filter(l => l.status === 'New Lead').length;
+    const contacted = leads.filter(l => l.status === 'Contacted').length;
+    const underContract = leads.filter(l => l.status === 'Under Contract').length;
+    const hot = leads.filter(l => l.spread && l.spread >= 30000).length;
+    const activeBuyers = buyers.filter(b => b.status === 'Active').length;
+    const totalDealsSent = buyers.reduce((s, b) => s + (b.dealsSent || []).length, 0);
+    const totalResponded = buyers.reduce((s, b) => s + (b.dealsSent || []).filter(d => d.responded).length, 0);
+    const topBuyers = buyers.map(b => { const m = leads.filter(l => scoreDealForBuyer(l, b) > 20).length; return { name: b.name, city: b.city, matchCount: m, responseRate: b.responseRate || 0, trust: b.trust || 50 }; }).sort((a, b) => b.matchCount - a.matchCount).slice(0, 5);
+    const summary = [
+      '📊 WHOLESALEOS DAILY SUMMARY — ' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+      '',
+      '📋 LEADS PIPELINE',
+      '• Total Leads: ' + leads.length.toLocaleString(),
+      '• New Leads: ' + newLeads.toLocaleString(),
+      '• Contacted: ' + contacted,
+      '• Under Contract: ' + underContract,
+      '• Hot Deals ($30K+ spread): ' + hot,
+      '',
+      '👥 BUYERS CRM',
+      '• Active Buyers: ' + activeBuyers,
+      '• Total Deals Sent: ' + totalDealsSent,
+      '• Total Responses: ' + totalResponded,
+      '• Response Rate: ' + (totalDealsSent > 0 ? Math.round((totalResponded/totalDealsSent)*100) : 0) + '%',
+      '',
+      '🏆 TOP BUYERS BY MATCH COUNT',
+      ...topBuyers.map((b, i) => (i+1) + '. ' + b.name + ' (' + (b.city||'?') + ') — ' + b.matchCount + ' matches | Trust: ' + b.trust + ' | Response: ' + b.responseRate + '%'),
+      '',
+      '💡 RECOMMENDED ACTIONS',
+      hot > 0 ? '• Send your ' + Math.min(hot,5) + ' hottest deals to top buyers today' : '• Search for new deals in target markets',
+      underContract > 0 ? '• Follow up on ' + underContract + ' deal(s) under contract' : '• Push to get at least 1 deal under contract',
+      '',
+      '— WholesaleOS Bot'
+    ].join('
+');
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.BOT_OWNER_ID) {
+      try { const TelegramBot = require('node-telegram-bot-api'); const tgBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN); await tgBot.sendMessage(process.env.BOT_OWNER_ID, summary); } catch(te) { console.log('Telegram summary failed:', te.message); }
+    }
+    try {
+      const nodemailer = require('nodemailer'); const { google } = require('googleapis');
+      const oauth2Client = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET, 'https://developers.google.com/oauthplayground');
+      oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+      const accessToken = await oauth2Client.getAccessToken();
+      const transporter = nodemailer.createTransport({ service: 'gmail', auth: { type: 'OAuth2', user: process.env.GMAIL_USER, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN, accessToken: accessToken.token } });
+      await transporter.sendMail({ from: process.env.GMAIL_USER, to: process.env.GMAIL_USER, subject: '📊 WholesaleOS Daily Summary — ' + now.toLocaleDateString(), text: summary });
+    } catch(emailErr) { console.log('Email summary failed:', emailErr.message); }
+    res.json({ success: true, summary });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// END BUYERS CRM PATCH
+// ============================================================
 
 module.exports = app;
 
