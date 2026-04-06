@@ -1991,36 +1991,43 @@ function scoreDealForBuyer(lead, buyer) {
 }
 
 function formatDealForBuyer(lead, buyer) {
-  const city = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim() : (lead.county || 'DFW Area');
-  const state = lead.state || 'TX';
-  const arv = lead.arv ? '$' + (lead.arv/1000).toFixed(0) + 'K' : 'TBD';
-  const offer = lead.offer ? '$' + (lead.offer/1000).toFixed(0) + 'K' : 'TBD';
-  const repairs = lead.repairs ? '$' + (lead.repairs/1000).toFixed(0) + 'K' : 'TBD';
-  const spread = lead.spread ? '$' + (lead.spread/1000).toFixed(0) + 'K' : 'TBD';
-  const equity = lead.equityPct ? lead.equityPct + '%' : 'N/A';
-  return { city, state, arv, offer, repairs, spread, equity, beds: lead.beds || '?', baths: lead.baths || '?', sqft: lead.sqft || '?', year: lead.year || '?', dealType: lead.dealType || lead.category || 'Wholesale', dealId: lead.id };
+  const city = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim() : (lead.county || 'Area');
+  const state = lead.state || '';
+  return {
+    city, state,
+    arv: lead.arv ? '$' + (lead.arv/1000).toFixed(0) + 'K' : 'TBD',
+    offer: lead.offer ? '$' + (lead.offer/1000).toFixed(0) + 'K' : 'TBD',
+    repairs: lead.repairs ? '$' + (lead.repairs/1000).toFixed(0) + 'K' : 'TBD',
+    spread: lead.spread ? '$' + (lead.spread/1000).toFixed(0) + 'K' : 'TBD',
+    equity: lead.equityPct ? lead.equityPct + '%' : 'N/A',
+    beds: lead.beds || '?', baths: lead.baths || '?',
+    sqft: lead.sqft || '?', year: lead.year || '?',
+    dealType: lead.dealType || lead.category || 'Wholesale',
+    dealId: lead.id
+  };
 }
 
-app.get('/api/buyers/:id/match-deals', async (req, res) => {
+app.get('/api/buyers/:id/match-deals', (req, res) => {
   try {
-    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
     const limit = parseInt(req.query.limit) || 50;
     const sentIds = new Set((buyer.dealsSent || []).map(d => d.leadId));
-    const leads = db.leads || [];
-    const scored = leads
+    const scored = (dbData.leads || [])
       .filter(l => !sentIds.has(l.id))
       .map(l => ({ lead: l, score: scoreDealForBuyer(l, buyer) }))
       .filter(x => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
-    res.json({ buyerId: buyer.id, buyerName: buyer.name, totalMatches: scored.length, deals: scored.map(x => ({ ...x.lead, matchScore: x.score })) });
+    res.json({ buyerId: buyer.id, buyerName: buyer.name, totalMatches: scored.length, deals: scored.map(x => Object.assign({}, x.lead, { matchScore: x.score })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/buyers/:id/deals-sent', async (req, res) => {
+app.get('/api/buyers/:id/deals-sent', (req, res) => {
   try {
-    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
     res.json({ buyerId: buyer.id, dealsSent: buyer.dealsSent || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2028,19 +2035,20 @@ app.get('/api/buyers/:id/deals-sent', async (req, res) => {
 
 app.post('/api/buyers/:id/send-deals', async (req, res) => {
   try {
-    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
-    if (!buyer.email) return res.status(400).json({ error: 'Buyer has no email address' });
-    const { batchSize = 10, leadIds } = req.body;
+    if (!buyer.email) return res.status(400).json({ error: 'Buyer has no email' });
+    const batchSize = req.body.batchSize || 10;
     const sentIds = new Set((buyer.dealsSent || []).map(d => d.leadId));
-    let dealsToSend = [];
-    if (leadIds && leadIds.length > 0) {
-      dealsToSend = (db.leads || []).filter(l => leadIds.includes(l.id) && !sentIds.has(l.id));
-    } else {
-      const scored = (db.leads || []).filter(l => !sentIds.has(l.id)).map(l => ({ lead: l, score: scoreDealForBuyer(l, buyer) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, batchSize);
-      dealsToSend = scored.map(x => x.lead);
-    }
-    if (dealsToSend.length === 0) return res.json({ sent: 0, message: 'No new matching deals to send' });
+    const scored = (dbData.leads || [])
+      .filter(l => !sentIds.has(l.id))
+      .map(l => ({ lead: l, score: scoreDealForBuyer(l, buyer) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, batchSize);
+    const dealsToSend = scored.map(x => x.lead);
+    if (dealsToSend.length === 0) return res.json({ sent: 0, message: 'No new matching deals' });
     const formatted = dealsToSend.map(l => formatDealForBuyer(l, buyer));
     const bb = buyer.buyBox || {};
     const types = (bb.buyTypes || buyer.buyTypes || ['SFR']).join(', ');
@@ -2048,27 +2056,25 @@ app.post('/api/buyers/:id/send-deals', async (req, res) => {
     let emailBody = 'Hi ' + buyer.name + ',
 
 ';
-    emailBody += 'Based on your investment criteria (' + types + ', up to $' + (maxPrice/1000).toFixed(0) + 'K in ' + (buyer.city || 'your target area') + '), I have ' + formatted.length + ' investment opportunities matching your buy box:
+    emailBody += 'Based on your buy box (' + types + ', up to $' + (maxPrice/1000).toFixed(0) + 'K in ' + (buyer.city || 'your market') + '), I have ' + formatted.length + ' opportunities for you:
 
 ';
     emailBody += '='.repeat(50) + '
 
 ';
     formatted.forEach((d, i) => {
-      emailBody += 'DEAL #' + (i+1) + ' — ' + d.dealType.toUpperCase() + '
+      emailBody += 'DEAL #' + (i+1) + ' - ' + d.dealType + '
 ';
-      emailBody += '📍 ' + d.city + ', ' + d.state + ' | ' + d.beds + 'bd/' + d.baths + 'ba | ' + (d.sqft ? d.sqft.toLocaleString() : '?') + ' sqft | Built ' + d.year + '
+      emailBody += 'Location: ' + d.city + ', ' + d.state + ' | ' + d.beds + 'bd/' + d.baths + 'ba | ' + d.sqft + ' sqft | Built ' + d.year + '
 ';
-      emailBody += 'ARV: ' + d.arv + ' | Purchase: ' + d.offer + ' | Repairs: ' + d.repairs + ' | Spread: ' + d.spread + ' | Equity: ' + d.equity + '
+      emailBody += 'ARV: ' + d.arv + ' | Price: ' + d.offer + ' | Repairs: ' + d.repairs + ' | Spread: ' + d.spread + ' | Equity: ' + d.equity + '
 
 ';
       emailBody += '-'.repeat(40) + '
 
 ';
     });
-    emailBody += 'Interested? Reply with the deal number(s) and I will send full details.
-
-These deals move fast — let me know within 48 hours.
+    emailBody += 'Reply with deal number(s) to get full details. These move fast - respond within 48 hours.
 
 Best,
 Gabriel Montealegre
@@ -2079,44 +2085,48 @@ Montsan Real Estate Investments';
     oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
     const accessToken = await oauth2Client.getAccessToken();
     const transporter = nodemailer.createTransport({ service: 'gmail', auth: { type: 'OAuth2', user: process.env.GMAIL_USER, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN, accessToken: accessToken.token } });
-    await transporter.sendMail({ from: process.env.GMAIL_USER, to: buyer.email, subject: '🏠 ' + formatted.length + ' Investment Opportunities Matching Your Buy Box — ' + (buyer.city || 'Your Market'), text: emailBody });
+    await transporter.sendMail({ from: process.env.GMAIL_USER, to: buyer.email, subject: 'Investment Opportunities Matching Your Buy Box - ' + (buyer.city || 'Your Market'), text: emailBody });
     if (!buyer.dealsSent) buyer.dealsSent = [];
     const now = new Date().toISOString();
     dealsToSend.forEach(l => { buyer.dealsSent.push({ leadId: l.id, sentAt: now, channel: 'email', responded: false }); });
     buyer.lastContacted = now;
-    await db.save();
+    db.writeDB(dbData);
     res.json({ sent: dealsToSend.length, deals: formatted });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/buyers/dedup-check', (req, res) => {
   try {
+    const dbData = db.readDB();
     const { name, phone } = req.body;
-    const existing = (db.buyers || []).find(b => {
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    const existing = (dbData.buyers || []).find(b => {
       const nameMatch = b.name && name && b.name.toLowerCase().trim() === name.toLowerCase().trim();
-      const phoneMatch = phone && b.phone && b.phone.replace(/\D/g,'') === phone.replace(/\D/g,'') && phone.replace(/\D/g,'').length > 6;
+      const phoneMatch = cleanPhone.length > 6 && b.phone && b.phone.replace(/[^0-9]/g, '') === cleanPhone;
       return nameMatch || phoneMatch;
     });
     res.json({ isDuplicate: !!existing, existing: existing || null });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/buyers/:id/buybox', async (req, res) => {
+app.put('/api/buyers/:id/buybox', (req, res) => {
   try {
-    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
-    buyer.buyBox = { ...buyer.buyBox, ...req.body };
-    await db.save();
+    buyer.buyBox = Object.assign({}, buyer.buyBox || {}, req.body);
+    db.writeDB(dbData);
     res.json(buyer);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/buyers/:id/trust', async (req, res) => {
+app.put('/api/buyers/:id/trust', (req, res) => {
   try {
-    const buyer = (db.buyers || []).find(b => b.id === req.params.id);
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
     const { trust, responded, dealId, notes } = req.body;
-    if (trust !== undefined) buyer.trust = Math.max(0, Math.min(100, trust));
+    if (trust !== undefined) buyer.trust = Math.max(0, Math.min(100, Number(trust)));
     if (notes !== undefined) buyer.notes = notes;
     if (responded && dealId && buyer.dealsSent) {
       const deal = buyer.dealsSent.find(d => d.leadId === dealId);
@@ -2125,61 +2135,59 @@ app.put('/api/buyers/:id/trust', async (req, res) => {
     const totalSent = (buyer.dealsSent || []).length;
     const totalResponded = (buyer.dealsSent || []).filter(d => d.responded).length;
     buyer.responseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
-    await db.save();
+    db.writeDB(dbData);
     res.json(buyer);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/daily-summary', async (req, res) => {
   try {
-    const leads = db.leads || [];
-    const buyers = db.buyers || [];
+    const dbData = db.readDB();
+    const leads = dbData.leads || [];
+    const buyers = dbData.buyers || [];
     const now = new Date();
     const newLeads = leads.filter(l => l.status === 'New Lead').length;
     const contacted = leads.filter(l => l.status === 'Contacted').length;
     const underContract = leads.filter(l => l.status === 'Under Contract').length;
     const hot = leads.filter(l => l.spread && l.spread >= 30000).length;
-    const activeBuyers = buyers.filter(b => b.status === 'Active').length;
     const totalDealsSent = buyers.reduce((s, b) => s + (b.dealsSent || []).length, 0);
     const totalResponded = buyers.reduce((s, b) => s + (b.dealsSent || []).filter(d => d.responded).length, 0);
-    const topBuyers = buyers.map(b => { const m = leads.filter(l => scoreDealForBuyer(l, b) > 20).length; return { name: b.name, city: b.city, matchCount: m, responseRate: b.responseRate || 0, trust: b.trust || 50 }; }).sort((a, b) => b.matchCount - a.matchCount).slice(0, 5);
-    const summary = [
+    const topBuyers = buyers.map(b => {
+      const m = leads.filter(l => scoreDealForBuyer(l, b) > 20).length;
+      return { name: b.name, city: b.city, matchCount: m, responseRate: b.responseRate || 0, trust: b.trust || 50 };
+    }).sort((a, b) => b.matchCount - a.matchCount).slice(0, 5);
+    const lines = [
       '📊 WHOLESALEOS DAILY SUMMARY — ' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       '',
       '📋 LEADS PIPELINE',
-      '• Total Leads: ' + leads.length.toLocaleString(),
-      '• New Leads: ' + newLeads.toLocaleString(),
-      '• Contacted: ' + contacted,
-      '• Under Contract: ' + underContract,
+      '• Total: ' + leads.length.toLocaleString() + ' | New: ' + newLeads + ' | Contacted: ' + contacted + ' | Under Contract: ' + underContract,
       '• Hot Deals ($30K+ spread): ' + hot,
       '',
       '👥 BUYERS CRM',
-      '• Active Buyers: ' + activeBuyers,
-      '• Total Deals Sent: ' + totalDealsSent,
-      '• Total Responses: ' + totalResponded,
-      '• Response Rate: ' + (totalDealsSent > 0 ? Math.round((totalResponded/totalDealsSent)*100) : 0) + '%',
+      '• Active Buyers: ' + buyers.filter(b => b.status === 'Active').length,
+      '• Deals Sent: ' + totalDealsSent + ' | Responses: ' + totalResponded + ' | Rate: ' + (totalDealsSent > 0 ? Math.round((totalResponded/totalDealsSent)*100) : 0) + '%',
       '',
       '🏆 TOP BUYERS BY MATCH COUNT',
-      ...topBuyers.map((b, i) => (i+1) + '. ' + b.name + ' (' + (b.city||'?') + ') — ' + b.matchCount + ' matches | Trust: ' + b.trust + ' | Response: ' + b.responseRate + '%'),
+    ].concat(topBuyers.map((b, i) => (i+1) + '. ' + b.name + ' (' + (b.city||'?') + ') - ' + b.matchCount + ' matches | Trust: ' + b.trust + ' | Response: ' + b.responseRate + '%')).concat([
       '',
-      '💡 RECOMMENDED ACTIONS',
-      hot > 0 ? '• Send your ' + Math.min(hot,5) + ' hottest deals to top buyers today' : '• Search for new deals in target markets',
-      underContract > 0 ? '• Follow up on ' + underContract + ' deal(s) under contract' : '• Push to get at least 1 deal under contract',
+      '💡 ACTIONS: ' + (hot > 0 ? 'Send ' + Math.min(hot,5) + ' hot deals to top buyers. ' : '') + (underContract > 0 ? 'Follow up on ' + underContract + ' under contract.' : 'Push to get a deal under contract.'),
       '',
-      '— WholesaleOS Bot'
-    ].join('
+      '— WholesaleOS'
+    ]);
+    const summary = lines.join('
 ');
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.BOT_OWNER_ID) {
-      try { const TelegramBot = require('node-telegram-bot-api'); const tgBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN); await tgBot.sendMessage(process.env.BOT_OWNER_ID, summary); } catch(te) { console.log('Telegram summary failed:', te.message); }
+      try { const TelegramBot = require('node-telegram-bot-api'); const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN); await bot.sendMessage(process.env.BOT_OWNER_ID, summary); } catch(te) { console.log('TG failed:', te.message); }
     }
     try {
-      const nodemailer = require('nodemailer'); const { google } = require('googleapis');
-      const oauth2Client = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET, 'https://developers.google.com/oauthplayground');
-      oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
-      const accessToken = await oauth2Client.getAccessToken();
-      const transporter = nodemailer.createTransport({ service: 'gmail', auth: { type: 'OAuth2', user: process.env.GMAIL_USER, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN, accessToken: accessToken.token } });
-      await transporter.sendMail({ from: process.env.GMAIL_USER, to: process.env.GMAIL_USER, subject: '📊 WholesaleOS Daily Summary — ' + now.toLocaleDateString(), text: summary });
-    } catch(emailErr) { console.log('Email summary failed:', emailErr.message); }
+      const nodemailer = require('nodemailer');
+      const { google } = require('googleapis');
+      const oa = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET, 'https://developers.google.com/oauthplayground');
+      oa.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+      const at = await oa.getAccessToken();
+      const t = nodemailer.createTransport({ service: 'gmail', auth: { type: 'OAuth2', user: process.env.GMAIL_USER, clientId: process.env.GMAIL_CLIENT_ID, clientSecret: process.env.GMAIL_CLIENT_SECRET, refreshToken: process.env.GMAIL_REFRESH_TOKEN, accessToken: at.token } });
+      await t.sendMail({ from: process.env.GMAIL_USER, to: process.env.GMAIL_USER, subject: '📊 WholesaleOS Daily Summary — ' + now.toLocaleDateString(), text: summary });
+    } catch(em) { console.log('Email summary failed:', em.message); }
     res.json({ success: true, summary });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
