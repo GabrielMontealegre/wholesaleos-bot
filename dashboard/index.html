@@ -1107,9 +1107,9 @@ function renderLeadDetail(l) {
 
   // QUICK ACTION BUTTONS
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
-  html += '<a href="#" onclick="makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="#" onclick="event.stopPropagation();makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
-  html += '<a href="mailto:' + (l.email||'') + '" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
+  html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border:none;border-radius:10px;cursor:pointer;"><span style="font-size:18px">&#128231;</span><span style="font-size:9px;font-weight:600;color:#fff;">EMAIL</span></button>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
   html += '</div>';
 
@@ -1494,15 +1494,15 @@ function renderBuyers() {
     <button class="btn btn-outline" onclick="extractBuyBoxesFromBuyersTab()">🎯 Extract Buy Boxes</button>
   </div>
   <div class="sub-tabs">
-    <div class="sub-tab active" onclick="subTab(this,'b-cash')">Cash Buyers (${APP.buyers.filter(b=>b.type==='Cash Buyer').length})</div>
-    <div class="sub-tab" onclick="subTab(this,'b-hedge')">Hedge Funds (${APP.buyers.filter(b=>b.type==='Hedge Fund').length})</div>
+    <div class="sub-tab active" onclick="subTab(this,'b-cash')">Cash Buyers (${APP.buyers.filter(b=>b.type==='Cash Buyer'||b.type==='cash'||(b.buyTypes&&(b.buyTypes.includes('SFR')||b.buyTypes.includes('Multi')))).length})</div>
+    <div class="sub-tab" onclick="subTab(this,'b-hedge')">Hedge Funds (${APP.buyers.filter(b=>b.type==='Hedge Fund'||b.type==='hedge'||(b.buyTypes&&(b.buyTypes.includes('Commercial')||b.buyTypes.includes('Multi')))).length})</div>
     <div class="sub-tab" onclick="subTab(this,'b-all')">All (${APP.buyers.length})</div>
   </div>
   <div id="b-cash">
-    ${APP.buyers.filter(b=>b.type==='Cash Buyer').map(b => renderBuyerCard(b)).join('')}
+    ${APP.buyers.filter(b=>b.type==='Cash Buyer'||b.type==='cash'||(b.buyTypes&&(b.buyTypes.includes('SFR')||b.buyTypes.includes('Multi')))).map(b => renderBuyerCard(b)).join('')}
   </div>
   <div id="b-hedge" style="display:none">
-    ${APP.buyers.filter(b=>b.type==='Hedge Fund').map(b => renderBuyerCard(b)).join('')}
+    ${APP.buyers.filter(b=>b.type==='Hedge Fund'||b.type==='hedge'||(b.buyTypes&&(b.buyTypes.includes('Commercial')||b.buyTypes.includes('Multi')))).map(b => renderBuyerCard(b)).join('')}
   </div>
   <div id="b-all" style="display:none">
     ${APP.buyers.map(b => renderBuyerCard(b)).join('')}
@@ -2656,7 +2656,11 @@ async function loadLeadsFromAPI() {
         APP.leads = leads;
         save('leads', APP.leads);
         const leadBadge = document.getElementById('nav-lead-count');
-        if (leadBadge) leadBadge.textContent = APP.leads.length;
+        if (leadBadge) { 
+          var newLeadCount = APP.leads.filter(function(l){return l.status==='New Lead'||!l.status;}).length;
+          leadBadge.textContent = newLeadCount; 
+          leadBadge.style.background = newLeadCount > 0 ? '#ff3b30' : '#34c759';
+        }
         const sbLeads = document.getElementById('sb-leads');
         if (sbLeads) sbLeads.textContent = APP.leads.length;
         if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
@@ -4389,6 +4393,152 @@ async function sendEmailViaServer(toEmail, toName, body) {
     showToastMsg('Email error: ' + e.message, 'error');
     return false;
   }
+}
+
+
+// ── In-system email composer ──────────────────────────────
+function openInSystemEmail(leadId) {
+  var lead = (APP.leads || []).find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var email = lead.email || '';
+  var existing = document.getElementById('in-system-email-modal');
+  if (existing) existing.remove();
+  
+  // Auto-generate AI draft
+  var subject = 'Regarding Your Property at ' + ((lead.address||'').split(',')[0] || lead.county || lead.state);
+  var body = 'Hi ' + (lead.owner_name || 'there') + ',
+
+I hope this message finds you well. I came across your property and wanted to reach out to see if you'd be open to a conversation.
+
+I work with buyers looking in your area and may have some options that could work well for your situation — whether that's a quick cash close, flexible terms, or something else entirely.
+
+Would you be open to a quick call this week?
+
+Best regards,
+Gabriel Montealegre
+Montsan REI';
+  
+  var modal = document.createElement('div');
+  modal.id = 'in-system-email-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;width:580px;max-width:96vw;padding:24px;position:relative;">'
+    + '<button onclick="this.closest('[id=in-system-email-modal]').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>'
+    + '<div style="font-size:16px;font-weight:700;margin-bottom:16px;">📧 Send Email</div>'
+    + '<div style="margin-bottom:10px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">To</label>'
+    + '<input id="ise-to" value="' + email + '" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;box-sizing:border-box;outline:none;"></div>'
+    + '<div style="margin-bottom:10px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">Subject</label>'
+    + '<input id="ise-subject" value="' + subject + '" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;box-sizing:border-box;outline:none;"></div>'
+    + '<div style="margin-bottom:16px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">Message <button onclick="regenerateEmailDraft('' + leadId + '')" style="background:none;border:none;color:#0071e3;font-size:11px;cursor:pointer;margin-left:8px;">🤖 Regenerate AI Draft</button></label>'
+    + '<textarea id="ise-body" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:160px;box-sizing:border-box;outline:none;">' + body + '</textarea></div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+    + '<button onclick="this.closest('[id=in-system-email-modal]').remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="sendInSystemEmail('' + leadId + '')" style="background:#5e5ce6;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Send Email</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+}
+
+async function regenerateEmailDraft(leadId) {
+  var lead = (APP.leads || []).find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var bodyEl = document.getElementById('ise-body');
+  if (bodyEl) bodyEl.value = 'Generating AI draft...';
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 250,
+        messages: [{ role: 'user', content: 'Write a soft, natural real estate investor email to a property owner in ' + ((lead.address||'').split(',')[1]||lead.state||'') + '. Property: ' + (lead.category||'residential') + ', ' + (lead.beds||3) + 'bd. Signals: ' + (lead.dom>60?'on market '+lead.dom+' days,':'') + (lead.category||'') + '. Goal: start conversation, mention cash or flexible terms, ask if open to options. 3 short paragraphs. Sign as Gabriel, Montsan REI. Sound human.' }]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content||[]).map(function(b){return b.text||'';}).join('');
+    if (bodyEl) bodyEl.value = text;
+  } catch(e) { if (bodyEl) bodyEl.value = 'Error generating draft. Please type your message.'; }
+}
+
+async function sendInSystemEmail(leadId) {
+  var to = document.getElementById('ise-to') ? document.getElementById('ise-to').value : '';
+  var subject = document.getElementById('ise-subject') ? document.getElementById('ise-subject').value : '';
+  var body = document.getElementById('ise-body') ? document.getElementById('ise-body').value : '';
+  if (!to || !body) { showToastMsg('Email address and message required', 'error'); return; }
+  try {
+    var res = await fetch('/api/gmail/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: to, subject: subject, body: body })
+    });
+    var data = await res.json();
+    if (data.ok || data.id) {
+      showToastMsg('Email sent!', 'success');
+      document.getElementById('in-system-email-modal').remove();
+      // Update lead status
+      var lead = (APP.leads||[]).find(function(l){return l.id===leadId;});
+      if (lead && lead.status === 'New Lead') {
+        lead.status = 'Contacted';
+        lead.lastContacted = new Date().toISOString();
+        await fetch('/api/leads/' + leadId, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Contacted', lastContacted: lead.lastContacted }) });
+        updateLeadBadge();
+      }
+    } else { showToastMsg('Send failed: ' + (data.error||'unknown'), 'error'); }
+  } catch(e) { showToastMsg('Error: ' + e.message, 'error'); }
+}
+
+// ── In-system SMS composer ────────────────────────────────
+function openInSystemSMS(leadId) {
+  var lead = (APP.leads || []).find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var phone = lead.phone || '';
+  var existing = document.getElementById('in-system-sms-modal');
+  if (existing) existing.remove();
+  var body = 'Hi, I came across your property in ' + ((lead.address||'').split(',')[1]||lead.state||'your area').trim() + ' and wanted to reach out. I may have a buyer interested. Would you be open to a quick conversation? - Gabriel, Montsan REI';
+  
+  var modal = document.createElement('div');
+  modal.id = 'in-system-sms-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;width:480px;max-width:96vw;padding:24px;position:relative;">'
+    + '<button onclick="this.closest('[id=in-system-sms-modal]').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>'
+    + '<div style="font-size:16px;font-weight:700;margin-bottom:16px;">💬 Send SMS</div>'
+    + '<div style="margin-bottom:10px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">To</label>'
+    + '<input id="iss-to" value="' + phone + '" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;box-sizing:border-box;outline:none;"></div>'
+    + '<div style="margin-bottom:16px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">Message <span id="iss-count" style="color:#86868b;font-size:11px;">(' + body.length + '/160)</span></label>'
+    + '<textarea id="iss-body" oninput="document.getElementById('iss-count').textContent='('+this.value.length+'/160)';" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:100px;box-sizing:border-box;outline:none;">' + body + '</textarea></div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+    + '<button onclick="this.closest('[id=in-system-sms-modal]').remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="sendInSystemSMS('' + leadId + '')" style="background:#0071e3;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Send SMS</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+}
+
+async function sendInSystemSMS(leadId) {
+  var to = document.getElementById('iss-to') ? document.getElementById('iss-to').value : '';
+  var body = document.getElementById('iss-body') ? document.getElementById('iss-body').value : '';
+  if (!to || !body) { showToastMsg('Phone and message required', 'error'); return; }
+  try {
+    var res = await fetch('/api/sms/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: to, body: body })
+    });
+    var data = await res.json();
+    if (data.ok || data.sid) {
+      showToastMsg('SMS sent!', 'success');
+      document.getElementById('in-system-sms-modal').remove();
+      var lead = (APP.leads||[]).find(function(l){return l.id===leadId;});
+      if (lead && lead.status === 'New Lead') {
+        lead.status = 'Contacted';
+        lead.lastContacted = new Date().toISOString();
+        await fetch('/api/leads/' + leadId, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'Contacted' }) });
+        updateLeadBadge();
+      }
+    } else { showToastMsg('SMS: Twilio not connected yet', 'info'); }
+  } catch(e) { showToastMsg('Error: ' + e.message, 'error'); }
+}
+
+function updateLeadBadge() {
+  var newCount = (APP.leads||[]).filter(function(l){return l.status==='New Lead'||!l.status;}).length;
+  var badge = document.getElementById('nav-lead-count');
+  if (badge) badge.textContent = newCount;
 }
 
 function showToastMsg(msg, type) {
@@ -6537,9 +6687,9 @@ function renderLeadDetail(l) {
 
   // QUICK ACTION BUTTONS
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
-  html += '<a href="#" onclick="makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="#" onclick="event.stopPropagation();makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
-  html += '<a href="mailto:' + (l.email||'') + '" data-action="email" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border-radius:8px;text-decoration:none"><span style="font-size:18px">📧</span><span style="font-size:9px;font-weight:600;color:#fff">EMAIL</span></a>';
+  html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border:none;border-radius:10px;cursor:pointer;"><span style="font-size:18px">&#128231;</span><span style="font-size:9px;font-weight:600;color:#fff;">EMAIL</span></button>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
   html += '</div>';
 
@@ -6887,15 +7037,15 @@ function renderBuyers() {
     <button class="btn btn-outline" onclick="extractBuyBoxesFromBuyersTab()">🎯 Extract Buy Boxes</button>
   </div>
   <div class="sub-tabs">
-    <div class="sub-tab active" onclick="subTab(this,'b-cash')">Cash Buyers (${APP.buyers.filter(b=>b.type==='Cash Buyer').length})</div>
-    <div class="sub-tab" onclick="subTab(this,'b-hedge')">Hedge Funds (${APP.buyers.filter(b=>b.type==='Hedge Fund').length})</div>
+    <div class="sub-tab active" onclick="subTab(this,'b-cash')">Cash Buyers (${APP.buyers.filter(b=>b.type==='Cash Buyer'||b.type==='cash'||(b.buyTypes&&(b.buyTypes.includes('SFR')||b.buyTypes.includes('Multi')))).length})</div>
+    <div class="sub-tab" onclick="subTab(this,'b-hedge')">Hedge Funds (${APP.buyers.filter(b=>b.type==='Hedge Fund'||b.type==='hedge'||(b.buyTypes&&(b.buyTypes.includes('Commercial')||b.buyTypes.includes('Multi')))).length})</div>
     <div class="sub-tab" onclick="subTab(this,'b-all')">All (${APP.buyers.length})</div>
   </div>
   <div id="b-cash">
-    ${APP.buyers.filter(b=>b.type==='Cash Buyer').map(b => renderBuyerCard(b)).join('')}
+    ${APP.buyers.filter(b=>b.type==='Cash Buyer'||b.type==='cash'||(b.buyTypes&&(b.buyTypes.includes('SFR')||b.buyTypes.includes('Multi')))).map(b => renderBuyerCard(b)).join('')}
   </div>
   <div id="b-hedge" style="display:none">
-    ${APP.buyers.filter(b=>b.type==='Hedge Fund').map(b => renderBuyerCard(b)).join('')}
+    ${APP.buyers.filter(b=>b.type==='Hedge Fund'||b.type==='hedge'||(b.buyTypes&&(b.buyTypes.includes('Commercial')||b.buyTypes.includes('Multi')))).map(b => renderBuyerCard(b)).join('')}
   </div>
   <div id="b-all" style="display:none">
     ${APP.buyers.map(b => renderBuyerCard(b)).join('')}
