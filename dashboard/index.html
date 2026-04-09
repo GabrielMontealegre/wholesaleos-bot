@@ -3943,677 +3943,519 @@ async function saveBuyBox() {
   } catch(e) { toast('Error: '+e.message, 'error'); }
 }
 
+
 // ══════════════════════════════════════════════════════════
-//  OUTREACH HUB
+//  OUTREACH HUB — AI-Powered v2
 // ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
-//  OUTREACH HUB — Full rebuild
-// ══════════════════════════════════════════════════════════
+
+// Deal protection mode (on by default)
+window.DEAL_PROTECTION = true;
+
+// ── Safe deal summary (no address, no owner) ──────────────
+function safeDealSummary(lead) {
+  var city = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim() : (lead.county || lead.state || 'Area');
+  var state = lead.state || '';
+  var beds = lead.beds || '?';
+  var baths = lead.baths || '?';
+  var sqft = lead.sqft ? lead.sqft.toLocaleString() + ' sqft' : '? sqft';
+  var arv = lead.arv ? '$' + (lead.arv/1000).toFixed(0) + 'K ARV' : '';
+  var price = lead.offer ? '$' + (lead.offer/1000).toFixed(0) + 'K price' : '';
+  var repairs = lead.repairs ? '$' + (lead.repairs/1000).toFixed(0) + 'K repairs' : '';
+  var spread = lead.spread ? '$' + (lead.spread/1000).toFixed(0) + 'K spread' : '';
+  var equity = lead.equityPct ? lead.equityPct + '% equity' : '';
+  var rent = lead.cashOnCash ? '$' + lead.cashOnCash.monthlyRent + '/mo est. rent' : '';
+  var cf = lead.cashOnCash ? '$' + lead.cashOnCash.monthlyCF + '/mo cash flow' : '';
+  var strategy = lead.creativeFinance ? lead.creativeFinance.type : 'Wholesale';
+  var category = lead.category || 'Investment';
+  return { city, state, beds, baths, sqft, arv, price, repairs, spread, equity, rent, cf, strategy, category };
+}
+
+// ── AI message generator (calls Anthropic API) ─────────────
+async function generateAIMessage(prompt, type) {
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    var data = await response.json();
+    return (data.content || []).map(function(b) { return b.text || ''; }).join('').trim();
+  } catch(e) {
+    return type === 'sms' ? generateFallbackSMS(prompt) : generateFallbackEmail(prompt);
+  }
+}
+
+function generateFallbackSMS(prompt) {
+  return 'Hi, I have a ' + (prompt.includes('buyer') ? 'deal' : 'question about your property') + ' that might interest you. Would you have a few minutes to connect?';
+}
+function generateFallbackEmail(prompt) {
+  return 'Hello,\n\nI hope this message finds you well. I wanted to reach out regarding a real estate opportunity that may align with your interests. Would you be open to a quick conversation?\n\nBest regards,\nGabriel Montealegre\nMontsan REI';
+}
+
+// ── Generate buyer SMS (unique per buyer) ──────────────────
+async function generateBuyerSMS(buyer, lead) {
+  var d = safeDealSummary(lead);
+  var buyerFocus = (buyer.buyTypes || ['SFR']).join('/');
+  var buyerMarket = buyer.city || buyer.state || 'your market';
+  var prompt = 'Write a SHORT real estate wholesaler SMS (under 160 chars) to a cash buyer named ' + buyer.name + ' about a deal. Be natural, conversational, NOT a template. Vary the opening completely.\n\nDeal: ' + d.beds + 'bd/' + d.baths + 'ba in ' + d.city + ', ' + d.state + '. ' + d.arv + ', ' + d.price + ', ' + d.spread + ' spread. Strategy: ' + d.strategy + '.\n\nBuyer focuses on: ' + buyerFocus + ' in ' + buyerMarket + '.\n\nRules: Do NOT include the address. Ask if interested. Keep it under 160 characters. Sound like a real person texting.';
+  return await generateAIMessage(prompt, 'sms');
+}
+
+// ── Generate buyer email (unique per buyer) ────────────────
+async function generateBuyerEmail(buyer, lead) {
+  var d = safeDealSummary(lead);
+  var buyerFocus = (buyer.buyTypes || ['SFR']).join('/');
+  var buyerMarket = buyer.city || buyer.state || 'your market';
+  var maxPrice = buyer.maxPrice ? '$' + (buyer.maxPrice/1000).toFixed(0) + 'K' : 'your range';
+  var prompt = 'Write a real estate wholesaler email to a buyer named ' + buyer.name + ' about a deal. Must be unique, natural, NOT a template. Vary the structure and opening.\n\nDeal details (DO NOT include the address - deal protection mode):\n- Location: ' + d.city + ', ' + d.state + '\n- Property: ' + d.category + ', ' + d.beds + 'bd/' + d.baths + 'ba, ' + d.sqft + '\n- ' + d.arv + ' | ' + d.price + ' | ' + d.repairs + ' repairs\n- ' + d.spread + ' spread | ' + d.equity + '\n- Est. rent: ' + d.rent + ' | Cash flow: ' + d.cf + '\n- Strategy: ' + d.strategy + '\n\nBuyer profile: Focuses on ' + buyerFocus + ' in ' + buyerMarket + ', max ' + maxPrice + '.\n\nGoals: Ask if interested, what they would pay, preferred terms. Offer to share address after interest confirmed. 3-4 short paragraphs max. Sign as Gabriel, Montsan REI.';
+  return await generateAIMessage(prompt, 'email');
+}
+
+// ── Generate seller SMS (unique per lead) ─────────────────
+async function generateSellerSMS(lead) {
+  var d = safeDealSummary(lead);
+  var signals = [];
+  if (lead.dom > 60) signals.push('on market ' + lead.dom + ' days');
+  if (lead.category && lead.category.toLowerCase().includes('pre-fc')) signals.push('pre-foreclosure situation');
+  if (lead.category && lead.category.toLowerCase().includes('vacant')) signals.push('vacant property');
+  if (lead.equityPct > 40) signals.push('strong equity position');
+  var signalStr = signals.length ? signals.join(', ') : 'off-market opportunity';
+  var prompt = 'Write a SHORT real estate investor SMS (under 160 chars) to a property owner in ' + d.city + ', ' + d.state + '. Natural, soft approach, conversational. Vary the opening completely - do NOT start with "Hi I".\n\nProperty signals: ' + signalStr + '.\n\nGoal: Start conversation, ask if open to options, mention cash or flexible terms. NO hard offer. Sound like a real person. Under 160 chars.';
+  return await generateAIMessage(prompt, 'sms');
+}
+
+// ── Generate seller email (unique per lead) ───────────────
+async function generateSellerEmail(lead) {
+  var d = safeDealSummary(lead);
+  var signals = [];
+  if (lead.dom > 60) signals.push('listed for ' + lead.dom + ' days');
+  if (lead.category) signals.push(lead.category + ' situation');
+  if (lead.equityPct > 40) signals.push('strong equity');
+  var signalStr = signals.join(', ');
+  var ownerName = lead.owner_name || lead.ownerName || '';
+  var prompt = 'Write a soft real estate investor email to a property owner' + (ownerName ? ' (their name is ' + ownerName + ')' : '') + ' about their property in ' + d.city + ', ' + d.state + '. IMPORTANT: Natural, conversational, NOT a template. Vary structure completely.\n\nProperty context: ' + signalStr + '.\n\nGoal: Express genuine interest, start conversation, ask if open to discussing options, mention cash purchase or flexible terms possible. NO hard offer yet. 3 short paragraphs. Sign as Gabriel, Montsan REI. Feel like a real human wrote this.';
+  return await generateAIMessage(prompt, 'email');
+}
+
+// ── Match buyers to a lead ────────────────────────────────
+function matchBuyersToLead(lead) {
+  return (APP.buyers || []).filter(function(b) {
+    var priceOk = !b.maxPrice || (lead.offer || lead.listPrice || 0) <= b.maxPrice * 1.1;
+    var stateOk = !b.state || b.state === lead.state || (b.buyBox && b.buyBox.states && b.buyBox.states.includes(lead.state));
+    var typeOk = !b.buyTypes || b.buyTypes.includes('SFR') || b.buyTypes.includes('Any');
+    return priceOk && stateOk;
+  }).sort(function(a, b) { return (b.trust || 50) - (a.trust || 50); });
+}
+
+// ── Outreach Hub render ───────────────────────────────────
 function renderOutreachHub() {
-  const states = [...new Set(APP.leads.map(l=>l.state).filter(Boolean))].sort();
-  const buyerStates = [...new Set(APP.buyers.map(b=>b.state).filter(Boolean))].sort();
-  return `
-  <div style="height:calc(100vh - 80px);display:grid;grid-template-columns:220px 220px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">
-    <!-- LEADS COLUMN -->
-    <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">
-      <div style="padding:10px 12px;border-bottom:1px solid #e5e5ea;font-size:11px;font-weight:700;color:#86868b;letter-spacing:.5px">LEADS</div>
-      <div style="padding:8px 10px;border-bottom:1px solid #e5e5ea;display:flex;flex-direction:column;gap:5px">
-        <input id="or-lead-search" type="text" placeholder="Search..." class="form-input" style="font-size:11px;padding:5px 8px" oninput="filterOutreachLeads()"/>
-        <select id="or-lead-state" class="form-input" style="font-size:11px;padding:4px 6px" onchange="filterOutreachLeads()">
-          <option value="">All States</option>
-          ${states.map(s=>`<option value="${s}">${s}</option>`).join('')}
-        </select>
-      </div>
-      <div id="outreach-lead-list" style="overflow-y:auto;flex:1">
-        ${buildOutreachLeadList(APP.leads)}
-      </div>
-    </div>
-    <!-- BUYERS COLUMN -->
-    <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">
-      <div style="padding:10px 12px;border-bottom:1px solid #e5e5ea;font-size:11px;font-weight:700;color:#86868b;letter-spacing:.5px">BUYERS</div>
-      <div style="padding:8px 10px;border-bottom:1px solid #e5e5ea;display:flex;flex-direction:column;gap:5px">
-        <input id="or-buyer-search" type="text" placeholder="Search buyers..." class="form-input" style="font-size:11px;padding:5px 8px" oninput="filterOutreachBuyers()"/>
-        <select id="or-buyer-state" class="form-input" style="font-size:11px;padding:4px 6px" onchange="filterOutreachBuyers()">
-          <option value="">All States</option>
-          ${buyerStates.map(s=>`<option value="${s}">${s}</option>`).join('')}
-        </select>
-      </div>
-      <div id="outreach-buyer-list" style="overflow-y:auto;flex:1">
-        ${buildOutreachBuyerList(APP.buyers)}
-      </div>
-    </div>
-    <!-- CONTENT PANEL -->
-    <div style="display:flex;flex-direction:column;overflow:hidden">
-      <!-- Tab bar -->
-      <div style="display:flex;border-bottom:1px solid #e5e5ea;background:#fff;flex-shrink:0" id="or-tab-bar">
-        ${['SMS','Email','Script','Buyers','History'].map((t,i)=>`<div class="or-tab${i===0?' or-tab-active':''}" onclick="switchOutreachTab('${t.toLowerCase()}')" id="or-tab-${t.toLowerCase()}" style="padding:10px 16px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid ${i===0?'#0071e3':'transparent'};color:${i===0?'#0071e3':'#86868b'}">${t}</div>`).join('')}
-        <div style="margin-left:auto;padding:8px 12px" id="or-tone-status"></div>
-      </div>
-      <!-- Content area -->
-      <div id="or-content" style="flex:1;overflow-y:auto;padding:16px">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:#86868b">
-          <div style="font-size:36px;margin-bottom:10px">✉️</div>
-          <div style="font-size:13px;font-weight:600">Select a lead or buyer to begin</div>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  var states = [...new Set((APP.leads || []).map(function(l){return l.state;}).filter(Boolean))].sort();
+  var buyerStates = [...new Set((APP.buyers || []).map(function(b){return b.state;}).filter(Boolean))].sort();
+
+  return '<div style="height:calc(100vh - 80px);display:grid;grid-template-columns:220px 240px 1fr;gap:0;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden">'
+
+    // LEADS COLUMN
+    + '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">'
+    + '<div style="padding:10px 12px;border-bottom:1px solid #e5e5ea;font-size:11px;font-weight:700;color:#86868b;letter-spacing:.5px">LEADS</div>'
+    + '<div style="padding:8px 10px;border-bottom:1px solid #e5e5ea;display:flex;flex-direction:column;gap:5px">'
+    + '<input id="or-lead-search" type="text" placeholder="Search leads..." style="font-size:11px;padding:5px 8px;border:1px solid #e5e5ea;border-radius:6px;outline:none;" oninput="filterOutreachLeads()"/>'
+    + '<select id="or-lead-state" style="font-size:11px;padding:4px 6px;border:1px solid #e5e5ea;border-radius:6px;" onchange="filterOutreachLeads()">'
+    + '<option value="">All States</option>'
+    + states.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')
+    + '</select></div>'
+    + '<div id="outreach-lead-list" style="overflow-y:auto;flex:1">' + buildOutreachLeadList(APP.leads || []) + '</div>'
+    + '</div>'
+
+    // BUYERS COLUMN
+    + '<div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#f9f9f9">'
+    + '<div style="padding:10px 12px;border-bottom:1px solid #e5e5ea;font-size:11px;font-weight:700;color:#86868b;letter-spacing:.5px">MATCHED BUYERS</div>'
+    + '<div style="padding:8px 10px;border-bottom:1px solid #e5e5ea;display:flex;flex-direction:column;gap:5px">'
+    + '<input id="or-buyer-search" type="text" placeholder="Search buyers..." style="font-size:11px;padding:5px 8px;border:1px solid #e5e5ea;border-radius:6px;outline:none;" oninput="filterOutreachBuyers()"/>'
+    + '<select id="or-buyer-state" style="font-size:11px;padding:4px 6px;border:1px solid #e5e5ea;border-radius:6px;" onchange="filterOutreachBuyers()">'
+    + '<option value="">All States</option>'
+    + buyerStates.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')
+    + '</select></div>'
+    + '<div id="outreach-buyer-list" style="overflow-y:auto;flex:1"><div style="padding:20px;text-align:center;font-size:11px;color:#86868b;">Select a lead to see matched buyers</div></div>'
+    + '</div>'
+
+    // CONTENT PANEL
+    + '<div style="display:flex;flex-direction:column;overflow:hidden">'
+    + '<div id="or-content" style="flex:1;overflow-y:auto;padding:16px">'
+    + '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:#86868b">'
+    + '<div style="font-size:36px;margin-bottom:10px">✉️</div>'
+    + '<div style="font-size:13px;font-weight:600">Select a lead to start outreach</div>'
+    + '<div style="font-size:11px;margin-top:6px;color:#aaa;">AI generates unique messages for each contact</div>'
+    + '</div></div></div></div>';
 }
 
 function buildOutreachLeadList(leads) {
-  if (!leads.length) return '<div style="padding:20px;text-align:center;font-size:11px;color:#86868b">No leads</div>';
-  return leads.map(l => {
-    const q = computeLeadQuality(l);
-    const active = APP.outreachLead === l.id;
-    return `<div onclick="selectOutreachLead('${l.id}')" style="padding:8px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;background:${active?'#1d1d1f':'transparent'}">
-      <div style="font-size:11px;font-weight:600;color:${active?'#fff':'#1d1d1f'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.address?.split(',')[0]||'N/A'}</div>
-      <div style="display:flex;gap:5px;margin-top:2px;align-items:center">
-        <span style="font-size:9px;background:${active?'rgba(255,255,255,0.2)':q.color};color:#fff;padding:1px 6px;border-radius:8px;font-weight:700">${q.label}</span>
-        <span style="font-size:9px;color:${active?'#aaa':'#86868b'}">${l.state||''}</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function buildOutreachBuyerList(buyers) {
-  if (!buyers.length) return '<div style="padding:20px;text-align:center;font-size:11px;color:#86868b">No buyers yet.<br>Run scrape to find real buyers.</div>';
-  return buyers.map(b => {
-    const active = APP.outreachBuyer === b.id;
-    const src = b.source ? `<span style="font-size:9px;background:#e8f0fe;color:#0071e3;padding:1px 5px;border-radius:6px">${b.source}</span>` : '';
-    return `<div onclick="selectOutreachBuyer('${b.id}')" style="padding:8px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;background:${active?'#1d1d1f':'transparent'}">
-      <div style="font-size:11px;font-weight:600;color:${active?'#fff':'#1d1d1f'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.name||'Unknown'}</div>
-      <div style="display:flex;gap:5px;margin-top:2px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:9px;color:${active?'#aaa':'#86868b'}">${b.type||'Cash Buyer'} · ${b.state||''}</span>
-        ${src}
-      </div>
-    </div>`;
+  if (!leads || !leads.length) return '<div style="padding:20px;text-align:center;font-size:11px;color:#86868b">No leads</div>';
+  var top = leads.slice(0, 200);
+  return top.map(function(l) {
+    var city = (l.address || '').split(',')[1] ? l.address.split(',')[1].trim() : (l.county || l.state || '');
+    var score = l.dealScore ? l.dealScore.emoji : '📊';
+    var strategy = l.creativeFinance ? l.creativeFinance.type : '';
+    return '<div onclick="selectOutreachLead(\'' + l.id + '\')" data-lead-id="' + l.id + '" style="padding:8px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;" onmouseover="this.style.background=\'#f0f7ff\'" onmouseout="this.style.background=\'\'">'
+      + '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + score + ' ' + city + ', ' + (l.state||'') + '</div>'
+      + '<div style="color:#86868b;margin-top:2px;">' + (l.beds||'?') + 'bd · ' + (l.category||'Deal') + (strategy?' · '+strategy:'') + '</div>'
+      + '</div>';
   }).join('');
 }
 
 function filterOutreachLeads() {
-  const q = (document.getElementById('or-lead-search')?.value||'').toLowerCase();
-  const st = document.getElementById('or-lead-state')?.value||'';
-  const filtered = APP.leads.filter(l => {
-    const mq = !q || (l.address||'').toLowerCase().includes(q) || (l.county||'').toLowerCase().includes(q);
-    const ms = !st || l.state === st;
-    return mq && ms;
+  var q = (document.getElementById('or-lead-search') ? document.getElementById('or-lead-search').value : '').toLowerCase();
+  var state = document.getElementById('or-lead-state') ? document.getElementById('or-lead-state').value : '';
+  var leads = (APP.leads || []).filter(function(l) {
+    var addr = (l.address || '').toLowerCase();
+    var s = l.state || '';
+    return (!q || addr.includes(q) || (l.county||'').toLowerCase().includes(q))
+      && (!state || s === state);
   });
-  const el = document.getElementById('outreach-lead-list');
-  if (el) el.innerHTML = buildOutreachLeadList(filtered);
+  var el = document.getElementById('outreach-lead-list');
+  if (el) el.innerHTML = buildOutreachLeadList(leads);
 }
 
 function filterOutreachBuyers() {
-  const q = (document.getElementById('or-buyer-search')?.value||'').toLowerCase();
-  const st = document.getElementById('or-buyer-state')?.value||'';
-  const filtered = APP.buyers.filter(b => {
-    const mq = !q || (b.name||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q) || (b.type||'').toLowerCase().includes(q);
-    const ms = !st || b.state === st;
-    return mq && ms;
+  var q = (document.getElementById('or-buyer-search') ? document.getElementById('or-buyer-search').value : '').toLowerCase();
+  var state = document.getElementById('or-buyer-state') ? document.getElementById('or-buyer-state').value : '';
+  var lead = APP.outreachLeadObj;
+  var buyers = lead ? matchBuyersToLead(lead) : (APP.buyers || []);
+  buyers = buyers.filter(function(b) {
+    return (!q || (b.name||'').toLowerCase().includes(q))
+      && (!state || b.state === state);
   });
-  const el = document.getElementById('outreach-buyer-list');
-  if (el) el.innerHTML = buildOutreachBuyerList(filtered);
+  var el = document.getElementById('outreach-buyer-list');
+  if (el) el.innerHTML = buildOutreachBuyerListFull(buyers);
 }
 
-function switchOutreachTab(tab) {
-  document.querySelectorAll('.or-tab').forEach(function(t) {
-    t.style.borderBottom = '2px solid transparent';
-    t.style.color = '#86868b';
-  });
-  const active = document.getElementById('or-tab-' + tab);
-  if (active) { active.style.borderBottom = '2px solid #0071e3'; active.style.color = '#0071e3'; }
-  APP._orTab = tab;
-  // Reload content based on current selection
-  if (APP.outreachBuyer && tab !== 'history') {
-    selectOutreachBuyer(APP.outreachBuyer, tab);
-  } else if (APP.outreachLead) {
-    selectOutreachLead(APP.outreachLead, tab);
-  }
+function buildOutreachBuyerListFull(buyers) {
+  if (!buyers || !buyers.length) return '<div style="padding:20px;text-align:center;font-size:11px;color:#86868b">No matching buyers</div>';
+  return buyers.map(function(b) {
+    return '<div data-buyer-id="' + b.id + '" style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:11px;" onmouseover="this.style.background=\'#f0f7ff\'" onmouseout="this.style.background=\'\'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<div><div style="font-weight:600">' + (b.name||'Unknown') + '</div>'
+      + '<div style="color:#86868b;margin-top:2px;">' + (b.city||'') + (b.state?', '+b.state:'') + ' · ' + (b.phone||b.email||'No contact') + '</div></div>'
+      + '<input type="checkbox" class="buyer-select-cb" data-buyer-id="' + b.id + '" checked style="accent-color:#0071e3;width:14px;height:14px;">'
+      + '</div></div>';
+  }).join('');
 }
 
-async function selectOutreachLead(leadId, forceTab) {
+async function selectOutreachLead(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
+  if (!lead) return;
   APP.outreachLead = leadId;
-  APP.outreachBuyer = null;
-  // Refresh list highlight
-  document.querySelectorAll('#outreach-lead-list > div').forEach(function(d) {
-    d.style.background = d.onclick?.toString().includes(leadId) || d.getAttribute('onclick')?.includes(leadId) ? '#1d1d1f' : 'transparent';
+  APP.outreachLeadObj = lead;
+
+  // Highlight selected
+  document.querySelectorAll('[data-lead-id]').forEach(function(el) {
+    el.style.background = el.dataset.leadId === leadId ? '#e8f0fe' : '';
+    el.style.borderLeft = el.dataset.leadId === leadId ? '3px solid #0071e3' : '';
   });
-  const el = document.getElementById('outreach-lead-list');
-  if (el) el.innerHTML = buildOutreachLeadList(APP.leads.filter(l => {
-    const q = (document.getElementById('or-lead-search')?.value||'').toLowerCase();
-    const st = document.getElementById('or-lead-state')?.value||'';
-    return (!q || JSON.stringify(l).toLowerCase().includes(q)) && (!st || l.state === st);
-  }));
 
-  const lead = APP.leads.find(l => l.id === leadId);
+  // Show matched buyers
+  var matchedBuyers = matchBuyersToLead(lead);
+  var buyerListEl = document.getElementById('outreach-buyer-list');
+  if (buyerListEl) buyerListEl.innerHTML = buildOutreachBuyerListFull(matchedBuyers);
+
+  // Show outreach panel
+  renderOutreachPanel(lead, matchedBuyers);
+}
+
+function renderOutreachPanel(lead, buyers) {
+  var d = safeDealSummary(lead);
+  var protection = window.DEAL_PROTECTION;
+  var el = document.getElementById('or-content');
+  if (!el) return;
+
+  el.innerHTML = '<div>'
+    // Header
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<div>'
+    + '<div style="font-size:15px;font-weight:700;">' + (protection ? '🔒 Protected Deal' : '🔓 Deal Exposed') + ' — ' + d.city + ', ' + d.state + '</div>'
+    + '<div style="font-size:12px;color:#86868b;margin-top:3px;">' + d.beds + 'bd/' + d.baths + 'ba · ' + d.category + ' · ' + d.strategy + ' · ' + d.arv + ' ARV · ' + d.spread + ' spread</div>'
+    + '</div>'
+    + '<button onclick="window.DEAL_PROTECTION=!window.DEAL_PROTECTION;selectOutreachLead(\'' + lead.id + '\')" style="background:' + (protection?'#e17055':'#00b894') + ';color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;">'
+    + (protection ? '🔓 Disable Protection' : '🔒 Enable Protection') + '</button>'
+    + '</div>'
+
+    // Action buttons
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">'
+    + '<button onclick="runBuyerOutreach(\'' + lead.id + '\')" style="background:#0071e3;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">📤 Generate + Send Buyer Messages</button>'
+    + '<button onclick="runSellerOutreach(\'' + lead.id + '\')" style="background:#5e5ce6;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">📩 Generate Seller Message</button>'
+    + '<button onclick="previewAllMessages(\'' + lead.id + '\')" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;">👁 Preview All</button>'
+    + '</div>'
+
+    // Buyers count
+    + '<div style="font-size:12px;font-weight:600;color:#86868b;margin-bottom:10px;">' + buyers.length + ' buyers matched · ' + buyers.filter(function(b){return b.email||b.phone;}).length + ' with contact info</div>'
+
+    // Progress / output area
+    + '<div id="or-output" style="background:#f9f9f9;border-radius:10px;padding:16px;min-height:100px;">'
+    + '<div style="color:#86868b;font-size:12px;text-align:center;padding:20px;">Click a button above to generate AI messages</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// ── Run buyer outreach (generate + preview + send) ─────────
+async function runBuyerOutreach(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
   if (!lead) return;
-  const tab = forceTab || APP._orTab || 'sms';
-  switchOutreachTab(tab);
-  renderOutreachContent(lead, tab);
+
+  // Get selected buyers from checkboxes
+  var selectedIds = [];
+  document.querySelectorAll('.buyer-select-cb:checked').forEach(function(cb) {
+    selectedIds.push(cb.dataset.buyerId);
+  });
+  var buyers = (APP.buyers || []).filter(function(b) { return selectedIds.includes(b.id); });
+  if (!buyers.length) buyers = matchBuyersToLead(lead).slice(0, 20);
+  if (!buyers.length) { showToastMsg('No buyers to contact', 'error'); return; }
+
+  var outputEl = document.getElementById('or-output');
+  if (outputEl) outputEl.innerHTML = '<div style="color:#0071e3;font-size:13px;padding:10px;">⏳ Generating ' + buyers.length + ' unique AI messages...</div>';
+
+  var messages = [];
+  var generated = 0;
+
+  for (var i = 0; i < buyers.length; i++) {
+    var buyer = buyers[i];
+    if (!buyer.email && !buyer.phone) continue;
+    try {
+      var sms = buyer.phone ? await generateBuyerSMS(buyer, lead) : '';
+      var email = buyer.email ? await generateBuyerEmail(buyer, lead) : '';
+      messages.push({ buyer: buyer, sms: sms, email: email, sent: false });
+      generated++;
+      if (outputEl) {
+        outputEl.innerHTML = '<div style="color:#0071e3;font-size:13px;padding:10px;">⏳ Generated ' + generated + '/' + buyers.length + ' messages...</div>';
+      }
+    } catch(e) {}
+  }
+
+  APP.pendingOutreach = { leadId: leadId, messages: messages, type: 'buyer' };
+  showOutreachPreview(messages, lead, 'buyer');
 }
 
-function renderOutreachContent(lead, tab) {
-  const panel = document.getElementById('or-content');
-  if (!panel) return;
-  const q = computeLeadQuality(lead);
+// ── Run seller outreach ────────────────────────────────────
+async function runSellerOutreach(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
+  if (!lead) return;
 
-  // Build deal intelligence header shown in all tabs
-  const arv = lead.arv || 0;
-  const offer = lead.offer || 0;
-  const repairs = lead.repairs || 0;
-  const spread = lead.spread || (arv - offer - repairs);
-  const equity = arv > 0 ? Math.round((arv - offer) / arv * 100) : 0;
-  const rent = lead.rentEstimate || 0;
-  const dealType = lead.dealType || 'Wholesale';
-  const dealReason = lead.dealTypeReason || '';
+  var outputEl = document.getElementById('or-output');
+  if (outputEl) outputEl.innerHTML = '<div style="color:#5e5ce6;font-size:13px;padding:10px;">⏳ Generating seller messages...</div>';
 
-  const photoHtml = lead.photoUrl
-    ? `<img src="${lead.photoUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:10px" onerror="this.style.display='none'">`
-    : lead.streetViewUrl
-    ? `<img src="${lead.streetViewUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:10px" onerror="this.style.display='none'">`
-    : '';
-
-  const linksHtml = [
-    lead.zillowUrl ? `<a href="${lead.zillowUrl}" target="_blank" style="font-size:10px;color:#0071e3">Zillow ↗</a>` : '',
-    lead.redfinUrl ? `<a href="${lead.redfinUrl}" target="_blank" style="font-size:10px;color:#0071e3">Redfin ↗</a>` : '',
-    lead.sourceUrl ? `<a href="${lead.sourceUrl}" target="_blank" style="font-size:10px;color:#0071e3">${lead.source||'Source'} ↗</a>` : '',
-  ].filter(Boolean).join(' · ');
-
-  const intelHtml = `
-    <div style="background:#f5f5f7;border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px">
-      ${photoHtml}
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="background:${q.color};color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px">${q.emoji} ${q.label}</span>
-        <span style="background:#e8f0fe;color:#0071e3;font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px">${dealType}</span>
-        ${lead.source ? `<span style="background:#f0f0f0;color:#3a3a3c;font-size:10px;padding:2px 8px;border-radius:8px">${lead.source}</span>` : ''}
-      </div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px">${lead.address||''}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
-        <div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">ARV</div><div style="font-size:12px;font-weight:700;color:#34c759">$${arv.toLocaleString()}</div></div>
-        <div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">OFFER</div><div style="font-size:12px;font-weight:700;color:#0071e3">$${offer.toLocaleString()}</div></div>
-        <div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:9px;color:#86868b">SPREAD</div><div style="font-size:12px;font-weight:700;color:#ff9500">$${spread.toLocaleString()}</div></div>
-      </div>
-      <div style="display:flex;gap:12px;margin-bottom:6px;flex-wrap:wrap">
-        ${repairs ? `<span>🔨 Repairs: <b>$${repairs.toLocaleString()}</b></span>` : ''}
-        ${equity ? `<span>📊 Equity: <b>${equity}%</b></span>` : ''}
-        ${rent ? `<span>🏠 Rent est: <b>$${rent.toLocaleString()}/mo</b></span>` : ''}
-        ${lead.dom ? `<span>📅 DOM: <b>${lead.dom} days</b></span>` : ''}
-      </div>
-      ${dealReason ? `<div style="color:#3a3a3c;font-style:italic;margin-bottom:4px">💡 ${dealReason}</div>` : ''}
-      ${linksHtml ? `<div style="display:flex;gap:10px;margin-top:4px">${linksHtml}</div>` : ''}
-      ${lead.comps && lead.comps.length ? `<div style="margin-top:8px;font-size:10px;color:#86868b">Comps: ${lead.comps.slice(0,3).map(c=>'$'+(c.price||0).toLocaleString()).join(' · ')}</div>` : ''}
-    </div>`;
-
-  if (tab === 'sms') {
-    const sms = generateSmartSMS(lead, q);
-    panel.innerHTML = intelHtml + `
-      <div style="font-size:11px;color:#86868b;margin-bottom:6px">Relationship-first. No offer in first contact.</div>
-      <textarea id="or-sms-body" class="form-textarea" style="min-height:100px;font-size:12px;line-height:1.7;width:100%;margin-bottom:10px" data-original="${sms.replace(/"/g,'&quot;')}">${sms}</textarea>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="sms:${lead.phone||''}" class="btn btn-dark btn-sm">Open SMS App</a>
-        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('or-sms-body').value);toast('Copied!','success')">Copy</button>
-        <button class="btn btn-outline btn-sm" onclick="renderOutreachContent(APP.leads.find(l=>l.id==='${lead.id}'),'sms')">↻ Regenerate</button>
-      </div>`;
-  } else if (tab === 'email') {
-    const em = generateSmartEmail(lead, q);
-    panel.innerHTML = intelHtml + `
-      <div style="background:#f0f6ff;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">Subject: ${em.subject}</div>
-      <textarea id="or-email-body" class="form-textarea" style="min-height:220px;font-size:12px;line-height:1.7;width:100%;margin-bottom:10px" data-original="${em.body.replace(/"/g,'&quot;')}">${em.body}</textarea>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email||'')}&su=${encodeURIComponent(em.subject)}&body=${encodeURIComponent(em.body)}" target="_blank" class="btn btn-dark btn-sm">Open in Gmail</a>
-        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('or-email-body').value);toast('Copied!','success')">Copy</button>
-        <button class="btn btn-outline btn-sm" onclick="renderOutreachContent(APP.leads.find(l=>l.id==='${lead.id}'),'email')">↻ Regenerate</button>
-      </div>`;
-  } else if (tab === 'script') {
-    const sc = generateSmartScript(lead, q);
-    panel.innerHTML = intelHtml + `
-      <div style="background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;margin-bottom:10px">${sc}</div>
-      <div style="display:flex;gap:8px">
-        <a href="tel:${lead.phone||''}" class="btn btn-dark btn-sm">📞 Call Now</a>
-        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('or-script-text')?.textContent||'');toast('Copied!','success')">Copy Script</button>
-      </div>`;
-  } else if (tab === 'buyers') {
-    const matched = APP.buyers.filter(b => (!b.state || b.state === lead.state) && (lead.offer||0) <= (b.maxPrice||999999));
-    panel.innerHTML = intelHtml + `
-      <div style="font-size:12px;font-weight:600;margin-bottom:10px">${matched.length} buyer${matched.length===1?'':'s'} match this deal</div>
-      ${(matched.length ? matched : APP.buyers).slice(0,12).map(b => `
-        <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:12px;font-weight:600">${b.name}</div>
-            <div style="font-size:10px;color:#86868b">${b.type||''} · Max $${((b.maxPrice||0)/1000).toFixed(0)}K · ${b.state||''}</div>
-            ${b.source ? `<div style="font-size:10px;color:#0071e3">${b.source}</div>` : ''}
-          </div>
-          <button class="btn btn-dark btn-sm" onclick="generateBuyerOutreach('${lead.id}','${b.id}')">Send Deal</button>
-        </div>`).join('')}
-      ${!APP.buyers.length ? '<div style="font-size:11px;color:#86868b">No buyers yet — run Craigslist scrape first.</div>' : ''}`;
-  } else if (tab === 'history') {
-    panel.innerHTML = intelHtml + '<div id="or-history-list"><div style="font-size:11px;color:#86868b">Loading...</div></div>';
-    loadOutreachHistory(lead.id);
-  }
-}
-
-function selectOutreachBuyer(buyerId, forceTab) {
-  APP.outreachBuyer = buyerId;
-  APP.outreachLead = null;
-  const buyer = APP.buyers.find(b => b.id === buyerId);
-  if (!buyer) return;
-  const tab = forceTab || 'email';
-  switchOutreachTab(tab);
-  const panel = document.getElementById('or-content');
-  if (!panel) return;
-
-  // Buyer profile card
-  const profileHtml = `
-    <div style="background:#f5f5f7;border-radius:10px;padding:14px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-size:14px;font-weight:700">${buyer.name}</div>
-          <div style="font-size:11px;color:#86868b;margin-top:2px">${buyer.type||'Cash Buyer'} · ${buyer.state||''}</div>
-          ${buyer.source ? `<div style="font-size:10px;color:#0071e3;margin-top:2px">Source: ${buyer.source}</div>` : ''}
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:11px;font-weight:600">Max: $${((buyer.maxPrice||0)/1000).toFixed(0)}K</div>
-          ${buyer.phone ? `<div style="font-size:10px;color:#86868b">${buyer.phone}</div>` : ''}
-          ${buyer.email ? `<div style="font-size:10px;color:#86868b">${buyer.email}</div>` : ''}
-        </div>
-      </div>
-      ${buyer.notes ? `<div style="font-size:11px;color:#3a3a3c;font-style:italic">${buyer.notes}</div>` : ''}
-      ${buyer.sourceUrl ? `<a href="${buyer.sourceUrl}" target="_blank" style="font-size:10px;color:#0071e3">View original post ↗</a>` : ''}
-    </div>`;
-
-  // Intro outreach for buyer acquisition
-  const intro = generateBuyerIntroOutreach(buyer);
-
-  if (tab === 'email') {
-    panel.innerHTML = profileHtml + `
-      <div style="font-size:11px;color:#86868b;margin-bottom:8px">Intro email — build relationship, capture buy box criteria.</div>
-      <div style="background:#f0f6ff;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0071e3">Subject: ${intro.subject}</div>
-      <textarea id="or-buyer-email" class="form-textarea" style="min-height:200px;font-size:12px;line-height:1.7;width:100%;margin-bottom:10px">${intro.email}</textarea>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(buyer.email||'')}&su=${encodeURIComponent(intro.subject)}&body=${encodeURIComponent(intro.email)}" target="_blank" class="btn btn-dark btn-sm">Open in Gmail</a>
-        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('or-buyer-email').value);toast('Copied!','success')">Copy</button>
-      </div>`;
-  } else if (tab === 'sms') {
-    panel.innerHTML = profileHtml + `
-      <div style="font-size:11px;color:#86868b;margin-bottom:6px">Intro SMS — short, friendly, opens conversation.</div>
-      <textarea id="or-buyer-sms" class="form-textarea" style="min-height:80px;font-size:12px;line-height:1.7;width:100%;margin-bottom:10px">${intro.sms}</textarea>
-      <div style="display:flex;gap:8px">
-        <a href="sms:${buyer.phone||''}" class="btn btn-dark btn-sm">Open SMS App</a>
-        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('or-buyer-sms').value);toast('Copied!','success')">Copy</button>
-      </div>`;
-  } else if (tab === 'script') {
-    panel.innerHTML = profileHtml + `
-      <div style="background:#f5f5f7;border-radius:8px;padding:14px;font-size:12px;line-height:1.9;white-space:pre-wrap;max-height:400px;overflow-y:auto">${intro.script}</div>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        ${buyer.phone ? `<a href="tel:${buyer.phone}" class="btn btn-dark btn-sm">📞 Call</a>` : ''}
-      </div>`;
-  } else {
-    panel.innerHTML = profileHtml + '<div style="font-size:11px;color:#86868b">Select SMS, Email, or Script tab above to generate outreach for this buyer.</div>';
-  }
-}
-
-function generateBuyerIntroOutreach(buyer) {
-  const name = buyer.name || 'there';
-  const type = buyer.type || 'Cash Buyer';
-  const max = buyer.maxPrice ? `$${(buyer.maxPrice/1000).toFixed(0)}K` : 'your target range';
-  const market = buyer.markets?.[0] || buyer.state || 'your market';
-  const subject = `Connecting — Off-Market Deals in ${market}`;
-  const email = `Hi ${name.split(' ')[0]||name},
-
-My name is Gabriel Montealegre — I run Montsan Real Estate Investment and we source off-market wholesale deals across multiple states.
-
-I came across your listing and wanted to reach out directly. I work with a network of cash buyers and I'd love to understand what you're looking for so I can bring you deals that actually fit your criteria.
-
-A few quick questions:
-• What markets are you most active in right now?
-• What's your typical price range per deal?
-• Do you prefer light rehab, heavy value-add, or turnkey?
-• How quickly can you close when the right deal comes along?
-
-I have off-market properties coming through regularly — once I know your buy box, I can send you deals before they hit anyone else.
-
-Looking forward to connecting.
-
-Best,
-Gabriel Montealegre
-Montsan Real Estate Investment
-montsan.rei@gmail.com`;
-
-  const sms = `Hi ${name.split(' ')[0]||'there'} — I'm Gabriel with Montsan REI. I source off-market deals and saw you're buying in ${market}. Would love to learn your buy box so I can bring you deals that fit. Quick call this week?`;
-
-  const script = `BUYER INTRO CALL — ${name}
-Type: ${type} | Market: ${market} | Max: ${max}
-
-─── OPENER ──────────────────────────
-"Hi, is this ${name.split(' ')[0]||name}? Great — my name is Gabriel with Montsan REI. I source off-market wholesale deals and I came across your profile. Do you have 5 minutes?"
-
-─── UNDERSTAND THEIR BUY BOX ────────
-"What markets are you most focused on right now?"
-"What price range works best for you per deal?"
-"Do you prefer light rehab, heavy value-add, or turnkey?"
-"Are you buying to flip, rent, or both?"
-"How many deals are you looking to do this year?"
-
-─── ESTABLISH THE RELATIONSHIP ──────
-"I get off-market deals regularly — mostly pre-foreclosures, FSBO, and REO. Once I know what you want, I'll send you first look before it goes anywhere else."
-"Do you have a preferred way to receive deals — email, text, or call?"
-
-─── CLOSE ───────────────────────────
-"Perfect. Let me get your best email and I'll add you to my buyer list. First deal that fits I'll reach out directly."
-"Great talking with you — I'll be in touch soon."`;
-
-  return { subject, email, sms, script };
-}
-
-async function generateBuyerOutreach(leadId, buyerId) {
-  const lead = APP.leads.find(l=>l.id===leadId);
-  const buyer = APP.buyers.find(b=>b.id===buyerId);
-  if (!lead||!buyer) return;
-  const panel = document.getElementById('or-content');
-  if (!panel) return;
-  const arv = lead.arv||0;
-  const offer = lead.offer||0;
-  const repairs = lead.repairs||0;
-  const spread = lead.spread||(arv-offer-repairs);
-  const feeRange = '$'+(lead.fee_lo||0).toLocaleString()+'-$'+(lead.fee_hi||0).toLocaleString();
-  const addr = (lead.address||'').split(',')[0];
-  const buyerType = buyer.type||'Cash Buyer';
-  let subj, body;
-  if (buyerType==='Hedge Fund') {
-    subj = `Portfolio Acquisition Opportunity — ${lead.state||'Off-Market'}`;
-    body = `Hello ${buyer.name} team,\n\nPresenting an off-market acquisition in ${lead.county||lead.state||'your target market'}:\n\n• ARV: $${arv.toLocaleString()}\n• Acquisition Price: $${offer.toLocaleString()}\n• Est. Repairs: $${repairs.toLocaleString()}\n• Projected Spread: $${spread.toLocaleString()}\n• Assignment Fee: ${feeRange}\n\nThis aligns with your stated criteria. Full package and address available upon signed NDA/LOI.\n\nGabriel Montealegre | Montsan REI\nmontsan.rei@gmail.com`;
-  } else if (buyerType.includes('Flip')) {
-    subj = `Flip Deal — ${addr} — Numbers Work`;
-    body = `Hey ${buyer.name.split(' ')[0]||buyer.name},\n\nGot a flip deal in ${lead.county||lead.state||'your area'}. Quick numbers:\n\nARV: $${arv.toLocaleString()} | Buy at: $${offer.toLocaleString()} | Repairs ~$${repairs.toLocaleString()}\nProfit potential after my fee: $${Math.round(spread*0.55).toLocaleString()}+\n\nAssignment fee: ${feeRange}. Interested? I'll send full details and address.\n\nGabriel — Montsan REI`;
-  } else {
-    subj = `Off-Market Deal — ${addr} — Protected`;
-    body = `Hi ${buyer.name.split(' ')[0]||buyer.name},\n\nI have an off-market property in ${lead.county||lead.state||'your area'} that fits your buy box:\n\n• ARV: $${arv.toLocaleString()}\n• Your price: $${offer.toLocaleString()}\n• Est. Repairs: $${repairs.toLocaleString()}\n• Assignment Fee: ${feeRange}\n${lead.rentEstimate?`• Rent Estimate: $${lead.rentEstimate.toLocaleString()}/mo\n`:''}\nAddress shared upon intent. Want the details?\n\nGabriel | Montsan REI\nmontsan.rei@gmail.com`;
-  }
-  const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(buyer.email||'')+'&su='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
-  // Show result in panel
-  const existing = document.getElementById('buyer-deal-outreach');
-  const div = document.createElement('div');
-  div.id = 'buyer-deal-outreach';
-  div.style.cssText = 'margin-top:12px;background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px';
-  div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700">Deal Email → ${buyer.name}</div><span style="font-size:10px;background:#e5e5ea;padding:2px 8px;border-radius:8px">${buyerType}</span></div>
-    <div style="background:#f0f6ff;border-radius:6px;padding:8px;font-size:11px;font-weight:600;color:#0071e3;margin-bottom:8px">${subj}</div>
-    <textarea class="form-textarea" id="buyer-deal-body" style="min-height:160px;font-size:11px;line-height:1.7;width:100%;margin-bottom:8px">${body}</textarea>
-    <div style="display:flex;gap:8px">
-      <a href="${gmailUrl}" target="_blank" class="btn btn-dark btn-sm">Open in Gmail</a>
-      <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('buyer-deal-body').value);toast('Copied!','success')">Copy</button>
-    </div>`;
-  if (existing) existing.replaceWith(div);
-  else panel.appendChild(div);
-  panel.scrollTop = panel.scrollHeight;
-}
-
-// ── Smart outreach generators (deal-intelligence driven) ─────────────────────
-function generateSmartSMS(lead, q) {
-  const addr = lead.address?.split(',')[0] || 'your property';
-  const cat = (lead.category||'').toLowerCase();
-  const arv = lead.arv||0;
-  const offer = lead.offer||0;
-  const dom = lead.dom||0;
-  const equity = arv>0 ? Math.round((arv-offer)/arv*100) : 0;
-
-  // Pick opener based on motivation signals
-  if (cat.includes('pre-fc') || cat.includes('foreclosure')) {
-    return `Hi, my name is Gabriel — I'm a local real estate investor. I came across ${addr} and I understand the situation might be stressful. I help homeowners in difficult positions close quickly and with dignity. Would you be open to a 5-minute conversation? No pressure at all.`;
-  }
-  if (cat.includes('probate') || cat.includes('estate')) {
-    return `Hi, my name is Gabriel. I'm a local real estate investor and I came across the property at ${addr}. I work with families navigating estate situations and I understand how overwhelming it can be. If it would help to have a straightforward cash option, I'd love to connect. No rush at all.`;
-  }
-  if (dom > 90) {
-    return `Hi, I'm Gabriel — a local investor. I noticed ${addr} has been on the market for a while. I work directly with sellers and can close cash without the usual delays or fees. Would you be open to a quick conversation?`;
-  }
-  if (cat.includes('fsbo')) {
-    return `Hi, I'm Gabriel — local cash buyer. I saw you're selling ${addr} yourself and I wanted to reach out directly. I can close fast, no agents, no fees on your end. Would you have 5 minutes to talk?`;
-  }
-  if (q.score >= 70) {
-    return `Hi, my name is Gabriel with Montsan REI. I came across ${addr} and I'm genuinely interested. I'm a local investor who buys cash and closes fast. Would you be open to a quick call?`;
-  }
-  return `Hi, I'm Gabriel — a local real estate investor. I came across your property at ${addr} and wanted to reach out. If you've ever thought about selling, I'd love to connect. No pressure, just a conversation.`;
-}
-
-function generateSmartEmail(lead, q) {
-  const addr = lead.address?.split(',')[0] || 'your property';
-  const city = lead.address?.split(',')[1]?.trim() || lead.county || 'your area';
-  const cat = (lead.category||'').toLowerCase();
-  const arv = lead.arv||0;
-  const offer = lead.offer||0;
-  const dom = lead.dom||0;
-  const rent = lead.rentEstimate||0;
-  const dealType = lead.dealType || 'Wholesale';
-  const repairs = lead.repairs||0;
-
-  // Build motivation context
-  let motivation = '';
-  if (cat.includes('pre-fc') || cat.includes('foreclosure')) motivation = 'pre-foreclosure situation and potential timeline pressure';
-  else if (cat.includes('probate')) motivation = 'estate or probate situation requiring resolution';
-  else if (dom > 90) motivation = `property sitting ${dom} days on market without selling`;
-  else if (cat.includes('fsbo')) motivation = 'selling without an agent — values directness';
-  else if (cat.includes('reo') || cat.includes('hud')) motivation = 'bank-owned property — institution wants to liquidate';
-  else motivation = 'motivated seller signals in market data';
-
-  const whyGood = lead.why_good_deal || (arv>0 ? `${Math.round((arv-offer)/arv*100)}% below ARV with strong wholesale potential in ${city}` : 'off-market opportunity with motivated seller');
-
-  const questions = cat.includes('pre-fc')
-    ? `• Have you spoken with your lender about your options?\n• Is there a foreclosure auction date set yet?\n• Do you own the property outright or is there a mortgage balance?`
-    : cat.includes('probate')
-    ? `• Are you the executor or one of the heirs?\n• Is there a timeline you're working toward?\n• Is the property occupied or vacant?`
-    : `• How long have you owned the property?\n• Is it currently occupied or vacant?\n• Are you looking for a quick close or do you have flexibility on timing?`;
-
-  let body;
-  if (q.score >= 70) {
-    body = `Hi,
-
-My name is Gabriel Montealegre and I invest in real estate in ${city} and surrounding areas.
-
-I came across your property at ${addr} and I'm reaching out because of the ${motivation}. I've helped homeowners in similar situations close quickly, with cash, and without the stress of showings, agent fees, or long timelines.
-
-Here's why I think this could work well for both of us:
-${whyGood}
-
-I'd love to ask you a few quick questions before we go further:
-${questions}
-
-I'm not here to pressure you — I'm here to understand your situation and see if I can genuinely help. If the numbers make sense and the timing works, I can make a cash offer and close in as little as 14 days.
-
-Would you be open to a quick 10-minute call this week?
-
-Best,
-Gabriel Montealegre
-Montsan Real Estate Investment
-montsan.rei@gmail.com`;
-  } else {
-    body = `Hi,
-
-My name is Gabriel — I'm a local real estate investor based in the area.
-
-I came across ${addr} and wanted to reach out directly. I work with sellers in a variety of situations — sometimes people need to move fast, sometimes they're just exploring options. Either way, I'm happy to have a straightforward, no-pressure conversation.
-
-If you've had any thoughts about selling — now or down the road — I'd love to connect. I work with cash and can often close without the delays of traditional buyers.
-
-Would you be open to a quick chat?
-
-Best,
-Gabriel Montealegre
-Montsan Real Estate Investment
-montsan.rei@gmail.com`;
-  }
-
-  const subjects = [
-    `Quick question about ${addr}`,
-    `${addr} — local investor, straightforward offer`,
-    `Regarding your property at ${addr}`,
-    `Cash buyer interested in ${addr}`,
-  ];
-  return { subject: subjects[Math.floor(Math.random()*subjects.length)], body };
-}
-
-function generateSmartScript(lead, q) {
-  const addr = lead.address?.split(',')[0] || 'the property';
-  const cat = (lead.category||'').toLowerCase();
-  const arv = lead.arv||0;
-  const offer = lead.offer||0;
-  const repairs = lead.repairs||0;
-  const spread = lead.spread||(arv-offer-repairs);
-  const dom = lead.dom||0;
-  const dealType = lead.dealType || 'Wholesale';
-  const dealReason = lead.dealTypeReason || '';
-  const rent = lead.rentEstimate||0;
-
-  // Motivation context for caller awareness
-  let motivationNote = '';
-  if (cat.includes('pre-fc')||cat.includes('foreclosure')) motivationNote = '⚠️ PRE-FORECLOSURE — Lead with empathy. They may be stressed or embarrassed. Do not mention the word "foreclosure" unless they bring it up first.';
-  else if (cat.includes('probate')||cat.includes('estate')) motivationNote = '⚠️ ESTATE/PROBATE — Be extra respectful and patient. Family may be grieving. Slow down.';
-  else if (cat.includes('fsbo')) motivationNote = '💡 FSBO — They value directness. They listed themselves to save money. Respect that.';
-  else if (dom > 90) motivationNote = `💡 LONG DOM (${dom} days) — Property hasn't sold. The seller is likely frustrated. Lead with empathy, then solutions.`;
-  else if (cat.includes('hud')||cat.includes('reo')) motivationNote = '🏦 REO/HUD — Bank or government-owned. Decision-maker is an asset manager, not a homeowner. Be professional and numbers-focused.';
-
-  const dealIntel = [
-    arv > 0 ? `ARV: $${arv.toLocaleString()}` : '',
-    offer > 0 ? `Your target offer: $${offer.toLocaleString()}` : '',
-    repairs > 0 ? `Est. repairs: $${repairs.toLocaleString()}` : '',
-    spread > 0 ? `Assignment fee potential: $${(spread*0.35).toLocaleString()}–$${(spread*0.55).toLocaleString()}` : '',
-    rent > 0 ? `Rental estimate: $${rent.toLocaleString()}/mo` : '',
-    dealType ? `Deal classification: ${dealType}` : '',
-    dealReason ? `Why: ${dealReason}` : '',
-  ].filter(Boolean).join('\n');
-
-  return `CALL SCRIPT — ${addr}
-${q.emoji} ${q.label} Lead | Score: ${q.score}/100 | Type: ${dealType}
-${motivationNote ? '\n' + motivationNote : ''}
-
-── DEAL INTEL (for your reference only — do not read aloud) ──
-${dealIntel}
-──────────────────────────────────────────────────────────────
-
-─── OPENER ──────────────────────────────────────────────────
-"Hi, may I speak with the owner of ${addr}?"
-
-[If asked who's calling]
-"My name is Gabriel — I'm a local real estate investor. I came across your property and wanted to reach out directly. Do you have just a couple minutes?"
-
-─── BUILD RAPPORT (always do this first) ────────────────────
-"How long have you owned the property?"  [listen fully]
-"Are you living there or is it vacant?"  [listen]
-"How has [city/area] been treating you lately?"
-
-─── SOFT QUALIFICATION ──────────────────────────────────────
-"I don't want to be forward, but — have you had any thoughts about selling at some point?"
-
-[If YES] → Go to Motivation Discovery
-[If NO]  → "Totally fair. Would it be okay if I kept your number in case you ever change your mind?"
-
-─── MOTIVATION DISCOVERY ────────────────────────────────────
-"What's making you consider it — is there a timeline or more of a when-the-time-is-right situation?"
-"Is there anything about the property that's been a challenge?"
-${cat.includes('pre-fc') ? '"Are you working with your lender on any solutions?" [listen with empathy]' : ''}
-${dom > 60 ? `"I noticed it's been listed for a while — has it been getting much activity?"` : ''}
-
-─── SOFT NUMBERS ────────────────────────────────────────────
-"What were you hoping to get out of it — just ballpark?"
-${offer > 0 ? `[If their number is near $${offer.toLocaleString()} or higher] "That's helpful — let me see if that works for us."` : ''}
-[If their number is too high] "I appreciate that. I work with cash so my numbers are a bit different, but let me take a look and see what makes sense for both of us."
-
-─── POSITION YOUR OFFER ─────────────────────────────────────
-"Here's how I work — I buy with cash, no bank involved, so I can close in 14 days or on your timeline. No agents, no repairs on your end, no fees."
-"I'd love to come take a look in person — are you free this week for a quick walkthrough?"
-
-─── OBJECTIONS ──────────────────────────────────────────────
-"Not interested" → "Totally understand. Thanks for your time. Mind if I send you my info by text in case anything changes?"
-"I need to think about it" → "Of course. When would be a good time to follow up — a few days or next week?"
-"I have an agent" → "No problem at all — I work with agents. If it makes sense I'll connect with them."
-"What's your offer?" → "I'd need to see it first to be fair to you. A 10-minute walkthrough tells me a lot. Could we do that?"
-"Someone else offered more" → "I respect that. My advantage is certainty — cash, fast close, no contingencies. Is certainty worth something to you?"
-
-─── CLOSE ───────────────────────────────────────────────────
-[Ready to move] "Perfect. I can be there [day/time]. Does that work?"
-[Not ready] "No pressure. I'll send you my contact info. Reach out anytime — I'm always looking in this area."`;
-}
-
-async function loadOutreachToneStatus() {
   try {
-    const res = await fetch('/api/outreach/tone-status');
-    if (!res.ok) return;
-    const data = await res.json();
-    const el = document.getElementById('or-tone-status');
-    if (el) {
-      if (data.auto_send) el.innerHTML = '<span style="color:#34c759;font-size:10px">✅ AI learned your tone</span>';
-      else el.innerHTML = `<span style="font-size:10px;color:#86868b">🧠 ${data.edits||0}/10 tone edits</span>`;
+    var sms = await generateSellerSMS(lead);
+    var email = await generateSellerEmail(lead);
+    APP.pendingOutreach = {
+      leadId: leadId,
+      messages: [{ seller: lead, sms: sms, email: email, sent: false }],
+      type: 'seller'
+    };
+    showOutreachPreview(APP.pendingOutreach.messages, lead, 'seller');
+  } catch(e) {
+    if (outputEl) outputEl.innerHTML = '<div style="color:#e17055;font-size:13px;padding:10px;">❌ Error: ' + e.message + '</div>';
+  }
+}
+
+// ── Preview all messages ───────────────────────────────────
+function showOutreachPreview(messages, lead, type) {
+  var outputEl = document.getElementById('or-output');
+  if (!outputEl) return;
+
+  var html = '<div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div style="font-size:14px;font-weight:700;">' + messages.length + ' ' + type + ' messages ready</div>'
+    + '<button onclick="sendAllMessages()" style="background:#34c759;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">🚀 Send All</button>'
+    + '</div>';
+
+  messages.forEach(function(m, i) {
+    var contact = type === 'buyer' ? m.buyer : m.seller;
+    var name = type === 'buyer' ? (m.buyer.name || 'Buyer ' + (i+1)) : (lead.owner_name || 'Seller');
+    var phone = type === 'buyer' ? m.buyer.phone : lead.phone;
+    var email = type === 'buyer' ? m.buyer.email : lead.email;
+
+    html += '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px;margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      + '<div style="font-weight:600;font-size:13px;">' + name + (phone ? ' · ' + phone : '') + (email ? ' · ' + email : '') + '</div>'
+      + '<div style="display:flex;gap:6px;">'
+      + (phone && m.sms ? '<button onclick="sendOneSMS(' + i + ')" style="background:#0071e3;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Send SMS</button>' : '')
+      + (email && m.email ? '<button onclick="sendOneEmail(' + i + ')" style="background:#5e5ce6;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Send Email</button>' : '')
+      + '</div></div>';
+
+    if (m.sms) {
+      html += '<div style="margin-bottom:8px;">'
+        + '<div style="font-size:10px;font-weight:700;color:#86868b;margin-bottom:4px;">SMS (' + m.sms.length + ' chars)</div>'
+        + '<textarea id="msg-sms-' + i + '" style="width:100%;font-size:12px;padding:8px;border:1px solid #e5e5ea;border-radius:6px;resize:vertical;min-height:60px;box-sizing:border-box;outline:none;">' + m.sms + '</textarea>'
+        + '</div>';
     }
-  } catch {}
+    if (m.email) {
+      html += '<div>'
+        + '<div style="font-size:10px;font-weight:700;color:#86868b;margin-bottom:4px;">EMAIL</div>'
+        + '<textarea id="msg-email-' + i + '" style="width:100%;font-size:12px;padding:8px;border:1px solid #e5e5ea;border-radius:6px;resize:vertical;min-height:100px;box-sizing:border-box;outline:none;">' + m.email + '</textarea>'
+        + '</div>';
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  outputEl.innerHTML = html;
 }
 
-function refreshSMSPanel(leadId){const lead=APP.leads.find(l=>l.id===leadId);if(!lead)return;const q=computeLeadQuality(lead);const t=generateSmartSMS(lead,q);const el=document.getElementById('or-sms-body');if(el){el.value=t;el.dataset.original=t;}toast('SMS regenerated','success');}
-function refreshEmailPanel(leadId){const lead=APP.leads.find(l=>l.id===leadId);if(!lead)return;const q=computeLeadQuality(lead);const obj=generateSmartEmail(lead,q);const el=document.getElementById('or-email-body');if(el){el.value=obj.body;el.dataset.original=obj.body;}toast('Email regenerated','success');}
-
-function copyAndRecord(elId, leadId, type) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  navigator.clipboard.writeText(el.value);
-  fetch('/api/outreach/record',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leadId,type,message:el.value})}).catch(()=>{});
-  toast('Copied and logged!','success');
-}
-
-async function checkToneEdit(el, context) {
-  const original = el.dataset.original;
-  if (!original || original === el.value) return;
-  try {
-    await fetch('/api/outreach/save-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({original,edited:el.value,context})});
-    el.dataset.original = el.value;
-    loadOutreachToneStatus();
-  } catch {}
-}
-
-async function loadOutreachHistory(leadId) {
-  const el = document.getElementById('or-history-list');
-  if (!el) return;
-  try {
-    const res = await fetch('/api/outreach/'+leadId);
-    const data = await res.json();
-    const history = data.history||[];
-    el.innerHTML = history.length ? history.map(h=>`
-      <div style="background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <span style="font-size:11px;font-weight:600">${h.type}</span>
-          <span style="font-size:10px;color:#86868b">${new Date(h.created).toLocaleDateString()}</span>
-        </div>
-        <div style="font-size:11px;color:#3a3a3c">${(h.message||'').slice(0,120)}...</div>
-      </div>`).join('')
-      : '<div style="text-align:center;padding:20px;color:#86868b;font-size:12px">No outreach history yet</div>';
-  } catch { el.innerHTML='<div style="font-size:11px;color:#86868b">Could not load history</div>'; }
-}
-
-
-function copyAndLearn(elId, context) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const original = el.dataset.original || '';
-  const edited = el.value;
-  navigator.clipboard.writeText(edited).catch(()=>{});
-  if (original && original !== edited) {
-    fetch('/api/outreach/save-edit', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({original, edited, context})}).catch(()=>{});
+async function previewAllMessages(leadId) {
+  if (APP.pendingOutreach && APP.pendingOutreach.messages && APP.pendingOutreach.messages.length) {
+    var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
+    showOutreachPreview(APP.pendingOutreach.messages, lead, APP.pendingOutreach.type);
+  } else {
+    var outputEl = document.getElementById('or-output');
+    if (outputEl) outputEl.innerHTML = '<div style="color:#86868b;font-size:12px;text-align:center;padding:20px;">No messages generated yet. Click Generate first.</div>';
   }
-  toast('Copied!', 'success');
 }
 
-function regenerateOutreach(leadId, type) {
-  const lead = APP.leads.find(l => l.id === leadId);
+// ── Send functions ────────────────────────────────────────
+async function sendAllMessages() {
+  if (!APP.pendingOutreach || !APP.pendingOutreach.messages) return;
+  var sent = 0;
+  var messages = APP.pendingOutreach.messages;
+  for (var i = 0; i < messages.length; i++) {
+    var m = messages[i];
+    var sms = document.getElementById('msg-sms-' + i);
+    var emailEl = document.getElementById('msg-email-' + i);
+    if (sms && sms.value && (m.buyer ? m.buyer.phone : APP.outreachLeadObj && APP.outreachLeadObj.phone)) {
+      await sendSMSViaServer(m.buyer ? m.buyer.phone : APP.outreachLeadObj.phone, sms.value);
+      sent++;
+    }
+    if (emailEl && emailEl.value && (m.buyer ? m.buyer.email : APP.outreachLeadObj && APP.outreachLeadObj.email)) {
+      await sendEmailViaServer(m.buyer ? m.buyer.email : APP.outreachLeadObj.email, m.buyer ? m.buyer.name : 'Property Owner', emailEl.value);
+      sent++;
+    }
+  }
+  showToastMsg('✅ Sent ' + sent + ' messages', 'success');
+}
+
+async function sendOneSMS(idx) {
+  var m = APP.pendingOutreach && APP.pendingOutreach.messages ? APP.pendingOutreach.messages[idx] : null;
+  if (!m) return;
+  var smsEl = document.getElementById('msg-sms-' + idx);
+  var text = smsEl ? smsEl.value : m.sms;
+  var phone = m.buyer ? m.buyer.phone : (APP.outreachLeadObj ? APP.outreachLeadObj.phone : '');
+  if (!phone) { showToastMsg('No phone number', 'error'); return; }
+  var result = await sendSMSViaServer(phone, text);
+  if (result) showToastMsg('SMS sent!', 'success');
+}
+
+async function sendOneEmail(idx) {
+  var m = APP.pendingOutreach && APP.pendingOutreach.messages ? APP.pendingOutreach.messages[idx] : null;
+  if (!m) return;
+  var emailEl = document.getElementById('msg-email-' + idx);
+  var text = emailEl ? emailEl.value : m.email;
+  var toEmail = m.buyer ? m.buyer.email : (APP.outreachLeadObj ? APP.outreachLeadObj.email : '');
+  var toName = m.buyer ? m.buyer.name : 'Seller';
+  if (!toEmail) { showToastMsg('No email address', 'error'); return; }
+  var result = await sendEmailViaServer(toEmail, toName, text);
+  if (result) showToastMsg('Email sent!', 'success');
+}
+
+async function sendSMSViaServer(phone, text) {
+  try {
+    var res = await fetch('/api/sms/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, body: text })
+    });
+    var data = await res.json();
+    return data.ok || data.sid;
+  } catch(e) {
+    showToastMsg('SMS: Twilio not connected yet', 'info');
+    return false;
+  }
+}
+
+async function sendEmailViaServer(toEmail, toName, body) {
+  try {
+    var res = await fetch('/api/gmail/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: toEmail,
+        subject: 'Investment Opportunity — ' + (APP.outreachLeadObj ? (APP.outreachLeadObj.state || 'Your Area') : 'Real Estate'),
+        body: body
+      })
+    });
+    var data = await res.json();
+    return data.ok || data.id;
+  } catch(e) {
+    showToastMsg('Email error: ' + e.message, 'error');
+    return false;
+  }
+}
+
+function showToastMsg(msg, type) {
+  var colors = { success: '#34c759', error: '#e17055', info: '#0071e3' };
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:' + (colors[type]||'#0071e3') + ';color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); }, 300); }, 3000);
+}
+
+// ── Deal-click outreach buttons (injected into lead modal) ──
+function addOutreachButtonsToLead(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
   if (!lead) return;
-  const q = computeLeadQuality(lead);
-  if (type === 'email') {
-    const emailObj = generateHumanEmail(lead, q);
-    const el = document.getElementById('ao-email-body');
-    if (el) { el.value = emailObj.body; el.dataset.original = emailObj.body; }
-  } else if (type === 'sms') {
-    const sms = generateHumanSMS(lead, q);
-    const el = document.getElementById('ao-sms-body');
-    if (el) { el.value = sms; el.dataset.original = sms; }
-  }
-  toast('Regenerated!', 'success');
+  var container = document.getElementById('lead-outreach-btns-' + leadId);
+  if (!container) return;
+
+  container.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'
+    + '<button onclick="quickBuyerOutreach(\'' + leadId + '\')" style="background:#0071e3;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;">📤 Buyer Outreach</button>'
+    + '<button onclick="quickSellerOutreach(\'' + leadId + '\')" style="background:#5e5ce6;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;">📩 Seller Outreach</button>'
+    + '<button onclick="navigate(\'outreach\',null);setTimeout(function(){selectOutreachLead(\'' + leadId + '\');},500)" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;">✉️ Full Outreach Hub</button>'
+    + '</div>';
 }
 
+async function quickBuyerOutreach(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var buyers = matchBuyersToLead(lead).slice(0, 10);
+  if (!buyers.length) { showToastMsg('No matched buyers found', 'error'); return; }
+  showToastMsg('Generating ' + buyers.length + ' buyer messages...', 'info');
+  APP.outreachLeadObj = lead;
+  var messages = [];
+  for (var i = 0; i < buyers.length; i++) {
+    if (!buyers[i].email && !buyers[i].phone) continue;
+    var sms = buyers[i].phone ? await generateBuyerSMS(buyers[i], lead) : '';
+    var email = buyers[i].email ? await generateBuyerEmail(buyers[i], lead) : '';
+    messages.push({ buyer: buyers[i], sms: sms, email: email });
+  }
+  APP.pendingOutreach = { leadId: leadId, messages: messages, type: 'buyer' };
+  // Navigate to outreach hub and show preview
+  navigate('outreach', null);
+  setTimeout(function(){
+    selectOutreachLead(leadId);
+    setTimeout(function(){ showOutreachPreview(messages, lead, 'buyer'); }, 500);
+  }, 300);
+}
+
+async function quickSellerOutreach(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  APP.outreachLeadObj = lead;
+  showToastMsg('Generating seller messages...', 'info');
+  var sms = await generateSellerSMS(lead);
+  var email = await generateSellerEmail(lead);
+  var messages = [{ seller: lead, sms: sms, email: email }];
+  APP.pendingOutreach = { leadId: leadId, messages: messages, type: 'seller' };
+  navigate('outreach', null);
+  setTimeout(function(){
+    selectOutreachLead(leadId);
+    setTimeout(function(){ showOutreachPreview(messages, lead, 'seller'); }, 500);
+  }, 300);
+}
+
+// ══════════════════════════════════════════════════════════
+//  END OUTREACH HUB
+// ══════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════
 //  FILTER LABEL UPDATES
