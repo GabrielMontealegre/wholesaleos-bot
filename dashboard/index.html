@@ -245,6 +245,15 @@ tr.selected td{background:#f0f6ff}
   .split-view{grid-template-columns:1fr}
   .split-right{display:none}
 }
+
+.lead-item-selected, .lead-item.selected {
+  background: #e8f0fe !important;
+  border-left: 3px solid #0071e3 !important;
+}
+.lead-row.selected, .lead-card.selected {
+  background: #e8f0fe !important;
+  border: 2px solid #0071e3 !important;
+}
 </style>
 </head>
 <body>
@@ -565,6 +574,7 @@ function initApp() {
 }
 
 function updateSidebarStats() {
+  var newLeadCount = APP.leads.filter(function(l) { return l.status === 'New Lead' || !l.status; }).length;
   document.getElementById('sb-leads').textContent = APP.leads.length;
   // ⑤ Pipeline opportunity: show potential fees from active leads, not just closed
   const closedFees = APP.assignments.filter(a => a.status === 'Closed').reduce((s, a) => s + (a.fee || 0), 0);
@@ -1060,6 +1070,12 @@ function renderLeadsCards(leads) {
 
 function openLeadModal(leadId) {
   APP.selectedLead = leadId;
+  // Highlight selected lead
+  document.querySelectorAll('.lead-item, .lead-row, .lead-card, [data-lead-id]').forEach(function(el) {
+    el.classList.remove('selected');
+  });
+  var sel = document.querySelector('[data-lead-id="' + leadId + '"], [onclick*="' + leadId + '"]');
+  if (sel) sel.classList.add('selected');
   const l = APP.leads.find(x => x.id === leadId);
   if (!l) return;
   const mc = document.getElementById('modal-content');
@@ -1106,6 +1122,43 @@ function renderLeadDetail(l) {
   html += '<div class="detail-metric"><div class="dm-label">Fee</div><div class="dm-value orange">$' + (l.fee_lo||0).toLocaleString() + '–$' + (l.fee_hi||0).toLocaleString() + '</div></div>';
   html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + (l.spread||0).toLocaleString() + '</div></div>';
   html += '</div>';
+
+  
+  if (l.creativeFinance || l.cashOnCash) {
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+    if (l.creativeFinance && l.creativeFinance.type) {
+      var cfColors = {'Wholesale':'#ff6b35','Subject-To':'#6c5ce7','Seller Finance':'#00b894','Lease Option':'#0984e3','Hold':'#636e72'};
+      var cfColor = cfColors[l.creativeFinance.type] || '#0071e3';
+      html += '<span style="background:'+cfColor+';color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;">Strategy: '+l.creativeFinance.type+'</span>';
+    }
+    if (l.dealScore) {
+      var dsColors = {'Hot Deal':'#e17055','Good Deal':'#00b894','Average':'#fdcb6e','Skip':'#b2bec3'};
+      var dsColor = dsColors[l.dealScore.label] || '#636e72';
+      html += '<span style="background:'+dsColor+';color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;">'+l.dealScore.emoji+' '+l.dealScore.label+'</span>';
+    }
+    if (l.cashOnCash) {
+      var cfBg = l.cashOnCash.cfStatus==='positive'?'#00b894':l.cashOnCash.cfStatus==='breakeven'?'#fdcb6e':'#d63031';
+      html += '<span style="background:'+cfBg+';color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;">CoC: '+l.cashOnCash.cashOnCash+'%</span>';
+    }
+    html += '</div>';
+    if (l.cashOnCash) {
+      var cf = l.cashOnCash;
+      html += '<div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;">';
+      html += '<div style="font-weight:600;margin-bottom:6px;">Cash Flow Analysis</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">';
+      html += '<div>Est. Rent: <b>$'+cf.monthlyRent+'/mo</b></div>';
+      html += '<div>Mortgage: <b>$'+cf.mortgage+'/mo</b></div>';
+      html += '<div>Expenses: <b>$'+cf.expenses+'/mo</b></div>';
+      html += '<div>Monthly CF: <b style="color:'+(cf.monthlyCF>=0?'#00b894':'#d63031')+'">$'+cf.monthlyCF+'</b></div>';
+      html += '<div>Annual CF: <b>$'+cf.annualCF+'</b></div>';
+      html += '<div>Down Pmt: <b>$'+cf.downPayment+'</b></div>';
+      html += '</div>';
+      if (l.creativeFinance && l.creativeFinance.why) {
+        html += '<div style="margin-top:6px;color:#636e72;">'+l.creativeFinance.why+'</div>';
+      }
+      html += '</div>';
+    }
+  }
 
   // WHY GOOD DEAL
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
@@ -2035,6 +2088,10 @@ function saveLead() {
   };
   APP.leads.unshift(lead);
   save('leads', APP.leads);
+  // Update badge after status change
+  var newLeadCt = APP.leads.filter(function(l){ return l.status==='New Lead'||!l.status; }).length;
+  var nb = document.getElementById('nav-lead-count');
+  if (nb) nb.textContent = newLeadCt;
   document.getElementById('nav-lead-count').textContent = APP.leads.length;
   document.getElementById('sb-leads').textContent = APP.leads.length;
   closeModal();
