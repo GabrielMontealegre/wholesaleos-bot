@@ -1963,172 +1963,684 @@ app.get('/api/dialer/calls', (req, res) => {
 
 
 
+
 // ============================================================
-// BUYERS CRM — NEW ENDPOINTS
+// WHOLESALEOS INTELLIGENCE ENGINE
+// Deal Scraper + Buyer Finder + Creative Finance Analysis
 // ============================================================
 
-function scoreDealForBuyer(lead, buyer) {
-  var score = 0;
-  var bb = buyer.buyBox || {};
-  var price = lead.offer || lead.mao || 0;
-  var maxP = bb.maxPrice || buyer.maxPrice || 999999;
-  var minP = bb.minPrice || 0;
-  if (price > 0 && price <= maxP && price >= minP) score += 30;
-  else if (price > 0 && price <= maxP * 1.1) score += 15;
-  var types = bb.buyTypes || buyer.buyTypes || ['SFR'];
-  var leadType = (lead.beds && lead.beds <= 4) ? 'SFR' : 'Multi';
-  if (types.includes(leadType) || types.includes('Any')) score += 25;
-  var buyerStates = bb.states || [buyer.state];
-  var buyerCities = (bb.cities || [buyer.city || '']).map(function(c) { return c.toLowerCase(); });
-  if (buyerStates && buyerStates.includes(lead.state)) score += 15;
-  var leadCity = (lead.address || '').split(',')[1] ? lead.address.split(',')[1].trim().toLowerCase() : '';
-  if (buyerCities.some(function(c) { return c && leadCity.includes(c); })) score += 10;
-  var spread = lead.spread || 0;
-  if (spread >= 40000) score += 20;
-  else if (spread >= 20000) score += 12;
-  else if (spread >= 10000) score += 6;
-  return score;
+const axios = require('axios');
+const SCRAPER_KEY = process.env.SCRAPERAPI_KEY || 'e99518e9c129422db35188517b89a212';
+
+// ── Scraper helper ───────────────────────────────────────────
+async function scraperFetch(url, opts) {
+  try {
+    opts = opts || {};
+    var apiUrl = 'http://api.scraperapi.com?api_key=' + SCRAPER_KEY + '&url=' + encodeURIComponent(url);
+    if (opts.render) apiUrl += '&render=true';
+    var res = await axios.get(apiUrl, { timeout: 25000, headers: { 'Accept': 'text/html,application/json' } });
+    return res.data || '';
+  } catch(e) {
+    return '';
+  }
 }
 
-app.get('/api/buyers/:id/match-deals', function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var buyer = (dbData.buyers||[]).find(function(b){return b.id===req.params.id;});
-    if (!buyer) return res.status(404).json({error:'Buyer not found'});
-    var limit = parseInt(req.query.limit)||50;
-    var sentIds = new Set((buyer.dealsSent||[]).map(function(d){return d.leadId;}));
-    var scored = (dbData.leads||[])
-      .filter(function(l){return !sentIds.has(l.id);})
-      .map(function(l){return {lead:l,score:scoreDealForBuyer(l,buyer)};})
-      .filter(function(x){return x.score>0;})
-      .sort(function(a,b){return b.score-a.score;})
-      .slice(0,limit);
-    res.json({buyerId:buyer.id,buyerName:buyer.name,totalMatches:scored.length,deals:scored.map(function(x){return Object.assign({},x.lead,{matchScore:x.score});})});
-  } catch(e){res.status(500).json({error:e.message});}
-});
+// ── Dedup helper ─────────────────────────────────────────────
+function isDuplicateLead(existing, newAddr, newPhone) {
+  var addr = (newAddr || '').toLowerCase().trim();
+  var phone = (newPhone || '').replace(/\D/g, '');
+  return existing.some(function(l) {
+    var la = (l.address || '').toLowerCase().trim();
+    var lp = (l.phone || '').replace(/\D/g, '');
+    if (addr && la && la.includes(addr.split(',')[0])) return true;
+    if (phone && phone.length > 8 && lp === phone) return true;
+    return false;
+  });
+}
 
-app.get('/api/buyers/:id/deals-sent', function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var buyer = (dbData.buyers||[]).find(function(b){return b.id===req.params.id;});
-    if (!buyer) return res.status(404).json({error:'Buyer not found'});
-    res.json({buyerId:buyer.id,dealsSent:buyer.dealsSent||[]});
-  } catch(e){res.status(500).json({error:e.message});}
-});
+function isDuplicateBuyer(existing, name, phone, email) {
+  var n = (name || '').toLowerCase().trim();
+  var p = (phone || '').replace(/\D/g, '');
+  var e = (email || '').toLowerCase().trim();
+  return existing.some(function(b) {
+    var bn = (b.name || '').toLowerCase().trim();
+    var bp = (b.phone || '').replace(/\D/g, '');
+    var be = (b.email || '').toLowerCase().trim();
+    if (n && bn && bn === n) return true;
+    if (p && p.length > 7 && bp === p) return true;
+    if (e && e.length > 5 && be === e) return true;
+    return false;
+  });
+}
 
-app.post('/api/buyers/:id/send-deals', async function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var buyer = (dbData.buyers||[]).find(function(b){return b.id===req.params.id;});
-    if (!buyer) return res.status(404).json({error:'Buyer not found'});
-    if (!buyer.email) return res.status(400).json({error:'Buyer has no email'});
-    var batchSize = req.body.batchSize||10;
-    var sentIds = new Set((buyer.dealsSent||[]).map(function(d){return d.leadId;}));
-    var scored = (dbData.leads||[])
-      .filter(function(l){return !sentIds.has(l.id);})
-      .map(function(l){return {lead:l,score:scoreDealForBuyer(l,buyer)};})
-      .filter(function(x){return x.score>0;})
-      .sort(function(a,b){return b.score-a.score;})
-      .slice(0,batchSize);
-    var dealsToSend = scored.map(function(x){return x.lead;});
-    if (dealsToSend.length===0) return res.json({sent:0,message:'No new matching deals'});
-    var bb = buyer.buyBox||{};
-    var types = (bb.buyTypes||buyer.buyTypes||['SFR']).join(', ');
-    var maxPrice = bb.maxPrice||buyer.maxPrice||0;
-    var body = 'Hi '+buyer.name+',\n\nBased on your buy box ('+types+', up to $'+(maxPrice/1000).toFixed(0)+'K in '+(buyer.city||'your market')+'), here are '+dealsToSend.length+' matching investment opportunities:\n\n';
-    dealsToSend.forEach(function(l,i){
-      var city = (l.address||'').split(',')[1] ? l.address.split(',')[1].trim() : (l.county||'');
-      body += 'DEAL #'+(i+1)+'\n';
-      body += 'Location: '+city+', '+(l.state||'')+' | '+(l.beds||'?')+'bd/'+(l.baths||'?')+'ba | '+(l.sqft||'?')+' sqft\n';
-      body += 'ARV: '+(l.arv?'$'+(l.arv/1000).toFixed(0)+'K':'TBD')+' | Price: '+(l.offer?'$'+(l.offer/1000).toFixed(0)+'K':'TBD')+' | Spread: '+(l.spread?'$'+(l.spread/1000).toFixed(0)+'K':'TBD')+'\n\n';
+// ── Rent estimation ──────────────────────────────────────────
+function estimateRent(lead) {
+  var beds = lead.beds || 3;
+  var baths = lead.baths || 2;
+  var sqft = lead.sqft || 1200;
+  var state = lead.state || 'TX';
+
+  // Base rent by state (median market rates)
+  var stateBase = {
+    'CA': 2200, 'NY': 2400, 'WA': 1900, 'MA': 2100, 'CO': 1800,
+    'FL': 1600, 'TX': 1400, 'GA': 1400, 'AZ': 1500, 'NC': 1300,
+    'TN': 1200, 'OH': 1100, 'IL': 1500, 'MI': 1100, 'PA': 1300,
+    'NV': 1600, 'OR': 1700, 'MN': 1400, 'SC': 1200, 'AL': 1000,
+    'MO': 1100, 'IN': 1000, 'KY': 1000, 'OK': 1000, 'LA': 1100,
+    'WI': 1100, 'KS': 1000, 'AR': 900, 'MS': 900, 'NM': 1100,
+    'UT': 1500, 'ID': 1300, 'MT': 1200, 'WY': 1100, 'ND': 1100,
+    'SD': 1000, 'NE': 1100, 'IA': 1000, 'VA': 1600, 'MD': 1700,
+    'DE': 1500, 'CT': 1700, 'RI': 1600, 'NJ': 1900, 'NH': 1500,
+    'VT': 1300, 'ME': 1200, 'WV': 900, 'AK': 1500, 'HI': 2500
+  };
+
+  var base = stateBase[state] || 1200;
+
+  // Adjust by beds
+  var bedAdj = { 1: 0.75, 2: 0.90, 3: 1.0, 4: 1.20, 5: 1.40 };
+  var adj = bedAdj[beds] || 1.0;
+
+  // Adjust by sqft
+  var sqftAdj = sqft > 2000 ? 1.15 : sqft > 1500 ? 1.05 : sqft < 800 ? 0.85 : 1.0;
+
+  var estimated = Math.round(base * adj * sqftAdj / 50) * 50;
+  var low = Math.round(estimated * 0.90 / 50) * 50;
+  var high = Math.round(estimated * 1.10 / 50) * 50;
+  var confidence = sqft && beds ? 'medium' : 'low';
+
+  return { low: low, mid: estimated, high: high, confidence: confidence };
+}
+
+// ── Cash on Cash analysis ────────────────────────────────────
+function analyzeCashOnCash(lead) {
+  var price = lead.offer || lead.mao || lead.listPrice || 0;
+  var arv = lead.arv || price * 1.3;
+  var repairs = lead.repairs || 0;
+  var rent = estimateRent(lead);
+  var monthlyRent = rent.mid;
+
+  // Expenses
+  var propTax = (arv * 0.012) / 12;
+  var insurance = 150;
+  var vacancy = monthlyRent * 0.08;
+  var maintenance = monthlyRent * 0.05;
+  var management = monthlyRent * 0.08;
+  var totalExpenses = propTax + insurance + vacancy + maintenance + management;
+
+  // Mortgage (assuming 15% down, 7.5% rate, 30yr)
+  var downPct = 0.15;
+  var downPayment = price * downPct;
+  var loanAmt = price * (1 - downPct);
+  var monthlyRate = 0.075 / 12;
+  var numPayments = 360;
+  var mortgage = loanAmt > 0
+    ? loanAmt * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
+    : 0;
+
+  var totalMonthly = mortgage + totalExpenses;
+  var monthlyCF = monthlyRent - totalMonthly;
+  var annualCF = monthlyCF * 12;
+  var totalCashIn = downPayment + repairs;
+  var cashOnCash = totalCashIn > 0 ? (annualCF / totalCashIn) * 100 : 0;
+
+  var cfStatus = monthlyCF >= 200 ? 'positive' : monthlyCF >= -50 ? 'breakeven' : 'negative';
+
+  return {
+    monthlyRent: monthlyRent,
+    rentRange: rent.low + '-' + rent.high,
+    mortgage: Math.round(mortgage),
+    expenses: Math.round(totalExpenses),
+    monthlyCF: Math.round(monthlyCF),
+    annualCF: Math.round(annualCF),
+    cashOnCash: Math.round(cashOnCash * 10) / 10,
+    downPayment: Math.round(downPayment),
+    cfStatus: cfStatus,
+    rentConfidence: rent.confidence
+  };
+}
+
+// ── Creative Finance detection ───────────────────────────────
+function detectCreativeFinance(lead) {
+  var equity = lead.equityPct || 0;
+  var ownMonths = lead.ownershipMonths || 0;
+  var price = lead.offer || lead.mao || lead.listPrice || 0;
+  var arv = lead.arv || 0;
+  var category = (lead.category || '').toLowerCase();
+  var mortgage = lead.mortgage || 0;
+  var cash = analyzeCashOnCash(lead);
+
+  var strategies = [];
+
+  // Subject-To: needs existing mortgage, seller behind or motivated
+  var estimatedLoanBalance = mortgage || (arv * 0.6 * (1 - Math.min(ownMonths / 360, 0.8)));
+  if (estimatedLoanBalance > 0 && equity < 65 && equity > 5) {
+    var monthlyPayment = estimatedLoanBalance * (0.045 / 12) / (1 - Math.pow(1 + 0.045/12, -360));
+    strategies.push({
+      type: 'Subject-To',
+      score: 85,
+      why: 'Estimated loan balance ~$' + Math.round(estimatedLoanBalance/1000) + 'K. Take over existing payments.',
+      monthlyPayment: Math.round(monthlyPayment),
+      cashNeeded: Math.round(price * 0.05)
     });
-    body += 'Reply with deal number(s) for full details. Respond within 48 hours.\n\nBest,\nGabriel Montealegre\nMontsan Real Estate Investments';
-    var nodemailer = require('nodemailer');
-    var google = require('googleapis').google;
-    var oa = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET, 'https://developers.google.com/oauthplayground');
-    oa.setCredentials({refresh_token:process.env.GMAIL_REFRESH_TOKEN});
-    var at = await oa.getAccessToken();
-    var tr = nodemailer.createTransport({service:'gmail',auth:{type:'OAuth2',user:process.env.GMAIL_USER,clientId:process.env.GMAIL_CLIENT_ID,clientSecret:process.env.GMAIL_CLIENT_SECRET,refreshToken:process.env.GMAIL_REFRESH_TOKEN,accessToken:at.token}});
-    await tr.sendMail({from:process.env.GMAIL_USER,to:buyer.email,subject:'Investment Opportunities - '+(buyer.city||'Your Market'),text:body});
-    if (!buyer.dealsSent) buyer.dealsSent=[];
-    var now = new Date().toISOString();
-    dealsToSend.forEach(function(l){buyer.dealsSent.push({leadId:l.id,sentAt:now,channel:'email',responded:false});});
-    buyer.lastContacted = now;
-    db.writeDB(dbData);
-    res.json({sent:dealsToSend.length});
-  } catch(e){res.status(500).json({error:e.message});}
-});
+  }
 
-app.post('/api/buyers/dedup-check', function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var name = req.body.name||'';
-    var phone = (req.body.phone||'').replace(/[^0-9]/g,'');
-    var existing = (dbData.buyers||[]).find(function(b){
-      var nameMatch = b.name && name && b.name.toLowerCase().trim()===name.toLowerCase().trim();
-      var phoneMatch = phone.length>6 && b.phone && b.phone.replace(/[^0-9]/g,'')===phone;
-      return nameMatch||phoneMatch;
+  // Seller Finance: high equity, long ownership, no bank needed
+  if (equity >= 50 || ownMonths >= 180) {
+    var sellerFinancePayment = price * 0.85 * (0.06 / 12) / (1 - Math.pow(1 + 0.06/12, -360));
+    strategies.push({
+      type: 'Seller Finance',
+      score: equity >= 70 ? 90 : 75,
+      why: equity + '% equity, owned ' + Math.round(ownMonths/12) + ' yrs. Seller can carry note.',
+      monthlyPayment: Math.round(sellerFinancePayment),
+      cashNeeded: Math.round(price * 0.10)
     });
-    res.json({isDuplicate:!!existing,existing:existing||null});
-  } catch(e){res.status(500).json({error:e.message});}
-});
+  }
 
-app.put('/api/buyers/:id/buybox', function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var buyer = (dbData.buyers||[]).find(function(b){return b.id===req.params.id;});
-    if (!buyer) return res.status(404).json({error:'Buyer not found'});
-    buyer.buyBox = Object.assign({},buyer.buyBox||{},req.body);
-    db.writeDB(dbData);
-    res.json(buyer);
-  } catch(e){res.status(500).json({error:e.message});}
-});
+  // Lease Option: positive cash flow potential, mid equity
+  if (cash.cfStatus !== 'negative' && arv > 0) {
+    strategies.push({
+      type: 'Lease Option',
+      score: cash.cfStatus === 'positive' ? 80 : 65,
+      why: 'CF: $' + cash.monthlyCF + '/mo. Option fee + monthly spread = profit.',
+      monthlyRent: cash.monthlyRent,
+      cashNeeded: Math.round(price * 0.03)
+    });
+  }
 
-app.put('/api/buyers/:id/trust', function(req, res) {
-  try {
-    var dbData = db.readDB();
-    var buyer = (dbData.buyers||[]).find(function(b){return b.id===req.params.id;});
-    if (!buyer) return res.status(404).json({error:'Buyer not found'});
-    if (req.body.trust!==undefined) buyer.trust=Math.max(0,Math.min(100,Number(req.body.trust)));
-    if (req.body.notes!==undefined) buyer.notes=req.body.notes;
-    var ts=(buyer.dealsSent||[]).length;
-    var tr=(buyer.dealsSent||[]).filter(function(d){return d.responded;}).length;
-    buyer.responseRate=ts>0?Math.round((tr/ts)*100):0;
-    db.writeDB(dbData);
-    res.json(buyer);
-  } catch(e){res.status(500).json({error:e.message});}
-});
+  // Wholesale: high spread, distressed
+  var spread = lead.spread || (arv - price - (lead.repairs || 0));
+  if (spread >= 20000 || category.includes('pre-fc') || category.includes('vacant') || category.includes('tax')) {
+    strategies.push({
+      type: 'Wholesale',
+      score: spread >= 40000 ? 95 : spread >= 25000 ? 85 : 70,
+      why: '$' + Math.round(spread/1000) + 'K spread. Assign contract to cash buyer.',
+      fee: Math.round(spread * 0.4),
+      cashNeeded: 0
+    });
+  }
 
-app.post('/api/daily-summary', async function(req, res) {
+  // Pick best strategy by score
+  strategies.sort(function(a, b) { return b.score - a.score; });
+  var best = strategies[0] || { type: 'Hold', score: 50, why: 'Evaluate for long-term hold.' };
+
+  return {
+    best: best,
+    all: strategies,
+    cashOnCash: cash
+  };
+}
+
+// ── Deal scoring ─────────────────────────────────────────────
+function scoreDeal(lead) {
+  var score = 0;
+  var equity = lead.equityPct || 0;
+  var spread = lead.spread || 0;
+  var dom = lead.dom || 0;
+  var category = (lead.category || '').toLowerCase();
+  var cf = analyzeCashOnCash(lead);
+  var creative = detectCreativeFinance(lead);
+
+  if (equity >= 40) score += 25;
+  else if (equity >= 25) score += 15;
+  else if (equity >= 10) score += 8;
+
+  if (spread >= 50000) score += 30;
+  else if (spread >= 30000) score += 20;
+  else if (spread >= 15000) score += 10;
+
+  if (cf.cfStatus === 'positive') score += 20;
+  else if (cf.cfStatus === 'breakeven') score += 8;
+
+  if (dom >= 90) score += 10;
+  else if (dom >= 45) score += 5;
+
+  if (category.includes('pre-fc') || category.includes('auction')) score += 10;
+  if (category.includes('vacant')) score += 8;
+  if (category.includes('tax')) score += 7;
+
+  if (creative.best && creative.best.score >= 80) score += 5;
+
+  var label, emoji;
+  if (score >= 70) { label = 'Hot Deal'; emoji = '🔥'; }
+  else if (score >= 45) { label = 'Good Deal'; emoji = '✅'; }
+  else if (score >= 25) { label = 'Average'; emoji = '📊'; }
+  else { label = 'Skip'; emoji = '⬇️'; }
+
+  return { score: score, label: label, emoji: emoji };
+}
+
+// ── Text extraction helpers ───────────────────────────────────
+function extractPhone(text) {
+  var match = text.match(/(\+?1?\s?[\(\.]?\d{3}[\)\.\-\s]?\s?\d{3}[\.\-\s]?\d{4})/);
+  return match ? match[1].replace(/\s/g, '').replace(/[()]/g, '').trim() : '';
+}
+
+function extractEmail(text) {
+  var match = text.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function extractPrice(text) {
+  var match = text.match(/\$\s?([\d,]+)/);
+  if (match) return parseInt(match[1].replace(/,/g, ''));
+  var match2 = text.match(/([\d,]+)\s*k/i);
+  if (match2) return parseInt(match2[1].replace(/,/g, '')) * 1000;
+  return 0;
+}
+
+function extractAddress(text) {
+  var match = text.match(/\d+\s+[A-Za-z\s]+(St|Ave|Rd|Blvd|Dr|Ln|Way|Ct|Pl|Hwy)[,\s]/i);
+  return match ? match[0].trim() : '';
+}
+
+function cleanText(html) {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ── Craigslist deal scraper ───────────────────────────────────
+async function scrapeCraigslistDeals(city, state) {
+  var keywords = ['fixer', 'motivated seller', 'handyman', 'as-is', 'investor special', 'must sell', 'cash only', 'distressed'];
+  var deals = [];
+  var baseUrl = 'https://' + city + '.craigslist.org/search/rea?query=' + encodeURIComponent(keywords[Math.floor(Math.random() * keywords.length)]) + '&sort=date';
+
   try {
-    var dbData = db.readDB();
-    var leads = dbData.leads||[];
-    var buyers = dbData.buyers||[];
-    var now = new Date();
-    var hot = leads.filter(function(l){return l.spread&&l.spread>=30000;}).length;
-    var totalSent = buyers.reduce(function(s,b){return s+(b.dealsSent||[]).length;},0);
-    var totalResp = buyers.reduce(function(s,b){return s+(b.dealsSent||[]).filter(function(d){return d.responded;}).length;},0);
-    var topBuyers = buyers.map(function(b){
-      var m=leads.filter(function(l){return scoreDealForBuyer(l,b)>20;}).length;
-      return {name:b.name,city:b.city,matchCount:m,responseRate:b.responseRate||0,trust:b.trust||50};
-    }).sort(function(a,b){return b.matchCount-a.matchCount;}).slice(0,5);
-    var summary = [
-      '📊 WHOLESALEOS DAILY SUMMARY — '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}),
-      '',
-      '📋 LEADS: '+leads.length.toLocaleString()+' total | '+leads.filter(function(l){return l.status==='New Lead';}).length+' new | '+hot+' hot ($30K+ spread)',
-      '👥 BUYERS: '+buyers.filter(function(b){return b.status==='Active';}).length+' active | '+totalSent+' deals sent | '+totalResp+' responses | '+(totalSent>0?Math.round((totalResp/totalSent)*100):0)+'% rate',
-      '',
-      '🏆 TOP BUYERS:'
-    ].concat(topBuyers.map(function(b,i){return (i+1)+'. '+b.name+' ('+(b.city||'?')+') - '+b.matchCount+' matches | Trust: '+b.trust+' | Response: '+b.responseRate+'%';})).concat(['','— WholesaleOS']).join('\n');
-    if (process.env.TELEGRAM_BOT_TOKEN&&process.env.BOT_OWNER_ID){
-      try{var TelegramBot=require('node-telegram-bot-api');var bot=new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);await bot.sendMessage(process.env.BOT_OWNER_ID,summary);}catch(te){console.log('TG:',te.message);}
+    var html = await scraperFetch(baseUrl, { render: false });
+    if (!html) return deals;
+    var text = cleanText(html);
+
+    // Extract listing items
+    var listings = html.split('class="result-row"');
+    for (var i = 1; i < Math.min(listings.length, 20); i++) {
+      var item = listings[i];
+      var titleMatch = item.match(/class="result-title[^"]*"[^>]*>([^<]+)</);
+      var priceMatch = item.match(/class="result-price">([^<]+)</);
+      var linkMatch = item.match(/href="([^"]+)"/);
+
+      var title = titleMatch ? titleMatch[1].trim() : '';
+      var priceText = priceMatch ? priceMatch[1] : '';
+      var price = extractPrice(priceText);
+      var addr = extractAddress(title) || (city + ', ' + state);
+
+      if (!title || price < 5000) continue;
+
+      var isDistressed = keywords.some(function(k) { return title.toLowerCase().includes(k); });
+      if (!isDistressed && !title.toLowerCase().includes('invest')) continue;
+
+      deals.push({
+        address: addr || title.split(' ').slice(0, 5).join(' ') + ', ' + state,
+        city: city,
+        state: state,
+        listPrice: price,
+        arv: Math.round(price * 1.35),
+        offer: Math.round(price * 0.75),
+        mao: Math.round(price * 0.70),
+        repairs: Math.round(price * 0.08),
+        spread: Math.round(price * 0.20),
+        equityPct: 30,
+        category: 'Distressed',
+        source: 'Craigslist',
+        sourceUrl: linkMatch ? linkMatch[1] : baseUrl,
+        status: 'New Lead',
+        dealType: 'Wholesale',
+        created: new Date().toISOString().slice(0, 10),
+        title: title
+      });
     }
-    res.json({success:true,summary:summary});
-  } catch(e){res.status(500).json({error:e.message});}
+  } catch(e) {}
+  return deals;
+}
+
+// ── Google search scraper for deals ──────────────────────────
+async function searchDealsGoogle(state, keyword) {
+  var query = keyword + ' ' + state + ' site:craigslist.org OR site:zillow.com OR site:loopnet.com';
+  var url = 'https://www.google.com/search?q=' + encodeURIComponent(query) + '&num=10';
+  var deals = [];
+
+  try {
+    var html = await scraperFetch(url, { render: false });
+    if (!html) return deals;
+    var text = cleanText(html);
+
+    // Extract results
+    var snippets = html.split('<div class="g"');
+    for (var i = 1; i < Math.min(snippets.length, 8); i++) {
+      var snippet = cleanText(snippets[i]);
+      var price = extractPrice(snippet);
+      var addr = extractAddress(snippet);
+      if (!addr || price < 10000) continue;
+
+      deals.push({
+        address: addr + ', ' + state,
+        state: state,
+        listPrice: price,
+        arv: Math.round(price * 1.3),
+        offer: Math.round(price * 0.72),
+        mao: Math.round(price * 0.70),
+        repairs: Math.round(price * 0.07),
+        spread: Math.round(price * 0.18),
+        equityPct: 28,
+        category: 'Distressed',
+        source: 'Google/Web',
+        status: 'New Lead',
+        dealType: 'Wholesale',
+        created: new Date().toISOString().slice(0, 10),
+        title: snippet.slice(0, 80)
+      });
+    }
+  } catch(e) {}
+  return deals;
+}
+
+// ── Buyer finder: Google search ───────────────────────────────
+async function findBuyersGoogle(state, city) {
+  var queries = [
+    '"we buy houses" "' + state + '"',
+    '"cash home buyers" "' + (city || state) + '"',
+    '"sell your house fast" "' + state + '" contact',
+    '"real estate investor" "buying properties" "' + state + '"',
+  ];
+
+  var buyers = [];
+
+  for (var qi = 0; qi < queries.length; qi++) {
+    var url = 'https://www.google.com/search?q=' + encodeURIComponent(queries[qi]) + '&num=8';
+    try {
+      var html = await scraperFetch(url, { render: false });
+      if (!html) continue;
+
+      // Extract website URLs from results
+      var urlMatches = html.match(/https?:\/\/(?!www\.google)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/g) || [];
+      var text = cleanText(html);
+
+      // Try to extract contact info from the search result text
+      var phone = extractPhone(text);
+      var email = extractEmail(text);
+
+      // Extract company names from titles
+      var titleMatches = html.match(/<h3[^>]*>([^<]+)<\/h3>/g) || [];
+      for (var ti = 0; ti < Math.min(titleMatches.length, 4); ti++) {
+        var companyName = cleanText(titleMatches[ti]);
+        if (companyName.length < 3 || companyName.length > 80) continue;
+        if (companyName.toLowerCase().includes('google') || companyName.toLowerCase().includes('search')) continue;
+
+        // Find associated URL
+        var website = '';
+        for (var ui = 0; ui < urlMatches.length; ui++) {
+          if (!urlMatches[ui].includes('google') && !urlMatches[ui].includes('facebook')) {
+            website = urlMatches[ui].split('/')[0] + '//' + urlMatches[ui].split('/')[2];
+            break;
+          }
+        }
+
+        if (companyName && (phone || email || website)) {
+          buyers.push({
+            name: companyName,
+            phone: phone || '',
+            email: email || '',
+            website: website || '',
+            state: state,
+            city: city || '',
+            type: 'Cash Buyer',
+            buyTypes: ['SFR'],
+            maxPrice: 500000,
+            source: 'Google Search',
+            sourceQuery: queries[qi],
+            status: 'Active',
+            score: 60,
+            trust: 40,
+            created: new Date().toISOString().slice(0, 10),
+            markets: [state]
+          });
+        }
+      }
+    } catch(e) {}
+    // Small delay between requests
+    await new Promise(function(r) { setTimeout(r, 1500); });
+  }
+  return buyers;
+}
+
+// ── Fetch buyer website for contact info ─────────────────────
+async function enrichBuyerFromWebsite(website) {
+  if (!website) return {};
+  try {
+    var html = await scraperFetch(website + '/contact', { render: false });
+    if (!html) html = await scraperFetch(website, { render: false });
+    if (!html) return {};
+    var text = cleanText(html);
+    return {
+      phone: extractPhone(text) || '',
+      email: extractEmail(text) || '',
+    };
+  } catch(e) { return {}; }
+}
+
+// ── 50-state buyer search ────────────────────────────────────
+var ALL_STATES = [
+  { state: 'AL', city: 'birmingham' }, { state: 'AK', city: 'anchorage' },
+  { state: 'AZ', city: 'phoenix' }, { state: 'AR', city: 'littlerock' },
+  { state: 'CA', city: 'losangeles' }, { state: 'CO', city: 'denver' },
+  { state: 'CT', city: 'hartford' }, { state: 'DE', city: 'dover' },
+  { state: 'FL', city: 'miami' }, { state: 'GA', city: 'atlanta' },
+  { state: 'HI', city: 'honolulu' }, { state: 'ID', city: 'boise' },
+  { state: 'IL', city: 'chicago' }, { state: 'IN', city: 'indianapolis' },
+  { state: 'IA', city: 'desmoines' }, { state: 'KS', city: 'kansascity' },
+  { state: 'KY', city: 'louisville' }, { state: 'LA', city: 'neworleans' },
+  { state: 'ME', city: 'portland' }, { state: 'MD', city: 'baltimore' },
+  { state: 'MA', city: 'boston' }, { state: 'MI', city: 'detroit' },
+  { state: 'MN', city: 'minneapolis' }, { state: 'MS', city: 'jackson' },
+  { state: 'MO', city: 'kansascity' }, { state: 'MT', city: 'billings' },
+  { state: 'NE', city: 'omaha' }, { state: 'NV', city: 'lasvegas' },
+  { state: 'NH', city: 'manchester' }, { state: 'NJ', city: 'newark' },
+  { state: 'NM', city: 'albuquerque' }, { state: 'NY', city: 'newyork' },
+  { state: 'NC', city: 'charlotte' }, { state: 'ND', city: 'fargo' },
+  { state: 'OH', city: 'columbus' }, { state: 'OK', city: 'oklahomacity' },
+  { state: 'OR', city: 'portland' }, { state: 'PA', city: 'philadelphia' },
+  { state: 'RI', city: 'providence' }, { state: 'SC', city: 'charleston' },
+  { state: 'SD', city: 'siouxfalls' }, { state: 'TN', city: 'nashville' },
+  { state: 'TX', city: 'dallas' }, { state: 'UT', city: 'saltlakecity' },
+  { state: 'VT', city: 'burlington' }, { state: 'VA', city: 'richmond' },
+  { state: 'WA', city: 'seattle' }, { state: 'WV', city: 'charleston' },
+  { state: 'WI', city: 'milwaukee' }, { state: 'WY', city: 'cheyenne' }
+];
+
+// ── Main daily engine ─────────────────────────────────────────
+async function runDailyEngine() {
+  console.log('[Engine] Daily run starting:', new Date().toISOString());
+  var dbData = db.readDB();
+  dbData.leads = dbData.leads || [];
+  dbData.buyers = dbData.buyers || [];
+  dbData.engineLog = dbData.engineLog || [];
+
+  var newLeads = 0;
+  var newBuyers = 0;
+
+  // ── PHASE 1: Enrich existing leads with analysis ──────────
+  console.log('[Engine] Phase 1: Enriching existing leads...');
+  var enrichCount = 0;
+  for (var i = 0; i < dbData.leads.length; i++) {
+    var lead = dbData.leads[i];
+    if (!lead.cashOnCash || !lead.dealScore) {
+      var cf = analyzeCashOnCash(lead);
+      var creative = detectCreativeFinance(lead);
+      var score = scoreDeal(lead);
+      var rent = estimateRent(lead);
+
+      dbData.leads[i].cashOnCash = cf;
+      dbData.leads[i].creativeFinance = creative.best;
+      dbData.leads[i].allStrategies = creative.all;
+      dbData.leads[i].dealScore = score;
+      dbData.leads[i].rentEstimate = rent;
+      enrichCount++;
+
+      // Batch save every 500
+      if (enrichCount % 500 === 0) {
+        db.writeDB(dbData);
+        console.log('[Engine] Enriched ' + enrichCount + ' leads so far...');
+      }
+    }
+  }
+  db.writeDB(dbData);
+  console.log('[Engine] Phase 1 done. Enriched ' + enrichCount + ' leads.');
+
+  // ── PHASE 2: Find buyers in all 50 states ─────────────────
+  console.log('[Engine] Phase 2: 50-state buyer search...');
+  for (var si = 0; si < ALL_STATES.length; si++) {
+    var stateInfo = ALL_STATES[si];
+    try {
+      var foundBuyers = await findBuyersGoogle(stateInfo.state, stateInfo.city);
+      for (var bi = 0; bi < foundBuyers.length; bi++) {
+        var buyer = foundBuyers[bi];
+        if (!isDuplicateBuyer(dbData.buyers, buyer.name, buyer.phone, buyer.email)) {
+          // Try to enrich from website
+          if (buyer.website && (!buyer.phone || !buyer.email)) {
+            var enriched = await enrichBuyerFromWebsite(buyer.website);
+            if (enriched.phone && !buyer.phone) buyer.phone = enriched.phone;
+            if (enriched.email && !buyer.email) buyer.email = enriched.email;
+          }
+          buyer.id = 'B' + Date.now() + Math.floor(Math.random() * 1000);
+          dbData.buyers.push(buyer);
+          newBuyers++;
+        }
+      }
+      // Save every 5 states
+      if ((si + 1) % 5 === 0) {
+        db.writeDB(dbData);
+        console.log('[Engine] Searched ' + (si + 1) + '/50 states. New buyers: ' + newBuyers);
+      }
+    } catch(e) {
+      console.log('[Engine] Error on state ' + stateInfo.state + ':', e.message);
+    }
+    // Delay between states to avoid rate limiting
+    await new Promise(function(r) { setTimeout(r, 2000); });
+  }
+
+  // ── PHASE 3: Find deals in top markets ───────────────────
+  console.log('[Engine] Phase 3: Deal scraping...');
+  var dealMarkets = [
+    {city:'dallas', state:'TX'}, {city:'houston', state:'TX'}, {city:'phoenix', state:'AZ'},
+    {city:'miami', state:'FL'}, {city:'orlando', state:'FL'}, {city:'atlanta', state:'GA'},
+    {city:'charlotte', state:'NC'}, {city:'nashville', state:'TN'}, {city:'denver', state:'CO'},
+    {city:'lasvegas', state:'NV'}, {city:'chicago', state:'IL'}, {city:'columbus', state:'OH'},
+    {city:'detroit', state:'MI'}, {city:'memphis', state:'TN'}, {city:'jacksonville', state:'FL'},
+    {city:'indianapolis', state:'IN'}, {city:'kansascity', state:'MO'}, {city:'birmingham', state:'AL'},
+    {city:'cleveland', state:'OH'}, {city:'stlouis', state:'MO'}
+  ];
+
+  var dealKeywords = ['motivated seller', 'fixer upper', 'investor special', 'as-is', 'cash only'];
+
+  for (var di = 0; di < dealMarkets.length; di++) {
+    var market = dealMarkets[di];
+    try {
+      var deals = await scrapeCraigslistDeals(market.city, market.state);
+      for (var dli = 0; dli < deals.length; dli++) {
+        var deal = deals[dli];
+        if (!isDuplicateLead(dbData.leads, deal.address, deal.phone)) {
+          var cf2 = analyzeCashOnCash(deal);
+          var creative2 = detectCreativeFinance(deal);
+          var score2 = scoreDeal(deal);
+          var rent2 = estimateRent(deal);
+          deal.cashOnCash = cf2;
+          deal.creativeFinance = creative2.best;
+          deal.dealScore = score2;
+          deal.rentEstimate = rent2;
+          deal.id = 'L' + Date.now() + Math.floor(Math.random() * 10000);
+          dbData.leads.push(deal);
+          newLeads++;
+        }
+      }
+    } catch(e) {}
+    await new Promise(function(r) { setTimeout(r, 1500); });
+  }
+
+  // Also run Google searches for deals
+  var dealSearchStates = ['TX', 'FL', 'GA', 'AZ', 'OH', 'NC', 'TN', 'CO', 'NV', 'IL'];
+  var dealSearchKeywords = ['motivated seller real estate', 'wholesale deal property', 'fixer upper investment'];
+
+  for (var dsi = 0; dsi < dealSearchStates.length; dsi++) {
+    try {
+      var keyword = dealSearchKeywords[dsi % dealSearchKeywords.length];
+      var googleDeals = await searchDealsGoogle(dealSearchStates[dsi], keyword);
+      for (var gli = 0; gli < googleDeals.length; gli++) {
+        var gDeal = googleDeals[gli];
+        if (!isDuplicateLead(dbData.leads, gDeal.address, '')) {
+          var cf3 = analyzeCashOnCash(gDeal);
+          var creative3 = detectCreativeFinance(gDeal);
+          gDeal.cashOnCash = cf3;
+          gDeal.creativeFinance = creative3.best;
+          gDeal.dealScore = scoreDeal(gDeal);
+          gDeal.rentEstimate = estimateRent(gDeal);
+          gDeal.id = 'L' + Date.now() + Math.floor(Math.random() * 10000);
+          dbData.leads.push(gDeal);
+          newLeads++;
+        }
+      }
+    } catch(e) {}
+    await new Promise(function(r) { setTimeout(r, 1000); });
+  }
+
+  // ── Final save & log ──────────────────────────────────────
+  dbData.engineLog.push({
+    date: new Date().toISOString(),
+    newLeads: newLeads,
+    newBuyers: newBuyers,
+    totalLeads: dbData.leads.length,
+    totalBuyers: dbData.buyers.length,
+    enriched: enrichCount
+  });
+  // Keep only last 30 log entries
+  if (dbData.engineLog.length > 30) dbData.engineLog = dbData.engineLog.slice(-30);
+  db.writeDB(dbData);
+
+  var summary = '[Engine] Done. +' + newLeads + ' leads, +' + newBuyers + ' buyers. Total: ' + dbData.leads.length + ' leads, ' + dbData.buyers.length + ' buyers.';
+  console.log(summary);
+  return { newLeads: newLeads, newBuyers: newBuyers, enriched: enrichCount, summary: summary };
+}
+
+// ── API endpoints ─────────────────────────────────────────────
+app.get('/api/engine/status', function(req, res) {
+  try {
+    var dbData = db.readDB();
+    var log = dbData.engineLog || [];
+    res.json({ lastRun: log[log.length - 1] || null, log: log.slice(-10) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+app.post('/api/engine/run', async function(req, res) {
+  // Non-blocking — runs in background
+  runDailyEngine().catch(function(e) { console.error('[Engine] Fatal error:', e.message); });
+  res.json({ ok: true, message: 'Engine started. Check /api/engine/status for progress.' });
+});
+
+app.post('/api/engine/enrich-lead', function(req, res) {
+  // Enrich a single lead on demand
+  try {
+    var dbData = db.readDB();
+    var leadId = req.body.leadId || req.params.id;
+    var lead = dbData.leads.find(function(l) { return l.id === leadId; });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    lead.cashOnCash = analyzeCashOnCash(lead);
+    lead.creativeFinance = detectCreativeFinance(lead).best;
+    lead.allStrategies = detectCreativeFinance(lead).all;
+    lead.dealScore = scoreDeal(lead);
+    lead.rentEstimate = estimateRent(lead);
+    db.writeDB(dbData);
+    res.json({ ok: true, lead: lead });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Schedule daily at 3AM MST (10AM UTC)
+var cron = require('node-cron');
+cron.schedule('0 10 * * *', function() {
+  console.log('[Engine] Cron triggered daily run');
+  runDailyEngine().catch(function(e) { console.error('[Engine] Cron error:', e.message); });
+}, { timezone: 'America/Denver' });
+
+console.log('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
 
 // ============================================================
-// END BUYERS CRM
+// END WHOLESALEOS INTELLIGENCE ENGINE
 // ============================================================
 
 module.exports = app;
