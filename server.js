@@ -677,7 +677,7 @@ app.post('/api/search/leads', async (req, res) => {
         added++;
       }
       // Always auto-add buyers regardless of search type
-      const buyers = require('./ai').generateMarketBuyers(county, state, 12);
+      const buyers = []; // generateMarketBuyers removed - use buyer finder engine instead
       const buyersAdded = db.addBuyersBulk(buyers);
       const boxes = generateMarketBuyBoxes(county, state, 5);
       addBuyBoxesBulk(boxes);
@@ -734,7 +734,7 @@ app.post('/api/states/populate', async (req, res) => {
           });
           totalAdded++;
         }
-        const buyers = require('./ai').generateMarketBuyers(county, stateCode, 5);
+        const buyers = []; // generateMarketBuyers removed - use buyer finder engine instead
         db.addBuyersBulk(buyers);
         db.addScannedMarket(stateCode, county);
       }
