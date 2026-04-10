@@ -391,6 +391,7 @@ tr.selected td{background:#f0f6ff}
 <script>
 
 
+
 // ══════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════
@@ -630,6 +631,10 @@ function navigate(page, el) {
   const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
+  // Auto-init tabs
+  if (page === 'gmail')  setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300);
+  if (page === 'sms')    setTimeout(function(){ loadSMSConversations(); }, 200);
+  if (page === 'dialer') setTimeout(function(){ initDialer(); }, 200);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -3546,13 +3551,7 @@ function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => toast('Copied: ' + text, 'success'));
 }
 
-// Patch initApp to load notifications
-let _origInit = initApp;
-initApp = function() {
-  _origInit();
-  loadNotifications();
-  setInterval(loadNotifications, 60000); // refresh every 60s
-};
+
 
 
 
@@ -6162,12 +6161,7 @@ async function deleteSingleEmail(id) {
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
-// Auto-load email folder when email tab opens
-var _origNavigate = navigate;
-navigate = function(page, el) {
-  _origNavigate(page, el);
-  if (page === 'gmail') setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300);
-};
+
 
 
 // ═══════════════════════════════════════════════════════
@@ -6649,13 +6643,7 @@ async function sendSMSReply(leadId) {
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
-// Auto-init when tabs open
-var _origNavForComms = navigate;
-navigate = function(page, el) {
-  _origNavForComms(page, el);
-  if (page === 'sms')    setTimeout(function(){ loadSMSConversations(); }, 200);
-  if (page === 'dialer') setTimeout(function(){ initDialer(); }, 200);
-};
+
 
 
 function openLeadModal(leadId) {
@@ -9065,25 +9053,7 @@ function copyToClipboard(text) {
 
 
 
-// Patch render to load markets on bot page
-_origRender = render;
-render = function() {
-  _origRender();
-  if (APP.page === 'bot') {
-    const content = document.getElementById('content');
-    if (content) {
-      renderMarketsPanel().then(html => {
-        const existing = content.querySelector('.markets-panel');
-        if (!existing) {
-          const div = document.createElement('div');
-          div.className = 'markets-panel';
-          div.innerHTML = html;
-          content.appendChild(div);
-        }
-      });
-    }
-  }
-};
+
 
 
 // ══════════════════════════════════════════════════════════
@@ -12178,6 +12148,7 @@ async function sendSMSReply(leadId) {
     }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
+
 
 
 
