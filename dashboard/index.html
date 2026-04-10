@@ -3554,25 +3554,7 @@ initApp = function() {
   setInterval(loadNotifications, 60000); // refresh every 60s
 };
 
-// Patch render to load markets on bot page
-let _origRender = render;
-render = function() {
-  _origRender();
-  if (APP.page === 'bot') {
-    const content = document.getElementById('content');
-    if (content) {
-      renderMarketsPanel().then(html => {
-        const existing = content.querySelector('.markets-panel');
-        if (!existing) {
-          const div = document.createElement('div');
-          div.className = 'markets-panel';
-          div.innerHTML = html;
-          content.appendChild(div);
-        }
-      });
-    }
-  }
-};
+
 
 
 // ══════════════════════════════════════════════════════════
@@ -9083,7 +9065,25 @@ function copyToClipboard(text) {
 
 
 
-
+// Patch render to load markets on bot page
+_origRender = render;
+render = function() {
+  _origRender();
+  if (APP.page === 'bot') {
+    const content = document.getElementById('content');
+    if (content) {
+      renderMarketsPanel().then(html => {
+        const existing = content.querySelector('.markets-panel');
+        if (!existing) {
+          const div = document.createElement('div');
+          div.className = 'markets-panel';
+          div.innerHTML = html;
+          content.appendChild(div);
+        }
+      });
+    }
+  }
+};
 
 
 // ══════════════════════════════════════════════════════════
