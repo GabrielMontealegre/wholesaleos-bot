@@ -259,7 +259,7 @@ tr.selected td{background:#f0f6ff}
 <body>
 
 <!-- PIN Screen -->
-<div id="pin-screen">
+<div id="pin-screen" style="display:none">
   <div class="pin-logo">
     <div style="width:52px;height:52px;background:#1d1d1f;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px">M</div>
     <div>
@@ -498,7 +498,7 @@ async function checkPin() {
 // Keyboard PIN input
 document.addEventListener('keydown', function(e) {
   var ps = document.getElementById('pin-screen');
-  if (!ps || ps.style.display === 'none') return;
+  if (!ps || ps.style.display === 'none') return; // PIN removed
   if (e.key >= '0' && e.key <= '9') { pinPress(parseInt(e.key)); }
   else if (e.key === 'Backspace') { pinPress('x'); }
   else if (e.key === 'Enter') { checkPin(); }
@@ -578,6 +578,12 @@ function addNewUser() {
 //  INIT
 // ══════════════════════════════════════════════════════════
 function initApp() {
+  // Auto-login: set default user if not set
+  if (!APP.currentUser) {
+    APP.currentUser = {id:'admin', name:'Gabriel', role:'admin', color:'#1d1d1f'};
+    APP.userId = 'admin';
+    APP.isAdmin = true;
+  }
   updateSidebarStats();
   document.getElementById('nav-lead-count').textContent = APP.leads.length;
   const pending = APP.followups.filter(f => f.status === 'pending').length;
@@ -12213,6 +12219,30 @@ navigate = function(page, el) {
   if (page === 'dialer') setTimeout(function(){ initDialer(); }, 200);
 };
 
+
+// AUTO-START: PIN removed — goes straight to dashboard
+(function autoStart() {
+  function boot() {
+    try {
+      if (typeof APP === 'undefined') { setTimeout(boot, 50); return; }
+      APP.currentUser = {id:'admin', name:'Gabriel', role:'admin', color:'#1d1d1f'};
+      APP.userId = 'admin';
+      APP.isAdmin = true;
+      var pin = document.getElementById('pin-screen');
+      var app = document.getElementById('app');
+      if (pin) pin.style.display = 'none';
+      if (app) { app.style.display = 'flex'; }
+      var lbl = document.getElementById('user-role-label');
+      if (lbl) lbl.textContent = 'Admin · Gabriel';
+      if (typeof initApp === 'function') initApp();
+    } catch(e) { setTimeout(boot, 100); }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
 </script>
 </body>
 </html>
