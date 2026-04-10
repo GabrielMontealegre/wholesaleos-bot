@@ -592,8 +592,14 @@ function initApp() {
   render();
   checkDailyUpdate();
   // SYNC: load from Railway database immediately on open
-  loadLeadsFromAPI();
-  // Auto-refresh every 30 seconds to pick up new Telegram leads
+  // Load leads then re-render so content shows immediately
+  loadLeadsFromAPI().then(function() {
+    render();
+    updateSidebarStats();
+  }).catch(function() {
+    render();
+  });
+  // Auto-refresh every 30 seconds
   setInterval(loadLeadsFromAPI, 30000);
 }
 
