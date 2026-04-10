@@ -2643,6 +2643,158 @@ console.log('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST
 // END WHOLESALEOS INTELLIGENCE ENGINE
 // ============================================================
 
+
+// ============================================================
+// BUYERS CRM EXTENDED ROUTES — v14a
+// ============================================================
+
+// 1. MATCH DEALS — ranked deals matching a buyer's buy box
+app.get('/api/buyers/:id/match-deals', async (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    const leads = dbData.leads || [];
+    const maxPrice = buyer.maxPrice || 999999999;
+    const buyTypes = buyer.buyTypes || [];
+    const buyerStates = buyer.states || [];
+    const buyerCities = (buyer.cities || []).map(c => c.toLowerCase());
+    const scored = leads
+      .filter(l => l.offer && l.spread > 0)
+      .map(l => {
+        let score = 0;
+        if (buyTypes.length === 0 || buyTypes.includes(l.type)) score += 30;
+        if (l.offer <= maxPrice) score += 25;
+        if (buyerStates.length === 0 || buyerStates.includes(l.state)) score += 20;
+        const city = (l.address || '').split(',')[1]?.trim().toLowerCase() || '';
+        if (buyerCities.length === 0 || buyerCities.some(c => city.includes(c))) score += 15;
+        if (l.spread > 50000) score += 10;
+        return { ...l, matchScore: score };
+      })
+      .filter(l => l.matchScore >= 30)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 20);
+    res.json({ deals: scored, total: scored.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 2. SEND DEALS — email batch of matched deals to buyer
+app.post('/api/buyers/:id/send-deals', async (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    if (!buyer.email) return res.status(400).json({ error: 'Buyer has no email address' });
+    const { dealIds } = req.body;
+    const leads = dbData.leads || [];
+    const dealsToSend = dealIds
+      ? leads.filter(l => dealIds.includes(l.id))
+      : leads.filter(l => l.offer && l.spread > 0).slice(0, 10);
+    if (dealsToSend.length === 0) return res.status(400).json({ error: 'No deals to send' });
+    const dealRows = dealsToSend.map((l, i) =>
+      '<tr style="background:' + (i%2===0?'#f9f9f9':'#fff') + '"><td style="padding:8px;border:1px solid #eee">' + (l.type||'SFR') + '</td><td style="padding:8px;border:1px solid #eee">' + (l.state||'') + '</td><td style="padding:8px;border:1px solid #eee">$' + (l.arv||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee">$' + (l.offer||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee;color:green;font-weight:bold">$' + (l.spread||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee">' + (l.repair_class||'-') + '</td></tr>'
+    ).join('');
+    const html = '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto"><h2 style="color:#1a1a2e">🏠 Deal Opportunities from Montsan REI</h2><p>Hi ' + buyer.name + ',</p><p>Here are ' + dealsToSend.length + ' off-market deal' + (dealsToSend.length>1?'s':'') + ' that match your buy box. Reply to get full property details.</p><table style="width:100%;border-collapse:collapse;margin:20px 0"><thead><tr style="background:#1a1a2e;color:#fff"><th style="padding:10px;text-align:left">Type</th><th style="padding:10px;text-align:left">State</th><th style="padding:10px;text-align:left">ARV</th><th style="padding:10px;text-align:left">Price</th><th style="padding:10px;text-align:left">Spread</th><th style="padding:10px;text-align:left">Repairs</th></tr></thead><tbody>' + dealRows + '</tbody></table><p><strong>Gabriel Montealegre</strong><br>Montsan Real Estate Investment<br>montsan.rei@gmail.com</p></div>';
+    if (transporter) {
+      await transporter.sendMail({ from: '"Montsan REI" <' + process.env.GMAIL_USER + '>', to: buyer.email, subject: dealsToSend.length + ' Off-Market Deal' + (dealsToSend.length>1?'s':'') + ' — Matches Your Buy Box', html });
+    }
+    if (!dbData.dealsSent) dbData.dealsSent = [];
+    dbData.dealsSent.push({ id: 'DS'+Date.now(), buyerId: buyer.id, buyerName: buyer.name, dealCount: dealsToSend.length, sentAt: new Date().toISOString(), dealIds: dealsToSend.map(l=>l.id) });
+    db.writeDB(dbData);
+    res.json({ success: true, sent: dealsToSend.length, to: buyer.email });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 3. DEALS SENT HISTORY
+app.get('/api/buyers/:id/deals-sent', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const history = (dbData.dealsSent || []).filter(d => d.buyerId === req.params.id).sort((a,b) => new Date(b.sentAt)-new Date(a.sentAt));
+    res.json({ history, total: history.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 4. DEDUP CHECK
+app.post('/api/buyers/dedup-check', (req, res) => {
+  try {
+    const { name, phone, email } = req.body;
+    const dbData = db.readDB();
+    const normPhone = p => (p||'').replace(/\D/g,'');
+    const normName  = n => (n||'').toLowerCase().trim();
+    const match = (dbData.buyers||[]).find(b => {
+      if (name && normName(b.name) === normName(name)) return true;
+      if (phone && normPhone(b.phone) === normPhone(phone) && normPhone(phone).length >= 7) return true;
+      if (email && email.trim() && b.email && b.email.toLowerCase() === email.toLowerCase()) return true;
+      return false;
+    });
+    res.json({ duplicate: !!match, existingBuyer: match || null });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 5. UPDATE BUY BOX
+app.put('/api/buyers/:id/buybox', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const idx = (dbData.buyers||[]).findIndex(b => b.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Buyer not found' });
+    const { buyTypes, minPrice, maxPrice, states, cities, notes } = req.body;
+    if (buyTypes !== undefined) dbData.buyers[idx].buyTypes = buyTypes;
+    if (minPrice !== undefined) dbData.buyers[idx].minPrice = Number(minPrice);
+    if (maxPrice !== undefined) dbData.buyers[idx].maxPrice = Number(maxPrice);
+    if (states   !== undefined) dbData.buyers[idx].states   = states;
+    if (cities   !== undefined) dbData.buyers[idx].cities   = cities;
+    if (notes    !== undefined) dbData.buyers[idx].notes    = notes;
+    dbData.buyers[idx].updatedAt = new Date().toISOString();
+    db.writeDB(dbData);
+    res.json({ success: true, buyer: dbData.buyers[idx] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 6. UPDATE TRUST SCORE
+app.put('/api/buyers/:id/trust', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const idx = (dbData.buyers||[]).findIndex(b => b.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Buyer not found' });
+    const { score, responded, closings } = req.body;
+    if (score     !== undefined) dbData.buyers[idx].score    = Math.min(100, Math.max(0, Number(score)));
+    if (responded !== undefined) dbData.buyers[idx].responded = responded;
+    if (closings  !== undefined) dbData.buyers[idx].closings  = Number(closings);
+    dbData.buyers[idx].updatedAt = new Date().toISOString();
+    db.writeDB(dbData);
+    res.json({ success: true, buyer: dbData.buyers[idx] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 7. DAILY SUMMARY → Telegram
+app.post('/api/daily-summary', async (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads  = dbData.leads  || [];
+    const buyers = dbData.buyers || [];
+    const today  = new Date().toISOString().split('T')[0];
+    const newLeads = leads.filter(l => l.created === today);
+    const topDeals = leads.filter(l => l.spread > 0).sort((a,b) => b.spread-a.spread).slice(0,5);
+    const summary = [
+      '📊 *WholesaleOS Daily Summary — ' + today + '*','',
+      '📥 New leads today: *' + newLeads.length + '*',
+      '📦 Total leads: *' + leads.length + '*',
+      '👥 Active buyers: *' + buyers.filter(b=>b.status==='Active').length + '*','',
+      '🏆 Top 5 deals by spread:',
+      ...topDeals.map((l,i) => (i+1)+'. ' + l.state + ' | $' + (l.spread||0).toLocaleString() + ' spread | ' + (l.type||'SFR'))
+    ].join('\n');
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.BOT_OWNER_ID) {
+      await fetch('https://api.telegram.org/bot' + process.env.TELEGRAM_BOT_TOKEN + '/sendMessage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ chat_id: process.env.BOT_OWNER_ID, text: summary, parse_mode:'Markdown' }) });
+    }
+    res.json({ success: true, summary });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+console.log('✅ Buyers CRM extended routes registered (7 endpoints)');
+// ============================================================
+// END BUYERS CRM EXTENDED ROUTES
+// ============================================================
+
 module.exports = app;
 
 
