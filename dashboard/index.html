@@ -392,6 +392,7 @@ tr.selected td{background:#f0f6ff}
 
 
 
+
 // ══════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════
@@ -12154,6 +12155,27 @@ async function sendSMSReply(leadId) {
 
 
 
+
+
+
+// ══════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    var saved = localStorage.getItem('wos_pin');
+    if (saved === '1234') {
+      document.getElementById('pin-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      initApp();
+    } else {
+      document.getElementById('pin-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  } catch(e) {
+    console.log('Boot error:', e.message);
+  }
+});
 
 </script>
 </body>
