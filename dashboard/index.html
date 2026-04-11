@@ -4409,7 +4409,7 @@ function openInSystemEmail(leadId) {
   var lead = (APP.leads || []).find(function(l) { return l.id === leadId; });
   if (!lead) return;
   var email = lead.email || '';
-  var existing = document.getElementById('in-system-email-modal');
+  var existing = document.getElementById("in-system-email-modal");
   if (existing) existing.remove();
   
   // Auto-generate AI draft
@@ -4431,7 +4431,7 @@ Montsan REI`;
   modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:14px;width:580px;max-width:96vw;padding:24px;position:relative;">
-      <button onclick="document.getElementById('in-system-email-modal').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>
+      <button onclick="document.getElementById("in-system-email-modal").remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>
       <div style="font-size:16px;font-weight:700;margin-bottom:16px;">📧 Send Email</div>
       <div style="margin-bottom:10px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">To</label>
       <input id="ise-to" value="${email}" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;box-sizing:border-box;outline:none;"></div>
@@ -4442,7 +4442,7 @@ Montsan REI`;
       </label>
       <textarea id="ise-body" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:160px;box-sizing:border-box;outline:none;">${body}</textarea></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="document.getElementById('in-system-email-modal').remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>
+        <button onclick="document.getElementById("in-system-email-modal").remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>
         <button onclick="sendInSystemEmail('${leadId}')" style="background:#5e5ce6;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Send Email</button>
       </div>
     </div>`
@@ -4483,7 +4483,7 @@ async function sendInSystemEmail(leadId) {
     var data = await res.json();
     if (data.ok || data.id) {
       showToastMsg('Email sent!', 'success');
-      document.getElementById('in-system-email-modal').remove();
+      document.getElementById("in-system-email-modal").remove();
       // Update lead status
       var lead = (APP.leads||[]).find(function(l){return l.id===leadId;});
       if (lead && lead.status === 'New Lead') {
@@ -4501,7 +4501,7 @@ function openInSystemSMS(leadId) {
   var lead = (APP.leads || []).find(function(l) { return l.id === leadId; });
   if (!lead) return;
   var phone = lead.phone || '';
-  var existing = document.getElementById('in-system-sms-modal');
+  var existing = document.getElementById("in-system-sms-modal");
   if (existing) existing.remove();
   var body = 'Hi, I came across your property in ' + ((lead.address||'').split(',')[1]||lead.state||'your area').trim() + ' and wanted to reach out. I may have a buyer interested. Would you be open to a quick conversation? - Gabriel, Montsan REI';
   
@@ -4510,14 +4510,14 @@ function openInSystemSMS(leadId) {
   modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:14px;width:480px;max-width:96vw;padding:24px;position:relative;">
-      <button onclick="document.getElementById('in-system-sms-modal').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>
+      <button onclick="document.getElementById("in-system-sms-modal").remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;">✕</button>
       <div style="font-size:16px;font-weight:700;margin-bottom:16px;">💬 Send Text Message</div>
       <div style="margin-bottom:10px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">To</label>
       <input id="iss-to" value="${phone}" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;box-sizing:border-box;outline:none;"></div>
       <div style="margin-bottom:16px;"><label style="font-size:12px;color:#86868b;display:block;margin-bottom:4px;">Message</label>
       <textarea id="iss-body" style="width:100%;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:120px;box-sizing:border-box;outline:none;">${smsBody}</textarea></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="document.getElementById('in-system-sms-modal').remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>
+        <button onclick="document.getElementById("in-system-sms-modal").remove()" style="background:#f0f0f0;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;">Cancel</button>
         <button onclick="sendInSystemSMS('${leadId}')" style="background:#34c759;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Send Text</button>
       </div>
     </div>`
@@ -4537,7 +4537,7 @@ async function sendInSystemSMS(leadId) {
     var data = await res.json();
     if (data.ok || data.sid) {
       showToastMsg('SMS sent!', 'success');
-      document.getElementById('in-system-sms-modal').remove();
+      document.getElementById("in-system-sms-modal").remove();
       var lead = (APP.leads||[]).find(function(l){return l.id===leadId;});
       if (lead && lead.status === 'New Lead') {
         lead.status = 'Contacted';
@@ -12267,7 +12267,7 @@ function renderBuyers() {
 function openBuyerDetail(buyerId) {
   var b=(APP.buyers||[]).find(function(x){return x.id===buyerId;}); if(!b) return;
   var matches=(APP.leads||[]).filter(function(l){return matchBuyersToLead(l,[b]).length>0;}).slice(0,10);
-  var ex=document.getElementById('buyer-detail-modal'); if(ex) ex.remove();
+  var ex=document.getElementById("buyer-detail-modal"); if(ex) ex.remove();
   var modal=document.createElement('div'); modal.id='buyer-detail-modal';
   modal.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px';
   var dealRows=matches.map(function(l){
@@ -12279,7 +12279,7 @@ function openBuyerDetail(buyerId) {
   }).join('');
   modal.innerHTML='<div style="background:#fff;border-radius:16px;width:640px;max-width:100%;max-height:85vh;overflow-y:auto;padding:24px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:700">'+b.name+'</div>'+
-    '<button onclick="document.getElementById('buyer-detail-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
+    '<button onclick="document.getElementById("buyer-detail-modal").remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
       '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:10px;color:#86868b;font-weight:700;margin-bottom:4px">CONTACT</div>'+
         '<div style="font-size:13px;font-weight:600">'+(b.phone||'No phone')+'</div><div style="font-size:12px;color:#86868b">'+(b.email||'No email')+'</div></div>'+
@@ -12290,8 +12290,8 @@ function openBuyerDetail(buyerId) {
     '<div style="font-size:14px;font-weight:700;margin-bottom:10px">Top Matching Deals ('+matches.length+')</div>'+
     (dealRows||'<div style="text-align:center;padding:20px;color:#86868b;font-size:13px">No matching deals yet.</div>')+
     '<div style="display:flex;gap:8px;margin-top:16px">'+
-      '<button class="btn btn-dark" style="flex:1" data-buyer-id="'+b.id+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId);document.getElementById('buyer-detail-modal').remove()">🚀 Send All Matching Deals</button>'+
-      '<button class="btn btn-sm" style="background:#f5f5f7" data-buyer-id="'+b.id+'" onclick="editBuyer(this.dataset.buyerId);document.getElementById('buyer-detail-modal').remove()">✏️ Edit</button>'+
+      '<button class="btn btn-dark" style="flex:1" data-buyer-id="'+b.id+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId);document.getElementById("buyer-detail-modal").remove()">🚀 Send All Matching Deals</button>'+
+      '<button class="btn btn-sm" style="background:#f5f5f7" data-buyer-id="'+b.id+'" onclick="editBuyer(this.dataset.buyerId);document.getElementById("buyer-detail-modal").remove()">✏️ Edit</button>'+
     '</div></div>';
   document.body.appendChild(modal);
 }
