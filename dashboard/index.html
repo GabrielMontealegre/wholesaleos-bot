@@ -592,14 +592,9 @@ function initApp() {
   render();
   checkDailyUpdate();
   // SYNC: load from Railway database immediately on open
-  // Load leads then re-render so content shows immediately
-  loadLeadsFromAPI().then(function() {
-    render();
-    updateSidebarStats();
-  }).catch(function() {
-    render();
-  });
-  // Auto-refresh every 30 seconds
+  APP.page = 'leads';
+  render();
+  loadLeadsFromAPI();
   setInterval(loadLeadsFromAPI, 30000);
 }
 
@@ -2697,7 +2692,7 @@ async function loadLeadsFromAPI() {
         }
         const sbLeads = document.getElementById('sb-leads');
         if (sbLeads) sbLeads.textContent = APP.leads.length;
-        if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
+        render(); updateSidebarStats();
       }
     }
     // Load buyers from correct endpoint
