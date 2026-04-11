@@ -12767,8 +12767,8 @@ async function runBuyerFinder(state, cities) {
     'wholesale real estate','buy houses cash','join buyers list','off market deals','fix and flip buyers'];
   var keepKw = ['cash offer','buy as-is','close fast','no repairs','investors','off market',
     'assignment','wholesale','buyers list','investment property','fix and flip','rental portfolio'];
-  var phoneRe = /((?d{3})?[-.s]?d{3}[-.s]?d{4})/g;
-  var emailRe = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.[A-Za-z]{2,}/g;
+  var phoneRe = new RegExp('(\\(?\\d{3}\\)?[-\\.\\s]?\\d{3}[-\\.\\s]?\\d{4})','g');
+  var emailRe = new RegExp('[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\.\\-]+\\.[A-Za-z]{2,}','g');
   var found = [], saved = 0;
 
   for (var ci=0; ci<cities.length; ci++) {
