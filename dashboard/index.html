@@ -12395,7 +12395,7 @@ function showSearchResults(query,leads,buyers){
   var lRows=leads.map(function(l){
     var rid=l.ref_id||getDealRefId(l);
     var mc=typeof matchBuyersToLead==='function'?matchBuyersToLead(l,APP.buyers||[]).length:0;
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-lead-id="'+l.id+'" onclick="document.getElementById('search-results-modal').remove();openLeadModal(this.dataset.leadId)">'+
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-lead-id="'+l.id+'" onclick="document.getElementById("search-results-modal").remove();openLeadModal(this.dataset.leadId)">'+
       '<div><span style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;margin-right:8px">'+rid+'</span>'+
       '<span style="font-size:13px;font-weight:600">'+(l.type||"SFR")+" · "+(l.county||l.state||"")+", "+l.state+"</span>"+
       '<span style="font-size:11px;color:#86868b;margin-left:8px">'+(l.status||"New Lead")+"</span></div>"+
@@ -12404,7 +12404,7 @@ function showSearchResults(query,leads,buyers){
       "</div></div>";
   }).join("");
   var bRows=buyers.map(function(b){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-buyer-id="'+b.id+'" onclick="document.getElementById('search-results-modal').remove();APP.page='buyers';render();setTimeout(function(){openBuyerDetail(''+b.id+'');},300)">'+
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-buyer-id="'+b.id+'" onclick="document.getElementById("search-results-modal").remove();APP.page='buyers';render();setTimeout(function(){openBuyerDetail(''+b.id+'');},300)">'+
       '<div><div style="font-size:13px;font-weight:600">'+b.name+"</div><div style='font-size:11px;color:#86868b'>"+(b.city||"")+(b.state?", "+b.state:"")+"</div></div>"+
       '<div style="font-size:10px;color:#0071e3;font-weight:600">'+(b.buyTypes||[]).join(", ")+"</div></div>";
   }).join("");
@@ -12415,7 +12415,7 @@ function showSearchResults(query,leads,buyers){
     '<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center">'+
     '<div><div style="font-size:16px;font-weight:700">Search: "'+query+'"</div>'+
     '<div style="font-size:12px;color:#86868b">'+leads.length+" deals · "+buyers.length+" buyers</div></div>"+
-    '<button onclick="document.getElementById('search-results-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
+    '<button onclick="document.getElementById("search-results-modal").remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
     '<div style="overflow-y:auto;flex:1">'+
     (leads.length?'<div style="padding:10px 20px 4px;font-size:10px;font-weight:700;color:#86868b">DEALS ('+leads.length+")</div>"+lRows:"")+
     (buyers.length?'<div style="padding:10px 20px 4px;font-size:10px;font-weight:700;color:#86868b">BUYERS ('+buyers.length+")</div>"+bRows:"")+
@@ -12558,6 +12558,8 @@ if(typeof updateLeadsBadge==='function') updateLeadsBadge();
 
 console.log("✅ Patch v3 loaded — search, leads pagination, buyers full info, modal fixes");
 
+
+// WholesaleOS v3.1 — 2026-04-11T04:17:33.718Z
 </script>
 </body>
 </html>
