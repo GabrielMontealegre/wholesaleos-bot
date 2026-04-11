@@ -12456,10 +12456,10 @@ function renderLeads(){
     var active=cf===s;
     return '<button data-status="'+s+'" onclick="setLeadsFilter(this.dataset.status)" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:'+(active?"700":"400")+';background:'+(active?"#1a1a2e":"#f5f5f7")+';color:'+(active?"#fff":"#1d1d1f")+'">'+s+(cnt?" ("+cnt+")":"")+"</button>";
   }).join("");
-  var pager=totalPages>1?'<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
+  var maxPage=totalPages-1;var pager=totalPages>1?'<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
     '<button onclick="_leadsPage=Math.max(0,_leadsPage-1);render()" '+(page===0?"disabled":"")+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← Prev</button>'+
     '<span style="font-size:12px;color:#86868b">Page '+(page+1)+" of "+totalPages+" ("+total.toLocaleString()+" leads)</span>"+
-    '<button onclick="_leadsPage=Math.min('+(totalPages-1)+',_leadsPage+1);render()" '+(page>=totalPages-1?"disabled":"")+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
+    '<button onclick="_leadsPage=Math.min('+maxPage+',_leadsPage+1);render()" '+(page>=totalPages-1?"disabled":"")+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
     '<select onchange="_leadsPage=0;_leadsPerPage=parseInt(this.value);render()" style="padding:5px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">'+
     [100,200,500,1000].map(function(n){return '<option value="'+n+'"'+(n===perPage?" selected":"")+">"+n+" per page</option>";}).join("")+
     "</select></div>":"";
