@@ -12443,6 +12443,11 @@ function setLeadsFilter(status){
   APP.filtered=status==='All'?APP.leads:(APP.leads||[]).filter(function(l){return (l.status||'New Lead')===status;});
   render();
 }
+function leadsNextPage(){
+  var maxP=_leadsPage+1<Math.ceil((APP.filtered||APP.leads||[]).length/_leadsPerPage);
+  if(maxP){_leadsPage++;render();}
+}
+
 function renderLeads(){
   var all=APP.filtered||APP.leads||[];
   var total=all.length, page=_leadsPage, perPage=_leadsPerPage;
@@ -12462,7 +12467,7 @@ function renderLeads(){
   var pager=totalPages>1?'<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
     '<button onclick="_leadsPage=Math.max(0,_leadsPage-1);render()" '+prevDisabled+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← Prev</button>'+
     '<span style="font-size:12px;color:#86868b">Page '+(page+1)+' of '+totalPages+' ('+total.toLocaleString()+' leads)</span>'+
-    '<button onclick="if(_leadsPage<'+maxPage+'){_leadsPage++;render();}" '+nextDisabled+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
+    '<button onclick="leadsNextPage()" data-max="'+maxPage+'" '+nextDisabled+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
     '<select onchange="_leadsPage=0;_leadsPerPage=parseInt(this.value);render()" style="padding:5px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">'+
     [100,200,500,1000].map(function(n){return '<option value="'+n+'"'+(n===perPage?' selected':'')+'>'+n+' per page</option>';}).join('')+
     '</select></div>':
