@@ -12156,6 +12156,219 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+
+
+// ══ MEGA-PATCH v2 ══════════════════════════════════════════
+function getDealRefId(lead) {
+  if (lead.ref_id) return lead.ref_id;
+  var st = (lead.state||'XX').toUpperCase().slice(0,2);
+  var h = 0, id = lead.id||'';
+  for(var i=0;i<id.length;i++) h=((h<<5)-h)+id.charCodeAt(i);
+  return st + '-' + (Math.abs(h) % 9000 + 1000);
+}
+function assignRefIds(leads) { return leads.map(function(l){ if(!l.ref_id) l.ref_id=getDealRefId(l); return l; }); }
+
+function updateLeadsBadge() {
+  var b=document.getElementById('nav-lead-count'); if(!b) return;
+  var n=(APP.leads||[]).filter(function(l){return !l.status||l.status==='New Lead'||l.status==='Uncontacted';}).length;
+  b.textContent=n; b.style.background=n>0?'#ff3b30':'#34c759'; b.style.display='';
+}
+
+function matchBuyersToLead(lead, buyers) {
+  buyers=buyers||APP.buyers||[]; if(!lead||!buyers.length) return [];
+  return buyers.map(function(b){
+    var score=0,reasons=[];
+    var bs=b.states||(b.state?[b.state]:[]);
+    if(!bs.length||bs.indexOf(lead.state)>-1){score+=30;reasons.push('state');}
+    var bt=b.buyTypes||[];
+    if(!bt.length||bt.indexOf(lead.type)>-1){score+=25;reasons.push('type');}
+    var mx=b.maxPrice||999999999,mn=b.minPrice||0;
+    if((lead.offer||0)>=mn&&(lead.offer||0)<=mx){score+=25;reasons.push('price');}
+    var bc=(b.cities||(b.city?[b.city]:[])).map(function(c){return c.toLowerCase();});
+    var lc=((lead.address||'').split(',')[1]||'').trim().toLowerCase();
+    if(!bc.length||bc.some(function(c){return lc.indexOf(c)>-1||c.indexOf(lc)>-1;})){score+=10;reasons.push('city');}
+    return {buyer:b,score:score,reasons:reasons};
+  }).filter(function(m){return m.score>=30;}).sort(function(a,b){return b.score-a.score;});
+}
+
+function renderReviewQueue() {
+  var buyers=APP.buyers||[], leads=APP.leads||[], matches=[];
+  leads.slice(0,300).forEach(function(lead){
+    var bms=matchBuyersToLead(lead,buyers);
+    if(bms.length) matches.push({lead:lead,buyers:bms.slice(0,3),topScore:bms[0].score});
+  });
+  matches.sort(function(a,b){return b.topScore-a.topScore;}); matches=matches.slice(0,50);
+  var rows=matches.map(function(m){
+    var l=m.lead,rid=getDealRefId(l);
+    var tags=m.buyers.map(function(bm){return '<span style="background:#f5f5f7;border-radius:6px;padding:4px 8px;font-size:11px"><b>'+bm.buyer.name+'</b> ('+bm.score+'pts)</span>';}).join('');
+    return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+        '<span style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 8px;border-radius:5px;margin-right:8px">'+rid+'</span>'+
+        '<span style="font-size:13px;font-weight:600">'+(l.type||'SFR')+' · '+l.state+' · $'+(l.spread||0).toLocaleString()+' spread</span>'+
+        '<span style="font-size:10px;font-weight:700;color:#34c759;background:#f0fff4;padding:2px 8px;border-radius:6px;margin-left:auto">'+m.buyers.length+' match</span>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#86868b;margin-bottom:8px">ARV $'+(l.arv||0).toLocaleString()+' · Offer $'+(l.offer||0).toLocaleString()+' · '+(l.repair_class||'')+' repairs</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+tags+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn btn-dark btn-sm" data-lead-id="'+l.id+'" onclick="sendDealToMatchedBuyers(this.dataset.leadId)">🚀 Send to Buyers</button>'+
+        '<button class="btn btn-sm" style="background:#f5f5f7" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">View</button>'+
+      '</div></div>';
+  }).join('');
+  var empty='<div style="text-align:center;padding:60px;color:#86868b"><div style="font-size:40px;margin-bottom:12px">🔍</div><div style="font-size:15px;font-weight:600">No matches yet</div><div style="font-size:13px;margin-top:8px">Buyers need state, type, and price range to match deals.</div></div>';
+  return '<div style="max-width:900px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">Deal–Buyer Match Queue</div><div style="font-size:12px;color:#86868b">'+matches.length+' matches · '+leads.length+' leads · '+buyers.length+' buyers</div></div><button class="btn btn-dark" onclick="loadMatchingData()">🔄 Refresh</button></div>'+(matches.length?rows:empty)+'</div>';
+}
+
+async function sendDealToMatchedBuyers(leadId) {
+  var lead=(APP.leads||[]).find(function(l){return l.id===leadId;});
+  if(!lead) return toast('Lead not found','error');
+  var matches=matchBuyersToLead(lead,APP.buyers||[]);
+  if(!matches.length) return toast('No buyers match this deal','error');
+  var rid=getDealRefId(lead);
+  if(!confirm('Send Deal '+rid+' to '+matches.length+' buyer(s)?')) return;
+  var sent=0;
+  for(var i=0;i<matches.length;i++){
+    if(!matches[i].buyer.email) continue;
+    try{ await fetch('/api/buyers/'+matches[i].buyer.id+'/send-deals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealIds:[leadId]})}); sent++; }catch(e){}
+  }
+  toast('Deal '+rid+' sent to '+sent+' buyer(s)','success');
+}
+
+function renderBuyers() {
+  var buyers=APP.buyers||[];
+  var cards=buyers.map(function(b){
+    var states=(b.states&&b.states.length)?b.states.join(', '):(b.state||'Any');
+    var types=(b.buyTypes||[]).join(', ')||'Any';
+    var maxP=b.maxPrice?'$'+Number(b.maxPrice).toLocaleString():'Any';
+    var minP=b.minPrice?'$'+Number(b.minPrice).toLocaleString():'$0';
+    var sc=b.score||75, scC=sc>=80?'#34c759':sc>=50?'#ff9500':'#ff3b30';
+    var mc=(APP.leads||[]).filter(function(l){return matchBuyersToLead(l,[b]).length>0;}).length;
+    return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
+        '<div><div style="font-size:14px;font-weight:700">'+b.name+'</div><div style="font-size:11px;color:#86868b">'+(b.city||'')+(b.state?', '+b.state:'')+'</div></div>'+
+        '<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:'+scC+'">'+sc+'</div><div style="font-size:9px;color:#86868b">trust</div></div>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+
+        '<span style="background:#f0f6ff;color:#0071e3;font-size:10px;padding:2px 8px;border-radius:6px">'+types+'</span>'+
+        '<span style="background:#f5f5f7;font-size:10px;padding:2px 8px;border-radius:6px">'+states+'</span>'+
+        '<span style="background:#f0fff4;color:#34c759;font-size:10px;padding:2px 8px;border-radius:6px">'+minP+'–'+maxP+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:11px;color:#86868b">'+mc+' matching deals</span>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" data-buyer-id="'+b.id+'" onclick="openBuyerDetail(this.dataset.buyerId)">✏️ Details</button>'+
+          '<button class="btn btn-dark btn-sm" style="font-size:11px" data-buyer-id="'+b.id+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId)">🚀 Send</button>'+
+        '</div>'+
+      '</div></div>';
+  }).join('');
+  var empty='<div style="text-align:center;padding:60px;color:#86868b"><div style="font-size:40px;margin-bottom:12px">👥</div><div style="font-size:15px;font-weight:600;margin-bottom:12px">No buyers yet</div><button class="btn btn-dark" onclick="openAddBuyer()">+ Add First Buyer</button></div>';
+  return '<div style="max-width:1000px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div><div style="font-size:18px;font-weight:700">💼 Buyers Database</div><div style="font-size:12px;color:#86868b">'+buyers.length+' buyers · '+(APP.leads||[]).length+' leads</div></div><div style="display:flex;gap:8px"><button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button><button class="btn btn-sm" style="background:#f5f5f7" onclick="loadMatchingData()">🔄 Sync</button></div></div>'+(buyers.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">'+cards+'</div>':empty)+'</div>';
+}
+
+function openBuyerDetail(buyerId) {
+  var b=(APP.buyers||[]).find(function(x){return x.id===buyerId;}); if(!b) return;
+  var matches=(APP.leads||[]).filter(function(l){return matchBuyersToLead(l,[b]).length>0;}).slice(0,10);
+  var ex=document.getElementById('buyer-detail-modal'); if(ex) ex.remove();
+  var modal=document.createElement('div'); modal.id='buyer-detail-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px';
+  var dealRows=matches.map(function(l){
+    var rid=getDealRefId(l),ms=matchBuyersToLead(l,[b]);
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f5f5f7;border-radius:8px;margin-bottom:6px">'+
+      '<div><span style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;margin-right:6px">'+rid+'</span>'+
+      '<span style="font-size:12px">'+(l.type||'SFR')+' · '+l.state+' · $'+(l.spread||0).toLocaleString()+' spread</span></div>'+
+      '<span style="font-size:11px;font-weight:700;color:#34c759">'+(ms[0]?ms[0].score:0)+' pts</span></div>';
+  }).join('');
+  modal.innerHTML='<div style="background:#fff;border-radius:16px;width:640px;max-width:100%;max-height:85vh;overflow-y:auto;padding:24px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:18px;font-weight:700">'+b.name+'</div>'+
+    '<button onclick="document.getElementById('buyer-detail-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+      '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:10px;color:#86868b;font-weight:700;margin-bottom:4px">CONTACT</div>'+
+        '<div style="font-size:13px;font-weight:600">'+(b.phone||'No phone')+'</div><div style="font-size:12px;color:#86868b">'+(b.email||'No email')+'</div></div>'+
+      '<div style="background:#f5f5f7;border-radius:10px;padding:12px"><div style="font-size:10px;color:#86868b;font-weight:700;margin-bottom:4px">BUY BOX</div>'+
+        '<div style="font-size:12px">'+(b.buyTypes||[]).join(', ')+'</div>'+
+        '<div style="font-size:12px;color:#86868b">'+(b.minPrice?'$'+b.minPrice.toLocaleString():'$0')+' – '+(b.maxPrice?'$'+b.maxPrice.toLocaleString():'any')+'</div></div>'+
+    '</div>'+
+    '<div style="font-size:14px;font-weight:700;margin-bottom:10px">Top Matching Deals ('+matches.length+')</div>'+
+    (dealRows||'<div style="text-align:center;padding:20px;color:#86868b;font-size:13px">No matching deals yet.</div>')+
+    '<div style="display:flex;gap:8px;margin-top:16px">'+
+      '<button class="btn btn-dark" style="flex:1" data-buyer-id="'+b.id+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId);document.getElementById('buyer-detail-modal').remove()">🚀 Send All Matching Deals</button>'+
+      '<button class="btn btn-sm" style="background:#f5f5f7" data-buyer-id="'+b.id+'" onclick="editBuyer(this.dataset.buyerId);document.getElementById('buyer-detail-modal').remove()">✏️ Edit</button>'+
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+
+async function sendDealsToOneBuyer(buyerId) {
+  var buyer=(APP.buyers||[]).find(function(b){return b.id===buyerId;}); if(!buyer) return toast('Buyer not found','error');
+  if(!buyer.email) return toast('No email for '+buyer.name+'. Add an email first.','error');
+  var matches=(APP.leads||[]).filter(function(l){return matchBuyersToLead(l,[buyer]).length>0;});
+  if(!matches.length) return toast('No deals match '+buyer.name,'error');
+  if(!confirm('Send '+Math.min(matches.length,20)+' deals to '+buyer.name+'?')) return;
+  var dealIds=matches.slice(0,20).map(function(l){return l.id;});
+  try{
+    var r=await fetch('/api/buyers/'+buyerId+'/send-deals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealIds:dealIds})});
+    var d=await r.json(); if(d.success) toast('Sent '+(d.sent||dealIds.length)+' deals to '+buyer.name,'success'); else toast('Error: '+(d.error||'Failed'),'error');
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+function renderDashboard() {
+  var leads=APP.leads||[], buyers=APP.buyers||[];
+  var topDeals=leads.filter(function(l){return l.spread>0;}).sort(function(a,b){return b.spread-a.spread;}).slice(0,100);
+  var total=leads.reduce(function(s,l){return s+(l.spread||0);},0);
+  var sl=leads.filter(function(l){return l.spread>0;});
+  var avg=sl.length?Math.round(total/sl.length):0;
+  var nw=leads.filter(function(l){return !l.status||l.status==='New Lead';}).length;
+  var fus=APP.followups||[], now=Date.now();
+  var upc=fus.filter(function(f){return f.status==='pending';}).sort(function(a,b){return new Date(a.date)-new Date(b.date);}).slice(0,8);
+  var evHtml=upc.length?upc.map(function(f){
+    var d=new Date(f.date),da=Math.round((d-now)/86400000);
+    var c=da<0?'#ff3b30':da<3?'#ff9500':'#34c759', lbl=da<0?'OVERDUE':da===0?'TODAY':'in '+da+'d';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f5f5f7;border-radius:8px;margin-bottom:6px"><div><div style="font-size:12px;font-weight:600">'+(f.type||'Follow-up')+'</div><div style="font-size:11px;color:#86868b">'+(f.note||f.leadAddress||'')+'</div></div><span style="font-size:10px;font-weight:700;color:'+c+'">'+lbl+'</span></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#86868b;font-size:12px">No upcoming events.<br>Add follow-ups to track them here.</div>';
+  var dHtml=topDeals.map(function(l,i){
+    var rid=getDealRefId(l), bm=matchBuyersToLead(l,buyers).length;
+    return '<div style="display:grid;grid-template-columns:28px 76px 1fr auto auto;gap:8px;align-items:center;padding:9px 12px;background:'+(i%2?'#fff':'#f9f9f9')+';border-radius:6px;cursor:pointer" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">'+
+      '<div style="font-size:12px;color:#86868b;font-weight:700">'+(i+1)+'</div>'+
+      '<div style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;text-align:center">'+rid+'</div>'+
+      '<div><div style="font-size:12px;font-weight:600">'+(l.type||'SFR')+' · '+l.state+' · '+(l.repair_class||'-')+'</div><div style="font-size:10px;color:#86868b">ARV $'+(l.arv||0).toLocaleString()+' · Offer $'+(l.offer||0).toLocaleString()+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+'</div><div style="font-size:10px;color:#86868b">spread</div></div>'+
+      '<div>'+(bm?'<span style="font-size:10px;font-weight:700;color:#0071e3;background:#f0f6ff;padding:2px 6px;border-radius:5px">'+bm+'👤</span>':'')+'</div></div>';
+  }).join('');
+  return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'+
+    '<div style="background:linear-gradient(135deg,#1a1a2e,#2d2d5e);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL LEADS</div><div style="font-size:28px;font-weight:700">'+leads.length.toLocaleString()+'</div><div style="font-size:11px;opacity:.7">'+nw+' new</div></div>'+
+    '<div style="background:linear-gradient(135deg,#34c759,#30b750);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">AVG SPREAD</div><div style="font-size:28px;font-weight:700">$'+avg.toLocaleString()+'</div><div style="font-size:11px;opacity:.7">per deal</div></div>'+
+    '<div style="background:linear-gradient(135deg,#0071e3,#0060c0);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">BUYERS</div><div style="font-size:28px;font-weight:700">'+buyers.length+'</div><div style="font-size:11px;opacity:.7">in database</div></div>'+
+    '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px">'+
+    '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700">🏆 Top 100 Deals by Spread</div><span style="font-size:11px;color:#86868b">'+topDeals.length+' deals</span></div>'+
+    '<div style="max-height:580px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:10px">'+(dHtml||'<div style="padding:40px;text-align:center;color:#86868b">Import leads to see top deals.</div>')+'</div></div>'+
+    '<div><div style="font-size:15px;font-weight:700;margin-bottom:10px">📅 Upcoming Events</div><div style="max-height:220px;overflow-y:auto;margin-bottom:16px">'+evHtml+'</div>'+
+    '<div style="background:#f5f5f7;border-radius:12px;padding:14px"><div style="font-size:13px;font-weight:700;margin-bottom:6px">💡 About Credits</div>'+
+    '<div style="font-size:11px;color:#86868b;line-height:1.7">Credits power the <strong>automated buyer & deal search</strong> across all 50 states. Each city search costs 1 credit. <strong>Always free:</strong> viewing leads, buyers, matching, outreach, and sending deals.</div></div></div>'+
+  '</div>';
+}
+
+function loadMatchingData() {
+  return Promise.all([
+    fetch('/api/buyers').then(function(r){return r.json();}).catch(function(){return {buyers:[]};}),
+    fetch('/api/leads').then(function(r){return r.json();}).catch(function(){return {leads:[]};})
+  ]).then(function(res){
+    APP.buyers=res[0].buyers||res[0]||[];
+    var ls=res[1].leads||res[1]||[];
+    if(ls.length){APP.leads=assignRefIds(ls);APP.filtered=APP.leads;}
+    updateLeadsBadge();
+    if(['buyers','matching','review','dashboard'].indexOf(APP.page)>-1) render();
+  });
+}
+
+var _wpOrig=loadLeadsFromAPI;
+loadLeadsFromAPI=async function(){
+  await _wpOrig();
+  if(APP.leads&&APP.leads.length){APP.leads=assignRefIds(APP.leads);APP.filtered=APP.leads;}
+  try{var br=await fetch('/api/buyers');if(br.ok){var bd=await br.json();APP.buyers=bd.buyers||bd||[];}}catch(e){}
+  updateLeadsBadge();
+};
+console.log('✅ Mega-Patch v2 loaded');
+
 </script>
 </body>
 </html>
