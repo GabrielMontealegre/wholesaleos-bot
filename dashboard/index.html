@@ -244,6 +244,14 @@ tr.selected td{background:#f0f6ff}
   .stats-row{grid-template-columns:repeat(2,1fr)}
   .split-view{grid-template-columns:1fr}
   .split-right{display:none}
+  .mobile-menu-btn{display:flex !important}
+  .sidebar.mobile-open{display:flex !important;position:fixed;inset:0;z-index:9000;width:260px;height:100vh;overflow-y:auto;box-shadow:4px 0 30px rgba(0,0,0,0.4)}
+  .topbar-search{width:100% !important;flex:1}
+  table{font-size:11px}
+}
+.loading-spinner{text-align:center;padding:60px 20px;color:#86868b}
+.loading-spinner .spinner{width:36px;height:36px;border:3px solid #f0f0f0;border-top:3px solid #1a1a2e;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
 }
 
 .lead-item-selected, .lead-item.selected {
@@ -293,6 +301,7 @@ tr.selected td{background:#f0f6ff}
 
 <!-- Main App -->
 <div id="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8999"></div>
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
@@ -352,6 +361,7 @@ tr.selected td{background:#f0f6ff}
   <!-- Main -->
   <div class="main">
     <div class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" style="display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px">☰</button>
       <div class="topbar-title" id="page-title">Dashboard</div>
       <input class="topbar-search" placeholder="🔍  Search leads, buyers, deals..." oninput="globalSearch(this.value)" id="global-search">
       <div class="notif-bell" onclick="toggleNotifications()" id="notif-bell-btn">
@@ -12362,7 +12372,9 @@ function loadMatchingData() {
 
 var _wpOrig=loadLeadsFromAPI;
 loadLeadsFromAPI=async function(){
+  APP._leadsLoading=true;if(typeof render==='function'&&APP.page==='leads')render();
   await _wpOrig();
+  APP._leadsLoading=false;
   if(APP.leads&&APP.leads.length){APP.leads=assignRefIds(APP.leads);APP.filtered=APP.leads;}
   try{var br=await fetch('/api/buyers');if(br.ok){var bd=await br.json();APP.buyers=bd.buyers||bd||[];}}catch(e){}
   updateLeadsBadge();
@@ -12480,6 +12492,9 @@ var _leadsPerPage = 200;
 function renderLeads() {
   var all = APP.filtered || APP.leads || [];
   var total = all.length;
+  if (total === 0 && APP._leadsLoading) {
+    return '<div class="loading-spinner"><div class="spinner"></div><div style="font-size:14px;font-weight:600">Loading leads...</div><div style="font-size:12px;margin-top:6px">Fetching your leads...</div></div>';
+  }
   var page = _leadsPage;
   var perPage = _leadsPerPage;
   var pageLeads = all.slice(page * perPage, (page + 1) * perPage);
@@ -12990,6 +13005,26 @@ if(APP&&APP.leads&&APP.leads.length&&typeof assignRefIds==='function'){
 if(typeof updateLeadsBadge==='function') updateLeadsBadge();
 
 console.log('✅ Patch v4 loaded — strict matching, bulk send with comps, buyer finder, All States, Buy Boxes removed');
+
+
+// ── MOBILE NAV ──────────────────────────────────────────
+function toggleMobileMenu() {
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar || !overlay) return;
+  var isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) { sidebar.classList.remove('mobile-open'); overlay.style.display='none'; }
+  else { sidebar.classList.add('mobile-open'); overlay.style.display='block'; }
+}
+function closeMobileMenu() {
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (overlay) overlay.style.display='none';
+}
+document.addEventListener('click', function(e) {
+  if (e.target.closest && e.target.closest('.nav-item') && window.innerWidth<=900) closeMobileMenu();
+});
 
 </script>
 </body>
