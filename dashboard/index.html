@@ -393,6 +393,7 @@ tr.selected td{background:#f0f6ff}
 
 
 
+
 // ══════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════
@@ -10469,33 +10470,7 @@ async function rejectBuyer(pid) {
   toast('Buyer rejected',''); render();
 }
 
-// ── Patch render for new pages ────────────────────────────
-_renderPatchV11 = render;
-render = function() {
-  _renderPatchV11();
-  var usersTab = document.getElementById('nav-users-item');
-  if (usersTab) usersTab.style.display = APP.isAdmin ? 'flex' : 'none';
-  if (APP.page === 'search') setTimeout(loadSearchHistory, 50);
-  if (APP.page === 'states') setTimeout(loadAllStates, 50);
-  if (APP.page === 'matching') setTimeout(function(){showMatchTab('all');}, 50);
-  if (APP.page === 'gmail') { setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300); }
-  if (APP.page === 'contracts_lib') setTimeout(loadContractTemplates, 50);
-  if (APP.page === 'buyboxes') setTimeout(loadBuyBoxes, 50);
-  if (APP.page === 'outreach') setTimeout(loadOutreachToneStatus, 50);
-  if (APP.page === 'review') setTimeout(loadReviewQueue, 50);
-  if (APP.page === 'automation') setTimeout(function() {
-    var el = document.getElementById('buybox-stats');
-    if (el) fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(d){
-      el.textContent = (d.buyboxes||[]).length + ' buy boxes · ' + APP.buyers.length + ' buyers in database';
-    }).catch(function(){});
-  }, 50);
-  if (APP.page === 'users' && APP.isAdmin) {
-    renderUsersPanel().then(function(html) {
-      var el = document.getElementById('content');
-      if (el) el.innerHTML = html;
-    });
-  }
-};
+
 
 // ============================================================
 //  MATCHING TAB
@@ -12177,6 +12152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Boot error:', e.message);
   }
 });
+
 
 </script>
 </body>
