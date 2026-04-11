@@ -12448,57 +12448,111 @@ function leadsNextPage(){
   if(maxP){_leadsPage++;render();}
 }
 
-function renderLeads(){
-  var all=APP.filtered||APP.leads||[];
-  var total=all.length, page=_leadsPage, perPage=_leadsPerPage;
-  var pageLeads=all.slice(page*perPage,(page+1)*perPage);
-  var totalPages=Math.ceil(total/perPage);
-  var statuses=["All","New Lead","Contacted","Follow-Up","Qualified","Not Interested","Dead","Archived"];
-  var sc={};all.forEach(function(l){var s=l.status||"New Lead";sc[s]=(sc[s]||0)+1;});
-  var cf=APP._leadsStatusFilter||"All";
-  var tabs=statuses.map(function(s){
-    var cnt=s==="All"?total:(sc[s]||0);if(cnt===0&&s!=="All")return "";
-    var active=cf===s;
-    return '<button data-status="'+s+'" onclick="setLeadsFilter(this.dataset.status)" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:'+(active?"700":"400")+';background:'+(active?"#1a1a2e":"#f5f5f7")+';color:'+(active?"#fff":"#1d1d1f")+'">'+s+(cnt?" ("+cnt+")":"")+"</button>";
-  }).join("");
-  var maxPage=totalPages-1;
-  var prevDisabled=page===0?'disabled':'';
-  var nextDisabled=page>=maxPage?'disabled':'';
-  var pager=totalPages>1?'<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
-    '<button onclick="_leadsPage=Math.max(0,_leadsPage-1);render()" '+prevDisabled+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← Prev</button>'+
-    '<span style="font-size:12px;color:#86868b">Page '+(page+1)+' of '+totalPages+' ('+total.toLocaleString()+' leads)</span>'+
-    '<button onclick="leadsNextPage()" data-max="'+maxPage+'" '+nextDisabled+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
-    '<select onchange="_leadsPage=0;_leadsPerPage=parseInt(this.value);render()" style="padding:5px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">'+
-    [100,200,500,1000].map(function(n){return '<option value="'+n+'"'+(n===perPage?' selected':'')+'>'+n+' per page</option>';}).join('')+
-    '</select></div>':
-  var scMap={"New Lead":"#ff9500","Contacted":"#0071e3","Follow-Up":"#5e5ce6","Qualified":"#34c759","Not Interested":"#86868b","Dead":"#ff3b30","Archived":"#86868b"};
-  var rows=pageLeads.map(function(l){
-    var rid=l.ref_id||getDealRefId(l);
-    var sc2=scMap[l.status||"New Lead"]||"#86868b";
-    var mc=typeof matchBuyersToLead==='function'?matchBuyersToLead(l,APP.buyers||[]).length:0;
+// Clean renderLeads — no inline variable interpolation in onclick attributes
+// Uses helper functions and data attributes exclusively
+
+function setLeadsFilter(status){
+  APP._leadsStatusFilter = status;
+  _leadsPage = 0;
+  APP.filtered = status === 'All' ? APP.leads : (APP.leads||[]).filter(function(l){ return (l.status||'New Lead') === status; });
+  render();
+}
+
+function leadsNextPage(){
+  var total = (APP.filtered||APP.leads||[]).length;
+  var totalPages = Math.ceil(total / _leadsPerPage);
+  if (_leadsPage < totalPages - 1) { _leadsPage++; render(); }
+}
+
+function leadsPrevPage(){
+  if (_leadsPage > 0) { _leadsPage--; render(); }
+}
+
+function leadsSetPerPage(n){
+  _leadsPage = 0;
+  _leadsPerPage = parseInt(n);
+  render();
+}
+
+var _leadsPage = 0;
+var _leadsPerPage = 200;
+
+function renderLeads() {
+  var all = APP.filtered || APP.leads || [];
+  var total = all.length;
+  var page = _leadsPage;
+  var perPage = _leadsPerPage;
+  var pageLeads = all.slice(page * perPage, (page + 1) * perPage);
+  var totalPages = Math.ceil(total / perPage);
+
+  var statuses = ['All','New Lead','Contacted','Follow-Up','Qualified','Not Interested','Dead','Archived'];
+  var sc = {};
+  all.forEach(function(l){ var s = l.status||'New Lead'; sc[s] = (sc[s]||0) + 1; });
+  var cf = APP._leadsStatusFilter || 'All';
+
+  var tabs = statuses.map(function(s) {
+    var cnt = s === 'All' ? total : (sc[s]||0);
+    if (cnt === 0 && s !== 'All') return '';
+    var active = cf === s;
+    return '<button data-status="'+s+'" onclick="setLeadsFilter(this.dataset.status)" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:'+(active?'700':'400')+';background:'+(active?'#1a1a2e':'#f5f5f7')+';color:'+(active?'#fff':'#1d1d1f')+'">'+s+(cnt?' ('+cnt+')':'')+'</button>';
+  }).join('');
+
+  var pager = '';
+  if (totalPages > 1) {
+    var prevDis = page === 0 ? ' disabled' : '';
+    var nextDis = page >= totalPages - 1 ? ' disabled' : '';
+    var opts = [100,200,500,1000].map(function(n){
+      return '<option value="'+n+'"'+(n===perPage?' selected':'')+'>'+n+' per page</option>';
+    }).join('');
+    pager = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
+      '<button onclick="leadsPrevPage()"'+prevDis+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← Prev</button>'+
+      '<span style="font-size:12px;color:#86868b">Page '+(page+1)+' of '+totalPages+' ('+total.toLocaleString()+' leads)</span>'+
+      '<button onclick="leadsNextPage()"'+nextDis+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
+      '<select onchange="leadsSetPerPage(this.value)" style="padding:5px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">'+opts+'</select>'+
+    '</div>';
+  }
+
+  var scMap = {'New Lead':'#ff9500','Contacted':'#0071e3','Follow-Up':'#5e5ce6','Qualified':'#34c759','Not Interested':'#86868b','Dead':'#ff3b30','Archived':'#86868b'};
+
+  var rows = pageLeads.map(function(l) {
+    var rid = l.ref_id || getDealRefId(l);
+    var statusColor = scMap[l.status||'New Lead'] || '#86868b';
+    var mc = typeof matchBuyersToLead === 'function' ? matchBuyersToLead(l, APP.buyers||[]).length : 0;
     return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">'+
-      '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">'+rid+"</span></td>"+
-      '<td style="padding:9px 8px;font-size:12px">'+(l.address||"").split(",")[0]+"</td>"+
-      '<td style="padding:9px 8px;font-size:12px">'+(l.state||"")+"</td>"+
-      '<td style="padding:9px 8px;font-size:12px">'+(l.type||"SFR")+"</td>"+
-      '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:'+sc2+";background:"+sc2+'22;padding:2px 8px;border-radius:10px">'+(l.status||"New Lead")+"</span></td>"+
-      '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+"</td>"+
-      '<td style="padding:9px 8px;font-size:11px;color:#0071e3">'+(mc?mc+" 👤":"")+"</td>"+
-      '<td style="padding:9px 8px;font-size:11px;color:#86868b">'+(l.created||"")+"</td></tr>";
-  }).join("");
+      '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">'+rid+'</span></td>'+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.address||'').split(',')[0]+'</td>'+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.state||'')+'</td>'+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.type||'SFR')+'</td>'+
+      '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:'+statusColor+';background:'+statusColor+'22;padding:2px 8px;border-radius:10px">'+(l.status||'New Lead')+'</span></td>'+
+      '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+'</td>'+
+      '<td style="padding:9px 8px;font-size:11px;color:#0071e3">'+(mc ? mc+' 👤' : '')+'</td>'+
+      '<td style="padding:9px 8px;font-size:11px;color:#86868b">'+(l.created||'')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var headers = ['REF #','ADDRESS','STATE','TYPE','STATUS','SPREAD','BUYERS','DATE'].map(function(h){
+    return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">'+h+'</th>';
+  }).join('');
+
   return '<div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+tabs+
-    '<div style="margin-left:auto;display:flex;gap:8px">'+
-    '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" onclick="exportCSV()">📥 Export</button>'+
-    '<button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button></div></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+
+      tabs+
+      '<div style="margin-left:auto;display:flex;gap:8px">'+
+        '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" onclick="exportCSV()">📥 Export</button>'+
+        '<button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button>'+
+      '</div>'+
+    '</div>'+
     pager+
     '<div style="overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px">'+
-    '<table style="width:100%;border-collapse:collapse">'+
-    '<thead><tr style="background:#f5f5f7">'+
-    ['REF #','ADDRESS','STATE','TYPE','STATUS','SPREAD','BUYERS','DATE'].map(function(h){return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">'+h+'</th>';}).join('')+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    (totalPages>1?pager:'')+'</div>';
+      '<table style="width:100%;border-collapse:collapse">'+
+        '<thead><tr style="background:#f5f5f7">'+headers+'</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>'+
+    (totalPages > 1 ? pager : '')+
+  '</div>';
 }
+
 function renderBuyers(){
   var buyers=APP.buyers||[];
   var cards=buyers.map(function(b){
