@@ -12369,6 +12369,195 @@ loadLeadsFromAPI=async function(){
 };
 console.log('✅ Mega-Patch v2 loaded');
 
+
+
+// ══ PATCH v3 ═══════════════════════════════════════════
+
+// Global search by ref#, address, buyer, city, status
+function globalSearch(query) {
+  if(!query||query.trim().length<2) return;
+  query=query.trim().toLowerCase();
+  var leads=APP.leads||[], buyers=APP.buyers||[];
+  var lm=leads.filter(function(l){
+    var rid=(l.ref_id||getDealRefId(l)).toLowerCase();
+    return rid.includes(query)||(l.address||'').toLowerCase().includes(query)||
+           (l.status||'').toLowerCase().includes(query)||(l.state||'').toLowerCase().includes(query)||
+           (l.county||'').toLowerCase().includes(query);
+  }).slice(0,30);
+  var bm=buyers.filter(function(b){
+    return (b.name||'').toLowerCase().includes(query)||(b.city||'').toLowerCase().includes(query)||(b.state||'').toLowerCase().includes(query);
+  }).slice(0,10);
+  showSearchResults(query,lm,bm);
+}
+
+function showSearchResults(query,leads,buyers){
+  var ex=document.getElementById("search-results-modal"); if(ex) ex.remove();
+  var lRows=leads.map(function(l){
+    var rid=l.ref_id||getDealRefId(l);
+    var mc=typeof matchBuyersToLead==="function"?matchBuyersToLead(l,APP.buyers||[]).length:0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-lead-id="'+l.id+'" onclick="document.getElementById('search-results-modal').remove();openLeadModal(this.dataset.leadId)">'+
+      '<div><span style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;margin-right:8px">'+rid+'</span>'+
+      '<span style="font-size:13px;font-weight:600">'+(l.type||"SFR")+" · "+(l.county||l.state||"")+", "+l.state+"</span>"+
+      '<span style="font-size:11px;color:#86868b;margin-left:8px">'+(l.status||"New Lead")+"</span></div>"+
+      '<div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+"</div>"+
+      (mc?'<div style="font-size:10px;color:#0071e3">'+mc+" buyers</div>":"")+
+      "</div></div>";
+  }).join("");
+  var bRows=buyers.map(function(b){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f5f5f7;cursor:pointer" data-buyer-id="'+b.id+'" onclick="document.getElementById('search-results-modal').remove();APP.page='buyers';render();setTimeout(function(){openBuyerDetail(''+b.id+'');},300)">'+
+      '<div><div style="font-size:13px;font-weight:600">'+b.name+"</div><div style='font-size:11px;color:#86868b'>"+(b.city||"")+(b.state?", "+b.state:"")+"</div></div>"+
+      '<div style="font-size:10px;color:#0071e3;font-weight:600">'+(b.buyTypes||[]).join(", ")+"</div></div>";
+  }).join("");
+  var modal=document.createElement("div"); modal.id="search-results-modal";
+  modal.style.cssText="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:flex-start;justify-content:center;padding-top:80px";
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  modal.innerHTML='<div style="background:#fff;border-radius:16px;width:700px;max-width:95vw;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">'+
+    '<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center">'+
+    '<div><div style="font-size:16px;font-weight:700">Search: "'+query+'"</div>'+
+    '<div style="font-size:12px;color:#86868b">'+leads.length+" deals · "+buyers.length+" buyers</div></div>"+
+    '<button onclick="document.getElementById('search-results-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#86868b">✕</button></div>'+
+    '<div style="overflow-y:auto;flex:1">'+
+    (leads.length?'<div style="padding:10px 20px 4px;font-size:10px;font-weight:700;color:#86868b">DEALS ('+leads.length+")</div>"+lRows:"")+
+    (buyers.length?'<div style="padding:10px 20px 4px;font-size:10px;font-weight:700;color:#86868b">BUYERS ('+buyers.length+")</div>"+bRows:"")+
+    (!leads.length&&!buyers.length?'<div style="padding:40px;text-align:center;color:#86868b"><div style="font-size:32px;margin-bottom:8px">🔍</div><div>No results for "'+query+'"</div></div>':"")+
+    "</div></div>";
+  document.body.appendChild(modal);
+}
+
+// Leads with pagination + status filters
+var _leadsPage=0, _leadsPerPage=200;
+function renderLeads(){
+  var all=APP.filtered||APP.leads||[];
+  var total=all.length, page=_leadsPage, perPage=_leadsPerPage;
+  var pageLeads=all.slice(page*perPage,(page+1)*perPage);
+  var totalPages=Math.ceil(total/perPage);
+  var statuses=["All","New Lead","Contacted","Follow-Up","Qualified","Not Interested","Dead","Archived"];
+  var sc={}; all.forEach(function(l){var s=l.status||"New Lead";sc[s]=(sc[s]||0)+1;});
+  var cf=APP._leadsStatusFilter||"All";
+  var tabs=statuses.map(function(s){
+    var cnt=s==="All"?total:(sc[s]||0); if(cnt===0&&s!=="All") return "";
+    var active=cf===s;
+    return '<button onclick="APP._leadsStatusFilter=''+s+'';_leadsPage=0;APP.filtered=(APP._leadsStatusFilter==='All'?APP.leads:(APP.leads||[]).filter(function(l){return (l.status||'New Lead')===APP._leadsStatusFilter;}));render()" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:'+(active?"700":"400")+";background:"+(active?"#1a1a2e":"#f5f5f7")+";color:"+(active?"#fff":"#1d1d1f")+'">'+s+(cnt?" ("+cnt+")":"")+"</button>";
+  }).join("");
+  var pager=totalPages>1?'<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
+    '<button onclick="_leadsPage=Math.max(0,_leadsPage-1);render()" '+(page===0?"disabled":"")+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← Prev</button>'+
+    '<span style="font-size:12px;color:#86868b">Page '+(page+1)+" of "+totalPages+" ("+total.toLocaleString()+" leads)</span>"+
+    '<button onclick="_leadsPage=Math.min('+(totalPages-1)+',_leadsPage+1);render()" '+(page>=totalPages-1?"disabled":"")+' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Next →</button>'+
+    '<select onchange="_leadsPage=0;_leadsPerPage=parseInt(this.value);render()" style="padding:5px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">'+
+    [100,200,500,1000].map(function(n){return '<option value="'+n+'"'+(n===perPage?" selected":"")+">"+n+" per page</option>";}).join("")+
+    "</select></div>":"";
+  var scMap={"New Lead":"#ff9500","Contacted":"#0071e3","Follow-Up":"#5e5ce6","Qualified":"#34c759","Not Interested":"#86868b","Dead":"#ff3b30","Archived":"#86868b"};
+  var rows=pageLeads.map(function(l){
+    var rid=l.ref_id||getDealRefId(l);
+    var sc2=scMap[l.status||"New Lead"]||"#86868b";
+    var mc=typeof matchBuyersToLead==="function"?matchBuyersToLead(l,APP.buyers||[]).length:0;
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">'+
+      '<td style="padding:9px 12px;font-size:10px;font-weight:700;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px">'+rid+"</span></td>"+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.address||"").split(",")[0]+"</td>"+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.state||"")+"</td>"+
+      '<td style="padding:9px 8px;font-size:12px">'+(l.type||"SFR")+"</td>"+
+      '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:'+sc2+";background:"+sc2+'22;padding:2px 8px;border-radius:10px">'+(l.status||"New Lead")+"</span></td>"+
+      '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+"</td>"+
+      '<td style="padding:9px 8px;font-size:11px;color:#0071e3">'+(mc?mc+" 👤":"")+"</td>"+
+      '<td style="padding:9px 8px;font-size:11px;color:#86868b">'+(l.created||"")+"</td>"+
+    "</tr>";
+  }).join("");
+  return '<div style="max-width:100%">'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+tabs+
+    '<div style="margin-left:auto;display:flex;gap:8px">'+
+    '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" onclick="exportCSV()">📥 Export</button>'+
+    '<button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button></div></div>'+
+    pager+
+    '<div style="overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px">'+
+    '<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr style="background:#f5f5f7">'+
+    '<th style="padding:9px 12px;text-align:left;font-size:11px;color:#86868b">REF #</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">ADDRESS</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">STATE</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">TYPE</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">STATUS</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">SPREAD</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">BUYERS</th>'+
+    '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">DATE</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    (totalPages>1?pager:"")+'</div>';
+}
+
+// Buyers tab — full info display
+function renderBuyers(){
+  var buyers=APP.buyers||[];
+  var cards=buyers.map(function(b){
+    var states=(b.states&&b.states.length)?b.states.join(", "):(b.state||"Any state");
+    var types=(b.buyTypes||[]).join(", ")||"Any type";
+    var maxP=b.maxPrice?"$"+Number(b.maxPrice).toLocaleString():"Any";
+    var minP=b.minPrice?"$"+Number(b.minPrice).toLocaleString():"$0";
+    var sc=b.score||75, scC=sc>=80?"#34c759":sc>=50?"#ff9500":"#ff3b30";
+    var mc=(APP.leads||[]).filter(function(l){return typeof matchBuyersToLead==="function"&&matchBuyersToLead(l,[b]).length>0;}).length;
+    var cities=(b.cities||[]).join(", ");
+    return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:18px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+      '<div><div style="font-size:15px;font-weight:700">'+b.name+"</div>"+
+      '<div style="font-size:12px;color:#86868b">'+(b.city||"")+(b.state?", "+b.state:"")+"</div></div>"+
+      '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+scC+'">'+sc+'</div><div style="font-size:9px;color:#86868b">trust</div></div></div>'+
+      '<div style="background:#f9f9fb;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px">'+
+      '<div>📞 <strong>'+(b.phone||"No phone")+"</strong></div>"+
+      '<div>✉️ '+(b.email||'<span style="color:#86868b">No email — add to send deals</span>')+"</div></div>"+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;font-size:11px">'+
+      '<div>🏠 <span style="color:#86868b">Types:</span> <strong>'+types+"</strong></div>"+
+      '<div>💰 <span style="color:#86868b">Budget:</span> <strong>'+minP+" – "+maxP+"</strong></div>"+
+      '<div>📍 <span style="color:#86868b">States:</span> <strong>'+states+"</strong></div>"+
+      (cities?'<div>🏙 <span style="color:#86868b">Cities:</span> <strong>'+cities+"</strong></div>":"")+
+      (b.strategy?'<div>🎯 <span style="color:#86868b">Strategy:</span> <strong>'+b.strategy+"</strong></div>":"")+
+      (b.closings?'<div>✅ <span style="color:#86868b">Closings:</span> <strong>'+b.closings+"</strong></div>":"")+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<span style="font-size:11px;font-weight:600;color:'+(mc>0?"#0071e3":"#86868b")+'">'+mc+' matching deal'+(mc!==1?"s":"")+'</span>'+
+      '<div style="display:flex;gap:6px">'+
+      '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" data-buyer-id="'+b.id+'" onclick="editBuyer(this.dataset.buyerId)">✏️ Edit</button>'+
+      '<button class="btn btn-dark btn-sm" style="font-size:11px" data-buyer-id="'+b.id+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId)">🚀 Send</button>'+
+      '</div></div></div>';
+  }).join("");
+  var empty='<div style="text-align:center;padding:60px;color:#86868b"><div style="font-size:40px;margin-bottom:12px">👥</div><div style="font-size:15px;font-weight:600;margin-bottom:12px">No buyers yet</div><button class="btn btn-dark" onclick="openAddBuyer()">+ Add First Buyer</button></div>';
+  return '<div style="max-width:1100px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+    '<div><div style="font-size:18px;font-weight:700">💼 Buyers Database</div>'+
+    '<div style="font-size:12px;color:#86868b">'+buyers.length+' buyers · '+(APP.leads||[]).length.toLocaleString()+' leads</div></div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button>'+
+    '<button class="btn btn-sm" style="background:#f5f5f7" onclick="loadMatchingData()">🔄 Sync</button>'+
+    '</div></div>'+
+    (buyers.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">'+cards+'</div>':empty)+
+    '</div>';
+}
+
+// Redirect buy box tab to buyers
+function renderBuyBoxes(){ APP.page='buyers'; return renderBuyers(); }
+
+// Fix modal-overlay close on outside click
+(function(){
+  var ov=document.getElementById("modal-overlay");
+  if(ov&&!ov._v3) { ov._v3=true; ov.onclick=function(e){if(e.target===ov)ov.style.display="none";}; }
+})();
+
+// Hook search bar
+(function hookSearch(){
+  var inp=document.querySelector('input[placeholder*="Search"]');
+  if(inp&&!inp._v3){
+    inp._v3=true;
+    inp.addEventListener("keydown",function(e){
+      if(e.key==="Enter"&&this.value.trim()){globalSearch(this.value.trim());this.value="";}
+    });
+  }
+})();
+
+// Re-assign ref IDs
+if(APP&&APP.leads&&APP.leads.length&&typeof assignRefIds==="function"){
+  APP.leads=assignRefIds(APP.leads); APP.filtered=APP.filtered?assignRefIds(APP.filtered):APP.leads;
+}
+if(typeof updateLeadsBadge==="function") updateLeadsBadge();
+
+console.log("✅ Patch v3 loaded — search, leads pagination, buyers full info, modal fixes");
+
 </script>
 </body>
 </html>
