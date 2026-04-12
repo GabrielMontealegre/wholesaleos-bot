@@ -22,6 +22,8 @@ app.use((req, res, next) => {
 
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+
+app.get('/dashboard/courthouse-tab.js', (req, res) => res.sendFile(require('path').join(__dirname, 'courthouse-addon', 'courthouse-tab.js')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
 app.get('/dashboard/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
 
@@ -2798,3 +2800,6 @@ console.log('✅ Buyers CRM extended routes registered (7 endpoints)');
 module.exports = app;
 
 
+
+// Courthouse addon
+try { require('./courthouse-addon/courthouse-routes')(app); } catch(e) {}

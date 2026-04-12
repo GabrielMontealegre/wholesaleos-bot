@@ -1,0 +1,21 @@
+{
+  "name": "courthouse-automation-addon",
+  "version": "1.0.0",
+  "description": "Isolated courthouse lead automation module for WholesaleOS",
+  "main": "courthouse-runner.js",
+  "scripts": {
+    "start": "node courthouse-runner.js",
+    "test": "node courthouse-runner.js --test"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "csv-parse": "^5.5.0",
+    "xlsx": "^0.18.5",
+    "pdf-parse": "^1.1.1",
+    "googleapis": "^128.0.0",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "uuid": "^9.0.0"
+  }
+}
