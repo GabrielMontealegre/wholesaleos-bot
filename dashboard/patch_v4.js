@@ -569,486 +569,579 @@ if(typeof updateLeadsBadge==='function')updateLeadsBadge();
 if(['buyers','states','outreach'].indexOf(APP&&APP.page)>-1)render();
 console.log('WholesaleOS Patch v5 loaded - all 9 issues addressed');
 
-// ── COURTHOUSE INTEGRATION ──
-// ══════════════════════════════════════════════════════════════
-//  COURTHOUSE INTEGRATION PATCH
-//  Fixes: flickering, merge into APP.leads, CH- ref IDs,
-//  clickable deals, feature parity, search, stable state
-// ══════════════════════════════════════════════════════════════
+// ══ COURTHOUSE INTEGRATION v2 ══
+// ════════════════════════════════════════════════════════════════════
+//  COURTHOUSE INTEGRATION v2 — Complete rewrite, all 9 issues fixed
+//  Loaded via patch_v4.js (appended after v5 patch)
+// ════════════════════════════════════════════════════════════════════
 
-// ── 1. CH- Reference Number generator ────────────────────────
-function getCHRefId(lead) {
-  if (lead.ref_id && lead.ref_id.startsWith('CH-')) return lead.ref_id;
-  var h = 0, id = (lead.id || lead.case_number || lead.address || '').toString();
-  for (var i = 0; i < id.length; i++) h = ((h << 5) - h) + id.charCodeAt(i);
-  return 'CH-' + String(Math.abs(h) % 9000 + 1000).padStart(4, '0');
+(function() {
+'use strict';
+
+// ── Constants ────────────────────────────────────────────────────────
+var CH_API_BASE = '/api/courthouse';
+var CH_FETCH_COOLDOWN = 30000; // 30s min between fetches (fix re-fetch loop)
+var CH_EXPIRING_DAYS = 14;
+
+// ── Isolated courthouse state — never touches APP directly ────────────
+window.CH = window.CH || {
+  leads: [],
+  loaded: false,
+  loading: false,
+  lastFetch: 0,
+  apiAvailable: null, // null=unknown, true=yes, false=no
+  filter: {}
+};
+
+// ── 5. CH- reference number ───────────────────────────────────────────
+function makeCHRef(lead, index) {
+  if (lead.ref_id && /^CH-\d{4}$/.test(lead.ref_id)) return lead.ref_id;
+  if (typeof index === 'number') return 'CH-' + String(index + 1).padStart(4, '0');
+  var h = 0, s = String(lead.id || lead.address || lead.case_number || Math.random());
+  for (var i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
+  return 'CH-' + String(Math.abs(h) % 9000 + 1000);
 }
 
-// ── 2. Courthouse lead normalizer — makes them full lead objects ─
-function normalizeCourthouseLead(raw) {
-  var ref = getCHRefId(raw);
+// ── Normalize raw courthouse record to full WholesaleOS lead ──────────
+function normalizeCHLead(raw, index) {
+  var ref = makeCHRef(raw, index);
   return {
-    // Core fields matching existing lead schema
-    id:           raw.id || ref,
-    ref_id:       ref,
-    address:      raw.address || '',
-    city:         raw.city || '',
-    state:        raw.state || '',
-    zip:          raw.zip || '',
-    county:       raw.county || raw.market || '',
-    type:         raw.type || 'SFR',
-    status:       raw.status || 'New Lead',
-    created:      raw.created || raw.filed_date || new Date().toISOString().slice(0,10),
-    source:       'courthouse',
-    source_url:   raw.source_url || '',
-
-    // Financial (zeroed if unknown — AI can fill later)
-    arv:          raw.arv || 0,
-    offer:        raw.offer || 0,
-    repairs:      raw.repairs || 0,
-    spread:       raw.spread || 0,
-    equity_pct:   raw.equity_pct || 0,
+    // Standard WholesaleOS lead fields
+    id:            raw.id || ref,
+    ref_id:        ref,
+    address:       raw.address || '',
+    city:          raw.city || '',
+    state:         raw.state || '',
+    zip:           raw.zip || '',
+    county:        raw.county || raw.market || raw._ch_market || '',
+    type:          raw.type || 'SFR',
+    status:        raw.status || 'New Lead',
+    created:       raw.created || raw.filed_date || new Date().toISOString().slice(0,10),
+    source:        'courthouse',
+    source_url:    raw.source_url || '',
+    arv:           raw.arv || 0,
+    offer:         raw.offer || 0,
+    repairs:       raw.repairs || 0,
+    spread:        raw.spread || 0,
+    equity_pct:    raw.equity_pct || 0,
     rent_estimate: raw.rent_estimate || 0,
-
+    distress:      raw.distress || raw.lead_type || 'Courthouse',
+    why_good_deal: raw.why_good_deal || buildWhyGoodDeal(raw),
+    priority_flag: (raw.priority_flags||[])[0] || 'courthouse',
     // Courthouse-specific
-    owner_name:   raw.owner_name || '',
-    mailing_addr: raw.mailing_addr || '',
-    parcel:       raw.parcel || '',
-    case_number:  raw.case_number || '',
-    auction_date: raw.auction_date || '',
-    lien_amount:  raw.lien_amount || '',
-    lead_type:    raw.lead_type || raw.type || '',
-    filed_date:   raw.filed_date || '',
-    distress:     raw.distress || raw.lead_type || 'Courthouse',
-
-    // Signals
-    priority_flags:  raw.priority_flags || [],
-    priority_flag:   (raw.priority_flags||[])[0] || 'courthouse',
-    expiring_soon:   raw.expiring_soon || false,
-    why_good_deal:   raw.why_good_deal || '',
-
-    // Source identification (issue #4)
-    _source_module:  'courthouse-addon',
-    _ch_market:      raw.market || raw.county || raw.state || '',
-    _ch_type:        raw.lead_type || raw.type || '',
-    _ch_origin:      'Courthouse Automation',
-    _ch_ref:         ref,
+    owner_name:    raw.owner_name || '',
+    mailing_addr:  raw.mailing_addr || '',
+    parcel:        raw.parcel || '',
+    case_number:   raw.case_number || '',
+    auction_date:  raw.auction_date || '',
+    lien_amount:   raw.lien_amount || '',
+    lead_type:     raw.lead_type || raw.type || '',
+    filed_date:    raw.filed_date || '',
+    priority_flags: raw.priority_flags || [],
+    expiring_soon:  raw.expiring_soon || isExpiringSoon(raw.auction_date),
+    // ── 4. Source identification fields ──
+    _source_module: 'courthouse-addon',
+    _ch_market:     raw._ch_market || raw.market || raw.county || raw.state || '',
+    _ch_type:       raw._ch_type || raw.lead_type || raw.type || '',
+    _ch_origin:     'Courthouse Automation',
+    _ch_ref:        ref,
+    _ch_source_url: raw.source_url || '',
   };
 }
 
-// ── 3. Stable courthouse lead store (no re-fetch loop) ────────
-window._CH = window._CH || {
-  leads:      [],      // normalized courthouse leads
-  loaded:     false,   // one-time load flag
-  loading:    false,   // prevent concurrent fetches
-  lastFetch:  0,       // timestamp
-};
-
-function loadCourthouseLeads(force) {
-  // Prevent re-fetch within 30 seconds (fix flickering)
-  var now = Date.now();
-  if (!force && window._CH.loaded && (now - window._CH.lastFetch < 30000)) {
-    return Promise.resolve(window._CH.leads);
+function buildWhyGoodDeal(raw) {
+  var flags = raw.priority_flags || [];
+  var parts = [];
+  if (flags.includes('foreclosure')) parts.push('Foreclosure — motivated seller or bank-owned opportunity');
+  if (flags.includes('probate')) parts.push('Probate — heirs often sell below market');
+  if (flags.includes('tax_delinquent')) parts.push('Tax delinquent — owner may need fast sale');
+  if (flags.includes('code_violation')) parts.push('Code violation — distressed, possible below-market acquisition');
+  if (flags.includes('vacant')) parts.push('Vacant — owner likely motivated to sell');
+  if (raw.auction_date && isExpiringSoon(raw.auction_date)) {
+    var days = Math.ceil((new Date(raw.auction_date) - Date.now()) / 86400000);
+    parts.push('Auction in ' + days + ' days — time-sensitive deal');
   }
-  if (window._CH.loading) return Promise.resolve(window._CH.leads);
+  return parts.join('. ') || 'Courthouse record — ' + (raw.lead_type || raw.type || 'distressed property');
+}
 
-  window._CH.loading = true;
+function isExpiringSoon(dateStr) {
+  if (!dateStr) return false;
+  var d = new Date(dateStr);
+  if (isNaN(d)) return false;
+  return Math.ceil((d - Date.now()) / 86400000) <= CH_EXPIRING_DAYS;
+}
 
-  return fetch('/api/courthouse/leads?limit=500')
+// ── 8. Fetch courthouse leads — with cooldown to prevent re-fetch ─────
+function fetchCHLeads(force) {
+  var now = Date.now();
+  if (!force && window.CH.loaded && (now - window.CH.lastFetch < CH_FETCH_COOLDOWN)) {
+    return Promise.resolve(window.CH.leads);
+  }
+  if (window.CH.loading) return Promise.resolve(window.CH.leads);
+  window.CH.loading = true;
+
+  return fetch(CH_API_BASE + '/leads?limit=1000')
     .then(function(r) {
-      if (!r.ok) throw new Error('API not ready');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
     .then(function(data) {
+      window.CH.apiAvailable = true;
       var raw = data.leads || [];
-      var normalized = raw.map(normalizeCourthouseLead);
-
-      // Assign sequential CH- numbers if not set
-      normalized.forEach(function(l, i) {
-        if (!l.ref_id || !l.ref_id.startsWith('CH-')) {
-          l.ref_id = 'CH-' + String(i + 1).padStart(4, '0');
-          l.id = l.ref_id;
-        }
-      });
-
-      window._CH.leads   = normalized;
-      window._CH.loaded  = true;
-      window._CH.loading = false;
-      window._CH.lastFetch = Date.now();
-
-      // MERGE into APP.leads (issue #3 + #8)
-      mergeCourthouseIntoApp(normalized);
-
-      console.log('Courthouse: loaded', normalized.length, 'leads and merged into APP');
-      return normalized;
+      window.CH.leads = raw.map(normalizeCHLead);
+      window.CH.loaded = true;
+      window.CH.loading = false;
+      window.CH.lastFetch = now;
+      mergeIntoApp(window.CH.leads);
+      return window.CH.leads;
     })
     .catch(function(e) {
-      window._CH.loading = false;
-      // API not ready yet — use local store if available
-      if (window._CH.leads.length) return window._CH.leads;
-      return [];
+      window.CH.apiAvailable = false;
+      window.CH.loading = false;
+      // Return any cached leads
+      return window.CH.leads;
     });
 }
 
-// ── 4. Merge into APP.leads without overwrite ─────────────────
-function mergeCourthouseIntoApp(chLeads) {
-  if (!chLeads.length) return;
-  var existing = APP.leads || [];
-
-  // Remove old courthouse leads, keep regular ones
-  var regular = existing.filter(function(l) { return l._source_module !== 'courthouse-addon'; });
-
-  // Append courthouse leads at end
-  APP.leads = regular.concat(chLeads);
-
-  // Reassign ref IDs to courthouse leads
-  APP.leads.forEach(function(l) {
-    if (l._source_module === 'courthouse-addon' && (!l.ref_id || !l.ref_id.startsWith('CH-'))) {
-      l.ref_id = getCHRefId(l);
-    } else if (!l.ref_id) {
-      l.ref_id = getDealRefId(l);
-    }
+// ── 3 + 8. Merge into APP.leads safely (no overwrite) ────────────────
+function mergeIntoApp(chLeads) {
+  if (!chLeads || !chLeads.length) return;
+  var regular = (APP.leads || []).filter(function(l) {
+    return l._source_module !== 'courthouse-addon';
   });
-
-  // Keep filtered in sync
-  if (APP._leadsStatusFilter) {
-    var s = APP._leadsStatusFilter;
-    APP.filtered = s === 'All' ? APP.leads : APP.leads.filter(function(l) {
-      return (l.status || 'New Lead') === s;
-    });
-  } else {
-    APP.filtered = APP.leads;
-  }
-
-  updateLeadsBadge();
+  APP.leads = regular.concat(chLeads);
+  APP.filtered = APP._leadsStatusFilter && APP._leadsStatusFilter !== 'All'
+    ? APP.leads.filter(function(l) { return (l.status||'New Lead') === APP._leadsStatusFilter; })
+    : APP.leads;
+  if (typeof updateLeadsBadge === 'function') updateLeadsBadge();
 }
 
-// ── 5. Source badge HTML for courthouse leads ─────────────────
-function courthouseSourceBadge(lead) {
-  if (lead._source_module !== 'courthouse-addon') return '';
-  var type  = lead._ch_type  || lead.lead_type || '';
-  var mkt   = lead._ch_market|| lead.county || lead.state || '';
-  var ref   = lead._ch_ref   || lead.ref_id || '';
-  return '<div style="background:#f0f6ff;border:1px solid #c8deff;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px">' +
-    '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
-      '<span><strong style="color:#86868b">SOURCE</strong><br><span style="color:#0071e3;font-weight:600">' + mkt + '</span></span>' +
-      '<span><strong style="color:#86868b">TYPE</strong><br><span style="color:#5e5ce6;font-weight:600">' + type.split(',')[0] + '</span></span>' +
-      '<span><strong style="color:#86868b">ORIGIN</strong><br><span style="color:#34c759;font-weight:600">Courthouse Automation</span></span>' +
-      '<span><strong style="color:#86868b">REF</strong><br><span style="background:#1a1a2e;color:#fff;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px">' + ref + '</span></span>' +
+// ── Priority score (module-local) ─────────────────────────────────────
+function chScore(lead) {
+  var flags = lead.priority_flags || [];
+  if (lead.expiring_soon && flags.includes('foreclosure')) return 100;
+  if (flags.includes('foreclosure')) return 85;
+  if (flags.includes('tax_delinquent')) return 75;
+  if (flags.includes('probate')) return 70;
+  if (flags.includes('vacant')) return 65;
+  if (flags.includes('code_violation')) return 60;
+  if (flags.includes('fire_damaged')) return 60;
+  if (flags.includes('lien')) return 50;
+  return 30;
+}
+
+// ── Flag color helper ─────────────────────────────────────────────────
+function chFlagColor(f) {
+  var m = {
+    foreclosure:'#ff3b30', auction_expiring:'#ff3b30',
+    probate:'#5e5ce6', tax_delinquent:'#ff9500',
+    code_violation:'#ff6b00', fire_damaged:'#dc2626',
+    lien:'#0071e3', vacant:'#8b5cf6',
+    out_of_state_owner:'#34c759', potential_equity:'#34c759',
+    bankruptcy:'#64748b', divorce:'#ec4899'
+  };
+  return m[f] || '#86868b';
+}
+
+// ── 2 + 7. Open courthouse lead — identical to normal lead modal ──────
+function openCHLead(leadId) {
+  // Ensure lead is in APP.leads
+  var l = (window.CH.leads || []).find(function(x) {
+    return x.id === leadId || x.ref_id === leadId;
+  });
+  if (!l) return;
+  // Add to APP.leads if not already there
+  if (!(APP.leads || []).find(function(x) { return x.id === l.id; })) {
+    APP.leads = (APP.leads || []).concat([l]);
+  }
+  // Use the standard lead modal (openLeadDetailFixed from patch_v4.js)
+  if (typeof openLeadDetailFixed === 'function') {
+    openLeadDetailFixed(l.id);
+    // After modal opens, inject source badge
+    setTimeout(function() {
+      var modal = document.getElementById('lead-overlay-modal');
+      if (!modal) return;
+      // Inject CH source badge at top of modal body
+      var existing = modal.querySelector('#ch-source-badge');
+      if (existing) return;
+      var body = modal.querySelector('[style*="padding:20"]');
+      if (!body) return;
+      var badge = document.createElement('div');
+      badge.id = 'ch-source-badge';
+      badge.innerHTML = buildSourceBadge(l);
+      body.insertBefore(badge, body.firstChild);
+    }, 80);
+  }
+}
+
+// ── 4. Source badge HTML ──────────────────────────────────────────────
+function buildSourceBadge(l) {
+  var market = l._ch_market || l.county || l.state || '';
+  var type   = (l._ch_type || l.lead_type || '').split(',')[0].trim();
+  var ref    = l._ch_ref || l.ref_id || '';
+  return '<div style="background:#f0f6ff;border:1px solid #c8deff;border-radius:8px;padding:10px 14px;margin-bottom:14px">' +
+    '<div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px">' +
+      '<div><div style="font-size:9px;font-weight:700;color:#86868b;margin-bottom:2px">SOURCE</div>' +
+      '<div style="font-weight:700;color:#0071e3">' + (market||'Courthouse') + '</div></div>' +
+      '<div><div style="font-size:9px;font-weight:700;color:#86868b;margin-bottom:2px">TYPE</div>' +
+      '<div style="font-weight:700;color:#5e5ce6">' + (type||'Courthouse Record') + '</div></div>' +
+      '<div><div style="font-size:9px;font-weight:700;color:#86868b;margin-bottom:2px">ORIGIN</div>' +
+      '<div style="font-weight:700;color:#34c759">Courthouse Automation</div></div>' +
+      '<div><div style="font-size:9px;font-weight:700;color:#86868b;margin-bottom:2px">REF #</div>' +
+      '<div><span style="background:#1a1a2e;color:#fff;padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px">' + ref + '</span></div></div>' +
     '</div>' +
   '</div>';
 }
 
-// ── 6. Override openLeadDetailFixed to support courthouse ─────
-//    (courthouse leads get same modal as regular leads + source badge)
-var _origOpenLeadDetailFixed = typeof openLeadDetailFixed === 'function' ? openLeadDetailFixed : null;
-openLeadModal = function(id) {
-  // Search both APP.leads and _CH.leads
-  var l = (APP.leads || []).find(function(x) { return x.id === id || x.id == id || x.ref_id === id; });
-  if (!l) l = (window._CH && window._CH.leads || []).find(function(x) { return x.id === id || x.ref_id === id; });
-  if (l) openLeadDetailFixed(l.id);
-};
+// ── Lead card HTML ─────────────────────────────────────────────────────
+function chLeadCard(lead) {
+  var ref = lead._ch_ref || lead.ref_id || makeCHRef(lead);
+  var flags = (lead.priority_flags || []).slice(0, 3);
+  var mc = typeof matchBuyersToLead === 'function'
+    ? matchBuyersToLead(lead, APP.buyers || []).length : 0;
+  var border = lead.expiring_soon ? '2px solid #ff3b30' : '1px solid #e5e5ea';
+  var fa = typeof fullAddress === 'function' ? fullAddress(lead) : (lead.address || '');
 
-// Patch openLeadDetailFixed to inject source badge for courthouse leads
-if (_origOpenLeadDetailFixed) {
-  openLeadDetailFixed = function(leadId) {
-    // Ensure courthouse leads are in APP.leads
-    var l = (APP.leads || []).find(function(x) { return x.id === leadId || x.id == leadId; });
-    if (!l && window._CH) {
-      l = (window._CH.leads || []).find(function(x) { return x.id === leadId || x.ref_id === leadId; });
-      if (l && !(APP.leads||[]).find(function(x){return x.id===l.id;})) {
-        APP.leads = (APP.leads||[]).concat([l]);
-      }
-    }
-    _origOpenLeadDetailFixed(leadId);
+  var pills = flags.map(function(f) {
+    var c = chFlagColor(f);
+    return '<span style="background:' + c + '22;color:' + c + ';font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">' +
+      f.replace(/_/g,' ').toUpperCase() + '</span>';
+  }).join('');
 
-    // After modal opens, inject courthouse badge
-    if (l && l._source_module === 'courthouse-addon') {
-      setTimeout(function() {
-        var modal = document.getElementById('lead-overlay-modal');
-        if (!modal) return;
-        var badge = document.createElement('div');
-        badge.innerHTML = courthouseSourceBadge(l);
-        var body = modal.querySelector('[style*="padding:20px 24px"]');
-        if (body && body.firstChild) body.insertBefore(badge.firstChild, body.firstChild);
-      }, 50);
-    }
-  };
+  return '<div data-chid="' + lead.id + '" ' +
+    'onclick="window._openCHLead(this.dataset.chid)" ' +
+    'onmouseover="this.style.background=\'#f9f9fb\'" ' +
+    'onmouseout="this.style.background=\'#fff\'" ' +
+    'style="background:#fff;border:' + border + ';border-radius:12px;padding:14px;cursor:pointer">' +
+
+    // Header row
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+      '<div style="min-width:0;flex:1">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap">' +
+          '<span style="background:#1a1a2e;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0">' + ref + '</span>' +
+          '<span style="font-size:12px;font-weight:700;color:#1a1a2e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (fa||'Address not available') + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#86868b">' + (lead._ch_market||lead.county||'') + (lead.state?', '+lead.state:'') + '</div>' +
+      '</div>' +
+      (mc > 0 ? '<span style="font-size:10px;color:#0071e3;font-weight:600;flex-shrink:0;margin-left:8px">' + mc + ' buyers</span>' : '') +
+    '</div>' +
+
+    // Auction badge
+    (lead.auction_date ? '<div style="background:#fff0f0;color:#ff3b30;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-bottom:8px;display:inline-block">⏰ Auction: ' + lead.auction_date + '</div>' : '') +
+
+    // Signal pills
+    (pills ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">' + pills + '</div>' : '') +
+
+    // Info row
+    '<div style="font-size:11px;color:#86868b;line-height:1.7">' +
+      '<div style="font-weight:600;color:#0071e3">' + ((lead._ch_type||lead.lead_type||'').split(',')[0]) + '</div>' +
+      (lead.owner_name  ? '<div>Owner: <strong style="color:#1a1a2e">' + lead.owner_name + '</strong></div>' : '') +
+      (lead.lien_amount ? '<div>Amount: <strong style="color:#ff3b30">' + lead.lien_amount + '</strong></div>' : '') +
+      (lead.case_number ? '<div>Case: ' + lead.case_number + '</div>' : '') +
+    '</div>' +
+
+    // Action buttons
+    '<div style="display:flex;gap:5px;margin-top:10px">' +
+      '<a href="https://www.google.com/maps/search/' + encodeURIComponent(fa + ' ' + (lead.state||'')) + '" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:6px;background:#f5f5f7;border-radius:6px;font-size:10px;text-align:center;text-decoration:none;color:#1a1a2e">🗺️</a>' +
+      '<a href="https://www.zillow.com/homes/' + encodeURIComponent(fa) + '_rb/" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:6px;background:#f5f5f7;border-radius:6px;font-size:10px;text-align:center;text-decoration:none;color:#1a1a2e">🏠</a>' +
+      '<a href="https://www.redfin.com/search#location=' + encodeURIComponent(fa) + '" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:6px;background:#f5f5f7;border-radius:6px;font-size:10px;text-align:center;text-decoration:none;color:#1a1a2e">🔍</a>' +
+      (lead.source_url ? '<a href="' + lead.source_url + '" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:6px;background:#0071e322;border-radius:6px;font-size:10px;text-align:center;text-decoration:none;color:#0071e3">🔗</a>' : '') +
+      '<button onclick="event.stopPropagation();window._openCHLead(\'' + lead.id + '\')" style="flex:2;padding:6px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Open Deal</button>' +
+    '</div>' +
+  '</div>';
 }
 
-// ── 7. Stable Courthouse Tab (no flicker) ────────────────────
-function renderCourthouseTabStable() {
+// ── 1. Stable courthouse tab — no flicker ────────────────────────────
+window._chRendering = false; // flag to prevent concurrent renders
+
+function renderCourthouseTab() {
   var content = document.getElementById('content');
   if (!content) return;
 
-  // Update nav
-  document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
+  // Set page state
+  APP.page = 'courthouse';
+
+  // Update nav active state
+  document.querySelectorAll('.nav-item, .sidebar-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
   var tab = document.getElementById('ch-nav-tab');
   if (tab) tab.classList.add('active');
 
-  // Set page flag
-  APP.page = 'courthouse';
+  // Render shell immediately (no flicker — shell is instant)
+  content.innerHTML = buildCHShell();
 
-  content.innerHTML = chBuildShell();
-
-  // Load data once — no re-render loop
-  loadCourthouseLeads(false).then(function(leads) {
-    chRenderLeads(leads);
-    chRenderStats(leads);
+  // Load data async — renders into #ch-list without touching shell
+  window._chRendering = true;
+  fetchCHLeads(false).then(function(leads) {
+    window._chRendering = false;
+    // Only render if still on courthouse page (prevent stale render)
+    if (APP.page !== 'courthouse') return;
+    updateCHStats(leads);
+    updateCHList(leads, window.CH.filter);
+  }).catch(function() {
+    window._chRendering = false;
   });
 }
+// Expose globally
+window.renderCourthouseTabStable = renderCourthouseTab;
 
-function chBuildShell() {
-  return '<div id="courthouse-root" style="max-width:1200px">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
-      '<div>' +
-        '<div style="font-size:18px;font-weight:700">\uD83C\uDFDB\uFE0F Courthouse Deals</div>' +
-        '<div id="ch-sub" style="font-size:12px;color:#86868b">Loading...</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button onclick="chFilter(\'expiring\')" style="padding:7px 12px;background:#ff3b3022;color:#ff3b30;border:1px solid #ff3b3044;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">\u23F0 Expiring</button>' +
-        '<select id="ch-state-sel" onchange="chFilter(\'state\',this.value)" style="padding:7px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px"><option value="">All States</option></select>' +
-        '<select id="ch-type-sel" onchange="chFilter(\'type\',this.value)" style="padding:7px;border:1px solid #e5e5ea;border-radius:8px;font-size:12px">' +
+function buildCHShell() {
+  var apiState = window.CH.apiAvailable === false
+    ? '<div style="background:#fff8ee;border:1px solid #ff950044;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#8a6400">⚠️ Courthouse API not yet available — Railway is still deploying server.js. Click <strong>Run Scan</strong> once deployed to fetch leads from 117 courthouse sources.</div>'
+    : '';
+
+  return '<div id="ch-root" style="max-width:1200px">' +
+    // Header
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">' +
+      '<div><div style="font-size:18px;font-weight:700">🏛️ Courthouse Deals</div>' +
+      '<div id="ch-sub" style="font-size:12px;color:#86868b">Loading...</div></div>' +
+      '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
+        '<button onclick="window._chFilter(\'expiring\')" style="padding:7px 12px;background:#ff3b3022;color:#ff3b30;border:1px solid #ff3b3044;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600">⏰ Expiring</button>' +
+        '<select id="ch-state" onchange="window._chFilter(\'state\',this.value)" style="padding:7px;border:1px solid #e5e5ea;border-radius:8px;font-size:11px"><option value="">All States</option></select>' +
+        '<select id="ch-type" onchange="window._chFilter(\'type\',this.value)" style="padding:7px;border:1px solid #e5e5ea;border-radius:8px;font-size:11px">' +
           '<option value="">All Types</option>' +
-          '<option>Foreclosures</option><option>Probates</option><option>Liens</option>' +
-          '<option>Code Violation</option><option>Tax Delinquency</option><option>Fire Damaged Properties</option>' +
+          ['Foreclosures','Probates','Liens','Code Violation','Tax Delinquency','Fire Damaged Properties'].map(function(t){return '<option>'+t+'</option>';}).join('') +
         '</select>' +
-        '<button onclick="chRunScanNow()" style="padding:7px 14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">\u25B6 Run Scan</button>' +
+        '<button onclick="window._chRunScan()" id="ch-run-btn" style="padding:7px 14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600">▶ Run Scan</button>' +
+        '<button onclick="window._chRefresh()" style="padding:7px 12px;background:#f5f5f7;color:#1a1a2e;border:none;border-radius:8px;cursor:pointer;font-size:11px">🔄 Refresh</button>' +
       '</div>' +
     '</div>' +
-    '<div id="ch-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:18px"></div>' +
-    '<div id="ch-list"><div style="text-align:center;padding:40px;color:#86868b">Loading courthouse leads...</div></div>' +
+    apiState +
+    '<div id="ch-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:16px"></div>' +
+    '<div id="ch-list" style="min-height:200px"><div style="text-align:center;padding:60px;color:#86868b">' +
+      '<div style="font-size:32px;margin-bottom:12px">🏛️</div>' +
+      '<div style="font-size:15px;font-weight:600;margin-bottom:8px">Loading courthouse leads...</div>' +
+    '</div></div>' +
   '</div>';
 }
 
-function chRenderStats(leads) {
+function updateCHStats(leads) {
   var statsEl = document.getElementById('ch-stats');
+  var subEl   = document.getElementById('ch-sub');
+  var stateEl = document.getElementById('ch-state');
   if (!statsEl) return;
+
   var expiring = leads.filter(function(l){return l.expiring_soon;}).length;
   var byType = {};
-  leads.forEach(function(l){ var t=(l.lead_type||l.type||'Other').split(',')[0].trim();byType[t]=(byType[t]||0)+1; });
+  leads.forEach(function(l) {
+    var t = (l._ch_type||l.lead_type||'Other').split(',')[0].trim();
+    byType[t] = (byType[t]||0) + 1;
+  });
+
   var cards = [
-    {label:'Total', val:leads.length, color:'#1a1a2e'},
+    {label:'Total', val:leads.length.toLocaleString(), color:'#1a1a2e'},
     {label:'Expiring', val:expiring, color:'#ff3b30'},
   ];
-  Object.entries(byType).slice(0,4).forEach(function(e){ cards.push({label:e[0].split(' ')[0],val:e[1],color:'#0071e3'}); });
+  Object.entries(byType).slice(0,5).forEach(function(e){
+    cards.push({label:e[0].split(' ')[0], val:e[1], color:'#0071e3'});
+  });
   statsEl.innerHTML = cards.map(function(c){
     return '<div style="background:#f9f9fb;border-radius:10px;padding:12px;text-align:center">' +
       '<div style="font-size:18px;font-weight:800;color:'+c.color+'">'+c.val+'</div>' +
-      '<div style="font-size:10px;color:#86868b;font-weight:600">'+c.label+'</div></div>';
+      '<div style="font-size:9px;color:#86868b;font-weight:600;margin-top:2px">'+c.label+'</div></div>';
   }).join('');
 
-  // Subtitle
-  var sub = document.getElementById('ch-sub');
-  if (sub) sub.textContent = leads.length+' courthouse leads \u00b7 '+expiring+' expiring soon \u00b7 Merged into main dashboard';
+  if (subEl) subEl.textContent = leads.length + ' courthouse leads · ' + expiring + ' expiring soon · Merged into main dashboard';
 
-  // Populate state filter
-  var sel = document.getElementById('ch-state-sel');
-  if (sel && sel.options.length < 3) {
+  // Populate state dropdown
+  if (stateEl && stateEl.options.length < 3) {
     var states = [...new Set(leads.map(function(l){return l.state;}).filter(Boolean))].sort();
-    states.forEach(function(s){ var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o); });
+    states.forEach(function(s){var o=document.createElement('option');o.value=s;o.textContent=s;stateEl.appendChild(o);});
   }
 }
 
-function chRenderLeads(leads, filter) {
+function updateCHList(leads, filter) {
   var listEl = document.getElementById('ch-list');
   if (!listEl) return;
+
   if (!leads.length) {
-    listEl.innerHTML = '<div style="text-align:center;padding:60px;color:#86868b"><div style="font-size:32px;margin-bottom:12px">\uD83C\uDFDB\uFE0F</div><div style="font-weight:600;margin-bottom:8px">No courthouse leads yet</div><div style="font-size:12px">Click Run Scan to fetch courthouse data from 117 sources</div></div>';
+    listEl.innerHTML = '<div style="text-align:center;padding:60px;color:#86868b">' +
+      '<div style="font-size:32px;margin-bottom:12px">🏛️</div>' +
+      '<div style="font-size:15px;font-weight:600;margin-bottom:8px">No courthouse leads yet</div>' +
+      '<div style="font-size:12px;margin-bottom:16px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.6">' +
+        'Click <strong>Run Scan</strong> to fetch leads from 117 courthouse sources across 30+ states.<br>' +
+        'First scan takes 10–20 minutes. Runs automatically daily after that.' +
+      '</div>' +
+      '<div style="font-size:11px;color:#0071e3">Sources: Foreclosures · Probates · Tax Delinquent · Code Violations · Liens · Fire Damaged</div>' +
+    '</div>';
     return;
   }
 
+  // Apply filters
   var filtered = leads;
-  if (filter) {
-    if (filter.expiring) filtered = filtered.filter(function(l){return l.expiring_soon;});
-    if (filter.state)    filtered = filtered.filter(function(l){return l.state===filter.state;});
-    if (filter.type)     filtered = filtered.filter(function(l){return (l.lead_type||'').includes(filter.type)||(l.type||'').includes(filter.type);});
-  }
+  if (filter && filter.expiring) filtered = filtered.filter(function(l){return l.expiring_soon;});
+  if (filter && filter.state) filtered = filtered.filter(function(l){return l.state===filter.state;});
+  if (filter && filter.type) filtered = filtered.filter(function(l){return (l._ch_type||l.lead_type||'').includes(filter.type);});
+
+  // Sort by priority
+  filtered.sort(function(a,b){return chScore(b)-chScore(a);});
 
   var expiring  = filtered.filter(function(l){return l.expiring_soon;});
-  var bestDeals = filtered.filter(function(l){return !l.expiring_soon && (l.priority_flags||[]).some(function(f){return ['foreclosure','high_equity','vacant'].includes(f);});});
-  var rest      = filtered.filter(function(l){return !l.expiring_soon && !bestDeals.includes(l);});
+  var bestDeals = filtered.filter(function(l){
+    return !l.expiring_soon && (l.priority_flags||[]).some(function(f){
+      return ['foreclosure','high_equity','vacant','tax_delinquent','probate'].includes(f);
+    });
+  });
+  var rest = filtered.filter(function(l){
+    return !expiring.includes(l) && !bestDeals.includes(l);
+  });
 
   var html = '';
-  if (expiring.length)  html += chSection('\u23F0 Expiring Soon ('+expiring.length+')', '#ff3b30', expiring);
-  if (bestDeals.length) html += chSection('\u2B50 Best Deals ('+bestDeals.length+')', '#ff9500', bestDeals);
-  if (rest.length)      html += chSection('All Courthouse Leads ('+rest.length+')', '#86868b', rest);
+  if (expiring.length) html += chSect('⏰ Expiring Soon (' + expiring.length + ')', '#ff3b30', expiring);
+  if (bestDeals.length) html += chSect('⭐ Best Deals (' + bestDeals.length + ')', '#ff9500', bestDeals);
+  if (rest.length) html += chSect('All Courthouse Leads (' + rest.length + ')', '#86868b', rest);
 
   listEl.innerHTML = html;
 }
 
-function chSection(title, color, leads) {
-  var cards = leads.map(chLeadCard).join('');
+function chSect(title, color, leads) {
   return '<div style="margin-bottom:24px">' +
     '<div style="background:'+color+'11;border-left:4px solid '+color+';border-radius:8px;padding:10px 16px;margin-bottom:12px;font-weight:700;font-size:13px;color:'+color+'">'+title+'</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">'+cards+'</div>' +
-  '</div>';
-}
-
-function chLeadCard(l) {
-  var flags     = (l.priority_flags||[]).slice(0,3);
-  var isExpiring= l.expiring_soon;
-  var border    = isExpiring ? '2px solid #ff3b30' : '1px solid #e5e5ea';
-  var ref       = l.ref_id || getCHRefId(l);
-  var mc        = typeof matchBuyersToLead==='function' ? matchBuyersToLead(l, APP.buyers||[]).length : 0;
-
-  var pills = flags.map(function(f){
-    var col = chFlagColor(f);
-    return '<span style="background:'+col+'22;color:'+col+';font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">'+f.replace(/_/g,' ').toUpperCase()+'</span>';
-  }).join('');
-
-  return '<div data-lid="'+l.id+'" onclick="openLeadDetailFixed(this.dataset.lid)" style="background:#fff;border:'+border+';border-radius:12px;padding:14px;cursor:pointer" onmouseover="this.style.background=\'#f9f9fb\'" onmouseout="this.style.background=\'#fff\'">' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">' +
-          '<span style="background:#1a1a2e;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap">'+ref+'</span>' +
-          '<span style="font-size:12px;font-weight:700;color:#1a1a2e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(l.address||'No address')+'</span>' +
-        '</div>' +
-        '<div style="font-size:11px;color:#86868b">'+(l.county||l.market||'')+', '+l.state+'</div>' +
-      '</div>' +
-      (mc ? '<span style="font-size:10px;color:#0071e3;font-weight:600;white-space:nowrap;margin-left:8px">'+mc+' buyers</span>' : '') +
-    '</div>' +
-    (l.auction_date ? '<div style="background:#fff0f0;color:#ff3b30;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-bottom:8px;display:inline-block">\u23F0 Auction: '+l.auction_date+'</div>' : '') +
-    '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">'+pills+'</div>' +
-    '<div style="font-size:11px;color:#86868b;line-height:1.6">' +
-      '<div style="font-size:10px;color:#0071e3;font-weight:600">'+((l.lead_type||l._ch_type||'').split(',')[0])+'</div>' +
-      (l.owner_name  ? '<div>Owner: <strong>'+l.owner_name+'</strong></div>' : '') +
-      (l.lien_amount ? '<div>Amount: <strong style="color:#ff3b30">'+l.lien_amount+'</strong></div>' : '') +
-      (l.case_number ? '<div>Case: '+l.case_number+'</div>' : '') +
-    '</div>' +
-    '<div style="display:flex;gap:5px;margin-top:10px">' +
-      '<a href="https://www.google.com/maps/search/'+encodeURIComponent((l.address||'')+' '+l.state)+'" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:5px;background:#f5f5f7;border-radius:6px;cursor:pointer;font-size:10px;text-align:center;text-decoration:none;color:#1a1a2e">\uD83D\uDDFA</a>' +
-      '<a href="https://www.zillow.com/homes/'+encodeURIComponent(fullAddress(l))+'_rb/" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:5px;background:#f5f5f7;border-radius:6px;cursor:pointer;font-size:10px;text-align:center;text-decoration:none;color:#1a1a2e">\uD83C\uDFE0</a>' +
-      (l.source_url ? '<a href="'+l.source_url+'" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:5px;background:#0071e322;border-radius:6px;cursor:pointer;font-size:10px;text-align:center;text-decoration:none;color:#0071e3">\uD83D\uDD17</a>' : '') +
-      '<button onclick="event.stopPropagation();openBulkSendToBuyer(\''+l.id+'\')" style="flex:2;padding:5px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Send Deals</button>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">' +
+      leads.map(chLeadCard).join('') +
     '</div>' +
   '</div>';
 }
 
-function chFlagColor(f) {
-  var m={foreclosure:'#ff3b30',auction_expiring:'#ff3b30',probate:'#5e5ce6',tax_delinquent:'#ff9500',code_violation:'#ff6b00',fire_damaged:'#dc2626',lien:'#0071e3',vacant:'#8b5cf6',out_of_state_owner:'#34c759',potential_equity:'#34c759',bankruptcy:'#64748b',divorce:'#ec4899'};
-  return m[f]||'#86868b';
-}
-
-// ── 8. Filter handler ─────────────────────────────────────────
-window._chFilter = {};
-window.chFilter = function(type, val) {
-  if (type==='expiring') { window._chFilter = {expiring:true}; }
-  else if (type==='state') { window._chFilter.state = val||null; }
-  else if (type==='type')  { window._chFilter.type  = val||null; }
-  chRenderLeads(window._CH.leads, window._chFilter);
+// ── Filter handlers ───────────────────────────────────────────────────
+window._chFilter = function(type, val) {
+  if (type === 'expiring') { window.CH.filter = {expiring:true}; }
+  else if (type === 'state') { window.CH.filter.state = val||null; window.CH.filter.expiring = false; }
+  else if (type === 'type')  { window.CH.filter.type  = val||null; window.CH.filter.expiring = false; }
+  updateCHList(window.CH.leads, window.CH.filter);
 };
 
-// ── 9. Run scan ───────────────────────────────────────────────
-window.chRunScanNow = function() {
-  fetch('/api/courthouse/run', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
-    .then(function(){ toast('Courthouse scan started — check back in 10-20 min','success'); })
-    .catch(function(){ toast('Scan API not ready yet — Railway still deploying',''); });
+window._chRefresh = function() {
+  window.CH.lastFetch = 0; // force re-fetch
+  fetchCHLeads(true).then(function(leads) {
+    if (APP.page === 'courthouse') {
+      updateCHStats(leads);
+      updateCHList(leads, window.CH.filter);
+    }
+  });
 };
 
-// ── 10. Nav injection — single tab, no duplicates ─────────────
+window._chRunScan = function() {
+  var btn = document.getElementById('ch-run-btn');
+  if (btn) { btn.textContent = '⏳ Running...'; btn.disabled = true; }
+  fetch(CH_API_BASE + '/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(function() {
+      if (typeof toast === 'function') toast('Courthouse scan started — check back in 10–20 min', 'success');
+      if (btn) { btn.textContent = '▶ Run Scan'; btn.disabled = false; }
+    })
+    .catch(function() {
+      if (typeof toast === 'function') toast('Run Scan API not ready yet — Railway still deploying', '');
+      if (btn) { btn.textContent = '▶ Run Scan'; btn.disabled = false; }
+    });
+};
+
+// ── Click handler exposed globally ───────────────────────────────────
+window._openCHLead = openCHLead;
+
+// ── 6. Search integration — CH- refs searchable ──────────────────────
+var _origSearch = typeof globalSearch === 'function' ? globalSearch : null;
+window.globalSearch = function(query) {
+  if (!query) return;
+  // CH- reference search
+  if (/^CH-\d+$/i.test(query.trim())) {
+    var chRef = query.trim().toUpperCase();
+    // Ensure courthouse leads are in APP.leads
+    if (window.CH.loaded) mergeIntoApp(window.CH.leads);
+    var lead = (APP.leads||[]).find(function(l){
+      return (l.ref_id||'').toUpperCase() === chRef || (l._ch_ref||'').toUpperCase() === chRef;
+    });
+    if (lead) {
+      openCHLead(lead.id);
+      return;
+    }
+    // Also check CH store directly
+    var chLead = (window.CH.leads||[]).find(function(l){
+      return (l.ref_id||'').toUpperCase() === chRef;
+    });
+    if (chLead) { openCHLead(chLead.id); return; }
+  }
+  if (_origSearch) _origSearch(query);
+};
+
+// ── 1. Fix flickering — hook render() to not clobber courthouse tab ──
+var _origRender = typeof render === 'function' ? render : null;
+window.render = function() {
+  // If on courthouse page, re-render courthouse tab instead of main app
+  if (APP && APP.page === 'courthouse') {
+    // Only re-render if not already rendering (prevent loop)
+    if (!window._chRendering) {
+      var root = document.getElementById('ch-root');
+      if (root) {
+        // Tab is already rendered — just refresh the list
+        updateCHList(window.CH.leads, window.CH.filter);
+        return;
+      }
+      renderCourthouseTab();
+    }
+    return;
+  }
+  return _origRender ? _origRender.apply(this, arguments) : undefined;
+};
+
+// ── Nav injection — single tab, no duplicates ─────────────────────────
 function injectCHNav() {
-  // Remove any duplicate courthouse tabs
-  document.querySelectorAll('#ch-nav-tab, [id=ch-nav-tab]').forEach(function(el,i){ if(i>0) el.remove(); });
+  // Remove unnamed courthouse tabs (legacy)
+  document.querySelectorAll('.nav-item, [onclick*="page"]').forEach(function(el) {
+    if (!el.id && el.textContent.trim().includes('Courthouse')) el.remove();
+  });
   if (document.getElementById('ch-nav-tab')) return;
 
-  var nav = document.querySelector('.sidebar, nav, [class*="sidebar"]');
-  if (!nav) {
-    // Find nav by looking for existing nav buttons
-    var anyNavBtn = document.querySelector('[onclick*="APP.page"]');
-    if (anyNavBtn) nav = anyNavBtn.parentElement;
-  }
+  // Find nav container
+  var anyBtn = document.querySelector('[onclick*="APP.page"], .nav-item');
+  if (!anyBtn) return;
+  var nav = anyBtn.parentElement;
   if (!nav) return;
 
   var tab = document.createElement('div');
   tab.id = 'ch-nav-tab';
-  tab.className = 'nav-item';
-  tab.style.cssText = 'position:relative;cursor:pointer';
-  tab.onclick = function(){ renderCourthouseTabStable(); };
-  tab.innerHTML = '\uD83C\uDFDB\uFE0F Courthouse';
+  tab.className = anyBtn.className;
+  tab.style.cssText = 'position:relative;cursor:pointer;user-select:none';
+  tab.onclick = function() { renderCourthouseTab(); };
+  tab.innerHTML = '🏛️ Courthouse';
 
-  // Badge
   var badge = document.createElement('span');
   badge.id = 'ch-exp-badge';
-  badge.style.cssText = 'position:absolute;top:-4px;right:-4px;background:#ff3b30;color:#fff;border-radius:9px;font-size:9px;font-weight:700;padding:1px 4px;display:none;min-width:16px;text-align:center';
+  badge.style.cssText = 'position:absolute;top:-4px;right:-6px;background:#ff3b30;color:#fff;border-radius:9px;font-size:9px;font-weight:700;padding:1px 5px;display:none';
   tab.appendChild(badge);
   nav.appendChild(tab);
-
-  // Update expiring badge
-  if (window._CH && window._CH.leads.length) {
-    var exp = window._CH.leads.filter(function(l){return l.expiring_soon;}).length;
-    if (exp) { badge.textContent=exp; badge.style.display=''; }
-  }
 }
 
-// ── 11. Merge courthouse into renderLeads (main dashboard) ────
-//    Courthouse leads appear BELOW regular leads in main list
-var _origRenderLeads = typeof renderLeads === 'function' ? renderLeads : null;
-renderLeads = function() {
-  // Ensure courthouse leads are merged
-  if (window._CH && window._CH.loaded && window._CH.leads.length) {
-    mergeCourthouseIntoApp(window._CH.leads);
-  }
-  return _origRenderLeads ? _origRenderLeads.apply(this, arguments) : '';
-};
+// Update expiring badge count
+function updateCHBadge() {
+  var badge = document.getElementById('ch-exp-badge');
+  if (!badge) return;
+  var exp = (window.CH.leads||[]).filter(function(l){return l.expiring_soon;}).length;
+  badge.textContent = exp;
+  badge.style.display = exp > 0 ? '' : 'none';
+}
 
-// ── 12. Search integration — CH- ref IDs are searchable ───────
-var _origGlobalSearch = typeof globalSearch === 'function' ? globalSearch : null;
-globalSearch = function(query) {
-  // Check if searching for courthouse ref
-  if (query && query.match(/^CH-\d+$/i)) {
-    var lead = (APP.leads||[]).find(function(l){ return (l.ref_id||'').toLowerCase()===query.toLowerCase(); });
-    if (lead) {
-      openLeadDetailFixed(lead.id);
-      return;
-    }
-  }
-  // Include courthouse leads in APP.leads before searching
-  if (window._CH && window._CH.loaded) mergeCourthouseIntoApp(window._CH.leads);
-  if (_origGlobalSearch) _origGlobalSearch(query);
-};
-
-// ── 13. Hook render() to prevent courthouse tab flicker ───────
-var _origRenderGlobal = typeof render === 'function' ? render : null;
-render = function() {
-  if (APP && APP.page === 'courthouse') {
-    // Don't let the main render clobber the courthouse tab
-    var el = document.getElementById('courthouse-root');
-    if (el) return; // Already rendered, skip
-    renderCourthouseTabStable();
-    return;
-  }
-  return _origRenderGlobal ? _origRenderGlobal.apply(this, arguments) : undefined;
-};
-
-// ── 14. Boot sequence ─────────────────────────────────────────
+// ── 8. Boot — load courthouse leads silently into APP on startup ──────
 (function boot() {
-  // Load courthouse leads into APP silently on startup
-  loadCourthouseLeads(false).then(function(leads) {
-    if (leads.length) {
-      console.log('Courthouse boot: merged', leads.length, 'leads into APP.leads');
-      updateLeadsBadge();
-    }
-  });
-
-  // Inject nav tab
+  // Inject nav
   injectCHNav();
 
-  // Remove duplicate tabs (old courthouse-tab.js may have added one)
-  setTimeout(function() {
-    var tabs = document.querySelectorAll('.nav-item');
-    var chTabs = Array.from(tabs).filter(function(el){ return el.textContent.trim().includes('Courthouse') && !el.id; });
-    chTabs.forEach(function(el){ el.remove(); }); // remove unnamed duplicates
-    injectCHNav();
-  }, 1000);
-
-  // MutationObserver to keep nav tab present
-  if (!window._chNavObs2) {
-    window._chNavObs2 = new MutationObserver(function() {
+  // Keep nav tab present through re-renders
+  if (!window._chNavObs) {
+    window._chNavObs = new MutationObserver(function() {
       if (!document.getElementById('ch-nav-tab')) injectCHNav();
     });
-    window._chNavObs2.observe(document.body, {childList:true, subtree:false});
+    window._chNavObs.observe(document.body, {childList:true, subtree:false});
   }
+
+  // Silently pre-load courthouse leads (merge into APP without triggering render)
+  fetchCHLeads(false).then(function(leads) {
+    if (leads.length) {
+      console.log('Courthouse: pre-loaded', leads.length, 'leads into APP.leads');
+      updateCHBadge();
+    }
+  });
 })();
 
-console.log('WholesaleOS Courthouse Integration Patch loaded — all 9 issues fixed');
+console.log('Courthouse Integration v2 loaded — 9 issues fixed');
+})(); // end IIFE
