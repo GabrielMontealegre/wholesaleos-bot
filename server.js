@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const path    = require('path');
 const db      = require('./db');
+const { validateLead } = require('./modules/lead-validator');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -168,13 +169,16 @@ app.post('/api/leads/import', (req, res) => {
     if (!leads || !Array.isArray(leads)) return res.status(400).json({ error: 'No leads array' });
     const existing = new Set(db.getLeads().map(l => l.address?.toLowerCase().trim()));
     let imported = 0;
+      const rejected = [];
     for (const lead of leads) {
       if (!lead.address) continue;
       if (existing.has(lead.address.toLowerCase().trim())) continue;
+      const _vr = validateLead(lead, seenAddresses);
+      if (!_vr.valid) { rejected.push({ address: lead.address, reason: _vr.reason }); continue; }
       db.addLead({ ...lead, status: lead.status || 'New Lead', source: lead.source || 'CSV Import' });
       imported++;
     }
-    res.json({ ok: true, imported, total: leads.length, skipped: leads.length - imported });
+    res.json({ ok: true, imported, total: leads.length, skipped: leads.length - imported, rejected: rejected.length, rejectedLeads: rejected });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
