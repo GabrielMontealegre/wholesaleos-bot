@@ -1,5 +1,27 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 UI data access — lead click, comps, email content all broken
+
+**Symptom 1 — Lead click did nothing.**
+Root cause: openLeadDetailFixed(id) was called in 7 places across patch_v4.js but never defined anywhere.
+Fix: Defined window.openLeadDetailFixed as a guarded alias to openLeadModal(id).
+Rule: Never call a function in a patch without defining it in the same patch file.
+
+**Symptom 2 — Comps/deal math did not render after selecting a lead.**
+Root cause: selectLead(id) set APP.selectedLead then called generic render() which does not
+trigger renderLeadDetail(). The detail panel stayed blank.
+Fix: Overrode selectLead() in patch to additionally call openLeadModal(id) after the original.
+Rule: Selecting a lead must always trigger renderLeadDetail(). Never rely on render() alone.
+
+**Symptom 3 — Email list showed but clicking an email did nothing.**
+Root cause: loadEmail() built message row divs with no onclick handlers. email-body element
+received a skeleton placeholder but was never updated with actual content.
+Fix: Overrode loadEmail() in patch to attach click listeners after DOM render (300ms).
+Added openEmailContent(msg) which writes subject/from/date/body to #email-body innerHTML.
+Rule: Every rendered list item must have an onclick. Never render a list without wiring clicks.
+
+---
+
 ## 2026-04-16 Runtime token waste — same leads reprocessed on every scan call
 
 **Symptom:** AI calls to analyzeProperty() fired on every /api/automation/scan, /api/search/leads,
