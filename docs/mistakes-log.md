@@ -1,5 +1,23 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 Lead data accuracy — validation layer added
+
+**Problem:** No validation existed before addLead(). Bad addresses, placeholder values,
+mismatched city/state/ZIP, and invalid phone numbers could be saved to db.json.
+Duplicate addresses were caught by a Set but only within a single import batch.
+
+**Fix:** Added modules/lead-validator.js, called before every db.addLead() in /api/leads/import.
+Checks: (1) address must start with a digit and not be a placeholder, (2) state must be a valid
+2-letter US abbreviation, (3) city must not be empty/placeholder, (4) ZIP prefix must match state
+(e.g. TX lead cannot have a ZIP starting with 9), (5) phone must be 10 or 11 digits if present.
+Rejected leads are returned in the API response as rejectedLeads[] for logging.
+
+**Rule:** Every lead must pass validateLead() before addLead() is called.
+Never call addLead() directly without running the validator first.
+Rejected leads must never be silently dropped — always include them in the import response.
+
+---
+
 Bugs that have occurred, their root causes, and confirmed fixes.
 Add new entries at the top. Never delete old entries.
 
