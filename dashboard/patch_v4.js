@@ -854,4 +854,85 @@ logLesson('rendering','Multiple render hooks caused flicker loops','Remove rende
   updateLeadsBadge();
 })();
 
-console.log('WholesaleOS Patch v7 loaded — 14 fixes applied');
+// v7 loaded (see v8 log below)
+
+// ─── UI FIX v8: lead click + comps + email content ─────────────────────────
+
+// FIX 1: openLeadDetailFixed was called everywhere but never defined.
+// Delegates to openLeadModal which calls renderLeadDetail + shows panel.
+window.openLeadDetailFixed = function(id) {
+  if (!id) { console.error("[fix] openLeadDetailFixed: no id"); return; }
+  if (typeof openLeadModal === "function") {
+    openLeadModal(id);
+  } else {
+    console.error("[fix] openLeadModal not found");
+  }
+};
+
+// FIX 2: selectLead sets APP.selectedLead but never opened the detail panel.
+// Override it to also call openLeadModal so comps/deal math render.
+(function() {
+  var _origSelectLead = window.selectLead;
+  window.selectLead = function(id) {
+    if (!id) return;
+    if (typeof _origSelectLead === "function") _origSelectLead(id);
+    if (typeof openLeadModal === "function") openLeadModal(id);
+  };
+})();
+
+// FIX 3: Email message items had no onclick. email-body never got content.
+// openEmailContent writes subject + body to #email-body.
+window.openEmailContent = function(msg) {
+  if (!msg) { console.error("[fix] openEmailContent: no msg"); return; }
+  var el = document.getElementById("email-body");
+  if (!el) { console.error("[fix] #email-body not found"); return; }
+  var subject  = msg.subject  || msg.Subject  || "(no subject)";
+  var sender   = msg.from     || msg.sender   || msg.From || "";
+  var date     = msg.date     || msg.Date     || "";
+  var body     = msg.body     || msg.html     || msg.text || msg.snippet || "(no content)";
+  el.innerHTML =
+    "<div style='padding:16px;font-family:sans-serif'>" +
+      "<div style='font-size:18px;font-weight:600;margin-bottom:8px'>" + subject + "</div>" +
+      (sender ? "<div style='color:#888;font-size:13px;margin-bottom:4px'>From: " + sender + "</div>" : "") +
+      (date   ? "<div style='color:#aaa;font-size:12px;margin-bottom:12px'>" + date + "</div>" : "") +
+      "<hr style='margin:8px 0;border-color:#333'>" +
+      "<div style='margin-top:12px;line-height:1.6'>" + body + "</div>" +
+    "</div>";
+};
+
+// Patch loadEmail to inject onclick on each message row.
+(function() {
+  var _origLoadEmail = window.loadEmail;
+  window.loadEmail = function() {
+    if (typeof _origLoadEmail === "function") _origLoadEmail();
+    // After a short wait for the DOM to render, attach click handlers
+    setTimeout(function() {
+      var list = document.getElementById("email-list");
+      if (!list) return;
+      var items = list.querySelectorAll("[data-msg-idx], .email-row, div[data-id]");
+      if (!items.length) {
+        // Fallback: attach to all direct children divs
+        items = list.querySelectorAll("div");
+      }
+      items.forEach(function(item, i) {
+        if (item._emailFixed) return; // already patched
+        item._emailFixed = true;
+        item.style.cursor = "pointer";
+        item.addEventListener("click", function() {
+          // Try to get msg from data attributes or APP.messages array
+          var idx = parseInt(item.dataset.msgIdx || item.dataset.idx || i, 10);
+          var msgs = window.APP && (APP.messages || APP.emails || APP.inbox || []);
+          var msg = (msgs && !isNaN(idx)) ? msgs[idx] : null;
+          if (!msg) {
+            // Build from DOM text as fallback
+            msg = { subject: item.querySelector(".subject, .email-subject") ?
+              item.querySelector(".subject, .email-subject").innerText : item.innerText.slice(0,80) };
+          }
+          openEmailContent(msg);
+        });
+      });
+    }, 300);
+  };
+})();
+
+console.log("WholesaleOS Patch v8 — UI fix: lead click + comps + email content");
