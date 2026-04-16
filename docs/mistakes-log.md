@@ -1,5 +1,24 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 Runtime token waste — same leads reprocessed on every scan call
+
+**Symptom:** AI calls to analyzeProperty() fired on every /api/automation/scan, /api/search/leads,
+and /api/states/populate even when lead data had not changed.
+
+**Root cause:** No processed-lead cache existed. No lead-count snapshot checked before the market
+loop. All 3 analyzeProperty() call sites ran unconditionally. 9 top-level console.log statements
+emitted on every request cycle.
+
+**Fix:** Added modules/runtime-cache.js (TTL 10 min, auto-prune 15 min). Scan handler now checks
+lead-count snapshot key — skips entirely if unchanged. All 3 analyzeProperty() calls wrapped with
+enrich: cache guard. 9 top-level verbose logs silenced.
+
+**Rule:** Never call analyzeProperty() without first checking _rc.has('enrich:' + lead.id).
+Never run the scan market loop without first checking the lead-count snapshot key.
+Never add top-level console.log — use console.error for real errors only.
+
+---
+
 ## 2026-04-16 Lead URL field validation added
 
 **Problem:** sourceUrl, photoUrl, zillowUrl, redfinUrl, streetViewUrl could contain
