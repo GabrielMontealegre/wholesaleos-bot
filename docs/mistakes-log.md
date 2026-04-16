@@ -1,5 +1,19 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 Lead URL field validation added
+
+**Problem:** sourceUrl, photoUrl, zillowUrl, redfinUrl, streetViewUrl could contain
+placeholder strings, empty values, or malformed URLs and were saved without checks.
+
+**Fix:** isValidUrl() added to lead-validator.js. If a URL field is present it must
+start with http:// or https:// and be at least 10 chars. Placeholder values rejected.
+URL fields are optional — blank/missing is allowed.
+
+**Rule:** Never save a lead URL field that does not pass isValidUrl().
+Affected fields: sourceUrl, photoUrl, zillowUrl, redfinUrl, streetViewUrl.
+
+---
+
 ## 2026-04-16 Lead data accuracy — validation layer added
 
 **Problem:** No validation existed before addLead(). Bad addresses, placeholder values,
