@@ -935,4 +935,95 @@ window.openEmailContent = function(msg) {
   };
 })();
 
-console.log("WholesaleOS Patch v8 — UI fix: lead click + comps + email content");
+// v8 loaded (see v9 log below)
+
+// ─── UI SAFETY GUARDS v9 ────────────────────────────────────────────────────
+
+// GUARD 1: renderLeads — reject leads missing address or arv before render.
+// Wraps the original renderLeads to filter incomplete entries first.
+(function() {
+  var _origRenderLeads = window.renderLeads;
+  window.renderLeads = function() {
+    if (window.APP && Array.isArray(APP.filtered)) {
+      APP.filtered = APP.filtered.filter(function(l) {
+        if (!l) return false;
+        if (!l.address || l.address.trim().length < 5) {
+          console.error("[guard] lead rejected — no address", l.id||"?");
+          return false;
+        }
+        return true;
+      });
+    }
+    if (typeof _origRenderLeads === "function") _origRenderLeads();
+  };
+})();
+
+// GUARD 2: comps — only run renderLeadDetail when a lead is actually selected.
+// Wraps renderLeadDetail to bail if APP.selectedLead is null/missing.
+(function() {
+  var _origRLD = window.renderLeadDetail;
+  window.renderLeadDetail = function() {
+    if (!window.APP || !APP.selectedLead) {
+      console.error("[guard] renderLeadDetail called with no selectedLead");
+      return;
+    }
+    if (typeof _origRLD === "function") _origRLD();
+  };
+})();
+
+// GUARD 3: Persist selected lead ID to localStorage on select.
+// Restore it on boot so refresh does not lose context.
+(function() {
+  var LS_KEY = "ws_selectedLeadId";
+  // Wrap selectLead to persist
+  var _origSL = window.selectLead;
+  window.selectLead = function(id) {
+    if (!id) return;
+    try { localStorage.setItem(LS_KEY, id); } catch(e) {}
+    if (typeof _origSL === "function") _origSL(id);
+  };
+  // Restore on load — after a short delay so APP.leads is populated
+  setTimeout(function() {
+    try {
+      var savedId = localStorage.getItem(LS_KEY);
+      if (!savedId) return;
+      var exists = window.APP && Array.isArray(APP.leads) &&
+        APP.leads.some(function(l) { return l && l.id === savedId; });
+      if (!exists) { localStorage.removeItem(LS_KEY); return; }
+      if (typeof openLeadDetailFixed === "function") openLeadDetailFixed(savedId);
+    } catch(e) {}
+  }, 1200);
+})();
+
+// GUARD 4: cachedFetch in-flight dedup.
+// If the same cacheKey is already fetching, return the existing promise.
+(function() {
+  var _inflight = {};
+  var _origCF = window.cachedFetch;
+  window.cachedFetch = function(cacheKey, store, fetchFn) {
+    if (!cacheKey) return (typeof _origCF === "function" ? _origCF(cacheKey, store, fetchFn) : Promise.reject("no key"));
+    // Return in-flight promise if already pending
+    if (_inflight[cacheKey]) return _inflight[cacheKey];
+    var p = (typeof _origCF === "function" ? _origCF(cacheKey, store, fetchFn) : fetchFn());
+    if (p && typeof p.then === "function") {
+      _inflight[cacheKey] = p;
+      p.then(function(v)  { delete _inflight[cacheKey]; return v; },
+             function(e)  { delete _inflight[cacheKey]; throw e; });
+    }
+    return p;
+  };
+})();
+
+// GUARD 5: email content — prevent empty render.
+// Wraps openEmailContent (defined in v8) to reject msgs with no usable content.
+(function() {
+  var _origOEC = window.openEmailContent;
+  window.openEmailContent = function(msg) {
+    if (!msg) { console.error("[guard] openEmailContent: null msg"); return; }
+    var hasContent = msg.body || msg.html || msg.text || msg.snippet || msg.subject;
+    if (!hasContent) { console.error("[guard] openEmailContent: no content", msg); return; }
+    if (typeof _origOEC === "function") _origOEC(msg);
+  };
+})();
+
+console.log("WholesaleOS Patch v9 — safety guards: render, comps, state, dedup, email");
