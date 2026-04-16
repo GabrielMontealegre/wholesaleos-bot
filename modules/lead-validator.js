@@ -54,6 +54,14 @@ var ZIP_STATE = {
   '0':['CT','MA','RI','VT','NH','ME','NJ','NY']
 };
 
+// URL fields are optional — if present must be a real http/https URL, not a placeholder
+function isValidUrl(u) {
+  if (!u) return true;
+  var s = String(u).trim();
+  if (s.length < 10) return false;
+  for (var i=0;i<PLACEHOLDER_RE.length;i++) if (PLACEHOLDER_RE[i].test(s)) return false;
+  return /^https?:\/\/.{4,}/.test(s);
+}
 function stateMatchesZip(state, zip) {
   if (!zip || !state) return true;
   var prefix = String(zip).trim()[0];
@@ -90,6 +98,14 @@ function validateLead(lead, existingAddressSet) {
   var phone = l.phone || l.phone_number || l.owner_phone || '';
   if (!isValidPhone(phone)) return { valid:false, reason:'invalid_phone:'+phone };
 
+
+  // 7. URL fields — if present must be valid http/https (optional fields)
+  var urlFields = ['sourceUrl','photoUrl','zillowUrl','redfinUrl','streetViewUrl'];
+  for (var ui=0;ui<urlFields.length;ui++) {
+    var uf = urlFields[ui];
+    if (l[uf] && !isValidUrl(l[uf]))
+      return { valid:false, reason:'invalid_url:'+uf+'='+l[uf] };
+  }
   return { valid:true };
 }
 
