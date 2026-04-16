@@ -6,6 +6,7 @@ const express = require('express');
 const path    = require('path');
 const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
+const _rc = require('./modules/runtime-cache');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -454,13 +455,19 @@ app.post('/api/automation/scan', async (req, res) => {
       const scanned = db.getScannedMarkets();
       const markets = selectMarketsForWeek(req.body?.markets||4, scanned);
       let totalLeads = 0;
+      const _scanKey = 'scan:leads:' + (db.getLeads ? db.getLeads().length : 0);
+      if (_rc.has(_scanKey)) { res.json({ ok:true, skipped:true, reason:'no_new_leads' }); return; }
+      _rc.set(_scanKey, 1);
       for (const market of markets) {
         const leads = await ai.generateLeadList(market.county, market.state, req.body?.count||20, ['Pre-FC','REO','Long DOM','FSBO','Probate']);
         let added = 0;
         for (const lead of leads) {
           if (db.leadExists(lead.address)) continue;
           let analysis = {};
+          if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
+          else { _rc.set('enrich:' + (lead.id||lead.address), 1);
           try { analysis = await ai.analyzeProperty({...lead, county:market.county, state:market.state}); } catch {}
+          }
           const mData = getMarketData(market.county, market.state);
           const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : mData.arv);
           const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
@@ -664,7 +671,10 @@ app.post('/api/search/leads', async (req, res) => {
       for (const lead of leads) {
         if (db.leadExists(lead.address)) continue;
         let analysis = {};
+        if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
+        else { _rc.set('enrich:' + (lead.id||lead.address), 1);
         try { analysis = await ai.analyzeProperty({...lead, county, state}); } catch {}
+        }
         const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : market.arv);
         const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
         const off = analysis.offer > 10000 ? analysis.offer : Math.round((arv*0.70-rep)*0.94);
@@ -723,7 +733,10 @@ app.post('/api/states/populate', async (req, res) => {
         for (const lead of leads) {
           if (db.leadExists(lead.address)) continue;
           let analysis = {};
+          if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
+          else { _rc.set('enrich:' + (lead.id||lead.address), 1);
           try { analysis = await ai.analyzeProperty({...lead, county, state:stateCode}); } catch {}
+          }
           const arv = analysis.arv > 50000 ? analysis.arv : market.arv;
           const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
           const off = Math.round((arv*0.70-rep)*0.94);
@@ -2452,7 +2465,7 @@ var ALL_STATES = [
 
 // ── Main daily engine ─────────────────────────────────────────
 async function runDailyEngine() {
-  console.log('[Engine] Daily run starting:', new Date().toISOString());
+  // console.log('[Engine] Daily run starting:', new Date().toISOString());
   var dbData = db.readDB();
   dbData.leads = dbData.leads || [];
   dbData.buyers = dbData.buyers || [];
@@ -2462,7 +2475,7 @@ async function runDailyEngine() {
   var newBuyers = 0;
 
   // ── PHASE 1: Enrich existing leads with analysis ──────────
-  console.log('[Engine] Phase 1: Enriching existing leads...');
+  // console.log('[Engine] Phase 1: Enriching existing leads...');
   var enrichCount = 0;
   for (var i = 0; i < dbData.leads.length; i++) {
     var lead = dbData.leads[i];
@@ -2487,10 +2500,10 @@ async function runDailyEngine() {
     }
   }
   db.writeDB(dbData);
-  console.log('[Engine] Phase 1 done. Enriched ' + enrichCount + ' leads.');
+  // console.log('[Engine] Phase 1 done. Enriched ' + enrichCount + ' leads.');
 
   // ── PHASE 2: Find buyers in all 50 states ─────────────────
-  console.log('[Engine] Phase 2: 50-state buyer search...');
+  // console.log('[Engine] Phase 2: 50-state buyer search...');
   for (var si = 0; si < ALL_STATES.length; si++) {
     var stateInfo = ALL_STATES[si];
     try {
@@ -2522,7 +2535,7 @@ async function runDailyEngine() {
   }
 
   // ── PHASE 3: Find deals in top markets ───────────────────
-  console.log('[Engine] Phase 3: Deal scraping...');
+  // console.log('[Engine] Phase 3: Deal scraping...');
   var dealMarkets = [
     {city:'dallas', state:'TX'}, {city:'houston', state:'TX'}, {city:'phoenix', state:'AZ'},
     {city:'miami', state:'FL'}, {city:'orlando', state:'FL'}, {city:'atlanta', state:'GA'},
@@ -2599,7 +2612,7 @@ async function runDailyEngine() {
   db.writeDB(dbData);
 
   var summary = '[Engine] Done. +' + newLeads + ' leads, +' + newBuyers + ' buyers. Total: ' + dbData.leads.length + ' leads, ' + dbData.buyers.length + ' buyers.';
-  console.log(summary);
+  // console.log(summary);
   return { newLeads: newLeads, newBuyers: newBuyers, enriched: enrichCount, summary: summary };
 }
 
@@ -2639,11 +2652,11 @@ app.post('/api/engine/enrich-lead', function(req, res) {
 // Schedule daily at 3AM MST (10AM UTC)
 var cron = require('node-cron');
 cron.schedule('0 10 * * *', function() {
-  console.log('[Engine] Cron triggered daily run');
+  // console.log('[Engine] Cron triggered daily run');
   runDailyEngine().catch(function(e) { console.error('[Engine] Cron error:', e.message); });
 }, { timezone: 'America/Denver' });
 
-console.log('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
+// console.log('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
 
 // ============================================================
 // END WHOLESALEOS INTELLIGENCE ENGINE
@@ -2796,7 +2809,7 @@ app.post('/api/daily-summary', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-console.log('✅ Buyers CRM extended routes registered (7 endpoints)');
+// console.log('✅ Buyers CRM extended routes registered (7 endpoints)');
 // ============================================================
 // END BUYERS CRM EXTENDED ROUTES
 // ============================================================
