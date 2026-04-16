@@ -1,5 +1,37 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 Missing safety guards — render, comps, state, fetch dedup, email
+
+**renderLeads — no data completeness check.**
+Root cause: Leads missing address rendered into the table, causing blank rows and broken links.
+Fix: Wrapped renderLeads to filter APP.filtered before render. Leads without a 5-char address
+are rejected and logged to console.error.
+Rule: Never render a lead row without validating address exists.
+
+**renderLeadDetail — called without a selected lead.**
+Root cause: renderLeadDetail() could be triggered before APP.selectedLead was set, causing
+blank or stale comps panels.
+Fix: Wrapped renderLeadDetail to bail with console.error if APP.selectedLead is null.
+Rule: renderLeadDetail must never run without a valid APP.selectedLead.
+
+**Selected lead lost on page refresh.**
+Root cause: APP.selectedLead was only in memory — refresh cleared it.
+Fix: selectLead() now writes ID to localStorage. On boot (1.2s delay for leads to load),
+restores selection if the lead still exists in APP.leads.
+Rule: Selected lead ID must be persisted to localStorage on every select call.
+
+**cachedFetch — no in-flight dedup.**
+Root cause: Same URL called twice before first resolved fired two separate fetches.
+Fix: Added _inflight map. Same cacheKey returns existing promise until resolved.
+Rule: cachedFetch must return an in-flight promise for duplicate keys.
+
+**openEmailContent — no content completeness check.**
+Root cause: Could render with a msg object that had no body/subject, writing blank HTML.
+Fix: Wrapped openEmailContent to reject msgs with no usable content field.
+Rule: Never render email content without at least one of: body, html, text, snippet, subject.
+
+---
+
 ## 2026-04-16 UI data access — lead click, comps, email content all broken
 
 **Symptom 1 — Lead click did nothing.**
