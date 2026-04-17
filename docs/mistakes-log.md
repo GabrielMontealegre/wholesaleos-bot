@@ -1,5 +1,25 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-17 renderLeadDetail crash — parameter not passed to original function
+
+**Symptom:** Lead modal showed fallback (200-char short content) instead of full detail.
+renderLeadDetail returned undefined even with APP.selectedLead set.
+
+**Root cause:** The original renderLeadDetail(l) takes a lead object as parameter.
+All wrapper layers called renderLeadDetail() with NO argument, so l=undefined → crash on l.phone.
+Multiple stacked wrappers (v8-v12) each captured the previous wrapper as "original",
+creating a broken chain where _origRLD3 → _origRLD2 → _origRLD → all undefined.
+
+**Fix (v13.1):** Wrapper calls _trueRLD.call(null, l) passing the resolved lead object.
+Wrapper resolves l from: param → APP.selectedLead (by ID or object) → fallback HTML.
+Wrapper sets APP.selectedLead = l to normalize string IDs to objects.
+
+**Rule:** When wrapping a function that takes parameters, always pass those parameters
+through to the original: origFn.call(null, ...args). Never call origFn() with no args.
+Never stack more than one wrapper on the same function — replace, do not chain.
+
+---
+
 ## 2026-04-16 "undefined" in Leads + email content failure (v10 fix)
 
 **Leads showed "undefined" everywhere.**
