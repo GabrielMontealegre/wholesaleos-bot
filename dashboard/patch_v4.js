@@ -1046,4 +1046,16 @@ window.openEmailContent = function(msg) {
 })();
 
 // v9 loaded (see v10 log below)
-console.log("WholesaleOS Patch v11 — fix missing return in renderLeads/renderLeadDetail wrappers");
+console.log("WholesaleOS Patch v12 — restore loadLeadsFromAPI to fetch-based _wpOrig");
+
+// FIX: loadLeadsFromAPI in html never fetches. Restore from working _wpOrig.
+(function() {
+  var _htmlLLFA = window.loadLeadsFromAPI;
+  window.loadLeadsFromAPI = function() {
+    var hasLeads = APP && APP.leads && APP.leads.length > 0;
+    if (!hasLeads && typeof _wpOrig === "function") {
+      return _wpOrig();
+    }
+    if (typeof _htmlLLFA === "function") return _htmlLLFA();
+  };
+})();
