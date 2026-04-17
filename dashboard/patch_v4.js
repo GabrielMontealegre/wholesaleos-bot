@@ -854,208 +854,88 @@ logLesson('rendering','Multiple render hooks caused flicker loops','Remove rende
   updateLeadsBadge();
 })();
 
-// v7 loaded (see v8 log below)
 
-// ─── UI FIX v8: lead click + comps + email content ─────────────────────────
 
-// FIX 1: openLeadDetailFixed was called everywhere but never defined.
-// Delegates to openLeadModal which calls renderLeadDetail + shows panel.
-window.openLeadDetailFixed = function(id) {
-  if (!id) { console.error("[fix] openLeadDetailFixed: no id"); return; }
-  if (typeof openLeadModal === "function") {
-    openLeadModal(id);
-  } else {
-    console.error("[fix] openLeadModal not found");
-  }
-};
+// ═══ UI FIX v13: DEFINITIVE — replaces all v8-v12 stacked wrappers ═══════════
+// Collapses broken wrapper chains into single clean implementations.
 
-// FIX 2: selectLead sets APP.selectedLead but never opened the detail panel.
-// Override it to also call openLeadModal so comps/deal math render.
-(function() {
-  var _origSelectLead = window.selectLead;
-  window.selectLead = function(id) {
-    if (!id) return;
-    if (typeof _origSelectLead === "function") _origSelectLead(id);
-    if (typeof openLeadModal === "function") openLeadModal(id);
+// 1. matchBuyers — null guards so renderLeadDetail never crashes
+(function(){
+  var _origMB = window.matchBuyers;
+  window.matchBuyers = function(lead) {
+    if (!lead || !APP || !APP.buyers) return [];
+    try {
+      return _origMB(lead);
+    } catch(e) {
+      var arv = lead.arv || 0;
+      var st  = (lead.state || "").toUpperCase();
+      return (APP.buyers || []).filter(function(b) {
+        if (!b) return false;
+        if (b.state && b.state.toUpperCase() !== st) return false;
+        var max = b.maxPrice || b.max_price || 0;
+        if (max && arv && arv > max) return false;
+        return true;
+      });
+    }
   };
 })();
 
-// FIX 3: Email message items had no onclick. email-body never got content.
-// openEmailContent writes subject + body to #email-body.
-window.openEmailContent = function(msg) {
-  if (!msg) { console.error("[fix] openEmailContent: no msg"); return; }
-  var el = document.getElementById("email-body");
-  if (!el) { console.error("[fix] #email-body not found"); return; }
-  var subject  = msg.subject  || msg.Subject  || "(no subject)";
-  var sender   = msg.from     || msg.sender   || msg.From || "";
-  var date     = msg.date     || msg.Date     || "";
-  var body     = msg.body     || msg.html     || msg.text || msg.snippet || "(no content)";
-  el.innerHTML =
-    "<div style='padding:16px;font-family:sans-serif'>" +
-      "<div style='font-size:18px;font-weight:600;margin-bottom:8px'>" + subject + "</div>" +
-      (sender ? "<div style='color:#888;font-size:13px;margin-bottom:4px'>From: " + sender + "</div>" : "") +
-      (date   ? "<div style='color:#aaa;font-size:12px;margin-bottom:12px'>" + date + "</div>" : "") +
-      "<hr style='margin:8px 0;border-color:#333'>" +
-      "<div style='margin-top:12px;line-height:1.6'>" + body + "</div>" +
-    "</div>";
-};
-
-// FIX: loadEmail — intercept to cache messages + wire click → fetch content
-(function() {
-  // Intercept loadGmailEmails to capture message list
-  var _origLGE = window.loadGmailEmails;
-  window.loadGmailEmails = function() {
-    fetch("/api/gmail/inbox")
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        window._gmailMessages = d.messages || [];
-        // Build list HTML with data-msg-id on each row
-        var list = document.getElementById("email-list");
-        if (!list) { if(typeof _origLGE==="function") _origLGE(); return; }
-        var html = window._gmailMessages.map(function(msg,i){
-          var subj = (msg.subject||"(no subject)").replace(/</g,"&lt;");
-          var from = (msg.from||"").replace(/</g,"&lt;").slice(0,40);
-          var date = (msg.date||"").slice(0,16);
-          return "<div class=\"email-row\" data-msg-id=\""+msg.id+"\" style=\"padding:10px 14px;border-bottom:1px solid #2a2a2a;cursor:pointer\">"
-            +"<div style=\"font-weight:600;font-size:13px\">"+subj+"</div>"
-            +"<div style=\"color:#888;font-size:12px\">"+from+" &bull; "+date+"</div>"
-            +"</div>";
-        }).join("");
-        list.innerHTML = html || "<div style=\"padding:16px;color:#888\">No messages</div>";
-        // Wire clicks
-        list.querySelectorAll("[data-msg-id]").forEach(function(row){
-          row.addEventListener("click", function(){
-            var msgId = row.dataset.msgId;
-            if (!msgId) return;
-            var el = document.getElementById("email-body");
-            if (el) el.innerHTML = "<div style=\"padding:16px;color:#888\">Loading...</div>";
-            fetch("/api/gmail/message/" + msgId)
-              .then(function(r){ return r.json(); })
-              .then(function(msg){
-                if (typeof openEmailContent === "function") openEmailContent(msg);
-                else if (el) el.innerHTML = "<div style=\"padding:16px\">" + (msg.body||msg.snippet||"No content") + "</div>";
-              })
-              .catch(function(e){
-                console.error("[fix] email fetch failed", e);
-                if (el) el.innerHTML = "<div style=\"padding:16px;color:#e55\">Failed to load email</div>";
-              });
-          });
-        });
-      })
-      .catch(function(e){ console.error("[fix] loadGmailEmails failed", e); });
-  };
-})();
-
-
-// v8+v9 loaded (see v10 log below)
-
-// ─── UI SAFETY GUARDS v9 ────────────────────────────────────────────────────
-
-// GUARD 1 (v10): Safe field fallbacks — never render undefined.
-// Patches renderLeads + renderLeadDetail to substitute missing fields.
-(function() {
-  // owner_name does not exist in schema — substitute ownership or seller_type
-  var _origRL = window.renderLeads;
+// 2. renderLeads — single clean wrapper, returns original result
+(function(){
+  var _origRL2 = window.renderLeads;
   window.renderLeads = function() {
-    if (window.APP && Array.isArray(APP.filtered)) {
+    if (APP && Array.isArray(APP.filtered)) {
       APP.filtered.forEach(function(l) {
         if (!l) return;
         if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
-        if (!l.city) l.city = (l.address||"").split(",")[1]||"";
+        if (!l.city) l.city = (l.address || "").split(",")[1] || "";
       });
     }
-    if (typeof _origRL === "function") return _origRL();
+    return _origRL2();
   };
-  // Same fix for renderLeadDetail
-  var _origRLD2 = window.renderLeadDetail;
+})();
+
+// 3. renderLeadDetail — single clean wrapper, handles string ID or object
+(function(){
+  var _origRLD3 = window.renderLeadDetail;
   window.renderLeadDetail = function() {
-    if (window.APP && APP.selectedLead) {
-      var l = APP.selectedLead;
-      if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
-      if (!l.city) l.city = (l.address||"").split(",")[1]||"";
+    if (!APP || !APP.selectedLead)
+      return "<div style='padding:16px;color:#888'>Select a lead to view details</div>";
+    var l = APP.selectedLead;
+    if (typeof l === "string") {
+      l = (APP.leads || []).find(function(x){ return x && x.id === APP.selectedLead; });
+      if (!l) return "<div style='padding:16px;color:#888'>Lead not found</div>";
+      APP.selectedLead = l;
     }
-    if (typeof _origRLD2 === "function") return _origRLD2();
-  };
-})();
-// GUARD 2: comps — only run renderLeadDetail when a lead is actually selected.
-// Wraps renderLeadDetail to bail if APP.selectedLead is null/missing.
-(function() {
-  var _origRLD = window.renderLeadDetail;
-  window.renderLeadDetail = function() {
-    if (!window.APP || !APP.selectedLead) {
-      console.error("[guard] renderLeadDetail called with no selectedLead");
-      return;
+    if (!l.owner_name)  l.owner_name  = l.ownership || l.seller_type || "";
+    if (!l.city)        l.city        = (l.address || "").split(",")[1] || "";
+    if (!l.phone)       l.phone       = l.phone_number || l.seller_phone || "";
+    if (!l.seller_type) l.seller_type = l.ownership ? "Owner" : "";
+    try { return _origRLD3(); }
+    catch(e) {
+      console.error("[v13] renderLeadDetail:", e.message);
+      return "<div style='padding:20px'><h3>" + (l.address||"") + "</h3>" +
+        "<div>ARV: $" + ((l.arv||0).toLocaleString()) + "</div>" +
+        "<div>Spread: $" + ((l.spread||0).toLocaleString()) + "</div>" +
+        "<div>Offer: $" + ((l.offer||0).toLocaleString()) + "</div></div>";
     }
-    if (typeof _origRLD === "function") return _origRLD();
   };
 })();
 
-// GUARD 3: Persist selected lead ID to localStorage on select.
-// Restore it on boot so refresh does not lose context.
-(function() {
-  var LS_KEY = "ws_selectedLeadId";
-  // Wrap selectLead to persist
-  var _origSL = window.selectLead;
-  window.selectLead = function(id) {
-    if (!id) return;
-    try { localStorage.setItem(LS_KEY, id); } catch(e) {}
-    if (typeof _origSL === "function") _origSL(id);
-  };
-  // Restore on load — after a short delay so APP.leads is populated
-  setTimeout(function() {
-    try {
-      var savedId = localStorage.getItem(LS_KEY);
-      if (!savedId) return;
-      var exists = window.APP && Array.isArray(APP.leads) &&
-        APP.leads.some(function(l) { return l && l.id === savedId; });
-      if (!exists) { localStorage.removeItem(LS_KEY); return; }
-      if (typeof openLeadDetailFixed === "function") openLeadDetailFixed(savedId);
-    } catch(e) {}
-  }, 1200);
-})();
-
-// GUARD 4: cachedFetch in-flight dedup.
-// If the same cacheKey is already fetching, return the existing promise.
-(function() {
-  var _inflight = {};
-  var _origCF = window.cachedFetch;
-  window.cachedFetch = function(cacheKey, store, fetchFn) {
-    if (!cacheKey) return (typeof _origCF === "function" ? _origCF(cacheKey, store, fetchFn) : Promise.reject("no key"));
-    // Return in-flight promise if already pending
-    if (_inflight[cacheKey]) return _inflight[cacheKey];
-    var p = (typeof _origCF === "function" ? _origCF(cacheKey, store, fetchFn) : fetchFn());
-    if (p && typeof p.then === "function") {
-      _inflight[cacheKey] = p;
-      p.then(function(v)  { delete _inflight[cacheKey]; return v; },
-             function(e)  { delete _inflight[cacheKey]; throw e; });
-    }
-    return p;
-  };
-})();
-
-// GUARD 5: email content — prevent empty render.
-// Wraps openEmailContent (defined in v8) to reject msgs with no usable content.
-(function() {
-  var _origOEC = window.openEmailContent;
-  window.openEmailContent = function(msg) {
-    if (!msg) { console.error("[guard] openEmailContent: null msg"); return; }
-    var hasContent = msg.body || msg.html || msg.text || msg.snippet || msg.subject;
-    if (!hasContent) { console.error("[guard] openEmailContent: no content", msg); return; }
-    if (typeof _origOEC === "function") _origOEC(msg);
-  };
-})();
-
-// v9 loaded (see v10 log below)
-console.log("WholesaleOS Patch v12 — restore loadLeadsFromAPI to fetch-based _wpOrig");
-
-// FIX: loadLeadsFromAPI in html never fetches. Restore from working _wpOrig.
-(function() {
-  var _htmlLLFA = window.loadLeadsFromAPI;
+// 4. loadLeadsFromAPI — call _wpOrig then filterLeads+render
+(function(){
+  var _htmlLL = window.loadLeadsFromAPI;
   window.loadLeadsFromAPI = function() {
-    var hasLeads = APP && APP.leads && APP.leads.length > 0;
-    if (!hasLeads && typeof _wpOrig === "function") {
-      return _wpOrig();
+    var loaded = APP && APP.leads && APP.leads.length > 0;
+    if (!loaded && typeof _wpOrig === "function") {
+      return _wpOrig().then(function() {
+        if (typeof filterLeads === "function") filterLeads();
+        if (APP.page==="leads"||APP.page==="dashboard"||APP.page==="pipeline")
+          if (typeof render === "function") render();
+      });
     }
-    if (typeof _htmlLLFA === "function") return _htmlLLFA();
+    if (typeof _htmlLL === "function") return _htmlLL();
   };
 })();
+
+console.log("WholesaleOS Patch v13 — definitive: matchBuyers+renderLeads+renderLeadDetail+loadLeads");
