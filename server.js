@@ -6,6 +6,7 @@ const express = require('express');
 const path    = require('path');
 const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
+const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
 
 const app  = express();
@@ -2820,3 +2821,23 @@ module.exports = app;
 
 // Courthouse addon
 try { require('./courthouse-addon/courthouse-routes')(app); } catch(e) {}
+app.post('/api/datasources/realauction', async (req, res) => {
+  try {
+    const { state } = req.body;
+    if (!state) return res.status(400).json({ error: 'state required' });
+    const dbData = db.readDB();
+    const existing = new Set(
+      (dbData.leads || []).filter(function(l){ return l._source_module === 'realauction'; })
+        .map(function(l){ return (l.address||'').toLowerCase().replace(/\s+/g,' '); })
+    );
+    const result = await scrapeRealAuction(state, existing);
+    let saved = 0;
+    for (const lead of result.leads) {
+      try { db.addLead({ ...lead, status: 'New Lead', created: Date.now() }); saved++; }
+      catch(e) { result.rejected.push({ address: lead.address, reason: 'save_error:'+e.message }); }
+    }
+    res.json({ ok: true, source: 'realauction', state, imported: saved,
+      rejected: result.rejected.length, rejectedLeads: result.rejected });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
