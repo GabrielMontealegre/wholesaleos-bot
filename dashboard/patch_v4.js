@@ -900,64 +900,83 @@ window.openEmailContent = function(msg) {
     "</div>";
 };
 
-// Patch loadEmail to inject onclick on each message row.
+// FIX: loadEmail — intercept to cache messages + wire click → fetch content
 (function() {
-  var _origLoadEmail = window.loadEmail;
-  window.loadEmail = function() {
-    if (typeof _origLoadEmail === "function") _origLoadEmail();
-    // After a short wait for the DOM to render, attach click handlers
-    setTimeout(function() {
-      var list = document.getElementById("email-list");
-      if (!list) return;
-      var items = list.querySelectorAll("[data-msg-idx], .email-row, div[data-id]");
-      if (!items.length) {
-        // Fallback: attach to all direct children divs
-        items = list.querySelectorAll("div");
-      }
-      items.forEach(function(item, i) {
-        if (item._emailFixed) return; // already patched
-        item._emailFixed = true;
-        item.style.cursor = "pointer";
-        item.addEventListener("click", function() {
-          // Try to get msg from data attributes or APP.messages array
-          var idx = parseInt(item.dataset.msgIdx || item.dataset.idx || i, 10);
-          var msgs = window.APP && (APP.messages || APP.emails || APP.inbox || []);
-          var msg = (msgs && !isNaN(idx)) ? msgs[idx] : null;
-          if (!msg) {
-            // Build from DOM text as fallback
-            msg = { subject: item.querySelector(".subject, .email-subject") ?
-              item.querySelector(".subject, .email-subject").innerText : item.innerText.slice(0,80) };
-          }
-          openEmailContent(msg);
+  // Intercept loadGmailEmails to capture message list
+  var _origLGE = window.loadGmailEmails;
+  window.loadGmailEmails = function() {
+    fetch("/api/gmail/inbox")
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        window._gmailMessages = d.messages || [];
+        // Build list HTML with data-msg-id on each row
+        var list = document.getElementById("email-list");
+        if (!list) { if(typeof _origLGE==="function") _origLGE(); return; }
+        var html = window._gmailMessages.map(function(msg,i){
+          var subj = (msg.subject||"(no subject)").replace(/</g,"&lt;");
+          var from = (msg.from||"").replace(/</g,"&lt;").slice(0,40);
+          var date = (msg.date||"").slice(0,16);
+          return "<div class=\"email-row\" data-msg-id=\""+msg.id+"\" style=\"padding:10px 14px;border-bottom:1px solid #2a2a2a;cursor:pointer\">"
+            +"<div style=\"font-weight:600;font-size:13px\">"+subj+"</div>"
+            +"<div style=\"color:#888;font-size:12px\">"+from+" &bull; "+date+"</div>"
+            +"</div>";
+        }).join("");
+        list.innerHTML = html || "<div style=\"padding:16px;color:#888\">No messages</div>";
+        // Wire clicks
+        list.querySelectorAll("[data-msg-id]").forEach(function(row){
+          row.addEventListener("click", function(){
+            var msgId = row.dataset.msgId;
+            if (!msgId) return;
+            var el = document.getElementById("email-body");
+            if (el) el.innerHTML = "<div style=\"padding:16px;color:#888\">Loading...</div>";
+            fetch("/api/gmail/message/" + msgId)
+              .then(function(r){ return r.json(); })
+              .then(function(msg){
+                if (typeof openEmailContent === "function") openEmailContent(msg);
+                else if (el) el.innerHTML = "<div style=\"padding:16px\">" + (msg.body||msg.snippet||"No content") + "</div>";
+              })
+              .catch(function(e){
+                console.error("[fix] email fetch failed", e);
+                if (el) el.innerHTML = "<div style=\"padding:16px;color:#e55\">Failed to load email</div>";
+              });
+          });
         });
-      });
-    }, 300);
+      })
+      .catch(function(e){ console.error("[fix] loadGmailEmails failed", e); });
   };
 })();
 
-// v8 loaded (see v9 log below)
+
+// v8+v9 loaded (see v10 log below)
 
 // ─── UI SAFETY GUARDS v9 ────────────────────────────────────────────────────
 
-// GUARD 1: renderLeads — reject leads missing address or arv before render.
-// Wraps the original renderLeads to filter incomplete entries first.
+// GUARD 1 (v10): Safe field fallbacks — never render undefined.
+// Patches renderLeads + renderLeadDetail to substitute missing fields.
 (function() {
-  var _origRenderLeads = window.renderLeads;
+  // owner_name does not exist in schema — substitute ownership or seller_type
+  var _origRL = window.renderLeads;
   window.renderLeads = function() {
     if (window.APP && Array.isArray(APP.filtered)) {
-      APP.filtered = APP.filtered.filter(function(l) {
-        if (!l) return false;
-        if (!l.address || l.address.trim().length < 5) {
-          console.error("[guard] lead rejected — no address", l.id||"?");
-          return false;
-        }
-        return true;
+      APP.filtered.forEach(function(l) {
+        if (!l) return;
+        if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
+        if (!l.city) l.city = (l.address||"").split(",")[1]||"";
       });
     }
-    if (typeof _origRenderLeads === "function") _origRenderLeads();
+    if (typeof _origRL === "function") _origRL();
+  };
+  // Same fix for renderLeadDetail
+  var _origRLD2 = window.renderLeadDetail;
+  window.renderLeadDetail = function() {
+    if (window.APP && APP.selectedLead) {
+      var l = APP.selectedLead;
+      if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
+      if (!l.city) l.city = (l.address||"").split(",")[1]||"";
+    }
+    if (typeof _origRLD2 === "function") _origRLD2();
   };
 })();
-
 // GUARD 2: comps — only run renderLeadDetail when a lead is actually selected.
 // Wraps renderLeadDetail to bail if APP.selectedLead is null/missing.
 (function() {
@@ -1026,4 +1045,5 @@ window.openEmailContent = function(msg) {
   };
 })();
 
-console.log("WholesaleOS Patch v9 — safety guards: render, comps, state, dedup, email");
+// v9 loaded (see v10 log below)
+console.log("WholesaleOS Patch v10 — fix undefined fields, email fetch, safe guards");
