@@ -964,7 +964,7 @@ window.openEmailContent = function(msg) {
         if (!l.city) l.city = (l.address||"").split(",")[1]||"";
       });
     }
-    if (typeof _origRL === "function") _origRL();
+    if (typeof _origRL === "function") return _origRL();
   };
   // Same fix for renderLeadDetail
   var _origRLD2 = window.renderLeadDetail;
@@ -974,7 +974,7 @@ window.openEmailContent = function(msg) {
       if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
       if (!l.city) l.city = (l.address||"").split(",")[1]||"";
     }
-    if (typeof _origRLD2 === "function") _origRLD2();
+    if (typeof _origRLD2 === "function") return _origRLD2();
   };
 })();
 // GUARD 2: comps — only run renderLeadDetail when a lead is actually selected.
@@ -986,7 +986,7 @@ window.openEmailContent = function(msg) {
       console.error("[guard] renderLeadDetail called with no selectedLead");
       return;
     }
-    if (typeof _origRLD === "function") _origRLD();
+    if (typeof _origRLD === "function") return _origRLD();
   };
 })();
 
@@ -1046,4 +1046,4 @@ window.openEmailContent = function(msg) {
 })();
 
 // v9 loaded (see v10 log below)
-console.log("WholesaleOS Patch v10 — fix undefined fields, email fetch, safe guards");
+console.log("WholesaleOS Patch v11 — fix missing return in renderLeads/renderLeadDetail wrappers");
