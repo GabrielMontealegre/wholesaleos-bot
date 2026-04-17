@@ -1,5 +1,32 @@
 # WholesaleOS — Mistakes Log
 
+## 2026-04-16 "undefined" in Leads + email content failure (v10 fix)
+
+**Leads showed "undefined" everywhere.**
+Root cause: renderLeads and renderLeadDetail access l.owner_name which does not exist
+in the lead schema. JS renders undefined as the string "undefined".
+Fix: Patch wraps renderLeads+renderLeadDetail to backfill l.owner_name from l.ownership
+or l.seller_type before render. Also backfills l.city from address string.
+Rule: Never access a field not confirmed in the live API schema.
+Always add || "" fallback for every displayed string field.
+
+**v9 Guard 1 was too aggressive — filtered valid leads.**
+Root cause: Guard 1 in v9 mutated APP.filtered to remove leads with address.length < 5.
+All real leads have valid addresses, but the guard ran before leads loaded, emptying the list.
+Fix: Replaced with safe field-backfill pattern. No leads are filtered.
+Rule: Never mutate APP.filtered as a safety guard. Use fallback values, not removal.
+
+**Email content showed "Couldn't load email".**
+Root cause: loadGmailEmails stored messages in a local variable, never on window or APP.
+The v8 click handler tried APP.messages[idx] which was always undefined.
+No actual fetch to /api/gmail/message/:id was ever triggered.
+Fix: Replaced with loadGmailEmails override that renders list with data-msg-id attributes
+and fires fetch("/api/gmail/message/"+msgId) on click, passing result to openEmailContent.
+Rule: Email list items must store their ID in data-msg-id. Click must fetch content by ID.
+Never rely on APP.messages — store fetched list in window._gmailMessages.
+
+---
+
 ## 2026-04-16 Missing safety guards — render, comps, state, fetch dedup, email
 
 **renderLeads — no data completeness check.**
