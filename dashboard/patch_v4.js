@@ -985,61 +985,329 @@ window.openLeadDetailFixed = function(id) {
 
 console.log("WholesaleOS Patch v14.1 - lead clicks fixed, filters, courthouse");
 
-// === PATCH v14.3 ===
+// === PATCH v15 ===
 
+// A1. Hide Buy Boxes nav tab
 (function(){
-  function wireModalButtons(lid){
-    var mc=document.getElementById("modal-content");
-    if(!mc||!lid)return;
-    Array.from(mc.querySelectorAll("button")).forEach(function(btn){
-      if(btn._wired)return; btn._wired=true;
-      var txt=(btn.innerText||"").trim().toLowerCase();
-      if(txt.indexOf("contract")>-1) btn.addEventListener("click",function(e){e.stopPropagation();openFillContract(lid);});
-      else if(txt.indexOf("match")>-1) btn.addEventListener("click",function(e){e.stopPropagation();triggerBuyerMatch(lid);});
-      else if(txt.indexOf("follow")>-1) btn.addEventListener("click",function(e){e.stopPropagation();openFollowUp(lid);});
-      else if(txt==="status") btn.addEventListener("click",function(e){e.stopPropagation();openUpdateStatus(lid);});
+  setTimeout(function(){
+    Array.from(document.querySelectorAll("[onclick]")).forEach(function(el){
+      if((el.getAttribute("onclick")||"").indexOf("navigate('buyboxes')")>-1)
+        el.style.display="none";
     });
-  }
-  var _olm=window.openLeadModal;
-  window.openLeadModal=function(leadId){
-    if(typeof _olm==="function")_olm(leadId);
-    setTimeout(function(){
-      wireModalButtons(leadId);
-      var lead=APP.selectedLead;
-      if(!lead||typeof lead==="string")lead=(APP.leads||[]).find(function(x){return x&&x.id===leadId;});
-      if(!lead)return;
-      var mc=document.getElementById("modal-content");
-      if(!mc||mc.querySelector(".prop-links-bar"))return;
-      var addr=(lead.address||"").trim();
-      var state=(lead.state||"").trim();
-      var zip=(lead.zip||"").trim();
-      var clean=addr;
-      if(state&&addr.indexOf(state)<0)clean+=", "+state;
-      if(zip&&addr.indexOf(zip)<0&&!/\d{5}/.test(addr))clean+=" "+zip;
-      var enc=encodeURIComponent(clean);
-      var bar=document.createElement("div");
-      bar.className="prop-links-bar";
-      bar.style.cssText="display:flex;gap:6px;padding:10px 14px;background:#f0f9ff;border-bottom:2px solid #bae6fd;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:10";
-      var as=document.createElement("span");
-      as.style.cssText="font-size:13px;font-weight:600;color:#0369a1;cursor:pointer;text-decoration:underline;flex:1;min-width:150px";
-      as.title="Click to copy full address";
-      as.textContent="📋 "+clean;
-      as.onclick=function(){try{navigator.clipboard.writeText(clean);}catch(e){var t=document.createElement("textarea");t.value=clean;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t);}var s=this;s.textContent="✅ Copied!";setTimeout(function(){s.textContent="📋 "+clean;},2000);};
-      bar.appendChild(as);
-      [["Zillow","https://www.zillow.com/homes/"+enc+"_rb/","#1d4ed8"],["Redfin","https://www.redfin.com/search#location="+enc,"#dc2626"],["Maps","https://www.google.com/maps/search/"+enc,"#059669"],["Rent","https://www.rentometer.com/analysis/new?address="+enc+"&bedrooms="+(lead.beds||3),"#7c3aed"]].forEach(function(lnk){var a=document.createElement("a");a.href=lnk[1];a.target="_blank";a.textContent=lnk[0];a.style.cssText="padding:5px 12px;background:"+lnk[2]+";color:#fff;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600;white-space:nowrap";bar.appendChild(a);});
-      mc.insertBefore(bar,mc.firstChild);
-    },250);
-  };
+  },1000);
 })();
 
+// A2. Fix openBulkSendToBuyer (was undefined)
+window.openBulkSendToBuyer=function(bid){
+  var buyer=(APP.buyers||[]).find(function(b){return b&&b.id===bid;});
+  if(!buyer)return;
+  var bst=(buyer.state||"").toUpperCase();
+  var leads=(APP.leads||[]).filter(function(l){
+    if(!l||!l.arv||!l.spread)return false;
+    if(bst&&(l.state||"").toUpperCase()!==bst)return false;
+    var max=buyer.maxPrice||0;if(max&&l.arv>max)return false;
+    return true;
+  }).sort(function(a,b){return(b.spread||0)-(a.spread||0);}).slice(0,30);
+  APP.bulkBuyer=buyer; APP.bulkLeads=leads;
+  if(typeof openBulkSendModal==="function")openBulkSendModal();
+};
+
+// A3. Fix openLeadDetailFixed
+window.openLeadDetailFixed=function(id){if(id&&typeof openLeadModal==="function")openLeadModal(id);};
+
+// A4. State-matched buyers only
 (function(){
   var _mb=window.matchBuyers;
   window.matchBuyers=function(lead){
     if(!lead||!APP||!APP.buyers)return[];
     var ls=(lead.state||"").toUpperCase(),arv=lead.arv||0;
-    var exact=(APP.buyers||[]).filter(function(b){if(!b)return false;var bs=(b.state||"").toUpperCase();if(bs&&bs!==ls)return false;var max=b.maxPrice||b.max_price||0;if(max&&arv&&arv>max)return false;return true;});
+    var exact=(APP.buyers||[]).filter(function(b){
+      if(!b)return false;
+      var bs=(b.state||"").toUpperCase();
+      if(bs&&bs!==ls)return false;
+      var max=b.maxPrice||b.max_price||0;
+      if(max&&arv&&arv>max)return false;
+      return true;
+    });
     return exact.length>0?exact:(APP.buyers||[]).filter(function(b){return b&&(!b.state||!b.state.trim());});
   };
 })();
 
-console.log("WholesaleOS v14.3 - buttons wired, state buyers, address+links");
+// B1. Build property links helper
+window.buildPropertyLinks=function(lead){
+  var addr=(lead.address||"").trim(),state=(lead.state||"").trim(),zip=(lead.zip||"").trim();
+  var clean=addr;
+  if(state&&addr.indexOf(state)<0)clean+=", "+state;
+  if(zip&&addr.indexOf(zip)<0&&!/\d{5}/.test(addr))clean+=" "+zip;
+  var enc=encodeURIComponent(clean),encA=encodeURIComponent(addr);
+  return{clean:clean,
+    zillow:"https://www.zillow.com/homes/"+enc+"_rb/",
+    redfin:"https://www.redfin.com/search#location="+enc,
+    maps:"https://www.google.com/maps/search/"+enc,
+    rent:"https://www.rentometer.com/?address="+encA+"&bedrooms="+(lead.beds||3)+"&baths="+(lead.baths||2)};
+};
+
+// B2. Outreach panel tab switcher + copy helper
+window._orchSwitchTab=function(el,tab){
+  document.querySelectorAll("[onclick*=_orchSwitchTab]").forEach(function(t){t.style.color="#6b7280";t.style.borderBottom="2px solid transparent";});
+  el.style.color="#2563eb";el.style.borderBottom="2px solid #2563eb";
+  document.querySelectorAll("._op").forEach(function(p){p.style.display="none";});
+  var pane=document.getElementById("_op-"+tab);if(pane)pane.style.display="block";
+};
+window._orchCopy=function(id){
+  var el=document.getElementById(id);if(!el)return;
+  try{navigator.clipboard.writeText(el.value);}catch(e){el.select();document.execCommand("copy");}
+  var ob=el.style.background;el.style.background="#dcfce7";setTimeout(function(){el.style.background=ob;},1200);
+};
+window._orchSendGmail=function(lid){
+  var subj=(document.getElementById("_op-email-subj")||{}).value||"";
+  var body=(document.getElementById("_op-email-body")||{}).value||"";
+  if(typeof openInSystemEmail==="function")openInSystemEmail(lid);
+  setTimeout(function(){
+    var sf=document.querySelector("#email-subject,input[placeholder*=Subject]");
+    var bf=document.querySelector("#email-body,textarea[placeholder*=Message]");
+    if(sf)sf.value=subj;if(bf)bf.value=body;
+  },500);
+};
+window._renderOutreachPanel=function(lead,buyer){
+  var oc=document.getElementById("or-content");
+  if(!oc)return;
+  if(!lead){oc.innerHTML="<div style='padding:40px;text-align:center;color:#9ca3af'>Select a lead to begin</div>";return;}
+  var arv=lead.arv||0,offer=lead.offer||0,spread=lead.spread||0,repairs=lead.repairs||0;
+  var feeLo=lead.fee_lo||Math.round(spread*0.35),feeHi=lead.fee_hi||Math.round(spread*0.55);
+  var lk=buildPropertyLinks(lead);
+  // SMS text
+  var sms=[
+    "DEAL ALERT",
+    lead.address+" ("+lead.state+")",
+    "",
+    "ARV:      $"+arv.toLocaleString(),
+    "Asking:   $"+offer.toLocaleString(),
+    "Repairs:  $"+repairs.toLocaleString(),
+    "Spread:   $"+spread.toLocaleString(),
+    "Fee:      $"+feeLo.toLocaleString()+" - $"+feeHi.toLocaleString(),
+    (lead.beds?lead.beds+"bd/"+(lead.baths||"?")+"ba ":"")+    (lead.sqft?lead.sqft+" sqft":""),
+    "Exit: "+(lead.investment_strategy||"Fix & Flip / Hold"),
+    "",
+    "Zillow: "+lk.zillow,
+    "",
+    "Interested? Reply YES"
+  ].join("\n");
+  // Email
+  var eSubj="Off-Market: "+lead.address+" | $"+spread.toLocaleString()+" Spread | "+lead.state;
+  var eBody=[
+    "Hi "+(buyer?buyer.name:"there")+",",
+    "",
+    "I have an off-market property you should look at.",
+    "",
+    "NUMBERS:",
+    "  ARV:      $"+arv.toLocaleString(),
+    "  Repairs:  $"+repairs.toLocaleString(),
+    "  Price:    $"+offer.toLocaleString(),
+    "  Spread:   $"+spread.toLocaleString(),
+    "  Fee:      $"+feeLo.toLocaleString()+" - $"+feeHi.toLocaleString(),
+    "",
+    "PROPERTY:",
+    "  Address:  "+lead.address,
+    (lead.beds?"  Beds/Bath: "+lead.beds+"/"+lead.baths:""),
+    (lead.sqft?"  Sqft:     "+lead.sqft:""),
+    "  Type:     "+(lead.category||lead.distress||""),
+    "  Strategy: "+(lead.investment_strategy||"Fix & Flip / Hold"),
+    "",
+    "RESEARCH:",
+    "  Zillow:   "+lk.zillow,
+    "  Redfin:   "+lk.redfin,
+    "  Rent:     "+lk.rent,
+    "",
+    "I can send the purchase agreement today. Are you in?",
+    "",
+    "Gabriel Montealegre",
+    "Montsan REI | montsan.rei@gmail.com"
+  ].filter(function(l){return l!==false;}).join("\n");
+  // Script
+  var script=[
+    "=== CALL SCRIPT: "+lead.address+" ===",
+    "",
+    "HEY [NAME], this is Gabriel with Montsan REI. How are you?",
+    "",
+    "PITCH:",
+    "I have an off-market "+lead.type+" in "+lead.address+", "+lead.state+".",
+    "ARV is $"+arv.toLocaleString()+", asking $"+offer.toLocaleString()+", spread is $"+spread.toLocaleString()+".",
+    "Your assignment fee: $"+feeLo.toLocaleString()+" to $"+feeHi.toLocaleString()+".",
+    "",
+    "[YES] Perfect - can I send the full package with comps right now?",
+    "[MAYBE] What would make this work for you price-wise?",
+    "[NO] What criteria would make a deal like this work for you?",
+    "",
+    "CLOSE:",
+    "I can email the purchase agreement right now. Shall I?"
+  ].join("\n");
+  // Render
+  var lnkBar="<div style='display:flex;gap:5px;margin-top:8px'>"+
+    "<a href='"+lk.zillow+"' target='_blank' style='padding:3px 10px;background:#1d4ed8;color:#fff;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600'>Zillow</a>"+
+    "<a href='"+lk.redfin+"' target='_blank' style='padding:3px 10px;background:#dc2626;color:#fff;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600'>Redfin</a>"+
+    "<a href='"+lk.maps+"' target='_blank' style='padding:3px 10px;background:#059669;color:#fff;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600'>Maps</a>"+
+    "<a href='"+lk.rent+"' target='_blank' style='padding:3px 10px;background:#7c3aed;color:#fff;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600'>Rent</a>"+
+  "</div>";
+  var tabs=["sms","email","script","buyers"].map(function(t,i){
+    return "<div onclick='_orchSwitchTab(this,\""+t+"\");' class='_otab' style='padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;color:"+(i===0?"#2563eb":"#6b7280")+";border-bottom:"+(i===0?"2px solid #2563eb":"2px solid transparent")+";margin-bottom:-2px'>"+({"sms":"SMS","email":"Email","script":"Script","buyers":"Buyers"}[t])+"</div>";
+  }).join("");
+  var buyerNote=buyer?"<span style='color:#16a34a'>Buyer: "+buyer.name+"</span>":"<span style='color:#f59e0b'>Select a buyer on the left</span>";
+  var buyerPanel=buyer?
+    "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:13px'>"+
+    "<b>"+buyer.name+"</b><br>"+buyer.state+" · Max $"+(buyer.maxPrice||0).toLocaleString()+"<br>"+
+    "<button onclick='_orchSendGmail(\""+lead.id+"\");' style='margin-top:10px;width:100%;padding:9px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600'>Email This Buyer</button>"+
+    "</div>":
+    "<div style='color:#9ca3af;padding:20px;text-align:center'>No buyer selected<br><small>Click a buyer on the left to select</small></div>";
+  oc.innerHTML=
+    "<div style='padding:12px 14px;background:#f8fafc;border-bottom:1px solid #e5e7eb'>"+
+    "<div style='font-weight:700;font-size:14px'>"+lead.address+"</div>"+
+    "<div style='font-size:12px;color:#6b7280;margin-top:2px'>ARV $"+arv.toLocaleString()+" · Spread $"+spread.toLocaleString()+" · "+buyerNote+"</div>"+
+    lnkBar+
+    "</div>"+
+    "<div style='display:flex;border-bottom:2px solid #e5e7eb;background:#fff'>"+tabs+"</div>"+
+    "<div id='_op-sms' class='_op' style='padding:12px'>"+
+    "<textarea id='_op-sms-txt' style='width:100%;height:170px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;resize:vertical;font-family:monospace;box-sizing:border-box'>"+sms+"</textarea>"+
+    "<div style='display:flex;gap:8px;margin-top:8px'>"+
+    "<button onclick='_orchCopy(\"_op-sms-txt\");' style='flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>Copy SMS</button>"+
+    (buyer&&buyer.phone?"<a href='sms:"+buyer.phone+"' style='flex:1;padding:9px;background:#0ea5e9;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;text-align:center'>Open Messages</a>":"")+
+    "</div></div>"+
+    "<div id='_op-email' class='_op' style='padding:12px;display:none'>"+
+    "<input id='_op-email-subj' value='"+eSubj.replace(/'/g,"&apos;")+"' style='width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box'>"+
+    "<textarea id='_op-email-body' style='width:100%;height:200px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;resize:vertical;font-family:monospace;box-sizing:border-box'>"+eBody+"</textarea>"+
+    "<div style='display:flex;gap:8px;margin-top:8px'>"+
+    "<button onclick='_orchCopy(\"_op-email-body\");' style='flex:1;padding:9px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>Copy Email</button>"+
+    "<button onclick='_orchSendGmail(\""+lead.id+"\");' style='flex:1;padding:9px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>Send via Gmail</button>"+
+    "</div></div>"+
+    "<div id='_op-script' class='_op' style='padding:12px;display:none'>"+
+    "<textarea id='_op-script-txt' style='width:100%;height:240px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;resize:vertical;font-family:monospace;box-sizing:border-box'>"+script+"</textarea>"+
+    "<button onclick='_orchCopy(\"_op-script-txt\");' style='width:100%;padding:9px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;margin-top:8px'>Copy Script</button>"+
+    "</div>"+
+    "<div id='_op-buyers' class='_op' style='padding:12px;display:none'>"+buyerPanel+"</div>";
+};
+// D. Wire outreach selectors
+(function(){
+  var _sol=window.selectOutreachLead;
+  window.selectOutreachLead=function(lid){
+    if(typeof _sol==="function")_sol(lid);
+    var lead=(APP.leads||[]).find(function(l){return l&&l.id===lid;});
+    if(!lead)return;
+    APP.outreachLead=lead;APP.selectedOutreachLead=lead;
+    setTimeout(function(){_renderOutreachPanel(lead,APP.outreachBuyer||APP.selectedOutreachBuyer||null);},100);
+  };
+  var _sob=window.selectOutreachBuyer;
+  window.selectOutreachBuyer=function(bid){
+    if(typeof _sob==="function")_sob(bid);
+    var buyer=(APP.buyers||[]).find(function(b){return b&&b.id===bid;});
+    if(!buyer)return;
+    APP.outreachBuyer=buyer;APP.selectedOutreachBuyer=buyer;
+    setTimeout(function(){_renderOutreachPanel(APP.outreachLead||APP.selectedOutreachLead||null,buyer);},100);
+  };
+})();
+// E. openLeadModal: inject address bar + seller Qs + deal intel
+(function(){
+  var _olm=window.openLeadModal;
+  window.openLeadModal=function(leadId){
+    if(typeof _olm==="function")_olm(leadId);
+    setTimeout(function(){
+      var mc=document.getElementById("modal-content");
+      var lead=APP.selectedLead;
+      if(!lead||typeof lead==="string")lead=(APP.leads||[]).find(function(x){return x&&x.id===leadId;});
+      if(!lead||!mc)return;
+      if(!mc._btnsWired){
+        mc._btnsWired=true;
+        Array.from(mc.querySelectorAll("button")).forEach(function(btn){
+          if(btn._wired)return;btn._wired=true;
+          var txt=(btn.innerText||"").trim().toLowerCase();
+          var lid=lead.id;
+          if(txt.indexOf("contract")>-1)btn.addEventListener("click",function(e){e.stopPropagation();openFillContract(lid);});
+          else if(txt.indexOf("match")>-1)btn.addEventListener("click",function(e){e.stopPropagation();triggerBuyerMatch(lid);});
+          else if(txt.indexOf("follow")>-1)btn.addEventListener("click",function(e){e.stopPropagation();openFollowUp(lid);});
+          else if(txt==="status")btn.addEventListener("click",function(e){e.stopPropagation();openUpdateStatus(lid);});
+        });
+      }
+      if(mc.querySelector(".prop-links-bar"))return;
+      var lk=buildPropertyLinks(lead);
+      // Address sticky bar
+      var bar=document.createElement("div");
+      bar.className="prop-links-bar";
+      bar.style.cssText="display:flex;gap:6px;padding:10px 14px;background:#f0f9ff;border-bottom:2px solid #bae6fd;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:10";
+      var as=document.createElement("span");
+      as.style.cssText="font-size:13px;font-weight:600;color:#0369a1;cursor:pointer;flex:1;min-width:150px";
+      as.innerHTML="<u>"+lk.clean+"</u> <small style='color:#94a3b8'>(tap to copy)</small>";
+      as.onclick=function(){
+        try{navigator.clipboard.writeText(lk.clean);}catch(e){var t=document.createElement("textarea");t.value=lk.clean;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t);}
+        var s=this;s.querySelector("u").textContent="Copied!";setTimeout(function(){s.querySelector("u").textContent=lk.clean;},2500);
+      };
+      bar.appendChild(as);
+      [["Zillow",lk.zillow,"#1d4ed8"],["Redfin",lk.redfin,"#dc2626"],["Maps",lk.maps,"#059669"],["Rent",lk.rent,"#7c3aed"]].forEach(function(l){
+        var a=document.createElement("a");a.href=l[1];a.target="_blank";a.textContent=l[0];
+        a.style.cssText="padding:5px 12px;background:"+l[2]+";color:#fff;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600;white-space:nowrap";
+        a.onclick=function(e){e.stopPropagation();};
+        bar.appendChild(a);
+      });
+      mc.insertBefore(bar,mc.firstChild);
+      if(mc.querySelector(".deal-intel"))return;
+      var arv=lead.arv||0,offer=lead.offer||0,spread=lead.spread||0,repairs=lead.repairs||0;
+      var feeLo=lead.fee_lo||Math.round(spread*0.35),feeHi=lead.fee_hi||Math.round(spread*0.55);
+      var cat=(lead.category||lead.distress||"").toLowerCase();
+      var qs=cat.indexOf("probate")>-1||cat.indexOf("estate")>-1?[
+        "Are you the executor or administrator of the estate?",
+        "Have you already gone through probate court?",
+        "Are there other heirs who need to agree to sell?",
+        "Is the property currently occupied or vacant?",
+        "What condition is it in — maintained or neglected?",
+        "What is your timeline to close?",
+        "Are there any liens or mortgages on the property?"
+      ]:cat.indexOf("pre-fc")>-1||cat.indexOf("foreclosure")>-1?[
+        "How many mortgage payments are you behind?",
+        "Have you received a Notice of Default or auction date?",
+        "What is your total mortgage payoff amount?",
+        "Are there any second liens or judgments on the property?",
+        "Have you spoken to your lender about options?",
+        "What outcome do you need — cash, time, or both?",
+        "Is the property currently occupied?"
+      ]:cat.indexOf("tax")>-1?[
+        "How many years of property taxes are past due?",
+        "Have you received a tax sale notice?",
+        "What is the total amount owed in taxes and penalties?",
+        "Are there any other liens besides taxes?",
+        "Is the property vacant or occupied?"
+      ]:[
+        "How long have you owned the property?",
+        "Why are you looking to sell?",
+        "What condition is the property in?",
+        "Is it owner-occupied or tenant-occupied?",
+        "Have you had any other offers or listed with an agent?",
+        "What is your ideal timeline to close?",
+        "Any liens, back taxes, or mortgages outstanding?",
+        "What is the lowest price you would consider?"
+      ];
+      var pitch="Hey — I have an off-market "+lead.type+" in "+lead.address+", "+lead.state+". ARV $"+arv.toLocaleString()+", repairs $"+repairs.toLocaleString()+", asking $"+offer.toLocaleString()+". Spread $"+spread.toLocaleString()+", your fee $"+feeLo.toLocaleString()+"–$"+feeHi.toLocaleString()+". "+(lead.beds?lead.beds+"bd/"+(lead.baths||"?")+"ba. ":"")+"Exit: "+(lead.investment_strategy||"Fix & Flip / Hold")+". Are you in?";
+      var intel=document.createElement("div");
+      intel.className="deal-intel";
+      intel.style.cssText="border-top:2px solid #e5e7eb";
+      intel.innerHTML=
+        "<div style='padding:12px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0'>"+
+        "<div style='font-weight:700;font-size:13px;color:#166534;margin-bottom:6px'>💡 Why This Is A Good Deal</div>"+
+        "<div style='font-size:13px;color:#15803d;line-height:1.6'>"+
+        "Offer $"+offer.toLocaleString()+" is "+(arv>0?Math.round((1-offer/arv)*100)+"%":"-")+" below ARV. "+
+        "Only $"+repairs.toLocaleString()+" repairs. Spread $"+spread.toLocaleString()+" → fee $"+feeLo.toLocaleString()+"–$"+feeHi.toLocaleString()+". "+
+        ((lead.risk||"").toLowerCase()==="high"?"High equity, motivated seller.":"Strong deal with solid upside.")+
+        "</div></div>"+
+        "<div style='padding:12px 16px;background:#fefce8;border-bottom:1px solid #fef08a'>"+
+        "<div style='font-weight:700;font-size:13px;color:#854d0e;margin-bottom:8px'>📞 Questions To Ask The Seller</div>"+
+        "<ol style='margin:0;padding-left:20px;font-size:13px;color:#713f12;line-height:1.9'>"+
+        qs.map(function(q){return"<li>"+q+"</li>";}).join("")+
+        "</ol></div>"+
+        "<div style='padding:12px 16px;background:#eff6ff'>"+
+        "<div style='font-weight:700;font-size:13px;color:#1e40af;margin-bottom:6px'>📤 Buyer Pitch <small style='color:#93c5fd;font-weight:400'>(tap text to copy)</small></div>"+
+        "<div onclick='(function(el){try{navigator.clipboard.writeText(el.innerText);}catch(e){var t=document.createElement(\"textarea\");t.value=el.innerText;document.body.appendChild(t);t.select();document.execCommand(\"copy\");document.body.removeChild(t);}el.style.background=\"#dcfce7\";setTimeout(function(){el.style.background=\"#fff\";},1500);})(this)' style='font-size:13px;color:#1e3a8a;line-height:1.6;background:#fff;padding:10px;border-radius:8px;border:1px solid #bfdbfe;cursor:pointer'>"+
+        pitch+
+        "</div></div>";
+      mc.appendChild(intel);
+    },280);
+  };
+})();
+
+console.log("WholesaleOS Patch v15 - outreach panel, seller Qs, buyer buttons, Buy Boxes hidden");
