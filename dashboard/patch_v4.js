@@ -1015,7 +1015,7 @@ console.log("WholesaleOS Patch v14.1 - lead clicks fixed, filters, courthouse");
       var zip=(lead.zip||"").trim();
       var clean=addr;
       if(state&&addr.indexOf(state)<0)clean+=", "+state;
-      if(zip&&addr.indexOf(zip)<0)clean+=" "+zip;
+      if(zip&&addr.indexOf(zip)<0&&!/\d{5}/.test(addr))clean+=" "+zip;
       var enc=encodeURIComponent(clean);
       var bar=document.createElement("div");
       bar.className="prop-links-bar";
