@@ -921,17 +921,22 @@ var loaded=APP&&APP.leads&&APP.leads.length>0;
 if(!loaded&&typeof _wpOrig==="function")return _wpOrig().then(function(){if(typeof filterLeads==="function")filterLeads();if(APP.page==="leads"||APP.page==="dashboard"||APP.page==="pipeline")if(typeof render==="function")render();});
 if(typeof o==="function")return o();};})();
 
+// State + County persistent filter
 (function(){
 var o=window.quickFilterBar;
 window.quickFilterBar=function(){
   var orig=typeof o==="function"?o():"";
   var sc={};(APP.leads||[]).forEach(function(l){if(l&&l.state)sc[l.state.toUpperCase()]=(sc[l.state.toUpperCase()]||0)+1;});
-  var so="<option value=\"\">All States ("+(APP.leads||[]).length+")</option>"+Object.keys(sc).sort().map(function(s){return"<option value=\""+s+"\">"+s+" ("+sc[s]+")</option>";}).join("");
+  var curSt=APP._wsState||"",curCo=APP._wsCounty||"";
+  var so="<option value=\"\">All States ("+(APP.leads||[]).length+")</option>"+Object.keys(sc).sort().map(function(s){return"<option value=\""+s+"\""+( s===curSt?" selected":"")+">"+s+" ("+sc[s]+")</option>";}).join("");
+  var co="<option value=\"\">All Counties</option>";
+  if(curSt){var cc={};(APP.leads||[]).forEach(function(l){if(l&&(l.state||"").toUpperCase()===curSt&&l.county){var n=l.county.trim().replace(/\w\S*/g,function(t){return t.charAt(0).toUpperCase()+t.substr(1).toLowerCase();});cc[n]=(cc[n]||0)+1;}});
+  co="<option value=\"\">All Counties</option>"+Object.keys(cc).sort().map(function(c){return"<option value=\""+c+"\""+( c===curCo?" selected":"")+">"+c+" ("+cc[c]+")</option>";}).join("");}
   var dd="<div style='display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap'>"+
     "<label style='font-size:12px;color:#6b7280;font-weight:600'>State:</label>"+
     "<select id='ws-st' onchange='_wsF()' style='padding:5px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer'>"+so+"</select>"+
     "<label style='font-size:12px;color:#6b7280;font-weight:600'>County:</label>"+
-    "<select id='ws-co' onchange='_wsF()' style='padding:5px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer'><option value=\"\">All Counties</option></select>"+
+    "<select id='ws-co' onchange='_wsF()' style='padding:5px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer'>"+co+"</select>"+
     "<button onclick='_wsR()' style='padding:5px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;cursor:pointer;background:#f9fafb'>Reset</button>"+
   "</div>";
   return dd+orig;
@@ -939,27 +944,25 @@ window.quickFilterBar=function(){
 window._wsF=function(){
   var st=(document.getElementById("ws-st")||{}).value||"";
   var co=(document.getElementById("ws-co")||{}).value||"";
-  if(st){var cc={};(APP.leads||[]).forEach(function(l){if(l&&(l.state||"").toUpperCase()===st&&l.county)cc[l.county]=(cc[l.county]||0)+1;});
-  var cs=document.getElementById("ws-co");
-  if(cs)cs.innerHTML="<option value=\"\">All Counties</option>"+Object.keys(cc).sort().map(function(c){return"<option value=\""+c+"\">"+c+" ("+cc[c]+")</option>";}).join("");}
-  else{var cs2=document.getElementById("ws-co");if(cs2)cs2.innerHTML="<option value=\"\">All Counties</option>";}
-  APP.filtered=(APP.leads||[]).filter(function(l){if(!l)return false;if(st&&(l.state||"").toUpperCase()!==st)return false;if(co&&(l.county||"").toLowerCase()!==co.toLowerCase())return false;return true;});
+  APP._wsState=st;APP._wsCounty=co;
+  APP.filtered=(APP.leads||[]).filter(function(l){
+    if(!l)return false;
+    if(st&&(l.state||"").toUpperCase()!==st)return false;
+    if(co){var n=(l.county||"").trim().replace(/\w\S*/g,function(t){return t.charAt(0).toUpperCase()+t.substr(1).toLowerCase();});if(n.toLowerCase()!==co.toLowerCase())return false;}
+    return true;
+  });
   if(typeof render==="function")render();
 };
-window._wsR=function(){
-  var s=document.getElementById("ws-st");if(s)s.value="";
-  var c=document.getElementById("ws-co");if(c)c.innerHTML="<option value=\"\">All Counties</option>";
-  APP.filtered=null;if(typeof render==="function")render();
-};
+window._wsR=function(){APP._wsState="";APP._wsCounty="";APP.filtered=null;if(typeof render==="function")render();};
 })();
 
 setTimeout(function(){try{
   var all=Array.from(document.querySelectorAll("[onclick]"));
   var hasCH=all.some(function(e){return(e.getAttribute("onclick")||"").indexOf("courthouse")>-1;});
-  if(!hasCH){var leadsEl=all.find(function(e){return(e.getAttribute("onclick")||"")==="navigate('leads')";});
-  if(leadsEl){var ch=leadsEl.cloneNode(true);ch.setAttribute("onclick","navigate('courthouse')");
+  if(!hasCH){var le=all.find(function(e){return(e.getAttribute("onclick")||"")==="navigate('leads')";});
+  if(le){var ch=le.cloneNode(true);ch.setAttribute("onclick","navigate('courthouse')");
   var t=ch.querySelector("span")||ch;t.textContent="🏛 Courthouse";
-  leadsEl.parentNode.insertBefore(ch,leadsEl.nextSibling);}}
+  le.parentNode.insertBefore(ch,le.nextSibling);}}
 }catch(e){}},2000);
 
-console.log("WholesaleOS Patch v14 - full modal, state/county filters, courthouse");
+console.log("WholesaleOS Patch v14 - full modal comps+buyers, CA/SD filters, courthouse");
