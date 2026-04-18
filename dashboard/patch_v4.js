@@ -854,88 +854,112 @@ logLesson('rendering','Multiple render hooks caused flicker loops','Remove rende
   updateLeadsBadge();
 })();
 
+// === PATCH v14 ===
 
-
-// ═══ UI FIX v13: DEFINITIVE — replaces all v8-v12 stacked wrappers ═══════════
-// Collapses broken wrapper chains into single clean implementations.
-
-// 1. matchBuyers — null guards so renderLeadDetail never crashes
-(function(){
-  var _origMB = window.matchBuyers;
-  window.matchBuyers = function(lead) {
-    if (!lead || !APP || !APP.buyers) return [];
-    try {
-      return _origMB(lead);
-    } catch(e) {
-      var arv = lead.arv || 0;
-      var st  = (lead.state || "").toUpperCase();
-      return (APP.buyers || []).filter(function(b) {
-        if (!b) return false;
-        if (b.state && b.state.toUpperCase() !== st) return false;
-        var max = b.maxPrice || b.max_price || 0;
-        if (max && arv && arv > max) return false;
-        return true;
-      });
-    }
-  };
+(function(){var o=window.matchBuyers;window.matchBuyers=function(l){
+if(!l||!APP||!APP.buyers)return[];
+try{return o(l);}catch(e){
+var a=l.arv||0,s=(l.state||"").toUpperCase();
+return(APP.buyers||[]).filter(function(b){if(!b)return false;if(b.state&&b.state.toUpperCase()!==s)return false;var m=b.maxPrice||0;if(m&&a&&a>m)return false;return true;});}};
 })();
 
-// 2. renderLeads — single clean wrapper, returns original result
+(function(){var o=window.renderLeads;window.renderLeads=function(){
+if(APP&&Array.isArray(APP.filtered))APP.filtered.forEach(function(l){if(!l)return;if(!l.owner_name)l.owner_name=l.ownership||l.seller_type||"";if(!l.city)l.city=(l.address||"").split(",")[1]||"";});
+return o();};})();
 (function(){
-  var _origRL2 = window.renderLeads;
-  window.renderLeads = function() {
-    if (APP && Array.isArray(APP.filtered)) {
-      APP.filtered.forEach(function(l) {
-        if (!l) return;
-        if (!l.owner_name) l.owner_name = l.ownership || l.seller_type || "";
-        if (!l.city) l.city = (l.address || "").split(",")[1] || "";
-      });
-    }
-    return _origRL2();
-  };
+var o=window.renderLeadDetail;
+window.renderLeadDetail=function(l){
+  if(!l)l=APP&&APP.selectedLead;
+  if(!l)return"<p style='padding:16px;color:#888'>Select a lead</p>";
+  if(typeof l==="string"){var f=null;for(var i=0;i<(APP.leads||[]).length;i++){if(APP.leads[i]&&APP.leads[i].id===l){f=APP.leads[i];break;}}if(!f)return"<p>Not found</p>";l=f;}
+  if(!l.owner_name)l.owner_name=l.ownership||l.seller_type||"Owner";
+  if(!l.city)l.city=(l.address||"").split(",")[1]||"";
+  if(!l.phone)l.phone=l.phone_number||l.seller_phone||"";
+  if(!l.seller_type)l.seller_type="Owner";
+  if(!l.county)l.county="";
+  APP.selectedLead=l;
+  var r;try{r=o.call(null,l);}catch(e){console.error("[v14]",e.message);}
+  if(r&&r.length>200)return r;
+  var dm=typeof calcDealMath==="function"?calcDealMath(l):{};
+  var mao=l.mao||dm.mao||0,fhi=l.fee_hi||dm.feeHi||0,flo=l.fee_lo||dm.feeLo||0;
+  var buyers=typeof matchBuyers==="function"?matchBuyers(l):[];
+  var ff=function(n){return"$"+(n||0).toLocaleString();};
+  var brows=buyers.slice(0,6).map(function(b){return"<div style='padding:7px 0;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:13px'><span><b>"+(b.name||"Buyer")+"</b> - "+(b.state||"")+"</span><span style='color:#16a34a'>Max "+(b.maxPrice||0).toLocaleString()+"</span></div>";}).join("")||"<p style='color:#888;font-size:13px'>No matching buyers yet</p>";
+  return"<div style='font-family:sans-serif;overflow:auto'>"+
+  "<div style='background:#0f172a;color:#fff;padding:14px 18px'><div style='font-size:15px;font-weight:700'>"+(l.address||"")+"</div><div style='color:#94a3b8;font-size:12px;margin-top:3px'>"+(l.city||"").trim()+", "+(l.state||"")+" "+(l.zip||"")+" | "+(l.category||"")+" | "+(l.risk||"")+"</div></div>"+
+  "<div style='display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e5e7eb'>"+
+  "<div style='padding:12px;text-align:center;border-right:1px solid #e5e7eb'><div style='font-size:10px;color:#6b7280;text-transform:uppercase'>ARV</div><div style='font-size:17px;font-weight:700'>"+ff(l.arv)+"</div></div>"+
+  "<div style='padding:12px;text-align:center;border-right:1px solid #e5e7eb'><div style='font-size:10px;color:#6b7280;text-transform:uppercase'>Offer</div><div style='font-size:17px;font-weight:700;color:#2563eb'>"+ff(l.offer)+"</div></div>"+
+  "<div style='padding:12px;text-align:center;border-right:1px solid #e5e7eb'><div style='font-size:10px;color:#6b7280;text-transform:uppercase'>Spread</div><div style='font-size:17px;font-weight:700;color:#16a34a'>"+ff(l.spread)+"</div></div>"+
+  "<div style='padding:12px;text-align:center'><div style='font-size:10px;color:#6b7280;text-transform:uppercase'>MAO</div><div style='font-size:17px;font-weight:700;color:#7c3aed'>"+ff(mao)+"</div></div>"+
+  "</div>"+
+  "<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px'>"+
+  "<div style='background:#dcfce7;border-radius:6px;padding:8px;text-align:center'><div style='font-size:10px;color:#166534'>Fee Lo</div><b style='color:#166534'>"+ff(flo)+"</b></div>"+
+  "<div style='background:#dcfce7;border-radius:6px;padding:8px;text-align:center'><div style='font-size:10px;color:#166534'>Fee Hi</div><b style='color:#166534'>"+ff(fhi)+"</b></div>"+
+  "<div style='background:#eff6ff;border-radius:6px;padding:8px;text-align:center'><div style='font-size:10px;color:#1e40af'>Equity</div><b style='color:#1e40af'>"+(l.equity_pct||0).toFixed(1)+"%</b></div>"+
+  "<div style='background:#fef9c3;border-radius:6px;padding:8px;text-align:center'><div style='font-size:10px;color:#854d0e'>Repairs</div><b style='color:#854d0e'>"+ff(l.repairs)+"</b></div>"+
+  "</div>"+
+  "<div style='padding:8px 14px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;display:flex;gap:6px;flex-wrap:wrap'>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Owner:</b> "+(l.owner_name||"")+"</span>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Phone:</b> "+(l.phone||"N/A")+"</span>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Beds/Baths:</b> "+(l.beds||"?")+"/"+(l.baths||"?")+"</span>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Sqft:</b> "+(l.sqft||"?")+"</span>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Year:</b> "+(l.year||"?")+"</span>"+
+  "<span style='background:#f3f4f6;border-radius:5px;padding:3px 8px;font-size:12px'><b>Strategy:</b> "+(l.investment_strategy||l.distress||"")+"</span>"+
+  "</div>"+
+  "<div style='padding:10px 14px;display:flex;gap:8px'>"+
+  "<button onclick='openSMSCompose(\""+l.id+"\")' style='flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>SMS</button>"+
+  "<button onclick='openEmailCompose(\""+l.id+"\")' style='flex:1;padding:9px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>Email</button>"+
+  "<button onclick='initiateCall(\""+l.id+"\")' style='flex:1;padding:9px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer'>Call</button>"+
+  "<a href='https://www.zillow.com/homes/"+encodeURIComponent(l.address||"")+"_rb/' target='_blank' style='flex:1;padding:9px;background:#f59e0b;color:#fff;text-decoration:none;text-align:center;border-radius:8px;font-weight:600;cursor:pointer'>Zillow</a>"+
+  "</div>"+
+  "<div style='padding:10px 14px'><div style='font-weight:700;margin-bottom:6px'>Matching Buyers ("+buyers.length+")</div>"+brows+"</div>"+
+  "</div>";
+};})();
+(function(){var o=window.loadLeadsFromAPI;window.loadLeadsFromAPI=function(){
+var loaded=APP&&APP.leads&&APP.leads.length>0;
+if(!loaded&&typeof _wpOrig==="function")return _wpOrig().then(function(){if(typeof filterLeads==="function")filterLeads();if(APP.page==="leads"||APP.page==="dashboard"||APP.page==="pipeline")if(typeof render==="function")render();});
+if(typeof o==="function")return o();};})();
+
+(function(){
+var o=window.quickFilterBar;
+window.quickFilterBar=function(){
+  var orig=typeof o==="function"?o():"";
+  var sc={};(APP.leads||[]).forEach(function(l){if(l&&l.state)sc[l.state.toUpperCase()]=(sc[l.state.toUpperCase()]||0)+1;});
+  var so="<option value=\"\">All States ("+(APP.leads||[]).length+")</option>"+Object.keys(sc).sort().map(function(s){return"<option value=\""+s+"\">"+s+" ("+sc[s]+")</option>";}).join("");
+  var dd="<div style='display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap'>"+
+    "<label style='font-size:12px;color:#6b7280;font-weight:600'>State:</label>"+
+    "<select id='ws-st' onchange='_wsF()' style='padding:5px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer'>"+so+"</select>"+
+    "<label style='font-size:12px;color:#6b7280;font-weight:600'>County:</label>"+
+    "<select id='ws-co' onchange='_wsF()' style='padding:5px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer'><option value=\"\">All Counties</option></select>"+
+    "<button onclick='_wsR()' style='padding:5px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;cursor:pointer;background:#f9fafb'>Reset</button>"+
+  "</div>";
+  return dd+orig;
+};
+window._wsF=function(){
+  var st=(document.getElementById("ws-st")||{}).value||"";
+  var co=(document.getElementById("ws-co")||{}).value||"";
+  if(st){var cc={};(APP.leads||[]).forEach(function(l){if(l&&(l.state||"").toUpperCase()===st&&l.county)cc[l.county]=(cc[l.county]||0)+1;});
+  var cs=document.getElementById("ws-co");
+  if(cs)cs.innerHTML="<option value=\"\">All Counties</option>"+Object.keys(cc).sort().map(function(c){return"<option value=\""+c+"\">"+c+" ("+cc[c]+")</option>";}).join("");}
+  else{var cs2=document.getElementById("ws-co");if(cs2)cs2.innerHTML="<option value=\"\">All Counties</option>";}
+  APP.filtered=(APP.leads||[]).filter(function(l){if(!l)return false;if(st&&(l.state||"").toUpperCase()!==st)return false;if(co&&(l.county||"").toLowerCase()!==co.toLowerCase())return false;return true;});
+  if(typeof render==="function")render();
+};
+window._wsR=function(){
+  var s=document.getElementById("ws-st");if(s)s.value="";
+  var c=document.getElementById("ws-co");if(c)c.innerHTML="<option value=\"\">All Counties</option>";
+  APP.filtered=null;if(typeof render==="function")render();
+};
 })();
 
-// 3. renderLeadDetail — single clean wrapper, handles string ID or object
-(function(){
-  var _origRLD3 = window.renderLeadDetail;
-  window.renderLeadDetail = function() {
-    if (!APP || !APP.selectedLead)
-      return "<div style='padding:16px;color:#888'>Select a lead to view details</div>";
-    var l = APP.selectedLead;
-    if (typeof l === "string") {
-      l = (APP.leads || []).find(function(x){ return x && x.id === APP.selectedLead; });
-      if (!l) return "<div style='padding:16px;color:#888'>Lead not found</div>";
-      APP.selectedLead = l;
-    }
-    if (!l.owner_name)  l.owner_name  = l.ownership || l.seller_type || "";
-    if (!l.city)        l.city        = (l.address || "").split(",")[1] || "";
-    if (!l.phone)       l.phone       = l.phone_number || l.seller_phone || "";
-    if (!l.seller_type) l.seller_type = l.ownership ? "Owner" : "";
-    try { return _origRLD3(); }
-    catch(e) {
-      console.error("[v13] renderLeadDetail:", e.message);
-      return "<div style='padding:20px'><h3>" + (l.address||"") + "</h3>" +
-        "<div>ARV: $" + ((l.arv||0).toLocaleString()) + "</div>" +
-        "<div>Spread: $" + ((l.spread||0).toLocaleString()) + "</div>" +
-        "<div>Offer: $" + ((l.offer||0).toLocaleString()) + "</div></div>";
-    }
-  };
-})();
+setTimeout(function(){try{
+  var all=Array.from(document.querySelectorAll("[onclick]"));
+  var hasCH=all.some(function(e){return(e.getAttribute("onclick")||"").indexOf("courthouse")>-1;});
+  if(!hasCH){var leadsEl=all.find(function(e){return(e.getAttribute("onclick")||"")==="navigate('leads')";});
+  if(leadsEl){var ch=leadsEl.cloneNode(true);ch.setAttribute("onclick","navigate('courthouse')");
+  var t=ch.querySelector("span")||ch;t.textContent="🏛 Courthouse";
+  leadsEl.parentNode.insertBefore(ch,leadsEl.nextSibling);}}
+}catch(e){}},2000);
 
-// 4. loadLeadsFromAPI — call _wpOrig then filterLeads+render
-(function(){
-  var _htmlLL = window.loadLeadsFromAPI;
-  window.loadLeadsFromAPI = function() {
-    var loaded = APP && APP.leads && APP.leads.length > 0;
-    if (!loaded && typeof _wpOrig === "function") {
-      return _wpOrig().then(function() {
-        if (typeof filterLeads === "function") filterLeads();
-        if (APP.page==="leads"||APP.page==="dashboard"||APP.page==="pipeline")
-          if (typeof render === "function") render();
-      });
-    }
-    if (typeof _htmlLL === "function") return _htmlLL();
-  };
-})();
-
-console.log("WholesaleOS Patch v13 — definitive: matchBuyers+renderLeads+renderLeadDetail+loadLeads");
+console.log("WholesaleOS Patch v14 - full modal, state/county filters, courthouse");
