@@ -984,3 +984,109 @@ window.openLeadDetailFixed = function(id) {
 })();
 
 console.log("WholesaleOS Patch v14.1 - lead clicks fixed, filters, courthouse");
+
+// === PATCH v14.2 ===
+
+// 1. Wire modal buttons via event delegation
+(function(){
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("button");
+    if(!btn) return;
+    var ov = document.getElementById("modal-overlay");
+    if(!ov || window.getComputedStyle(ov).display === "none") return;
+    var txt = (btn.innerText||"").trim().toLowerCase();
+    var lead = APP.selectedLead;
+    if(!lead) return;
+    var id = typeof lead==="string"?lead:lead.id;
+    if(btn.getAttribute("onclick")) return; // already has handler
+    if(txt.indexOf("contract")>-1){
+      e.stopPropagation();
+      if(typeof openFillContract==="function") openFillContract(id);
+      else if(typeof openContractFill==="function") openContractFill(id);
+    } else if(txt.indexOf("match")>-1){
+      e.stopPropagation();
+      if(typeof triggerBuyerMatch==="function") triggerBuyerMatch(id);
+      else if(typeof openBulkSendModal==="function") openBulkSendModal([id]);
+    } else if(txt.indexOf("follow")>-1){
+      e.stopPropagation();
+      if(typeof openFollowUp==="function") openFollowUp(id);
+    } else if(txt==="status"){
+      e.stopPropagation();
+      if(typeof openUpdateStatus==="function") openUpdateStatus(id);
+    }
+  }, true);
+})();
+
+// 2. State-matched buyers only
+(function(){
+  var _mb = window.matchBuyers;
+  window.matchBuyers = function(lead){
+    if(!lead||!APP||!APP.buyers) return [];
+    var ls=(lead.state||"").toUpperCase();
+    var arv=lead.arv||0;
+    var matched=(APP.buyers||[]).filter(function(b){
+      if(!b) return false;
+      var bs=(b.state||"").toUpperCase();
+      if(bs && bs!==ls) return false;
+      var max=b.maxPrice||b.max_price||0;
+      if(max&&arv&&arv>max) return false;
+      return true;
+    });
+    return matched.length>0 ? matched : (APP.buyers||[]).filter(function(b){return b&&(!b.state||!b.state.trim());});
+  };
+})();
+
+// 3. Fix openLeadModal: inject address bar + property links after render
+(function(){
+  var _olm=window.openLeadModal;
+  window.openLeadModal=function(leadId){
+    if(typeof _olm==="function") _olm(leadId);
+    setTimeout(function(){
+      var lead=APP.selectedLead;
+      if(!lead||typeof lead==="string") return;
+      var mc=document.getElementById("modal-content");
+      if(!mc||mc.querySelector(".prop-links-bar")) return;
+      // Build clean full address
+      var addr=(lead.address||"").trim();
+      var city=(lead.city||"").trim().replace(/^,+\s*/,"");
+      var state=(lead.state||"").trim();
+      var zip=(lead.zip||"").trim();
+      var parts=[addr];
+      if(city&&addr.toLowerCase().indexOf(city.toLowerCase())<0) parts.push(city);
+      if(state&&addr.indexOf(state)<0) parts.push(state);
+      if(zip&&addr.indexOf(zip)<0) parts.push(zip);
+      var clean=parts.join(", ").replace(/,\s*,/g,",");
+      var enc=encodeURIComponent(clean);
+      var bar=document.createElement("div");
+      bar.className="prop-links-bar";
+      bar.style.cssText="display:flex;gap:6px;padding:10px 14px;background:#f0f9ff;border-bottom:2px solid #bae6fd;flex-wrap:wrap;align-items:center";
+      // Address with copy button
+      var aspan=document.createElement("span");
+      aspan.style.cssText="font-size:13px;font-weight:600;color:#0369a1;cursor:pointer;text-decoration:underline;flex:1;min-width:180px";
+      aspan.title="Click to copy full address";
+      aspan.textContent="📋 "+clean;
+      aspan.onclick=function(){
+        try{navigator.clipboard.writeText(clean);}catch(e){var ta=document.createElement("textarea");ta.value=clean;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}
+        this.textContent="✅ Copied! "+clean;
+        var self=this;setTimeout(function(){self.textContent="📋 "+clean;},2000);
+      };
+      bar.appendChild(aspan);
+      // Property links
+      var links=[
+        ["Zillow","https://www.zillow.com/homes/"+enc+"_rb/","#1d4ed8"],
+        ["Redfin","https://www.redfin.com/search#location="+enc,"#dc2626"],
+        ["Maps","https://www.google.com/maps/search/"+enc,"#059669"],
+        ["Rent","https://www.rentometer.com/analysis/new?address="+enc+"&bedrooms="+(lead.beds||3),"#7c3aed"]
+      ];
+      links.forEach(function(lnk){
+        var a=document.createElement("a");
+        a.href=lnk[1];a.target="_blank";a.textContent=lnk[0];
+        a.style.cssText="padding:5px 12px;background:"+lnk[2]+";color:#fff;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600;white-space:nowrap";
+        bar.appendChild(a);
+      });
+      mc.insertBefore(bar,mc.firstChild);
+    },200);
+  };
+})();
+
+console.log("WholesaleOS v14.2 - buttons wired, state buyers, address+links");
