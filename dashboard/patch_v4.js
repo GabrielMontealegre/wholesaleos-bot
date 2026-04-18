@@ -965,4 +965,22 @@ setTimeout(function(){try{
   le.parentNode.insertBefore(ch,le.nextSibling);}}
 }catch(e){}},2000);
 
-console.log("WholesaleOS Patch v14 - full modal comps+buyers, CA/SD filters, courthouse");
+
+// CRITICAL FIX: openLeadDetailFixed was broken — redefine to call openLeadModal directly
+window.openLeadDetailFixed = function(id) {
+  if (!id) return;
+  if (typeof openLeadModal === "function") openLeadModal(id);
+};
+
+// Also fix selectLead to use openLeadModal
+(function(){
+  var _orig = window.selectLead;
+  window.selectLead = function(id) {
+    if (!id) return;
+    try { localStorage.setItem("ws_lastLead", id); } catch(e) {}
+    if (typeof _orig === "function") _orig(id);
+    if (typeof openLeadModal === "function") openLeadModal(id);
+  };
+})();
+
+console.log("WholesaleOS Patch v14.1 - lead clicks fixed, filters, courthouse");
