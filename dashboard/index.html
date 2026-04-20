@@ -12997,6 +12997,77 @@ function runAddressFix(dry){
   .catch(function(e){if(st)st.textContent='Error: '+e.message;});
 }
 
+
+
+// =============================================
+// ADDRESS VALIDATION BADGE in lead modal
+// =============================================
+(function() {
+  // Patch openLeadModal to inject validation badge after render
+  var _origOpenLead = window.openLeadModal;
+  if (typeof _origOpenLead !== 'function') return;
+  
+  window.openLeadModal = function(id) {
+    _origOpenLead.apply(this, arguments);
+    
+    // Short delay to let modal render
+    setTimeout(function() {
+      // Get the current lead
+      var lead = APP && APP.selectedLead;
+      if (!lead) return;
+      
+      // Find address bar container
+      var addrBar = document.getElementById('lead-addr-bar') || document.querySelector('.lead-addr-bar');
+      if (!addrBar) return;
+      
+      // Remove old badge if any
+      var oldBadge = document.getElementById('addr-validation-badge');
+      if (oldBadge) oldBadge.remove();
+      
+      // Build badge
+      var badge = document.createElement('span');
+      badge.id = 'addr-validation-badge';
+      badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px;';
+      
+      if (lead._address_validated === true) {
+        badge.style.background = 'rgba(76,175,80,0.2)';
+        badge.style.color = '#4caf50';
+        badge.style.border = '1px solid #4caf50';
+        badge.innerHTML = '✅ Verified';
+        badge.title = lead._address_issues ? lead._address_issues.join(' | ') : 'Address validated';
+      } else if (lead._address_validated === false) {
+        badge.style.background = 'rgba(248,81,73,0.2)';
+        badge.style.color = '#f85149';
+        badge.style.border = '1px solid #f85149';
+        badge.innerHTML = '⚠️ Review ZIP';
+        badge.title = lead._address_issues ? lead._address_issues.join(' | ') : 'Address needs review';
+      } else {
+        badge.style.background = 'rgba(100,100,100,0.2)';
+        badge.style.color = '#888';
+        badge.style.border = '1px solid #555';
+        badge.innerHTML = '○ Unvalidated';
+        badge.title = 'Run address validation pipeline to check this address';
+      }
+      
+      addrBar.appendChild(badge);
+      
+      // Upgrade Zillow/Redfin/Maps links to use stored validated links
+      if (lead._zillow_link) {
+        var zLinks = document.querySelectorAll('a[href*="zillow.com"]');
+        zLinks.forEach(function(a) { a.href = lead._zillow_link; });
+      }
+      if (lead._redfin_link) {
+        var rLinks = document.querySelectorAll('a[href*="redfin.com"]');
+        rLinks.forEach(function(a) { a.href = lead._redfin_link; });
+      }
+      if (lead._google_maps_link) {
+        var gLinks = document.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google"]');
+        gLinks.forEach(function(a) { a.href = lead._google_maps_link; });
+      }
+    }, 200);
+  };
+})();
+
 </script>
 </body>
 </html>
