@@ -2904,3 +2904,56 @@ app.post('/api/buyers/bulk-import', async (req, res) => {
   }
 });
 
+// Buyer generator prompt endpoint — returns the system prompt for on-demand buyer generation
+app.get('/api/buyers/generator-prompt', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const promptPath = path.join(__dirname, 'buyer-generator-prompt.md');
+    const prompt = fs.existsSync(promptPath) ? fs.readFileSync(promptPath, 'utf8') : 'Prompt file not found';
+    res.json({
+      ok: true,
+      prompt: prompt,
+      instructions: [
+        '1. Copy the SYSTEM ROLE section as the system prompt for any AI (Claude, GPT, etc.)',
+        '2. Ask: "Generate 30 buyers for [STATE]" or "Generate 30 buyers for [COUNTY], [STATE]"',
+        '3. Paste the AI output back into WholesaleOS via POST /api/buyers/bulk-import',
+        '4. Or use the Import Buyers panel in the Buyers tab'
+      ],
+      importEndpoint: '/api/buyers/bulk-import',
+      currentBuyerCount: (db.readDB().buyers || []).length
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Buyer stats by state endpoint
+app.get('/api/buyers/stats', (req, res) => {
+  try {
+    const buyers = db.readDB().buyers || [];
+    const byState = {};
+    buyers.forEach(b => {
+      const s = b.state || 'Unknown';
+      if (!byState[s]) byState[s] = { count: 0, types: {} };
+      byState[s].count++;
+      (b.buyTypes || []).forEach(t => {
+        byState[s].types[t] = (byState[s].types[t] || 0) + 1;
+      });
+    });
+    const statesWithBuyers = Object.keys(byState).length;
+    res.json({
+      ok: true,
+      totalBuyers: buyers.length,
+      statesWithBuyers,
+      byState,
+      topStates: Object.entries(byState)
+        .sort((a,b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([state, data]) => ({ state, count: data.count }))
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
