@@ -2961,23 +2961,47 @@ app.get('/api/buyers/stats', (req, res) => {
 // ADDRESS VALIDATION & ENRICHMENT PIPELINE
 // ============================================================
 
+// Helper: clean and normalize an address string
+function cleanAddressString(address) {
+  if (!address) return address;
+  // Fix "TX_Extra NNNNN" pattern — remove garbage suffix before ZIP
+  address = address.replace(/[A-Z]{2}_Extra\s*/g, '');
+  // Normalize multiple spaces
+  address = address.replace(/\s{2,}/g, ' ').trim();
+  // Remove trailing commas
+  address = address.replace(/,\s*$/, '').trim();
+  return address;
+}
+
 // Helper: parse address components from a full address string
 function parseAddressComponents(address) {
   if (!address) return null;
+  address = cleanAddressString(address);
   
-  // Pattern: "1234 Street Name, City, ST 12345" or "1234 Street Name, City, ST"
-  const full = /^(\d+[\w\s\-\.#]+?),\s*([\w\s\.]+),\s*([A-Z]{2})\s*(\d{5})?$/i;
-  const noZip = /^(\d+[\w\s\-\.#]+?),\s*([\w\s\.]+),\s*([A-Z]{2})$/i;
+  // Pattern 1: "1234 Street Name, City, ST 12345"
+  var full = /^(\d+[\w\s\-\.#\/]+?),\s*([\w\s\.]+),\s*([A-Z]{2})\s*(\d{5})?$/i;
+  // Pattern 2: "1234 Street Name, City, ST"
+  var noZip = /^(\d+[\w\s\-\.#\/]+?),\s*([\w\s\.]+),\s*([A-Z]{2})$/i;
+  // Pattern 3: street only "1234 Street Name" (no city/state in string)
+  var streetOnly = /^(\d+\s+[\w\s\-\.#\/]+)$/i;
   
-  let m = address.match(full) || address.match(noZip);
-  if (!m) return null;
+  var m = address.match(full) || address.match(noZip);
+  if (m) {
+    return {
+      street: m[1].trim(),
+      city: m[2].trim(),
+      state: (m[3]||'').trim().toUpperCase(),
+      zip: m[4] ? m[4].trim() : null,
+      pattern: 'full'
+    };
+  }
   
-  return {
-    street: m[1].trim(),
-    city: m[2].trim(),
-    state: (m[3]||'').trim().toUpperCase(),
-    zip: m[4] ? m[4].trim() : null
-  };
+  var m2 = address.match(streetOnly);
+  if (m2) {
+    return { street: m2[1].trim(), city: null, state: null, zip: null, pattern: 'streetOnly' };
+  }
+  
+  return null;
 }
 
 // Helper: build Google Maps link
@@ -2987,8 +3011,6 @@ function buildGoogleMapsLink(address) {
 
 // Helper: build Zillow search link  
 function buildZillowLink(address) {
-  // Zillow uses dashes in URLs
-  const slug = address.replace(/[,#]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').toLowerCase();
   return 'https://www.zillow.com/homes/' + encodeURIComponent(address) + '_rb/';
 }
 
@@ -2997,16 +3019,17 @@ function buildRedfinLink(address) {
   return 'https://www.redfin.com/city/search?q=' + encodeURIComponent(address);
 }
 
-// Helper: validate a single lead's address
+// Helper: validate and fix a single lead's address
 function validateLeadAddress(lead) {
-  const addr = (lead.address || '').trim();
+  const rawAddr = (lead.address || '').trim();
   const zipField = (lead.zip || '').trim();
   const stateField = (lead.state || '').trim().toUpperCase();
+  const cityField = (lead.city || '').trim();
 
   const result = {
-    original_address: addr,
-    corrected_address: addr,
-    city: '',
+    original_address: rawAddr,
+    corrected_address: rawAddr,
+    city: cityField || '',
     state: stateField,
     zip: zipField,
     county: lead.county || '',
@@ -3017,47 +3040,80 @@ function validateLeadAddress(lead) {
     issues: []
   };
 
-  // Parse address components
-  const parsed = parseAddressComponents(addr);
-  
+  // Step 1: Clean the raw address (removes TX_Extra and similar garbage)
+  const cleaned = cleanAddressString(rawAddr);
+  const wasGarbage = cleaned !== rawAddr;
+  if (wasGarbage) {
+    result.issues.push('Removed garbage suffix from address string');
+    result.corrected_address = cleaned;
+  }
+
+  // Step 2: Parse cleaned address
+  const parsed = parseAddressComponents(cleaned);
+
   if (!parsed) {
     result.validation_status = 'INVALID_ADDRESS_REQUIRES_REVIEW';
     result.issues.push('Cannot parse address components');
+    result.google_maps_link = buildGoogleMapsLink(cleaned);
     return result;
   }
 
-  result.city = parsed.city;
-  
-  // Check: ZIP in address vs zip field
-  if (parsed.zip && zipField && parsed.zip !== zipField) {
-    result.issues.push('ZIP mismatch: address has ' + parsed.zip + ', zip field has ' + zipField);
-    // Trust the ZIP embedded in the address string (more specific)
-    result.zip = parsed.zip;
-    result.corrected_address = parsed.street + ', ' + parsed.city + ', ' + parsed.state + ' ' + parsed.zip;
-    result.validation_status = 'FIXED';
+  // Step 3: Handle street-only (no city/state in address string)
+  if (parsed.pattern === 'streetOnly') {
+    if (cityField && stateField && zipField) {
+      // Can reconstruct from separate fields
+      const reconstructed = parsed.street + ', ' + cityField + ', ' + stateField + ' ' + zipField;
+      result.corrected_address = reconstructed;
+      result.city = cityField;
+      result.state = stateField;
+      result.zip = zipField;
+      result.issues.push('Reconstructed from street + city/state/zip fields');
+      result.validation_status = 'FIXED';
+    } else if (stateField && zipField) {
+      const reconstructed = parsed.street + ', ' + stateField + ' ' + zipField;
+      result.corrected_address = reconstructed;
+      result.state = stateField;
+      result.zip = zipField;
+      result.issues.push('Partial reconstruction — missing city');
+      result.validation_status = 'FIXED';
+    } else {
+      result.validation_status = 'INVALID_ADDRESS_REQUIRES_REVIEW';
+      result.issues.push('Street-only address, no city/state fields to reconstruct from');
+    }
+    const finalAddr = result.corrected_address;
+    result.google_maps_link = buildGoogleMapsLink(finalAddr);
+    result.zillow_link = buildZillowLink(finalAddr);
+    result.redfin_link = buildRedfinLink(finalAddr);
+    return result;
   }
 
-  // Check: state in address vs state field
-  if (parsed.state && stateField && parsed.state !== stateField) {
-    result.issues.push('State mismatch: address has ' + parsed.state + ', state field has ' + stateField);
-    result.state = parsed.state; // Trust address string
-    result.validation_status = 'FIXED';
-  }
-
-  // Check: missing ZIP
-  if (!parsed.zip && !zipField) {
-    result.issues.push('Missing ZIP code');
+  // Step 4: Check highway addresses
+  if (/hwy|highway|fm \d|cr \d|route \d/i.test(parsed.street) && !parsed.city) {
     result.validation_status = 'INVALID_ADDRESS_REQUIRES_REVIEW';
-  } else if (!parsed.zip && zipField) {
-    // Add ZIP to corrected address
-    result.zip = zipField;
-    result.corrected_address = parsed.street + ', ' + parsed.city + ', ' + (parsed.state||stateField) + ' ' + zipField;
-    result.validation_status = 'FIXED';
-    result.issues.push('ZIP missing from address string — appended from zip field');
+    result.issues.push('Highway/rural address — verify parcel exists');
   }
 
-  // Build links using corrected address
-  const finalAddr = result.corrected_address || addr;
+  // Step 5: Populate fields from parsed
+  result.city = parsed.city || cityField;
+  result.state = parsed.state || stateField;
+  result.zip = parsed.zip || zipField;
+
+  // Step 6: Check state mismatch between address string and field
+  if (parsed.state && stateField && parsed.state !== stateField) {
+    result.issues.push('State mismatch: address says ' + parsed.state + ', field says ' + stateField + ' — using address value');
+    result.state = parsed.state;
+    result.validation_status = 'FIXED';
+  }
+
+  // Step 7: Rebuild corrected_address if anything changed
+  if (wasGarbage || result.issues.length > 0) {
+    const z = result.zip || parsed.zip || zipField;
+    result.corrected_address = parsed.street + ', ' + result.city + ', ' + result.state + (z ? ' ' + z : '');
+    if (result.validation_status === 'VALID') result.validation_status = 'FIXED';
+  }
+
+  // Step 8: Generate links
+  const finalAddr = result.corrected_address;
   result.google_maps_link = buildGoogleMapsLink(finalAddr);
   result.zillow_link = buildZillowLink(finalAddr);
   result.redfin_link = buildRedfinLink(finalAddr);
