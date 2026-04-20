@@ -51,6 +51,153 @@ app.get('/api/leads', (req, res) => {
   res.json({ leads: filtered, total: filtered.length });
 });
 
+
+// ====================== ADDRESS VALIDATION ROUTES (must be before :id routes) ======================
+// GET /api/leads/validate — validate all leads and return report
+app.get('/api/leads/validate', (req, res) => {
+  try {
+    const leads = db.readDB().leads || [];
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+    const statusFilter = req.query.status; // 'VALID' | 'FIXED' | 'INVALID_ADDRESS_REQUIRES_REVIEW'
+    
+    const results = leads.map(lead => {
+      const validation = validateLeadAddress(lead);
+      return { id: lead.id, address: lead.address, ...validation };
+    });
+
+    const summary = {
+      total: results.length,
+      valid: results.filter(r => r.validation_status === 'VALID').length,
+      fixed: results.filter(r => r.validation_status === 'FIXED').length,
+      requiresReview: results.filter(r => r.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW').length,
+      zipMismatches: results.filter(r => r.issues.some(i => i.includes('ZIP mismatch'))).length,
+      missingZip: results.filter(r => r.issues.some(i => i.includes('Missing ZIP'))).length,
+    };
+
+    let filtered = statusFilter ? results.filter(r => r.validation_status === statusFilter) : results;
+    const paginated = filtered.slice(offset, offset + limit);
+
+    res.json({ ok: true, summary, results: paginated, total: filtered.length, offset, limit });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/leads/validate-fix — auto-fix all fixable addresses in the DB
+app.post('/api/leads/validate-fix', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads = dbData.leads || [];
+    const dryRun = req.body && req.body.dry_run === true;
+    
+    let fixed = 0, skipped = 0, requiresReview = 0, alreadyValid = 0;
+    const fixedIds = [];
+    const reviewIds = [];
+
+    leads.forEach(lead => {
+      const validation = validateLeadAddress(lead);
+      
+      if (validation.validation_status === 'VALID') {
+        alreadyValid++;
+        return;
+      }
+      
+      if (validation.validation_status === 'FIXED') {
+        if (!dryRun) {
+          // Apply fixes to lead record
+          lead.address = validation.corrected_address;
+          lead.zip = validation.zip;
+          lead.state = validation.state;
+          if (validation.city) lead.city = validation.city;
+          lead._address_validated = true;
+          lead._address_validation_date = new Date().toISOString().split('T')[0];
+          lead._address_issues = validation.issues;
+          lead._google_maps_link = validation.google_maps_link;
+          lead._zillow_link = validation.zillow_link;
+        }
+        fixed++;
+        fixedIds.push(lead.id);
+        return;
+      }
+      
+      if (validation.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW') {
+        if (!dryRun) {
+          lead._address_validated = false;
+          lead._address_issues = validation.issues;
+        }
+        requiresReview++;
+        reviewIds.push(lead.id);
+      }
+    });
+
+    if (!dryRun) {
+      dbData.leads = leads;
+      db.writeDB(dbData);
+    }
+
+    res.json({
+      ok: true,
+      dry_run: dryRun,
+      summary: { total: leads.length, fixed, alreadyValid, requiresReview, skipped },
+      fixedIds: fixedIds.slice(0, 20),
+      reviewIds: reviewIds.slice(0, 20),
+      message: dryRun 
+        ? 'Dry run complete — no changes written' 
+        : fixed + ' addresses fixed, ' + requiresReview + ' flagged for review'
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/leads/:id/validate — validate single lead address
+app.get('/api/leads/:id/validate', (req, res) => {
+  try {
+    const leads = db.readDB().leads || [];
+    const lead = leads.find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    
+    const validation = validateLeadAddress(lead);
+    res.json({ ok: true, lead_id: lead.id, ...validation });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PATCH /api/leads/:id/address — manually correct a single lead's address
+app.patch('/api/leads/:id/address', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads = dbData.leads || [];
+    const lead = leads.find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const { address, city, state, zip } = req.body;
+    
+    if (address) lead.address = address.trim();
+    if (city) lead.city = city.trim();
+    if (state) lead.state = state.trim().toUpperCase();
+    if (zip) lead.zip = zip.trim();
+    
+    lead._address_manually_corrected = true;
+    lead._address_corrected_date = new Date().toISOString().split('T')[0];
+
+    // Re-validate after correction
+    const validation = validateLeadAddress(lead);
+    lead._google_maps_link = validation.google_maps_link;
+    lead._zillow_link = validation.zillow_link;
+    lead._address_validated = validation.validation_status !== 'INVALID_ADDRESS_REQUIRES_REVIEW';
+
+    dbData.leads = leads;
+    db.writeDB(dbData);
+
+    res.json({ ok: true, lead, validation });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/leads/:id', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
@@ -3121,148 +3268,5 @@ function validateLeadAddress(lead) {
   return result;
 }
 
-// GET /api/leads/validate — validate all leads and return report
-app.get('/api/leads/validate', (req, res) => {
-  try {
-    const leads = db.readDB().leads || [];
-    const limit = parseInt(req.query.limit) || 100;
-    const offset = parseInt(req.query.offset) || 0;
-    const statusFilter = req.query.status; // 'VALID' | 'FIXED' | 'INVALID_ADDRESS_REQUIRES_REVIEW'
-    
-    const results = leads.map(lead => {
-      const validation = validateLeadAddress(lead);
-      return { id: lead.id, address: lead.address, ...validation };
-    });
 
-    const summary = {
-      total: results.length,
-      valid: results.filter(r => r.validation_status === 'VALID').length,
-      fixed: results.filter(r => r.validation_status === 'FIXED').length,
-      requiresReview: results.filter(r => r.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW').length,
-      zipMismatches: results.filter(r => r.issues.some(i => i.includes('ZIP mismatch'))).length,
-      missingZip: results.filter(r => r.issues.some(i => i.includes('Missing ZIP'))).length,
-    };
-
-    let filtered = statusFilter ? results.filter(r => r.validation_status === statusFilter) : results;
-    const paginated = filtered.slice(offset, offset + limit);
-
-    res.json({ ok: true, summary, results: paginated, total: filtered.length, offset, limit });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/leads/validate-fix — auto-fix all fixable addresses in the DB
-app.post('/api/leads/validate-fix', (req, res) => {
-  try {
-    const dbData = db.readDB();
-    const leads = dbData.leads || [];
-    const dryRun = req.body && req.body.dry_run === true;
-    
-    let fixed = 0, skipped = 0, requiresReview = 0, alreadyValid = 0;
-    const fixedIds = [];
-    const reviewIds = [];
-
-    leads.forEach(lead => {
-      const validation = validateLeadAddress(lead);
-      
-      if (validation.validation_status === 'VALID') {
-        alreadyValid++;
-        return;
-      }
-      
-      if (validation.validation_status === 'FIXED') {
-        if (!dryRun) {
-          // Apply fixes to lead record
-          lead.address = validation.corrected_address;
-          lead.zip = validation.zip;
-          lead.state = validation.state;
-          if (validation.city) lead.city = validation.city;
-          lead._address_validated = true;
-          lead._address_validation_date = new Date().toISOString().split('T')[0];
-          lead._address_issues = validation.issues;
-          lead._google_maps_link = validation.google_maps_link;
-          lead._zillow_link = validation.zillow_link;
-        }
-        fixed++;
-        fixedIds.push(lead.id);
-        return;
-      }
-      
-      if (validation.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW') {
-        if (!dryRun) {
-          lead._address_validated = false;
-          lead._address_issues = validation.issues;
-        }
-        requiresReview++;
-        reviewIds.push(lead.id);
-      }
-    });
-
-    if (!dryRun) {
-      dbData.leads = leads;
-      db.writeDB(dbData);
-    }
-
-    res.json({
-      ok: true,
-      dry_run: dryRun,
-      summary: { total: leads.length, fixed, alreadyValid, requiresReview, skipped },
-      fixedIds: fixedIds.slice(0, 20),
-      reviewIds: reviewIds.slice(0, 20),
-      message: dryRun 
-        ? 'Dry run complete — no changes written' 
-        : fixed + ' addresses fixed, ' + requiresReview + ' flagged for review'
-    });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/leads/:id/validate — validate single lead address
-app.get('/api/leads/:id/validate', (req, res) => {
-  try {
-    const leads = db.readDB().leads || [];
-    const lead = leads.find(l => l.id === req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-    
-    const validation = validateLeadAddress(lead);
-    res.json({ ok: true, lead_id: lead.id, ...validation });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// PATCH /api/leads/:id/address — manually correct a single lead's address
-app.patch('/api/leads/:id/address', (req, res) => {
-  try {
-    const dbData = db.readDB();
-    const leads = dbData.leads || [];
-    const lead = leads.find(l => l.id === req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-
-    const { address, city, state, zip } = req.body;
-    
-    if (address) lead.address = address.trim();
-    if (city) lead.city = city.trim();
-    if (state) lead.state = state.trim().toUpperCase();
-    if (zip) lead.zip = zip.trim();
-    
-    lead._address_manually_corrected = true;
-    lead._address_corrected_date = new Date().toISOString().split('T')[0];
-
-    // Re-validate after correction
-    const validation = validateLeadAddress(lead);
-    lead._google_maps_link = validation.google_maps_link;
-    lead._zillow_link = validation.zillow_link;
-    lead._address_validated = validation.validation_status !== 'INVALID_ADDRESS_REQUIRES_REVIEW';
-
-    dbData.leads = leads;
-    db.writeDB(dbData);
-
-    res.json({ ok: true, lead, validation });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
