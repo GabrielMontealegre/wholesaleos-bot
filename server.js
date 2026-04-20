@@ -2957,3 +2957,256 @@ app.get('/api/buyers/stats', (req, res) => {
   }
 });
 
+// ============================================================
+// ADDRESS VALIDATION & ENRICHMENT PIPELINE
+// ============================================================
+
+// Helper: parse address components from a full address string
+function parseAddressComponents(address) {
+  if (!address) return null;
+  
+  // Pattern: "1234 Street Name, City, ST 12345" or "1234 Street Name, City, ST"
+  const full = /^(\d+[\w\s\-\.#]+?),\s*([\w\s\.]+),\s*([A-Z]{2})\s*(\d{5})?$/i;
+  const noZip = /^(\d+[\w\s\-\.#]+?),\s*([\w\s\.]+),\s*([A-Z]{2})$/i;
+  
+  let m = address.match(full) || address.match(noZip);
+  if (!m) return null;
+  
+  return {
+    street: m[1].trim(),
+    city: m[2].trim(),
+    state: (m[3]||'').trim().toUpperCase(),
+    zip: m[4] ? m[4].trim() : null
+  };
+}
+
+// Helper: build Google Maps link
+function buildGoogleMapsLink(address) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
+}
+
+// Helper: build Zillow search link  
+function buildZillowLink(address) {
+  // Zillow uses dashes in URLs
+  const slug = address.replace(/[,#]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').toLowerCase();
+  return 'https://www.zillow.com/homes/' + encodeURIComponent(address) + '_rb/';
+}
+
+// Helper: build Redfin link
+function buildRedfinLink(address) {
+  return 'https://www.redfin.com/city/search?q=' + encodeURIComponent(address);
+}
+
+// Helper: validate a single lead's address
+function validateLeadAddress(lead) {
+  const addr = (lead.address || '').trim();
+  const zipField = (lead.zip || '').trim();
+  const stateField = (lead.state || '').trim().toUpperCase();
+
+  const result = {
+    original_address: addr,
+    corrected_address: addr,
+    city: '',
+    state: stateField,
+    zip: zipField,
+    county: lead.county || '',
+    google_maps_link: '',
+    zillow_link: '',
+    redfin_link: '',
+    validation_status: 'VALID',
+    issues: []
+  };
+
+  // Parse address components
+  const parsed = parseAddressComponents(addr);
+  
+  if (!parsed) {
+    result.validation_status = 'INVALID_ADDRESS_REQUIRES_REVIEW';
+    result.issues.push('Cannot parse address components');
+    return result;
+  }
+
+  result.city = parsed.city;
+  
+  // Check: ZIP in address vs zip field
+  if (parsed.zip && zipField && parsed.zip !== zipField) {
+    result.issues.push('ZIP mismatch: address has ' + parsed.zip + ', zip field has ' + zipField);
+    // Trust the ZIP embedded in the address string (more specific)
+    result.zip = parsed.zip;
+    result.corrected_address = parsed.street + ', ' + parsed.city + ', ' + parsed.state + ' ' + parsed.zip;
+    result.validation_status = 'FIXED';
+  }
+
+  // Check: state in address vs state field
+  if (parsed.state && stateField && parsed.state !== stateField) {
+    result.issues.push('State mismatch: address has ' + parsed.state + ', state field has ' + stateField);
+    result.state = parsed.state; // Trust address string
+    result.validation_status = 'FIXED';
+  }
+
+  // Check: missing ZIP
+  if (!parsed.zip && !zipField) {
+    result.issues.push('Missing ZIP code');
+    result.validation_status = 'INVALID_ADDRESS_REQUIRES_REVIEW';
+  } else if (!parsed.zip && zipField) {
+    // Add ZIP to corrected address
+    result.zip = zipField;
+    result.corrected_address = parsed.street + ', ' + parsed.city + ', ' + (parsed.state||stateField) + ' ' + zipField;
+    result.validation_status = 'FIXED';
+    result.issues.push('ZIP missing from address string — appended from zip field');
+  }
+
+  // Build links using corrected address
+  const finalAddr = result.corrected_address || addr;
+  result.google_maps_link = buildGoogleMapsLink(finalAddr);
+  result.zillow_link = buildZillowLink(finalAddr);
+  result.redfin_link = buildRedfinLink(finalAddr);
+
+  return result;
+}
+
+// GET /api/leads/validate — validate all leads and return report
+app.get('/api/leads/validate', (req, res) => {
+  try {
+    const leads = db.readDB().leads || [];
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+    const statusFilter = req.query.status; // 'VALID' | 'FIXED' | 'INVALID_ADDRESS_REQUIRES_REVIEW'
+    
+    const results = leads.map(lead => {
+      const validation = validateLeadAddress(lead);
+      return { id: lead.id, address: lead.address, ...validation };
+    });
+
+    const summary = {
+      total: results.length,
+      valid: results.filter(r => r.validation_status === 'VALID').length,
+      fixed: results.filter(r => r.validation_status === 'FIXED').length,
+      requiresReview: results.filter(r => r.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW').length,
+      zipMismatches: results.filter(r => r.issues.some(i => i.includes('ZIP mismatch'))).length,
+      missingZip: results.filter(r => r.issues.some(i => i.includes('Missing ZIP'))).length,
+    };
+
+    let filtered = statusFilter ? results.filter(r => r.validation_status === statusFilter) : results;
+    const paginated = filtered.slice(offset, offset + limit);
+
+    res.json({ ok: true, summary, results: paginated, total: filtered.length, offset, limit });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/leads/validate-fix — auto-fix all fixable addresses in the DB
+app.post('/api/leads/validate-fix', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads = dbData.leads || [];
+    const dryRun = req.body && req.body.dry_run === true;
+    
+    let fixed = 0, skipped = 0, requiresReview = 0, alreadyValid = 0;
+    const fixedIds = [];
+    const reviewIds = [];
+
+    leads.forEach(lead => {
+      const validation = validateLeadAddress(lead);
+      
+      if (validation.validation_status === 'VALID') {
+        alreadyValid++;
+        return;
+      }
+      
+      if (validation.validation_status === 'FIXED') {
+        if (!dryRun) {
+          // Apply fixes to lead record
+          lead.address = validation.corrected_address;
+          lead.zip = validation.zip;
+          lead.state = validation.state;
+          if (validation.city) lead.city = validation.city;
+          lead._address_validated = true;
+          lead._address_validation_date = new Date().toISOString().split('T')[0];
+          lead._address_issues = validation.issues;
+          lead._google_maps_link = validation.google_maps_link;
+          lead._zillow_link = validation.zillow_link;
+        }
+        fixed++;
+        fixedIds.push(lead.id);
+        return;
+      }
+      
+      if (validation.validation_status === 'INVALID_ADDRESS_REQUIRES_REVIEW') {
+        if (!dryRun) {
+          lead._address_validated = false;
+          lead._address_issues = validation.issues;
+        }
+        requiresReview++;
+        reviewIds.push(lead.id);
+      }
+    });
+
+    if (!dryRun) {
+      dbData.leads = leads;
+      db.writeDB(dbData);
+    }
+
+    res.json({
+      ok: true,
+      dry_run: dryRun,
+      summary: { total: leads.length, fixed, alreadyValid, requiresReview, skipped },
+      fixedIds: fixedIds.slice(0, 20),
+      reviewIds: reviewIds.slice(0, 20),
+      message: dryRun 
+        ? 'Dry run complete — no changes written' 
+        : fixed + ' addresses fixed, ' + requiresReview + ' flagged for review'
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/leads/:id/validate — validate single lead address
+app.get('/api/leads/:id/validate', (req, res) => {
+  try {
+    const leads = db.readDB().leads || [];
+    const lead = leads.find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    
+    const validation = validateLeadAddress(lead);
+    res.json({ ok: true, lead_id: lead.id, ...validation });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PATCH /api/leads/:id/address — manually correct a single lead's address
+app.patch('/api/leads/:id/address', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads = dbData.leads || [];
+    const lead = leads.find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const { address, city, state, zip } = req.body;
+    
+    if (address) lead.address = address.trim();
+    if (city) lead.city = city.trim();
+    if (state) lead.state = state.trim().toUpperCase();
+    if (zip) lead.zip = zip.trim();
+    
+    lead._address_manually_corrected = true;
+    lead._address_corrected_date = new Date().toISOString().split('T')[0];
+
+    // Re-validate after correction
+    const validation = validateLeadAddress(lead);
+    lead._google_maps_link = validation.google_maps_link;
+    lead._zillow_link = validation.zillow_link;
+    lead._address_validated = validation.validation_status !== 'INVALID_ADDRESS_REQUIRES_REVIEW';
+
+    dbData.leads = leads;
+    db.writeDB(dbData);
+
+    res.json({ ok: true, lead, validation });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
