@@ -725,47 +725,8 @@ app.put('/api/contracts/custom/:id', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Automation Control Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/automation/scan', async (req, res) => {
-  res.json({ ok: true, message: 'Scan triggered Ã¢ÂÂ check notifications for progress' });
-  // Fire and forget
-  setTimeout(async () => {
-    try {
-      const { selectMarketsForWeek, getMarketData } = require('./markets');
-      const ai = require('./ai');
-      const { generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
-      const scanned = db.getScannedMarkets();
-      const markets = selectMarketsForWeek(req.body?.markets||4, scanned);
-      let totalLeads = 0;
-      const _scanKey = 'scan:leads:' + (db.getLeads ? db.getLeads().length : 0);
-      if (_rc.has(_scanKey)) { res.json({ ok:true, skipped:true, reason:'no_new_leads' }); return; }
-      _rc.set(_scanKey, 1);
-      for (const market of markets) {
-        const leads = await ai.generateLeadList(market.county, market.state, req.body?.count||20, ['Pre-FC','REO','Long DOM','FSBO','Probate']);
-        let added = 0;
-        for (const lead of leads) {
-          if (db.leadExists(lead.address)) continue;
-          let analysis = {};
-          if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
-          else { _rc.set('enrich:' + (lead.id||lead.address), 1);
-          try { analysis = await ai.analyzeProperty({...lead, county:market.county, state:market.state}); } catch {}
-          }
-          const mData = getMarketData(market.county, market.state);
-          const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : mData.arv);
-          const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
-          const off = analysis.offer > 10000 ? analysis.offer : Math.round((arv*0.70-rep)*0.94);
-          const sprd = arv-off-rep;
-          db.addLead({...lead, county:market.county, state:market.state, arv, offer:off, repairs:rep, mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55), spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High', why_good_deal:analysis.why_good_deal||lead.why_good_deal||`${lead.category} in ${market.county} County`, distress_signals:analysis.distress_signals||[lead.category], investment_strategy:'Wholesale Assignment', script:analysis.script||lead.script||'', source:'AI Generated'});
-          added++;
-        }
-        const boxes = generateMarketBuyBoxes(market.county, market.state, 3);
-        addBuyBoxesBulk(boxes);
-        db.addScannedMarket(market.state, market.county);
-        totalLeads += added;
-        db.addNotification('deal', `${added} leads Ã¢ÂÂ ${market.county}, ${market.state}`, `Automation scan complete for ${market.county} County`);
-      }
-      db.addNotification('scan', 'Automation scan complete', `${totalLeads} total leads added across ${markets.length} markets`);
-    } catch(e) { db.addNotification('warning', 'Scan error', e.message); }
-  }, 100);
+app.post('/api/automation/scan', function(req, res) {
+  res.status(410).json({ error: 'DISABLED - AI lead generation removed. Use real CSV imports.' });
 });
 
 app.post('/api/automation/extract-buyboxes', (req, res) => {
@@ -929,120 +890,13 @@ app.get('/api/stats/:userId', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Dashboard search (no Telegram needed) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/search/leads', async (req, res) => {
-  const { county, state, count, type, userId } = req.body;
-  if (!county || !state) return res.status(400).json({ error: 'County and state required' });
-  res.json({ ok: true, message: 'Search started', county, state, count: count||50 });
-  // Fire search in background
-  setTimeout(async () => {
-    try {
-      const ai = require('./ai');
-      const { getMarketData } = require('./markets');
-      const { generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
-      const isLand = type === 'land';
-      const isBuyers = type === 'buyers';
-      let leads = [];
-      if (isLand) {
-        leads = ai.generateLandLeads(county, state, count||50);
-      } else if (!isBuyers) {
-        leads = await ai.generateLeadList(county, state, count||50, ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent']);
-      }
-      const market = getMarketData(county, state);
-      let added = 0;
-      for (const lead of leads) {
-        if (db.leadExists(lead.address)) continue;
-        let analysis = {};
-        if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
-        else { _rc.set('enrich:' + (lead.id||lead.address), 1);
-        try { analysis = await ai.analyzeProperty({...lead, county, state}); } catch {}
-        }
-        const arv = analysis.arv > 50000 ? analysis.arv : (lead.arv > 50000 ? lead.arv : market.arv);
-        const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
-        const off = analysis.offer > 10000 ? analysis.offer : Math.round((arv*0.70-rep)*0.94);
-        const sprd = Math.max(0, arv-off-rep);
-        db.addLead({...lead, county, state, arv, offer:off, repairs:rep,
-          mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55),
-          spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High',
-          why_good_deal:analysis.why_good_deal||lead.why_good_deal||'',
-          distress_signals:analysis.distress_signals||lead.distress_signals||[],
-          investment_strategy:analysis.investment_strategy||'Wholesale Assignment',
-          script:analysis.script||lead.script||'', offer_email:analysis.offer_email||lead.offer_email||'',
-          negotiation_text:analysis.negotiation_text||lead.negotiation_text||'',
-          source: isLand ? 'Land Ã¢ÂÂ Dashboard Search' : 'AI Generated Ã¢ÂÂ Dashboard Search',
-          userId: userId || 'admin',
-        });
-        added++;
-      }
-      // Always auto-add buyers regardless of search type
-      const buyers = []; // generateMarketBuyers removed - use buyer finder engine instead
-      const buyersAdded = db.addBuyersBulk(buyers);
-      const boxes = generateMarketBuyBoxes(county, state, 5);
-      addBuyBoxesBulk(boxes);
-      db.addScannedMarket(state, county);
-      db.markStatePopulated(state);
-      db.checkLeadLimit();
-      db.addNotification('deal', added + ' leads found Ã¢ÂÂ ' + county + ', ' + state,
-        'Dashboard search complete. ' + buyersAdded + ' buyers added.', {county, state, added, userId: userId||'admin'});
-    } catch(e) { db.addNotification('warning','Search error', e.message); }
-  }, 100);
+app.post('/api/search/leads', function(req, res) {
+  res.status(410).json({ error: 'DISABLED - AI lead generation removed. Use real CSV imports.' });
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: State auto-populate Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/states/populate', async (req, res) => {
-  const { stateCode, userId } = req.body;
-  if (!stateCode) return res.status(400).json({ error: 'State code required' });
-  const { getStateMarkets } = require('./markets');
-  const stateData = getStateMarkets(stateCode);
-  if (!stateData) return res.status(404).json({ error: 'State not found' });
-  const alreadyDone = db.isStatePopulated(stateCode);
-  if (alreadyDone) return res.json({ ok: true, message: 'Already populated', alreadyDone: true });
-  res.json({ ok: true, message: 'Populating ' + stateData.name + ' with 150 leads...', stateName: stateData.name });
-  setTimeout(async () => {
-    try {
-      const ai = require('./ai');
-      const { getMarketData } = require('./markets');
-      const counties = Object.keys(stateData.counties||{});
-      // Pick top 2 counties by hotness
-      const topCounties = counties
-        .map(c => ({ county: c.replace(/_/g,' '), hotness: stateData.counties[c].hotness||70 }))
-        .sort((a,b) => b.hotness-a.hotness).slice(0,2);
-      let totalAdded = 0;
-      for (const { county } of topCounties) {
-        const perCounty = Math.round(150 / topCounties.length);
-        const leads = await ai.generateLeadList(county, stateCode, perCounty, ['Pre-FC','REO','Long DOM','FSBO','Probate']);
-        const market = getMarketData(county, stateCode);
-        for (const lead of leads) {
-          if (db.leadExists(lead.address)) continue;
-          let analysis = {};
-          if (_rc.has('enrich:' + (lead.id||lead.address))) { /* already processed */ }
-          else { _rc.set('enrich:' + (lead.id||lead.address), 1);
-          try { analysis = await ai.analyzeProperty({...lead, county, state:stateCode}); } catch {}
-          }
-          const arv = analysis.arv > 50000 ? analysis.arv : market.arv;
-          const rep = analysis.repairs > 1000 ? analysis.repairs : Math.round((lead.sqft||1400)*42);
-          const off = Math.round((arv*0.70-rep)*0.94);
-          const sprd = Math.max(0, arv-off-rep);
-          db.addLead({...lead, county, state:stateCode, arv, offer:off, repairs:rep,
-            mao:Math.round(arv*0.70-rep), fee_lo:Math.round(sprd*0.35), fee_hi:Math.round(sprd*0.55),
-            spread:sprd, risk:sprd>60000?'Low':sprd>30000?'Medium':'High',
-            why_good_deal:analysis.why_good_deal||lead.why_good_deal||'',
-            distress_signals:analysis.distress_signals||[lead.category],
-            investment_strategy:'Wholesale Assignment',
-            script:analysis.script||lead.script||'',
-            source:'AI Generated Ã¢ÂÂ State Population',
-            userId: userId||'admin',
-          });
-          totalAdded++;
-        }
-        const buyers = []; // generateMarketBuyers removed - use buyer finder engine instead
-        db.addBuyersBulk(buyers);
-        db.addScannedMarket(stateCode, county);
-      }
-      db.markStatePopulated(stateCode);
-      db.checkLeadLimit();
-      db.addNotification('deal', stateData.name + ' populated Ã¢ÂÂ ' + totalAdded + ' leads', 'Auto-population complete for ' + stateData.name, {state:stateCode, added:totalAdded});
-    } catch(e) { db.addNotification('warning','Population error for '+stateCode, e.message); }
-  }, 100);
+app.post('/api/states/populate', function(req, res) {
+  res.status(410).json({ error: 'DISABLED - AI lead generation removed. Use real CSV imports.' });
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Pending buyers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
