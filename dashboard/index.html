@@ -1296,7 +1296,7 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
   html += '<div style="display:flex;gap:6px">';
-  html += '<a href="' + (l._zillow_link || 'https://www.zillow.com/homes/' + encodeURIComponent(l.address||'') + '_rb/') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
+  html += '<a href="' + (l._zillow_link || '' + (l._zillow_link || ('https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:l.address||''})))) + '') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
   html += '<a href="https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(l.address||'') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">📊 Redfin Comps</a>';
   html += '<a href="https://rentometer.com/analysis/search?address=' + encodeURIComponent(l.address||'') + '&bedrooms=' + (l.beds||3) + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">💵 Rent Comps</a>';
   html += '</div></div>';
@@ -6807,7 +6807,7 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
   html += '<div style="display:flex;gap:6px">';
-  html += '<a href="' + (l._zillow_link || 'https://www.zillow.com/homes/' + encodeURIComponent(l.address||'') + '_rb/') + ' target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
+  html += '<a href="' + (l._zillow_link || '' + (l._zillow_link || ('https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:l.address||''})))) + '') + ' target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
   html += '<a href="https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(l.address||'') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">📊 Redfin Comps</a>';
   html += '<a href="https://rentometer.com/analysis/search?address=' + encodeURIComponent(l.address||'') + '&bedrooms=' + (l.beds||3) + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">💵 Rent Comps</a>';
   html += '</div></div>';
@@ -13126,9 +13126,9 @@ function buildLeadLinks(lead) {
   var addr = (lead.address || '').replace(/TX_Extra/gi, 'TX');
   var enc  = encodeURIComponent(addr);
   return {
-    zillow:   lead._zillow_link   || ('https://www.zillow.com/homes/' + enc + '_rb/'),
+    zillow:   lead._zillow_link   || ('https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:addr})) + ''),
     redfin:   lead._redfin_link   || ('https://www.redfin.com/city/search?q=' + enc),
-    maps:     lead._google_maps_link || ('https://www.google.com/maps/search/?api=1&query=' + enc),
+    maps:     lead._google_maps_link || ('https://maps.google.com/?q=' + enc),
     rent:     'https://www.rentometer.com/analysis/new?address=' + enc
   };
 }
@@ -13366,9 +13366,9 @@ function buildCleanLinks(lead) {
   var addr = (lead._clean_address || lead.address || '').replace(/[A-Z]{2}_w+/g, function(m){ return m.match(/^([A-Z]{2})/)[1]; });
   var enc  = encodeURIComponent(addr);
   return {
-    zillow:  lead._zillow_link  || 'https://www.zillow.com/homes/'+enc+'_rb/',
+    zillow:  lead._zillow_link  || 'https://www.zillow.com/search/real-estate/?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:addr}))+'',
     redfin:  lead._redfin_link  || 'https://www.redfin.com/city/search?q='+enc,
-    maps:    lead._google_maps_link || 'https://www.google.com/maps/search/?api=1&query='+enc,
+    maps:    lead._google_maps_link || ('https://maps.google.com/?q=' + enc),
     rent:    'https://www.rentometer.com/analysis/new?address='+enc,
     address: addr
   };
