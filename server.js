@@ -2842,3 +2842,65 @@ app.post('/api/datasources/realauction', async (req, res) => {
 });
 
 // v15-deploy
+// Bulk buyer import endpoint
+app.post('/api/buyers/bulk-import', async (req, res) => {
+  try {
+    const { buyers } = req.body;
+    if (!buyers || !Array.isArray(buyers)) {
+      return res.status(400).json({ error: 'buyers array required' });
+    }
+    const dbData = db.readDB();
+    const existingEmails = new Set(
+      (dbData.buyers || []).map(b => (b.email || '').toLowerCase().trim()).filter(Boolean)
+    );
+    const existingNames = new Set(
+      (dbData.buyers || []).map(b => (b.name || '').toLowerCase().trim())
+    );
+    
+    let imported = 0, skipped = 0, duplicates = [];
+    
+    for (const buyer of buyers) {
+      if (!buyer.name || !buyer.state) { skipped++; continue; }
+      const emailKey = (buyer.email || '').toLowerCase().trim();
+      const nameKey = (buyer.name || '').toLowerCase().trim();
+      
+      // Skip duplicates by email (if email exists) or exact name+state match
+      if (emailKey && existingEmails.has(emailKey)) {
+        duplicates.push(buyer.name);
+        skipped++;
+        continue;
+      }
+      if (existingNames.has(nameKey + '_' + buyer.state.toLowerCase())) {
+        duplicates.push(buyer.name);
+        skipped++;
+        continue;
+      }
+      
+      const newBuyer = {
+        name: buyer.name,
+        phone: buyer.phone || '',
+        email: buyer.email || '',
+        city: buyer.city || '',
+        state: buyer.state,
+        counties: buyer.counties || 'Statewide',
+        buyTypes: buyer.buyTypes || ['Cash Buyer'],
+        maxPrice: buyer.maxPrice || null,
+        notes: buyer.notes || '',
+        status: 'active',
+        score: 75,
+        closings: 0,
+        created: new Date().toISOString().split('T')[0]
+      };
+      
+      db.addBuyer(newBuyer);
+      if (emailKey) existingEmails.add(emailKey);
+      existingNames.add(nameKey + '_' + buyer.state.toLowerCase());
+      imported++;
+    }
+    
+    res.json({ ok: true, imported, skipped, duplicates: duplicates.length, duplicateNames: duplicates.slice(0, 10) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
