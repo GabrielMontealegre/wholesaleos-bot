@@ -3165,14 +3165,16 @@ function validateLeadAddress(lead) {
 
   // === Pattern 1: TX_Extra corruption ===
   if (rawAddr.indexOf('TX_Extra') > -1 || (lead.state || '').indexOf('_') > -1) {
-    const cleaned = cleanAddressString(rawAddr);
-    const parsed  = parseAddressComponents(cleaned);
+    // cleanAddressString removes "TX_Extra" — re-parse with TX injected
+    const fixedAddr = rawAddr.replace(/TX_Extra/gi, 'TX').replace(/\s{2,}/g,' ').trim();
+    const parsed  = parseAddressComponents(fixedAddr);
     if (parsed && parsed.pattern === 'full') {
       const z = parsed.zip || zipField;
-      result.corrected_address = parsed.street + ', ' + parsed.city + ', TX' + (z ? ' ' + z : '');
-      result.city = parsed.city; result.state = 'TX'; result.zip = z;
+      const st = (parsed.state && parsed.state.length === 2) ? parsed.state : 'TX';
+      result.corrected_address = parsed.street + ', ' + parsed.city + ', ' + st + (z ? ' ' + z : '');
+      result.city = parsed.city; result.state = st; result.zip = z;
     } else {
-      result.corrected_address = cleaned; result.state = 'TX';
+      result.corrected_address = fixedAddr; result.state = 'TX';
     }
     result.issues.push('Fixed TX_Extra corruption in address/state field');
     result.validation_status = 'FIXED';
