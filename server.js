@@ -3272,97 +3272,115 @@ app.post('/api/users/:id/credentials', (req, res) => {
 });
 
 // ── Rebuild property links for ALL leads ──
-app.post('/api/leads/rebuild-links', (req, res) => {
+app.post('/api/leads/rebuild-links', function(req, res) {
   try {
-    const dbData = db.readDB();
-    const leads  = dbData.leads||[];
-    let rebuilt=0;
-    leads.forEach(lead => {
-      const raw   = (lead.address||'').trim();
-      const state = (lead.state||'').replace(/_\w+/gi,'').trim().toUpperCase().slice(0,2);
-      const city  = lead.city||'';
-      const zip   = (lead.zip||'').trim();
-      
-      // Clean the address — fix state corruption like "TX_Extra", "MO_Extra"
-      let clean = raw.replace(/[A-Z]{2}_\w+/g, (m) => m.match(/^([A-Z]{2})/)[1]);
-      
-      // If address has no comma (street only), reconstruct
-      if (!clean.includes(',') && city && state) {
-        clean = clean + ', ' + city + ', ' + state + (zip?' '+zip:'');
+    var dbData = db.readDB();
+    var leads  = dbData.leads || [];
+    var rebuilt = 0;
+
+    leads.forEach(function(lead) {
+      var raw   = (lead.address || '').trim();
+      var state = (lead.state || '').replace(/_\w+/gi, '').trim().toUpperCase().slice(0,2);
+      var city  = lead.city || '';
+      var zip   = (lead.zip || '').trim();
+
+      // Clean state corruption: TX_Extra -> TX, MO_Extra -> MO
+      var clean = raw.replace(/([A-Z]{2})_\w+/g, '$1');
+
+      // If address has no comma (street only), reconstruct from fields
+      if (clean.indexOf(',') === -1 && city && state) {
+        clean = clean + ', ' + city + ', ' + state + (zip ? ' ' + zip : '');
       }
-      // If address has city+state but wrong zip field, use address zip
-      const addrZipM = clean.match(/\b(\d{5})\b/);
+
+      // Sync zip field to address zip if mismatch
+      var addrZipM = clean.match(/\b(\d{5})\b/);
       if (addrZipM && addrZipM[1] !== zip) {
-        lead.zip = addrZipM[1]; // sync zip field to address zip
+        lead.zip = addrZipM[1];
       }
-      
-      const enc = encodeURIComponent(clean);
-      lead._zillow_link      = 'https://www.zillow.com/homes/'+enc+'_rb/';
-      lead._redfin_link      = 'https://www.redfin.com/city/search?q='+enc;
-      lead._google_maps_link = 'https://www.google.com/maps/search/?api=1&query='+enc;
+
+      var enc = encodeURIComponent(clean);
+      lead._zillow_link      = 'https://www.zillow.com/homes/' + enc + '_rb/';
+      lead._redfin_link      = 'https://www.redfin.com/city/search?q=' + enc;
+      lead._google_maps_link = 'https://www.google.com/maps/search/?api=1&query=' + enc;
       lead._clean_address    = clean;
       rebuilt++;
     });
+
     dbData.leads = leads;
     db.writeDB(dbData);
-    res.json({ ok:true, rebuilt, sample:leads[0]?._zillow_link?.slice(0,100) });
-  } catch(e){ res.status(500).json({error:e.message}); }
+    var sample = leads.length > 0 ? (leads[0]._zillow_link || '').slice(0,100) : '';
+    res.json({ ok: true, rebuilt: rebuilt, sample: sample });
+  } catch(e) { res.status(500).json({error: e.message}); }
 });
 
+
 // ── Seller questions for a lead ──
-app.get('/api/leads/:id/seller-questions', (req, res) => {
+app.get('/api/leads/:id/seller-questions', function(req, res) {
   try {
-    const leads = db.readDB().leads||[];
-    const lead  = leads.find(l=>l.id===req.params.id);
+    var leads = db.readDB().leads || [];
+    var lead  = leads.find(function(l){ return l.id === req.params.id; });
     if (!lead) return res.status(404).json({error:'Lead not found'});
 
-    const cat = (lead.category||lead.deal_classification||'').toLowerCase();
-    const base = [
+    var cat = ((lead.category || lead.deal_classification || '')).toLowerCase();
+
+    var base = [
       {q:'Why are you looking to sell?', why:'Uncovers motivation and urgency'},
-      {q:'How long have you owned the property?', why:'Longer ownership = more equity & flexibility'},
+      {q:'How long have you owned the property?', why:'Longer ownership = more equity and flexibility'},
       {q:'Is it vacant or occupied right now?', why:'Affects access, condition, and timeline'},
       {q:'What repairs are needed that you know of?', why:'Sets realistic repair expectations'},
-      {q:'Is there a mortgage, any liens, or back taxes owed?', why:'Critical for net-to-seller calc'},
+      {q:'Is there a mortgage, any liens, or back taxes owed?', why:'Critical for net-to-seller calculation'},
       {q:'What is your ideal closing timeline?', why:'Identifies urgency level'},
       {q:'Have you had any other offers or listed with an agent?', why:'Reveals competition'},
       {q:'What is the lowest price you would consider?', why:'Tests price flexibility directly'},
     ];
-    const catMap = {
+
+    var catMap = {
       'pre-foreclosure':[
-        {q:'How many mortgage payments are you behind?', why:'Foreclosure timeline'},
-        {q:'Have you received a Notice of Default or Sale date?', why:'Legal deadline urgency'},
-        {q:'Have you spoken with your lender about options?', why:'Alternatives exhausted?'},
+        {q:'How many mortgage payments are you behind?', why:'Foreclosure timeline urgency'},
+        {q:'Have you received a Notice of Default or Sale date?', why:'Legal deadline pressure'},
+        {q:'Have you spoken with your lender about options?', why:'Alternatives exhausted check'},
       ],
       'probate':[
-        {q:'Are you the executor or administrator of the estate?', why:'Decision authority'},
-        {q:'Is probate already filed and open?', why:'Timeline clarity'},
-        {q:'Are all heirs aligned on selling?', why:'Avoids deal-killing disputes'},
+        {q:'Are you the executor or administrator of the estate?', why:'Decision authority confirmation'},
+        {q:'Is probate already filed and open?', why:'Timeline clarity for closing'},
+        {q:'Are all heirs aligned on selling?', why:'Prevents deal-killing disputes'},
       ],
       'tax':[
-        {q:'How much in back taxes is currently owed?', why:'Payoff amount'},
-        {q:'Have you received a tax sale notice?', why:'Auction deadline?'},
+        {q:'How much in back taxes is currently owed?', why:'Payoff amount for deal math'},
+        {q:'Have you received a tax sale notice?', why:'Auction deadline urgency'},
       ],
       'fsbo':[
         {q:'How did you arrive at your asking price?', why:'Price basis and flexibility'},
-        {q:'How long have you been trying to sell?', why:'Motivation level'},
+        {q:'How long have you been trying to sell?', why:'Motivation level indicator'},
       ],
     };
-    const extraKey = Object.keys(catMap).find(k=>cat.includes(k));
-    const extra = extraKey ? catMap[extraKey] : [];
+
+    var extraKey = Object.keys(catMap).find(function(k){ return cat.indexOf(k) > -1; });
+    var extra = extraKey ? catMap[extraKey] : [];
+
+    var opener = 'Hi, I am a local real estate investor. I saw your property at ' +
+      (lead.address || 'your address') +
+      ' and wanted to reach out. I can close fast, pay cash, and handle everything. Do you have a few minutes to chat?';
 
     res.json({
-      ok:true, lead_id:lead.id, address:lead.address,
-      deal_summary:{
-        arv: lead.arv, offer:lead.offer, mao:lead.mao,
-        spread:lead.spread, repairs:lead.repair_class,
-        strategy:lead.investment_strategy||lead.allStrategies||'Wholesale/Flip/Sub-To',
-        why_good_deal:lead.why_good_deal||lead.deal_classification,
+      ok: true,
+      lead_id: lead.id,
+      address: lead.address,
+      deal_summary: {
+        arv:    lead.arv,
+        offer:  lead.offer,
+        mao:    lead.mao,
+        spread: lead.spread,
+        repairs: lead.repair_class,
+        strategy: lead.investment_strategy || lead.allStrategies || 'Wholesale / Flip / Subject-To',
+        why_good_deal: lead.why_good_deal || lead.deal_classification,
       },
-      questions:[...base,...extra],
-      opener:'Hi, I'm a local real estate investor. I saw your property at '+lead.address+' and wanted to reach out — I can close fast, pay cash, and handle everything. Do you have a few minutes?',
+      questions: base.concat(extra),
+      opener: opener,
     });
-  } catch(e){ res.status(500).json({error:e.message}); }
+  } catch(e) { res.status(500).json({error: e.message}); }
 });
+
 
 // ── System limits check ──
 app.get('/api/system/limits', (req, res) => {
