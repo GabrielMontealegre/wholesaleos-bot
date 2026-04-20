@@ -112,19 +112,17 @@ app.get('/api/leads', (req, res) => {
 
 
 
-// Role check endpoint — used by dashboard to determine UI rendering
+// Role check endpoint — reads userId from x-user-id header or query param
 app.get('/api/auth/role', (req, res) => {
   try {
     const users = db.readDB().users || [];
-    const userId = req.headers['x-user-id'] || req.query._uid ||
+    const userId = req.headers['x-user-id'] || req.query.uid ||
                    (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    if (!userId) return res.json({ role: 'user', isAdmin: false });
+    if (!userId) return res.json({ role: 'user', isAdmin: false, userId: null });
     const user = users.find(u => u.id === userId);
-    if (!user) return res.json({ role: 'user', isAdmin: false });
-    res.json({ role: user.role || 'user', isAdmin: user.role === 'admin', userId: user.id, name: user.name });
-  } catch(e) {
-    res.json({ role: 'user', isAdmin: false });
-  }
+    if (!user) return res.json({ role: 'user', isAdmin: false, userId: null });
+    res.json({ role: user.role||'user', isAdmin: user.role==='admin', userId: user.id, name: user.name });
+  } catch(e) { res.json({ role: 'user', isAdmin: false }); }
 });
 
 // Admin-only: protect sensitive routes
@@ -3242,6 +3240,145 @@ app.get('/api/buyers/stats', (req, res) => {
 // ============================================================
 // ADDRESS VALIDATION & ENRICHMENT PIPELINE
 // ============================================================
+
+
+// ── Email login ──
+app.post('/api/auth/email-login', (req, res) => {
+  try {
+    const { email, password } = req.body||{};
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    const users = db.readDB().users||[];
+    const user = users.find(u => (u.email||'').toLowerCase()===email.toLowerCase().trim());
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (user.password && user.password!==password) return res.status(401).json({ error: 'Invalid credentials' });
+    res.json({ ok:true, user:{ id:user.id, name:user.name, role:user.role, color:user.color, initials:user.initials }});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+app.post('/api/users/:id/credentials', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const users  = dbData.users||[];
+    const adminId = req.headers['x-user-id']||req.query.uid;
+    const admin   = users.find(u=>u.id===adminId);
+    if (!admin||admin.role!=='admin') return res.status(403).json({error:'Admin only'});
+    const user = users.find(u=>u.id===req.params.id);
+    if (!user) return res.status(404).json({error:'User not found'});
+    if (req.body.email) user.email = req.body.email.trim().toLowerCase();
+    if (req.body.password) user.password = req.body.password;
+    db.writeDB(dbData);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// ── Rebuild property links for ALL leads ──
+app.post('/api/leads/rebuild-links', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads  = dbData.leads||[];
+    let rebuilt=0;
+    leads.forEach(lead => {
+      const raw   = (lead.address||'').trim();
+      const state = (lead.state||'').replace(/_\w+/gi,'').trim().toUpperCase().slice(0,2);
+      const city  = lead.city||'';
+      const zip   = (lead.zip||'').trim();
+      
+      // Clean the address — fix state corruption like "TX_Extra", "MO_Extra"
+      let clean = raw.replace(/[A-Z]{2}_\w+/g, (m) => m.match(/^([A-Z]{2})/)[1]);
+      
+      // If address has no comma (street only), reconstruct
+      if (!clean.includes(',') && city && state) {
+        clean = clean + ', ' + city + ', ' + state + (zip?' '+zip:'');
+      }
+      // If address has city+state but wrong zip field, use address zip
+      const addrZipM = clean.match(/\b(\d{5})\b/);
+      if (addrZipM && addrZipM[1] !== zip) {
+        lead.zip = addrZipM[1]; // sync zip field to address zip
+      }
+      
+      const enc = encodeURIComponent(clean);
+      lead._zillow_link      = 'https://www.zillow.com/homes/'+enc+'_rb/';
+      lead._redfin_link      = 'https://www.redfin.com/city/search?q='+enc;
+      lead._google_maps_link = 'https://www.google.com/maps/search/?api=1&query='+enc;
+      lead._clean_address    = clean;
+      rebuilt++;
+    });
+    dbData.leads = leads;
+    db.writeDB(dbData);
+    res.json({ ok:true, rebuilt, sample:leads[0]?._zillow_link?.slice(0,100) });
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// ── Seller questions for a lead ──
+app.get('/api/leads/:id/seller-questions', (req, res) => {
+  try {
+    const leads = db.readDB().leads||[];
+    const lead  = leads.find(l=>l.id===req.params.id);
+    if (!lead) return res.status(404).json({error:'Lead not found'});
+
+    const cat = (lead.category||lead.deal_classification||'').toLowerCase();
+    const base = [
+      {q:'Why are you looking to sell?', why:'Uncovers motivation and urgency'},
+      {q:'How long have you owned the property?', why:'Longer ownership = more equity & flexibility'},
+      {q:'Is it vacant or occupied right now?', why:'Affects access, condition, and timeline'},
+      {q:'What repairs are needed that you know of?', why:'Sets realistic repair expectations'},
+      {q:'Is there a mortgage, any liens, or back taxes owed?', why:'Critical for net-to-seller calc'},
+      {q:'What is your ideal closing timeline?', why:'Identifies urgency level'},
+      {q:'Have you had any other offers or listed with an agent?', why:'Reveals competition'},
+      {q:'What is the lowest price you would consider?', why:'Tests price flexibility directly'},
+    ];
+    const catMap = {
+      'pre-foreclosure':[
+        {q:'How many mortgage payments are you behind?', why:'Foreclosure timeline'},
+        {q:'Have you received a Notice of Default or Sale date?', why:'Legal deadline urgency'},
+        {q:'Have you spoken with your lender about options?', why:'Alternatives exhausted?'},
+      ],
+      'probate':[
+        {q:'Are you the executor or administrator of the estate?', why:'Decision authority'},
+        {q:'Is probate already filed and open?', why:'Timeline clarity'},
+        {q:'Are all heirs aligned on selling?', why:'Avoids deal-killing disputes'},
+      ],
+      'tax':[
+        {q:'How much in back taxes is currently owed?', why:'Payoff amount'},
+        {q:'Have you received a tax sale notice?', why:'Auction deadline?'},
+      ],
+      'fsbo':[
+        {q:'How did you arrive at your asking price?', why:'Price basis and flexibility'},
+        {q:'How long have you been trying to sell?', why:'Motivation level'},
+      ],
+    };
+    const extraKey = Object.keys(catMap).find(k=>cat.includes(k));
+    const extra = extraKey ? catMap[extraKey] : [];
+
+    res.json({
+      ok:true, lead_id:lead.id, address:lead.address,
+      deal_summary:{
+        arv: lead.arv, offer:lead.offer, mao:lead.mao,
+        spread:lead.spread, repairs:lead.repair_class,
+        strategy:lead.investment_strategy||lead.allStrategies||'Wholesale/Flip/Sub-To',
+        why_good_deal:lead.why_good_deal||lead.deal_classification,
+      },
+      questions:[...base,...extra],
+      opener:'Hi, I'm a local real estate investor. I saw your property at '+lead.address+' and wanted to reach out — I can close fast, pay cash, and handle everything. Do you have a few minutes?',
+    });
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// ── System limits check ──
+app.get('/api/system/limits', (req, res) => {
+  try {
+    const dbData = db.readDB();
+    const leads  = (dbData.leads||[]).length;
+    const buyers = (dbData.buyers||[]).length;
+    res.json({ ok:true, limits:[
+      {resource:'Leads DB', current:leads, limit:50000, status:leads>45000?'WARNING':'OK'},
+      {resource:'Buyers DB', current:buyers, limit:10000, status:buyers>9000?'WARNING':'OK'},
+      {resource:'Groq AI', note:'Free tier ~14,400 req/day. Rotate keys or switch to Claude in Settings.', status:'MONITOR'},
+      {resource:'Railway Memory', note:'If db.json exceeds 100MB, archive old leads.', status:'MONITOR'},
+      {resource:'Gmail OAuth', note:'Tokens expire every 7 days. Re-auth in Settings if email stops.', status:'MONITOR'},
+    ]});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
 
 // Helper: clean and normalize an address string
 function cleanAddressString(address) {
