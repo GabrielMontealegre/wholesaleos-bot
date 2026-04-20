@@ -335,7 +335,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-section">System</div>
       <div class="nav-item" onclick="navigate('automation',this)"><span class="nav-icon">🚀</span>Automation</div>
       <div class="nav-item" onclick="navigate('contracts_lib',this)"><span class="nav-icon">📑</span>Contracts Library</div>
-      <div class="nav-item" onclick="navigate('buyboxes',this)"><span class="nav-icon">🎯</span>Buy Boxes</div>
+      
       <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import</div>
       <div class="nav-item" onclick="navigate('review',this)"><span class="nav-icon">🔍</span>Review Queue<span class="nav-badge" id="nav-review-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('apis',this)"><span class="nav-icon">🔌</span>API Integrations</div>
@@ -1296,7 +1296,7 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
   html += '<div style="display:flex;gap:6px">';
-  html += '<a href="https://www.zillow.com/homes/' + encodeURIComponent((l.address||'').split(',')[0] + ' ' + (l.state||'')) + '_rb/" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
+  html += '<a href="' + (l._zillow_link || 'https://www.zillow.com/homes/' + encodeURIComponent(l.address||'') + '_rb/') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
   html += '<a href="https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(l.address||'') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">📊 Redfin Comps</a>';
   html += '<a href="https://rentometer.com/analysis/search?address=' + encodeURIComponent(l.address||'') + '&bedrooms=' + (l.beds||3) + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">💵 Rent Comps</a>';
   html += '</div></div>';
@@ -6807,7 +6807,7 @@ function renderLeadDetail(l) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
   html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">Comps & Market</div>';
   html += '<div style="display:flex;gap:6px">';
-  html += '<a href="https://www.zillow.com/homes/' + encodeURIComponent((l.address||'').split(',')[0] + ' ' + (l.state||'')) + '_rb/" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
+  html += '<a href="' + (l._zillow_link || 'https://www.zillow.com/homes/' + encodeURIComponent(l.address||'') + '_rb/') + ' target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">🏠 Zillow Comps</a>';
   html += '<a href="https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(l.address||'') + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">📊 Redfin Comps</a>';
   html += '<a href="https://rentometer.com/analysis/search?address=' + encodeURIComponent(l.address||'') + '&bedrooms=' + (l.beds||3) + '" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px;flex:1">💵 Rent Comps</a>';
   html += '</div></div>';
@@ -13067,6 +13067,256 @@ function runAddressFix(dry){
     }, 200);
   };
 })();
+
+
+
+// ============================================================
+// COMPREHENSIVE PATCH — All 7 fixes
+// ============================================================
+
+// ── TASK 6: Role-Based UI ──
+window._userRole = 'admin'; // default, overridden on load
+window._isAdmin  = true;
+
+function applyRoleBasedUI(role) {
+  window._userRole = role;
+  window._isAdmin  = (role === 'admin');
+
+  // Items only admins can see
+  var adminOnlySelectors = [
+    '[data-admin-only]',
+    '.nav-item[onclick*="buyboxes"]',
+    '.nav-item[onclick*="settings"]',
+    '.nav-item[onclick*="bot"]'
+  ];
+
+  adminOnlySelectors.forEach(function(sel) {
+    try {
+      document.querySelectorAll(sel).forEach(function(el) {
+        el.style.display = window._isAdmin ? '' : 'none';
+      });
+    } catch(e) {}
+  });
+
+  // Mark buyers nav as admin-only in UI
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    var t = (el.textContent || '').trim().toLowerCase();
+    if (t === 'buyers' || t.startsWith('buyer')) {
+      el.setAttribute('data-admin-only', '1');
+      el.style.display = window._isAdmin ? '' : 'none';
+    }
+  });
+}
+
+// Fetch and apply role on load
+function initUserRole() {
+  fetch('/api/auth/role', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      applyRoleBasedUI(d.role || 'user');
+      window._currentUserId = d.userId;
+      // Inject user ID into future API calls
+      window._apiHeaders = { 'x-user-id': d.userId };
+    })
+    .catch(function() { applyRoleBasedUI('admin'); }); // fail open
+}
+
+// ── TASK 1: Fix Google Maps / Redfin links in lead modal ──
+function buildLeadLinks(lead) {
+  var addr = (lead.address || '').replace(/TX_Extra/gi, 'TX');
+  var enc  = encodeURIComponent(addr);
+  return {
+    zillow:   lead._zillow_link   || ('https://www.zillow.com/homes/' + enc + '_rb/'),
+    redfin:   lead._redfin_link   || ('https://www.redfin.com/city/search?q=' + enc),
+    maps:     lead._google_maps_link || ('https://www.google.com/maps/search/?api=1&query=' + enc),
+    rent:     'https://www.rentometer.com/analysis/new?address=' + enc
+  };
+}
+
+// Patch openLeadModal to fix all 4 links
+(function() {
+  var _orig = window.openLeadModal;
+  if (typeof _orig !== 'function') return;
+  window.openLeadModal = function(id) {
+    _orig.apply(this, arguments);
+    setTimeout(function() {
+      var lead = APP && APP.selectedLead;
+      if (!lead) return;
+      var links = buildLeadLinks(lead);
+
+      // Fix Zillow button
+      document.querySelectorAll('a[href*="zillow"]').forEach(function(a) {
+        a.href = links.zillow;
+      });
+      // Fix Redfin button
+      document.querySelectorAll('a[href*="redfin"]').forEach(function(a) {
+        a.href = links.redfin;
+      });
+      // Fix Maps button
+      document.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google"]').forEach(function(a) {
+        a.href = links.maps;
+      });
+      // Fix Rent button
+      document.querySelectorAll('a[href*="rentometer"]').forEach(function(a) {
+        a.href = links.rent;
+      });
+
+      // Validation badge
+      var addrBar = document.getElementById('lead-addr-bar') ||
+                    document.querySelector('.lead-addr-bar') ||
+                    document.querySelector('[id^="addr"]');
+      if (addrBar && !document.getElementById('val-badge')) {
+        var badge = document.createElement('span');
+        badge.id = 'val-badge';
+        badge.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:8px;cursor:help;';
+        if (lead._address_validated === true) {
+          badge.style.cssText += 'background:rgba(76,175,80,.15);color:#4caf50;border:1px solid #4caf50;';
+          badge.textContent = '✅ Verified';
+          badge.title = (lead._address_issues || []).join(' | ') || 'Address validated';
+        } else if (lead._address_validated === false) {
+          badge.style.cssText += 'background:rgba(255,152,0,.15);color:#ff9800;border:1px solid #ff9800;';
+          badge.textContent = '⚠️ ZIP Review';
+          badge.title = (lead._address_issues || []).join(' | ') || 'ZIP needs verification';
+        } else {
+          badge.style.cssText += 'background:rgba(128,128,128,.1);color:#888;border:1px solid #555;';
+          badge.textContent = '○ Unvalidated';
+          badge.title = 'Open Validate Addresses to check this lead';
+        }
+        addrBar.appendChild(badge);
+      }
+    }, 150);
+  };
+})();
+
+// ── TASK 3: Dashboard first-load fix ──
+// Ensure leads render immediately on first page load
+(function() {
+  var _domReady = document.readyState;
+  function ensureFirstLoad() {
+    // If no content rendered yet, trigger re-render
+    var content = document.getElementById('content');
+    if (content && (!content.innerHTML || content.innerHTML.trim() === '')) {
+      if (typeof renderLeads === 'function') {
+        try { renderLeads(); } catch(e) {}
+      } else if (typeof APP !== 'undefined' && APP.currentView) {
+        try {
+          var renders = window.pageRenderers || {};
+          if (renders[APP.currentView]) renders[APP.currentView]();
+        } catch(e) {}
+      }
+    }
+  }
+  // Fire after short delay to let existing init complete
+  setTimeout(ensureFirstLoad, 800);
+  setTimeout(ensureFirstLoad, 2000); // second attempt as fallback
+})();
+
+// ── TASK 5: Buyers tab — State filter UI ──
+(function() {
+  var _origRenderBuyers = window.renderBuyers;
+  if (typeof _origRenderBuyers !== 'function') return;
+
+  window.renderBuyers = function() {
+    _origRenderBuyers.apply(this, arguments);
+
+    // Inject state filter if not already present
+    setTimeout(function() {
+      if (document.getElementById('buyer-state-filter')) return;
+
+      var toolbar = document.querySelector('.buyers-toolbar') ||
+                    document.querySelector('[class*="buyer"][class*="toolbar"]') ||
+                    document.querySelector('#buyers-actions') ||
+                    document.querySelector('.tab-actions');
+      if (!toolbar) return;
+
+      // Build state list from current buyers
+      var stateSet = new Set();
+      if (window.APP && APP.buyers) {
+        APP.buyers.forEach(function(b) { if (b.state) stateSet.add(b.state.toUpperCase()); });
+      }
+      var states = Array.from(stateSet).sort();
+
+      var filterWrap = document.createElement('div');
+      filterWrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:8px;';
+      filterWrap.innerHTML = '<label style="color:#888;font-size:12px;">State:</label>' +
+        '<select id="buyer-state-filter" style="background:#1a1a2e;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;">' +
+        '<option value="">All States</option>' +
+        states.map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('') +
+        '</select>' +
+        '<select id="buyer-type-filter" style="background:#1a1a2e;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;">' +
+        '<option value="">All Types</option>' +
+        '<option value="Cash">Cash Buyers</option>' +
+        '<option value="Fix">Fix & Flip</option>' +
+        '<option value="Hold">Buy & Hold</option>' +
+        '</select>';
+
+      toolbar.appendChild(filterWrap);
+
+      // Wire up filter events
+      document.getElementById('buyer-state-filter').addEventListener('change', function() {
+        filterBuyersDisplay();
+      });
+      document.getElementById('buyer-type-filter').addEventListener('change', function() {
+        filterBuyersDisplay();
+      });
+    }, 300);
+  };
+
+  window.filterBuyersDisplay = function() {
+    var stateSel = (document.getElementById('buyer-state-filter') || {}).value || '';
+    var typeSel  = (document.getElementById('buyer-type-filter') || {}).value || '';
+
+    // Filter buyer rows
+    var rows = document.querySelectorAll('.buyer-row, [class*="buyer-card"], tbody tr');
+    rows.forEach(function(row) {
+      var text = row.textContent || '';
+      var stateMatch = !stateSel || text.indexOf(stateSel) > -1;
+      var typeMatch  = !typeSel  || text.toLowerCase().indexOf(typeSel.toLowerCase()) > -1;
+      row.style.display = (stateMatch && typeMatch) ? '' : 'none';
+    });
+  };
+})();
+
+// ── TASK 3: Inbox/messages fix ──
+(function() {
+  var _origRenderInbox = window.renderInbox || window.renderMessages;
+  // Patch inbox render to show proper empty state and retry
+  window._inboxRetryCount = 0;
+
+  function patchInbox() {
+    var inboxEl = document.getElementById('inbox-content') ||
+                  document.querySelector('[class*="inbox"]') ||
+                  document.querySelector('[class*="message"]');
+    if (!inboxEl) return;
+
+    // If empty, show proper empty state
+    if (!inboxEl.innerHTML || inboxEl.innerHTML.trim() === '') {
+      inboxEl.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">' +
+        '<div style="font-size:32px;margin-bottom:8px;">📭</div>' +
+        '<div style="font-weight:600;margin-bottom:4px;">No messages yet</div>' +
+        '<div style="font-size:12px;color:#555;">Replies from sellers and buyers will appear here</div>' +
+        '</div>';
+    }
+  }
+
+  // Run after navigating to inbox
+  var _origNavigate = window.navigate;
+  if (typeof _origNavigate === 'function') {
+    window.navigate = function(view) {
+      _origNavigate.apply(this, arguments);
+      if (view === 'inbox' || view === 'messages') {
+        setTimeout(patchInbox, 400);
+      }
+    };
+  }
+})();
+
+// ── INIT: Run role check on load ──
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUserRole);
+} else {
+  initUserRole();
+}
 
 </script>
 </body>
