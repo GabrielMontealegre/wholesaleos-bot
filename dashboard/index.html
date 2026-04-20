@@ -13318,6 +13318,308 @@ if (document.readyState === 'loading') {
   initUserRole();
 }
 
+
+
+// ================================================================
+// WHOLESALEOS COMPREHENSIVE PATCH v3
+// Fixes: links, seller questions, guide, limits, role, inbox
+// ================================================================
+
+// ── Store userId for API calls ──
+window._APP_USER_ID = localStorage.getItem('montsan_userId') || 'admin';
+window._APP_ROLE    = localStorage.getItem('montsan_role') || 'admin';
+
+// Auth headers for all fetch calls
+window._authHeaders = function() {
+  return { 'Content-Type':'application/json', 'x-user-id': window._APP_USER_ID };
+};
+
+// ── Sync role from server on load ──
+(function syncRole() {
+  var uid = localStorage.getItem('montsan_userId') || 'admin';
+  fetch('/api/auth/role?uid='+uid)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      window._APP_ROLE  = d.role||'user';
+      window._isAdmin   = d.isAdmin;
+      window._APP_USER_ID = d.userId || uid;
+      localStorage.setItem('montsan_role', d.role||'user');
+      applyRoleUI(d.role);
+    })
+    .catch(function(){});
+})();
+
+function applyRoleUI(role) {
+  var isAdmin = (role === 'admin');
+  // Hide buyers/settings nav for non-admins
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    var txt = (el.textContent||'').trim().toLowerCase();
+    if (!isAdmin && (txt==='buyers'||txt.startsWith('buyer')||txt.startsWith('setting')||txt==='bot'||txt==='automation')) {
+      el.style.opacity='0.3';
+      el.style.pointerEvents='none';
+    }
+  });
+}
+
+// ── FIX 1: Property links — always use full clean address ──
+function buildCleanLinks(lead) {
+  var addr = (lead._clean_address || lead.address || '').replace(/[A-Z]{2}_w+/g, function(m){ return m.match(/^([A-Z]{2})/)[1]; });
+  var enc  = encodeURIComponent(addr);
+  return {
+    zillow:  lead._zillow_link  || 'https://www.zillow.com/homes/'+enc+'_rb/',
+    redfin:  lead._redfin_link  || 'https://www.redfin.com/city/search?q='+enc,
+    maps:    lead._google_maps_link || 'https://www.google.com/maps/search/?api=1&query='+enc,
+    rent:    'https://www.rentometer.com/analysis/new?address='+enc,
+    address: addr
+  };
+}
+
+// Patch openLeadModal to fix all links AND inject seller questions
+(function() {
+  var _orig = window.openLeadModal;
+  if (typeof _orig !== 'function') { setTimeout(arguments.callee, 500); return; }
+  window.openLeadModal = function(id) {
+    _orig.apply(this, arguments);
+    setTimeout(function() {
+      var lead = APP && APP.selectedLead;
+      if (!lead) return;
+
+      // Fix all 4 property links in modal
+      var links = buildCleanLinks(lead);
+      document.querySelectorAll('a[href*="zillow"]').forEach(function(a){ a.href=links.zillow; a.target='_blank'; });
+      document.querySelectorAll('a[href*="redfin"]').forEach(function(a){ a.href=links.redfin; a.target='_blank'; });
+      document.querySelectorAll('a[href*="google.com/maps"],a[href*="maps.google"]').forEach(function(a){ a.href=links.maps; a.target='_blank'; });
+      document.querySelectorAll('a[href*="rentometer"]').forEach(function(a){ a.href=links.rent; a.target='_blank'; });
+
+      // Fix address bar text too
+      var addrBar = document.querySelector('.lead-addr-bar, #lead-addr-bar, [data-addr-bar]');
+
+      // Remove old seller-questions section if present
+      var oldSQ = document.getElementById('seller-questions-panel');
+      if (oldSQ) oldSQ.remove();
+
+      // Inject seller questions panel
+      injectSellerQuestions(lead);
+    }, 200);
+  };
+})();
+
+function injectSellerQuestions(lead) {
+  // Find modal content area
+  var modal = document.querySelector('.lead-modal-content, .modal-body, #lead-modal-inner, .lead-detail');
+  if (!modal) modal = document.querySelector('[id*="modal"][style*="block"], [id*="modal"]:not([style*="none"])');
+  if (!modal) return;
+
+  // Check if already injected
+  if (document.getElementById('seller-questions-panel')) return;
+
+  // Fetch from server
+  fetch('/api/leads/'+lead.id+'/seller-questions', { headers: window._authHeaders() })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if (!data.ok) return;
+
+      var panel = document.createElement('div');
+      panel.id = 'seller-questions-panel';
+      panel.style.cssText = 'margin-top:16px;border-top:1px solid #2a2a3e;padding-top:16px;';
+
+      var qHtml = '<div style="margin-bottom:12px;">';
+      qHtml += '<div style="font-size:13px;font-weight:700;color:#4fc3f7;margin-bottom:10px;">💬 Seller Questions</div>';
+      qHtml += '<div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.5;background:#0d1117;padding:8px 10px;border-radius:6px;border-left:3px solid #4fc3f7;">';
+      qHtml += '<strong style="color:#888;">Opener:</strong> '+data.opener;
+      qHtml += '</div>';
+
+      data.questions.forEach(function(item, i) {
+        qHtml += '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #1e1e2e;align-items:flex-start;">';
+        qHtml += '<span style="background:#4fc3f7;color:#000;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;">'+(i+1)+'</span>';
+        qHtml += '<div>';
+        qHtml += '<div style="font-size:12px;color:#e0e0e0;font-weight:500;">'+item.q+'</div>';
+        qHtml += '<div style="font-size:10px;color:#666;margin-top:2px;">'+item.why+'</div>';
+        qHtml += '</div></div>';
+      });
+
+      if (data.deal_summary) {
+        var ds = data.deal_summary;
+        qHtml += '<div style="margin-top:12px;background:#0d1117;border-radius:6px;padding:10px;border:1px solid #2a2a3e;">';
+        qHtml += '<div style="font-size:11px;font-weight:700;color:#ff9800;margin-bottom:6px;">📊 Deal Analysis</div>';
+        qHtml += '<div style="font-size:11px;color:#888;line-height:1.8;">';
+        qHtml += '<b style="color:#ccc;">Strategy:</b> '+(ds.strategy||'—')+'<br>';
+        qHtml += '<b style="color:#ccc;">Spread:</b> $'+(Number(ds.spread||0).toLocaleString())+'<br>';
+        qHtml += '<b style="color:#ccc;">Repairs:</b> '+(ds.repairs||'—')+'<br>';
+        qHtml += '<b style="color:#ccc;">Why good:</b> '+(ds.why_good_deal||'—');
+        qHtml += '</div></div>';
+      }
+
+      qHtml += '</div>';
+      panel.innerHTML = qHtml;
+      modal.appendChild(panel);
+    })
+    .catch(function(err){ console.warn('seller-questions failed:', err); });
+}
+
+// ── FIX 2: Inbox — show proper state ──
+(function fixInbox() {
+  var origNav = window.navigate;
+  if (typeof origNav !== 'function') { setTimeout(fixInbox, 600); return; }
+  window.navigate = function(view, el) {
+    origNav.apply(this, arguments);
+    if (view === 'inbox') {
+      setTimeout(function() {
+        var inbox = document.querySelector('.inbox-list, #inbox-content, [class*="inbox"]');
+        if (inbox && inbox.children.length === 0) {
+          inbox.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#555;">' +
+            '<div style="font-size:48px;margin-bottom:12px;">📭</div>' +
+            '<div style="font-size:16px;font-weight:600;color:#888;margin-bottom:8px;">No messages yet</div>' +
+            '<div style="font-size:13px;color:#555;">Replies from sellers will appear here.<br>Send outreach via the SMS or Email tab to start conversations.</div>' +
+            '</div>';
+        }
+      }, 500);
+    }
+  };
+})();
+
+// ── FIX 3: System limits warning banner ──
+function checkSystemLimits() {
+  fetch('/api/system/limits', { headers: window._authHeaders() })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if (!d.ok) return;
+      var warnings = d.limits.filter(function(l){ return l.status==='WARNING'; });
+      if (warnings.length === 0) return;
+
+      var existing = document.getElementById('limits-banner');
+      if (existing) return;
+
+      var banner = document.createElement('div');
+      banner.id = 'limits-banner';
+      banner.style.cssText = 'position:fixed;bottom:16px;right:16px;background:#1a1a2e;border:1px solid #ff9800;border-radius:8px;padding:12px 16px;z-index:9998;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+      banner.innerHTML = '<div style="font-size:12px;font-weight:700;color:#ff9800;margin-bottom:6px;">⚠️ System Limit Warning</div>' +
+        warnings.map(function(w){ return '<div style="font-size:11px;color:#ccc;margin-bottom:4px;"><b>'+w.resource+':</b> '+w.current+'/'+w.limit+' ('+w.pct+'%)</div>'; }).join('') +
+        '<div style="font-size:10px;color:#666;margin-top:8px;">Continue from another machine if needed.</div>' +
+        '<button onclick="document.getElementById('limits-banner').remove()" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#666;font-size:16px;cursor:pointer;">×</button>';
+      document.body.appendChild(banner);
+    })
+    .catch(function(){});
+}
+
+// ── FIX 4: First-load dashboard fix ──
+(function firstLoadFix() {
+  setTimeout(function() {
+    var content = document.getElementById('content');
+    if (content && (!content.innerHTML || content.innerHTML.trim().length < 50)) {
+      try {
+        if (typeof renderLeads === 'function') renderLeads();
+        else if (typeof APP !== 'undefined' && APP.page) {
+          var fns = {leads:renderLeads,buyers:renderBuyers,pipeline:renderPipeline};
+          if (fns[APP.page]) fns[APP.page]();
+        }
+      } catch(e){}
+    }
+  }, 1000);
+})();
+
+// ── Wholesaling Guide ──
+window.openWholesaleGuide = function() {
+  var existing = document.getElementById('wg-modal');
+  if (existing) { existing.remove(); return; }
+  var m = document.createElement('div');
+  m.id='wg-modal';
+  m.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  m.innerHTML='<div style="background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:32px;width:760px;max-height:85vh;overflow-y:auto;color:#e0e0e0;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">' +
+    '<h2 style="margin:0;color:#4fc3f7;">📖 Wholesaling Guide & Platform Tutorial</h2>' +
+    '<button onclick="document.getElementById('wg-modal').remove()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button></div>' +
+    
+    '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #4fc3f7;">' +
+    '<h3 style="margin:0 0 8px;color:#4fc3f7;font-size:14px;">🏠 What is Real Estate Wholesaling?</h3>' +
+    '<p style="margin:0;font-size:12px;color:#aaa;line-height:1.7;">Wholesaling means finding a distressed property, getting it under contract below market value, then selling (assigning) that contract to a cash buyer investor for a fee — without ever owning the property. Your profit is the difference between your contract price (MAO) and what the cash buyer pays.</p>' +
+    '</div>' +
+    
+    '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #ff9800;">' +
+    '<h3 style="margin:0 0 10px;color:#ff9800;font-size:14px;">📊 The Math (MAO Formula)</h3>' +
+    '<div style="font-size:12px;color:#aaa;line-height:2;">' +
+    '• <b style="color:#fff;">ARV</b> = After Repair Value (what the house is worth fixed up)<br>' +
+    '• <b style="color:#fff;">MAO</b> = ARV × 70% − Repairs (Maximum Allowable Offer to your buyer)<br>' +
+    '• <b style="color:#fff;">Your Offer</b> = MAO × 94% (leaves room for your fee)<br>' +
+    '• <b style="color:#fff;">Your Fee</b> = MAO − Your Offer (typically $5K–$25K per deal)<br>' +
+    '• <b style="color:#56d364;">Example:</b> ARV $200K, Repairs $30K → MAO = $110K → Your offer $103K → Fee ~$7K' +
+    '</div></div>' +
+
+    '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #56d364;">' +
+    '<h3 style="margin:0 0 10px;color:#56d364;font-size:14px;">🔄 Step-by-Step Process</h3>' +
+    '<div style="font-size:12px;color:#aaa;line-height:2;">' +
+    '<b style="color:#fff;">1. Find Leads</b> — Use the Leads tab. Filter by state/category. Look for Pre-Foreclosure, FSBO, Probate, Tax Liens.<br>' +
+    '<b style="color:#fff;">2. Analyze the Deal</b> — Open the lead. Check ARV, Spread, MAO, and "Why good deal" section. Green spread = good deal.<br>' +
+    '<b style="color:#fff;">3. Contact the Seller</b> — Use Call, Text, or Email buttons in the lead modal. Read the Seller Questions section for what to ask.<br>' +
+    '<b style="color:#fff;">4. Get Under Contract</b> — Use the Contract button. Fill in your offer (at or below MAO).<br>' +
+    '<b style="color:#fff;">5. Find a Buyer</b> — Go to Buyers tab. Filter by state. Match the lead using the Match button.<br>' +
+    '<b style="color:#fff;">6. Assign & Close</b> — Buyer pays you an assignment fee at closing. No cash needed from you.' +
+    '</div></div>' +
+
+    '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #f85149;">' +
+    '<h3 style="margin:0 0 10px;color:#f85149;font-size:14px;">🚦 Deal Categories Explained</h3>' +
+    '<div style="font-size:12px;color:#aaa;line-height:2;">' +
+    '• <b style="color:#ff9800;">Pre-Foreclosure</b> — Owner is behind on payments. Very motivated, time pressure.<br>' +
+    '• <b style="color:#ff9800;">Probate</b> — Inherited property. Heirs want to sell quickly, often below market.<br>' +
+    '• <b style="color:#ff9800;">FSBO</b> — For Sale By Owner. Avoiding agents = flexible on price.<br>' +
+    '• <b style="color:#ff9800;">Tax Lien</b> — Owner owes back taxes. Facing government auction.<br>' +
+    '• <b style="color:#ff9800;">Absentee Owner</b> — Owns but doesn't live there. Often has rental fatigue.' +
+    '</div></div>' +
+
+    '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #ab7ae0;">' +
+    '<h3 style="margin:0 0 10px;color:#ab7ae0;font-size:14px;">💻 How to Use This Platform</h3>' +
+    '<div style="font-size:12px;color:#aaa;line-height:2;">' +
+    '• <b style="color:#fff;">Leads Tab</b> → Browse all leads. Filter by state, category, deal score.<br>' +
+    '• <b style="color:#fff;">Lead Modal</b> → Click any lead. See full deal analysis, seller info, contact buttons, and seller questions.<br>' +
+    '• <b style="color:#fff;">Dialer Tab</b> → Call sellers with AI scripts pre-loaded for each deal type.<br>' +
+    '• <b style="color:#fff;">SMS Tab</b> → Send bulk or individual texts to sellers.<br>' +
+    '• <b style="color:#fff;">Buyers Tab</b> → Find cash buyers. Filter by state. Use Match to pair leads with buyers.<br>' +
+    '• <b style="color:#fff;">Pipeline</b> → Track active deals from first contact to closed.<br>' +
+    '• <b style="color:#fff;">Follow-Ups</b> → Never let a deal go cold. Set callbacks and reminders.<br>' +
+    '• <b style="color:#fff;">Outreach Hub</b> → Launch bulk campaigns to sellers or buyers by state.' +
+    '</div></div>' +
+
+    '<div style="text-align:center;margin-top:8px;">' +
+    '<button onclick="document.getElementById('wg-modal').remove()" style="background:#4fc3f7;color:#000;border:none;border-radius:8px;padding:10px 32px;cursor:pointer;font-weight:700;font-size:14px;">Got it — Start Wholesaling!</button>' +
+    '</div></div>';
+  document.body.appendChild(m);
+};
+
+// ── Add Guide button to top nav ──
+(function addGuideButton() {
+  setTimeout(function() {
+    var nav = document.querySelector('.topbar, .top-nav, header, .header');
+    if (!nav || document.getElementById('guide-btn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'guide-btn';
+    btn.textContent = '📖 Guide';
+    btn.onclick = window.openWholesaleGuide;
+    btn.style.cssText = 'background:none;border:1px solid #333;color:#888;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;margin-left:8px;';
+    btn.onmouseover = function(){ this.style.borderColor='#4fc3f7'; this.style.color='#4fc3f7'; };
+    btn.onmouseout  = function(){ this.style.borderColor='#333'; this.style.color='#888'; };
+    nav.appendChild(btn);
+  }, 800);
+})();
+
+// ── Rebuild links on first load (runs once) ──
+(function rebuildLinksOnce() {
+  var key = 'montsan_links_rebuilt_v3';
+  if (localStorage.getItem(key)) return;
+  fetch('/api/leads/rebuild-links', { method:'POST', headers: window._authHeaders() })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if (d.ok) {
+        localStorage.setItem(key, '1');
+        console.log('Links rebuilt for '+d.rebuilt+' leads');
+      }
+    })
+    .catch(function(){});
+})();
+
+// ── Run system limits check (once per session) ──
+setTimeout(checkSystemLimits, 3000);
+
+
 </script>
 </body>
 </html>
