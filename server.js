@@ -3527,3 +3527,36 @@ function validateLeadAddress(lead) {
   setLinks(result.corrected_address);
   return result;
 }
+
+
+// DELETE all AI-generated fake leads — keep only real Propwire/imported leads
+app.post('/api/leads/delete-fake', function(req, res) {
+  try {
+    var dbData = db.readDB();
+    var leads  = dbData.leads || [];
+    var before = leads.length;
+
+    // Keep only leads that are NOT AI-generated
+    var realLeads = leads.filter(function(l) {
+      var src = (l.source || l.source_platform || '').toLowerCase();
+      var isAI = src.indexOf('ai generated') > -1 ||
+                 src.indexOf('ai-generated') > -1 ||
+                 src.indexOf('state population') > -1 ||
+                 src.indexOf('dashboard search') > -1;
+      return !isAI;
+    });
+
+    var deleted = before - realLeads.length;
+    dbData.leads = realLeads;
+    db.writeDB(dbData);
+
+    res.json({
+      ok: true,
+      before: before,
+      after: realLeads.length,
+      deleted: deleted,
+      kept_sources: [...new Set(realLeads.map(function(l){ return l.source||l.source_platform||'unknown'; }))].slice(0,10)
+    });
+  } catch(e) { res.status(500).json({error: e.message}); }
+});
+
