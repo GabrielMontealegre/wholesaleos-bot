@@ -26,6 +26,65 @@ app.use((req, res, next) => {
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
+
+// ============================================================
+// ROLE-BASED ACCESS CONTROL MIDDLEWARE
+// ============================================================
+function requireAdmin(req, res, next) {
+  try {
+    const users = db.readDB().users || [];
+    // Get session user from cookie or header
+    const userId = req.headers['x-user-id'] || req.query._uid || 
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+    const user = users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+    req.currentUser = user;
+    next();
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+function requireAuth(req, res, next) {
+  try {
+    const users = db.readDB().users || [];
+    const userId = req.headers['x-user-id'] || req.query._uid ||
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+    const user = users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    req.currentUser = user;
+    next();
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// Helper: build reliable property links
+function buildPropertyLinks(address, state, zip) {
+  const fullAddr = address || '';
+  const encoded  = encodeURIComponent(fullAddr);
+  
+  // Google Maps — always works via search
+  const googleMaps = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+  
+  // Zillow — use address search (their homepage search, not listing-specific)
+  // Strip unit/apt info to improve match
+  const cleanAddr = fullAddr.replace(/,?s*(apt|unit|#)s*[wd]+/gi, '').trim();
+  const zEncoded  = encodeURIComponent(cleanAddr);
+  const zillow    = 'https://www.zillow.com/homes/' + zEncoded + '_rb/';
+  
+  // Redfin — use their search page
+  const redfin    = 'https://www.redfin.com/city/search?q=' + encoded;
+  
+  // Rentometer for rental estimates
+  const rentometer = 'https://www.rentometer.com/analysis/new?address=' + encoded;
+  
+  return { googleMaps, zillow, redfin, rentometer };
+}
+
 app.get('/dashboard/courthouse-tab.js', (req, res) => res.sendFile(require('path').join(__dirname, 'courthouse-addon', 'courthouse-tab.js')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
 app.get('/dashboard/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard', 'index.html')));
@@ -51,6 +110,38 @@ app.get('/api/leads', (req, res) => {
   res.json({ leads: filtered, total: filtered.length });
 });
 
+
+
+// Role check endpoint — used by dashboard to determine UI rendering
+app.get('/api/auth/role', (req, res) => {
+  try {
+    const users = db.readDB().users || [];
+    const userId = req.headers['x-user-id'] || req.query._uid ||
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    if (!userId) return res.json({ role: 'user', isAdmin: false });
+    const user = users.find(u => u.id === userId);
+    if (!user) return res.json({ role: 'user', isAdmin: false });
+    res.json({ role: user.role || 'user', isAdmin: user.role === 'admin', userId: user.id, name: user.name });
+  } catch(e) {
+    res.json({ role: 'user', isAdmin: false });
+  }
+});
+
+// Admin-only: protect sensitive routes
+app.use(['/api/buyboxes', '/api/settings', '/api/integrations'], (req, res, next) => {
+  try {
+    const users = db.readDB().users || [];
+    const userId = req.headers['x-user-id'] || req.query._uid ||
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    const user = users.find(u => u.id === userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required', code: 'FORBIDDEN' });
+    }
+    next();
+  } catch(e) {
+    next(); // fail open for now, harden later
+  }
+});
 
 // ====================== ADDRESS VALIDATION ROUTES (must be before :id routes) ======================
 // GET /api/leads/validate — validate all leads and return report
@@ -223,11 +314,55 @@ app.delete('/api/leads/:id', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Buyers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.get('/api/buyers', (req, res) => res.json({ buyers: db.getBuyers() }));
-
-app.post('/api/buyers', (req, res) => {
-  const buyer = db.addBuyer(req.body);
-  res.json(buyer);
+app.get('/api/buyers', (req, res) => {
+  try {
+    let buyers = db.readDB().buyers || [];
+    
+    // State filter
+    if (req.query.state) {
+      const st = req.query.state.toUpperCase();
+      buyers = buyers.filter(b => (b.state||'').toUpperCase() === st);
+    }
+    // County filter (optional)
+    if (req.query.county) {
+      const co = req.query.county.toLowerCase();
+      buyers = buyers.filter(b => (b.counties||'').toLowerCase().includes(co));
+    }
+    // Type filter
+    if (req.query.type) {
+      const t = req.query.type.toLowerCase();
+      buyers = buyers.filter(b => (b.buyTypes||[]).some(bt => bt.toLowerCase().includes(t)));
+    }
+    // Search filter
+    if (req.query.search) {
+      const s = req.query.search.toLowerCase();
+      buyers = buyers.filter(b => 
+        (b.name||'').toLowerCase().includes(s) || 
+        (b.email||'').toLowerCase().includes(s) ||
+        (b.counties||'').toLowerCase().includes(s)
+      );
+    }
+    
+    // Role check — users get limited buyer info (no full contact details)
+    const userId = req.headers['x-user-id'] || req.query._uid ||
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    const users  = db.readDB().users || [];
+    const currentUser = users.find(u => u.id === userId);
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    
+    if (!isAdmin) {
+      // Non-admins: return limited buyer info only (no contact details)
+      buyers = buyers.map(b => ({
+        id: b.id, name: b.name, state: b.state,
+        counties: b.counties, buyTypes: b.buyTypes,
+        maxPrice: b.maxPrice, status: b.status
+      }));
+    }
+    
+    res.json({ buyers, total: buyers.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.put('/api/buyers/:id', (req, res) => {
