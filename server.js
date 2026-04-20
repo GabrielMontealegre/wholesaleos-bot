@@ -74,7 +74,7 @@ function buildPropertyLinks(address, state, zip) {
   // Strip unit/apt info to improve match
   const cleanAddr = fullAddr.replace(/,?s*(apt|unit|#)s*[wd]+/gi, '').trim();
   const zEncoded  = encodeURIComponent(cleanAddr);
-  const zillow    = 'https://www.zillow.com/homes/' + zEncoded + '_rb/';
+  const zillow    = buildZillowLink(cleanAddr);
   
   // Redfin — use their search page
   const redfin    = 'https://www.redfin.com/city/search?q=' + encoded;
@@ -1745,7 +1745,7 @@ function parsePropwireCSV(csvText) {
         estValue, dom:Math.round(num(C.dom))||0,
         status:'New Lead', source:'Propwire', verified:true,
         dealType:spread>arv*0.20?'Wholesale':spread>arv*0.12?'Fix & Flip':'Buy & Hold',
-        zillowUrl:`https://www.zillow.com/homes/${encodeURIComponent(fullAddress)}_rb/`,
+        zillowUrl:buildZillowLink(fullAddress),
         redfinUrl:`https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(fullAddress)}`,
         created:new Date().toISOString(), userId:'admin',
       });
@@ -3299,7 +3299,7 @@ app.post('/api/leads/rebuild-links', function(req, res) {
       }
 
       var enc = encodeURIComponent(clean);
-      lead._zillow_link      = 'https://www.zillow.com/homes/' + enc + '_rb/';
+      lead._zillow_link      = buildZillowLink(clean);
       lead._redfin_link      = 'https://www.redfin.com/city/search?q=' + enc;
       lead._google_maps_link = 'https://www.google.com/maps/search/?api=1&query=' + enc;
       lead._clean_address    = clean;
@@ -3427,11 +3427,15 @@ function isDallasFakeZip(zip, state) {
 function buildGoogleMapsLink(address) {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
 }
+function buildGoogleMapsLink(address) {
+  return 'https://maps.google.com/?q=' + encodeURIComponent(address);
+}
 function buildZillowLink(address) {
-  return 'https://www.zillow.com/homes/' + encodeURIComponent(address) + '_rb/';
+  return 'https://www.zillow.com/search/real-estate/?searchQueryState=' +
+    encodeURIComponent(JSON.stringify({usersSearchTerm: address}));
 }
 function buildRedfinLink(address) {
-  return 'https://www.redfin.com/city/search?q=' + encodeURIComponent(address);
+  return 'https://www.redfin.com/search?location=' + encodeURIComponent(address);
 }
 
 function validateLeadAddress(lead) {
