@@ -48,3 +48,4 @@ async function findDeals(state, limit = 25) {
   await browser.close();
   return leads;
 }
+module.exports = { findDeals };
