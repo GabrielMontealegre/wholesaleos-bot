@@ -1,41 +1,36 @@
-const { chromium } = require('playwright');
+const fetch = require('node-fetch');
 
-async function findDeals(state = 'Texas', limit = 25) {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
-  const page = await browser.newPage();
+async function findDeals(state = 'NY', limit = 5) {
   const deals = [];
 
   try {
-  await page.goto(
-    'https://data.cityofnewyork.us/resource/jz4z-kudi.json?$limit=' + limit,
-    { timeout: 60000 }
-  );
+    // NYC Open Data — Housing Maintenance Code Violations
+    const url = `https://data.cityofnewyork.us/resource/wvxf-dwi5.json?$limit=${limit}`;
 
-  const data = await page.evaluate(() => document.body.innerText);
-  const json = JSON.parse(data);
+    const resp = await fetch(url);
+    const json = await resp.json();
 
-  json.forEach((item, i) => {
-    deals.push({
-      address: item.house_number && item.street_name
-  ? `${item.house_number} ${item.street_name}`
-  : (item.location || `NYC Violation ${i}`),
-      city: "New York",
-      state: "NY",
-      motivation: 8,
-      source: "NYC Code Violation"
+    // DEBUG: log first record so we see fields in Railway logs
+    console.log("NYC DATA SAMPLE:", json[0]);
+
+    json.forEach((item, i) => {
+      deals.push({
+        address: item.house_number && item.street_name
+          ? `${item.house_number} ${item.street_name}`
+          : (item.location || `NYC Violation ${i}`),
+        city: item.borough || "New York",
+        state: "NY",
+        motivation: 8,
+        source: "NYC Code Violation"
+      });
     });
-  });
 
-} catch (err) {
-  console.error('Scraper error:', err.message);
-}
+    return deals;
 
-  await browser.close();
-  return deals;
+  } catch (err) {
+    console.error("Deal finder error:", err);
+    return [];
+  }
 }
 
 module.exports = { findDeals };
