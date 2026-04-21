@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-async function findDeals(state = 'NY', limit = 5) {
+async function findDeals(state = 'NY', limit = 50) {
   const deals = [];
 
   try {
@@ -11,9 +11,10 @@ async function findDeals(state = 'NY', limit = 5) {
 
     console.log("NYC DATA SAMPLE:", json[0]);
 
-    json.forEach((item) => {
+    // 🧠 STEP 1: normalize + dedupe by buildingid or address key
+    const seen = new Map();
 
-      // 🧠 FIX: handle BOTH formats (flat + nested)
+    json.forEach((item) => {
       const data = item.address || item;
 
       const housenumber = data.housenumber || data.house_number;
@@ -25,20 +26,30 @@ async function findDeals(state = 'NY', limit = 5) {
           ? `${housenumber} ${streetname}`
           : (streetname && boro)
             ? `${streetname}, ${boro}`
-            : (data.zip)
-              ? `ZIP ${data.zip}`
-              : null;
+            : null;
+
+      // 🧠 UNIQUE KEY (prevents duplicates)
+      const key =
+        data.buildingid ||
+        data.bin ||
+        address ||
+        JSON.stringify(data);
+
+      // 🚫 skip duplicates
+      if (seen.has(key)) return;
+      seen.set(key, true);
 
       deals.push({
         address: address || "Unknown Address",
-        city: boro || item.city || "New York",
+        city: boro || "New York",
         state: "NY",
         motivation: 8,
+        violations: 1, // we will upgrade later
         source: "NYC Code Violation"
       });
     });
 
-    return deals;
+    return deals.slice(0, 5);
 
   } catch (err) {
     console.error("Deal finder error:", err);
