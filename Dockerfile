@@ -1,17 +1,15 @@
-FROM node:20-alpine
+FROM mcr.microsoft.com/playwright:v1.44.0-jammy
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json ./
-RUN npm install && npx playwright install --with-deps --production
+COPY package*.json ./
 
-# Copy source
+RUN npm install
+
 COPY . .
 
-# Create data directory
-RUN mkdir -p data
+RUN npx playwright install --with-deps
 
 EXPOSE 3000
 
-CMD ["node", "bot.js"]
+CMD ["npm", "start"]
