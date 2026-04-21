@@ -3421,4 +3421,22 @@ app.post('/api/deals/playwright', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+  // Playwright Deals Route
+app.post('/api/deals/playwright', async (req, res) => {
+  try {
+    const { state, limit } = req.body;
+
+    const { findDeals } = require('./modules/deal-finder-playwright');
+    const deals = await findDeals(state || 'NY', limit || 5);
+
+    res.json({
+      success: true,
+      count: deals.length,
+      deals
+    });
+
+  } catch (err) {
+    console.error("Playwright route error:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
