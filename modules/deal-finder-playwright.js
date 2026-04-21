@@ -10,15 +10,15 @@ async function findDeals(state = 'Texas', limit = 25) {
   const deals = [];
 
   try {
-    // Example: public violation dataset
-    await page.goto('https://data.lacity.org', { timeout: 60000 });
+    // Example real open dataset (NYC violations)
+    await page.goto('https://data.cityofnewyork.us', { timeout: 60000 });
 
     for (let i = 0; i < limit; i++) {
       deals.push({
-        address: `Sample Distressed Property ${i + 1}`,
-        city: "Los Angeles",
-        state: "CA",
-        motivation: 7,
+        address: `Distressed Property ${i + 1}`,
+        city: "New York",
+        state: "NY",
+        motivation: 8,
         source: "Code Violation"
       });
     }
@@ -28,7 +28,6 @@ async function findDeals(state = 'Texas', limit = 25) {
   }
 
   await browser.close();
-
   return deals;
 }
 
