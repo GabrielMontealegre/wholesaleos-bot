@@ -3413,4 +3413,12 @@ app.post('/api/leads/delete-fake', function(req, res) {
     });
   } catch(e) { res.status(500).json({error: e.message}); }
 });
-
+app.post('/api/deals/playwright', async (req, res) => {
+  try {
+    const { state, limit } = req.body;
+    const deals = await findDeals(state || 'Texas', limit || 25);
+    res.json({ success: true, count: deals.length, deals });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
