@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json ./
-RUN npm install --production
+RUN npm install && npx playwright install --with-deps --production
 
 # Copy source
 COPY . .
