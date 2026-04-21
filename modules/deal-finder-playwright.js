@@ -1,7 +1,3 @@
-const { chromium } = require('playwright');
-const db = require('../db');
-const { validateLead } = require('./lead-validator');
-
 async function findDeals(state, limit = 25) {
   const browser = await chromium.launch({
     headless: true,
@@ -12,20 +8,17 @@ async function findDeals(state, limit = 25) {
   const leads = [];
 
   try {
-    await page.goto('https://www.zillow.com', { waitUntil: 'domcontentloaded' });
+    await page.goto(`https://www.zillow.com/homes/${state}_rb/`, {
+      waitUntil: 'domcontentloaded'
+    });
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(5000);
 
-    await page.fill('input[type="text"]', state);
-    await page.keyboard.press('Enter');
-
-    await page.waitForTimeout(4000);
-
-    const cards = await page.$$('article');
+    const cards = await page.$$('[data-test="property-card"]');
 
     for (let i = 0; i < cards.length && leads.length < limit; i++) {
       try {
-        const address = await cards[i].$eval('address', el => el.innerText).catch(()=>null);
+        const address = await cards[i].$eval('[data-test="property-card-addr"]', el => el.innerText).catch(()=>null);
         const price = await cards[i].$eval('[data-test="property-card-price"]', el => el.innerText).catch(()=>null);
 
         if (!address || !price) continue;
@@ -55,5 +48,3 @@ async function findDeals(state, limit = 25) {
   await browser.close();
   return leads;
 }
-
-module.exports = { findDeals };
