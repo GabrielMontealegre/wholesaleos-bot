@@ -10,22 +10,27 @@ async function findDeals(state = 'Texas', limit = 25) {
   const deals = [];
 
   try {
-    // Example real open dataset (NYC violations)
-    await page.goto('https://data.cityofnewyork.us', { timeout: 60000 });
+  await page.goto(
+    'https://data.cityofnewyork.us/resource/jz4z-kudi.json?$limit=' + limit,
+    { timeout: 60000 }
+  );
 
-    for (let i = 0; i < limit; i++) {
-      deals.push({
-        address: `Distressed Property ${i + 1}`,
-        city: "New York",
-        state: "NY",
-        motivation: 8,
-        source: "Code Violation"
-      });
-    }
+  const data = await page.evaluate(() => document.body.innerText);
+  const json = JSON.parse(data);
 
-  } catch (err) {
-    console.error('Scraper error:', err.message);
-  }
+  json.forEach((item, i) => {
+    deals.push({
+      address: item.respondent || `NYC Violation ${i}`,
+      city: "New York",
+      state: "NY",
+      motivation: 8,
+      source: "NYC Code Violation"
+    });
+  });
+
+} catch (err) {
+  console.error('Scraper error:', err.message);
+}
 
   await browser.close();
   return deals;
