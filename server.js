@@ -8,7 +8,7 @@ const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
 const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
-
+const { findDeals } = require('./modules/deal-finder-playwright');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
