@@ -10,20 +10,21 @@ async function findDeals(state = 'NY', limit = 5) {
     const resp = await fetch(url);
     const json = await resp.json();
 
-    // DEBUG: log first record so we see fields in Railway logs
+    // Debug (you can still see raw data in logs)
     console.log("NYC DATA SAMPLE:", json[0]);
 
     json.forEach((item, i) => {
 
-      // ✅ FIX: smarter address extraction (no fake placeholders)
+      // ✅ SAFE ADDRESS EXTRACTION (FIXED)
       const address =
-        (item.house_number && item.street_name)
+        item.street_address ||
+        item.address ||
+        item.violation_location ||
+        item.location ||
+        item.street_name ||
+        (item.house_number && item.street_name
           ? `${item.house_number} ${item.street_name}`
-          : item.violation_location
-          || item.address
-          || item.location
-          || item.street
-          || null;
+          : null);
 
       deals.push({
         address: address || "Unknown Address",
