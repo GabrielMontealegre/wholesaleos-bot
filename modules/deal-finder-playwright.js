@@ -16,15 +16,16 @@ async function findDeals(state = 'NY', limit = 5) {
     json.forEach((item, i) => {
 
       // ✅ SAFE ADDRESS EXTRACTION (FIXED)
-      const address =
-        item.street_address ||
-        item.address ||
-        item.violation_location ||
-        item.location ||
-        item.street_name ||
-        (item.house_number && item.street_name
-          ? `${item.house_number} ${item.street_name}`
-          : null);
+      const address = item;
+console.log("RAW ITEM:", item);
+  item.street_address ||
+  item.address ||
+  item.violation_location ||
+  item.location ||
+  item.street_name ||
+  (item.house_number && item.street_name
+    ? `${item.house_number} ${item.street_name}`
+    : null);
 
       deals.push({
         address: address || "Unknown Address",
