@@ -1,3 +1,7 @@
+const { chromium } = require('playwright');
+const db = require('../db');
+const { validateLead } = require('./lead-validator');
+
 async function findDeals(state, limit = 25) {
   const browser = await chromium.launch({
     headless: true,
@@ -48,4 +52,5 @@ async function findDeals(state, limit = 25) {
   await browser.close();
   return leads;
 }
+
 module.exports = { findDeals };
