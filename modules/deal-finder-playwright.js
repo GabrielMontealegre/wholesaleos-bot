@@ -14,11 +14,20 @@ async function findDeals(state = 'NY', limit = 5) {
     console.log("NYC DATA SAMPLE:", json[0]);
 
     json.forEach((item, i) => {
-      deals.push({
-        address: item.house_number && item.street_name
+
+      // ✅ FIX: smarter address extraction (no fake placeholders)
+      const address =
+        (item.house_number && item.street_name)
           ? `${item.house_number} ${item.street_name}`
-          : (item.location || `NYC Violation ${i}`),
-        city: item.borough || "New York",
+          : item.violation_location
+          || item.address
+          || item.location
+          || item.street
+          || null;
+
+      deals.push({
+        address: address || "Unknown Address",
+        city: item.borough || item.city || "New York",
         state: "NY",
         motivation: 8,
         source: "NYC Code Violation"
