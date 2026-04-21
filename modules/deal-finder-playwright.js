@@ -13,21 +13,25 @@ async function findDeals(state = 'NY', limit = 5) {
 
     json.forEach((item) => {
 
-      // ✅ FIX: address is inside a nested object now
-      const addr = item.address || {};
+      // 🧠 FIX: handle BOTH formats (flat + nested)
+      const data = item.address || item;
+
+      const housenumber = data.housenumber || data.house_number;
+      const streetname = data.streetname || data.street_name;
+      const boro = data.boro || data.borough;
 
       const address =
-        (addr.housenumber && addr.streetname)
-          ? `${addr.housenumber} ${addr.streetname}`
-          : (addr.streetname && addr.boro)
-            ? `${addr.streetname}, ${addr.boro}`
-            : addr.zip
-              ? `ZIP ${addr.zip}`
+        (housenumber && streetname)
+          ? `${housenumber} ${streetname}`
+          : (streetname && boro)
+            ? `${streetname}, ${boro}`
+            : (data.zip)
+              ? `ZIP ${data.zip}`
               : null;
 
       deals.push({
         address: address || "Unknown Address",
-        city: addr.boro || item.city || "New York",
+        city: boro || item.city || "New York",
         state: "NY",
         motivation: 8,
         source: "NYC Code Violation"
