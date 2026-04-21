@@ -20,7 +20,9 @@ async function findDeals(state = 'Texas', limit = 25) {
 
   json.forEach((item, i) => {
     deals.push({
-      address: item.respondent || `NYC Violation ${i}`,
+      address: item.house_number && item.street_name
+  ? `${item.house_number} ${item.street_name}`
+  : (item.location || `NYC Violation ${i}`),
       city: "New York",
       state: "NY",
       motivation: 8,
