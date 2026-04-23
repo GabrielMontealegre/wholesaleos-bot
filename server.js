@@ -8,7 +8,7 @@ const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
 const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
-const { findDeals } = require('./modules/deal-finder-playwright');
+const { dealEngine } = require('./modules/deal-engine');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -3414,30 +3414,30 @@ app.post('/api/leads/delete-fake', function(req, res) {
   } catch(e) { res.status(500).json({error: e.message}); }
 });
 app.post('/api/deals/playwright', async (req, res) => {
-  try {
-    const { state, limit } = req.body;
-    const deals = await findDeals(state || 'Texas', limit || 25);
-    res.json({ success: true, count: deals.length, deals });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-  // Playwright Deals Route
-app.post('/api/deals/playwright', async (req, res) => {
+  // Powered by deal-engine.js — DO NOT modify AI, SMS, email, buyers, comps, or UI
   try {
     const { state, limit } = req.body;
 
-    const { findDeals } = require('./modules/deal-finder-playwright');
-    const deals = await findDeals(state || 'NY', limit || 5);
+    const rawDeals = await dealEngine(state || 'NY', Number(limit) || 20);
 
-    res.json({
-      success: true,
-      count: deals.length,
-      deals
+    const deals = rawDeals.map(function(d) {
+      return {
+        address:    d.address    || '',
+        city:       d.city       || '',
+        state:      d.state      || state || 'NY',
+        source:     d.source     || 'Unknown',
+        score:      typeof d.score === 'number' ? d.score : (d.motivation || 5),
+        violations: typeof d.violations === 'number' ? d.violations : 0,
+        raw:        d.raw        || d
+      };
     });
 
+    res.json({ success: true, count: deals.length, deals });
+
   } catch (err) {
-    console.error("Playwright route error:", err);
-    res.status(500).json({ error: err.message });
+    console.error('deal-engine route error:', err.message);
+    res.status(500).json({ success: false, error: err.message, deals: [] });
   }
 });
+
   });
