@@ -3414,30 +3414,78 @@ app.post('/api/leads/delete-fake', function(req, res) {
   } catch(e) { res.status(500).json({error: e.message}); }
 });
 app.post('/api/deals/playwright', async (req, res) => {
-  // Powered by deal-engine.js — DO NOT modify AI, SMS, email, buyers, comps, or UI
+  // deal-engine -> db.addLead pipeline
+  // Scraped deals now enter the same system as CSV-imported leads
   try {
     const { state, limit } = req.body;
+    const { analyzeProperty } = require('./ai');
 
+    // 1. Run deal engine — normalizes + deduplicates across sources
     const rawDeals = await dealEngine(state || 'NY', Number(limit) || 20);
 
-    const deals = rawDeals.map(function(d) {
-      return {
-        address:    d.address    || '',
-        city:       d.city       || '',
-        state:      d.state      || state || 'NY',
-        source:     d.source     || 'Unknown',
+    const inserted = [];
+    const skipped  = [];
+
+    for (const d of rawDeals) {
+      // 2. Build lead object matching db.addLead() expected structure
+      const leadInput = {
+        address:    (d.address    || '').trim(),
+        city:       (d.city       || '').trim(),
+        state:      (d.state      || state || 'NY').trim(),
+        zip:        d.zip         || '',
+        source:     d.source      || 'Deal Engine',
+        source_platform: d.source || 'Deal Engine',
+        status:     'New Lead',
+        createdAt:  new Date().toISOString(),
         score:      typeof d.score === 'number' ? d.score : (d.motivation || 5),
         violations: typeof d.violations === 'number' ? d.violations : 0,
-        raw:        d.raw        || d
+        motivation: d.motivation  || 5,
+        category:   d.category    || 'Code Violation',
+        type:       d.type        || 'SFR',
+        arv:        d.arv         || 0,
+        offer:      d.offer       || 0,
+        repairs:    d.repairs     || 0,
+        phone:      d.phone       || '',
+        email:      d.email       || '',
       };
-    });
 
-    res.json({ success: true, count: deals.length, deals });
+      // 3. Skip if address is missing or already in db
+      if (!leadInput.address || leadInput.address === 'Unknown Address') {
+        skipped.push({ reason: 'no_address', address: leadInput.address });
+        continue;
+      }
+      if (db.leadExists(leadInput.address)) {
+        skipped.push({ reason: 'duplicate', address: leadInput.address });
+        continue;
+      }
+
+      // 4. Run AI scoring (analyzeProperty) — same as CSV import flow
+      //    Wraps in try/catch so a failed AI call never blocks insertion
+      try {
+        const enriched = await analyzeProperty(leadInput);
+        Object.assign(leadInput, enriched);
+      } catch (aiErr) {
+        console.warn('analyzeProperty skipped for', leadInput.address, aiErr.message);
+      }
+
+      // 5. Write to db.json — makes it appear in dashboard, pipeline, buyers, SMS, email
+      const saved = db.addLead(leadInput);
+      inserted.push({ id: saved.id, address: saved.address });
+    }
+
+    res.json({
+      success:  true,
+      inserted: inserted.length,
+      skipped:  skipped.length,
+      leads:    inserted,
+      skip_log: skipped
+    });
 
   } catch (err) {
     console.error('deal-engine route error:', err.message);
-    res.status(500).json({ success: false, error: err.message, deals: [] });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
+
 
   });
