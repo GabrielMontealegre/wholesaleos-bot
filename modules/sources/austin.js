@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.austintexas.gov/resource/6wtj-zbtb.json' +
-      '?$limit=' + limit +
+      '?$limit=100&$offset=' + offset +
       '&$where=status%20!%3D%20%27Closed%27%20AND%20opened_date%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=opened_date%20DESC';
 
