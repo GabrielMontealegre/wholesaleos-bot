@@ -40,22 +40,19 @@ class WholesaleScraper:
         print(f"Mining Open Data from: {url}")
         try:
             response = requests.get(url, headers=self.headers, timeout=15)
-            # Use Gemini to find the BEST download link on the page
             data_link = brain.fast_think(f"Find the direct CSV, Excel, or PDF download link for this data page: {url}. Return ONLY the URL.")
             
-            if any(ext in data_link for ext in ['.pdf', '.csv', '.xlsx']):
+            if data_link and any(ext in data_link for ext in ['.pdf', '.csv', '.xlsx']):
                 file_path = self.download_file(data_link)
                 if data_link.endswith('.pdf'):
                     raw_data = self.read_pdf(file_path)
                 elif data_link.endswith('.csv') or data_link.endswith('.xlsx'):
                     raw_data = self.read_excel(file_path)
-                os.remove(file_path) # Clean up server space
+                os.remove(file_path)
             else:
-                # If it's a direct CSV link, read it with pandas
                 df = pd.read_csv(data_link)
                 raw_data = df.to_string()
 
-            # Use Gemini to turn the raw text into structured columns
             structured_leads = brain.deep_think(f"Convert this raw data into a structured list of leads with columns [Address, Owner, Violation, Date]: {raw_data}")
             return structured_leads
         except Exception as e:
@@ -66,25 +63,21 @@ class WholesaleScraper:
         """Strategy for Fortresses: Interaction required"""
         print(f"Interacting with Portal: {url}")
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            # ADDED RAILWAY FLAGS: These prevent the 'Executable' and 'Sandbox' errors
+            browser = p.chromium.launch(
+                headless=True, 
+                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+            )
             page = browser.new_page()
             try:
-                page.goto(url, wait_until="networkidle")
+                page.goto(url, wait_until="networkidle", timeout=60000)
                 
-                # Handle Disclaimer/Agree buttons
                 if "Disclaimer" in page.content() or "Agree" in page.content():
                     buttons = page.get_by_role("button", name="Agree").all() or page.get_by_text("I Agree").all()
                     if buttons:
                         buttons[0].click()
                         page.wait_for_load_state("networkidle")
 
-                # Check for any download links on the page
-                links = page.locator("a").all_inner_texts()
-                # Gemini checks if any of these links look like a lead list
-                download_target = brain.fast_think(f"Looking at these links: {links}, which one is most likely a downloadable lead list (PDF/CSV/Excel)? Return ONLY the text of the link.")
-                
-                # If a download is found, we'd trigger it here (simplified for now)
-                
                 content = page.content()
                 prompt = f"Analyze this HTML: {content}. Extract real leads into columns [Address, Owner, Violation, Date]. If no leads, return 'NO_LEADS'."
                 leads = brain.deep_think(prompt)
