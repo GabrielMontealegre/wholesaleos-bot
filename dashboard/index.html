@@ -13620,6 +13620,87 @@ window.openWholesaleGuide = function() {
 setTimeout(checkSystemLimits, 3000);
 
 
+
+// ── ARV NULL DISPLAY PATCH ──
+// When arv === null (analysisStatus: incomplete), show Price Unknown instead of fake numbers
+(function() {
+  // Patch: intercept any attempt to render ARV fields in lead modal
+  function safePrice(val, fallback) {
+    if (val === null || val === undefined || val === 0) return fallback || 'Price Unknown';
+    if (typeof val === 'number' && isFinite(val)) return '$' + val.toLocaleString();
+    return fallback || 'Price Unknown';
+  }
+
+  // Override lead modal rendering for null ARV leads
+  var _origOpenLead = window.openLeadModal;
+  if (typeof _origOpenLead === 'function') {
+    window.openLeadModal = function(id) {
+      _origOpenLead.apply(this, arguments);
+      setTimeout(function() {
+        try {
+          var lead = APP && APP.selectedLead;
+          if (!lead) return;
+
+          // Only patch incomplete leads
+          if (lead.analysisStatus !== 'incomplete' && lead.arv !== null) return;
+
+          // Replace any $ amounts that show fake 0 or NaN for ARV fields
+          var modal = document.querySelector('.lead-modal-content, .modal-body, #lead-modal-inner');
+          if (!modal) return;
+
+          // Find and replace ARV/Offer/MAO cells showing $0 or invalid values
+          modal.querySelectorAll('[data-field="arv"],[data-field="offer"],[data-field="mao"],[data-field="spread"]').forEach(function(el) {
+            el.textContent = 'Price Unknown';
+            el.style.color = '#888';
+          });
+
+          // Add a visible banner for incomplete analysis
+          if (!document.getElementById('incomplete-banner')) {
+            var banner = document.createElement('div');
+            banner.id = 'incomplete-banner';
+            banner.style.cssText = 'background:rgba(255,152,0,0.12);border:1px solid #ff9800;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:12px;color:#ff9800;';
+            banner.innerHTML = '&#9888; <strong>Comps Not Available</strong> — No real market data found for this property. ARV, Offer, and MAO will update automatically when comp data is available.';
+            var firstSection = modal.querySelector('.lead-deal-section, .deal-section, [class*="deal"]');
+            if (firstSection) firstSection.prepend(banner);
+            else modal.prepend(banner);
+          }
+        } catch(e) {}
+      }, 300);
+    };
+  }
+
+  // Also patch the leads table to flag incomplete leads with a visual indicator
+  var _origRenderLeads = window.renderLeads;
+  if (typeof _origRenderLeads === 'function') {
+    window.renderLeads = function() {
+      _origRenderLeads.apply(this, arguments);
+      setTimeout(function() {
+        try {
+          // Add visual indicator to rows with analysisStatus: incomplete
+          document.querySelectorAll('tr[data-lead-id], [data-lead-id]').forEach(function(row) {
+            var lid = row.getAttribute('data-lead-id');
+            if (!lid || !APP || !APP.leads) return;
+            var lead = APP.leads.find(function(l){ return l.id === lid; });
+            if (lead && (lead.analysisStatus === 'incomplete' || lead.arv === null)) {
+              row.style.opacity = '0.75';
+              var badge = row.querySelector('.incomplete-badge');
+              if (!badge) {
+                var td = row.querySelector('td:last-child, td');
+                if (td) {
+                  var sp = document.createElement('span');
+                  sp.className = 'incomplete-badge';
+                  sp.style.cssText = 'font-size:9px;color:#ff9800;margin-left:4px;';
+                  sp.textContent = 'NO COMPS';
+                  td.appendChild(sp);
+                }
+              }
+            }
+          });
+        } catch(e) {}
+      }, 200);
+    };
+  }
+})();
 </script>
 </body>
 </html>
