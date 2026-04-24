@@ -1,15 +1,13 @@
-FROM mcr.microsoft.com/playwright:v1.44.0-jammy
+FROM node:20-slim
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm install --production
 
 COPY . .
 
-RUN npx playwright install --with-deps
-
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
