@@ -3,7 +3,7 @@ import json
 import subprocess
 import sys
 import uuid
-from datetime import datetime # Corrected: Import datetime for Python
+from datetime import datetime
 from scraper_engine import WholesaleScraper
 from llm_manager import brain
 
@@ -46,24 +46,35 @@ def save_lead_to_db(lead_data):
             except json.JSONDecodeError:
                 data = {"leads": [], "users": [], "buyers": []}
 
-            if "leads" not in data: data["leads"] = []
+            if "leads" not in data: 
+                data["leads"] = []
             
-            # Ensure lead_data is a dictionary
+            # Step 1: Clean the AI response
+            processed_data = {}
             if isinstance(lead_data, str):
                 try:
                     import ast
-                    lead_data = ast.literal_eval(lead_data)
+                    processed_data = ast.literal_eval(lead_data)
+                    if not isinstance(processed_data, dict):
+                        processed_data = {"raw_data": lead_data}
                 except:
-                    lead_data = {"address": "Check Logs", "note": lead_data}
+                    processed_data = {"raw_data": lead_data}
+            elif isinstance(lead_data, dict):
+                processed_data = lead_data
+            else:
+                processed_data = {"raw_data": str(lead_data)}
 
-            # Add unique ID and CORRECT Python timestamp
+            # Step 2: Create the final lead entry
             lead_entry = {
                 "id": str(uuid.uuid4()),
-                "created": datetime.now().isoformat(), # FIXED: Correct Python syntax
+                "created": datetime.now().isoformat(),
                 "status": "New Lead",
-                "source": "MontSan REI Engine",
-                **lead_data if isinstance(lead_data, dict) else {"raw_data": lead_data}
+                "source": "MontSan REI Engine"
             }
+            
+            # Step 3: Merge the data safely (The "Old School" way)
+            for key, value in processed_data.items():
+                lead_entry[key] = value
             
             data["leads"].append(lead_entry)
             f.seek(0)
