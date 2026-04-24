@@ -1,7 +1,7 @@
 # Use a stable Python base
 FROM python:3.11-slim
 
-# Install system dependencies for Playwright and Node.js
+# Install system dependencies for Playwright, Chrome, and Node.js
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -21,26 +21,28 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js
+# Install Node.js (The Engine for the Dashboard)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
 WORKDIR /app
 
-# Install Python requirements
+# 1. Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
+# 2. Install Playwright browsers
 RUN playwright install chromium --with-deps
 
-# Copy everything from GitHub
+# 3. Copy everything from GitHub
 COPY . .
+
+# 4. INSTALL NODE MODULES (The missing piece!)
+# This installs express, pino, and everything in your package.json
+RUN npm install
 
 # Ensure Playwright uses the system browser
 ENV PLAYWRIGHT_BROWSERS_PATH=0
 
-# THE CORRECTED MASTER COMMAND:
-# We wrap the command in "sh -c" so the server understands the "&" symbol.
-# This ensures the Bot runs in the background AND the Dashboard stays alive.
+# Start the Bot in background and Server in foreground
 CMD ["sh", "-c", "python bot_runner.py & node server.js"]
