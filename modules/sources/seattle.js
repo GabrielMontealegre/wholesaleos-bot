@@ -1,15 +1,17 @@
 const fetch = require('node-fetch');
 
 // Source: Seattle Code Complaints and Violations (Socrata)
-// API: data.seattle.gov/resource/ez4a-iug7.json
-// Fields confirmed: originaladdress1, originalcity, originalstate, statuscurrent
+// Date filter: opendate within last 60 days
 async function findDeals(state, limit) {
   limit = limit || 20;
   try {
-    // Filter: exclude completed cases to focus on active violations
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+    var cutoffStr = cutoff.toISOString().slice(0, 10);
+
     var url = 'https://data.seattle.gov/resource/ez4a-iug7.json' +
       '?$limit=' + limit +
-      '&$where=statuscurrent%20!%3D%20%27Completed%27' +
+      '&$where=statuscurrent%20!%3D%20%27Completed%27%20AND%20opendate%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=opendate%20DESC';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -19,7 +21,7 @@ async function findDeals(state, limit) {
     var results = [];
     json.forEach(function(item) {
       var address = (item.originaladdress1 || '').trim();
-      if (!address) return; // skip missing address
+      if (!address) return;
 
       results.push({
         address:    address,
@@ -27,7 +29,8 @@ async function findDeals(state, limit) {
         state:      (item.originalstate || 'WA').trim(),
         source:     'Seattle Code Violation',
         motivation: 7,
-        violations: 1
+        violations: 1,
+        opendate:   item.opendate || null
       });
     });
     return results;
