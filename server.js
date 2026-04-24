@@ -8,7 +8,7 @@ const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
 const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
-const { dealEngine } = require('./modules/deal-engine');
+const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -3618,6 +3618,13 @@ cron.schedule('0 6 * * *', function() {
 }, { timezone: 'UTC' });
 
 console.log('[Daily Ingestion] Scheduled: 0 6 * * * UTC (6AM daily across 14 states)');
+
+// Daily ingestion via setInterval — runs every 24 hours
+setInterval(async () => {
+  console.log('Running daily ingestion...');
+  await runDailyIngestion();
+  console.log('Daily ingestion complete');
+}, 24 * 60 * 60 * 1000);
 
 // Start server
 app.listen(PORT, () => {
