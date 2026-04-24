@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.nola.gov/resource/3ehi-je3s.json' +
-      '?$limit=' + limit +
+      '?$limit=100&$offset=' + offset +
       '&$where=violationdate%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=violationdate%20DESC';
 
