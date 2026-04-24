@@ -3454,7 +3454,12 @@ app.post('/api/deals/playwright', async (req, res) => {
         skipped.push({ reason: 'no_address', address: leadInput.address });
         continue;
       }
-      if (db.leadExists(leadInput.address)) {
+      if (db.getLeads().some(function(l) {
+        return (l.address||'').toLowerCase().trim() === (leadInput.address||'').toLowerCase().trim() &&
+               (l.city||'').toLowerCase().trim()    === (leadInput.city||'').toLowerCase().trim() &&
+               (l.state||'').toLowerCase().trim()   === (leadInput.state||'').toLowerCase().trim() &&
+               (l.source||'').toLowerCase().trim()  === (leadInput.source||'').toLowerCase().trim();
+      })) {
         skipped.push({ reason: 'duplicate', address: leadInput.address });
         continue;
       }
