@@ -1,4 +1,4 @@
-h// server.js Ã¢ÂÂ Express server for dashboard + REST API
+// server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
 require('dotenv').config();
