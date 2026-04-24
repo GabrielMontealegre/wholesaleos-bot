@@ -3467,6 +3467,61 @@ app.post('/api/deals/playwright', async (req, res) => {
         phone:      d.phone       || '',
         email:      d.email       || '',
         sourceCount: 1,
+
+        // ── Lead Quality Fields (added for structured data) ──
+
+        // county: derive from raw data if available, else null
+        county: d.raw && (d.raw.county || d.raw.borough || d.raw.parish || null) || null,
+
+        // source_details: structured source metadata
+        source_details: {
+          type: (function() {
+            var src = (d.source || '').toLowerCase();
+            if (src.indexOf('foreclosure') > -1) return 'foreclosure';
+            if (src.indexOf('tax') > -1)         return 'tax_delinquent';
+            if (src.indexOf('lien') > -1)        return 'tax_delinquent';
+            if (src.indexOf('probate') > -1)     return 'probate';
+            if (src.indexOf('auction') > -1)     return 'foreclosure';
+            if (src.indexOf('violation') > -1)   return 'code_violation';
+            if (src.indexOf('blight') > -1)      return 'code_violation';
+            if (src.indexOf('complaint') > -1)   return 'code_violation';
+            if (src.indexOf('enforcement') > -1) return 'code_violation';
+            return 'other';
+          })(),
+          source_name: d.source || 'Deal Engine',
+          raw_data:    d.raw    || null,
+        },
+
+        // good_deal_reasons: structured signals (replaces generic AI text)
+        good_deal_reasons: (function() {
+          var reasons = [];
+          var src = (d.source || '').toLowerCase();
+          var vcount = typeof d.violations === 'number' ? d.violations : 0;
+          if (vcount > 0) reasons.push(vcount + ' active code violation' + (vcount > 1 ? 's' : ''));
+          if (src.indexOf('violation') > -1 || src.indexOf('blight') > -1) reasons.push('open code violation on record');
+          if (src.indexOf('foreclosure') > -1)   reasons.push('pre-foreclosure or foreclosure status');
+          if (src.indexOf('tax') > -1 || src.indexOf('lien') > -1) reasons.push('tax delinquent property');
+          if (src.indexOf('probate') > -1)        reasons.push('probate sale — motivated estate');
+          if (src.indexOf('auction') > -1)        reasons.push('scheduled for auction — time pressure');
+          reasons.push('off-market property');
+          return reasons;
+        })(),
+
+        // motivation_score: computed from real distress signals
+        motivation_score: (function() {
+          var ms  = 0;
+          var src = (d.source || '').toLowerCase();
+          var vcount = typeof d.violations === 'number' ? d.violations : 0;
+          ms += vcount * 2;                                          // +2 per violation
+          if (src.indexOf('violation') > -1 || src.indexOf('blight') > -1 ||
+              src.indexOf('complaint') > -1 || src.indexOf('enforcement') > -1) ms += 3; // open violation +3
+          if (src.indexOf('tax') > -1 || src.indexOf('lien') > -1)  ms += 5; // tax delinquent +5
+          if (src.indexOf('foreclosure') > -1 || src.indexOf('auction') > -1) ms += 8; // foreclosure +8
+          return ms;
+        })(),
+
+        // created_at: ISO alias (createdAt/createdAtReadable already set above)
+        created_at: new Date().toISOString(),
       };
 
       // 3. Skip if address is missing
