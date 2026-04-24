@@ -11,9 +11,12 @@ const _rc = require('./modules/runtime-cache');
 const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const app  = express();
+// NOTE: Railway proxy requires trust proxy = 1
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 
@@ -3589,6 +3592,16 @@ cron.schedule('0 2 * * *', async () => {
   logger.info('Daily ingestion complete');
 }, { timezone: 'UTC' });
 // Start server
+
+// NOTE: express.json can crash on invalid input — protected with error handler
+app.use(function(err, req, res, next) {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    logger.error('Invalid JSON received: ' + err.message);
+    return res.status(400).json({ error: 'Invalid JSON format' });
+  }
+  next(err);
+});
+
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
 });
