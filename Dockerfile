@@ -1,7 +1,7 @@
-# Use a stable Python version
+# Use a stable Python base
 FROM python:3.11-slim
 
-# Install system dependencies for Playwright, Chrome, and Node.js
+# Install system dependencies for Playwright and Node.js
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -21,25 +21,26 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (The Receptionist)
+# Install Node.js (This ensures your server.js has its engine)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
-# Set the working directory
 WORKDIR /app
 
-# Copy and install Python dependencies
+# Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers
 RUN playwright install chromium --with-deps
 
-# Copy the rest of the application code
+# Copy everything from GitHub to the server
 COPY . .
 
 # Ensure Playwright uses the system browser
 ENV PLAYWRIGHT_BROWSERS_PATH=0
 
-# Run the Master Start Script
-CMD ["sh", "start.sh"]
+# THE MASTER COMMAND: 
+# This starts the bot in the background (&) and the server in the foreground.
+# This is the most stable way to run a hybrid app on Railway.
+CMD python bot_runner.py & node server.js
