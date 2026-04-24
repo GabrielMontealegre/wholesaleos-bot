@@ -7,6 +7,7 @@ const { findDeals: baltimoreDeals }    = require('./sources/baltimore');
 const { findDeals: austinDeals }       = require('./sources/austin');
 const { findDeals: seattleDeals }      = require('./sources/seattle');
 const { findDeals: nolaDeals }         = require('./sources/nola');
+const logger = require('pino')({ level: 'info' });
 
 // Batch 3+ sources will be added here:
 // const { findDeals: atlantaDeals }   = require('./sources/atlanta');
@@ -45,7 +46,7 @@ async function dealEngine(state, limit) {
       return deal.address && deal.address.trim().length > 3;
     });
 
-        console.log('Deals before filter:', allDeals.length);
+        logger.info('Deals before filter:', allDeals.length);
 
     // 2b. WHOLESALING FILTER
     var ninetyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
@@ -73,7 +74,7 @@ async function dealEngine(state, limit) {
       return true;
     });
 
-    console.log('Deals after filter:', allDeals.length);
+    logger.info('Deals after filter:', allDeals.length);
 
     // 2c. PRIORITY SCORING
     allDeals = allDeals.map(function(deal) {
@@ -114,7 +115,7 @@ async function dealEngine(state, limit) {
     return scored.slice(0, limit);
 
   } catch (err) {
-    console.error('Deal Engine Error:', err.message);
+    logger.error('Deal Engine Error:', err.message);
     return [];
   }
 }
@@ -127,10 +128,10 @@ async function runDailyIngestion() {
     try {
       await dealEngine(state, 50);
     } catch (e) {
-      console.error('Daily ingestion error:', state, e.message);
+      logger.error('Daily ingestion error:', state, e.message);
     }
   }
-  console.log('Daily ingestion complete');
+  logger.info('Daily ingestion complete');
 }
 
 module.exports = { dealEngine, runDailyIngestion };
