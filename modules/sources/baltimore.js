@@ -8,8 +8,9 @@ async function findDeals(state, limit) {
     var cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 60);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.baltimorecity.gov/resource/wsfq-mvij.json' +
-      '?$limit=' + (limit * 3) +
+      '?$limit=100&$offset=' + offset +
       '&$order=noticedate%20DESC';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
