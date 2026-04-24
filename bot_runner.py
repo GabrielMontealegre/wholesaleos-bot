@@ -1,12 +1,12 @@
 import os
-import time
+import subprocess
+import sys
 from scraper_engine import WholesaleScraper
 from llm_manager import brain
 
 # =================================================================
 # CONFIGURATION: THE LEAD LIST
 # =================================================================
-# We start with your first batch of 10 URLs
 TARGET_URLS = [
     "https://www.muni.org/Departments/OCPD/development-services/permits-inspections/pages/default.aspx",
     "https://permits.jccal.org/CitizenAccess/Cap/CapApplyDisclaimer.aspx?module=Enforcement&TabName=Enforcement&TabList=Home%7C0%7CESDPermits%7C1%7CBuilding%7C2%7CPlanning%7C3%7CLicenses%7C4%7CEnforcement%7C5%7CCurrentTabIndex%7C5",
@@ -20,26 +20,35 @@ TARGET_URLS = [
     "https://www.sandiego.gov/development-services"
 ]
 
+def ensure_browser_installed():
+    """
+    THE NUCLEAR OPTION:
+    This forces the server to download the browser if it's missing,
+    bypassing Railway's build cache.
+    """
+    print("🛠️ Checking for browser installation...")
+    try:
+        # This runs the actual 'playwright install chromium' command inside the server
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        print("✅ Browser installation verified/completed.")
+    except Exception as e:
+        print(f"❌ Critical Error installing browser: {e}")
+        sys.exit(1)
+
 def save_lead_to_db(lead_data):
-    """
-    This function handles saving the lead to your database.
-    Since we want to keep the dashboard stable, we first print it 
-    to the logs to verify the data is REAL.
-    """
     print(f"--- NEW LEAD FOUND ---")
     print(lead_data)
     print("----------------------")
-    
-    # TODO: Once we verify the data in logs, we will plug in your 
-    # specific Database 'Save' function here.
-    # For now, we write to a local file so we don't lose any data.
     with open("found_leads.txt", "a") as f:
         f.write(str(lead_data) + "\n")
 
 def run_wholesale_engine():
     print("🚀 Damian's Wholesale Engine is starting...")
     
-    # Initialize the engine we built in the previous step
+    # STEP 1: Force the browser to exist before doing anything else
+    ensure_browser_installed()
+    
+    # STEP 2: Initialize the engine
     engine = WholesaleScraper()
     
     print(f"Processing {len(TARGET_URLS)} target sources...")
@@ -47,7 +56,6 @@ def run_wholesale_engine():
     # Run the batch
     results = engine.run_batch(TARGET_URLS)
     
-    # Process the results
     total_leads = 0
     for entry in results:
         url = entry['url']
@@ -63,6 +71,4 @@ def run_wholesale_engine():
     print(f"🏁 Run Complete. Total leads captured: {total_leads}")
 
 if __name__ == "__main__":
-    # This allows the bot to run once and then stop.
-    # On Railway, we will set this to run every X hours.
     run_wholesale_engine()
