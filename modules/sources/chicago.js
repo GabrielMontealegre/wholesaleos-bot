@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.cityofchicago.org/resource/22u3-xenr.json' +
-      '?$limit=' + limit +
+      '?$limit=100&$offset=' + offset +
       '&$where=violation_status%3D%27OPEN%27%20AND%20violation_date%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=violation_date%20DESC';
 
