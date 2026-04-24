@@ -45,7 +45,57 @@ async function dealEngine(state, limit) {
       return deal.address && deal.address.trim().length > 3;
     });
 
-    // 3. DEDUPE ACROSS ALL SOURCES
+        console.log('Deals before filter:', allDeals.length);
+
+    // 2b. WHOLESALING FILTER
+    var ninetyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
+    var thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+
+    allDeals = allDeals.filter(function(deal) {
+      var src = (deal.source || '').toLowerCase();
+      var vs  = (deal.violationstatus || '').toLowerCase();
+      var cs  = (deal.currentstatus  || '').toLowerCase();
+
+      if (vs === 'open') return true;
+      if (cs.indexOf('open') > -1 || cs.indexOf('not complied') > -1) return true;
+
+      var wt = ['violation','tax','lien','foreclosure','probate','auction'];
+      if (wt.some(function(t){ return src.indexOf(t) > -1; })) return true;
+
+      var ds = deal.inspectiondate || deal.issueddate || deal.violationdate ||
+               deal.opened_date   || deal.opendate    || deal.noticedate || '';
+      if (ds) {
+        var ts = Date.parse(ds);
+        if (!isNaN(ts) && ts >= ninetyDaysAgo) return true;
+        return false;
+      }
+      deal.freshness = 'unknown';
+      return true;
+    });
+
+    console.log('Deals after filter:', allDeals.length);
+
+    // 2c. PRIORITY SCORING
+    allDeals = allDeals.map(function(deal) {
+      var src = (deal.source || '').toLowerCase();
+      var vs  = (deal.violationstatus || '').toLowerCase();
+      var cs  = (deal.currentstatus  || '').toLowerCase();
+      var ds  = deal.inspectiondate || deal.issueddate || deal.violationdate ||
+                deal.opened_date   || deal.opendate    || deal.noticedate || '';
+      var ps  = 0;
+
+      if (vs === 'open') ps += 3;
+      if (cs.indexOf('not complied') > -1) ps += 3;
+      if (ds) { var ts2 = Date.parse(ds); if (!isNaN(ts2) && ts2 >= thirtyDaysAgo) ps += 2; }
+      if (src.indexOf('foreclosure') > -1 || src.indexOf('auction') > -1) ps += 2;
+      if (src.indexOf('tax') > -1 || src.indexOf('lien') > -1) ps += 1;
+
+      deal.priorityScore = ps;
+      deal.priority = ps >= 6 ? 'HIGH' : ps >= 3 ? 'MEDIUM' : 'LOW';
+      return deal;
+    });
+
+// 3. DEDUPE ACROSS ALL SOURCES
     const seen = new Set();
     const deduped = allDeals.filter(function(deal) {
       const key = (deal.address + '-' + deal.city + '-' + deal.state + '-' + (deal.source||'')).toLowerCase();
