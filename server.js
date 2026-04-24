@@ -3510,12 +3510,12 @@ app.post('/api/deals/playwright', async (req, res) => {
   }
 });
 
-setInterval(async () => {
+// Daily ingestion — 2AM UTC via cron (replaces setInterval)
+cron.schedule('0 2 * * *', async () => {
   logger.info('Running daily ingestion...');
   await runDailyIngestion();
   logger.info('Daily ingestion complete');
-}, 24 * 60 * 60 * 1000);
-
+}, { timezone: 'UTC' });
 // Start server
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
