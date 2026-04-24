@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 async function findDeals(state, limit) {
   limit = limit || 20;
   try {
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.cuyahogacounty.gov/resource/fzp3-tv2q.json?$limit=' + limit +
       '&$order=delinquency_year%20DESC';
 
