@@ -187,9 +187,31 @@ Return JSON: {"arv":number,"repairs":number,"repair_class":"LIGHT|MEDIUM|HEAVY",
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) { const r = JSON.parse(match[0]); if (r.arv > 50000) return r; }
   } catch(e) {}
-  const arv = estimateARV(prop);
-  const rep = estimateRepairs(prop);
-  return fallbackAnalysis(prop, arv, rep);
+  // No real comp data available — do NOT fabricate ARV/offer/MAO/spread
+  // Return nulls so dashboard can show 'Price Unknown' instead of fake numbers
+  return {
+    arv:               null,
+    repairs:           null,
+    repair_class:      null,
+    mao:               null,
+    offer:             null,
+    fee_lo:            null,
+    fee_hi:            null,
+    spread:            null,
+    risk:              null,
+    analysisStatus:    'incomplete',
+    why_good_deal:     'Comps Not Available — price data pending real market analysis.',
+    distress_signals:  prop.distress_signals || [],
+    motivation:        prop.motivation        || [],
+    investment_strategy: 'Pending Analysis',
+    comp_range:        null,
+    comp_trend:        null,
+    script:            null,
+    offer_email:       null,
+    negotiation_text:  null,
+    arv_note:          'Price Unknown — no comp data available for this area.',
+    profit_note:       'Comps Not Available',
+  };
 }
 
 // ── Deep outreach generation with real deal data ──────────────────────────
