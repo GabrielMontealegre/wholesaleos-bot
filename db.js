@@ -41,6 +41,8 @@ function addLead(lead) {
     source_details: lead.source_details || { type: lead.source || 'unknown', source_name: lead.source || 'unknown' },
     good_deal_reasons: lead.good_deal_reasons || [],
     motivation_score:  lead.motivation_score  !== undefined ? lead.motivation_score : (lead.motivation || 0),
+    // Lead classification: raw = no real comp data, deal_ready = ARV confirmed
+    lead_type:         lead.lead_type || ((lead.arv && lead.arv > 0) ? 'deal_ready' : 'raw'),
   };
   db.leads.unshift(newLead);
   writeDB(db);
