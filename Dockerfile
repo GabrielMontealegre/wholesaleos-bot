@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (This ensures your server.js has its engine)
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
@@ -34,13 +34,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers
 RUN playwright install chromium --with-deps
 
-# Copy everything from GitHub to the server
+# Copy everything from GitHub
 COPY . .
 
 # Ensure Playwright uses the system browser
 ENV PLAYWRIGHT_BROWSERS_PATH=0
 
-# THE MASTER COMMAND: 
-# This starts the bot in the background (&) and the server in the foreground.
-# This is the most stable way to run a hybrid app on Railway.
-CMD python bot_runner.py & node server.js
+# THE CORRECTED MASTER COMMAND:
+# We wrap the command in "sh -c" so the server understands the "&" symbol.
+# This ensures the Bot runs in the background AND the Dashboard stays alive.
+CMD ["sh", "-c", "python bot_runner.py & node server.js"]
