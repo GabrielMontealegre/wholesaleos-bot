@@ -1,12 +1,10 @@
 import os
+import json
 import subprocess
 import sys
 from scraper_engine import WholesaleScraper
 from llm_manager import brain
 
-# =================================================================
-# CONFIGURATION: THE LEAD LIST
-# =================================================================
 TARGET_URLS = [
     "https://www.muni.org/Departments/OCPD/development-services/permits-inspections/pages/default.aspx",
     "https://permits.jccal.org/CitizenAccess/Cap/CapApplyDisclaimer.aspx?module=Enforcement&TabName=Enforcement&TabList=Home%7C0%7CESDPermits%7C1%7CBuilding%7C2%7CPlanning%7C3%7CLicenses%7C4%7CEnforcement%7C5%7CCurrentTabIndex%7C5",
@@ -21,46 +19,65 @@ TARGET_URLS = [
 ]
 
 def ensure_browser_installed():
-    """
-    THE NUCLEAR OPTION:
-    This forces the server to download the browser if it's missing,
-    bypassing Railway's build cache.
-    """
     print("🛠️ Checking for browser installation...")
     try:
-        # This runs the actual 'playwright install chromium' command inside the server
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
-        print("✅ Browser installation verified/completed.")
+        print("✅ Browser installation verified.")
     except Exception as e:
-        print(f"❌ Critical Error installing browser: {e}")
-        sys.exit(1)
+        print(f"❌ Browser Error: {e}")
 
 def save_lead_to_db(lead_data):
-    print(f"--- NEW LEAD FOUND ---")
-    print(lead_data)
-    print("----------------------")
-    with open("found_leads.txt", "a") as f:
-        f.write(str(lead_data) + "\n")
+    """Saves the lead directly into the dashboard's db.json file"""
+    try:
+        db_path = 'db.json' # This is where your dashboard looks for data
+        if not os.path.exists(db_path):
+            with open(db_path, 'w') as f:
+                json.dump({"leads": [], "users": [], "buyers": []}, f)
+
+        with open(db_path, 'r+') as f:
+            data = json.load(f)
+            if "leads" not in data: data["leads"] = []
+            
+            # Clean the AI response to ensure it's a dictionary
+            # If Gemini returns a string, we try to parse it
+            if isinstance(lead_data, str):
+                try:
+                    import ast
+                    lead_data = ast.literal_eval(lead_data)
+                except:
+                    # If it's just a string, we save it as a note
+                    lead_data = {"address": "Check Logs", "note": lead_data}
+
+            # Add unique ID and timestamp
+            import uuid
+            lead_entry = {
+                "id": str(uuid.uuid4()),
+                "created": new Date().toISOString() if 'new Date' in str(lead_data) else "2026-04-24",
+                "status": "New Lead",
+                "source": "MontSan REI Engine",
+                **lead_data if isinstance(lead_data, dict) else {"raw_data": lead_data}
+            }
+            
+            data["leads"].append(lead_entry)
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+            
+        print(f"💾 Lead successfully saved to db.json")
+    except Exception as e:
+        print(f"❌ Database Error: {e}")
 
 def run_wholesale_engine():
-    print("🚀 Damian's Wholesale Engine is starting...")
-    
-    # STEP 1: Force the browser to exist before doing anything else
+    print("🚀 MontSan REI Engine is starting...")
     ensure_browser_installed()
-    
-    # STEP 2: Initialize the engine
     engine = WholesaleScraper()
-    
     print(f"Processing {len(TARGET_URLS)} target sources...")
-    
-    # Run the batch
     results = engine.run_batch(TARGET_URLS)
     
     total_leads = 0
     for entry in results:
         url = entry['url']
         data = entry['data']
-        
         if data and "NO_LEADS" not in str(data):
             print(f"✅ Success! Found data at {url}")
             save_lead_to_db(data)
