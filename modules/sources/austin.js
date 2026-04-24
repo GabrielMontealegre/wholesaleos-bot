@@ -1,15 +1,17 @@
 const fetch = require('node-fetch');
 
 // Source: Austin Code Complaint Cases (Socrata)
-// API: data.austintexas.gov/resource/6wtj-zbtb.json
-// Fields confirmed: address, city, state, zip_code, status, case_type
+// Date filter: opened_date within last 60 days
 async function findDeals(state, limit) {
   limit = limit || 20;
   try {
-    // Filter: only open/active cases — closed = motivated seller already resolved issue
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+    var cutoffStr = cutoff.toISOString().slice(0, 10);
+
     var url = 'https://data.austintexas.gov/resource/6wtj-zbtb.json' +
       '?$limit=' + limit +
-      '&$where=status%20!%3D%20%27Closed%27' +
+      '&$where=status%20!%3D%20%27Closed%27%20AND%20opened_date%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=opened_date%20DESC';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -19,15 +21,16 @@ async function findDeals(state, limit) {
     var results = [];
     json.forEach(function(item) {
       var address = (item.address || '').trim();
-      if (!address) return; // skip missing address
+      if (!address) return;
 
       results.push({
-        address:    address,
-        city:       (item.city  || 'Austin').trim(),
-        state:      (item.state || 'TX').trim(),
-        source:     'Austin Code Complaint',
-        motivation: 7,
-        violations: 1
+        address:     address,
+        city:        (item.city  || 'Austin').trim(),
+        state:       (item.state || 'TX').trim(),
+        source:      'Austin Code Complaint',
+        motivation:  7,
+        violations:  1,
+        opened_date: item.opened_date || null
       });
     });
     return results;
