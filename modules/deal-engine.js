@@ -119,4 +119,18 @@ async function dealEngine(state, limit) {
   }
 }
 
-module.exports = { dealEngine };
+
+// Daily ingestion runner — calls dealEngine across target states
+async function runDailyIngestion() {
+  const states = ['NY','IL','PA','OH','MD'];
+  for (const state of states) {
+    try {
+      await dealEngine(state, 50);
+    } catch (e) {
+      console.error('Daily ingestion error:', state, e.message);
+    }
+  }
+  console.log('Daily ingestion complete');
+}
+
+module.exports = { dealEngine, runDailyIngestion };
