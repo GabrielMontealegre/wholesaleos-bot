@@ -9,11 +9,12 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://phl.carto.com/api/v2/sql?q=' +
       encodeURIComponent(
         'SELECT address, violationcodetitle, casestatus, violationdate FROM li_violations ' +
         'WHERE casestatus = \'OPEN\' AND violationdate >= \'' + cutoffStr + '\' ' +
-        'ORDER BY violationdate DESC LIMIT ' + limit
+        'ORDER BY violationdate DESC LIMIT ' + limit + ' OFFSET ' + offset
       ) + '&format=json';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
