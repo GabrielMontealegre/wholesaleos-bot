@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.cityofnewyork.us/resource/wvxf-dwi5.json' +
-      '?$limit=' + (limit * 3) +
+      '?$limit=100&$offset=' + offset +
       '&$where=inspectiondate%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=inspectiondate%20DESC';
 
