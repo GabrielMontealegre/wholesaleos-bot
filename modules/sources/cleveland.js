@@ -2,11 +2,14 @@ const fetch = require('node-fetch');
 
 // Source: Cuyahoga County Land Bank / Tax Delinquent Properties
 // NOTE: no date field available in this API — date filtering skipped
+// Pagination: $limit=100, random $offset to rotate through records
 async function findDeals(state, limit) {
   limit = limit || 20;
   try {
     var offset = Math.floor(Math.random() * 500);
-    var url = 'https://data.cuyahogacounty.gov/resource/fzp3-tv2q.json?$limit=' + limit +
+    var url = 'https://data.cuyahogacounty.gov/resource/fzp3-tv2q.json' +
+      '?$limit=100' +
+      '&$offset=' + offset +
       '&$order=delinquency_year%20DESC';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -27,7 +30,7 @@ async function findDeals(state, limit) {
         violations: 1
       });
     });
-    return results;
+    return results.slice(0, limit);
 
   } catch(err) {
     console.error('Cleveland source error:', err.message);
