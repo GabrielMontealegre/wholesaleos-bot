@@ -3486,3 +3486,8 @@ app.post('/api/deals/playwright', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// Start server
+app.listen(PORT, () => {
+  console.log('WholesaleOS server running on port ' + PORT);
+});
