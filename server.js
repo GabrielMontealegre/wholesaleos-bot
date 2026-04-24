@@ -3447,13 +3447,16 @@ app.post('/api/deals/playwright', async (req, res) => {
         repairs:    d.repairs     || 0,
         phone:      d.phone       || '',
         email:      d.email       || '',
+        sourceCount: 1,
       };
 
-      // 3. Skip if address is missing or already in db
+      // 3. Skip if address is missing
       if (!leadInput.address || leadInput.address === 'Unknown Address') {
         skipped.push({ reason: 'no_address', address: leadInput.address });
         continue;
       }
+
+      // 3a. Check for exact same-source duplicate (skip if exists)
       if (db.getLeads().some(function(l) {
         return (l.address||'').toLowerCase().trim() === (leadInput.address||'').toLowerCase().trim() &&
                (l.city||'').toLowerCase().trim()    === (leadInput.city||'').toLowerCase().trim() &&
@@ -3462,6 +3465,19 @@ app.post('/api/deals/playwright', async (req, res) => {
       })) {
         skipped.push({ reason: 'duplicate', address: leadInput.address });
         continue;
+      }
+
+      // 3b. Track sourceCount: find any lead with same address+city+state (any source)
+      //     If found, increment its sourceCount. Multiple sources = higher motivation.
+      var existingMatch = db.getLeads().find(function(l) {
+        return (l.address||'').toLowerCase().trim() === (leadInput.address||'').toLowerCase().trim() &&
+               (l.city||'').toLowerCase().trim()    === (leadInput.city||'').toLowerCase().trim() &&
+               (l.state||'').toLowerCase().trim()   === (leadInput.state||'').toLowerCase().trim();
+      });
+      if (existingMatch) {
+        var newCount = (existingMatch.sourceCount || 1) + 1;
+        db.updateLead(existingMatch.id, { sourceCount: newCount });
+        // Note: we still insert the new lead below (different source)
       }
 
       // 4. Run AI scoring (analyzeProperty) — same as CSV import flow
