@@ -34,6 +34,13 @@ function addLead(lead) {
     status:  'New Lead',
     created: new Date().toISOString().slice(0,10),
     ...lead,
+    // Quality fields — only set if not already provided by caller
+    id:             lead.id      || ('LEAD-' + Date.now() + '-' + Math.floor(Math.random()*10000)),
+    created_at:     lead.created_at     || new Date().toISOString(),
+    county:         lead.county         !== undefined ? lead.county : null,
+    source_details: lead.source_details || { type: lead.source || 'unknown', source_name: lead.source || 'unknown' },
+    good_deal_reasons: lead.good_deal_reasons || [],
+    motivation_score:  lead.motivation_score  !== undefined ? lead.motivation_score : (lead.motivation || 0),
   };
   db.leads.unshift(newLead);
   writeDB(db);
