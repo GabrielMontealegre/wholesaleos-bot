@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
     var cutoffStr = cutoff.toISOString().slice(0, 10);
 
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.seattle.gov/resource/ez4a-iug7.json' +
-      '?$limit=' + limit +
+      '?$limit=100&$offset=' + offset +
       '&$where=statuscurrent%20!%3D%20%27Completed%27%20AND%20opendate%20%3E%3D%20%27' + cutoffStr + '%27' +
       '&$order=opendate%20DESC';
 
