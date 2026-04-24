@@ -42,7 +42,7 @@ async function dealEngine(state, limit) {
     // 3. DEDUPE ACROSS ALL SOURCES
     const seen = new Set();
     const deduped = allDeals.filter(function(deal) {
-      const key = (deal.address + '-' + deal.city + '-' + deal.state).toLowerCase();
+      const key = (deal.address + '-' + deal.city + '-' + deal.state + '-' + (deal.source||'')).toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
