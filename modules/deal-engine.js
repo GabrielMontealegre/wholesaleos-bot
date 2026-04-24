@@ -4,8 +4,11 @@ const { findDeals: detroitDeals }      = require('./sources/detroit');
 const { findDeals: philadelphiaDeals } = require('./sources/philadelphia');
 const { findDeals: clevelandDeals }    = require('./sources/cleveland');
 const { findDeals: baltimoreDeals }    = require('./sources/baltimore');
+const { findDeals: austinDeals }       = require('./sources/austin');
+const { findDeals: seattleDeals }      = require('./sources/seattle');
+const { findDeals: nolaDeals }         = require('./sources/nola');
 
-// Batch 2+ sources will be added here:
+// Batch 3+ sources will be added here:
 // const { findDeals: atlantaDeals }   = require('./sources/atlanta');
 // const { findDeals: houstonDeals }   = require('./sources/houston');
 // const { findDeals: laDeals }        = require('./sources/la');
@@ -17,7 +20,7 @@ async function dealEngine(state, limit) {
 
   try {
     // 1. RUN ALL SOURCES IN PARALLEL — each source handles its own errors
-    const perSource = Math.ceil(limit / 6); // distribute limit across 6 sources
+    const perSource = Math.ceil(limit / 9); // distribute limit across 9 sources
 
     const results = await Promise.allSettled([
       nycDeals(state, perSource),
@@ -25,7 +28,10 @@ async function dealEngine(state, limit) {
       detroitDeals(state, perSource),
       philadelphiaDeals(state, perSource),
       clevelandDeals(state, perSource),
-      baltimoreDeals(state, perSource)
+      baltimoreDeals(state, perSource),
+      austinDeals(state, perSource),
+      seattleDeals(state, perSource),
+      nolaDeals(state, perSource)
     ]);
 
     results.forEach(function(r) {
