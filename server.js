@@ -8,6 +8,7 @@ const db      = require('./db');
 const { validateLead } = require('./modules/lead-validator');
 const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
+const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1116,7 +1117,7 @@ app.post('/api/gmail/delete-bulk', async (req, res) => {
       try {
         await gmail.users.messages.trash({ userId: 'me', id });
         deleted++;
-      } catch(e) { console.log('Trash error for', id, e.message); }
+      } catch(e) { logger.info('Trash error for', id, e.message); }
     }
     res.json({ ok: true, deleted });
   } catch(e) { res.json({ ok: false, error: e.message }); }
@@ -1245,7 +1246,7 @@ app.post('/api/scrape/buyers', async (req, res) => {
     res.json({ ok: true, message: 'Buyer scrape started in background' });
     scraper.runDailyBuyerScrape(db).then(added => {
       if (added > 0) db.addNotification('buyer', added+' new buyers scraped', 'Manual buyer scrape complete');
-    }).catch(e => console.error('Manual scrape error:', e.message));
+    }).catch(e => logger.error('Manual scrape error:', e.message));
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1356,8 +1357,8 @@ app.post('/api/scraper/buyers', async (req, res) => {
         }
         scrapeProgress.buyers = { status: 'complete', found: added, markets: markets.length, time: new Date().toISOString() };
         db.addNotification('buyer', `${added} real buyers found`, `Craigslist scrape across ${markets.length} markets`);
-        console.log(`Buyer scrape complete: ${added} new buyers added`);
-      } catch(e) { console.error('Buyer scrape error:', e.message); }
+        logger.info(`Buyer scrape complete: ${added} new buyers added`);
+      } catch(e) { logger.error('Buyer scrape error:', e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1398,8 +1399,8 @@ app.post('/api/scraper/deals', async (req, res) => {
         }
         db.writeDB(dbData);
         db.addNotification('deal', `${added} deals in Review Queue`, `From Craigslist, HUD, FSBO, Landwatch`);
-        console.log(`Deal scrape complete: ${added} new deals in review queue`);
-      } catch(e) { console.error('Deal scrape error:', e.message); }
+        logger.info(`Deal scrape complete: ${added} new deals in review queue`);
+      } catch(e) { logger.error('Deal scrape error:', e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1684,9 +1685,9 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
             media: { mimeType: 'text/csv', body: csvContent },
           });
           db.addNotification('system', 'Google Drive updated', `${fileName} uploaded automatically`);
-          console.log('[Drive] Uploaded:', fileName);
+          logger.info('[Drive] Uploaded:', fileName);
         }
-      } catch(e) { console.log('[Drive] Auto-upload error:', e.message); }
+      } catch(e) { logger.info('[Drive] Auto-upload error:', e.message); }
     });
 
     res.json({
@@ -1733,8 +1734,8 @@ app.post('/api/datasources/run-all', async (req, res) => {
           }
         }
         db.addNotification('system', `Data pull complete`, `${leadsAdded} leads in Review Queue + ${buyersAdded} buyers added. Errors: ${results.errors.length}`);
-        console.log(`[DataSources] ${leadsAdded} leads, ${buyersAdded} buyers. Errors: ${results.errors.join('; ')}`);
-      } catch(e) { console.error('[DataSources] Error:', e.message); }
+        logger.info(`[DataSources] ${leadsAdded} leads, ${buyersAdded} buyers. Errors: ${results.errors.join('; ')}`);
+      } catch(e) { logger.error('[DataSources] Error:', e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1775,7 +1776,7 @@ app.post('/api/datasources/:source', async (req, res) => {
 
         db.addNotification('system', `${source} complete`, `${added} leads + ${buyersAdded} buyers`);
         scrapeProgress[source] = { status: 'complete', leads: added, buyers: buyersAdded, time: new Date().toISOString() };
-      } catch(e) { console.error(`[${source}]`, e.message); }
+      } catch(e) { logger.error(`[${source}]`, e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1930,8 +1931,8 @@ app.post('/api/sms/bulk', async (req, res) => {
       try {
         const results = await comms.sendBulkSMS(withPhone, db, { customMessage });
         db.addNotification('system', `Bulk SMS complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no phone)`);
-        console.log('[BulkSMS]', results);
-      } catch(e) { console.error('[BulkSMS]', e.message); }
+        logger.info('[BulkSMS]', results);
+      } catch(e) { logger.error('[BulkSMS]', e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1952,8 +1953,8 @@ app.post('/api/email/bulk', async (req, res) => {
       try {
         const results = await comms.sendBulkEmail(withEmail, gmailCfg, db, { customEmail });
         db.addNotification('system', `Bulk Email complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no email)`);
-        console.log('[BulkEmail]', results);
-      } catch(e) { console.error('[BulkEmail]', e.message); }
+        logger.info('[BulkEmail]', results);
+      } catch(e) { logger.error('[BulkEmail]', e.message); }
     });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1981,12 +1982,12 @@ app.post('/api/sms/webhook', (req, res) => {
     const comms = require('./modules/comms');
     const { From, Body } = req.body;
     const lead = comms.handleInboundSMS(From, Body, db);
-    console.log(`[SMS Inbound] From: ${From} Ã¢ÂÂ "${Body.slice(0,50)}"`);
+    logger.info(`[SMS Inbound] From: ${From} Ã¢ÂÂ "${Body.slice(0,50)}"`);
     // Respond with empty TwiML so Twilio doesn't send error
     res.set('Content-Type', 'text/xml');
     res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   } catch(e) {
-    console.error('[SMS Webhook]', e.message);
+    logger.error('[SMS Webhook]', e.message);
     res.set('Content-Type', 'text/xml');
     res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
@@ -2048,7 +2049,7 @@ app.post('/api/dialer/twiml', (req, res) => {
 app.post('/api/dialer/recording-complete', async (req, res) => {
   try {
     const { CallSid, RecordingUrl, RecordingDuration } = req.body;
-    console.log(`[Recording] CallSid: ${CallSid}, Duration: ${RecordingDuration}s`);
+    logger.info(`[Recording] CallSid: ${CallSid}, Duration: ${RecordingDuration}s`);
     // Find the call log entry
     const dbData = db.readDB();
     if (!dbData.callLog) dbData.callLog = [];
@@ -2085,13 +2086,13 @@ Respond in JSON format only.`, 'free');
             callEntry.recommendation = analysis.slice(0, 200);
           }
           db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address} Ã¢ÂÂ ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
-        } catch(e) { console.log('[AI Analysis]', e.message); }
+        } catch(e) { logger.info('[AI Analysis]', e.message); }
       }
       db.writeDB(dbData);
     }
     res.sendStatus(200);
   } catch(e) {
-    console.error('[Recording webhook]', e.message);
+    logger.error('[Recording webhook]', e.message);
     res.sendStatus(200);
   }
 });
@@ -2600,7 +2601,7 @@ var ALL_STATES = [
 
 // ── Main daily engine ─────────────────────────────────────────
 async function runDailyEngine() {
-  // console.log('[Engine] Daily run starting:', new Date().toISOString());
+  // logger.info('[Engine] Daily run starting:', new Date().toISOString());
   var dbData = db.readDB();
   dbData.leads = dbData.leads || [];
   dbData.buyers = dbData.buyers || [];
@@ -2610,7 +2611,7 @@ async function runDailyEngine() {
   var newBuyers = 0;
 
   // ── PHASE 1: Enrich existing leads with analysis ──────────
-  // console.log('[Engine] Phase 1: Enriching existing leads...');
+  // logger.info('[Engine] Phase 1: Enriching existing leads...');
   var enrichCount = 0;
   for (var i = 0; i < dbData.leads.length; i++) {
     var lead = dbData.leads[i];
@@ -2630,15 +2631,15 @@ async function runDailyEngine() {
       // Batch save every 500
       if (enrichCount % 500 === 0) {
         db.writeDB(dbData);
-        console.log('[Engine] Enriched ' + enrichCount + ' leads so far...');
+        logger.info('[Engine] Enriched ' + enrichCount + ' leads so far...');
       }
     }
   }
   db.writeDB(dbData);
-  // console.log('[Engine] Phase 1 done. Enriched ' + enrichCount + ' leads.');
+  // logger.info('[Engine] Phase 1 done. Enriched ' + enrichCount + ' leads.');
 
   // ── PHASE 2: Find buyers in all 50 states ─────────────────
-  // console.log('[Engine] Phase 2: 50-state buyer search...');
+  // logger.info('[Engine] Phase 2: 50-state buyer search...');
   for (var si = 0; si < ALL_STATES.length; si++) {
     var stateInfo = ALL_STATES[si];
     try {
@@ -2660,17 +2661,17 @@ async function runDailyEngine() {
       // Save every 5 states
       if ((si + 1) % 5 === 0) {
         db.writeDB(dbData);
-        console.log('[Engine] Searched ' + (si + 1) + '/50 states. New buyers: ' + newBuyers);
+        logger.info('[Engine] Searched ' + (si + 1) + '/50 states. New buyers: ' + newBuyers);
       }
     } catch(e) {
-      console.log('[Engine] Error on state ' + stateInfo.state + ':', e.message);
+      logger.info('[Engine] Error on state ' + stateInfo.state + ':', e.message);
     }
     // Delay between states to avoid rate limiting
     await new Promise(function(r) { setTimeout(r, 2000); });
   }
 
   // ── PHASE 3: Find deals in top markets ───────────────────
-  // console.log('[Engine] Phase 3: Deal scraping...');
+  // logger.info('[Engine] Phase 3: Deal scraping...');
   var dealMarkets = [
     {city:'dallas', state:'TX'}, {city:'houston', state:'TX'}, {city:'phoenix', state:'AZ'},
     {city:'miami', state:'FL'}, {city:'orlando', state:'FL'}, {city:'atlanta', state:'GA'},
@@ -2747,7 +2748,7 @@ async function runDailyEngine() {
   db.writeDB(dbData);
 
   var summary = '[Engine] Done. +' + newLeads + ' leads, +' + newBuyers + ' buyers. Total: ' + dbData.leads.length + ' leads, ' + dbData.buyers.length + ' buyers.';
-  // console.log(summary);
+  // logger.info(summary);
   return { newLeads: newLeads, newBuyers: newBuyers, enriched: enrichCount, summary: summary };
 }
 
@@ -2762,7 +2763,7 @@ app.get('/api/engine/status', function(req, res) {
 
 app.post('/api/engine/run', async function(req, res) {
   // Non-blocking — runs in background
-  runDailyEngine().catch(function(e) { console.error('[Engine] Fatal error:', e.message); });
+  runDailyEngine().catch(function(e) { logger.error('[Engine] Fatal error:', e.message); });
   res.json({ ok: true, message: 'Engine started. Check /api/engine/status for progress.' });
 });
 
@@ -2787,11 +2788,11 @@ app.post('/api/engine/enrich-lead', function(req, res) {
 // Schedule daily at 3AM MST (10AM UTC)
 var cron = require('node-cron');
 cron.schedule('0 10 * * *', function() {
-  // console.log('[Engine] Cron triggered daily run');
-  runDailyEngine().catch(function(e) { console.error('[Engine] Cron error:', e.message); });
+  // logger.info('[Engine] Cron triggered daily run');
+  runDailyEngine().catch(function(e) { logger.error('[Engine] Cron error:', e.message); });
 }, { timezone: 'America/Denver' });
 
-// console.log('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
+// logger.info('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
 
 // ============================================================
 // END WHOLESALEOS INTELLIGENCE ENGINE
@@ -2944,7 +2945,7 @@ app.post('/api/daily-summary', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// console.log('✅ Buyers CRM extended routes registered (7 endpoints)');
+// logger.info('✅ Buyers CRM extended routes registered (7 endpoints)');
 // ============================================================
 // END BUYERS CRM EXTENDED ROUTES
 // ============================================================
@@ -3487,7 +3488,7 @@ app.post('/api/deals/playwright', async (req, res) => {
         const enriched = await analyzeProperty(leadInput);
         Object.assign(leadInput, enriched);
       } catch (aiErr) {
-        console.warn('analyzeProperty skipped for', leadInput.address, aiErr.message);
+        logger.warn('analyzeProperty skipped for', leadInput.address, aiErr.message);
       }
 
       // 5. Write to db.json — makes it appear in dashboard, pipeline, buyers, SMS, email
@@ -3504,18 +3505,18 @@ app.post('/api/deals/playwright', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('deal-engine route error:', err.message);
+    logger.error('deal-engine route error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 setInterval(async () => {
-  console.log('Running daily ingestion...');
+  logger.info('Running daily ingestion...');
   await runDailyIngestion();
-  console.log('Daily ingestion complete');
+  logger.info('Daily ingestion complete');
 }, 24 * 60 * 60 * 1000);
 
 // Start server
 app.listen(PORT, () => {
-  console.log('WholesaleOS server running on port ' + PORT);
+  logger.info('WholesaleOS server running on port ' + PORT);
 });
