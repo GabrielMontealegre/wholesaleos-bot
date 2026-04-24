@@ -21,28 +21,26 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (The Engine for the Dashboard)
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
 WORKDIR /app
 
-# 1. Install Python requirements
+# Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 2. Install Playwright browsers
+# Install Playwright browsers
 RUN playwright install chromium --with-deps
 
-# 3. Copy everything from GitHub
+# Copy everything from GitHub
 COPY . .
-
-# 4. INSTALL NODE MODULES (The missing piece!)
-# This installs express, pino, and everything in your package.json
-RUN npm install
 
 # Ensure Playwright uses the system browser
 ENV PLAYWRIGHT_BROWSERS_PATH=0
 
-# Start the Bot in background and Server in foreground
+# THE MASTER COMMAND:
+# This tells Railway: "Open a shell, start the bot in the background, 
+# then start the server." No separate scripts, no permission errors.
 CMD ["sh", "-c", "python bot_runner.py & node server.js"]
