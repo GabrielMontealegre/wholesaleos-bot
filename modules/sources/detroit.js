@@ -9,8 +9,9 @@ async function findDeals(state, limit) {
     cutoff.setDate(cutoff.getDate() - 60);
 
     // Fetch more to allow for date filtering
+    var offset = Math.floor(Math.random() * 500);
     var url = 'https://data.detroitmi.gov/resource/s7dm-byad.json' +
-      '?$limit=' + (limit * 3) +
+      '?$limit=100&$offset=' + offset +
       '&$order=ticket_issued_time%20DESC';
 
     var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
