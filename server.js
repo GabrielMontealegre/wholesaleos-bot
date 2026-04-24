@@ -26,6 +26,23 @@ app.use((req, res, next) => {
 
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+// ── API Rate Limiter (express-rate-limit) ──
+// Applied to /api/* only — dashboard and static files are NOT affected
+// Safe limits: 200 requests per 15 minutes per IP
+const rateLimit = require('express-rate-limit');
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again in 15 minutes.' },
+  skip: function(req) {
+    // Never rate-limit internal cron, health checks, or Railway probes
+    return req.path === '/health' || req.ip === '127.0.0.1' || req.ip === '::1';
+  }
+});
+app.use('/api/', apiLimiter);
+
 
 
 // ============================================================
