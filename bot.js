@@ -30,73 +30,15 @@ function typing(chatId) { bot.sendChatAction(chatId, 'typing').catch(()=>{}); }
 
 // ── Core lead generation function (reused by bot commands + crons) ────────
 async function runLeadSearch(county, state, count, cats, chatId=null) {
-  const notify = msg => chatId ? send(chatId, msg) : console.log(msg);
-  notify(`Searching <b>${county} County, ${state}</b> for <b>${count} leads</b>...\nAI: <b>${ai.MODE()==='premium'?'Claude':'Llama 3.3 Free'}</b>`);
-  if (chatId) bot.sendChatAction(chatId, 'upload_document');
-
-  const allLeads = [], allAnalyses = [];
-  const batchSize = 20, batches = Math.ceil(count/batchSize);
-  const market = getMarketData(county, state);
-
-  for (let b = 0; b < batches; b++) {
-    const bCount = Math.min(batchSize, count - b*batchSize);
-    if (chatId) bot.sendChatAction(chatId, 'upload_document');
-    const rawLeads = await ai.generateLeadList(county, state, bCount, cats);
-
-    for (const rawLead of rawLeads) {
-      if (db.leadExists(rawLead.address)) continue;
-      let analysis = {};
-      try { analysis = await ai.analyzeProperty({...rawLead, county, state}); } catch(e) { console.error('Analysis:', e.message); }
-
-      const finalArv   = (analysis.arv   > 50000) ? analysis.arv   : (rawLead.arv   > 50000 ? rawLead.arv   : market.arv);
-      const finalRep   = (analysis.repairs> 1000) ? analysis.repairs : (rawLead.repairs>0 ? rawLead.repairs : Math.round((rawLead.sqft||1400)*42));
-      const finalOffer = (analysis.offer  > 10000) ? analysis.offer  : (rawLead.offer  > 10000 ? rawLead.offer  : Math.round((finalArv*0.70-finalRep)*0.94));
-      const finalSpread= finalArv - finalOffer - finalRep;
-
-      const saved = db.addLead({
-        ...rawLead, state, county,
-        arv: Math.round(finalArv), offer: Math.round(finalOffer), repairs: Math.round(finalRep),
-        repair_class: analysis.repair_class || rawLead.repair_class || 'MEDIUM',
-        mao: Math.round(finalArv*0.70-finalRep),
-        fee_lo: analysis.fee_lo || rawLead.fee_lo || Math.round(finalSpread*0.35),
-        fee_hi: analysis.fee_hi || rawLead.fee_hi || Math.round(finalSpread*0.55),
-        spread: Math.round(finalSpread),
-        risk: analysis.risk || rawLead.risk || 'Medium',
-        why_good_deal: analysis.why_good_deal || rawLead.why_good_deal || `${rawLead.category||'Distressed'} property at discount in ${county} County.`,
-        distress_signals: analysis.distress_signals || rawLead.distress_signals || [rawLead.category||'Motivated Seller'],
-        motivation: analysis.motivation || rawLead.motivation || [],
-        investment_strategy: analysis.investment_strategy || rawLead.investment_strategy || 'Wholesale Assignment',
-        script: analysis.script || rawLead.script || '',
-        offer_email: analysis.offer_email || rawLead.offer_email || '',
-        negotiation_text: analysis.negotiation_text || rawLead.negotiation_text || '',
-        strategy_note: analysis.strategy_note || '',
-        profit_note: analysis.profit_note || rawLead.profit_note || '',
-        arv_note: analysis.arv_note || rawLead.arv_note || '',
-      });
-      allLeads.push(saved); allAnalyses.push(analysis);
-    }
-    if (b < batches-1) notify(`Batch ${b+1}/${batches} — ${allLeads.length} leads so far...`);
-  }
-
-  if (!allLeads.length) return { leads: [], analyses: [] };
-
-  // Real buyer scrape for this market (no fake buyers)
-  try {
-    const scraper = require('./scraper');
-    const buyers  = await scraper.scrapeCraigslistBuyers({ clRegion: county.toLowerCase().replace(/\s/g,''), county, state });
-    const added   = buyers.length > 0 ? db.addBuyersBulk(buyers) : 0;
-    if (added > 0) {
-      db.addNotification('buyer', `${added} real buyers found`, `Scraped ${added} cash buyers for ${county} County, ${state}`, {county, state});
-    }
-  } catch(e) { console.error('Buyer scrape error:', e.message); }
-
-  // Track scanned market + notification
-  db.addScannedMarket(state, county);
-  db.addNotification('deal', `${allLeads.length} leads added`, `${county} County, ${state} — ${allLeads.length} new wholesale leads`, {county, state, count: allLeads.length});
-
-  allLeads.sort((a,b) => (b.spread||0)-(a.spread||0));
-  return { leads: allLeads, analyses: allAnalyses };
+  // DISABLED: AI fake lead generation removed permanently.
+  const msg = '<b>AI Lead Search Disabled</b>\n\n' +
+    'This command previously generated fake AI leads.\n' +
+    'Import real leads via dashboard   Import button (Propwire CSV).';
+  if (chatId) send(chatId, msg);
+  else console.log('[DISABLED] runLeadSearch called but AI generation is off.');
+  return [];
 }
+
 
 // ── /start or /help ───────────────────────────────────────────────────────
 bot.onText(/\/(start|help)/, async (msg) => {
@@ -147,75 +89,18 @@ bot.onText(/\/test/, async (msg) => {
 });
 
 // ── /leads ────────────────────────────────────────────────────────────────
-bot.onText(/\/leads (.+)/, async (msg, match) => {
+bot.onText(/\/leads (.+)/, async (msg) => {
   if (!guard(msg)) return;
-  const parts = match[1].trim().split(/\s+/);
-  const numIdx = parts.findIndex(p => !isNaN(parseInt(p)) && parseInt(p) > 0);
-  let county, count, state, cats;
-
-  if (numIdx > 0) {
-    const countyParts = parts.slice(0, numIdx);
-    // Check if last county part is a state code (2 uppercase letters)
-    const lastPart = countyParts[countyParts.length-1];
-    if (/^[A-Z]{2}$/.test(lastPart)) {
-      state = lastPart;
-      county = countyParts.slice(0,-1).join(' ');
-    } else {
-      county = countyParts.join(' ');
-      state = null;
-    }
-    count = Math.min(parseInt(parts[numIdx])||20, 400);
-    cats  = parts.slice(numIdx+1).filter(p=>p.length>1);
-  } else {
-    county = parts.join(' ').replace(/\d+/g,'').trim() || 'Dallas';
-    count = 20; state = null; cats = [];
-  }
-  if (!cats.length) cats = ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent'];
-
-  // Auto-detect state if not provided
-  if (!state) {
-    const CA = ['San Diego','Los Angeles','LA','Orange','Riverside','Sacramento','San Francisco','Alameda','Santa Clara','San Bernardino','Ventura','Kern','Fresno'];
-    const FL = ['Miami-Dade','Broward','Palm Beach','Hillsborough','Orange','Pinellas','Duval','Polk'];
-    const GA = ['Fulton','DeKalb','Gwinnett','Clayton','Cobb','Chatham'];
-    const OH = ['Cuyahoga','Franklin','Hamilton','Summit','Montgomery','Stark'];
-    const MI = ['Wayne','Oakland','Macomb','Genesee','Kent'];
-    const IL = ['Cook','DuPage','Lake','Will','Kane'];
-    const AZ = ['Maricopa','Pima','Pinal'];
-    const NC = ['Mecklenburg','Wake','Guilford','Forsyth','Durham'];
-    const NV = ['Clark','Washoe'];
-    const TN = ['Shelby','Davidson','Hamilton','Knox'];
-    if (CA.includes(county)) state='CA';
-    else if (FL.some(c=>county.includes(c))) state='FL';
-    else if (GA.includes(county)) state='GA';
-    else if (OH.includes(county)) state='OH';
-    else if (MI.includes(county)) state='MI';
-    else if (IL.includes(county)) state='IL';
-    else if (AZ.includes(county)) state='AZ';
-    else if (NC.includes(county)) state='NC';
-    else if (NV.includes(county)) state='NV';
-    else if (TN.includes(county)) state='TN';
-    else state='TX';
-  }
-
-  try {
-    const { leads, analyses } = await runLeadSearch(county, state, count, cats, msg.chat.id);
-    if (!leads.length) return send(msg.chat.id, 'No new leads found. Send /clearleads then try again.');
-
-    send(msg.chat.id, `Found <b>${leads.length} leads</b> — generating PDF...`);
-    bot.sendChatAction(msg.chat.id, 'upload_document');
-    const pdfBuffer = await generateLeadsPDF(leads, analyses, `${county} County, ${state} — ${leads.length} Wholesale Leads`);
-    await sendDoc(msg.chat.id, pdfBuffer, `${county}_${state}_${leads.length}_Leads.pdf`,
-      `<b>${county} County, ${state} — ${leads.length} Leads</b>\nSorted by spread. Total est. fees: $${leads.reduce((s,l)=>s+(l.fee_lo||0),0).toLocaleString()}+`);
-
-    let summary = `\n<b>Top 5 — ${county} County, ${state}</b>\n\n`;
-    leads.slice(0,5).forEach((l,i) => {
-      summary += `<b>${i+1}. ${l.address.split(',')[0]}</b>\nARV: $${(l.arv||0).toLocaleString()} | Spread: $${(l.spread||0).toLocaleString()} | ${l.category} | ${l.risk}\n\n`;
-    });
-    send(msg.chat.id, summary);
-  } catch(err) {
-    console.error('Lead error:', err);
-    send(msg.chat.id, `Error: ${err.message}\n\nTry /test to check connections.`);
-  }
+  send(msg.chat.id,
+    '<b>AI Lead Generation Disabled</b>\n\n' +
+    'Fake AI leads have been permanently removed from this system.\n\n' +
+    'To add real leads:\n' +
+    '1. Export CSV from Propwire.com\n' +
+    '2. Go to dashboard   Import button\n' +
+    '3. Upload the CSV\n\n' +
+    'Only real Propwire/public-record leads are allowed.'
+  );
+});
 });
 
 // ── /markets — show best markets for this week ────────────────────────────
@@ -347,32 +232,19 @@ bot.on('message', async (msg) => {
 // ══════════════════════════════════════════════════════════
 
 async function runNationwideScan(chatId=null) {
-  const notify = msg => chatId ? send(chatId, msg) : console.log('[SCAN]', msg);
-  try {
-    const scanned = db.getScannedMarkets();
-    const markets = selectMarketsForWeek(4, scanned);
-    notify(`🌎 Scanning <b>${markets.length}</b> markets:\n${markets.map(m=>`• ${m.county}, ${m.stateName}`).join('\n')}`);
-
-    let totalLeads = 0, totalBuyers = 0;
-    for (const market of markets) {
-      try {
-        notify(`Scanning ${market.county} County, ${market.stateName}...`);
-        const cats = ['Pre-FC','REO','Long DOM','FSBO','Probate','Auction','Tax Delinquent'];
-        const { leads } = await runLeadSearch(market.county, market.state, 20, cats, null);
-        totalLeads += leads.length;
-        if (chatId) bot.sendChatAction(chatId, 'typing');
-        await new Promise(r => setTimeout(r, 2000));
-      } catch(e) { console.error(`Scan error for ${market.county}:`, e.message); }
-    }
-
-    const buyers = db.getBuyers().length;
-    const summary = `✅ <b>Nationwide Scan Complete</b>\n\n📊 ${totalLeads} new leads added\n💼 ${buyers} total buyers in database\n📍 Markets: ${markets.map(m=>m.county+', '+m.state).join(' | ')}\n\nCheck your dashboard for ranked leads.`;
-    notify(summary);
-    db.addNotification('scan', 'Nationwide scan complete', `${totalLeads} leads added across ${markets.length} markets`);
-  } catch(e) { notify(`Scan error: ${e.message}`); }
+  // DISABLED: AI fake lead generation removed permanently.
+  // This function previously generated fake leads via ai.generateLeadList().
+  // Real leads come from Propwire CSV imports or the deal-engine (real sources only).
+  if (chatId) {
+    send(chatId,
+      '<b>Nationwide Scan Disabled</b>\n\n' +
+      'AI lead generation has been permanently disabled.\n' +
+      'Import real leads via the dashboard Import button.'
+    );
+  }
+  console.log('[SCAN] AI scan disabled — real leads only.');
+  return [];
 }
-
-// ── CRONS ─────────────────────────────────────────────────────────────────
 
 // Daily 7AM briefing (MST)
 cron.schedule('0 14 * * *', async () => {
@@ -384,12 +256,8 @@ cron.schedule('0 14 * * *', async () => {
   text += '\n/leads [County] [State] [count] to find deals\n/scan for auto nationwide scan';
   send(OWNER_ID, text);
 });
-
-// 4x per week scan (Mon, Tue, Thu, Sat at 6AM MST = 1PM UTC)
-cron.schedule('0 13 * * 1,2,4,6', async () => {
-  console.log('[CRON] Starting scheduled nationwide scan...');
-  if (OWNER_ID) send(OWNER_ID, '🔄 Scheduled nationwide scan starting...');
-  await runNationwideScan(OWNER_ID || null);
+// SCAN CRON DISABLED — was generating fake AI leads 4x/week
+// cron.schedule('0 13 * * 1,2,4,6', async () => { ... });
 });
 
 // Daily buyer scrape at 6AM MST (1PM UTC) — 15 hot markets
