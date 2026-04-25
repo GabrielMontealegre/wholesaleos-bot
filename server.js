@@ -3591,6 +3591,25 @@ cron.schedule('0 2 * * *', async () => {
   await runDailyIngestion();
   logger.info('Daily ingestion complete');
 }, { timezone: 'UTC' });
+// ── Batch lead delete ──
+// POST /api/leads/delete-batch  body: { ids: ['id1','id2',...] }
+app.post('/api/leads/delete-batch', function(req, res) {
+  try {
+    var ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : [];
+    if (ids.length === 0) return res.status(400).json({ ok:false, error:'No IDs provided' });
+    var dbData = db.readDB();
+    var before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(function(l){ return ids.indexOf(l.id) === -1; });
+    var deleted = before - dbData.leads.length;
+    db.writeDB(dbData);
+    logger.info('Batch delete: removed ' + deleted + ' leads');
+    res.json({ ok:true, deleted:deleted, remaining:dbData.leads.length });
+  } catch(e) {
+    logger.error('Batch delete error: ' + e.message);
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});
+
 // Start server
 
 // NOTE: express.json can crash on invalid input — protected with error handler
