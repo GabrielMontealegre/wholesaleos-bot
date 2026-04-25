@@ -13701,6 +13701,106 @@ setTimeout(checkSystemLimits, 3000);
     };
   }
 })();
+
+
+// ── BATCH DELETE PATCH ──
+// Adds 'Delete Selected (N)' button when leads are checked.
+// Uses POST /api/leads/delete-batch
+(function() {
+
+  // Inject the floating Delete Selected bar
+  function ensureDeleteBar() {
+    if (document.getElementById('batch-delete-bar')) return;
+    var bar = document.createElement('div');
+    bar.id = 'batch-delete-bar';
+    bar.style.cssText = [
+      'display:none',
+      'position:fixed',
+      'bottom:24px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'background:#1e1e2e',
+      'border:1px solid #f85149',
+      'border-radius:10px',
+      'padding:10px 20px',
+      'display:none',
+      'align-items:center',
+      'gap:16px',
+      'z-index:9999',
+      'box-shadow:0 4px 20px rgba(248,81,73,0.3)',
+      'font-family:inherit'
+    ].join(';');
+    bar.innerHTML =
+      '<span id="batch-count" style="color:#ccc;font-size:13px;">0 selected</span>' +
+      '<button onclick="batchDeleteSelected()" style="background:#f85149;color:#fff;border:none;' +
+        'border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;">'
+      + '&#128465; Delete Selected</button>' +
+      '<button onclick="batchClearSelection()" style="background:transparent;color:#888;border:1px solid #444;' +
+        'border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;">Cancel</button>';
+    document.body.appendChild(bar);
+  }
+
+  // Update bar visibility and count
+  window.updateBatchDeleteBar = function() {
+    ensureDeleteBar();
+    var bar   = document.getElementById('batch-delete-bar');
+    var count = document.getElementById('batch-count');
+    var sel   = (APP && APP._selectedLeads) ? APP._selectedLeads.size : 0;
+    if (sel > 0) {
+      bar.style.display = 'flex';
+      count.textContent = sel + ' lead' + (sel > 1 ? 's' : '') + ' selected';
+    } else {
+      bar.style.display = 'none';
+    }
+  };
+
+  // Clear selection
+  window.batchClearSelection = function() {
+    if (APP && APP._selectedLeads) APP._selectedLeads.clear();
+    updateBatchDeleteBar();
+    // Re-render to uncheck all rows
+    if (typeof renderLeads === 'function') { try { renderLeads(); } catch(e) {} }
+  };
+
+  // Execute batch delete
+  window.batchDeleteSelected = async function() {
+    var sel = (APP && APP._selectedLeads) ? Array.from(APP._selectedLeads) : [];
+    if (sel.length === 0) return;
+    if (!confirm('Delete ' + sel.length + ' lead' + (sel.length > 1 ? 's' : '') + '? This cannot be undone.')) return;
+    try {
+      var res = await fetch('/api/leads/delete-batch', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, window._apiHeaders||{}),
+        body: JSON.stringify({ ids: sel })
+      });
+      var data = await res.json();
+      if (data.ok) {
+        APP.leads = (APP.leads || []).filter(function(l){ return sel.indexOf(l.id) === -1; });
+        APP._selectedLeads.clear();
+        updateBatchDeleteBar();
+        if (typeof renderLeads === 'function') { try { renderLeads(); } catch(e) {} }
+        if (typeof toast === 'function') toast('Deleted ' + data.deleted + ' leads', 'success');
+        else alert('Deleted ' + data.deleted + ' leads');
+      } else {
+        alert('Error: ' + (data.error || 'Delete failed'));
+      }
+    } catch(e) { alert('Network error: ' + e.message); }
+  };
+
+  // Patch handleLeadRowClick to call updateBatchDeleteBar after selection changes
+  var _origHandleRowClick = window.handleLeadRowClick;
+  if (typeof _origHandleRowClick === 'function') {
+    window.handleLeadRowClick = function(e, id) {
+      _origHandleRowClick.apply(this, arguments);
+      setTimeout(updateBatchDeleteBar, 50);
+    };
+  }
+
+  // Init bar on load
+  setTimeout(ensureDeleteBar, 1000);
+
+})();
+
 </script>
 </body>
 </html>
