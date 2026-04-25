@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import uuid
+import ast
 from datetime import datetime
 from scraper_engine import WholesaleScraper
 from llm_manager import brain
@@ -24,6 +25,7 @@ TARGET_URLS = [
 ]
 
 def ensure_browser_installed():
+    """Ensures Playwright has the browser ready on the server"""
     print("🛠️ Checking for browser installation...")
     try:
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
@@ -32,13 +34,23 @@ def ensure_browser_installed():
         print(f"❌ Browser Error: {e}")
 
 def save_lead_to_db(lead_data):
-    """Saves the lead directly into the dashboard's db.json file"""
+    """Saves the lead to the CORRECT Railway persistent volume path (/app/data/db.json)"""
     try:
-        db_path = 'db.json' 
+        # Using the persistent volume path from the Handover Document
+        db_folder = '/app/data'
+        db_path = os.path.join(db_folder, 'db.json')
+        
+        # 1. Ensure the data folder exists
+        if not os.path.exists(db_folder):
+            os.makedirs(db_folder)
+            print(f"📁 Created missing data folder at {db_folder}")
+
+        # 2. Ensure the db.json file exists
         if not os.path.exists(db_path):
             with open(db_path, 'w') as f:
                 json.dump({"leads": [], "users": [], "buyers": []}, f)
 
+        # 3. Read existing data
         with open(db_path, 'r+') as f:
             try:
                 content = f.read()
@@ -49,11 +61,11 @@ def save_lead_to_db(lead_data):
             if "leads" not in data: 
                 data["leads"] = []
             
-            # Step 1: Clean the AI response
+            # 4. Clean the AI response (Convert string to dictionary if needed)
             processed_data = {}
             if isinstance(lead_data, str):
                 try:
-                    import ast
+                    # Attempt to convert string representation of dict to actual dict
                     processed_data = ast.literal_eval(lead_data)
                     if not isinstance(processed_data, dict):
                         processed_data = {"raw_data": lead_data}
@@ -64,38 +76,40 @@ def save_lead_to_db(lead_data):
             else:
                 processed_data = {"raw_data": str(lead_data)}
 
-            # Step 2: Create the final lead entry
+            # 5. Create the final lead entry with correct metadata
             lead_entry = {
                 "id": str(uuid.uuid4()),
                 "created": datetime.now().isoformat(),
                 "status": "New Lead",
-                "source": "MontSan REI Engine"
+                "source": "MontSan REI Engine",
+                **processed_data # Merges the actual lead data into the entry
             }
             
-            # Step 3: Merge the data safely (The "Old School" way)
-            for key, value in processed_data.items():
-                lead_entry[key] = value
-            
+            # 6. Append and save
             data["leads"].append(lead_entry)
             f.seek(0)
             json.dump(data, f, indent=2)
             f.truncate()
             
-        print(f"💾 Lead successfully saved to db.json")
+        print(f"💾 Lead successfully saved to {db_path}")
     except Exception as e:
         print(f"❌ Database Error: {e}")
 
 def run_wholesale_engine():
     print("🚀 MontSan REI Engine is starting...")
     ensure_browser_installed()
+    
     engine = WholesaleScraper()
     print(f"Processing {len(TARGET_URLS)} target sources...")
+    
     results = engine.run_batch(TARGET_URLS)
     
     total_leads = 0
     for entry in results:
         url = entry['url']
         data = entry['data']
+        
+        # Only save if data was found and it's not a 'NO_LEADS' message
         if data and "NO_LEADS" not in str(data):
             print(f"✅ Success! Found data at {url}")
             save_lead_to_db(data)
