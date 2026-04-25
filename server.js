@@ -3609,6 +3609,24 @@ app.post('/api/leads/delete-batch', function(req, res) {
     res.status(500).json({ ok:false, error:e.message });
   }
 });
+// Alias: /api/leads/delete-bulk (same as delete-batch, matches dashboard bulkDelete() call)
+app.post('/api/leads/delete-bulk', function(req, res) {
+  try {
+    var ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : [];
+    if (ids.length === 0) return res.status(400).json({ ok:false, error:'No IDs provided' });
+    var dbData = db.readDB();
+    var before = (dbData.leads || []).length;
+    dbData.leads = (dbData.leads || []).filter(function(l){ return ids.indexOf(l.id) === -1; });
+    var deleted = before - dbData.leads.length;
+    db.writeDB(dbData);
+    logger.info('Bulk delete: removed ' + deleted + ' leads');
+    res.json({ ok:true, deleted:deleted, removed:deleted, remaining:dbData.leads.length });
+  } catch(e) {
+    logger.error('Bulk delete error: ' + e.message);
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});
+
 
 // Start server
 
