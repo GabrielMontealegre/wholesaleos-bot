@@ -22,50 +22,74 @@ def ensure_browser_installed():
         print(f"❌ Browser Error: {e}")
 
 def save_lead_to_db(lead_data):
-    """Saves lead to /app/data/db.json with absolute stability"""
+    """
+    Robustly saves a lead to /app/data/db.json.
+    Handles all errors gracefully and converts string input to {"raw_data": ...}.
+    """
     try:
         db_folder = '/app/data'
         db_path = os.path.join(db_folder, 'db.json')
-        
-        if not os.path.exists(db_folder):
-            os.makedirs(db_folder)
 
+        # Convert lead_data to dict if it is a string
+        if isinstance(lead_data, str):
+            lead_data = {"raw_data": lead_data}
+        elif not isinstance(lead_data, dict):
+            # For all other non-dict and non-string types, convert to string in "raw_data"
+            lead_data = {"raw_data": str(lead_data)}
+
+        # Ensure the DB directory exists
+        try:
+            if not os.path.exists(db_folder):
+                os.makedirs(db_folder, exist_ok=True)
+        except Exception as e:
+            print(f"❌ Could not create db folder: {e}")
+            return
+
+        # If DB does not exist, initialize it
         if not os.path.exists(db_path):
-            with open(db_path, 'w') as f:
-                json.dump({"leads": [], "users": [], "buyers": []}, f)
+            try:
+                with open(db_path, 'w') as f:
+                    json.dump({"leads": [], "users": [], "buyers": []}, f, indent=2)
+            except Exception as e:
+                print(f"❌ Could not initialize db.json: {e}")
+                return
 
-        with open(db_path, 'r+') as f:
-            content = f.read()
-            if not content:
-                data = {"leads": [], "users": [], "buyers": []}
-            else:
-                data = json.loads(content)
+        # Safely read and update the DB file
+        try:
+            with open(db_path, 'r+') as f:
+                try:
+                    content = f.read().strip()
+                    data = json.loads(content) if content else {"leads": [], "users": [], "buyers": []}
+                except Exception as e:
+                    print(f"❌ Corrupt db.json. Reinitializing. ({e})")
+                    data = {"leads": [], "users": [], "buyers": []}
 
-            if "leads" not in data:
-                data["leads"] = []
-            
-            # Create a clean lead dictionary
-            new_lead = {}
-            new_lead["id"] = str(uuid.uuid4())
-            new_lead["created"] = datetime.now().isoformat()
-            new_lead["status"] = "New Lead"
-            new_lead["source"] = "MontSan REI Engine"
-            
-            # Safely add the scraped data
-            if isinstance(lead_data, dict):
-                for key, value in lead_data.items():
-                    new_lead[key] = value
-            else:
-                new_lead["raw_data"] = str(lead_data)
-            
-            data["leads"].append(new_lead)
-            f.seek(0)
-            json.dump(data, f, indent=2)
-            f.truncate()
-            
+                data.setdefault("leads", [])
+
+                # Prepare the new lead entry
+                new_lead = {
+                    "id": str(uuid.uuid4()),
+                    "created": datetime.now().isoformat(),
+                    "status": "New Lead",
+                    "source": "MontSan REI Engine"
+                }
+                # Merge user-passed data last (safe overwrite)
+                new_lead.update(lead_data)
+
+                data["leads"].append(new_lead)
+
+                # Persist to disk
+                f.seek(0)
+                json.dump(data, f, indent=2)
+                f.truncate()
+        except Exception as e:
+            print(f"❌ Could not update db.json: {e}")
+            return
+
         print(f"💾 Lead saved to {db_path}")
+
     except Exception as e:
-        print(f"❌ DB Error: {e}")
+        print(f"❌ DB Error (catastrophic): {e}")
 
 def run_wholesale_engine():
     print("🚀 MontSan REI Engine Starting...")
