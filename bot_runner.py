@@ -3,121 +3,127 @@ import json
 import subprocess
 import sys
 import uuid
-import ast
 from datetime import datetime
 from scraper_engine import WholesaleScraper
 from llm_manager import brain
+from enrichment_agent import EnrichmentAgent
 
 # =================================================================
-# CONFIGURATION: THE LEAD LIST
+# CONFIGURATION
 # =================================================================
-TARGET_URLS = [
-    "https://www.muni.org/Departments/OCPD/development-services/permits-inspections/pages/default.aspx",
-    "https://permits.jccal.org/CitizenAccess/Cap/CapApplyDisclaimer.aspx?module=Enforcement&TabName=Enforcement&TabList=Home%7C0%7CESDPermits%7C1%7CBuilding%7C2%7CPlanning%7C3%7CLicenses%7C4%7CEnforcement%7C5%7CCurrentTabIndex%7C5",
-    "https://pulaskiclerkar.gov/news-events/auction-notices/",
-    "https://data.mesaaz.gov/",
-    "https://www.superiorcourt.maricopa.gov/docket/calendar/",
-    "https://acclaim.pinalcountyaz.gov/AcclaimWeb/Search/Disclaimer?st=/AcclaimWeb/search/SearchTypeDocType",
-    "https://hub.arcgis.com/maps/8026de93be8147d2aa2941c3e7ceed97",
-    "https://pimacountyaz-web.tylerhost.net/web/search/DOCSEARCH55S8",
-    "https://data.lacity.org/City-Infrastructure-Service-Requests/Building-and-Safety-Code-Enforcement-Case/2uz8-3tj3",
-    "https://www.sandiego.gov/development-services"
-]
+SOURCES_FILE = 'sources.json'
 
 def ensure_browser_installed():
-    """Ensures Playwright has the browser ready on the server"""
-    print("🛠️ Checking for browser installation...")
+    print("🛠️ Checking browser...")
     try:
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
-        print("✅ Browser installation verified.")
+        print("✅ Browser Ready.")
     except Exception as e:
         print(f"❌ Browser Error: {e}")
 
 def save_lead_to_db(lead_data):
-    """Saves the lead to the CORRECT Railway persistent volume path (/app/data/db.json)"""
+    """Saves lead to /app/data/db.json with absolute stability"""
     try:
-        # Using the persistent volume path from the Handover Document
         db_folder = '/app/data'
         db_path = os.path.join(db_folder, 'db.json')
         
-        # 1. Ensure the data folder exists
         if not os.path.exists(db_folder):
             os.makedirs(db_folder)
-            print(f"📁 Created missing data folder at {db_folder}")
 
-        # 2. Ensure the db.json file exists
         if not os.path.exists(db_path):
             with open(db_path, 'w') as f:
                 json.dump({"leads": [], "users": [], "buyers": []}, f)
 
-        # 3. Read existing data
         with open(db_path, 'r+') as f:
-            try:
-                content = f.read()
-                data = json.loads(content) if content else {"leads": [], "users": [], "buyers": []}
-            except json.JSONDecodeError:
+            content = f.read()
+            if not content:
                 data = {"leads": [], "users": [], "buyers": []}
+            else:
+                data = json.loads(content)
 
-            if "leads" not in data: 
+            if "leads" not in data:
                 data["leads"] = []
             
-            # 4. Clean the AI response (Convert string to dictionary if needed)
-            processed_data = {}
-            if isinstance(lead_data, str):
-                try:
-                    # Attempt to convert string representation of dict to actual dict
-                    processed_data = ast.literal_eval(lead_data)
-                    if not isinstance(processed_data, dict):
-                        processed_data = {"raw_data": lead_data}
-                except:
-                    processed_data = {"raw_data": lead_data}
-            elif isinstance(lead_data, dict):
-                processed_data = lead_data
-            else:
-                processed_data = {"raw_data": str(lead_data)}
-
-            # 5. Create the final lead entry with correct metadata
-            lead_entry = {
-                "id": str(uuid.uuid4()),
-                "created": datetime.now().isoformat(),
-                "status": "New Lead",
-                "source": "MontSan REI Engine",
-                **processed_data # Merges the actual lead data into the entry
-            }
+            # Create a clean lead dictionary
+            new_lead = {}
+            new_lead["id"] = str(uuid.uuid4())
+            new_lead["created"] = datetime.now().isoformat()
+            new_lead["status"] = "New Lead"
+            new_lead["source"] = "MontSan REI Engine"
             
-            # 6. Append and save
-            data["leads"].append(lead_entry)
+            # Safely add the scraped data
+            if isinstance(lead_data, dict):
+                for key, value in lead_data.items():
+                    new_lead[key] = value
+            else:
+                new_lead["raw_data"] = str(lead_data)
+            
+            data["leads"].append(new_lead)
             f.seek(0)
             json.dump(data, f, indent=2)
             f.truncate()
             
-        print(f"💾 Lead successfully saved to {db_path}")
+        print(f"💾 Lead saved to {db_path}")
     except Exception as e:
-        print(f"❌ Database Error: {e}")
+        print(f"❌ DB Error: {e}")
 
 def run_wholesale_engine():
-    print("🚀 MontSan REI Engine is starting...")
+    print("🚀 MontSan REI Engine Starting...")
     ensure_browser_installed()
     
-    engine = WholesaleScraper()
-    print(f"Processing {len(TARGET_URLS)} target sources...")
-    
-    results = engine.run_batch(TARGET_URLS)
-    
-    total_leads = 0
-    for entry in results:
-        url = entry['url']
-        data = entry['data']
-        
-        # Only save if data was found and it's not a 'NO_LEADS' message
-        if data and "NO_LEADS" not in str(data):
-            print(f"✅ Success! Found data at {url}")
-            save_lead_to_db(data)
-            total_leads += 1
-        else:
-            print(f"❌ No valid leads found at {url}")
+    # Load sources from JSON file
+    try:
+        with open(SOURCES_FILE, 'r') as f:
+            sources_data = json.load(f)
+            urls = [s['url'] for s in sources_data]
+    except Exception as e:
+        print(f"❌ Could not load sources.json: {e}")
+        return
 
-    print(f"🏁 Run Complete. Total leads captured: {total_leads}")
+    scraper = WholesaleScraper()
+    agent = EnrichmentAgent()
+    
+    print(f"Processing {len(urls)} sources...")
+    
+    for url in urls:
+        print(f"Checking: {url}")
+        try:
+            # 1. Scrape raw lead data
+            # Note: We are using a simplified call to avoid complex batching for now
+            # We simulate the run_batch logic here for stability
+            if "data." in url or "hub.arcgis.com" in url:
+                raw_results = scraper.scrape_open_data(url)
+            else:
+                raw_results = scraper.scrape_portal(url)
+            
+            if not raw_results or "NO_LEADS" in str(raw_results):
+                print(f"❌ No leads at {url}")
+                continue
+
+            # 2. If the results are a list, process each lead
+            if isinstance(raw_results, list):
+                for lead in raw_results:
+                    # Enrich the lead (Zillow/Phone)
+                    enriched = agent.get_property_intelligence(lead.get('address', 'Unknown'))
+                    
+                    # Merge enrichment data into lead
+                    if enriched:
+                        for k, v in enriched.items():
+                            lead[k] = v
+                    
+                    save_lead_to_db(lead)
+            else:
+                # Single lead found
+                enriched = agent.get_property_intelligence(raw_results.get('address', 'Unknown'))
+                if enriched:
+                    for k, v in enriched.items():
+                        raw_results[k] = v
+                save_lead_to_db(raw_results)
+                
+        except Exception as e:
+            print(f"⚠️ Error processing {url}: {e}")
+
+    print("🏁 Run Complete.")
 
 if __name__ == "__main__":
     run_wholesale_engine()
