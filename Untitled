@@ -1,0 +1,13 @@
+Rewrite this file to use the OpenRouter API. I have an environment variable called OPENROUTER_API_KEY.
+
+    Create a class LLMManager.
+
+    Implement a method call_ai(prompt, model_name) that sends a request to the OpenRouter API.
+
+    Create a method fast_think(prompt) that calls call_ai using the model 'meta-llama/llama-3.1-8b-instruct'.
+
+    Create a method deep_think(prompt) that calls call_ai using the model 'anthropic/claude-3.5-sonnet'.
+
+    Ensure all errors are caught with try/except blocks so the bot never crashes.
+
+    Use the 'requests' library for the API calls."
