@@ -1,0 +1,12 @@
+[
+    {"url": "https://www.muni.org/Departments/OCPD/development-services/permits-inspections/pages/default.aspx", "type": "portal"},
+    {"url": "https://permits.jccal.org/CitizenAccess/Cap/CapApplyDisclaimer.aspx?module=Enforcement&TabName=Enforcement&TabList=Home%7C0%7CESDPermits%7C1%7CBuilding%7C2%7CPlanning%7C3%7CLicenses%7C4%7CEnforcement%7C5%7CCurrentTabIndex%7C5", "type": "portal"},
+    {"url": "https://pulaskiclerkar.gov/news-events/auction-notices/", "type": "portal"},
+    {"url": "https://data.mesaaz.gov/", "type": "open_data"},
+    {"url": "https://www.superiorcourt.maricopa.gov/docket/calendar/", "type": "portal"},
+    {"url": "https://acclaim.pinalcountyaz.gov/AcclaimWeb/Search/Disclaimer?st=/AcclaimWeb/search/SearchTypeDocType", "type": "portal"},
+    {"url": "https://hub.arcgis.com/maps/8026de93be8147d2aa2941c3e7ceed97", "type": "open_data"},
+    {"url": "https://pimacountyaz-web.tylerhost.net/web/search/DOCSEARCH55S8", "type": "portal"},
+    {"url": "https://data.lacity.org/City-Infrastructure-Service-Requests/Building-and-Safety-Code-Enforcement-Case/2uz8-3tj3", "type": "open_data"},
+    {"url": "https://www.sandiego.gov/development-services", "type": "portal"}
+]
