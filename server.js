@@ -14,7 +14,7 @@ const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
