@@ -8,8 +8,7 @@ class LLMManager:
         self.gemini_key = os.getenv("GEMINI_API_KEY")
         self.groq_client = Groq(api_key=self.groq_key)
         genai.configure(api_key=self.gemini_key)
-        # Updated to the most stable model string
-        self.gemini_model = genai.GenerativeModel('gemini-pro')
+        self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
 
     def fast_think(self, prompt):
         try:
@@ -17,7 +16,11 @@ class LLMManager:
                 messages=[{"role": "user", "content": prompt}],
                 model="llama-3.3-70b-versatile",
             )
-            return chat_completion.choices[0].message.content
+            result = chat_completion.choices[0].message.content
+            # Guard: Llama can return a str or dict-like object; handle both
+            if isinstance(result, str):
+                return result
+            return result.get('content', str(result))
         except Exception as e:
             return f"Groq Error: {e}"
 
