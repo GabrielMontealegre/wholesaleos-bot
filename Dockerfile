@@ -36,6 +36,7 @@ RUN playwright install chromium --with-deps
 
 # Copy everything from GitHub
 COPY . .
+RUN npm install
 
 # Ensure Playwright uses the system browser
 ENV PLAYWRIGHT_BROWSERS_PATH=0
