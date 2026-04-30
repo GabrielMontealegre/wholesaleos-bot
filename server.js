@@ -3750,6 +3750,41 @@ cron.schedule('0 6 * * *', function() {
   agent.runDailySkipTrace().catch(function(e) { console.error('[skip-trace-cron]', e.message); });
 }, { timezone: 'UTC' });
 
+
+// DEBUG: test comp scraper
+app.get('/api/debug/comp-test', async function(req,res){
+  var address=req.query.address||'6901 S Oglesby Ave';
+  var city=req.query.city||'Chicago';
+  var state=req.query.state||'IL';
+  var errors=[];
+  var redfinResult=null;
+  var zillowResult=null;
+  var skipResult=null;
+  try{
+    var axios=require('axios');
+    var H={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36','Accept':'text/html,*/*;q=0.9','Accept-Language':'en-US,en;q=0.9'};
+    // Test Redfin stingray
+    try{
+      var rfUrl='https://www.redfin.com/stingray/do/location-autocomplete?location='+encodeURIComponent(address+', '+city+', '+state)+'&v=2';
+      var rfRes=await axios.get(rfUrl,{headers:H,timeout:10000});
+      redfinResult={status:rfRes.status,len:rfRes.data.length,preview:rfRes.data.toString().slice(0,200)};
+    }catch(e){errors.push('Redfin: '+e.message);}
+    // Test Zillow search
+    try{
+      var zUrl='https://www.zillow.com/search/GetSearchPageState.htm?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:address+' '+city+' '+state,isMapVisible:false,filterState:{isRecentlySold:{value:true}}}))+'&wants={"cat1":["listResults"]}';
+      var zRes=await axios.get(zUrl,{headers:H,timeout:10000});
+      zillowResult={status:zRes.status,len:zRes.data.length,preview:JSON.stringify(zRes.data).slice(0,200)};
+    }catch(e){errors.push('Zillow: '+e.message);}
+    // Test TruePeopleSearch
+    try{
+      var tpsUrl='https://www.truepeoplesearch.com/results?streetaddress='+encodeURIComponent(address)+'&citystatezip='+encodeURIComponent(city+' '+state);
+      var tpsRes=await axios.get(tpsUrl,{headers:H,timeout:10000});
+      skipResult={status:tpsRes.status,len:tpsRes.data.length,preview:tpsRes.data.slice(0,300)};
+    }catch(e){errors.push('TPS: '+e.message);}
+  }catch(e){errors.push('General: '+e.message);}
+  res.json({errors,redfinResult,zillowResult,skipResult});
+});
+
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
