@@ -3727,6 +3727,29 @@ cron.schedule('0 4 * * *', function() {
   ca2.runDailyCompBatch().catch(function(e) { console.error('[comp-batch]', e.message); });
 }, { timezone: 'UTC' });
 
+
+// ================================================================
+// SKIP TRACE ROUTES — TruePeopleSearch / FastPeopleSearch / CBC
+// ================================================================
+
+// POST /api/leads/:id/skip-trace — on-demand per lead
+app.post('/api/leads/:id/skip-trace', function(req, res) {
+  var agent;
+  try { agent = require('./modules/agents/skip-trace-agent'); }
+  catch(e) { return res.status(503).json({ error: 'skip-trace agent unavailable: ' + e.message }); }
+  agent.skipTraceLead(req.params.id)
+    .then(function(r) { res.json(r); })
+    .catch(function(e) { logger.error('[skip-trace] ' + e.message); res.status(500).json({ error: e.message }); });
+});
+
+// Daily skip trace cron — 6AM UTC (after ingestion at 2AM, comps at 4AM)
+cron.schedule('0 6 * * *', function() {
+  var agent;
+  try { agent = require('./modules/agents/skip-trace-agent'); }
+  catch(e) { console.error('[skip-trace-cron] load error:', e.message); return; }
+  agent.runDailySkipTrace().catch(function(e) { console.error('[skip-trace-cron]', e.message); });
+}, { timezone: 'UTC' });
+
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
