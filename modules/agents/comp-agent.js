@@ -145,7 +145,7 @@ async function analyzeCompsWithLLM(lead, comps, subjectData) {
 
   try {
     var raw = await ask(prompt, 'You are a real estate analyst. Respond only with valid JSON. No markdown.', 1500);
-    var clean = raw.replace(/```json|```/g, '').trim();
+    var clean = raw.replace(/\x60\x60\x60json|\x60\x60\x60/g, '').trim();
     var parsed = JSON.parse(clean);
     if (!parsed.arv || parsed.arv < 30000) return null;
     return parsed;
