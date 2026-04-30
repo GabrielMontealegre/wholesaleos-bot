@@ -5736,7 +5736,7 @@ function clearLeadSelection() {
   if (allCb) { allCb.checked = false; allCb.indeterminate = false; }
 }
 
-async async function bulkDelete() {
+async function bulkDelete() {
   var ids = Array.from(APP._selectedLeads || []);
   if (!ids.length) return;
   if (!confirm('Delete ' + ids.length + ' selected leads? This cannot be undone.')) return;
@@ -11216,7 +11216,7 @@ function clearLeadSelection() {
   if (allCb) { allCb.checked = false; allCb.indeterminate = false; }
 }
 
-async async function bulkDelete() {
+async function bulkDelete() {
   var ids = Array.from(APP._selectedLeads || []);
   if (!ids.length) return;
   if (!confirm('Delete ' + ids.length + ' selected leads? This cannot be undone.')) return;
