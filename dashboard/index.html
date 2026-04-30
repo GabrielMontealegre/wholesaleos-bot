@@ -13804,246 +13804,110 @@ setTimeout(checkSystemLimits, 3000);
 
 // ============================================================
 
-// WholesaleOS UI PATCH v16 — Real Comps + Seller Script + Full Address + Buyer Send
-(function() {
-var st = document.createElement("style");
-st.textContent = [
-  "table td:nth-child(2){min-width:260px;max-width:400px;white-space:normal;word-break:break-word;}",
-  "#prop-links-bar{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 4px;}",
-  ".plink{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;color:#60a5fa;display:inline-flex;align-items:center;gap:5px;cursor:pointer;}",
-  ".plink:hover{background:#334155;}",
-  ".plink.green{color:#34d399;} .plink.orange{color:#f97316;} .plink.purple{color:#a78bfa;} .plink.indigo{color:#fff;background:#6366f1;border-color:#6366f1;} .plink.teal{color:#fff;background:#0f766e;border-color:#0f766e;}",
-  "#seller-script-section{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;margin-top:12px;}",
-  "#seller-script-section h4{color:#38bdf8;margin:0 0 10px;font-size:13px;text-transform:uppercase;}",
-  ".sq{background:#0f172a;border-left:3px solid #38bdf8;padding:8px 12px;margin:5px 0;border-radius:4px;color:#e2e8f0;font-size:13px;line-height:1.5;}",
-  ".so{background:#1a2744;border-left:3px solid #f59e0b;padding:6px 10px;margin:4px 0;border-radius:4px;color:#cbd5e1;font-size:12px;}",
-  ".sk{background:#14532d;border-left:3px solid #22c55e;padding:6px 10px;margin:4px 0;border-radius:4px;color:#bbf7d0;font-size:12px;}",
-  ".slabel{color:#64748b;font-size:11px;text-transform:uppercase;margin:8px 0 3px;}",
-  "#real-comps-section{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;margin-top:12px;}",
-  "#real-comps-section h4{color:#a78bfa;margin:0 0 10px;font-size:13px;text-transform:uppercase;}",
-  ".crow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #0f172a;font-size:12px;color:#cbd5e1;}",
-  ".crow:last-child{border-bottom:none;} .cprice{color:#34d399;font-weight:600;} .csrc{color:#64748b;font-size:10px;}",
-  ".arvbox{background:#0f172a;border:1px solid #a78bfa;border-radius:8px;padding:10px 14px;margin-bottom:10px;color:#c4b5fd;font-size:13px;}",
-  ".conf{display:inline-block;padding:2px 8px;border-radius:9px;font-size:10px;font-weight:600;margin-left:6px;}",
-  ".ch{background:#14532d;color:#4ade80;} .cm{background:#713f12;color:#fbbf24;} .cl{background:#4c1d95;color:#c4b5fd;}",
-  "#bsm-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:center;justify-content:center;}",
-  "#bsm-overlay.open{display:flex;}",
-  "#bsm-box{background:#1e293b;border-radius:12px;padding:24px;max-width:640px;width:92%;max-height:80vh;overflow-y:auto;}",
-  ".bsm-lead{display:flex;align-items:center;gap:10px;padding:8px;background:#0f172a;border-radius:6px;margin-bottom:6px;}",
-  "#ws-toast{position:fixed;bottom:24px;right:24px;z-index:99999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4);display:none;max-width:400px;transition:opacity .4s;}",
-].join(" ");
+// WholesaleOS v16.1
+(function(){
+var st=document.createElement("style");
+st.textContent="table td:nth-child(2){min-width:260px;max-width:400px;white-space:normal;word-break:break-word}";
 document.head.appendChild(st);
-var toastEl = document.createElement("div");
-toastEl.id = "ws-toast";
-document.body.appendChild(toastEl);
-window._wsToast = function(msg, ok) {
-  toastEl.textContent = msg;
-  toastEl.style.background = ok ? "#14532d" : "#7f1d1d";
-  toastEl.style.color = "#fff";
-  toastEl.style.display = "block";
-  toastEl.style.opacity = "1";
-  clearTimeout(window._wsToastTimer);
-  window._wsToastTimer = setTimeout(function() {
-    toastEl.style.opacity = "0";
-    setTimeout(function(){ toastEl.style.display = "none"; }, 400);
-  }, 4000);
+var wst=document.createElement("div");wst.id="wst16";wst.style.cssText="position:fixed;bottom:24px;right:24px;z-index:99999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;display:none;max-width:400px;";document.body.appendChild(wst);
+window._wst=function(m,ok){wst.textContent=m;wst.style.background=ok?"#14532d":"#7f1d1d";wst.style.color="#fff";wst.style.display="block";clearTimeout(window._wstT);window._wstT=setTimeout(function(){wst.style.display="none";},4000);};
+window._injectLinks=function(l){
+  var m=document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");
+  if(!m||!l)return;
+  var ob=document.getElementById("plb16");if(ob)ob.remove();
+  var fa=encodeURIComponent([l.address,l.city,l.state,l.zip].filter(Boolean).join(", "));
+  var as=(l.address||"").replace(/\s+/g,"-").replace(/[^a-zA-Z0-9-]/g,"");
+  var cs=(l.city||"").replace(/\s+/g,"-");
+  var zU=l.zillow_url||("https://www.zillow.com/homes/"+as+"-"+cs+"-"+(l.state||"")+"_rb/");
+  var rU=l.redfin_url||("https://www.redfin.com/search?location="+fa);
+  var mU=l.maps_url||("https://maps.google.com/?q="+fa);
+  var lid=l.id||"";
+  var bar=document.createElement("div");bar.id="plb16";
+  bar.style.cssText="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 4px;";
+  var ls="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;";
+  bar.innerHTML='<a style="'+ls+'color:#60a5fa" href="'+mU+'" target="_blank">Maps</a>'
+    +'<a style="'+ls+'color:#34d399" href="'+zU+'" target="_blank">Zillow</a>'
+    +'<a style="'+ls+'color:#f97316" href="'+rU+'" target="_blank">Redfin</a>'
+    +'<a style="'+ls+'color:#a78bfa" href="https://www.realauction.com" target="_blank">Auction</a>'
+    +'<button id="btn-comps-'+lid+'" style="'+ls+'color:#fff;background:#6366f1;border:none;font-weight:600" onclick="window._getComps(\'"+lid+"\')"  >Get Real Comps</button>'
+    +'<button id="btn-script-'+lid+'" style="'+ls+'color:#fff;background:#0f766e;border:none;font-weight:600" onclick="window._getScript(\'"+lid+"\')" >Seller Script</button>';
+  var te=m.querySelector("h2,h3");
+  if(te&&te.parentNode)te.parentNode.insertBefore(bar,te.nextSibling);else m.insertBefore(bar,m.firstChild);
 };
-var bsmEl = document.createElement("div");
-bsmEl.id = "bsm-overlay";
-bsmEl.innerHTML = "<div id=\"bsm-box\"><div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;\"><h3 style=\"color:#e2e8f0;margin:0;\">Send Leads to Buyer</h3><button data-action=\"bsm-close\" style=\"background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;\">&#x2715;</button></div><div id=\"bsm-info\" style=\"background:#0f172a;border-radius:8px;padding:12px;margin-bottom:12px;color:#94a3b8;font-size:13px;\"></div><div id=\"bsm-list\" style=\"max-height:300px;overflow-y:auto;\"></div><div style=\"margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;\"><button data-action=\"bsm-send\" style=\"background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;\">&#x1F4E4; Send Selected (no address)</button><button data-action=\"bsm-close\" style=\"background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;\">Cancel</button></div><div id=\"bsm-preview\" style=\"display:none;margin-top:12px;background:#0f172a;border-radius:8px;padding:12px;\"><div style=\"color:#94a3b8;font-size:11px;margin-bottom:6px;\">MESSAGE (no addresses — copy and send)</div><pre id=\"bsm-text\" style=\"color:#e2e8f0;font-size:12px;white-space:pre-wrap;margin:0;\"></pre></div></div>";
-document.body.appendChild(bsmEl);
-window._bsmBuyerId = null;
-document.addEventListener("click", function(e) {
-  var el = e.target;
-  var action = el.getAttribute("data-action") || (el.parentElement && el.parentElement.getAttribute("data-action"));
-  if (!action) return;
-  var lid = el.getAttribute("data-lid") || (el.parentElement && el.parentElement.getAttribute("data-lid")) || "";
-  if (action === "get-comps")    { window._getComps(lid); }
-  if (action === "get-script")   { window._getScript(lid); }
-  if (action === "bsm-close")    { bsmEl.classList.remove("open"); }
-  if (action === "bsm-send")     { window._bsmSend(); }
-  if (action === "open-bsm")     { window._openBSM(el.getAttribute("data-lid")); }
-});
-window._getComps = function(lid) {
-  var btn = document.querySelector("[data-action=get-comps][data-lid=\"" + lid + "\"]");
-  if (btn) { btn.textContent = "Fetching..."; btn.disabled = true; }
-  fetch("/api/leads/" + lid + "/comps")
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      if (btn) { btn.textContent = d.comp_count ? ("Got " + d.comp_count + " comps") : "No comps found"; btn.disabled = false; }
-      if (d.error) { window._wsToast("Comps: " + d.error, false); return; }
-      var lead = (APP.leads||[]).find(function(l){ return l.id === lid; });
-      if (lead) { Object.assign(lead, d); if (APP.selectedLead && APP.selectedLead.id === lid) Object.assign(APP.selectedLead, d); }
-      window._injectComps(d);
-      window._wsToast("Real comps fetched: ARV $" + Math.round(d.arv||0).toLocaleString() + " (" + d.comp_count + " comps)", true);
-    })
-    .catch(function(e){ window._wsToast("Error: " + e.message, false); if(btn){btn.textContent="Get Real Comps";btn.disabled=false;} });
+window._injectComps=function(d){
+  var m=document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");if(!m)return;
+  var ob=document.getElementById("rcs16");if(ob)ob.remove();
+  if(!d||!d.comps||!d.comps.length)return;
+  var h='<div id="rcs16" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;margin-top:12px;">'
+    +'<h4 style="color:#a78bfa;margin:0 0 10px;font-size:13px;text-transform:uppercase;">Real Comps';
+  if(d.arv_confidence)h+=' <span style="background:#'+(d.arv_confidence==="high"?"14532d;color:#4ade80":d.arv_confidence==="medium"?"713f12;color:#fbbf24":"4c1d95;color:#c4b5fd")+';padding:2px 8px;border-radius:9px;font-size:10px;font-weight:600;">'+(d.arv_confidence.toUpperCase())+'</span>';
+  h+='</h4>';
+  if(d.arv_summary)h+='<div style="background:#0f172a;border:1px solid #a78bfa;border-radius:8px;padding:10px;margin-bottom:10px;color:#c4b5fd;font-size:13px;">'+d.arv_summary+'</div>';
+  (d.comps||[]).forEach(function(c){h+='<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #0f172a;font-size:12px;"><div><div style="color:#e2e8f0;">'+( c.address||"?")+'</div><div style="color:#64748b;font-size:10px;">'+(c.source||"")+(c.soldDate?" · "+c.soldDate.slice(0,10):"")+(c.sqft?" · "+c.sqft.toLocaleString()+"sqft":"")+(c.beds?" · "+c.beds+"bd":"")+"</div></div><div style=\"color:#34d399;font-weight:600;\">$"+(c.price||0).toLocaleString()+"</div></div>";});
+  h+='</div>';
+  var w=document.createElement("div");w.innerHTML=h;
+  var n=m.querySelector("[id*=notes],[class*=notes]");
+  if(n)n.parentNode.insertBefore(w.firstChild,n);else m.appendChild(w.firstChild);
 };
-window._getScript = function(lid) {
-  var btn = document.querySelector("[data-action=get-script][data-lid=\"" + lid + "\"]");
-  if (btn) { btn.textContent = "Generating..."; btn.disabled = true; }
-  fetch("/api/leads/" + lid + "/seller-script")
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      if (btn) { btn.textContent = "Script Ready"; btn.disabled = false; }
-      if (d.error) { window._wsToast("Script: " + d.error, false); return; }
-      var lead = (APP.leads||[]).find(function(l){ return l.id === lid; });
-      if (lead) { lead.seller_script = d.script; lead.seller_script_category = d.category; if (APP.selectedLead&&APP.selectedLead.id===lid){APP.selectedLead.seller_script=d.script;APP.selectedLead.seller_script_category=d.category;} }
-      window._injectScript(d.script, d.category);
-      window._wsToast("Seller script ready for " + (d.category||"this lead"), true);
-    })
-    .catch(function(e){ window._wsToast("Error: " + e.message, false); if(btn){btn.textContent="Seller Script";btn.disabled=false;} });
+window._injectScript=function(sc,cat){
+  var m=document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");if(!m||!sc)return;
+  var ob=document.getElementById("sss16");if(ob)ob.remove();
+  var h='<div id="sss16" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;margin-top:12px;">'
+    +'<h4 style="color:#38bdf8;margin:0 0 10px;font-size:13px;text-transform:uppercase;">Seller Script — '+(cat||"General")+'</h4>';
+  if(sc.opening_line)h+='<div style="color:#64748b;font-size:11px;text-transform:uppercase;margin:6px 0 3px;">Opening</div><div style="background:#0f172a;border-left:3px solid #22d3ee;padding:8px 12px;border-radius:4px;color:#67e8f9;font-size:13px;">'+sc.opening_line+'</div>';
+  if(sc.questions&&sc.questions.length){h+='<div style="color:#64748b;font-size:11px;text-transform:uppercase;margin:8px 0 3px;">Questions</div>';sc.questions.forEach(function(q,i){h+='<div style="background:#0f172a;border-left:3px solid #38bdf8;padding:8px 12px;margin:5px 0;border-radius:4px;color:#e2e8f0;font-size:13px;">'+(i+1)+'. '+q+'</div>';});}
+  if(sc.key_intel&&sc.key_intel.length){h+='<div style="color:#64748b;font-size:11px;text-transform:uppercase;margin:8px 0 3px;">Key Intel</div>';sc.key_intel.forEach(function(k){h+='<div style="background:#14532d;border-left:3px solid #22c55e;padding:6px 10px;margin:4px 0;border-radius:4px;color:#bbf7d0;font-size:12px;">&bull; '+k+'</div>';});}
+  if(sc.closing_line)h+='<div style="color:#64748b;font-size:11px;text-transform:uppercase;margin:8px 0 3px;">Closing</div><div style="background:#0f172a;border-left:3px solid #4ade80;padding:8px 12px;border-radius:4px;color:#86efac;font-size:13px;">'+sc.closing_line+'</div>';
+  h+='</div>';
+  var w=document.createElement("div");w.innerHTML=h;
+  var n=m.querySelector("[id*=notes],[class*=notes]");
+  if(n)n.parentNode.insertBefore(w.firstChild,n);else m.appendChild(w.firstChild);
 };
-window._injectLinkBar = function(lead) {
-  var modal = document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");
-  if (!modal || !lead) return;
-  var old = document.getElementById("prop-links-bar");
-  if (old) old.remove();
-  var fa = encodeURIComponent([lead.address, lead.city, lead.state, lead.zip].filter(Boolean).join(", "));
-  var as = (lead.address||"").replace(/\s+/g,"-").replace(/[^a-zA-Z0-9-]/g,"");
-  var cs = (lead.city||"").replace(/\s+/g,"-");
-  var zUrl = lead.zillow_url  || ("https://www.zillow.com/homes/" + as + "-" + cs + "-" + (lead.state||"") + "_rb/");
-  var rUrl = lead.redfin_url  || ("https://www.redfin.com/search?location=" + fa);
-  var mUrl = lead.maps_url    || ("https://maps.google.com/?q=" + fa);
-  var lid = lead.id || "";
-  var bar = document.createElement("div");
-  bar.id = "prop-links-bar";
-  bar.innerHTML = [
-    "<a class=\"plink\" href=\"" + mUrl + "\" target=\"_blank\">&#x1F5FA; Maps</a>",
-    "<a class=\"plink green\" href=\"" + zUrl + "\" target=\"_blank\">&#x1F3E0; Zillow</a>",
-    "<a class=\"plink orange\" href=\"" + rUrl + "\" target=\"_blank\">&#x1F4CA; Redfin</a>",
-    "<a class=\"plink purple\" href=\"https://www.realauction.com\" target=\"_blank\">&#x2696; Auction</a>",
-    "<button class=\"plink indigo\" data-action=\"get-comps\" data-lid=\"" + lid + "\">&#x1F50D; Get Real Comps</button>",
-    "<button class=\"plink teal\" data-action=\"get-script\" data-lid=\"" + lid + "\">&#x1F4CB; Seller Script</button>",
-  ].join("");
-  var titleEl = modal.querySelector("h2,h3");
-  if (titleEl && titleEl.parentNode) titleEl.parentNode.insertBefore(bar, titleEl.nextSibling);
-  else modal.insertBefore(bar, modal.firstChild);
+window._getComps=function(lid){
+  var btn=document.getElementById("btn-comps-"+lid);
+  if(btn){btn.textContent="Fetching...";btn.disabled=true;}
+  fetch("/api/leads/"+lid+"/comps").then(function(r){return r.json();}).then(function(d){
+    if(btn){btn.textContent=d.comp_count?"Got "+d.comp_count+" comps":"No comps";btn.disabled=false;}
+    if(d.error){window._wst("Comps: "+d.error,false);return;}
+    var lead=(APP&&APP.leads||[]).find(function(l){return l.id===lid;});
+    if(lead){Object.assign(lead,d);if(APP.selectedLead&&APP.selectedLead.id===lid)Object.assign(APP.selectedLead,d);}
+    window._injectComps(d);
+    window._wst("ARV $"+Math.round(d.arv||0).toLocaleString()+" from "+d.comp_count+" real comps",true);
+  }).catch(function(e){window._wst("Error: "+e.message,false);if(btn){btn.textContent="Get Real Comps";btn.disabled=false;}});
 };
-window._injectComps = function(d) {
-  var modal = document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");
-  if (!modal) return;
-  var old = document.getElementById("real-comps-section");
-  if (old) old.remove();
-  if (!d || !d.comps || !d.comps.length) return;
-  var cc = d.arv_confidence === "high" ? "ch" : d.arv_confidence === "medium" ? "cm" : "cl";
-  var h = "<div id=\"real-comps-section\"><h4>&#x1F4CA; Real Comps <span class=\"conf " + cc + "\">" + (d.arv_confidence||"").toUpperCase() + "</span></h4>";
-  if (d.arv_summary) h += "<div class=\"arvbox\">" + d.arv_summary + "</div>";
-  d.comps.forEach(function(c) {
-    h += "<div class=\"crow\"><div><div style=\"color:#e2e8f0;\">" + (c.address||"Unknown") + "</div><div class=\"csrc\">" + (c.source||"") + (c.soldDate?" &middot; Sold "+c.soldDate.slice(0,10):"") + (c.sqft?" &middot; "+c.sqft.toLocaleString()+"sqft":"") + (c.beds?" &middot; "+c.beds+"bd/"+c.baths+"ba":"") + "</div></div><div class=\"cprice\">$" + (c.price||0).toLocaleString() + "</div></div>";
-  });
-  h += "</div>";
-  var wrap = document.createElement("div"); wrap.innerHTML = h;
-  var notesEl = modal.querySelector("[id*=notes],[class*=notes]");
-  if (notesEl) notesEl.parentNode.insertBefore(wrap.firstChild, notesEl);
-  else modal.appendChild(wrap.firstChild);
+window._getScript=function(lid){
+  var btn=document.getElementById("btn-script-"+lid);
+  if(btn){btn.textContent="Generating...";btn.disabled=true;}
+  fetch("/api/leads/"+lid+"/seller-script").then(function(r){return r.json();}).then(function(d){
+    if(btn){btn.textContent="Script Ready";btn.disabled=false;}
+    if(d.error){window._wst("Script: "+d.error,false);return;}
+    var lead=(APP&&APP.leads||[]).find(function(l){return l.id===lid;});
+    if(lead){lead.seller_script=d.script;lead.seller_script_category=d.category;if(APP.selectedLead&&APP.selectedLead.id===lid){APP.selectedLead.seller_script=d.script;APP.selectedLead.seller_script_category=d.category;}}
+    window._injectScript(d.script,d.category);
+    window._wst("Seller script ready for "+(d.category||"lead"),true);
+  }).catch(function(e){window._wst("Error: "+e.message,false);if(btn){btn.textContent="Seller Script";btn.disabled=false;}});
 };
-window._injectScript = function(sc, cat) {
-  var modal = document.querySelector(".lead-modal,[id*=lead-detail],[id*=lead-modal]");
-  if (!modal || !sc) return;
-  var old = document.getElementById("seller-script-section");
-  if (old) old.remove();
-  var h = "<div id=\"seller-script-section\"><h4>&#x1F4CB; Seller Script &mdash; " + (cat||"General") + "</h4>";
-  if (sc.opening_line) h += "<div class=\"slabel\">Opening</div><div class=\"sq\" style=\"border-left-color:#22d3ee;color:#67e8f9;\">" + sc.opening_line + "</div>";
-  if (sc.questions && sc.questions.length) {
-    h += "<div class=\"slabel\">Questions</div>";
-    sc.questions.forEach(function(q,i){ h += "<div class=\"sq\">" + (i+1) + ". " + q + "</div>"; });
-  }
-  if (sc.objection_handlers) {
-    h += "<div class=\"slabel\">Objection Handlers</div>";
-    var oh = sc.objection_handlers;
-    if (oh.not_interested)  h += "<div class=\"so\">&#x1F6D1; Not interested: <em>" + oh.not_interested + "</em></div>";
-    if (oh.already_listed)  h += "<div class=\"so\">&#x1F3F7; Already listed: <em>" + oh.already_listed + "</em></div>";
-    if (oh.want_full_price) h += "<div class=\"so\">&#x1F4B0; Want full price: <em>" + oh.want_full_price + "</em></div>";
-  }
-  if (sc.key_intel && sc.key_intel.length) {
-    h += "<div class=\"slabel\">Key Intel to Get</div>";
-    sc.key_intel.forEach(function(k){ h += "<div class=\"sk\">&bull; " + k + "</div>"; });
-  }
-  if (sc.closing_line) h += "<div class=\"slabel\">Closing</div><div class=\"sq\" style=\"border-left-color:#4ade80;color:#86efac;\">" + sc.closing_line + "</div>";
-  h += "</div>";
-  var wrap = document.createElement("div"); wrap.innerHTML = h;
-  var notesEl = modal.querySelector("[id*=notes],[class*=notes]");
-  if (notesEl) notesEl.parentNode.insertBefore(wrap.firstChild, notesEl);
-  else modal.appendChild(wrap.firstChild);
-};
-var _origRLD = window.renderLeadDetail;
-if (typeof _origRLD === "function") {
-  window.renderLeadDetail = function(l) {
-    l = l || APP.selectedLead;
-    if (!l) return;
-    _origRLD.call(this, l);
-    setTimeout(function() {
-      window._injectLinkBar(l);
-      if (l.comps && l.comps.length) window._injectComps(l);
-      if (l.seller_script) window._injectScript(l.seller_script, l.seller_script_category);
-      // Fix NaN% buyer scores
-      document.querySelectorAll("[class*=fit],[class*=score],[class*=match]").forEach(function(el){
-        if (el.textContent.indexOf("NaN") > -1) el.textContent = el.textContent.replace(/NaN%?/g,"N/A");
-      });
-      // Fix address truncation
-      document.querySelectorAll("table tbody tr td:nth-child(2)").forEach(function(td){
-        td.style.whiteSpace = "normal";
-        td.style.overflow = "visible";
-        td.style.textOverflow = "unset";
-      });
-    }, 250);
+var _ha=0;
+function _h(){
+  _ha++;
+  if(typeof window.renderLeadDetail!=="function"){if(_ha<20)setTimeout(_h,500);return;}
+  var _o=window.renderLeadDetail;
+  window.renderLeadDetail=function(l){
+    l=l||APP.selectedLead;if(!l)return;
+    _o.call(this,l);
+    setTimeout(function(){
+      window._injectLinks(l);
+      if(l.comps&&l.comps.length)window._injectComps(l);
+      if(l.seller_script)window._injectScript(l.seller_script,l.seller_script_category);
+      document.querySelectorAll("[class*=fit],[class*=score]").forEach(function(e){if(e.textContent.indexOf("NaN")>-1)e.textContent=e.textContent.replace(/NaN%?/g,"N/A");});
+      document.querySelectorAll("table tbody tr td:nth-child(2)").forEach(function(td){td.style.whiteSpace="normal";td.style.overflow="visible";td.style.textOverflow="unset";});
+    },250);
   };
+  console.log("[v16.1] hooked renderLeadDetail after "+_ha+" polls");
 }
-window._openBSM = function(buyerId) {
-  window._bsmBuyerId = buyerId;
-  bsmEl.classList.add("open");
-  document.getElementById("bsm-info").textContent = "Loading...";
-  document.getElementById("bsm-list").innerHTML = "";
-  document.getElementById("bsm-preview").style.display = "none";
-  Promise.all([fetch("/api/buyers/" + buyerId), fetch("/api/buyers/" + buyerId + "/match-deals")])
-    .then(function(rs){ return Promise.all(rs.map(function(r){return r.json();})); })
-    .then(function(data) {
-      var buyer = data[0]; var leads = data[1].deals || data[1].leads || data[1] || [];
-      var info = document.getElementById("bsm-info");
-      if (info && buyer.name) info.innerHTML = "<strong style=\"color:#e2e8f0;\">" + buyer.name + "</strong>" + (buyer.phone?" &middot; "+buyer.phone:"") + (buyer.email?" &middot; "+buyer.email:"") + "<br><span style=\"color:#64748b;\">State: " + (buyer.state||"Any") + (buyer.maxPrice?" &middot; Max: $"+Math.round(buyer.maxPrice).toLocaleString():"") + "</span>";
-      var list = document.getElementById("bsm-list");
-      if (!leads.length) { list.innerHTML = "<div style=\"color:#64748b;text-align:center;padding:20px;\">No matching leads found</div>"; return; }
-      list.innerHTML = leads.slice(0,30).map(function(l,i){
-        return "<div class=\"bsm-lead\"><input type=\"checkbox\" class=\"bsm-cb\" value=\"" + l.id + "\" checked><div style=\"flex:1;\"><div style=\"color:#e2e8f0;font-size:12px;\">" + (l.city||"?") + ", " + (l.state||"?") + " &mdash; " + (l.lead_type||"SFR") + "</div><div style=\"color:#64748b;font-size:11px;\">ARV: " + (l.arv?"$"+Math.round(l.arv).toLocaleString():"TBD") + " &middot; Spread: " + (l.spread?"$"+Math.round(l.spread).toLocaleString():"TBD") + " &middot; " + (l.source||"Public Record") + "</div></div><div style=\"color:#34d399;font-size:11px;\">" + (l.score||l.matchScore||"") + (l.score||l.matchScore?"% fit":"") + "</div></div>";
-      }).join("");
-    })
-    .catch(function(e){ document.getElementById("bsm-info").textContent = "Error: " + e.message; });
-};
-window._bsmSend = function() {
-  var checked = Array.from(document.querySelectorAll(".bsm-cb:checked")).map(function(c){return c.value;});
-  if (!checked.length) { window._wsToast("Select at least one lead", false); return; }
-  fetch("/api/buyers/" + window._bsmBuyerId + "/send-leads", {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ lead_ids: checked })
-  }).then(function(r){ return r.json(); })
-    .then(function(d) {
-      var prev = document.getElementById("bsm-preview");
-      var prevText = document.getElementById("bsm-text");
-      if (prev && prevText && d.message) { prevText.textContent = d.message; prev.style.display = "block"; }
-      window._wsToast("Message ready for " + (d.lead_count||0) + " leads", true);
-    })
-    .catch(function(e){ window._wsToast("Error: " + e.message, false); });
-};
-var _origOpenBuyer = window.openBuyerDetail || window.openBuyer;
-if (typeof _origOpenBuyer === "function") {
-  var _patchedBuyer = function(id) {
-    _origOpenBuyer.call(this, id);
-    setTimeout(function() {
-      var bModal = document.querySelector(".buyer-modal,[id*=buyer-detail]");
-      if (!bModal || bModal.querySelector("[data-action=open-bsm]")) return;
-      var btn = document.createElement("button");
-      btn.setAttribute("data-action", "open-bsm");
-      btn.setAttribute("data-lid", id);
-      btn.textContent = "Send Matching Leads (no address)";
-      btn.style.cssText = "background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;margin-top:12px;width:100%;font-size:13px;";
-      bModal.appendChild(btn);
-    }, 350);
-  };
-  window.openBuyerDetail = window.openBuyer = _patchedBuyer;
-}
-console.log("[v16] WholesaleOS patch loaded — comps, seller script, property links, buyer send, full address");
+setTimeout(_h,500);
 })();
+
 </script>
 </body>
 </html>
