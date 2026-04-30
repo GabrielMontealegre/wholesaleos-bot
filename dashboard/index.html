@@ -599,7 +599,7 @@ function buildModal(parts) {
     else _mc2.appendChild(_box);
   },600);
   // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_date) {
+  if (!l.phone && !l.skip_trace_attempted) {
     setTimeout(function() {
       fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
         .then(function(r) { return r.json(); })
@@ -1212,7 +1212,7 @@ function openLeadModal(leadId) {
     else _mc2.appendChild(_box);
   },600);
   // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_date) {
+  if (!l.phone && !l.skip_trace_attempted) {
     setTimeout(function() {
       fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
         .then(function(r) { return r.json(); })
@@ -1458,7 +1458,8 @@ function renderLeadDetail(l) {
   if(_tsDays>=3){html += '<span style="font-size:10px;color:#ef4444;font-weight:600">&#9888; Leads lose value after 3 days</span>';}
   html += '</div>';
   if(l.skip_trace_date){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128270; Skip traced: '+new Date(l.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</div>';}
-  else if(!l.phone){html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">&#128270; Skip trace running...</div>';}
+  else if(l.skip_trace_attempted){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128270; Skip trace: no data found (sites blocked from server)</div>';}
+  else if(!l.phone){html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">&#128270; Skip trace queued...</div>';}
   if(l.relatives&&l.relatives.length){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128101; Contacts: '+l.relatives.slice(0,3).join(', ')+'</div>';}
   if(l.phone_all&&l.phone_all.length>1){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128222; More phones: '+l.phone_all.slice(1).join(', ')+'</div>';}
 
@@ -2270,7 +2271,7 @@ function showModal(html) {
     else _mc2.appendChild(_box);
   },600);
   // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_date) {
+  if (!l.phone && !l.skip_trace_attempted) {
     setTimeout(function() {
       fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
         .then(function(r) { return r.json(); })
@@ -6913,7 +6914,7 @@ function openLeadModal(leadId) {
     else _mc2.appendChild(_box);
   },600);
   // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_date) {
+  if (!l.phone && !l.skip_trace_attempted) {
     setTimeout(function() {
       fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
         .then(function(r) { return r.json(); })
@@ -7089,7 +7090,8 @@ function renderLeadDetail(l) {
   if(_tsDays>=3){html += '<span style="font-size:10px;color:#ef4444;font-weight:600">&#9888; Leads lose value after 3 days</span>';}
   html += '</div>';
   if(l.skip_trace_date){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128270; Skip traced: '+new Date(l.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</div>';}
-  else if(!l.phone){html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">&#128270; Skip trace running...</div>';}
+  else if(l.skip_trace_attempted){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128270; Skip trace: no data found (sites blocked from server)</div>';}
+  else if(!l.phone){html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">&#128270; Skip trace queued...</div>';}
   if(l.relatives&&l.relatives.length){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128101; Contacts: '+l.relatives.slice(0,3).join(', ')+'</div>';}
   if(l.phone_all&&l.phone_all.length>1){html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128222; More phones: '+l.phone_all.slice(1).join(', ')+'</div>';}
 
@@ -7900,7 +7902,7 @@ function showModal(html) {
     else _mc2.appendChild(_box);
   },600);
   // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_date) {
+  if (!l.phone && !l.skip_trace_attempted) {
     setTimeout(function() {
       fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
         .then(function(r) { return r.json(); })
