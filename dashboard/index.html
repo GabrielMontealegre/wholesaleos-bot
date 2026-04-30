@@ -825,7 +825,7 @@ function renderDashboard() {
           ${topLeads.map(l => {
             const buyers = matchBuyers(l);
             return `<tr onclick="selectLead('${l.id}')">
-              <td><div class="addr-main">${l.address?.split(',')[0]||'N/A'}</div><div class="addr-sub">${l.county||''} · ${l.category||''}</div></td>
+              <td><div class="addr-main" style="white-space:normal;word-break:break-word">${(l.address||'N/A')+( l.city?', '+l.city:'')+(l.state?', '+l.state:'')}</div><div class="addr-sub">${l.county||''} · ${l.category||''}</div></td>
               <td>${categoryBadge(l.category)}</td>
               <td style="font-weight:600;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</td>
               <td style="color:#0071e3">$${((l.offer||0)/1000).toFixed(0)}K</td>
@@ -1150,7 +1150,23 @@ function renderLeadDetail(l) {
   let html = '<div class="detail-panel">';
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
-  html += '<div class="detail-addr" style="margin-bottom:0">' + (l.address||'').split(',')[0] + '</div>';
+  html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
+  // Property links bar
+  var _fa = encodeURIComponent((l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
+  var _as = (l.address||'').replace(/\\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
+  var _cs = (l.city||'').replace(/\\s+/g,'-').toLowerCase();
+  var _st = (l.state||'').toLowerCase();
+  var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
+  var _rUrl = 'https://www.redfin.com/search?location='+_fa;
+  var _mUrl = 'https://maps.google.com/?q='+_fa;
+  var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
+  var _btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #e5e5ea;background:#f5f5f7;color:#1d1d1f;margin-right:5px;margin-top:5px';
+  html += '<div style="display:flex;flex-wrap:wrap;margin-top:8px;margin-bottom:2px">';
+  html += '<a href="'+_mUrl+'" target="_blank" style="'+_btnStyle+';border-color:#4fc3f7;color:#0288d1">🗺 Maps</a>';
+  html += '<a href="'+_zUrl+'" target="_blank" style="'+_btnStyle+';border-color:#00a0dc;color:#006aff">🏠 Zillow</a>';
+  html += '<a href="'+_rUrl+'" target="_blank" style="'+_btnStyle+';border-color:#e74c3c;color:#e74c3c">📊 Redfin</a>';
+  html += '<a href="'+_raUrl+'" target="_blank" style="'+_btnStyle+';border-color:#9b59b6;color:#9b59b6">⚖️ Auction</a>';
+  html += '</div>';
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
   html += '</div>';
   html += '<div class="detail-meta">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div>';
@@ -6698,7 +6714,23 @@ function renderLeadDetail(l) {
   let html = '<div class="detail-panel">';
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
-  html += '<div class="detail-addr" style="margin-bottom:0">' + (l.address||'').split(',')[0] + '</div>';
+  html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
+  // Property links bar
+  var _fa = encodeURIComponent((l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
+  var _as = (l.address||'').replace(/\\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
+  var _cs = (l.city||'').replace(/\\s+/g,'-').toLowerCase();
+  var _st = (l.state||'').toLowerCase();
+  var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
+  var _rUrl = 'https://www.redfin.com/search?location='+_fa;
+  var _mUrl = 'https://maps.google.com/?q='+_fa;
+  var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
+  var _btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #e5e5ea;background:#f5f5f7;color:#1d1d1f;margin-right:5px;margin-top:5px';
+  html += '<div style="display:flex;flex-wrap:wrap;margin-top:8px;margin-bottom:2px">';
+  html += '<a href="'+_mUrl+'" target="_blank" style="'+_btnStyle+';border-color:#4fc3f7;color:#0288d1">🗺 Maps</a>';
+  html += '<a href="'+_zUrl+'" target="_blank" style="'+_btnStyle+';border-color:#00a0dc;color:#006aff">🏠 Zillow</a>';
+  html += '<a href="'+_rUrl+'" target="_blank" style="'+_btnStyle+';border-color:#e74c3c;color:#e74c3c">📊 Redfin</a>';
+  html += '<a href="'+_raUrl+'" target="_blank" style="'+_btnStyle+';border-color:#9b59b6;color:#9b59b6">⚖️ Auction</a>';
+  html += '</div>';
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
   html += '</div>';
   html += '<div class="detail-meta">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div>';
