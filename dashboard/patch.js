@@ -117,19 +117,23 @@ function _h(){
   _ha++;
   if(typeof window.renderLeadDetail!=="function"){if(_ha<30)setTimeout(_h,500);return;}
   var _o=window.renderLeadDetail;
-  window.renderLeadDetail=function(l){
-    l=l||APP.selectedLead;if(!l)return;
-    _o.call(this,l);
+  window.renderLeadDetail=function(){
+    var args=Array.prototype.slice.call(arguments);
+    _o.apply(this,args);
     setTimeout(function(){
-      window._injectLinks(l);
-      if(l.comps&&l.comps.length)window._injectComps(l);
-      if(l.seller_script)window._injectScript(l.seller_script,l.seller_script_category);
+      var lead=APP.selectedLead;
+      if(typeof lead==="string"){lead=(APP.leads||[]).find(function(l){return l.id===lead;})||null;}
+      if(!lead||typeof lead!=="object")return;
+      window._injectLinks(lead);
+      if(lead.comps&&lead.comps.length)window._injectComps(lead);
+      if(lead.seller_script)window._injectScript(lead.seller_script,lead.seller_script_category);
       document.querySelectorAll("[class*=fit],[class*=score]").forEach(function(el){if(el.textContent.indexOf("NaN")>-1)el.textContent=el.textContent.replace(/NaN%?/g,"N/A");});
       document.querySelectorAll("table tbody tr td:nth-child(2)").forEach(function(td){td.style.whiteSpace="normal";td.style.overflow="visible";td.style.textOverflow="unset";});
-    },300);
+    },400);
   };
-  console.log("[v16.3] renderLeadDetail hooked after "+(_ha*500)+"ms");
+  console.log("[v16.3] renderLeadDetail hooked OK after "+(_ha*500)+"ms");
 }
 setTimeout(_h,300);
 console.log("[v16.3] patch.js loaded OK");
+
 })();
