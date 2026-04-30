@@ -1153,18 +1153,18 @@ function renderLeadDetail(l) {
   html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
   // Property links bar
   var _fa = encodeURIComponent((l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
-  var _as = (l.address||'').replace(/\\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
-  var _cs = (l.city||'').replace(/\\s+/g,'-').toLowerCase();
+  var _as = (l.address||'').toLowerCase().split(' ').join('-').replace(/[^a-zA-Z0-9-]/g,'');
+  var _cs = (l.city||'').toLowerCase().split(' ').join('-');
   var _st = (l.state||'').toLowerCase();
   var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
-  var _rUrl = 'https://www.redfin.com/search?location='+_fa;
+  
   var _mUrl = 'https://maps.google.com/?q='+_fa;
   var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
   var _btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #e5e5ea;background:#f5f5f7;color:#1d1d1f;margin-right:5px;margin-top:5px';
   html += '<div style="display:flex;flex-wrap:wrap;margin-top:8px;margin-bottom:2px">';
   html += '<a href="'+_mUrl+'" target="_blank" style="'+_btnStyle+';border-color:#4fc3f7;color:#0288d1">🗺 Maps</a>';
   html += '<a href="'+_zUrl+'" target="_blank" style="'+_btnStyle+';border-color:#00a0dc;color:#006aff">🏠 Zillow</a>';
-  html += '<a href="'+_rUrl+'" target="_blank" style="'+_btnStyle+';border-color:#e74c3c;color:#e74c3c">📊 Redfin</a>';
+
   html += '<a href="'+_raUrl+'" target="_blank" style="'+_btnStyle+';border-color:#9b59b6;color:#9b59b6">⚖️ Auction</a>';
   html += '</div>';
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
@@ -6717,18 +6717,18 @@ function renderLeadDetail(l) {
   html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
   // Property links bar
   var _fa = encodeURIComponent((l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
-  var _as = (l.address||'').replace(/\\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
-  var _cs = (l.city||'').replace(/\\s+/g,'-').toLowerCase();
+  var _as = (l.address||'').toLowerCase().split(' ').join('-').replace(/[^a-zA-Z0-9-]/g,'');
+  var _cs = (l.city||'').toLowerCase().split(' ').join('-');
   var _st = (l.state||'').toLowerCase();
   var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
-  var _rUrl = 'https://www.redfin.com/search?location='+_fa;
+  
   var _mUrl = 'https://maps.google.com/?q='+_fa;
   var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
   var _btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #e5e5ea;background:#f5f5f7;color:#1d1d1f;margin-right:5px;margin-top:5px';
   html += '<div style="display:flex;flex-wrap:wrap;margin-top:8px;margin-bottom:2px">';
   html += '<a href="'+_mUrl+'" target="_blank" style="'+_btnStyle+';border-color:#4fc3f7;color:#0288d1">🗺 Maps</a>';
   html += '<a href="'+_zUrl+'" target="_blank" style="'+_btnStyle+';border-color:#00a0dc;color:#006aff">🏠 Zillow</a>';
-  html += '<a href="'+_rUrl+'" target="_blank" style="'+_btnStyle+';border-color:#e74c3c;color:#e74c3c">📊 Redfin</a>';
+
   html += '<a href="'+_raUrl+'" target="_blank" style="'+_btnStyle+';border-color:#9b59b6;color:#9b59b6">⚖️ Auction</a>';
   html += '</div>';
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
