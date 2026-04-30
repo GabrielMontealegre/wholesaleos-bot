@@ -103,7 +103,7 @@ async function generateSellerScript(leadId) {
 
   try {
     var raw = await ask(prompt, 'You are a real estate wholesaler coach. Respond only with valid JSON.', 2000);
-    var clean = raw.replace(/```json|```/g, '').trim();
+    var clean = raw.replace(/\x60\x60\x60json|\x60\x60\x60/g, '').trim();
     var parsed = JSON.parse(clean);
 
     // Cache on lead
