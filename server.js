@@ -1,6 +1,4 @@
-// Deploy: 2026-04-30T11:53:02.497Z
-// Deploy: 2026-04-30T00:54:39.328Z
-// server.js Ã¢ÂÂ Express server for dashboard + REST API
+// server.js  -  Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
 require('dotenv').config();
@@ -115,7 +113,7 @@ app.get('/dashboard/', (req, res) => res.sendFile(path.join(__dirname, 'dashboar
 // Ã¢ÂÂÃ¢ÂÂ Health check Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/health', (_, res) => res.json({ ok: true, time: new Date().toISOString() }));
 app.get('/', (_, res) => res.json({
-  status: 'Montsan REI Bot Ã¢ÂÂ Online',
+  status: 'Montsan REI Bot  -  Online',
   dashboard: '/dashboard/',
   leads: db.getLeads().length,
   version: '3.0'
@@ -649,7 +647,7 @@ app.post('/api/buyboxes', (req, res) => {
   const { addBuyBox } = require('./modules/buybox');
   const box = addBuyBox(req.body);
   if (!box) return res.json({ ok: false, error: 'Duplicate buy box' });
-  db.addNotification('buyer', 'New buy box added', `${req.body.name} Ã¢ÂÂ ${req.body.county||'Unknown'}, ${req.body.state||'TX'}`);
+  db.addNotification('buyer', 'New buy box added', `${req.body.name}  -  ${req.body.county||'Unknown'}, ${req.body.state||'TX'}`);
   res.json({ ok: true, buybox: box });
 });
 
@@ -835,7 +833,7 @@ app.post('/api/leads/land', async (req, res) => {
       db.addLead(lead);
       added++;
     }
-    db.addNotification('deal', `${added} land deals added`, `${county}, ${state} Ã¢ÂÂ land opportunities`);
+    db.addNotification('deal', `${added} land deals added`, `${county}, ${state}  -  land opportunities`);
     res.json({ ok: true, added, leads: leads.slice(0, added) });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -862,7 +860,7 @@ app.post('/api/deals/send', (req, res) => {
     if (!dbData.deals_sent) dbData.deals_sent = [];
     dbData.deals_sent.push({ leadId, buyerId, buyerName: buyer.name, sent: new Date().toISOString(), version: email.subject });
     db.writeDB(dbData);
-    db.addNotification('match', `Deal sent to ${buyer.name}`, `${lead.address?.split(',')[0]} Ã¢ÂÂ city-only version sent`);
+    db.addNotification('match', `Deal sent to ${buyer.name}`, `${lead.address?.split(',')[0]}  -  city-only version sent`);
     res.json({ ok: true, email });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -1119,7 +1117,7 @@ app.post('/api/gmail/send', async (req, res) => {
     ];
     const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
-    db.addNotification('system', 'Email sent', 'To: ' + to + ' Ã¢ÂÂ ' + subject);
+    db.addNotification('system', 'Email sent', 'To: ' + to + '  -  ' + subject);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1293,9 +1291,9 @@ app.get('/api/drive/status', async (req, res) => {
     res.json({ connected: true, email: about.data.user.emailAddress });
   } catch(e) {
     // Common causes: token expired, wrong scope, revoked access
-    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired Ã¢ÂÂ regenerate at OAuth Playground' :
-                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope Ã¢ÂÂ re-authorize with https://www.googleapis.com/auth/drive scope' :
-                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret Ã¢ÂÂ check Railway Variables' :
+    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired  -  regenerate at OAuth Playground' :
+                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope  -  re-authorize with https://www.googleapis.com/auth/drive scope' :
+                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret  -  check Railway Variables' :
                    e.message;
     res.json({ connected: false, reason });
   }
@@ -1536,7 +1534,7 @@ app.post('/api/leads/:id/enrich', async (req, res) => {
 });
 
 
-// Ã¢ÂÂÃ¢ÂÂ Propwire CSV Parser (inline Ã¢ÂÂ no external dependency) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Ã¢ÂÂÃ¢ÂÂ Propwire CSV Parser (inline  -  no external dependency) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function parsePropwireCSV(csvText) {
   const { v4: uuidv4 } = require('uuid');
   const lines = csvText.split('\n').filter(l => l.trim());
@@ -1649,7 +1647,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
 
     if (!leads || !leads.length) return res.json({
       ok: false,
-      error: `No wholesale deals found in this file. Processed ${stats.total} rows Ã¢ÂÂ all were filtered out (${stats.skipped_type} wrong property type, ${stats.skipped_price} outside price range).`
+      error: `No wholesale deals found in this file. Processed ${stats.total} rows  -  all were filtered out (${stats.skipped_type} wrong property type, ${stats.skipped_price} outside price range).`
     });
 
     // Delete all existing Propwire leads before reimporting to avoid stale bad data
@@ -1892,7 +1890,7 @@ app.delete('/api/buyers/clear/fake', (req, res) => {
 
 
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-//  COMMUNICATIONS Ã¢ÂÂ SMS, Bulk Email, Browser Dialer
+//  COMMUNICATIONS  -  SMS, Bulk Email, Browser Dialer
 // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 // Ã¢ÂÂÃ¢ÂÂ Twilio status Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
@@ -1947,7 +1945,7 @@ app.post('/api/sms/bulk', async (req, res) => {
     const leads = db.getLeads().filter(l => leadIds.includes(l.id));
     const withPhone = leads.filter(l => l.phone);
     if (!withPhone.length) return res.json({ ok: false, error: 'None of the selected leads have phone numbers. Add phone numbers via skip tracing first.' });
-    // Start async Ã¢ÂÂ respond immediately
+    // Start async  -  respond immediately
     res.json({ ok: true, total: withPhone.length, message: `Sending ${withPhone.length} SMS messages in background. Check SMS tab for progress.` });
     setImmediate(async () => {
       try {
@@ -2004,7 +2002,7 @@ app.post('/api/sms/webhook', (req, res) => {
     const comms = require('./modules/comms');
     const { From, Body } = req.body;
     const lead = comms.handleInboundSMS(From, Body, db);
-    logger.info(`[SMS Inbound] From: ${From} Ã¢ÂÂ "${Body.slice(0,50)}"`);
+    logger.info(`[SMS Inbound] From: ${From}  -  "${Body.slice(0,50)}"`);
     // Respond with empty TwiML so Twilio doesn't send error
     res.set('Content-Type', 'text/xml');
     res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
@@ -2107,7 +2105,7 @@ Respond in JSON format only.`, 'free');
             callEntry.sentiment = 'Unknown';
             callEntry.recommendation = analysis.slice(0, 200);
           }
-          db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address} Ã¢ÂÂ ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
+          db.addNotification('system', 'Call analysis ready', `${lead.owner_name||lead.address}  -  ${callEntry.sentiment} sentiment. ${callEntry.recommendation}`);
         } catch(e) { logger.info('[AI Analysis]', e.message); }
       }
       db.writeDB(dbData);
