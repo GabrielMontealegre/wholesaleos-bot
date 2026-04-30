@@ -1167,6 +1167,41 @@ function renderLeadDetail(l) {
 
   html += '<a href="'+_raUrl+'" target="_blank" style="'+_btnStyle+';border-color:#9b59b6;color:#9b59b6">⚖️ Auction</a>';
   html += '</div>';
+
+  // ── TIMELINE + URGENCY + SKIP TRACE ──────────────────────────────────────
+  var _now = Date.now();
+  var _addedAt = l.created_at || l.added_at || l.created || null;
+  var _daysAgo = _addedAt ? Math.floor((_now - new Date(_addedAt).getTime()) / 86400000) : null;
+  var _urgColor = _daysAgo === null ? '#86868b' : _daysAgo <= 1 ? '#34c759' : _daysAgo <= 3 ? '#ff9500' : '#ff3b30';
+  var _urgLabel = _daysAgo === null ? 'Unknown age' : _daysAgo === 0 ? 'Added today' : _daysAgo === 1 ? '1 day ago' : _daysAgo + ' days ago';
+  var _urgNote  = _daysAgo !== null && _daysAgo > 3 ? ' ⚠️ Value declining' : '';
+  var _addedFmt = _addedAt ? new Date(_addedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Unknown';
+
+  html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0 4px;flex-wrap:wrap">';
+  html += '<span style="background:' + _urgColor + ';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px">' + _urgLabel + _urgNote + '</span>';
+  html += '<span style="color:#86868b;font-size:10px">Added: ' + _addedFmt + '</span>';
+  if (l.auction_date) {
+    var _auctDays = Math.ceil((new Date(l.auction_date).getTime() - _now) / 86400000);
+    var _auctColor = _auctDays <= 7 ? '#ff3b30' : _auctDays <= 14 ? '#ff9500' : '#86868b';
+    html += '<span style="background:' + _auctColor + ';color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px">⚠️ Auction in ' + _auctDays + 'd</span>';
+  }
+  if (l.nod_date) {
+    var _nodDays = Math.ceil((new Date(l.nod_date).getTime() - _now) / 86400000);
+    html += '<span style="background:#ff9500;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px">📄 NOD: ' + (_nodDays > 0 ? _nodDays + 'd to foreclosure' : 'Overdue') + '</span>';
+  }
+  // Skip trace status
+  if (l.skip_trace_result === 'found') {
+    html += '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;border:1px solid #a5d6a7">✓ Skip traced: ' + (l.skip_trace_date ? new Date(l.skip_trace_date).toLocaleDateString() : '') + '</span>';
+  } else if (l.skip_trace_result === 'not_found') {
+    html += '<span style="background:#fafafa;color:#86868b;font-size:10px;padding:3px 10px;border-radius:10px;border:1px solid #e5e5ea">∅ Skip trace: no results</span>';
+  } else {
+    html += '<span id="st-badge-' + l.id + '" style="background:#fff3e0;color:#e65100;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;border:1px solid #ffcc80;cursor:pointer" onclick="runSkipTrace(\'' + l.id + '\')">&#128269; Skip Trace Now</span>';
+  }
+  html += '</div>';
+  // Auto-run skip trace if no phone and not yet attempted
+  if (!l.phone && !l.skip_trace_result) {
+    html += '<script>setTimeout(function(){ if(typeof runSkipTrace==="function") runSkipTrace("' + l.id + '"); },800);<\/script>';
+  }
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
   html += '</div>';
   html += '<div class="detail-meta">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div>';
@@ -13822,6 +13857,80 @@ setTimeout(checkSystemLimits, 3000);
 
 })();
 
+
+
+// ── Skip Trace runner ─────────────────────────────────────────────────────
+window.runSkipTrace = function(leadId) {
+  var badge = document.getElementById('st-badge-' + leadId);
+  if (badge) { badge.textContent = 'Searching...'; badge.style.cursor = 'default'; }
+  fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.found) {
+        if (badge) { badge.style.background = '#e8f5e9'; badge.style.color = '#2e7d32'; badge.style.borderColor = '#a5d6a7'; badge.textContent = '\u2713 Found: ' + (d.name||'') + (d.phone?' · '+ d.phone:''); }
+        // Update seller contact section if visible
+        var phoneEl = document.querySelector('.detail-phone, [data-field="phone"]');
+        if (phoneEl && d.phone) phoneEl.textContent = d.phone;
+        // Toast
+        showToastST('\u2705 Skip trace complete: ' + (d.name||'') + (d.phone?' · ' + formatPhone(d.phone):'') + (d.phones&&d.phones.length>1?' ('+d.phones.length+' phones found)':''), true);
+        // Update APP.leads in memory
+        if (APP && APP.leads) {
+          var lead = APP.leads.find(function(l){ return l.id === leadId; });
+          if (lead) { lead.phone = d.phone; lead.owner_name = d.name; lead.skip_trace_result = 'found'; }
+        }
+      } else {
+        if (badge) { badge.textContent = '\u2205 Not found'; badge.style.color = '#86868b'; }
+        showToastST('Skip trace: no results for this address', false);
+      }
+    })
+    .catch(function(e) {
+      if (badge) badge.textContent = '\u2269 Skip Trace Now';
+      showToastST('Skip trace error: ' + e.message, false);
+    });
+};
+
+function formatPhone(p) {
+  var d = (p||'').replace(/\D/g,'');
+  if (d.length === 10) return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+  if (d.length === 11) return '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
+  return p;
+}
+
+function showToastST(msg, ok) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;max-width:420px;box-shadow:0 4px 20px rgba(0,0,0,.3);background:' + (ok?'#14532d':'#7f1d1d') + ';color:#fff;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(function(){t.remove();},400); }, 5000);
+}
+
+// ── Lead age urgency highlight on table rows ──────────────────────────────
+function highlightAgedLeads() {
+  document.querySelectorAll('tr[data-lead-id], [data-lead-id]').forEach(function(row) {
+    var lid = row.getAttribute('data-lead-id');
+    if (!lid || !APP || !APP.leads) return;
+    var lead = APP.leads.find(function(l){ return l.id === lid; });
+    if (!lead) return;
+    var addedAt = lead.created_at || lead.added_at || lead.created;
+    if (!addedAt) return;
+    var days = Math.floor((Date.now() - new Date(addedAt).getTime()) / 86400000);
+    if (days > 3) {
+      row.style.borderLeft = '3px solid #ff3b30';
+      row.title = days + ' days old — value declining';
+    } else if (days > 1) {
+      row.style.borderLeft = '3px solid #ff9500';
+    }
+  });
+}
+// Run after leads render
+var _origRenderLeads = window.renderLeads;
+if (typeof _origRenderLeads === 'function') {
+  window.renderLeads = function() {
+    _origRenderLeads.apply(this, arguments);
+    setTimeout(highlightAgedLeads, 300);
+  };
+}
+setTimeout(highlightAgedLeads, 2000);
 </script>
 </body>
 </html>
