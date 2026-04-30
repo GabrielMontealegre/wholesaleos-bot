@@ -1,3 +1,25 @@
+## 2026-04-30 — Session lessons
+
+### NEVER use backtick characters inside agent files pushed via ghPut()
+**Symptom:** Server 502 immediately on deploy. Railway shows crash before port binds.
+**Root cause:** Backticks inside regex patterns like /```json|```/g are stored as literal char 96 in the file. When Node.js parses the file it treats them as template literal delimiters. 6 backticks = 3 unclosed template literals = SyntaxError at startup.
+**Fix:** Replace /```json|```/g with /\x60\x60\x60json|\x60\x60\x60/g — hex escape code 0x60 = backtick, safe inside regex, never triggers template literal parsing.
+**Rule:** BEFORE pushing any agent file, verify: (new file content).match(/`/g).length % 2 === 0. If odd → syntax crash guaranteed.
+
+### NEVER use async/await in new route blocks added to server.js
+**Symptom:** Server 502. No obvious syntax error.
+**Root cause:** The server.js file has strict-mode sections. async route handlers added mid-file can conflict with existing code patterns.
+**Fix:** Use Promise chains (.then/.catch) for all new routes. Never use async function() {} in injected route blocks.
+**Rule:** All new routes use: app.get(path, function(req,res){ ... .then().catch() });
+
+### NEVER use string markers with em-dash (—) when searching server.js
+**Symptom:** indexOf returns -1, insertion fails silently, nothing gets injected.
+**Root cause:** The em-dash character in code comments may be encoded differently in the file vs the search string. indexOf uses exact byte comparison.
+**Fix:** Always search for unique plain-ASCII strings like app.listen(PORT or app.use(function(err as insertion markers.
+**Rule:** Find insertion point using: s.indexOf('app.use(function(err, req, res, next)') and insert before that position.
+
+---
+
 # WholesaleOS — Mistakes Log
 
 ## 2026-04-17 renderLeadDetail crash — parameter not passed to original function
