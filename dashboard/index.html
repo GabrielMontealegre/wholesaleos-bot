@@ -574,6 +574,27 @@ function buildModal(parts) {
     mc.appendChild(el);
   });
   document.getElementById('modal-overlay').style.display = 'flex';
+  // Auto skip-trace: if lead has no phone, run in background
+  if (!l.phone && !l.skip_trace_date) {
+    setTimeout(function() {
+      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.phone) {
+            // Update lead in APP
+            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
+            if (idx > -1) Object.assign(APP.leads[idx], d);
+            // Show toast
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 5000);
+          }
+        })
+        .catch(function(e){ console.error('[skip-trace]', e.message); });
+    }, 800);
+  }
 }
 
 function editUser(userId, currentName) {
@@ -1135,6 +1156,27 @@ function openLeadModal(leadId) {
   wrapper.innerHTML = renderLeadDetail(l);
   mc.appendChild(wrapper);
   document.getElementById('modal-overlay').style.display = 'flex';
+  // Auto skip-trace: if lead has no phone, run in background
+  if (!l.phone && !l.skip_trace_date) {
+    setTimeout(function() {
+      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.phone) {
+            // Update lead in APP
+            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
+            if (idx > -1) Object.assign(APP.leads[idx], d);
+            // Show toast
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 5000);
+          }
+        })
+        .catch(function(e){ console.error('[skip-trace]', e.message); });
+    }, 800);
+  }
 }
 
 
@@ -1346,6 +1388,79 @@ function renderLeadDetail(l) {
   // Comps placeholder
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
 
+
+  // ── TIMESTAMP + URGENCY + DEAL TIMELINE ──
+  (function() {
+    var now       = Date.now();
+    var addedAt   = l.createdAt ? new Date(l.createdAt).getTime() : (l.created_at ? new Date(l.created_at).getTime() : now);
+    var ageMs     = now - addedAt;
+    var ageDays   = Math.floor(ageMs / 86400000);
+    var ageHours  = Math.floor(ageMs / 3600000);
+    var ageStr    = ageDays > 0 ? ageDays + "d ago" : ageHours + "h ago";
+    var addedStr  = addedAt < now ? new Date(addedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "Today";
+    // Urgency color: green=0-1d, yellow=1-3d, orange=3-7d, red=7d+
+    var urgColor  = ageDays < 1 ? "#22c55e" : ageDays < 3 ? "#f59e0b" : ageDays < 7 ? "#f97316" : "#ef4444";
+    var urgLabel  = ageDays < 1 ? "FRESH" : ageDays < 3 ? "ACTIVE" : ageDays < 7 ? "AGING" : "STALE";
+    var urgBg     = ageDays < 1 ? "#14532d" : ageDays < 3 ? "#713f12" : ageDays < 7 ? "#7c2d12" : "#450a0a";
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid #e5e5ea;border-bottom:1px solid #e5e5ea;margin:8px 0">'
+      + '<span style="font-size:10px;font-weight:700;background:' + urgBg + ';color:' + urgColor + ';padding:2px 8px;border-radius:9px;border:1px solid ' + urgColor + ';">' + urgLabel + '</span>'
+      + '<span style="font-size:11px;color:#86868b;">Added: ' + addedStr + ' &bull; ' + ageStr + '</span>';
+    // Urgency warning for aging leads
+    if (ageDays >= 3) {
+      html += '<span style="font-size:10px;color:#ef4444;font-weight:600;">&#9888; Leads lose value after 3 days</span>';
+    }
+    html += '</div>';
+    // Deal timeline — auction/closure warnings
+    var timelineItems = [];
+    // Pre-foreclosure: NOD typically = 90-120 days to auction
+    var src = (l.source||"").toLowerCase();
+    var viol = ((l.violations||[]).join(" ")||"").toLowerCase();
+    if (src.indexOf("pre-fc")>-1 || src.indexOf("foreclos")>-1 || viol.indexOf("nod")>-1) {
+      var daysToAuction = l.days_to_auction || 90;
+      var urgClass = daysToAuction < 30 ? "#ef4444" : daysToAuction < 60 ? "#f97316" : "#f59e0b";
+      timelineItems.push({icon:"&#9876;",label:"Est. Auction",days:daysToAuction,color:urgClass});
+    }
+    // Tax lien: typically 1-2 years, but flag if old
+    if (src.indexOf("tax")>-1 || viol.indexOf("tax")>-1) {
+      timelineItems.push({icon:"&#128197;",label:"Tax Sale Risk",days:l.days_to_tax_sale||180,color:"#f59e0b"});
+    }
+    // Code violation: fines compound daily
+    if (src.indexOf("code")>-1 || viol.indexOf("violation")>-1) {
+      timelineItems.push({icon:"&#9888;",label:"Daily Fines",days:null,color:"#f97316"});
+    }
+    if (timelineItems.length > 0) {
+      html += '<div style="background:#fff8f0;border:1px solid #f97316;border-radius:8px;padding:10px 12px;margin:6px 0">'
+        + '<div style="font-size:10px;font-weight:700;color:#ea580c;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Deal Timeline</div>';
+      timelineItems.forEach(function(t) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin:3px 0">'
+          + '<span style="font-size:14px">' + t.icon + '</span>'
+          + '<span style="font-size:12px;color:#374151;font-weight:600">' + t.label + ':</span>'
+          + (t.days !== null
+            ? '<span style="font-size:12px;color:' + t.color + ';font-weight:700">' + t.days + ' days remaining</span>'
+            : '<span style="font-size:12px;color:' + t.color + '">Accumulating now</span>')
+          + '</div>';
+      });
+      html += '</div>';
+    }
+    // Skip trace status badge
+    if (l.skip_trace_date) {
+      var stDate = new Date(l.skip_trace_date).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128270; Skip traced: ' + stDate
+        + (l.skip_trace_sources ? ' via ' + (l.skip_trace_sources||[]).join(", ") : "") + '</div>';
+    } else if (!l.phone) {
+      html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">&#128270; Skip trace running...</div>';
+    }
+    // Relatives info
+    if (l.relatives && l.relatives.length) {
+      html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128101; Known contacts: ' + l.relatives.slice(0,3).join(", ") + '</div>';
+    }
+    if (l.owner_age) {
+      html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128100; Owner est. age: ' + l.owner_age + '</div>';
+    }
+    if (l.phone_all && l.phone_all.length > 1) {
+      html += '<div style="font-size:10px;color:#86868b;margin:2px 0">&#128222; Additional phones: ' + l.phone_all.slice(1).join(", ") + '</div>';
+    }
+  })();
   // NOTES
   html += '<div class="section-title" style="margin-top:12px">Notes</div>';
   html += '<textarea id="lead-notes-' + lid + '" class="form-textarea" style="min-height:70px;width:100%;margin-bottom:6px" placeholder="Add notes...">' + (l.notes||'') + '</textarea>';
@@ -2129,6 +2244,27 @@ function renderSettings() {
 function showModal(html) {
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').style.display = 'flex';
+  // Auto skip-trace: if lead has no phone, run in background
+  if (!l.phone && !l.skip_trace_date) {
+    setTimeout(function() {
+      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.phone) {
+            // Update lead in APP
+            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
+            if (idx > -1) Object.assign(APP.leads[idx], d);
+            // Show toast
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 5000);
+          }
+        })
+        .catch(function(e){ console.error('[skip-trace]', e.message); });
+    }, 800);
+  }
 }
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modal-overlay')) {
@@ -6727,6 +6863,27 @@ function openLeadModal(leadId) {
   wrapper.innerHTML = renderLeadDetail(l);
   mc.appendChild(wrapper);
   document.getElementById('modal-overlay').style.display = 'flex';
+  // Auto skip-trace: if lead has no phone, run in background
+  if (!l.phone && !l.skip_trace_date) {
+    setTimeout(function() {
+      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.phone) {
+            // Update lead in APP
+            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
+            if (idx > -1) Object.assign(APP.leads[idx], d);
+            // Show toast
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 5000);
+          }
+        })
+        .catch(function(e){ console.error('[skip-trace]', e.message); });
+    }, 800);
+  }
 }
 
 
@@ -7651,6 +7808,27 @@ function renderSettings() {
 function showModal(html) {
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').style.display = 'flex';
+  // Auto skip-trace: if lead has no phone, run in background
+  if (!l.phone && !l.skip_trace_date) {
+    setTimeout(function() {
+      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.phone) {
+            // Update lead in APP
+            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
+            if (idx > -1) Object.assign(APP.leads[idx], d);
+            // Show toast
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
+            document.body.appendChild(t);
+            setTimeout(function(){ t.remove(); }, 5000);
+          }
+        })
+        .catch(function(e){ console.error('[skip-trace]', e.message); });
+    }, 800);
+  }
 }
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modal-overlay')) {
