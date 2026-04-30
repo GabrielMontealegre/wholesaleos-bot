@@ -13801,6 +13801,470 @@ setTimeout(checkSystemLimits, 3000);
 
 })();
 
+
+// ============================================================
+// WHOLESALEOS UI PATCH v15 — Real Comps + Seller Script + Full Address + Buyer Send
+// ============================================================
+(function() {
+  'use strict';
+
+  // ── 1. FULL ADDRESS in lead list table (fix truncation) ──────────────────
+  var style = document.createElement('style');
+  style.textContent = [
+    '.lead-table td:nth-child(2), .lead-table th:nth-child(2) { min-width:280px; max-width:420px; white-space:normal; word-break:break-word; }',
+    '.lead-address-cell { white-space:normal !important; overflow:visible !important; text-overflow:unset !important; }',
+    // Comp badge on lead rows
+    '.comp-badge { display:inline-block; background:#10b981; color:#fff; font-size:10px; padding:1px 6px; border-radius:9px; margin-left:6px; vertical-align:middle; }',
+    '.comp-badge.pending { background:#f59e0b; }',
+    // Seller script section
+    '#seller-script-section { background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px; margin-top:12px; }',
+    '#seller-script-section h4 { color:#38bdf8; margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; }',
+    '.script-question { background:#0f172a; border-left:3px solid #38bdf8; padding:8px 12px; margin:6px 0; border-radius:4px; color:#e2e8f0; font-size:13px; line-height:1.5; }',
+    '.script-objection { background:#1a2744; border-left:3px solid #f59e0b; padding:6px 10px; margin:4px 0; border-radius:4px; color:#cbd5e1; font-size:12px; }',
+    '.script-label { color:#64748b; font-size:11px; text-transform:uppercase; margin:8px 0 4px; }',
+    '.script-key-intel { background:#14532d; border-left:3px solid #22c55e; padding:6px 10px; margin:4px 0; border-radius:4px; color:#bbf7d0; font-size:12px; }',
+    // Comps display in lead modal
+    '#real-comps-section { background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px; margin-top:12px; }',
+    '#real-comps-section h4 { color:#a78bfa; margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; }',
+    '.comp-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #1e293b; font-size:12px; color:#cbd5e1; }',
+    '.comp-row:last-child { border-bottom:none; }',
+    '.comp-price { color:#34d399; font-weight:600; }',
+    '.comp-source { color:#64748b; font-size:10px; }',
+    '.arv-summary-box { background:#0f172a; border:1px solid #a78bfa; border-radius:8px; padding:10px 14px; margin-bottom:10px; color:#c4b5fd; font-size:13px; line-height:1.6; }',
+    '.comp-confidence { display:inline-block; padding:2px 8px; border-radius:9px; font-size:10px; font-weight:600; margin-left:8px; }',
+    '.conf-high { background:#14532d; color:#4ade80; }',
+    '.conf-medium { background:#713f12; color:#fbbf24; }',
+    '.conf-low { background:#4c1d95; color:#c4b5fd; }',
+    // Buyer send modal
+    '#buyer-send-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.7); z-index:9999; display:none; align-items:center; justify-content:center; }',
+    '#buyer-send-modal.open { display:flex; }',
+    '#buyer-send-inner { background:#1e293b; border-radius:12px; padding:24px; max-width:640px; width:90%; max-height:80vh; overflow-y:auto; }',
+    '.send-lead-item { display:flex; align-items:center; gap:10px; padding:8px; background:#0f172a; border-radius:6px; margin-bottom:6px; }',
+    '.send-lead-item input[type=checkbox] { width:16px; height:16px; cursor:pointer; }',
+    // Fresh leads button
+    '#fresh-leads-bar { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }',
+    '#fresh-leads-bar select, #fresh-leads-bar input { background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:6px; padding:6px 10px; font-size:13px; }',
+    '#fresh-leads-btn { background:#6366f1; color:#fff; border:none; border-radius:6px; padding:7px 16px; cursor:pointer; font-size:13px; font-weight:600; }',
+    '#fresh-leads-btn:hover { background:#4f46e5; }',
+  ].join('\n');
+  document.head.appendChild(style);
+
+  // ── 2. FIX FULL ADDRESS IN LEAD ROWS ────────────────────────────────────
+  var _origRenderLeads = window.renderLeads;
+  if (typeof _origRenderLeads === 'function') {
+    window.renderLeads = function() {
+      _origRenderLeads.apply(this, arguments);
+      // After render, fix all address cells to show full text
+      setTimeout(function() {
+        document.querySelectorAll('table tbody tr td:nth-child(2)').forEach(function(td) {
+          td.style.whiteSpace = 'normal';
+          td.style.overflow = 'visible';
+          td.style.textOverflow = 'unset';
+          td.style.maxWidth = '420px';
+        });
+      }, 100);
+    };
+  }
+
+  // ── 3. FIX NaN% in buyer match scores ────────────────────────────────────
+  // Patch the matchBuyBoxesToLead display wherever it renders
+  var _origRenderLeadDetail = window.renderLeadDetail;
+  if (typeof _origRenderLeadDetail === 'function') {
+    window.renderLeadDetail = function(l) {
+      // Normalize lead
+      l = l || APP.selectedLead;
+      if (!l) return;
+      // Fix all numeric fields before passing to original
+      l.arv    = isNaN(l.arv)    || !l.arv    ? null : parseFloat(l.arv);
+      l.mao    = isNaN(l.mao)    || !l.mao    ? null : parseFloat(l.mao);
+      l.offer  = isNaN(l.offer)  || !l.offer  ? null : parseFloat(l.offer);
+      l.spread = isNaN(l.spread) || !l.spread ? null : parseFloat(l.spread);
+      l.fee_lo = isNaN(l.fee_lo) || !l.fee_lo ? null : parseFloat(l.fee_lo);
+      l.fee_hi = isNaN(l.fee_hi) || !l.fee_hi ? null : parseFloat(l.fee_hi);
+      _origRenderLeadDetail.call(this, l);
+      // After original renders, fix NaN buyer scores
+      setTimeout(function() {
+        document.querySelectorAll('.buyer-match-score, .fit-score, [class*="fit"]').forEach(function(el) {
+          if (el.textContent.indexOf('NaN') > -1) {
+            el.textContent = el.textContent.replace(/NaN%/g, 'N/A').replace(/NaN/g, 'N/A');
+          }
+        });
+        // Inject our new sections into modal
+        injectCompSection(l);
+        injectSellerScriptSection(l);
+        injectPropertyLinks(l);
+      }, 200);
+    };
+  }
+
+  // ── 4. PROPERTY LINKS in modal header ────────────────────────────────────
+  function buildFullAddr(l) {
+    var parts = [l.address, l.city, l.state, l.zip].filter(Boolean);
+    return parts.join(', ');
+  }
+  function injectPropertyLinks(l) {
+    if (!l) return;
+    var modal = document.querySelector('.lead-modal, #lead-detail-modal, [id*="lead"][class*="modal"]');
+    if (!modal) return;
+    if (modal.querySelector('#prop-links-bar')) return; // already injected
+    var full = buildFullAddr(l);
+    var enc  = encodeURIComponent(full);
+    var addrSlug = (l.address||'').replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
+    var citySlug = (l.city||'').replace(/\s+/g,'-');
+    var zUrl = l.zillow_url || ('https://www.zillow.com/homes/' + addrSlug + '-' + citySlug + '-' + (l.state||'') + '_rb/');
+    var rUrl = l.redfin_url || ('https://www.redfin.com/search?location=' + enc);
+    var mUrl = l.maps_url   || ('https://maps.google.com/?q=' + enc);
+    var bar = document.createElement('div');
+    bar.id = 'prop-links-bar';
+    bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 4px;';
+    bar.innerHTML = [
+      '<a href="'+mUrl+'" target="_blank" style="background:#1e293b;color:#60a5fa;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">🗺️ Maps</a>',
+      '<a href="'+zUrl+'" target="_blank" style="background:#1e293b;color:#34d399;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">🏠 Zillow</a>',
+      '<a href="'+rUrl+'" target="_blank" style="background:#1e293b;color:#f97316;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">📊 Redfin</a>',
+      '<a href="https://www.realauction.com" target="_blank" style="background:#1e293b;color:#a78bfa;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">⚖️ Auction</a>',
+      '<button onclick="window.fetchRealComps(''+l.id+'')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-weight:600;">🔍 Get Real Comps</button>',
+      '<button onclick="window.fetchSellerScript(''+l.id+'')" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-weight:600;">📋 Seller Script</button>',
+    ].join('');
+    // Find modal header/title area
+    var titleEl = modal.querySelector('h2,h3,[class*="title"],[class*="header"]');
+    if (titleEl && titleEl.parentNode) {
+      titleEl.parentNode.insertBefore(bar, titleEl.nextSibling);
+    } else {
+      modal.insertBefore(bar, modal.firstChild);
+    }
+  }
+
+  // ── 5. REAL COMPS SECTION in modal ───────────────────────────────────────
+  function injectCompSection(l) {
+    if (!l) return;
+    var modal = document.querySelector('.lead-modal, #lead-detail-modal, [id*="lead"][class*="modal"]');
+    if (!modal) return;
+    // Remove stale
+    var existing = modal.querySelector('#real-comps-section');
+    if (existing) existing.remove();
+    // Only render if we have real comps
+    if (!l.comps || !l.comps.length) return;
+    var confClass = l.arv_confidence === 'high' ? 'conf-high' : l.arv_confidence === 'medium' ? 'conf-medium' : 'conf-low';
+    var html = '<div id="real-comps-section">' +
+      '<h4>📊 Real Comps <span class="comp-confidence ' + confClass + '">' + (l.arv_confidence||'').toUpperCase() + ' confidence</span></h4>';
+    if (l.arv_summary) {
+      html += '<div class="arv-summary-box">' + l.arv_summary + '</div>';
+    }
+    l.comps.forEach(function(c) {
+      html += '<div class="comp-row">' +
+        '<div><div style="color:#e2e8f0;font-size:12px;">' + (c.address||'Unknown') + '</div>' +
+        '<div class="comp-source">' + (c.source||'') + (c.soldDate ? ' · Sold ' + c.soldDate.slice(0,10) : '') +
+        (c.sqft ? ' · ' + c.sqft.toLocaleString() + ' sqft' : '') +
+        (c.beds ? ' · ' + c.beds + 'bd/' + c.baths + 'ba' : '') + '</div></div>' +
+        '<div class="comp-price">$' + (c.price||0).toLocaleString() + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    // Insert before notes section or at bottom of modal
+    var notesEl = modal.querySelector('[id*="notes"], [class*="notes"]');
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    if (notesEl) {
+      notesEl.parentNode.insertBefore(div.firstChild, notesEl);
+    } else {
+      modal.appendChild(div.firstChild);
+    }
+  }
+
+  // ── 6. SELLER SCRIPT SECTION in modal ────────────────────────────────────
+  function injectSellerScriptSection(l) {
+    if (!l || !l.seller_script) return;
+    var modal = document.querySelector('.lead-modal, #lead-detail-modal, [id*="lead"][class*="modal"]');
+    if (!modal) return;
+    var existing = modal.querySelector('#seller-script-section');
+    if (existing) existing.remove();
+    var sc = l.seller_script;
+    var html = '<div id="seller-script-section">' +
+      '<h4>📋 Seller Script — ' + (l.seller_script_category||'General') + '</h4>';
+    if (sc.opening_line) {
+      html += '<div class="script-label">Opening</div>' +
+        '<div class="script-question" style="border-left-color:#22d3ee;color:#67e8f9;">' + sc.opening_line + '</div>';
+    }
+    if (sc.questions && sc.questions.length) {
+      html += '<div class="script-label">Questions</div>';
+      sc.questions.forEach(function(q, i) {
+        html += '<div class="script-question">' + (i+1) + '. ' + q + '</div>';
+      });
+    }
+    if (sc.objection_handlers) {
+      html += '<div class="script-label">Objection Handlers</div>';
+      var oh = sc.objection_handlers;
+      if (oh.not_interested)  html += '<div class="script-objection">🛑 Not interested: <em>' + oh.not_interested + '</em></div>';
+      if (oh.already_listed)  html += '<div class="script-objection">🏷️ Already listed: <em>' + oh.already_listed + '</em></div>';
+      if (oh.want_full_price) html += '<div class="script-objection">💰 Want full price: <em>' + oh.want_full_price + '</em></div>';
+    }
+    if (sc.key_intel && sc.key_intel.length) {
+      html += '<div class="script-label">Key Intel to Get on This Call</div>';
+      sc.key_intel.forEach(function(k) {
+        html += '<div class="script-key-intel">• ' + k + '</div>';
+      });
+    }
+    if (sc.closing_line) {
+      html += '<div class="script-label">Closing</div>' +
+        '<div class="script-question" style="border-left-color:#4ade80;color:#86efac;">' + sc.closing_line + '</div>';
+    }
+    html += '</div>';
+    var notesEl = modal.querySelector('[id*="notes"],[class*="notes"]');
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    if (notesEl) {
+      notesEl.parentNode.insertBefore(div.firstChild, notesEl);
+    } else {
+      modal.appendChild(div.firstChild);
+    }
+  }
+
+  // ── 7. FETCH REAL COMPS — button handler ──────────────────────────────────
+  window.fetchRealComps = async function(leadId) {
+    var btn = document.querySelector('button[onclick*="fetchRealComps"]');
+    if (btn) { btn.textContent = '⏳ Fetching...'; btn.disabled = true; }
+    try {
+      var res = await fetch('/api/leads/' + leadId + '/comps');
+      var data = await res.json();
+      if (data.error) {
+        alert('Comps error: ' + data.error);
+        if (btn) { btn.textContent = '🔍 Get Real Comps'; btn.disabled = false; }
+        return;
+      }
+      // Update lead in APP.leads
+      var idx = (APP.leads||[]).findIndex(function(l) { return l.id === leadId; });
+      if (idx > -1) Object.assign(APP.leads[idx], data);
+      if (APP.selectedLead && APP.selectedLead.id === leadId) Object.assign(APP.selectedLead, data);
+      if (btn) { btn.textContent = '✅ ' + data.comp_count + ' comps'; btn.disabled = false; }
+      // Re-render modal with new data
+      var updLead = (APP.leads||[]).find(function(l) { return l.id === leadId; }) || APP.selectedLead;
+      if (updLead) {
+        injectCompSection(updLead);
+        // Also update deal math display
+        var arvEl = document.querySelector('[data-field="arv"],[class*="arv-value"]');
+        if (arvEl && data.arv) arvEl.textContent = '$' + Math.round(data.arv).toLocaleString();
+        var maoEl = document.querySelector('[data-field="mao"],[class*="mao-value"]');
+        if (maoEl && data.mao) maoEl.textContent = '$' + Math.round(data.mao).toLocaleString();
+        // Show toast
+        showToast('✅ Real comps fetched: ARV $' + Math.round(data.arv).toLocaleString() + ' (' + data.comp_count + ' comps)', 'success');
+      }
+    } catch(e) {
+      alert('Fetch error: ' + e.message);
+      if (btn) { btn.textContent = '🔍 Get Real Comps'; btn.disabled = false; }
+    }
+  };
+
+  // ── 8. FETCH SELLER SCRIPT — button handler ──────────────────────────────
+  window.fetchSellerScript = async function(leadId) {
+    var btn = document.querySelector('button[onclick*="fetchSellerScript"]');
+    if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
+    try {
+      var res = await fetch('/api/leads/' + leadId + '/seller-script');
+      var data = await res.json();
+      if (data.error) { alert('Script error: ' + data.error); if(btn){btn.textContent='📋 Seller Script';btn.disabled=false;} return; }
+      var idx = (APP.leads||[]).findIndex(function(l) { return l.id === leadId; });
+      if (idx > -1) { APP.leads[idx].seller_script = data.script; APP.leads[idx].seller_script_category = data.category; }
+      if (APP.selectedLead && APP.selectedLead.id === leadId) { APP.selectedLead.seller_script = data.script; APP.selectedLead.seller_script_category = data.category; }
+      if (btn) { btn.textContent = '📋 Script Ready'; btn.disabled = false; }
+      var updLead = (APP.leads||[]).find(function(l){return l.id===leadId;}) || APP.selectedLead;
+      if (updLead) injectSellerScriptSection(updLead);
+      showToast('📋 Seller script generated for ' + (data.category||'this lead'), 'success');
+    } catch(e) {
+      alert('Script error: ' + e.message);
+      if (btn) { btn.textContent = '📋 Seller Script'; btn.disabled = false; }
+    }
+  };
+
+  // ── 9. TOAST HELPER ──────────────────────────────────────────────────────
+  function showToast(msg, type) {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:' +
+      (type==='success'?'#14532d':'#7f1d1d') +
+      ';color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:400px;';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(function(){t.remove();},400); }, 4000);
+  }
+  window._showToast = showToast;
+
+  // ── 10. FRESH LEADS BAR above lead list ────────────────────────────────
+  function injectFreshLeadsBar() {
+    var leadsHeader = document.querySelector('#leads-tab .tab-header, #leads-section .section-header, .leads-header, [id*="leads"] h2, [id*="leads"] h3');
+    if (!leadsHeader || document.getElementById('fresh-leads-bar')) return;
+    var US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+    var stateOpts = US_STATES.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+    var bar = document.createElement('div');
+    bar.id = 'fresh-leads-bar';
+    bar.innerHTML = '<span style="color:#94a3b8;font-size:12px;font-weight:600;">FRESH LEADS:</span>' +
+      '<select id="fresh-state-select"><option value="">State...</option>' + stateOpts + '</select>' +
+      '<input type="number" id="fresh-count-input" placeholder="Count" value="50" min="10" max="200" style="width:80px;">' +
+      '<button id="fresh-leads-btn" onclick="window.runFreshLeadSearch()">🔍 Search Fresh Leads</button>' +
+      '<span id="fresh-leads-result" style="color:#34d399;font-size:12px;"></span>';
+    leadsHeader.parentNode.insertBefore(bar, leadsHeader.nextSibling);
+  }
+  window.runFreshLeadSearch = async function() {
+    var state = document.getElementById('fresh-state-select') && document.getElementById('fresh-state-select').value;
+    var count = document.getElementById('fresh-count-input') && parseInt(document.getElementById('fresh-count-input').value) || 50;
+    var result = document.getElementById('fresh-leads-result');
+    if (!state) { showToast('Select a state first', 'error'); return; }
+    var btn = document.getElementById('fresh-leads-btn');
+    if (btn) { btn.textContent = '⏳ Searching...'; btn.disabled = true; }
+    if (result) result.textContent = '';
+    try {
+      var res = await fetch('/api/leads/search-fresh', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({state,count}) });
+      var data = await res.json();
+      if (btn) { btn.textContent = '🔍 Search Fresh Leads'; btn.disabled = false; }
+      if (data.ok) {
+        if (result) result.textContent = '✅ ' + (data.inserted||0) + ' new leads found for ' + state;
+        showToast('✅ ' + (data.inserted||0) + ' new leads added for ' + state, 'success');
+        // Refresh lead list
+        if (typeof loadLeads === 'function') setTimeout(loadLeads, 1000);
+        else if (typeof APP !== 'undefined' && APP.loadLeads) setTimeout(APP.loadLeads, 1000);
+      } else {
+        showToast('Error: ' + (data.error||'Unknown'), 'error');
+      }
+    } catch(e) {
+      if (btn) { btn.textContent = '🔍 Search Fresh Leads'; btn.disabled = false; }
+      showToast('Error: ' + e.message, 'error');
+    }
+  };
+
+  // ── 11. BUYER SEND-WITHOUT-ADDRESS MODAL ─────────────────────────────────
+  // Inject modal into DOM
+  var bsModal = document.createElement('div');
+  bsModal.id = 'buyer-send-modal';
+  bsModal.innerHTML = '<div id="buyer-send-inner">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+    '<h3 style="color:#e2e8f0;margin:0;">Send Leads to Buyer</h3>' +
+    '<button onclick="window.closeBuyerSendModal()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">✕</button></div>' +
+    '<div id="bsm-buyer-info" style="background:#0f172a;border-radius:8px;padding:12px;margin-bottom:12px;color:#94a3b8;font-size:13px;"></div>' +
+    '<div id="bsm-lead-list" style="max-height:300px;overflow-y:auto;"></div>' +
+    '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">' +
+    '<button onclick="window.sendLeadsToBuyer()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;">📤 Send Selected (no address)</button>' +
+    '<button onclick="window.closeBuyerSendModal()" style="background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;">Cancel</button>' +
+    '</div>' +
+    '<div id="bsm-message-preview" style="margin-top:12px;background:#0f172a;border-radius:8px;padding:12px;display:none;">' +
+    '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">MESSAGE PREVIEW (no addresses shown)</div>' +
+    '<pre id="bsm-preview-text" style="color:#e2e8f0;font-size:12px;white-space:pre-wrap;margin:0;"></pre></div>' +
+    '</div>';
+  document.body.appendChild(bsModal);
+
+  window._bsmBuyerId = null;
+  window._bsmLeads = [];
+
+  window.openBuyerSendModal = async function(buyerId) {
+    window._bsmBuyerId = buyerId;
+    bsModal.classList.add('open');
+    var infoEl = document.getElementById('bsm-buyer-info');
+    var listEl = document.getElementById('bsm-lead-list');
+    if (infoEl) infoEl.textContent = 'Loading...';
+    if (listEl) listEl.innerHTML = '';
+    try {
+      // Get buyer info + matching leads
+      var [buyerRes, matchRes] = await Promise.all([
+        fetch('/api/buyers/' + buyerId),
+        fetch('/api/buyers/' + buyerId + '/match-deals'),
+      ]);
+      var buyer  = await buyerRes.json();
+      var matchData = await matchRes.json();
+      window._bsmLeads = matchData.deals || matchData.leads || matchData || [];
+      if (infoEl && buyer.name) {
+        infoEl.innerHTML =
+          '<strong style="color:#e2e8f0;">' + buyer.name + '</strong>' +
+          (buyer.phone ? ' · 📞 ' + buyer.phone : '') +
+          (buyer.email ? ' · ✉️ ' + buyer.email : '') + '<br>' +
+          '<span style="color:#64748b;">' +
+          'State: ' + (buyer.state||'Any') +
+          (buyer.maxPrice ? ' · Max: $' + Math.round(buyer.maxPrice).toLocaleString() : '') +
+          (buyer.strategy ? ' · ' + buyer.strategy : '') +
+          '</span>';
+      }
+      if (listEl) {
+        if (!window._bsmLeads.length) {
+          listEl.innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;">No matching leads found for this buyer</div>';
+        } else {
+          listEl.innerHTML = window._bsmLeads.slice(0,30).map(function(l,i) {
+            var arv    = l.arv    ? '$'+Math.round(l.arv).toLocaleString()    : 'TBD';
+            var spread = l.spread ? '$'+Math.round(l.spread).toLocaleString() : 'TBD';
+            var score  = (l.score||l.matchScore||0);
+            return '<div class="send-lead-item">' +
+              '<input type="checkbox" class="bsm-lead-cb" value="'+l.id+'" checked>' +
+              '<div style="flex:1;">' +
+              '<div style="color:#e2e8f0;font-size:12px;">' + (l.city||'?') + ', ' + (l.state||'?') + ' — ' + (l.lead_type||'SFR') + '</div>' +
+              '<div style="color:#64748b;font-size:11px;">ARV: '+arv+' · Spread: '+spread+' · Source: '+(l.source||'Public Record')+'</div>' +
+              '</div>' +
+              '<div style="color:#34d399;font-size:11px;">' + (score||'') + (score?'% fit':'') + '</div>' +
+              '</div>';
+          }).join('');
+        }
+      }
+    } catch(e) {
+      if (infoEl) infoEl.textContent = 'Error loading buyer: ' + e.message;
+    }
+  };
+
+  window.closeBuyerSendModal = function() {
+    bsModal.classList.remove('open');
+    var prev = document.getElementById('bsm-message-preview');
+    if (prev) prev.style.display = 'none';
+  };
+
+  window.sendLeadsToBuyer = async function() {
+    var checked = Array.from(document.querySelectorAll('.bsm-lead-cb:checked')).map(function(cb){return cb.value;});
+    if (!checked.length) { showToast('Select at least one lead', 'error'); return; }
+    try {
+      var res = await fetch('/api/buyers/' + window._bsmBuyerId + '/send-leads', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ lead_ids: checked }),
+      });
+      var data = await res.json();
+      var prev = document.getElementById('bsm-message-preview');
+      var prevText = document.getElementById('bsm-preview-text');
+      if (prev && prevText && data.message) {
+        prevText.textContent = data.message;
+        prev.style.display = 'block';
+      }
+      showToast('✅ Message ready for ' + (data.lead_count||0) + ' leads — copy from preview', 'success');
+    } catch(e) {
+      showToast('Error: ' + e.message, 'error');
+    }
+  };
+
+  // Override buyer card click to open our send modal (inject Send button into buyer detail)
+  var _origOpenBuyer = window.openBuyerDetail || window.openBuyer;
+  if (typeof _origOpenBuyer === 'function') {
+    window.openBuyerDetail = window.openBuyer = function(id) {
+      _origOpenBuyer.call(this, id);
+      setTimeout(function() {
+        var buyerModal = document.querySelector('.buyer-modal,[id*="buyer-detail"]');
+        if (!buyerModal || buyerModal.querySelector('#bsm-open-btn')) return;
+        var btn = document.createElement('button');
+        btn.id = 'bsm-open-btn';
+        btn.textContent = '📤 Send Matching Leads (no address)';
+        btn.style.cssText = 'background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;margin-top:12px;width:100%;';
+        btn.onclick = function() { window.openBuyerSendModal(id); };
+        buyerModal.appendChild(btn);
+      }, 300);
+    };
+  }
+
+  // ── 12. INIT — run after APP loads ───────────────────────────────────────
+  function init() {
+    injectFreshLeadsBar();
+    // Fix NaN in buyer fit percentages already on page
+    document.querySelectorAll('[class*="fit"],[class*="score"],[class*="match"]').forEach(function(el) {
+      if (el.textContent.indexOf('NaN') > -1) el.textContent = el.textContent.replace(/NaN%?/g,'N/A');
+    });
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(init, 1500);
+  } else {
+    window.addEventListener('load', function(){ setTimeout(init, 1500); });
+  }
+
+  console.log('[v15] WholesaleOS UI patch loaded — real comps, seller script, full address, buyer send');
+})();
 </script>
 </body>
 </html>
