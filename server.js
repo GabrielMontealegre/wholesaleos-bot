@@ -3631,7 +3631,94 @@ app.post('/api/leads/delete-bulk', function(req, res) {
 
 // Start server
 
-// NOTE: express.json can crash on invalid input — protected with error handler
+// NOTE: express.json can crash on invalid 
+// ============================================================
+// COMP AGENT ROUTES — real Redfin+Zillow+LLaMA comps
+// ============================================================
+var compAgent; try { compAgent = require('./modules/agents/comp-agent'); } catch(e) { console.error('[server] comp-agent load error:', e.message); }
+var sellerScriptAgent; try { sellerScriptAgent = require('./modules/agents/seller-script-agent'); } catch(e) { console.error('[server] seller-script-agent load error:', e.message); }
+
+// GET /api/leads/:id/comps — fetch real comps on demand
+app.get('/api/leads/:id/comps', async function(req, res) {
+  if (!compAgent) return res.status(503).json({ error: 'Comp agent not loaded' });
+  try {
+    var result = await compAgent.fetchCompsForLead(req.params.id);
+    if (result.error) return res.status(404).json(result);
+    res.json(result);
+  } catch(e) {
+    logger.error('[comps] Error: ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/leads/:id/seller-script — generate tailored seller call script
+app.get('/api/leads/:id/seller-script', async function(req, res) {
+  if (!sellerScriptAgent) return res.status(503).json({ error: 'Seller script agent not loaded' });
+  try {
+    var result = await sellerScriptAgent.generateSellerScript(req.params.id);
+    res.json(result);
+  } catch(e) {
+    logger.error('[seller-script] Error: ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/leads/search-fresh — on-demand lead search for any state
+app.post('/api/leads/search-fresh', async function(req, res) {
+  try {
+    var state = (req.body.state || 'TX').toString().toUpperCase().slice(0,2);
+    var count = Math.min(parseInt(req.body.count) || 50, 200);
+    var dealEngine = require('./modules/deal-engine');
+    var inserted = await dealEngine.runDailyIngestion(state, count);
+    res.json({ ok: true, state, requested: count, inserted: inserted || 0 });
+  } catch(e) {
+    logger.error('[search-fresh] Error: ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/buyers/:id/send-leads — send matching leads WITHOUT address
+app.post('/api/buyers/:id/send-leads', async function(req, res) {
+  try {
+    var dbData = db.readDB();
+    var buyer = (dbData.buyers || []).find(function(b) { return b.id === req.params.id; });
+    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
+    var leadIds = req.body.lead_ids || [];
+    if (!leadIds.length) return res.status(400).json({ error: 'No lead_ids provided' });
+    var leads = db.getLeads().filter(function(l) { return leadIds.includes(l.id); });
+    // Build message WITHOUT address (protected until contract signed)
+    var lines = ['Hi ' + (buyer.name||'Investor') + ', here are ' + leads.length + ' properties matching your buy box:\n'];
+    leads.forEach(function(l, i) {
+      var arv    = l.arv    ? '$' + Math.round(l.arv).toLocaleString()    : 'TBD';
+      var mao    = l.mao    ? '$' + Math.round(l.mao).toLocaleString()    : 'TBD';
+      var spread = l.spread ? '$' + Math.round(l.spread).toLocaleString() : 'TBD';
+      var fee    = (l.fee_lo && l.fee_hi) ? '$' + Math.round(l.fee_lo).toLocaleString() + '-$' + Math.round(l.fee_hi).toLocaleString() : 'TBD';
+      lines.push(
+        (i+1) + '. ' + (l.city||'') + ', ' + (l.state||'') + ' — ' + (l.lead_type||'SFR') + '\n' +
+        '   ARV: ' + arv + ' | Asking: ' + mao + ' | Spread: ' + spread + ' | Fee: ' + fee + '\n' +
+        '   Source: ' + (l.source||'Public Record') + ' | Status: ' + (l.status||'New Lead') + '\n' +
+        '   [Address withheld — provided upon signed contract]\n'
+      );
+    });
+    lines.push('\nInterested in any of these? Reply with the number and I will send you the full details and contract.');
+    var message = lines.join('\n');
+    res.json({ ok: true, buyer_id: buyer.id, buyer_name: buyer.name, lead_count: leads.length, message });
+  } catch(e) {
+    logger.error('[send-leads] Error: ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Daily comp batch cron — 4AM UTC
+try {
+  var cron = require('node-cron');
+  cron.schedule('0 4 * * *', function() {
+    if (!compAgent) return;
+    compAgent.runDailyCompBatch().catch(function(e) { console.error('[cron][comp-batch] Error:', e.message); });
+  }, { timezone: 'UTC' });
+} catch(e) { console.error('[cron] comp batch schedule error:', e.message); }
+
+input — protected with error handler
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
