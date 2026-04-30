@@ -3785,6 +3785,16 @@ app.get('/api/debug/comp-test', async function(req,res){
   res.json({errors,redfinResult,zillowResult,skipResult});
 });
 
+
+app.get('/api/debug/env', function(req,res){
+  res.json({
+    SCRAPERAPI: !!process.env.SCRAPERAPI_KEY,
+    GROQ: !!process.env.GROQ_API_KEY,
+    ANTHROPIC: !!process.env.ANTHROPIC_API_KEY,
+    RENTCAST: !!process.env.RENTCAST_API_KEY,
+  });
+});
+
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
