@@ -826,10 +826,17 @@ function matchBuyers(lead) {
 }
 
 function matchScore(buyer, lead) {
-  let score = buyer.score;
-  if (buyer.preferred && lead.category && buyer.preferred.some(p => lead.category.toLowerCase().includes(p.toLowerCase()))) score += 10;
-  if (buyer.markets && lead.county && buyer.markets.some(m => lead.county.toLowerCase().includes(m.toLowerCase()))) score += 10;
-  return Math.min(score, 100);
+  var score = 60;
+  // State match: +20
+  if (buyer.state && lead.state && buyer.state.toUpperCase() === lead.state.toUpperCase()) score += 20;
+  // Price fit: +15 if lead ARV is within buyer max
+  if (buyer.maxPrice && lead.arv && lead.arv * 0.85 <= buyer.maxPrice) score += 15;
+  // Buy type match: +10
+  var leadType = (lead.lead_type || lead.property_type || 'SFR').toUpperCase();
+  if (buyer.buyTypes && buyer.buyTypes.some(function(t){ return t.toUpperCase().indexOf(leadType) > -1 || leadType.indexOf(t.toUpperCase()) > -1; })) score += 10;
+  // Spread bonus: higher spread = better fit
+  if (lead.spread && lead.spread >= 20000) score += 5;
+  return Math.min(score, 99);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1388,7 +1395,7 @@ function renderLeadDetail(l) {
   if (buyers.length) {
     buyers.slice(0,3).forEach(b => {
       const s = matchScore(b, l);
-      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + b.type + ' &middot; ' + b.contact + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
+      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + (b.state||'Any state') + ' &middot; ' + ((b.buyTypes||[]).join(', ')||'All types') + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
     });
   } else {
     html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
@@ -7017,7 +7024,7 @@ function renderLeadDetail(l) {
   if (buyers.length) {
     buyers.slice(0,3).forEach(b => {
       const s = matchScore(b, l);
-      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + b.type + ' &middot; ' + b.contact + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
+      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + (b.state||'Any state') + ' &middot; ' + ((b.buyTypes||[]).join(', ')||'All types') + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lid + '" data-bid="' + b.id + '">Send</button></div></div>';
     });
   } else {
     html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
