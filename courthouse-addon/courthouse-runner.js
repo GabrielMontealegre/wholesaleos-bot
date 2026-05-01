@@ -48,12 +48,12 @@ function loadSources() {
   const raw = fs.readFileSync(CONFIG.csv, 'utf8');
   const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true });
   return rows
-    .filter(r => r.States && r.Link && r.Link.startsWith('http'))
+    .filter(r => r.States && (r.URL || r.Link) && (r.URL || r.Link).startsWith('http'))
     .map(r => ({
       state:   r.States.trim(),
       market:  r.Market.trim(),
       type:    r.Type.trim(),
-      url:     r.Link.trim(),
+      url:     (r.URL || r.Link).trim(),
     }));
 }
 
@@ -202,7 +202,7 @@ function normalizeAddress(addr) {
 
 // ── Send to existing WholesaleOS pipeline ────────────────────────
 async function sendToExistingPipeline(leads) {
-  const BASE_URL = process.env.WHOLESALEOS_API || 'http://localhost:3000';
+  const BASE_URL = process.env.WHOLESALEOS_API || ('http://localhost:' + (process.env.PORT || 8080));
   const axios = require('axios');
 
   console.log(`\nSending ${leads.length} leads to WholesaleOS pipeline...`);
