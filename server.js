@@ -1,4 +1,4 @@
-// Deploy: 2026-05-01T06:16:09.275Z
+// Deploy: 2026-05-01T06:51:52.400Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3873,6 +3873,34 @@ cron.schedule('0 5 * * *', function() {
     .then(function(r) { logger.info('[Courthouse] Daily scrape done:', JSON.stringify(r)); })
     .catch(function(e) { logger.error('[Courthouse] Error:', e.message); });
 });
+
+// POST /api/leads/run-ingestion — trigger fresh lead fetch from all sources
+app.post('/api/leads/run-ingestion', requireAdmin, async function(req, res) {
+  var source = req.body && req.body.source || 'all';
+  var count  = (req.body && req.body.count) || 100;
+  var results = {};
+  try {
+    if (source === 'all' || source === 'arcgis') {
+      var ag = require('./modules/sources/arcgis_sources');
+      results.arcgis = await ag.fetchAllArcGIS(count);
+    }
+    if (source === 'all' || source === 'opendata') {
+      var od = require('./modules/sources/open_data_sources');
+      results.opendata = await od.fetchAllOpenData(count);
+    }
+    if (source === 'all' || source === 'engine') {
+      var de = require('./modules/deal-engine');
+      results.engine = await de.runDailyIngestion();
+    }
+    var total = Object.values(results).reduce(function(a,b){return a+(typeof b==='number'?b:0);},0);
+    logger.info('[ingestion] Manual run: '+JSON.stringify(results));
+    res.json({ ok: true, source: source, results: results, total_added: total });
+  } catch(e) {
+    logger.error('[ingestion] Error: '+e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
