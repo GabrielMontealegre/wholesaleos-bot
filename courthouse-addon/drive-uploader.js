@@ -1,140 +1,117 @@
-/**
- * DriveUploader — uploads downloaded courthouse files to Google Drive
- * Folder structure: /Courthouse_Automation/Raw_Downloads/State/County/YYYY-MM-DD/
- */
-
 'use strict';
+const path   = require('path');
+const fs     = require('fs');
+const { google } = require('googleapis');
 
-const fs   = require('fs');
-const path = require('path');
+// Folder structure: WholesaleOS / {State} / {lead_type}
+const ROOT_FOLDER_NAME = 'WholesaleOS Courthouse Leads';
+
+function getTypeFolder(sourceType) {
+  var t = (sourceType || '').toLowerCase();
+  if (t.indexOf('tax') > -1 || t.indexOf('lien') > -1 || t.indexOf('delinq') > -1) return 'Tax Delinquent';
+  if (t.indexOf('foreclos') > -1 || t.indexOf('pre-foreclos') > -1 || t.indexOf('lis pendens') > -1) return 'Pre-Foreclosure';
+  if (t.indexOf('auction') > -1 || t.indexOf('probate') > -1) return 'Auctions';
+  return 'Other';
+}
 
 class DriveUploader {
   constructor() {
-    this.drive     = null;
-    this.rootId    = null;
-    this.folderCache = {};
-    this.enabled   = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    this._drive   = null;
+    this._folders = {}; // cache: 'State/Type' -> folderId
+    this._rootId  = null;
+    this._enabled = false;
+    this._initAttempted = false;
   }
 
-  async init() {
-    if (this.drive || !this.enabled) return;
+  async _init() {
+    if (this._initAttempted) return;
+    this._initAttempted = true;
+    var keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    if (!keyJson) {
+      console.log('[drive-uploader] GOOGLE_SERVICE_ACCOUNT_KEY not set — Drive upload disabled');
+      return;
+    }
     try {
-      const { google } = require('googleapis');
-      const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-      const key = typeof keyJson === 'string' ? JSON.parse(keyJson) : keyJson;
-      const auth = new google.auth.GoogleAuth({
+      var key = JSON.parse(keyJson);
+      var auth = new google.auth.GoogleAuth({
         credentials: key,
         scopes: ['https://www.googleapis.com/auth/drive']
       });
-      this.drive = google.drive({ version: 'v3', auth });
-      this.rootId = await this.ensureFolder('Courthouse_Automation', null);
-    } catch (err) {
-      console.log(`    Drive init failed: ${err.message} — uploads disabled`);
-      this.enabled = false;
+      this._drive = google.drive({ version: 'v3', auth: await auth.getClient() });
+      this._enabled = true;
+      console.log('[drive-uploader] initialized OK');
+    } catch(e) {
+      console.error('[drive-uploader] init error: ' + e.message);
     }
   }
 
-  async upload(filePath, src, dateStr) {
-    if (!this.enabled) return null;
-    await this.init();
-    if (!this.drive) return null;
-
+  async _getOrCreateFolder(name, parentId) {
+    var cacheKey = (parentId || 'root') + '/' + name;
+    if (this._folders[cacheKey]) return this._folders[cacheKey];
+    // Search for existing
+    var q = "name='" + name + "' and mimeType='application/vnd.google-apps.folder' and trashed=false";
+    if (parentId) q += " and '" + parentId + "' in parents";
     try {
-      // Build folder path: Root > Raw_Downloads > State > Market > Date
-      const rawId    = await this.ensureFolder('Raw_Downloads', this.rootId);
-      const stateId  = await this.ensureFolder(src.state, rawId);
-      const marketId = await this.ensureFolder(src.market.replace(/[^a-z0-9 ]/gi, '_'), stateId);
-      const dateId   = await this.ensureFolder(dateStr, marketId);
-
-      const fileName = path.basename(filePath);
-      const mimeType = this.getMimeType(filePath);
-      const fileSize = fs.statSync(filePath).size;
-
-      if (fileSize === 0) return null;
-
-      const res = await this.drive.files.create({
-        requestBody: {
-          name:    fileName,
-          parents: [dateId],
-        },
-        media: {
-          mimeType,
-          body: fs.createReadStream(filePath),
-        },
-        fields: 'id,name,webViewLink',
-      });
-
-      return res.data.webViewLink;
-    } catch (err) {
-      console.log(`    Drive upload error: ${err.message}`);
+      var res = await this._drive.files.list({ q: q, fields: 'files(id,name)', pageSize: 5 });
+      if (res.data.files && res.data.files.length > 0) {
+        this._folders[cacheKey] = res.data.files[0].id;
+        return res.data.files[0].id;
+      }
+      // Create it
+      var meta = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+      if (parentId) meta.parents = [parentId];
+      var created = await this._drive.files.create({ requestBody: meta, fields: 'id' });
+      this._folders[cacheKey] = created.data.id;
+      return created.data.id;
+    } catch(e) {
+      console.error('[drive-uploader] folder error: ' + e.message);
       return null;
     }
   }
 
-  async uploadProcessed(leads, category = 'Processed_Leads') {
-    if (!this.enabled || !leads.length) return null;
-    await this.init();
-    if (!this.drive) return null;
+  async upload(filePath, src, dateStr) {
+    await this._init();
+    if (!this._enabled || !this._drive) return { skipped: true, reason: 'drive not enabled' };
+    if (!filePath || !fs.existsSync(filePath)) return { skipped: true, reason: 'file not found' };
 
-    const folderId = await this.ensureFolder(category, this.rootId);
-    const fileName = `${category}-${new Date().toISOString().slice(0,10)}.json`;
-    const content  = JSON.stringify(leads, null, 2);
-    const tmpPath  = `/tmp/${fileName}`;
-    fs.writeFileSync(tmpPath, content);
+    try {
+      // Folder: WholesaleOS / State / TypeFolder
+      if (!this._rootId) {
+        this._rootId = await this._getOrCreateFolder(ROOT_FOLDER_NAME, null);
+      }
+      var stateId  = await this._getOrCreateFolder(src.state || 'Unknown', this._rootId);
+      var typeId   = await this._getOrCreateFolder(getTypeFolder(src.type), stateId);
 
-    const res = await this.drive.files.create({
-      requestBody: { name: fileName, parents: [folderId] },
-      media: { mimeType: 'application/json', body: fs.createReadStream(tmpPath) },
-      fields: 'id,webViewLink',
-    }).catch(() => null);
+      var filename = path.basename(filePath);
+      var ext = path.extname(filename).toLowerCase();
+      var mime = ext === '.pdf' ? 'application/pdf'
+               : ext === '.csv' ? 'text/csv'
+               : ext === '.xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+               : 'application/octet-stream';
 
-    fs.unlinkSync(tmpPath);
-    return res?.data?.webViewLink;
-  }
-
-  // ── Folder helpers ───────────────────────────────────────────────
-  async ensureFolder(name, parentId) {
-    const cacheKey = `${parentId}:${name}`;
-    if (this.folderCache[cacheKey]) return this.folderCache[cacheKey];
-
-    const query = [
-      `name='${name.replace(/'/g, "\\'")}'`,
-      `mimeType='application/vnd.google-apps.folder'`,
-      `trashed=false`,
-      parentId ? `'${parentId}' in parents` : null
-    ].filter(Boolean).join(' and ');
-
-    const list = await this.drive.files.list({ q: query, fields: 'files(id)' });
-    let id;
-    if (list.data.files.length) {
-      id = list.data.files[0].id;
-    } else {
-      const created = await this.drive.files.create({
+      var res = await this._drive.files.create({
         requestBody: {
-          name,
-          mimeType: 'application/vnd.google-apps.folder',
-          parents: parentId ? [parentId] : [],
+          name: (src.market || src.state) + '_' + (dateStr || '') + '_' + filename,
+          parents: [typeId]
         },
-        fields: 'id',
+        media: { mimeType: mime, body: fs.createReadStream(filePath) },
+        fields: 'id,webViewLink'
       });
-      id = created.data.id;
+
+      return {
+        uploaded: true,
+        fileId:   res.data.id,
+        driveUrl: res.data.webViewLink,
+        state:    src.state,
+        type:     getTypeFolder(src.type)
+      };
+    } catch(e) {
+      console.error('[drive-uploader] upload error: ' + e.message);
+      return { skipped: true, reason: e.message };
     }
-    this.folderCache[cacheKey] = id;
-    return id;
   }
 
-  getMimeType(filePath) {
-    const ext = path.extname(filePath).toLowerCase();
-    const map = {
-      '.csv':  'text/csv',
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.xls':  'application/vnd.ms-excel',
-      '.pdf':  'application/pdf',
-      '.json': 'application/json',
-      '.html': 'text/html',
-    };
-    return map[ext] || 'application/octet-stream';
-  }
+  isEnabled() { return this._enabled; }
 }
 
 module.exports = DriveUploader;
