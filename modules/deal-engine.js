@@ -14,6 +14,8 @@ const { findDeals: fwDeals }           = require('./sources/fort_worth');
 const { findDeals: buffaloDeals }      = require('./sources/buffalo');
 const { findDeals: pittsburghDeals }   = require('./sources/pittsburgh');
 const { findDeals: alleghenyDeals }    = require('./sources/allegheny');
+const arcgisSources = require('./sources/arcgis_sources');
+const openDataSources = require('./sources/open_data_sources');
 
 // All active sources — add new sources here, no other file changes needed
 const ALL_SOURCES = [
@@ -129,7 +131,7 @@ async function dealEngine(state, limit) {
 }
 
 async function runDailyIngestion() {
-  const states = ['NY','IL','PA','OH','MD','CA','TX','MA','MO','WA'];
+  const states = ['NY','IL','PA','OH','MD','CA','TX','MA','MO','WA','AZ','NC','TN'];
   for (const state of states) {
     try {
       await dealEngine(state, 50);
@@ -137,6 +139,10 @@ async function runDailyIngestion() {
       console.error('Daily ingestion error:', state, e.message);
     }
   }
+  // ArcGIS sources
+  try { await arcgisSources.fetchAllArcGIS(100); } catch(e) { console.error('[arcgis]', e.message); }
+  // Open data sources
+  try { await openDataSources.fetchAllOpenData(100); } catch(e) { console.error('[open-data]', e.message); }
   console.log('Daily ingestion complete');
 }
 
