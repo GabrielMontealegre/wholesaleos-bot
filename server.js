@@ -1,4 +1,4 @@
-// Deploy: 2026-04-30T22:55:46.351Z
+// Deploy: 2026-05-01T04:38:31.637Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3591,6 +3591,14 @@ cron.schedule('0 2 * * *', async () => {
   logger.info('Running daily ingestion...');
   await runDailyIngestion();
   logger.info('Daily ingestion complete');
+  // Run ArcGIS sources (5 cities, no Playwright needed)
+  try {
+    var arcgisSrc = require('./modules/sources/arcgis-sources');
+    var arcgisResult = await arcgisSrc.runArcGISSources();
+    logger.info('[arcgis] Added ' + arcgisResult.added + ' new leads from ArcGIS sources');
+  } catch(e) {
+    logger.error('[arcgis] Daily run error: ' + e.message);
+  }
 }, { timezone: 'UTC' });
 // ── Batch lead delete ──
 // POST /api/leads/delete-batch  body: { ids: ['id1','id2',...] }
@@ -3781,7 +3789,19 @@ app.get('/api/debug/comp-test', async function(req,res){
       var tpsRes=await axios.get(tpsUrl,{headers:H,timeout:10000});
       skipResult={status:tpsRes.status,len:tpsRes.data.length,preview:tpsRes.data.slice(0,300)};
     }catch(e){errors.push('TPS: '+e.message);}
-  }catch(e){errors.push('General: '+e.message);}
+ 
+// ── ArcGIS Sources API ────────────────────────────────────────────────────
+// POST /api/leads/run-arcgis — trigger ArcGIS sources manually
+app.post('/api/leads/run-arcgis', function(req, res) {
+  var arcgis;
+  try { arcgis = require('./modules/sources/arcgis-sources'); }
+  catch(e) { return res.status(503).json({ error: 'arcgis-sources unavailable: ' + e.message }); }
+  arcgis.runArcGISSources()
+    .then(function(r) { res.json({ ok: true, total: r.total, added: r.added }); })
+    .catch(function(e) { res.status(500).json({ error: e.message }); });
+});
+
+ }catch(e){errors.push('General: '+e.message);}
   res.json({errors,redfinResult,zillowResult,skipResult});
 });
 
