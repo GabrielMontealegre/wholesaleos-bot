@@ -3602,6 +3602,7 @@ cron.schedule('0 2 * * *', async () => {
 }, { timezone: 'UTC' });
 try{var ag=require('./modules/sources/arcgis-runner');ag.runArcGISSources(200).catch(function(e){logger.error('[arcgis] '+e.message);});}catch(e){logger.error('[arcgis] load: '+e.message);}
 try{var se=require('./modules/sources/socrata-extra');se.runExtraSocrataSources(200).catch(function(e){logger.error('[socrata-extra] '+e.message);});}catch(e){logger.error('[socrata-extra] load: '+e.message);}
+try{var s30=require('./modules/sources/socrata-30');s30.runSocrata30Sources(200).catch(function(e){logger.error('[socrata-30] '+e.message);});}catch(e){logger.error('[socrata-30] load: '+e.message);}
 
 // ── Batch lead delete ──
 // POST /api/leads/delete-batch  body: { ids: ['id1','id2',...] }
@@ -3910,6 +3911,88 @@ app.use(function(err, req, res, next) {
     return res.status(400).json({ error: 'Invalid JSON format' });
   }
   next(err);
+});
+
+
+// ── Courthouse automation routes ────────────────────────────────
+try {
+  var _chTab = require('./courthouse-addon/courthouse-tab');
+  _chTab.registerCourthouseRoutes(app);
+} catch(e) { logger.error('[courthouse-tab] failed to load: ' + e.message); }
+
+// ── POST /api/leads/search-fresh-v2 — manual trigger: state + county + source_type ──
+app.post('/api/leads/search-fresh-v2', async function(req, res) {
+  try {
+    var body      = req.body || {};
+    var state     = body.state     ? body.state.toString().toUpperCase().slice(0,2) : null;
+    var county    = body.county    ? body.county.toString().trim() : null;
+    var srcType   = body.source_type ? body.source_type.toString().toLowerCase() : null;
+    var count     = Math.min(parseInt(body.count || 100), 500);
+    var results   = { arcgis: 0, socrata: 0, socrataExtra: 0, socrata30: 0, dealEngine: 0 };
+    var errors    = [];
+
+    // Always run deal-engine for the state
+    if (state) {
+      try {
+        var de = require('./modules/deal-engine');
+        await de.dealEngine(state, count);
+        results.dealEngine = count;
+      } catch(e) { errors.push('dealEngine: ' + e.message); }
+    }
+
+    // ArcGIS sources (filter by state if given)
+    if (!srcType || srcType === 'arcgis' || srcType === 'code_violation') {
+      try {
+        var ag = require('./modules/sources/arcgis-runner');
+        var agR = await ag.runArcGISSources(Math.ceil(count/7));
+        results.arcgis = agR.inserted || 0;
+      } catch(e) { errors.push('arcgis: ' + e.message); }
+    }
+
+    // Socrata extra (20 cities)
+    if (!srcType || srcType === 'socrata' || srcType === 'code_violation') {
+      try {
+        var se = require('./modules/sources/socrata-extra');
+        var seR = await se.runExtraSocrataSources(Math.ceil(count/20));
+        results.socrataExtra = seR.inserted || 0;
+      } catch(e) { errors.push('socrata-extra: ' + e.message); }
+    }
+
+    // Socrata 30 new states
+    if (!srcType || srcType === 'socrata' || srcType === 'code_violation') {
+      try {
+        var s30 = require('./modules/sources/socrata-30');
+        var s30R = await s30.runSocrata30Sources(Math.ceil(count/30));
+        results.socrata30 = s30R.inserted || 0;
+      } catch(e) { errors.push('socrata-30: ' + e.message); }
+    }
+
+    // Courthouse automation (Playwright portals) if requested
+    if (srcType === 'courthouse' || srcType === 'tax_delinquent' || srcType === 'pre_foreclosure' || srcType === 'auction') {
+      try {
+        var ct = require('./courthouse-addon/courthouse-tab');
+        // Map source_type to courthouse lead type
+        var stateFilter = state ? [state] : null;
+        var ctR = await require('./courthouse-addon/courthouse-runner').runCourthouseAutomation({ states: stateFilter });
+        results.courthouse = ctR.summary.newLeads || 0;
+      } catch(e) { errors.push('courthouse: ' + e.message); }
+    }
+
+    var totalInserted = Object.values(results).reduce(function(a,b){ return a+(b||0); }, 0);
+    res.json({ ok: true, inserted: totalInserted, breakdown: results, errors: errors, filters: { state: state, county: county, source_type: srcType, count: count } });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/leads/sources — list all available states and source types
+app.get('/api/leads/sources', function(req, res) {
+  res.json({
+    source_types: ['arcgis','socrata','code_violation','tax_delinquent','pre_foreclosure','auction','courthouse'],
+    states: ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'],
+    priority_markets: ['TX','FL','GA','OH','PA','IL','MI','NC','TN','MD','NY','CA','AZ','NV','CO'],
+    total_sources: 73
+  });
 });
 
 app.listen(PORT, () => {
