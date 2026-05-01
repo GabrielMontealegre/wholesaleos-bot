@@ -8,7 +8,8 @@ const SOURCES = [
   {
     market: 'Glendale, AZ', state: 'AZ', city: 'Glendale',
     url: 'https://services1.arcgis.com/9fVTQQSiODPjLUTa/arcgis/rest/services/GlendaleOne_Code_Compliance_Cases/FeatureServer/0/query',
-    addrField: 'Address', dateField: 'RequestDate', typeField: 'CaseType', caseField: 'CodeCaseNumber',
+    addrField: 'Address', streetNumField: 'StreetNum', streetNameField: 'StreetName', cityField: 'CityName',
+    dateField: 'RequestDate', typeField: 'RequestTypeName', caseField: 'CodeCaseNumber',
     source: 'Glendale AZ Code Violations', sourceUrl: 'https://hub.arcgis.com/maps/8026de93be8147d2aa2941c3e7ceed97'
   },
   {
@@ -63,12 +64,13 @@ async function fetchFromArcGIS(src, count) {
   const leads = [];
   features.forEach(function(feat) {
     const a = feat.attributes || {};
-    const address = a[src.addrField] || a.Address || a.address || a.Property_Address || a.complaint_address || '';
+    const address = a[src.addrField] || a.Address || a.address || a.Property_Address || a.complaint_address ||
+      (src.streetNumField && src.streetNameField ? ((a[src.streetNumField]||'') + ' ' + (a[src.streetNameField]||'')).trim() : '') || '';
     if (!address || address.length < 5) return;
     // Build lead object
     const lead = {
       address: address.trim().toUpperCase(),
-      city: a.City || a.city || src.city,
+      city: (src.cityField && a[src.cityField]) || a.City || a.city || src.city,
       state: a.State || a.state || src.state,
       zip: String(a.ZIP || a.zip || a.Zip || a.complaint_zip || ''),
       county: src.market,
