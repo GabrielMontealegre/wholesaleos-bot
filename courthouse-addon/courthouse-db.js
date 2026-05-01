@@ -1,87 +1,56 @@
-/**
- * CourthouseDB — isolated database for courthouse leads
- * Completely separate from the main WholesaleOS db.js
- * Uses its own JSON file: courthouse-leads.json
- */
-
 'use strict';
-
 const fs   = require('fs');
 const path = require('path');
 
 class CourthouseDB {
-  constructor(dbPath) {
-    this.dbPath = dbPath || path.join(__dirname, 'courthouse-leads.json');
-    this._cache = null;
+  constructor(dbFile) {
+    this.dbFile = dbFile || path.join(__dirname, 'courthouse-leads.json');
+    this._data  = null;
   }
 
-  read() {
-    if (!fs.existsSync(this.dbPath)) {
-      return { leads: [], lastRun: null, totalProcessed: 0 };
-    }
+  _load() {
+    if (this._data) return this._data;
     try {
-      return JSON.parse(fs.readFileSync(this.dbPath, 'utf8'));
-    } catch {
-      return { leads: [], lastRun: null, totalProcessed: 0 };
+      this._data = JSON.parse(fs.readFileSync(this.dbFile, 'utf8'));
+    } catch(e) {
+      this._data = { leads: [], addresses: [] };
     }
+    return this._data;
   }
 
-  write(data) {
-    fs.writeFileSync(this.dbPath, JSON.stringify(data, null, 2));
-    this._cache = null;
-  }
-
-  getLeads(filters = {}) {
-    const db = this.read();
-    let leads = db.leads || [];
-    if (filters.state)    leads = leads.filter(l => l.state === filters.state);
-    if (filters.type)     leads = leads.filter(l => (l.lead_type||'').includes(filters.type));
-    if (filters.flag)     leads = leads.filter(l => (l.priority_flags||[]).includes(filters.flag));
-    if (filters.expiring) leads = leads.filter(l => l.expiring_soon);
-    if (filters.daysBack) {
-      const cutoff = Date.now() - filters.daysBack * 86400000;
-      leads = leads.filter(l => new Date(l.created).getTime() > cutoff);
-    }
-    return leads;
-  }
-
-  appendLeads(newLeads) {
-    const db = this.read();
-    const existing = new Set((db.leads || []).map(l => this.normalizeAddr(l.address)));
-    const added = newLeads.filter(l => {
-      const key = this.normalizeAddr(l.address);
-      if (!key || existing.has(key)) return false;
-      existing.add(key);
-      return true;
-    });
-    db.leads = [...(db.leads || []), ...added];
-    db.lastRun = new Date().toISOString();
-    db.totalProcessed = (db.totalProcessed || 0) + added.length;
-    this.write(db);
-    return added.length;
+  _save() {
+    fs.writeFileSync(this.dbFile, JSON.stringify(this._data, null, 2));
   }
 
   getAddressSet() {
-    const db = this.read();
-    return new Set((db.leads || []).map(l => this.normalizeAddr(l.address)).filter(Boolean));
+    var data = this._load();
+    return new Set((data.addresses || []));
   }
 
-  getStats() {
-    const db = this.read();
-    const leads = db.leads || [];
-    const byType = {}, byState = {};
-    let expiring = 0;
-    leads.forEach(l => {
-      byType[l.lead_type]  = (byType[l.lead_type]  || 0) + 1;
-      byState[l.state]     = (byState[l.state]      || 0) + 1;
-      if (l.expiring_soon) expiring++;
+  appendLeads(leads) {
+    var data = this._load();
+    if (!data.leads)     data.leads     = [];
+    if (!data.addresses) data.addresses = [];
+    var addrSet = new Set(data.addresses);
+    var added = 0;
+    leads.forEach(function(lead) {
+      var key = (lead.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!key || addrSet.has(key)) return;
+      data.leads.push(lead);
+      data.addresses.push(key);
+      addrSet.add(key);
+      added++;
     });
-    return { total: leads.length, expiring, byType, byState, lastRun: db.lastRun };
+    if (added > 0) this._save();
+    return added;
   }
 
-  normalizeAddr(addr) {
-    if (!addr) return null;
-    return addr.toLowerCase().replace(/[^a-z0-9]/g, '');
+  getLeads() {
+    return this._load().leads || [];
+  }
+
+  count() {
+    return (this._load().leads || []).length;
   }
 }
 
