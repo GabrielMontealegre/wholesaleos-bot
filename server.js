@@ -1,4 +1,4 @@
-// Deploy: 2026-05-01T05:41:27.267Z
+// Deploy: 2026-05-01T06:16:09.275Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3837,6 +3837,42 @@ app.post('/api/leads/fetch-now', requireAdmin, async function(req, res) {
   }
 });
 
+// POST /api/courthouse/scrape — on-demand courthouse scrape
+app.post('/api/courthouse/scrape', requireAdmin, function(req, res) {
+  var limit = parseInt(req.body && req.body.limit) || 5;
+  var scraper;
+  try { scraper = require('./courthouse-addon/scraper'); }
+  catch(e) { return res.status(503).json({ error: 'Scraper unavailable: ' + e.message }); }
+  scraper.scrapeAllPortals(limit)
+    .then(function(r) { res.json(r); })
+    .catch(function(e) { res.status(500).json({ error: e.message }); });
+});
+
+// GET /api/courthouse/status — list all portals and their types
+app.get('/api/courthouse/status', requireAdmin, function(req, res) {
+  try {
+    var scraper = require('./courthouse-addon/scraper');
+    var rows = scraper.readMastersheet();
+    var summary = {};
+    rows.forEach(function(r) {
+      var type = scraper.classifyPortal(r.url);
+      if(!summary[type]) summary[type] = [];
+      summary[type].push({ market: r.market, state: r.state, type: r.type });
+    });
+    res.json({ total: rows.length, byType: summary });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Courthouse cron: run Playwright scraper daily at 5AM UTC (after Socrata/ArcGIS at 2AM)
+cron.schedule('0 5 * * *', function() {
+  logger.info('[Courthouse] Starting daily Playwright scrape');
+  var scraper;
+  try { scraper = require('./courthouse-addon/scraper'); }
+  catch(e) { logger.error('[Courthouse] Scraper unavailable: ' + e.message); return; }
+  scraper.scrapeAllPortals(10)
+    .then(function(r) { logger.info('[Courthouse] Daily scrape done:', JSON.stringify(r)); })
+    .catch(function(e) { logger.error('[Courthouse] Error:', e.message); });
+});
 app.use(function(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     logger.error('Invalid JSON received: ' + err.message);
