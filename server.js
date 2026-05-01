@@ -1,4 +1,4 @@
-// Deploy: 2026-05-01T04:38:31.637Z
+// Deploy: 2026-05-01T05:41:27.267Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3813,6 +3813,28 @@ app.get('/api/debug/env', function(req,res){
     ANTHROPIC: !!process.env.ANTHROPIC_API_KEY,
     RENTCAST: !!process.env.RENTCAST_API_KEY,
   });
+});
+
+// POST /api/leads/fetch-now — trigger ingestion on demand (admin only)
+app.post('/api/leads/fetch-now', requireAdmin, async function(req, res) {
+  var source = req.body && req.body.source;
+  try {
+    var de = require('./modules/deal-engine');
+    if (source === 'arcgis') {
+      var arc = require('./modules/sources/arcgis_sources');
+      var n = await arc.fetchAllArcGIS(req.body.count||100);
+      return res.json({ ok: true, added: n, source: 'arcgis' });
+    } else if (source === 'opendata') {
+      var od = require('./modules/sources/open_data_sources');
+      var n2 = await od.fetchAllOpenData(req.body.count||100);
+      return res.json({ ok: true, added: n2, source: 'opendata' });
+    } else {
+      await de.runDailyIngestion();
+      return res.json({ ok: true, source: 'all' });
+    }
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.use(function(err, req, res, next) {
