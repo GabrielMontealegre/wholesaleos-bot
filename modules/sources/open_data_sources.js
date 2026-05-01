@@ -1,5 +1,5 @@
 // modules/sources/open_data_sources.js
-// Socrata open data: Mesa AZ, LA CA, Boston MA, Kansas City MO, Philadelphia PA, Austin TX, Seattle WA
+// Socrata open data: Mesa AZ, LA CA, Hartford CT, Louisville KY, NOLA LA, Boston MA, Kansas City MO, Fayetteville NC, Buffalo NY, Philadelphia PA, Pittsburgh PA, Fort Worth TX, Norfolk VA, Austin TX, Seattle WA
 'use strict';
 const axios = require('axios');
 const db = require('../../db');
@@ -47,6 +47,54 @@ const SOURCES = [
     addrField: 'address', typeField: 'complaint_type', dateField: 'originalcompliancedate',
     source: 'Seattle WA Code Complaints', sourceUrl: 'https://data.seattle.gov'
   },
+  {
+    market: "Hartford, CT", state: "CT", city: "Hartford",
+    url: "https://data.hartford.gov/resource/pers-xhpw.json",
+    addrField: "location_1_address", typeField: "description", dateField: "date_of_violation",
+    source: "Hartford CT Code Violations", sourceUrl: "https://data.hartford.gov"
+  },
+  {
+    market: "Louisville, KY", state: "KY", city: "Louisville",
+    url: "https://data.louisvilleky.gov/resource/5g9f-e75h.json",
+    addrField: "address", typeField: "violation_code_description", dateField: "case_date",
+    source: "Louisville KY Code Violations", sourceUrl: "https://data.louisvilleky.gov"
+  },
+  {
+    market: "New Orleans, LA", state: "LA", city: "New Orleans",
+    url: "https://data.nola.gov/resource/gcku-jbr4.json",
+    addrField: "address", typeField: "casesubtype", dateField: "caseopendate",
+    source: "New Orleans LA Code Enforcement", sourceUrl: "https://data.nola.gov"
+  },
+  {
+    market: "Fayetteville, NC", state: "NC", city: "Fayetteville",
+    url: "https://services.arcgis.com/ijFJ1wfcEDLCXdDc/arcgis/rest/services/CodeEnforcement/FeatureServer/0/query?where=1%3D1&outFields=*&f=json&resultRecordCount=100",
+    addrField: "Address", typeField: "ViolationType", dateField: "DateOpened", isArcGISRaw: true,
+    source: "Fayetteville NC Code Violations", sourceUrl: "https://data.fayettevillenc.gov"
+  },
+  {
+    market: "Buffalo, NY", state: "NY", city: "Buffalo",
+    url: "https://data.buffalony.gov/resource/6c2n-d9h7.json",
+    addrField: "parcel_address", typeField: "violation_type", dateField: "inspection_date",
+    source: "Buffalo NY Housing Violations", sourceUrl: "https://data.buffalony.gov"
+  },
+  {
+    market: "Pittsburgh, PA", state: "PA", city: "Pittsburgh",
+    url: "https://data.wprdc.org/resource/pzpb-38hp.json",
+    addrField: "street_num_name", typeField: "viol_desc", dateField: "compl_date",
+    source: "Pittsburgh PA PLI Violations", sourceUrl: "https://data.wprdc.org"
+  },
+  {
+    market: "Fort Worth, TX", state: "TX", city: "Fort Worth",
+    url: "https://data.fortworthtexas.gov/resource/spnu-bq4u.json",
+    addrField: "address_location", typeField: "description", dateField: "date_filed",
+    source: "Fort Worth TX Code Violations", sourceUrl: "https://data.fortworthtexas.gov"
+  },
+  {
+    market: "Norfolk, VA", state: "VA", city: "Norfolk",
+    url: "https://data.norfolk.gov/resource/tfj5-edcq.json",
+    addrField: "siteaddress", typeField: "casesubtype", dateField: "opendate",
+    source: "Norfolk VA Code Violations", sourceUrl: "https://data.norfolk.gov"
+  },
 ];
 
 async function fetchFromSocrata(src, count) {
@@ -58,6 +106,9 @@ async function fetchFromSocrata(src, count) {
   } else if (src.isCarto) {
     const res = await axios.get(src.url, { timeout: 20000 });
     rows = (res.data && res.data.rows) || [];
+  } else if (src.isArcGISRaw) {
+    const res = await axios.get(src.url, { timeout: 20000 });
+    rows = ((res.data && res.data.features) || []).map(function(f){ return f.attributes || {}; });
   } else {
     const url = src.url + (src.url.indexOf('?') > -1 ? '&' : '?') + '$limit=' + count + '&$order=' + src.dateField + '+DESC';
     const res = await axios.get(url, { timeout: 20000 });
