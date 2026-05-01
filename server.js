@@ -3600,6 +3600,9 @@ cron.schedule('0 2 * * *', async () => {
     logger.error('[arcgis] Daily run error: ' + e.message);
   }
 }, { timezone: 'UTC' });
+try{var ag=require('./modules/sources/arcgis-runner');ag.runArcGISSources(200).catch(function(e){logger.error('[arcgis] '+e.message);});}catch(e){logger.error('[arcgis] load: '+e.message);}
+try{var se=require('./modules/sources/socrata-extra');se.runExtraSocrataSources(200).catch(function(e){logger.error('[socrata-extra] '+e.message);});}catch(e){logger.error('[socrata-extra] load: '+e.message);}
+
 // ── Batch lead delete ──
 // POST /api/leads/delete-batch  body: { ids: ['id1','id2',...] }
 app.post('/api/leads/delete-batch', function(req, res) {
