@@ -1,5 +1,5 @@
 // modules/sources/arcgis_sources.js
-// ArcGIS FeatureServer sources: Glendale AZ, Greensboro NC, Wake County NC, Syracuse NY, Nashville TN
+// ArcGIS FeatureServer sources: Glendale AZ, Placer County CA, South Bend IN, Greensboro NC, Wake County NC, Syracuse NY, Nashville TN
 'use strict';
 const axios = require('axios');
 const db = require('../../db');
@@ -34,6 +34,18 @@ const SOURCES = [
     url: 'https://services2.arcgis.com/HdTo6HJqh92wn4D8/arcgis/rest/services/Property_Standards_Violations_2/FeatureServer/0/query',
     addrField: 'Property_Address', dateField: 'Date_Received', typeField: 'Violation_Type', caseField: 'Request_Nbr',
     source: 'Nashville TN Property Violations', sourceUrl: 'https://datanashvillegov-nashville.hub.arcgis.com/datasets/038de0cf3d35435c8c563b731265c036_0'
+  },
+  {
+    market: "Placer County, CA", state: "CA", city: "Auburn",
+    url: "https://services1.arcgis.com/L5bq1UhFYKOc0bKR/arcgis/rest/services/Code_Enforcement_Cases/FeatureServer/0/query",
+    addrField: "SiteAddress", dateField: "OpenDate", typeField: "ViolationType", caseField: "CaseNumber",
+    source: "Placer County CA Code Enforcement", sourceUrl: "https://hub.arcgis.com/datasets/ef7447d4efc2439a8a96727509fa57c5_4"
+  },
+  {
+    market: "South Bend, IN", state: "IN", city: "South Bend",
+    url: "https://services.arcgis.com/AF20J31nGaez0LkQ/arcgis/rest/services/code_enforcement/FeatureServer/0/query",
+    addrField: "address", dateField: "open_date", typeField: "case_type", caseField: "case_number",
+    source: "South Bend IN Code Enforcement", sourceUrl: "https://hub.arcgis.com/datasets/ff1172d09ae94928b1e3b9c47d3eec8f_50"
   },
 ];
 
