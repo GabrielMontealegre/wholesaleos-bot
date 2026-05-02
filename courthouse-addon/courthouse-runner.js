@@ -167,19 +167,21 @@ async function processSingleSource(src, scraper, parser, uploader, formatter, db
   let allLeads = [];
 
   for (const filePath of downloadedFiles) {
-    try {
-      const raw = await parser.parse(filePath, src);
-      const leads = raw.map(record => formatter.format(record, src));
-      allLeads.push(...leads);
+      try {
+        const raw = await parser.parse(filePath, src);
+        const leads = raw.map(record => formatter.format(record, src));
+        allLeads.push(...leads);
 
-      // Upload to Google Drive
-      if (config.useDrive && filePath) {
-        await uploader.upload(filePath, src, dateStr).catch(() => {});
+        // Upload to Google Drive
+        if (config.useDrive && filePath) {
+          await uploader.upload(filePath, src, dateStr).catch(err => {
+            console.warn(`Upload failed for ${filePath}: ${err.message}`);
+          });
+        }
+      } catch (e) {
+        console.log(`    Parse error ${path.basename(filePath)}: ${e.message}`);
       }
-    } catch (e) {
-      console.log(`    Parse error ${path.basename(filePath)}: ${e.message}`);
     }
-  }
 
   return { leads: allLeads, files: downloadedFiles.length };
 }
