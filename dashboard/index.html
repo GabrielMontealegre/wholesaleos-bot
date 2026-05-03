@@ -1365,7 +1365,7 @@ function renderLeadDetail(l) {
   const sigs = (l.distress_signals||l.motivation||[]);
   if (sigs.length) {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
-    sigs.forEach(s => { html += '<span class="badge b-red">' + s + '</span>'; });
+    (Array.isArray(sigs)?sigs:[]).forEach(function(sg){ html += '<span class="badge b-red">' + sg + '</span>'; });
     if (l.investment_strategy) html += '<span class="badge b-blue">' + l.investment_strategy + '</span>';
     html += '</div>';
   }
@@ -14263,6 +14263,221 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 else{document.body.appendChild(fb);}
 })();
 // ===== END PULL LEADS NOW =====
+
+// ===== LEAD FILTERS + BULK DELETE =====
+(function(){
+var filterBar = "<div id='leadFilterBar' style='display:none;padding:12px 16px;background:#f8f8fb;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px;align-items:center;'>" +
+"<div style='display:flex;align-items:center;gap:6px;'>" +
+"<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>STATE</span>" +
+"<select id='lfState' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;' onchange='applyLeadFilters()'>" +
+"<option value=''>All States</option>" +
+"<option value='TX'>TX</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='OH'>OH</option><option value='PA'>PA</option><option value='IL'>IL</option><option value='MI'>MI</option><option value='NC'>NC</option><option value='TN'>TN</option><option value='MD'>MD</option><option value='NY'>NY</option><option value='CA'>CA</option><option value='AZ'>AZ</option><option value='NV'>NV</option><option value='CO'>CO</option>" +
+"<option value='AL'>AL</option><option value='AK'>AK</option><option value='AR'>AR</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MA'>MA</option><option value='MN'>MN</option>" +
+"<option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='ND'>ND</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='UT'>UT</option><option value='VT'>VT</option>" +
+"<option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option>" +
+"</select></div>" +
+"<div style='display:flex;align-items:center;gap:6px;'>" +
+"<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>TYPE</span>" +
+"<select id='lfType' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;' onchange='applyLeadFilters()'>" +
+"<option value=''>All Types</option>" +
+"<option value='new_lead'>New Lead</option>" +
+"<option value='deal_ready'>Deal Ready</option>" +
+"<option value='code_violation'>Code Violation</option>" +
+"<option value='tax_delinquent'>Tax Delinquent</option>" +
+"<option value='pre_foreclosure'>Pre-Foreclosure</option>" +
+"<option value='auction'>Auction/Probate</option>" +
+"<option value='fire_damaged'>Fire Damaged</option>" +
+"<option value='vacant'>Vacant/Abandoned</option>" +
+"<option value='lien'>Lien</option>" +
+"<option value='raw'>Raw Lead</option>" +
+"</select></div>" +
+"<div style='display:flex;align-items:center;gap:6px;'>" +
+"<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>AGE</span>" +
+"<select id='lfAge' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;' onchange='applyLeadFilters()'>" +
+"<option value=''>Any Time</option>" +
+"<option value='1'>Today</option>" +
+"<option value='3'>Last 3 Days</option>" +
+"<option value='5'>Last 5 Days</option>" +
+"<option value='7'>Last Week</option>" +
+"<option value='30'>Last Month</option>" +
+"<option value='60'>Last 2 Months</option>" +
+"<option value='90'>Last 3 Months</option>" +
+"</select></div>" +
+"<div style='display:flex;align-items:center;gap:6px;'>" +
+"<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>PRIORITY</span>" +
+"<select id='lfPriority' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;' onchange='applyLeadFilters()'>" +
+"<option value=''>All</option>" +
+"<option value='HIGH'>High</option>" +
+"<option value='MEDIUM'>Medium</option>" +
+"<option value='LOW'>Low</option>" +
+"</select></div>" +
+"<button onclick='clearLeadFilters()' style='font-size:11px;padding:4px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280;cursor:pointer;'>Clear</button>" +
+"<span id='lfCount' style='font-size:11px;color:#6b7280;'></span>" +
+"</div>";
+var deleteBar = "<div id='bulkDeleteBar' style='display:none;padding:8px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;align-items:center;gap:10px;'>" +
+"<input type='checkbox' id='selectAllLeads' style='width:16px;height:16px;cursor:pointer;' onchange='toggleSelectAll(this.checked)'>" +
+"<span id='selectedCount' style='font-size:13px;color:#374151;'>0 selected</span>" +
+"<button id='deleteSelectedBtn' onclick='deleteSelectedLeads()' style='padding:6px 16px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;opacity:0.5;' disabled>Delete Selected</button>" +
+"<button onclick='hideBulkDelete()' style='padding:6px 12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;color:#6b7280;font-size:12px;cursor:pointer;'>Cancel</button>" +
+"<span id='deleteStatus' style='font-size:12px;color:#6b7280;'></span>" +
+"</div>";
+function injectFilterBars(){
+  var leadsSection = document.querySelector(".leads-header, #leadsHeader, .tab-header");
+  var leadTable = document.querySelector("table, .leads-table, #leadsTable");
+  var target = leadsSection || (leadTable && leadTable.parentElement);
+  if(!target && leadTable) target = leadTable;
+  if(!target){
+    var tables = document.querySelectorAll("table");
+    if(tables.length) target = tables[0];
+  }
+  if(target){
+    var fb = document.createElement("div"); fb.innerHTML = filterBar;
+    var db = document.createElement("div"); db.innerHTML = deleteBar;
+    target.parentNode.insertBefore(db.firstChild, target);
+    target.parentNode.insertBefore(fb.firstChild, target);
+    addToolbarButtons();
+  }
+}
+function addToolbarButtons(){
+  var toolbar = document.querySelector(".toolbar, .leads-toolbar, #leadsToolbar, .tab-toolbar, .action-bar");
+  if(!toolbar){
+    var floatBar = document.createElement("div");
+    floatBar.id = "wosFilterToggleBar";
+    floatBar.style.cssText = "position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;";
+    floatBar.innerHTML = filterToggleBtns();
+    var content = document.querySelector(".content, #mainContent, main, .main-content");
+    if(content) content.insertBefore(floatBar, content.firstChild);
+    else document.body.insertBefore(floatBar, document.body.firstChild);
+  } else {
+    toolbar.insertAdjacentHTML("beforeend", filterToggleBtns());
+  }
+}
+function filterToggleBtns(){
+  return "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='toggleBulkDelete()' style='font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;cursor:pointer;font-weight:600;'>Bulk Delete</button>";
+}
+window.toggleFilterBar = function(){
+  var fb = document.getElementById("leadFilterBar");
+  if(fb) fb.style.display = fb.style.display==="none"?"flex":"none";
+};
+window.toggleBulkDelete = function(){
+  var db = document.getElementById("bulkDeleteBar");
+  if(db) db.style.display = db.style.display==="none"?"flex":"none";
+  addCheckboxesToRows();
+};
+window.hideBulkDelete = function(){
+  var db = document.getElementById("bulkDeleteBar");
+  if(db) db.style.display = "none";
+  removeCheckboxesFromRows();
+};
+window.applyLeadFilters = function(){
+  var state = (document.getElementById("lfState")||{}).value||"";
+  var type  = (document.getElementById("lfType")||{}).value||"";
+  var age   = parseInt((document.getElementById("lfAge")||{}).value||"0");
+  var prio  = (document.getElementById("lfPriority")||{}).value||"";
+  var now = Date.now();
+  var rows = document.querySelectorAll("tr[data-lead-id]");
+  var shown = 0;
+  rows.forEach(function(row){
+    var st  = (row.dataset.state||"").toUpperCase();
+    var tp  = (row.dataset.type||row.dataset.leadType||"").toLowerCase();
+    var pr  = (row.dataset.priority||"").toUpperCase();
+    var dt  = row.dataset.created||row.dataset.date||"";
+    var ok  = true;
+    if(state && st !== state.toUpperCase()) ok=false;
+    if(type && tp.indexOf(type)===-1) ok=false;
+    if(prio && pr !== prio) ok=false;
+    if(age && dt){
+      var d = new Date(dt).getTime();
+      if((now-d) > age*86400000) ok=false;
+    }
+    row.style.display = ok?"":"none";
+    if(ok) shown++;
+  });
+  var lfc = document.getElementById("lfCount");
+  if(lfc) lfc.textContent = shown+" leads shown";
+};
+window.clearLeadFilters = function(){
+  ["lfState","lfType","lfAge","lfPriority"].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value="";
+  });
+  document.querySelectorAll("tr[data-lead-id]").forEach(function(r){ r.style.display=""; });
+  var lfc=document.getElementById("lfCount"); if(lfc) lfc.textContent="";
+};
+var _selectedIds = {};
+function addCheckboxesToRows(){
+  document.querySelectorAll("tr[data-lead-id]").forEach(function(row){
+    if(row.querySelector(".wos-chk")) return;
+    var td = document.createElement("td");
+    td.style.cssText="padding:6px 8px;width:32px;";
+    var chk = document.createElement("input");
+    chk.type="checkbox"; chk.className="wos-chk";
+    chk.style.cssText="width:15px;height:15px;cursor:pointer;";
+    var lid = row.dataset.leadId;
+    chk.onchange = function(){
+      if(this.checked) _selectedIds[lid]=true;
+      else delete _selectedIds[lid];
+      updateDeleteBar();
+    };
+    td.appendChild(chk);
+    row.insertBefore(td, row.firstChild);
+  });
+}
+function removeCheckboxesFromRows(){
+  document.querySelectorAll(".wos-chk").forEach(function(c){ c.parentElement.remove(); });
+  _selectedIds={}; updateDeleteBar();
+}
+function updateDeleteBar(){
+  var n=Object.keys(_selectedIds).length;
+  var sc=document.getElementById("selectedCount"); if(sc) sc.textContent=n+" selected";
+  var btn=document.getElementById("deleteSelectedBtn");
+  if(btn){ btn.disabled=n===0; btn.style.opacity=n===0?"0.5":"1"; }
+}
+window.toggleSelectAll = function(checked){
+  document.querySelectorAll(".wos-chk").forEach(function(c){
+    c.checked=checked;
+    var lid=c.closest("tr[data-lead-id]")&&c.closest("tr[data-lead-id]").dataset.leadId;
+    if(lid){ if(checked) _selectedIds[lid]=true; else delete _selectedIds[lid]; }
+  });
+  updateDeleteBar();
+};
+window.deleteSelectedLeads = function(){
+  var ids=Object.keys(_selectedIds);
+  if(!ids.length) return;
+  var st=document.getElementById("deleteStatus");
+  if(st) st.textContent="Deleting "+ids.length+" leads...";
+  var btn=document.getElementById("deleteSelectedBtn");
+  if(btn){ btn.disabled=true; btn.textContent="Deleting..."; }
+  fetch("/api/leads/delete-bulk",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ids:ids})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      ids.forEach(function(id){
+        var row=document.querySelector("tr[data-lead-id='"+id+"']");
+        if(row) row.remove();
+      });
+      _selectedIds={};
+      if(st) st.textContent=d.removed+" leads deleted.";
+      if(btn){ btn.disabled=true; btn.textContent="Delete Selected"; btn.style.opacity="0.5"; }
+      var sc=document.getElementById("selectedCount"); if(sc) sc.textContent="0 selected";
+      var sa=document.getElementById("selectAllLeads"); if(sa) sa.checked=false;
+    } else {
+      if(st) st.textContent="Error: "+(d.error||"failed");
+      if(btn){ btn.disabled=false; btn.textContent="Delete Selected"; }
+    }
+  }).catch(function(e){
+    if(st) st.textContent="Error: "+e.message;
+    if(btn){ btn.disabled=false; btn.textContent="Delete Selected"; }
+  });
+};
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(injectFilterBars,1200);});
+} else { setTimeout(injectFilterBars,1200); }
+})();
+// ===== END LEAD FILTERS + BULK DELETE =====
 </script>
 </body>
 </html>
