@@ -1,35 +1,50 @@
-// email.js — Gmail API via OAuth2
-// No SMTP — uses HTTPS so Railway cannot block it
-// Sends from montsan.rei@gmail.com — unlimited, no daily cap
-
+// email.js — Gmail OAuth2 primary, SMTP app-password fallback
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 
 async function createTransporter() {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GMAIL_CLIENT_ID,
-    process.env.GMAIL_CLIENT_SECRET,
-    'https://developers.google.com/oauthplayground'
-  );
-  oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
-  const accessToken = await new Promise((resolve, reject) => {
-    oauth2Client.getAccessToken((err, token) => {
-      if (err) reject(new Error('Failed to get access token: ' + err.message));
-      else resolve(token);
+  // Try OAuth2 first
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GMAIL_CLIENT_ID,
+      process.env.GMAIL_CLIENT_SECRET,
+      'https://developers.google.com/oauthplayground'
+    );
+    oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+    const accessToken = await new Promise((resolve, reject) => {
+      oauth2Client.getAccessToken((err, token) => {
+        if (err) reject(new Error('OAuth token failed: ' + err.message));
+        else resolve(token);
+      });
     });
-  });
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      type:         'OAuth2',
-      user:         process.env.GMAIL_USER,
-      clientId:     process.env.GMAIL_CLIENT_ID,
-      clientSecret: process.env.GMAIL_CLIENT_SECRET,
-      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-      accessToken,
-    },
-  });
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type:         'OAuth2',
+        user:         process.env.GMAIL_USER,
+        clientId:     process.env.GMAIL_CLIENT_ID,
+        clientSecret: process.env.GMAIL_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+        accessToken,
+      },
+    });
+  } catch (oauthErr) {
+    // Fallback to SMTP with App Password (never expires)
+    console.warn('[email] OAuth failed, using SMTP fallback: ' + oauthErr.message);
+    if (!process.env.GMAIL_APP_PASSWORD) {
+      throw new Error('OAuth failed and GMAIL_APP_PASSWORD not set. Add it in Railway env vars.');
+    }
+    return nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
 }
 
 async function sendEmail({ to, subject, body, attachments = [] }) {
@@ -80,7 +95,7 @@ async function testConnection() {
   try {
     const transporter = await createTransporter();
     await transporter.verify();
-    return { success: true };
+    return { success: true, method: 'connected' };
   } catch (err) {
     return { success: false, error: err.message };
   }
