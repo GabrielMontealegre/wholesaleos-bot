@@ -6995,7 +6995,7 @@ function renderLeadDetail(l) {
   const sigs = (l.distress_signals||l.motivation||[]);
   if (sigs.length) {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
-    sigs.forEach(s => { html += '<span class="badge b-red">' + s + '</span>'; });
+    (Array.isArray(sigs)?sigs:[]).forEach(function(sg){ html += '<span class="badge b-red">' + sg + '</span>'; });
     if (l.investment_strategy) html += '<span class="badge b-blue">' + l.investment_strategy + '</span>';
     html += '</div>';
   }
