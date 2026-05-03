@@ -1,130 +1,182 @@
-// modules/agents/comp-agent.js
-// Real comps via RentCast AVM API (free tier, works from Railway server)
-// Set RENTCAST_API_KEY in Railway env vars (free at rentcast.io)
 'use strict';
+var fetch = require('node-fetch');
+var db = require('../../db');
 
-const axios = require('axios');
-const db    = require('../../db');
-const { ask } = require('../../ai');
+// Comp Agent — fetches real ARV from Redfin + Zillow open data
+// Runs daily at 4AM UTC. Also called on-demand via POST /api/leads/reanalyze
 
-const RENTCAST_KEY = process.env.RENTCAST_API_KEY || '';
-
-// ── RentCast AVM — real automated valuation ──────────────────────────────
-async function getRentCastAVM(address, city, state, zip) {
-  if (!RENTCAST_KEY) throw new Error('RENTCAST_API_KEY not set in Railway env vars');
-  const fullAddr = [address, city, state, zip].filter(Boolean).join(', ');
-  const url = 'https://api.rentcast.io/v1/avm/value';
-  const res = await axios.get(url, {
-    params: { address: fullAddr, propertyType: 'Single Family', compCount: 5 },
-    headers: { 'X-Api-Key': RENTCAST_KEY, 'Accept': 'application/json' },
-    timeout: 20000
-  });
-  return res.data;
-}
-
-// ── RentCast comparable sales ─────────────────────────────────────────────
-async function getRentCastComps(address, city, state, zip) {
-  if (!RENTCAST_KEY) throw new Error('RENTCAST_API_KEY not set in Railway env vars');
-  const fullAddr = [address, city, state, zip].filter(Boolean).join(', ');
-  const url = 'https://api.rentcast.io/v1/avm/value';
-  const res = await axios.get(url, {
-    params: { address: fullAddr, propertyType: 'Single Family', compCount: 5 },
-    headers: { 'X-Api-Key': RENTCAST_KEY, 'Accept': 'application/json' },
-    timeout: 20000
-  });
-  const d = res.data;
-  const comps = (d.comparables || []).map(function(c) {
-    return {
-      address: c.formattedAddress || c.address,
-      price:   c.price || c.lastSalePrice,
-      sqft:    c.squareFootage,
-      beds:    c.bedrooms,
-      baths:   c.bathrooms,
-      soldDate: c.lastSaleDate,
-      distance: c.distance,
-      source:  'RentCast'
-    };
-  });
-  return { avm: d.price, low: d.priceRangeLow, high: d.priceRangeHigh, comps };
-}
-
-// ── LLaMA analysis of comps → final ARV recommendation ───────────────────
-async function analyzeWithLLaMA(lead, avm, comps) {
-  const compStr = comps.slice(0, 5).map(function(c, i) {
-    return (i+1) + '. ' + (c.address||'Unknown') + ' — $' + (c.price||0).toLocaleString()
-      + (c.sqft ? ' | ' + c.sqft + 'sqft' : '')
-      + (c.beds ? ' | ' + c.beds + 'bd/' + (c.baths||'?') + 'ba' : '')
-      + (c.soldDate ? ' | Sold: ' + c.soldDate.slice(0,10) : '')
-      + (c.distance ? ' | ' + c.distance.toFixed(2) + ' mi' : '');
-  }).join('\n');
-  const prompt = 'Address: ' + lead.address + ', ' + lead.city + ', ' + lead.state + '\n'
-    + 'RentCast AVM: $' + (avm||0).toLocaleString() + '\n'
-    + 'Comparable sales:\n' + compStr + '\n'
-    + 'Property type: SFR | Lead type: ' + (lead.source||'Unknown') + '\n\n'
-    + 'Based on these comps, give me a conservative ARV for a wholesale deal. '
-    + 'Reply ONLY with JSON: {"arv":number,"confidence":"low|medium|high","arv_note":"1 sentence","repairs_estimate":number}'
-    + ' — numbers only, no $ signs in JSON values.';
+async function fetchRedfin(address, city, state) {
+  var query = encodeURIComponent(address + ' ' + city + ' ' + state);
+  var url = 'https://www.redfin.com/stingray/api/gis?al=1&market=nashville&num_homes=5&ord=redfin-recommended-asc&page_number=1&poly=&region_id=&region_type=&sf=1,2,3,4,5,6&start=0&status=9&uipt=1,2,3,4,5,6&v=8&render=csv&location=' + query;
   try {
-    const resp = await ask(prompt, 'You are a real estate analyst. Return only valid JSON.', 500);
-    var clean = resp.replace(/\x60\x60\x60json|\x60\x60\x60/g,'').trim();
-    return JSON.parse(clean);
-  } catch(e) {
-    // Fallback: use RentCast AVM directly
-    return { arv: avm, confidence: 'medium', arv_note: 'Based on RentCast AVM', repairs_estimate: 25000 };
-  }
-}
-
-// ── Main: fetch comps for one lead ───────────────────────────────────────
-async function fetchCompsForLead(leadId) {
-  const lead = (db.getLeads() || []).find(function(l) { return l.id === leadId; });
-  if (!lead) return { error: 'Lead not found' };
-  if (!lead.address) return { error: 'No address on lead' };
-  if (!RENTCAST_KEY) return {
-    error: 'RENTCAST_API_KEY not configured',
-    fix: 'Add RENTCAST_API_KEY to Railway environment variables (free at rentcast.io)',
-    arv: null
-  };
-  console.log('[comp-agent] Fetching comps for:', lead.address, lead.city, lead.state);
-  try {
-    const { avm, low, high, comps } = await getRentCastComps(
-      lead.address, lead.city, lead.state, lead.zip
-    );
-    const analysis = await analyzeWithLLaMA(lead, avm, comps);
-    const arv      = analysis.arv || avm;
-    const repairs  = analysis.repairs_estimate || lead.repairs || 25000;
-    const mao      = Math.round(arv * 0.70 - repairs);
-    const offer    = Math.round(mao * 0.94);
-    const spread   = mao - offer;
-    const fee_lo   = Math.round(spread * 0.35);
-    const fee_hi   = Math.round(spread * 0.55);
-    // Save updated ARV to lead permanently
-    db.updateLead(leadId, {
-      arv, mao, offer, spread, repairs, fee_lo, fee_hi,
-      comps_fetched_at: new Date().toISOString(),
-      arv_source: 'RentCast',
-      arv_confidence: analysis.confidence,
-      arv_note: analysis.arv_note,
-      analysisStatus: 'complete',
+    var res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json'
+      },
+      timeout: 12000
     });
-    console.log('[comp-agent] Done:', lead.address, '| ARV: $' + arv.toLocaleString());
-    return {
-      ok: true,
-      lead_id: leadId,
-      arv, mao, offer, spread, repairs, fee_lo, fee_hi,
-      arv_source: 'RentCast',
-      arv_confidence: analysis.confidence,
-      arv_note: analysis.arv_note,
-      arv_range: { low, high },
-      comp_count: comps.length,
-      comps: comps.slice(0, 5),
-      arv_summary: 'ARV $' + arv.toLocaleString() + ' (' + analysis.confidence + ' confidence)'
-        + ' | ' + comps.length + ' comps via RentCast'
-        + (analysis.arv_note ? ' — ' + analysis.arv_note : ''),
-    };
+    if (!res.ok) return null;
+    var text = await res.text();
+    // Redfin returns CSV-like data; parse price from it
+    var priceMatch = text.match(/\$(\d[\d,]+)/);
+    if (priceMatch) {
+      return parseInt(priceMatch[1].replace(/,/g, ''));
+    }
+    return null;
   } catch(e) {
-    console.error('[comp-agent] Error:', e.message);
-    return { error: e.message, lead_id: leadId };
+    return null;
   }
 }
 
-module.exports = { fetchCompsForLead };
+async function fetchZillowEstimate(address, city, state, zip) {
+  // Use Zillow's public search API
+  var query = encodeURIComponent(address + ' ' + city + ' ' + state + ' ' + (zip||''));
+  var url = 'https://www.zillow.com/homes/' + query.replace(/%20/g, '-') + '_rb/';
+  try {
+    var res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WholesaleOS/1.0)' },
+      timeout: 10000
+    });
+    if (!res.ok) return null;
+    var html = await res.text();
+    // Extract Zestimate from JSON-LD
+    var match = html.match(/"zestimate":(\d+)/);
+    if (match) return parseInt(match[1]);
+    match = html.match(/"price":(\d+)/);
+    if (match) return parseInt(match[1]);
+    return null;
+  } catch(e) { return null; }
+}
+
+async function fetchAttomValue(address, state, zip) {
+  // ATTOM public AVM endpoint (no key needed for basic)
+  try {
+    var encoded = encodeURIComponent(address);
+    var res = await fetch('https://api.gateway.attomdata.com/propertyapi/v1.0.0/avm/detail?address1=' + encoded + '&address2=' + encodeURIComponent((zip||state)), {
+      headers: { 'Accept': 'application/json', 'apikey': process.env.ATTOM_API_KEY||'' },
+      timeout: 8000
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    if (data && data.property && data.property[0] && data.property[0].avm) {
+      return data.property[0].avm.amount && data.property[0].avm.amount.value;
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+function estimateRepairs(violations, motivation) {
+  var v = (violations || []).join(' ').toLowerCase() + ' ' + (motivation||'').toLowerCase();
+  if (v.indexOf('fire') > -1) return 45000;
+  if (v.indexOf('demo') > -1 || v.indexOf('unsafe') > -1 || v.indexOf('hazard') > -1) return 35000;
+  if (v.indexOf('vacant') > -1 || v.indexOf('abandon') > -1) return 25000;
+  if (v.indexOf('blight') > -1) return 20000;
+  return 12000; // default light rehab for code violations
+}
+
+function calcDeal(arv, repairs) {
+  if (!arv || arv <= 0) return null;
+  var mao    = Math.round(arv * 0.70 - repairs);
+  var offer  = Math.round(mao * 0.94);
+  var spread = mao - offer;
+  var feeL   = Math.round(spread * 0.35);
+  var feeH   = Math.round(spread * 0.55);
+  return { arv: arv, mao: mao, offer: offer, spread: spread, fee_lo: feeL, fee_hi: feeH, repairs: repairs };
+}
+
+async function analyzeLead(lead) {
+  var arv = null;
+
+  // Try Zillow first
+  arv = await fetchZillowEstimate(lead.address, lead.city, lead.state, lead.zip);
+
+  // Fallback to Redfin
+  if (!arv || arv < 10000) {
+    arv = await fetchRedfin(lead.address, lead.city, lead.state);
+  }
+
+  // Fallback to ATTOM if key exists
+  if (!arv || arv < 10000) {
+    arv = await fetchAttomValue(lead.address, lead.state, lead.zip);
+  }
+
+  if (!arv || arv < 10000) {
+    return { analyzed: false, reason: 'no_arv_found' };
+  }
+
+  var violations = Array.isArray(lead.violations) ? lead.violations : [lead.violations||''];
+  var repairs = estimateRepairs(violations, lead.motivation);
+  var deal = calcDeal(arv, repairs);
+
+  if (!deal || deal.mao <= 0) {
+    return { analyzed: false, reason: 'mao_negative', arv: arv };
+  }
+
+  return {
+    analyzed: true,
+    arv: deal.arv,
+    mao: deal.mao,
+    offer: deal.offer,
+    spread: deal.spread,
+    fee_lo: deal.fee_lo,
+    fee_hi: deal.fee_hi,
+    repairs: deal.repairs,
+    analysisStatus: 'complete',
+    lead_type: 'deal_ready',
+    comps_fetched_at: new Date().toISOString()
+  };
+}
+
+async function runCompAgent(opts) {
+  opts = opts || {};
+  var batchSize = opts.batchSize || 50;
+  var maxLeads  = opts.maxLeads  || 500;
+  var force     = opts.force     || false;
+
+  console.log('[comp-agent] starting batch=' + batchSize + ' max=' + maxLeads);
+
+  var allLeads = db.getLeads ? db.getLeads() : [];
+  if (!allLeads || !allLeads.length) {
+    // Try db.read()
+    try { var dbData = require('../../db').readDB ? require('../../db').readDB() : null; allLeads = dbData && dbData.leads ? dbData.leads : []; } catch(e) {}
+  }
+
+  // Prioritize: no ARV, highest motivation score
+  var targets = allLeads
+    .filter(function(l) {
+      if (!l.address || !l.city || !l.state) return false;
+      if (!force && l.arv && l.arv > 0) return false; // already has ARV
+      if (l.analysisStatus === 'complete' && !force) return false;
+      return true;
+    })
+    .sort(function(a, b) { return (b.motivation_score||0) - (a.motivation_score||0); })
+    .slice(0, maxLeads);
+
+  console.log('[comp-agent] targets: ' + targets.length + ' leads need ARV');
+
+  var updated = 0; var failed = 0;
+  for (var i = 0; i < targets.length; i++) {
+    var lead = targets[i];
+    try {
+      var result = await analyzeLead(lead);
+      if (result.analyzed) {
+        db.updateLead(lead.id, result);
+        updated++;
+        if (updated % 10 === 0) console.log('[comp-agent] updated ' + updated + '/' + targets.length);
+      } else {
+        failed++;
+      }
+    } catch(e) {
+      failed++;
+      console.error('[comp-agent] error on ' + lead.id + ': ' + e.message);
+    }
+    // Small delay to avoid rate limiting
+    var t = Date.now(); while(Date.now()-t < 500){}
+  }
+
+  console.log('[comp-agent] done. updated=' + updated + ' failed=' + failed);
+  return { updated: updated, failed: failed, total: targets.length };
+}
+
+module.exports = { runCompAgent: runCompAgent, analyzeLead: analyzeLead };
