@@ -14204,58 +14204,40 @@ if (typeof _origRenderLeads === 'function') {
 setTimeout(highlightAgedLeads, 2000);
 
 
+
 // ===== PULL LEADS NOW =====
 (function(){
 var mh="<div id='plModal' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:99999;align-items:center;justify-content:center;'>" +
 "<div style='background:#1a1a2e;border:1px solid #7c3aed;border-radius:16px;padding:32px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(124,58,237,.5);'>" +
-"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;'>" +
-"<h2 style='color:#fff;margin:0;font-size:20px;'>Pull Fresh Leads Now</h2>" +
-"<button onclick='document.getElementById(\"plModal\").style.display=\"none\"' style='background:none;border:none;color:#aaa;font-size:28px;cursor:pointer;'>&times;</button>" +
-"</div>" +
-"<label style='color:#a78bfa;font-size:12px;font-weight:600;display:block;margin-bottom:6px;'>STATE</label>" +
-"<select id='plState' style='width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:10px 14px;border-radius:8px;font-size:14px;margin-bottom:16px;'>" +
-"<option value=''>All States (best markets)</option>" +
-"<option value='TX'>Texas</option><option value='FL'>Florida</option><option value='GA'>Georgia</option><option value='OH'>Ohio</option>" +
-"<option value='PA'>Pennsylvania</option><option value='IL'>Illinois</option><option value='MI'>Michigan</option><option value='NC'>North Carolina</option>" +
-"<option value='TN'>Tennessee</option><option value='MD'>Maryland</option><option value='NY'>New York</option><option value='CA'>California</option>" +
-"<option value='AZ'>Arizona</option><option value='NV'>Nevada</option><option value='CO'>Colorado</option><option value='AL'>Alabama</option>" +
-"<option value='AK'>Alaska</option><option value='AR'>Arkansas</option><option value='CT'>Connecticut</option><option value='DE'>Delaware</option>" +
-"<option value='HI'>Hawaii</option><option value='ID'>Idaho</option><option value='IN'>Indiana</option><option value='IA'>Iowa</option>" +
-"<option value='KS'>Kansas</option><option value='KY'>Kentucky</option><option value='LA'>Louisiana</option><option value='ME'>Maine</option>" +
-"<option value='MA'>Massachusetts</option><option value='MN'>Minnesota</option><option value='MS'>Mississippi</option><option value='MO'>Missouri</option>" +
-"<option value='MT'>Montana</option><option value='NE'>Nebraska</option><option value='NH'>New Hampshire</option><option value='NJ'>New Jersey</option>" +
-"<option value='NM'>New Mexico</option><option value='ND'>North Dakota</option><option value='OK'>Oklahoma</option><option value='OR'>Oregon</option>" +
-"<option value='RI'>Rhode Island</option><option value='SC'>South Carolina</option><option value='SD'>South Dakota</option><option value='UT'>Utah</option>" +
-"<option value='VT'>Vermont</option><option value='VA'>Virginia</option><option value='WA'>Washington</option><option value='WV'>West Virginia</option>" +
-"<option value='WI'>Wisconsin</option><option value='WY'>Wyoming</option></select>" +
+"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;'><h2 style='color:#fff;margin:0;font-size:20px;'>Pull Fresh Leads Now</h2><button onclick='document.getElementById(\"plModal\").style.display=\"none\"' style='background:none;border:none;color:#aaa;font-size:28px;cursor:pointer;'>&times;</button></div>" +
+"<label style='color:#a78bfa;font-size:12px;font-weight:600;display:block;margin-bottom:6px;'>STATE</label><select id='plState' style='width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:10px;border-radius:8px;font-size:14px;margin-bottom:16px;'>" +
+"<option value=''>All States</option><option value='TX'>Texas</option><option value='FL'>Florida</option><option value='GA'>Georgia</option><option value='OH'>Ohio</option><option value='PA'>Pennsylvania</option><option value='IL'>Illinois</option>" +
+"<option value='MI'>Michigan</option><option value='NC'>North Carolina</option><option value='TN'>Tennessee</option><option value='MD'>Maryland</option><option value='NY'>New York</option><option value='CA'>California</option>" +
+"<option value='AZ'>Arizona</option><option value='NV'>Nevada</option><option value='CO'>Colorado</option><option value='AL'>Alabama</option><option value='AK'>Alaska</option><option value='AR'>Arkansas</option>" +
+"<option value='CT'>Connecticut</option><option value='DE'>Delaware</option><option value='HI'>Hawaii</option><option value='ID'>Idaho</option><option value='IN'>Indiana</option><option value='IA'>Iowa</option>" +
+"<option value='KS'>Kansas</option><option value='KY'>Kentucky</option><option value='LA'>Louisiana</option><option value='ME'>Maine</option><option value='MA'>Massachusetts</option><option value='MN'>Minnesota</option>" +
+"<option value='MS'>Mississippi</option><option value='MO'>Missouri</option><option value='MT'>Montana</option><option value='NE'>Nebraska</option><option value='NH'>New Hampshire</option><option value='NJ'>New Jersey</option>" +
+"<option value='NM'>New Mexico</option><option value='ND'>North Dakota</option><option value='OK'>Oklahoma</option><option value='OR'>Oregon</option><option value='RI'>Rhode Island</option><option value='SC'>South Carolina</option>" +
+"<option value='SD'>South Dakota</option><option value='UT'>Utah</option><option value='VT'>Vermont</option><option value='VA'>Virginia</option><option value='WA'>Washington</option><option value='WV'>West Virginia</option><option value='WI'>Wisconsin</option><option value='WY'>Wyoming</option></select>" +
 "<label style='color:#a78bfa;font-size:12px;font-weight:600;display:block;margin-bottom:6px;'>COUNTY (optional)</label>" +
-"<input id='plCounty' type='text' placeholder='e.g. Harris, Fulton, Cook' style='width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:10px 14px;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:16px;'>" +
+"<input id='plCounty' type='text' placeholder='e.g. Harris, Fulton, Cook' style='width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:10px;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:16px;'>" +
 "<label style='color:#a78bfa;font-size:12px;font-weight:600;display:block;margin-bottom:8px;'>SOURCE TYPE</label>" +
 "<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;'>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='' checked style='accent-color:#7c3aed'> All Sources</label>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='code_violation' style='accent-color:#7c3aed'> Code Violations</label>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='tax_delinquent' style='accent-color:#7c3aed'> Tax Delinquent</label>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='pre_foreclosure' style='accent-color:#7c3aed'> Pre-Foreclosure</label>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='auction' style='accent-color:#7c3aed'> Auctions/Probate</label>" +
-"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;cursor:pointer;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;'><input type='radio' name='plSrcType' value='arcgis' style='accent-color:#7c3aed'> ArcGIS Portals</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='' checked style='accent-color:#7c3aed'> All Sources</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='code_violation' style='accent-color:#7c3aed'> Code Violations</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='tax_delinquent' style='accent-color:#7c3aed'> Tax Delinquent</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='pre_foreclosure' style='accent-color:#7c3aed'> Pre-Foreclosure</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='auction' style='accent-color:#7c3aed'> Auctions/Probate</label>" +
+"<label style='display:flex;align-items:center;gap:8px;color:#ccc;font-size:13px;background:#0f0f23;padding:8px 12px;border-radius:8px;border:1px solid #4c1d95;cursor:pointer;'><input type='radio' name='plSrcType' value='arcgis' style='accent-color:#7c3aed'> ArcGIS Portals</label>" +
 "</div>" +
 "<label style='color:#a78bfa;font-size:12px;font-weight:600;display:block;margin-bottom:6px;'>HOW MANY: <span id='plCountLbl'>200</span></label>" +
-"<input id='plCount' type='range' min='50' max='500' step='50' value='200' oninput='document.getElementById(\"plCountLbl\").textContent=this.value' style='width:100%;accent-color:#7c3aed;margin-bottom:4px;'>" +
-"<div style='display:flex;justify-content:space-between;color:#555;font-size:11px;margin-bottom:20px;'><span>50</span><span>500</span></div>" +
+"<input id='plCount' type='range' min='50' max='500' step='50' value='200' oninput='document.getElementById(\"plCountLbl\").textContent=this.value' style='width:100%;accent-color:#7c3aed;margin-bottom:20px;'>" +
 "<button id='plRunBtn' onclick='window.runPullLeads()' style='width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;'>Pull Leads Now</button>" +
 "<div id='plResult' style='margin-top:14px;padding:12px;background:#0f0f23;border-radius:8px;color:#a78bfa;font-size:13px;display:none;text-align:center;'></div>" +
 "</div></div>";
 document.body.insertAdjacentHTML("beforeend",mh);
-function addBtn(){
- var b=document.createElement("button");
- b.id="openPLBtn";b.textContent="Pull Leads Now";
- b.style.cssText="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;color:#fff;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;position:fixed;bottom:28px;right:28px;z-index:9998;box-shadow:0 4px 20px rgba(124,58,237,.6);";
- b.onclick=function(){var m=document.getElementById("plModal");if(m)m.style.display="flex";};
- document.body.appendChild(b);
-}
 window.runPullLeads=function(){
- var btn=document.getElementById("plRunBtn");
- var res=document.getElementById("plResult");
+ var btn=document.getElementById("plRunBtn"),res=document.getElementById("plResult");
  var state=document.getElementById("plState").value;
  var county=document.getElementById("plCounty").value.trim();
  var count=parseInt(document.getElementById("plCount").value);
@@ -14263,27 +14245,22 @@ window.runPullLeads=function(){
  document.querySelectorAll("input[name=plSrcType]").forEach(function(r){if(r.checked)srcType=r.value;});
  btn.textContent="Searching...";btn.disabled=true;
  res.style.display="block";res.style.color="#a78bfa";
- res.textContent="Pulling "+(state||"all states")+(county?" / "+county:"")+(srcType?" / "+srcType:"")+" — "+count+" leads... (30-60 sec)";
+ res.textContent="Pulling "+(state||"all states")+(county?" / "+county:"")+(srcType?" / "+srcType:"")+" — "+count+" leads...";
  var body={count:count};
- if(state)body.state=state;
- if(county)body.county=county;
- if(srcType)body.source_type=srcType;
+ if(state)body.state=state;if(county)body.county=county;if(srcType)body.source_type=srcType;
  fetch("/api/leads/search-fresh-v2",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
  .then(function(r){return r.json();})
  .then(function(d){
    btn.textContent="Pull Leads Now";btn.disabled=false;
-   if(d.ok){
-     res.style.color="#10b981";
-     res.textContent="Done! "+d.inserted+" new leads added. Refreshing...";
-     setTimeout(function(){if(typeof loadLeads==="function")loadLeads();if(typeof refreshLeads==="function")refreshLeads();},1500);
-   } else {
-     res.style.color="#ef4444";
-     res.textContent="Error: "+(d.error||"Unknown");
-   }
- })
- .catch(function(e){btn.textContent="Pull Leads Now";btn.disabled=false;res.style.color="#ef4444";res.textContent="Error: "+e.message;});
+   if(d.ok){res.style.color="#10b981";res.textContent="Done! "+d.inserted+" new leads added. Refreshing...";setTimeout(function(){if(typeof loadLeads==="function")loadLeads();},1500);}
+   else{res.style.color="#ef4444";res.textContent="Error: "+(d.error||"Unknown");}
+ }).catch(function(e){btn.textContent="Pull Leads Now";btn.disabled=false;res.style.color="#ef4444";res.textContent="Error: "+e.message;});
 };
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",addBtn);}else{setTimeout(addBtn,1000);}
+var fb=document.createElement("button");fb.id="openPLBtn";fb.textContent="Pull Leads Now";
+fb.style.cssText="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;color:#fff;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;position:fixed;bottom:28px;right:28px;z-index:9998;box-shadow:0 4px 20px rgba(124,58,237,.6);";
+fb.onclick=function(){var m=document.getElementById("plModal");if(m)m.style.display="flex";};
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){document.body.appendChild(fb);});}
+else{document.body.appendChild(fb);}
 })();
 // ===== END PULL LEADS NOW =====
 </script>
