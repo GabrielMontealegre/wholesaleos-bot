@@ -1,4 +1,4 @@
-// Deploy: 2026-05-03T19:52:40.650Z
+// Deploy: 2026-05-03T20:00:06.215Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -4036,6 +4036,52 @@ try {
 
   logger.info('[comp-agent] routes + cron registered');
 } catch(e) { logger.error('[comp-agent] failed to load: ' + e.message); }
+
+
+// ── Skip Trace 3AM cron ─────────────────────────────────────────────────
+try {
+  var _skipTrace = require('./modules/agents/skip-trace-agent');
+  cron.schedule('0 3 * * *', function() {
+    logger.info('[skip-trace] 3AM cron starting');
+    _skipTrace.runSkipTraceAgent({ limit: 300 })
+      .then(function(r){ logger.info({ event: 'skip_trace_done', traced: r.traced, failed: r.failed }); })
+      .catch(function(e){ logger.error('[skip-trace] cron error: ' + e.message); });
+  }, { timezone: 'UTC' });
+  // POST /api/leads/skip-trace — on-demand
+  app.post('/api/leads/skip-trace', async function(req, res) {
+    var limit = Math.min(parseInt((req.body||{}).limit||50), 300);
+    res.json({ ok: true, message: 'Skip trace started for up to ' + limit + ' leads' });
+    _skipTrace.runSkipTraceAgent({ limit: limit })
+      .catch(function(e){ logger.error('[skip-trace] on-demand error: ' + e.message); });
+  });
+  logger.info('[skip-trace] 3AM cron + route registered');
+} catch(e){ logger.error('[skip-trace] failed to load: ' + e.message); }
+
+// ── Telegram 7AM daily summary ──────────────────────────────────────────
+cron.schedule('0 7 * * *', async function() {
+  try {
+    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.BOT_OWNER_ID) return;
+    var TelegramBot = require('node-telegram-bot-api');
+    var tgBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+    var dbData = db.readDB ? db.readDB() : { leads: [] };
+    var leads = dbData.leads || [];
+    var total = leads.length;
+    var today = new Date().toISOString().split('T')[0];
+    var todayLeads = leads.filter(function(l){ return (l.created||l.createdAt||'')''.startsWith(today); }).length;
+    var withPhone = leads.filter(function(l){ return l.phone && l.phone.length > 7; }).length;
+    var withArv = leads.filter(function(l){ return l.arv && l.arv > 0; }).length;
+    var highPrio = leads.filter(function(l){ return l.priority === 'HIGH'; }).length;
+    var msg = 'WholesaleOS Daily Summary — ' + today + '\n\n' +
+      'Total Leads: ' + total.toLocaleString() + '\n' +
+      'New Today: ' + todayLeads + '\n' +
+      'High Priority: ' + highPrio + '\n' +
+      'With Phone: ' + withPhone + '\n' +
+      'With ARV: ' + withArv + '\n\n' +
+      'Dashboard: https://wholesaleos-bot-production.up.railway.app/dashboard/';
+    await tgBot.sendMessage(process.env.BOT_OWNER_ID, msg);
+    logger.info('[telegram] 7AM summary sent');
+  } catch(e){ logger.error('[telegram] 7AM cron error: ' + e.message); }
+}, { timezone: 'UTC' });
 
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
