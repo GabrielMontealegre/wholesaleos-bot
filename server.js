@@ -1,4 +1,4 @@
-// Deploy: 2026-05-03T19:17:42.498Z
+// Deploy: 2026-05-03T19:18:48.511Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3994,6 +3994,48 @@ app.get('/api/leads/sources', function(req, res) {
     total_sources: 73
   });
 });
+
+
+// ── Comp Agent — real ARV on-demand + daily 4AM cron ────────────────────
+try {
+  var _compAgent = require('./modules/agents/comp-agent');
+
+  // POST /api/leads/reanalyze — on-demand full reanalysis
+  app.post('/api/leads/reanalyze', async function(req, res) {
+    var body = req.body || {};
+    var maxLeads = Math.min(parseInt(body.max || 200), 1000);
+    var force = !!body.force;
+    // Run async, respond immediately with job started
+    res.json({ ok: true, message: 'Reanalysis started for up to ' + maxLeads + ' leads', max: maxLeads });
+    _compAgent.runCompAgent({ maxLeads: maxLeads, batchSize: 50, force: force })
+      .then(function(r) { logger.info({ event: 'comp_agent_done', updated: r.updated, failed: r.failed }); })
+      .catch(function(e) { logger.error('[comp-agent] on-demand error: ' + e.message); });
+  });
+
+  // POST /api/leads/:id/analyze — analyze single lead
+  app.post('/api/leads/:id/analyze', async function(req, res) {
+    try {
+      var lead = db.getLead ? db.getLead(req.params.id) : null;
+      if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });
+      var result = await _compAgent.analyzeLead(lead);
+      if (result.analyzed) {
+        db.updateLead(req.params.id, result);
+        res.json({ ok: true, data: result });
+      } else {
+        res.json({ ok: false, reason: result.reason, arv: result.arv || null });
+      }
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+  });
+
+  // 4AM daily cron — top 500 leads by motivation score
+  cron.schedule('0 4 * * *', function() {
+    logger.info('[comp-agent] 4AM cron starting');
+    _compAgent.runCompAgent({ maxLeads: 500, batchSize: 50 })
+      .catch(function(e) { logger.error('[comp-agent] cron error: ' + e.message); });
+  }, { timezone: 'UTC' });
+
+  logger.info('[comp-agent] routes + cron registered');
+} catch(e) { logger.error('[comp-agent] failed to load: ' + e.message); }
 
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
