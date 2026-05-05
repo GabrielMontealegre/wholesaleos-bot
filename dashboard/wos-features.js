@@ -208,25 +208,33 @@ function _patchDashboard() {
 
 // ── ADD DATA ATTRS TO ROWS ───────────────────────────────────────────────
 function _addDataAttrs() {
-  // Read from DOM cells — works without APP.leads being loaded
-  // Cell order: 0=REF, 1=ADDRESS, 2=STATE, 3=TYPE, 4=STATUS, 5=SPREAD, 6=BUYERS, 7=DATE
+  // Read directly from table cells — APP.leads not always available
+  // Col 0:chk 1:ref 2:address 3:state 4:type 5:status 6:spread 7:buyers 8:date
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
-    var cells = row.querySelectorAll('td');
-    if (!cells.length) return;
+    if (row.dataset.wosInit) return;
     row.dataset.wosInit = '1';
-    row.dataset.state   = (cells[2] ? cells[2].textContent.trim() : '').toUpperCase();
-    row.dataset.src     = (cells[3] ? cells[3].textContent.trim() : '').toLowerCase();
-    var dateStr = cells[7] ? cells[7].textContent.trim() : '';
-    row.dataset.created = dateStr ? new Date(dateStr + 'T00:00:00Z').toISOString() : '';
-    var spreadTxt = cells[5] ? cells[5].textContent.replace(/[^0-9]/g,'') : '0';
-    row.dataset.arv = (parseInt(spreadTxt) > 0) ? 'yes' : 'no';
-    // Try APP.leads for phone/priority if available
+    var cells = row.querySelectorAll('td');
+    var offset = 0; // adjust if checkbox col added
+    if (cells.length >= 9) {
+      row.dataset.state    = (cells[3].textContent||cells[3+offset].textContent||"").trim().toUpperCase();
+      row.dataset.src      = (cells[4].textContent||"").trim().toLowerCase();
+      row.dataset.priority = ""; // not in DOM, use motivation_score from API if available
+      row.dataset.phone    = "any";
+      row.dataset.arv      = (cells[6].textContent||"").trim() === "$0" ? "no" : "yes";
+      var dateStr = (cells[8].textContent||"").trim();
+      row.dataset.created  = dateStr ? new Date(dateStr).toISOString() : "";
+    }
+    // Override with APP.leads if available
     if (window.APP && APP.leads) {
-      var lead = APP.leads.find(function(l){ return l.id === row.dataset.leadId; });
+      var lid = row.dataset.leadId;
+      var lead = APP.leads.find(function(l) { return l.id === lid; });
       if (lead) {
-        row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
+        row.dataset.state    = (lead.state || row.dataset.state || '').toUpperCase();
+        row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || row.dataset.src || '').toLowerCase();
         row.dataset.priority = (lead.priority || '').toUpperCase();
-        row.dataset.src      = (lead.source_details || lead.source || row.dataset.src || '').toLowerCase();
+        row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
+        row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
+        row.dataset.created  = lead.created_at || lead.createdAt || lead.created || row.dataset.created || '';
       }
     }
   });
@@ -284,7 +292,15 @@ window.wosFilter = function() {
     if (arv   && row.dataset.arv !== arv) ok = false;
     if (age && row.dataset.created) {
       var d = new Date(row.dataset.created).getTime();
-      if (isNaN(d) || (now - d) > age * 86400000) ok = false;
+      if (isNaN(d)) { ok = false; }
+      else if (age === 1) {
+        // 'Today' — compare date strings in local time
+        var leadDate = new Date(d).toLocaleDateString();
+        var todayDate = new Date().toLocaleDateString();
+        if (leadDate !== todayDate) ok = false;
+      } else {
+        if ((now - d) > age * 86400000) ok = false;
+      }
     }
     row.style.display = ok ? '' : 'none';
     if (ok) shown++;
@@ -327,13 +343,16 @@ function _addCheckboxes() {
     chk.type = 'checkbox'; chk.className = 'wos-chk';
     chk.style.cssText = 'width:15px;height:15px;cursor:pointer;accent-color:#ef4444;';
     var lid = row.dataset.leadId;
-    chk.addEventListener('change', function() {
+    chk.addEventListener('change', function(e) {
+      e.stopPropagation();
       if (this.checked) _sel[lid] = true; else delete _sel[lid];
       _updateBulkUI();
     });
+    chk.addEventListener('click', function(e) { e.stopPropagation(); });
     // Stop clicks on checkbox cell from bubbling to row onclick (openLeadModal)
     td.addEventListener('click', function(e) { e.stopPropagation(); });
     td.appendChild(chk);
+    td.addEventListener('click', function(e){ e.stopPropagation(); });
     row.insertBefore(td, row.firstChild);
   });
 }
