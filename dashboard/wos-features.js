@@ -10,15 +10,23 @@
 // Wait for lead rows to appear (after PIN unlock)
 // v2
 var _ready = false;
-var _interval = setInterval(function() {
+
+// Global init — callable any time after PIN entry
+window.wosInit = function() {
+  if (_ready) return;
   var rows = document.querySelectorAll('tr[data-lead-id]');
-  if (rows.length > 0 && !_ready) {
-    _ready = true;
-    clearInterval(_interval);
-    initFeatures();
+  if (rows.length > 0) { _ready = true; initFeatures(); console.log('[wos-features] initialized'); }
+};
+
+// Poll every 500ms for 5 minutes (PIN entry can take time)
+var _poll = setInterval(function() {
+  if (_ready) { clearInterval(_poll); return; }
+  if (document.querySelectorAll('tr[data-lead-id]').length > 0) {
+    _ready = true; clearInterval(_poll); initFeatures();
+    console.log('[wos-features] initialized via poll');
   }
-}, 600);
-setTimeout(function() { clearInterval(_interval); }, 60000);
+}, 500);
+setTimeout(function() { clearInterval(_poll); }, 300000);
 
 function initFeatures() {
   injectFilterBar();
