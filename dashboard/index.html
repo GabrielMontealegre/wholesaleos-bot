@@ -12825,7 +12825,7 @@ function leadsSetPerPage(n){
 }
 
 var _leadsPage = 0;
-var _leadsPerPage = 200;
+var _leadsPerPage = 300;
 
 function renderLeads() {
   var all = APP.filtered || APP.leads || [];
@@ -12854,7 +12854,7 @@ function renderLeads() {
   if (totalPages > 1) {
     var prevDis = page === 0 ? ' disabled' : '';
     var nextDis = page >= totalPages - 1 ? ' disabled' : '';
-    var opts = [100,200,500,1000].map(function(n){
+    var opts = [50,100,150,200,250,300,400,500].map(function(n){
       return '<option value="'+n+'"'+(n===perPage?' selected':'')+'>'+n+' per page</option>';
     }).join('');
     pager = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0">'+
