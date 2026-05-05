@@ -4067,7 +4067,7 @@ cron.schedule('0 7 * * *', async function() {
     var leads = dbData.leads || [];
     var total = leads.length;
     var today = new Date().toISOString().split('T')[0];
-    var todayLeads = leads.filter(function(l){ return (l.created||l.createdAt||'')''.startsWith(today); }).length;
+    var todayLeads = leads.filter(function(l){ return (l.created||l.createdAt||'').startsWith(today); }).length;
     var withPhone = leads.filter(function(l){ return l.phone && l.phone.length > 7; }).length;
     var withArv = leads.filter(function(l){ return l.arv && l.arv > 0; }).length;
     var highPrio = leads.filter(function(l){ return l.priority === 'HIGH'; }).length;
