@@ -69,10 +69,13 @@ function _skipPin() {
 
 // ── MOUNT CONTROLS IN LEADS TAB ─────────────────────────────────────────
 function _mountOnTab() {
-  // Remove any existing toolbar to avoid duplicates
-  ['wosToolbar','wosFilterPanel','wosBulkBar','wosPullModal'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.remove();
-  });
+  // Only mount if toolbar not already present
+  if (document.getElementById('wosToolbar')) {
+    // Already mounted — just re-add checkboxes if bulk mode is open
+    if (_bulkOpen) _addCheckboxes();
+    _addDataAttrs();
+    return;
+  }
   _sel = {};
 
   var tbl = document.querySelector('table');
@@ -206,20 +209,23 @@ function _patchDashboard() {
 // ── ADD DATA ATTRS TO ROWS ───────────────────────────────────────────────
 function _addDataAttrs() {
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
-    if (row.dataset.wosInit) return;
-    row.dataset.wosInit = '1';
     var lid = row.dataset.leadId;
-    if (window.APP && APP.leads) {
-      var lead = APP.leads.find(function(l) { return l.id === lid; });
-      if (lead) {
-        row.dataset.state    = (lead.state || '').toUpperCase();
-        row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || '').toLowerCase();
-        row.dataset.priority = (lead.priority || '').toUpperCase();
-        row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
-        row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
-        row.dataset.created  = lead.created_at || lead.createdAt || lead.created || '';
-      }
+    var lead = null;
+    if (window.APP && APP.leads) lead = APP.leads.find(function(l) { return l.id === lid; });
+    if (!lead) return; // will retry on next filter call
+    row.dataset.wosInit  = '1';
+    row.dataset.state    = (lead.state || '').toUpperCase();
+    row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || '').toLowerCase();
+    row.dataset.priority = (lead.priority || '').toUpperCase();
+    row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
+    row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
+    // Normalize date — support ISO string, unix ms, unix seconds
+    var raw = lead.created_at || lead.createdAt || lead.created || '';
+    if (raw && !isNaN(Number(raw))) {
+      var n = Number(raw);
+      raw = new Date(n > 9999999999 ? n : n * 1000).toISOString();
     }
+    row.dataset.created = raw;
   });
 }
 
@@ -322,6 +328,8 @@ function _addCheckboxes() {
       if (this.checked) _sel[lid] = true; else delete _sel[lid];
       _updateBulkUI();
     });
+    // Stop clicks on checkbox cell from bubbling to row onclick (openLeadModal)
+    td.addEventListener('click', function(e) { e.stopPropagation(); });
     td.appendChild(chk);
     row.insertBefore(td, row.firstChild);
   });
