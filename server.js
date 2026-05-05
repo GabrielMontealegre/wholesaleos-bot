@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T16:28:09.819Z
+// Deploy: 2026-05-05T16:31:09.695Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -273,6 +273,18 @@ app.post('/api/leads/validate-fix', (req, res) => {
 });
 
 // GET /api/leads/:id/validate — validate single lead address
+
+// GET /api/leads/hot — must be BEFORE /api/leads/:id
+app.get('/api/leads/hot', function(req, res) {
+  try {
+    var leads = db.getLeads ? db.getLeads() : [];
+    var hot = leads.filter(function(l){ return l.hot_score >= 70 || l.hot_tier==='HOT'; })
+      .sort(function(a,b){ return (b.hot_score||0)-(a.hot_score||0); })
+      .slice(0, parseInt(req.query.limit)||100);
+    res.json({ok:true,leads:hot,total:hot.length});
+  } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
+
 app.get('/api/leads/:id/validate', (req, res) => {
   try {
     const leads = db.readDB().leads || [];
@@ -4132,17 +4144,7 @@ try {
     } catch(e) { res.status(500).json({ok:false,error:e.message}); }
   });
 
-  // GET /api/leads/hot — get HOT leads only
-  app.get('/api/leads/hot', function(req, res) {
-    try {
-      var leads = db.getLeads ? db.getLeads() : [];
-      var hot = leads.filter(function(l){ return l.hot_score >= 70 || l.hot_tier==='HOT'; })
-        .sort(function(a,b){ return (b.hot_score||0)-(a.hot_score||0); })
-        .slice(0, parseInt(req.query.limit)||100);
-      res.json({ok:true,leads:hot,total:hot.length});
-    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
-  });
-
+  
   logger.info('[hot-lead] scorer + alert + outreach AI routes registered');
 } catch(e) { logger.error('[hot-lead] failed to load: ' + e.message); }
 
