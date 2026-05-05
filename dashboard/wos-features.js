@@ -221,6 +221,7 @@ function _addDataAttrs() {
       row.dataset.priority = ""; // not in DOM, use motivation_score from API if available
       row.dataset.phone    = "any";
       row.dataset.arv      = (cells[6].textContent||"").trim() === "$0" ? "no" : "yes";
+        row.dataset.hotScore = "0"; // will be set when leads are scored
       var dateStr = (cells[8].textContent||"").trim();
       row.dataset.created  = dateStr ? new Date(dateStr).toISOString() : "";
     }
@@ -465,5 +466,45 @@ window.wosReanalyzeAll = function() {
   })
   .catch(function(e){alert('Error: '+e.message);});
 };
+
+// ── Score All Leads ────────────────────────────────────────────────────
+window.wosScoreAllLeads = function() {
+  var btn = event && event.target;
+  if (btn) { btn.textContent = "Scoring..."; btn.disabled = true; }
+  fetch("/api/leads/score-all", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if (btn) { btn.textContent = "Score All Leads"; btn.disabled = false; }
+    if (d.ok) {
+      alert("Scored "+d.total+" leads — "+d.hot+" HOT 🔥 / "+d.warm+" WARM ⚡ / "+d.cold+" COLD ❄️\nRefreshing...");
+      _ready = false;
+      setTimeout(function() { if (typeof loadLeads==="function") loadLeads(); setTimeout(_mountOnTab, 1500); }, 500);
+    } else {
+      alert("Error: "+(d.error||"failed"));
+    }
+  }).catch(function(e){
+    if (btn) { btn.textContent = "Score All Leads"; btn.disabled = false; }
+    alert("Error: "+e.message);
+  });
+};
+
+// ── Add hot score badge to lead rows ─────────────────────────────────────
+function _addScoreBadges() {
+  document.querySelectorAll("tr[data-lead-id]").forEach(function(row) {
+    if (row.querySelector(".wos-score-badge")) return;
+    var ref = row.querySelector("td:nth-child(2), td:first-child");
+    if (!ref) return;
+    // Get score from data attribute or 0
+    var score = parseInt(row.dataset.hotScore || "0");
+    if (score === 0) return; // Only show if scored
+    var color = score>=70 ? "#ef4444" : score>=45 ? "#f59e0b" : "#9ca3af";
+    var emoji = score>=70 ? "🔥" : score>=45 ? "⚡" : "";
+    var badge = document.createElement("span");
+    badge.className = "wos-score-badge";
+    badge.style.cssText = "font-size:10px;font-weight:700;color:"+color+";margin-left:4px;white-space:nowrap;";
+    badge.textContent = emoji+" "+score;
+    ref.appendChild(badge);
+  });
+}
 
 })();
