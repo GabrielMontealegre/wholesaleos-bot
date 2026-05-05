@@ -8,6 +8,7 @@
 // ============================================================
 
 // Wait for lead rows to appear (after PIN unlock)
+// v2
 var _ready = false;
 var _interval = setInterval(function() {
   var rows = document.querySelectorAll('tr[data-lead-id]');
@@ -125,7 +126,7 @@ function injectToolbar() {
     '<button onclick="wosToggleFilters()" style="font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-weight:600;cursor:pointer;">Filters</button>' +
     '<button onclick="wosToggleBulk()" style="font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;color:#ef4444;font-weight:600;cursor:pointer;">Bulk Delete</button>' +
     '<button onclick="wosReanalyzeAll()" style="font-size:12px;padding:6px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;color:#059669;font-weight:600;cursor:pointer;">Re-analyze Comps</button>';
-  insertBeforeTable(tb);
+  insertToolbarFixed(tb);
 }
 
 // ── PULL LEADS MODAL ─────────────────────────────────────────
@@ -166,9 +167,28 @@ function injectPullLeadsModal() {
 
 // ── HELPERS ──────────────────────────────────────────────────
 function insertBeforeTable(el) {
+  // Try multiple insertion strategies
   var tbl = document.querySelector('table, #leadsTable');
-  if (tbl && tbl.parentNode) tbl.parentNode.insertBefore(el, tbl);
-  else document.body.appendChild(el);
+  var inserted = false;
+  if (tbl && tbl.parentNode) {
+    tbl.parentNode.insertBefore(el, tbl);
+    inserted = true;
+  }
+  if (!inserted) document.body.appendChild(el);
+}
+
+function insertToolbarFixed(el) {
+  // Toolbar uses sticky top position so it always shows
+  el.style.position = 'sticky';
+  el.style.top = '0';
+  el.style.zIndex = '500';
+  var contentArea = document.querySelector('.content-area, #contentArea, main, .main, #main, .container, [class*="content"], [class*="main"]');
+  if (contentArea) contentArea.insertBefore(el, contentArea.firstChild);
+  else {
+    var tbl = document.querySelector('table');
+    if (tbl && tbl.parentNode) tbl.parentNode.insertBefore(el, tbl);
+    else document.body.appendChild(el);
+  }
 }
 
 // ── PUBLIC API ───────────────────────────────────────────────
