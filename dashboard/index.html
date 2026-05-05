@@ -1496,16 +1496,40 @@ function renderPipeline() {
           <div class="pipe-count">${items.length}</div>
         </div>
         <div class="pipe-body">
-          ${items.map(l => `<div class="pipe-card" onclick="navigate('leads',null);setTimeout(()=>selectLead('${l.id}'),100)">
-            <div class="pipe-card-addr">${l.address?.split(',')[0]||'N/A'}</div>
-            <div class="pipe-card-meta">${l.county||''} · ${l.category||''}</div>
-            <div class="pipe-card-fee">$${(l.fee_lo||0).toLocaleString()}–$${(l.fee_hi||0).toLocaleString()}</div>
-          </div>`).join('')}
+          ${items.map(l => `<div class="pipe-card" style="cursor:default;padding:0;overflow:hidden"><div style="padding:10px;cursor:pointer" onclick="navigate('leads',null);setTimeout(()=>selectLead('${l.id}'),100)"><div class="pipe-card-addr">${l.address?.split(',')[0]||'N/A'}</div><div class="pipe-card-meta">${l.county||''} · ${l.category||''}</div><div class="pipe-card-fee">$${(l.fee_lo||0).toLocaleString()}–$${(l.fee_hi||0).toLocaleString()}</div></div><select onchange="wosMoveStage('${l.id}',this.value,this)" onclick="event.stopPropagation()" style="width:100%;font-size:10px;border:none;border-top:1px solid #e5e5ea;padding:4px 8px;background:#f0f0f5;color:#555;cursor:pointer;outline:none"><option value="">↕ Move stage...</option><option value="New Lead">New Lead</option><option value="Contacted">Contacted</option><option value="Offer Sent">Offer Sent</option><option value="Negotiating">Negotiating</option><option value="Under Contract">Under Contract</option><option value="Closed">Closed</option></select></div>`).join('')}
           ${items.length===0?'<div style="font-size:11px;color:#86868b;text-align:center;padding:16px">Empty</div>':''}
         </div>
       </div>`;
     }).join('')}
   </div>`;
+}
+
+
+// wosMoveStage — called from pipeline stage dropdown
+async function wosMoveStage(leadId, newStage, sel) {
+  if (!newStage || !leadId) return;
+  sel.disabled = true;
+  try {
+    const resp = await fetch('/api/leads/'+leadId+'/status', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: newStage})
+    });
+    const data = await resp.json();
+    if (data.ok || data.id) {
+      // Update local APP.leads
+      const lead = APP.leads.find(l => l.id === leadId);
+      if (lead) lead.status = newStage;
+      // Re-render pipeline
+      render();
+    } else {
+      alert('Error moving lead: '+(data.error||'Failed'));
+      sel.disabled = false;
+    }
+  } catch(e) {
+    alert('Error: '+e.message);
+    sel.disabled = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5077,7 +5101,7 @@ var ALL_STATES_DATA = [];
 
 function renderAllStates() {
   setTimeout(loadAllStates, 50);
-  return '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><div style="font-size:16px;font-weight:700">All States — Click to Populate</div><div style="font-size:11px;color:#86868b">Click any state to auto-generate 150 leads. First click only.</div></div><input class="topbar-search" style="width:200px" placeholder="Filter states..." id="states-filter" oninput="filterStates(this.value)"></div><div id="states-grid"><div style="text-align:center;padding:40px;color:#86868b">Loading states...</div></div></div>';
+  return '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><div style="font-size:16px;font-weight:700">All States — Click to Populate</div><div style="font-size:11px;color:#86868b">Click any state to pull REAL leads from public records (code violations, tax liens, pre-foreclosures).</div></div><input class="topbar-search" style="width:200px" placeholder="Filter states..." id="states-filter" oninput="filterStates(this.value)"></div><div id="states-grid"><div style="text-align:center;padding:40px;color:#86868b">Loading states...</div></div></div>';
 }
 
 async function loadAllStates() {
@@ -5104,7 +5128,7 @@ function renderStatesGrid(states) {
     card.innerHTML = '<div style="font-size:11px;font-weight:700;color:#86868b;margin-bottom:2px">'+s.code+'</div><div style="font-size:13px;font-weight:600;margin-bottom:6px">'+s.name+'</div><div style="font-size:10px;color:'+(hasLeads?'#34c759':'#86868b')+';font-weight:600">'+(hasLeads?s.leadCount+' leads':'Click to populate')+'</div>'+(hasLeads?'<div style="font-size:9px;color:#86868b;margin-top:2px">'+s.counties.length+' counties</div>':'');
     card.addEventListener('mouseenter', function() { this.style.borderColor = '#0071e3'; });
     card.addEventListener('mouseleave', function() { this.style.borderColor = hasLeads?'#34c759':'#e5e5ea'; });
-    (function(code, name) { card.addEventListener('click', function() { populateState(code, name); }); })(s.code, s.name);
+    (function(code, name) { card.addEventListener('click', function() { wosRealPullState(code, name); }); })(s.code, s.name);
     container.appendChild(card);
   });
   grid.innerHTML = '';
@@ -5116,7 +5140,7 @@ function filterStates(q) {
   renderStatesGrid(ALL_STATES_DATA.filter(function(s) { return s.name.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()); }));
 }
 
-async function populateState(code, name) {
+async function wosRealPullState(code, name) {
   const s = ALL_STATES_DATA.find(function(x) { return x.code === code; });
   if (s && s.populated && s.leadCount > 0) { toast(name+' already has '+s.leadCount+' leads. Go to Leads tab.',''); return; }
   toast('Populating '+name+' with 150 leads… Check notifications when done.','');
@@ -10731,7 +10755,7 @@ function renderStatesGrid(states) {
     card.innerHTML = '<div style="font-size:11px;font-weight:700;color:#86868b;margin-bottom:2px">'+s.code+'</div><div style="font-size:13px;font-weight:600;margin-bottom:6px">'+s.name+'</div><div style="font-size:10px;color:'+(hasLeads?'#34c759':'#86868b')+';font-weight:600">'+(hasLeads?s.leadCount+' leads':'Click to populate')+'</div>'+(hasLeads?'<div style="font-size:9px;color:#86868b;margin-top:2px">'+s.counties.length+' counties</div>':'');
     card.addEventListener('mouseenter', function() { this.style.borderColor = '#0071e3'; });
     card.addEventListener('mouseleave', function() { this.style.borderColor = hasLeads?'#34c759':'#e5e5ea'; });
-    (function(code, name) { card.addEventListener('click', function() { populateState(code, name); }); })(s.code, s.name);
+    (function(code, name) { card.addEventListener('click', function() { wosRealPullState(code, name); }); })(s.code, s.name);
     container.appendChild(card);
   });
   grid.innerHTML = '';
@@ -10743,7 +10767,7 @@ function filterStates(q) {
   renderStatesGrid(ALL_STATES_DATA.filter(function(s) { return s.name.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()); }));
 }
 
-async function populateState(code, name) {
+async function wosRealPullState(code, name) {
   const s = ALL_STATES_DATA.find(function(x) { return x.code === code; });
   if (s && s.populated && s.leadCount > 0) { toast(name+' already has '+s.leadCount+' leads. Go to Leads tab.',''); return; }
   toast('Populating '+name+' with 150 leads… Check notifications when done.','');
@@ -14482,6 +14506,35 @@ if(document.readyState==="loading"){
 
 <script src="/dashboard/wos-features.js?v=7"></script>
 
-<script src="/dashboard/wos-outreach.js?v=1"></script>
+<script src="/dashboard/wos-outreach.js?v=1">
+function wosRealPullState(stateCode, cardEl) {
+  if (cardEl) { cardEl.style.opacity="0.6"; cardEl.style.pointerEvents="none"; }
+  var count = 300;
+  var statusDiv = cardEl ? cardEl.querySelector("[data-state-status]") : null;
+  if (statusDiv) statusDiv.textContent = "Pulling...";
+  fetch('/api/leads/search-fresh-v2', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({state: stateCode, count: count})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if (cardEl) { cardEl.style.opacity="1"; cardEl.style.pointerEvents=""; }
+    if (d.ok) {
+      if (statusDiv) statusDiv.textContent = d.inserted+" new leads added";
+      // Refresh leads
+      loadLeads && loadLeads();
+      alert(d.inserted+" real leads added for "+stateCode+" from code violations, tax liens, and pre-foreclosure data.");
+    } else {
+      if (statusDiv) statusDiv.textContent = "Error";
+      alert("Error: "+(d.error||"failed"));
+    }
+  })
+  .catch(function(e){
+    if (cardEl) { cardEl.style.opacity="1"; cardEl.style.pointerEvents=""; }
+    alert("Error: "+e.message);
+  });
+}
+</script>
 </body>
 </html>
