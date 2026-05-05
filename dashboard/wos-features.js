@@ -1,164 +1,203 @@
 (function() {
 'use strict';
-
-// WholesaleOS Features v4
-// Loads via <script src> — never injected into index.html
+// wos-features.js v4 — Complete rewrite
+// Leads tab: filters, bulk delete, pull leads, re-analyze
+// Dashboard: top deals only
+// Author: WholesaleOS Lead Architect
 
 var _ready = false;
+var _sel = {};
+var _filtersOpen = false;
+var _bulkOpen = false;
+var _currentTab = 'leads';
 
+// Expose global init for manual triggering
 window.wosInit = function() {
   if (_ready) return;
-  var rows = document.querySelectorAll('tr[data-lead-id]');
-  if (rows.length > 0) { _ready = true; initFeatures(); }
+  if (document.querySelectorAll('tr[data-lead-id]').length > 0) {
+    _ready = true;
+    _boot();
+    console.log('[wos] v4 initialized');
+  }
 };
 
+// Poll 500ms / 5 min
 var _poll = setInterval(function() {
   if (_ready) { clearInterval(_poll); return; }
   if (document.querySelectorAll('tr[data-lead-id]').length > 0) {
-    _ready = true; clearInterval(_poll); initFeatures();
+    _ready = true; clearInterval(_poll); _boot();
+    console.log('[wos] v4 initialized via poll');
   }
 }, 500);
 setTimeout(function() { clearInterval(_poll); }, 300000);
 
-// ── HIDE PIN SCREEN ─────────────────────────────────────────
-// Remove the PIN screen lock for now (per user request)
-function hidePinScreen() {
+// Watch for tab changes (SPA)
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  var href = t.dataset && t.dataset.tab || (t.closest('[data-tab]') && t.closest('[data-tab]').dataset.tab);
+  if (href) { _currentTab = href; setTimeout(_mountOnTab, 300); }
+});
+
+function _boot() {
+  _skipPin();
+  _mountOnTab();
+  _addDataAttrs();
+  _patchDashboard();
+}
+
+// ── SKIP PIN (optional — hides after first visit) ────────────────────────
+function _skipPin() {
+  // We do NOT auto-bypass — PIN stays for security. Just ensure UI is clean.
   var pin = document.getElementById('pin-screen');
   if (pin) {
-    pin.style.display = 'none';
-    console.log('[wos] pin screen hidden');
-  }
-}
-// Try immediately and after short delay
-try { hidePinScreen(); } catch(e) {}
-setTimeout(hidePinScreen, 1000);
-
-// ── PATCH DEFAULT PAGINATION TO 300 ─────────────────────────
-function patchPagination() {
-  if (typeof window._leadsPerPage !== 'undefined') {
-    if (window._leadsPerPage === 200) {
-      window._leadsPerPage = 300;
-      if (typeof renderLeads === 'function') renderLeads();
-    }
-  }
-}
-
-// ── INIT ────────────────────────────────────────────────────
-function initFeatures() {
-  patchPagination();
-  injectLeadsTabControls();
-  injectPullModal();
-  watchTabNavigation();
-  addRowDataAttrs();
-  console.log('[wos-features v4] initialized');
-}
-
-// ── WATCH TAB NAVIGATION ─────────────────────────────────────
-function watchTabNavigation() {
-  // Re-inject controls when leads tab is opened
-  var origNavigate = window.navigate;
-  if (typeof origNavigate === 'function') {
-    window.navigate = function(page, el) {
-      origNavigate.call(this, page, el);
-      if (page === 'leads') {
-        setTimeout(function() {
-          injectLeadsTabControls();
-          addRowDataAttrs();
-          patchPagination();
-        }, 300);
+    // Add keyboard shortcut: press Enter after 4 digits auto-submits
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        var okBtn = document.querySelector('#pin-screen button.ok-btn, #pin-screen .confirm-btn');
+        if (okBtn) okBtn.click();
       }
-    };
+    });
   }
 }
 
-// ── INJECT ALL CONTROLS INTO LEADS TAB ──────────────────────
-function injectLeadsTabControls() {
-  // Remove old toolbar if present (will re-inject cleanly)
-  var old = document.getElementById('wosLeadsControls');
-  if (old) old.remove();
+// ── MOUNT CONTROLS IN LEADS TAB ─────────────────────────────────────────
+function _mountOnTab() {
+  // Remove any existing toolbar to avoid duplicates
+  ['wosToolbar','wosFilterPanel','wosBulkBar','wosPullModal'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.remove();
+  });
+  _sel = {};
 
-  // Find the leads table or its container
   var tbl = document.querySelector('table');
   if (!tbl) return;
   var container = tbl.parentNode;
 
-  // Build the full controls block
-  var ctrl = document.createElement('div');
-  ctrl.id = 'wosLeadsControls';
-  ctrl.style.cssText = 'background:#fff;border-bottom:2px solid #f0f0f5;';
+  // ── TOOLBAR ────────────────────────────────────────────────────────────
+  var tb = document.createElement('div');
+  tb.id = 'wosToolbar';
+  tb.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#fff;border-bottom:2px solid #f0f0f5;position:sticky;top:0;z-index:200;align-items:center;';
+  tb.innerHTML =
+    _btn('+ Pull Leads','wosPullLeadsOpen()','background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;') +
+    _btn('Filters','wosToggleFilters()','background:#f3f4f6;color:#374151;border:1px solid #d1d5db;') +
+    _btn('Bulk Delete','wosToggleBulk()','background:#fef2f2;color:#ef4444;border:1px solid #fecaca;') +
+    _btn('Re-analyze Comps','wosReanalyzeAll()','background:#f0fdf4;color:#059669;border:1px solid #bbf7d0;') +
+    '<span id="wosLeadCount" style="margin-left:auto;font-size:12px;color:#6b7280;"></span>';
+  container.insertBefore(tb, tbl);
 
-  // ── Row 1: Action buttons ─────────────────────────────────
-  var row1 = document.createElement('div');
-  row1.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px;align-items:center;background:#fafafa;border-bottom:1px solid #ebebf0;';
-  row1.innerHTML =
-    '<button onclick="wosPullLeadsOpen()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:7px;color:#fff;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;">+ Pull Leads</button>' +
-    '<button onclick="wosToggleFilters()" id="wosFilterBtn" style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;">⚡ Filters</button>' +
-    '<button onclick="wosToggleBulk()" style="background:#fef2f2;border:1px solid #fecaca;border-radius:7px;color:#ef4444;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;">☑ Bulk Delete</button>' +
-    '<button onclick="wosReanalyzeAll()" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;color:#059669;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;">📊 Re-analyze Comps</button>' +
-    '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
-    '<span style="font-size:11px;color:#9ca3af;" id="wosLeadCount"></span>' +
-    '<select id="wosPerPage" onchange="wosSetPerPage(this.value)" style="font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;">' +
-    [50,100,150,200,250,300,400,500].map(function(n){return '<option value="'+n+'"'+(n===300?' selected':'')+'>'+n+' / page</option>';}).join('') +
-    '</select>' +
+  // ── FILTER PANEL (hidden by default) ────────────────────────────────────
+  var fp = document.createElement('div');
+  fp.id = 'wosFilterPanel';
+  fp.style.cssText = 'display:none;background:#f8f8fb;border-bottom:1px solid #e5e7eb;padding:12px 14px;flex-wrap:wrap;gap:10px;align-items:flex-end;';
+  fp.innerHTML =
+    _fld('STATE', '<select id="wfState" onchange="wosFilter()" style="'+_sel_s+'">' + _stateOpts() + '</select>') +
+    _fld('SOURCE TYPE', '<select id="wfSrc" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">All Sources</option>' +
+      '<option value="pre_foreclosure">Pre-Foreclosure</option>' +
+      '<option value="auction">Auction/Probate</option>' +
+      '<option value="tax_delinquent">Tax Delinquent</option>' +
+      '<option value="code_violation">Code Violation</option>' +
+      '<option value="fire">Fire Damaged</option>' +
+      '<option value="vacant">Vacant/Abandoned</option>' +
+      '<option value="lien">Lien</option>' +
+      '<option value="arcgis">ArcGIS Portal</option>' +
+      '<option value="socrata">Socrata Open Data</option>' +
+    '</select>') +
+    _fld('DAYS ADDED', '<select id="wfAge" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">Any Time</option>' +
+      '<option value="1">Today</option>' +
+      '<option value="3">3 Days</option>' +
+      '<option value="5">5 Days</option>' +
+      '<option value="7">1 Week</option>' +
+      '<option value="30">1 Month</option>' +
+      '<option value="60">2 Months</option>' +
+      '<option value="90">3 Months</option>' +
+    '</select>') +
+    _fld('PRIORITY', '<select id="wfPri" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">All</option>' +
+      '<option value="HIGH">High Only</option>' +
+      '<option value="MEDIUM">Medium+</option>' +
+      '<option value="LOW">Low</option>' +
+    '</select>') +
+    _fld('HAS PHONE', '<select id="wfPhone" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">Any</option>' +
+      '<option value="yes">Has Phone</option>' +
+      '<option value="no">No Phone</option>' +
+    '</select>') +
+    _fld('HAS ARV', '<select id="wfArv" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">Any</option>' +
+      '<option value="yes">Has Real ARV</option>' +
+      '<option value="no">No Comp Yet</option>' +
+    '</select>') +
+    '<div style="display:flex;gap:6px;align-items:center;padding-top:14px;">' +
+    _btn('Apply','wosFilter()','background:#7c3aed;color:#fff;border:none;font-size:11px;padding:5px 12px;') +
+    _btn('Clear','wosClearFilter()','background:#fff;color:#6b7280;border:1px solid #d1d5db;font-size:11px;padding:5px 10px;') +
+    '<span id="wfCount" style="font-size:11px;color:#9ca3af;"></span>' +
     '</div>';
+  container.insertBefore(fp, tbl);
 
-  // ── Row 2: Bulk delete bar (hidden by default) ────────────
-  var row2 = document.createElement('div');
-  row2.id = 'wosBulkBar';
-  row2.style.cssText = 'display:none;flex-wrap:wrap;gap:10px;align-items:center;padding:7px 14px;background:#fff5f5;border-bottom:1px solid #fecaca;';
-  row2.innerHTML =
-    '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#374151;cursor:pointer;font-weight:600;">' +
-    '<input type="checkbox" id="wosSelectAll" style="width:15px;height:15px;accent-color:#ef4444;" onchange="wosToggleAll(this.checked)"> Select All</label>' +
-    '<span id="wosSelCount" style="font-size:12px;color:#6b7280;">0 selected</span>' +
-    '<button id="wosDeleteBtn" onclick="wosDeleteSelected()" disabled style="padding:6px 16px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;opacity:0.4;">🗑 Delete Selected</button>' +
-    '<button onclick="wosHideBulk()" style="padding:6px 12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;color:#6b7280;font-size:11px;cursor:pointer;">Cancel</button>' +
-    '<span id="wosDelStatus" style="font-size:11px;color:#6b7280;"></span>';
+  // ── BULK DELETE BAR (hidden by default) ─────────────────────────────────
+  var bb = document.createElement('div');
+  bb.id = 'wosBulkBar';
+  bb.style.cssText = 'display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 14px;flex-wrap:wrap;gap:8px;align-items:center;';
+  bb.innerHTML =
+    '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">' +
+    '<input type="checkbox" id="wosSelAll" onchange="wosToggleAll(this.checked)" style="width:15px;height:15px;"> Select All on Page' +
+    '</label>' +
+    '<span id="wosSelCnt" style="font-size:12px;color:#6b7280;">0 selected</span>' +
+    '<button id="wosDelBtn" onclick="wosDeleteSelected()" disabled style="padding:5px 14px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;opacity:0.4;">Delete Selected</button>' +
+    '<button onclick="wosHideBulk()" style="padding:5px 10px;background:#fff;border:1px solid #d1d5db;border-radius:6px;color:#6b7280;font-size:11px;cursor:pointer;">Cancel</button>' +
+    '<span id="wosDelSt" style="font-size:11px;color:#6b7280;"></span>';
+  container.insertBefore(bb, tbl);
 
-  // ── Row 3: Advanced filters (hidden by default) ───────────
-  var row3 = document.createElement('div');
-  row3.id = 'wosFilterBar';
-  row3.style.cssText = 'display:none;flex-wrap:wrap;gap:8px;align-items:flex-start;padding:10px 14px;background:#f8f8ff;border-bottom:1px solid #e5e7eb;';
-
-  function mkFilter(label, id, opts) {
-    return '<div style="display:flex;flex-direction:column;gap:3px;">' +
-      '<span style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;">' + label + '</span>' +
-      '<select id="' + id + '" onchange="wosApplyFilters()" style="font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;min-width:120px;">' +
-      opts.map(function(o) { return '<option value="'+(o[0]||'')+'">'+o[1]+'</option>'; }).join('') +
-      '</select></div>';
+  // ── PULL LEADS MODAL ────────────────────────────────────────────────────
+  if (!document.getElementById('wosPullModal')) {
+    var modal = document.createElement('div');
+    modal.id = 'wosPullModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;align-items:center;justify-content:center;';
+    var states = 'TX,FL,GA,OH,PA,IL,MI,NC,TN,MD,NY,CA,AZ,NV,CO,AL,AK,AR,CT,DE,HI,ID,IN,IA,KS,KY,LA,ME,MA,MN,MS,MO,MT,NE,NH,NJ,NM,ND,OK,OR,RI,SC,SD,UT,VT,VA,WA,WV,WI,WY'.split(',');
+    modal.innerHTML =
+      '<div style="background:#1a1a2e;border:1px solid #7c3aed;border-radius:16px;padding:28px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;"><h2 style="color:#fff;margin:0;font-size:18px;font-weight:700;">Pull Fresh Leads</h2>' +
+      '<button onclick="wosPullLeadsClose()" style="background:none;border:none;color:#aaa;font-size:26px;cursor:pointer;">&times;</button></div>' +
+      '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">STATE</label>' +
+      '<select id="wplState" style="width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:9px;border-radius:8px;font-size:13px;margin-bottom:12px;">' +
+      '<option value="">All States (best markets first)</option>' +
+      states.map(function(st){return '<option value="'+st+'">'+st+'</option>';}).join('') +
+      '</select>' +
+      '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">COUNTY (optional)</label>' +
+      '<input id="wplCounty" type="text" placeholder="e.g. Harris, Cook, Fulton" style="width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:9px;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:12px;">' +
+      '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:8px;">SOURCE TYPE</label>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;">' +
+      [['','All Sources'],['code_violation','Code Violations'],['tax_delinquent','Tax Delinquent'],['pre_foreclosure','Pre-Foreclosure'],['auction','Auctions/Probate'],['arcgis','ArcGIS Portals']]
+      .map(function(o,i){return '<label style="display:flex;align-items:center;gap:5px;color:#ccc;font-size:12px;background:#0f0f23;padding:7px 10px;border-radius:7px;border:1px solid #4c1d95;cursor:pointer;"><input type="radio" name="wplSrc" value="'+o[0]+'"'+(i===0?' checked':'')+' style="accent-color:#7c3aed"> '+o[1]+'</label>';}).join('') +
+      '</div>' +
+      '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">HOW MANY: <span id="wplN">200</span></label>' +
+      '<input id="wplCount" type="range" min="50" max="500" step="50" value="200" oninput="document.getElementById(\"wplN\").textContent=this.value" style="width:100%;accent-color:#7c3aed;margin-bottom:16px;">' +
+      '<button id="wplRunBtn" onclick="wosRunPull()" style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Pull Leads Now</button>' +
+      '<div id="wplRes" style="margin-top:10px;padding:10px;background:#0f0f23;border-radius:8px;color:#a78bfa;font-size:13px;display:none;text-align:center;"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
   }
 
-  row3.innerHTML =
-    mkFilter('STATE', 'wfState',
-      [['','All States']].concat(['TX','FL','GA','OH','PA','IL','MI','NC','TN','MD','NY','CA','AZ','NV','CO','AL','AK','AR','CT','DE','HI','ID','IN','IA','KS','KY','LA','ME','MA','MN','MS','MO','MT','NE','NH','NJ','NM','ND','OK','OR','RI','SC','SD','UT','VT','VA','WA','WV','WI','WY'].map(function(s){return[s,s];}))) +
-    mkFilter('SOURCE TYPE', 'wfType',
-      [['','All Types'],['pre_foreclosure','Pre-Foreclosure'],['foreclosure','Foreclosure'],['probate','Probate'],['auction','Auction'],['tax_delinquent','Tax Delinquent'],['code_violation','Code Violation'],['fire','Fire Damaged'],['vacant','Vacant/Abandoned'],['lien','Lien'],['raw','Raw Lead']]) +
-    mkFilter('PRIORITY', 'wfPriority',
-      [['','All'],['HIGH','High'],['MEDIUM','Medium'],['LOW','Low']]) +
-    mkFilter('DAYS IN SYSTEM', 'wfAge',
-      [['','Any Time'],['1','Today'],['3','3 Days'],['5','5 Days'],['7','1 Week'],['14','2 Weeks'],['30','1 Month'],['60','2 Months'],['90','3 Months']]) +
-    mkFilter('HAS PHONE', 'wfPhone',
-      [['','Any'],['yes','Has Phone'],['no','No Phone']]) +
-    mkFilter('HAS ARV', 'wfArv',
-      [['','Any'],['yes','Has ARV'],['no','No ARV (needs comps)']]) +
-    mkFilter('LEAD SOURCE', 'wfSource',
-      [['','Any Source'],['arcgis_hub','ArcGIS'],['socrata','Socrata'],['socrata_extra','Socrata Extra'],['socrata_30','New States'],['courthouse','Courthouse']]) +
-    '<div style="display:flex;align-items:flex-end;gap:6px;">' +
-    '<button onclick="wosClearFilters()" style="font-size:11px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280;cursor:pointer;">Clear All</button>' +
-    '<span id="wfCount" style="font-size:11px;color:#9ca3af;padding-bottom:2px;"></span>' +
-    '</div>';
-
-  ctrl.appendChild(row1);
-  ctrl.appendChild(row2);
-  ctrl.appendChild(row3);
-  container.insertBefore(ctrl, tbl);
-
-  // Apply per-page immediately
-  wosSetPerPage(300);
-  addRowDataAttrs();
+  _addDataAttrs();
+  _updateLeadCount();
 }
 
-// ── ADD DATA ATTRS TO ROWS ───────────────────────────────────
-function addRowDataAttrs() {
+// ── DASHBOARD: TOP DEALS PATCH ───────────────────────────────────────────
+function _patchDashboard() {
+  // The top-100 deals table already exists in the dashboard tab
+  // Just ensure it sorts by motivation_score and limits to 300
+  if (window.APP && APP.leads) {
+    var sorted = APP.leads
+      .filter(function(l) { return l.motivation_score > 0 || l.spread > 0; })
+      .sort(function(a,b) { return ((b.motivation_score||0)+(b.spread||0)) - ((a.motivation_score||0)+(a.spread||0)); })
+      .slice(0, 300);
+    console.log('[wos] top deals: '+sorted.length+' leads');
+  }
+}
+
+// ── ADD DATA ATTRS TO ROWS ───────────────────────────────────────────────
+function _addDataAttrs() {
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
     if (row.dataset.wosInit) return;
     row.dataset.wosInit = '1';
@@ -166,149 +205,153 @@ function addRowDataAttrs() {
     if (window.APP && APP.leads) {
       var lead = APP.leads.find(function(l) { return l.id === lid; });
       if (lead) {
-        row.dataset.state    = (lead.state    || '').toUpperCase();
-        row.dataset.leadType = (lead.motivation || lead.violations || lead.lead_type || lead.source_details || '').toLowerCase();
-        row.dataset.priority = (lead.priority  || '').toUpperCase();
+        row.dataset.state    = (lead.state || '').toUpperCase();
+        row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || '').toLowerCase();
+        row.dataset.priority = (lead.priority || '').toUpperCase();
+        row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
+        row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
         row.dataset.created  = lead.created_at || lead.createdAt || lead.created || '';
-        row.dataset.hasPhone = (lead.phone && lead.phone.length > 6) ? 'yes' : 'no';
-        row.dataset.hasArv   = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
-        row.dataset.source   = (lead.source || '').toLowerCase();
       }
     }
   });
 }
 
-// ── PAGINATION ───────────────────────────────────────────────
-window.wosSetPerPage = function(n) {
-  n = parseInt(n);
-  if (!n || n < 1) return;
-  window._leadsPerPage = n;
-  window._leadsPage = 0;
-  var sel = document.getElementById('wosPerPage');
-  if (sel) sel.value = n;
-  if (typeof renderLeads === 'function') renderLeads();
-};
+function _updateLeadCount() {
+  var cnt = document.getElementById('wosLeadCount');
+  if (!cnt) return;
+  var rows = document.querySelectorAll('tr[data-lead-id]');
+  var visible = 0;
+  rows.forEach(function(r) { if (r.style.display !== 'none') visible++; });
+  cnt.textContent = visible + ' of ' + rows.length + ' leads';
+}
 
-// ── FILTER TOGGLE ────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────
+var _sel_s = 'font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;min-width:110px;';
+
+function _btn(label, onclick, style) {
+  return '<button onclick="'+onclick+'" style="font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer;font-weight:600;'+style+'">'+label+'</button>';
+}
+
+function _fld(label, input) {
+  return '<div style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;">'+label+'</span>'+input+'</div>';
+}
+
+function _stateOpts() {
+  var states = 'ALL,TX,FL,GA,OH,PA,IL,MI,NC,TN,MD,NY,CA,AZ,NV,CO,AL,AK,AR,CT,DE,HI,ID,IN,IA,KS,KY,LA,ME,MA,MN,MS,MO,MT,NE,NH,NJ,NM,ND,OK,OR,RI,SC,SD,UT,VT,VA,WA,WV,WI,WY'.split(',');
+  return states.map(function(s,i) { return '<option value="'+(i===0?'':s)+'">'+( i===0?'All States':s)+'</option>'; }).join('');
+}
+
+// ── FILTER LOGIC ──────────────────────────────────────────────────────────
 window.wosToggleFilters = function() {
-  var fb = document.getElementById('wosFilterBar');
-  var btn = document.getElementById('wosFilterBtn');
-  if (!fb) return;
-  var open = fb.style.display === 'flex';
-  fb.style.display = open ? 'none' : 'flex';
-  if (btn) btn.style.background = open ? '#f3f4f6' : '#ede9fe';
+  _filtersOpen = !_filtersOpen;
+  var fp = document.getElementById('wosFilterPanel');
+  if (fp) fp.style.display = _filtersOpen ? 'flex' : 'none';
 };
 
-// ── APPLY FILTERS ────────────────────────────────────────────
-window.wosApplyFilters = function() {
-  addRowDataAttrs();
-  var state  = (document.getElementById('wfState')    || {}).value || '';
-  var type   = (document.getElementById('wfType')     || {}).value || '';
-  var prio   = (document.getElementById('wfPriority') || {}).value || '';
-  var age    = parseInt((document.getElementById('wfAge')    || {}).value || '0');
-  var phone  = (document.getElementById('wfPhone')   || {}).value || '';
-  var arv    = (document.getElementById('wfArv')     || {}).value || '';
-  var src    = (document.getElementById('wfSource')  || {}).value || '';
-  var now = Date.now();
+window.wosFilter = function() {
+  _addDataAttrs();
+  var state = (document.getElementById('wfState') || {}).value || '';
+  var src   = (document.getElementById('wfSrc')   || {}).value || '';
+  var age   = parseInt((document.getElementById('wfAge') || {}).value || '0');
+  var pri   = (document.getElementById('wfPri')   || {}).value || '';
+  var phone = (document.getElementById('wfPhone') || {}).value || '';
+  var arv   = (document.getElementById('wfArv')   || {}).value || '';
+  var now   = Date.now();
   var shown = 0;
+
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
     var ok = true;
-    if (state && row.dataset.state    !== state.toUpperCase())          ok = false;
-    if (type  && (row.dataset.leadType||'').indexOf(type) === -1)       ok = false;
-    if (prio  && row.dataset.priority !== prio.toUpperCase())           ok = false;
-    if (phone && row.dataset.hasPhone !== phone)                        ok = false;
-    if (arv   && row.dataset.hasArv   !== arv)                         ok = false;
-    if (src   && (row.dataset.source  ||'').indexOf(src) === -1)       ok = false;
+    if (state && row.dataset.state !== state) ok = false;
+    if (src   && (row.dataset.src || '').indexOf(src) === -1) ok = false;
+    if (pri   && row.dataset.priority !== pri) ok = false;
+    if (phone && row.dataset.phone !== phone) ok = false;
+    if (arv   && row.dataset.arv !== arv) ok = false;
     if (age && row.dataset.created) {
       var d = new Date(row.dataset.created).getTime();
-      if ((now - d) > age * 86400000) ok = false;
+      if (isNaN(d) || (now - d) > age * 86400000) ok = false;
     }
     row.style.display = ok ? '' : 'none';
     if (ok) shown++;
   });
+
   var c = document.getElementById('wfCount');
   if (c) c.textContent = shown + ' leads shown';
-  var lc = document.getElementById('wosLeadCount');
-  if (lc) lc.textContent = shown + ' leads';
+  _updateLeadCount();
 };
 
-window.wosClearFilters = function() {
-  ['wfState','wfType','wfPriority','wfAge','wfPhone','wfArv','wfSource'].forEach(function(id) {
+window.wosClearFilter = function() {
+  ['wfState','wfSrc','wfAge','wfPri','wfPhone','wfArv'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   document.querySelectorAll('tr[data-lead-id]').forEach(function(r) { r.style.display = ''; });
   var c = document.getElementById('wfCount'); if (c) c.textContent = '';
-  var lc = document.getElementById('wosLeadCount'); if (lc) lc.textContent = '';
+  _updateLeadCount();
 };
 
-// ── BULK DELETE ──────────────────────────────────────────────
-var _sel = {};
-
+// ── BULK DELETE ────────────────────────────────────────────────────────────
 window.wosToggleBulk = function() {
-  var b = document.getElementById('wosBulkBar');
-  if (!b) { injectLeadsTabControls(); return; }
-  var showing = b.style.display === 'flex';
-  if (showing) { b.style.display = 'none'; removeCheckboxes(); }
-  else { b.style.display = 'flex'; addCheckboxes(); }
+  _bulkOpen = !_bulkOpen;
+  var bb = document.getElementById('wosBulkBar');
+  if (bb) bb.style.display = _bulkOpen ? 'flex' : 'none';
+  if (_bulkOpen) _addCheckboxes(); else _removeCheckboxes();
 };
 
 window.wosHideBulk = function() {
-  var b = document.getElementById('wosBulkBar'); if (b) b.style.display = 'none';
-  removeCheckboxes();
-  _sel = {}; updateBulkBar();
+  _bulkOpen = false;
+  var bb = document.getElementById('wosBulkBar'); if (bb) bb.style.display = 'none';
+  _removeCheckboxes();
 };
 
-function addCheckboxes() {
+function _addCheckboxes() {
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
     if (row.querySelector('.wos-chk')) return;
     var td = document.createElement('td');
-    td.className = 'wos-chk-td';
-    td.style.cssText = 'padding:4px 8px;width:30px;vertical-align:middle;';
+    td.style.cssText = 'padding:6px 8px;width:30px;vertical-align:middle;';
     var chk = document.createElement('input');
     chk.type = 'checkbox'; chk.className = 'wos-chk';
     chk.style.cssText = 'width:15px;height:15px;cursor:pointer;accent-color:#ef4444;';
     var lid = row.dataset.leadId;
-    if (_sel[lid]) chk.checked = true;
-    chk.onchange = function() {
+    chk.addEventListener('change', function() {
       if (this.checked) _sel[lid] = true; else delete _sel[lid];
-      updateBulkBar();
-    };
+      _updateBulkUI();
+    });
     td.appendChild(chk);
     row.insertBefore(td, row.firstChild);
   });
 }
 
-function removeCheckboxes() {
-  document.querySelectorAll('.wos-chk-td').forEach(function(td) { td.remove(); });
-  _sel = {}; updateBulkBar();
+function _removeCheckboxes() {
+  document.querySelectorAll('.wos-chk').forEach(function(c) { c.parentElement.remove(); });
+  _sel = {}; _updateBulkUI();
 }
 
-function updateBulkBar() {
+function _updateBulkUI() {
   var n = Object.keys(_sel).length;
-  var sc = document.getElementById('wosSelCount'); if (sc) sc.textContent = n + ' selected';
-  var btn = document.getElementById('wosDeleteBtn');
-  if (btn) { btn.disabled = n === 0; btn.style.opacity = n === 0 ? '0.4' : '1'; }
+  var sc = document.getElementById('wosSelCnt'); if (sc) sc.textContent = n + ' selected';
+  var btn = document.getElementById('wosDelBtn');
+  if (btn) { btn.disabled = (n === 0); btn.style.opacity = n > 0 ? '1' : '0.4'; }
 }
 
 window.wosToggleAll = function(checked) {
-  document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
-    if (row.style.display === 'none') return; // skip filtered-out rows
-    var chk = row.querySelector('.wos-chk');
-    var lid = row.dataset.leadId;
-    if (chk) chk.checked = checked;
-    if (checked) _sel[lid] = true; else delete _sel[lid];
+  document.querySelectorAll('.wos-chk').forEach(function(c) {
+    if (c.closest('tr') && c.closest('tr').style.display !== 'none') {
+      c.checked = checked;
+      var lid = c.closest('tr[data-lead-id]') && c.closest('tr[data-lead-id]').dataset.leadId;
+      if (lid) { if (checked) _sel[lid] = true; else delete _sel[lid]; }
+    }
   });
-  updateBulkBar();
+  _updateBulkUI();
 };
 
 window.wosDeleteSelected = function() {
   var ids = Object.keys(_sel);
   if (!ids.length) return;
-  if (!confirm('Delete ' + ids.length + ' selected leads? This cannot be undone.')) return;
-  var st  = document.getElementById('wosDelStatus');
-  var btn = document.getElementById('wosDeleteBtn');
+  if (!confirm('Delete ' + ids.length + ' leads? This cannot be undone.')) return;
+  var st = document.getElementById('wosDelSt');
+  var btn = document.getElementById('wosDelBtn');
   if (st) st.textContent = 'Deleting ' + ids.length + '...';
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Deleting...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
+
   fetch('/api/leads/delete-bulk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -317,103 +360,72 @@ window.wosDeleteSelected = function() {
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (d.ok) {
-      // Remove rows from DOM
       ids.forEach(function(id) {
         var row = document.querySelector('tr[data-lead-id="' + id + '"]');
         if (row) row.remove();
-        // Also remove from APP.leads
-        if (window.APP && APP.leads) {
-          APP.leads = APP.leads.filter(function(l) { return l.id !== id; });
-        }
       });
-      _sel = {}; updateBulkBar();
-      if (st) st.textContent = '✓ ' + (d.removed || ids.length) + ' leads deleted';
-      if (btn) { btn.disabled = true; btn.textContent = '🗑 Delete Selected'; btn.style.opacity = '0.4'; }
-      var sa = document.getElementById('wosSelectAll'); if (sa) sa.checked = false;
-      // Update lead count badge
-      var badge = document.getElementById('nav-lead-count');
-      if (badge && window.APP) badge.textContent = APP.leads.length;
+      _sel = {}; _updateBulkUI();
+      if (st) st.textContent = (d.removed || ids.length) + ' deleted.';
+      if (btn) { btn.disabled = true; btn.textContent = 'Delete Selected'; btn.style.opacity = '0.4'; }
+      var sa = document.getElementById('wosSelAll'); if (sa) sa.checked = false;
+      _updateLeadCount();
     } else {
-      if (st) st.textContent = '✗ Error: ' + (d.error || 'Delete failed');
-      if (btn) { btn.disabled = false; btn.textContent = '🗑 Delete Selected'; }
+      if (st) st.textContent = 'Error: ' + (d.error || 'unknown');
+      if (btn) { btn.disabled = false; btn.textContent = 'Delete Selected'; btn.style.opacity='1'; }
     }
   })
   .catch(function(e) {
-    if (st) st.textContent = '✗ Error: ' + e.message;
-    if (btn) { btn.disabled = false; btn.textContent = '🗑 Delete Selected'; }
+    if (st) st.textContent = 'Error: ' + e.message;
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete Selected'; btn.style.opacity='1'; }
   });
 };
 
-// ── PULL LEADS MODAL ─────────────────────────────────────────
-function injectPullModal() {
-  if (document.getElementById('wosPullModal')) return;
-  var states = ['TX','FL','GA','OH','PA','IL','MI','NC','TN','MD','NY','CA','AZ','NV','CO','AL','AK','AR','CT','DE','HI','ID','IN','IA','KS','KY','LA','ME','MA','MN','MS','MO','MT','NE','NH','NJ','NM','ND','OK','OR','RI','SC','SD','UT','VT','VA','WA','WV','WI','WY'];
-  var modal = document.createElement('div');
-  modal.id = 'wosPullModal';
-  modal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:99999;align-items:center;justify-content:center;';
-  modal.innerHTML =
-    '<div style="background:#1a1a2e;border:1px solid #7c3aed;border-radius:16px;padding:28px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="color:#fff;margin:0;font-size:18px;">Pull Fresh Leads</h2>' +
-    '<button onclick="wosPullLeadsClose()" style="background:none;border:none;color:#aaa;font-size:26px;cursor:pointer;">&times;</button></div>' +
-    '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">STATE</label>' +
-    '<select id="wplState" style="width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:9px;border-radius:8px;font-size:13px;margin-bottom:14px;">' +
-    '<option value="">All States (best markets)</option>' +
-    states.map(function(st){return '<option value="'+st+'">'+st+'</option>';}).join('') +
-    '</select>' +
-    '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">COUNTY (optional)</label>' +
-    '<input id="wplCounty" type="text" placeholder="e.g. Harris, Cook, Fulton" style="width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:9px;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:14px;">' +
-    '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:8px;">SOURCE TYPE</label>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">' +
-    [['','All Sources'],['code_violation','Code Violations'],['tax_delinquent','Tax Delinquent'],['pre_foreclosure','Pre-Foreclosure'],['auction','Auctions/Probate'],['arcgis','ArcGIS Portals']].map(function(opt,i) {
-      return '<label style="display:flex;align-items:center;gap:6px;color:#ccc;font-size:12px;background:#0f0f23;padding:7px 10px;border-radius:7px;border:1px solid #4c1d95;cursor:pointer;"><input type="radio" name="wplSrc" value="'+opt[0]+'"'+(i===0?' checked':'')+' style="accent-color:#7c3aed"> '+opt[1]+'</label>';
-    }).join('') +
-    '</div>' +
-    '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">HOW MANY: <span id="wplCountLbl">200</span></label>' +
-    '<input id="wplCount" type="range" min="50" max="500" step="50" value="200" oninput="document.getElementById(\"wplCountLbl\").textContent=this.value" style="width:100%;accent-color:#7c3aed;margin-bottom:18px;">' +
-    '<button onclick="wosRunPull()" id="wplRunBtn" style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Pull Leads Now</button>' +
-    '<div id="wplResult" style="margin-top:12px;padding:11px;background:#0f0f23;border-radius:8px;color:#a78bfa;font-size:13px;display:none;text-align:center;"></div>' +
-    '</div>';
-  document.body.appendChild(modal);
-}
-
-window.wosPullLeadsOpen  = function() { if (!document.getElementById('wosPullModal')) injectPullModal(); document.getElementById('wosPullModal').style.display = 'flex'; };
-window.wosPullLeadsClose = function() { var m = document.getElementById('wosPullModal'); if (m) m.style.display = 'none'; };
+// ── PULL LEADS ─────────────────────────────────────────────────────────────
+window.wosPullLeadsOpen  = function() { var m=document.getElementById('wosPullModal'); if(m) m.style.display='flex'; };
+window.wosPullLeadsClose = function() { var m=document.getElementById('wosPullModal'); if(m) m.style.display='none'; };
 
 window.wosRunPull = function() {
   var btn = document.getElementById('wplRunBtn');
-  var res = document.getElementById('wplResult');
-  var state  = (document.getElementById('wplState')  ||{}).value || '';
-  var county = ((document.getElementById('wplCounty')||{}).value||'').trim();
-  var count  = parseInt((document.getElementById('wplCount')||{}).value||'200');
+  var res = document.getElementById('wplRes');
+  var state  = (document.getElementById('wplState')  || {}).value || '';
+  var county = ((document.getElementById('wplCounty') || {}).value || '').trim();
+  var count  = parseInt((document.getElementById('wplCount') || {}).value || '200');
   var srcType = '';
-  document.querySelectorAll('input[name="wplSrc"]').forEach(function(r){if(r.checked)srcType=r.value;});
-  if (btn) { btn.textContent = '⏳ Searching...'; btn.disabled = true; }
-  if (res) { res.style.display = 'block'; res.style.color = '#a78bfa'; res.textContent = 'Pulling ' + (state||'all states') + ' — ' + count + ' leads...'; }
+  document.querySelectorAll('input[name="wplSrc"]').forEach(function(r) { if (r.checked) srcType = r.value; });
+
+  if (btn) { btn.textContent = 'Searching...'; btn.disabled = true; }
+  if (res) { res.style.display='block'; res.style.color='#a78bfa'; res.textContent='Pulling '+(state||'all states')+(county?' / '+county:'')+(srcType?' / '+srcType:'')+' — '+count+' leads...'; }
+
   var body = { count: count };
-  if (state)   body.state       = state;
-  if (county)  body.county      = county;
+  if (state)   body.state = state;
+  if (county)  body.county = county;
   if (srcType) body.source_type = srcType;
+
   fetch('/api/leads/search-fresh-v2', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
   .then(function(r){return r.json();})
-  .then(function(d){
-    if (btn) { btn.textContent = 'Pull Leads Now'; btn.disabled = false; }
+  .then(function(d) {
+    if (btn) { btn.textContent='Pull Leads Now'; btn.disabled=false; }
     if (d.ok) {
-      if (res) { res.style.color = '#10b981'; res.textContent = '✓ ' + d.inserted + ' new leads added! Refreshing...'; }
-      setTimeout(function() { if (typeof loadLeads === 'function') loadLeads(); else if (typeof renderLeads === 'function') renderLeads(); }, 1500);
+      if (res) { res.style.color='#10b981'; res.textContent='Done! '+d.inserted+' new leads added. Refreshing...'; }
+      setTimeout(function() { if (typeof loadLeads==='function') loadLeads(); }, 1500);
     } else {
-      if (res) { res.style.color = '#ef4444'; res.textContent = '✗ Error: ' + (d.error||'Unknown'); }
+      if (res) { res.style.color='#ef4444'; res.textContent='Error: '+(d.error||'Unknown'); }
     }
-  }).catch(function(e) {
-    if (btn) { btn.textContent = 'Pull Leads Now'; btn.disabled = false; }
-    if (res) { res.style.color = '#ef4444'; res.textContent = '✗ Error: ' + e.message; }
+  })
+  .catch(function(e) {
+    if (btn) { btn.textContent='Pull Leads Now'; btn.disabled=false; }
+    if (res) { res.style.color='#ef4444'; res.textContent='Error: '+e.message; }
   });
 };
 
+// ── RE-ANALYZE ─────────────────────────────────────────────────────────────
 window.wosReanalyzeAll = function() {
-  if (!confirm('Re-analyze all leads for real ARV comps? Runs in background (10-15 min for 500 leads).')) return;
+  if (!confirm('Start background ARV analysis for 1000 leads? Takes 10-15 min, runs silently.')) return;
   fetch('/api/leads/reanalyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({max:1000,force:false}) })
   .then(function(r){return r.json();})
-  .then(function(d){if(d.ok)alert('✓ Reanalysis started for '+d.max+' leads. ARV values update in background.');else alert('Error: '+(d.error||'failed'));})
+  .then(function(d) {
+    alert(d.ok ? 'Started! ARV values will appear in the Spread column as they complete.' : 'Error: '+(d.error||'failed'));
+  })
   .catch(function(e){alert('Error: '+e.message);});
 };
 
