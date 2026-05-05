@@ -2905,7 +2905,7 @@ function addListeners() {
 async function loadLeadsFromAPI() {
   try {
     // Load leads from correct endpoint
-    const leadsRes = await fetch('/api/leads');
+    const leadsRes = await fetch('/api/leads?limit=9999&sort=motivation_score');
     if (leadsRes.ok) {
       const data = await leadsRes.json();
       const leads = data.leads || data || [];
