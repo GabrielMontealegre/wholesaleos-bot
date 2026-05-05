@@ -13,11 +13,9 @@ var _currentTab = 'leads';
 
 // Expose global init for manual triggering
 window.wosInit = function() {
-  if (_ready) return;
   if (document.querySelectorAll('tr[data-lead-id]').length > 0) {
-    _ready = true;
-    _boot();
-    console.log('[wos] v4 initialized');
+    if (!_ready) { _ready = true; _boot(); console.log('[wos] v4 initialized'); }
+    else { _mountOnTab(); } // re-mount on tab change
   }
 };
 
@@ -43,6 +41,15 @@ function _boot() {
   _mountOnTab();
   _addDataAttrs();
   _patchDashboard();
+  // Watch for SPA navigation — remount when table container changes
+  var _obs = new MutationObserver(function() {
+    var tbl = document.querySelector('table');
+    if (tbl && !document.getElementById('wosToolbar')) {
+      setTimeout(_mountOnTab, 200);
+    }
+  });
+  var target = document.querySelector('.content, #content, main, body');
+  if (target) _obs.observe(target, { childList: true, subtree: true });
 }
 
 // ── SKIP PIN (optional — hides after first visit) ────────────────────────
