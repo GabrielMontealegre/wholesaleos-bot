@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T01:38:58.410Z
+// Deploy: 2026-05-05T02:07:23.508Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3623,32 +3623,6 @@ app.post('/api/leads/delete-batch', function(req, res) {
   }
 });
 // Alias: /api/leads/delete-bulk (same as delete-batch, matches dashboard bulkDelete() call)
-app.post('/api/leads/delete-bulk', function(req, res) {
-  try {
-    var ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : [];
-    if (ids.length === 0) return res.status(400).json({ ok:false, error:'No IDs provided' });
-    var dbData = db.readDB();
-    var before = (dbData.leads || []).length;
-    dbData.leads = (dbData.leads || []).filter(function(l){ return ids.indexOf(l.id) === -1; });
-    var deleted = before - dbData.leads.length;
-    db.writeDB(dbData);
-    logger.info('Bulk delete: removed ' + deleted + ' leads');
-    res.json({ ok:true, deleted:deleted, removed:deleted, remaining:dbData.leads.length });
-  } catch(e) {
-    logger.error('Bulk delete error: ' + e.message);
-    res.status(500).json({ ok:false, error:e.message });
-  }
-});
-
-
-// Start server
-
-// NOTE: express.json can crash on invalid input — protected with error handler
-// ================================================================
-// WHOLESALEOS NEW ROUTES v3 — comps, seller-script, search-fresh, buyer-send
-// ================================================================
-
-// GET /api/leads/:id/comps — fetch real comps on demand
 app.get('/api/leads/:id/comps', function(req, res) {
   var agent;
   try { agent = require('./modules/agents/comp-agent'); }
