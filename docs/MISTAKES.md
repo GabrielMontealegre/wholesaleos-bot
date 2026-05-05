@@ -152,3 +152,40 @@ Rule: Never auto-generate leads. All leads must come from real public record sou
 - Outreach Hub UI: Built (dashboard/wos-outreach.js)
 - Score All Leads: Button in Leads tab toolbar
 - PUT /api/leads/:id/status: Added
+
+
+---
+
+## Session 2026-05-05 — Key Learnings
+
+MISTAKE 10 — /api/leads/hot route order (Express routing)
+What: Defined /api/leads/hot AFTER /api/leads/:id. Express treated "hot" as the :id param.
+Fix: Always define specific static routes BEFORE parameterized routes (:id).
+Rule: In server.js, all GET /api/leads/[specific] routes must come BEFORE GET /api/leads/:id
+
+MISTAKE 11 — Pipeline routes missing entirely
+What: Pipeline tab existed in dashboard but /api/pipeline route was never added to server.js.
+Fix: Added GET /api/pipeline, PATCH /api/pipeline/:id/stage, POST /api/pipeline/:id/note
+Rule: Always verify route exists via curl/XHR before building the UI for it.
+
+MISTAKE 12 — Score All Leads button not reaching toolbar
+What: Pattern match in previous session failed because toolbar uses _btn() helper not raw HTML.
+Fix: Always log the exact string before attempting replacement.
+Rule: console.log the section you are about to modify before replacing.
+
+WORKING PATTERN — Safe modular JS files
+All new features go in separate /dashboard/wos-*.js files loaded via <script src>.
+Never inject into dashboard/index.html except to add a <script src> tag before </body>.
+Always validate: delta of script open/close tags must equal 1/1 after adding script tag.
+
+CURRENT STATUS (2026-05-05)
+- /api/pipeline: WORKING
+- /api/leads/hot: WORKING (fixed route order)
+- Score All Leads button: IN TOOLBAR
+- Pipeline Kanban: wos-pipeline.js deployed
+- Outreach Hub: wos-outreach.js deployed
+- Hot Lead Scorer: modules/agents/hot-lead-scorer.js
+- Hot Lead Alert: modules/agents/hot-lead-alert.js
+- Checkbox stopPropagation: CONFIRMED in features file
+- No fake leads found in sample of 50
+- BOT_OWNER_ID: needs verification in Railway env vars
