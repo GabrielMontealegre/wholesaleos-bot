@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T03:22:33.426Z
+// Deploy: 2026-05-05T10:06:00.415Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -4066,6 +4066,85 @@ cron.schedule('0 7 * * *', async function() {
     logger.info('[telegram] 7AM summary sent');
   } catch(e){ logger.error('[telegram] 7AM cron error: ' + e.message); }
 }, { timezone: 'UTC' });
+
+
+// ── Hot Lead Scorer + Alert + Outreach AI ───────────────────────────────
+try {
+  var _hotScorer = require('./modules/agents/hot-lead-scorer');
+  var _hotAlert  = require('./modules/agents/hot-lead-alert');
+
+  // POST /api/outreach/generate-ai — AI outreach per lead
+  app.post('/api/outreach/generate-ai', async function(req, res) {
+    try {
+      var body = req.body || {};
+      var lead = db.getLeads ? db.getLeads().find(function(l){return l.id===body.leadId;}) : null;
+      if (!lead) return res.status(404).json({ok:false,error:'Lead not found'});
+      var scored = _hotScorer.scoreHotLead(lead);
+      lead = Object.assign({}, lead, scored);
+      var result = await _hotAlert.generateOutreachMessage(lead, body.type || 'sms_seller', body.extra || {});
+      res.json(result);
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // POST /api/outreach/bulk-buyer — blind deal outreach to buyers
+  app.post('/api/outreach/bulk-buyer', async function(req, res) {
+    try {
+      var body = req.body || {};
+      var leadIds = body.leadIds || [];
+      var buyerId = body.buyerId;
+      var allLeads = db.getLeads ? db.getLeads() : [];
+      var deals = allLeads.filter(function(l){ return leadIds.indexOf(l.id) > -1; });
+      var buyers = db.getBuyers ? db.getBuyers() : [];
+      var buyer = buyers.find(function(b){ return b.id===buyerId; }) || {};
+      var fakeLead = deals[0] || {};
+      var result = await _hotAlert.generateOutreachMessage(fakeLead, 'bulk_buyer', {
+        deals: deals, buyerName: buyer.name||buyer.contact||'Investor',
+        buyerState: (buyer.buyBox||{}).state||''
+      });
+      res.json(result);
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // POST /api/leads/:id/score-hot — score a single lead
+  app.post('/api/leads/:id/score-hot', function(req, res) {
+    try {
+      var lead = db.getLeads ? db.getLeads().find(function(l){return l.id===req.params.id;}) : null;
+      if (!lead) return res.status(404).json({ok:false,error:'Lead not found'});
+      var score = _hotScorer.scoreHotLead(lead);
+      db.updateLead(req.params.id, score);
+      res.json({ok:true,score:score});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // POST /api/leads/score-all — batch score all leads
+  app.post('/api/leads/score-all', function(req, res) {
+    try {
+      var leads = db.getLeads ? db.getLeads() : [];
+      var hot=0, warm=0, cold=0;
+      leads.forEach(function(lead) {
+        var score = _hotScorer.scoreHotLead(lead);
+        db.updateLead(lead.id, score);
+        if(score.hot_tier==='HOT') hot++;
+        else if(score.hot_tier==='WARM') warm++;
+        else cold++;
+      });
+      res.json({ok:true,total:leads.length,hot:hot,warm:warm,cold:cold});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // GET /api/leads/hot — get HOT leads only
+  app.get('/api/leads/hot', function(req, res) {
+    try {
+      var leads = db.getLeads ? db.getLeads() : [];
+      var hot = leads.filter(function(l){ return l.hot_score >= 70 || l.hot_tier==='HOT'; })
+        .sort(function(a,b){ return (b.hot_score||0)-(a.hot_score||0); })
+        .slice(0, parseInt(req.query.limit)||100);
+      res.json({ok:true,leads:hot,total:hot.length});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  logger.info('[hot-lead] scorer + alert + outreach AI routes registered');
+} catch(e) { logger.error('[hot-lead] failed to load: ' + e.message); }
 
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
