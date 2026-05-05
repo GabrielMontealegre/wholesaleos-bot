@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T10:10:42.772Z
+// Deploy: 2026-05-05T10:39:15.895Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -4145,6 +4145,22 @@ try {
 
   logger.info('[hot-lead] scorer + alert + outreach AI routes registered');
 } catch(e) { logger.error('[hot-lead] failed to load: ' + e.message); }
+
+
+// ── Lead status update (pipeline stage move) ────────────────────────────
+app.put('/api/leads/:id/status', function(req, res) {
+  try {
+    var lead = db.getLead ? db.getLead(req.params.id) : db.getLeads().find(function(l){return l.id===req.params.id;});
+    if (!lead) return res.status(404).json({ok:false,error:'Lead not found'});
+    var newStatus = (req.body||{}).status;
+    var validStatuses = ['New Lead','Contacted','Offer Sent','Negotiating','Under Contract','Closed','Dead'];
+    if (!newStatus || validStatuses.indexOf(newStatus) === -1) return res.status(400).json({ok:false,error:'Invalid status'});
+    db.updateLead(req.params.id, {status: newStatus, status_updated: new Date().toISOString()});
+    var updated = db.getLeads().find(function(l){return l.id===req.params.id;});
+    logger.info({event:'lead_status_update',id:req.params.id,newStatus:newStatus});
+    res.json({ok:true,id:req.params.id,status:newStatus});
+  } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
 
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
