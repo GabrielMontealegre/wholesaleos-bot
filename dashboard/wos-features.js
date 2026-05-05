@@ -208,24 +208,27 @@ function _patchDashboard() {
 
 // ── ADD DATA ATTRS TO ROWS ───────────────────────────────────────────────
 function _addDataAttrs() {
+  // Read from DOM cells — works without APP.leads being loaded
+  // Cell order: 0=REF, 1=ADDRESS, 2=STATE, 3=TYPE, 4=STATUS, 5=SPREAD, 6=BUYERS, 7=DATE
   document.querySelectorAll('tr[data-lead-id]').forEach(function(row) {
-    var lid = row.dataset.leadId;
-    var lead = null;
-    if (window.APP && APP.leads) lead = APP.leads.find(function(l) { return l.id === lid; });
-    if (!lead) return; // will retry on next filter call
-    row.dataset.wosInit  = '1';
-    row.dataset.state    = (lead.state || '').toUpperCase();
-    row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || '').toLowerCase();
-    row.dataset.priority = (lead.priority || '').toUpperCase();
-    row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
-    row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
-    // Normalize date — support ISO string, unix ms, unix seconds
-    var raw = lead.created_at || lead.createdAt || lead.created || '';
-    if (raw && !isNaN(Number(raw))) {
-      var n = Number(raw);
-      raw = new Date(n > 9999999999 ? n : n * 1000).toISOString();
+    var cells = row.querySelectorAll('td');
+    if (!cells.length) return;
+    row.dataset.wosInit = '1';
+    row.dataset.state   = (cells[2] ? cells[2].textContent.trim() : '').toUpperCase();
+    row.dataset.src     = (cells[3] ? cells[3].textContent.trim() : '').toLowerCase();
+    var dateStr = cells[7] ? cells[7].textContent.trim() : '';
+    row.dataset.created = dateStr ? new Date(dateStr + 'T00:00:00Z').toISOString() : '';
+    var spreadTxt = cells[5] ? cells[5].textContent.replace(/[^0-9]/g,'') : '0';
+    row.dataset.arv = (parseInt(spreadTxt) > 0) ? 'yes' : 'no';
+    // Try APP.leads for phone/priority if available
+    if (window.APP && APP.leads) {
+      var lead = APP.leads.find(function(l){ return l.id === row.dataset.leadId; });
+      if (lead) {
+        row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
+        row.dataset.priority = (lead.priority || '').toUpperCase();
+        row.dataset.src      = (lead.source_details || lead.source || row.dataset.src || '').toLowerCase();
+      }
     }
-    row.dataset.created = raw;
   });
 }
 
