@@ -124,3 +124,31 @@ Rule: If file would exceed 900KB, put new code in a separate JS file instead.
 - Comp agent: 4AM daily cron wired
 - Google Drive: Service account created, folder shared
 - Sources: 73 total (16 original + 7 ArcGIS + 20 Socrata extra + 30 new states)
+
+
+---
+
+## MISTAKE 10 — Pipeline had no stage-move, just links back to leads
+What: Pipeline card onclick did navigate(leads) + selectLead — took you away from pipeline.
+Fix: Added wosMoveStage() + dropdown on each card. Added PUT /api/leads/:id/status route.
+Rule: Never use navigate() inside pipeline cards. Always update status in-place.
+
+## MISTAKE 11 — Score All Leads button only visible on Leads tab
+What: Button injected by wos-features.js only when lead rows exist — not on Dashboard.
+Fix: Add Score All button to server-side rendered header too (next sprint).
+Rule: Global action buttons belong in the persistent header, not tab-specific toolbars.
+
+## MISTAKE 12 — All States used populateState() which generated fake leads
+What: populateState() was a legacy function that auto-generated 150 leads locally.
+Fix: Replaced with wosRealPullState() which calls /api/leads/search-fresh-v2 (real data).
+Rule: Never auto-generate leads. All leads must come from real public record sources.
+
+## CURRENT WORKING STATE (2026-05-05 session 2)
+- Dashboard: WORKING
+- Pipeline: Stage mover added (dropdown per card)
+- All States: Now pulls real leads via search-fresh-v2
+- Hot Lead Scorer: Built (modules/agents/hot-lead-scorer.js)
+- Hot Lead Alert: Built (modules/agents/hot-lead-alert.js)
+- Outreach Hub UI: Built (dashboard/wos-outreach.js)
+- Score All Leads: Button in Leads tab toolbar
+- PUT /api/leads/:id/status: Added
