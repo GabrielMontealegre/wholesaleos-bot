@@ -123,12 +123,22 @@ app.get('/', (_, res) => res.json({
 // Ã¢ÂÂÃ¢ÂÂ API: Leads Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
-  const { status, county, category, limit } = req.query;
+  const { status, county, category, limit, sort, state } = req.query;
   let filtered = leads;
   if (status)   filtered = filtered.filter(l => l.status === status);
   if (county)   filtered = filtered.filter(l => l.county?.toLowerCase().includes(county.toLowerCase()));
   if (category) filtered = filtered.filter(l => l.category?.toLowerCase().includes(category.toLowerCase()));
   if (limit)    filtered = filtered.slice(0, parseInt(limit));
+  // State filter
+  if (state) filtered = filtered.filter(l => (l.state||"").toUpperCase() === state.toUpperCase());
+  // Sort
+  if (sort === "motivation_score") {
+    filtered = filtered.slice().sort(function(a,b){ return ((b.motivation_score||0)+(b.priorityScore||0)) - ((a.motivation_score||0)+(a.priorityScore||0)); });
+  } else if (sort === "created_at") {
+    filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
+  } else if (sort === "spread") {
+    filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
+  }
   res.json({ leads: filtered, total: filtered.length });
 });
 
