@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T10:39:15.895Z
+// Deploy: 2026-05-05T16:22:45.219Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -4159,6 +4159,51 @@ app.put('/api/leads/:id/status', function(req, res) {
     var updated = db.getLeads().find(function(l){return l.id===req.params.id;});
     logger.info({event:'lead_status_update',id:req.params.id,newStatus:newStatus});
     res.json({ok:true,id:req.params.id,status:newStatus});
+  } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
+
+
+// ── Pipeline Routes ─────────────────────────────────────────────────────
+// GET /api/pipeline — get leads grouped by pipeline stage
+app.get('/api/pipeline', function(req, res) {
+  try {
+    var leads = db.getLeads ? db.getLeads() : [];
+    var stages = { "New Lead":[], "Contacted":[], "Interested":[], "Offer Made":[], "Under Contract":[], "Closed":[], "Dead":[] };
+    leads.forEach(function(l) {
+      var st = l.status || "New Lead";
+      if (!stages[st]) stages[st] = [];
+      stages[st].push(l);
+    });
+    res.json({ ok:true, stages:stages, total:leads.length });
+  } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
+
+// PATCH /api/pipeline/:id/stage — move lead to new stage
+app.patch('/api/pipeline/:id/stage', function(req, res) {
+  try {
+    var body = req.body || {};
+    var stage = body.stage;
+    if (!stage) return res.status(400).json({ok:false,error:"stage required"});
+    var valid = ["New Lead","Contacted","Interested","Offer Made","Under Contract","Closed","Dead"];
+    if (valid.indexOf(stage) === -1) return res.status(400).json({ok:false,error:"invalid stage: "+stage});
+    var updated = db.updateLead(req.params.id, {status: stage, pipeline_updated_at: new Date().toISOString()});
+    if (!updated) return res.status(404).json({ok:false,error:"Lead not found"});
+    res.json({ok:true, lead:updated});
+  } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
+
+// POST /api/pipeline/:id/note — add pipeline note
+app.post('/api/pipeline/:id/note', function(req, res) {
+  try {
+    var body = req.body || {};
+    var note = {text: body.note, date: new Date().toISOString(), user: "Gabriel"};
+    var leads = db.getLeads ? db.getLeads() : [];
+    var lead = leads.find(function(l){return l.id===req.params.id;});
+    if (!lead) return res.status(404).json({ok:false,error:"Lead not found"});
+    var notes = lead.pipeline_notes || [];
+    notes.push(note);
+    var updated = db.updateLead(req.params.id, {pipeline_notes: notes});
+    res.json({ok:true, notes:notes});
   } catch(e) { res.status(500).json({ok:false,error:e.message}); }
 });
 
