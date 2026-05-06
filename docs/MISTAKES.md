@@ -189,3 +189,56 @@ CURRENT STATUS (2026-05-05)
 - Checkbox stopPropagation: CONFIRMED in features file
 - No fake leads found in sample of 50
 - BOT_OWNER_ID: needs verification in Railway env vars
+
+
+---
+
+## TASK BACKLOG — Added 2026-05-05 (Gabriel voice note)
+
+### LEADS TAB
+- Fix flickering/color glitch on hard refresh (BUG 1 — FIXED in wos-features.js v10)
+- Ensure stable performance at all times
+
+### COMMUNICATIONS TAB (NEW)
+- Merge Email + SMS + Dialer into ONE tab
+- Name: "Communications"
+- Keep all existing functionality, just unified UI
+
+### ALL STATES TAB
+- Verify auto-population working correctly
+- Confirm system pulls from all configured URLs (~100+) per state
+- PropStream: leave placeholder, ask Gabriel for setup details before implementing
+
+### SEARCH DEALS — ADVANCED FILTERS
+- State
+- Source type (tax delinquent, probate, foreclosure, etc.)
+- Days on market
+- Days since added
+- Property type
+- Any other relevant deal criteria
+- Goal: find very specific deals easily
+
+### DASHBOARD
+- Show only top 300 best deals (by motivation_score / hot_score)
+
+### FOLLOW-UP SYSTEM
+- Verify and fix (currently not working)
+
+### CALENDAR AUTOMATION
+- When adding a note to a lead:
+  - Read note content
+  - Detect dates/tasks (e.g. "call this person on [date]")
+  - Auto-create calendar event with: lead link, full note, conversation context
+- Add reminders/notifications for follow-ups
+
+### BUYERS SYSTEM IMPROVEMENTS
+- Bulk buyer creation: paste raw text → auto-parse → create profiles
+- Fix buyer database (manual entry too slow)
+- Enable fast bulk imports, scalable to thousands of buyers
+- Suggestions needed: buyer DB structure + automated acquisition/enrichment
+
+### GENERAL
+- Complete current URL/lead source tasks first
+- Build everything modularly
+- Do not break existing functionality
+- After current tasks: provide optimization suggestions + system improvements
