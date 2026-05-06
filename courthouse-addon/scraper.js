@@ -7,6 +7,7 @@ const db     = require('../db');
 const path   = require('path');
 const fs     = require('fs');
 const axios  = require('axios');
+const PdfExtractor = require('./pdf-extractor');
 
 // ── Playwright availability check ─────────────────────────────────────────
 let pw = null;
@@ -123,6 +124,16 @@ async function scrapeTyler(page, url, market, state) {
 
 // ── Custom/generic scraper ────────────────────────────────────────────────
 async function scrapeCustom(page, url, market, state) {
+  // ── PDF detection & extraction ─────────────────────────────────────
+  // If the page or linked docs are PDFs, extract leads from them
+  const pdfLeads = await PdfExtractor.extractFromPlaywrightPdf(page, url, {
+    state: state, market: market, type: "Custom Portal", url: url
+  });
+  if (pdfLeads.length > 0) {
+    console.log("[scraper] PDF extraction got", pdfLeads.length, "leads from", market);
+    return pdfLeads;
+  }
+
   var leads = [];
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -171,14 +182,14 @@ function saveLeads(leads, row) {
 
 // ── Main: scrape all Playwright-needed portals ─────────────────────────────
 async function scrapeAllPortals(limit) {
-  limit = limit || 5;
+  limit = limit || 30;
   var playwright = getPlaywright();
   if(!playwright) return { error: 'Playwright not installed' };
   var rows = readMastersheet();
   // Only portals that need Playwright
   var pwRows = rows.filter(function(r) {
     var t = classifyPortal(r.url);
-    return t==='accela'||t==='acclaim'||t==='tyler'||t==='custom';
+    return t==='accela'||t==='acclaim'||t==='tyler'||t==='custom'||t==='arcgis';
   });
   console.log('[scraper] Starting Playwright scrape of', pwRows.length, 'portals');
   var browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox','--disable-setuid-sandbox'] });
@@ -207,4 +218,4 @@ async function scrapeAllPortals(limit) {
   return { ok: true, portals: Math.min(pwRows.length, limit), leads: total };
 }
 
-module.exports = { scrapeAllPortals, readMastersheet, classifyPortal };
+module.exports = { scrapeAllPortals, readMastersheet, classifyPortal, PdfExtractor };
