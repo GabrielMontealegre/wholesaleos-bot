@@ -54,23 +54,25 @@ document.addEventListener('click', function(e) {
   if (href) { _currentTab = href; setTimeout(_mountOnTab, 300); }
 });
 
+var _wosObs = null; // module-level so _mountOnTab can disconnect it
+var _wosObsTimer = null;
 function _boot() {
   _skipPin();
   _mountOnTab();
   _addDataAttrs();
   _patchDashboard();
-  // Watch for SPA navigation — remount when table container changes
-  var _obsTimer = null;
-  var _obs = new MutationObserver(function() {
-    if (document.getElementById('wosToolbar')) return;
-    clearTimeout(_obsTimer);
-    _obsTimer = setTimeout(function() {
+  // Watch for SPA navigation — remount when table not present
+  // IMPORTANT: observer is disconnected inside _mountOnTab after success
+  _wosObs = new MutationObserver(function() {
+    if (document.getElementById('wosToolbar')) return; // already mounted, ignore ALL events
+    clearTimeout(_wosObsTimer);
+    _wosObsTimer = setTimeout(function() {
       var tbl = document.querySelector('table');
       if (tbl && !document.getElementById('wosToolbar')) _mountOnTab();
-    }, 800);
+    }, 1000);
   });
   var target = document.querySelector('.content, #content, main, body');
-  if (target) _obs.observe(target, { childList: true, subtree: true });
+  if (target) _wosObs.observe(target, { childList: true, subtree: true });
 }
 
 // ── SKIP PIN (optional — hides after first visit) ────────────────────────
@@ -255,6 +257,33 @@ function _patchDashboard() {
       .slice(0, 300);
     console.log('[wos] top deals: '+sorted.length+' leads');
   }
+  // Intercept nav tab clicks — re-mount toolbar after SPA re-renders
+  document.addEventListener('click', function(e) {
+    var navEl = e.target.closest && e.target.closest('[data-tab], .nav-link, .nav-item a, [onclick*="showSection"], [onclick*="showTab"]');
+    if (!navEl) return;
+    var txt = (navEl.textContent||'').toLowerCase().trim();
+    // If navigating TO leads — remount toolbar after render delay
+    if (txt.indexOf('lead') > -1) {
+      setTimeout(function() {
+        if (!document.getElementById('wosToolbar')) {
+          _mountOnTab();
+          // Restart observer for future nav changes
+          if (!_wosObs) {
+            var t2 = document.querySelector('.content, #content, main, body');
+            if (t2) {
+              _wosObs = new MutationObserver(function(){
+                if (document.getElementById('wosToolbar')) return;
+                clearTimeout(_wosObsTimer);
+                _wosObsTimer = setTimeout(function(){ if(!document.getElementById('wosToolbar')) _mountOnTab(); }, 1000);
+              });
+              _wosObs.observe(t2, {childList:true, subtree:true});
+            }
+          }
+        }
+      }, 400);
+    }
+    // If navigating AWAY from leads — toolbar will be re-added when they come back
+  }, true);
 }
 
 // ── ADD DATA ATTRS TO ROWS ───────────────────────────────────────────────
@@ -597,4 +626,60 @@ window.wosApplyTop300 = function() {
       wosToast('✅ Showing top 300 deals by score ('+d.leads.length+' leads)', '#059669');
     }).catch(function(e){ wosToast('Error loading top 300: '+e.message,'#dc2626'); });
 };
+
+// ── STATE PULL — All States tab: click state → pull leads for that state ──
+window.wosStatePull = function(state, btn) {
+  if (!state) return;
+  if (btn) { btn.textContent = '⏳ Pulling...'; btn.disabled = true; }
+  var toast = typeof wosToast === 'function' ? wosToast : function(m){console.log(m);};
+  toast('Pulling leads for ' + state + '...', '#1d4ed8');
+  fetch('/api/leads/search-fresh-v2', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({state: state, count: 200})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(btn){btn.textContent=state;btn.disabled=false;}
+    if(d.ok){
+      var n = d.inserted||d.added||0;
+      toast(n>0 ? '✅ '+n+' new leads added for '+state : 'ℹ️ '+state+' — all leads already in database', n>0?'#059669':'#6b7280');
+    } else {
+      toast('Error pulling '+state+': '+(d.error||'unknown'), '#dc2626');
+    }
+  })
+  .catch(function(e){
+    if(btn){btn.textContent=state;btn.disabled=false;}
+    toast('Error: '+e.message,'#dc2626');
+  });
+};
+
+// Wire All States tab: add onclick to each state button after tab renders
+window.wosWireAllStates = function() {
+  var stateBtns = document.querySelectorAll('[data-state-code], .state-btn, [onclick*="stateClick"], [onclick*="pullState"]');
+  stateBtns.forEach(function(btn){
+    if(btn.dataset.wosWired) return;
+    btn.dataset.wosWired = '1';
+    var st = btn.dataset.stateCode || btn.textContent.trim().slice(0,2).toUpperCase();
+    if(st.length===2) btn.addEventListener('click', function(e){ e.preventDefault(); wosStatePull(st, btn); });
+  });
+  // Also intercept any element with a state code in the All States section
+  var allStatesSection = document.querySelector('[data-section="allstates"], #allstates, #all-states, [id*="allState"]');
+  if(allStatesSection) {
+    allStatesSection.querySelectorAll('[onclick], button, a').forEach(function(el){
+      if(el.dataset.wosWired) return;
+      var txt = (el.textContent||'').trim();
+      if(txt.length===2 && /^[A-Z]{2}$/.test(txt)) {
+        el.dataset.wosWired = '1';
+        el.addEventListener('click', function(e){ e.stopImmediatePropagation(); wosStatePull(txt, el); });
+      }
+    });
+  }
+};
+
+// Auto-wire when All States section becomes visible
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[onclick*="allstate"], [onclick*="AllState"], [data-tab="allstates"]');
+  if(el) setTimeout(wosWireAllStates, 600);
+}, true);
 })();
