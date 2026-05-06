@@ -92,6 +92,7 @@ function _mountOnTab() {
     _btn('Bulk Delete','wosToggleBulk()','background:#fef2f2;color:#ef4444;border:1px solid #fecaca;') +
     _btn('Re-analyze Comps','wosReanalyzeAll()','background:#f0fdf4;color:#059669;border:1px solid #bbf7d0;') +
     _btn('Score All Leads','wosScoreAllLeads()','background:#fef3c7;color:#92400e;border:1px solid #fcd34d;') +
+    _btn('Run Courthouse','wosCourthouseScrape()','background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;') +
     '<span id="wosLeadCount" style="margin-left:auto;font-size:12px;color:#6b7280;"></span>';
   container.insertBefore(tb, tbl);
 
