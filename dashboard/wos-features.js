@@ -181,7 +181,7 @@ function _mountOnTab() {
       '<option value="">All Leads</option>' +
       '<option value="1">🔥 Top 300 Deals</option>' +
     '</select>') +
-    style="display:flex;gap:6px;align-items:center;padding-top:14px;">" +
+    '<div style="display:flex;gap:6px;align-items:center;padding-top:14px;">' +
     _btn('Apply','wosFilter()','background:#7c3aed;color:#fff;border:none;font-size:11px;padding:5px 12px;') +
     _btn('Clear','wosClearFilter()','background:#fff;color:#6b7280;border:1px solid #d1d5db;font-size:11px;padding:5px 10px;') +
     '<span id="wfCount" style="font-size:11px;color:#9ca3af;"></span>' +
