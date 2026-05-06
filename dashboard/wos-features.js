@@ -1,4 +1,22 @@
 (function() {
+
+// ── TOAST HELPER ──────────────────────────────────────────────────────────
+function wosToast(msg, color) {
+  color = color || '#1f2937';
+  var t = document.getElementById('wosToastEl');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'wosToastEl';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.4s;max-width:340px;line-height:1.4;';
+    document.body.appendChild(t);
+  }
+  t.style.background = color;
+  t.style.opacity = '1';
+  t.textContent = msg;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.opacity='0'; }, 3000);
+}
+
 'use strict';
 // wos-features.js v4 — Complete rewrite
 // Leads tab: filters, bulk delete, pull leads, re-analyze
@@ -69,6 +87,10 @@ function _skipPin() {
 
 // ── MOUNT CONTROLS IN LEADS TAB ─────────────────────────────────────────
 function _mountOnTab() {
+  // Guard: only mount on LEADS section, not Dashboard
+  var _at = document.querySelector('.nav-link.active, [data-tab].active, [aria-selected="true"]');
+  var _atText = _at ? (_at.textContent||'').toLowerCase().trim() : '';
+  if (_atText === 'dashboard' || _atText === 'home') return;
   // Only mount if toolbar not already present
   if (document.getElementById('wosToolbar')) {
     // Already mounted — just re-add checkboxes if bulk mode is open
@@ -392,7 +414,7 @@ window.wosDeleteSelected = function() {
   if (st) st.textContent = 'Deleting ' + ids.length + '...';
   if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
 
-  fetch('/api/leads/delete-bulk', {
+  wosToast("⏳ Re-analyzing comps…", "#7c3aed"); fetch('/api/leads/delete-bulk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids: ids })
@@ -473,12 +495,12 @@ window.wosReanalyzeAll = function() {
 window.wosScoreAllLeads = function() {
   var btn = event && event.target;
   if (btn) { btn.textContent = "Scoring..."; btn.disabled = true; }
-  fetch("/api/leads/score-all", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})
+  wosToast("⏳ Scoring all leads…", "#1d4ed8"); fetch("/api/leads/score-all", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})
   .then(function(r){return r.json();})
   .then(function(d){
     if (btn) { btn.textContent = "Score All Leads"; btn.disabled = false; }
     if (d.ok) {
-      alert("Scored "+d.total+" leads — "+d.hot+" HOT 🔥 / "+d.warm+" WARM ⚡ / "+d.cold+" COLD ❄️\nRefreshing...");
+      wosToast("✅ Scored "+d.total+" leads: "+d.hot+" HOT 🔥 "+d.warm+" WARM ⚡ "+d.cold+" COLD ❄️", "#059669");
       _ready = false;
       setTimeout(function() { if (typeof loadLeads==="function") loadLeads(); setTimeout(_mountOnTab, 1500); }, 500);
     } else {
