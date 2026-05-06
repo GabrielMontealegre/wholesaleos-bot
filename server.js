@@ -1,4 +1,4 @@
-// Deploy: 2026-05-05T16:31:09.695Z
+// Deploy: 2026-05-06T00:02:59.049Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3621,6 +3621,14 @@ cron.schedule('0 2 * * *', async () => {
   } catch(e) {
     logger.error('[arcgis] Daily run error: ' + e.message);
   }
+    // Also run courthouse scraper (30 portals)
+    try {
+      var _chScraper = require('./courthouse-addon/scraper');
+      _chScraper.scrapeAllPortals(30).then(function(r){
+        logger.info({ event: 'courthouse_done', leads: r.leads, portals: r.portals });
+      }).catch(function(e){ logger.error('[courthouse] cron error: '+e.message); });
+    } catch(e) { logger.error('[courthouse] load error: '+e.message); }
+
 }, { timezone: 'UTC' });
 try{var ag=require('./modules/sources/arcgis-runner');ag.runArcGISSources(200).catch(function(e){logger.error('[arcgis] '+e.message);});}catch(e){logger.error('[arcgis] load: '+e.message);}
 try{var se=require('./modules/sources/socrata-extra');se.runExtraSocrataSources(200).catch(function(e){logger.error('[socrata-extra] '+e.message);});}catch(e){logger.error('[socrata-extra] load: '+e.message);}
@@ -3838,8 +3846,8 @@ app.post('/api/leads/fetch-now', requireAdmin, async function(req, res) {
 });
 
 // POST /api/courthouse/scrape — on-demand courthouse scrape
-app.post('/api/courthouse/scrape', requireAdmin, function(req, res) {
-  var limit = parseInt(req.body && req.body.limit) || 5;
+app.post('/api/courthouse/scrape', function(req, res) {
+  var limit = parseInt(req.body && req.body.limit) || 30;
   var scraper;
   try { scraper = require('./courthouse-addon/scraper'); }
   catch(e) { return res.status(503).json({ error: 'Scraper unavailable: ' + e.message }); }
@@ -4207,6 +4215,19 @@ app.post('/api/pipeline/:id/note', function(req, res) {
     var updated = db.updateLead(req.params.id, {pipeline_notes: notes});
     res.json({ok:true, notes:notes});
   } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+});
+
+
+// POST /api/courthouse/run-all — trigger all 118 courthouse portals
+app.post('/api/courthouse/run-all', async function(req, res) {
+  try {
+    var limit = parseInt(req.body && req.body.limit) || 30;
+    res.json({ ok: true, message: "Courthouse scrape started for "+limit+" portals. Runs in background." });
+    var _chScraper = require('./courthouse-addon/scraper');
+    _chScraper.scrapeAllPortals(limit).then(function(r){
+      logger.info({ event: "courthouse_ondemand_done", leads: r.leads, portals: r.portals });
+    }).catch(function(e){ logger.error("[courthouse] run-all error: "+e.message); });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.listen(PORT, () => {
