@@ -44,7 +44,7 @@ var _poll = setInterval(function() {
     _ready = true; clearInterval(_poll); _boot();
     console.log('[wos] v4 initialized via poll');
   }
-}, 500);
+}, 800);
 setTimeout(function() { clearInterval(_poll); }, 300000);
 
 // Watch for tab changes (SPA)
@@ -60,11 +60,14 @@ function _boot() {
   _addDataAttrs();
   _patchDashboard();
   // Watch for SPA navigation — remount when table container changes
+  var _obsTimer = null;
   var _obs = new MutationObserver(function() {
-    var tbl = document.querySelector('table');
-    if (tbl && !document.getElementById('wosToolbar')) {
-      setTimeout(_mountOnTab, 200);
-    }
+    if (document.getElementById('wosToolbar')) return;
+    clearTimeout(_obsTimer);
+    _obsTimer = setTimeout(function() {
+      var tbl = document.querySelector('table');
+      if (tbl && !document.getElementById('wosToolbar')) _mountOnTab();
+    }, 800);
   });
   var target = document.querySelector('.content, #content, main, body');
   if (target) _obs.observe(target, { childList: true, subtree: true });
@@ -225,7 +228,12 @@ function _mountOnTab() {
       .map(function(o,i){return '<label style="display:flex;align-items:center;gap:5px;color:#ccc;font-size:12px;background:#0f0f23;padding:7px 10px;border-radius:7px;border:1px solid #4c1d95;cursor:pointer;"><input type="radio" name="wplSrc" value="'+o[0]+'"'+(i===0?' checked':'')+' style="accent-color:#7c3aed"> '+o[1]+'</label>';}).join('') +
       '</div>' +
       '<label style="color:#a78bfa;font-size:11px;font-weight:700;display:block;margin-bottom:5px;">HOW MANY: <span id="wplN">200</span></label>' +
-      '<input id="wplCount" type="range" min="50" max="500" step="50" value="200" oninput="document.getElementById(\"wplN\").textContent=this.value" style="width:100%;accent-color:#7c3aed;margin-bottom:16px;">' +
+      '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+      ['50','100','200','300','500'].map(function(n){
+        return '<button onclick="var e=document.getElementById(\'wplCount\');e.value=n;document.getElementById(\'wplN\').textContent=n;" style="flex:1;padding:6px 0;border-radius:6px;border:1px solid #4c1d95;background:#0f0f23;color:#a78bfa;font-size:12px;cursor:pointer;">'+n+'</button>';
+      }).join('') +
+      '</div>' +
+      '<input id="wplCount" type="number" min="10" max="500" step="10" value="200" oninput="document.getElementById(\'wplN\').textContent=this.value" style="width:100%;background:#0f0f23;border:1px solid #4c1d95;color:#fff;padding:9px;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:12px;text-align:center;font-weight:700;">' +
       '<button id="wplRunBtn" onclick="wosRunPull()" style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Pull Leads Now</button>' +
       '<div id="wplRes" style="margin-top:10px;padding:10px;background:#0f0f23;border-radius:8px;color:#a78bfa;font-size:13px;display:none;text-align:center;"></div>' +
       '</div>';
@@ -491,8 +499,13 @@ window.wosRunPull = function() {
   .then(function(d) {
     if (btn) { btn.textContent='Pull Leads Now'; btn.disabled=false; }
     if (d.ok) {
-      if (res) { res.style.color='#10b981'; res.textContent='Done! '+d.inserted+' new leads added. Refreshing...'; }
-      setTimeout(function() { if (typeof loadLeads==='function') loadLeads(); }, 1500);
+      var msg = 'Done! Searched '+count+' leads.';
+      var newAdded = d.inserted || d.added || 0;
+      var found = d.found || d.total || count;
+      if (newAdded > 0) msg += ' ✅ '+newAdded+' new leads saved.';
+      else msg += ' ℹ️ All leads already in database (no new duplicates).';
+      if (res) { res.style.color='#10b981'; res.textContent = msg; }
+      setTimeout(function() { if (typeof loadLeads==='function') loadLeads(); wosPullLeadsClose(); }, 2000);
     } else {
       if (res) { res.style.color='#ef4444'; res.textContent='Error: '+(d.error||'Unknown'); }
     }
