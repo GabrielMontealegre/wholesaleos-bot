@@ -448,3 +448,73 @@ IA,"Polk County, IA",Foreclosures,https://www.polksheriff.org/real-estate-sales
 IA,"Linn County, IA",Foreclosures,https://www.linncounty.org/sheriff/real-estate-sales
 SD,"Minnehaha County, SD",Foreclosures,https://www.minnehahacounty.org/dept/sr/sheriff.php
 ND,"Cass County, ND",Foreclosures,https://www.casscountynd.gov/county/depts/sheriff/real-estate
+TX,"Houston, TX",Code Violation,https://aca-prod.accela.com/HOUSTON/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+TX,"Fort Worth, TX",Code Violation,https://aca-prod.accela.com/FORTWORTH/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+TX,"San Antonio, TX",Code Violation,https://aca-prod.accela.com/SANANTONIO/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+TX,"Austin, TX",Code Violation,https://aca-prod.accela.com/AUSTIN/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+GA,"Atlanta, GA",Code Violation,https://aca-prod.accela.com/ATLANTA/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+OH,"Columbus, OH",Code Violation,https://aca-prod.accela.com/COLUMBUS/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+PA,"Philadelphia, PA",Code Violation,https://aca-prod.accela.com/PHILADELPHIA/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+WA,"Seattle, WA",Code Violation,https://aca-prod.accela.com/SEATTLE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+TN,"Nashville, TN",Code Violation,https://aca-prod.accela.com/NASHVILLE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+NC,"Charlotte, NC",Code Violation,https://aca-prod.accela.com/CHARLOTTE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Miami, FL",Code Violation,https://aca-prod.accela.com/MIAMI/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Tampa, FL",Code Violation,https://aca-prod.accela.com/TAMPA/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Orlando, FL",Code Violation,https://aca-prod.accela.com/ORLANDO/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Jacksonville, FL",Code Violation,https://aca-prod.accela.com/JACKSONVILLE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+IN,"Indianapolis, IN",Code Violation,https://aca-prod.accela.com/INDIANAPOLIS/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+MO,"Kansas City, MO",Code Violation,https://aca-prod.accela.com/KCMO/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+NV,"Las Vegas, NV",Code Violation,https://aca-prod.accela.com/LASVEGAS/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+OR,"Portland, OR",Code Violation,https://aca-prod.accela.com/PORTLAND/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+OK,"Oklahoma City, OK",Code Violation,https://aca-prod.accela.com/OKLAHOMA/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+KY,"Louisville, KY",Code Violation,https://aca-prod.accela.com/LOUISVILLE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+IL,"Chicago, IL",Code Violation,https://data.cityofchicago.org/Buildings/Building-Violations/22u3-xenr/about_data
+CA,"Los Angeles, CA",Code Violation,https://data.lacity.org/datasets/311-service-requests
+CA,"San Francisco, CA",Code Violation,https://data.sfgov.org/datasets/code-enforcement-cases
+NY,"New York, NY",Code Violation,https://data.cityofnewyork.us/Housing-Development/Housing-Litigations/59kj-x8nc
+TN,"Nashville, TN",Code Violation,https://data.nashville.gov/datasets/code-enforcement-cases
+WA,"Seattle, WA",Code Violation,https://data.seattle.gov/datasets/code-enforcement-cases
+TX,"Houston, TX",Code Violation,https://data.houstontx.gov/datasets/code-enforcement-cases
+TX,"Austin, TX",Code Violation,https://data.austintexas.gov/datasets/code-enforcement-cases
+GA,"Atlanta, GA",Code Violation,https://data.atlanta.gov/datasets/code-enforcement-violations
+FL,"Fort Lauderdale, FL",Code Violation,https://aca-prod.accela.com/FTLAUDERDALE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Cape Coral, FL",Code Violation,https://aca-prod.accela.com/CAPECORAL/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Tallahassee, FL",Code Violation,https://aca-prod.accela.com/TALLAHASSEE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+TX,"Tarrant County, TX",Foreclosures,https://www.tarranttaxoffice.com/foreclosures
+TX,"Dallas County, TX",Foreclosures,https://www.dallascounty.org/sheriff/foreclosures
+TX,"Dallas County, TX",Probates,https://www.dallascounty.org/probate
+FL,"Broward County, FL",Probates,https://www.browardclerk.org/probate
+FL,"Palm Beach County, FL",Probates,https://www.mypalmbeachclerk.com/probate
+FL,"Miami-Dade County, FL",Probates,https://www.miami-dadeclerk.com/probate
+OH,"Summit County, OH",Probates,https://www.co.summit.oh.us/probate
+OH,"Lucas County, OH",Probates,https://www.co.lucas.oh.us/probate
+MI,"Kent County, MI",Probates,https://www.accesskent.com/probate
+MI,"Washtenaw County, MI",Probates,https://www.washtenaw.org/probate
+NC,"Durham County, NC",Probates,https://www.dconc.gov/courts/clerk-of-court
+AZ,"Pinal County, AZ",Probates,https://www.pinalcountyaz.gov/courts/superior-court
+TX,"Dallas County, TX",Tax Delinquency,https://www.dallascad.org/SearchAppraisal.aspx
+TX,"Bexar County, TX",Tax Delinquency,https://www.bcad.org/Search/PropertySearch.aspx
+TX,"Tarrant County, TX",Tax Delinquency,https://www.tad.org/Property/PropertySearch
+FL,"Miami-Dade County, FL",Tax Delinquency,https://www.miamidade.gov/pa/property_search.asp
+FL,"Broward County, FL",Tax Delinquency,https://www.bcpa.net/RecInfo.asp
+GA,"Fulton County, GA",Tax Delinquency,https://www.fultonassessor.org/property-search
+NC,"Mecklenburg County, NC",Tax Delinquency,https://polaris3g.mecklenburgcountync.gov
+VA,"Fairfax County, VA",Tax Delinquency,https://www.fairfaxcounty.gov/taxes/delinquent
+MD,"Baltimore City, MD",Tax Delinquency,https://sdat.dat.maryland.gov/RealProperty
+WI,"Milwaukee County, WI",Tax Delinquency,https://county.milwaukee.gov/treasurer/tax-search
+IA,"Black Hawk County, IA",Foreclosures,https://www.blackhawksheriff.org/real-estate-sales
+NE,"Sarpy County, NE",Foreclosures,https://www.sarpysheriff.org/real-estate-sales
+LA,"Jefferson Parish, LA",Foreclosures,https://www.jeffparish.net/departments/sheriff/civil-division
+LA,"Caddo Parish, LA",Foreclosures,https://www.caddosheriff.org/civil-division
+MS,"Harrison County, MS",Foreclosures,https://www.harrisoncountyms.gov/sheriff/real-estate-sales
+WV,"Kanawha County, WV",Foreclosures,https://www.kanawhasheriff.us/real-estate-sales
+ME,"Cumberland County, ME",Foreclosures,https://www.cumberlandcounty.org/sheriff/real-estate-sales
+NH,"Hillsborough County, NH",Foreclosures,https://www.hillsboroughcountysheriff.com/real-estate-sales
+CT,"Hartford County, CT",Foreclosures,https://www.hartfordsheriff.com/real-estate-sales
+RI,"Providence County, RI",Foreclosures,https://www.providencesheriff.com/real-estate-sales
+AR,"Benton County, AR",Foreclosures,https://www.bentoncountysheriff.com/real-estate-sales
+AK,"Anchorage, AK",Code Violation,https://aca-prod.accela.com/ANCHORAGE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Pinellas County, FL",Code Violation,https://data-pinellas.opendata.arcgis.com/datasets/code-enforcement-cases
+PA,"Pittsburgh, PA",Code Violation,https://data.wprdc.org/dataset/pli-violations-condemnations
+MD,"Baltimore, MD",Code Violation,https://data.baltimorecity.gov/datasets/housing-inspections
+NV,"Reno, NV",Code Violation,https://opendata.reno.gov/datasets/code-enforcement-cases
