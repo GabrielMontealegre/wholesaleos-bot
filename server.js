@@ -1,4 +1,4 @@
-// Deploy: 2026-05-06T05:38:20.971Z
+// Deploy: 2026-05-06T05:43:31.918Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -123,23 +123,30 @@ app.get('/', (_, res) => res.json({
 // Ã¢ÂÂÃ¢ÂÂ API: Leads Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
-  const { status, county, category, limit, sort, state } = req.query;
+  const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
   let filtered = leads;
-  if (status)   filtered = filtered.filter(l => l.status === status);
-  if (county)   filtered = filtered.filter(l => l.county?.toLowerCase().includes(county.toLowerCase()));
-  if (category) filtered = filtered.filter(l => l.category?.toLowerCase().includes(category.toLowerCase()));
-  if (limit)    filtered = filtered.slice(0, parseInt(limit));
-  // State filter
-  if (state) filtered = filtered.filter(l => (l.state||"").toUpperCase() === state.toUpperCase());
-  // Sort
-  if (sort === "motivation_score") {
-    filtered = filtered.slice().sort(function(a,b){ return ((b.motivation_score||0)+(b.priorityScore||0)) - ((a.motivation_score||0)+(a.priorityScore||0)); });
-  } else if (sort === "created_at") {
+  // Filters (apply before sort)
+  if (status)      filtered = filtered.filter(l => l.status === status);
+  if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
+  if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
+  if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
+  if (source_type) filtered = filtered.filter(l => (l.source_details||l.motivation||'').toLowerCase().includes(source_type.toLowerCase()));
+  // Sort BEFORE limiting (correct order)
+  var sortKey = sort || 'motivation_score';
+  if (sortKey === 'motivation_score') {
+    filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
+  } else if (sortKey === 'created_at') {
     filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
-  } else if (sort === "spread") {
+  } else if (sortKey === 'spread') {
     filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
   }
-  res.json({ leads: filtered, total: filtered.length });
+  // top300 mode: dashboard shows only best 300 deals
+  if (top300 === '1' || top300 === 'true') {
+    filtered = filtered.slice(0, 300);
+  } else if (limit) {
+    filtered = filtered.slice(0, parseInt(limit));
+  }
+  res.json({ leads: filtered, total: filtered.length, totalAll: leads.length });
 });
 
 
