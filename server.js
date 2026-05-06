@@ -1,4 +1,4 @@
-// Deploy: 2026-05-06T20:40:32.911Z
+// Deploy: 2026-05-06T20:50:46.032Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3028,6 +3028,42 @@ app.post('/api/datasources/realauction', async (req, res) => {
 
 // v15-deploy
 // Bulk buyer import endpoint
+// ── API: Buyers — parse raw paste text ─────────────────────────────────────
+app.post('/api/buyers/parse-paste', (req, res) => {
+  try {
+    var text = (req.body && req.body.text) || '';
+    var lines = text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>3;});
+    var US_STATES = {'AL':1,'AK':1,'AZ':1,'AR':1,'CA':1,'CO':1,'CT':1,'DE':1,'FL':1,'GA':1,'HI':1,'ID':1,'IL':1,'IN':1,'IA':1,'KS':1,'KY':1,'LA':1,'ME':1,'MD':1,'MA':1,'MI':1,'MN':1,'MS':1,'MO':1,'MT':1,'NE':1,'NV':1,'NH':1,'NJ':1,'NM':1,'NY':1,'NC':1,'ND':1,'OH':1,'OK':1,'OR':1,'PA':1,'RI':1,'SC':1,'SD':1,'TN':1,'TX':1,'UT':1,'VT':1,'VA':1,'WA':1,'WV':1,'WI':1,'WY':1};
+    var STATE_NAMES = {'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA','colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA','hawaii':'HI','idaho':'ID','illinois':'IL','indiana':'IN','iowa':'IA','kansas':'KS','kentucky':'KY','louisiana':'LA','maine':'ME','maryland':'MD','massachusetts':'MA','michigan':'MI','minnesota':'MN','mississippi':'MS','missouri':'MO','montana':'MT','nebraska':'NE','nevada':'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK','oregon':'OR','pennsylvania':'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD','tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT','virginia':'VA','washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY'};
+    var buyers = lines.map(function(line) {
+      var parts = line.split(/[|,;\t]|\s{2,}|\s--?\s/).map(function(p){return p.trim();}).filter(Boolean);
+      if(parts.length < 2) return null;
+      var email='',phone='',state='',name='';
+      parts.forEach(function(p) {
+        if(/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(p)) { email=p; }
+        else if(/^[\+\(]?[0-9][\d\s\-\(\)]{7,}[0-9]$/.test(p.replace(/\s/g,''))) { phone=p.replace(/[^0-9\+]/g,''); }
+        else if(US_STATES[p.toUpperCase()]) { state=p.toUpperCase(); }
+        else if(STATE_NAMES[p.toLowerCase()]) { state=STATE_NAMES[p.toLowerCase()]; }
+        else if(!name) { name=p; }
+      });
+      if(!name) return null;
+      return {name:name,email:email,phone:phone,state:state};
+    }).filter(Boolean);
+    // Check duplicates against existing buyers
+    var dbData = db.readDB();
+    var existingEmails = new Set((dbData.buyers||[]).map(function(b){return (b.email||'').toLowerCase();}));
+    var existingPhones = new Set((dbData.buyers||[]).map(function(b){return (b.phone||'').replace(/\D/g,'');}).filter(Boolean));
+    var existingNames  = new Set((dbData.buyers||[]).map(function(b){return (b.name||'').toLowerCase();}));
+    buyers = buyers.map(function(b) {
+      var isDupe = (b.email && existingEmails.has(b.email.toLowerCase())) ||
+                   (b.phone && b.phone.length>7 && existingPhones.has(b.phone.replace(/\D/g,''))) ||
+                   (b.name && existingNames.has(b.name.toLowerCase()));
+      b.duplicate = isDupe;
+      return b;
+    });
+    res.json({ok:true,parsed:buyers.length,buyers:buyers,duplicates:buyers.filter(function(b){return b.duplicate;}).length});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
 app.post('/api/buyers/bulk-import', async (req, res) => {
   try {
     const { buyers } = req.body;
