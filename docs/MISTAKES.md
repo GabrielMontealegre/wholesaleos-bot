@@ -242,3 +242,12 @@ CURRENT STATUS (2026-05-05)
 - Build everything modularly
 - Do not break existing functionality
 - After current tasks: provide optimization suggestions + system improvements
+
+
+## MISTAKE 13 — Cache buster not bumped after wos-features.js update
+What: dashboard/index.html has wos-features.js?v=N hardcoded. Every wos-features.js push needs the version number bumped or browsers serve the old file.
+Result: All new buttons/filters disappeared on hard refresh.
+Fix: Bumped ?v=9 to ?v=10 in index.html commit 8f3d25ed.
+Rule: EVERY push to dashboard/wos-features.js MUST also bump the ?v=N in index.html in the same session.
+Rule: Current version is ?v=10. Next push: bump to ?v=11, then ?v=12, etc.
+Rule: Never push wos-features.js without also updating the version tag in index.html.
