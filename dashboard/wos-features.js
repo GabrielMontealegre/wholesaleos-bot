@@ -162,7 +162,7 @@ function _mountOnTab() {
       '<option value="yes">Has Real ARV</option>' +
       '<option value="no">No Comp Yet</option>' +
     '</select>') +
-    '<div _fld('MOTIVATION', '<select id="wfMotivation" onchange="wosFilter()" style="'+_sel_s+'">' +
+    _fld('MOTIVATION', '<select id="wfMotivation" onchange="wosFilter()" style="'+_sel_s+'">' +
       '<option value="">All Types</option>' +
       '<option value="pre_foreclosure">Pre-Foreclosure</option>' +
       '<option value="probate">Probate</option>' +
