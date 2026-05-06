@@ -109,11 +109,117 @@ WI,WISCONSIN,All Court Records,https://wcca.wicourts.gov/courtOfficialCalendar.h
 TX,"Tarrant County, TX",Probates,https://portal-txtarrant.tylertech.cloud/PublicAccess/default.aspx
 TX,"Tarrant County, TX",Court Records,https://portal-txtarrant.tylertech.cloud/PublicAccess/default.aspx
 IA,"Des Moines, IA",Court Records,https://landrecords.polkcountyiowa.gov/LandRecords/protected/SrchDateRange.aspx
-,,,
-,,,
-,,,
-,,,
-,,,
-,,,
-,,,
-IMPORT DATA & SKIPTRACE IT ALL IN XLEADS.COM for $81/mo,,,
+CA,"Oakland, CA",Code Violation,https://aca-prod.accela.com/OAKLAND/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+CO,"Colorado Springs, CO",Code Violation,https://aca-prod.accela.com/COSPRINGS/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Pinellas County, FL",Code Violation,https://aca-prod.accela.com/PINELLAS/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+FL,"Lee County, FL",Code Violation,https://aca-prod.accela.com/LEECO/Cap/CapHome.aspx?module=CodeEnforcement&TabName=Home
+CA,"San Diego, CA",Code Violation,https://aca-prod.accela.com/SANDIEGO/Cap/CapHome.aspx?module=CE&TabName=Home
+WI,"Milwaukee, WI",Code Violation,https://aca-prod.accela.com/MILWAUKEE/Cap/CapHome.aspx?module=Enforcement&TabName=Home
+NM,"Bernalillo County, NM",Code Violation,https://aca-prod.accela.com/BERNCO/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+AZ,"Mesa, AZ",Code Violation,https://aca-prod.accela.com/MESA/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+KY,"Hopkinsville, KY",Code Violation,https://aca-prod.accela.com/HOPKINSVILLE/Cap/CapHome.aspx?module=Enforcement&TabName=Enforcement
+OK,"Oklahoma City, OK",Fire Damaged Properties,https://access.okc.gov/aca/Cap/CapHome.aspx?module=Fire&TabName=Fire
+FL,"Brevard County, FL","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://vaclmweb1.brevardclerk.us/AcclaimWeb/
+WA,"Chelan County, WA","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://acclaim.co.chelan.wa.us/acclaimweb
+NJ,"Hudson County, NJ","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://acclaim.hcnj.us/AcclaimWeb/
+OK,"Tulsa County, OK","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://acclaim.tulsacounty.org/AcclaimWeb
+NV,"Clark County, NV","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://recorderecomm.clarkcountynv.gov/AcclaimWeb/
+MS,"DeSoto County, MS","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://landrecords.desotocountyms.gov/AcclaimWeb
+NV,"Reno/Washoe County, NV","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://portal-nvreno.tylertech.cloud/PublicAccess/default.aspx
+NC,North Carolina,Court Records,https://portal-nc.tylertech.cloud/Portal/
+TX,"Parker County, TX",Probates,https://portal-txparker.tylertech.cloud/PublicAccess/default.aspx
+ID,Idaho,Court Records,https://portal-idaho.tylertech.cloud/odysseyportal
+MD,"Prince Georges County, MD",Code Violation,https://data.princegeorgescountymd.gov/Urban-Planning/Housing-Inspection-Violations/9hyf-46qb/data
+NY,"New York City, NY","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://data.cityofnewyork.us/Housing-Development/Housing-Maintenance-Code-Violations/wvxf-dwi5
+IL,"Cook County, IL",Tax Delinquency,https://www.cookcountyclerkil.gov/property-taxes/delinquent-property-tax-search
+NC,"Mecklenburg County, NC",Tax Delinquency,https://tax.mecknc.gov/services/Delinquent-Taxpayer-Lists
+GA,"Cobb County, GA",Tax Delinquency,https://www.cobbtax.gov/property/delinquent_taxes/index.php
+MO,"Jackson County, MO",Tax Delinquency,https://www.16thcircuit.org/delinquent-land-tax
+PA,"Cumberland County, PA",Tax Delinquency,https://www.cumberlandcountypa.gov/2279/Delinquent-Real-Estate-Tax-Database
+TX,"Dallas, TX",Code Violation,https://www.dallasopendata.com/Services/Code-Violations/rxtg-hf3r/about_data
+AZ,"Phoenix, AZ",Code Violation,https://www.phoenixopendata.com/dataset/code-violations
+CA,"Sacramento, CA",Code Violation,https://data.cityofsacramento.org/datasets/code-enforcement-cases
+OH,"Cincinnati, OH",Code Violation,https://data.cincinnati-oh.gov/Thriving-Neighborhoods/Code-Enforcement-Complaints/4cjh-bm3t/about_data
+MN,"Minneapolis, MN",Code Violation,https://opendata.minneapolismn.gov/datasets/inspections-orders-and-violations
+CO,"Denver, CO",Code Violation,https://www.denvergov.org/opendata/dataset/city-and-county-of-denver-code-violations
+AZ,"Tucson, AZ",Code Violation,https://gisdata.tucsonaz.gov/datasets/code-enforcement-cases
+NC,"Charlotte, NC",Code Violation,https://data.charlottenc.gov/datasets/code-enforcement-cases
+TN,"Memphis, TN",Code Violation,https://data.memphistn.gov/Neighborhoods/Code-Enforcement-Violations/ggdg-evy7/about_data
+TX,"El Paso, TX",Code Violation,https://opendata.elpasotexas.gov/datasets/code-enforcement-cases
+MI,"Detroit, MI",Code Violation,https://data.detroitmi.gov/datasets/blight-violations
+VA,"Arlington County, VA",Code Violation,https://data.arlingtonva.us/datasets/code-enforcement-cases
+WA,"Spokane, WA",Code Violation,https://my.spokanecity.org/opendata/datasets/code-enforcement-cases
+NE,"Omaha, NE",Code Violation,https://opendata.cityofomaha.org/datasets/code-enforcement-complaints
+NV,"Las Vegas, NV",Code Violation,https://opendata.lasvegasnevada.gov/datasets/code-enforcement-cases
+UT,"Salt Lake City, UT",Code Violation,https://opendata.utah.gov/datasets/salt-lake-code-enforcement
+AK,"Anchorage, AK",Code Violation,https://opendata.arcgis.com/datasets/code-enforcement-cases-anchorage
+CA,"Los Angeles, CA",Probates,https://www.lacourt.org/casesummary/ui/
+TX,"Harris County, TX",Probates,https://www.cclerk.hctx.net/applications/websearch/CourtSearch.aspx?CaseType=Probate
+FL,"Orange County, FL",Probates,https://myeclerk.myorangeclerk.com/cases/search
+GA,"Fulton County, GA",Probates,https://www.fultoncourt.org/probate/
+IL,"Cook County, IL",Probates,https://courtlink.cookcountyclerkofcourt.org/Search/SearchTypeU.aspx
+PA,"Philadelphia County, PA",Probates,https://fjdefile.phila.gov/efsfjd/zk_fjd_public_qry_00.zp_main_idx
+AZ,"Maricopa County, AZ",Probates,https://apps.superiorcourt.maricopa.gov/publicaccess/default.aspx
+WA,"King County, WA",Probates,https://dja-prd-ecexap2.kingcounty.gov/Superior/Civil/search
+MI,"Wayne County, MI",Probates,https://cmspublic.3rdcc.org/default.aspx
+MO,"St. Louis County, MO",Probates,https://www.stlcountycourts.com/CaseNet/default.aspx
+TN,"Shelby County, TN",Probates,https://www.shelbytnfis.com/webportal
+NC,"Wake County, NC",Probates,https://www.wakegov.com/departments-government/wake-county-register-of-deeds
+OR,"Multnomah County, OR",Probates,https://www.oregoncourts.gov/records/
+CO,"Denver County, CO",Probates,https://www.courts.state.co.us/dockets/index.cfm
+NV,"Clark County, NV",Probates,https://lvjcpa.clarkcountynv.gov/Anonymous/default.aspx
+FL,"Broward County, FL",Foreclosures,https://broward.realforeclose.com/
+FL,"Hillsborough County, FL",Foreclosures,https://hillsborough.realforeclose.com/
+FL,"Orange County, FL",Foreclosures,https://orange.realforeclose.com/
+FL,"Palm Beach County, FL",Foreclosures,https://palmbeach.realforeclose.com/
+FL,"Duval County, FL",Foreclosures,https://duval.realforeclose.com/
+FL,"Pinellas County, FL",Foreclosures,https://pinellas.realforeclose.com/
+FL,"Polk County, FL",Foreclosures,https://polk.realforeclose.com/
+FL,"Volusia County, FL",Foreclosures,https://volusia.realforeclose.com/
+FL,"Osceola County, FL",Foreclosures,https://osceola.realforeclose.com/
+FL,"Sarasota County, FL",Foreclosures,https://sarasota.realforeclose.com/
+FL,"Collier County, FL",Foreclosures,https://collier.realforeclose.com/
+FL,"Pasco County, FL",Foreclosures,https://pasco.realforeclose.com/
+GA,Georgia,Foreclosures,https://www.foreclosureradar.com/foreclosures/GA
+CA,"San Bernardino County, CA","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://www.sbcounty.gov/assessor/wp-content/uploads/sites/7/2024/08/parcel-search.html
+TX,"Travis County, TX","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://records.traviscountytx.gov/Public/Search.aspx
+TX,"Bexar County, TX","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://bexar.tx.publicsearch.us/
+TX,"Collin County, TX","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://collincountytx.publicsearch.us/
+TX,"Denton County, TX","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://dentoncounty.tx.publicsearch.us/
+TX,"Williamson County, TX","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://williamson.tx.publicsearch.us/
+CO,"El Paso County, CO","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://recording.elpasoco.com/PublicRecords/Search.aspx
+CO,"Jefferson County, CO","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://jeffco.us/1429/Property-Records-Search
+GA,"DeKalb County, GA","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://dekalbcountyga.gov/recorder/deed-records
+GA,"Gwinnett County, GA","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://gwinnettcounty.com/web/gwinnett/departments/courtsandlaw/superiorcourtclerkofcourts
+TN,"Davidson County, TN","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://www.nashville.gov/departments/register-of-deeds
+OH,"Cuyahoga County, OH","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://recorder.cuyahogacounty.us/search
+OH,"Hamilton County, OH","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://www.hamiltoncountyrecorder.com/searchrecord.aspx
+MN,"Hennepin County, MN","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://www.hennepin.us/property/land-records/land-records-search
+WI,"Dane County, WI","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://www.countyofdane.com/register-of-deeds
+AZ,"Pima County, AZ","Liens, Probates, Pre-Foreclosures, Bankruptcy, and Divorce",https://pimacountyaz-web.tylerhost.net/web/search/DOCSEARCH55S8
+TX,"San Antonio, TX",Code Violation,https://data-sa.opendata.arcgis.com/datasets/code-enforcement-cases
+AZ,"Scottsdale, AZ",Code Violation,https://opendata.arcgis.com/datasets/scottsdale-code-enforcement-cases
+CA,"Riverside County, CA",Code Violation,https://hub.arcgis.com/datasets/riverside-code-enforcement
+NC,"Durham, NC",Code Violation,https://data.durhamnc.gov/datasets/code-enforcement-cases
+VA,"Richmond, VA",Code Violation,https://data.richmondgov.com/datasets/code-enforcement-cases
+FL,"Jacksonville, FL",Code Violation,https://www.coj.net/departments/neighborhoods/citizen-action-center
+CA,"San Jose, CA",Code Violation,https://data.sanjoseca.gov/datasets/code-enforcement-cases
+TX,"Plano, TX",Code Violation,https://data.plano.gov/datasets/code-enforcement-complaints
+MD,"Baltimore, MD",Code Violation,https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx
+OH,"Cleveland, OH",Code Violation,https://data.clevelandohio.gov/datasets/code-enforcement-violations
+PA,"Pittsburgh, PA",Code Violation,https://data.wprdc.org/dataset/pli-violations
+MI,"Detroit, MI",Code Violation,https://data.detroitmi.gov/datasets/detroit-blight-violations
+MO,"St. Louis, MO",Code Violation,https://www.stlouis-mo.gov/data/datasets/code-violations.cfm
+IN,"Gary, IN",Code Violation,https://data.in.gov/dataset/code-enforcement-violations-gary
+AL,"Birmingham, AL",Code Violation,https://www.birminghamal.gov/departments/neighborhood-services/code-enforcement
+LA,"Baton Rouge, LA",Code Violation,https://data.brla.gov/Housing-and-Land-Use/Code-Enforcement/i4ni-tkzx/about_data
+TX,"Harris County, TX",Tax Delinquency,https://www.hctax.net/Property/DelinquentTax
+AZ,"Maricopa County, AZ",Tax Delinquency,https://treasurer.maricopa.gov/parcel-taxes/tax-lien-sale
+FL,"Miami-Dade County, FL",Tax Delinquency,https://www.miamidade.gov/taxcollector/tax-certificate.asp
+NJ,New Jersey,Tax Delinquency,https://www.njleg.state.nj.us/Bills/2022/PL22/48_.HTM
+SC,"Richland County, SC",Tax Delinquency,https://www.richlandcountysc.gov/Departments/Treasurer/Delinquent-Taxes
+GA,"Fulton County, GA",Tax Delinquency,https://www.fultoncountyga.gov/services/taxes/delinquent-tax-list
+LA,"Orleans Parish, LA",Tax Delinquency,https://sfno.org/tax-sale
+MS,Mississippi,Tax Delinquency,https://www.ms.gov/dor/prop_tax/delinquent_property_tax.jsp
+IN,"Indianapolis, IN",Tax Delinquency,https://www.indy.gov/agency/department-of-code-enforcement
+KS,Kansas,Tax Delinquency,https://www.ksrevenue.gov/prsaleprop.html
