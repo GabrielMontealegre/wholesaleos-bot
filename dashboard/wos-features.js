@@ -162,7 +162,26 @@ function _mountOnTab() {
       '<option value="yes">Has Real ARV</option>' +
       '<option value="no">No Comp Yet</option>' +
     '</select>') +
-    '<div style="display:flex;gap:6px;align-items:center;padding-top:14px;">' +
+    '<div _fld('MOTIVATION', '<select id="wfMotivation" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">All Types</option>' +
+      '<option value="pre_foreclosure">Pre-Foreclosure</option>' +
+      '<option value="probate">Probate</option>' +
+      '<option value="tax_lien">Tax Lien</option>' +
+      '<option value="fire_damaged">Fire Damaged</option>' +
+      '<option value="bankruptcy">Bankruptcy</option>' +
+      '<option value="code_violation">Code Violation</option>' +
+    '</select>') +
+    _fld('MIN SCORE', '<select id="wfScore" onchange="wosFilter()" style="'+_sel_s+'">' +
+      '<option value="">Any Score</option>' +
+      '<option value="90">90+ (HOT)</option>' +
+      '<option value="70">70+ (Warm)</option>' +
+      '<option value="50">50+ (Avg)</option>' +
+    '</select>') +
+    _fld('VIEW', '<select id="wfTop300" onchange="wosApplyTop300()" style="'+_sel_s+'">' +
+      '<option value="">All Leads</option>' +
+      '<option value="1">🔥 Top 300 Deals</option>' +
+    '</select>') +
+    style="display:flex;gap:6px;align-items:center;padding-top:14px;">" +
     _btn('Apply','wosFilter()','background:#7c3aed;color:#fff;border:none;font-size:11px;padding:5px 12px;') +
     _btn('Clear','wosClearFilter()','background:#fff;color:#6b7280;border:1px solid #d1d5db;font-size:11px;padding:5px 10px;') +
     '<span id="wfCount" style="font-size:11px;color:#9ca3af;"></span>' +
@@ -315,6 +334,10 @@ window.wosFilter = function() {
     if (pri   && row.dataset.priority !== pri) ok = false;
     if (phone && row.dataset.phone !== phone) ok = false;
     if (arv   && row.dataset.arv !== arv) ok = false;
+    var mot = (document.getElementById('wfMotivation')||{}).value||'';
+    var score = parseInt((document.getElementById('wfScore')||{}).value||'0');
+    if (mot && (row.dataset.motivation||'').indexOf(mot)===-1) ok = false;
+    if (score && parseInt(row.dataset.score||'0') < score) ok = false;
     if (age && row.dataset.created) {
       var d = new Date(row.dataset.created).getTime();
       if (isNaN(d)) { ok = false; }
@@ -337,7 +360,7 @@ window.wosFilter = function() {
 };
 
 window.wosClearFilter = function() {
-  ['wfState','wfSrc','wfAge','wfPri','wfPhone','wfArv'].forEach(function(id) {
+  ['wfState','wfSrc','wfAge','wfPri','wfPhone','wfArv','wfMotivation','wfScore','wfTop300'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   document.querySelectorAll('tr[data-lead-id]').forEach(function(r) { r.style.display = ''; });
@@ -531,4 +554,34 @@ function _addScoreBadges() {
   });
 }
 
+
+window.wosApplyTop300 = function() {
+  var val = (document.getElementById('wfTop300')||{}).value||'';
+  if (!val) { if (typeof loadLeads === 'function') { loadLeads(); } return; }
+  wosToast('🔥 Loading top 300 deals by score…', '#7c3aed');
+  fetch('/api/leads?top300=1&sort=motivation_score')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if (!d.leads) return;
+      var tbl = document.querySelector('table tbody');
+      if (!tbl) return;
+      // Store original rows for restore
+      if (!window._wosOrigRows) window._wosOrigRows = tbl.innerHTML;
+      // Build new rows from API data
+      var html = d.leads.map(function(l){
+        var score = l.hot_score||l.motivation_score||0;
+        var badge = score>=90?'🔥':score>=70?'⚡':'❄️';
+        return '<tr data-lead-id="'+l.id+'" data-state="'+(l.state||'')+'" data-src="'+(l.motivation||'')+'" data-score="'+score+'" data-motivation="'+(l.motivation||'')+'" data-priority="'+(l.priority||'')+'" data-phone="'+(l.phone?'yes':'no')+'" data-arv="'+(l.arv?'yes':'no')+'" data-created="'+(l.created_at||l.created||'')+'">' +
+          '<td style="padding:6px 10px;font-size:12px;">' + badge + ' ' + (score||0) + '</td>' +
+          '<td style="padding:6px 10px;font-size:12px;">' + (l.address||'') + '</td>' +
+          '<td style="padding:6px 10px;font-size:12px;">' + (l.city||'') + ', ' + (l.state||'') + '</td>' +
+          '<td style="padding:6px 10px;font-size:12px;">' + (l.motivation||'').replace(/_/g,' ') + '</td>' +
+          '<td style="padding:6px 10px;font-size:12px;">' + (l.arv?'$'+Math.round(l.arv/1000)+'k':'—') + '</td>' +
+          '</tr>';
+      }).join('');
+      tbl.innerHTML = html;
+      _addDataAttrs();
+      wosToast('✅ Showing top 300 deals by score ('+d.leads.length+' leads)', '#059669');
+    }).catch(function(e){ wosToast('Error loading top 300: '+e.message,'#dc2626'); });
+};
 })();
