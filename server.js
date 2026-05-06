@@ -1,4 +1,4 @@
-// Deploy: 2026-05-06T05:17:31.045Z
+// Deploy: 2026-05-06T05:38:20.971Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -3851,7 +3851,7 @@ app.post('/api/courthouse/scrape', function(req, res) {
   var scraper;
   try { scraper = require('./courthouse-addon/scraper'); }
   catch(e) { return res.status(503).json({ error: 'Scraper unavailable: ' + e.message }); }
-  scraper.scrapeAllPortals(limit)
+  scraper.scrapeAllPortals({limit:limit})
     .then(function(r) { res.json(r); })
     .catch(function(e) { res.status(500).json({ error: e.message }); });
 });
@@ -4224,7 +4224,7 @@ app.post('/api/courthouse/run-all', async function(req, res) {
     var limit = parseInt(req.body && req.body.limit) || 30;
     res.json({ ok: true, message: "Courthouse scrape started for "+limit+" portals. Runs in background." });
     var _chScraper = require('./courthouse-addon/scraper');
-    _chScraper.scrapeAllPortals(limit).then(function(r){
+    _chScraper.scrapeAllPortals({limit:limit}).then(function(r){
       logger.info({ event: "courthouse_ondemand_done", leads: r.leads, portals: r.portals });
     }).catch(function(e){ logger.error("[courthouse] run-all error: "+e.message); });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
