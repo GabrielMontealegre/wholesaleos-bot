@@ -244,6 +244,7 @@ function _mountOnTab() {
 
   _addDataAttrs();
   _updateLeadCount();
+  if (_wosObs) { try{_wosObs.disconnect();}catch(e){} _wosObs=null; }
 }
 
 // ── DASHBOARD: TOP DEALS PATCH ───────────────────────────────────────────
