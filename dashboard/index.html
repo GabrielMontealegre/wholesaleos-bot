@@ -1245,6 +1245,50 @@ function renderLeadDetail(l) {
   const lid = l.id;
 
   let html = '<div class="detail-panel">';
+  // SOURCE + AI BLOCK
+  var _srcName = l.source || l.county || 'Unknown source';
+  var _srcUrl  = l.source_url || '';
+  var _srcDate = l.created_at || l.createdAt || l.created || '';
+  if (_srcDate) { try { _srcDate = new Date(_srcDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch(e){} }
+  var _mot = (l.motivation || '').toLowerCase();
+  var _tM = {pre_foreclosure:{lbl:'Pre-Foreclosure',col:'#dc2626',bg:'#fef2f2',icon:'⚠️',urg:'HIGH — Facing foreclosure'},foreclosure:{lbl:'Foreclosure/Auction',col:'#1d4ed8',bg:'#eff6ff',icon:'🔨',urg:'VERY HIGH — Going to auction'},probate:{lbl:'Probate',col:'#7c3aed',bg:'#f5f3ff',icon:'⚖️',urg:'MEDIUM — Estate must sell'},tax_lien:{lbl:'Tax Delinquent',col:'#b45309',bg:'#fffbeb',icon:'🏛',urg:'HIGH — May lose to tax sale'},fire_damaged:{lbl:'Fire Damaged',col:'#ea580c',bg:'#fff7ed',icon:'🔥',urg:'HIGH — Owner wants out'},code_violation:{lbl:'Code Violation',col:'#d97706',bg:'#fffbeb',icon:'🚨',urg:'MEDIUM — Fines accumulating'},bankruptcy:{lbl:'Bankruptcy',col:'#6b7280',bg:'#f9fafb',icon:'📋',urg:'HIGH — Trustee controls deal'}};
+  var _tc = _tM[_mot] || {lbl:'Lead',col:'#374151',bg:'#f9fafb',icon:'📍',urg:'Research needed'};
+  var _qMap = {pre_foreclosure:['How far behind on payments?','Notice of Default received?','Total owed on mortgage?','Other liens on property?','Primary residence?'],foreclosure:['Auction date?','Opening bid amount?','Redemption period?','Property occupied?','Can I inspect before auction?'],probate:['Are you the executor?','Letters Testamentary issued?','All heirs agree to sell?','Mortgage on property?','Estate closing timeline?'],tax_lien:['How far behind on taxes?','Tax sale notice received?','Property vacant or occupied?','Other debts on property?','Open to cash sale?'],fire_damaged:['Insurance claim filed?','Payout received?','Property status?','Permits pulled?','How long ago was fire?'],code_violation:['What violations were cited?','How long outstanding?','Daily fines?','Occupied or vacant?','Repair estimates?'],bankruptcy:['Chapter 7 or 13?','Who is trustee?','Stay lifted?','Expected trustee value?','Other creditors?']};
+  var _qs = _qMap[_mot] || ['How long have you owned?','Are you open to selling?','What is your timeline?','Is property occupied?','What is your asking price?'];
+  var _appMap = {pre_foreclosure:'Empathetic and fast. They need relief now, not negotiation.',foreclosure:'Fast and factual. Numbers only. Hard deadline ahead.',probate:'Compassionate. Work with executor. Court approval may be required.',tax_lien:'Educational. Many owners do not know they can sell to avoid losing it.',fire_damaged:'Direct. They want the problem gone. Make it simple and fast.',code_violation:'Problem-solver. Relief from city pressure. They are stressed.',bankruptcy:'Professional. Trustee must sell. Document everything formally.'};
+  var _app2 = _appMap[_mot] || 'Gather information first before making any offer or assumption.';
+  var _whyMap = {pre_foreclosure:'Financial pressure — facing loss of home. Time is critical.',foreclosure:'Hard deadline — auction overrides all other options.',probate:'Heirs need liquidity from estate. Executor wants clean close.',tax_lien:'Accumulating debt threatening ownership. Cash sale = instant relief.',fire_damaged:'Property is a liability. Insurance headaches with no clear path forward.',code_violation:'City fines piling up. Owner embarrassed and stressed.',bankruptcy:'Trustee legally obligated to maximize creditor recovery.'};
+  var _why = _whyMap[_mot] || 'Motivation unclear — qualify the lead with the questions below.';
+  var _sc2 = l.hot_score || l.motivation_score || l.score || 0;
+  var _sb2 = _sc2>=85?'🔥 HOT '+_sc2:_sc2>=65?'⚡ WARM '+_sc2:'❄️ '+_sc2;
+  var _sbg = _sc2>=85?'#7f1d1d':_sc2>=65?'#78350f':'#1e3a5f';
+  var _sco = _sc2>=85?'#fca5a5':_sc2>=65?'#fcd34d':'#93c5fd';
+  var _ref2 = l.ref_number || ('WOS-' + (l.id||'').slice(-6).toUpperCase());
+  html += '<div style="border-radius:10px;overflow:hidden;border:1.5px solid '+_tc.col+';margin-bottom:14px">';
+  html += '<div style="background:'+_tc.col+';color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px">';
+  html += '<span style="font-size:18px">'+_tc.icon+'</span><div style="flex:1"><div style="font-size:13px;font-weight:600">'+_tc.lbl+'</div><div style="font-size:11px;opacity:.85">'+_tc.urg+'</div></div>';
+  html += '<div style="background:'+_sbg+';color:'+_sco+';font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">'+_sb2+'</div></div>';
+  html += '<div style="background:'+_tc.bg+';padding:10px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;border-bottom:1.5px solid '+_tc.col+'33">';
+  html += '<div><div style="font-size:9px;font-weight:700;color:'+_tc.col+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Source</div><div style="font-size:12px;color:#1f2937;font-weight:500">'+ _srcName +'</div>';
+  if(_srcUrl)html+='<a href="'+_srcUrl+'" target="_blank" style="font-size:10px;color:'+_tc.col+'">View →</a>';html+='</div>';
+  html += '<div><div style="font-size:9px;font-weight:700;color:'+_tc.col+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Pulled</div><div style="font-size:12px;color:#1f2937;font-weight:500">'+(_srcDate||'Unknown')+'</div></div>';
+  html += '<div><div style="font-size:9px;font-weight:700;color:'+_tc.col+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Ref</div><div style="font-size:12px;color:'+_tc.col+';font-weight:700;font-family:monospace">'+_ref2+'</div></div>';
+  html += '</div><div style="background:#fff;padding:12px 14px">';
+  html += '<div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🤖 AI Approach — '+_tc.lbl+'</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+  html += '<div style="background:#f8fafc;border-radius:7px;padding:9px"><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">How to Approach</div><div style="font-size:11px;color:#1f2937;line-height:1.5">'+_app2+'</div></div>';
+  html += '<div style="background:#f8fafc;border-radius:7px;padding:9px"><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">Why They Sell</div><div style="font-size:11px;color:#1f2937;line-height:1.5">'+_why+'</div></div>';
+  html += '</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px">Key Questions to Ask</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">';
+  _qs.forEach(function(q){html+='<div style="font-size:11px;color:#374151;padding:4px 8px;background:#f8fafc;border-radius:5px;border-left:2px solid '+_tc.col+'">'+ q +'</div>';});
+  html += '</div><div style="display:flex;gap:5px;flex-wrap:wrap">';
+  if(!l.phone)html+='<span style="font-size:10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 8px;border-radius:20px">📱 No phone — skip trace needed</span>';
+  else html+='<span style="font-size:10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:2px 8px;border-radius:20px">✅ '+l.phone+'</span>';
+  if(!l.arv)html+='<span style="font-size:10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 8px;border-radius:20px">📊 No comps — ARV unknown</span>';
+  else html+='<span style="font-size:10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:2px 8px;border-radius:20px">✅ ARV $'+Math.round((l.arv||0)/1000)+'k</span>';
+  if(l.owner_name)html+='<span style="font-size:10px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:2px 8px;border-radius:20px">👤 '+l.owner_name+'</span>';
+  html += '</div></div></div>';
+
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
   html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
