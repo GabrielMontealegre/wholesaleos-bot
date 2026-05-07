@@ -1,4 +1,4 @@
-// Deploy: 2026-05-07T02:06:05.699Z
+// Deploy: 2026-05-07T02:19:29.430Z
 // server.js Ã¢ÂÂ Express server for dashboard + REST API
 // Serves dashboard at /dashboard/ and API at /api/
 
@@ -36,13 +36,17 @@ app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 const rateLimit = require('express-rate-limit');
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again in 15 minutes.' },
   skip: function(req) {
-    // Never rate-limit internal cron, health checks, or Railway probes
-    return req.path === '/health' || req.ip === '127.0.0.1' || req.ip === '::1';
+    // Never rate-limit health, internal, or dashboard lead reads
+    if (req.path === '/health') return true;
+    if (req.ip === '127.0.0.1' || req.ip === '::1') return true;
+    // Allow unlimited dashboard reads (GET leads, stats) — only POST/DELETE count
+    if (req.method === 'GET' && (req.path.startsWith('/api/leads') || req.path.startsWith('/api/stats') || req.path.startsWith('/api/buyers') || req.path.startsWith('/api/pipeline'))) return true;
+    return false;
   }
 });
 app.use('/api/', apiLimiter);
