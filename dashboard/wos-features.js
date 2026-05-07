@@ -1,4 +1,83 @@
 (function() {
+// ── A1 THEME: NAVY + GOLD ─────────────────────────────────────────────
+(function injectA1Theme(){
+  if(document.getElementById('wosA1Theme')) return;
+  var st=document.createElement('style');
+  st.id='wosA1Theme';
+  st.textContent=[
+    // Page background
+    'body, html { background: #080f1e !important; }',
+    // Top navigation bar
+    '.topnav, nav.navbar, header.header, .header, #header, .app-header, .top-bar, nav[class*="nav"] { background: #080f1e !important; border-bottom: 1px solid #1e2d4a !important; }',
+    // Nav links
+    '.nav-link, .nav-item a, .navbar-nav .nav-link { color: #64748b !important; }',
+    '.nav-link.active, .nav-item.active a, .nav-link:hover { color: #f4c542 !important; }',
+    // Sidebar / left panel
+    '.sidebar, .left-panel, aside, [class*="sidebar"] { background: #0a1220 !important; border-right: 1px solid #1e2d4a !important; }',
+    // Stat cards on dashboard
+    '.stat-card, .metric-card, .card, .summary-card { background: #0c1422 !important; border: 1px solid #1e2d4a !important; color: #e2e8f0 !important; }',
+    '.stat-card .value, .metric-value, .card-value { color: #f4c542 !important; }',
+    '.stat-card .label, .metric-label, .card-label { color: #64748b !important; }',
+    // Main content area
+    '.content, .main-content, main, #main, .page-content, .container-fluid, .app-body { background: #080f1e !important; }',
+    // Tables
+    'table { background: #080f1e !important; color: #94a3b8 !important; }',
+    'table thead th, th { background: #0c1422 !important; color: #475569 !important; border-bottom: 1px solid #1e2d4a !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.04em; }',
+    'table tbody tr { border-bottom: 1px solid #0e1a2d !important; }',
+    'table tbody tr:hover { background: #0e1a2d !important; }',
+    'table tbody td { color: #94a3b8 !important; font-size: 12px !important; }',
+    // Lead address / name cell — make it pop
+    'table tbody td:nth-child(2), table tbody td:nth-child(3) { color: #e2e8f0 !important; font-weight: 500 !important; }',
+    // HOT row highlight
+    'tr[data-hot="true"], tr.hot-lead { border-left: 3px solid #f4c542 !important; }',
+    // Modals
+    '.modal-content, .modal-dialog .modal-content { background: #0c1422 !important; border: 1px solid #1e2d4a !important; color: #e2e8f0 !important; }',
+    '.modal-header { background: #080f1e !important; border-bottom: 1px solid #1e2d4a !important; }',
+    '.modal-title { color: #f4c542 !important; }',
+    '.modal-footer { background: #080f1e !important; border-top: 1px solid #1e2d4a !important; }',
+    // Inputs and selects
+    'input, select, textarea { background: #0a1220 !important; border: 1px solid #1e2d4a !important; color: #e2e8f0 !important; }',
+    'input::placeholder { color: #334155 !important; }',
+    // Buttons (generic)
+    '.btn-primary { background: #f4c542 !important; color: #080f1e !important; border-color: #f4c542 !important; font-weight: 600 !important; }',
+    '.btn-secondary, .btn-default { background: #1e2d4a !important; color: #94a3b8 !important; border-color: #2d3f5a !important; }',
+    '.btn-danger { background: #ef4444 !important; border-color: #ef4444 !important; }',
+    '.btn-success { background: #10b981 !important; border-color: #10b981 !important; color: #fff !important; }',
+    // Badges / pills / status labels
+    '.badge-primary, .badge.bg-primary { background: #1e2d4a !important; color: #f4c542 !important; }',
+    // Tabs (pipeline, outreach, etc.)
+    '.tab-content, .tab-pane { background: #080f1e !important; }',
+    '.nav-tabs { border-bottom: 1px solid #1e2d4a !important; }',
+    '.nav-tabs .nav-link { color: #64748b !important; border: none !important; }',
+    '.nav-tabs .nav-link.active { color: #f4c542 !important; border-bottom: 2px solid #f4c542 !important; background: transparent !important; }',
+    // Scrollbars
+    '::-webkit-scrollbar { width: 6px; height: 6px; }',
+    '::-webkit-scrollbar-track { background: #080f1e; }',
+    '::-webkit-scrollbar-thumb { background: #1e2d4a; border-radius: 3px; }',
+    // Dashboard stat numbers
+    '.total-leads-value, .spread-value, #totalLeads, #avgSpread { color: #f4c542 !important; }',
+    // Pin screen
+    '#pin-screen, .pin-screen { background: #080f1e !important; }',
+    // Logo / brand
+    '.brand, .logo, .navbar-brand { color: #f4c542 !important; font-weight: 600 !important; }',
+    // Dropdowns
+    '.dropdown-menu { background: #0c1422 !important; border: 1px solid #1e2d4a !important; }',
+    '.dropdown-item { color: #94a3b8 !important; }',
+    '.dropdown-item:hover { background: #1e2d4a !important; color: #f4c542 !important; }',
+    // Forms labels
+    'label { color: #64748b !important; }',
+    // Links
+    'a { color: #f4c542 !important; }',
+    'a:hover { color: #fbbf24 !important; }',
+    // HR dividers
+    'hr { border-color: #1e2d4a !important; }',
+    // Section headings
+    'h1,h2,h3,h4,h5,h6 { color: #e2e8f0 !important; }',
+  ].join('\n');
+  document.head.appendChild(st);
+  console.log('[wos] A1 Navy+Gold theme injected');
+})();
+
 
 // ── TOAST HELPER ──────────────────────────────────────────────────────────
 function wosToast(msg, color) {
@@ -7,7 +86,7 @@ function wosToast(msg, color) {
   if (!t) {
     t = document.createElement('div');
     t.id = 'wosToastEl';
-    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.4s;max-width:340px;line-height:1.4;';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;color:#e2e8f0;border:1px solid #1e2d4a;transition:opacity 0.4s;max-width:340px;line-height:1.4;';
     document.body.appendChild(t);
   }
   t.style.background = color;
@@ -112,21 +191,21 @@ function _mountOnTab() {
   // ── TOOLBAR ────────────────────────────────────────────────────────────
   var tb = document.createElement('div');
   tb.id = 'wosToolbar';
-  tb.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#fff;border-bottom:2px solid #f0f0f5;position:sticky;top:0;z-index:200;align-items:center;';
+  tb.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:9px 14px;background:#080f1e;border-bottom:1px solid #1e2d4a;position:sticky;top:0;z-index:200;align-items:center;';
   tb.innerHTML =
-    _btn('+ Pull Leads','wosPullLeadsOpen()','background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;') +
-    _btn('Filters','wosToggleFilters()','background:#f3f4f6;color:#374151;border:1px solid #d1d5db;') +
-    _btn('Bulk Delete','wosToggleBulk()','background:#fef2f2;color:#ef4444;border:1px solid #fecaca;') +
-    _btn('Re-analyze Comps','wosReanalyzeAll()','background:#f0fdf4;color:#059669;border:1px solid #bbf7d0;') +
-    _btn('Score All Leads','wosScoreAllLeads()','background:#fef3c7;color:#92400e;border:1px solid #fcd34d;') +
-    _btn('Run Courthouse','wosCourthouseScrape()','background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;') +
+    _btn('+ Pull Leads','wosPullLeadsOpen()','background:#f4c542;color:#080f1e;border:none;font-weight:600;') +
+    _btn('Filters','wosToggleFilters()','background:#1e2d4a;color:#94a3b8;border:1px solid #2d3f5a;') +
+    _btn('Bulk Delete','wosToggleBulk()','background:#1e2d4a;color:#ef4444;border:1px solid #2d3f5a;') +
+    _btn('Re-analyze Comps','wosReanalyzeAll()','background:#1e2d4a;color:#10b981;border:1px solid #2d3f5a;') +
+    _btn('Score All Leads','wosScoreAllLeads()','background:#1e2d4a;color:#f4c542;border:1px solid #2d3f5a;') +
+    _btn('Run Courthouse','wosCourthouseScrape()','background:#1e2d4a;color:#93c5fd;border:1px solid #2d3f5a;') +
     '<span id="wosLeadCount" style="margin-left:auto;font-size:12px;color:#6b7280;"></span>';
   container.insertBefore(tb, tbl);
 
   // ── FILTER PANEL (hidden by default) ────────────────────────────────────
   var fp = document.createElement('div');
   fp.id = 'wosFilterPanel';
-  fp.style.cssText = 'display:none;background:#f8f8fb;border-bottom:1px solid #e5e7eb;padding:12px 14px;flex-wrap:wrap;gap:10px;align-items:flex-end;';
+  fp.style.cssText = 'display:none;background:#0c1422;border-bottom:1px solid #1e2d4a;padding:12px 14px;flex-wrap:wrap;gap:10px;align-items:flex-end;';
   fp.innerHTML =
     _fld('STATE', '<select id="wfState" onchange="wosFilter()" style="'+_sel_s+'">' + _stateOpts() + '</select>') +
     _fld('SOURCE TYPE', '<select id="wfSrc" onchange="wosFilter()" style="'+_sel_s+'">' +
@@ -187,8 +266,8 @@ function _mountOnTab() {
       '<option value="1">🔥 Top 300 Deals</option>' +
     '</select>') +
     '<div style="display:flex;gap:6px;align-items:center;padding-top:14px;">' +
-    _btn('Apply','wosFilter()','background:#7c3aed;color:#fff;border:none;font-size:11px;padding:5px 12px;') +
-    _btn('Clear','wosClearFilter()','background:#fff;color:#6b7280;border:1px solid #d1d5db;font-size:11px;padding:5px 10px;') +
+    _btn('Apply','wosFilter()','background:#f4c542;color:#080f1e;border:none;font-size:11px;padding:5px 12px;font-weight:600;') +
+    _btn('Clear','wosClearFilter()','background:#1e2d4a;color:#94a3b8;border:1px solid #2d3f5a;font-size:11px;padding:5px 10px;') +
     '<span id="wfCount" style="font-size:11px;color:#9ca3af;"></span>' +
     '</div>';
   container.insertBefore(fp, tbl);
@@ -196,14 +275,14 @@ function _mountOnTab() {
   // ── BULK DELETE BAR (hidden by default) ─────────────────────────────────
   var bb = document.createElement('div');
   bb.id = 'wosBulkBar';
-  bb.style.cssText = 'display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 14px;flex-wrap:wrap;gap:8px;align-items:center;';
+  bb.style.cssText = 'display:none;background:#0f0a0a;border-bottom:1px solid #2d1515;padding:8px 14px;flex-wrap:wrap;gap:8px;align-items:center;';
   bb.innerHTML =
     '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">' +
     '<input type="checkbox" id="wosSelAll" onchange="wosToggleAll(this.checked)" style="width:15px;height:15px;"> Select All on Page' +
     '</label>' +
     '<span id="wosSelCnt" style="font-size:12px;color:#6b7280;">0 selected</span>' +
-    '<button id="wosDelBtn" onclick="wosDeleteSelected()" disabled style="padding:5px 14px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;opacity:0.4;">Delete Selected</button>' +
-    '<button onclick="wosHideBulk()" style="padding:5px 10px;background:#fff;border:1px solid #d1d5db;border-radius:6px;color:#6b7280;font-size:11px;cursor:pointer;">Cancel</button>' +
+    '<button id="wosDelBtn" onclick="wosDeleteSelected()" disabled style="padding:5px 14px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;opacity:0.4;box-shadow:none;">Delete Selected</button>' +
+    '<button onclick="wosHideBulk()" style="padding:5px 10px;background:#1e2d4a;border:1px solid #2d3f5a;border-radius:6px;color:#94a3b8;font-size:11px;cursor:pointer;">Cancel</button>' +
     '<span id="wosDelSt" style="font-size:11px;color:#6b7280;"></span>';
   container.insertBefore(bb, tbl);
 
