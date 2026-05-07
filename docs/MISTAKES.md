@@ -251,3 +251,11 @@ Fix: Bumped ?v=9 to ?v=10 in index.html commit 8f3d25ed.
 Rule: EVERY push to dashboard/wos-features.js MUST also bump the ?v=N in index.html in the same session.
 Rule: Current version is ?v=10. Next push: bump to ?v=11, then ?v=12, etc.
 Rule: Never push wos-features.js without also updating the version tag in index.html.
+
+## MISTAKE 14 — Railway volume not configured (CRITICAL)
+What: DB_PATH defaults to ./data/db.json which lives in the container ephemeral filesystem.
+Result: Every Railway redeploy wipes db.json. 9,240 leads lost on each deploy.
+Fix needed: Gabriel must go to Railway dashboard → service → Settings → Volumes → Add volume at /app/data
+Then set env var: DB_PATH=/app/data/db.json
+Until volume is configured: never redeploy unless willing to re-pull all leads.
+Status: PENDING Gabriel action — cannot be fixed in code alone.
