@@ -1161,19 +1161,21 @@ function renderLeadDetail(l) {
     html += '<div style="font-size:10px;color:#475569;margin-bottom:6px">📍 ' + sn + '</div>';
   }
 
-  // OWNER INFO (Phase 2A)
+  // OWNER INFO (Phase 3B — enhanced display)
   html += '<div style="margin:10px 0;padding:10px 12px;background:#0e1a2d;border-radius:10px;border:1px solid #1e2d4a">';
   html += '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px">Owner Info</div>';
-  if (l.owner_name || l.owner_phone || l.owner_email) {
-    if (l.owner_name)  html += '<div style="font-size:12px;color:#e2e8f0;margin-bottom:2px">👤 ' + l.owner_name + '</div>';
-    if (l.owner_phone) html += '<div style="font-size:12px;color:#94a3b8;margin-bottom:2px">📞 ' + l.owner_phone + '</div>';
-    if (l.owner_email) html += '<div style="font-size:12px;color:#94a3b8">✉️ ' + l.owner_email + '</div>';
+  if (l.owner_name) {
+    var ownerTypeLabel = l.owner_type ? ' <span style="background:#1e2d4a;color:#94a3b8;font-size:9px;padding:1px 6px;border-radius:10px">' + l.owner_type + '</span>' : '';
+    html += '<div style="font-size:12px;color:#e2e8f0;margin-bottom:2px">👤 ' + l.owner_name + ownerTypeLabel + '</div>';
+    if (l.owner_phone) html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:2px">📞 ' + l.owner_phone + '</div>';
+    if (l.owner_email) html += '<div style="font-size:11px;color:#94a3b8">✉️ ' + l.owner_email + '</div>';
+    if (l.enrichment_source) html += '<div style="font-size:10px;color:#475569;margin-top:4px">Source: ' + l.enrichment_source + (l.enrichment_date ? ' · ' + (l.enrichment_date||'').slice(0,10) : '') + '</div>';
+    if (l.parcel_number)    html += '<div style="font-size:10px;color:#475569">Parcel: ' + l.parcel_number + (l.market_value ? ' · Value: $' + parseInt(l.market_value||0).toLocaleString() : '') + '</div>';
   } else {
-    html += '<div style="font-size:11px;color:#475569;font-style:italic">Not enriched yet — owner data pending skip trace</div>';
+    html += '<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable — use enrichment to fetch</div>';
   }
   html += '</div>';
-
-  // SELLER
+SELLER
   html += '<div class="section-title">Seller Contact</div>';
   html += '<div class="seller-card"><div class="seller-info">';
   html += '<strong>' + (l.owner_name||l.seller_type||'Owner') + '</strong><br>';
