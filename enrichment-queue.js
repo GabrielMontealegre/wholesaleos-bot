@@ -45,6 +45,16 @@ async function fetchOwnerData(lead) {
       return { owner_name: null, source_name: 'nashville_arcgis', notes: 'Connector error: ' + connErr.message };
     }
   }
+  // Syracuse NY — lazy require inside function, startup-safe (Phase 3C)
+  if (state === 'NY' || /syracuse/i.test(source)) {
+    try {
+      var syrConn = require('./modules/enrichment/connectors/syracuse-arcgis');
+      return syrConn.lookup(lead);
+    } catch(connErr) {
+      console.error('[EnrichQ] Syracuse connector error:', connErr.message);
+      return { owner_name: null, source_name: 'onondaga_arcgis', notes: 'Connector error: ' + connErr.message };
+    }
+  }
   // Other cities: no connector active — return null safely
   return {
     owner_name: null,
