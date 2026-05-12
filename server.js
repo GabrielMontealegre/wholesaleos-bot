@@ -4402,4 +4402,6 @@ app.post('/api/admin/backfill-enrichment', requireAdmin, (req, res) => {
 
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
+  // Phase 3B: restore queued enrichment jobs from db.json after restart
+  try { enrichQ.restoreQueue(); } catch(e) { logger.error('enrichQ restore error: ' + e.message); }
 });
