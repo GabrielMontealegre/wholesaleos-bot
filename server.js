@@ -4277,6 +4277,24 @@ app.post('/api/courthouse/run-all', async function(req, res) {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+// ── Ingestion status tracking (Phase 1A) ──────────────────────────────────────
+if (!global._ingestionStatus) {
+  global._ingestionStatus = {
+    last_run: null,
+    last_run_source: null,
+    records_added: 0,
+    records_skipped: 0,
+    last_error: null,
+    runs_today: 0,
+    status: 'idle'
+  };
+}
+
+app.get('/api/ingestion-status', (req, res) => {
+  res.json(global._ingestionStatus);
+});
+
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
 });
