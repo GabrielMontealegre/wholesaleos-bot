@@ -20,7 +20,10 @@ function readDB() {
 
 function writeDB(data) {
   ensureDir();
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+  // Atomic write: .tmp then rename — prevents db.json corruption on crash/restart
+  var tmp = DB_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, DB_FILE);
 }
 
 // ── Leads ──────────────────────────────────────────────
