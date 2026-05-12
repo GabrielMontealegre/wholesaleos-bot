@@ -1148,9 +1148,12 @@ function renderLeadDetail(l) {
       '<span style="background:' + sc + '22;color:' + sc + ';font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;border:1px solid ' + sc + '44">' + dScore + '/100</span>' +
     '</div>';
   }
-  // DUPLICATE BADGE (Phase 2A)
+  // DUPLICATE BADGE (Phase 2A / 2B)
   if (l.duplicate_group_id) {
     html += '<span style="background:#7c3aed22;color:#7c3aed;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #7c3aed44;margin-left:4px">⚠ Duplicate ×' + (l.duplicate_count||2) + '</span>';
+  }
+  if (l.consolidated_from && l.consolidated_from > 1) {
+    html += '<div style="font-size:10px;color:#64748b;margin:4px 0">📋 Consolidated from ' + l.consolidated_from + ' duplicate records</div>';
   }
   // SOURCE (Phase 1B.3 Task 4)
   if (l.source || (l.source_details && l.source_details.source_name)) {
