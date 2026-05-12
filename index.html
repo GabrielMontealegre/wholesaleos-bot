@@ -1182,6 +1182,27 @@ function renderLeadDetail(l) {
   html += '<br>📧 ' + (l.email||'No email') + '<br>Your time: <strong>' + tz.losCabosTime + '</strong> (Los Cabos)';
   html += '</div></div>';
 
+  // ENRICHMENT STATUS + BUTTON (Phase 3A)
+  (function() {
+    var es = l.enrichment_status || 'none';
+    var esColor = es==='complete' ? '#10b981' : es==='failed' ? '#ef4444' : (es==='in_progress'||es==='queued') ? '#f4c542' : '#475569';
+    var esLabel = ({none:'Not Started',queued:'Queued',in_progress:'In Progress',complete:'Complete',failed:'Failed'})[es] || es;
+    html += '<div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Enrichment</span>' +
+      '<span style="background:' + esColor + '22;color:' + esColor + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid ' + esColor + '44">' + esLabel + '</span>';
+    if (es==='none'||es==='failed') {
+      html += '<button onclick="startEnrichment(\'' + l.id + '\')" style="font-size:10px;padding:3px 12px;background:#f4c542;color:#080f1e;border:none;border-radius:20px;cursor:pointer;font-weight:700">▶ Start Owner Enrichment</button>';
+    }
+    html += '</div>';
+    if (l.enrichment_notes && es==='complete') {
+      html += '<div style="font-size:10px;color:#64748b;margin-bottom:4px">' + l.enrichment_notes + '</div>';
+    }
+    if (l.enrichment_attempts > 0) {
+      html += '<div style="font-size:10px;color:#475569;margin-bottom:4px">Attempts: ' + l.enrichment_attempts + (l.last_enrichment_attempt ? ' · Last: ' + (l.last_enrichment_attempt||'').slice(0,10) : '') + '</div>';
+    }
+  })();
+
+
   // ACTIONS
   html += '<div class="action-row">';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
@@ -6039,6 +6060,15 @@ function statusBadge(s) {
 
 function riskBadge(r) {
   return `<span class="badge ${r==='Low'?'b-green':r==='High'?'b-red':'b-yellow'}">${r||'Med'}</span>`;
+}
+
+async function startEnrichment(leadId) {
+  try {
+    const r = await fetch('/api/leads/' + leadId + '/enrich-owner', {method:'POST', headers:{'Content-Type':'application/json','x-user-id':'admin'}});
+    const d = await r.json();
+    if (d.ok || d.queued) { toast('✅ Enrichment queued for this lead', 'success'); openLeadModal(leadId); }
+    else toast('⚠ ' + (d.error||d.reason||'Cannot queue'), 'warning');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 function selectLead(id) {
