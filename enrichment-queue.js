@@ -7,11 +7,11 @@ const db = require('./db');
 
 // ── Connector registry ────────────────────────────────────────────────────────
 const CONNECTORS = {
-  PA:         () => require('./modules/enrichment/connectors/philadelphia'),
-  TN:         () => require('./modules/enrichment/connectors/nashville'),
-  IN:         () => require('./modules/enrichment/connectors/south-bend'),
-  AZ:         () => require('./modules/enrichment/connectors/glendale'),
-  NY:         () => require('./modules/enrichment/connectors/syracuse'),
+  PA:         () => require('./modules/enrichment/connectors/philly-opa'),
+  TN:         () => require('./modules/enrichment/connectors/nashville-arcgis'),
+  IN:         () => require('./modules/enrichment/connectors/south-bend-stub'),
+  AZ:         () => require('./modules/enrichment/connectors/glendale-stub'),
+  NY:         () => require('./modules/enrichment/connectors/syracuse-arcgis'),
 };
 
 // Source keyword → state override (for ambiguous sources)
