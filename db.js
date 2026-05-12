@@ -232,6 +232,7 @@ function addLead(lead) {
     enrichment_source:          lead.enrichment_source          || null,
     enrichment_notes:           lead.enrichment_notes           || null,
     enrichment_date:            lead.enrichment_date            || null,
+    enrichment_history:         Array.isArray(lead.enrichment_history) ? lead.enrichment_history : [],
     archived:          lead.archived          === true ? true : false,
     archive_reason:    lead.archive_reason    || null,
     last_activity:          lead.last_activity          || new Date().toISOString(),
@@ -953,6 +954,24 @@ function backfillEnrichmentFields() {
 }
 
 
+// ── Add enrichment history entry (Phase 3B) ────────────────────────────────────
+function addEnrichmentHistory(leadId, entry) {
+  var db = readDB();
+  var idx = (db.leads || []).findIndex(function(l) { return l.id === leadId; });
+  if (idx === -1) return null;
+  if (!db.leads[idx].enrichment_history) db.leads[idx].enrichment_history = [];
+  db.leads[idx].enrichment_history.push({
+    timestamp:     entry.timestamp     || new Date().toISOString(),
+    source:        entry.source        || null,
+    status:        entry.status        || null,
+    fields_updated:entry.fields_updated|| [],
+    notes:         entry.notes         || null
+  });
+  writeDB(db);
+  return db.leads[idx];
+}
+
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
@@ -972,5 +991,5 @@ module.exports = {
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
   detectDuplicates, backfillActivityFields, backfillDuplicateGroups,
   consolidateDuplicates,
-  updateEnrichmentStatus, backfillEnrichmentFields,
+  updateEnrichmentStatus, backfillEnrichmentFields, addEnrichmentHistory,
 };
