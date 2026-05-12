@@ -4212,7 +4212,7 @@ app.put('/api/leads/:id/status', function(req, res) {
     var newStatus = (req.body||{}).status;
     var validStatuses = ['New Lead','Contacted','Offer Sent','Negotiating','Under Contract','Closed','Dead'];
     if (!newStatus || validStatuses.indexOf(newStatus) === -1) return res.status(400).json({ok:false,error:'Invalid status'});
-    db.updateLead(req.params.id, {status: newStatus, status_updated: new Date().toISOString()});
+    db.updateLead(req.params.id, {status: newStatus, status_updated: new Date().toISOString(), last_status_change: new Date().toISOString()});
     var updated = db.getLeads().find(function(l){return l.id===req.params.id;});
     logger.info({event:'lead_status_update',id:req.params.id,newStatus:newStatus});
     res.json({ok:true,id:req.params.id,status:newStatus});
@@ -4300,7 +4300,7 @@ app.get('/api/ingestion-status', (req, res) => {
 
 // POST /api/admin/backfill-distress
 // Backfills distress_types + distress_score on all leads missing them
-app.post('/api/admin/backfill-distress', (req, res) => {
+app.post('/api/admin/backfill-distress', requireAdmin, (req, res) => {
   try {
     const result = db.backfillDistress();
     global._ingestionStatus.last_run = new Date().toISOString();
@@ -4313,13 +4313,44 @@ app.post('/api/admin/backfill-distress', (req, res) => {
 
 // POST /api/admin/backfill-normalized-address
 // Backfills normalized_address on all leads missing it
-app.post('/api/admin/backfill-normalized-address', (req, res) => {
+app.post('/api/admin/backfill-normalized-address', requireAdmin, (req, res) => {
   try {
     const result = db.backfillNormalizedAddress();
     res.json({ ok: true, ...result });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+
+// ── Phase 2A Admin Routes ──────────────────────────────────────────────────────
+
+app.get('/api/admin/duplicates', requireAdmin, (req, res) => {
+  try {
+    const result = db.detectDuplicates();
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/admin/backfill-activity', requireAdmin, (req, res) => {
+  try {
+    const result = db.backfillActivityFields();
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/admin/backfill-duplicate-groups', requireAdmin, (req, res) => {
+  try {
+    const result = db.backfillDuplicateGroups();
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/buyers', (req, res) => {
+  try {
+    const buyer = db.addBuyer(req.body || {});
+    res.json(buyer);
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.listen(PORT, () => {
