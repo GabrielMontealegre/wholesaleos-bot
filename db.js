@@ -230,8 +230,15 @@ function addLead(lead) {
     enrichment_date:   lead.enrichment_date   || null,
     archived:          lead.archived          === true ? true : false,
     archive_reason:    lead.archive_reason    || null,
-    last_activity:     lead.last_activity     || new Date().toISOString(),
-    normalized_address: lead.normalized_address || normalizeAddress(lead.address || ''),
+    last_activity:          lead.last_activity          || new Date().toISOString(),
+    normalized_address:     lead.normalized_address     || normalizeAddress(lead.address || ''),
+    // Phase 2A — activity tracking
+    contact_attempts:       lead.contact_attempts       != null ? lead.contact_attempts : 0,
+    last_contact_attempt:   lead.last_contact_attempt   || null,
+    last_status_change:     lead.last_status_change     || new Date().toISOString(),
+    // Phase 2A — duplicate detection
+    duplicate_group_id:     lead.duplicate_group_id     || null,
+    duplicate_count:        lead.duplicate_count        != null ? lead.duplicate_count : 1,
   };
   db.leads.unshift(newLead);
   writeDB(db);
@@ -665,6 +672,108 @@ function backfillNormalizedAddress() {
 }
 
 
+// ── Duplicate detection (Phase 2A — detection only, no merge) ────────────────
+function detectDuplicates() {
+  var db = readDB();
+  var leads = db.leads || [];
+
+  // Group by normalized_address + city + state (lowercase)
+  var groups = {};
+  leads.forEach(function(lead) {
+    var norm  = (lead.normalized_address || normalizeAddress(lead.address || '')).trim();
+    var city  = (lead.city  || '').toLowerCase().trim();
+    var state = (lead.state || '').toLowerCase().trim();
+    if (!norm) return;
+    var key = norm + '|' + city + '|' + state;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(lead.id);
+  });
+
+  // Build result — only groups with duplicates
+  var dupGroups = [];
+  var totalDuplicates = 0;
+  Object.keys(groups).forEach(function(key) {
+    var ids = groups[key];
+    if (ids.length < 2) return;
+    totalDuplicates += ids.length;
+    dupGroups.push({
+      key: key,
+      count: ids.length,
+      lead_ids: ids,
+      sample_address: key.split('|')[0]
+    });
+  });
+
+  // Sort by count desc
+  dupGroups.sort(function(a,b){ return b.count - a.count; });
+
+  return {
+    groups: dupGroups.length,
+    total_duplicates: totalDuplicates,
+    samples: dupGroups.slice(0, 20)
+  };
+}
+
+// ── Backfill: activity tracking fields (Phase 2A) ─────────────────────────────
+function backfillActivityFields() {
+  var db = readDB();
+  var leads = db.leads || [];
+  var scanned = 0, updated = 0, skipped = 0;
+  leads.forEach(function(lead, idx) {
+    scanned++;
+    var changed = false;
+    if (lead.contact_attempts     == null)      { lead.contact_attempts     = 0;               changed = true; }
+    if (!lead.last_contact_attempt)             { lead.last_contact_attempt = null;             changed = true; }
+    if (!lead.last_status_change)               { lead.last_status_change   = lead.created_at || lead.created || new Date().toISOString(); changed = true; }
+    if (lead.duplicate_group_id   === undefined){ lead.duplicate_group_id   = null;             changed = true; }
+    if (lead.duplicate_count      == null)      { lead.duplicate_count      = 1;                changed = true; }
+    if (changed) { db.leads[idx] = lead; updated++; } else { skipped++; }
+  });
+  if (updated > 0) writeDB(db);
+  return { scanned: scanned, updated: updated, skipped: skipped };
+}
+
+// ── Backfill: duplicate group IDs (Phase 2A — stamp only, no merge) ───────────
+function backfillDuplicateGroups() {
+  var db = readDB();
+  var leads = db.leads || [];
+
+  // Build groups by normalized_address + city + state
+  var groups = {};
+  leads.forEach(function(lead) {
+    var norm  = (lead.normalized_address || normalizeAddress(lead.address || '')).trim();
+    var city  = (lead.city  || '').toLowerCase().trim();
+    var state = (lead.state || '').toLowerCase().trim();
+    if (!norm) return;
+    var key = norm + '|' + city + '|' + state;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(lead.id);
+  });
+
+  // Stamp duplicate_group_id and duplicate_count
+  var updated = 0;
+  leads.forEach(function(lead, idx) {
+    var norm  = (lead.normalized_address || normalizeAddress(lead.address || '')).trim();
+    var city  = (lead.city  || '').toLowerCase().trim();
+    var state = (lead.state || '').toLowerCase().trim();
+    var key   = norm + '|' + city + '|' + state;
+    var group = groups[key] || [];
+    var isDup = group.length > 1;
+    var groupId = isDup ? 'DG-' + key.replace(/[^A-Z0-9]/gi,'').slice(0,20) : null;
+    var count   = group.length;
+    if (lead.duplicate_group_id !== groupId || lead.duplicate_count !== count) {
+      lead.duplicate_group_id = groupId;
+      lead.duplicate_count    = count;
+      db.leads[idx] = lead;
+      updated++;
+    }
+  });
+
+  if (updated > 0) writeDB(db);
+  return { total_leads: leads.length, updated: updated, duplicate_groups: Object.keys(groups).filter(function(k){return groups[k].length>1;}).length };
+}
+
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
@@ -682,4 +791,5 @@ module.exports = {
   getStats,
   getSetting, setSetting,
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
+  detectDuplicates, backfillActivityFields, backfillDuplicateGroups,
 };
