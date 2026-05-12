@@ -6,12 +6,15 @@
 const db = require('./db');
 
 // ── Connector registry ────────────────────────────────────────────────────────
+function _loadConnector(path) {
+  try { return require(path); } catch(e) { return { lookup: async function(lead) { return { owner_name:null, source_name:'load_error', notes:e.message }; } }; }
+}
 const CONNECTORS = {
-  PA:         () => require('./modules/enrichment/connectors/philly-opa'),
-  TN:         () => require('./modules/enrichment/connectors/nashville-arcgis'),
-  IN:         () => require('./modules/enrichment/connectors/south-bend-stub'),
-  AZ:         () => require('./modules/enrichment/connectors/glendale-stub'),
-  NY:         () => require('./modules/enrichment/connectors/syracuse-arcgis'),
+  PA: function(){ return _loadConnector('./modules/enrichment/connectors/philly-opa'); },
+  TN: function(){ return _loadConnector('./modules/enrichment/connectors/nashville-arcgis'); },
+  IN: function(){ return _loadConnector('./modules/enrichment/connectors/south-bend-stub'); },
+  AZ: function(){ return _loadConnector('./modules/enrichment/connectors/glendale-stub'); },
+  NY: function(){ return _loadConnector('./modules/enrichment/connectors/syracuse-arcgis'); },
 };
 
 // Source keyword → state override (for ambiguous sources)
