@@ -179,6 +179,21 @@ function computeDistressScore(lead) {
 }
 
 
+// ── Address normalizer (Phase 1C) ─────────────────────────────────────────────
+function normalizeAddress(addr) {
+  if (!addr) return '';
+  return addr
+    .toUpperCase()
+    .replace(/\bAPT\.?\s*#?\w+/gi, '')
+    .replace(/\bUNIT\.?\s*#?\w+/gi, '')
+    .replace(/\b(STE|SUITE)\.?\s*#?\w+/gi, '')
+    .replace(/\b#\w+/g, '')
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+
 function addLead(lead) {
   const db = readDB();
   if (!db.leads) db.leads = [];
@@ -216,6 +231,7 @@ function addLead(lead) {
     archived:          lead.archived          === true ? true : false,
     archive_reason:    lead.archive_reason    || null,
     last_activity:     lead.last_activity     || new Date().toISOString(),
+    normalized_address: lead.normalized_address || normalizeAddress(lead.address || ''),
   };
   db.leads.unshift(newLead);
   writeDB(db);
@@ -602,6 +618,53 @@ function markStatePopulated(stateCode) {
   }
 }
 
+// ── Backfill: distress fields (Phase 1C) ──────────────────────────────────────
+function backfillDistress() {
+  var db = readDB();
+  var leads = db.leads || [];
+  var scanned = 0, updated = 0, skipped = 0, errors = 0;
+  leads.forEach(function(lead, idx) {
+    scanned++;
+    try {
+      var needsTypes  = !lead.distress_types  || !Array.isArray(lead.distress_types) || lead.distress_types.length === 0;
+      var needsScore  = lead.distress_score   == null || typeof lead.distress_score !== 'number';
+      var needsAct    = !lead.last_activity;
+      var needsArch   = lead.archived === undefined;
+      if (!needsTypes && !needsScore && !needsAct && !needsArch) { skipped++; return; }
+      if (needsTypes)  lead.distress_types  = normalizeDistressTypes(lead);
+      if (needsScore)  lead.distress_score  = computeDistressScore(lead);
+      if (needsAct)    lead.last_activity   = lead.created_at || lead.created || new Date().toISOString();
+      if (needsArch)   lead.archived        = false;
+      if (lead.archive_reason === undefined) lead.archive_reason = null;
+      if (lead.enrichment_status === undefined) lead.enrichment_status = 'none';
+      if (lead.enrichment_date   === undefined) lead.enrichment_date   = null;
+      db.leads[idx] = lead;
+      updated++;
+    } catch(e) { errors++; }
+  });
+  if (updated > 0) writeDB(db);
+  return { scanned: scanned, updated: updated, skipped: skipped, errors: errors };
+}
+
+// ── Backfill: normalized_address (Phase 1C) ───────────────────────────────────
+function backfillNormalizedAddress() {
+  var db = readDB();
+  var leads = db.leads || [];
+  var scanned = 0, updated = 0, skipped = 0, errors = 0;
+  leads.forEach(function(lead, idx) {
+    scanned++;
+    try {
+      if (lead.normalized_address && lead.normalized_address.length > 0) { skipped++; return; }
+      lead.normalized_address = normalizeAddress(lead.address || '');
+      db.leads[idx] = lead;
+      updated++;
+    } catch(e) { errors++; }
+  });
+  if (updated > 0) writeDB(db);
+  return { scanned: scanned, updated: updated, skipped: skipped, errors: errors };
+}
+
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
@@ -618,4 +681,5 @@ module.exports = {
   getUpcomingEvents, addEvent,
   getStats,
   getSetting, setSetting,
+  backfillDistress, backfillNormalizedAddress, normalizeAddress,
 };
