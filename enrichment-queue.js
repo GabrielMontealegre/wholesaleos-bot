@@ -35,6 +35,16 @@ async function fetchOwnerData(lead) {
   if (state === 'PA' || /philadelphia|l.?i/i.test(source)) {
     return fetchPhillyOPA(lead);
   }
+  // Nashville TN — lazy require inside function, wrapped in try/catch (Phase 3C)
+  if (state === 'TN' || /nashville/i.test(source)) {
+    try {
+      var nashConn = require('./modules/enrichment/connectors/nashville-arcgis');
+      return nashConn.lookup(lead);
+    } catch(connErr) {
+      console.error('[EnrichQ] Nashville connector error:', connErr.message);
+      return { owner_name: null, source_name: 'nashville_arcgis', notes: 'Connector error: ' + connErr.message };
+    }
+  }
   // Other cities: no connector active — return null safely
   return {
     owner_name: null,
