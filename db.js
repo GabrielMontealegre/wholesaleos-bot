@@ -240,6 +240,49 @@ function addLead(lead) {
     duplicate_group_id:     lead.duplicate_group_id     || null,
     duplicate_count:        lead.duplicate_count        != null ? lead.duplicate_count : 1,
   };
+  // Phase 2B: dedup guard — check normalized_address + city + state before inserting
+  var normNew  = newLead.normalized_address || normalizeAddress(newLead.address || '');
+  var cityNew  = (newLead.city  || '').toLowerCase().trim();
+  var stateNew = (newLead.state || '').toLowerCase().trim();
+  if (normNew && cityNew) {
+    var existIdx = -1;
+    for (var _i = 0; _i < db.leads.length; _i++) {
+      var _l = db.leads[_i];
+      if (_l.archived) continue;
+      var normEx  = _l.normalized_address || normalizeAddress(_l.address || '');
+      var cityEx  = (_l.city  || '').toLowerCase().trim();
+      var stateEx = (_l.state || '').toLowerCase().trim();
+      if (normEx === normNew && cityEx === cityNew && stateEx === stateNew) {
+        existIdx = _i; break;
+      }
+    }
+    if (existIdx > -1) {
+      var ex = db.leads[existIdx];
+      ex.source_count     = (ex.source_count || 1) + 1;
+      ex.merged_duplicate = true;
+      ex.last_activity    = new Date().toISOString();
+      if ((newLead.distress_score || 0) > (ex.distress_score || 0)) ex.distress_score = newLead.distress_score;
+      if (!ex.distress_types) ex.distress_types = [];
+      (newLead.distress_types || []).forEach(function(dt) {
+        if (ex.distress_types.indexOf(dt) === -1) ex.distress_types.push(dt);
+      });
+      if (!ex.distress_history) ex.distress_history = [];
+      ex.distress_history.push({ source: newLead.source, type: (newLead.distress_types||[])[0]||null, date: new Date().toISOString(), details: newLead.source_url||null });
+      if (newLead.violations && newLead.violations.length) {
+        if (!ex.violations) ex.violations = [];
+        newLead.violations.forEach(function(v){ if (ex.violations.indexOf(v)===-1) ex.violations.push(v); });
+      }
+      if (!ex.owner_name  && newLead.owner_name)  ex.owner_name  = newLead.owner_name;
+      if (!ex.owner_phone && newLead.owner_phone) ex.owner_phone = newLead.owner_phone;
+      if (!ex.owner_email && newLead.owner_email) ex.owner_email = newLead.owner_email;
+      if (newLead.source_url)        ex.source_url        = newLead.source_url;
+      if (newLead.source_record_url) ex.source_record_url = newLead.source_record_url;
+      db.leads[existIdx] = ex;
+      writeDB(db);
+      return { merged: true, id: ex.id };
+    }
+  }
+  // No duplicate — insert normally
   db.leads.unshift(newLead);
   writeDB(db);
   return newLead;
@@ -774,6 +817,100 @@ function backfillDuplicateGroups() {
 }
 
 
+// ── Consolidate duplicates (Phase 2B — archive duplicates, merge data) ────────
+function consolidateDuplicates() {
+  var db = readDB();
+  var leads = db.leads || [];
+  var groups_processed = 0, leads_archived = 0, survivors = 0, errors = 0;
+  var mergedHistoryCount = 0;
+
+  // Build groups by normalized_address + city + state
+  var groups = {};
+  leads.forEach(function(lead, idx) {
+    if (lead.archived) return;
+    var norm  = (lead.normalized_address || normalizeAddress(lead.address || '')).trim();
+    var city  = (lead.city  || '').toLowerCase().trim();
+    var state = (lead.state || '').toLowerCase().trim();
+    if (!norm) return;
+    var key = norm + '|' + city + '|' + state;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ idx: idx, lead: lead });
+  });
+
+  Object.keys(groups).forEach(function(key) {
+    var group = groups[key];
+    if (group.length < 2) return;
+    groups_processed++;
+
+    try {
+      // Select primary lead:
+      // 1) has owner info  2) highest distress_score  3) newest last_activity  4) newest created_at
+      group.sort(function(a, b) {
+        var aOwner = (a.lead.owner_name || a.lead.owner_phone) ? 1 : 0;
+        var bOwner = (b.lead.owner_name || b.lead.owner_phone) ? 1 : 0;
+        if (bOwner !== aOwner) return bOwner - aOwner;
+        var aScore = a.lead.distress_score || 0;
+        var bScore = b.lead.distress_score || 0;
+        if (bScore !== aScore) return bScore - aScore;
+        var aAct = new Date(a.lead.last_activity || a.lead.created_at || 0).getTime();
+        var bAct = new Date(b.lead.last_activity || b.lead.created_at || 0).getTime();
+        return bAct - aAct;
+      });
+
+      var primary = group[0];
+      var duplicates = group.slice(1);
+
+      // Merge data from duplicates into primary
+      duplicates.forEach(function(dup) {
+        var d = dup.lead;
+        // Merge violations
+        if (d.violations && d.violations.length) {
+          if (!primary.lead.violations) primary.lead.violations = [];
+          d.violations.forEach(function(v) {
+            if (primary.lead.violations.indexOf(v) === -1) primary.lead.violations.push(v);
+          });
+        }
+        // Merge distress_types
+        if (d.distress_types && d.distress_types.length) {
+          if (!primary.lead.distress_types) primary.lead.distress_types = [];
+          d.distress_types.forEach(function(dt) {
+            if (primary.lead.distress_types.indexOf(dt) === -1) primary.lead.distress_types.push(dt);
+          });
+        }
+        // Merge distress_history
+        if (d.distress_history && d.distress_history.length) {
+          if (!primary.lead.distress_history) primary.lead.distress_history = [];
+          d.distress_history.forEach(function(h) { primary.lead.distress_history.push(h); mergedHistoryCount++; });
+        }
+        // Merge source_count
+        primary.lead.source_count = (primary.lead.source_count || 1) + (d.source_count || 1);
+        // Best owner info
+        if (!primary.lead.owner_name  && d.owner_name)  primary.lead.owner_name  = d.owner_name;
+        if (!primary.lead.owner_phone && d.owner_phone) primary.lead.owner_phone = d.owner_phone;
+        if (!primary.lead.owner_email && d.owner_email) primary.lead.owner_email = d.owner_email;
+        // Record original count
+        primary.lead.consolidated_from = (primary.lead.consolidated_from || 1) + 1;
+        // Archive duplicate
+        db.leads[dup.idx].archived       = true;
+        db.leads[dup.idx].archive_reason = 'duplicate_merge';
+        db.leads[dup.idx].archived_at    = new Date().toISOString();
+        leads_archived++;
+      });
+
+      // Update primary with merged data + recalculate score
+      primary.lead.distress_score = computeDistressScore(primary.lead);
+      primary.lead.last_activity  = new Date().toISOString();
+      db.leads[primary.idx] = primary.lead;
+      survivors++;
+
+    } catch(e) { errors++; }
+  });
+
+  if (leads_archived > 0) writeDB(db);
+  return { groups_processed: groups_processed, leads_archived: leads_archived, survivors: survivors, errors: errors, merged_history_entries: mergedHistoryCount };
+}
+
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
@@ -792,4 +929,5 @@ module.exports = {
   getSetting, setSetting,
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
   detectDuplicates, backfillActivityFields, backfillDuplicateGroups,
+  consolidateDuplicates,
 };
