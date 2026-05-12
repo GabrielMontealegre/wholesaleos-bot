@@ -226,8 +226,12 @@ function addLead(lead) {
     distress_history:  lead.distress_history  || [],
     source_query_url:  lead.source_query_url  || null,
     source_record_url: lead.source_record_url || null,
-    enrichment_status: lead.enrichment_status || 'none',
-    enrichment_date:   lead.enrichment_date   || null,
+    enrichment_status:          lead.enrichment_status          || 'none',
+    enrichment_attempts:        lead.enrichment_attempts        != null ? lead.enrichment_attempts : 0,
+    last_enrichment_attempt:    lead.last_enrichment_attempt    || null,
+    enrichment_source:          lead.enrichment_source          || null,
+    enrichment_notes:           lead.enrichment_notes           || null,
+    enrichment_date:            lead.enrichment_date            || null,
     archived:          lead.archived          === true ? true : false,
     archive_reason:    lead.archive_reason    || null,
     last_activity:          lead.last_activity          || new Date().toISOString(),
@@ -368,7 +372,8 @@ function addEvent(evt) {
 // ── Stats ───────────────────────────────────────────────
 function getStats() {
   const db = readDB();
-  const leads       = db.leads || [];
+  const allLeads    = db.leads || [];
+  const leads       = allLeads.filter(l => l.archived !== true); // Phase 3A: exclude archived
   const assignments = db.assignments || [];
   const buyers      = db.buyers || [];
   const followups   = db.followups || [];
@@ -723,6 +728,7 @@ function detectDuplicates() {
   // Group by normalized_address + city + state (lowercase)
   var groups = {};
   leads.forEach(function(lead) {
+    if (lead.archived) return; // Phase 3A: skip archived leads
     var norm  = (lead.normalized_address || normalizeAddress(lead.address || '')).trim();
     var city  = (lead.city  || '').toLowerCase().trim();
     var state = (lead.state || '').toLowerCase().trim();
@@ -911,6 +917,42 @@ function consolidateDuplicates() {
 }
 
 
+// ── Update enrichment status on a lead (Phase 3A) ─────────────────────────────
+function updateEnrichmentStatus(id, updates) {
+  var db = readDB();
+  var idx = (db.leads || []).findIndex(function(l) { return l.id === id; });
+  if (idx === -1) return null;
+  var lead = db.leads[idx];
+  var allowed = ['none','queued','in_progress','complete','failed'];
+  if (updates.enrichment_status && allowed.indexOf(updates.enrichment_status) === -1) {
+    throw new Error('Invalid enrichment_status: ' + updates.enrichment_status);
+  }
+  Object.assign(lead, updates);
+  db.leads[idx] = lead;
+  writeDB(db);
+  return lead;
+}
+
+// ── Backfill: enrichment fields on existing leads (Phase 3A) ─────────────────
+function backfillEnrichmentFields() {
+  var db = readDB();
+  var leads = db.leads || [];
+  var scanned = 0, updated = 0, skipped = 0;
+  leads.forEach(function(lead, idx) {
+    scanned++;
+    var changed = false;
+    if (lead.enrichment_attempts     == null) { lead.enrichment_attempts     = 0;      changed = true; }
+    if (!lead.last_enrichment_attempt)        { lead.last_enrichment_attempt = null;   changed = true; }
+    if (lead.enrichment_source       === undefined) { lead.enrichment_source = null;   changed = true; }
+    if (lead.enrichment_notes        === undefined) { lead.enrichment_notes  = null;   changed = true; }
+    if (!lead.enrichment_status)              { lead.enrichment_status       = 'none'; changed = true; }
+    if (changed) { db.leads[idx] = lead; updated++; } else { skipped++; }
+  });
+  if (updated > 0) writeDB(db);
+  return { scanned: scanned, updated: updated, skipped: skipped };
+}
+
+
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
@@ -930,4 +972,5 @@ module.exports = {
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
   detectDuplicates, backfillActivityFields, backfillDuplicateGroups,
   consolidateDuplicates,
+  updateEnrichmentStatus, backfillEnrichmentFields,
 };
