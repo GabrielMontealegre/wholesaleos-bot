@@ -30,70 +30,131 @@ function writeDB(data) {
 function getLeads() { return readDB().leads || []; }
 
 
-// ── Distress type normalizer (Phase 1B) ──────────────────────────────────────
+// ── Distress type normalizer (Phase 1B.3 — improved) ────────────────────────
 function normalizeDistressTypes(lead) {
   var types = [];
-  var src   = (lead.source || '').toLowerCase();
-  var viols = lead.violations || [];
-  var mot   = (lead.motivation || '').toLowerCase();
 
-  // Code violations
-  if (viols.some(function(v){ return /code|violation|l.?i|unsafe|hazard/i.test(v); }) ||
-      mot === 'code_violation' || /l.?i|violation|code/i.test(src)) {
+  // Gather all signal text into one lowercase string for broad matching
+  var src  = ((lead.source || '') + ' ' +
+              (lead.motivation || '') + ' ' +
+              ((lead.source_details && lead.source_details.type) || '') + ' ' +
+              ((lead.source_details && lead.source_details.source_name) || '')).toLowerCase();
+
+  var viols = (lead.violations || []).map(function(v){ return (v||'').toLowerCase(); });
+  var violStr = viols.join(' ');
+
+  // ── Code violation ────────────────────────────────────────────────────────
+  if (/l.?i violations?|code.?viol|code.?enforce|blight|property.?maint|unsafe|building.?permit|complaint/i.test(src) ||
+      /code.?viol|code.?compliance|blight|property.?maint|unsafe|permit|hearing|overgrowth|rental.?reg|residential.?rental/i.test(violStr) ||
+      lead.motivation === 'code_violation' || lead.motivation === 'Code Violation') {
     types.push('code_violation');
   }
-  // Tax delinquency
-  if (mot === 'tax_delinquency' || /tax.?delin|delinquent.?tax|tax.?lien/i.test(src) ||
-      viols.some(function(v){ return /tax/i.test(v); })) {
+
+  // ── Vacant ───────────────────────────────────────────────────────────────
+  if (/vacant/i.test(src) || /vacant/i.test(violStr)) {
+    types.push('vacant');
+  }
+
+  // ── Tax delinquency ───────────────────────────────────────────────────────
+  if (/tax.?delin|delin.?tax|tax.?lien|treasurer|tax.?sale|delinquent/i.test(src) ||
+      /tax/i.test(violStr) ||
+      lead.motivation === 'tax_delinquency') {
     types.push('tax_delinquency');
   }
-  // Foreclosure / pre-foreclosure
-  if (mot === 'foreclosure' || /foreclos/i.test(src)) types.push('foreclosure');
-  if (mot === 'pre_foreclosure' || /pre.?foreclos/i.test(src)) types.push('pre_foreclosure');
-  // Auction
-  if (mot === 'auction' || /auction/i.test(src)) types.push('auction');
-  // Probate
-  if (mot === 'probate' || /probate|estate/i.test(src)) types.push('probate');
-  // Vacant / absentee
-  if (mot === 'vacant' || /vacant/i.test(src)) types.push('vacant');
-  if (mot === 'absentee_owner' || /absentee/i.test(src)) types.push('absentee_owner');
-  // Liens
-  if (/lien/i.test(src) || viols.some(function(v){ return /lien/i.test(v); })) types.push('lien');
-  // Failed MLS
-  if (/mls|listing/i.test(src) && /expir|fail|cancel/i.test(src)) types.push('failed_mls');
 
-  // Passthrough: preserve existing distress_types if caller already set them
-  if (lead.distress_types && lead.distress_types.length > 0) {
-    lead.distress_types.forEach(function(t) {
-      if (types.indexOf(t) === -1) types.push(t);
+  // ── Foreclosure ───────────────────────────────────────────────────────────
+  if (/foreclos|sheriff.?sale|lis.?pendens/i.test(src) ||
+      lead.motivation === 'foreclosure') {
+    types.push('foreclosure');
+  }
+
+  // ── Pre-foreclosure ───────────────────────────────────────────────────────
+  if (/pre.?foreclos|notice.?default|nod/i.test(src) ||
+      lead.motivation === 'pre_foreclosure') {
+    types.push('pre_foreclosure');
+  }
+
+  // ── Auction ───────────────────────────────────────────────────────────────
+  if (/auction|sheriff.?sale|tax.?sale/i.test(src) ||
+      lead.motivation === 'auction') {
+    types.push('auction');
+  }
+
+  // ── Probate ───────────────────────────────────────────────────────────────
+  if (/probate|estate|deceased|heir/i.test(src) ||
+      lead.motivation === 'probate') {
+    types.push('probate');
+  }
+
+  // ── Absentee owner ────────────────────────────────────────────────────────
+  if (/absentee|out.?of.?state|non.?owner/i.test(src) ||
+      lead.motivation === 'absentee_owner') {
+    types.push('absentee_owner');
+  }
+
+  // ── Lien ─────────────────────────────────────────────────────────────────
+  if (/lien/i.test(src) || /lien/i.test(violStr)) {
+    types.push('lien');
+  }
+
+  // ── Failed MLS ───────────────────────────────────────────────────────────
+  if (/expired.?listing|failed.?mls|cancelled.?listing/i.test(src) ||
+      lead.motivation === 'failed_mls') {
+    types.push('failed_mls');
+  }
+
+  // ── Caller-provided override (preserve existing if set) ───────────────────
+  if (lead.distress_types && Array.isArray(lead.distress_types) && lead.distress_types.length > 0) {
+    lead.distress_types.forEach(function(dt) {
+      if (types.indexOf(dt) === -1) types.push(dt);
     });
+    return types;
+  }
+
+  // Fallback: if no type matched but motivation exists, store it normalized
+  if (types.length === 0 && lead.motivation) {
+    var m = (lead.motivation || '').toLowerCase().replace(/s+/g,'_');
+    var valid = ['tax_delinquency','code_violation','foreclosure','pre_foreclosure',
+                 'probate','auction','absentee_owner','failed_mls','vacant','lien'];
+    if (valid.indexOf(m) > -1) types.push(m);
   }
 
   return types;
 }
 
-// ── Distress score calculator (Phase 1B) ─────────────────────────────────────
+// ── Distress score calculator (Phase 1B.3 — improved) ────────────────────────
 function computeDistressScore(lead) {
   var score = 0;
-  var types = lead.distress_types || normalizeDistressTypes(lead);
 
-  // Tax delinquency: base 25 + 5/yr delinquent (max +25)
+  // Use caller-provided distress_types OR compute fresh
+  var types = (lead.distress_types && Array.isArray(lead.distress_types) && lead.distress_types.length > 0)
+    ? lead.distress_types
+    : normalizeDistressTypes(lead);
+
+  // ── Code violation: base 15, +5 per additional violation (max +20) ────────
+  if (types.indexOf('code_violation') > -1) {
+    score += 15;
+    var vcount = (lead.violations || []).length;
+    if (vcount > 1) score += Math.min((vcount - 1) * 5, 20);
+  }
+
+  // ── Vacant bonus (often paired with code_violation) ───────────────────────
+  if (types.indexOf('vacant') > -1) score += 10;
+
+  // ── Tax delinquency: base 25, +5/yr (max +25) ────────────────────────────
   if (types.indexOf('tax_delinquency') > -1) {
     score += 25;
     var yrs = parseInt(lead.years_delinquent) || 0;
     score += Math.min(yrs * 5, 25);
   }
-  // Code violations: base 15 + 5/violation (max +20)
-  if (types.indexOf('code_violation') > -1) {
-    score += 15;
-    var vCount = (lead.violations || []).length;
-    score += Math.min((vCount > 1 ? (vCount - 1) * 5 : 0), 20);
-  }
-  // Foreclosure: base 30
+
+  // ── Foreclosure: base 30 ─────────────────────────────────────────────────
   if (types.indexOf('foreclosure') > -1) score += 30;
-  // Pre-foreclosure: base 20
+
+  // ── Pre-foreclosure: base 20 ─────────────────────────────────────────────
   if (types.indexOf('pre_foreclosure') > -1) score += 20;
-  // Auction: base 0 if already counted in foreclosure, bonus 15 if within 30 days
+
+  // ── Auction: base 20 if no foreclosure, +15 if within 30 days ────────────
   if (types.indexOf('auction') > -1) {
     if (types.indexOf('foreclosure') === -1) score += 20;
     if (lead.auction_date) {
@@ -101,17 +162,22 @@ function computeDistressScore(lead) {
       if (daysOut >= 0 && daysOut <= 30) score += 15;
     }
   }
-  // Probate: +20
+
+  // ── Probate: +20 ─────────────────────────────────────────────────────────
   if (types.indexOf('probate') > -1) score += 20;
-  // Absentee owner: +10
+
+  // ── Absentee owner: +10 ──────────────────────────────────────────────────
   if (types.indexOf('absentee_owner') > -1) score += 10;
-  // Failed MLS: +10
+
+  // ── Failed MLS: +10 ──────────────────────────────────────────────────────
   if (types.indexOf('failed_mls') > -1) score += 10;
-  // Multi-source stacking bonus: +15 if 2+ distress types
+
+  // ── Multi-distress stacking bonus: +15 if 2+ distinct types ──────────────
   if (types.length >= 2) score += 15;
 
   return Math.min(score, 100);
 }
+
 
 function addLead(lead) {
   const db = readDB();
