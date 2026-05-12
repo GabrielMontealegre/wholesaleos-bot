@@ -4439,7 +4439,8 @@ app.post('/api/admin/enrich-batch', requireAdmin, (req, res) => {
       if (r.queued) queued++; else skipped++;
     });
 
-    res.json({ ok:true, queued, skipped, queue_length: enrichQ.getStatus().queue_length });
+    const batchTotal = db.getLeads().filter(l=>!l.archived).length;
+    res.json({ ok:true, scanned:leads.length, queued, skipped, failed:0, queue_length: enrichQ.getStatus().queue_length, total_active:batchTotal });
   } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
 });
 
