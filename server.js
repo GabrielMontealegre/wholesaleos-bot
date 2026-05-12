@@ -4400,6 +4400,79 @@ app.post('/api/admin/backfill-enrichment', requireAdmin, (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+// ── Phase 3C Routes ────────────────────────────────────────────────────────────
+
+// POST /api/admin/enrich-batch — enrich up to 25 active leads per call
+app.post('/api/admin/enrich-batch', requireAdmin, (req, res) => {
+  try {
+    const MAX_BATCH    = 25;
+    const qStatus      = enrichQ.getStatus();
+    // Concurrency guard: don't flood queue
+    if (qStatus.queue_length >= 50) {
+      return res.status(429).json({ ok:false, error:'Queue busy — ' + qStatus.queue_length + ' items pending' });
+    }
+    const available    = MAX_BATCH - qStatus.queue_length;
+    if (available <= 0) return res.json({ ok:true, queued:0, reason:'queue_near_capacity' });
+
+    const source_filter = req.body && req.body.source ? req.body.source : null;
+    const skip_complete = req.body && req.body.skip_complete !== false; // default true
+
+    const leads = db.getLeads()
+      .filter(l => {
+        if (l.archived) return false;
+        if (skip_complete && l.enrichment_status === 'complete') return false;
+        if (['queued','in_progress'].includes(l.enrichment_status)) return false;
+        if (source_filter && l.source !== source_filter) return false;
+        return true;
+      })
+      .slice(0, available);
+
+    var queued = 0, skipped = 0;
+    leads.forEach(l => {
+      // Increment attempts before queuing
+      db.updateEnrichmentStatus(l.id, {
+        enrichment_attempts: (l.enrichment_attempts || 0) + 1,
+        last_enrichment_attempt: new Date().toISOString()
+      });
+      const r = enrichQ.enqueue(l.id);
+      if (r.queued) queued++; else skipped++;
+    });
+
+    res.json({ ok:true, queued, skipped, queue_length: enrichQ.getStatus().queue_length });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/leads/:id/matching-buyers — basic deterministic buyer match
+app.get('/api/leads/:id/matching-buyers', (req, res) => {
+  try {
+    const lead   = db.getLeads().find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ ok:false, error:'Lead not found' });
+    const buyers = db.getBuyers().filter(b => b.status === 'Active');
+    const matched = buyers.filter(b => {
+      // Market match: buyer.markets[] contains lead city or state
+      var markets = b.markets || b.target_markets || [];
+      var cityMatch  = !markets.length || markets.some(m =>
+        (lead.city  || '').toLowerCase().includes(m.toLowerCase()) ||
+        (lead.state || '').toLowerCase().includes(m.toLowerCase())
+      );
+      // Distress threshold
+      var distressOk = !b.min_distress_score || (lead.distress_score || 0) >= b.min_distress_score;
+      // Max price
+      var priceOk = !b.max_price || (lead.arv || 0) <= b.max_price;
+      // Owner type preference (optional filter)
+      var ownerOk = !b.preferred_owner_types || !b.preferred_owner_types.length ||
+                    b.preferred_owner_types.includes(lead.owner_type);
+      return cityMatch && distressOk && priceOk && ownerOk;
+    }).map(b => ({
+      id: b.id, name: b.name, phone: b.phone,
+      markets: b.markets || b.target_markets || [],
+      max_price: b.max_price, min_distress_score: b.min_distress_score
+    }));
+    res.json({ ok:true, lead_id:req.params.id, matches:matched.length, buyers:matched });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
   // Phase 3B: restore queued enrichment jobs from db.json after restart
