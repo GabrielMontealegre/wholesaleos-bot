@@ -2439,6 +2439,7 @@ function openAddBuyer() {
       <div class="form-group"><div class="form-label">Max Price ($)</div><input class="form-input" id="mb-max" type="number" placeholder="400000"></div>
       <div class="form-group"><div class="form-label">Markets (comma separated)</div><input class="form-input" id="mb-markets" placeholder="Dallas, Tarrant, San Diego"></div>
       <div class="form-group"><div class="form-label">Rehab Tolerance</div><select class="form-select" id="mb-rehab"><option>Light</option><option>Medium</option><option>Heavy</option><option>Any</option></select></div>
+      <div class="form-group"><div class="form-label">Min Distress Score</div><input class="form-input" id="mb-distress" type="number" min="0" max="100" placeholder="15 (0=any)"></div>
       <div class="form-group" style="grid-column:1/-1"><div class="form-label">Notes / Buy Box Details</div><textarea class="form-textarea" id="mb-notes" placeholder="Preferred property types, investment strategy, anything specific..."></textarea></div>
     </div>
     <div class="modal-actions">
@@ -2448,21 +2449,33 @@ function openAddBuyer() {
 }
 
 function saveBuyer() {
-  const g = id => document.getElementById(id)?.value || '';
+  const g = id => (document.getElementById(id)||{}).value||'';
+  const name = g('mb-name');
+  if (!name.trim()) { showToastMsg('Name is required','error'); return; }
   const buyer = {
     id: 'B' + Date.now(),
-    name: g('mb-name'), type: g('mb-type'), contact: g('mb-contact'),
+    name: name, type: g('mb-type'), contact: g('mb-contact'),
     phone: g('mb-phone'), email: g('mb-email'), website: g('mb-website'),
     minARV: parseInt(g('mb-min'))||0, maxPrice: parseInt(g('mb-max'))||0,
-    markets: g('mb-markets').split(',').map(m=>m.trim()),
+    max_price: parseInt(g('mb-max'))||0,
+    min_distress_score: parseInt(g('mb-distress'))||0,
+    markets: g('mb-markets').split(',').map(m=>m.trim()).filter(Boolean),
     rehab: g('mb-rehab'), notes: g('mb-notes'),
     status: 'Active', closings: 0, score: 75
   };
+  // POST to persistent API
+  fetch('/api/buyers', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-user-id': window._uid||'admin'},
+    body: JSON.stringify(buyer)
+  }).then(r=>r.json()).then(function(data) {
+    if (data.id) { showToastMsg('Buyer saved: '+name,'success'); }
+    else { showToastMsg('API error: '+(data.error||'unknown'),'error'); }
+  }).catch(function(e){ showToastMsg('Save error: '+e.message,'error'); });
   APP.buyers.push(buyer);
   save('buyers', APP.buyers);
   closeModal();
   render();
-  toast('Buyer added to database', 'success');
 }
 
 function openAddEvent(date) {
