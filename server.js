@@ -17,6 +17,7 @@ app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 8080;
 
+const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
@@ -4359,6 +4360,42 @@ app.post('/api/buyers', requireAdmin, (req, res) => {
 app.post('/api/admin/consolidate-duplicates', requireAdmin, (req, res) => {
   try {
     const result = db.consolidateDuplicates();
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Phase 3A Enrichment Routes ───────────────────────────────────────────────
+
+// POST /api/leads/:id/enrich-owner — queue a lead for owner enrichment
+app.post('/api/leads/:id/enrich-owner', requireAdmin, (req, res) => {
+  try {
+    const lead = db.getLeads().find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });
+    if (lead.archived) return res.status(400).json({ ok: false, error: 'Cannot enrich archived lead' });
+    const allowed = ['none','failed','complete'];
+    if (!allowed.includes(lead.enrichment_status)) {
+      return res.status(400).json({ ok: false, error: 'Lead already ' + lead.enrichment_status });
+    }
+    // Increment attempts before queuing
+    db.updateEnrichmentStatus(req.params.id, {
+      enrichment_attempts: (lead.enrichment_attempts || 0) + 1,
+      last_enrichment_attempt: new Date().toISOString()
+    });
+    const result = enrichQ.enqueue(req.params.id);
+    res.json({ ok: true, ...result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/admin/enrichment-queue — view queue status
+app.get('/api/admin/enrichment-queue', requireAdmin, (req, res) => {
+  try { res.json({ ok: true, ...enrichQ.getStatus() }); }
+  catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// POST /api/admin/backfill-enrichment — stamp enrichment fields on existing leads
+app.post('/api/admin/backfill-enrichment', requireAdmin, (req, res) => {
+  try {
+    const result = db.backfillEnrichmentFields();
     res.json({ ok: true, ...result });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
