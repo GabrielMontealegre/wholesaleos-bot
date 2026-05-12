@@ -1205,6 +1205,25 @@ SELLER
   })();
 
 
+  // MATCHING BUYERS (Phase 3C Task 5)
+  (function() {
+    var matchCount = typeof l._matchCount !== 'undefined' ? l._matchCount : null;
+    html += '<div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px">' +
+      '<span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Matching Buyers</span>';
+    if (matchCount !== null) {
+      var mc = parseInt(matchCount)||0;
+      var mcColor = mc > 0 ? '#10b981' : '#475569';
+      html += '<span style="background:' + mcColor + '22;color:' + mcColor + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid ' + mcColor + '44">' + mc + ' buyer' + (mc!==1?'s':'') + '</span>';
+    } else {
+      html += '<span style="font-size:10px;color:#475569" id="buyer-match-badge-' + l.id + '">Loading...</span>';
+      fetch('/api/leads/' + l.id + '/matching-buyers').then(function(r){return r.json();}).then(function(d){
+        var el=document.getElementById('buyer-match-badge-' + l.id);
+        if(el){var mc=d.matches||0;var mcC=mc>0?'#10b981':'#475569';el.style.cssText='background:'+mcC+'22;color:'+mcC+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid '+mcC+'44';el.textContent=mc+' buyer'+(mc!==1?'s':'');}
+      }).catch(function(){});
+    }
+    html += '</div>';
+  })();
+
   // ACTIONS
   html += '<div class="action-row">';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
@@ -1636,7 +1655,7 @@ function buildBuyerProfiles(buyers) {
   var toolbar = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">' +
     '<input id="buyer-filter-input" oninput="filterBuyerCards()" type="text" placeholder="Search buyers..." style="flex:1;min-width:200px;background:#0f1219;border:1px solid #374151;border-radius:8px;padding:9px 14px;color:#fff;font-size:13px;outline:none;"/>' +
     '<button onclick="openBuyerSearchPanel()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Find Buyers</button>' +
-    '<button onclick="openAddBuyerManual()" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;">+ Add Buyer</button>' +
+    '<button onclick="openAddBuyerManual()" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="showAddBuyerModal()">+ Add Buyer</button>' +
     '</div>';
   if (buyers.length === 0) {
     return toolbar + '<div style="text-align:center;padding:60px;color:#6b7280;"><div style="font-size:48px;margin-bottom:16px;">&#128101;</div><div style="color:#9ca3af;">Add your first buyer to activate matching.</div></div>';
@@ -6071,6 +6090,29 @@ async function startEnrichment(leadId) {
     if (d.ok || d.queued) { toast('✅ Enrichment queued for this lead', 'success'); openLeadModal(leadId); }
     else toast('⚠ ' + (d.error||d.reason||'Cannot queue'), 'warning');
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function showAddBuyerModal() {
+  var name  = prompt('Buyer name:');
+  if (!name || !name.trim()) return;
+  var phone = prompt('Phone (optional):') || '';
+  var maxP  = prompt('Max purchase price (e.g. 150000):') || '';
+  var minDs = prompt('Min distress score 0-100 (e.g. 15):') || '0';
+  var mkts  = prompt('Target markets e.g. Philadelphia,Nashville (blank=all):') || '';
+  var buyer = {
+    name: name.trim(),
+    phone: phone.trim() || null,
+    max_price: maxP ? parseInt(maxP) : null,
+    min_distress_score: parseInt(minDs) || 0,
+    markets: mkts ? mkts.split(',').map(function(m){return m.trim();}).filter(Boolean) : [],
+    status: 'Active'
+  };
+  try {
+    var r = await fetch('/api/buyers', {method:'POST',headers:{'Content-Type':'application/json','x-user-id':'admin'},body:JSON.stringify(buyer)});
+    var d = await r.json();
+    if (d.id) { toast('✅ Buyer added: ' + d.name, 'success'); renderBuyers(); }
+    else toast('⚠ Error: ' + (d.error||'Unknown'), 'warning');
+  } catch(e) { toast('Error: '+e.message,'error'); }
 }
 
 function selectLead(id) {
