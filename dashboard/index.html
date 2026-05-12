@@ -877,7 +877,7 @@ function renderDashboard() {
           ${topLeads.map(l => {
             const buyers = matchBuyers(l);
             return `<tr onclick="selectLead('${l.id}')">
-              <td><div class="addr-main" style="white-space:normal;word-break:break-word">${(l.address||'N/A')+( l.city?', '+l.city:'')+(l.state?', '+l.state:'')}</div><div class="addr-sub">${l.county||''} · ${l.category||''}</div></td>
+              <td><div class="addr-main" style="white-space:normal;word-break:break-word">${(l.address||'N/A')+( l.city?', '+l.city:'')+(l.state?', '+l.state:'')}</div><div class="addr-sub">${l.county||''} · ${l.category||''}${typeof l.distress_score==="number"?' <span style=\"color:'+(l.distress_score>=60?'#ef4444':l.distress_score>=35?'#f4c542':'#10b981')+';font-weight:700\">▲'+l.distress_score+'</span>':''}</div></td>
               <td>${categoryBadge(l.category)}</td>
               <td style="font-weight:600;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</td>
               <td style="color:#0071e3">$${((l.offer||0)/1000).toFixed(0)}K</td>
@@ -1406,7 +1406,11 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   // DISTRESS BADGES
-  const sigs = (l.distress_signals||l.motivation||[]);
+  // Phase 1B.3: use distress_types; fallback from motivation
+  const sigs = Array.isArray(l.distress_types) && l.distress_types.length > 0
+    ? l.distress_types
+    : (l.motivation ? [l.motivation.toLowerCase().replace(/\s+/g,'_')] : []);
+  const dScore = typeof l.distress_score === 'number' ? l.distress_score : null;
   if (sigs.length) {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
     (Array.isArray(sigs)?sigs:[]).forEach(function(sg){ html += '<span class="badge b-red">' + sg + '</span>'; });
@@ -1414,6 +1418,27 @@ function renderLeadDetail(l) {
     html += '</div>';
   }
 
+  // DISTRESS SCORE
+  if (dScore !== null) {
+    var sc=dScore>=60?'#ef4444':dScore>=35?'#f4c542':'#10b981';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px"><span style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Distress Score</span><span style="background:'+sc+'22;color:'+sc+';font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;border:1px solid '+sc+'44">'+dScore+'/100</span></div>';
+  }
+  // SOURCE
+  if (l.enrichment_source||l.source) {
+    html+='<div style="font-size:10px;color:#475569;margin-bottom:4px">📍 '+(l.enrichment_source||l.source)+'</div>';
+  }
+  // OWNER INFO
+  html+='<div style="margin:10px 0;padding:10px 12px;background:#0e1a2d;border-radius:10px;border:1px solid #1e2d4a">';
+  html+='<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px">Owner Info</div>';
+  if(l.owner_name){
+    var otl=l.owner_type?'<span style="background:#1e2d4a;color:#94a3b8;font-size:9px;padding:1px 6px;border-radius:10px">'+l.owner_type+'</span>':'';
+    html+='<div style="font-size:12px;color:#e2e8f0;margin-bottom:2px">👤 '+l.owner_name+' '+otl+'</div>';
+    if(l.enrichment_source)html+='<div style="font-size:10px;color:#475569;margin-top:2px">'+l.enrichment_source+(l.enrichment_date?' · '+(l.enrichment_date||'').slice(0,10):'')+'</div>';
+    if(l.parcel_number)html+='<div style="font-size:10px;color:#475569">Parcel: '+l.parcel_number+'</div>';
+  }else{
+    html+='<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable</div>';
+  }
+  html+='</div>';
   // SELLER
   html += '<div class="section-title">Seller Contact</div>';
   html += '<div class="seller-card"><div class="seller-info">';
@@ -1423,6 +1448,15 @@ function renderLeadDetail(l) {
   html += '<br>📧 ' + (l.email||'No email') + '<br>Your time: <strong>' + tz.losCabosTime + '</strong> (Los Cabos)';
   html += '</div></div>';
 
+  // ENRICHMENT
+  (function(){
+    var es=l.enrichment_status||'none';
+    var esc=es==='complete'?'#10b981':es==='failed'?'#ef4444':(es==='in_progress'||es==='queued')?'#f4c542':'#475569';
+    var esl=({none:'Not Started',queued:'Queued',in_progress:'In Progress',complete:'Complete',failed:'Failed'})[es]||es;
+    html+='<div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Enrichment</span><span style="background:'+esc+'22;color:'+esc+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid '+esc+'44">'+esl+'</span>';
+    if(es==='none'||es==='failed')html+='<button onclick="startEnrichment(\''+l.id+'\')" style="font-size:10px;padding:3px 12px;background:#f4c542;color:#080f1e;border:none;border-radius:20px;cursor:pointer;font-weight:700">▶ Enrich Owner</button>';
+    html+='</div>';
+  })();
   // ACTIONS
   html += '<div class="action-row">';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
@@ -2708,6 +2742,14 @@ function statusBadge(s) {
 
 function riskBadge(r) {
   return `<span class="badge ${r==='Low'?'b-green':r==='High'?'b-red':'b-yellow'}">${r||'Med'}</span>`;
+}
+
+async function startEnrichment(id){
+  try{
+    var r=await fetch('/api/leads/'+id+'/enrich-owner',{method:'POST',headers:{'Content-Type':'application/json','x-user-id':'admin'}});
+    var data=await r.json();
+    if(typeof showToastMsg==='function')showToastMsg(data.ok||data.queued?'Enrichment queued':'Error: '+(data.error||data.reason),'info');
+  }catch(e){if(typeof showToastMsg==="function")showToastMsg("Error: "+e.message,"error");}
 }
 
 function selectLead(id) {
