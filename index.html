@@ -1658,7 +1658,7 @@ function buildBuyerProfiles(buyers) {
     '<button onclick="openAddBuyerManual()" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="showAddBuyerModal()">+ Add Buyer</button>' +
     '</div>';
   if (buyers.length === 0) {
-    return toolbar + '<div style="text-align:center;padding:60px;color:#6b7280;"><div style="font-size:48px;margin-bottom:16px;">&#128101;</div><div style="color:#9ca3af;">Add your first buyer to activate matching.</div></div>';
+    return toolbar + '<div style="text-align:center;padding:60px;color:#6b7280;"><div style="font-size:48px;margin-bottom:16px;">&#128101;</div><div style="color:#9ca3af;">Add your first buyer to activate matching. <button onclick="openBuyerModal()" style="margin-left:8px;font-size:11px;padding:4px 12px;background:#f4c542;color:#080f1e;border:none;border-radius:20px;cursor:pointer;font-weight:700">+ Add Buyer</button></div></div>';
   }
   var grid = '<div id="buyer-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;">';
   buyers.forEach(function(b) {
@@ -6113,6 +6113,106 @@ async function showAddBuyerModal() {
     if (d.id) { toast('✅ Buyer added: ' + d.name, 'success'); renderBuyers(); }
     else toast('⚠ Error: ' + (d.error||'Unknown'), 'warning');
   } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+// ── Buyer Creation Modal (Phase 3C) ──────────────────────────────────────────
+function openBuyerModal() {
+  var existing = document.getElementById('buyer-creation-modal');
+  if (existing) { existing.style.display='flex'; return; }
+
+  var modal = document.createElement('div');
+  modal.id = 'buyer-creation-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(4,8,18,.72);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  modal.innerHTML = `<div style="background:#0c1422;border-radius:14px;border:1px solid #1e2d4a;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.55)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-size:16px;font-weight:700;color:#e2e8f0">Add Buyer</span>
+    <button onclick="closeBuyerModal()" style="background:#1a2744;border:1px solid #1e2d4a;color:#94a3b8;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>
+  </div>
+  <div id="buyer-form-msg" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Name *</div>
+      <input id="bfName" placeholder="Full name" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Email</div>
+      <input id="bfEmail" type="email" placeholder="email@example.com" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Phone</div>
+      <input id="bfPhone" placeholder="555-000-0000" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Target Markets <span style="color:#475569;font-weight:400">(comma-separated cities)</span></div>
+      <input id="bfMarkets" placeholder="Philadelphia, Nashville, Syracuse" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Max Price ($)</div>
+      <input id="bfMaxPrice" type="number" placeholder="250000" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Min Distress Score</div>
+      <input id="bfMinDistress" type="number" min="0" max="100" placeholder="15" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Preferred Distress Types <span style="color:#475569;font-weight:400">(comma-separated)</span></div>
+      <input id="bfDistressTypes" placeholder="code_violation, vacant, tax_delinquency" style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Notes</div>
+      <textarea id="bfNotes" rows="2" placeholder="Buying criteria, preferences..." style="width:100%;background:#080f1e;border:1px solid #1e2d4a;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+    <button onclick="submitBuyerForm()" style="width:100%;background:#f4c542;color:#080f1e;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">Save Buyer</button>
+  </div>
+</div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) closeBuyerModal(); });
+  setTimeout(function(){ var n=document.getElementById('bfName'); if(n) n.focus(); }, 100);
+}
+
+function closeBuyerModal() {
+  var m=document.getElementById('buyer-creation-modal');
+  if(m) m.style.display='none';
+}
+
+async function submitBuyerForm() {
+  var name=(document.getElementById('bfName')||{}).value||'';
+  if(!name.trim()) {
+    var msg=document.getElementById('buyer-form-msg');
+    if(msg){msg.style.display='block';msg.style.background='#ef444422';msg.style.color='#ef4444';msg.style.border='1px solid #ef444444';msg.textContent='Name is required.';}
+    return;
+  }
+  var markets=(document.getElementById('bfMarkets')||{}).value||'';
+  var distTypes=(document.getElementById('bfDistressTypes')||{}).value||'';
+  var payload={
+    name:name.trim(),
+    email:(document.getElementById('bfEmail')||{}).value||'',
+    phone:(document.getElementById('bfPhone')||{}).value||'',
+    markets:markets?markets.split(',').map(function(m){return m.trim();}).filter(Boolean):[],
+    max_price:parseInt((document.getElementById('bfMaxPrice')||{}).value)||null,
+    min_distress_score:parseInt((document.getElementById('bfMinDistress')||{}).value)||0,
+    preferred_distress_types:distTypes?distTypes.split(',').map(function(d){return d.trim();}).filter(Boolean):[],
+    notes:(document.getElementById('bfNotes')||{}).value||'',
+    status:'Active'
+  };
+  try {
+    var uid=window._currentUser||'admin';
+    var r=await fetch('/api/buyers',{method:'POST',headers:{'Content-Type':'application/json','x-user-id':uid},body:JSON.stringify(payload)});
+    var data=await r.json();
+    if(r.ok && data.id) {
+      closeBuyerModal();
+      if(typeof renderBuyers==='function') renderBuyers();
+      if(typeof toast==='function') toast('Buyer added: '+name.trim(),'success');
+    } else {
+      var msg=document.getElementById('buyer-form-msg');
+      if(msg){msg.style.display='block';msg.style.background='#ef444422';msg.style.color='#ef4444';msg.style.border='1px solid #ef444444';msg.textContent=data.error||'Failed to save buyer.';}
+    }
+  } catch(e) {
+    var msg=document.getElementById('buyer-form-msg');
+    if(msg){msg.style.display='block';msg.style.background='#ef444422';msg.style.color='#ef4444';msg.style.border='1px solid #ef444444';msg.textContent='Network error: '+e.message;}
+  }
 }
 
 function selectLead(id) {
