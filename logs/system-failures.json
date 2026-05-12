@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "phase": "3C",
+    "file": "enrichment-queue.js",
+    "commit": "9b8e0261",
+    "failure_type": "startup_crash_502",
+    "root_cause": "Connector registry used eager require() at module load time. All 5 connector requires executed synchronously on startup. Any connector file error (missing dep, syntax, path) caused enrichment-queue.js to throw at load, which caused server.js (which eagerly requires enrichment-queue.js) to crash before binding to PORT.",
+    "fix_applied": "Rolled back to inline fetchOwnerData() with no external connector imports. Philly OPA fetch kept inline with axios. Other cities return null safely.",
+    "prevention_rule": "NEVER use eager require() for optional/external modules in files that server.js loads at startup. Always use lazy require() inside function bodies OR wrap in try/catch factory. Deploy ONE connector at a time and verify health after each."
+  }
+]
