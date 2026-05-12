@@ -130,6 +130,9 @@ app.get('/api/leads', (req, res) => {
   const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
   let filtered = leads;
   // Filters (apply before sort)
+  // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
+  const showArchived = req.query.archived === 'true';
+  if (!showArchived) filtered = filtered.filter(l => l.archived !== true);
   if (status)      filtered = filtered.filter(l => l.status === status);
   if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
   if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
@@ -4346,10 +4349,17 @@ app.post('/api/admin/backfill-duplicate-groups', requireAdmin, (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/buyers', (req, res) => {
+app.post('/api/buyers', requireAdmin, (req, res) => {
   try {
     const buyer = db.addBuyer(req.body || {});
     res.json(buyer);
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/admin/consolidate-duplicates', requireAdmin, (req, res) => {
+  try {
+    const result = db.consolidateDuplicates();
+    res.json({ ok: true, ...result });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
