@@ -4295,6 +4295,33 @@ app.get('/api/ingestion-status', (req, res) => {
   res.json(global._ingestionStatus);
 });
 
+
+// ── Phase 1C Admin Routes ──────────────────────────────────────────────────────
+
+// POST /api/admin/backfill-distress
+// Backfills distress_types + distress_score on all leads missing them
+app.post('/api/admin/backfill-distress', (req, res) => {
+  try {
+    const result = db.backfillDistress();
+    global._ingestionStatus.last_run = new Date().toISOString();
+    global._ingestionStatus.last_run_source = 'backfill-distress';
+    res.json({ ok: true, ...result });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/admin/backfill-normalized-address
+// Backfills normalized_address on all leads missing it
+app.post('/api/admin/backfill-normalized-address', (req, res) => {
+  try {
+    const result = db.backfillNormalizedAddress();
+    res.json({ ok: true, ...result });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
 });
