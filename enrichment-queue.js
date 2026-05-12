@@ -25,7 +25,7 @@ function classifyOwnerType(name) {
   if (/\b(ESTATE|EST\.|HEIR|HEIRS|EXECUTOR)\b/.test(n)) return 'estate';
   if (/\b(BANK|SAVINGS|FEDERAL|NA\b|FSB\b|MORTGAGE|FINANCIAL)\b/.test(n)) return 'bank';
   if (/\b(CITY OF|COUNTY OF|COMMONWEALTH|STATE OF|AUTHORITY|HOUSING|HUD|PHILA\b)\b/.test(n)) return 'government';
-  if (/\b(ASSOC|ASSOCIATION|DEMOCRATIC|REPUBLICAN|CHURCH|COMMUNITY|CENTER|FOUNDATION)\b/.test(n)) return 'organization';
+  if (/\b(ASSOC|ASSO\b|ASSOCIATION|DEMOCRATIC|REPUBLICAN|CHURCH|COMMUNITY|CENTER|FOUNDATION|PARK ASSO)/.test(n)) return 'organization';
   // Multiple distinct words with no entity markers = likely individual
   if (/^[A-Z]+\s+[A-Z]/.test(n)) return 'individual';
   return null;
