@@ -782,7 +782,7 @@ function renderDashboard() {
           ${topLeads.map(l => {
             const buyers = matchBuyers(l);
             return `<tr onclick="selectLead('${l.id}')">
-              <td><div class="addr-main">${l.address?.split(',')[0]||'N/A'}</div><div class="addr-sub">${l.county||''} · ${l.category||''}</div></td>
+              <td><div class="addr-main">${l.address?.split(',')[0]||'N/A'}</div><div class="addr-sub">${l.county||''} · ${l.category||''}${typeof l.distress_score==='number' ? ' <span style="color:' + (l.distress_score>=60?'#ef4444':l.distress_score>=35?'#f4c542':'#10b981') + ';font-weight:700">▲' + l.distress_score + '</span>' : ''}</div></td>
               <td>${categoryBadge(l.category)}</td>
               <td style="font-weight:600;color:#34c759">$${((l.arv||0)/1000).toFixed(0)}K</td>
               <td style="color:#0071e3">$${((l.offer||0)/1000).toFixed(0)}K</td>
@@ -1128,12 +1128,30 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   // DISTRESS BADGES
-  const sigs = (l.distress_signals||l.motivation||[]);
+  // Phase 1B.3: use distress_types array; fallback infer from motivation string
+  const sigs = Array.isArray(l.distress_types) && l.distress_types.length > 0
+    ? l.distress_types
+    : (l.motivation ? [l.motivation.toLowerCase().replace(/\s+/g,'_')] : []);
+  const dScore = typeof l.distress_score === 'number' ? l.distress_score : null;
   if (sigs.length) {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
     sigs.forEach(s => { html += '<span class="badge b-red">' + s + '</span>'; });
     if (l.investment_strategy) html += '<span class="badge b-blue">' + l.investment_strategy + '</span>';
     html += '</div>';
+  }
+
+  // DISTRESS SCORE (Phase 1B.3)
+  if (dScore !== null) {
+    var sc = dScore >= 60 ? '#ef4444' : dScore >= 35 ? '#f4c542' : '#10b981';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">' +
+      '<span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Distress Score</span>' +
+      '<span style="background:' + sc + '22;color:' + sc + ';font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;border:1px solid ' + sc + '44">' + dScore + '/100</span>' +
+    '</div>';
+  }
+  // SOURCE (Phase 1B.3 Task 4)
+  if (l.source || (l.source_details && l.source_details.source_name)) {
+    var sn = (l.source_details && l.source_details.source_name) || l.source || '';
+    html += '<div style="font-size:10px;color:#475569;margin-bottom:6px">📍 ' + sn + '</div>';
   }
 
   // SELLER
