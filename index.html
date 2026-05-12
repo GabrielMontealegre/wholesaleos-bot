@@ -1148,11 +1148,27 @@ function renderLeadDetail(l) {
       '<span style="background:' + sc + '22;color:' + sc + ';font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;border:1px solid ' + sc + '44">' + dScore + '/100</span>' +
     '</div>';
   }
+  // DUPLICATE BADGE (Phase 2A)
+  if (l.duplicate_group_id) {
+    html += '<span style="background:#7c3aed22;color:#7c3aed;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #7c3aed44;margin-left:4px">⚠ Duplicate ×' + (l.duplicate_count||2) + '</span>';
+  }
   // SOURCE (Phase 1B.3 Task 4)
   if (l.source || (l.source_details && l.source_details.source_name)) {
     var sn = (l.source_details && l.source_details.source_name) || l.source || '';
     html += '<div style="font-size:10px;color:#475569;margin-bottom:6px">📍 ' + sn + '</div>';
   }
+
+  // OWNER INFO (Phase 2A)
+  html += '<div style="margin:10px 0;padding:10px 12px;background:#0e1a2d;border-radius:10px;border:1px solid #1e2d4a">';
+  html += '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px">Owner Info</div>';
+  if (l.owner_name || l.owner_phone || l.owner_email) {
+    if (l.owner_name)  html += '<div style="font-size:12px;color:#e2e8f0;margin-bottom:2px">👤 ' + l.owner_name + '</div>';
+    if (l.owner_phone) html += '<div style="font-size:12px;color:#94a3b8;margin-bottom:2px">📞 ' + l.owner_phone + '</div>';
+    if (l.owner_email) html += '<div style="font-size:12px;color:#94a3b8">✉️ ' + l.owner_email + '</div>';
+  } else {
+    html += '<div style="font-size:11px;color:#475569;font-style:italic">Not enriched yet — owner data pending skip trace</div>';
+  }
+  html += '</div>';
 
   // SELLER
   html += '<div class="section-title">Seller Contact</div>';
@@ -1597,7 +1613,7 @@ function buildBuyerProfiles(buyers) {
     '<button onclick="openAddBuyerManual()" style="background:#1e2533;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;">+ Add Buyer</button>' +
     '</div>';
   if (buyers.length === 0) {
-    return toolbar + '<div style="text-align:center;padding:60px;color:#6b7280;"><div style="font-size:48px;margin-bottom:16px;">&#128101;</div><div style="color:#9ca3af;">0 buyers yet — add buyers manually to activate matching.</div></div>';
+    return toolbar + '<div style="text-align:center;padding:60px;color:#6b7280;"><div style="font-size:48px;margin-bottom:16px;">&#128101;</div><div style="color:#9ca3af;">Add your first buyer to activate matching.</div></div>';
   }
   var grid = '<div id="buyer-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;">';
   buyers.forEach(function(b) {
