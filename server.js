@@ -492,6 +492,34 @@ app.post('/api/assignments', (req, res) => {
   const asgn = { id: 'A' + Date.now(), ...req.body, created: new Date().toISOString().slice(0,10) };
   dbData.assignments.push(asgn);
   db.writeDB(dbData);
+  if (db.appendEvent) {
+    try {
+      var leadId = asgn.leadId || asgn.lead_id || null;
+      db.appendEvent({
+        event_type: 'assignment_created',
+        category: 'assignment',
+        entity: {
+          type: 'assignment',
+          id: asgn.id,
+          lead_id: leadId
+        },
+        payload: {
+          lead_id: leadId,
+          buyer_id: asgn.buyerId || asgn.buyer_id || null,
+          assignment_fee: asgn.fee || asgn.assignment_fee || null,
+          status: asgn.status || null
+        },
+        source: {
+          system: 'server',
+          module: 'assignment-route',
+          route: 'POST /api/assignments'
+        },
+        dedupe_key: 'assignment_created:' + asgn.id
+      });
+    } catch(eventError) {
+      logger.warn({event:'assignment_created_event_append_failed',id:asgn.id,error:eventError.message});
+    }
+  }
   res.json(asgn);
 });
 
