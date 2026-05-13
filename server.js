@@ -462,6 +462,25 @@ app.post('/api/calendar', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Follow-ups Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Read-only operational event inspection
+app.get('/api/events', (req, res) => {
+  const rawLimit = parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 250) : 50;
+  const filters = { limit };
+
+  ['event_type', 'entity_type', 'entity_id'].forEach(function(key) {
+    if (req.query[key]) filters[key] = String(req.query[key]);
+  });
+
+  const events = db.getEvents ? db.getEvents(filters) : [];
+  res.json({
+    success: true,
+    count: events.length,
+    filters: filters,
+    events: events
+  });
+});
+
 app.get('/api/followups', (req, res) => {
   const dbData = db.readDB();
   const today = new Date().toISOString().slice(0,10);
