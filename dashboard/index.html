@@ -2880,10 +2880,21 @@ function openUpdateStatus(leadId) {
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
 }
 
-function updateLeadStatus(leadId, status) {
+async function updateLeadStatus(leadId, status) {
   const lead = APP.leads.find(l=>l.id===leadId);
-  if (lead) { lead.status=status; save('leads',APP.leads); }
-  closeModal(); render(); toast('Status updated to '+status,'success');
+  try {
+    const res = await fetch('/api/leads/'+encodeURIComponent(leadId)+'/status', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: status})
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.ok === false) throw new Error(data.error || 'Status update failed');
+    if (lead) lead.status=status;
+    closeModal(); render(); toast('Status updated to '+status,'success');
+  } catch(e) {
+    toast('Status update failed: '+e.message,'error');
+  }
 }
 
 function openNewAssignment() {
@@ -2902,14 +2913,28 @@ function openNewAssignment() {
     </div>`);
 }
 
-function saveAssignment() {
+async function saveAssignment() {
   const g = id => document.getElementById(id)?.value||'';
   const lead = APP.leads.find(l=>l.id===g('na-lead'));
   const buyer = APP.buyers.find(b=>b.id===g('na-buyer'));
   const asgn = {id:'A'+Date.now(), leadId:g('na-lead'), property:lead?.address||'', buyer:buyer?.name||'', buyerContact:buyer?.contact||'', fee:parseInt(g('na-fee'))||0, emd:parseInt(g('na-emd'))||0, closingDate:g('na-close'), status:'Under Contract'};
+  if (lead) {
+    try {
+      const res = await fetch('/api/leads/'+encodeURIComponent(lead.id)+'/status', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status: 'Under Contract'})
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || 'Status update failed');
+      lead.status='Under Contract';
+    } catch(e) {
+      toast('Status update failed: '+e.message,'error');
+      return;
+    }
+  }
   APP.assignments.push(asgn);
   save('assignments',APP.assignments);
-  if (lead) { lead.status='Under Contract'; save('leads',APP.leads); }
   closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
 }
 
@@ -8507,10 +8532,21 @@ function openUpdateStatus(leadId) {
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
 }
 
-function updateLeadStatus(leadId, status) {
+async function updateLeadStatus(leadId, status) {
   const lead = APP.leads.find(l=>l.id===leadId);
-  if (lead) { lead.status=status; save('leads',APP.leads); }
-  closeModal(); render(); toast('Status updated to '+status,'success');
+  try {
+    const res = await fetch('/api/leads/'+encodeURIComponent(leadId)+'/status', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: status})
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.ok === false) throw new Error(data.error || 'Status update failed');
+    if (lead) lead.status=status;
+    closeModal(); render(); toast('Status updated to '+status,'success');
+  } catch(e) {
+    toast('Status update failed: '+e.message,'error');
+  }
 }
 
 function openNewAssignment() {
@@ -8529,14 +8565,28 @@ function openNewAssignment() {
     </div>`);
 }
 
-function saveAssignment() {
+async function saveAssignment() {
   const g = id => document.getElementById(id)?.value||'';
   const lead = APP.leads.find(l=>l.id===g('na-lead'));
   const buyer = APP.buyers.find(b=>b.id===g('na-buyer'));
   const asgn = {id:'A'+Date.now(), leadId:g('na-lead'), property:lead?.address||'', buyer:buyer?.name||'', buyerContact:buyer?.contact||'', fee:parseInt(g('na-fee'))||0, emd:parseInt(g('na-emd'))||0, closingDate:g('na-close'), status:'Under Contract'};
+  if (lead) {
+    try {
+      const res = await fetch('/api/leads/'+encodeURIComponent(lead.id)+'/status', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status: 'Under Contract'})
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || 'Status update failed');
+      lead.status='Under Contract';
+    } catch(e) {
+      toast('Status update failed: '+e.message,'error');
+      return;
+    }
+  }
   APP.assignments.push(asgn);
   save('assignments',APP.assignments);
-  if (lead) { lead.status='Under Contract'; save('leads',APP.leads); }
   closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
 }
 
