@@ -2509,6 +2509,7 @@ async function saveBuyer() {
     closeModal();
     render();
     showToastMsg('Buyer saved: '+name,'success');
+  } catch(e) {
     showToastMsg('Save error: '+e.message,'error');
   }
 }
