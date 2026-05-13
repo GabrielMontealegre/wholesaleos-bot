@@ -668,8 +668,6 @@ function initApp() {
   render();
   checkDailyUpdate();
   // SYNC: load from Railway database immediately on open
-  APP.page = 'leads';
-  render();
   loadLeadsFromAPI();
   setInterval(loadLeadsFromAPI, 30000);
 }
