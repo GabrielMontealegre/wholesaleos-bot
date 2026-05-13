@@ -1,6 +1,7 @@
 'use strict';
 var fetch = require('node-fetch');
 var db = require('../../db');
+var sourceNormalizer = require('./transforms/source-normalizer');
 
 // 20 additional Socrata open data cities
 var SOCRATA_SOURCES = [
@@ -219,6 +220,176 @@ function scoreMotivation(row, source) {
   return { score: Math.min(score, 100), reasons: reasons };
 }
 
+function firstField(row, fields) {
+  row = row || {};
+  for (var i = 0; i < fields.length; i++) {
+    var field = fields[i];
+    if (row[field] !== undefined && row[field] !== null && row[field] !== '') return row[field];
+  }
+  var keys = Object.keys(row);
+  for (var j = 0; j < fields.length; j++) {
+    var wanted = String(fields[j]).toLowerCase();
+    for (var k = 0; k < keys.length; k++) {
+      if (keys[k].toLowerCase() === wanted && row[keys[k]] !== undefined && row[keys[k]] !== null && row[keys[k]] !== '') {
+        return row[keys[k]];
+      }
+    }
+  }
+  return null;
+}
+
+function parseMoney(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'number') return isFinite(value) ? value : null;
+  var cleaned = String(value).replace(/[$,\s]/g, '');
+  if (!cleaned) return null;
+  var parsed = Number(cleaned);
+  return isFinite(parsed) ? parsed : null;
+}
+
+function parseYearsDelinquent(row) {
+  var explicit = parseMoney(firstField(row, ['years_delinquent', 'years_delinq', 'delinquent_years']));
+  if (explicit !== null) return explicit;
+
+  var yearValue = firstField(row, ['delinquent_year', 'delinquency_year', 'tax_sale_year']);
+  var year = parseInt(yearValue, 10);
+  var currentYear = new Date().getFullYear();
+  if (year && year > 1900 && year <= currentYear) return Math.max(0, currentYear - year);
+  return null;
+}
+
+function sourceApiUrl(source) {
+  return 'https://' + source.domain + '/resource/' + source.dataset + '.json';
+}
+
+function sourceDatasetUrl(source) {
+  return 'https://' + source.domain + '/resource/' + source.dataset;
+}
+
+function isCookCountyTaxSource(source) {
+  return source && source.domain === 'datacatalog.cookcountyil.gov' && source.dataset === 'tx2p-k2g9';
+}
+
+function buildCookCountyTaxLead(row, source) {
+  var parcel = firstField(row, ['pin', 'apn', 'parcel', 'parcel_number', 'pin10']);
+  var taxYear = firstField(row, ['tax_year', 'year', 'delinquent_year', 'tax_sale_year']);
+  var sourceStatus = firstField(row, ['status', 'tax_status', 'payment_status', 'sale_status']);
+  var taxDue = parseMoney(firstField(row, ['tax_due', 'tax_amount', 'amount_due', 'balance_due', 'total_due', 'delinquent_amount']));
+  var lienAmount = parseMoney(firstField(row, ['lien_amount', 'lien', 'tax_lien_amount']));
+  var yearsDelinquent = parseYearsDelinquent(row);
+  var hasRichTaxEvidence = taxDue !== null ||
+    lienAmount !== null ||
+    yearsDelinquent !== null ||
+    /delinq|lien|sale|auction|due/i.test(String(sourceStatus || ''));
+  var queryUrl = sourceApiUrl(source) + (parcel ? '?pin=' + encodeURIComponent(parcel) : '?$limit=1');
+
+  var lead = {
+    address: firstField(row, ['prop_address_full', source.addressField, 'address', 'Address']) || '',
+    city: firstField(row, ['prop_address_city_name', 'city', 'City']) || source.city,
+    state: firstField(row, ['prop_address_state', 'state', 'State']) || source.state,
+    county: source.county,
+    zip: firstField(row, ['prop_address_zipcode_1', 'zip', 'zip_code', 'zipcode']) || '',
+    source: 'socrata_extra',
+    source_url: sourceDatasetUrl(source),
+    source_query_url: queryUrl,
+    source_record_url: parcel ? queryUrl : null,
+    source_details: {
+      source_name: source.label,
+      source_type: 'tax_delinquency',
+      county: source.county,
+      dataset_id: source.dataset,
+      tax_year: taxYear || null,
+      status: sourceStatus || null
+    },
+    lead_type: 'raw',
+    analysisStatus: 'incomplete',
+    arv: null,
+    motivation: 'tax_delinquent',
+    violations: 'Tax Delinquent',
+    motivation_score: hasRichTaxEvidence ? 80 : 65,
+    good_deal_reasons: ['Tax delinquent'],
+    priority: hasRichTaxEvidence ? 'HIGH' : 'MEDIUM',
+    phone: '',
+    email: '',
+    owner_name: firstField(row, ['mail_address_name', 'owner_name', 'owner', 'Owner']) || '',
+    parcel: parcel || '',
+    apn: parcel || '',
+    tax_year: taxYear || null,
+    source_status: sourceStatus || null,
+    tax_due: taxDue,
+    lien_amount: lienAmount,
+    years_delinquent: yearsDelinquent,
+    distress_types: ['tax_delinquent'],
+    distress_score: hasRichTaxEvidence
+      ? (yearsDelinquent ? Math.min(100, 80 + Math.min(yearsDelinquent * 5, 20)) : 80)
+      : 65,
+    source_confidence: hasRichTaxEvidence ? 'high' : 'medium'
+  };
+
+  lead.source_normalized = sourceNormalizer.normalizeSourcePayload({
+    address: lead.address,
+    city: lead.city,
+    state: lead.state,
+    county: lead.county,
+    owner_name: lead.owner_name,
+    parcel: lead.parcel,
+    apn: lead.apn,
+    tax_due: lead.tax_due,
+    lien_amount: lead.lien_amount,
+    years_delinquent: lead.years_delinquent,
+    distress_types: lead.distress_types,
+    distress_score: lead.distress_score,
+    source_type: 'tax_delinquency',
+    source_url: lead.source_url,
+    source_query_url: lead.source_query_url,
+    source_record_url: lead.source_record_url,
+    source_details: lead.source_details,
+    source_confidence: lead.source_confidence
+  }, {
+    source_id: 'cook-county-tax-delinquency',
+    source_kind: 'socrata',
+    provider: 'Cook County IL',
+    source_confidence: 'high'
+  });
+
+  return lead;
+}
+
+function buildGenericSocrataLead(row, source) {
+  var addrRaw = row[source.addressField] || row.address || row.Address || '';
+  if (!addrRaw || typeof addrRaw !== 'string') {
+    // try nested location object
+    if (row.location && row.location.human_address) {
+      try {
+        var loc = JSON.parse(row.location.human_address);
+        addrRaw = loc.address || '';
+      } catch(e) {}
+    }
+  }
+  if (!addrRaw) return null;
+  var motivation = scoreMotivation(row, source);
+  return {
+    address: addrRaw,
+    city: source.city,
+    state: source.state,
+    county: source.county,
+    zip: row.zip || row.zip_code || row.zipcode || '',
+    source: 'socrata_extra',
+    source_details: source.label,
+    lead_type: 'raw',
+    analysisStatus: 'incomplete',
+    arv: null,
+    motivation: motivation.reasons.join('; ') || (row[source.typeField] || 'Code Violation'),
+    violations: row[source.typeField] || 'Code Violation',
+    motivation_score: motivation.score,
+    good_deal_reasons: motivation.reasons,
+    priority: motivation.score >= 75 ? 'HIGH' : motivation.score >= 55 ? 'MEDIUM' : 'LOW',
+    phone: '',
+    email: '',
+    owner_name: row.owner_name || row.owner || ''
+  };
+}
+
 async function fetchSocrataSource(source, maxRecords) {
   var leads = [];
   var offset = 0;
@@ -257,39 +428,10 @@ async function fetchSocrataSource(source, maxRecords) {
     if (!rows || rows.length === 0) break;
 
     rows.forEach(function(row) {
-      var addrRaw = row[source.addressField] || row.address || row.Address || '';
-      if (!addrRaw || typeof addrRaw !== 'string') {
-        // try nested location object
-        if (row.location && row.location.human_address) {
-          try {
-            var loc = JSON.parse(row.location.human_address);
-            addrRaw = loc.address || '';
-          } catch(e) {}
-        }
-      }
-      if (!addrRaw) return;
-      var motivation = scoreMotivation(row, source);
-      var lead = {
-        address: addrRaw,
-        city: source.city,
-        state: source.state,
-        county: source.county,
-        zip: row.zip || row.zip_code || row.zipcode || '',
-        source: 'socrata_extra',
-        source_details: source.label,
-        lead_type: 'raw',
-        analysisStatus: 'incomplete',
-        arv: null,
-        motivation: motivation.reasons.join('; ') || (row[source.typeField] || 'Code Violation'),
-        violations: row[source.typeField] || 'Code Violation',
-        motivation_score: motivation.score,
-        good_deal_reasons: motivation.reasons,
-        priority: motivation.score >= 75 ? 'HIGH' : motivation.score >= 55 ? 'MEDIUM' : 'LOW',
-        phone: '',
-        email: '',
-        owner_name: row.owner_name || row.owner || ''
-      };
-      leads.push(lead);
+      var lead = isCookCountyTaxSource(source)
+        ? buildCookCountyTaxLead(row, source)
+        : buildGenericSocrataLead(row, source);
+      if (lead && lead.address) leads.push(lead);
     });
 
     if (rows.length < fetchLimit) break;
@@ -327,4 +469,8 @@ async function runExtraSocrataSources(maxPerSource) {
   return { fetched: total, inserted: inserted };
 }
 
-module.exports = { runExtraSocrataSources: runExtraSocrataSources };
+module.exports = {
+  runExtraSocrataSources: runExtraSocrataSources,
+  _buildCookCountyTaxLead: buildCookCountyTaxLead,
+  _buildGenericSocrataLead: buildGenericSocrataLead
+};
