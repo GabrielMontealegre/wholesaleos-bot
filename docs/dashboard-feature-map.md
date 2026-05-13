@@ -62,3 +62,10 @@ These have been re-implemented correctly in dashboard/index.html (Phase 3C).
 - Telegram alert integration
 - Mobile-responsive layout
 - Bulk buyer import
+
+---
+
+## Known UI Issues / Deferred Fixes
+- Lead action toolbar appears after refresh but disappears after tab navigation.
+  Probable cause: toolbar is injected outside the canonical `renderLeads()` output and is lost when `render()` replaces content.
+  Future fix: move toolbar into canonical `renderLeads()` markup instead of delayed DOM injection.
