@@ -14173,7 +14173,7 @@ setTimeout(checkSystemLimits, 3000);
   var _origRenderLeads = window.renderLeads;
   if (typeof _origRenderLeads === 'function') {
     window.renderLeads = function() {
-      _origRenderLeads.apply(this, arguments);
+      var html = _origRenderLeads.apply(this, arguments);
       setTimeout(function() {
         try {
           // Add visual indicator to rows with analysisStatus: incomplete
@@ -14198,6 +14198,7 @@ setTimeout(checkSystemLimits, 3000);
           });
         } catch(e) {}
       }, 200);
+      return html;
     };
   }
 })();
@@ -14370,8 +14371,9 @@ function highlightAgedLeads() {
 var _origRenderLeads = window.renderLeads;
 if (typeof _origRenderLeads === 'function') {
   window.renderLeads = function() {
-    _origRenderLeads.apply(this, arguments);
+    var html = _origRenderLeads.apply(this, arguments);
     setTimeout(highlightAgedLeads, 300);
+    return html;
   };
 }
 setTimeout(highlightAgedLeads, 2000);
