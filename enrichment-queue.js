@@ -16,14 +16,25 @@ const FETCH_TIMEOUT  = 28000;
 function classifyOwnerType(name) {
   if (!name) return null;
   var n = name.toUpperCase().trim();
-  if (/\b(LLC|L\.L\.C|LIMITED LIABILITY)\b/.test(n)) return 'LLC';
-  if (/\b(INC|INCORPORATED|CORP|CORPORATION)\b/.test(n)) return 'corporation';
-  if (/\b(TRUST|TRUSTEE|REVOCABLE|IRREVOCABLE)\b/.test(n)) return 'trust';
-  if (/\b(ESTATE|HEIR|HEIRS|EXECUTOR)\b/.test(n)) return 'estate';
-  if (/\b(BANK|SAVINGS|FEDERAL|MORTGAGE|FINANCIAL)\b/.test(n)) return 'bank';
-  if (/\b(CITY OF|COUNTY OF|COMMONWEALTH|STATE OF|AUTHORITY|HUD)\b/.test(n)) return 'government';
-  if (/\b(ASSOC|ASSO\b|ASSOCIATION|CHURCH|COMMUNITY|FOUNDATION|DEMOCRATIC)/.test(n)) return 'organization';
-  if (/^[A-Z]+\s+[A-Z]/.test(n)) return 'individual';
+  // LLC / partnership variants
+  if (/\b(LLC|L\.L\.C|LIMITED LIABILITY|LLP|LP\b)\b/.test(n)) return 'LLC';
+  // Corporation variants
+  if (/\b(INC|INCORPORATED|CORP|CORPORATION|LTD|HOLDINGS|GROUP|MANAGEMENT|PROPERTIES|PARTNERS|PARTNERSHIP|VENTURES|CAPITAL|INVESTMENTS|REALTY|ACQUISITIONS)\b/.test(n)) return 'corporation';
+  // Trust
+  if (/\b(TRUST|TRUSTEE|REVOCABLE|IRREVOCABLE|LIVING TRUST|FAMILY TRUST)\b/.test(n)) return 'trust';
+  // Estate / probate
+  if (/\b(ESTATE|EST\b|HEIR|HEIRS|EXECUTOR|ADMIN\b|DECEASED)\b/.test(n)) return 'estate';
+  // Bank / financial
+  if (/\b(BANK|SAVINGS|FEDERAL|MORTGAGE|FINANCIAL|LENDING|CREDIT UNION|FANNIE|FREDDIE|FHA)\b/.test(n)) return 'bank';
+  // Government
+  if (/\b(CITY OF|COUNTY OF|COMMONWEALTH|STATE OF|AUTHORITY|HUD|PHILA\b|HOUSING AUTH|REDEVELOPMENT)\b/.test(n)) return 'government';
+  // Organization — including truncated forms from assessor records
+  if (/\b(ASSOC|ASSO|ASSOCIATION|CHURCH|COMMUNITY|FOUNDATION|DEMOCRATIC|REPUBLICAN|MINIST|PARTNE|FOUND|CHUR|SCHOOL|UNIVERSITY|COLLEGE|CLUB|LEAGUE|AGENCY|SERVICES|SOLUTIONS|CENTER|NETWORK)/.test(n)) return 'organization';
+  // Joint ownership — "&", "AND", "ET UX", "ET AL", multiple commas
+  if (/&|\bAND\b|\bET UX\b|\bET AL\b|\bET VIR\b/.test(n)) return 'joint_ownership';
+  // Individual: comma-surname pattern (LAST, FIRST) or two capitalized words
+  if (/^[A-Z'-]+,\s+[A-Z]/.test(n)) return 'individual';
+  if (/^[A-Z'-]+\s+[A-Z]/.test(n)) return 'individual';
   return null;
 }
 
