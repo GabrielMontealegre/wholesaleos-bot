@@ -5,6 +5,42 @@ WholesaleOS needs a canonical event layer so lead, buyer, enrichment, outreach, 
 
 The goal is not to replace the existing database records or workflows. The goal is to add a lightweight, deterministic event spine that can support auditability, replay, automation, and future scale.
 
+## Current Implementation Status
+The event foundation is in place, but only a small part of the runtime is wired so far.
+
+Implemented now:
+
+- `appendEvent()` in `db.js`
+- `getEvents()` in `db.js`
+- capped event storage at `5000`
+- `dedupe_key` support
+- payload safety stripping for bulky or unsafe fields
+- `status_changed` emitted from `PUT /api/leads/:id/status`
+- `assignment_created` emitted from `POST /api/assignments`
+- no UI/render event emission
+- no ingestion, evidence, or enrichment event emission yet
+
+Deferred emitters:
+
+- `lead_created`
+- `lead_deduped`
+- `enrichment_queued`
+- `enrichment_completed`
+- `enrichment_failed`
+- `outreach_sent`
+- `outreach_failed`
+- `followup_created`
+- `buyer_matched`
+- `buyer_sent`
+- `evidence_added`
+- `lead_archived`
+
+Operating rules for the current checkpoint:
+
+- Do not emit from dashboard render functions.
+- Do not use events as the only source of truth.
+- Do not log full lead, buyer, assignment, or contract payloads.
+
 ## Why Event-Driven Architecture Matters
 Wholesale operations grow messy when each subsystem stores its own version of truth in isolation. Status, enrichment, outreach, follow-ups, assignments, and buyer matching already exist as separate flows in WholesaleOS.
 
