@@ -6,7 +6,7 @@
 'use strict';
 
 const { v4: uuid } = require('uuid');
-const { normalizeSourcePayload } = require('../modules/sources/transforms/source-normalizer');
+const { normalizeSourcePayload, normalizeDistressTypes } = require('../modules/sources/transforms/source-normalizer');
 
 // Days from now that qualifies as "expiring soon"
 const EXPIRING_DAYS = 14;
@@ -72,6 +72,7 @@ class LeadFormatter {
     const auctionDate = this.parseDate(raw.auction_date);
     const isExpiring  = auctionDate && this.daysUntil(auctionDate) <= EXPIRING_DAYS;
     const normalized = normalizeCourthousePdfPayload(raw, src);
+    const distressTypes = Array.from(new Set((normalized.distress_types || []).concat(normalizeDistressTypes(flags))));
 
     // ── Core lead object matching existing WholesaleOS schema ──────
     const lead = {
@@ -117,6 +118,8 @@ class LeadFormatter {
       priority_flags: flags,
       priority_flag:  flags[0] || 'courthouse',
       expiring_soon:  isExpiring,
+      distress_types: distressTypes,
+      distress_score: normalized.distress_score || 0,
 
       // Dashboard display helpers
       distress:      this.mapDistressLabel(src.type),

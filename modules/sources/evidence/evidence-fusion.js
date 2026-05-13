@@ -3,14 +3,24 @@
 var sourceNormalizer = require('../transforms/source-normalizer');
 
 var DISTRESS_TYPES = [
-  'code_violation',
   'foreclosure',
+  'auction',
   'probate',
   'tax_delinquent',
   'lien',
+  'vacant',
+  'utility_delinquent',
   'bankruptcy',
   'divorce',
-  'vacant'
+  'code_violation',
+  'fire_damage',
+  'unsafe_structure',
+  'demolition',
+  'failed_listing',
+  'price_reduction',
+  'out_of_state_owner',
+  'high_equity',
+  'absentee_owner'
 ];
 
 var CONFIDENCE_RANK = {

@@ -32,7 +32,220 @@ function getLeads() { return readDB().leads || []; }
 
 
 // ── Distress type normalizer (Phase 1B.3 — improved) ────────────────────────
+const CANONICAL_DISTRESS_TYPES = [
+  'foreclosure',
+  'auction',
+  'tax_delinquent',
+  'probate',
+  'lien',
+  'vacant',
+  'utility_delinquent',
+  'bankruptcy',
+  'divorce',
+  'code_violation',
+  'fire_damage',
+  'unsafe_structure',
+  'demolition',
+  'failed_listing',
+  'price_reduction',
+  'out_of_state_owner',
+  'high_equity',
+  'absentee_owner'
+];
+
+const DISTRESS_ALIASES = {
+  pre_foreclosure: 'foreclosure',
+  preforeclosure: 'foreclosure',
+  lis_pendens: 'foreclosure',
+  sheriff_sale: 'auction',
+  auction_expiring: 'auction',
+  tax_sale: 'auction',
+  tax_deed: 'tax_delinquent',
+  tax_lien: 'tax_delinquent',
+  tax_delinquency: 'tax_delinquent',
+  delinquent_tax: 'tax_delinquent',
+  code_enforcement: 'code_violation',
+  code_violations: 'code_violation',
+  property_maintenance: 'code_violation',
+  blight: 'code_violation',
+  vacant_property: 'vacant',
+  abandoned: 'vacant',
+  unoccupied: 'vacant',
+  utility_shutoff: 'utility_delinquent',
+  utility_shut_off: 'utility_delinquent',
+  water_shutoff: 'utility_delinquent',
+  water_shut_off: 'utility_delinquent',
+  fire_damaged: 'fire_damage',
+  unsafe: 'unsafe_structure',
+  unsafe_condition: 'unsafe_structure',
+  demo_order: 'demolition',
+  demolition_order: 'demolition',
+  failed_mls: 'failed_listing',
+  expired_listing: 'failed_listing',
+  cancelled_listing: 'failed_listing',
+  canceled_listing: 'failed_listing',
+  price_reduced: 'price_reduction',
+  price_drop: 'price_reduction',
+  out_of_state: 'out_of_state_owner',
+  potential_equity: 'high_equity'
+};
+
+function normalizeDistressType(value) {
+  if (value === undefined || value === null || value === '') return null;
+  var key = String(value).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  key = DISTRESS_ALIASES[key] || key;
+  return CANONICAL_DISTRESS_TYPES.indexOf(key) > -1 ? key : null;
+}
+
+function addCanonicalDistressType(types, type) {
+  var canonical = normalizeDistressType(type);
+  if (canonical && types.indexOf(canonical) === -1) types.push(canonical);
+}
+
+function canonicalizeDistressTypes(value) {
+  var output = [];
+  var values = Array.isArray(value) ? value : (value ? [value] : []);
+  values.forEach(function(type) { addCanonicalDistressType(output, type); });
+  return output;
+}
+
+function stringifySignalValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  try { return JSON.stringify(value); } catch(e) { return String(value); }
+}
+
+function classifiableSourceDetails(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return {
+      type: value.type || value.source_type || null,
+      raw_data: value.raw_data || value.raw || null
+    };
+  }
+  return value;
+}
+
+function inferDistressTypesFromText() {
+  var values = [];
+  for (var i = 0; i < arguments.length; i++) {
+    var value = arguments[i];
+    if (Array.isArray(value)) values = values.concat(value);
+    else if (value !== undefined && value !== null && value !== '') values.push(value);
+  }
+
+  var text = values.map(stringifySignalValue).join(' ').toLowerCase();
+  var types = [];
+  values.forEach(function(value) { addCanonicalDistressType(types, value); });
+
+  if (/foreclos|pre.?foreclos|lis.?pendens|notice.?of.?default/.test(text)) addCanonicalDistressType(types, 'foreclosure');
+  if (/auction|sheriff.?sale|trustee.?sale|tax.?sale/.test(text)) addCanonicalDistressType(types, 'auction');
+  if (/probate|estate|heir|letters testamentary/.test(text)) addCanonicalDistressType(types, 'probate');
+  if (/tax.?delin|delin.?tax|tax.?lien|tax.?sale|tax.?deed|treasurer/.test(text)) addCanonicalDistressType(types, 'tax_delinquent');
+  if (/\blien\b/.test(text)) addCanonicalDistressType(types, 'lien');
+  if (/vacant|abandoned|unoccupied/.test(text)) addCanonicalDistressType(types, 'vacant');
+  if (/utility.?delin|utility.?shut.?off|water.?shut.?off|water.?disconnect|electric.?disconnect/.test(text)) addCanonicalDistressType(types, 'utility_delinquent');
+  if (/bankruptcy|chapter 7|chapter 13/.test(text)) addCanonicalDistressType(types, 'bankruptcy');
+  if (/divorce|dissolution/.test(text)) addCanonicalDistressType(types, 'divorce');
+  if (/code.?viol|code.?enforce|property.?maint|complaint/.test(text)) addCanonicalDistressType(types, 'code_violation');
+  if (/fire.?damage|fire.?damaged|burned|burnt/.test(text)) addCanonicalDistressType(types, 'fire_damage');
+  if (/unsafe|condemn|dangerous building|structural hazard/.test(text)) addCanonicalDistressType(types, 'unsafe_structure');
+  if (/demo order|demolition/.test(text)) addCanonicalDistressType(types, 'demolition');
+  if (/expired.?listing|failed.?mls|cancelled.?listing|canceled.?listing/.test(text)) addCanonicalDistressType(types, 'failed_listing');
+  if (/price.?reduc|price.?drop/.test(text)) addCanonicalDistressType(types, 'price_reduction');
+  if (/out.?of.?state/.test(text)) addCanonicalDistressType(types, 'out_of_state_owner');
+  if (/absentee|non.?owner.?occupied/.test(text)) addCanonicalDistressType(types, 'absentee_owner');
+  if (/high.?equity|potential.?equity|equity.?play/.test(text)) addCanonicalDistressType(types, 'high_equity');
+
+  return types;
+}
+
+function hasRicherDistressSignal(types) {
+  return (types || []).some(function(type) { return type !== 'code_violation'; });
+}
+
+function collectPromotableSignals(lead) {
+  lead = lead || {};
+  var sourceNormalized = lead.source_normalized || {};
+  var courthouse = lead._courthouse_metadata || {};
+  var evidence = lead.evidence || sourceNormalized.evidence || {};
+  var normalizedEvidence = lead.normalized_evidence || lead.lead_evidence || {};
+  return [
+    sourceNormalized.distress_types,
+    sourceNormalized.source_type,
+    sourceNormalized.evidence && sourceNormalized.evidence.snippets,
+    sourceNormalized.raw_payload && sourceNormalized.raw_payload.distress_types,
+    sourceNormalized.raw_payload && sourceNormalized.raw_payload.priority_flags,
+    sourceNormalized.raw_payload && sourceNormalized.raw_payload.violations,
+    sourceNormalized.raw_payload && sourceNormalized.raw_payload.doc_type,
+    sourceNormalized.raw_payload && sourceNormalized.raw_payload.source_type,
+    lead.priority_flags,
+    lead.priority_flag,
+    lead.doc_type,
+    lead.case_number,
+    lead.why_good_deal,
+    lead.good_deal_reasons,
+    lead.violations,
+    evidence.distress_types,
+    evidence.evidence_type,
+    evidence.evidence_label,
+    evidence.snippets,
+    normalizedEvidence.distress_signals,
+    normalizedEvidence.entries,
+    courthouse.flags,
+    courthouse.lead_type,
+    courthouse.lien_amount ? 'lien' : null,
+    courthouse.auction_date ? 'auction' : null,
+    lead.auction_date ? 'auction' : null,
+    lead.lien_amount ? 'lien' : null,
+    lead.years_delinquent ? 'tax_delinquent' : null
+  ];
+}
+
+function promoteLeadClassification(lead) {
+  var existingTypes = canonicalizeDistressTypes(lead && lead.distress_types);
+  var computedTypes = inferDistressTypesFromText(
+    lead && lead.motivation,
+    classifiableSourceDetails(lead && lead.source_details),
+    lead && lead.violations,
+    lead && lead.good_deal_reasons,
+    lead && lead.why_good_deal,
+    lead && lead.enrichment_notes
+  );
+  var promotedTypes = inferDistressTypesFromText(collectPromotableSignals(lead));
+  var finalTypes = existingTypes.length ? existingTypes.slice() : computedTypes.slice();
+  var weak = finalTypes.length === 0 || (finalTypes.length === 1 && finalTypes[0] === 'code_violation');
+
+  if (weak || hasRicherDistressSignal(promotedTypes)) {
+    promotedTypes.forEach(function(type) {
+      if (finalTypes.indexOf(type) === -1) finalTypes.push(type);
+    });
+  }
+
+  return {
+    distress_types: finalTypes,
+    distress_score: computeDistressScore(Object.assign({}, lead, { distress_types: finalTypes }))
+  };
+}
+
 function normalizeDistressTypes(lead) {
+  lead = lead || {};
+  var canonical = canonicalizeDistressTypes(lead.distress_types);
+  var inferred = inferDistressTypesFromText(
+    lead.motivation,
+    classifiableSourceDetails(lead.source_details),
+    lead.violations,
+    lead.good_deal_reasons,
+    lead.why_good_deal,
+    lead.enrichment_notes,
+    collectPromotableSignals(lead)
+  );
+  inferred.forEach(function(type) {
+    if (canonical.indexOf(type) === -1) canonical.push(type);
+  });
+  return canonical;
+
   var types = [];
 
   // Gather all signal text into one lowercase string for broad matching
@@ -131,6 +344,7 @@ function computeDistressScore(lead) {
   var types = (lead.distress_types && Array.isArray(lead.distress_types) && lead.distress_types.length > 0)
     ? lead.distress_types
     : normalizeDistressTypes(lead);
+  types = canonicalizeDistressTypes(types);
 
   // ── Code violation: base 15, +5 per additional violation (max +20) ────────
   if (types.indexOf('code_violation') > -1) {
@@ -143,7 +357,7 @@ function computeDistressScore(lead) {
   if (types.indexOf('vacant') > -1) score += 10;
 
   // ── Tax delinquency: base 25, +5/yr (max +25) ────────────────────────────
-  if (types.indexOf('tax_delinquency') > -1) {
+  if (types.indexOf('tax_delinquent') > -1) {
     score += 25;
     var yrs = parseInt(lead.years_delinquent) || 0;
     score += Math.min(yrs * 5, 25);
@@ -171,7 +385,16 @@ function computeDistressScore(lead) {
   if (types.indexOf('absentee_owner') > -1) score += 10;
 
   // ── Failed MLS: +10 ──────────────────────────────────────────────────────
-  if (types.indexOf('failed_mls') > -1) score += 10;
+  if (types.indexOf('utility_delinquent') > -1) score += 15;
+  if (types.indexOf('bankruptcy') > -1) score += 15;
+  if (types.indexOf('divorce') > -1) score += 10;
+  if (types.indexOf('fire_damage') > -1) score += 25;
+  if (types.indexOf('unsafe_structure') > -1) score += 20;
+  if (types.indexOf('demolition') > -1) score += 20;
+  if (types.indexOf('failed_listing') > -1) score += 10;
+  if (types.indexOf('price_reduction') > -1) score += 10;
+  if (types.indexOf('out_of_state_owner') > -1) score += 10;
+  if (types.indexOf('high_equity') > -1) score += 10;
 
   // ── Multi-distress stacking bonus: +15 if 2+ distinct types ──────────────
   if (types.length >= 2) score += 15;
@@ -203,27 +426,37 @@ function stringifySourceDetails(value) {
 
 function normalizeLeadIntelligenceCause(lead) {
   var types = asArray(lead && lead.distress_types).map(function(t) {
-    return String(t || '').toLowerCase();
-  });
+    return normalizeDistressType(t) || String(t || '').toLowerCase();
+  }).filter(Boolean);
   var signalText = [
     types.join(' '),
-    lead && lead.source,
-    stringifySourceDetails(lead && lead.source_details),
+    stringifySignalValue(classifiableSourceDetails(lead && lead.source_details)),
     lead && lead.motivation,
     asArray(lead && lead.violations).join(' '),
     asArray(lead && lead.good_deal_reasons).join(' '),
     lead && lead.why_good_deal,
-    lead && lead.enrichment_notes
+    lead && lead.enrichment_notes,
+    stringifySignalValue(collectPromotableSignals(lead))
   ].join(' ').toLowerCase();
 
-  if (/foreclos|pre.?foreclos|auction|sheriff.?sale|lis.?pendens/.test(signalText)) return 'foreclosure';
+  if (/foreclos|pre.?foreclos|sheriff.?sale|lis.?pendens/.test(signalText)) return 'foreclosure';
+  if (/auction|trustee.?sale|tax.?sale/.test(signalText)) return 'auction';
   if (/probate|estate|heir|letters testamentary/.test(signalText)) return 'probate';
   if (/tax.?delin|delin.?tax|tax.?lien|tax.?sale|tax.?deed|treasurer/.test(signalText)) return 'tax_delinquent';
-  if (/code.?viol|code.?enforce|blight|complaint|unsafe|property.?maint/.test(signalText)) return 'code_violation';
   if (/\blien\b/.test(signalText)) return 'lien';
+  if (/vacant|abandoned|unoccupied/.test(signalText)) return 'vacant';
+  if (/utility.?delin|utility.?shut.?off|water.?shut.?off|water.?disconnect|electric.?disconnect/.test(signalText)) return 'utility_delinquent';
   if (/bankruptcy|chapter 7|chapter 13/.test(signalText)) return 'bankruptcy';
   if (/divorce|dissolution/.test(signalText)) return 'divorce';
-  if (/vacant|abandoned|unoccupied/.test(signalText)) return 'vacant';
+  if (/fire.?damage|fire.?damaged|burned|burnt/.test(signalText)) return 'fire_damage';
+  if (/unsafe|condemn|dangerous building|structural hazard/.test(signalText)) return 'unsafe_structure';
+  if (/demo order|demolition/.test(signalText)) return 'demolition';
+  if (/expired.?listing|failed.?mls|cancelled.?listing|canceled.?listing/.test(signalText)) return 'failed_listing';
+  if (/price.?reduc|price.?drop/.test(signalText)) return 'price_reduction';
+  if (/out.?of.?state/.test(signalText)) return 'out_of_state_owner';
+  if (/absentee|non.?owner.?occupied/.test(signalText)) return 'absentee_owner';
+  if (/high.?equity|potential.?equity|equity.?play/.test(signalText)) return 'high_equity';
+  if (/code.?viol|code.?enforce|blight|complaint|property.?maint/.test(signalText)) return 'code_violation';
   return 'unknown';
 }
 
@@ -301,7 +534,7 @@ function computeLeadIntelligence(lead) {
       last_status_change: lead.last_status_change || null
     },
     evidence: {
-      distress_types: asArray(lead.distress_types).filter(Boolean),
+      distress_types: canonicalizeDistressTypes(lead.distress_types),
       distress_score: typeof lead.distress_score === 'number' ? lead.distress_score : null,
       source: lead.source || null,
       source_details: lead.source_details || null,
@@ -339,6 +572,7 @@ function normalizeAddress(addr) {
 function addLead(lead) {
   const db = readDB();
   if (!db.leads) db.leads = [];
+  const promotedClassification = promoteLeadClassification(lead);
   const newLead = {
     id:      'L' + Date.now() + Math.random().toString(36).slice(2,6),
     status:  'New Lead',
@@ -359,12 +593,10 @@ function addLead(lead) {
     owner_phone:       lead.owner_phone       || null,
     owner_email:       lead.owner_email       || null,
     owner_type:        lead.owner_type        || null,
-    distress_types:    (lead.distress_types && lead.distress_types.length > 0)
-                         ? lead.distress_types
-                         : normalizeDistressTypes(lead),
-    distress_score:    lead.distress_score    != null
+    distress_types:    promotedClassification.distress_types,
+    distress_score:    lead.distress_score != null && lead.distress_score >= promotedClassification.distress_score
                          ? lead.distress_score
-                         : computeDistressScore(lead),
+                         : promotedClassification.distress_score,
     distress_history:  lead.distress_history  || [],
     source_query_url:  lead.source_query_url  || null,
     source_record_url: lead.source_record_url || null,

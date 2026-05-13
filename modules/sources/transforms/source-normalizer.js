@@ -13,6 +13,62 @@ var SOURCE_KINDS = {
 };
 
 var CONFIDENCE_LEVELS = ['low', 'medium', 'high'];
+var CANONICAL_DISTRESS_TYPES = [
+  'foreclosure',
+  'auction',
+  'tax_delinquent',
+  'probate',
+  'lien',
+  'vacant',
+  'utility_delinquent',
+  'bankruptcy',
+  'divorce',
+  'code_violation',
+  'fire_damage',
+  'unsafe_structure',
+  'demolition',
+  'failed_listing',
+  'price_reduction',
+  'out_of_state_owner',
+  'high_equity',
+  'absentee_owner'
+];
+
+var DISTRESS_ALIASES = {
+  pre_foreclosure: 'foreclosure',
+  preforeclosure: 'foreclosure',
+  lis_pendens: 'foreclosure',
+  sheriff_sale: 'auction',
+  tax_sale: 'auction',
+  tax_deed: 'tax_delinquent',
+  tax_lien: 'tax_delinquent',
+  tax_delinquency: 'tax_delinquent',
+  delinquent_tax: 'tax_delinquent',
+  code_enforcement: 'code_violation',
+  code_violations: 'code_violation',
+  property_maintenance: 'code_violation',
+  blight: 'code_violation',
+  vacant_property: 'vacant',
+  abandoned: 'vacant',
+  unoccupied: 'vacant',
+  utility_shutoff: 'utility_delinquent',
+  utility_shut_off: 'utility_delinquent',
+  water_shutoff: 'utility_delinquent',
+  water_shut_off: 'utility_delinquent',
+  fire_damaged: 'fire_damage',
+  unsafe: 'unsafe_structure',
+  unsafe_condition: 'unsafe_structure',
+  demo_order: 'demolition',
+  demolition_order: 'demolition',
+  failed_mls: 'failed_listing',
+  expired_listing: 'failed_listing',
+  cancelled_listing: 'failed_listing',
+  canceled_listing: 'failed_listing',
+  price_reduced: 'price_reduction',
+  price_drop: 'price_reduction',
+  out_of_state: 'out_of_state_owner',
+  potential_equity: 'high_equity'
+};
 
 function firstValue() {
   for (var i = 0; i < arguments.length; i++) {
@@ -39,6 +95,19 @@ function asArray(value) {
   if (Array.isArray(value)) return value.filter(function(v) { return v !== undefined && v !== null && v !== ''; });
   if (value === undefined || value === null || value === '') return [];
   return [value];
+}
+
+function normalizeDistressType(value) {
+  var str = asString(value);
+  if (!str) return null;
+  var key = str.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  key = DISTRESS_ALIASES[key] || key;
+  return CANONICAL_DISTRESS_TYPES.indexOf(key) > -1 ? key : null;
+}
+
+function addCanonicalType(types, type) {
+  var canonical = normalizeDistressType(type);
+  if (canonical && types.indexOf(canonical) === -1) types.push(canonical);
 }
 
 function normalizeDate(value) {
@@ -102,17 +171,29 @@ function normalizeDistressTypes() {
   var types = [];
 
   function add(type) {
-    if (types.indexOf(type) === -1) types.push(type);
+    addCanonicalType(types, type);
   }
 
-  if (/foreclos|pre.?foreclos|sheriff.?sale|lis.?pendens|auction/.test(text)) add('foreclosure');
+  values.forEach(function(value) { add(value); });
+
+  if (/foreclos|pre.?foreclos|lis.?pendens|notice.?of.?default/.test(text)) add('foreclosure');
+  if (/auction|sheriff.?sale|trustee.?sale|tax.?sale/.test(text)) add('auction');
   if (/probate|estate|heir|letters testamentary/.test(text)) add('probate');
   if (/tax.?delin|delin.?tax|tax.?lien|tax.?sale|tax.?deed|treasurer/.test(text)) add('tax_delinquent');
-  if (/code.?viol|code.?enforce|blight|complaint|unsafe|property.?maint|demo order/.test(text)) add('code_violation');
+  if (/code.?viol|code.?enforce|property.?maint|complaint/.test(text)) add('code_violation');
+  if (/unsafe|condemn|dangerous building|structural hazard/.test(text)) add('unsafe_structure');
+  if (/demo order|demolition/.test(text)) add('demolition');
   if (/\blien\b/.test(text)) add('lien');
   if (/bankruptcy|chapter 7|chapter 13/.test(text)) add('bankruptcy');
   if (/divorce|dissolution/.test(text)) add('divorce');
   if (/vacant|abandoned|unoccupied/.test(text)) add('vacant');
+  if (/utility.?delin|utility.?shut.?off|water.?shut.?off|water.?disconnect|electric.?disconnect/.test(text)) add('utility_delinquent');
+  if (/fire.?damage|fire.?damaged|burned|burnt/.test(text)) add('fire_damage');
+  if (/expired.?listing|failed.?mls|cancelled.?listing|canceled.?listing/.test(text)) add('failed_listing');
+  if (/price.?reduc|price.?drop/.test(text)) add('price_reduction');
+  if (/out.?of.?state/.test(text)) add('out_of_state_owner');
+  if (/absentee|non.?owner.?occupied/.test(text)) add('absentee_owner');
+  if (/high.?equity|potential.?equity|equity.?play/.test(text)) add('high_equity');
 
   return types;
 }
@@ -121,13 +202,23 @@ function estimateDistressScore(types, raw) {
   var score = 0;
   types = asArray(types);
   if (types.indexOf('foreclosure') > -1) score += 35;
+  if (types.indexOf('auction') > -1) score += 25;
   if (types.indexOf('tax_delinquent') > -1) score += 30;
   if (types.indexOf('probate') > -1) score += 25;
   if (types.indexOf('code_violation') > -1) score += 20;
   if (types.indexOf('lien') > -1) score += 15;
+  if (types.indexOf('utility_delinquent') > -1) score += 15;
   if (types.indexOf('bankruptcy') > -1) score += 15;
   if (types.indexOf('divorce') > -1) score += 10;
   if (types.indexOf('vacant') > -1) score += 10;
+  if (types.indexOf('fire_damage') > -1) score += 25;
+  if (types.indexOf('unsafe_structure') > -1) score += 20;
+  if (types.indexOf('demolition') > -1) score += 20;
+  if (types.indexOf('failed_listing') > -1) score += 10;
+  if (types.indexOf('price_reduction') > -1) score += 10;
+  if (types.indexOf('out_of_state_owner') > -1) score += 10;
+  if (types.indexOf('absentee_owner') > -1) score += 10;
+  if (types.indexOf('high_equity') > -1) score += 10;
   if (types.length > 1) score += 10;
 
   var years = asNumber(raw && raw.years_delinquent);
@@ -240,14 +331,41 @@ function normalizeSourcePayload(raw, options) {
     options.source_type,
     evidence.source_details && evidence.source_details.type
   ));
+  var recordEvidenceValues = [
+    raw.distress_types,
+    raw.priority_flags,
+    raw.violations,
+    raw.motivation,
+    raw.good_deal_reasons,
+    raw.evidence_snippets,
+    raw.snippets,
+    raw.doc_type,
+    raw.source_type,
+    raw.type,
+    timeline.auction_date ? 'auction' : null,
+    timeline.years_delinquent ? 'tax_delinquent' : null,
+    timeline.lien_amount ? 'lien' : null,
+    timeline.foreclosure_stage,
+    timeline.probate_status
+  ];
+  var hasRecordEvidence = recordEvidenceValues.some(function(value) {
+    return asArray(value).length > 0;
+  });
+  var sourceTypeForDistress = hasRecordEvidence ? sourceType : null;
+  var sourceDetailsForDistress = hasRecordEvidence ? evidence.source_details : null;
   var distressTypes = normalizeDistressTypes(
     raw.distress_types,
     raw.priority_flags,
     raw.violations,
     raw.motivation,
-    sourceType,
-    evidence.source_details,
-    raw.good_deal_reasons
+    sourceTypeForDistress,
+    sourceDetailsForDistress,
+    raw.good_deal_reasons,
+    timeline.auction_date ? 'auction' : null,
+    timeline.years_delinquent ? 'tax_delinquent' : null,
+    timeline.lien_amount ? 'lien' : null,
+    timeline.foreclosure_stage,
+    timeline.probate_status
   );
   var providedScore = asNumber(firstValue(raw.distress_score, raw.motivation_score, raw.score, options.distress_score));
   var confidence = evidence.confidence || normalizeSourceConfidence(firstValue(options.source_confidence, raw.source_confidence));
@@ -296,6 +414,8 @@ module.exports = {
   normalizeAddressFields: normalizeAddressFields,
   normalizeSourceDetails: normalizeSourceDetails,
   normalizeSourceConfidence: normalizeSourceConfidence,
+  normalizeDistressType: normalizeDistressType,
+  CANONICAL_DISTRESS_TYPES: CANONICAL_DISTRESS_TYPES,
   asArray: asArray,
   asString: asString,
   asNumber: asNumber
