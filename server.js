@@ -4235,8 +4235,34 @@ app.put('/api/leads/:id/status', function(req, res) {
     var newStatus = (req.body||{}).status;
     var validStatuses = ['New Lead','Contacted','Offer Sent','Negotiating','Under Contract','Closed','Dead'];
     if (!newStatus || validStatuses.indexOf(newStatus) === -1) return res.status(400).json({ok:false,error:'Invalid status'});
+    var fromStatus = lead.status || null;
     db.updateLead(req.params.id, {status: newStatus, status_updated: new Date().toISOString(), last_status_change: new Date().toISOString()});
     var updated = db.getLeads().find(function(l){return l.id===req.params.id;});
+    if (fromStatus !== newStatus && db.appendEvent) {
+      try {
+        db.appendEvent({
+          event_type: 'status_changed',
+          category: 'lifecycle',
+          entity: {
+            type: 'lead',
+            id: lead.id,
+            ref_number: lead.ref_number || lead.reference_number || null
+          },
+          payload: {
+            from_status: fromStatus,
+            to_status: newStatus
+          },
+          source: {
+            system: 'server',
+            module: 'status-route',
+            route: 'PUT /api/leads/:id/status'
+          },
+          dedupe_key: 'status_changed:' + lead.id + ':' + fromStatus + ':' + newStatus
+        });
+      } catch(eventError) {
+        logger.warn({event:'status_changed_event_append_failed',id:req.params.id,error:eventError.message});
+      }
+    }
     logger.info({event:'lead_status_update',id:req.params.id,newStatus:newStatus});
     res.json({ok:true,id:req.params.id,status:newStatus});
   } catch(e) { res.status(500).json({ok:false,error:e.message}); }
