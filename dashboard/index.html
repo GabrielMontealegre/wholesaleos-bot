@@ -1462,7 +1462,7 @@ function renderLeadDetail(l) {
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
   html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">💼 Match</button>';
   html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">🔔 Follow-Up</button>';
-  html += '<button class="btn btn-outline btn-sm" data-action="status" data-lid="' + lid + '">Status</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="openUpdateStatus(\'' + lid + '\')">Status</button>';
   html += '</div>';
 
   // SCRIPT
@@ -7174,7 +7174,7 @@ function renderLeadDetail(l) {
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
   html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">💼 Match</button>';
   html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">🔔 Follow-Up</button>';
-  html += '<button class="btn btn-outline btn-sm" data-action="status" data-lid="' + lid + '">Status</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="openUpdateStatus(\'' + lid + '\')">Status</button>';
   html += '</div>';
 
   // SCRIPT
