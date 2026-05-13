@@ -1244,6 +1244,49 @@ function openLeadModal(leadId) {
 }
 
 
+function leadIntelText(value) {
+  return String(value == null || value === '' ? 'Unknown' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderLeadIntelligence(li) {
+  if (!li) return '';
+  var timeline = li.timeline || {};
+  var evidence = li.evidence || {};
+  var urls = evidence.urls || {};
+  var links = [];
+  [['Source', urls.source_url], ['Query', urls.source_query_url], ['Record', urls.source_record_url]].forEach(function(pair) {
+    if (pair[1]) links.push('<a href="' + leadIntelText(pair[1]) + '" target="_blank" style="color:#f4c542;text-decoration:none;font-weight:700">' + pair[0] + '</a>');
+  });
+  var highlights = [];
+  if (timeline.auction_date) highlights.push('Auction: ' + leadIntelText(timeline.auction_date));
+  if (timeline.days_to_auction !== null && timeline.days_to_auction !== undefined) highlights.push('Days: ' + leadIntelText(timeline.days_to_auction));
+  if (timeline.years_delinquent) highlights.push('Tax years: ' + leadIntelText(timeline.years_delinquent));
+  if (timeline.last_activity) highlights.push('Last activity: ' + leadIntelText(String(timeline.last_activity).slice(0,10)));
+  var levelColor = li.urgency_level === 'high' ? '#ef4444' : li.urgency_level === 'medium' ? '#f4c542' : '#10b981';
+  var cause = leadIntelText(li.distress_cause || 'unknown').replace(/_/g, ' ');
+  var action = leadIntelText(li.recommended_next_action || 'monitor').replace(/_/g, ' ');
+  var html = '<div style="margin:10px 0;padding:12px;background:#0e1a2d;border:1px solid #1e2d4a;border-radius:10px;color:#e2e8f0">';
+  html += '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em;margin-bottom:6px">Lead Intelligence</div>';
+  html += '<div style="font-size:12px;line-height:1.55;color:#e2e8f0;margin-bottom:8px">' + leadIntelText(li.summary) + '</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+  html += '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;background:' + levelColor + '22;color:' + levelColor + ';border:1px solid ' + levelColor + '55">' + leadIntelText(li.urgency_level || 'low').toUpperCase() + '</span>';
+  html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">' + cause + '</span>';
+  html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">Action: ' + action + '</span>';
+  html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">Confidence: ' + leadIntelText(li.confidence || 'low') + '</span>';
+  html += '</div>';
+  html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Reason: ' + leadIntelText(li.urgency_reason || 'insufficient_urgent_signal') + '</div>';
+  if (highlights.length) html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Timeline: ' + highlights.join(' | ') + '</div>';
+  if (links.length) html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Evidence: ' + links.join(' | ') + '</div>';
+  html += '</div>';
+  return html;
+}
+
+
 function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
   const fu = APP.followups.filter(f => f.leadId === l.id);
@@ -7159,6 +7202,8 @@ function renderLeadDetail(l) {
 
   // WHY GOOD DEAL
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
+
+  html += renderLeadIntelligence(l.lead_intelligence);
 
   // DISTRESS BADGES
   const sigs = (l.distress_signals||l.motivation||[]);
@@ -14042,7 +14087,7 @@ function checkSystemLimits() {
       banner.innerHTML = '<div style="font-size:12px;font-weight:700;color:#ff9800;margin-bottom:6px;">⚠️ System Limit Warning</div>' +
         warnings.map(function(w){ return '<div style="font-size:11px;color:#ccc;margin-bottom:4px;"><b>'+w.resource+':</b> '+w.current+'/'+w.limit+' ('+w.pct+'%)</div>'; }).join('') +
         '<div style="font-size:10px;color:#666;margin-top:8px;">Continue from another machine if needed.</div>' +
-        '<button onclick="document.getElementById('limits-banner').remove()" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#666;font-size:16px;cursor:pointer;">×</button>';
+        '<button onclick="document.getElementById(&quot;limits-banner&quot;).remove()" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#666;font-size:16px;cursor:pointer;">×</button>';
       document.body.appendChild(banner);
     })
     .catch(function(){});
@@ -14074,7 +14119,7 @@ window.openWholesaleGuide = function() {
   m.innerHTML='<div style="background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:32px;width:760px;max-height:85vh;overflow-y:auto;color:#e0e0e0;">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">' +
     '<h2 style="margin:0;color:#4fc3f7;">📖 Wholesaling Guide & Platform Tutorial</h2>' +
-    '<button onclick="document.getElementById('wg-modal').remove()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button></div>' +
+    '<button onclick="document.getElementById(&quot;wg-modal&quot;).remove()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button></div>' +
     
     '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #4fc3f7;">' +
     '<h3 style="margin:0 0 8px;color:#4fc3f7;font-size:14px;">🏠 What is Real Estate Wholesaling?</h3>' +
@@ -14109,7 +14154,7 @@ window.openWholesaleGuide = function() {
     '• <b style="color:#ff9800;">Probate</b> — Inherited property. Heirs want to sell quickly, often below market.<br>' +
     '• <b style="color:#ff9800;">FSBO</b> — For Sale By Owner. Avoiding agents = flexible on price.<br>' +
     '• <b style="color:#ff9800;">Tax Lien</b> — Owner owes back taxes. Facing government auction.<br>' +
-    '• <b style="color:#ff9800;">Absentee Owner</b> — Owns but doesn't live there. Often has rental fatigue.' +
+    '• <b style="color:#ff9800;">Absentee Owner</b> — Owns but does not live there. Often has rental fatigue.' +
     '</div></div>' +
 
     '<div style="background:#0d1117;border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid #ab7ae0;">' +
@@ -14126,7 +14171,7 @@ window.openWholesaleGuide = function() {
     '</div></div>' +
 
     '<div style="text-align:center;margin-top:8px;">' +
-    '<button onclick="document.getElementById('wg-modal').remove()" style="background:#4fc3f7;color:#000;border:none;border-radius:8px;padding:10px 32px;cursor:pointer;font-weight:700;font-size:14px;">Got it — Start Wholesaling!</button>' +
+    '<button onclick="document.getElementById(&quot;wg-modal&quot;).remove()" style="background:#4fc3f7;color:#000;border:none;border-radius:8px;padding:10px 32px;cursor:pointer;font-weight:700;font-size:14px;">Got it — Start Wholesaling!</button>' +
     '</div></div>';
   document.body.appendChild(m);
 };

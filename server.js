@@ -126,6 +126,25 @@ app.get('/', (_, res) => res.json({
 }));
 
 // Ã¢ÂÂÃ¢ÂÂ API: Leads Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+function withLeadIntelligence(lead) {
+  if (!lead) return lead;
+  return Object.assign({}, lead, {
+    lead_intelligence: db.computeLeadIntelligence
+      ? db.computeLeadIntelligence(lead)
+      : null
+  });
+}
+
+function leadSourceTypeText(lead) {
+  var details = lead && lead.source_details;
+  if (!details) return (lead && lead.motivation) || '';
+  if (typeof details === 'string') return details;
+  if (typeof details === 'object') {
+    return [details.type, details.source_name, details.label, details.name].filter(Boolean).join(' ');
+  }
+  return String(details);
+}
+
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
   const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
@@ -138,7 +157,7 @@ app.get('/api/leads', (req, res) => {
   if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
   if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
   if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
-  if (source_type) filtered = filtered.filter(l => (l.source_details||l.motivation||'').toLowerCase().includes(source_type.toLowerCase()));
+  if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
   // Sort BEFORE limiting (correct order)
   var sortKey = sort || 'motivation_score';
   if (sortKey === 'motivation_score') {
@@ -154,7 +173,7 @@ app.get('/api/leads', (req, res) => {
   } else if (limit) {
     filtered = filtered.slice(0, parseInt(limit));
   }
-  res.json({ leads: filtered, total: filtered.length, totalAll: leads.length });
+  res.json({ leads: filtered.map(withLeadIntelligence), total: filtered.length, totalAll: leads.length });
 });
 
 
@@ -349,7 +368,7 @@ app.patch('/api/leads/:id/address', (req, res) => {
 app.get('/api/leads/:id', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  res.json(lead);
+  res.json(withLeadIntelligence(lead));
 });
 
 app.post('/api/leads', (req, res) => {

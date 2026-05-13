@@ -180,6 +180,147 @@ function computeDistressScore(lead) {
 
 
 // ── Address normalizer (Phase 1C) ─────────────────────────────────────────────
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === '') return [];
+  return [value];
+}
+
+function stringifySourceDetails(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return [
+      value.type,
+      value.source_name,
+      value.label,
+      value.name
+    ].filter(Boolean).join(' ');
+  }
+  return String(value);
+}
+
+function normalizeLeadIntelligenceCause(lead) {
+  var types = asArray(lead && lead.distress_types).map(function(t) {
+    return String(t || '').toLowerCase();
+  });
+  var signalText = [
+    types.join(' '),
+    lead && lead.source,
+    stringifySourceDetails(lead && lead.source_details),
+    lead && lead.motivation,
+    asArray(lead && lead.violations).join(' '),
+    asArray(lead && lead.good_deal_reasons).join(' '),
+    lead && lead.why_good_deal,
+    lead && lead.enrichment_notes
+  ].join(' ').toLowerCase();
+
+  if (/foreclos|pre.?foreclos|auction|sheriff.?sale|lis.?pendens/.test(signalText)) return 'foreclosure';
+  if (/probate|estate|heir|letters testamentary/.test(signalText)) return 'probate';
+  if (/tax.?delin|delin.?tax|tax.?lien|tax.?sale|tax.?deed|treasurer/.test(signalText)) return 'tax_delinquent';
+  if (/code.?viol|code.?enforce|blight|complaint|unsafe|property.?maint/.test(signalText)) return 'code_violation';
+  if (/\blien\b/.test(signalText)) return 'lien';
+  if (/bankruptcy|chapter 7|chapter 13/.test(signalText)) return 'bankruptcy';
+  if (/divorce|dissolution/.test(signalText)) return 'divorce';
+  if (/vacant|abandoned|unoccupied/.test(signalText)) return 'vacant';
+  return 'unknown';
+}
+
+function computeDaysToAuction(auctionDate) {
+  if (!auctionDate) return null;
+  var d = new Date(auctionDate);
+  if (isNaN(d.getTime())) return null;
+  return Math.ceil((d.getTime() - Date.now()) / 86400000);
+}
+
+function computeLeadIntelligence(lead) {
+  lead = lead || {};
+  var cause = normalizeLeadIntelligenceCause(lead);
+  var score = typeof lead.distress_score === 'number'
+    ? lead.distress_score
+    : (typeof lead.motivation_score === 'number' ? lead.motivation_score : 0);
+  var daysToAuction = computeDaysToAuction(lead.auction_date);
+  var reasons = asArray(lead.good_deal_reasons).filter(Boolean).map(function(r) { return String(r); });
+  var summary = lead.why_good_deal || reasons.join('. ');
+  if (!summary) {
+    summary = cause !== 'unknown'
+      ? 'Distress signal: ' + cause
+      : 'No confirmed distress summary available';
+  }
+
+  var urgencyLevel = 'low';
+  var urgencyReason = 'insufficient_urgent_signal';
+  if (daysToAuction != null && daysToAuction >= 0 && daysToAuction <= 30) {
+    urgencyLevel = 'high';
+    urgencyReason = 'auction_date_within_30_days';
+  } else if (score >= 70 || cause === 'foreclosure') {
+    urgencyLevel = 'high';
+    urgencyReason = score >= 70 ? 'high_distress_score' : 'foreclosure_signal';
+  } else if (score >= 35 || cause !== 'unknown' || reasons.length > 0) {
+    urgencyLevel = 'medium';
+    urgencyReason = score >= 35 ? 'moderate_distress_score' : 'distress_signal_present';
+  }
+
+  var hasContact = !!(lead.owner_phone || lead.phone || lead.owner_email || lead.email);
+  var recommended = 'monitor';
+  if (!lead.owner_name && !hasContact) recommended = 'enrich_first';
+  else if (cause === 'probate') recommended = 'reach_estate_contact';
+  else if (urgencyLevel === 'high' && hasContact) recommended = 'call_now';
+  else if (urgencyLevel === 'medium' && hasContact) recommended = 'send_offer';
+
+  var urls = {
+    source_url: lead.source_url || null,
+    source_query_url: lead.source_query_url || null,
+    source_record_url: lead.source_record_url || null
+  };
+  var hasUrl = !!(urls.source_url || urls.source_query_url || urls.source_record_url);
+  var signalCount = 0;
+  if (cause !== 'unknown') signalCount++;
+  if (score > 0) signalCount++;
+  if (daysToAuction != null) signalCount++;
+  if (reasons.length > 0) signalCount++;
+  if (lead.enrichment_notes) signalCount++;
+
+  var confidence = 'low';
+  if (hasUrl && signalCount >= 2 && (lead.owner_name || hasContact)) confidence = 'high';
+  else if (signalCount >= 2 || (hasUrl && signalCount >= 1)) confidence = 'medium';
+
+  return {
+    intelligence_version: 'v1',
+    summary: summary,
+    distress_cause: cause,
+    urgency_level: urgencyLevel,
+    urgency_reason: urgencyReason,
+    timeline: {
+      auction_date: lead.auction_date || null,
+      days_to_auction: daysToAuction,
+      years_delinquent: lead.years_delinquent || null,
+      last_activity: lead.last_activity || null,
+      last_contact_attempt: lead.last_contact_attempt || null,
+      last_status_change: lead.last_status_change || null
+    },
+    evidence: {
+      distress_types: asArray(lead.distress_types).filter(Boolean),
+      distress_score: typeof lead.distress_score === 'number' ? lead.distress_score : null,
+      source: lead.source || null,
+      source_details: lead.source_details || null,
+      urls: urls,
+      violations: asArray(lead.violations).filter(Boolean),
+      motivation: lead.motivation || null,
+      good_deal_reasons: reasons,
+      enrichment_notes: lead.enrichment_notes || null
+    },
+    owner_context: {
+      owner_name: lead.owner_name || null,
+      owner_type: lead.owner_type || null,
+      owner_phone: lead.owner_phone || lead.phone || null,
+      owner_email: lead.owner_email || lead.email || null
+    },
+    recommended_next_action: recommended,
+    confidence: confidence
+  };
+}
+
 function normalizeAddress(addr) {
   if (!addr) return '';
   return addr
@@ -989,6 +1130,7 @@ module.exports = {
   getStats,
   getSetting, setSetting,
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
+  computeLeadIntelligence,
   detectDuplicates, backfillActivityFields, backfillDuplicateGroups,
   consolidateDuplicates,
   updateEnrichmentStatus, backfillEnrichmentFields, addEnrichmentHistory,
