@@ -6,6 +6,7 @@
 const fs   = require('fs');
 const path = require('path');
 const os   = require('os');
+const LeadFormatter = require('./lead-formatter');
 
 // ── Safe pdf-parse loader ────────────────────────────────────────────────
 let pdfParse = null;
@@ -47,7 +48,11 @@ async function extractFromPdfUrl(url, source) {
       console.warn('[pdf-extractor] PDF too small or empty');
       return [];
     }
-    return extractFromPdfBuffer(Buffer.from(resp.data), source);
+    var sourceWithUrl = Object.assign({}, source || {}, {
+      url: (source && source.url) || url,
+      pdf_url: url
+    });
+    return extractFromPdfBuffer(Buffer.from(resp.data), sourceWithUrl);
   } catch(e) {
     console.error('[pdf-extractor] download error:', e.message);
     return [];
@@ -159,6 +164,24 @@ function buildLead(record, source) {
   var stMatch = stateZip.match(/^([A-Z]{2})\s*(\d{5})?/);
   var state  = stMatch ? stMatch[1] : source.state || '';
   var zip    = stMatch && stMatch[2] ? stMatch[2] : '';
+  var normalized = LeadFormatter.normalizeCourthousePdfPayload({
+    address: street,
+    city: city || (source.market || '').split(',')[0],
+    state: state,
+    zip: zip,
+    owner_name: record.owner || '',
+    case_number: record.case_number || '',
+    auction_date: record.date || '',
+    opening_bid: record.amount || null,
+    assessed_value: record.amount || null,
+    source: source.type || 'Courthouse PDF',
+    source_type: source.type || 'PDF Record',
+    source_url: source.url || '',
+    source_pdf_url: source.pdf_url || source.url || '',
+    pdf_confidence: 'high',
+    violations: [source.type || 'Courthouse Record'],
+    evidence_snippets: record.address
+  }, source);
 
   return {
     address:        street.toUpperCase(),
@@ -167,15 +190,22 @@ function buildLead(record, source) {
     zip:            zip,
     owner_name:     record.owner || '',
     source:         source.type || 'Courthouse PDF',
+    source_url:     source.url || '',
+    source_record_url: normalized.source_record_url || null,
+    source_pdf_url: normalized.source_pdf_url || null,
+    source_confidence: normalized.source_confidence || null,
     source_details: source.market + ' — ' + (source.type || 'PDF Record'),
     case_number:    record.case_number || '',
     auction_date:   record.date || '',
+    days_to_auction: normalized.days_to_auction,
+    years_delinquent: normalized.years_delinquent,
     assessed_value: record.amount || null,
     motivation:     source.type || 'courthouse',
     violations:     [source.type || 'Courthouse Record'],
     county:         source.market || '',
     pdf_source:     true,
     pdf_source_url: source.url || '',
+    source_normalized: normalized,
   };
 }
 

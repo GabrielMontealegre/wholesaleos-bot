@@ -184,8 +184,15 @@ function normalizeAddressFields(raw, options) {
 function normalizeTimeline(raw, options) {
   raw = raw || {};
   options = options || {};
+  var auctionDate = normalizeDate(firstValue(raw.auction_date, raw.sale_date, raw.date, options.auction_date));
+  var daysToAuction = asNumber(firstValue(raw.days_to_auction, options.days_to_auction));
+  if (daysToAuction === null && auctionDate) {
+    var d = new Date(auctionDate);
+    if (!isNaN(d.getTime())) daysToAuction = Math.ceil((d.getTime() - Date.now()) / 86400000);
+  }
   return {
-    auction_date: normalizeDate(firstValue(raw.auction_date, raw.sale_date, raw.date, options.auction_date)),
+    auction_date: auctionDate,
+    days_to_auction: daysToAuction,
     opening_bid: asNumber(firstValue(raw.opening_bid, raw.bid, raw.amount, options.opening_bid)),
     tax_due: asNumber(firstValue(raw.tax_due, raw.tax_amount, raw.amount_due, options.tax_due)),
     years_delinquent: asNumber(firstValue(raw.years_delinquent, raw.tax_years, options.years_delinquent)),
@@ -265,6 +272,7 @@ function normalizeSourcePayload(raw, options) {
     parcel: asString(firstValue(raw.parcel, raw.apn, raw.APN, raw.parcel_number, options.parcel)),
     case_number: asString(firstValue(raw.case_number, raw.case, raw.case_no, raw.record_id, options.case_number)),
     auction_date: timeline.auction_date,
+    days_to_auction: timeline.days_to_auction,
     opening_bid: timeline.opening_bid,
     tax_due: timeline.tax_due,
     years_delinquent: timeline.years_delinquent,

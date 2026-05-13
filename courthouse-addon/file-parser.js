@@ -1,6 +1,32 @@
 'use strict';
 const path = require('path');
 const fs   = require('fs');
+const LeadFormatter = require('./lead-formatter');
+
+function normalizeDownloadableRecord(record, src, sourceKind) {
+  record = record || {};
+  src = src || {};
+  return LeadFormatter.normalizeCourthousePdfPayload(Object.assign({}, record, {
+    source_kind: sourceKind,
+    source: record.source || 'courthouse',
+    source_url: record.source_url || src.url || null,
+    source_pdf_url: record.source_pdf_url || record.pdf_source_url || (sourceKind === 'pdf' ? (src.url || null) : null),
+    source_type: record.source_type || src.type || 'Courthouse Record',
+    source_confidence: record.source_confidence || record.pdf_confidence || null
+  }), src);
+}
+
+function withNormalized(record, src, sourceKind) {
+  record.source_normalized = normalizeDownloadableRecord(record, src, sourceKind);
+  record.source_confidence = record.source_normalized.source_confidence || record.source_confidence || null;
+  record.source_url = record.source_normalized.source_url || record.source_url || null;
+  record.source_record_url = record.source_normalized.source_record_url || record.source_record_url || null;
+  record.source_pdf_url = record.source_normalized.source_pdf_url || record.source_pdf_url || null;
+  record.auction_date = record.source_normalized.auction_date || record.auction_date || null;
+  record.days_to_auction = record.source_normalized.days_to_auction;
+  record.years_delinquent = record.source_normalized.years_delinquent;
+  return record;
+}
 
 class FileParser {
   async parse(filePath, src) {
@@ -28,7 +54,7 @@ class FileParser {
       var text = data.text || '';
       if (text.trim().length < 50) {
         // Likely scanned image — store PDF ref, mark for OCR
-        records.push({
+        records.push(withNormalized({
           address: '',
           city: src.market ? src.market.split(',')[0].trim() : '',
           state: src.state,
@@ -38,7 +64,7 @@ class FileParser {
           pdf_confidence: 'scanned_image',
           source_type: src.type,
           needs_ocr: true
-        });
+        }, src, 'pdf'));
         return records;
       }
       confidence = 'high';
@@ -49,7 +75,7 @@ class FileParser {
       lines.forEach(function(line) {
         var addrMatch = line.match(addrPattern);
         if (addrMatch) {
-          if (currentRecord.address) records.push(Object.assign({}, currentRecord));
+          if (currentRecord.address) records.push(withNormalized(Object.assign({}, currentRecord), src, 'pdf'));
           currentRecord = {
             address: addrMatch[0].trim(),
             city: src.market ? src.market.split(',')[0].trim() : '',
@@ -74,11 +100,11 @@ class FileParser {
           if (dateMatch && !currentRecord.filed_date) currentRecord.filed_date = dateMatch[0];
         }
       });
-      if (currentRecord.address) records.push(currentRecord);
+      if (currentRecord.address) records.push(withNormalized(currentRecord, src, 'pdf'));
     } catch(e) {
       console.error('[file-parser] PDF error: ' + e.message);
       // Always store the file path for Google Drive upload even if parse fails
-      records.push({
+      records.push(withNormalized({
         address: '',
         state: src.state,
         county: src.market,
@@ -86,7 +112,7 @@ class FileParser {
         pdf_confidence: 'parse_failed',
         source_type: src.type,
         parse_error: e.message
-      });
+      }, src, 'pdf'));
     }
     return records;
   }
@@ -104,7 +130,7 @@ class FileParser {
         headers.forEach(function(h, i){ row[h] = (cols[i]||'').trim(); });
         var addr = row.address || row.site_address || row.property_address || row.situs || '';
         if (!addr) return;
-        records.push({
+        records.push(withNormalized({
           address:    addr,
           city:       row.city || src.market.split(',')[0].trim(),
           state:      row.state || src.state,
@@ -116,7 +142,7 @@ class FileParser {
           case_number: row.case || row.case_number || row.record_id || '',
           source_type: src.type,
           pdf_confidence: 'csv_direct'
-        });
+        }, src, 'csv'));
       });
     } catch(e) {
       console.error('[file-parser] CSV error: ' + e.message);
@@ -134,7 +160,7 @@ class FileParser {
       rows.forEach(function(row) {
         var addr = row['Address'] || row['Site Address'] || row['Property Address'] || row['Situs'] || row['address'] || '';
         if (!addr) return;
-        records.push({
+        records.push(withNormalized({
           address:    String(addr).trim(),
           city:       String(row['City'] || row['city'] || src.market.split(',')[0].trim()),
           state:      String(row['State'] || row['state'] || src.state),
@@ -146,7 +172,7 @@ class FileParser {
           case_number: String(row['Case #'] || row['Case Number'] || row['Record ID'] || ''),
           source_type: src.type,
           pdf_confidence: 'excel_direct'
-        });
+        }, src, 'csv'));
       });
     } catch(e) {
       console.error('[file-parser] Excel error: ' + e.message);
@@ -160,7 +186,7 @@ class FileParser {
       var rows = Array.isArray(data) ? data : (data.features || data.records || data.data || []);
       return rows.map(function(r) {
         var props = r.properties || r.attributes || r;
-        return {
+        return withNormalized({
           address:    String(props.address || props.Address || props.ADDRESS || ''),
           city:       String(props.city || props.City || src.market.split(',')[0].trim()),
           state:      String(props.state || props.State || src.state),
@@ -169,7 +195,7 @@ class FileParser {
           owner_name: String(props.owner || props.Owner || props.owner_name || ''),
           source_type: src.type,
           pdf_confidence: 'json_direct'
-        };
+        }, src, 'json');
       }).filter(function(r){ return r.address; });
     } catch(e) {
       console.error('[file-parser] JSON error: ' + e.message);
