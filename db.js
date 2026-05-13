@@ -467,13 +467,85 @@ function computeDaysToAuction(auctionDate) {
   return Math.ceil((d.getTime() - Date.now()) / 86400000);
 }
 
+function firstPresent() {
+  for (var i = 0; i < arguments.length; i++) {
+    var value = arguments[i];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return null;
+}
+
+function asTimelineNumber(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'number') return isFinite(value) ? value : null;
+  var cleaned = String(value).replace(/[$,\s]/g, '');
+  if (!cleaned) return null;
+  var parsed = Number(cleaned);
+  return isFinite(parsed) ? parsed : null;
+}
+
+function collectLeadTimeline(lead) {
+  lead = lead || {};
+  var sourceNormalized = lead.source_normalized || {};
+  var sourceTimeline = sourceNormalized.timeline || {};
+  var courthouse = lead._courthouse_metadata || {};
+
+  var auctionDate = firstPresent(
+    lead.auction_date,
+    sourceNormalized.auction_date,
+    sourceTimeline.auction_date,
+    courthouse.auction_date
+  );
+  var explicitDaysToAuction = firstPresent(
+    lead.days_to_auction,
+    sourceNormalized.days_to_auction,
+    sourceTimeline.days_to_auction,
+    courthouse.days_to_auction
+  );
+  var daysToAuction = asTimelineNumber(explicitDaysToAuction);
+  if (daysToAuction === null) daysToAuction = computeDaysToAuction(auctionDate);
+
+  return {
+    auction_date: auctionDate || null,
+    days_to_auction: daysToAuction,
+    years_delinquent: asTimelineNumber(firstPresent(
+      lead.years_delinquent,
+      sourceNormalized.years_delinquent,
+      sourceTimeline.years_delinquent,
+      courthouse.years_delinquent
+    )),
+    tax_due: asTimelineNumber(firstPresent(
+      lead.tax_due,
+      sourceNormalized.tax_due,
+      sourceTimeline.tax_due,
+      courthouse.tax_due
+    )),
+    lien_amount: asTimelineNumber(firstPresent(
+      lead.lien_amount,
+      sourceNormalized.lien_amount,
+      sourceTimeline.lien_amount,
+      courthouse.lien_amount
+    )),
+    opening_bid: asTimelineNumber(firstPresent(
+      lead.opening_bid,
+      sourceNormalized.opening_bid,
+      sourceTimeline.opening_bid,
+      courthouse.opening_bid
+    )),
+    last_activity: lead.last_activity || null,
+    last_contact_attempt: lead.last_contact_attempt || null,
+    last_status_change: lead.last_status_change || null
+  };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
   var score = typeof lead.distress_score === 'number'
     ? lead.distress_score
     : (typeof lead.motivation_score === 'number' ? lead.motivation_score : 0);
-  var daysToAuction = computeDaysToAuction(lead.auction_date);
+  var timeline = collectLeadTimeline(lead);
+  var daysToAuction = timeline.days_to_auction;
   var reasons = asArray(lead.good_deal_reasons).filter(Boolean).map(function(r) { return String(r); });
   var summary = lead.why_good_deal || reasons.join('. ');
   if (!summary) {
@@ -484,9 +556,18 @@ function computeLeadIntelligence(lead) {
 
   var urgencyLevel = 'low';
   var urgencyReason = 'insufficient_urgent_signal';
-  if (daysToAuction != null && daysToAuction >= 0 && daysToAuction <= 30) {
+  if (daysToAuction != null && daysToAuction >= 0) {
     urgencyLevel = 'high';
-    urgencyReason = 'auction_date_within_30_days';
+    urgencyReason = 'auction_in_' + daysToAuction + '_days';
+  } else if (daysToAuction != null && daysToAuction < 0) {
+    urgencyLevel = 'high';
+    urgencyReason = 'auction_past_due';
+  } else if (timeline.years_delinquent != null) {
+    urgencyLevel = 'high';
+    urgencyReason = 'tax_delinquent_' + timeline.years_delinquent + '_years';
+  } else if (timeline.lien_amount != null) {
+    urgencyLevel = 'high';
+    urgencyReason = 'lien_amount_present';
   } else if (score >= 70 || cause === 'foreclosure') {
     urgencyLevel = 'high';
     urgencyReason = score >= 70 ? 'high_distress_score' : 'foreclosure_signal';
@@ -525,14 +606,7 @@ function computeLeadIntelligence(lead) {
     distress_cause: cause,
     urgency_level: urgencyLevel,
     urgency_reason: urgencyReason,
-    timeline: {
-      auction_date: lead.auction_date || null,
-      days_to_auction: daysToAuction,
-      years_delinquent: lead.years_delinquent || null,
-      last_activity: lead.last_activity || null,
-      last_contact_attempt: lead.last_contact_attempt || null,
-      last_status_change: lead.last_status_change || null
-    },
+    timeline: timeline,
     evidence: {
       distress_types: canonicalizeDistressTypes(lead.distress_types),
       distress_score: typeof lead.distress_score === 'number' ? lead.distress_score : null,
