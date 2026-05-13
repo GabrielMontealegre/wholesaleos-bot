@@ -150,8 +150,8 @@ tr.selected td{background:#f0f6ff}
 
 /* ── Modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000;display:none}
-.modal{background:#fff;border-radius:16px;padding:24px;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
-.modal-title{font-size:17px;font-weight:700;color:#1d1d1f;margin-bottom:16px}
+.modal{background:#101827;color:#f8fafc;border:1px solid #d4af37;border-radius:16px;padding:24px;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal-title{font-size:17px;font-weight:700;color:#f7d774;margin-bottom:16px}
 .modal-close{position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:50%;background:#f5f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-group{display:flex;flex-direction:column;gap:4px}
@@ -161,6 +161,16 @@ tr.selected td{background:#f0f6ff}
 .form-select{background:#f5f5f7;border:none;border-radius:8px;padding:9px 12px;color:#1d1d1f;outline:none}
 .form-textarea{background:#f5f5f7;border:none;border-radius:8px;padding:9px 12px;color:#1d1d1f;outline:none;resize:vertical;min-height:80px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid #f2f2f7}
+.modal .btn-outline{background:#16233a;color:#f8fafc;border-color:#d4af37}
+.modal .btn-outline:hover{background:#d4af37;color:#101827;border-color:#f7d774}
+.modal .btn-dark{background:#d4af37;color:#101827}
+.modal .btn-dark:hover{background:#f7d774;color:#101827}
+.modal .btn-blue{background:#1e63b6;color:#fff}
+.modal .form-label,.modal .section-title{color:#f7d774}
+.modal .form-input,.modal .form-select,.modal .form-textarea{background:#0b1220;color:#f8fafc;border:1px solid #2b3b58}
+.modal .form-input:focus,.modal .form-select:focus,.modal .form-textarea:focus{background:#111d33;border-color:#d4af37}
+.modal .detail-panel,.modal .seller-card,.modal .buyer-match-card,.modal .detail-metric{color:#1d1d1f}
+.modal [style*="background:#fff"],.modal [style*="background: #fff"],.modal [style*="background:#f5f5f7"],.modal [style*="background: #f5f5f7"],.modal [style*="background:#f8fafc"],.modal [style*="background: #f8fafc"],.modal [style*="background:#f9fafb"],.modal [style*="background: #f9fafb"]{color:#1d1d1f}
 
 /* ── Pipeline View ── */
 .pipeline-view{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;height:calc(100vh - 180px)}
@@ -738,6 +748,7 @@ function render() {
   };
   document.getElementById('content').innerHTML = (renders[APP.page] || renderDashboard)();
   addListeners();
+  if (typeof syncLeadToolbarVisibility === 'function') syncLeadToolbarVisibility();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -14469,6 +14480,7 @@ window.runPullLeads=function(){
 };
 var fb=document.createElement("button");fb.id="openPLBtn";fb.textContent="Pull Leads Now";
 fb.style.cssText="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;color:#fff;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;position:fixed;bottom:28px;right:28px;z-index:9998;box-shadow:0 4px 20px rgba(124,58,237,.6);";
+fb.style.display=(typeof APP!=="undefined"&&APP.page==="leads")?"":"none";
 fb.onclick=function(){var m=document.getElementById("plModal");if(m)m.style.display="flex";};
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){document.body.appendChild(fb);});}
 else{document.body.appendChild(fb);}
@@ -14533,6 +14545,11 @@ var deleteBar = "<div id='bulkDeleteBar' style='display:none;padding:8px 16px;ba
 "<span id='deleteStatus' style='font-size:12px;color:#6b7280;'></span>" +
 "</div>";
 function injectFilterBars(){
+  if (!isLeadToolbarPage()) {
+    removeLeadToolbar();
+    return;
+  }
+  if (document.getElementById("leadFilterBar") || document.getElementById("bulkDeleteBar") || document.getElementById("wosFilterToggleBar")) return;
   var leadsSection = document.querySelector(".leads-header, #leadsHeader, .tab-header");
   var leadTable = document.querySelector("table, .leads-table, #leadsTable");
   var target = leadsSection || (leadTable && leadTable.parentElement);
@@ -14550,6 +14567,8 @@ function injectFilterBars(){
   }
 }
 function addToolbarButtons(){
+  if (!isLeadToolbarPage()) return;
+  if (document.getElementById("wosFilterToggleBar")) return;
   var toolbar = document.querySelector(".toolbar, .leads-toolbar, #leadsToolbar, .tab-toolbar, .action-bar");
   if(!toolbar){
     var floatBar = document.createElement("div");
@@ -14567,6 +14586,26 @@ function filterToggleBtns(){
   return "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
     "<button onclick='toggleBulkDelete()' style='font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;cursor:pointer;font-weight:600;'>Bulk Delete</button>";
 }
+function isLeadToolbarPage(){
+  return typeof APP !== "undefined" && APP.page === "leads";
+}
+function removeLeadToolbar(){
+  ["leadFilterBar","bulkDeleteBar","wosFilterToggleBar"].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  var pullBtn = document.getElementById("openPLBtn");
+  if (pullBtn) pullBtn.style.display = "none";
+}
+window.syncLeadToolbarVisibility = function(){
+  var pullBtn = document.getElementById("openPLBtn");
+  if (!isLeadToolbarPage()) {
+    removeLeadToolbar();
+    return;
+  }
+  if (pullBtn) pullBtn.style.display = "";
+  setTimeout(injectFilterBars, 0);
+};
 window.toggleFilterBar = function(){
   var fb = document.getElementById("leadFilterBar");
   if(fb) fb.style.display = fb.style.display==="none"?"flex":"none";
