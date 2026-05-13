@@ -13108,6 +13108,7 @@ function renderLeads() {
   }).join('');
 
   return '<div>'+
+    (typeof window.renderLeadActionToolbar === 'function' ? window.renderLeadActionToolbar() : '')+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+
       tabs+
       '<div style="margin-left:auto;display:flex;gap:8px">'+
@@ -14549,43 +14550,28 @@ function injectFilterBars(){
     removeLeadToolbar();
     return;
   }
-  if (document.getElementById("leadFilterBar") || document.getElementById("bulkDeleteBar") || document.getElementById("wosFilterToggleBar")) return;
-  var leadsSection = document.querySelector(".leads-header, #leadsHeader, .tab-header");
-  var leadTable = document.querySelector("table, .leads-table, #leadsTable");
-  var target = leadsSection || (leadTable && leadTable.parentElement);
-  if(!target && leadTable) target = leadTable;
-  if(!target){
-    var tables = document.querySelectorAll("table");
-    if(tables.length) target = tables[0];
-  }
-  if(target){
-    var fb = document.createElement("div"); fb.innerHTML = filterBar;
-    var db = document.createElement("div"); db.innerHTML = deleteBar;
-    target.parentNode.insertBefore(db.firstChild, target);
-    target.parentNode.insertBefore(fb.firstChild, target);
-    addToolbarButtons();
-  }
+  if (!document.getElementById("wosFilterToggleBar") && typeof render === "function") render();
 }
 function addToolbarButtons(){
-  if (!isLeadToolbarPage()) return;
-  if (document.getElementById("wosFilterToggleBar")) return;
-  var toolbar = document.querySelector(".toolbar, .leads-toolbar, #leadsToolbar, .tab-toolbar, .action-bar");
-  if(!toolbar){
-    var floatBar = document.createElement("div");
-    floatBar.id = "wosFilterToggleBar";
-    floatBar.style.cssText = "position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;";
-    floatBar.innerHTML = filterToggleBtns();
-    var content = document.querySelector(".content, #mainContent, main, .main-content");
-    if(content) content.insertBefore(floatBar, content.firstChild);
-    else document.body.insertBefore(floatBar, document.body.firstChild);
-  } else {
-    toolbar.insertAdjacentHTML("beforeend", filterToggleBtns());
-  }
+  if (!isLeadToolbarPage()) removeLeadToolbar();
 }
 function filterToggleBtns(){
-  return "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+  return "<button onclick='openPullLeadsToolbar()' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
+    "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
     "<button onclick='toggleBulkDelete()' style='font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;cursor:pointer;font-weight:600;'>Bulk Delete</button>";
 }
+function leadToolbarButton(label, calls, style){
+  return "<button onclick='runLeadToolbarAction("+JSON.stringify(calls)+")' style='font-size:12px;padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-weight:600;"+style+"'>"+label+"</button>";
+}
+window.renderLeadActionToolbar = function(){
+  if (!isLeadToolbarPage()) return "";
+  return "<div id='wosFilterToggleBar' style='position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;'>" +
+    filterToggleBtns() +
+    leadToolbarButton("Re-analyze Comps", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#eef2ff;color:#3730a3;") +
+    leadToolbarButton("Score All Leads", ["scoreAllLeads","runLeadScoring","scoreLeads"], "background:#ecfdf5;color:#047857;") +
+    leadToolbarButton("Run Courthouse", ["runCourthouse","openCourthouse","runCourthouseSearch","openCourthouseTab"], "background:#fffbeb;color:#92400e;") +
+    "</div>" + filterBar + deleteBar;
+};
 function isLeadToolbarPage(){
   return typeof APP !== "undefined" && APP.page === "leads";
 }
@@ -14603,8 +14589,18 @@ window.syncLeadToolbarVisibility = function(){
     removeLeadToolbar();
     return;
   }
-  if (pullBtn) pullBtn.style.display = "";
-  setTimeout(injectFilterBars, 0);
+  if (pullBtn) pullBtn.style.display = "none";
+};
+window.openPullLeadsToolbar = function(){
+  var m = document.getElementById("plModal");
+  if (m) m.style.display = "flex";
+};
+window.runLeadToolbarAction = function(calls){
+  for (var i=0;i<calls.length;i++){
+    var fn = window[calls[i]];
+    if (typeof fn === "function") return fn();
+  }
+  if (typeof toast === "function") toast("Action unavailable", "error");
 };
 window.toggleFilterBar = function(){
   var fb = document.getElementById("leadFilterBar");
