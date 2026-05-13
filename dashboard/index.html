@@ -2482,7 +2482,7 @@ function openAddBuyer() {
     </div>`);
 }
 
-function saveBuyer() {
+async function saveBuyer() {
   const g = id => (document.getElementById(id)||{}).value||'';
   const name = g('mb-name');
   if (!name.trim()) { showToastMsg('Name is required','error'); return; }
@@ -2497,19 +2497,20 @@ function saveBuyer() {
     rehab: g('mb-rehab'), notes: g('mb-notes'),
     status: 'Active', closings: 0, score: 75
   };
-  // POST to persistent API
-  fetch('/api/buyers', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json','x-user-id': window._uid||'admin'},
-    body: JSON.stringify(buyer)
-  }).then(r=>r.json()).then(function(data) {
-    if (data.id) { showToastMsg('Buyer saved: '+name,'success'); }
-    else { showToastMsg('API error: '+(data.error||'unknown'),'error'); }
-  }).catch(function(e){ showToastMsg('Save error: '+e.message,'error'); });
-  APP.buyers.push(buyer);
-  save('buyers', APP.buyers);
-  closeModal();
-  render();
+  try {
+    const res = await fetch('/api/buyers', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-user-id': window._uid||'admin'},
+      body: JSON.stringify(buyer)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.error || !data.id) throw new Error(data.error || 'Buyer save failed');
+    APP.buyers.push(data);
+    closeModal();
+    render();
+    showToastMsg('Buyer saved: '+name,'success');
+    showToastMsg('Save error: '+e.message,'error');
+  }
 }
 
 function openAddEvent(date) {
@@ -2933,9 +2934,19 @@ async function saveAssignment() {
       return;
     }
   }
-  APP.assignments.push(asgn);
-  save('assignments',APP.assignments);
-  closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
+  try {
+    const res = await fetch('/api/assignments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(asgn)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.error || !data.id) throw new Error(data.error || 'Assignment save failed');
+    APP.assignments.push(data);
+    closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
+  } catch(e) {
+    toast('Assignment save failed: '+e.message,'error');
+  }
 }
 
 function saveSettings() { toast('Settings saved','success'); }
@@ -8154,22 +8165,36 @@ function openAddBuyer() {
     </div>`);
 }
 
-function saveBuyer() {
+async function saveBuyer() {
   const g = id => document.getElementById(id)?.value || '';
+  const name = g('mb-name');
+  if (!name.trim()) { toast('Name is required','error'); return; }
   const buyer = {
     id: 'B' + Date.now(),
-    name: g('mb-name'), type: g('mb-type'), contact: g('mb-contact'),
+    name: name, type: g('mb-type'), contact: g('mb-contact'),
     phone: g('mb-phone'), email: g('mb-email'), website: g('mb-website'),
     minARV: parseInt(g('mb-min'))||0, maxPrice: parseInt(g('mb-max'))||0,
-    markets: g('mb-markets').split(',').map(m=>m.trim()),
+    max_price: parseInt(g('mb-max'))||0,
+    min_distress_score: parseInt(g('mb-distress'))||0,
+    markets: g('mb-markets').split(',').map(m=>m.trim()).filter(Boolean),
     rehab: g('mb-rehab'), notes: g('mb-notes'),
     status: 'Active', closings: 0, score: 75
   };
-  APP.buyers.push(buyer);
-  save('buyers', APP.buyers);
-  closeModal();
-  render();
-  toast('Buyer added to database', 'success');
+  try {
+    const res = await fetch('/api/buyers', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-user-id': window._uid||'admin'},
+      body: JSON.stringify(buyer)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.error || !data.id) throw new Error(data.error || 'Buyer save failed');
+    APP.buyers.push(data);
+    closeModal();
+    render();
+    toast('Buyer saved: '+name, 'success');
+  } catch(e) {
+    toast('Save error: '+e.message,'error');
+  }
 }
 
 function openAddEvent(date) {
@@ -8585,9 +8610,19 @@ async function saveAssignment() {
       return;
     }
   }
-  APP.assignments.push(asgn);
-  save('assignments',APP.assignments);
-  closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
+  try {
+    const res = await fetch('/api/assignments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(asgn)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || data.error || !data.id) throw new Error(data.error || 'Assignment save failed');
+    APP.assignments.push(data);
+    closeModal(); render(); updateSidebarStats(); toast('Assignment created','success');
+  } catch(e) {
+    toast('Assignment save failed: '+e.message,'error');
+  }
 }
 
 function saveSettings() { toast('Settings saved','success'); }
