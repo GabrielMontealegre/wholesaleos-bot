@@ -14544,14 +14544,10 @@ var deleteBar = "<div id='bulkDeleteBar' style='display:none;padding:8px 16px;ba
 "<span id='deleteStatus' style='font-size:12px;color:#6b7280;'></span>" +
 "</div>";
 function injectFilterBars(){
-  if (!isLeadToolbarPage()) {
-    removeLeadToolbar();
-    return;
-  }
-  if (!document.getElementById("wosFilterToggleBar") && typeof render === "function") render();
+  // Toolbar is rendered canonically by renderLeads().
 }
 function addToolbarButtons(){
-  if (!isLeadToolbarPage()) removeLeadToolbar();
+  // Toolbar is rendered canonically by renderLeads().
 }
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
@@ -14583,10 +14579,6 @@ function removeLeadToolbar(){
 }
 window.syncLeadToolbarVisibility = function(){
   var pullBtn = document.getElementById("openPLBtn");
-  if (!isLeadToolbarPage()) {
-    removeLeadToolbar();
-    return;
-  }
   if (pullBtn) pullBtn.style.display = "none";
 };
 window.openPullLeadsToolbar = function(){
