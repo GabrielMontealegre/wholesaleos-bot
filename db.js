@@ -2,6 +2,7 @@
 require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -512,6 +513,139 @@ function addEvent(evt) {
 }
 
 // ── Stats ───────────────────────────────────────────────
+// Operational event log (additive audit spine, not a source of truth)
+const MAX_OPERATIONAL_EVENTS = 5000;
+
+function stableStringify(value) {
+  if (value === null || value === undefined) return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+  if (typeof value === 'object') {
+    return '{' + Object.keys(value).sort().map(function(key) {
+      return JSON.stringify(key) + ':' + stableStringify(value[key]);
+    }).join(',') + '}';
+  }
+  return JSON.stringify(value);
+}
+
+function hashEventSeed(seed) {
+  return crypto.createHash('sha256').update(stableStringify(seed)).digest('hex').slice(0, 24);
+}
+
+function sanitizeEventPayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {};
+
+  var blockedKeys = {
+    html: true,
+    raw_html: true,
+    pdf: true,
+    raw_pdf: true,
+    pdf_text: true,
+    full_lead: true,
+    lead: true,
+    leads: true
+  };
+  var clean = {};
+
+  Object.keys(payload).forEach(function(key) {
+    if (blockedKeys[key]) return;
+    var value = payload[key];
+    if (value === undefined || typeof value === 'function') return;
+    if (typeof value === 'string' && value.length > 1000) {
+      clean[key] = value.slice(0, 1000);
+      return;
+    }
+    if (Array.isArray(value)) {
+      clean[key] = value.slice(0, 50).map(function(item) {
+        if (item && typeof item === 'object') return sanitizeEventPayload(item);
+        if (typeof item === 'string' && item.length > 500) return item.slice(0, 500);
+        return item;
+      });
+      return;
+    }
+    if (value && typeof value === 'object') {
+      clean[key] = sanitizeEventPayload(value);
+      return;
+    }
+    clean[key] = value;
+  });
+
+  return clean;
+}
+
+function normalizeEventEnvelope(event) {
+  var input = event || {};
+  var occurredAt = input.occurred_at || new Date().toISOString();
+  var normalized = {
+    event_id: input.event_id || null,
+    event_version: 'v1',
+    event_type: input.event_type || 'unknown_event',
+    category: input.category || 'system',
+    occurred_at: occurredAt,
+    entity: input.entity && typeof input.entity === 'object' ? input.entity : {},
+    actor: input.actor && typeof input.actor === 'object' ? input.actor : null,
+    source: input.source && typeof input.source === 'object' ? input.source : { system: 'wholesaleos' },
+    payload: sanitizeEventPayload(input.payload),
+    correlation_id: input.correlation_id || null,
+    causation_id: input.causation_id || null,
+    dedupe_key: input.dedupe_key || null,
+    severity: input.severity || 'info',
+    confidence: input.confidence || 'medium'
+  };
+
+  if (!normalized.event_id) {
+    normalized.event_id = 'evt_' + hashEventSeed({
+      event_type: normalized.event_type,
+      category: normalized.category,
+      occurred_at: normalized.occurred_at,
+      entity: normalized.entity,
+      payload: normalized.payload,
+      dedupe_key: normalized.dedupe_key
+    });
+  }
+
+  return normalized;
+}
+
+function appendEvent(event) {
+  var db = readDB();
+  if (!db.events) db.events = [];
+
+  var normalized = normalizeEventEnvelope(event);
+  if (normalized.dedupe_key) {
+    var existing = db.events.find(function(evt) {
+      return evt && evt.dedupe_key === normalized.dedupe_key;
+    });
+    if (existing) return existing;
+  }
+
+  db.events.push(normalized);
+  if (db.events.length > MAX_OPERATIONAL_EVENTS) {
+    db.events = db.events.slice(db.events.length - MAX_OPERATIONAL_EVENTS);
+  }
+  writeDB(db);
+  return normalized;
+}
+
+function getEvents(filters) {
+  var opts = filters || {};
+  var events = (readDB().events || []).slice();
+
+  if (opts.event_type) events = events.filter(function(evt) { return evt.event_type === opts.event_type; });
+  if (opts.category) events = events.filter(function(evt) { return evt.category === opts.category; });
+  if (opts.correlation_id) events = events.filter(function(evt) { return evt.correlation_id === opts.correlation_id; });
+  if (opts.entity_type) events = events.filter(function(evt) { return evt.entity && evt.entity.type === opts.entity_type; });
+  if (opts.entity_id) events = events.filter(function(evt) { return evt.entity && String(evt.entity.id) === String(opts.entity_id); });
+  if (opts.since) events = events.filter(function(evt) { return evt.occurred_at >= opts.since; });
+  if (opts.until) events = events.filter(function(evt) { return evt.occurred_at <= opts.until; });
+
+  events.sort(function(a, b) {
+    return new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime();
+  });
+
+  var limit = Math.max(0, Math.min(parseInt(opts.limit, 10) || 100, MAX_OPERATIONAL_EVENTS));
+  return events.slice(0, limit);
+}
+
 function getStats() {
   const db = readDB();
   const allLeads    = db.leads || [];
@@ -1126,7 +1260,7 @@ module.exports = {
   getScannedMarkets, addScannedMarket,
   getBuyers, addBuyer, matchBuyersToLead,
   getAssignments,
-  getUpcomingEvents, addEvent,
+  getUpcomingEvents, addEvent, appendEvent, getEvents,
   getStats,
   getSetting, setSetting,
   backfillDistress, backfillNormalizedAddress, normalizeAddress,
