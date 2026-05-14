@@ -4446,6 +4446,31 @@ app.post('/api/admin/test-ingest/cook-tax', requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/admin/test-ingest/wayne-tax
+// Tiny admin-only Wayne County tax foreclosure XLSX ingestion smoke test.
+app.post('/api/admin/test-ingest/wayne-tax', requireAdmin, async (req, res) => {
+  try {
+    const rawLimit = req.body && req.body.limit;
+    const parsedLimit = parseInt(rawLimit, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 3)
+      : 1;
+    const wayneTax = require('./modules/sources/wayne-tax');
+
+    if (!wayneTax.runWayneTaxTest) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Wayne County tax test helper is not available'
+      });
+    }
+
+    const result = await wayneTax.runWayneTaxTest(limit);
+    res.json(result);
+  } catch(e) {
+    res.status(502).json({ ok: false, error: e.message });
+  }
+});
+
 app.get('/api/admin/duplicates', requireAdmin, (req, res) => {
   try {
     const result = db.detectDuplicates();
