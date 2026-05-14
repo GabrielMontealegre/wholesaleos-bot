@@ -649,6 +649,92 @@ function computeSourceConfidence(lead, timeline, distressTypes) {
   };
 }
 
+function computeLeadPriorityTier(context) {
+  context = context || {};
+  var lead = context.lead || {};
+  var timeline = context.timeline || {};
+  var distressTypes = Array.isArray(context.distressTypes) ? context.distressTypes : [];
+  var sourceConfidence = context.sourceConfidence || {};
+  var sourceScore = typeof sourceConfidence.score === 'number' ? sourceConfidence.score : 0;
+  var sourceReasons = Array.isArray(sourceConfidence.reason) ? sourceConfidence.reason : [];
+  var distressScore = typeof context.distressScore === 'number' ? context.distressScore : 0;
+  var urgencyLevel = context.urgencyLevel || 'low';
+  var reasons = [];
+
+  function addPriorityReason(reason) {
+    if (reasons.indexOf(reason) === -1) reasons.push(reason);
+  }
+
+  var hardTimeline = timeline.days_to_auction != null || !!timeline.auction_date;
+  var moneyPressure = timeline.tax_due != null || timeline.lien_amount != null || timeline.opening_bid != null;
+  var hasOwner = !!lead.owner_name;
+  var hasContact = !!(lead.owner_phone || lead.owner_email || lead.phone || lead.email);
+  var hasParcel = !!firstPresent(
+    lead.parcel,
+    lead.parcel_number,
+    lead.apn,
+    lead.pin,
+    lead.tax_id,
+    lead.property_id,
+    (lead.source_normalized || {}).parcel
+  );
+  var multipleDistressSignals = distressTypes.length > 1;
+  var hasOfficialSource = sourceReasons.indexOf('official_source') > -1;
+  var hasSourceRecord = sourceReasons.indexOf('source_record_url_present') > -1;
+  var evidenceCompleteness = 0;
+
+  if (sourceScore >= 85) addPriorityReason('high_source_confidence');
+  else if (sourceScore >= 55) addPriorityReason('medium_source_confidence');
+  else if (sourceScore > 0) addPriorityReason('low_source_confidence');
+
+  if (hasOfficialSource) addPriorityReason('official_source');
+  if (urgencyLevel === 'high') addPriorityReason('high_urgency');
+  else if (urgencyLevel === 'medium') addPriorityReason('medium_urgency');
+  if (distressScore >= 70) addPriorityReason('high_distress_score');
+  else if (distressScore >= 40) addPriorityReason('medium_distress_score');
+  if (hardTimeline) addPriorityReason('timeline_present');
+  if (moneyPressure) addPriorityReason('money_pressure');
+  if (multipleDistressSignals) addPriorityReason('multiple_distress_signals');
+  if (hasParcel) addPriorityReason('parcel_present');
+  if (hasOwner) addPriorityReason('owner_present');
+  if (hasContact) addPriorityReason('contact_present');
+  if (hasSourceRecord) addPriorityReason('source_record_url_present');
+
+  if (sourceScore >= 55) evidenceCompleteness++;
+  if (hasParcel) evidenceCompleteness++;
+  if (moneyPressure) evidenceCompleteness++;
+  if (hardTimeline) evidenceCompleteness++;
+  if (hasOwner) evidenceCompleteness++;
+  if (hasSourceRecord) evidenceCompleteness++;
+  if (multipleDistressSignals) evidenceCompleteness++;
+
+  if (evidenceCompleteness >= 4) addPriorityReason('evidence_complete');
+  else if (evidenceCompleteness >= 2) addPriorityReason('partial_evidence');
+  else addPriorityReason('limited_evidence');
+
+  if (urgencyLevel === 'high' && sourceScore >= 85 && (hardTimeline || moneyPressure) && distressScore >= 70) {
+    return { tier: 'tier_5_act_now', label: 'Act Now', reasons: reasons };
+  }
+
+  if (
+    (sourceScore >= 85 && distressScore >= 60) ||
+    (urgencyLevel === 'high' && sourceScore >= 70) ||
+    (moneyPressure && sourceScore >= 75 && (multipleDistressSignals || distressScore >= 60))
+  ) {
+    return { tier: 'tier_4_high_priority', label: 'High Priority', reasons: reasons };
+  }
+
+  if (sourceScore >= 55 || distressScore >= 35 || urgencyLevel === 'medium' || multipleDistressSignals || evidenceCompleteness >= 2) {
+    return { tier: 'tier_3_review', label: 'Review', reasons: reasons };
+  }
+
+  if (sourceScore >= 35 || distressTypes.length > 0 || hasOfficialSource) {
+    return { tier: 'tier_2_monitor', label: 'Monitor', reasons: reasons };
+  }
+
+  return { tier: 'tier_1_low_priority', label: 'Low Priority', reasons: reasons };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
@@ -657,6 +743,7 @@ function computeLeadIntelligence(lead) {
     : (typeof lead.motivation_score === 'number' ? lead.motivation_score : 0);
   var timeline = collectLeadTimeline(lead);
   var daysToAuction = timeline.days_to_auction;
+  var distressTypes = canonicalizeDistressTypes(lead.distress_types);
   var reasons = asArray(lead.good_deal_reasons).filter(Boolean).map(function(r) { return String(r); });
   var summary = lead.why_good_deal || reasons.join('. ');
   if (!summary) {
@@ -710,9 +797,17 @@ function computeLeadIntelligence(lead) {
   var confidence = 'low';
   if (hasUrl && signalCount >= 2 && (lead.owner_name || hasContact)) confidence = 'high';
   else if (signalCount >= 2 || (hasUrl && signalCount >= 1)) confidence = 'medium';
-  var sourceConfidence = computeSourceConfidence(lead, timeline, canonicalizeDistressTypes(lead.distress_types));
+  var sourceConfidence = computeSourceConfidence(lead, timeline, distressTypes);
   if (sourceConfidence.score >= 85) confidence = 'high';
   else if (sourceConfidence.score >= 55 && confidence === 'low') confidence = 'medium';
+  var priority = computeLeadPriorityTier({
+    lead: lead,
+    timeline: timeline,
+    distressTypes: distressTypes,
+    distressScore: score,
+    urgencyLevel: urgencyLevel,
+    sourceConfidence: sourceConfidence
+  });
 
   return {
     intelligence_version: 'v1',
@@ -722,7 +817,7 @@ function computeLeadIntelligence(lead) {
     urgency_reason: urgencyReason,
     timeline: timeline,
     evidence: {
-      distress_types: canonicalizeDistressTypes(lead.distress_types),
+      distress_types: distressTypes,
       distress_score: typeof lead.distress_score === 'number' ? lead.distress_score : null,
       source: lead.source || null,
       source_details: lead.source_details || null,
@@ -743,6 +838,9 @@ function computeLeadIntelligence(lead) {
     recommended_next_action: recommended,
     source_confidence_score: sourceConfidence.score,
     source_confidence_reason: sourceConfidence.reason,
+    priority_tier: priority.tier,
+    priority_label: priority.label,
+    priority_reasons: priority.reasons,
     confidence: confidence
   };
 }
