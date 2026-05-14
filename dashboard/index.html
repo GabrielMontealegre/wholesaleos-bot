@@ -819,6 +819,12 @@ function renderManualDealAnalyzer() {
           <div style="font-size:13px;font-weight:800;color:#f4c542">Deal Math</div>
           <div id="mda-next-action" style="font-size:10px;font-weight:800;color:#101827;background:#f4c542;border-radius:20px;padding:4px 9px">Enter deal details</div>
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <button onclick="mdaCopy('offer')" style="background:#f4c542;color:#101827;border:0;border-radius:7px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer">Copy Offer Summary</button>
+          <button onclick="mdaCopy('questions')" style="background:#1e2d4a;color:#e2e8f0;border:1px solid #334155;border-radius:7px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer">Copy Seller Questions</button>
+          <button onclick="mdaCopy('snapshot')" style="background:#1e2d4a;color:#e2e8f0;border:1px solid #334155;border-radius:7px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer">Copy Deal Snapshot</button>
+          <span id="mda-copy-status" style="font-size:10px;color:#94a3b8;align-self:center"></span>
+        </div>
         <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;margin-bottom:10px">
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade</div><div id="mda-deal-grade" style="font-size:28px;font-weight:900;color:#94a3b8;line-height:1">-</div></div>
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade Reason</div><div id="mda-deal-grade-reason" style="font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45">Enter deal details to grade.</div></div>
@@ -900,6 +906,86 @@ function mdaSetGuide(id, sections) {
     return '<div style="margin-bottom:8px"><div style="color:#f4c542;font-weight:800;text-transform:uppercase;font-size:9px;margin-bottom:3px">' + section.title + '</div>' +
       section.items.map(function(item) { return '<div style="margin-bottom:3px">- ' + item + '</div>'; }).join('') + '</div>';
   }).join('');
+}
+
+var MDA_LAST_COPY = null;
+
+function mdaCleanList(items, emptyText) {
+  return items && items.length ? items.slice() : [emptyText];
+}
+
+function mdaGuideToText(sections) {
+  return sections.map(function(section) {
+    return section.title + '\n' + section.items.map(function(item) { return '- ' + item; }).join('\n');
+  }).join('\n\n');
+}
+
+function mdaBuildCopyText(type) {
+  var d = MDA_LAST_COPY || {};
+  if (type === 'questions') {
+    return 'SELLER QUESTIONS / CALL GUIDE\n\n' + mdaGuideToText(d.callGuideSections || []);
+  }
+  if (type === 'snapshot') {
+    return [
+      'DEAL SNAPSHOT',
+      'Source/address: ' + (d.source || 'Not entered'),
+      'Distress/context: ' + (d.distress || 'Not entered'),
+      'Deal grade: ' + (d.dealGrade || '-'),
+      'Weaknesses: ' + mdaCleanList(d.weaknesses, 'No major deal weaknesses.').join('; '),
+      'Comp confidence: ' + (d.compConfidence || 'Incomplete'),
+      'ARV range: ' + (d.arvRange || 'No comps yet'),
+      'Taxes/liens: ' + (d.taxes ? mdaMoney(d.taxes) : 'Not entered'),
+      'Opening bid: ' + (d.openingBid ? mdaMoney(d.openingBid) : 'Not entered'),
+      'Repair estimate: ' + (d.repairs ? mdaMoney(d.repairs) : 'Not entered'),
+      'Offer strategy: first ' + (d.firstOffer ? mdaMoney(d.firstOffer) : '-') + ', target ' + (d.targetOffer ? mdaMoney(d.targetOffer) : '-') + ', walkaway ' + (d.walkawayPrice ? mdaMoney(d.walkawayPrice) : '-'),
+      'Offer notes: ' + mdaCleanList(d.negotiationNotes, 'No offer guidance yet.').join('; ')
+    ].join('\n');
+  }
+  return [
+    'OFFER SUMMARY',
+    'Source/address: ' + (d.source || 'Not entered'),
+    'Deal grade: ' + (d.dealGrade || '-') + ' - ' + (d.dealGradeReason || ''),
+    'Suggested first offer: ' + (d.firstOffer ? mdaMoney(d.firstOffer) : '-'),
+    'Target offer: ' + (d.targetOffer ? mdaMoney(d.targetOffer) : '-'),
+    'Walkaway price: ' + (d.walkawayPrice ? mdaMoney(d.walkawayPrice) : '-'),
+    'MAO: ' + (d.mao ? mdaMoney(d.mao) : '-'),
+    'Spread: ' + (d.spread ? mdaMoney(d.spread) : '-'),
+    'Major risks: ' + mdaCleanList(d.risks, 'No major risk flags.').join('; '),
+    'Next step: ' + (d.nextAction || 'Enter deal details'),
+    'Offer notes: ' + mdaCleanList(d.negotiationNotes, 'No offer guidance yet.').join('; ')
+  ].join('\n');
+}
+
+function mdaCopy(type) {
+  updateManualDealAnalyzer();
+  var text = mdaBuildCopyText(type);
+  var status = document.getElementById('mda-copy-status');
+  function setStatus(message) {
+    if (!status) return;
+    status.textContent = message;
+    setTimeout(function() {
+      if (status.textContent === message) status.textContent = '';
+    }, 1800);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { setStatus('Copied'); }).catch(function() { mdaCopyFallback(text, setStatus); });
+  } else {
+    mdaCopyFallback(text, setStatus);
+  }
+}
+
+function mdaCopyFallback(text, setStatus) {
+  var textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', 'readonly');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  var ok = false;
+  try { ok = document.execCommand && document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(textarea);
+  setStatus(ok ? 'Copied' : 'Copy unavailable');
 }
 
 function mdaCompValues() {
@@ -1217,6 +1303,28 @@ function updateManualDealAnalyzer() {
       ]
     }
   ];
+
+  MDA_LAST_COPY = {
+    source: mdaRaw('mda-source'),
+    distress: mdaRaw('mda-distress'),
+    dealGrade: dealGrade,
+    dealGradeReason: dealGradeReason,
+    firstOffer: firstOffer,
+    targetOffer: targetOffer,
+    walkawayPrice: walkawayPrice,
+    mao: mao,
+    spread: spread,
+    risks: risks,
+    nextAction: nextAction,
+    negotiationNotes: negotiationNotes,
+    callGuideSections: callGuideSections,
+    weaknesses: weaknesses,
+    compConfidence: compStats.confidence + (compStats.count ? ' | ' + compStats.countQuality : ''),
+    arvRange: compStats.suggestedArv ? mdaMoney(compStats.rangeLow) + ' - ' + mdaMoney(compStats.rangeHigh) + (manualArv ? ' suggested range' : ' used for ARV') : 'No comps yet',
+    taxes: taxes,
+    openingBid: openingBid,
+    repairs: repairs
+  };
 
   mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
   mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
