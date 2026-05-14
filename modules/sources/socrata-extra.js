@@ -442,6 +442,92 @@ async function fetchSocrataSource(source, maxRecords) {
   return leads;
 }
 
+function clampCookCountyTaxLimit(limit) {
+  var parsed = parseInt(limit, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.min(parsed, 3);
+}
+
+function getCookCountyTaxSource() {
+  return SOCRATA_SOURCES.find(function(source) {
+    return isCookCountyTaxSource(source);
+  }) || null;
+}
+
+function getSavedLeadById(id) {
+  if (!id || !db.getLeads) return null;
+  return db.getLeads().find(function(lead) {
+    return lead && lead.id === id;
+  }) || null;
+}
+
+async function fetchCookCountyTaxLeads(limit) {
+  var requested = clampCookCountyTaxLimit(limit);
+  var source = getCookCountyTaxSource();
+  if (!source) throw new Error('Cook County tax delinquency source is not configured');
+
+  var url = sourceApiUrl(source) + '?$limit=' + requested;
+  var res = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+    timeout: 15000
+  });
+
+  if (!res.ok) {
+    throw new Error('Cook County tax fetch failed: HTTP ' + res.status);
+  }
+
+  var rows = await res.json();
+  if (!Array.isArray(rows)) {
+    throw new Error('Cook County tax fetch returned an unexpected response');
+  }
+
+  return rows.map(function(row) {
+    return buildCookCountyTaxLead(row, source);
+  }).filter(function(lead) {
+    return lead && lead.address;
+  });
+}
+
+function compactCookCountyTaxSample(savedLead, mappedLead) {
+  var lead = savedLead || mappedLead || {};
+
+  return {
+    address: lead.address || null,
+    parcel: lead.parcel || lead.apn || null,
+    tax_due: lead.tax_due != null ? lead.tax_due : null,
+    years_delinquent: lead.years_delinquent != null ? lead.years_delinquent : null,
+    distress_types: Array.isArray(lead.distress_types) ? lead.distress_types : [],
+    distress_score: lead.distress_score != null ? lead.distress_score : null,
+    source_query_url: lead.source_query_url || null,
+    source_record_url: lead.source_record_url || null,
+    lead_intelligence: db.computeLeadIntelligence
+      ? db.computeLeadIntelligence(lead)
+      : (lead.lead_intelligence || null)
+  };
+}
+
+async function runCookCountyTaxTest(limit) {
+  var requested = clampCookCountyTaxLimit(limit);
+  var leads = await fetchCookCountyTaxLeads(requested);
+  var samples = [];
+  var insertedOrMerged = 0;
+
+  for (var i = 0; i < leads.length && i < requested; i++) {
+    var mappedLead = leads[i];
+    var result = db.addLead(mappedLead);
+    var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
+    if (result && result.id) insertedOrMerged++;
+    samples.push(compactCookCountyTaxSample(savedLead || result, mappedLead));
+  }
+
+  return {
+    ok: true,
+    requested: requested,
+    inserted_or_merged: insertedOrMerged,
+    samples: samples
+  };
+}
+
 async function runExtraSocrataSources(maxPerSource) {
   var total = 0;
   var inserted = 0;
@@ -471,6 +557,7 @@ async function runExtraSocrataSources(maxPerSource) {
 
 module.exports = {
   runExtraSocrataSources: runExtraSocrataSources,
+  runCookCountyTaxTest: runCookCountyTaxTest,
   _buildCookCountyTaxLead: buildCookCountyTaxLead,
   _buildGenericSocrataLead: buildGenericSocrataLead
 };

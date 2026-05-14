@@ -4421,6 +4421,31 @@ app.post('/api/admin/backfill-normalized-address', requireAdmin, (req, res) => {
 
 // ── Phase 2A Admin Routes ──────────────────────────────────────────────────────
 
+// POST /api/admin/test-ingest/cook-tax
+// Tiny admin-only Cook County tax delinquency ingestion smoke test.
+app.post('/api/admin/test-ingest/cook-tax', requireAdmin, async (req, res) => {
+  try {
+    const rawLimit = req.body && req.body.limit;
+    const parsedLimit = parseInt(rawLimit, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 3)
+      : 1;
+    const socrataExtra = require('./modules/sources/socrata-extra');
+
+    if (!socrataExtra.runCookCountyTaxTest) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Cook County tax test helper is not available'
+      });
+    }
+
+    const result = await socrataExtra.runCookCountyTaxTest(limit);
+    res.json(result);
+  } catch(e) {
+    res.status(502).json({ ok: false, error: e.message });
+  }
+});
+
 app.get('/api/admin/duplicates', requireAdmin, (req, res) => {
   try {
     const result = db.detectDuplicates();
