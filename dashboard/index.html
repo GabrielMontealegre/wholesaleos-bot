@@ -1685,6 +1685,7 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">Pipeline Fees</div><div class="stat-value" style="color:#ff9500">$${(stats.feesPipeline/1000).toFixed(0)}K</div><div class="stat-change">Pending close</div></div>
     <div class="stat-card"><div class="stat-label">Follow-Ups Today</div><div class="stat-value" style="color:${todayFU.length>0?'#ff3b30':'#34c759'}">${todayFU.length}</div><div class="stat-change">${todayFU.length>0?'Action needed':'All clear'}</div></div>
   </div>
+  ${renderCostAwarenessCommandCenter(APP.leads, APP.followups)}
   ${renderVerificationCommandCenter(APP.leads, APP.followups)}
   ${renderTodaySummaryCard(APP.leads, APP.followups)}
   ${renderDailyAcquisitionQueue(APP.leads, APP.followups)}
@@ -2339,6 +2340,167 @@ function renderVerificationFreshness(lead, followups) {
   '</div>';
 }
 
+function buildCostAwareness(lead, followups) {
+  lead = lead || {};
+  followups = followups || [];
+  var li = lead.lead_intelligence || {};
+  var freshness = buildVerificationFreshness(lead, followups);
+  var priorityTier = String(li.priority_tier || lead.priority_tier || '').toLowerCase();
+  var workQueueBand = String(li.work_queue_band || lead.work_queue_band || '').toLowerCase();
+  var contactReadiness = String(li.contact_readiness || lead.contact_readiness || '').toLowerCase();
+  var skipTracePriority = String(li.skip_trace_priority || lead.skip_trace_priority || lead.skip_trace_status || '').toLowerCase();
+  var sourceConfidence = String(
+    mdaLeadPick(lead, [
+      'source_confidence', 'sourceConfidence', 'lead_intelligence.source_confidence',
+      'lead_intelligence.confidence', 'verification.source_confidence'
+    ]) || freshness.sourceConfidence || ''
+  ).toLowerCase();
+  var distressScore = mdaLeadNumber(mdaLeadPick(lead, ['distress_score', 'lead_intelligence.distress_score', 'score', 'hot_score']));
+  var leadAgeDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, [
+    'created_at', 'createdAt', 'created', 'added_at', 'date_added', 'imported_at'
+  ]));
+  var hasContact = !!(lead.phone || lead.email);
+  var arv = mdaLeadNumber(lead.arv || lead.after_repair_value);
+  var spread = mdaLeadNumber(lead.spread || lead.estimated_spread);
+  var highPriority = priorityTier.indexOf('tier_5') > -1 || priorityTier.indexOf('tier_4') > -1 || workQueueBand.indexOf('act') > -1 || workQueueBand.indexOf('high') > -1;
+  var highValue = highPriority || distressScore >= 70 || spread >= 25000 || arv >= 200000;
+  var lowConfidence = sourceConfidence.indexOf('low') > -1 || sourceConfidence.indexOf('unknown') > -1 || sourceConfidence.indexOf('unverified') > -1 || freshness.sourceConfidence === 'Unknown';
+  var mediumConfidence = sourceConfidence.indexOf('medium') > -1;
+  var skipTraceNeeded = !hasContact || contactReadiness.indexOf('skip') > -1 || contactReadiness.indexOf('missing') > -1 || skipTracePriority.indexOf('high') > -1;
+  var oldLead = leadAgeDays !== null && leadAgeDays >= 21;
+  var estimatedLevel = 'Low';
+  var score = 0;
+  if (skipTraceNeeded) score += 12;
+  if (freshness.needsRecheck) score += 8;
+  if (highValue) score += 12;
+  if (lowConfidence || oldLead) score += 8;
+  if (score >= 34) estimatedLevel = 'High';
+  else if (score >= 18) estimatedLevel = 'Medium';
+  var warnings = [];
+  var recommendations = [];
+  var items = [];
+  function item(title, detail, level, tone) {
+    items.push({ title: title, detail: detail, level: level || 'Low', tone: tone || 'neutral' });
+  }
+  if (skipTraceNeeded && highValue) {
+    item('Skip trace', 'High-priority lead likely worth skip trace spend', 'Low', 'good');
+    recommendations.push('Skip trace spend is reasonable after source check');
+  } else if (skipTraceNeeded) {
+    item('Skip trace', 'Skip trace may help, but verify source quality first', 'Low', 'warn');
+  } else {
+    item('Skip trace', 'Contact info present; skip trace spend not needed yet', 'None', 'good');
+  }
+  if (hasContact && freshness.needsRecheck) {
+    item('SMS outreach', 'Verification recommended before paid outreach', 'Low', 'warn');
+    warnings.push('Verify source before paid outreach');
+  } else if (hasContact) {
+    item('SMS outreach', 'Estimated outreach cost: low', 'Low', 'good');
+  } else {
+    item('SMS outreach', 'No contact path yet; outreach spend blocked', 'None', 'neutral');
+  }
+  if (hasContact && highValue && !freshness.needsRecheck) {
+    item('AI call', 'High-value lead may justify call prep spend', 'Medium', 'good');
+  } else if (hasContact) {
+    item('AI call', 'Keep call spend light until economics and source freshness are confirmed', 'Medium', 'warn');
+  } else {
+    item('AI call', 'No call spend until contact info is available', 'None', 'neutral');
+  }
+  if (highValue && !lowConfidence) {
+    item('Premium enrichment', 'Low-cost enrichment recommended before premium spend', 'Medium', 'warn');
+  } else if (lowConfidence || mediumConfidence) {
+    item('Premium enrichment', 'Do not spend premium enrichment on low-confidence lead yet', 'Medium', 'hot');
+    warnings.push('Premium enrichment should wait for confidence');
+  } else {
+    item('Premium enrichment', 'Not worth premium enrichment yet', 'Medium', 'warn');
+  }
+  if (freshness.needsRecheck || lowConfidence || oldLead) {
+    item('Verification / recheck', freshness.topAction || 'Recommended verification before outreach', 'Low', oldLead || lowConfidence ? 'hot' : 'warn');
+    recommendations.push('Verification recommended before paid actions');
+  } else {
+    item('Verification / recheck', 'Source freshness looks acceptable for normal review', 'Low', 'good');
+  }
+  if (!recommendations.length) recommendations.push(highValue ? 'Keep spend controlled and focused on verification' : 'Keep spend minimal until lead quality improves');
+  var caution = warnings.length ? warnings[0] : recommendations[0];
+  return {
+    items: items,
+    estimatedLevel: estimatedLevel,
+    warnings: mdaLeadUnique(warnings),
+    recommendations: mdaLeadUnique(recommendations),
+    caution: caution,
+    highValue: highValue,
+    skipTraceRecommended: skipTraceNeeded && highValue,
+    verifyBeforeSpend: freshness.needsRecheck || lowConfidence || oldLead,
+    holdPremium: lowConfidence || (!highValue && !hasContact),
+    score: score
+  };
+}
+
+function renderCostAwareness(lead, followups) {
+  var cost = buildCostAwareness(lead, followups);
+  function toneColor(tone) {
+    return tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : tone === 'good' ? '#10b981' : '#94a3b8';
+  }
+  var levelColor = cost.estimatedLevel === 'High' ? '#ef4444' : cost.estimatedLevel === 'Medium' ? '#f59e0b' : '#10b981';
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Cost Awareness</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Deterministic spend caution only; no billing or automation.</div></div>' +
+      '<span style="font-size:10px;font-weight:800;color:' + levelColor + ';background:' + levelColor + '22;border:1px solid ' + levelColor + '55;border-radius:999px;padding:3px 8px">Spend: ' + cost.estimatedLevel + '</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-bottom:8px">' +
+      cost.items.map(function(item) {
+        var color = toneColor(item.tone);
+        return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
+            '<div style="font-size:10px;color:#e5e7eb;font-weight:800;line-height:1.35">' + leadIntelText(item.title) + '</div>' +
+            '<span style="font-size:9px;color:' + color + ';font-weight:800">' + leadIntelText(item.level) + '</span>' +
+          '</div>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:4px">' + leadIntelText(item.detail) + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;background:#111827;border:1px solid #243044;border-radius:8px;padding:8px;line-height:1.45">Recommended caution: ' + leadIntelText(cost.caution) + '</div>' +
+  '</div>';
+}
+
+function renderCostAwarenessCommandCenter(leads, followups) {
+  var snapshots = (leads || []).map(function(lead) {
+    return { lead: lead, cost: buildCostAwareness(lead, followups || []) };
+  });
+  var high = snapshots.filter(function(s) { return s.cost.estimatedLevel === 'High'; }).length;
+  var medium = snapshots.filter(function(s) { return s.cost.estimatedLevel === 'Medium'; }).length;
+  var verifyFirst = snapshots.filter(function(s) { return s.cost.verifyBeforeSpend; }).length;
+  var skipTrace = snapshots.filter(function(s) { return s.cost.skipTraceRecommended; }).length;
+  var holdPremium = snapshots.filter(function(s) { return s.cost.holdPremium; }).length;
+  var top = snapshots.sort(function(a, b) { return b.cost.score - a.cost.score; })[0];
+  var topAction = top ? top.cost.caution + ' - ' + daqLeadLabel(top.lead || {}) : 'No spend action pending';
+  function metric(label, value, tone) {
+    var color = tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : '#10b981';
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + label + '</div>' +
+      '<div style="font-size:18px;font-weight:900;color:' + color + ';margin-top:3px">' + value + '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:14px;padding:12px;margin-bottom:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#f8fafc">Cost Awareness</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:2px">Estimated operational spend caution from saved lead signals only.</div></div>' +
+      '<span style="font-size:10px;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:5px 9px">No billing data</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:10px">' +
+      metric('High spend caution', high, high ? 'hot' : 'good') +
+      metric('Medium spend caution', medium, medium ? 'warn' : 'good') +
+      metric('Verify first', verifyFirst, verifyFirst ? 'hot' : 'good') +
+      metric('Skip trace worth it', skipTrace, skipTrace ? 'warn' : 'good') +
+      metric('Hold premium spend', holdPremium, holdPremium ? 'hot' : 'good') +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.04em;margin-bottom:3px">Top Spend Caution</div>' +
+      '<div style="font-size:11px;color:#e5e7eb;line-height:1.45">' + leadIntelText(topAction) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderVerificationCommandCenter(leads, followups) {
   var snapshots = (leads || []).map(function(lead) {
     var freshness = buildVerificationFreshness(lead, followups || []);
@@ -2836,6 +2998,7 @@ function renderDailyAcquisitionQueue(leads, followups) {
   function renderItem(item) {
     var lead = item.lead || {};
     var color = toneColor(item.tone);
+    var cost = buildCostAwareness(lead, []);
     return '<div data-lead-id="' + mdaEscapeAttr(lead.id || '') + '" onclick="openLeadModal(this.dataset.leadId)" style="cursor:pointer;background:#111827;border:1px solid #243044;border-radius:7px;padding:8px;margin-bottom:6px">' +
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
         '<div style="min-width:0"><div style="font-size:11px;font-weight:800;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(daqLeadLabel(lead)) + '</div>' +
@@ -2843,6 +3006,7 @@ function renderDailyAcquisitionQueue(leads, followups) {
         '<span style="font-size:9px;font-weight:800;color:' + color + ';background:' + color + '1f;border:1px solid ' + color + '55;border-radius:999px;padding:2px 6px;white-space:nowrap">' + Math.round(item.score) + '</span>' +
       '</div>' +
       '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:5px">' + leadIntelText(item.reason) + '</div>' +
+      '<div style="font-size:9px;color:#94a3b8;line-height:1.35;margin-top:4px">Spend: ' + leadIntelText(cost.estimatedLevel) + ' | ' + leadIntelText(cost.caution) + '</div>' +
     '</div>';
   }
   function renderQueue(queue) {
@@ -3070,6 +3234,7 @@ function renderLeadDetail(l) {
     html+='<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable</div>';
   }
   html+='</div>';
+  html += renderCostAwareness(l, fu);
   html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
@@ -8787,6 +8952,7 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   html += renderLeadIntelligence(l.lead_intelligence);
+  html += renderCostAwareness(l, fu);
   html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
@@ -14535,6 +14701,7 @@ function renderDashboard() {
     '<div style="background:linear-gradient(135deg,#0071e3,#0060c0);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">BUYERS</div><div style="font-size:28px;font-weight:700">'+buyers.length+'</div><div style="font-size:11px;opacity:.7">in database</div></div>'+
     '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
   '</div>'+
+  renderCostAwarenessCommandCenter(leads,fus)+
   renderVerificationCommandCenter(leads,fus)+
   renderTodaySummaryCard(leads,fus)+
   renderDailyAcquisitionQueue(leads,fus)+
