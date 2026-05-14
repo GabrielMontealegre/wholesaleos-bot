@@ -1685,6 +1685,7 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">Pipeline Fees</div><div class="stat-value" style="color:#ff9500">$${(stats.feesPipeline/1000).toFixed(0)}K</div><div class="stat-change">Pending close</div></div>
     <div class="stat-card"><div class="stat-label">Follow-Ups Today</div><div class="stat-value" style="color:${todayFU.length>0?'#ff3b30':'#34c759'}">${todayFU.length}</div><div class="stat-change">${todayFU.length>0?'Action needed':'All clear'}</div></div>
   </div>
+  ${renderDailyAcquisitionQueue(APP.leads, APP.followups)}
   <div class="split-view">
     <div class="split-left">
       <div class="table-header">
@@ -2404,6 +2405,235 @@ function renderAcquisitionTimeline(lead, followups) {
       renderGroup('Follow-Up Intelligence', timeline.followup || []) +
       renderGroup('Next-Step Memory', timeline.next) +
     '</div>' +
+  '</div>';
+}
+
+function daqLeadLabel(lead) {
+  return (lead.address || lead.property_address || lead.site_address || lead.owner_name || lead.id || 'Unknown lead');
+}
+
+function daqLeadSubline(lead) {
+  return mdaLeadUnique([lead.county, lead.state, lead.source, lead.category || lead.motivation]).slice(0, 3).join(' | ') || 'No source detail';
+}
+
+function daqDaysUntilAuction(lead) {
+  var rawDays = mdaLeadPick(lead, [
+    'days_to_auction', 'days_to_sale', 'days_to_tax_sale',
+    'source_details.days_to_auction', 'source_details.days_to_sale',
+    'lead_intelligence.timeline.days_to_auction', 'lead_intelligence.timeline.days_to_sale'
+  ]);
+  if (mdaLeadText(rawDays)) return mdaLeadNumber(rawDays);
+  var date = mdaLeadPick(lead, [
+    'auction_date', 'sale_date', 'foreclosure_date', 'tax_sale_date',
+    'source_details.auction_date', 'source_details.sale_date',
+    'lead_intelligence.timeline.auction_date', 'lead_intelligence.timeline.sale_date'
+  ]);
+  return acquisitionTimelineDaysUntil(date);
+}
+
+function daqLeadSnapshot(lead, followups) {
+  lead = lead || {};
+  followups = followups || [];
+  var li = lead.lead_intelligence || {};
+  var timeline = buildAcquisitionTimeline(lead, followups);
+  var ageDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, ['created_at', 'createdAt', 'created', 'added_at', 'date_added', 'imported_at']));
+  var statusDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, ['status_updated_at', 'status_changed_at', 'last_status_change', 'updated_at', 'lead_intelligence.timeline.last_status_change']));
+  var contactDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, ['last_contact_attempt', 'last_contacted_at', 'last_contact_at', 'last_call_at', 'last_sms_at', 'last_email_at', 'lead_intelligence.timeline.last_contact_attempt']));
+  var auctionDays = daqDaysUntilAuction(lead);
+  var compConfidence = String(mdaLeadPick(lead, ['comp_confidence', 'compConfidence', 'comp_analysis.confidence', 'comps.confidence', 'lead_intelligence.comp_confidence']) || '').toLowerCase();
+  var offerStatus = mdaLeadText(lead.offer_status || lead.offerStatus || lead.offer_stage);
+  var contactReadiness = String(li.contact_readiness || lead.contact_readiness || '').toLowerCase();
+  var workQueueBand = String(li.work_queue_band || lead.work_queue_band || '').toLowerCase();
+  var priorityTier = String(li.priority_tier || lead.priority_tier || '').toLowerCase();
+  var skipTracePriority = String(li.skip_trace_priority || lead.skip_trace_priority || lead.skip_trace_status || '').toLowerCase();
+  var hasContact = !!(lead.phone || lead.email);
+  var hasOfferMath = !!(lead.offer || lead.mao || lead.spread || lead.arv);
+  var pendingFollowups = followups.filter(function(f) {
+    return String(f.leadId || f.lead_id || '') === String(lead.id || '') && (f.status || 'pending') === 'pending';
+  }).sort(function(a, b) {
+    return String(a.nextDate || a.date || '').localeCompare(String(b.nextDate || b.date || ''));
+  });
+  var today = new Date().toISOString().slice(0, 10);
+  var firstFollowup = pendingFollowups[0] || null;
+  var followupDate = firstFollowup ? (firstFollowup.nextDate || firstFollowup.date || '') : '';
+  var followupDays = followupDate ? acquisitionTimelineDaysUntil(followupDate) : null;
+  var isFollowupDue = firstFollowup && followupDate && followupDate <= today;
+  var hotTimeline = []
+    .concat(timeline.urgency || [])
+    .concat(timeline.followup || [])
+    .some(function(item) { return item.tone === 'hot'; });
+  var missingComps = !compConfidence || compConfidence.indexOf('low') > -1 || compConfidence.indexOf('incomplete') > -1 || (!lead.arv && !(lead.comps && lead.comps.length));
+  var score = 0;
+  if (priorityTier.indexOf('tier_5') > -1 || priorityTier.indexOf('act_now') > -1) score += 35;
+  if (priorityTier.indexOf('tier_4') > -1 || priorityTier.indexOf('high') > -1) score += 25;
+  if (workQueueBand.indexOf('act') > -1 || workQueueBand.indexOf('hot') > -1 || workQueueBand.indexOf('high') > -1) score += 25;
+  if (isFollowupDue) score += 22;
+  if (auctionDays !== null && auctionDays <= 14) score += 30;
+  else if (auctionDays !== null && auctionDays <= 30) score += 18;
+  if (contactDays === null && ageDays !== null && ageDays >= 1) score += 12;
+  if (contactDays !== null && contactDays >= 7) score += 18;
+  if (statusDays !== null && statusDays >= 14) score += 14;
+  if (!hasContact) score += 10;
+  if (missingComps) score += 6;
+  if (hotTimeline) score += 12;
+  return {
+    lead: lead,
+    timeline: timeline,
+    ageDays: ageDays,
+    statusDays: statusDays,
+    contactDays: contactDays,
+    auctionDays: auctionDays,
+    compConfidence: compConfidence,
+    offerStatus: offerStatus,
+    contactReadiness: contactReadiness,
+    workQueueBand: workQueueBand,
+    priorityTier: priorityTier,
+    skipTracePriority: skipTracePriority,
+    hasContact: hasContact,
+    hasOfferMath: hasOfferMath,
+    missingComps: missingComps,
+    firstFollowup: firstFollowup,
+    followupDays: followupDays,
+    isFollowupDue: isFollowupDue,
+    hotTimeline: hotTimeline,
+    score: score
+  };
+}
+
+function daqQueueItem(snapshot, reason, tone, points) {
+  return {
+    lead: snapshot.lead,
+    reason: reason,
+    tone: tone || 'neutral',
+    score: snapshot.score + (points || 0),
+    subline: daqLeadSubline(snapshot.lead)
+  };
+}
+
+function buildDailyAcquisitionQueue(leads, followups) {
+  var snapshots = (leads || []).map(function(lead) { return daqLeadSnapshot(lead, followups || []); });
+  function items(predicate, mapper) {
+    return snapshots.filter(predicate).map(mapper).sort(function(a, b) {
+      return b.score - a.score;
+    }).slice(0, 5);
+  }
+  return [
+    {
+      title: 'Act Today',
+      hint: 'Hot queue from priority, urgency, and stale operational signals.',
+      items: items(function(s) {
+        return s.score >= 45 || s.hotTimeline || s.workQueueBand.indexOf('act') > -1 || s.priorityTier.indexOf('tier_5') > -1 || (s.auctionDays !== null && s.auctionDays <= 14);
+      }, function(s) {
+        var reason = s.auctionDays !== null && s.auctionDays <= 14 ? 'Auction in ' + s.auctionDays + ' days' : (s.isFollowupDue ? 'Follow-up due today' : 'High-priority acquisition signal');
+        return daqQueueItem(s, reason, 'hot', 30);
+      })
+    },
+    {
+      title: 'Follow Up Today',
+      hint: 'Callbacks due, overdue, or likely cooling off.',
+      items: items(function(s) {
+        return s.isFollowupDue || (s.contactDays !== null && s.contactDays >= 3) || (s.contactDays === null && s.ageDays !== null && s.ageDays >= 1);
+      }, function(s) {
+        var reason = s.isFollowupDue ? 'Callback due ' + (s.followupDays < 0 ? Math.abs(s.followupDays) + ' days ago' : 'today') : (s.contactDays === null ? 'No contact attempt yet' : 'No contact in ' + s.contactDays + ' days');
+        return daqQueueItem(s, reason, s.isFollowupDue || s.contactDays >= 7 ? 'hot' : 'warn', 20);
+      })
+    },
+    {
+      title: 'Skip Trace Candidates',
+      hint: 'No visible contact path or skip-trace readiness signal.',
+      items: items(function(s) {
+        return !s.hasContact || s.contactReadiness.indexOf('skip') > -1 || s.contactReadiness.indexOf('missing') > -1 || s.skipTracePriority.indexOf('high') > -1;
+      }, function(s) {
+        var reason = !s.hasContact ? 'No phone or email yet' : 'Skip trace priority: ' + (s.skipTracePriority || s.contactReadiness || 'review');
+        return daqQueueItem(s, reason, !s.hasContact ? 'hot' : 'warn', 16);
+      })
+    },
+    {
+      title: 'Leads Missing Comps',
+      hint: 'Pricing confidence is not ready for offer work.',
+      items: items(function(s) {
+        return s.missingComps;
+      }, function(s) {
+        var reason = s.compConfidence ? 'Comp confidence: ' + s.compConfidence : 'No comps added yet';
+        return daqQueueItem(s, reason, 'warn', 8);
+      })
+    },
+    {
+      title: 'Auction Urgency',
+      hint: 'Foreclosure, tax sale, or auction countdowns.',
+      items: items(function(s) {
+        return s.auctionDays !== null && s.auctionDays <= 45;
+      }, function(s) {
+        return daqQueueItem(s, 'Auction in ' + s.auctionDays + ' days', s.auctionDays <= 14 ? 'hot' : 'warn', 28);
+      })
+    },
+    {
+      title: 'Aging Leads',
+      hint: 'Older leads that need movement before value fades.',
+      items: items(function(s) {
+        return s.ageDays !== null && s.ageDays >= 7;
+      }, function(s) {
+        return daqQueueItem(s, 'Lead age ' + s.ageDays + ' days', s.ageDays >= 14 ? 'hot' : 'warn', 10);
+      })
+    },
+    {
+      title: 'Stale Leads',
+      hint: 'No recent status/contact memory.',
+      items: items(function(s) {
+        return (s.statusDays !== null && s.statusDays >= 14) || (s.contactDays !== null && s.contactDays >= 7);
+      }, function(s) {
+        var reason = s.contactDays !== null && s.contactDays >= 7 ? 'No contact in ' + s.contactDays + ' days' : 'No status change in ' + s.statusDays + ' days';
+        return daqQueueItem(s, reason, 'hot', 15);
+      })
+    },
+    {
+      title: 'Ready For Offer Review',
+      hint: 'Has enough pricing/contact signal to review next offer step.',
+      items: items(function(s) {
+        var usableComps = s.compConfidence.indexOf('high') > -1 || s.compConfidence.indexOf('medium') > -1 || !!s.lead.arv;
+        return usableComps && s.hasOfferMath && (!s.offerStatus || s.offerStatus === 'not_sent') && (s.hasContact || s.contactReadiness.indexOf('ready') > -1);
+      }, function(s) {
+        return daqQueueItem(s, s.offerStatus ? 'Offer status: ' + s.offerStatus : 'Numbers exist, no offer status saved', 'good', 18);
+      })
+    }
+  ];
+}
+
+function renderDailyAcquisitionQueue(leads, followups) {
+  var queues = buildDailyAcquisitionQueue(leads || [], followups || []);
+  var total = queues.reduce(function(sum, q) { return sum + q.items.length; }, 0);
+  function toneColor(tone) {
+    return tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : tone === 'good' ? '#10b981' : '#94a3b8';
+  }
+  function renderItem(item) {
+    var lead = item.lead || {};
+    var color = toneColor(item.tone);
+    return '<div data-lead-id="' + mdaEscapeAttr(lead.id || '') + '" onclick="openLeadModal(this.dataset.leadId)" style="cursor:pointer;background:#111827;border:1px solid #243044;border-radius:7px;padding:8px;margin-bottom:6px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
+        '<div style="min-width:0"><div style="font-size:11px;font-weight:800;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(daqLeadLabel(lead)) + '</div>' +
+        '<div style="font-size:9px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(item.subline) + '</div></div>' +
+        '<span style="font-size:9px;font-weight:800;color:' + color + ';background:' + color + '1f;border:1px solid ' + color + '55;border-radius:999px;padding:2px 6px;white-space:nowrap">' + Math.round(item.score) + '</span>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:5px">' + leadIntelText(item.reason) + '</div>' +
+    '</div>';
+  }
+  function renderQueue(queue) {
+    return '<div style="background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:10px;min-height:154px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px">' +
+        '<div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.04em">' + queue.title + '</div>' +
+        '<span style="font-size:10px;color:#e5e7eb;background:#1f2937;border-radius:999px;padding:2px 7px">' + queue.items.length + '</span>' +
+      '</div>' +
+      '<div style="font-size:9px;color:#94a3b8;line-height:1.35;margin-bottom:8px;min-height:24px">' + queue.hint + '</div>' +
+      (queue.items.length ? queue.items.map(renderItem).join('') : '<div style="font-size:10px;color:#64748b;text-align:center;padding:22px 8px;border:1px dashed #334155;border-radius:7px">No leads in this queue.</div>') +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:14px;padding:14px;margin-bottom:18px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">' +
+      '<div><div style="font-size:15px;font-weight:900;color:#f8fafc">Daily Acquisition Queue</div>' +
+      '<div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:2px">Deterministic work queues from lead intelligence, timeline, skip trace, comps, offer, and follow-up signals.</div></div>' +
+      '<div style="font-size:11px;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:5px 9px">' + total + ' queued signals</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">' + queues.map(renderQueue).join('') + '</div>' +
   '</div>';
 }
 
@@ -14075,6 +14305,7 @@ function renderDashboard() {
     '<div style="background:linear-gradient(135deg,#0071e3,#0060c0);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">BUYERS</div><div style="font-size:28px;font-weight:700">'+buyers.length+'</div><div style="font-size:11px;opacity:.7">in database</div></div>'+
     '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
   '</div>'+
+  renderDailyAcquisitionQueue(leads,fus)+
   '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px">'+
     '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700">🏆 Top 100 Deals by Spread</div><span style="font-size:11px;color:#86868b">'+topDeals.length+' deals</span></div>'+
     '<div style="max-height:580px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:10px">'+(dHtml||'<div style="padding:40px;text-align:center;color:#86868b">Import leads to see top deals.</div>')+'</div></div>'+
