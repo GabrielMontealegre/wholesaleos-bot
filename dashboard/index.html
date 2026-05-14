@@ -1094,6 +1094,7 @@ function mdaRenderLoadedLeadBanner() {
   var timelinePreview = []
     .concat((timeline.urgency || []).slice(0, 2))
     .concat((timeline.operational || []).slice(0, 1))
+    .concat((timeline.followup || []).slice(0, 2))
     .concat((timeline.next || []).slice(0, 1));
   var chips = meta.map(function(item) {
     return '<span style="display:inline-flex;gap:4px;align-items:center;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:999px;padding:4px 7px;color:#f5f5f7;font-size:10px;max-width:100%;white-space:normal;word-break:break-word;line-height:1.4"><strong style="color:#f4c542">' + mdaEscapeHtml(item.label) + ':</strong> ' + mdaEscapeHtml(item.value) + '</span>';
@@ -2168,6 +2169,15 @@ function acquisitionTimelineAgo(value) {
   return years + ' year' + (years === 1 ? '' : 's') + ' ago';
 }
 
+function acquisitionTimelineDaysSince(value) {
+  var date = acquisitionTimelineDate(value);
+  if (!date) return null;
+  var today = new Date();
+  var start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  var now = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  return Math.max(0, Math.floor((now - start) / 86400000));
+}
+
 function acquisitionTimelineTone(days) {
   if (days === null || days === undefined) return 'neutral';
   if (days < 0) return 'hot';
@@ -2189,6 +2199,20 @@ function buildAcquisitionTimeline(lead, followups) {
   var urgency = [];
   var operational = [];
   var next = [];
+  var followupIntel = [];
+
+  var createdAt = mdaLeadPick(lead, [
+    'created_at', 'createdAt', 'created', 'added_at', 'date_added', 'imported_at',
+    'lead_intelligence.timeline.created_at', 'lead_intelligence.timeline.first_seen'
+  ]);
+  var leadAgeDays = acquisitionTimelineDaysSince(createdAt);
+  if (leadAgeDays !== null) {
+    var ageTone = leadAgeDays >= 14 ? 'hot' : (leadAgeDays >= 7 ? 'warn' : 'neutral');
+    operational.push(acquisitionTimelineItem('Lead age', leadAgeDays === 0 ? 'Added today' : 'Lead age ' + leadAgeDays + ' day' + (leadAgeDays === 1 ? '' : 's'), ageTone));
+    if (leadAgeDays >= 7) followupIntel.push(acquisitionTimelineItem('Lead aging', leadAgeDays >= 14 ? 'Lead aging rapidly: ' + leadAgeDays + ' days old' : 'Lead needs movement: ' + leadAgeDays + ' days old', ageTone));
+  } else {
+    operational.push(acquisitionTimelineItem('Lead age', 'No created date saved', 'neutral'));
+  }
 
   var auctionDate = mdaLeadPick(lead, [
     'auction_date', 'sale_date', 'foreclosure_date', 'tax_sale_date',
@@ -2238,13 +2262,24 @@ function buildAcquisitionTimeline(lead, followups) {
     status = lastStatus.to || lastStatus.status || status;
   }
   operational.push(acquisitionTimelineItem('Status memory', statusChanged ? status + ' changed ' + acquisitionTimelineAgo(statusChanged) : status + ' with no status-change timestamp', statusChanged ? 'neutral' : 'warn'));
+  var statusDays = acquisitionTimelineDaysSince(statusChanged);
+  if (statusDays !== null && statusDays >= 7) {
+    followupIntel.push(acquisitionTimelineItem('Status stale', 'No status change in ' + statusDays + ' days', statusDays >= 14 ? 'hot' : 'warn'));
+  }
 
   var contactAt = mdaLeadPick(lead, [
     'last_contact_attempt', 'last_contacted_at', 'last_contact_at', 'last_call_at', 'last_sms_at', 'last_email_at',
     'outreach.last_contact_attempt', 'lead_intelligence.timeline.last_contact_attempt'
   ]);
-  if (contactAt) operational.push(acquisitionTimelineItem('Contact memory', 'Last contact attempt ' + acquisitionTimelineAgo(contactAt), 'neutral'));
-  else operational.push(acquisitionTimelineItem('Contact memory', 'No contact attempt recorded', 'warn'));
+  var contactDays = acquisitionTimelineDaysSince(contactAt);
+  if (contactAt) {
+    operational.push(acquisitionTimelineItem('Contact memory', 'Last contact attempt ' + acquisitionTimelineAgo(contactAt), contactDays >= 7 ? 'warn' : 'neutral'));
+    if (contactDays >= 7) followupIntel.push(acquisitionTimelineItem('Cooling-off risk', 'Seller likely cooling off: no contact attempt in ' + contactDays + ' days', contactDays >= 14 ? 'hot' : 'warn'));
+    else if (contactDays >= 3) followupIntel.push(acquisitionTimelineItem('Follow-up cadence', 'No contact attempt in ' + contactDays + ' days', 'warn'));
+  } else {
+    operational.push(acquisitionTimelineItem('Contact memory', 'No contact attempt recorded', leadAgeDays !== null && leadAgeDays >= 3 ? 'hot' : 'warn'));
+    followupIntel.push(acquisitionTimelineItem('First contact', leadAgeDays !== null && leadAgeDays >= 3 ? 'Lead aging without first contact' : 'No contact attempt yet', leadAgeDays !== null && leadAgeDays >= 3 ? 'hot' : 'warn'));
+  }
 
   if (lead.phone || lead.email) {
     operational.push(acquisitionTimelineItem('Skip trace', 'Contact info present' + (lead.phone ? ': phone' : '') + (lead.email ? (lead.phone ? ' and email' : ': email') : ''), 'good'));
@@ -2259,7 +2294,10 @@ function buildAcquisitionTimeline(lead, followups) {
     'lead_intelligence.comp_confidence'
   ]);
   if (compConfidence) operational.push(acquisitionTimelineItem('Comp confidence', leadIntelText(compConfidence), String(compConfidence).toLowerCase().indexOf('high') > -1 ? 'good' : 'warn'));
-  else operational.push(acquisitionTimelineItem('Comp confidence', lead.arv ? 'ARV present, comp confidence not saved' : 'No comp confidence saved', lead.arv ? 'warn' : 'hot'));
+  else {
+    operational.push(acquisitionTimelineItem('Comp confidence', lead.arv ? 'ARV present, comp confidence not saved' : 'No comp confidence saved', lead.arv ? 'warn' : 'hot'));
+    followupIntel.push(acquisitionTimelineItem('Comp diligence', lead.arv ? 'No saved comp confidence yet' : 'No comps added yet', lead.arv ? 'warn' : 'hot'));
+  }
 
   var offerStatus = lead.offer_status || lead.offerStatus || lead.offer_stage || '';
   if (offerStatus) operational.push(acquisitionTimelineItem('Offer status', leadIntelText(offerStatus), 'neutral'));
@@ -2275,9 +2313,17 @@ function buildAcquisitionTimeline(lead, followups) {
     var fu = dueFollowups[0];
     var fuDate = fu.nextDate || fu.date || '';
     var fuDays = acquisitionTimelineDaysUntil(fuDate);
-    var fuText = fuDate ? 'Follow up ' + (fuDays === 1 ? 'tomorrow' : (fuDays === 0 ? 'today' : acquisitionTimelineFormatDate(fuDate))) : 'Follow-up reminder exists';
+    var fuText = fuDate ? 'Follow up ' + (fuDays === 1 ? 'tomorrow' : (fuDays === 0 ? 'today' : (fuDays < 0 ? Math.abs(fuDays) + ' day' + (Math.abs(fuDays) === 1 ? '' : 's') + ' overdue' : acquisitionTimelineFormatDate(fuDate)))) : 'Follow-up reminder exists';
     if (fu.note || fu.notes || fu.title) fuText += ': ' + leadIntelText(fu.note || fu.notes || fu.title);
     next.push(acquisitionTimelineItem('Follow-up reminder', fuText, acquisitionTimelineTone(fuDays)));
+    if (fuDays !== null && fuDays <= 0) {
+      followupIntel.push(acquisitionTimelineItem(fuDays < 0 ? 'Overdue callback' : 'Follow-up due', fuText, 'hot'));
+    } else if (fuDays === 1) {
+      followupIntel.push(acquisitionTimelineItem('Follow-up timing', 'Follow up recommended tomorrow', 'warn'));
+    }
+  } else {
+    var needsFollowup = (contactDays === null && leadAgeDays !== null && leadAgeDays >= 1) || (contactDays !== null && contactDays >= 3) || (statusDays !== null && statusDays >= 7) || (auctionDays !== null && auctionDays <= 14);
+    followupIntel.push(acquisitionTimelineItem('Follow-up reminder', needsFollowup ? 'Follow up recommended today' : 'No callback reminder saved', needsFollowup ? 'hot' : 'neutral'));
   }
 
   var recommended = li.recommended_next_action || lead.recommended_next_action || '';
@@ -2288,6 +2334,14 @@ function buildAcquisitionTimeline(lead, followups) {
     else recommended = 'Open analyzer and confirm offer range';
   }
   next.push(acquisitionTimelineItem('Recommended action', leadIntelText(recommended).replace(/_/g, ' '), 'neutral'));
+
+  var timing = 'This week';
+  var timingTone = 'neutral';
+  if (!lead.phone && !lead.email) { timing = 'Before next contact: skip trace recommended'; timingTone = 'hot'; }
+  else if (auctionDays !== null && auctionDays <= 14) { timing = 'Today: auction countdown is active'; timingTone = 'hot'; }
+  else if (followupIntel.some(function(item) { return item.tone === 'hot'; })) { timing = 'Today'; timingTone = 'hot'; }
+  else if (followupIntel.some(function(item) { return item.tone === 'warn'; })) { timing = 'Within 24 hours'; timingTone = 'warn'; }
+  followupIntel.push(acquisitionTimelineItem('Next action timing', timing, timingTone));
 
   var riskFlags = []
     .concat(mdaLeadList(lead.risk_flags))
@@ -2303,8 +2357,22 @@ function buildAcquisitionTimeline(lead, followups) {
     next.push(acquisitionTimelineItem('Risk reminders', 'No major risk reminders saved', 'neutral'));
   }
 
+  if (leadAgeDays !== null && leadAgeDays >= 14 && (contactDays === null || contactDays >= 7) && (statusDays === null || statusDays >= 7)) {
+    followupIntel.push(acquisitionTimelineItem('Stale lead warning', 'Lead is stale: age, contact, and status all need attention', 'hot'));
+  }
+
+  if (!lead.phone && !lead.email) {
+    followupIntel.push(acquisitionTimelineItem('Skip trace next', 'Skip trace recommended before next contact', 'hot'));
+  }
+
   if (!urgency.length) urgency.push(acquisitionTimelineItem('Timing memory', 'No foreclosure, tax sale, or auction timing saved yet', 'neutral'));
-  return { urgency: urgency, operational: operational, next: next };
+  followupIntel = mdaLeadUnique(followupIntel.map(function(item) {
+    return item.title + '|' + item.detail + '|' + item.tone;
+  })).map(function(raw) {
+    var parts = raw.split('|');
+    return acquisitionTimelineItem(parts[0], parts[1], parts[2]);
+  }).slice(0, 8);
+  return { urgency: urgency, operational: operational, next: next, followup: followupIntel };
 }
 
 function renderAcquisitionTimeline(lead, followups) {
@@ -2315,7 +2383,7 @@ function renderAcquisitionTimeline(lead, followups) {
   function renderGroup(title, items) {
     return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
       '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em;margin-bottom:6px">' + title + '</div>' +
-      items.slice(0, 5).map(function(item) {
+      items.slice(0, 8).map(function(item) {
         var color = toneColor(item.tone);
         return '<div style="display:grid;grid-template-columns:8px 1fr;gap:7px;margin-bottom:6px;align-items:start">' +
           '<span style="width:7px;height:7px;border-radius:99px;background:' + color + ';margin-top:5px"></span>' +
@@ -2328,11 +2396,12 @@ function renderAcquisitionTimeline(lead, followups) {
   return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
     '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:9px">' +
       '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Acquisition Timeline</div>' +
-      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Urgency, operations, and next-step memory from saved lead fields only.</div></div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Urgency, operations, follow-up, and next-step memory from saved lead fields only.</div></div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px">' +
       renderGroup('Urgency Memory', timeline.urgency) +
       renderGroup('Operational Memory', timeline.operational) +
+      renderGroup('Follow-Up Intelligence', timeline.followup || []) +
       renderGroup('Next-Step Memory', timeline.next) +
     '</div>' +
   '</div>';
