@@ -7385,6 +7385,216 @@ async function wosRealPullState(code, name) {
 // ══════════════════════════════════════════════════════════
 //  USER MANAGEMENT (Admin only)
 // ══════════════════════════════════════════════════════════
+// All States Lead Explorer v1: read-only browser over currently loaded leads.
+function renderAllStates() {
+  var view = getAllStatesExplorerView();
+  var title = view.county ? view.state.name+' / '+view.county.name : (view.state ? view.state.name+' Counties' : 'All States Lead Explorer');
+  var subtitle = view.county ? view.county.leads.length+' existing leads in this county' : (view.state ? view.state.countyCount+' counties from existing leads' : 'Browse currently loaded leads by state, county, and source. No lead pulling runs here.');
+  return '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">'+
+    '<div><div style="font-size:16px;font-weight:700">'+allStatesEscape(title)+'</div><div style="font-size:11px;color:#86868b">'+allStatesEscape(subtitle)+'</div></div>'+
+    '<input class="topbar-search" style="width:220px" placeholder="'+(view.state?'Filter counties/leads...':'Filter states...')+'" id="states-filter" value="'+allStatesEscape(view.query)+'" oninput="filterStates(this.value)">'+
+  '</div>'+
+  renderAllStatesBreadcrumb(view)+
+  '<div id="states-grid">'+(view.county ? renderAllStatesLeadList(view) : (view.state ? renderAllStatesCountyCards(view) : renderAllStatesStateCards(view)))+'</div></div>';
+}
+
+function allStatesMap() {
+  return {
+    AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
+    HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',
+    MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+    NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+    SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'
+  };
+}
+
+function allStatesEscape(value) {
+  return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function allStatesJs(value) {
+  return JSON.stringify(String(value == null ? '' : value));
+}
+
+function allStatesNormalize(value) {
+  return String(value == null ? '' : value).trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+}
+
+function allStatesTitle(value) {
+  value = String(value || '').trim();
+  if (!value) return '';
+  return value.replace(/_/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
+}
+
+function allStatesArrayText(value) {
+  if (Array.isArray(value)) return value.join(' ');
+  if (value && typeof value === 'object') return Object.keys(value).map(function(k){ return value[k]; }).join(' ');
+  return value || '';
+}
+
+function allStatesInfo(lead) {
+  var names = allStatesMap();
+  var byName = Object.keys(names).reduce(function(acc,code){ acc[names[code].toLowerCase()] = code; return acc; },{});
+  var raw = String(lead.state || lead.state_code || lead.state_name || '').trim();
+  var code = '';
+  var name = 'Unknown State';
+  if (raw) {
+    var upper = raw.toUpperCase();
+    if (names[upper]) { code = upper; name = names[upper]; }
+    else { code = byName[raw.toLowerCase()] || ''; name = names[code] || raw; }
+  }
+  return {key: code || name, code: code, name: name};
+}
+
+function allStatesCountyName(lead) {
+  var county = lead.county || lead.county_name || (lead.lead_intelligence && lead.lead_intelligence.county) || '';
+  county = String(county || '').trim();
+  return county || 'Unknown County';
+}
+
+function allStatesSourceText(lead) {
+  var details = lead.source_details || lead.source_detail || {};
+  var parts = [lead.source,lead.source_name,lead.source_type,lead.source_platform,lead.source_key,lead.source_slug,lead.source_system,lead.import_source,lead.provider];
+  if (typeof details === 'string') parts.push(details);
+  if (details && typeof details === 'object') parts.push(details.source_name,details.source_type,details.name,details.type);
+  return parts.filter(Boolean).join(' ') || 'Unknown Source';
+}
+
+function allStatesDistressText(lead) {
+  var li = lead.lead_intelligence || {};
+  return [lead.distress_type,allStatesArrayText(lead.distress_types),allStatesArrayText(li.distress_types),lead.type,lead.category].filter(Boolean).join(' ') || 'Unknown Distress';
+}
+
+function allStatesTopValues(leads, getter, limit) {
+  var counts = {};
+  leads.forEach(function(lead){
+    String(getter(lead) || '').split(/[|,]/).map(function(v){ return allStatesTitle(v.trim()); }).filter(Boolean).forEach(function(v){
+      counts[v] = (counts[v] || 0) + 1;
+    });
+  });
+  return Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a] || a.localeCompare(b); }).slice(0,limit || 3);
+}
+
+function buildAllStatesLeadIndex() {
+  var states = {};
+  (APP.leads || []).forEach(function(lead){
+    var s = allStatesInfo(lead);
+    var c = allStatesCountyName(lead);
+    if (!states[s.key]) states[s.key] = {key:s.key,code:s.code,name:s.name,leads:[],counties:{}};
+    states[s.key].leads.push(lead);
+    if (!states[s.key].counties[c]) states[s.key].counties[c] = {key:c,name:c,leads:[]};
+    states[s.key].counties[c].leads.push(lead);
+  });
+  return Object.keys(states).map(function(k){
+    var state = states[k];
+    state.countyList = Object.keys(state.counties).map(function(c){ return state.counties[c]; }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+    state.countyCount = state.countyList.length;
+    state.topSources = allStatesTopValues(state.leads, allStatesSourceText, 3);
+    return state;
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+}
+
+function getAllStatesExplorerView() {
+  var stateKey = APP._allStatesExplorerState || '';
+  var countyKey = APP._allStatesExplorerCounty || '';
+  var query = APP._allStatesExplorerQuery || '';
+  var states = buildAllStatesLeadIndex();
+  var state = states.find(function(s){ return s.key === stateKey; });
+  var county = state ? state.countyList.find(function(c){ return c.key === countyKey; }) : null;
+  return {states:states,state:state,county:county,query:query};
+}
+
+function renderAllStatesBreadcrumb(view) {
+  var crumbs = '<button onclick="openAllStatesExplorerRoot()" style="border:0;background:none;color:#0071e3;font-size:12px;font-weight:700;cursor:pointer;padding:0">All States</button>';
+  if (view.state) crumbs += '<span style="color:#86868b;font-size:12px">/</span><button onclick="openAllStatesExplorerState('+allStatesJs(view.state.key)+')" style="border:0;background:none;color:#0071e3;font-size:12px;font-weight:700;cursor:pointer;padding:0">'+allStatesEscape(view.state.name)+'</button>';
+  if (view.county) crumbs += '<span style="color:#86868b;font-size:12px">/</span><span style="font-size:12px;font-weight:700">'+allStatesEscape(view.county.name)+'</span>';
+  return '<div style="display:flex;gap:7px;align-items:center;margin-bottom:12px">'+crumbs+'</div>';
+}
+
+function renderAllStatesStateCards(view) {
+  var q = allStatesNormalize(view.query);
+  var states = view.states.filter(function(s){ return !q || allStatesNormalize(s.name+' '+s.code).indexOf(q) !== -1; });
+  if (!states.length) return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:24px;text-align:center;color:#86868b">No loaded leads match this state search.</div>';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">'+states.map(function(s){
+    return '<button onclick="openAllStatesExplorerState('+allStatesJs(s.key)+')" style="text-align:left;background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px;cursor:pointer">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px"><div style="font-size:14px;font-weight:800">'+allStatesEscape(s.name)+'</div><div style="font-size:10px;color:#86868b;font-weight:800">'+allStatesEscape(s.code || '')+'</div></div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:#34c759;font-weight:800">'+s.leads.length+' leads</span><span style="font-size:11px;color:#86868b">'+s.countyCount+' counties</span></div>'+
+      '<div style="font-size:10px;color:#86868b;line-height:1.5">Top sources: '+allStatesEscape(s.topSources.join(', ') || 'Not available')+'</div>'+
+    '</button>';
+  }).join('')+'</div>';
+}
+
+function renderAllStatesCountyCards(view) {
+  var q = allStatesNormalize(view.query);
+  var counties = view.state.countyList.filter(function(c){ return !q || allStatesNormalize(c.name).indexOf(q) !== -1; });
+  if (!counties.length) return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:24px;text-align:center;color:#86868b">No counties match this search.</div>';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">'+counties.map(function(c){
+    var sources = allStatesTopValues(c.leads, allStatesSourceText, 3);
+    var distress = allStatesTopValues(c.leads, allStatesDistressText, 3);
+    return '<button onclick="openAllStatesExplorerCounty('+allStatesJs(c.key)+')" style="text-align:left;background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:14px;cursor:pointer">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px"><div style="font-size:14px;font-weight:800">'+allStatesEscape(c.name)+'</div><div style="font-size:11px;color:#34c759;font-weight:800">'+c.leads.length+'</div></div>'+
+      '<div style="font-size:10px;color:#86868b;line-height:1.5">Sources: '+allStatesEscape(sources.join(', ') || 'Not available')+'</div>'+
+      '<div style="font-size:10px;color:#86868b;line-height:1.5;margin-top:4px">Distress: '+allStatesEscape(distress.join(', ') || 'Not available')+'</div>'+
+    '</button>';
+  }).join('')+'</div>';
+}
+
+function renderAllStatesLeadList(view) {
+  var q = allStatesNormalize(view.query);
+  var leads = view.county.leads.filter(function(l){
+    return !q || allStatesNormalize([l.address,l.city,l.county,l.state,allStatesSourceText(l),allStatesDistressText(l)].join(' ')).indexOf(q) !== -1;
+  });
+  if (!leads.length) return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:24px;text-align:center;color:#86868b">No leads match this county search.</div>';
+  return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f5f5f7">'+
+    ['Address','City','Source','Distress','Status'].map(function(h){ return '<th style="text-align:left;padding:9px 10px;font-size:11px;color:#86868b">'+h+'</th>'; }).join('')+
+    '</tr></thead><tbody>'+leads.slice(0,300).map(function(l){
+      return '<tr data-lead-id="'+allStatesEscape(l.id || '')+'" onclick="openLeadModal(this.dataset.leadId)" style="cursor:pointer;border-top:1px solid #f5f5f7">'+
+        '<td style="padding:9px 10px;font-size:12px;font-weight:700">'+allStatesEscape(l.address || 'Not available')+'</td>'+
+        '<td style="padding:9px 10px;font-size:12px">'+allStatesEscape(l.city || '')+'</td>'+
+        '<td style="padding:9px 10px;font-size:11px;color:#86868b">'+allStatesEscape(allStatesSourceText(l))+'</td>'+
+        '<td style="padding:9px 10px;font-size:11px;color:#86868b">'+allStatesEscape(allStatesDistressText(l))+'</td>'+
+        '<td style="padding:9px 10px;font-size:11px">'+allStatesEscape(l.status || 'New Lead')+'</td>'+
+      '</tr>';
+    }).join('')+'</tbody></table>'+(leads.length>300?'<div style="padding:10px;font-size:11px;color:#86868b">Showing first 300 of '+leads.length+' leads.</div>':'')+'</div>';
+}
+
+function filterStates(q) {
+  APP._allStatesExplorerQuery = q || '';
+  render();
+}
+
+function openAllStatesExplorerRoot() {
+  APP._allStatesExplorerState = '';
+  APP._allStatesExplorerCounty = '';
+  APP._allStatesExplorerQuery = '';
+  render();
+}
+
+function openAllStatesExplorerState(key) {
+  APP._allStatesExplorerState = key || '';
+  APP._allStatesExplorerCounty = '';
+  APP._allStatesExplorerQuery = '';
+  render();
+}
+
+function openAllStatesExplorerCounty(key) {
+  APP._allStatesExplorerCounty = key || '';
+  APP._allStatesExplorerQuery = '';
+  render();
+}
+
+function loadAllStates() {
+  if (APP.page === 'states') render();
+}
+
+function renderStatesGrid() {
+  if (APP.page === 'states') render();
+}
+
+function wosRealPullState(code) {
+  openAllStatesExplorerState(code);
+}
+
 async function renderUsersPanel() {
   if (!APP.isAdmin) return '<div style="text-align:center;padding:40px;color:#86868b">Admin access required</div>';
   let usersHtml = '<div style="padding:20px;color:#86868b;text-align:center">Loading…</div>';
