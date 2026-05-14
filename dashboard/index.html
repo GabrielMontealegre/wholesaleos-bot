@@ -1685,6 +1685,7 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">Pipeline Fees</div><div class="stat-value" style="color:#ff9500">$${(stats.feesPipeline/1000).toFixed(0)}K</div><div class="stat-change">Pending close</div></div>
     <div class="stat-card"><div class="stat-label">Follow-Ups Today</div><div class="stat-value" style="color:${todayFU.length>0?'#ff3b30':'#34c759'}">${todayFU.length}</div><div class="stat-change">${todayFU.length>0?'Action needed':'All clear'}</div></div>
   </div>
+  ${renderVerificationCommandCenter(APP.leads, APP.followups)}
   ${renderTodaySummaryCard(APP.leads, APP.followups)}
   ${renderDailyAcquisitionQueue(APP.leads, APP.followups)}
   <div class="split-view">
@@ -2190,6 +2191,194 @@ function acquisitionTimelineTone(days) {
 
 function acquisitionTimelineItem(title, detail, tone) {
   return { title: title, detail: detail, tone: tone || 'neutral' };
+}
+
+function buildVerificationFreshness(lead, followups) {
+  lead = lead || {};
+  followups = followups || [];
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var timeline = li.timeline || {};
+  var sourceDetails = lead.source_details || {};
+  var verificationAt = mdaLeadPick(lead, [
+    'last_verified_at', 'verified_at', 'source_verified_at', 'source_last_verified_at',
+    'verification.last_verified_at', 'verification.verified_at',
+    'lead_intelligence.last_verified_at', 'lead_intelligence.evidence.last_verified_at',
+    'lead_intelligence.timeline.last_verified_at'
+  ]);
+  var verifiedDays = acquisitionTimelineDaysSince(verificationAt);
+  var leadAgeDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, [
+    'created_at', 'createdAt', 'created', 'added_at', 'date_added', 'imported_at',
+    'lead_intelligence.timeline.created_at', 'lead_intelligence.timeline.first_seen'
+  ]));
+  var statusDays = acquisitionTimelineDaysSince(mdaLeadPick(lead, [
+    'status_updated_at', 'status_changed_at', 'last_status_change', 'updated_at',
+    'lead_intelligence.timeline.last_status_change'
+  ]));
+  var auctionDays = daqDaysUntilAuction(lead);
+  var priorityTier = String(li.priority_tier || lead.priority_tier || '').toLowerCase();
+  var workQueueBand = String(li.work_queue_band || lead.work_queue_band || '').toLowerCase();
+  var contactReadiness = String(li.contact_readiness || lead.contact_readiness || '').toLowerCase();
+  var skipTracePriority = String(li.skip_trace_priority || lead.skip_trace_priority || lead.skip_trace_status || '').toLowerCase();
+  var confidenceText = String(
+    mdaLeadPick(lead, [
+      'source_confidence', 'sourceConfidence', 'verification.source_confidence',
+      'lead_intelligence.source_confidence', 'lead_intelligence.confidence',
+      'lead_intelligence.evidence.source_confidence'
+    ]) || ''
+  ).toLowerCase();
+  var sourceText = String(lead.source || sourceDetails.source || evidence.source || '').toLowerCase();
+  var riskFlags = []
+    .concat(mdaLeadList(lead.risk_flags))
+    .concat(mdaLeadList(li.risk_flags))
+    .concat(mdaLeadList(li.priority_reasons))
+    .map(function(v) { return String(v).toLowerCase(); });
+  var officialSource = sourceText.indexOf('county') > -1 || sourceText.indexOf('tax') > -1 || sourceText.indexOf('auction') > -1 || riskFlags.indexOf('official_source') > -1;
+  var highConfidence = confidenceText.indexOf('high') > -1 || confidenceText.indexOf('official') > -1 || riskFlags.indexOf('high_source_confidence') > -1;
+  var lowConfidence = confidenceText.indexOf('low') > -1 || confidenceText.indexOf('unknown') > -1 || confidenceText.indexOf('unverified') > -1;
+  var items = [];
+  var priorityScore = 0;
+  if (verificationAt) {
+    var verifyTone = verifiedDays >= 14 ? 'hot' : (verifiedDays >= 7 ? 'warn' : 'good');
+    items.push(acquisitionTimelineItem('Last verified', 'Verified ' + acquisitionTimelineAgo(verificationAt), verifyTone));
+    if (verifiedDays >= 14) priorityScore += 25;
+    else if (verifiedDays >= 7) priorityScore += 12;
+  } else {
+    items.push(acquisitionTimelineItem('Last verified', 'No recent verification recorded', 'warn'));
+    priorityScore += 18;
+  }
+  if (highConfidence && officialSource) {
+    items.push(acquisitionTimelineItem('Source freshness confidence', 'High-confidence official source', 'good'));
+  } else if (highConfidence) {
+    items.push(acquisitionTimelineItem('Source freshness confidence', 'High source confidence, verification still recommended before outreach', 'neutral'));
+  } else if (lowConfidence) {
+    items.push(acquisitionTimelineItem('Source freshness confidence', 'Low source freshness confidence', 'hot'));
+    priorityScore += 18;
+  } else {
+    items.push(acquisitionTimelineItem('Source freshness confidence', 'Source freshness confidence not saved', 'warn'));
+    priorityScore += 8;
+  }
+  if (auctionDays !== null && auctionDays <= 14) {
+    items.push(acquisitionTimelineItem('Auction verification urgency', 'Auction timing should be rechecked today', 'hot'));
+    priorityScore += 30;
+  } else if (auctionDays !== null && auctionDays <= 45) {
+    items.push(acquisitionTimelineItem('Auction verification urgency', 'Recheck auction timing before offer work', 'warn'));
+    priorityScore += 15;
+  } else {
+    items.push(acquisitionTimelineItem('Auction verification urgency', 'No near-term auction verification urgency saved', 'neutral'));
+  }
+  var staleIndicators = [];
+  if (!verificationAt) staleIndicators.push('missing verification timestamp');
+  if (verifiedDays !== null && verifiedDays >= 14) staleIndicators.push('verification older than 14 days');
+  if (leadAgeDays !== null && leadAgeDays >= 30) staleIndicators.push('lead age ' + leadAgeDays + ' days');
+  if (statusDays !== null && statusDays >= 21) staleIndicators.push('status unchanged ' + statusDays + ' days');
+  if (workQueueBand.indexOf('stale') > -1) staleIndicators.push('work queue stale signal');
+  if (staleIndicators.length) {
+    items.push(acquisitionTimelineItem('Likely stale indicators', staleIndicators.slice(0, 3).join('; '), staleIndicators.length > 1 ? 'hot' : 'warn'));
+    priorityScore += Math.min(24, staleIndicators.length * 8);
+  } else {
+    items.push(acquisitionTimelineItem('Likely stale indicators', 'No stale-source indicators from saved fields', 'good'));
+  }
+  var recheck = 'Recheck before next outreach';
+  var recheckTone = 'warn';
+  if (auctionDays !== null && auctionDays <= 14) {
+    recheck = 'Recheck auction timing today';
+    recheckTone = 'hot';
+  } else if (verificationAt && verifiedDays <= 2 && highConfidence) {
+    recheck = 'Verification current; monitor normally';
+    recheckTone = 'good';
+  } else if (contactReadiness.indexOf('skip') > -1 || skipTracePriority.indexOf('high') > -1 || (!lead.phone && !lead.email)) {
+    recheck = 'Verify source before skip trace or outreach';
+    recheckTone = 'hot';
+    priorityScore += 10;
+  } else if (priorityTier.indexOf('tier_5') > -1 || workQueueBand.indexOf('act') > -1) {
+    recheck = 'Recommended verification before outreach';
+    recheckTone = 'hot';
+    priorityScore += 12;
+  }
+  items.push(acquisitionTimelineItem('Recommended recheck timing', recheck, recheckTone));
+  items.push(acquisitionTimelineItem('Verification-safe reminder', 'Do not assume source facts are current until rechecked', 'neutral'));
+  var priority = priorityScore >= 55 ? 'High' : (priorityScore >= 25 ? 'Medium' : 'Low');
+  return {
+    items: items,
+    priority: priority,
+    priorityScore: priorityScore,
+    verifiedDays: verifiedDays,
+    hasVerification: !!verificationAt,
+    isStale: staleIndicators.length > 0,
+    needsRecheck: recheckTone === 'hot' || recheckTone === 'warn',
+    topAction: recheck,
+    sourceConfidence: highConfidence && officialSource ? 'High official' : (highConfidence ? 'High' : (lowConfidence ? 'Low' : 'Unknown'))
+  };
+}
+
+function renderVerificationFreshness(lead, followups) {
+  var freshness = buildVerificationFreshness(lead, followups);
+  function toneColor(tone) {
+    return tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : tone === 'good' ? '#10b981' : '#94a3b8';
+  }
+  var priorityColor = freshness.priority === 'High' ? '#ef4444' : freshness.priority === 'Medium' ? '#f59e0b' : '#10b981';
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Verification / Freshness</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Source freshness, recheck timing, and verification reminders from saved fields only.</div></div>' +
+      '<span style="font-size:10px;font-weight:800;color:' + priorityColor + ';background:' + priorityColor + '22;border:1px solid ' + priorityColor + '55;border-radius:999px;padding:3px 8px">Priority: ' + freshness.priority + '</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px">' +
+      freshness.items.slice(0, 8).map(function(item) {
+        var color = toneColor(item.tone);
+        return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+          '<div style="display:grid;grid-template-columns:8px 1fr;gap:7px;align-items:start">' +
+            '<span style="width:7px;height:7px;border-radius:99px;background:' + color + ';margin-top:5px"></span>' +
+            '<div><div style="font-size:10px;color:#e5e7eb;font-weight:800;line-height:1.35">' + leadIntelText(item.title) + '</div>' +
+            '<div style="font-size:10px;color:#cbd5e1;line-height:1.45">' + leadIntelText(item.detail) + '</div></div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+function renderVerificationCommandCenter(leads, followups) {
+  var snapshots = (leads || []).map(function(lead) {
+    var freshness = buildVerificationFreshness(lead, followups || []);
+    return { lead: lead, freshness: freshness };
+  });
+  var missing = snapshots.filter(function(s) { return !s.freshness.hasVerification; }).length;
+  var stale = snapshots.filter(function(s) { return s.freshness.isStale; }).length;
+  var urgent = snapshots.filter(function(s) { return s.freshness.priority === 'High'; }).length;
+  var auction = snapshots.filter(function(s) {
+    var days = daqDaysUntilAuction(s.lead || {});
+    return days !== null && days <= 14;
+  }).length;
+  var top = snapshots.filter(function(s) { return s.freshness.needsRecheck; }).sort(function(a, b) {
+    return b.freshness.priorityScore - a.freshness.priorityScore;
+  })[0];
+  var topAction = top ? top.freshness.topAction + ' - ' + daqLeadLabel(top.lead || {}) : 'No verification recheck pending';
+  function metric(label, value, tone) {
+    var color = tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : '#10b981';
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + label + '</div>' +
+      '<div style="font-size:18px;font-weight:900;color:' + color + ';margin-top:3px">' + value + '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:14px;padding:12px;margin-bottom:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#f8fafc">Verification / Freshness</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:2px">Read-only source freshness and recheck signals from saved lead data.</div></div>' +
+      '<span style="font-size:10px;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:5px 9px">' + snapshots.length + ' leads scanned</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:10px">' +
+      metric('No recent verification', missing, missing ? 'warn' : 'good') +
+      metric('Likely stale', stale, stale ? 'hot' : 'good') +
+      metric('High priority', urgent, urgent ? 'hot' : 'good') +
+      metric('Auction recheck', auction, auction ? 'hot' : 'good') +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.04em;margin-bottom:3px">Top Verification Action</div>' +
+      '<div style="font-size:11px;color:#e5e7eb;line-height:1.45">' + leadIntelText(topAction) + '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function buildAcquisitionTimeline(lead, followups) {
@@ -2881,6 +3070,7 @@ function renderLeadDetail(l) {
     html+='<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable</div>';
   }
   html+='</div>';
+  html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
   // SELLER
@@ -8597,6 +8787,7 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   html += renderLeadIntelligence(l.lead_intelligence);
+  html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
   // DISTRESS BADGES
@@ -14344,6 +14535,7 @@ function renderDashboard() {
     '<div style="background:linear-gradient(135deg,#0071e3,#0060c0);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">BUYERS</div><div style="font-size:28px;font-weight:700">'+buyers.length+'</div><div style="font-size:11px;opacity:.7">in database</div></div>'+
     '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
   '</div>'+
+  renderVerificationCommandCenter(leads,fus)+
   renderTodaySummaryCard(leads,fus)+
   renderDailyAcquisitionQueue(leads,fus)+
   '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px">'+
