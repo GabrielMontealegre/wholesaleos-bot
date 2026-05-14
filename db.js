@@ -949,6 +949,115 @@ function computeContactReadiness(context) {
   };
 }
 
+function computeSkipTracePriority(context) {
+  context = context || {};
+  var lead = context.lead || {};
+  var timeline = context.timeline || {};
+  var distressTypes = Array.isArray(context.distressTypes) ? context.distressTypes : [];
+  var sourceConfidence = context.sourceConfidence || {};
+  var priority = context.priority || {};
+  var workQueue = context.workQueue || {};
+  var contactReadiness = context.contactReadiness || {};
+  var sourceScore = typeof sourceConfidence.score === 'number' ? sourceConfidence.score : 0;
+  var distressScore = typeof context.distressScore === 'number' ? context.distressScore : 0;
+  var tier = priority.tier || '';
+  var queueBand = workQueue.band || '';
+  var readiness = contactReadiness.readiness || '';
+  var readinessScore = typeof contactReadiness.score === 'number' ? contactReadiness.score : 0;
+  var workScore = typeof workQueue.score === 'number' ? workQueue.score : 0;
+  var status = String(lead.status || '').toLowerCase();
+  var archived = lead.archived === true || status === 'archived';
+  var hasOwner = !!lead.owner_name;
+  var hasContact = !!(lead.owner_phone || lead.owner_email || lead.phone || lead.email);
+  var hasParcel = !!firstPresent(
+    lead.parcel,
+    lead.parcel_number,
+    lead.apn,
+    lead.pin,
+    lead.tax_id,
+    lead.property_id,
+    (lead.source_normalized || {}).parcel
+  );
+  var daysToAuction = timeline.days_to_auction;
+  var hardTimeline = daysToAuction != null || !!timeline.auction_date;
+  var nearTimeline = daysToAuction != null && daysToAuction >= 0 && daysToAuction <= 30;
+  var moneyPressure = timeline.tax_due != null || timeline.lien_amount != null || timeline.opening_bid != null;
+  var multipleDistressSignals = distressTypes.length > 1;
+  var taxOrForeclosure = distressTypes.indexOf('tax_delinquent') > -1 ||
+    distressTypes.indexOf('foreclosure') > -1 ||
+    distressTypes.indexOf('auction') > -1;
+  var codeOnly = distressTypes.length === 1 && distressTypes[0] === 'code_violation';
+  var lastAttempt = lead.last_contact_attempt || lead.lastContactAttempt || null;
+  var recentContact = false;
+  if (lastAttempt) {
+    var lastAttemptDate = new Date(lastAttempt);
+    if (!isNaN(lastAttemptDate.getTime())) {
+      recentContact = (Date.now() - lastAttemptDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+    }
+  }
+  var reasons = [];
+
+  function addSkipReason(reason) {
+    if (reasons.indexOf(reason) === -1) reasons.push(reason);
+  }
+
+  var disqualified = false;
+  if (archived) { disqualified = true; addSkipReason('archived'); }
+  if (/dead|closed|not interested|do not contact/.test(status)) { disqualified = true; addSkipReason('non_workable_status'); }
+  if (hasContact) { disqualified = true; addSkipReason('contact_already_present'); }
+  if (sourceScore < 35) { disqualified = true; addSkipReason('low_source_confidence'); }
+  if (tier === 'tier_1_low_priority' || queueBand === 'low_value') { disqualified = true; addSkipReason('weak_or_low_value_lead'); }
+
+  var score = 0;
+  if (readiness === 'skip_trace_candidate') { score += 28; addSkipReason('skip_trace_candidate'); }
+  else if (readiness === 'research_needed') { score += 8; addSkipReason('research_needed'); }
+  else if (readiness === 'monitor_only') { score -= 10; addSkipReason('monitor_only'); }
+
+  if (tier === 'tier_5_act_now') { score += 25; addSkipReason('tier_5_priority'); }
+  else if (tier === 'tier_4_high_priority') { score += 18; addSkipReason('tier_4_priority'); }
+  else if (tier === 'tier_3_review') { score += 6; addSkipReason('tier_3_review'); }
+
+  if (sourceScore >= 85) { score += 18; addSkipReason('high_source_confidence'); }
+  else if (sourceScore >= 55) { score += 8; addSkipReason('medium_source_confidence'); }
+  if (readinessScore >= 75) { score += 10; addSkipReason('high_contact_readiness_score'); }
+  if (workScore >= 70) { score += 8; addSkipReason('high_work_queue_score'); }
+  if (distressScore >= 70) { score += 10; addSkipReason('high_distress_score'); }
+  else if (distressScore >= 35) { score += 5; addSkipReason('moderate_distress_score'); }
+  if (nearTimeline) { score += 12; addSkipReason('near_term_timeline'); }
+  else if (hardTimeline) { score += 6; addSkipReason('timeline_present'); }
+  if (moneyPressure) { score += 12; addSkipReason('money_pressure'); }
+  if (taxOrForeclosure) { score += 8; addSkipReason('tax_or_foreclosure_signal'); }
+  if (multipleDistressSignals) { score += 5; addSkipReason('multiple_distress_signals'); }
+  if (hasOwner) { score += 6; addSkipReason('owner_present'); }
+  else { score -= 6; addSkipReason('owner_missing'); }
+  if (hasParcel) { score += 4; addSkipReason('parcel_present'); }
+  if (codeOnly) { score -= 12; addSkipReason('code_violation_only'); }
+  if (recentContact) { score -= 10; addSkipReason('recent_contact_attempt'); }
+
+  if (disqualified) score = 0;
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  var priorityLabel = 'do_not_skip_trace';
+  if (!disqualified && score >= 80 && readiness === 'skip_trace_candidate' && sourceScore >= 85 && (tier === 'tier_4_high_priority' || tier === 'tier_5_act_now') && (moneyPressure || nearTimeline || hardTimeline)) {
+    priorityLabel = 'skip_trace_now';
+    addSkipReason('skip_trace_now');
+  } else if (!disqualified && score >= 60 && readiness === 'skip_trace_candidate' && sourceScore >= 75) {
+    priorityLabel = 'skip_trace_soon';
+    addSkipReason('skip_trace_soon');
+  } else if (!disqualified && score >= 35 && (readiness === 'research_needed' || tier === 'tier_3_review')) {
+    priorityLabel = 'skip_trace_later';
+    addSkipReason('skip_trace_later');
+  } else if (priorityLabel === 'do_not_skip_trace') {
+    addSkipReason('do_not_skip_trace');
+  }
+
+  return {
+    score: score,
+    priority: priorityLabel,
+    reasons: reasons
+  };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
@@ -1039,6 +1148,16 @@ function computeLeadIntelligence(lead) {
     priority: priority,
     workQueue: workQueue
   });
+  var skipTrace = computeSkipTracePriority({
+    lead: lead,
+    timeline: timeline,
+    distressTypes: distressTypes,
+    distressScore: score,
+    sourceConfidence: sourceConfidence,
+    priority: priority,
+    workQueue: workQueue,
+    contactReadiness: contactReadiness
+  });
 
   return {
     intelligence_version: 'v1',
@@ -1078,6 +1197,9 @@ function computeLeadIntelligence(lead) {
     contact_readiness: contactReadiness.readiness,
     contact_readiness_score: contactReadiness.score,
     contact_readiness_reasons: contactReadiness.reasons,
+    skip_trace_score: skipTrace.score,
+    skip_trace_priority: skipTrace.priority,
+    skip_trace_reasons: skipTrace.reasons,
     confidence: confidence
   };
 }
