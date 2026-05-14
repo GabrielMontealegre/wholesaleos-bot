@@ -31,6 +31,103 @@ function firstField(row, fields) {
   return null;
 }
 
+function normalizeKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizeCell(value) {
+  if (value === undefined || value === null) return '';
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function headerRole(value) {
+  var key = normalizeKey(value);
+  if (!key || /^column\d+$/.test(key)) return null;
+  if (/^(parcel|parcelid|parcelnumber|parcelsid|pin|propertyid|taxid|sidwell)$/.test(key)) return 'parcel';
+  if (/^(propertyaddress|address|siteaddress|situs|situsaddress|propertylocation|locationaddress)$/.test(key)) return 'address';
+  if (/^(owner|ownername|taxpayer|taxpayername|name|propertyowner)$/.test(key)) return 'owner_name';
+  if (/^(auctiondate|saledate|sale|auction)$/.test(key)) return 'auction_date';
+  if (/^(openingbid|minimumbid|minbid|startingbid|bid)$/.test(key)) return 'opening_bid';
+  if (/^(taxdue|taxesdue|amountdue|balancedue|totaldue|delinquentamount|taxamount)$/.test(key)) return 'tax_due';
+  if (/^(status|foreclosurestage|stage|foreclosurestatus)$/.test(key)) return 'status';
+  if (/^(city|cityname|municipality|community)$/.test(key)) return 'city';
+  if (/^(zip|zipcode|postalcode)$/.test(key)) return 'zip';
+  if (/^(taxyear|year|delinquentyear|forfeitureyear|foreclosureyear)$/.test(key)) return 'tax_year';
+  return null;
+}
+
+function rowValues(row) {
+  row = row || [];
+  return row.map(normalizeCell);
+}
+
+function detectHeaderMap(rows) {
+  var best = null;
+  var scanLimit = Math.min(rows.length, 25);
+  for (var r = 0; r < scanLimit; r++) {
+    var values = rowValues(rows[r]);
+    var roles = {};
+    var score = 0;
+    for (var c = 0; c < values.length; c++) {
+      var role = headerRole(values[c]);
+      if (role && roles[role] === undefined) {
+        roles[role] = c;
+        score++;
+      }
+    }
+    if (roles.parcel !== undefined) score += 2;
+    if (roles.address !== undefined) score += 2;
+    if (!best || score > best.score) best = { rowIndex: r, roles: roles, score: score };
+  }
+  return best && best.roles.parcel !== undefined && best.roles.address !== undefined
+    ? best
+    : null;
+}
+
+function rowToWayneObject(row, headerMap) {
+  var values = rowValues(row);
+  var output = {};
+  Object.keys(headerMap.roles).forEach(function(role) {
+    output[role] = values[headerMap.roles[role]] || '';
+  });
+  return output;
+}
+
+function isEmptyWayneMappedRow(row) {
+  row = row || {};
+  return Object.keys(row).every(function(key) {
+    return !normalizeCell(row[key]);
+  });
+}
+
+function isHeaderLikeWayneMappedRow(row) {
+  row = row || {};
+  return Object.keys(row).some(function(key) {
+    return normalizeKey(row[key]) === normalizeKey(key);
+  }) || Object.keys(row).some(function(key) {
+    return /^column\d+$/i.test(normalizeCell(row[key]));
+  });
+}
+
+function isPlaceholderValue(value) {
+  var text = normalizeCell(value);
+  return !text || /^column\d+$/i.test(text) || /^unnamed/i.test(text) || /^n\/?a$/i.test(text);
+}
+
+function looksLikeParcel(value) {
+  var text = normalizeCell(value);
+  if (isPlaceholderValue(text)) return false;
+  var compact = text.replace(/[^A-Za-z0-9]/g, '');
+  return compact.length >= 6 && /\d/.test(compact);
+}
+
+function looksLikeAddress(value) {
+  var text = normalizeCell(value);
+  if (isPlaceholderValue(text)) return false;
+  if (/^(property\s+)?address$/i.test(text)) return false;
+  return /\d/.test(text) && /[A-Za-z]/.test(text) && text.length >= 8;
+}
+
 function parseMoney(value) {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number') return isFinite(value) ? value : null;
@@ -112,12 +209,19 @@ function xlsxRowsFromBuffer(buffer, limit) {
   if (!sheetName) return [];
   var sheet = workbook.Sheets[sheetName];
   if (!sheet || !sheet['!ref']) return [];
-  var range = XLSX.utils.decode_range(sheet['!ref']);
-  range.e.r = Math.min(range.e.r, range.s.r + requested);
-  return XLSX.utils.sheet_to_json(sheet, {
-    defval: '',
-    range: XLSX.utils.encode_range(range)
-  }).slice(0, requested);
+  var rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+  var headerMap = detectHeaderMap(rawRows);
+  if (!headerMap) {
+    return [{ __wayne_parse_error: 'Wayne XLSX parcel/address columns could not be detected' }];
+  }
+
+  var rows = [];
+  for (var i = headerMap.rowIndex + 1; i < rawRows.length && rows.length < requested; i++) {
+    var mapped = rowToWayneObject(rawRows[i], headerMap);
+    if (isEmptyWayneMappedRow(mapped) || isHeaderLikeWayneMappedRow(mapped)) continue;
+    rows.push(mapped);
+  }
+  return rows;
 }
 
 async function fetchWayneTaxRows(limit) {
@@ -134,8 +238,9 @@ async function fetchWayneTaxRows(limit) {
 function buildWayneTaxLead(row, sourceInfo) {
   row = row || {};
   sourceInfo = sourceInfo || {};
-  var parcel = firstField(row, ['parcel_id', 'parcel', 'parcel_number', 'apn', 'property_id', 'parcelid']);
-  var address = firstField(row, ['property_address', 'address', 'site_address', 'situs', 'propertyaddress']);
+  if (row.__wayne_parse_error) throw new Error(row.__wayne_parse_error);
+  var parcel = firstField(row, ['parcel', 'parcel_id', 'parcel_number', 'apn', 'property_id', 'parcelid']);
+  var address = firstField(row, ['address', 'property_address', 'site_address', 'situs', 'propertyaddress']);
   var city = firstField(row, ['city_name', 'city', 'municipality', 'community']);
   var ownerName = firstField(row, ['owner_name', 'owner', 'taxpayer_name', 'name']);
   var taxDue = parseMoney(firstField(row, ['tax_due', 'taxes_due', 'amount_due', 'balance_due', 'total_due', 'delinquent_amount']));
@@ -143,6 +248,9 @@ function buildWayneTaxLead(row, sourceInfo) {
   var auctionDate = parseDate(firstField(row, ['auction_date', 'sale_date', 'date']));
   var taxYear = firstField(row, ['tax_year', 'year', 'delinquent_year', 'forfeiture_year', 'foreclosure_year']);
   var status = firstField(row, ['status', 'foreclosure_stage', 'stage']);
+
+  if (!looksLikeParcel(parcel)) throw new Error('Wayne row missing valid parcel after mapping');
+  if (!looksLikeAddress(address)) throw new Error('Wayne row missing valid address after mapping');
 
   var distressTypes = ['tax_delinquent'];
   if (auctionDate || openingBid !== null || /auction|foreclos/i.test(String(status || ''))) {
