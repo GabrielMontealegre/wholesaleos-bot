@@ -790,6 +790,7 @@ function renderManualDealAnalyzer() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           ${input('mda-source', 'Source link or address', 'Paste listing, FSBO, courthouse link, or address')}
           ${numberInput('mda-purchase', 'Asking / purchase price', '$150,000')}
+          ${input('mda-distress', 'Distress / context', 'Tax delinquent, auction, probate, tired landlord')}
           ${numberInput('mda-arv', 'ARV', '$240,000')}
           ${numberInput('mda-repairs', 'Repairs', '$35,000')}
           ${numberInput('mda-assignment', 'Assignment fee target', '$10,000')}
@@ -830,6 +831,10 @@ function renderManualDealAnalyzer() {
             <div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Walkaway</div><div id="mda-walkaway-price" style="font-size:15px;font-weight:900;color:#e2e8f0">-</div></div>
           </div>
           <div id="mda-negotiation-notes" style="font-size:10px;color:#cbd5e1;line-height:1.55">Enter ARV and price basis to build offer guidance.</div>
+        </div>
+        <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:7px">Seller Questions / Call Guide</div>
+          <div id="mda-call-guide" style="font-size:10px;color:#cbd5e1;line-height:1.55">Enter deal details to build call guidance.</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px">
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">MAO</div><div id="mda-mao" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
@@ -886,6 +891,15 @@ function mdaSetList(id, items, emptyText) {
   el.innerHTML = items.length
     ? items.map(function(item) { return '<div style="margin-bottom:4px">' + item + '</div>'; }).join('')
     : '<div style="color:#94a3b8">' + emptyText + '</div>';
+}
+
+function mdaSetGuide(id, sections) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = sections.map(function(section) {
+    return '<div style="margin-bottom:8px"><div style="color:#f4c542;font-weight:800;text-transform:uppercase;font-size:9px;margin-bottom:3px">' + section.title + '</div>' +
+      section.items.map(function(item) { return '<div style="margin-bottom:3px">- ' + item + '</div>'; }).join('') + '</div>';
+  }).join('');
 }
 
 function mdaCompValues() {
@@ -971,6 +985,8 @@ function updateManualDealAnalyzer() {
   var taxes = mdaNumber('mda-taxes');
   var rent = mdaNumber('mda-rent');
   var sqft = mdaNumber('mda-sqft');
+  var sourceRaw = mdaRaw('mda-source').toLowerCase();
+  var distressRaw = mdaRaw('mda-distress').toLowerCase();
   var comps = mdaCompDetails();
   var compStats = mdaCompStats(comps, sqft);
   var arv = manualArv || compStats.suggestedArv;
@@ -1015,7 +1031,7 @@ function updateManualDealAnalyzer() {
   if (rent && basisWithRepairs && rentRatio < 0.008) risks.push('Rental check is weak under the rough 0.8% rent-to-basis screen.');
   if (comps.length === 1) risks.push('Only one comp entered.');
   if (manualArv && compStats.suggestedArv && Math.abs(compStats.suggestedArv - manualArv) / manualArv > 0.15) risks.push('Comp-derived ARV differs from manual ARV by more than 15%.');
-  if (!taxes && mdaRaw('mda-source').toLowerCase().indexOf('tax') > -1) risks.push('Tax source entered but taxes/liens are blank.');
+  if (!taxes && sourceRaw.indexOf('tax') > -1) risks.push('Tax source entered but taxes/liens are blank.');
   if (sqft && arv && arv / sqft > 400) risks.push('High ARV per sqft. Confirm neighborhood comps carefully.');
 
   if (!arv) weaknesses.push('Missing ARV.');
@@ -1127,6 +1143,81 @@ function updateManualDealAnalyzer() {
     if (dealGrade === 'D' || dealGrade === 'F') negotiationNotes.push('Grade is weak, so treat this as research guidance, not an offer recommendation.');
   }
 
+  var hasTaxContext = taxes > 0 || sourceRaw.indexOf('tax') > -1 || distressRaw.indexOf('tax') > -1 || distressRaw.indexOf('lien') > -1;
+  var hasAuctionContext = openingBid > 0 && (
+    sourceRaw.indexOf('auction') > -1 || sourceRaw.indexOf('sale') > -1 || sourceRaw.indexOf('sheriff') > -1 ||
+    sourceRaw.indexOf('treasurer') > -1 || distressRaw.indexOf('auction') > -1 || distressRaw.indexOf('sale') > -1
+  );
+  var hasDistressContext = distressRaw.length > 0 || hasTaxContext || hasAuctionContext;
+  var highRepairs = repairs >= 30000 || (arv && repairs / arv >= 0.12);
+  var askingAboveWalkaway = dealBasis && walkawayPrice && dealBasis > walkawayPrice;
+  var missingArvOrComps = !manualArv || !comps.length;
+  var callGuideSections = [
+    {
+      title: 'Opening line',
+      items: [
+        'Hi, I am calling about the property. I wanted to see if you are still open to talking through options.',
+        hasDistressContext ? 'Keep the opening neutral. Mention the source generally, but let the seller confirm the situation.' : 'Keep the opening neutral and ask permission to ask a few quick questions.'
+      ]
+    },
+    {
+      title: 'Discovery questions',
+      items: [
+        'Can you confirm the property address and whether you are the right person to speak with?',
+        'Is the property occupied, vacant, rented, or owner-occupied?',
+        'Are there any title, lien, probate, tenant, or access issues I should know before pricing it?'
+      ]
+    },
+    {
+      title: 'Motivation questions',
+      items: [
+        'What has you considering selling now?',
+        'What would a good outcome look like for you?',
+        hasTaxContext ? 'Are taxes, liens, or payment deadlines creating pressure right now?' : 'Is there anything time-sensitive affecting your decision?'
+      ]
+    },
+    {
+      title: 'Property condition questions',
+      items: [
+        'What repairs would you do first if you kept the property?',
+        highRepairs ? 'Can you walk me through roof, HVAC, plumbing, electrical, foundation, and any water damage?' : 'Are there known issues with roof, HVAC, plumbing, electrical, foundation, or water intrusion?',
+        'When was the last major update or repair completed?'
+      ]
+    },
+    {
+      title: 'Price and offer questions',
+      items: [
+        firstOffer > 0 ? 'My first-pass range starts near ' + mdaMoney(firstOffer) + ' and targets ' + mdaMoney(targetOffer) + ', but I need to verify condition and title before making that final.' : 'I need ARV, condition, and price basis before discussing a real number.',
+        askingAboveWalkaway ? 'Your current ask is above my walkaway number, so I would need to understand flexibility before spending more diligence time.' : 'How much flexibility do you have if we can close cleanly and handle the work?',
+        'Would you rather optimize for highest price, speed, certainty, or fewer repairs and showings?'
+      ]
+    },
+    {
+      title: 'Urgency and timeline questions',
+      items: [
+        hasAuctionContext ? 'Is there an auction, tax sale, sheriff sale, or other deadline already scheduled?' : 'Is there a date you need this solved by?',
+        openingBid && hasAuctionContext ? 'Do you know the opening bid, redemption deadline, or sale status?' : 'Are there deadlines from a lender, county, court, HOA, tenant, or family situation?',
+        'If we agreed on terms, how soon would you want to close?'
+      ]
+    },
+    {
+      title: 'Closing and next steps',
+      items: [
+        'If the numbers make sense, can we schedule a walkthrough or get photos today?',
+        rent ? 'If it is rented, can you confirm rent, lease end date, deposit, and tenant status?' : 'Can you send photos or details that help estimate repairs?',
+        'Would you be comfortable with me verifying taxes, liens, title, and comparable sales before I send final terms?'
+      ]
+    },
+    {
+      title: 'Caution notes',
+      items: [
+        'Do not overstate tax, lien, auction, repair, ARV, or title facts until verified.',
+        missingArvOrComps ? 'ARV or comps are incomplete, so avoid making a firm final offer until comps are verified.' : 'Comps are entered, but still verify they are truly comparable before relying on the range.',
+        dealGrade === 'D' || dealGrade === 'F' ? 'Deal grade is weak, so treat the call as research unless the seller has major flexibility.' : 'Use the call to confirm facts before moving from guidance to commitment.'
+      ]
+    }
+  ];
+
   mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
   mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
   mdaSet('mda-wholesale-profit', mdaMoney(wholesaleProfit), wholesaleProfit > 0 ? '#10b981' : '#ef4444');
@@ -1146,6 +1237,7 @@ function updateManualDealAnalyzer() {
   mdaSetList('mda-missing', missing, 'No obvious missing info.');
   mdaSetList('mda-risks', risks, 'No major risk flags from current inputs.');
   mdaSetList('mda-negotiation-notes', negotiationNotes, 'Enter ARV and price basis to build offer guidance.');
+  mdaSetGuide('mda-call-guide', callGuideSections);
   mdaSetList('mda-comp-warnings', compWarnings, 'No comp warnings from current inputs.');
   mdaSetList('mda-deal-weaknesses', weaknesses, 'No major deal weaknesses from current inputs.');
 }
