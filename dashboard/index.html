@@ -822,6 +822,15 @@ function renderManualDealAnalyzer() {
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade</div><div id="mda-deal-grade" style="font-size:28px;font-weight:900;color:#94a3b8;line-height:1">-</div></div>
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade Reason</div><div id="mda-deal-grade-reason" style="font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45">Enter deal details to grade.</div></div>
         </div>
+        <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:7px">Offer Strategy</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px">
+            <div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">First Offer</div><div id="mda-first-offer" style="font-size:15px;font-weight:900;color:#e2e8f0">-</div></div>
+            <div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Target</div><div id="mda-target-offer" style="font-size:15px;font-weight:900;color:#e2e8f0">-</div></div>
+            <div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Walkaway</div><div id="mda-walkaway-price" style="font-size:15px;font-weight:900;color:#e2e8f0">-</div></div>
+          </div>
+          <div id="mda-negotiation-notes" style="font-size:10px;color:#cbd5e1;line-height:1.55">Enter ARV and price basis to build offer guidance.</div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px">
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">MAO</div><div id="mda-mao" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Spread</div><div id="mda-spread" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
@@ -1088,6 +1097,36 @@ function updateManualDealAnalyzer() {
     dealGradeReason = 'Weak economics or high uncertainty. Do more research before offering.';
   }
 
+  var firstOffer = 0;
+  var targetOffer = 0;
+  var walkawayPrice = 0;
+  var negotiationNotes = [];
+  var offerColor = '#94a3b8';
+  if (!arv || !dealBasis) {
+    negotiationNotes.push('Offer guidance needs ARV plus asking price or opening bid.');
+  } else if (mao <= 0) {
+    negotiationNotes.push('MAO is zero or negative after repairs, fees, closing costs, and liens. Do not make an offer from this model yet.');
+    offerColor = '#ef4444';
+  } else {
+    var bufferRate = dealGrade === 'A' ? 0.06 : (dealGrade === 'B' ? 0.08 : 0.10);
+    var negotiationBuffer = Math.max(5000, mao * bufferRate);
+    firstOffer = Math.max(0, mao - negotiationBuffer);
+    targetOffer = mao;
+    var walkawayBuffer = Math.min(Math.max(3000, mao * 0.03), Math.max(3000, spread * 0.25));
+    var candidateWalkaway = mao + walkawayBuffer;
+    var walkawaySpread = arv - candidateWalkaway - repairs - closing - taxes - assignment;
+    var safeMinimumSpread = Math.max(assignment, arv * 0.06);
+    walkawayPrice = walkawaySpread >= safeMinimumSpread ? candidateWalkaway : mao;
+    offerColor = dealBasis <= walkawayPrice ? '#10b981' : '#f59e0b';
+    negotiationNotes.push('First offer starts below MAO with a ' + Math.round(bufferRate * 100) + '% negotiation buffer.');
+    negotiationNotes.push('Target offer equals MAO based on current ARV, repairs, fees, closing costs, and liens.');
+    if (walkawayPrice > mao) negotiationNotes.push('Walkaway includes a small buffer because projected spread still clears the safety screen.');
+    else negotiationNotes.push('Walkaway stays at MAO because extra price would weaken the margin.');
+    if (dealBasis > walkawayPrice) negotiationNotes.push('Asking price is above walkaway. Negotiate down before proceeding.');
+    if (firstOffer <= 0) negotiationNotes.push('First offer is zero or negative. Recheck ARV, liens, and repairs before using this range.');
+    if (dealGrade === 'D' || dealGrade === 'F') negotiationNotes.push('Grade is weak, so treat this as research guidance, not an offer recommendation.');
+  }
+
   mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
   mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
   mdaSet('mda-wholesale-profit', mdaMoney(wholesaleProfit), wholesaleProfit > 0 ? '#10b981' : '#ef4444');
@@ -1101,8 +1140,12 @@ function updateManualDealAnalyzer() {
   mdaSet('mda-comp-confidence', compStats.confidence + (compStats.count ? ' | ' + compStats.countQuality : ''), compStats.confidenceColor);
   mdaSet('mda-deal-grade', dealGrade, dealGradeColor);
   mdaSet('mda-deal-grade-reason', dealGradeReason);
+  mdaSet('mda-first-offer', firstOffer > 0 ? mdaMoney(firstOffer) : '-', offerColor);
+  mdaSet('mda-target-offer', targetOffer > 0 ? mdaMoney(targetOffer) : '-', offerColor);
+  mdaSet('mda-walkaway-price', walkawayPrice > 0 ? mdaMoney(walkawayPrice) : '-', dealBasis && walkawayPrice && dealBasis > walkawayPrice ? '#ef4444' : offerColor);
   mdaSetList('mda-missing', missing, 'No obvious missing info.');
   mdaSetList('mda-risks', risks, 'No major risk flags from current inputs.');
+  mdaSetList('mda-negotiation-notes', negotiationNotes, 'Enter ARV and price basis to build offer guidance.');
   mdaSetList('mda-comp-warnings', compWarnings, 'No comp warnings from current inputs.');
   mdaSetList('mda-deal-weaknesses', weaknesses, 'No major deal weaknesses from current inputs.');
 }
