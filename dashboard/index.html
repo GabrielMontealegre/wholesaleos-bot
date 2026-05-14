@@ -2136,6 +2136,124 @@ function renderLeadIntelligence(li) {
   return html;
 }
 
+function buildLeadEvidenceDetails(lead) {
+  lead = lead || {};
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var urls = evidence.urls || {};
+  var money = evidence.money || {};
+  var timeline = li.timeline || {};
+  var sourceDetails = lead.source_details || {};
+  function pick(paths) {
+    return mdaLeadPick(lead, paths);
+  }
+  function pickLi(paths) {
+    for (var i = 0; i < paths.length; i++) {
+      var value = mdaLeadAt(li, paths[i]);
+      if (Array.isArray(value) && value.length) return value;
+      if (mdaLeadText(value)) return value;
+    }
+    return '';
+  }
+  function value(label, raw, type) {
+    var text = '';
+    if (type === 'money') {
+      var amount = mdaLeadNumber(raw);
+      text = amount > 0 ? mdaMoney(amount) : '';
+    } else if (Array.isArray(raw)) {
+      text = raw.map(mdaLeadText).filter(Boolean).join(', ');
+    } else {
+      text = mdaLeadText(raw);
+    }
+    return { label: label, value: text || 'Not available', available: !!text };
+  }
+  var distressTypes = mdaLeadUnique([]
+    .concat(mdaLeadList(lead.distress_types))
+    .concat(mdaLeadList(lead.distress_signals))
+    .concat(mdaLeadList(li.distress_types))
+    .concat(mdaLeadList(li.distress_signals))
+    .concat(mdaLeadList(lead.motivation || lead.category)));
+  var priorityReasons = mdaLeadUnique(mdaLeadList(li.priority_reasons).concat(mdaLeadList(lead.priority_reasons)));
+  var fields = [
+    value('Source name', pick(['source', 'source_name', 'enrichment_source']) || evidence.source || sourceDetails.source),
+    value('Source type', pick(['source_type', 'category', 'motivation']) || li.distress_cause),
+    value('Source URL', pick(['source_url', 'sourceUrl']) || urls.source_url),
+    value('Query URL', pick(['source_query_url', 'query_url']) || urls.source_query_url),
+    value('Record URL', pick(['source_record_url', 'record_url']) || urls.source_record_url),
+    value('Parcel / APN', pick(['parcel_apn', 'parcel_number', 'apn', 'parcel', 'source_details.parcel_apn', 'source_details.apn'])),
+    value('Owner name', pick(['owner_name', 'owner', 'seller_name'])),
+    value('Tax due', pick(['tax_due', 'taxes_due', 'taxes_owed', 'source_details.tax_due']) || money.tax_due || money.taxes_due, 'money'),
+    value('Lien amount', pick(['lien_amount', 'taxes_liens', 'source_details.lien_amount']) || money.lien_amount || money.taxes_liens, 'money'),
+    value('Opening bid', pick(['opening_bid', 'minimum_bid', 'source_details.opening_bid']) || money.opening_bid || money.minimum_bid, 'money'),
+    value('Auction date', pick(['auction_date', 'sale_date', 'foreclosure_date', 'tax_sale_date', 'source_details.auction_date']) || timeline.auction_date || timeline.sale_date),
+    value('Days to auction', pick(['days_to_auction', 'days_to_sale', 'source_details.days_to_auction']) || timeline.days_to_auction || timeline.days_to_sale),
+    value('Years delinquent', pick(['years_delinquent', 'tax_years_delinquent', 'source_details.years_delinquent']) || timeline.years_delinquent),
+    value('Foreclosure stage', pick(['foreclosure_stage', 'source_details.foreclosure_stage']) || pickLi(['foreclosure_stage'])),
+    value('Probate status', pick(['probate_status', 'source_details.probate_status']) || pickLi(['probate_status'])),
+    value('Distress types', distressTypes),
+    value('Distress score', pick(['distress_score', 'hot_score', 'score']) || pickLi(['distress_score'])),
+    value('Source confidence score', pick(['source_confidence_score', 'source_confidence', 'sourceConfidence']) || pickLi(['source_confidence_score', 'source_confidence', 'confidence'])),
+    value('Source confidence reason', pick(['source_confidence_reason', 'source_reason']) || pickLi(['source_confidence_reason', 'urgency_reason'])),
+    value('Priority tier', pick(['priority_tier']) || li.priority_tier),
+    value('Priority label', pick(['priority_label']) || li.priority_label),
+    value('Priority reasons', priorityReasons),
+    value('Work queue band', pick(['work_queue_band']) || li.work_queue_band),
+    value('Work queue score', pick(['work_queue_score']) || li.work_queue_score),
+    value('Contact readiness', pick(['contact_readiness']) || li.contact_readiness),
+    value('Skip trace priority', pick(['skip_trace_priority', 'skip_trace_status']) || li.skip_trace_priority),
+    value('Freshness / verification warning', buildVerificationFreshness(lead, []).topAction)
+  ];
+  var missing = [];
+  if (!fields.find(function(f) { return f.label === 'Auction date'; }).available) missing.push('No auction date found');
+  if (!lead.phone && !lead.email) missing.push('No owner phone/email');
+  if (!lead.arv && !(lead.comps && lead.comps.length) && !mdaLeadText(lead.comp_confidence || li.comp_confidence)) missing.push('No comps added');
+  if (!mdaLeadText(pick(['last_verified_at', 'verified_at', 'source_verified_at', 'lead_intelligence.last_verified_at', 'lead_intelligence.timeline.last_verified_at']))) missing.push('No verification timestamp');
+  if (!mdaLeadText(lead.offer_status || lead.offerStatus || lead.offer_stage) && !lead.offer && !lead.mao) missing.push('No offer strategy saved');
+  var why = [];
+  var sourceName = String(fields[0].value || '').toLowerCase();
+  var sourceConfidence = String(fields[17].value || '').toLowerCase();
+  if (sourceName.indexOf('tax') > -1 || sourceName.indexOf('foreclosure') > -1 || sourceName.indexOf('auction') > -1 || sourceName.indexOf('county') > -1) why.push('comes from an official tax/foreclosure-style source');
+  if (fields[7].available || fields[8].available) why.push('has tax/lien pressure');
+  if (sourceConfidence.indexOf('high') > -1) why.push('has high source confidence');
+  if (li.priority_tier || li.priority_label) why.push('is prioritized by saved lead intelligence');
+  if (!lead.phone && !lead.email) why.push('needs contact enrichment before outreach');
+  if (distressTypes.length) why.push('has distress signals: ' + distressTypes.slice(0, 3).join(', '));
+  if (!why.length) why.push('has limited saved evidence and needs manual verification before action');
+  return {
+    fields: fields,
+    missing: missing,
+    why: 'This lead matters because it ' + why.join(', ') + '.'
+  };
+}
+
+function renderLeadEvidenceDetails(lead) {
+  var details = buildLeadEvidenceDetails(lead);
+  function renderField(field) {
+    var val = field.value;
+    var isUrl = /^https?:\/\//i.test(val);
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px;min-width:0">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;margin-bottom:3px">' + leadIntelText(field.label) + '</div>' +
+      (isUrl ? '<a href="' + mdaEscapeAttr(val) + '" target="_blank" style="font-size:10px;color:#f4c542;line-height:1.45;word-break:break-word;text-decoration:none">' + leadIntelText(val) + '</a>'
+        : '<div style="font-size:10px;color:' + (field.available ? '#e5e7eb' : '#64748b') + ';line-height:1.45;word-break:break-word">' + leadIntelText(val) + '</div>') +
+    '</div>';
+  }
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Evidence Details</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Saved source fields, raw intelligence, and deterministic reasons only.</div></div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin-bottom:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:3px">Why This Lead Matters</div>' +
+      '<div style="font-size:11px;color:#e5e7eb;line-height:1.5">' + leadIntelText(details.why) + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-bottom:9px">' + details.fields.map(renderField).join('') + '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:5px">Missing Evidence</div>' +
+      (details.missing.length ? details.missing.map(function(item) { return '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-bottom:3px">- ' + leadIntelText(item) + '</div>'; }).join('') : '<div style="font-size:10px;color:#10b981;line-height:1.45">No major missing evidence flags from saved fields.</div>') +
+    '</div>' +
+  '</div>';
+}
+
 function acquisitionTimelineDate(value) {
   if (!value) return null;
   if (typeof value === 'number') return new Date(value);
@@ -3388,6 +3506,7 @@ function renderLeadDetail(l) {
     html+='<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable</div>';
   }
   html+='</div>';
+  html += renderLeadEvidenceDetails(l);
   html += renderCostAwareness(l, fu);
   html += renderSourceRecheckWorkflow(l, fu);
   html += renderVerificationFreshness(l, fu);
@@ -9107,6 +9226,7 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   html += renderLeadIntelligence(l.lead_intelligence);
+  html += renderLeadEvidenceDetails(l);
   html += renderCostAwareness(l, fu);
   html += renderSourceRecheckWorkflow(l, fu);
   html += renderVerificationFreshness(l, fu);
