@@ -515,14 +515,15 @@ function compactCookCountyTaxError(rowIndex, error, mappedLead, rawRow) {
   };
 }
 
-async function runCookCountyTaxTest(limit) {
-  var requested = clampCookCountyTaxLimit(limit);
-  var fetched = await fetchCookCountyTaxRows(requested);
-  var rows = fetched.rows || [];
-  var source = fetched.source;
+function runCookCountyTaxRows(rows, source, requested, options) {
+  options = options || {};
+  var shouldCommit = options.commit === true;
+  rows = rows || [];
+  requested = clampCookCountyTaxLimit(requested);
   var samples = [];
   var errors = [];
   var insertedOrMerged = 0;
+  var wouldInsertOrMerge = 0;
 
   for (var i = 0; i < rows.length && i < requested; i++) {
     var rawRow = rows[i];
@@ -533,10 +534,15 @@ async function runCookCountyTaxTest(limit) {
         throw new Error('Cook row missing address after mapping');
       }
 
-      var result = db.addLead(mappedLead);
-      var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
-      if (result && result.id) insertedOrMerged++;
-      samples.push(compactCookCountyTaxSample(savedLead || (result && result.address ? result : mappedLead), mappedLead));
+      wouldInsertOrMerge++;
+      if (shouldCommit) {
+        var result = db.addLead(mappedLead);
+        var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
+        if (result && result.id) insertedOrMerged++;
+        samples.push(compactCookCountyTaxSample(savedLead || (result && result.address ? result : mappedLead), mappedLead));
+      } else {
+        samples.push(compactCookCountyTaxSample(mappedLead, mappedLead));
+      }
     } catch(e) {
       errors.push(compactCookCountyTaxError(i, e, mappedLead, rawRow));
     }
@@ -546,10 +552,18 @@ async function runCookCountyTaxTest(limit) {
     ok: samples.length > 0 || errors.length === 0,
     requested: requested,
     partial: errors.length > 0 && samples.length > 0,
+    dry_run: !shouldCommit,
+    would_insert_or_merge: wouldInsertOrMerge,
     errors: errors,
     inserted_or_merged: insertedOrMerged,
     samples: samples
   };
+}
+
+async function runCookCountyTaxTest(limit, options) {
+  var requested = clampCookCountyTaxLimit(limit);
+  var fetched = await fetchCookCountyTaxRows(requested);
+  return runCookCountyTaxRows(fetched.rows || [], fetched.source, requested, options);
 }
 
 async function runExtraSocrataSources(maxPerSource) {
@@ -582,6 +596,7 @@ async function runExtraSocrataSources(maxPerSource) {
 module.exports = {
   runExtraSocrataSources: runExtraSocrataSources,
   runCookCountyTaxTest: runCookCountyTaxTest,
+  _runCookCountyTaxRows: runCookCountyTaxRows,
   _buildCookCountyTaxLead: buildCookCountyTaxLead,
   _buildGenericSocrataLead: buildGenericSocrataLead
 };

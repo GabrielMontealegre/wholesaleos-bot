@@ -1034,6 +1034,16 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     'lead_intelligence.summary', 'lead_intelligence.intelligence_summary', 'lead_intelligence.recommended_next_action',
     'lead_intelligence.urgency_reason', 'lead_intelligence.priority_reason'
   ]);
+  var priorityLabel = mdaLeadPick(lead, ['priority_label', 'priority_tier', 'lead_intelligence.priority_label', 'lead_intelligence.priority_tier']);
+  var priorityReasons = mdaLeadList(mdaLeadPick(lead, ['priority_reasons', 'lead_intelligence.priority_reasons']));
+  var sourceConfidenceReason = mdaLeadList(mdaLeadPick(lead, [
+    'source_confidence_reason',
+    'lead_intelligence.source_confidence_reason',
+    'lead_intelligence.evidence.source_confidence_reason'
+  ]));
+  var workQueueBand = mdaLeadPick(lead, ['work_queue_band', 'lead_intelligence.work_queue_band']);
+  var contactReadiness = mdaLeadPick(lead, ['contact_readiness', 'lead_intelligence.contact_readiness']);
+  var skipTracePriority = mdaLeadPick(lead, ['skip_trace_priority', 'lead_intelligence.skip_trace_priority']);
   var sourceText = mdaLeadUnique([address].concat(sourceUrls.slice(0, 2))).join(' | ');
   var contextText = mdaLeadUnique(
     distressTypes
@@ -1042,6 +1052,10 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
       .concat(parcel ? ['Parcel/APN: ' + parcel] : [])
       .concat(ownerName ? ['Owner: ' + ownerName] : [])
       .concat(intelligenceSummary ? ['Lead intelligence: ' + intelligenceSummary] : [])
+      .concat(priorityLabel ? ['Priority: ' + priorityLabel] : [])
+      .concat(workQueueBand ? ['Work queue: ' + workQueueBand] : [])
+      .concat(contactReadiness ? ['Contact readiness: ' + contactReadiness] : [])
+      .concat(skipTracePriority ? ['Skip trace: ' + skipTracePriority] : [])
   ).join('; ');
   var values = {};
   if (sourceText) values['mda-source'] = sourceText;
@@ -1063,7 +1077,13 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     { label: 'Taxes/liens', value: taxesLiens > 0 ? mdaMoney(taxesLiens) : '' },
     { label: 'Opening bid', value: openingBid > 0 ? mdaMoney(openingBid) : '' },
     { label: 'Source URLs', value: sourceUrls.join(' | ') },
-    { label: 'Lead intel', value: intelligenceSummary }
+    { label: 'Lead intel', value: intelligenceSummary },
+    { label: 'Priority', value: priorityLabel },
+    { label: 'Priority reasons', value: priorityReasons.slice(0, 4).join(', ') },
+    { label: 'Source confidence', value: sourceConfidenceReason.slice(0, 4).join(', ') },
+    { label: 'Work queue', value: workQueueBand },
+    { label: 'Contact readiness', value: contactReadiness },
+    { label: 'Skip trace', value: skipTracePriority }
   ].filter(function(item) { return mdaLeadText(item.value); });
   return {
     leadId: lead.id,

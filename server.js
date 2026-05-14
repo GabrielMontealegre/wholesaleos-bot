@@ -4430,6 +4430,7 @@ app.post('/api/admin/test-ingest/cook-tax', requireAdmin, async (req, res) => {
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
       ? Math.min(parsedLimit, 3)
       : 1;
+    const commit = req.body && req.body.commit === true;
     const socrataExtra = require('./modules/sources/socrata-extra');
 
     if (!socrataExtra.runCookCountyTaxTest) {
@@ -4439,7 +4440,7 @@ app.post('/api/admin/test-ingest/cook-tax', requireAdmin, async (req, res) => {
       });
     }
 
-    const result = await socrataExtra.runCookCountyTaxTest(limit);
+    const result = await socrataExtra.runCookCountyTaxTest(limit, { commit: commit });
     res.json(result);
   } catch(e) {
     res.status(502).json({ ok: false, error: e.message });
@@ -4455,6 +4456,7 @@ app.post('/api/admin/test-ingest/wayne-tax', requireAdmin, async (req, res) => {
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
       ? Math.min(parsedLimit, 3)
       : 1;
+    const commit = req.body && req.body.commit === true;
     const wayneTax = require('./modules/sources/wayne-tax');
 
     if (!wayneTax.runWayneTaxTest) {
@@ -4464,7 +4466,7 @@ app.post('/api/admin/test-ingest/wayne-tax', requireAdmin, async (req, res) => {
       });
     }
 
-    const result = await wayneTax.runWayneTaxTest(limit);
+    const result = await wayneTax.runWayneTaxTest(limit, { commit: commit });
     res.json(result);
   } catch(e) {
     res.status(502).json({ ok: false, error: e.message });

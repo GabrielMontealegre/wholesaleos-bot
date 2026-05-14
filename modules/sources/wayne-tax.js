@@ -202,14 +202,9 @@ async function discoverWayneTaxXlsxUrl() {
   throw new Error('Wayne Treasurer XLSX link not found');
 }
 
-function xlsxRowsFromBuffer(buffer, limit) {
+function mappedWayneRowsFromRawRows(rawRows, limit) {
   var requested = clampWayneTaxLimit(limit);
-  var workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
-  var sheetName = workbook.SheetNames && workbook.SheetNames[0];
-  if (!sheetName) return [];
-  var sheet = workbook.Sheets[sheetName];
-  if (!sheet || !sheet['!ref']) return [];
-  var rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+  rawRows = rawRows || [];
   var headerMap = detectHeaderMap(rawRows);
   if (!headerMap) {
     return [{ __wayne_parse_error: 'Wayne XLSX parcel/address columns could not be detected' }];
@@ -219,9 +214,20 @@ function xlsxRowsFromBuffer(buffer, limit) {
   for (var i = headerMap.rowIndex + 1; i < rawRows.length && rows.length < requested; i++) {
     var mapped = rowToWayneObject(rawRows[i], headerMap);
     if (isEmptyWayneMappedRow(mapped) || isHeaderLikeWayneMappedRow(mapped)) continue;
+    if (!looksLikeParcel(mapped.parcel) || !looksLikeAddress(mapped.address)) continue;
     rows.push(mapped);
   }
   return rows;
+}
+
+function xlsxRowsFromBuffer(buffer, limit) {
+  var workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  var sheetName = workbook.SheetNames && workbook.SheetNames[0];
+  if (!sheetName) return [];
+  var sheet = workbook.Sheets[sheetName];
+  if (!sheet || !sheet['!ref']) return [];
+  var rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+  return mappedWayneRowsFromRawRows(rawRows, limit);
 }
 
 async function fetchWayneTaxRows(limit) {
@@ -366,27 +372,35 @@ function compactWayneTaxError(rowIndex, error, mappedLead, rawRow) {
   };
 }
 
-async function runWayneTaxTest(limit) {
-  var requested = clampWayneTaxLimit(limit);
-  var fetched = await fetchWayneTaxRows(requested);
-  var rows = fetched.rows || [];
+function runWayneTaxRows(rows, sourceInfo, requested, options) {
+  options = options || {};
+  var shouldCommit = options.commit === true;
+  rows = rows || [];
+  sourceInfo = sourceInfo || {};
+  requested = clampWayneTaxLimit(requested);
   var samples = [];
   var errors = [];
   var insertedOrMerged = 0;
+  var wouldInsertOrMerge = 0;
 
   for (var i = 0; i < rows.length && i < requested; i++) {
     var rawRow = rows[i];
     var mappedLead = null;
     try {
-      mappedLead = buildWayneTaxLead(rawRow, fetched);
+      mappedLead = buildWayneTaxLead(rawRow, sourceInfo);
       if (!mappedLead || !mappedLead.address) {
         throw new Error('Wayne row missing address after mapping');
       }
 
-      var result = db.addLead(mappedLead);
-      var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
-      if (result && result.id) insertedOrMerged++;
-      samples.push(compactWayneTaxSample(savedLead || (result && result.address ? result : mappedLead), mappedLead));
+      wouldInsertOrMerge++;
+      if (shouldCommit) {
+        var result = db.addLead(mappedLead);
+        var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
+        if (result && result.id) insertedOrMerged++;
+        samples.push(compactWayneTaxSample(savedLead || (result && result.address ? result : mappedLead), mappedLead));
+      } else {
+        samples.push(compactWayneTaxSample(mappedLead, mappedLead));
+      }
     } catch(e) {
       errors.push(compactWayneTaxError(i, e, mappedLead, rawRow));
     }
@@ -396,14 +410,25 @@ async function runWayneTaxTest(limit) {
     ok: samples.length > 0 || errors.length === 0,
     partial: errors.length > 0 && samples.length > 0,
     requested: requested,
+    dry_run: !shouldCommit,
+    would_insert_or_merge: wouldInsertOrMerge,
     inserted_or_merged: insertedOrMerged,
     errors: errors,
     samples: samples
   };
 }
 
+async function runWayneTaxTest(limit, options) {
+  var requested = clampWayneTaxLimit(limit);
+  var fetched = await fetchWayneTaxRows(requested);
+  return runWayneTaxRows(fetched.rows || [], fetched, requested, options);
+}
+
 module.exports = {
   runWayneTaxTest: runWayneTaxTest,
   _buildWayneTaxLead: buildWayneTaxLead,
-  _xlsxRowsFromBuffer: xlsxRowsFromBuffer
+  _xlsxRowsFromBuffer: xlsxRowsFromBuffer,
+  _mappedWayneRowsFromRawRows: mappedWayneRowsFromRawRows,
+  _isHeaderLikeWayneMappedRow: isHeaderLikeWayneMappedRow,
+  _runWayneTaxRows: runWayneTaxRows
 };
