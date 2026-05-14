@@ -437,6 +437,7 @@ const APP = {
   calendar: JSON.parse(localStorage.getItem('montsan_calendar') || '[]'),
   followups: JSON.parse(localStorage.getItem('montsan_followups') || '[]'),
   contracts: JSON.parse(localStorage.getItem('montsan_contracts') || '[]'),
+  sourceRechecks: JSON.parse(localStorage.getItem('montsan_source_rechecks') || '{}'),
 };
 
 function defaultBuyers() {
@@ -1686,6 +1687,7 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">Follow-Ups Today</div><div class="stat-value" style="color:${todayFU.length>0?'#ff3b30':'#34c759'}">${todayFU.length}</div><div class="stat-change">${todayFU.length>0?'Action needed':'All clear'}</div></div>
   </div>
   ${renderCostAwarenessCommandCenter(APP.leads, APP.followups)}
+  ${renderSourceRecheckCommandCenter(APP.leads, APP.followups)}
   ${renderVerificationCommandCenter(APP.leads, APP.followups)}
   ${renderTodaySummaryCard(APP.leads, APP.followups)}
   ${renderDailyAcquisitionQueue(APP.leads, APP.followups)}
@@ -2192,6 +2194,158 @@ function acquisitionTimelineTone(days) {
 
 function acquisitionTimelineItem(title, detail, tone) {
   return { title: title, detail: detail, tone: tone || 'neutral' };
+}
+
+function sourceRecheckStateLabel(state) {
+  return ({
+    mark_for_recheck: 'Mark For Recheck',
+    verification_requested: 'Verification Requested',
+    recently_refreshed: 'Recently Refreshed',
+    verification_needed: 'Verification Needed',
+    verification_deferred: 'Verification Deferred'
+  })[state] || 'Verification Needed';
+}
+
+function sourceRecheckMemory(leadId) {
+  var store = (typeof APP !== 'undefined' && APP.sourceRechecks) ? APP.sourceRechecks : {};
+  return store[String(leadId || '')] || {};
+}
+
+function sourceRecheckFormatDate(value) {
+  if (!value) return '';
+  var date = acquisitionTimelineDate(value);
+  if (!date) return leadIntelText(value);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function buildSourceRecheckWorkflow(lead, followups) {
+  lead = lead || {};
+  var freshness = buildVerificationFreshness(lead, followups || []);
+  var memory = sourceRecheckMemory(lead.id);
+  var state = memory.state || '';
+  if (!state) {
+    state = freshness.hasVerification && freshness.verifiedDays !== null && freshness.verifiedDays <= 7
+      ? 'recently_refreshed'
+      : (freshness.needsRecheck ? 'verification_needed' : 'verification_deferred');
+  }
+  var timing = freshness.topAction || 'Review source freshness before outreach';
+  var sourceReminder = freshness.sourceConfidence === 'High official'
+    ? 'Official source signal present, but confirm before paid action'
+    : 'Source freshness should be confirmed before outreach';
+  var refreshMemory = memory.updatedAt
+    ? sourceRecheckStateLabel(memory.state) + ' on ' + sourceRecheckFormatDate(memory.updatedAt)
+    : 'No operator recheck action recorded yet';
+  if (memory.refreshedAt) refreshMemory = 'Operator marked refreshed on ' + sourceRecheckFormatDate(memory.refreshedAt);
+  return {
+    state: state,
+    stateLabel: sourceRecheckStateLabel(state),
+    note: memory.note || '',
+    updatedAt: memory.updatedAt || '',
+    timing: timing,
+    sourceReminder: sourceReminder,
+    refreshMemory: refreshMemory,
+    safeReminder: 'This workflow records operator intent only; it does not scrape or refresh sources automatically.'
+  };
+}
+
+function saveSourceRecheckState(leadId, state) {
+  if (!leadId) return;
+  APP.sourceRechecks = APP.sourceRechecks || {};
+  var current = APP.sourceRechecks[String(leadId)] || {};
+  APP.sourceRechecks[String(leadId)] = {
+    state: state,
+    note: current.note || '',
+    updatedAt: new Date().toISOString(),
+    refreshedAt: state === 'recently_refreshed' ? new Date().toISOString() : (current.refreshedAt || '')
+  };
+  save('source_rechecks', APP.sourceRechecks);
+  toast(sourceRecheckStateLabel(state), 'success');
+  render();
+}
+
+function saveSourceRecheckNote(leadId) {
+  if (!leadId) return;
+  var el = document.getElementById('source-recheck-note-' + leadId);
+  APP.sourceRechecks = APP.sourceRechecks || {};
+  var current = APP.sourceRechecks[String(leadId)] || {};
+  APP.sourceRechecks[String(leadId)] = {
+    state: current.state || 'verification_needed',
+    note: el ? el.value.trim() : '',
+    updatedAt: new Date().toISOString(),
+    refreshedAt: current.refreshedAt || ''
+  };
+  save('source_rechecks', APP.sourceRechecks);
+  toast('Verification note saved', 'success');
+  render();
+}
+
+function renderSourceRecheckWorkflow(lead, followups) {
+  lead = lead || {};
+  var workflow = buildSourceRecheckWorkflow(lead, followups || []);
+  var states = ['mark_for_recheck', 'verification_requested', 'recently_refreshed', 'verification_needed', 'verification_deferred'];
+  var leadId = mdaEscapeAttr(lead.id || '');
+  function stateButton(state) {
+    var active = workflow.state === state;
+    return '<button type="button" data-lead-id="' + leadId + '" data-state="' + state + '" onclick="event.stopPropagation();saveSourceRecheckState(this.dataset.leadId,this.dataset.state)" style="border:1px solid ' + (active ? '#f4c542' : '#334155') + ';background:' + (active ? '#f4c542' : '#111827') + ';color:' + (active ? '#101827' : '#e5e7eb') + ';border-radius:7px;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer">' + sourceRecheckStateLabel(state) + '</button>';
+  }
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Source Recheck Workflow</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Operator-controlled verification state. No scraping, schedulers, or automatic refreshes.</div></div>' +
+      '<span style="font-size:10px;font-weight:800;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:3px 8px">' + workflow.stateLabel + '</span>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + states.map(stateButton).join('') + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Recommended Recheck</div><div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:4px">' + leadIntelText(workflow.timing) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Source Reminder</div><div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:4px">' + leadIntelText(workflow.sourceReminder) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Refresh Memory</div><div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:4px">' + leadIntelText(workflow.refreshMemory) + '</div></div>' +
+    '</div>' +
+    '<textarea id="source-recheck-note-' + leadId + '" placeholder="Operator verification notes" style="width:100%;min-height:54px;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:8px;padding:8px;font-size:11px;resize:vertical">' + leadIntelText(workflow.note) + '</textarea>' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px">' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45">' + workflow.safeReminder + '</div>' +
+      '<button type="button" data-lead-id="' + leadId + '" onclick="event.stopPropagation();saveSourceRecheckNote(this.dataset.leadId)" style="background:#1e2d4a;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer">Save Note</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderSourceRecheckCommandCenter(leads, followups) {
+  var snapshots = (leads || []).map(function(lead) {
+    return { lead: lead, workflow: buildSourceRecheckWorkflow(lead, followups || []) };
+  });
+  var counts = {};
+  snapshots.forEach(function(s) {
+    counts[s.workflow.state] = (counts[s.workflow.state] || 0) + 1;
+  });
+  var operatorMarked = Object.keys((typeof APP !== 'undefined' && APP.sourceRechecks) ? APP.sourceRechecks : {}).length;
+  var top = snapshots.filter(function(s) {
+    return s.workflow.state === 'verification_needed' || s.workflow.state === 'mark_for_recheck' || s.workflow.state === 'verification_requested';
+  })[0];
+  var topAction = top ? top.workflow.timing + ' - ' + daqLeadLabel(top.lead || {}) : 'No source recheck action queued';
+  function metric(state, tone) {
+    var color = tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : '#10b981';
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sourceRecheckStateLabel(state) + '</div>' +
+      '<div style="font-size:18px;font-weight:900;color:' + color + ';margin-top:3px">' + (counts[state] || 0) + '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:14px;padding:12px;margin-bottom:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#f8fafc">Source Recheck Workflow</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:2px">Operator-controlled source verification states. No automatic refreshes.</div></div>' +
+      '<span style="font-size:10px;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:5px 9px">' + operatorMarked + ' operator-marked</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:10px">' +
+      metric('mark_for_recheck', 'warn') +
+      metric('verification_requested', 'warn') +
+      metric('recently_refreshed', 'good') +
+      metric('verification_needed', 'hot') +
+      metric('verification_deferred', 'good') +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.04em;margin-bottom:3px">Top Recheck Action</div>' +
+      '<div style="font-size:11px;color:#e5e7eb;line-height:1.45">' + leadIntelText(topAction) + '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function buildVerificationFreshness(lead, followups) {
@@ -3235,6 +3389,7 @@ function renderLeadDetail(l) {
   }
   html+='</div>';
   html += renderCostAwareness(l, fu);
+  html += renderSourceRecheckWorkflow(l, fu);
   html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
@@ -8953,6 +9108,7 @@ function renderLeadDetail(l) {
 
   html += renderLeadIntelligence(l.lead_intelligence);
   html += renderCostAwareness(l, fu);
+  html += renderSourceRecheckWorkflow(l, fu);
   html += renderVerificationFreshness(l, fu);
   html += renderAcquisitionTimeline(l, fu);
 
@@ -14702,6 +14858,7 @@ function renderDashboard() {
     '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
   '</div>'+
   renderCostAwarenessCommandCenter(leads,fus)+
+  renderSourceRecheckCommandCenter(leads,fus)+
   renderVerificationCommandCenter(leads,fus)+
   renderTodaySummaryCard(leads,fus)+
   renderDailyAcquisitionQueue(leads,fus)+
