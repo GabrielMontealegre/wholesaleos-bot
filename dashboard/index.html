@@ -1258,6 +1258,9 @@ function renderLeadIntelligence(li) {
   var timeline = li.timeline || {};
   var evidence = li.evidence || {};
   var urls = evidence.urls || {};
+  var priorityTier = li.priority_tier || '';
+  var priorityLabel = li.priority_label || '';
+  var priorityReasons = Array.isArray(li.priority_reasons) ? li.priority_reasons.filter(Boolean) : [];
   var links = [];
   [['Source', urls.source_url], ['Query', urls.source_query_url], ['Record', urls.source_record_url]].forEach(function(pair) {
     if (pair[1]) links.push('<a href="' + leadIntelText(pair[1]) + '" target="_blank" style="color:#f4c542;text-decoration:none;font-weight:700">' + pair[0] + '</a>');
@@ -1268,6 +1271,11 @@ function renderLeadIntelligence(li) {
   if (timeline.years_delinquent) highlights.push('Tax years: ' + leadIntelText(timeline.years_delinquent));
   if (timeline.last_activity) highlights.push('Last activity: ' + leadIntelText(String(timeline.last_activity).slice(0,10)));
   var levelColor = li.urgency_level === 'high' ? '#ef4444' : li.urgency_level === 'medium' ? '#f4c542' : '#10b981';
+  var priorityColor = priorityTier === 'tier_5_act_now' ? '#ef4444'
+    : priorityTier === 'tier_4_high_priority' ? '#f59e0b'
+    : priorityTier === 'tier_3_review' ? '#3b82f6'
+    : priorityTier === 'tier_2_monitor' ? '#94a3b8'
+    : '#64748b';
   var cause = leadIntelText(li.distress_cause || 'unknown').replace(/_/g, ' ');
   var action = leadIntelText(li.recommended_next_action || 'monitor').replace(/_/g, ' ');
   var html = '<div style="margin:10px 0;padding:12px;background:#0e1a2d;border:1px solid #1e2d4a;border-radius:10px;color:#e2e8f0">';
@@ -1279,6 +1287,21 @@ function renderLeadIntelligence(li) {
   html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">Action: ' + action + '</span>';
   html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">Confidence: ' + leadIntelText(li.confidence || 'low') + '</span>';
   html += '</div>';
+  if (priorityTier || priorityLabel) {
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
+    if (priorityLabel) {
+      html += '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;background:' + priorityColor + '22;color:' + priorityColor + ';border:1px solid ' + priorityColor + '55">' + leadIntelText(priorityLabel) + '</span>';
+    }
+    if (priorityTier) {
+      html += '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1e2d4a;color:#e2e8f0;border:1px solid #334155">' + leadIntelText(priorityTier) + '</span>';
+    }
+  html += '</div>';
+  }
+  if (priorityReasons.length) {
+    html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Priority: ' + leadIntelText(priorityReasons.slice(0, 4).join(' · ')) + '</div>';
+  } else if (priorityTier || priorityLabel) {
+    html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Priority: not enough evidence to explain this tier yet</div>';
+  }
   html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Reason: ' + leadIntelText(li.urgency_reason || 'insufficient_urgent_signal') + '</div>';
   if (highlights.length) html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Timeline: ' + highlights.join(' | ') + '</div>';
   if (links.length) html += '<div style="font-size:10px;color:#94a3b8;line-height:1.6">Evidence: ' + links.join(' | ') + '</div>';
