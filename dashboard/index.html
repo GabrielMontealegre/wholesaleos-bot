@@ -1685,6 +1685,7 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">Pipeline Fees</div><div class="stat-value" style="color:#ff9500">$${(stats.feesPipeline/1000).toFixed(0)}K</div><div class="stat-change">Pending close</div></div>
     <div class="stat-card"><div class="stat-label">Follow-Ups Today</div><div class="stat-value" style="color:${todayFU.length>0?'#ff3b30':'#34c759'}">${todayFU.length}</div><div class="stat-change">${todayFU.length>0?'Action needed':'All clear'}</div></div>
   </div>
+  ${renderTodaySummaryCard(APP.leads, APP.followups)}
   ${renderDailyAcquisitionQueue(APP.leads, APP.followups)}
   <div class="split-view">
     <div class="split-left">
@@ -2597,6 +2598,44 @@ function buildDailyAcquisitionQueue(leads, followups) {
       })
     }
   ];
+}
+
+function renderTodaySummaryCard(leads, followups) {
+  var queues = buildDailyAcquisitionQueue(leads || [], followups || []);
+  var total = queues.reduce(function(sum, q) { return sum + q.items.length; }, 0);
+  var hotCount = queues.reduce(function(sum, q) {
+    return sum + q.items.filter(function(item) { return item.tone === 'hot'; }).length;
+  }, 0);
+  var topQueue = queues.find(function(q) { return q.items.length > 0; });
+  var topItem = topQueue && topQueue.items[0];
+  var topAction = topItem
+    ? topQueue.title + ': ' + topItem.reason + ' - ' + daqLeadLabel(topItem.lead || {})
+    : 'No daily queue action pending';
+  function summaryMetric(queue) {
+    var hot = queue.items.some(function(item) { return item.tone === 'hot'; });
+    var color = hot ? '#ef4444' : queue.items.length ? '#f59e0b' : '#64748b';
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px;min-width:0">' +
+      '<div style="display:flex;justify-content:space-between;gap:6px;align-items:center">' +
+        '<span style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(queue.title) + '</span>' +
+        '<span style="font-size:13px;font-weight:900;color:' + color + '">' + queue.items.length + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:14px;padding:12px;margin-bottom:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#f8fafc">Today Summary</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:2px">Queue counts from existing deterministic acquisition signals.</div></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;color:#f4c542;background:#1f2937;border:1px solid #334155;border-radius:999px;padding:5px 9px">' + total + ' total signals</span>' +
+        '<span style="font-size:10px;color:#fecaca;background:#3f1f22;border:1px solid #7f1d1d;border-radius:999px;padding:5px 9px">' + hotCount + ' highest urgency</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-bottom:10px">' + queues.map(summaryMetric).join('') + '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.04em;margin-bottom:3px">Top Recommended Action</div>' +
+      '<div style="font-size:11px;color:#e5e7eb;line-height:1.45">' + leadIntelText(topAction) + '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function renderDailyAcquisitionQueue(leads, followups) {
@@ -14305,6 +14344,7 @@ function renderDashboard() {
     '<div style="background:linear-gradient(135deg,#0071e3,#0060c0);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">BUYERS</div><div style="font-size:28px;font-weight:700">'+buyers.length+'</div><div style="font-size:11px;opacity:.7">in database</div></div>'+
     '<div style="background:linear-gradient(135deg,#ff9500,#e08000);color:#fff;border-radius:14px;padding:16px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">TOTAL UPSIDE</div><div style="font-size:28px;font-weight:700">$'+Math.round(total/1000).toLocaleString()+'K</div><div style="font-size:11px;opacity:.7">all deals</div></div>'+
   '</div>'+
+  renderTodaySummaryCard(leads,fus)+
   renderDailyAcquisitionQueue(leads,fus)+
   '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px">'+
     '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700">🏆 Top 100 Deals by Spread</div><span style="font-size:11px;color:#86868b">'+topDeals.length+' deals</span></div>'+
