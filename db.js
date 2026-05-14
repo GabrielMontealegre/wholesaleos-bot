@@ -735,6 +735,108 @@ function computeLeadPriorityTier(context) {
   return { tier: 'tier_1_low_priority', label: 'Low Priority', reasons: reasons };
 }
 
+function computeWorkQueueScore(context) {
+  context = context || {};
+  var lead = context.lead || {};
+  var timeline = context.timeline || {};
+  var distressTypes = Array.isArray(context.distressTypes) ? context.distressTypes : [];
+  var sourceConfidence = context.sourceConfidence || {};
+  var priority = context.priority || {};
+  var sourceScore = typeof sourceConfidence.score === 'number' ? sourceConfidence.score : 0;
+  var distressScore = typeof context.distressScore === 'number' ? context.distressScore : 0;
+  var tier = priority.tier || '';
+  var reasons = [];
+
+  function addQueueReason(reason) {
+    if (reasons.indexOf(reason) === -1) reasons.push(reason);
+  }
+
+  var status = String(lead.status || '').toLowerCase();
+  var archived = lead.archived === true || status === 'archived';
+  var hasOwner = !!lead.owner_name;
+  var hasContact = !!(lead.owner_phone || lead.owner_email || lead.phone || lead.email);
+  var hasPhone = !!(lead.owner_phone || lead.phone);
+  var hasEmail = !!(lead.owner_email || lead.email);
+  var hasParcel = !!firstPresent(
+    lead.parcel,
+    lead.parcel_number,
+    lead.apn,
+    lead.pin,
+    lead.tax_id,
+    lead.property_id,
+    (lead.source_normalized || {}).parcel
+  );
+  var daysToAuction = timeline.days_to_auction;
+  var hardTimeline = daysToAuction != null || !!timeline.auction_date;
+  var nearTimeline = daysToAuction != null && daysToAuction >= 0 && daysToAuction <= 30;
+  var moneyPressure = timeline.tax_due != null || timeline.lien_amount != null || timeline.opening_bid != null;
+  var multipleDistressSignals = distressTypes.length > 1;
+  var hasTaxOrForeclosure = distressTypes.indexOf('tax_delinquent') > -1 ||
+    distressTypes.indexOf('foreclosure') > -1 ||
+    distressTypes.indexOf('auction') > -1;
+  var codeOnly = distressTypes.length === 1 && distressTypes[0] === 'code_violation';
+  var lastAttempt = lead.last_contact_attempt || lead.lastContactAttempt || null;
+  var recentContact = false;
+  if (lastAttempt) {
+    var lastAttemptDate = new Date(lastAttempt);
+    if (!isNaN(lastAttemptDate.getTime())) {
+      recentContact = (Date.now() - lastAttemptDate.getTime()) <= 3 * 24 * 60 * 60 * 1000;
+    }
+  }
+
+  var score = 0;
+  if (tier === 'tier_5_act_now') { score += 40; addQueueReason('tier_5_priority'); }
+  else if (tier === 'tier_4_high_priority') { score += 28; addQueueReason('tier_4_priority'); }
+  else if (tier === 'tier_3_review') { score += 12; addQueueReason('tier_3_review'); }
+  else if (tier === 'tier_2_monitor') { score += 5; addQueueReason('tier_2_monitor'); }
+
+  if (sourceScore >= 85) { score += 18; addQueueReason('high_source_confidence'); }
+  else if (sourceScore >= 55) { score += 8; addQueueReason('medium_source_confidence'); }
+  else if (sourceScore < 35) { score -= 8; addQueueReason('low_source_confidence'); }
+
+  if (distressScore >= 70) { score += 16; addQueueReason('high_distress_score'); }
+  else if (distressScore >= 40) { score += 8; addQueueReason('medium_distress_score'); }
+
+  if (nearTimeline) { score += 18; addQueueReason('near_term_timeline'); }
+  else if (hardTimeline) { score += 10; addQueueReason('timeline_present'); }
+  if (moneyPressure) { score += 12; addQueueReason('money_pressure'); }
+  if (multipleDistressSignals) { score += 8; addQueueReason('multiple_distress_signals'); }
+  if (hasTaxOrForeclosure) { score += 6; addQueueReason('tax_or_foreclosure_signal'); }
+
+  if (hasContact) { score += 12; addQueueReason('contact_present'); }
+  if (hasPhone) addQueueReason('phone_present');
+  if (hasEmail) addQueueReason('email_present');
+  if (hasOwner) { score += 5; addQueueReason('owner_present'); }
+  else { score -= 5; addQueueReason('owner_missing'); }
+  if (hasParcel) { score += 4; addQueueReason('parcel_present'); }
+
+  if (codeOnly) { score -= 10; addQueueReason('code_violation_only'); }
+  if (recentContact) { score -= 12; addQueueReason('recent_contact_attempt'); }
+  if (/dead|closed|not interested|do not contact/.test(status)) { score -= 30; addQueueReason('non_workable_status'); }
+  if (archived) { score = Math.min(score, 10); addQueueReason('archived'); }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  var band = 'low_value';
+  if (!archived && tier === 'tier_5_act_now' && hasContact && score >= 80) band = 'immediate_action';
+  else if (!archived && score >= 70 && hasContact) band = 'call_today';
+  else if (!archived && (tier === 'tier_4_high_priority' || tier === 'tier_5_act_now') && !hasContact && sourceScore >= 75) band = 'enrich_first';
+  else if (!archived && score >= 35) band = 'monitor';
+  else if (!archived && codeOnly && sourceScore >= 35) band = 'monitor';
+
+  if (band === 'immediate_action') addQueueReason('work_now');
+  else if (band === 'call_today') addQueueReason('call_today');
+  else if (band === 'enrich_first') addQueueReason('needs_contact_enrichment');
+  else if (band === 'monitor') addQueueReason('monitor_queue');
+  else addQueueReason('low_value_queue');
+
+  return {
+    score: score,
+    band: band,
+    reasons: reasons
+  };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
@@ -808,6 +910,14 @@ function computeLeadIntelligence(lead) {
     urgencyLevel: urgencyLevel,
     sourceConfidence: sourceConfidence
   });
+  var workQueue = computeWorkQueueScore({
+    lead: lead,
+    timeline: timeline,
+    distressTypes: distressTypes,
+    distressScore: score,
+    sourceConfidence: sourceConfidence,
+    priority: priority
+  });
 
   return {
     intelligence_version: 'v1',
@@ -841,6 +951,9 @@ function computeLeadIntelligence(lead) {
     priority_tier: priority.tier,
     priority_label: priority.label,
     priority_reasons: priority.reasons,
+    work_queue_score: workQueue.score,
+    work_queue_band: workQueue.band,
+    work_queue_reasons: workQueue.reasons,
     confidence: confidence
   };
 }
