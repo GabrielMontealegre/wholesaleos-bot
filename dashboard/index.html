@@ -802,6 +802,10 @@ function renderManualDealAnalyzer() {
           <div style="font-size:13px;font-weight:800;color:#f4c542">Deal Math</div>
           <div id="mda-next-action" style="font-size:10px;font-weight:800;color:#101827;background:#f4c542;border-radius:20px;padding:4px 9px">Enter deal details</div>
         </div>
+        <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;margin-bottom:10px">
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade</div><div id="mda-deal-grade" style="font-size:28px;font-weight:900;color:#94a3b8;line-height:1">-</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Grade Reason</div><div id="mda-deal-grade-reason" style="font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45">Enter deal details to grade.</div></div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px">
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">MAO</div><div id="mda-mao" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Spread</div><div id="mda-spread" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
@@ -818,6 +822,7 @@ function renderManualDealAnalyzer() {
           <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Missing Info</div><div id="mda-missing" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
           <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Risk Flags</div><div id="mda-risks" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
         </div>
+        <div style="margin-top:10px"><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Deal Weaknesses</div><div id="mda-deal-weaknesses" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
       </div>
     </div>
   </div>`;
@@ -888,6 +893,7 @@ function updateManualDealAnalyzer() {
   var compHigh = comps.length ? Math.max.apply(null, comps) : 0;
   var missing = [];
   var risks = [];
+  var weaknesses = [];
 
   if (!mdaRaw('mda-source')) missing.push('Source link/address: paste listing, FSBO, courthouse link, or address.');
   if (!mdaRaw('mda-arv')) missing.push('ARV: check Zillow sold comps, Redfin solds, or manually verified comps.');
@@ -907,6 +913,19 @@ function updateManualDealAnalyzer() {
   if (compAvg && arv && Math.abs(compAvg - arv) / arv > 0.15) risks.push('Manual comp average differs from ARV by more than 15%.');
   if (!taxes && mdaRaw('mda-source').toLowerCase().indexOf('tax') > -1) risks.push('Tax source entered but taxes/liens are blank.');
   if (sqft && arv && arv / sqft > 400) risks.push('High ARV per sqft. Confirm neighborhood comps carefully.');
+
+  if (!arv) weaknesses.push('Missing ARV.');
+  if (!comps.length) weaknesses.push('Missing manual comps.');
+  if (!mdaRaw('mda-taxes')) weaknesses.push('Unknown liens/taxes.');
+  if (!sqft) weaknesses.push('No sqft entered.');
+  if (arv && repairs && repairs / arv >= 0.18) weaknesses.push('High repairs relative to ARV.');
+  if (arv && spread > 0 && (spread < assignment || spread / arv < 0.08)) weaknesses.push('Thin spread.');
+  if (arv && dealBasis && dealBasis > mao) weaknesses.push('Purchase price is above MAO.');
+  if (arv && spread <= 0) weaknesses.push('Negative wholesale spread.');
+  if (rent && basisWithRepairs && rentRatio < 0.008) weaknesses.push('Weak rent yield.');
+  if (arv && flipProfit >= 0 && flipMargin < 0.10) weaknesses.push('Tight flip margin.');
+  if (openingBid && arv && openingBid / arv > 0.70) weaknesses.push('High opening bid relative to ARV.');
+  if (!dealBasis) weaknesses.push('Missing purchase price or opening bid.');
 
   var wholesaleStatus = 'Incomplete';
   var wholesaleColor = '#94a3b8';
@@ -940,6 +959,40 @@ function updateManualDealAnalyzer() {
   else if (risks.length) nextAction = 'Research before offer';
   else if (arv && dealBasis) nextAction = 'Review with buyer criteria';
 
+  var maoMargin = mao - dealBasis;
+  var hasStrongSpread = arv && spread >= Math.max(assignment, arv * 0.12);
+  var hasStrongMaoMargin = arv && dealBasis && maoMargin >= Math.max(10000, arv * 0.03);
+  var hasStrongExit = wholesaleStatus === 'Strong' || flipStatus === 'Strong' || rentalStatus === 'Strong rough check';
+  var criticalMissing = !arv || !dealBasis || !comps.length;
+  var dealGrade = 'C';
+  var dealGradeColor = '#f59e0b';
+  var dealGradeReason = 'Thin margins or critical diligence gaps remain.';
+  if (!arv || !dealBasis) {
+    dealGrade = 'D';
+    dealGradeColor = '#fb7185';
+    dealGradeReason = 'Missing ARV or purchase basis creates high uncertainty.';
+  } else if (spread <= 0 || flipProfit < 0 || (dealBasis > mao * 1.20 && !hasStrongExit)) {
+    dealGrade = 'F';
+    dealGradeColor = '#ef4444';
+    dealGradeReason = 'Likely bad deal: weak economics, negative spread, or price far above MAO without a strong exit.';
+  } else if (hasStrongSpread && hasStrongMaoMargin && hasStrongExit && weaknesses.length <= 2) {
+    dealGrade = 'A';
+    dealGradeColor = '#10b981';
+    dealGradeReason = 'Strong spread, strong MAO margin, and at least one strong exit path.';
+  } else if (spread > 0 && hasStrongExit && !criticalMissing && weaknesses.length <= 4) {
+    dealGrade = 'B';
+    dealGradeColor = '#84cc16';
+    dealGradeReason = 'Workable deal, but it still needs negotiation or verification.';
+  } else if (spread > 0 || flipProfit >= 0) {
+    dealGrade = 'C';
+    dealGradeColor = '#f59e0b';
+    dealGradeReason = 'Thin margins or missing critical data keep this in review.';
+  } else {
+    dealGrade = 'D';
+    dealGradeColor = '#fb7185';
+    dealGradeReason = 'Weak economics or high uncertainty. Do more research before offering.';
+  }
+
   mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
   mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
   mdaSet('mda-wholesale-profit', mdaMoney(wholesaleProfit), wholesaleProfit > 0 ? '#10b981' : '#ef4444');
@@ -949,8 +1002,11 @@ function updateManualDealAnalyzer() {
   mdaSet('mda-rental', rentalStatus + (rent && basisWithRepairs ? ' (' + (rentRatio * 100).toFixed(2) + '% / ' + (grossYield * 100).toFixed(1) + '% yield)' : ''), rentalColor);
   mdaSet('mda-next-action', nextAction);
   mdaSet('mda-comp-summary', comps.length ? 'Comps: ' + comps.length + ' entered | Avg ' + mdaMoney(compAvg) + ' | Range ' + mdaMoney(compLow) + ' - ' + mdaMoney(compHigh) : 'Comps: none entered');
+  mdaSet('mda-deal-grade', dealGrade, dealGradeColor);
+  mdaSet('mda-deal-grade-reason', dealGradeReason);
   mdaSetList('mda-missing', missing, 'No obvious missing info.');
   mdaSetList('mda-risks', risks, 'No major risk flags from current inputs.');
+  mdaSetList('mda-deal-weaknesses', weaknesses, 'No major deal weaknesses from current inputs.');
 }
 
 function getSellerTZ(phone, state) {
