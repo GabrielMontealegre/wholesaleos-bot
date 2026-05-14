@@ -538,6 +538,117 @@ function collectLeadTimeline(lead) {
   };
 }
 
+function sourceConfidenceUrlText(lead) {
+  lead = lead || {};
+  var sourceNormalized = lead.source_normalized || {};
+  var evidence = sourceNormalized.evidence || {};
+  var urls = evidence.urls || {};
+  return [
+    lead.source_url,
+    lead.source_query_url,
+    lead.source_record_url,
+    lead.source_pdf_url,
+    sourceNormalized.source_url,
+    sourceNormalized.source_query_url,
+    sourceNormalized.source_record_url,
+    sourceNormalized.source_pdf_url,
+    urls.source_url,
+    urls.source_query_url,
+    urls.source_record_url,
+    urls.source_pdf_url
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function sourceConfidenceDetailsText(lead) {
+  lead = lead || {};
+  var sourceNormalized = lead.source_normalized || {};
+  return [
+    lead.source,
+    lead.source_confidence,
+    lead.motivation,
+    lead.source_details,
+    sourceNormalized.provider,
+    sourceNormalized.source_kind,
+    sourceNormalized.source_type,
+    sourceNormalized.source_confidence,
+    sourceNormalized.source_id
+  ].map(stringifySignalValue).join(' ').toLowerCase();
+}
+
+function sourceConfidenceKind(lead) {
+  lead = lead || {};
+  var normalized = lead.source_normalized || {};
+  return String(firstPresent(normalized.source_kind, lead.source_kind, lead.source_platform, '') || '').toLowerCase();
+}
+
+function addReasonTag(tags, tag) {
+  if (tags.indexOf(tag) === -1) tags.push(tag);
+}
+
+function computeSourceConfidence(lead, timeline, distressTypes) {
+  lead = lead || {};
+  timeline = timeline || {};
+  distressTypes = canonicalizeDistressTypes(distressTypes || lead.distress_types);
+
+  var tags = [];
+  var urlText = sourceConfidenceUrlText(lead);
+  var detailText = sourceConfidenceDetailsText(lead);
+  var kind = sourceConfidenceKind(lead);
+  var official = /\.(gov|us)\b/.test(urlText) ||
+    /county|city|treasurer|sheriff|clerk|court|recorder|arcgis|socrata|data\./.test(urlText + ' ' + detailText);
+  var sourceNamePresent = !!(lead.source_details && (lead.source_details.source_name || lead.source_details.name)) ||
+    !!((lead.source_normalized || {}).provider);
+  var hasRecordUrl = !!(lead.source_record_url || (lead.source_normalized || {}).source_record_url);
+  var hasPdfUrl = !!(lead.source_pdf_url || (lead.source_normalized || {}).source_pdf_url);
+  var hasParcel = !!firstPresent(lead.parcel, lead.apn, (lead.source_normalized || {}).parcel);
+  var hasMoney = timeline.tax_due != null || timeline.lien_amount != null || timeline.opening_bid != null;
+  var hasTimeline = !!timeline.auction_date || timeline.years_delinquent != null || timeline.days_to_auction != null;
+  var hasOwner = !!lead.owner_name;
+  var hasMultipleDistress = distressTypes.length > 1;
+  var taxAuctionForeclosure = /tax|auction|foreclos|lien|treasurer|sheriff/.test(detailText) ||
+    distressTypes.indexOf('tax_delinquent') > -1 ||
+    distressTypes.indexOf('auction') > -1 ||
+    distressTypes.indexOf('foreclosure') > -1;
+  var codeViolation = distressTypes.indexOf('code_violation') > -1 ||
+    /code.?viol|blight|open.?data/.test(detailText);
+  var unverified = /craigslist|manual|user|scrape|unknown/.test(detailText) && !official;
+
+  if (official) addReasonTag(tags, 'official_source');
+  if (hasParcel) addReasonTag(tags, 'parcel_present');
+  if (hasMoney) addReasonTag(tags, 'money_field_present');
+  if (hasTimeline) addReasonTag(tags, 'timeline_present');
+  if (hasRecordUrl) addReasonTag(tags, 'source_record_url_present');
+  if (hasMultipleDistress) addReasonTag(tags, 'multiple_distress_signals');
+
+  var score = 25;
+  if (official && taxAuctionForeclosure) score = 60;
+  else if (official && codeViolation) score = 50;
+  else if (official) score = 45;
+  else if (unverified) score = 25;
+  else if (!urlText && !hasParcel) score = 20;
+  else if (urlText) score = 35;
+
+  if (kind === 'socrata' || kind === 'arcgis' || kind === 'csv' || kind === 'json') score += 8;
+  if (kind === 'pdf') score += 6;
+  if (hasRecordUrl) score += 8;
+  if (hasPdfUrl) score += 4;
+  if (hasParcel) score += 10;
+  if (hasMoney) score += 10;
+  if (hasTimeline) score += 8;
+  if (hasOwner) score += 6;
+  if (hasMultipleDistress) score += 6;
+  if (sourceNamePresent) score += 4;
+  if (unverified && !official) score = Math.min(score, 45);
+  if (!urlText && !hasParcel) score = Math.min(score, 40);
+  if (official && taxAuctionForeclosure && hasParcel && (hasMoney || hasTimeline)) score = Math.max(score, 85);
+  if (official && codeViolation && !taxAuctionForeclosure) score = Math.min(Math.max(score, 55), 70);
+
+  return {
+    score: Math.max(20, Math.min(95, Math.round(score))),
+    reason: tags
+  };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
@@ -599,6 +710,9 @@ function computeLeadIntelligence(lead) {
   var confidence = 'low';
   if (hasUrl && signalCount >= 2 && (lead.owner_name || hasContact)) confidence = 'high';
   else if (signalCount >= 2 || (hasUrl && signalCount >= 1)) confidence = 'medium';
+  var sourceConfidence = computeSourceConfidence(lead, timeline, canonicalizeDistressTypes(lead.distress_types));
+  if (sourceConfidence.score >= 85) confidence = 'high';
+  else if (sourceConfidence.score >= 55 && confidence === 'low') confidence = 'medium';
 
   return {
     intelligence_version: 'v1',
@@ -613,6 +727,8 @@ function computeLeadIntelligence(lead) {
       source: lead.source || null,
       source_details: lead.source_details || null,
       urls: urls,
+      source_confidence_score: sourceConfidence.score,
+      source_confidence_reason: sourceConfidence.reason,
       violations: asArray(lead.violations).filter(Boolean),
       motivation: lead.motivation || null,
       good_deal_reasons: reasons,
@@ -625,6 +741,8 @@ function computeLeadIntelligence(lead) {
       owner_email: lead.owner_email || lead.email || null
     },
     recommended_next_action: recommended,
+    source_confidence_score: sourceConfidence.score,
+    source_confidence_reason: sourceConfidence.reason,
     confidence: confidence
   };
 }
