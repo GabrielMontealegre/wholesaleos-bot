@@ -837,6 +837,118 @@ function computeWorkQueueScore(context) {
   };
 }
 
+function computeContactReadiness(context) {
+  context = context || {};
+  var lead = context.lead || {};
+  var timeline = context.timeline || {};
+  var distressTypes = Array.isArray(context.distressTypes) ? context.distressTypes : [];
+  var sourceConfidence = context.sourceConfidence || {};
+  var priority = context.priority || {};
+  var workQueue = context.workQueue || {};
+  var sourceScore = typeof sourceConfidence.score === 'number' ? sourceConfidence.score : 0;
+  var distressScore = typeof context.distressScore === 'number' ? context.distressScore : 0;
+  var tier = priority.tier || '';
+  var queueBand = workQueue.band || '';
+  var status = String(lead.status || '').toLowerCase();
+  var archived = lead.archived === true || status === 'archived';
+  var hasOwner = !!lead.owner_name;
+  var hasPhone = !!(lead.owner_phone || lead.phone);
+  var hasEmail = !!(lead.owner_email || lead.email);
+  var hasContact = hasPhone || hasEmail;
+  var hasParcel = !!firstPresent(
+    lead.parcel,
+    lead.parcel_number,
+    lead.apn,
+    lead.pin,
+    lead.tax_id,
+    lead.property_id,
+    (lead.source_normalized || {}).parcel
+  );
+  var hardTimeline = timeline.days_to_auction != null || !!timeline.auction_date;
+  var moneyPressure = timeline.tax_due != null || timeline.lien_amount != null || timeline.opening_bid != null;
+  var multipleDistressSignals = distressTypes.length > 1;
+  var taxOrForeclosure = distressTypes.indexOf('tax_delinquent') > -1 ||
+    distressTypes.indexOf('foreclosure') > -1 ||
+    distressTypes.indexOf('auction') > -1;
+  var codeOnly = distressTypes.length === 1 && distressTypes[0] === 'code_violation';
+  var reasons = [];
+
+  function addContactReason(reason) {
+    if (reasons.indexOf(reason) === -1) reasons.push(reason);
+  }
+
+  var score = 0;
+  if (sourceScore >= 85) { score += 25; addContactReason('high_source_confidence'); }
+  else if (sourceScore >= 55) { score += 12; addContactReason('medium_source_confidence'); }
+  else { addContactReason('low_source_confidence'); }
+
+  if (tier === 'tier_5_act_now') { score += 25; addContactReason('tier_5_priority'); }
+  else if (tier === 'tier_4_high_priority') { score += 18; addContactReason('tier_4_priority'); }
+  else if (tier === 'tier_3_review') { score += 8; addContactReason('tier_3_review'); }
+
+  if (queueBand === 'immediate_action' || queueBand === 'call_today') {
+    score += 15;
+    addContactReason('work_queue_ready');
+  } else if (queueBand === 'enrich_first') {
+    score += 8;
+    addContactReason('work_queue_enrich_first');
+  } else if (queueBand === 'low_value') {
+    score -= 10;
+    addContactReason('work_queue_low_value');
+  }
+
+  if (distressScore >= 70) { score += 10; addContactReason('high_distress_score'); }
+  else if (distressScore >= 35) { score += 5; addContactReason('moderate_distress_score'); }
+  if (hardTimeline) { score += 8; addContactReason('timeline_present'); }
+  if (moneyPressure) { score += 8; addContactReason('money_pressure'); }
+  if (taxOrForeclosure) { score += 6; addContactReason('tax_or_foreclosure_signal'); }
+  if (multipleDistressSignals) { score += 5; addContactReason('multiple_distress_signals'); }
+  if (hasParcel) { score += 4; addContactReason('parcel_present'); }
+  if (hasOwner) { score += 8; addContactReason('owner_present'); }
+  else { score -= 5; addContactReason('owner_missing'); }
+  if (hasPhone) { score += 20; addContactReason('phone_present'); }
+  if (hasEmail) { score += 12; addContactReason('email_present'); }
+  if (codeOnly) { score -= 10; addContactReason('code_violation_only'); }
+  if (/dead|closed|not interested|do not contact/.test(status)) {
+    score -= 30;
+    addContactReason('non_workable_status');
+  }
+  if (archived) {
+    score = Math.min(score, 10);
+    addContactReason('archived');
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  var readiness = 'monitor_only';
+  var strongOfficialUrgent = sourceScore >= 85 &&
+    (tier === 'tier_4_high_priority' || tier === 'tier_5_act_now') &&
+    (hardTimeline || moneyPressure || taxOrForeclosure || distressScore >= 70);
+  var moderateEvidence = sourceScore >= 55 || distressScore >= 35 || hasParcel || hasOwner || multipleDistressSignals;
+
+  if (!archived && hasContact && (tier === 'tier_4_high_priority' || tier === 'tier_5_act_now' || queueBand === 'call_today' || queueBand === 'immediate_action')) {
+    readiness = 'ready_to_call';
+    addContactReason('ready_for_outreach');
+  } else if (!archived && !hasContact && strongOfficialUrgent) {
+    readiness = 'skip_trace_candidate';
+    addContactReason('missing_contact_for_strong_lead');
+  } else if (!archived && moderateEvidence && !codeOnly) {
+    readiness = 'research_needed';
+    addContactReason('research_before_outreach');
+  } else if (!archived && moderateEvidence && codeOnly && sourceScore >= 55) {
+    readiness = 'research_needed';
+    addContactReason('verify_code_violation_before_outreach');
+  } else {
+    addContactReason('monitor_only');
+  }
+
+  return {
+    readiness: readiness,
+    score: score,
+    reasons: reasons
+  };
+}
+
 function computeLeadIntelligence(lead) {
   lead = lead || {};
   var cause = normalizeLeadIntelligenceCause(lead);
@@ -918,6 +1030,15 @@ function computeLeadIntelligence(lead) {
     sourceConfidence: sourceConfidence,
     priority: priority
   });
+  var contactReadiness = computeContactReadiness({
+    lead: lead,
+    timeline: timeline,
+    distressTypes: distressTypes,
+    distressScore: score,
+    sourceConfidence: sourceConfidence,
+    priority: priority,
+    workQueue: workQueue
+  });
 
   return {
     intelligence_version: 'v1',
@@ -954,6 +1075,9 @@ function computeLeadIntelligence(lead) {
     work_queue_score: workQueue.score,
     work_queue_band: workQueue.band,
     work_queue_reasons: workQueue.reasons,
+    contact_readiness: contactReadiness.readiness,
+    contact_readiness_score: contactReadiness.score,
+    contact_readiness_reasons: contactReadiness.reasons,
     confidence: confidence
   };
 }
