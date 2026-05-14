@@ -339,6 +339,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('calendar',this)"><span class="nav-icon">📅</span>Calendar</div>
       <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach Hub</div>
       <div class="nav-section">Deals</div>
+      <div class="nav-item" onclick="navigate('deal_analyzer',this)"><span class="nav-icon">$</span>Deal Analyzer</div>
       <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
@@ -704,7 +705,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
   // Auto-init tabs
@@ -739,6 +740,7 @@ function render() {
     buyers: renderBuyers,
     assignments: renderAssignments,
     contracts: renderContracts,
+    deal_analyzer: renderManualDealAnalyzer,
     drive: renderDrive,
     bot: renderBot,
     settings: renderSettings,
@@ -752,6 +754,205 @@ function render() {
 // ══════════════════════════════════════════════════════════
 //  TIMEZONE HELPER
 // ══════════════════════════════════════════════════════════
+function renderManualDealAnalyzer() {
+  setTimeout(updateManualDealAnalyzer, 0);
+  var fieldStyle = 'background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:8px 10px;color:#1d1d1f;outline:none;width:100%';
+  var labelStyle = 'font-size:10px;color:#86868b;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px';
+  function input(id, label, placeholder) {
+    return '<div><div style="' + labelStyle + '">' + label + '</div><input id="' + id + '" oninput="updateManualDealAnalyzer()" placeholder="' + placeholder + '" style="' + fieldStyle + '"></div>';
+  }
+  function numberInput(id, label, placeholder) {
+    return '<div><div style="' + labelStyle + '">' + label + '</div><input id="' + id + '" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="' + placeholder + '" style="' + fieldStyle + '"></div>';
+  }
+  return `
+  <div style="max-width:1180px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:#1d1d1f">Manual Deal Analyzer</div>
+        <div style="font-size:12px;color:#86868b;line-height:1.6;max-width:720px">Manual inputs only. No paid APIs, scraping, saved records, lead mutation, or generated comps.</div>
+      </div>
+      <div style="font-size:11px;color:#946c00;background:#fef9e7;border:1px solid #f4d35e;border-radius:8px;padding:8px 10px">Use verified comps and county figures before making an offer.</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,.95fr);gap:14px;align-items:start">
+      <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px">
+        <div style="font-size:13px;font-weight:800;color:#1d1d1f;margin-bottom:10px">Inputs</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${input('mda-source', 'Source link or address', 'Paste listing, FSBO, courthouse link, or address')}
+          ${numberInput('mda-purchase', 'Asking / purchase price', '$150,000')}
+          ${numberInput('mda-arv', 'ARV', '$240,000')}
+          ${numberInput('mda-repairs', 'Repairs', '$35,000')}
+          ${numberInput('mda-assignment', 'Assignment fee target', '$10,000')}
+          ${numberInput('mda-closing', 'Closing costs', '$4,000')}
+          ${numberInput('mda-taxes', 'Taxes / liens owed', '$8,500')}
+          ${numberInput('mda-opening-bid', 'Opening bid', '$125,000')}
+          ${numberInput('mda-rent', 'Rent estimate', '$1,850 / month')}
+          ${numberInput('mda-beds', 'Beds', '3')}
+          ${numberInput('mda-baths', 'Baths', '2')}
+          ${numberInput('mda-sqft', 'Sqft', '1450')}
+        </div>
+        <div style="margin-top:10px">
+          <div style="${labelStyle}">Manual comp values</div>
+          <textarea id="mda-comps" oninput="updateManualDealAnalyzer()" placeholder="Enter sold comp values separated by commas or new lines, e.g. 230000, 242500, 255000" style="${fieldStyle};min-height:74px;resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <div style="background:#101827;color:#e2e8f0;border:1px solid #1e2d4a;border-radius:12px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:800;color:#f4c542">Deal Math</div>
+          <div id="mda-next-action" style="font-size:10px;font-weight:800;color:#101827;background:#f4c542;border-radius:20px;padding:4px 9px">Enter deal details</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px">
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">MAO</div><div id="mda-mao" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Spread</div><div id="mda-spread" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Wholesale Profit</div><div id="mda-wholesale-profit" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Flip Profit</div><div id="mda-flip-profit" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Wholesale</div><div id="mda-wholesale" style="font-size:12px;font-weight:800;color:#e2e8f0">Incomplete</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Flip</div><div id="mda-flip" style="font-size:12px;font-weight:800;color:#e2e8f0">Incomplete</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Rental</div><div id="mda-rental" style="font-size:12px;font-weight:800;color:#e2e8f0">Incomplete</div></div>
+        </div>
+        <div id="mda-comp-summary" style="font-size:10px;color:#94a3b8;line-height:1.6;margin-bottom:8px">Comps: none entered</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Missing Info</div><div id="mda-missing" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
+          <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Risk Flags</div><div id="mda-risks" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function mdaRaw(id) {
+  var el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+function mdaNumber(id) {
+  var raw = mdaRaw(id).replace(/[^0-9.-]/g, '');
+  var value = parseFloat(raw);
+  return isNaN(value) ? 0 : value;
+}
+
+function mdaMoney(value) {
+  return '$' + Math.round(value || 0).toLocaleString();
+}
+
+function mdaSet(id, text, color) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (color) el.style.color = color;
+}
+
+function mdaSetList(id, items, emptyText) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = items.length
+    ? items.map(function(item) { return '<div style="margin-bottom:4px">' + item + '</div>'; }).join('')
+    : '<div style="color:#94a3b8">' + emptyText + '</div>';
+}
+
+function mdaCompValues() {
+  return mdaRaw('mda-comps')
+    .split(/[\n,;]/)
+    .map(function(v) { return parseFloat(String(v).replace(/[^0-9.-]/g, '')); })
+    .filter(function(v) { return !isNaN(v) && v > 0; });
+}
+
+function updateManualDealAnalyzer() {
+  if (!document.getElementById('mda-mao')) return;
+  var purchase = mdaNumber('mda-purchase');
+  var openingBid = mdaNumber('mda-opening-bid');
+  var dealBasis = purchase || openingBid;
+  var arv = mdaNumber('mda-arv');
+  var repairs = mdaNumber('mda-repairs');
+  var assignment = mdaNumber('mda-assignment');
+  var closing = mdaNumber('mda-closing');
+  var taxes = mdaNumber('mda-taxes');
+  var rent = mdaNumber('mda-rent');
+  var sqft = mdaNumber('mda-sqft');
+  var comps = mdaCompValues();
+  var mao = (arv * 0.70) - repairs - assignment - closing - taxes;
+  var spread = arv - dealBasis - repairs - closing - taxes - assignment;
+  var wholesaleProfit = spread;
+  var sellingCosts = arv * 0.08;
+  var holdingCosts = arv * 0.02;
+  var flipProfit = arv - dealBasis - repairs - closing - taxes - sellingCosts - holdingCosts;
+  var flipMargin = arv ? flipProfit / arv : 0;
+  var basisWithRepairs = dealBasis + repairs + taxes;
+  var rentRatio = basisWithRepairs ? rent / basisWithRepairs : 0;
+  var grossYield = basisWithRepairs ? (rent * 12) / basisWithRepairs : 0;
+  var compAvg = comps.length ? comps.reduce(function(sum, v) { return sum + v; }, 0) / comps.length : 0;
+  var compLow = comps.length ? Math.min.apply(null, comps) : 0;
+  var compHigh = comps.length ? Math.max.apply(null, comps) : 0;
+  var missing = [];
+  var risks = [];
+
+  if (!mdaRaw('mda-source')) missing.push('Source link/address: paste listing, FSBO, courthouse link, or address.');
+  if (!mdaRaw('mda-arv')) missing.push('ARV: check Zillow sold comps, Redfin solds, or manually verified comps.');
+  if (!mdaRaw('mda-purchase') && !mdaRaw('mda-opening-bid')) missing.push('Purchase price/opening bid: confirm listing price, seller ask, or auction bid.');
+  if (!mdaRaw('mda-repairs')) missing.push('Repairs: use contractor estimate, walkthrough notes, or a conservative rehab budget.');
+  if (!mdaRaw('mda-closing')) missing.push('Closing costs: estimate title, transfer, recording, and buyer/seller closing costs.');
+  if (!mdaRaw('mda-taxes')) missing.push('Taxes/liens: confirm with county treasurer, court records, or title search.');
+  if (!mdaRaw('mda-rent')) missing.push('Rent estimate: check Zillow rentals, Rentometer, or local active rentals.');
+  if (!comps.length) missing.push('Comp values: enter at least 2-3 manual sold comps before trusting ARV.');
+
+  if (arv && dealBasis && dealBasis > mao) risks.push('Purchase price is above MAO.');
+  if (arv && spread <= 0) risks.push('Wholesale spread is zero or negative.');
+  if (arv && flipProfit < 15000) risks.push('Flip profit is thin after rough holding and selling costs.');
+  if (arv && flipMargin > 0 && flipMargin < 0.10) risks.push('Flip margin is below 10%.');
+  if (rent && basisWithRepairs && rentRatio < 0.008) risks.push('Rental check is weak under the rough 0.8% rent-to-basis screen.');
+  if (comps.length === 1) risks.push('Only one comp entered.');
+  if (compAvg && arv && Math.abs(compAvg - arv) / arv > 0.15) risks.push('Manual comp average differs from ARV by more than 15%.');
+  if (!taxes && mdaRaw('mda-source').toLowerCase().indexOf('tax') > -1) risks.push('Tax source entered but taxes/liens are blank.');
+  if (sqft && arv && arv / sqft > 400) risks.push('High ARV per sqft. Confirm neighborhood comps carefully.');
+
+  var wholesaleStatus = 'Incomplete';
+  var wholesaleColor = '#94a3b8';
+  if (arv && dealBasis) {
+    if (spread >= assignment && dealBasis <= mao) { wholesaleStatus = 'Strong'; wholesaleColor = '#10b981'; }
+    else if (spread > 0) { wholesaleStatus = 'Thin'; wholesaleColor = '#f59e0b'; }
+    else { wholesaleStatus = 'Not viable'; wholesaleColor = '#ef4444'; }
+  }
+
+  var flipStatus = 'Incomplete';
+  var flipColor = '#94a3b8';
+  if (arv && dealBasis) {
+    if (flipProfit >= 30000 && flipMargin >= 0.10) { flipStatus = 'Strong'; flipColor = '#10b981'; }
+    else if (flipProfit >= 15000) { flipStatus = 'Possible'; flipColor = '#f59e0b'; }
+    else { flipStatus = 'Weak'; flipColor = '#ef4444'; }
+  }
+
+  var rentalStatus = 'Incomplete';
+  var rentalColor = '#94a3b8';
+  if (rent && basisWithRepairs) {
+    if (rentRatio >= 0.01) { rentalStatus = 'Strong rough check'; rentalColor = '#10b981'; }
+    else if (rentRatio >= 0.008) { rentalStatus = 'Borderline'; rentalColor = '#f59e0b'; }
+    else { rentalStatus = 'Weak'; rentalColor = '#ef4444'; }
+  }
+
+  var nextAction = 'Enter deal details';
+  if (missing.length >= 4) nextAction = 'Fill critical missing info';
+  else if (wholesaleStatus === 'Strong') nextAction = 'Prepare wholesale offer';
+  else if (flipStatus === 'Strong') nextAction = 'Validate flip budget';
+  else if (rentalStatus === 'Strong rough check') nextAction = 'Check financing and rents';
+  else if (risks.length) nextAction = 'Research before offer';
+  else if (arv && dealBasis) nextAction = 'Review with buyer criteria';
+
+  mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
+  mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
+  mdaSet('mda-wholesale-profit', mdaMoney(wholesaleProfit), wholesaleProfit > 0 ? '#10b981' : '#ef4444');
+  mdaSet('mda-flip-profit', mdaMoney(flipProfit), flipProfit >= 15000 ? '#10b981' : '#ef4444');
+  mdaSet('mda-wholesale', wholesaleStatus, wholesaleColor);
+  mdaSet('mda-flip', flipStatus, flipColor);
+  mdaSet('mda-rental', rentalStatus + (rent && basisWithRepairs ? ' (' + (rentRatio * 100).toFixed(2) + '% / ' + (grossYield * 100).toFixed(1) + '% yield)' : ''), rentalColor);
+  mdaSet('mda-next-action', nextAction);
+  mdaSet('mda-comp-summary', comps.length ? 'Comps: ' + comps.length + ' entered | Avg ' + mdaMoney(compAvg) + ' | Range ' + mdaMoney(compLow) + ' - ' + mdaMoney(compHigh) : 'Comps: none entered');
+  mdaSetList('mda-missing', missing, 'No obvious missing info.');
+  mdaSetList('mda-risks', risks, 'No major risk flags from current inputs.');
+}
+
 function getSellerTZ(phone, state) {
   const tzMap = {
     CA: 'Pacific (PT)', TX: 'Central (CT)', FL: 'Eastern (ET)',
