@@ -461,7 +461,7 @@ function getSavedLeadById(id) {
   }) || null;
 }
 
-async function fetchCookCountyTaxLeads(limit) {
+async function fetchCookCountyTaxRows(limit) {
   var requested = clampCookCountyTaxLimit(limit);
   var source = getCookCountyTaxSource();
   if (!source) throw new Error('Cook County tax delinquency source is not configured');
@@ -481,11 +481,10 @@ async function fetchCookCountyTaxLeads(limit) {
     throw new Error('Cook County tax fetch returned an unexpected response');
   }
 
-  return rows.map(function(row) {
-    return buildCookCountyTaxLead(row, source);
-  }).filter(function(lead) {
-    return lead && lead.address;
-  });
+  return {
+    source: source,
+    rows: rows.slice(0, requested)
+  };
 }
 
 function compactCookCountyTaxSample(savedLead, mappedLead) {
@@ -506,23 +505,48 @@ function compactCookCountyTaxSample(savedLead, mappedLead) {
   };
 }
 
+function compactCookCountyTaxError(rowIndex, error, mappedLead, rawRow) {
+  var source = mappedLead || rawRow || {};
+  return {
+    row_index: rowIndex,
+    message: error && error.message ? error.message : 'Unknown Cook row processing error',
+    parcel: source.parcel || source.apn || source.pin || source.parcel_number || null,
+    address: source.address || source.prop_address_full || source.Address || null
+  };
+}
+
 async function runCookCountyTaxTest(limit) {
   var requested = clampCookCountyTaxLimit(limit);
-  var leads = await fetchCookCountyTaxLeads(requested);
+  var fetched = await fetchCookCountyTaxRows(requested);
+  var rows = fetched.rows || [];
+  var source = fetched.source;
   var samples = [];
+  var errors = [];
   var insertedOrMerged = 0;
 
-  for (var i = 0; i < leads.length && i < requested; i++) {
-    var mappedLead = leads[i];
-    var result = db.addLead(mappedLead);
-    var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
-    if (result && result.id) insertedOrMerged++;
-    samples.push(compactCookCountyTaxSample(savedLead || result, mappedLead));
+  for (var i = 0; i < rows.length && i < requested; i++) {
+    var rawRow = rows[i];
+    var mappedLead = null;
+    try {
+      mappedLead = buildCookCountyTaxLead(rawRow, source);
+      if (!mappedLead || !mappedLead.address) {
+        throw new Error('Cook row missing address after mapping');
+      }
+
+      var result = db.addLead(mappedLead);
+      var savedLead = result && result.id ? getSavedLeadById(result.id) : null;
+      if (result && result.id) insertedOrMerged++;
+      samples.push(compactCookCountyTaxSample(savedLead || (result && result.address ? result : mappedLead), mappedLead));
+    } catch(e) {
+      errors.push(compactCookCountyTaxError(i, e, mappedLead, rawRow));
+    }
   }
 
   return {
-    ok: true,
+    ok: samples.length > 0 || errors.length === 0,
     requested: requested,
+    partial: errors.length > 0 && samples.length > 0,
+    errors: errors,
     inserted_or_merged: insertedOrMerged,
     samples: samples
   };
