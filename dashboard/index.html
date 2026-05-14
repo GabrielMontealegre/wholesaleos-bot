@@ -3321,6 +3321,157 @@ function renderDailyAcquisitionQueue(leads, followups) {
   '</div>';
 }
 
+function leadBriefingText(value) {
+  if (Array.isArray(value)) return value.map(leadBriefingText).filter(Boolean).join(', ');
+  if (value && typeof value === 'object') return Object.keys(value).map(function(k){ return value[k]; }).map(leadBriefingText).filter(Boolean).join(', ');
+  return String(value == null ? '' : value).trim();
+}
+
+function leadBriefingPick(lead, paths) {
+  for (var i = 0; i < paths.length; i++) {
+    var parts = paths[i].split('.');
+    var cur = lead;
+    for (var j = 0; j < parts.length && cur != null; j++) cur = cur[parts[j]];
+    var text = leadBriefingText(cur);
+    if (text) return cur;
+  }
+  return '';
+}
+
+function leadBriefingList(value) {
+  if (Array.isArray(value)) return value.map(leadBriefingText).filter(Boolean);
+  var text = leadBriefingText(value);
+  if (!text) return [];
+  return text.split(/[|,;]/).map(function(v){ return v.trim(); }).filter(Boolean);
+}
+
+function leadBriefingMoney(value) {
+  var n = Number(String(value == null ? '' : value).replace(/[^0-9.-]/g, ''));
+  return isFinite(n) && n > 0 ? '$' + Math.round(n).toLocaleString() : '';
+}
+
+function leadBriefingAddress(lead) {
+  return [lead.address, lead.city, lead.state || lead.state_name, lead.zip].map(leadBriefingText).filter(Boolean).join(', ');
+}
+
+function leadBriefingSourceUrls(lead) {
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var urls = evidence.urls || {};
+  var sourceDetails = lead.source_details || lead.source_detail || {};
+  return {
+    source_record_url: leadBriefingPick(lead, ['source_record_url','record_url','source_details.source_record_url','source_details.record_url','source_detail.record_url']) || urls.source_record_url || urls.record_url || '',
+    source_query_url: leadBriefingPick(lead, ['source_query_url','query_url','source_details.source_query_url','source_details.query_url','source_detail.query_url']) || urls.source_query_url || urls.query_url || '',
+    source_url: leadBriefingPick(lead, ['source_url','sourceUrl','url','source_details.source_url','source_details.url','source_detail.url']) || urls.source_url || urls.url || sourceDetails.url || ''
+  };
+}
+
+function leadBriefingLinks(lead) {
+  var addr = leadBriefingAddress(lead) || leadBriefingText(lead.address);
+  var enc = encodeURIComponent(addr);
+  var urls = leadBriefingSourceUrls(lead);
+  return [
+    {label:'Record', url:leadBriefingText(urls.source_record_url)},
+    {label:'Query', url:leadBriefingText(urls.source_query_url)},
+    {label:'Source', url:leadBriefingText(urls.source_url)},
+    {label:'Zillow', url:addr ? 'https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:addr})) : ''},
+    {label:'Google Maps', url:addr ? 'https://maps.google.com/?q=' + enc : ''},
+    {label:'Street View', url:addr ? 'https://www.google.com/maps/search/?api=1&query=' + enc + '&layer=c' : ''}
+  ].filter(function(link){ return !!link.url; });
+}
+
+function buildLeadBriefing(lead, followups) {
+  lead = lead || {};
+  followups = followups || [];
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var money = evidence.money || {};
+  var timeline = li.timeline || {};
+  var source = leadBriefingText(lead.source || lead.source_name || lead.source_type || evidence.source || 'Unknown source');
+  var distress = leadBriefingList(lead.distress_types).concat(leadBriefingList(lead.distress_signals)).concat(leadBriefingList(li.distress_types));
+  if (!distress.length && lead.motivation) distress = leadBriefingList(lead.motivation);
+  if (!distress.length && lead.category) distress = leadBriefingList(lead.category);
+  distress = distress.length ? Array.from(new Set(distress)).slice(0, 4) : ['unclassified lead'];
+  var taxDue = leadBriefingMoney(lead.tax_due || lead.taxes_due || lead.taxes_owed || money.tax_due || money.taxes_due);
+  var liens = leadBriefingMoney(lead.lien_amount || lead.taxes_liens || money.lien_amount || money.taxes_liens);
+  var auctionDate = leadBriefingText(lead.auction_date || lead.sale_date || lead.tax_sale_date || timeline.auction_date || timeline.sale_date);
+  var confidence = leadBriefingText(lead.source_confidence_reason || li.source_confidence_reason || li.urgency_reason || li.confidence);
+  var priority = leadBriefingText(lead.priority_label || li.priority_label || li.priority_tier || lead.work_queue_band || li.work_queue_band);
+  var hasContact = !!(lead.phone || lead.email);
+  var hasComps = !!(lead.arv || (lead.comps && lead.comps.length) || lead.comp_confidence || li.comp_confidence);
+  var hasVerified = !!leadBriefingText(lead.last_verified_at || lead.verified_at || lead.source_verified_at || li.last_verified_at || (timeline && timeline.last_verified_at));
+  var hasOffer = !!(lead.offer || lead.mao || lead.offer_status || lead.offerStatus || lead.offer_stage);
+  var missing = [];
+  if (!lead.arv && !(lead.comps && lead.comps.length)) missing.push('ARV/comps');
+  if (!hasContact) missing.push('seller phone/email');
+  if (!hasVerified) missing.push('recent verification');
+  if (!lead.owner_name && !lead.owner && !lead.seller_name) missing.push('owner name');
+  if (!auctionDate && /auction|tax|foreclosure/i.test(source + ' ' + distress.join(' '))) missing.push('auction/sale date');
+  var evidencePoints = [];
+  evidencePoints.push('Source: ' + source);
+  evidencePoints.push('Distress: ' + distress.join(', '));
+  if (taxDue) evidencePoints.push('Tax due: ' + taxDue);
+  if (liens) evidencePoints.push('Liens/taxes: ' + liens);
+  if (auctionDate) evidencePoints.push('Auction/sale date: ' + auctionDate);
+  if (priority) evidencePoints.push('Priority: ' + priority);
+  if (confidence) evidencePoints.push('Confidence: ' + confidence);
+  var summary = (leadBriefingAddress(lead) || 'This lead') + ' is a ' + distress[0] + ' from ' + source + '.';
+  var why = [];
+  if (taxDue || liens) why.push('tax/lien pressure is present');
+  if (auctionDate) why.push('there is a dated sale or auction signal');
+  if (priority) why.push('saved intelligence prioritizes it as ' + priority);
+  if (!hasContact) why.push('contact enrichment is still needed before outreach');
+  if (!why.length) why.push('the saved source evidence needs verification before a firm offer');
+  var nextAction = !hasVerified ? 'Verify the source record before outreach.'
+    : !hasContact ? 'Run or review skip trace before contacting.'
+    : !hasComps ? 'Add comps or ARV before making a final offer.'
+    : !hasOffer ? 'Open the Manual Deal Analyzer and build an offer range.'
+    : 'Contact the seller and keep the analyzer numbers nearby.';
+  return {
+    summary: summary,
+    why: 'This lead matters because ' + why.join(', ') + '.',
+    nextAction: nextAction,
+    evidencePoints: evidencePoints.slice(0, 6),
+    missing: missing.length ? missing : ['No major missing info flags from saved fields'],
+    contactStatus: hasContact ? 'Contact available: ' + [lead.phone, lead.email].filter(Boolean).join(' / ') : 'No phone/email saved. Enrichment needed.',
+    verificationWarning: hasVerified ? 'Source has a verification timestamp saved.' : 'No recent verification timestamp found. Do not overstate facts until checked.',
+    analyzerReadiness: hasComps ? (hasOffer ? 'Analyzer-ready: value and offer fields are present.' : 'Analyzer-ready after offer strategy review.') : 'Analyzer needs ARV/comps before final offer math.',
+    links: leadBriefingLinks(lead)
+  };
+}
+
+function renderLeadBriefing(lead, followups) {
+  var briefing = buildLeadBriefing(lead, followups);
+  function pill(text, color) {
+    return '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;background:' + color + '22;color:' + color + ';border:1px solid ' + color + '55">' + leadIntelText(text) + '</span>';
+  }
+  function bullet(item) {
+    return '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-bottom:3px">- ' + leadIntelText(item) + '</div>';
+  }
+  var links = briefing.links.length ? briefing.links.map(function(link){
+    return '<a href="' + mdaEscapeAttr(link.url) + '" target="_blank" style="font-size:10px;font-weight:800;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#111827;border-radius:999px;padding:4px 8px">' + leadIntelText(link.label) + '</a>';
+  }).join('') : '<span style="font-size:10px;color:#64748b">No address/source links available.</span>';
+  return '<div style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Lead Briefing</div>' +
+      '<div style="font-size:12px;line-height:1.45;color:#f8fafc;margin-top:3px">' + leadIntelText(briefing.summary) + '</div></div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap">' + pill('Deterministic', '#10b981') + pill('No AI facts', '#38bdf8') + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Why It Matters</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.why) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Best Next Action</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.nextAction) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Contact / Enrichment</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.contactStatus) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Analyzer Readiness</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.analyzerReadiness) + '</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Top Evidence</div>' + briefing.evidencePoints.map(bullet).join('') + '</div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Missing Information</div>' + briefing.missing.map(bullet).join('') + '</div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Verification Warning</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.verificationWarning) + '</div></div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:6px">Property Visuals / Links</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
+  '</div>';
+}
+
 
 function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
@@ -3332,6 +3483,7 @@ function renderLeadDetail(l) {
   const lid = l.id;
 
   let html = '<div class="detail-panel">';
+  html += renderLeadBriefing(l, fu);
   // SOURCE + AI BLOCK
   var _srcName = l.source || l.county || 'Unknown source';
   var _srcUrl  = l.source_url || '';
@@ -9411,6 +9563,7 @@ function renderLeadDetail(l) {
   const lid = l.id;
 
   let html = '<div class="detail-panel">';
+  html += renderLeadBriefing(l, fu);
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
   html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
