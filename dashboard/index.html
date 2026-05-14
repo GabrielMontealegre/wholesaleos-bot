@@ -15029,9 +15029,14 @@ loadLeadsFromAPI=async function(){
   APP._leadsLoading=true;if(typeof render==='function'&&APP.page==='leads')render();
   await _wpOrig();
   APP._leadsLoading=false;
-  if(APP.leads&&APP.leads.length){APP.leads=assignRefIds(APP.leads);APP.filtered=APP.leads;}
+  if(APP.leads&&APP.leads.length){
+    APP.leads=assignRefIds(APP.leads);
+    if(typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters({silent:true});
+    else APP.filtered=APP.leads;
+  }
   try{var br=await fetch('/api/buyers');if(br.ok){var bd=await br.json();APP.buyers=bd.buyers||bd||[];}}catch(e){}
   updateLeadsBadge();
+  if(typeof render==='function'&&APP.page==='leads')render();
 };
 console.log('✅ Mega-Patch v2 loaded');
 
@@ -15120,8 +15125,11 @@ function leadsNextPage(){
 function setLeadsFilter(status){
   APP._leadsStatusFilter = status;
   _leadsPage = 0;
-  APP.filtered = status === 'All' ? APP.leads : (APP.leads||[]).filter(function(l){ return (l.status||'New Lead') === status; });
-  render();
+  if (typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters();
+  else {
+    APP.filtered = status === 'All' ? APP.leads : (APP.leads||[]).filter(function(l){ return (l.status||'New Lead') === status; });
+    render();
+  }
 }
 
 function leadsNextPage(){
@@ -15182,12 +15190,26 @@ function renderLeads() {
   }
 
   var scMap = {'New Lead':'#ff9500','Contacted':'#0071e3','Follow-Up':'#5e5ce6','Qualified':'#34c759','Not Interested':'#86868b','Dead':'#ff3b30','Archived':'#86868b'};
+  function leadRowAttr(value){
+    if (typeof mdaEscapeAttr === 'function') return mdaEscapeAttr(value);
+    return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
   var rows = pageLeads.map(function(l) {
     var rid = l.ref_id || getDealRefId(l);
     var statusColor = scMap[l.status||'New Lead'] || '#86868b';
     var mc = typeof matchBuyersToLead === 'function' ? matchBuyersToLead(l, APP.buyers||[]).length : 0;
-    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">'+
+    var li = l.lead_intelligence || {};
+    var sourceDetails = l.source_details || l.source_detail || {};
+    var sourceText = l.source || l.source_name || l.source_type || l.source_key || l.source_slug || l.source_system || l.import_source || l.provider || l.source_url || '';
+    if (!sourceText && typeof sourceDetails === 'string') sourceText = sourceDetails;
+    if (!sourceText && sourceDetails) sourceText = sourceDetails.source_name || sourceDetails.source_type || sourceDetails.query_url || sourceDetails.record_url || '';
+    var distressText = Array.isArray(l.distress_types) ? l.distress_types.join(' ') : (l.distress_types || '');
+    var typeText = [l.type,l.lead_type,l.status,l.category,l.distress_type,distressText,li.distress_types].filter(Boolean).join(' ');
+    var priorityText = [l.priority,l.priority_label,l.priority_tier,li.priority_tier,li.priority_label].filter(Boolean).join(' ');
+    var createdText = l.created || l.created_at || l.createdAt || l.inserted_at || l.updated_at || '';
+    var stateName = typeof window.wosStateNameFromValue === 'function' ? window.wosStateNameFromValue(l.state || l.state_name || '') : '';
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7" data-lead-id="'+leadRowAttr(l.id)+'" data-state="'+leadRowAttr(l.state||'')+'" data-state-name="'+leadRowAttr(l.state_name||stateName)+'" data-source="'+leadRowAttr(sourceText)+'" data-type="'+leadRowAttr(typeText)+'" data-lead-type="'+leadRowAttr(l.lead_type||'')+'" data-priority="'+leadRowAttr(priorityText)+'" data-created="'+leadRowAttr(createdText)+'" onclick="openLeadModal(this.dataset.leadId)">'+
       '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">'+rid+'</span></td>'+
       '<td style="padding:9px 8px;font-size:12px">'+(l.address||'').split(',')[0]+'</td>'+
       '<td style="padding:9px 8px;font-size:12px">'+(l.state||'')+'</td>'+
@@ -16591,10 +16613,16 @@ var filterBar = "<div id='leadFilterBar' style='display:none;padding:12px 16px;b
 "<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>STATE</span>" +
 "<select id='lfState' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;' onchange='applyLeadFilters()'>" +
 "<option value=''>All States</option>" +
-"<option value='TX'>TX</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='OH'>OH</option><option value='PA'>PA</option><option value='IL'>IL</option><option value='MI'>MI</option><option value='NC'>NC</option><option value='TN'>TN</option><option value='MD'>MD</option><option value='NY'>NY</option><option value='CA'>CA</option><option value='AZ'>AZ</option><option value='NV'>NV</option><option value='CO'>CO</option>" +
-"<option value='AL'>AL</option><option value='AK'>AK</option><option value='AR'>AR</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MA'>MA</option><option value='MN'>MN</option>" +
-"<option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='ND'>ND</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='UT'>UT</option><option value='VT'>VT</option>" +
-"<option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option>" +
+"<option value='AL'>Alabama</option><option value='AK'>Alaska</option><option value='AZ'>Arizona</option><option value='AR'>Arkansas</option><option value='CA'>California</option><option value='CO'>Colorado</option><option value='CT'>Connecticut</option><option value='DE'>Delaware</option><option value='FL'>Florida</option><option value='GA'>Georgia</option>" +
+"<option value='HI'>Hawaii</option><option value='ID'>Idaho</option><option value='IL'>Illinois</option><option value='IN'>Indiana</option><option value='IA'>Iowa</option><option value='KS'>Kansas</option><option value='KY'>Kentucky</option><option value='LA'>Louisiana</option><option value='ME'>Maine</option><option value='MD'>Maryland</option>" +
+"<option value='MA'>Massachusetts</option><option value='MI'>Michigan</option><option value='MN'>Minnesota</option><option value='MS'>Mississippi</option><option value='MO'>Missouri</option><option value='MT'>Montana</option><option value='NE'>Nebraska</option><option value='NV'>Nevada</option><option value='NH'>New Hampshire</option><option value='NJ'>New Jersey</option>" +
+"<option value='NM'>New Mexico</option><option value='NY'>New York</option><option value='NC'>North Carolina</option><option value='ND'>North Dakota</option><option value='OH'>Ohio</option><option value='OK'>Oklahoma</option><option value='OR'>Oregon</option><option value='PA'>Pennsylvania</option><option value='RI'>Rhode Island</option><option value='SC'>South Carolina</option>" +
+"<option value='SD'>South Dakota</option><option value='TN'>Tennessee</option><option value='TX'>Texas</option><option value='UT'>Utah</option><option value='VT'>Vermont</option><option value='VA'>Virginia</option><option value='WA'>Washington</option><option value='WV'>West Virginia</option><option value='WI'>Wisconsin</option><option value='WY'>Wyoming</option>" +
+"</select></div>" +
+"<div style='display:flex;align-items:center;gap:6px;'>" +
+"<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>SOURCE</span>" +
+"<select id='lfSource' style='font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;color:#111;max-width:190px;' onchange='applyLeadFilters()'>" +
+"<option value=''>All Sources</option>" +
 "</select></div>" +
 "<div style='display:flex;align-items:center;gap:6px;'>" +
 "<span style='font-size:11px;font-weight:600;color:#6b7280;white-space:nowrap;'>TYPE</span>" +
@@ -16641,6 +16669,144 @@ var deleteBar = "<div id='bulkDeleteBar' style='display:none;padding:8px 16px;ba
 "<button onclick='hideBulkDelete()' style='padding:6px 12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;color:#6b7280;font-size:12px;cursor:pointer;'>Cancel</button>" +
 "<span id='deleteStatus' style='font-size:12px;color:#6b7280;'></span>" +
 "</div>";
+var WOS_STATE_NAMES = {
+  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",
+  HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",
+  MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
+  NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
+  SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"
+};
+var WOS_STATE_CODES = Object.keys(WOS_STATE_NAMES).reduce(function(acc,code){
+  acc[WOS_STATE_NAMES[code].toLowerCase()] = code;
+  return acc;
+},{});
+function normalizeLeadFilterText(value){
+  return String(value == null ? "" : value).trim().toLowerCase().replace(/[^a-z0-9]+/g,"");
+}
+function leadArrayText(value){
+  if (Array.isArray(value)) return value.join(" ");
+  if (value && typeof value === "object") return Object.keys(value).map(function(k){return value[k];}).join(" ");
+  return value || "";
+}
+window.wosStateNameFromValue = function(value){
+  var raw = String(value || "").trim();
+  var up = raw.toUpperCase();
+  if (WOS_STATE_NAMES[up]) return WOS_STATE_NAMES[up];
+  return WOS_STATE_NAMES[WOS_STATE_CODES[raw.toLowerCase()]] || "";
+};
+function leadSourceText(l){
+  var details = l.source_details || l.source_detail || {};
+  var values = [l.source,l.source_name,l.source_type,l.source_platform,l.source_key,l.source_slug,l.source_system,l.import_source,l.provider,l.source_url,l.record_url,l.query_url];
+  if (typeof details === "string") values.push(details);
+  if (details && typeof details === "object") values.push(details.source_name,details.source_type,details.record_url,details.query_url,details.url);
+  return values.filter(Boolean).join(" ");
+}
+function leadTypeText(l){
+  var li = l.lead_intelligence || {};
+  return [l.type,l.lead_type,l.status,l.category,l.distress_type,leadArrayText(l.distress_types),leadArrayText(li.distress_types)].filter(Boolean).join(" ");
+}
+function leadPriorityText(l){
+  var li = l.lead_intelligence || {};
+  return [l.priority,l.priority_label,l.priority_tier,li.priority_tier,li.priority_label,li.work_queue_band,l.work_queue_band].filter(Boolean).join(" ");
+}
+function leadCreatedText(l){
+  return l.created || l.created_at || l.createdAt || l.inserted_at || l.updated_at || "";
+}
+function leadMatchesState(l,state){
+  if (!state) return true;
+  var wantedCode = String(state).trim().toUpperCase();
+  var wantedName = WOS_STATE_NAMES[wantedCode] || state;
+  var values = [l.state,l.state_code,l.state_name,l.county_state,window.wosStateNameFromValue(l.state || l.state_name || "")];
+  var wanted = [wantedCode,wantedName].map(normalizeLeadFilterText);
+  return values.some(function(value){ return wanted.indexOf(normalizeLeadFilterText(value)) !== -1; });
+}
+function leadMatchesSource(l,source){
+  if (!source) return true;
+  var hay = normalizeLeadFilterText(leadSourceText(l));
+  var needle = normalizeLeadFilterText(source);
+  return hay === needle || hay.indexOf(needle) !== -1;
+}
+function leadMatchesType(l,type){
+  if (!type) return true;
+  var hay = normalizeLeadFilterText(leadTypeText(l));
+  var needle = normalizeLeadFilterText(type);
+  return hay.indexOf(needle) !== -1;
+}
+function leadMatchesPriority(l,priority){
+  if (!priority) return true;
+  var hay = normalizeLeadFilterText(leadPriorityText(l));
+  var p = String(priority).toUpperCase();
+  if (p === "HIGH") return /high|urgent|acttoday|actnow|tier1|tier2/.test(hay);
+  if (p === "MEDIUM") return /medium|watch|followup|tier3/.test(hay);
+  if (p === "LOW") return /low|later|defer|tier4|tier5/.test(hay);
+  return hay.indexOf(normalizeLeadFilterText(priority)) !== -1;
+}
+function leadMatchesAge(l,age){
+  var days = parseInt(age || "0",10);
+  if (!days) return true;
+  var dateText = leadCreatedText(l);
+  if (!dateText) return false;
+  var t = new Date(dateText).getTime();
+  return isFinite(t) && (Date.now() - t) <= days * 86400000;
+}
+function getLeadToolbarFilters(){
+  APP._leadToolbarFilters = APP._leadToolbarFilters || {};
+  return APP._leadToolbarFilters;
+}
+function readLeadToolbarFiltersFromDom(){
+  var filters = getLeadToolbarFilters();
+  filters.state = (document.getElementById("lfState")||{}).value || "";
+  filters.source = (document.getElementById("lfSource")||{}).value || "";
+  filters.type = (document.getElementById("lfType")||{}).value || "";
+  filters.age = (document.getElementById("lfAge")||{}).value || "";
+  filters.priority = (document.getElementById("lfPriority")||{}).value || "";
+  return filters;
+}
+function leadMatchesToolbarFilters(l,filters){
+  var status = APP._leadsStatusFilter || "All";
+  if (status !== "All" && (l.status || "New Lead") !== status) return false;
+  return leadMatchesState(l,filters.state) &&
+    leadMatchesSource(l,filters.source) &&
+    leadMatchesType(l,filters.type) &&
+    leadMatchesPriority(l,filters.priority) &&
+    leadMatchesAge(l,filters.age);
+}
+function syncLeadFilterControls(){
+  var filters = getLeadToolbarFilters();
+  var fb = document.getElementById("leadFilterBar");
+  if (fb && APP._leadFilterBarOpen) fb.style.display = "flex";
+  [["lfState","state"],["lfType","type"],["lfAge","age"],["lfPriority","priority"]].forEach(function(pair){
+    var el = document.getElementById(pair[0]);
+    if (el) el.value = filters[pair[1]] || "";
+  });
+  var src = document.getElementById("lfSource");
+  if (src) {
+    var selected = filters.source || "";
+    var sources = {};
+    (APP.leads || []).forEach(function(l){
+      var text = leadSourceText(l).trim();
+      if (text) sources[text] = true;
+    });
+    var opts = ["<option value=''>All Sources</option>"].concat(Object.keys(sources).sort(function(a,b){return a.localeCompare(b);}).slice(0,80).map(function(s){
+      var safe = typeof mdaEscapeAttr === "function" ? mdaEscapeAttr(s) : String(s).replace(/"/g,"&quot;");
+      return "<option value=\""+safe+"\">"+safe+"</option>";
+    }));
+    src.innerHTML = opts.join("");
+    src.value = selected;
+  }
+  var lfc = document.getElementById("lfCount");
+  if (lfc && APP.filtered) lfc.textContent = APP.filtered.length.toLocaleString()+" leads shown";
+}
+window.applyLeadToolbarFilters = function(options){
+  options = options || {};
+  var filters = getLeadToolbarFilters();
+  var base = APP.leads || [];
+  APP.filtered = base.filter(function(l){ return leadMatchesToolbarFilters(l,filters); });
+  if (typeof _leadsPage !== "undefined") _leadsPage = Math.min(_leadsPage || 0, Math.max(0, Math.ceil((APP.filtered.length || 1) / (_leadsPerPage || 300)) - 1));
+  if (!options.silent && typeof render === "function") render();
+  setTimeout(syncLeadFilterControls,0);
+  return APP.filtered;
+};
 function injectFilterBars(){
   // Toolbar is rendered canonically by renderLeads().
 }
@@ -16648,7 +16814,7 @@ function addToolbarButtons(){
   // Toolbar is rendered canonically by renderLeads().
 }
 function filterToggleBtns(){
-  return "<button onclick='openPullLeadsToolbar()' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
+  return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
     "<button onclick='toggleBulkDelete()' style='font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;cursor:pointer;font-weight:600;'>Bulk Delete</button>";
 }
@@ -16657,6 +16823,7 @@ function leadToolbarButton(label, calls, style){
 }
 window.renderLeadActionToolbar = function(){
   if (typeof APP === "undefined" || APP.page !== "leads") return "";
+  setTimeout(syncLeadFilterControls,0);
   return "<div id='wosFilterToggleBar' style='position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;'>" +
     filterToggleBtns() +
     leadToolbarButton("Re-analyze Comps", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#eef2ff;color:#3730a3;") +
@@ -16689,7 +16856,10 @@ window.runLeadToolbarAction = function(calls){
 };
 window.toggleFilterBar = function(){
   var fb = document.getElementById("leadFilterBar");
-  if(fb) fb.style.display = fb.style.display==="none"?"flex":"none";
+  if(fb) {
+    fb.style.display = fb.style.display==="none"?"flex":"none";
+    APP._leadFilterBarOpen = fb.style.display !== "none";
+  }
 };
 window.toggleBulkDelete = function(){
   var db = document.getElementById("bulkDeleteBar");
@@ -16702,38 +16872,17 @@ window.hideBulkDelete = function(){
   removeCheckboxesFromRows();
 };
 window.applyLeadFilters = function(){
-  var state = (document.getElementById("lfState")||{}).value||"";
-  var type  = (document.getElementById("lfType")||{}).value||"";
-  var age   = parseInt((document.getElementById("lfAge")||{}).value||"0");
-  var prio  = (document.getElementById("lfPriority")||{}).value||"";
-  var now = Date.now();
-  var rows = document.querySelectorAll("tr[data-lead-id]");
-  var shown = 0;
-  rows.forEach(function(row){
-    var st  = (row.dataset.state||"").toUpperCase();
-    var tp  = (row.dataset.type||row.dataset.leadType||"").toLowerCase();
-    var pr  = (row.dataset.priority||"").toUpperCase();
-    var dt  = row.dataset.created||row.dataset.date||"";
-    var ok  = true;
-    if(state && st !== state.toUpperCase()) ok=false;
-    if(type && tp.indexOf(type)===-1) ok=false;
-    if(prio && pr !== prio) ok=false;
-    if(age && dt){
-      var d = new Date(dt).getTime();
-      if((now-d) > age*86400000) ok=false;
-    }
-    row.style.display = ok?"":"none";
-    if(ok) shown++;
-  });
-  var lfc = document.getElementById("lfCount");
-  if(lfc) lfc.textContent = shown+" leads shown";
+  readLeadToolbarFiltersFromDom();
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  return window.applyLeadToolbarFilters();
 };
 window.clearLeadFilters = function(){
-  ["lfState","lfType","lfAge","lfPriority"].forEach(function(id){
+  APP._leadToolbarFilters = {state:"",source:"",type:"",age:"",priority:""};
+  ["lfState","lfSource","lfType","lfAge","lfPriority"].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value="";
   });
-  document.querySelectorAll("tr[data-lead-id]").forEach(function(r){ r.style.display=""; });
-  var lfc=document.getElementById("lfCount"); if(lfc) lfc.textContent="";
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  window.applyLeadToolbarFilters();
 };
 var _selectedIds = {};
 function addCheckboxesToRows(){
