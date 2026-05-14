@@ -1069,6 +1069,7 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     label: address || ownerName || lead.id || 'Selected lead',
     values: values,
     meta: meta,
+    timeline: buildAcquisitionTimeline(lead, (typeof APP !== 'undefined' && APP.followups) ? APP.followups : []),
     applied: false
   };
 }
@@ -1089,8 +1090,17 @@ function mdaApplyAnalyzerPreload() {
 function mdaRenderLoadedLeadBanner() {
   if (!MDA_LEAD_PREFILL) return '';
   var meta = MDA_LEAD_PREFILL.meta || [];
+  var timeline = MDA_LEAD_PREFILL.timeline || {};
+  var timelinePreview = []
+    .concat((timeline.urgency || []).slice(0, 2))
+    .concat((timeline.operational || []).slice(0, 1))
+    .concat((timeline.next || []).slice(0, 1));
   var chips = meta.map(function(item) {
     return '<span style="display:inline-flex;gap:4px;align-items:center;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:999px;padding:4px 7px;color:#f5f5f7;font-size:10px;max-width:100%;white-space:normal;word-break:break-word;line-height:1.4"><strong style="color:#f4c542">' + mdaEscapeHtml(item.label) + ':</strong> ' + mdaEscapeHtml(item.value) + '</span>';
+  }).join('');
+  var timelineHtml = timelinePreview.map(function(item) {
+    var color = item.tone === 'hot' ? '#ef4444' : item.tone === 'warn' ? '#f59e0b' : item.tone === 'good' ? '#10b981' : '#94a3b8';
+    return '<div style="font-size:10px;line-height:1.5;color:#d1d5db"><span style="color:' + color + ';font-weight:800">' + mdaEscapeHtml(item.title) + ':</span> ' + mdaEscapeHtml(item.detail) + '</div>';
   }).join('');
   return '<div style="background:#1d1d1f;border:1px solid #3a3a3c;border-radius:10px;padding:10px 12px;margin-bottom:12px;color:#f5f5f7">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">' +
@@ -1099,6 +1109,7 @@ function mdaRenderLoadedLeadBanner() {
       '<button class="btn btn-sm" style="background:#2c2c2e;color:#f5f5f7;border:1px solid #3a3a3c;font-size:11px" onclick="mdaClearLeadAnalyzerPreload()">Clear</button>' +
     '</div>' +
     (chips ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + chips + '</div>' : '') +
+    (timelineHtml ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3a3c;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px">' + timelineHtml + '</div>' : '') +
     '<div style="font-size:10px;color:#b8b8bd;margin-top:8px">Temporary autofill only. Nothing is saved back to the lead.</div>' +
   '</div>';
 }
@@ -2118,6 +2129,215 @@ function renderLeadIntelligence(li) {
   return html;
 }
 
+function acquisitionTimelineDate(value) {
+  if (!value) return null;
+  if (typeof value === 'number') return new Date(value);
+  var text = String(value).trim();
+  if (!text) return null;
+  var dateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return new Date(parseInt(dateOnly[1], 10), parseInt(dateOnly[2], 10) - 1, parseInt(dateOnly[3], 10));
+  var date = new Date(text);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function acquisitionTimelineDaysUntil(value) {
+  var date = acquisitionTimelineDate(value);
+  if (!date) return null;
+  var today = new Date();
+  var start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  var target = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return Math.round((target - start) / 86400000);
+}
+
+function acquisitionTimelineFormatDate(value) {
+  var date = acquisitionTimelineDate(value);
+  if (!date) return leadIntelText(value);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function acquisitionTimelineAgo(value) {
+  var date = acquisitionTimelineDate(value);
+  if (!date) return leadIntelText(value);
+  var days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return days + ' days ago';
+  var months = Math.floor(days / 30);
+  if (months < 12) return months + ' month' + (months === 1 ? '' : 's') + ' ago';
+  var years = Math.floor(days / 365);
+  return years + ' year' + (years === 1 ? '' : 's') + ' ago';
+}
+
+function acquisitionTimelineTone(days) {
+  if (days === null || days === undefined) return 'neutral';
+  if (days < 0) return 'hot';
+  if (days <= 14) return 'hot';
+  if (days <= 45) return 'warn';
+  return 'neutral';
+}
+
+function acquisitionTimelineItem(title, detail, tone) {
+  return { title: title, detail: detail, tone: tone || 'neutral' };
+}
+
+function buildAcquisitionTimeline(lead, followups) {
+  lead = lead || {};
+  followups = followups || [];
+  var li = lead.lead_intelligence || {};
+  var sourceDetails = lead.source_details || {};
+  var timeline = li.timeline || {};
+  var urgency = [];
+  var operational = [];
+  var next = [];
+
+  var auctionDate = mdaLeadPick(lead, [
+    'auction_date', 'sale_date', 'foreclosure_date', 'tax_sale_date',
+    'source_details.auction_date', 'source_details.sale_date',
+    'lead_intelligence.timeline.auction_date', 'lead_intelligence.timeline.sale_date'
+  ]);
+  var daysToAuctionRaw = mdaLeadPick(lead, [
+    'days_to_auction', 'days_to_sale', 'days_to_tax_sale',
+    'source_details.days_to_auction', 'source_details.days_to_sale',
+    'lead_intelligence.timeline.days_to_auction', 'lead_intelligence.timeline.days_to_sale'
+  ]);
+  var auctionDays = mdaLeadText(daysToAuctionRaw) ? mdaLeadNumber(daysToAuctionRaw) : acquisitionTimelineDaysUntil(auctionDate);
+  if (auctionDate) {
+    var auctionText = acquisitionTimelineFormatDate(auctionDate);
+    if (auctionDays !== null && auctionDays !== undefined) {
+      auctionText = auctionDays >= 0 ? 'Auction in ' + auctionDays + ' day' + (auctionDays === 1 ? '' : 's') + ' (' + auctionText + ')' : 'Auction date passed ' + Math.abs(auctionDays) + ' day' + (Math.abs(auctionDays) === 1 ? '' : 's') + ' ago';
+    }
+    urgency.push(acquisitionTimelineItem('Auction timing', auctionText, acquisitionTimelineTone(auctionDays)));
+  } else if (auctionDays) {
+    urgency.push(acquisitionTimelineItem('Auction timing', 'Estimated auction in ' + auctionDays + ' days', acquisitionTimelineTone(auctionDays)));
+  }
+
+  var yearsDelinquent = mdaLeadPick(lead, [
+    'years_delinquent', 'tax_years_delinquent', 'source_details.years_delinquent',
+    'lead_intelligence.timeline.years_delinquent'
+  ]);
+  if (yearsDelinquent) {
+    urgency.push(acquisitionTimelineItem('Tax memory', 'Taxes delinquent ' + leadIntelText(yearsDelinquent) + ' year' + (String(yearsDelinquent) === '1' ? '' : 's'), 'warn'));
+  }
+
+  var taxDue = mdaLeadPickNumber(lead, [
+    'tax_due', 'taxes_due', 'taxes_owed', 'taxes_liens', 'lien_amount',
+    'source_details.tax_due', 'source_details.taxes_due', 'source_details.lien_amount',
+    'lead_intelligence.evidence.money.tax_due', 'lead_intelligence.evidence.money.taxes_liens'
+  ]);
+  if (taxDue > 0) urgency.push(acquisitionTimelineItem('Lien pressure', mdaMoney(taxDue) + ' taxes/liens noted', 'warn'));
+
+  var status = lead.status || lead.stage || lead.pipeline_stage || 'New';
+  var statusChanged = mdaLeadPick(lead, [
+    'status_updated_at', 'status_changed_at', 'last_status_change', 'updated_at',
+    'lead_intelligence.timeline.last_status_change'
+  ]);
+  var statusHistory = Array.isArray(lead.status_history) ? lead.status_history : [];
+  if (!statusChanged && statusHistory.length) {
+    var lastStatus = statusHistory[statusHistory.length - 1] || {};
+    statusChanged = lastStatus.changed_at || lastStatus.at || lastStatus.date || '';
+    status = lastStatus.to || lastStatus.status || status;
+  }
+  operational.push(acquisitionTimelineItem('Status memory', statusChanged ? status + ' changed ' + acquisitionTimelineAgo(statusChanged) : status + ' with no status-change timestamp', statusChanged ? 'neutral' : 'warn'));
+
+  var contactAt = mdaLeadPick(lead, [
+    'last_contact_attempt', 'last_contacted_at', 'last_contact_at', 'last_call_at', 'last_sms_at', 'last_email_at',
+    'outreach.last_contact_attempt', 'lead_intelligence.timeline.last_contact_attempt'
+  ]);
+  if (contactAt) operational.push(acquisitionTimelineItem('Contact memory', 'Last contact attempt ' + acquisitionTimelineAgo(contactAt), 'neutral'));
+  else operational.push(acquisitionTimelineItem('Contact memory', 'No contact attempt recorded', 'warn'));
+
+  if (lead.phone || lead.email) {
+    operational.push(acquisitionTimelineItem('Skip trace', 'Contact info present' + (lead.phone ? ': phone' : '') + (lead.email ? (lead.phone ? ' and email' : ': email') : ''), 'good'));
+  } else if (lead.skip_trace_status || lead.skip_trace_attempted) {
+    operational.push(acquisitionTimelineItem('Skip trace', 'Skip trace attempted, no contact info visible', 'warn'));
+  } else {
+    operational.push(acquisitionTimelineItem('Skip trace', 'No contact info yet', 'hot'));
+  }
+
+  var compConfidence = mdaLeadPick(lead, [
+    'comp_confidence', 'compConfidence', 'comp_analysis.confidence', 'comps.confidence',
+    'lead_intelligence.comp_confidence'
+  ]);
+  if (compConfidence) operational.push(acquisitionTimelineItem('Comp confidence', leadIntelText(compConfidence), String(compConfidence).toLowerCase().indexOf('high') > -1 ? 'good' : 'warn'));
+  else operational.push(acquisitionTimelineItem('Comp confidence', lead.arv ? 'ARV present, comp confidence not saved' : 'No comp confidence saved', lead.arv ? 'warn' : 'hot'));
+
+  var offerStatus = lead.offer_status || lead.offerStatus || lead.offer_stage || '';
+  if (offerStatus) operational.push(acquisitionTimelineItem('Offer status', leadIntelText(offerStatus), 'neutral'));
+  else if (lead.offer || lead.mao) operational.push(acquisitionTimelineItem('Offer status', 'Offer math exists, no saved offer status', 'warn'));
+  else operational.push(acquisitionTimelineItem('Offer status', 'No offer strategy saved', 'warn'));
+
+  var dueFollowups = followups.filter(function(f) {
+    return String(f.leadId || f.lead_id || '') === String(lead.id || '') && (f.status || 'pending') === 'pending';
+  }).sort(function(a, b) {
+    return String(a.nextDate || a.date || '').localeCompare(String(b.nextDate || b.date || ''));
+  });
+  if (dueFollowups.length) {
+    var fu = dueFollowups[0];
+    var fuDate = fu.nextDate || fu.date || '';
+    var fuDays = acquisitionTimelineDaysUntil(fuDate);
+    var fuText = fuDate ? 'Follow up ' + (fuDays === 1 ? 'tomorrow' : (fuDays === 0 ? 'today' : acquisitionTimelineFormatDate(fuDate))) : 'Follow-up reminder exists';
+    if (fu.note || fu.notes || fu.title) fuText += ': ' + leadIntelText(fu.note || fu.notes || fu.title);
+    next.push(acquisitionTimelineItem('Follow-up reminder', fuText, acquisitionTimelineTone(fuDays)));
+  }
+
+  var recommended = li.recommended_next_action || lead.recommended_next_action || '';
+  if (!recommended) {
+    if (!lead.phone && !lead.email) recommended = 'Skip trace before outreach';
+    else if (auctionDate || taxDue > 0) recommended = 'Verify timing, payoff, and title before offer';
+    else if (!compConfidence) recommended = 'Verify comps before pricing';
+    else recommended = 'Open analyzer and confirm offer range';
+  }
+  next.push(acquisitionTimelineItem('Recommended action', leadIntelText(recommended).replace(/_/g, ' '), 'neutral'));
+
+  var riskFlags = []
+    .concat(mdaLeadList(lead.risk_flags))
+    .concat(mdaLeadList(li.risk_flags))
+    .concat(mdaLeadList(li.priority_reasons));
+  if (lead.risk) riskFlags.push('Risk level: ' + lead.risk);
+  if (lead.repairs && lead.arv && lead.repairs / lead.arv > 0.18) riskFlags.push('High repairs relative to ARV');
+  if (li.urgency_reason) riskFlags.push(li.urgency_reason);
+  riskFlags = mdaLeadUnique(riskFlags).slice(0, 4);
+  if (riskFlags.length) {
+    next.push(acquisitionTimelineItem('Risk reminders', riskFlags.join('; '), riskFlags.length > 2 ? 'hot' : 'warn'));
+  } else {
+    next.push(acquisitionTimelineItem('Risk reminders', 'No major risk reminders saved', 'neutral'));
+  }
+
+  if (!urgency.length) urgency.push(acquisitionTimelineItem('Timing memory', 'No foreclosure, tax sale, or auction timing saved yet', 'neutral'));
+  return { urgency: urgency, operational: operational, next: next };
+}
+
+function renderAcquisitionTimeline(lead, followups) {
+  var timeline = buildAcquisitionTimeline(lead, followups);
+  function toneColor(tone) {
+    return tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : tone === 'good' ? '#10b981' : '#94a3b8';
+  }
+  function renderGroup(title, items) {
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em;margin-bottom:6px">' + title + '</div>' +
+      items.slice(0, 5).map(function(item) {
+        var color = toneColor(item.tone);
+        return '<div style="display:grid;grid-template-columns:8px 1fr;gap:7px;margin-bottom:6px;align-items:start">' +
+          '<span style="width:7px;height:7px;border-radius:99px;background:' + color + ';margin-top:5px"></span>' +
+          '<div><div style="font-size:10px;color:#e5e7eb;font-weight:800;line-height:1.35">' + leadIntelText(item.title) + '</div>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.45">' + leadIntelText(item.detail) + '</div></div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Acquisition Timeline</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Urgency, operations, and next-step memory from saved lead fields only.</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px">' +
+      renderGroup('Urgency Memory', timeline.urgency) +
+      renderGroup('Operational Memory', timeline.operational) +
+      renderGroup('Next-Step Memory', timeline.next) +
+    '</div>' +
+  '</div>';
+}
+
 
 function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
@@ -2323,6 +2543,8 @@ function renderLeadDetail(l) {
     html+='<div style="font-size:11px;color:#475569;font-style:italic">Owner data unavailable</div>';
   }
   html+='</div>';
+  html += renderAcquisitionTimeline(l, fu);
+
   // SELLER
   html += '<div class="section-title">Seller Contact</div>';
   html += '<div class="seller-card"><div class="seller-info">';
@@ -8037,6 +8259,7 @@ function renderLeadDetail(l) {
   if (l.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + l.why_good_deal + '</div>';
 
   html += renderLeadIntelligence(l.lead_intelligence);
+  html += renderAcquisitionTimeline(l, fu);
 
   // DISTRESS BADGES
   const sigs = (l.distress_signals||l.motivation||[]);
