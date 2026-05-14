@@ -755,7 +755,10 @@ function render() {
 //  TIMEZONE HELPER
 // ══════════════════════════════════════════════════════════
 function renderManualDealAnalyzer() {
-  setTimeout(updateManualDealAnalyzer, 0);
+  setTimeout(function() {
+    mdaApplyAnalyzerPreload();
+    updateManualDealAnalyzer();
+  }, 0);
   var fieldStyle = 'background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:8px 10px;color:#1d1d1f;outline:none;width:100%';
   var labelStyle = 'font-size:10px;color:#86868b;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px';
   function input(id, label, placeholder) {
@@ -783,6 +786,7 @@ function renderManualDealAnalyzer() {
       </div>
       <div style="font-size:11px;color:#946c00;background:#fef9e7;border:1px solid #f4d35e;border-radius:8px;padding:8px 10px">Use verified comps and county figures before making an offer.</div>
     </div>
+    ${mdaRenderLoadedLeadBanner()}
 
     <div style="display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,.95fr);gap:14px;align-items:start">
       <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px">
@@ -909,6 +913,213 @@ function mdaSetGuide(id, sections) {
 }
 
 var MDA_LAST_COPY = null;
+var MDA_LEAD_PREFILL = null;
+
+function mdaEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function mdaEscapeAttr(value) {
+  return mdaEscapeHtml(value);
+}
+
+function mdaLeadText(value) {
+  if (Array.isArray(value)) return value.map(mdaLeadText).filter(Boolean).join(', ');
+  if (value && typeof value === 'object') return '';
+  return String(value == null ? '' : value).trim();
+}
+
+function mdaLeadNumber(value) {
+  if (typeof value === 'number') return isFinite(value) ? value : 0;
+  var raw = mdaLeadText(value).replace(/[^0-9.-]/g, '');
+  var parsed = parseFloat(raw);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function mdaLeadAt(obj, path) {
+  return String(path).split('.').reduce(function(current, part) {
+    return current && current[part] != null ? current[part] : undefined;
+  }, obj);
+}
+
+function mdaLeadPick(obj, paths) {
+  for (var i = 0; i < paths.length; i++) {
+    var value = mdaLeadAt(obj, paths[i]);
+    if (Array.isArray(value) && value.length) return value;
+    if (mdaLeadText(value)) return value;
+  }
+  return '';
+}
+
+function mdaLeadPickNumber(obj, paths) {
+  for (var i = 0; i < paths.length; i++) {
+    var value = mdaLeadNumber(mdaLeadAt(obj, paths[i]));
+    if (value > 0) return value;
+  }
+  return 0;
+}
+
+function mdaLeadList(value) {
+  if (Array.isArray(value)) return value.map(mdaLeadText).filter(Boolean);
+  if (!mdaLeadText(value)) return [];
+  return mdaLeadText(value).split(/[,;|]/).map(function(item) { return item.trim(); }).filter(Boolean);
+}
+
+function mdaLeadUnique(items) {
+  var seen = {};
+  return items.map(mdaLeadText).filter(Boolean).filter(function(item) {
+    var key = item.toLowerCase();
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+function mdaLeadAddress(lead) {
+  var full = mdaLeadText(lead.address || lead.property_address || lead.site_address);
+  if (full) return full;
+  return mdaLeadUnique([lead.street, lead.city, lead.state, lead.zip || lead.zip_code]).join(', ');
+}
+
+function mdaBuildLeadAnalyzerPrefill(lead) {
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var urls = evidence.urls || {};
+  var address = mdaLeadAddress(lead);
+  var sourceUrl = mdaLeadPick(lead, ['source_url', 'source_link', 'source_record_url', 'url', 'source_details.url', 'source_details.source_url']) ||
+    mdaLeadPick({ urls: urls }, ['urls.source_record_url', 'urls.source_url', 'urls.source_query_url']);
+  var sourceUrls = mdaLeadUnique([
+    sourceUrl,
+    urls.source_record_url,
+    urls.source_url,
+    urls.source_query_url,
+    lead.source_urls,
+    lead.sourceLinks
+  ].reduce(function(all, value) { return all.concat(mdaLeadList(value)); }, []));
+  var distressTypes = mdaLeadUnique(
+    mdaLeadList(lead.distress_types)
+      .concat(mdaLeadList(lead.distress_type))
+      .concat(mdaLeadList(lead.distress_signals))
+      .concat(mdaLeadList(lead.category))
+      .concat(mdaLeadList(lead.source))
+      .concat(mdaLeadList(li.distress_cause))
+  );
+  var taxesLiens = mdaLeadPickNumber(lead, [
+    'taxes_liens', 'tax_liens', 'taxes_owed', 'tax_due', 'taxes_due', 'lien_amount', 'liens_owed',
+    'source_details.taxes_liens', 'source_details.tax_due', 'source_details.lien_amount',
+    'lead_intelligence.evidence.money.taxes_liens', 'lead_intelligence.evidence.money.tax_due', 'lead_intelligence.evidence.money.lien_amount'
+  ]);
+  var openingBid = mdaLeadPickNumber(lead, [
+    'opening_bid', 'minimum_bid', 'auction_bid', 'bid_amount',
+    'source_details.opening_bid', 'source_details.minimum_bid', 'source_details.auction_bid',
+    'lead_intelligence.evidence.money.opening_bid', 'lead_intelligence.evidence.money.minimum_bid'
+  ]);
+  var auctionDate = mdaLeadPick(lead, [
+    'auction_date', 'sale_date', 'foreclosure_date', 'tax_sale_date',
+    'source_details.auction_date', 'source_details.sale_date',
+    'lead_intelligence.timeline.auction_date', 'lead_intelligence.timeline.sale_date'
+  ]);
+  var parcel = mdaLeadPick(lead, [
+    'parcel', 'apn', 'parcel_apn', 'parcel_id', 'parcel_number', 'pin', 'property_id',
+    'source_details.parcel', 'source_details.apn', 'source_details.parcel_number', 'source_details.pin'
+  ]);
+  var ownerName = mdaLeadPick(lead, ['owner_name', 'owner', 'seller_name', 'name', 'source_details.owner_name']);
+  var intelligenceSummary = mdaLeadPick(lead, [
+    'lead_intelligence.summary', 'lead_intelligence.intelligence_summary', 'lead_intelligence.recommended_next_action',
+    'lead_intelligence.urgency_reason', 'lead_intelligence.priority_reason'
+  ]);
+  var sourceText = mdaLeadUnique([address].concat(sourceUrls.slice(0, 2))).join(' | ');
+  var contextText = mdaLeadUnique(
+    distressTypes
+      .concat(mdaLeadList(lead.motivation))
+      .concat(auctionDate ? ['Auction/sale date: ' + auctionDate] : [])
+      .concat(parcel ? ['Parcel/APN: ' + parcel] : [])
+      .concat(ownerName ? ['Owner: ' + ownerName] : [])
+      .concat(intelligenceSummary ? ['Lead intelligence: ' + intelligenceSummary] : [])
+  ).join('; ');
+  var values = {};
+  if (sourceText) values['mda-source'] = sourceText;
+  if (contextText) values['mda-distress'] = contextText;
+  if (taxesLiens > 0) values['mda-taxes'] = taxesLiens;
+  if (openingBid > 0) values['mda-opening-bid'] = openingBid;
+  var rentEstimate = mdaLeadPickNumber(lead, ['rent_estimate', 'rent', 'monthly_rent', 'estimated_rent', 'lead_intelligence.rent_estimate']);
+  if (rentEstimate > 0) values['mda-rent'] = rentEstimate;
+  var arv = mdaLeadPickNumber(lead, ['arv', 'after_repair_value', 'estimated_arv', 'lead_intelligence.arv']);
+  if (arv > 0) values['mda-arv'] = arv;
+  var repairs = mdaLeadPickNumber(lead, ['repairs', 'repair_estimate', 'estimated_repairs', 'lead_intelligence.repair_estimate']);
+  if (repairs > 0) values['mda-repairs'] = repairs;
+  var asking = mdaLeadPickNumber(lead, ['asking_price', 'purchase_price', 'list_price', 'price', 'source_details.asking_price']);
+  if (asking > 0) values['mda-purchase'] = asking;
+  var meta = [
+    { label: 'Owner', value: ownerName },
+    { label: 'Parcel/APN', value: parcel },
+    { label: 'Auction date', value: auctionDate },
+    { label: 'Taxes/liens', value: taxesLiens > 0 ? mdaMoney(taxesLiens) : '' },
+    { label: 'Opening bid', value: openingBid > 0 ? mdaMoney(openingBid) : '' },
+    { label: 'Source URLs', value: sourceUrls.join(' | ') },
+    { label: 'Lead intel', value: intelligenceSummary }
+  ].filter(function(item) { return mdaLeadText(item.value); });
+  return {
+    leadId: lead.id,
+    label: address || ownerName || lead.id || 'Selected lead',
+    values: values,
+    meta: meta,
+    applied: false
+  };
+}
+
+function mdaSetInputValue(id, value) {
+  var el = document.getElementById(id);
+  if (!el || value == null || value === '') return;
+  el.value = value;
+}
+
+function mdaApplyAnalyzerPreload() {
+  if (!MDA_LEAD_PREFILL || MDA_LEAD_PREFILL.applied) return;
+  var values = MDA_LEAD_PREFILL.values || {};
+  Object.keys(values).forEach(function(id) { mdaSetInputValue(id, values[id]); });
+  MDA_LEAD_PREFILL.applied = true;
+}
+
+function mdaRenderLoadedLeadBanner() {
+  if (!MDA_LEAD_PREFILL) return '';
+  var meta = MDA_LEAD_PREFILL.meta || [];
+  var chips = meta.map(function(item) {
+    return '<span style="display:inline-flex;gap:4px;align-items:center;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:999px;padding:4px 7px;color:#f5f5f7;font-size:10px;max-width:100%;white-space:normal;word-break:break-word;line-height:1.4"><strong style="color:#f4c542">' + mdaEscapeHtml(item.label) + ':</strong> ' + mdaEscapeHtml(item.value) + '</span>';
+  }).join('');
+  return '<div style="background:#1d1d1f;border:1px solid #3a3a3c;border-radius:10px;padding:10px 12px;margin-bottom:12px;color:#f5f5f7">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:11px;font-weight:800;color:#f4c542;text-transform:uppercase;letter-spacing:.04em">Loaded from lead</div>' +
+      '<div style="font-size:13px;font-weight:800;margin-top:2px">' + mdaEscapeHtml(MDA_LEAD_PREFILL.label) + '</div></div>' +
+      '<button class="btn btn-sm" style="background:#2c2c2e;color:#f5f5f7;border:1px solid #3a3a3c;font-size:11px" onclick="mdaClearLeadAnalyzerPreload()">Clear</button>' +
+    '</div>' +
+    (chips ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + chips + '</div>' : '') +
+    '<div style="font-size:10px;color:#b8b8bd;margin-top:8px">Temporary autofill only. Nothing is saved back to the lead.</div>' +
+  '</div>';
+}
+
+function mdaClearLeadAnalyzerPreload() {
+  MDA_LEAD_PREFILL = null;
+  if (APP.page === 'deal_analyzer') render();
+}
+
+function analyzeLeadInManualDealAnalyzer(leadId) {
+  var lead = (APP.leads || []).find(function(item) { return String(item.id) === String(leadId); });
+  if (!lead) {
+    if (typeof toast === 'function') toast('Lead unavailable', 'error');
+    return;
+  }
+  MDA_LEAD_PREFILL = mdaBuildLeadAnalyzerPrefill(lead);
+  if (typeof closeModal === 'function') closeModal();
+  var navItem = document.querySelector(".nav-item[onclick*='deal_analyzer']");
+  navigate('deal_analyzer', navItem);
+  if (typeof toast === 'function') toast('Loaded lead into analyzer', 'success');
+}
 
 function mdaCleanList(items, emptyText) {
   return items && items.length ? items.slice() : [emptyText];
@@ -2132,6 +2343,7 @@ function renderLeadDetail(l) {
   })();
   // ACTIONS
   html += '<div class="action-row">';
+  html += '<button class="btn btn-dark btn-sm" data-lead-id="' + mdaEscapeAttr(lid) + '" onclick="event.stopPropagation();analyzeLeadInManualDealAnalyzer(this.dataset.leadId)">Analyze Deal</button>';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
   html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">💼 Match</button>';
   html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">🔔 Follow-Up</button>';
@@ -7846,6 +8058,7 @@ function renderLeadDetail(l) {
 
   // ACTIONS
   html += '<div class="action-row">';
+  html += '<button class="btn btn-dark btn-sm" data-lead-id="' + mdaEscapeAttr(lid) + '" onclick="event.stopPropagation();analyzeLeadInManualDealAnalyzer(this.dataset.leadId)">Analyze Deal</button>';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">📄 Contract</button>';
   html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">💼 Match</button>';
   html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">🔔 Follow-Up</button>';
