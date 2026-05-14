@@ -764,6 +764,16 @@ function renderManualDealAnalyzer() {
   function numberInput(id, label, placeholder) {
     return '<div><div style="' + labelStyle + '">' + label + '</div><input id="' + id + '" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="' + placeholder + '" style="' + fieldStyle + '"></div>';
   }
+  function compRow(i) {
+    return '<div style="display:grid;grid-template-columns:1.3fr .8fr .55fr .45fr .45fr .75fr;gap:6px;margin-bottom:6px">' +
+      '<input id="mda-comp-' + i + '-address" oninput="updateManualDealAnalyzer()" placeholder="Comp address" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+      '<input id="mda-comp-' + i + '-price" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="Sold $" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+      '<input id="mda-comp-' + i + '-sqft" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="Sqft" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+      '<input id="mda-comp-' + i + '-beds" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="Beds" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+      '<input id="mda-comp-' + i + '-baths" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="Baths" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+      '<input id="mda-comp-' + i + '-date" oninput="updateManualDealAnalyzer()" placeholder="Sale date" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
+    '</div>';
+  }
   return `
   <div style="max-width:1180px;margin:0 auto">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px">
@@ -792,8 +802,14 @@ function renderManualDealAnalyzer() {
           ${numberInput('mda-sqft', 'Sqft', '1450')}
         </div>
         <div style="margin-top:10px">
-          <div style="${labelStyle}">Manual comp values</div>
-          <textarea id="mda-comps" oninput="updateManualDealAnalyzer()" placeholder="Enter sold comp values separated by commas or new lines, e.g. 230000, 242500, 255000" style="${fieldStyle};min-height:74px;resize:vertical"></textarea>
+          <div style="${labelStyle}">Manual sold comps</div>
+          <div style="font-size:10px;color:#86868b;margin-bottom:6px">Enter up to 5 sold comps. Address, beds, baths, and sale date are optional.</div>
+          ${compRow(1)}
+          ${compRow(2)}
+          ${compRow(3)}
+          ${compRow(4)}
+          ${compRow(5)}
+          <textarea id="mda-comps" oninput="updateManualDealAnalyzer()" placeholder="Optional quick sold prices if you only have values, e.g. 230000, 242500, 255000" style="${fieldStyle};min-height:54px;resize:vertical;margin-top:4px"></textarea>
         </div>
       </div>
 
@@ -818,6 +834,11 @@ function renderManualDealAnalyzer() {
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Rental</div><div id="mda-rental" style="font-size:12px;font-weight:800;color:#e2e8f0">Incomplete</div></div>
         </div>
         <div id="mda-comp-summary" style="font-size:10px;color:#94a3b8;line-height:1.6;margin-bottom:8px">Comps: none entered</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">ARV Assist</div><div id="mda-arv-assist" style="font-size:12px;font-weight:800;color:#e2e8f0">No comps yet</div></div>
+          <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Comp Confidence</div><div id="mda-comp-confidence" style="font-size:12px;font-weight:800;color:#e2e8f0">Incomplete</div></div>
+        </div>
+        <div style="margin-bottom:10px"><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Comp Warnings</div><div id="mda-comp-warnings" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Missing Info</div><div id="mda-missing" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
           <div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;margin-bottom:5px">Risk Flags</div><div id="mda-risks" style="font-size:10px;color:#cbd5e1;line-height:1.6"></div></div>
@@ -859,10 +880,74 @@ function mdaSetList(id, items, emptyText) {
 }
 
 function mdaCompValues() {
+  return mdaCompDetails().map(function(comp) { return comp.price; });
+}
+
+function mdaCompDetails() {
+  var comps = [];
+  for (var i = 1; i <= 5; i++) {
+    var price = mdaNumber('mda-comp-' + i + '-price');
+    var sqft = mdaNumber('mda-comp-' + i + '-sqft');
+    var address = mdaRaw('mda-comp-' + i + '-address');
+    var beds = mdaNumber('mda-comp-' + i + '-beds');
+    var baths = mdaNumber('mda-comp-' + i + '-baths');
+    var saleDate = mdaRaw('mda-comp-' + i + '-date');
+    if (price > 0) {
+      comps.push({ price: price, sqft: sqft, address: address, beds: beds, baths: baths, saleDate: saleDate, ppsf: sqft > 0 ? price / sqft : 0 });
+    }
+  }
+  if (comps.length) return comps;
   return mdaRaw('mda-comps')
     .split(/[\n,;]/)
     .map(function(v) { return parseFloat(String(v).replace(/[^0-9.-]/g, '')); })
-    .filter(function(v) { return !isNaN(v) && v > 0; });
+    .filter(function(v) { return !isNaN(v) && v > 0; })
+    .slice(0, 5)
+    .map(function(price) { return { price: price, sqft: 0, address: '', beds: 0, baths: 0, saleDate: '', ppsf: 0 }; });
+}
+
+function mdaAverage(values) {
+  return values.length ? values.reduce(function(sum, value) { return sum + value; }, 0) / values.length : 0;
+}
+
+function mdaCompStats(comps, subjectSqft) {
+  var prices = comps.map(function(comp) { return comp.price; });
+  var ppsfValues = comps.filter(function(comp) { return comp.ppsf > 0; }).map(function(comp) { return comp.ppsf; });
+  var avgPrice = mdaAverage(prices);
+  var avgPpsf = mdaAverage(ppsfValues);
+  var lowPrice = prices.length ? Math.min.apply(null, prices) : 0;
+  var highPrice = prices.length ? Math.max.apply(null, prices) : 0;
+  var varianceRatio = avgPrice ? (highPrice - lowPrice) / avgPrice : 0;
+  var suggestedArv = subjectSqft && avgPpsf ? avgPpsf * subjectSqft : avgPrice;
+  var rangeLow = suggestedArv ? suggestedArv * 0.93 : 0;
+  var rangeHigh = suggestedArv ? suggestedArv * 1.07 : 0;
+  var confidence = 'Incomplete';
+  var confidenceColor = '#94a3b8';
+  if (comps.length >= 3 && ppsfValues.length >= 2 && varianceRatio <= 0.18) {
+    confidence = 'High';
+    confidenceColor = '#10b981';
+  } else if (comps.length >= 2 && varianceRatio <= 0.28) {
+    confidence = 'Medium';
+    confidenceColor = '#f59e0b';
+  } else if (comps.length > 0) {
+    confidence = 'Low';
+    confidenceColor = '#ef4444';
+  }
+  return {
+    count: comps.length,
+    prices: prices,
+    avgPrice: avgPrice,
+    avgPpsf: avgPpsf,
+    ppsfCount: ppsfValues.length,
+    lowPrice: lowPrice,
+    highPrice: highPrice,
+    varianceRatio: varianceRatio,
+    suggestedArv: suggestedArv,
+    rangeLow: rangeLow,
+    rangeHigh: rangeHigh,
+    confidence: confidence,
+    confidenceColor: confidenceColor,
+    countQuality: comps.length >= 3 ? 'Strong count' : (comps.length === 2 ? 'Usable count' : (comps.length === 1 ? 'Single comp only' : 'No comps'))
+  };
 }
 
 function updateManualDealAnalyzer() {
@@ -870,14 +955,16 @@ function updateManualDealAnalyzer() {
   var purchase = mdaNumber('mda-purchase');
   var openingBid = mdaNumber('mda-opening-bid');
   var dealBasis = purchase || openingBid;
-  var arv = mdaNumber('mda-arv');
+  var manualArv = mdaNumber('mda-arv');
   var repairs = mdaNumber('mda-repairs');
   var assignment = mdaNumber('mda-assignment');
   var closing = mdaNumber('mda-closing');
   var taxes = mdaNumber('mda-taxes');
   var rent = mdaNumber('mda-rent');
   var sqft = mdaNumber('mda-sqft');
-  var comps = mdaCompValues();
+  var comps = mdaCompDetails();
+  var compStats = mdaCompStats(comps, sqft);
+  var arv = manualArv || compStats.suggestedArv;
   var mao = (arv * 0.70) - repairs - assignment - closing - taxes;
   var spread = arv - dealBasis - repairs - closing - taxes - assignment;
   var wholesaleProfit = spread;
@@ -888,15 +975,16 @@ function updateManualDealAnalyzer() {
   var basisWithRepairs = dealBasis + repairs + taxes;
   var rentRatio = basisWithRepairs ? rent / basisWithRepairs : 0;
   var grossYield = basisWithRepairs ? (rent * 12) / basisWithRepairs : 0;
-  var compAvg = comps.length ? comps.reduce(function(sum, v) { return sum + v; }, 0) / comps.length : 0;
-  var compLow = comps.length ? Math.min.apply(null, comps) : 0;
-  var compHigh = comps.length ? Math.max.apply(null, comps) : 0;
+  var compAvg = compStats.avgPrice;
+  var compLow = compStats.lowPrice;
+  var compHigh = compStats.highPrice;
   var missing = [];
   var risks = [];
   var weaknesses = [];
+  var compWarnings = [];
 
   if (!mdaRaw('mda-source')) missing.push('Source link/address: paste listing, FSBO, courthouse link, or address.');
-  if (!mdaRaw('mda-arv')) missing.push('ARV: check Zillow sold comps, Redfin solds, or manually verified comps.');
+  if (!manualArv && !compStats.suggestedArv) missing.push('ARV: check Zillow sold comps, Redfin solds, or manually verified comps.');
   if (!mdaRaw('mda-purchase') && !mdaRaw('mda-opening-bid')) missing.push('Purchase price/opening bid: confirm listing price, seller ask, or auction bid.');
   if (!mdaRaw('mda-repairs')) missing.push('Repairs: use contractor estimate, walkthrough notes, or a conservative rehab budget.');
   if (!mdaRaw('mda-closing')) missing.push('Closing costs: estimate title, transfer, recording, and buyer/seller closing costs.');
@@ -904,13 +992,20 @@ function updateManualDealAnalyzer() {
   if (!mdaRaw('mda-rent')) missing.push('Rent estimate: check Zillow rentals, Rentometer, or local active rentals.');
   if (!comps.length) missing.push('Comp values: enter at least 2-3 manual sold comps before trusting ARV.');
 
+  if (comps.length && !manualArv && compStats.suggestedArv) compWarnings.push('Manual ARV blank. Using comp-derived ARV for deal math.');
+  if (comps.length && comps.length < 3) compWarnings.push('Insufficient comp count. Add 3+ verified sold comps before trusting ARV.');
+  if (comps.length && compStats.confidence === 'Low') compWarnings.push('Low comp confidence. Count, sqft coverage, or price consistency is weak.');
+  if (comps.length && compStats.ppsfCount < Math.min(2, comps.length) && sqft) compWarnings.push('Average price per sqft is weak because most comps are missing sqft.');
+  if (compStats.varianceRatio > 0.25) compWarnings.push('Large ARV variance. Sold comp prices differ by more than 25% of average.');
+  if (manualArv && compStats.suggestedArv && Math.abs(manualArv - compStats.suggestedArv) / manualArv > 0.15) compWarnings.push('Manual ARV differs from comp-derived ARV by more than 15%.');
+
   if (arv && dealBasis && dealBasis > mao) risks.push('Purchase price is above MAO.');
   if (arv && spread <= 0) risks.push('Wholesale spread is zero or negative.');
   if (arv && flipProfit < 15000) risks.push('Flip profit is thin after rough holding and selling costs.');
   if (arv && flipMargin > 0 && flipMargin < 0.10) risks.push('Flip margin is below 10%.');
   if (rent && basisWithRepairs && rentRatio < 0.008) risks.push('Rental check is weak under the rough 0.8% rent-to-basis screen.');
   if (comps.length === 1) risks.push('Only one comp entered.');
-  if (compAvg && arv && Math.abs(compAvg - arv) / arv > 0.15) risks.push('Manual comp average differs from ARV by more than 15%.');
+  if (manualArv && compStats.suggestedArv && Math.abs(compStats.suggestedArv - manualArv) / manualArv > 0.15) risks.push('Comp-derived ARV differs from manual ARV by more than 15%.');
   if (!taxes && mdaRaw('mda-source').toLowerCase().indexOf('tax') > -1) risks.push('Tax source entered but taxes/liens are blank.');
   if (sqft && arv && arv / sqft > 400) risks.push('High ARV per sqft. Confirm neighborhood comps carefully.');
 
@@ -1001,11 +1096,14 @@ function updateManualDealAnalyzer() {
   mdaSet('mda-flip', flipStatus, flipColor);
   mdaSet('mda-rental', rentalStatus + (rent && basisWithRepairs ? ' (' + (rentRatio * 100).toFixed(2) + '% / ' + (grossYield * 100).toFixed(1) + '% yield)' : ''), rentalColor);
   mdaSet('mda-next-action', nextAction);
-  mdaSet('mda-comp-summary', comps.length ? 'Comps: ' + comps.length + ' entered | Avg ' + mdaMoney(compAvg) + ' | Range ' + mdaMoney(compLow) + ' - ' + mdaMoney(compHigh) : 'Comps: none entered');
+  mdaSet('mda-comp-summary', comps.length ? 'Comps: ' + comps.length + ' entered | Avg sold ' + mdaMoney(compAvg) + ' | Avg ' + (compStats.avgPpsf ? mdaMoney(compStats.avgPpsf) + '/sqft' : 'PPSF unavailable') + ' | Range ' + mdaMoney(compLow) + ' - ' + mdaMoney(compHigh) : 'Comps: none entered');
+  mdaSet('mda-arv-assist', compStats.suggestedArv ? mdaMoney(compStats.rangeLow) + ' - ' + mdaMoney(compStats.rangeHigh) + (manualArv ? ' suggested range' : ' used for ARV') : 'No comps yet');
+  mdaSet('mda-comp-confidence', compStats.confidence + (compStats.count ? ' | ' + compStats.countQuality : ''), compStats.confidenceColor);
   mdaSet('mda-deal-grade', dealGrade, dealGradeColor);
   mdaSet('mda-deal-grade-reason', dealGradeReason);
   mdaSetList('mda-missing', missing, 'No obvious missing info.');
   mdaSetList('mda-risks', risks, 'No major risk flags from current inputs.');
+  mdaSetList('mda-comp-warnings', compWarnings, 'No comp warnings from current inputs.');
   mdaSetList('mda-deal-weaknesses', weaknesses, 'No major deal weaknesses from current inputs.');
 }
 
