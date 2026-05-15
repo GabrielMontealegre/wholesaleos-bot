@@ -9886,6 +9886,7 @@ function openLeadModal(leadId) {
   wrapper.innerHTML = renderLeadDetail(l);
   mc.appendChild(wrapper);
   document.getElementById('modal-overlay').style.display = 'flex';
+  setTimeout(function(){ if (typeof loadLeadActivities === 'function') loadLeadActivities(leadId); }, 0);
   // Deal Timeline DOM injection
   setTimeout(function(){
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
@@ -9933,8 +9934,254 @@ function openLeadModal(leadId) {
   }
 }
 
+function renderLeadDetailSection(title, subtitle, body, open, id) {
+  return '<details ' + (open ? 'open ' : '') + (id ? 'id="' + id + '" ' : '') +
+    'style="margin:10px 0;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb;overflow:hidden">' +
+    '<summary style="display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;list-style:none;padding:11px 12px;background:#0b1120;border-bottom:1px solid #1f2937">' +
+      '<span><span style="display:block;font-size:11px;font-weight:900;color:#f8fafc;text-transform:uppercase;letter-spacing:.05em">' + leadIntelText(title) + '</span>' +
+      (subtitle ? '<span style="display:block;font-size:10px;color:#94a3b8;margin-top:2px">' + leadIntelText(subtitle) + '</span>' : '') + '</span>' +
+      '<span style="font-size:10px;color:#f4c542;font-weight:900">Toggle</span>' +
+    '</summary>' +
+    '<div style="padding:12px">' + body + '</div>' +
+  '</details>';
+}
+
+function renderLeadAcquisitionSnapshot(lead, followups, mao, spread) {
+  var briefing = buildLeadBriefing(lead, followups || []);
+  var freshness = buildVerificationFreshness(lead, followups || []);
+  var li = lead.lead_intelligence || {};
+  var address = leadBriefingAddress(lead) || leadBriefingText(lead.address || 'Address not available');
+  var cityState = [lead.city, lead.state].filter(Boolean).join(', ') || leadBriefingText(lead.county || lead.state || 'Location not available');
+  var auctionDays = (typeof daqDaysUntilAuction === 'function') ? daqDaysUntilAuction(lead) : null;
+  var timing = auctionDays !== null ? (auctionDays >= 0 ? 'Auction in ' + auctionDays + ' days' : 'Auction date has passed') :
+    (lead.auction_date || lead.sale_date ? 'Auction/sale date: ' + leadBriefingText(lead.auction_date || lead.sale_date) : 'Timing not verified');
+  var contactReadiness = leadBriefingText(lead.contact_readiness || li.contact_readiness || briefing.contactStatus || 'Contact readiness unknown');
+  var verification = freshness.hasVerification ? ('Verified ' + (freshness.verifiedDays === 0 ? 'today' : freshness.verifiedDays + ' days ago')) : freshness.topAction;
+  var priority = leadBriefingText(lead.priority_label || li.priority_label || li.priority_tier || lead.work_queue_band || 'Priority not classified');
+  var assignedTo = leadBriefingText(lead.assigned_to || lead.assignedTo);
+  function metric(label, value, color) {
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;min-width:0">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;letter-spacing:.04em;margin-bottom:3px">' + label + '</div>' +
+      '<div style="font-size:12px;color:' + (color || '#e5e7eb') + ';font-weight:900;line-height:1.3;word-break:break-word">' + leadIntelText(value) + '</div>' +
+    '</div>';
+  }
+  return '<div style="margin:0 0 10px;padding:13px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div style="min-width:220px;flex:1">' +
+        '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em;margin-bottom:3px">Acquisition Snapshot</div>' +
+        '<div style="font-size:16px;color:#f8fafc;font-weight:900;line-height:1.25">' + leadIntelText(address) + '</div>' +
+        '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + leadIntelText(cityState) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">' +
+        '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:#f4c54222;color:#f4c542;border:1px solid #f4c54255">' + leadIntelText(briefing.referenceId) + '</span>' +
+        renderLeadWorkflowBadge(lead) +
+        '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:#38bdf822;color:#38bdf8;border:1px solid #38bdf855">' + leadIntelText(priority) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:9px">' +
+      metric('Why this lead matters', briefing.why, '#e5e7eb') +
+      metric('Best next action', briefing.nextAction, '#f4c542') +
+      metric('Timing status', timing, auctionDays !== null && auctionDays <= 14 ? '#ef4444' : '#e5e7eb') +
+      metric('Contact readiness', contactReadiness, '#e5e7eb') +
+      metric('Verification status', verification, freshness.needsRecheck ? '#f59e0b' : '#10b981') +
+      metric('Assignment state', leadWorkflowLabel(leadWorkflowState(lead)) + (assignedTo ? ' - ' + assignedTo : ''), '#e5e7eb') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">' +
+      metric('ARV', mdaMoney(lead.arv || 0), '#10b981') +
+      metric('MAO', mdaMoney(mao || 0), '#e5e7eb') +
+      metric('Spread', mdaMoney(spread || 0), spread > 0 ? '#10b981' : '#ef4444') +
+    '</div>' +
+  '</div>';
+}
+
+function renderLeadQuickActions(lead) {
+  var lid = lead.id;
+  var safeId = leadActivityDomId(lid);
+  function btn(label, action, tone) {
+    var bg = tone === 'gold' ? '#f4c542' : tone === 'blue' ? '#1d4ed8' : '#111827';
+    var color = tone === 'gold' ? '#101827' : '#e5e7eb';
+    var border = tone === 'gold' ? '#f4c542' : '#334155';
+    return '<button type="button" onclick="' + action + '" style="border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';border-radius:7px;padding:8px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">' + label + '</button>';
+  }
+  return '<div style="margin:0 0 10px;padding:10px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em;margin-bottom:8px">Quick Actions</div>' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
+      btn('Analyze Deal', 'event.stopPropagation();analyzeLeadInManualDealAnalyzer(' + JSON.stringify(lid) + ')', 'gold') +
+      btn('Add Activity', 'event.stopPropagation();var d=document.getElementById("lead-activity-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var n=document.getElementById("lead-activity-note-' + safeId + '");if(n)n.focus();', '') +
+      btn('Queue For Enrichment', 'event.stopPropagation();var d=document.getElementById("lead-enrichment-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}', 'blue') +
+      btn('Verify Source', 'event.stopPropagation();if(typeof saveSourceRecheckState==="function")saveSourceRecheckState(' + JSON.stringify(lid) + ',"verification_requested");', '') +
+      btn('Assign Lead', 'event.stopPropagation();var d=document.getElementById("lead-operations-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var a=document.getElementById("lead-assigned-to-' + safeId + '");if(a)a.focus();', '') +
+      btn('Mark Contacted', 'event.stopPropagation();if(typeof updateLeadStatus==="function")updateLeadStatus(' + JSON.stringify(lid) + ',"Contacted");', '') +
+    '</div>' +
+  '</div>';
+}
+
+function renderLeadDealAnalysisBlock(lead, buyers, spread) {
+  var html = '';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-metric"><div class="dm-label">ARV</div><div class="dm-value green">$' + (lead.arv||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Offer</div><div class="dm-value blue">$' + (lead.offer||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Repairs</div><div class="dm-value">' + (lead.repair_class||'') + ' $' + (lead.repairs||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">MAO</div><div class="dm-value">$' + (lead.mao||lead.offer||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Fee</div><div class="dm-value orange">$' + (lead.fee_lo||0).toLocaleString() + '-' + (lead.fee_hi||0).toLocaleString() + '</div></div>';
+  html += '<div class="detail-metric"><div class="dm-label">Spread</div><div class="dm-value ' + (spread>50000?'green':'') + '">$' + (lead.spread||0).toLocaleString() + '</div></div>';
+  html += '</div>';
+  if (lead.why_good_deal) html += '<div style="background:#e6f9ed;border:1px solid #34c759;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#1b8f3d;line-height:1.6"><strong>Why good deal:</strong> ' + lead.why_good_deal + '</div>';
+  var reasons = [];
+  if (lead.category === 'Pre-FC' || lead.category === 'Auction') reasons.push('Pre-foreclosure or auction timing gives the seller a hard deadline.');
+  if (lead.category === 'Vacant Property') reasons.push('Vacancy creates carrying costs and usually reduces owner attachment.');
+  if (lead.category === 'Tax Delinquent') reasons.push('Tax delinquency can create pressure to resolve county debt.');
+  if (lead.category === 'Tired Landlord') reasons.push('Long-term landlord ownership can signal tenant fatigue.');
+  if (lead.category === 'Absentee Owner') reasons.push('Absentee ownership can reduce emotional attachment.');
+  if (lead.category === 'High Equity') reasons.push('High equity can leave room to negotiate below market.');
+  if ((lead.ownershipMonths||0) > 240) reasons.push('Owned about ' + Math.round((lead.ownershipMonths||0)/12) + ' years.');
+  if ((lead.dom||0) > 90) reasons.push(lead.dom + ' days on market can indicate pricing fatigue.');
+  if ((lead.equityPct||0) >= 40) reasons.push((lead.equityPct||0) + '% equity saved on the lead.');
+  if (reasons.length === 0) reasons.push('Saved deal fields are available for standard wholesale review.');
+  html += '<div style="background:#f5f5f7;border-radius:10px;padding:12px;margin-bottom:10px">';
+  html += '<div style="font-size:11px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Why This Is A Deal</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:5px">';
+  reasons.forEach(function(r) { html += '<div style="font-size:11px;color:#3a3a3c;line-height:1.5">- ' + leadIntelText(r) + '</div>'; });
+  html += '</div>';
+  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e5ea">';
+  html += '<div style="font-size:11px;font-weight:700;margin-bottom:8px">Deal Math Breakdown</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">';
+  html += '<div style="color:#86868b">ARV (Market Value)</div><div style="font-weight:600;color:#34c759">$' + (lead.arv||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Estimated Repairs</div><div style="font-weight:600;color:#ff9500">- $' + (lead.repairs||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">70% Rule MAO</div><div style="font-weight:600">$' + (lead.mao||lead.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Offer</div><div style="font-weight:600;color:#0071e3">$' + (lead.offer||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Wholesale Spread</div><div style="font-weight:700;color:#34c759;font-size:12px">$' + (lead.spread||0).toLocaleString() + '</div>';
+  html += '<div style="color:#86868b">Your Est. Fee</div><div style="font-weight:700;color:#5e5ce6">$' + (lead.fee_lo||0).toLocaleString() + '-' + (lead.fee_hi||0).toLocaleString() + '</div>';
+  html += '</div></div></div>';
+  html += '<div class="section-title">Buy Box Matches (' + buyers.length + ')</div>';
+  if (buyers.length) {
+    buyers.slice(0,3).forEach(function(b) {
+      var s = matchScore(b, lead);
+      html += '<div class="buyer-match-card"><div><div class="bm-name">' + b.name + '</div><div class="bm-meta">' + (b.state||'Any state') + ' &middot; ' + ((b.buyTypes||[]).join(', ')||'All types') + '</div></div><div style="text-align:right;min-width:70px"><div class="bm-score">' + s + '% fit</div><button class="btn btn-dark btn-sm" style="margin-top:3px" data-action="senddeal" data-lid="' + lead.id + '" data-bid="' + b.id + '">Send</button></div></div>';
+    });
+  } else {
+    html += '<div style="font-size:11px;color:#86868b;padding:8px">No matching buyers yet.</div>';
+  }
+  return html;
+}
+
+function renderLeadOperationsBlock(lead, followups, tz, safe) {
+  var lid = lead.id;
+  var callArgs = [lead.phone || '', lead.id || '', lead.owner_name || '', lead.address || ''].map(function(v) { return JSON.stringify(v); }).join(',');
+  var html = renderLeadAssignmentState(lead);
+  html += '<div class="section-title">Seller Contact</div>';
+  html += '<div class="seller-card"><div class="seller-info">';
+  html += '<strong>' + (lead.owner_name||lead.seller_type||'Owner') + '</strong><br>';
+  html += 'Phone: ' + (lead.phone||'No phone') + ' <span class="tz-badge">' + tz.tz + '</span>';
+  html += safe ? ' <span style="color:#34c759;font-size:10px">Safe to call</span>' : ' <span style="color:#ff3b30;font-size:10px">Off hours</span>';
+  html += '<br>Email: ' + (lead.email||'No email') + '<br>Your time: <strong>' + tz.losCabosTime + '</strong> (Los Cabos)';
+  html += '</div></div>';
+  html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px;flex-wrap:wrap">';
+  html += '<a href="#" onclick="event.stopPropagation();makeCall(' + callArgs + ');event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none;font-size:10px;font-weight:700;color:#fff">' + (safe?'CALL':'OFF HRS') + '</a>';
+  html += '<a href="sms:' + (lead.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none;font-size:10px;font-weight:700;color:#fff">TEXT</a>';
+  html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;min-width:90px;padding:8px;background:#5e5ce6;border:none;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;color:#fff">EMAIL</button>';
+  html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;color:#fff">AI MSG</div>';
+  html += '</div>';
+  html += renderLeadActivityMemory(lead);
+  html += '<div class="action-row">';
+  html += '<button class="btn btn-dark btn-sm" data-lead-id="' + mdaEscapeAttr(lid) + '" onclick="event.stopPropagation();analyzeLeadInManualDealAnalyzer(this.dataset.leadId)">Analyze Deal</button>';
+  html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">Contract</button>';
+  html += '<button class="btn btn-blue btn-sm" data-action="match" data-lid="' + lid + '">Match</button>';
+  html += '<button class="btn btn-outline btn-sm" data-action="followup" data-lid="' + lid + '">Follow-Up</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="openUpdateStatus(\'' + lid + '\')">Status</button>';
+  html += '</div>';
+  if (lead.script) html += '<div class="section-title" style="margin-top:10px">Call Script</div><div style="background:#f5f5f7;border-radius:8px;padding:10px;font-size:11px;color:#3a3a3c;line-height:1.7;margin-bottom:10px">' + lead.script + '</div>';
+  html += '<div class="section-title" style="margin-top:12px">Notes</div>';
+  html += '<textarea id="lead-notes-' + lid + '" class="form-textarea" style="min-height:70px;width:100%;margin-bottom:6px" placeholder="Add notes...">' + (lead.notes||'') + '</textarea>';
+  html += '<div style="display:flex;gap:6px"><button class="btn btn-dark btn-sm" data-action="savenotes" data-lid="' + lid + '">Save Notes</button><button class="btn btn-outline btn-sm" data-action="ainote" data-lid="' + lid + '">AI Note</button></div>';
+  if (followups.length) {
+    html += '<div class="section-title" style="margin-top:12px">Follow-Up Sequence</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+    followups.forEach(function(f) { html += '<span class="badge ' + (f.status==='done'?'b-green':f.status==='pending'?'b-orange':'b-gray') + '">' + f.type + ' D' + f.day + '</span>'; });
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderLeadTimingLine(lead) {
+  var html = '';
+  var tsAge = Date.now() - (lead.createdAt || 0);
+  var tsDays = Math.floor(tsAge / 86400000);
+  var tsHrs = Math.floor(tsAge / 3600000);
+  var tsAdded = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Unknown';
+  var tsUrgC = tsDays < 1 ? '#22c55e' : tsDays < 3 ? '#f59e0b' : tsDays < 7 ? '#f97316' : '#ef4444';
+  var tsUrgL = tsDays < 1 ? 'FRESH' : tsDays < 3 ? 'ACTIVE' : tsDays < 7 ? 'AGING' : 'STALE';
+  var tsUrgBg = tsDays < 1 ? '#14532d' : tsDays < 3 ? '#713f12' : tsDays < 7 ? '#7c2d12' : '#450a0a';
+  html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid #334155;margin:8px 0">';
+  html += '<span style="font-size:10px;font-weight:700;background:' + tsUrgBg + ';color:' + tsUrgC + ';padding:2px 8px;border-radius:9px;border:1px solid ' + tsUrgC + '">' + tsUrgL + '</span>';
+  html += '<span style="font-size:11px;color:#94a3b8">Added: ' + tsAdded + ' &bull; ' + (tsDays > 0 ? tsDays + 'd' : tsHrs + 'h') + ' ago</span>';
+  if (tsDays >= 3) html += '<span style="font-size:10px;color:#ef4444;font-weight:600">Lead value may decline after 3 days</span>';
+  html += '</div>';
+  if (lead.skip_trace_date) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Skip traced: ' + new Date(lead.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div>';
+  else if (lead.skip_trace_attempted) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Skip trace: no data found</div>';
+  else if (!lead.phone) html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">Skip trace queued or needed.</div>';
+  if (lead.relatives && lead.relatives.length) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contacts: ' + lead.relatives.slice(0,3).join(', ') + '</div>';
+  if (lead.phone_all && lead.phone_all.length > 1) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">More phones: ' + lead.phone_all.slice(1).join(', ') + '</div>';
+  return html;
+}
+
 
 function renderLeadDetail(l) {
+  const buyers = matchBuyers(l);
+  const fu = APP.followups.filter(function(f) { return f.leadId === l.id; });
+  const tz = getSellerTZ(l.phone, l.state || 'TX');
+  const safe = isSafeCallTime(l.state || 'TX');
+  const mao = l.mao || Math.round((l.arv||0)*0.70 - (l.repairs||0));
+  const spread = l.spread || ((l.arv||0) - (l.offer||0) - (l.repairs||0));
+  const lid = l.id;
+  const safeId = leadActivityDomId(lid);
+  const qualScore = computeLeadQuality(l);
+  const sigs = (l.distress_signals||l.motivation||[]);
+
+  var enrichmentBits = '';
+  if (sigs.length) {
+    enrichmentBits += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
+    (Array.isArray(sigs)?sigs:[]).forEach(function(sg){ enrichmentBits += '<span class="badge b-red">' + sg + '</span>'; });
+    if (l.investment_strategy) enrichmentBits += '<span class="badge b-blue">' + l.investment_strategy + '</span>';
+    enrichmentBits += '</div>';
+  }
+  enrichmentBits += renderEnrichmentLaunchpad(l);
+  enrichmentBits += renderCostAwareness(l, fu);
+
+  var evidenceBits = renderLeadBriefing(l, fu) + renderLeadEvidenceDetails(l);
+  var fa = encodeURIComponent((l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
+  var zUrl = leadEnrichmentSearchUrl('zillow', (l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
+  var mUrl = 'https://maps.google.com/?q=' + fa;
+  var raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr=' + fa;
+  var btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #334155;background:#111827;color:#e5e7eb;margin-right:5px;margin-top:5px';
+  var internalBits = '';
+  internalBits += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:10px;flex-wrap:wrap">';
+  internalBits += '<div><div class="detail-addr" style="margin-bottom:0;font-size:15px;color:#e5e7eb">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
+  internalBits += '<div class="detail-meta" style="color:#94a3b8">' + (l.address||'').split(',').slice(1).join(',').trim() + ' &middot; ' + (l.category||'') + ' &middot; ' + (l.seller_type||'Owner') + '</div></div>';
+  internalBits += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
+  internalBits += '</div>';
+  internalBits += '<div style="display:flex;flex-wrap:wrap;margin-bottom:10px">';
+  internalBits += '<a href="'+mUrl+'" target="_blank" style="'+btnStyle+'">Maps</a>';
+  internalBits += '<a href="'+zUrl+'" target="_blank" style="'+btnStyle+'">Zillow Search</a>';
+  internalBits += '<a href="'+raUrl+'" target="_blank" style="'+btnStyle+'">Auction Search</a>';
+  internalBits += '</div>';
+  internalBits += renderLeadIntelligence(l.lead_intelligence);
+  internalBits += '<div style="font-size:10px;color:#94a3b8;margin-top:10px">Internal ID: ' + lid + ' &middot; Added: ' + (l.created||'N/A') + '</div>';
+
+  let html = '<div class="detail-panel">';
+  html += renderLeadAcquisitionSnapshot(l, fu, mao, spread);
+  html += renderLeadQuickActions(l);
+  html += renderLeadDetailSection('Deal Analysis', 'Deal math, buyer fit, and saved wholesale reasoning.', renderLeadDealAnalysisBlock(l, buyers, spread), true, 'lead-deal-section-' + safeId);
+  html += renderLeadDetailSection('Operations', 'Assignment, contact controls, activity, notes, and follow-up work.', renderLeadOperationsBlock(l, fu, tz, safe), false, 'lead-operations-section-' + safeId);
+  html += renderLeadDetailSection('Verification', 'Source recheck workflow, freshness, timeline, and timing pressure.', renderSourceRecheckWorkflow(l, fu) + renderVerificationFreshness(l, fu) + renderAcquisitionTimeline(l, fu) + renderLeadTimingLine(l), false, 'lead-verification-section-' + safeId);
+  html += renderLeadDetailSection('Enrichment', 'Manual enrichment launchpad, spend caution, distress tags, and missing info.', enrichmentBits, false, 'lead-enrichment-section-' + safeId);
+  html += renderLeadDetailSection('Evidence Details', 'Plain-English briefing, saved evidence, missing evidence, and property links.', evidenceBits, false, 'lead-evidence-section-' + safeId);
+  html += renderLeadDetailSection('Raw Source / Internal Intelligence', 'Raw confidence reasons, source internals, IDs, and saved intelligence arrays.', internalBits, false, 'lead-internal-section-' + safeId);
+  html += '</div>';
+  return html;
+}
+
+
+function renderLeadDetailLegacy(l) {
   const buyers = matchBuyers(l);
   const fu = APP.followups.filter(f => f.leadId === l.id);
   const tz = getSellerTZ(l.phone, l.state || 'TX');
