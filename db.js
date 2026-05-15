@@ -14,9 +14,9 @@ function ensureDir() {
 
 function readDB() {
   ensureDir();
-  if (!fs.existsSync(DB_FILE)) return { leads:[], buyers:[], assignments:[], calendar:[], followups:[], contracts:[], settings:{} };
+  if (!fs.existsSync(DB_FILE)) return { leads:[], buyers:[], assignments:[], calendar:[], followups:[], activities:[], contracts:[], settings:{} };
   try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); }
-  catch { return { leads:[], buyers:[], assignments:[], calendar:[], followups:[], contracts:[], settings:{} }; }
+  catch { return { leads:[], buyers:[], assignments:[], calendar:[], followups:[], activities:[], contracts:[], settings:{} }; }
 }
 
 function writeDB(data) {
@@ -1364,6 +1364,69 @@ function updateLead(id, updates) {
   return db.leads[idx];
 }
 
+const LEAD_ACTIVITY_TYPES = new Set([
+  'call_attempt',
+  'text_attempt',
+  'email_attempt',
+  'voicemail',
+  'seller_response',
+  'verification',
+  'skip_trace',
+  'comp_review',
+  'offer_review',
+  'follow_up',
+  'note'
+]);
+
+function normalizeLeadActivity(input) {
+  input = input || {};
+  var type = String(input.type || 'note').trim();
+  if (!LEAD_ACTIVITY_TYPES.has(type)) type = 'note';
+  var note = String(input.note || '').trim().slice(0, 2000);
+  var outcome = String(input.outcome || '').trim().slice(0, 500);
+  var createdBy = String(input.created_by || input.createdBy || 'operator').trim().slice(0, 120);
+  var nextFollowUpDate = String(input.next_follow_up_date || input.nextFollowUpDate || '').trim();
+  if (nextFollowUpDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextFollowUpDate)) nextFollowUpDate = '';
+  return {
+    type: type,
+    note: note,
+    outcome: outcome,
+    created_by: createdBy || 'operator',
+    next_follow_up_date: nextFollowUpDate || null
+  };
+}
+
+function getLeadActivities(leadId) {
+  const data = readDB();
+  return (data.activities || [])
+    .filter(function(activity) { return activity.lead_id === leadId; })
+    .sort(function(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+}
+
+function addLeadActivity(leadId, input) {
+  const data = readDB();
+  if (!data.leads) data.leads = [];
+  if (!data.activities) data.activities = [];
+  var lead = data.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return { error: 'lead_not_found', status: 404 };
+  var normalized = normalizeLeadActivity(input);
+  if (!normalized.note && !normalized.outcome) return { error: 'activity_requires_note_or_outcome', status: 400 };
+  var activity = {
+    lead_id: leadId,
+    activity_id: 'ACT-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    type: normalized.type,
+    note: normalized.note,
+    outcome: normalized.outcome,
+    created_at: new Date().toISOString(),
+    created_by: normalized.created_by,
+    next_follow_up_date: normalized.next_follow_up_date,
+    source: 'manual'
+  };
+  data.activities.push(activity);
+  writeDB(data);
+  return activity;
+}
+
 function leadExists(address) {
   if (!address) return false;
   // Normalize: lowercase, remove extra spaces
@@ -2170,6 +2233,7 @@ function addEnrichmentHistory(leadId, entry) {
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
+  getLeadActivities, addLeadActivity,
   getUsers, getUserByPin, getUserById, updateUser, addUser,
   getLeadsForUser, getLeadsByStateCountyForUser, getStatsForUser,
   archiveStaleLeads, checkLeadLimit,

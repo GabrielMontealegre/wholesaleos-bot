@@ -333,6 +333,27 @@ app.get('/api/leads/:id/validate', (req, res) => {
 });
 
 // PATCH /api/leads/:id/address — manually correct a single lead's address
+app.get('/api/leads/:id/activities', (req, res) => {
+  try {
+    const lead = db.getLeads().find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });
+    const activities = db.getLeadActivities(req.params.id);
+    res.json({ ok: true, lead_id: req.params.id, activities, count: activities.length });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/leads/:id/activities', (req, res) => {
+  try {
+    const activity = db.addLeadActivity(req.params.id, req.body || {});
+    if (activity && activity.error) return res.status(activity.status || 400).json({ ok: false, error: activity.error });
+    res.json({ ok: true, activity });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.patch('/api/leads/:id/address', (req, res) => {
   try {
     const dbData = db.readDB();
