@@ -3381,6 +3381,106 @@ function leadBriefingLinks(lead) {
   ].filter(function(link){ return !!link.url; });
 }
 
+function leadEnrichmentSearchUrl(site, query) {
+  query = leadBriefingText(query);
+  if (!query) return '';
+  var enc = encodeURIComponent(query);
+  if (site === 'zillow') return 'https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:query}));
+  if (site === 'redfin') return 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + query);
+  if (site === 'maps') return 'https://maps.google.com/?q=' + enc;
+  if (site === 'street') return 'https://www.google.com/maps/search/?api=1&query=' + enc + '&layer=c';
+  if (site === 'cyber') return 'https://www.cyberbackgroundchecks.com/search?q=' + enc;
+  if (site === 'fastpeople') return 'https://www.fastpeoplesearch.com/name/' + enc;
+  if (site === 'whitepages') return 'https://www.whitepages.com/name/' + enc;
+  return '';
+}
+
+function buildEnrichmentLaunchpad(lead) {
+  lead = lead || {};
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var timeline = li.timeline || {};
+  var address = leadBriefingAddress(lead) || leadBriefingText(lead.address);
+  var owner = leadBriefingText(lead.owner_name || lead.owner || lead.seller_name || evidence.owner_name);
+  var urls = leadBriefingSourceUrls(lead);
+  var priority = leadBriefingText(lead.priority_label || li.priority_label || lead.priority_tier || li.priority_tier || lead.work_queue_band || li.work_queue_band);
+  var priorityText = priority || 'Unscored priority';
+  var highPriority = /high|hot|urgent|act today|auction|tax|priority 1|p1/i.test(priorityText + ' ' + leadBriefingText(lead.source) + ' ' + leadBriefingText(lead.motivation));
+  var days = leadBriefingText(lead.days_to_auction || lead.days_to_sale || lead.days_to_tax_sale || timeline.days_to_auction || timeline.days_to_sale);
+  var auctionDate = leadBriefingText(lead.auction_date || lead.sale_date || lead.tax_sale_date || timeline.auction_date || timeline.sale_date);
+  var timing = days ? 'Timing pressure: ' + days + ' day' + (String(days) === '1' ? '' : 's') + ' to auction/sale from saved data.'
+    : auctionDate ? 'Timing pressure: sale/auction date saved as ' + auctionDate + '.'
+    : 'Timing not verified. Recheck source before treating this as urgent.';
+  var hasContact = !!(lead.phone || lead.email);
+  var hasComps = !!(lead.arv || (lead.comps && lead.comps.length) || lead.comp_confidence || li.comp_confidence);
+  var hasVerified = !!leadBriefingText(lead.last_verified_at || lead.verified_at || lead.source_verified_at || li.last_verified_at || timeline.last_verified_at);
+  var missing = [];
+  if (!address) missing.push('property address');
+  if (!owner) missing.push('owner name');
+  if (!hasContact) missing.push('seller phone/email');
+  if (!hasComps) missing.push('ARV/comps');
+  if (!hasVerified) missing.push('recent source verification');
+  if (!urls.source_record_url && !urls.source_query_url && !urls.source_url) missing.push('county/source record link');
+  var order = [];
+  if (!hasVerified) order.push('Verify county/source record first');
+  if (!hasComps) order.push('Check Zillow/Redfin/Maps for value context');
+  if (!owner) order.push('Confirm owner name from official source');
+  if (!hasContact) order.push('Run owner/contact searches manually');
+  if (!order.length) order.push('Review evidence, then update activity/follow-up notes');
+  var nextStep = order[0];
+  var why = highPriority ? 'High-priority signals justify manual enrichment before outreach.' : 'Enrichment should stay controlled until source confidence and lead value are clear.';
+  if (missing.length) why += ' Missing: ' + missing.slice(0, 4).join(', ') + '.';
+  var ownerQuery = owner || address;
+  var links = [
+    {label:'Zillow Search', url:leadEnrichmentSearchUrl('zillow', address), hint:'Address-based value context'},
+    {label:'Redfin Search', url:leadEnrichmentSearchUrl('redfin', address), hint:'Search result, not assumed property URL'},
+    {label:'Google Maps', url:leadEnrichmentSearchUrl('maps', address), hint:'Location check'},
+    {label:'Street View', url:leadEnrichmentSearchUrl('street', address), hint:'Visual condition check'},
+    {label:'County Record', url:leadBriefingText(urls.source_record_url || urls.source_query_url || urls.source_url), hint:'Official/source verification'},
+    {label:'CyberBackgroundChecks', url:leadEnrichmentSearchUrl('cyber', ownerQuery), hint:'Manual owner/contact search'},
+    {label:'FastPeopleSearch', url:leadEnrichmentSearchUrl('fastpeople', ownerQuery), hint:'Manual owner/contact search'},
+    {label:'Whitepages', url:leadEnrichmentSearchUrl('whitepages', ownerQuery), hint:'Optional manual lookup'}
+  ].filter(function(link){ return !!link.url; });
+  return {
+    highPriority: highPriority,
+    priorityText: priorityText,
+    missing: missing.length ? missing : ['No critical missing enrichment fields detected from saved data'],
+    order: order.slice(0, 5),
+    nextStep: nextStep,
+    why: why,
+    timing: timing,
+    links: links
+  };
+}
+
+function renderEnrichmentLaunchpad(lead) {
+  var data = buildEnrichmentLaunchpad(lead);
+  function bullet(text) {
+    return '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-bottom:3px">- ' + leadIntelText(text) + '</div>';
+  }
+  var badgeColor = data.highPriority ? '#ef4444' : '#38bdf8';
+  var links = data.links.length ? data.links.map(function(link) {
+    return '<a href="' + mdaEscapeAttr(link.url) + '" target="_blank" title="' + leadIntelText(link.hint) + '" style="font-size:10px;font-weight:800;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#111827;border-radius:999px;padding:5px 8px">' + leadIntelText(link.label) + '</a>';
+  }).join('') : '<span style="font-size:10px;color:#64748b">No safe enrichment links available until address, owner, or source URL is present.</span>';
+  return '<div style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Enrichment Launchpad</div>' +
+      '<div style="font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px">Manual 1-5 lead workflow only. Opens search links; no scraping, storage, or automation.</div></div>' +
+      '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:' + badgeColor + '22;color:' + badgeColor + ';border:1px solid ' + badgeColor + '55">' + leadIntelText(data.priorityText) + '</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Why Enrichment Matters</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(data.why) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Best Next Enrichment Step</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(data.nextStep) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Timing Pressure</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(data.timing) + '</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Top Missing Fields</div>' + data.missing.slice(0, 5).map(bullet).join('') + '</div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Recommended Enrichment Order</div>' + data.order.map(bullet).join('') + '</div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:6px">Manual Launch Links</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
+  '</div>';
+}
+
 function buildLeadBriefing(lead, followups) {
   lead = lead || {};
   followups = followups || [];
@@ -3607,6 +3707,7 @@ function renderLeadDetail(l) {
 
   let html = '<div class="detail-panel">';
   html += renderLeadBriefing(l, fu);
+  html += renderEnrichmentLaunchpad(l);
   // SOURCE + AI BLOCK
   var _srcName = l.source || l.county || 'Unknown source';
   var _srcUrl  = l.source_url || '';
@@ -3659,7 +3760,7 @@ function renderLeadDetail(l) {
   var _as = (l.address||'').toLowerCase().split(' ').join('-').replace(/[^a-zA-Z0-9-]/g,'');
   var _cs = (l.city||'').toLowerCase().split(' ').join('-');
   var _st = (l.state||'').toLowerCase();
-  var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
+  var _zUrl = leadEnrichmentSearchUrl('zillow', (l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
   
   var _mUrl = 'https://maps.google.com/?q='+_fa;
   var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
@@ -9687,6 +9788,7 @@ function renderLeadDetail(l) {
 
   let html = '<div class="detail-panel">';
   html += renderLeadBriefing(l, fu);
+  html += renderEnrichmentLaunchpad(l);
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
   html += '<div class="detail-addr" style="margin-bottom:0;font-size:15px">' + (l.address||'') + (l.city?', '+l.city:'') + (l.state?', '+l.state:'') + (l.zip?' '+l.zip:'') + '</div>';
@@ -9695,7 +9797,7 @@ function renderLeadDetail(l) {
   var _as = (l.address||'').toLowerCase().split(' ').join('-').replace(/[^a-zA-Z0-9-]/g,'');
   var _cs = (l.city||'').toLowerCase().split(' ').join('-');
   var _st = (l.state||'').toLowerCase();
-  var _zUrl = 'https://www.zillow.com/homes/'+_as+'-'+_cs+'-'+_st+'_rb/';
+  var _zUrl = leadEnrichmentSearchUrl('zillow', (l.address||'')+(l.city?', '+l.city:'')+(l.state?', '+l.state:''));
   
   var _mUrl = 'https://maps.google.com/?q='+_fa;
   var _raUrl = 'https://www.realauction.com/search/allsearch.html?searchStr='+_fa;
