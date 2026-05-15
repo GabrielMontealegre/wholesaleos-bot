@@ -16016,13 +16016,24 @@ function loadMatchingData() {
 
 var _wpOrig=loadLeadsFromAPI;
 loadLeadsFromAPI=async function(){
-  APP._leadsLoading=true;if(typeof render==='function'&&APP.page==='leads')render();
-  await _wpOrig();
-  APP._leadsLoading=false;
-  if(APP.leads&&APP.leads.length){
-    APP.leads=assignRefIds(APP.leads);
+  APP._leadsLoading=true;
+  APP._leadsError='';
+  if(typeof render==='function'&&APP.page==='leads')render();
+  try{
+    var lr=await fetch('/api/leads');
+    if(!lr.ok) throw new Error('HTTP '+lr.status);
+    var ld=await lr.json();
+    var leads=Array.isArray(ld&&ld.leads)?ld.leads:(Array.isArray(ld)?ld:[]);
+    APP.leads=typeof assignRefIds==='function'?assignRefIds(leads):leads;
     if(typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters({silent:true});
     else APP.filtered=APP.leads;
+  }catch(e){
+    APP._leadsError=(e&&e.message)?e.message:'Failed to load leads';
+    if(!Array.isArray(APP.leads)) APP.leads=[];
+    if(!Array.isArray(APP.filtered)) APP.filtered=APP.leads;
+    try{console.error('[leads] load failed',e);}catch(_){}
+  }finally{
+    APP._leadsLoading=false;
   }
   try{var br=await fetch('/api/buyers');if(br.ok){var bd=await br.json();APP.buyers=bd.buyers||bd||[];}}catch(e){}
   updateLeadsBadge();
@@ -16142,10 +16153,34 @@ var _leadsPage = 0;
 var _leadsPerPage = 300;
 
 function renderLeads() {
-  var all = APP.filtered || APP.leads || [];
+  var baseLeads = Array.isArray(APP.leads) ? APP.leads : [];
+  var all = Array.isArray(APP.filtered) ? APP.filtered : baseLeads;
+  var toolbar = typeof window.renderLeadActionToolbar === 'function' ? window.renderLeadActionToolbar() : '';
+  function leadSafeText(value){
+    if (typeof mdaEscapeHtml === 'function') return mdaEscapeHtml(value);
+    return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function leadStateMessage(title, detail){
+    return '<div>'+toolbar+
+      '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:24px;text-align:center;background:#fff;color:#1d1d1f">'+
+        '<div style="font-size:15px;font-weight:700;margin-bottom:6px">'+leadSafeText(title)+'</div>'+
+        '<div style="font-size:12px;color:#86868b;line-height:1.5">'+leadSafeText(detail)+'</div>'+
+      '</div>'+
+    '</div>';
+  }
+  var baseTotal = baseLeads.length;
   var total = all.length;
-  if (total === 0 && APP._leadsLoading) {
-    return '<div class="loading-spinner"><div class="spinner"></div><div style="font-size:14px;font-weight:600">Loading leads...</div><div style="font-size:12px;margin-top:6px">Fetching your leads...</div></div>';
+  if (baseTotal === 0 && APP._leadsLoading) {
+    return '<div>'+toolbar+'<div class="loading-spinner"><div class="spinner"></div><div style="font-size:14px;font-weight:600">Loading leads...</div><div style="font-size:12px;margin-top:6px">Fetching your leads...</div></div></div>';
+  }
+  if (baseTotal === 0 && APP._leadsError) {
+    return leadStateMessage('Failed to load leads','The dashboard could not hydrate leads from /api/leads. '+APP._leadsError);
+  }
+  if (baseTotal === 0) {
+    return leadStateMessage('No leads loaded','Lead hydration completed, but /api/leads returned zero leads.');
+  }
+  if (total === 0) {
+    return leadStateMessage('No leads match current filters','Leads are loaded. Clear or adjust the current filters to show results.');
   }
   var page = _leadsPage;
   var perPage = _leadsPerPage;
@@ -16214,9 +16249,11 @@ function renderLeads() {
   var headers = ['REF #','ADDRESS','STATE','TYPE','STATUS','SPREAD','BUYERS','DATE'].map(function(h){
     return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">'+h+'</th>';
   }).join('');
+  var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: '+leadSafeText(APP._leadsError)+'</div>' : '';
 
   return '<div>'+
-    (typeof window.renderLeadActionToolbar === 'function' ? window.renderLeadActionToolbar() : '')+
+    toolbar+
+    loadWarning+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+
       tabs+
       '<div style="margin-left:auto;display:flex;gap:8px">'+
