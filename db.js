@@ -1249,6 +1249,87 @@ function shouldSkipPlaceholderLead(lead) {
   return placeholderCount >= 2;
 }
 
+const LEAD_ASSIGNMENT_STATES = new Set([
+  'unassigned',
+  'assigned',
+  'in_review',
+  'active_outreach',
+  'comping',
+  'offer_prep',
+  'follow_up',
+  'dead_lead',
+  'under_contract',
+  'dispo_ready'
+]);
+
+function leadReferenceSlug(value, fallback, maxLen) {
+  var text = String(value || '').toUpperCase().replace(/\bCOUNTY\b/g, '').replace(/[^A-Z0-9]/g, '');
+  if (!text) text = fallback || 'UNK';
+  return text.slice(0, maxLen || 4);
+}
+
+function leadReferenceDate(value) {
+  var text = String(value || '').trim();
+  var match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return match[1].slice(-2) + match[2] + match[3];
+  var d = value ? new Date(value) : null;
+  if (!d || isNaN(d.getTime())) d = new Date();
+  var yy = String(d.getFullYear()).slice(-2);
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yy + mm + dd;
+}
+
+function leadReferenceCountyCode(lead) {
+  var raw = lead.county || lead.county_name || lead.city || lead.source;
+  var slug = leadReferenceSlug(raw, 'UNK', 12);
+  var aliases = {
+    WAYNE: 'WAY',
+    COOK: 'COOK',
+    NASHVILLE: 'NASH',
+    DAVIDSON: 'NASH'
+  };
+  if (aliases[slug]) return aliases[slug];
+  return slug.length > 4 ? slug.slice(0, 3) : slug;
+}
+
+function leadReferenceSequence(prefix, leads) {
+  var max = 0;
+  (leads || []).forEach(function(lead) {
+    var ref = String(lead.reference_id || lead.lead_reference_id || '').toUpperCase();
+    if (ref.indexOf(prefix + '-') !== 0) return;
+    var n = parseInt(ref.split('-').pop(), 10);
+    if (isFinite(n) && n > max) max = n;
+  });
+  return String(max + 1).padStart(4, '0');
+}
+
+function generateLeadReferenceId(lead, leads) {
+  lead = lead || {};
+  var state = leadReferenceSlug(lead.state || lead.state_code || lead.state_name, 'XX', 2);
+  var county = leadReferenceCountyCode(lead);
+  var date = leadReferenceDate(lead.created_at || lead.created || lead.createdAt || lead.inserted_at);
+  var prefix = state + '-' + county + '-' + date;
+  return prefix + '-' + leadReferenceSequence(prefix, leads || []);
+}
+
+function normalizeAssignmentState(value) {
+  var state = String(value || 'unassigned').trim().toLowerCase();
+  return LEAD_ASSIGNMENT_STATES.has(state) ? state : '';
+}
+
+function normalizeAssignmentUpdate(input) {
+  input = input || {};
+  var state = normalizeAssignmentState(input.assignment_state || input.workflow_state || input.state);
+  if (!state) return { error: 'invalid_assignment_state' };
+  return {
+    assignment_state: state,
+    workflow_state: state,
+    assigned_to: String(input.assigned_to || input.assignedTo || '').trim().slice(0, 120) || null,
+    assignment_updated_at: new Date().toISOString()
+  };
+}
+
 
 function addLead(lead) {
   if (!lead || shouldSkipPlaceholderLead(lead)) {
@@ -1268,6 +1349,8 @@ function addLead(lead) {
     ...lead,
     // Quality fields — only set if not already provided by caller
     id:             lead.id      || ('LEAD-' + Date.now() + '-' + Math.floor(Math.random()*10000)),
+    reference_id:   lead.reference_id || lead.lead_reference_id || generateLeadReferenceId(lead, db.leads),
+    lead_reference_id: lead.lead_reference_id || lead.reference_id || generateLeadReferenceId(lead, db.leads),
     ref_number:     lead.ref_number || ('WOS-' + String(Date.now()).slice(-5) + Math.floor(Math.random()*10).toString()),
     created_at:     lead.created_at     || new Date().toISOString(),
     county:         lead.county         !== undefined ? lead.county : null,
@@ -1306,6 +1389,10 @@ function addLead(lead) {
     // Phase 2A — duplicate detection
     duplicate_group_id:     lead.duplicate_group_id     || null,
     duplicate_count:        lead.duplicate_count        != null ? lead.duplicate_count : 1,
+    assignment_state:       normalizeAssignmentState(lead.assignment_state || lead.workflow_state) || 'unassigned',
+    workflow_state:         normalizeAssignmentState(lead.workflow_state || lead.assignment_state) || 'unassigned',
+    assigned_to:            lead.assigned_to || null,
+    assignment_updated_at:  lead.assignment_updated_at || null,
   };
   // Phase 2B: dedup guard — check normalized_address + city + state before inserting
   var normNew  = newLead.normalized_address || normalizeAddress(newLead.address || '');
@@ -1360,6 +1447,27 @@ function updateLead(id, updates) {
   const idx = (db.leads||[]).findIndex(l => l.id === id);
   if (idx === -1) return null;
   db.leads[idx] = { ...db.leads[idx], ...updates };
+  if (!db.leads[idx].reference_id && !db.leads[idx].lead_reference_id) {
+    var ref = generateLeadReferenceId(db.leads[idx], db.leads);
+    db.leads[idx].reference_id = ref;
+    db.leads[idx].lead_reference_id = ref;
+  }
+  writeDB(db);
+  return db.leads[idx];
+}
+
+function updateLeadAssignmentState(id, input) {
+  const db = readDB();
+  const idx = (db.leads || []).findIndex(function(l) { return l.id === id; });
+  if (idx === -1) return { error: 'lead_not_found', status: 404 };
+  var normalized = normalizeAssignmentUpdate(input);
+  if (normalized.error) return { error: normalized.error, status: 400 };
+  if (!db.leads[idx].reference_id && !db.leads[idx].lead_reference_id) {
+    var ref = generateLeadReferenceId(db.leads[idx], db.leads);
+    db.leads[idx].reference_id = ref;
+    db.leads[idx].lead_reference_id = ref;
+  }
+  Object.assign(db.leads[idx], normalized);
   writeDB(db);
   return db.leads[idx];
 }
@@ -2233,6 +2341,7 @@ function addEnrichmentHistory(leadId, entry) {
 module.exports = {
   readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
+  generateLeadReferenceId, updateLeadAssignmentState,
   getLeadActivities, addLeadActivity,
   getUsers, getUserByPin, getUserById, updateUser, addUser,
   getLeadsForUser, getLeadsByStateCountyForUser, getStatsForUser,

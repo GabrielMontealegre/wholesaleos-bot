@@ -354,6 +354,16 @@ app.post('/api/leads/:id/activities', (req, res) => {
   }
 });
 
+app.patch('/api/leads/:id/assignment', (req, res) => {
+  try {
+    const lead = db.updateLeadAssignmentState(req.params.id, req.body || {});
+    if (lead && lead.error) return res.status(lead.status || 400).json({ ok: false, error: lead.error });
+    res.json({ ok: true, lead });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.patch('/api/leads/:id/address', (req, res) => {
   try {
     const dbData = db.readDB();

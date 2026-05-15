@@ -1044,6 +1044,9 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
   var workQueueBand = mdaLeadPick(lead, ['work_queue_band', 'lead_intelligence.work_queue_band']);
   var contactReadiness = mdaLeadPick(lead, ['contact_readiness', 'lead_intelligence.contact_readiness']);
   var skipTracePriority = mdaLeadPick(lead, ['skip_trace_priority', 'lead_intelligence.skip_trace_priority']);
+  var referenceId = getLeadReferenceId(lead);
+  var workflowState = leadWorkflowState(lead);
+  var assignedTo = mdaLeadPick(lead, ['assigned_to', 'assignedTo']);
   var sourceText = mdaLeadUnique([address].concat(sourceUrls.slice(0, 2))).join(' | ');
   var contextText = mdaLeadUnique(
     distressTypes
@@ -1071,6 +1074,9 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
   var asking = mdaLeadPickNumber(lead, ['asking_price', 'purchase_price', 'list_price', 'price', 'source_details.asking_price']);
   if (asking > 0) values['mda-purchase'] = asking;
   var meta = [
+    { label: 'Reference', value: referenceId },
+    { label: 'Workflow', value: leadWorkflowLabel(workflowState) },
+    { label: 'Assigned to', value: assignedTo },
     { label: 'Owner', value: ownerName },
     { label: 'Parcel/APN', value: parcel },
     { label: 'Auction date', value: auctionDate },
@@ -1087,6 +1093,7 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
   ].filter(function(item) { return mdaLeadText(item.value); });
   return {
     leadId: lead.id,
+    referenceId: referenceId,
     label: address || ownerName || lead.id || 'Selected lead',
     values: values,
     meta: meta,
@@ -1172,6 +1179,7 @@ function mdaBuildCopyText(type) {
   if (type === 'snapshot') {
     return [
       'DEAL SNAPSHOT',
+      'Lead reference: ' + (d.leadReference || 'Not loaded from lead'),
       'Source/address: ' + (d.source || 'Not entered'),
       'Distress/context: ' + (d.distress || 'Not entered'),
       'Deal grade: ' + (d.dealGrade || '-'),
@@ -1187,6 +1195,7 @@ function mdaBuildCopyText(type) {
   }
   return [
     'OFFER SUMMARY',
+    'Lead reference: ' + (d.leadReference || 'Not loaded from lead'),
     'Source/address: ' + (d.source || 'Not entered'),
     'Deal grade: ' + (d.dealGrade || '-') + ' - ' + (d.dealGradeReason || ''),
     'Suggested first offer: ' + (d.firstOffer ? mdaMoney(d.firstOffer) : '-'),
@@ -1549,6 +1558,7 @@ function updateManualDealAnalyzer() {
   ];
 
   MDA_LAST_COPY = {
+    leadReference: MDA_LEAD_PREFILL ? MDA_LEAD_PREFILL.referenceId : '',
     source: mdaRaw('mda-source'),
     distress: mdaRaw('mda-distress'),
     dealGrade: dealGrade,
@@ -3292,13 +3302,15 @@ function renderDailyAcquisitionQueue(leads, followups) {
     var lead = item.lead || {};
     var color = toneColor(item.tone);
     var cost = buildCostAwareness(lead, []);
+    var workflow = leadWorkflowState(lead);
     return '<div data-lead-id="' + mdaEscapeAttr(lead.id || '') + '" onclick="openLeadModal(this.dataset.leadId)" style="cursor:pointer;background:#111827;border:1px solid #243044;border-radius:7px;padding:8px;margin-bottom:6px">' +
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
         '<div style="min-width:0"><div style="font-size:11px;font-weight:800;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(daqLeadLabel(lead)) + '</div>' +
-        '<div style="font-size:9px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(item.subline) + '</div></div>' +
+        '<div style="font-size:9px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadIntelText(getLeadReferenceId(lead)) + ' | ' + leadIntelText(item.subline) + '</div></div>' +
         '<span style="font-size:9px;font-weight:800;color:' + color + ';background:' + color + '1f;border:1px solid ' + color + '55;border-radius:999px;padding:2px 6px;white-space:nowrap">' + Math.round(item.score) + '</span>' +
       '</div>' +
       '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:5px">' + leadIntelText(item.reason) + '</div>' +
+      '<div style="font-size:9px;color:' + leadWorkflowColor(workflow) + ';line-height:1.35;margin-top:4px">Workflow: ' + leadIntelText(leadWorkflowLabel(workflow)) + (lead.assigned_to ? ' | ' + leadIntelText(lead.assigned_to) : '') + '</div>' +
       '<div style="font-size:9px;color:#94a3b8;line-height:1.35;margin-top:4px">Spend: ' + leadIntelText(cost.estimatedLevel) + ' | ' + leadIntelText(cost.caution) + '</div>' +
     '</div>';
   }
@@ -3353,6 +3365,88 @@ function leadBriefingMoney(value) {
 
 function leadBriefingAddress(lead) {
   return [lead.address, lead.city, lead.state || lead.state_name, lead.zip].map(leadBriefingText).filter(Boolean).join(', ');
+}
+
+function leadReferenceSlug(value, fallback, maxLen) {
+  var text = String(value || '').toUpperCase().replace(/\bCOUNTY\b/g, '').replace(/[^A-Z0-9]/g, '');
+  if (!text) text = fallback || 'UNK';
+  return text.slice(0, maxLen || 4);
+}
+
+function leadReferenceDate(value) {
+  var text = String(value || '').trim();
+  var match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return match[1].slice(-2) + match[2] + match[3];
+  var d = value ? new Date(value) : null;
+  if (!d || isNaN(d.getTime())) d = new Date(0);
+  return String(d.getFullYear()).slice(-2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+
+function leadReferenceCountyCode(lead) {
+  var raw = lead.county || lead.county_name || lead.city || lead.source;
+  var slug = leadReferenceSlug(raw, 'UNK', 12);
+  var aliases = { WAYNE: 'WAY', COOK: 'COOK', NASHVILLE: 'NASH', DAVIDSON: 'NASH' };
+  if (aliases[slug]) return aliases[slug];
+  return slug.length > 4 ? slug.slice(0, 3) : slug;
+}
+
+function leadReferenceSequence(lead) {
+  var source = String(lead.id || lead.address || lead.created_at || '');
+  var hash = 0;
+  for (var i = 0; i < source.length; i++) hash = ((hash << 5) - hash) + source.charCodeAt(i);
+  return String(Math.abs(hash) % 9999 + 1).padStart(4, '0');
+}
+
+function getLeadReferenceId(lead) {
+  lead = lead || {};
+  if (lead.reference_id) return lead.reference_id;
+  if (lead.lead_reference_id) return lead.lead_reference_id;
+  var state = leadReferenceSlug(lead.state || lead.state_code || lead.state_name, 'XX', 2);
+  var county = leadReferenceCountyCode(lead);
+  var date = leadReferenceDate(lead.created_at || lead.created || lead.createdAt || lead.inserted_at);
+  return state + '-' + county + '-' + date + '-' + leadReferenceSequence(lead);
+}
+
+function leadWorkflowState(lead) {
+  var state = String((lead && (lead.assignment_state || lead.workflow_state)) || 'unassigned').toLowerCase();
+  var allowed = ['unassigned','assigned','in_review','active_outreach','comping','offer_prep','follow_up','dead_lead','under_contract','dispo_ready'];
+  return allowed.indexOf(state) > -1 ? state : 'unassigned';
+}
+
+function leadWorkflowLabel(state) {
+  return {
+    unassigned: 'Unassigned',
+    assigned: 'Assigned',
+    in_review: 'In Review',
+    active_outreach: 'Active Outreach',
+    comping: 'Comping',
+    offer_prep: 'Offer Prep',
+    follow_up: 'Follow Up',
+    dead_lead: 'Dead Lead',
+    under_contract: 'Under Contract',
+    dispo_ready: 'Dispo Ready'
+  }[state] || 'Unassigned';
+}
+
+function leadWorkflowColor(state) {
+  return {
+    unassigned: '#94a3b8',
+    assigned: '#38bdf8',
+    in_review: '#f59e0b',
+    active_outreach: '#22c55e',
+    comping: '#84cc16',
+    offer_prep: '#f4c542',
+    follow_up: '#fb923c',
+    dead_lead: '#ef4444',
+    under_contract: '#10b981',
+    dispo_ready: '#8b5cf6'
+  }[state] || '#94a3b8';
+}
+
+function renderLeadWorkflowBadge(lead) {
+  var state = leadWorkflowState(lead);
+  var color = leadWorkflowColor(state);
+  return '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:' + color + '22;color:' + color + ';border:1px solid ' + color + '55">' + leadIntelText(leadWorkflowLabel(state)) + '</span>';
 }
 
 function leadBriefingSourceUrls(lead) {
@@ -3498,6 +3592,9 @@ function buildLeadBriefing(lead, followups) {
   var auctionDate = leadBriefingText(lead.auction_date || lead.sale_date || lead.tax_sale_date || timeline.auction_date || timeline.sale_date);
   var confidence = leadBriefingText(lead.source_confidence_reason || li.source_confidence_reason || li.urgency_reason || li.confidence);
   var priority = leadBriefingText(lead.priority_label || li.priority_label || li.priority_tier || lead.work_queue_band || li.work_queue_band);
+  var referenceId = getLeadReferenceId(lead);
+  var workflowState = leadWorkflowState(lead);
+  var assignedTo = leadBriefingText(lead.assigned_to || lead.assignedTo);
   var hasContact = !!(lead.phone || lead.email);
   var hasComps = !!(lead.arv || (lead.comps && lead.comps.length) || lead.comp_confidence || li.comp_confidence);
   var hasVerified = !!leadBriefingText(lead.last_verified_at || lead.verified_at || lead.source_verified_at || li.last_verified_at || (timeline && timeline.last_verified_at));
@@ -3509,6 +3606,9 @@ function buildLeadBriefing(lead, followups) {
   if (!lead.owner_name && !lead.owner && !lead.seller_name) missing.push('owner name');
   if (!auctionDate && /auction|tax|foreclosure/i.test(source + ' ' + distress.join(' '))) missing.push('auction/sale date');
   var evidencePoints = [];
+  evidencePoints.push('Reference: ' + referenceId);
+  evidencePoints.push('Workflow: ' + leadWorkflowLabel(workflowState));
+  if (assignedTo) evidencePoints.push('Assigned to: ' + assignedTo);
   evidencePoints.push('Source: ' + source);
   evidencePoints.push('Distress: ' + distress.join(', '));
   if (taxDue) evidencePoints.push('Tax due: ' + taxDue);
@@ -3537,6 +3637,9 @@ function buildLeadBriefing(lead, followups) {
     contactStatus: hasContact ? 'Contact available: ' + [lead.phone, lead.email].filter(Boolean).join(' / ') : 'No phone/email saved. Enrichment needed.',
     verificationWarning: hasVerified ? 'Source has a verification timestamp saved.' : 'No recent verification timestamp found. Do not overstate facts until checked.',
     analyzerReadiness: hasComps ? (hasOffer ? 'Analyzer-ready: value and offer fields are present.' : 'Analyzer-ready after offer strategy review.') : 'Analyzer needs ARV/comps before final offer math.',
+    referenceId: referenceId,
+    workflowState: workflowState,
+    assignedTo: assignedTo,
     links: leadBriefingLinks(lead)
   };
 }
@@ -3556,7 +3659,7 @@ function renderLeadBriefing(lead, followups) {
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
       '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Lead Briefing</div>' +
       '<div style="font-size:12px;line-height:1.45;color:#f8fafc;margin-top:3px">' + leadIntelText(briefing.summary) + '</div></div>' +
-      '<div style="display:flex;gap:5px;flex-wrap:wrap">' + pill('Deterministic', '#10b981') + pill('No AI facts', '#38bdf8') + '</div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap">' + pill(briefing.referenceId, '#f4c542') + renderLeadWorkflowBadge(lead) + (briefing.assignedTo ? pill('Assigned: ' + briefing.assignedTo, '#38bdf8') : pill('Unassigned', '#94a3b8')) + '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:9px">' +
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Why It Matters</div><div style="font-size:11px;line-height:1.5;color:#e5e7eb">' + leadIntelText(briefing.why) + '</div></div>' +
@@ -3695,6 +3798,59 @@ function submitLeadActivity(leadId) {
     .catch(function(e){ if (status) status.textContent = e.message; });
 }
 
+function renderLeadAssignmentState(lead) {
+  var lid = lead.id;
+  var safeId = leadActivityDomId(lid);
+  var state = leadWorkflowState(lead);
+  var assignedTo = leadBriefingText(lead.assigned_to || lead.assignedTo);
+  var updated = leadBriefingText(lead.assignment_updated_at || lead.workflow_updated_at);
+  var options = ['unassigned','assigned','in_review','active_outreach','comping','offer_prep','follow_up','dead_lead','under_contract','dispo_ready'].map(function(value) {
+    return '<option value="' + value + '"' + (value === state ? ' selected' : '') + '>' + leadIntelText(leadWorkflowLabel(value)) + '</option>';
+  }).join('');
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Assignment / Workflow</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Manual operator state only. No automation or workflow engine.</div></div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:#f4c54222;color:#f4c542;border:1px solid #f4c54255">' + leadIntelText(getLeadReferenceId(lead)) + '</span>' +
+        renderLeadWorkflowBadge(lead) +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:170px minmax(160px,1fr) auto;gap:7px;align-items:start">' +
+      '<select id="lead-workflow-state-' + safeId + '" style="font-size:11px;border:1px solid #334155;border-radius:7px;padding:7px;background:#111827;color:#e5e7eb">' + options + '</select>' +
+      '<input id="lead-assigned-to-' + safeId + '" value="' + mdaEscapeAttr(assignedTo) + '" placeholder="Assigned to" style="font-size:11px;border:1px solid #334155;border-radius:7px;padding:7px;background:#111827;color:#e5e7eb">' +
+      '<button onclick="saveLeadAssignmentState(' + JSON.stringify(lid) + ')" style="font-size:11px;font-weight:900;border:1px solid #f4c542;border-radius:7px;padding:7px 10px;background:#1f2937;color:#f4c542;cursor:pointer">Save</button>' +
+    '</div>' +
+    '<div id="lead-assignment-status-' + safeId + '" style="font-size:10px;color:#94a3b8;margin-top:7px">' + (updated ? 'Last updated: ' + leadIntelText(updated) : 'No workflow update recorded yet.') + '</div>' +
+  '</div>';
+}
+
+function saveLeadAssignmentState(leadId) {
+  var safeId = leadActivityDomId(leadId);
+  var stateEl = document.getElementById('lead-workflow-state-' + safeId);
+  var assignedEl = document.getElementById('lead-assigned-to-' + safeId);
+  var status = document.getElementById('lead-assignment-status-' + safeId);
+  var body = {
+    assignment_state: stateEl ? stateEl.value : 'unassigned',
+    assigned_to: assignedEl ? assignedEl.value.trim() : ''
+  };
+  if (status) status.textContent = 'Saving workflow state...';
+  fetch('/api/leads/' + encodeURIComponent(leadId) + '/assignment', {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  })
+    .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, data:d }; }); })
+    .then(function(result){
+      if (!result.ok || !result.data.ok) throw new Error(result.data.error || 'Could not save workflow state');
+      var idx = (APP.leads || []).findIndex(function(l) { return String(l.id) === String(leadId); });
+      if (idx > -1 && result.data.lead) APP.leads[idx] = result.data.lead;
+      if (status) status.textContent = 'Workflow state saved.';
+      if (typeof toast === 'function') toast('Workflow state saved', 'success');
+    })
+    .catch(function(e){ if (status) status.textContent = e.message; });
+}
+
 
 function renderLeadDetail(l) {
   const buyers = matchBuyers(l);
@@ -3707,6 +3863,7 @@ function renderLeadDetail(l) {
 
   let html = '<div class="detail-panel">';
   html += renderLeadBriefing(l, fu);
+  html += renderLeadAssignmentState(l);
   html += renderEnrichmentLaunchpad(l);
   // SOURCE + AI BLOCK
   var _srcName = l.source || l.county || 'Unknown source';
@@ -3726,7 +3883,7 @@ function renderLeadDetail(l) {
   var _sb2 = _sc2>=85?'🔥 HOT '+_sc2:_sc2>=65?'⚡ WARM '+_sc2:'❄️ '+_sc2;
   var _sbg = _sc2>=85?'#7f1d1d':_sc2>=65?'#78350f':'#1e3a5f';
   var _sco = _sc2>=85?'#fca5a5':_sc2>=65?'#fcd34d':'#93c5fd';
-  var _ref2 = l.ref_number || ('WOS-' + (l.id||'').slice(-6).toUpperCase());
+  var _ref2 = getLeadReferenceId(l);
   html += '<div style="border-radius:10px;overflow:hidden;border:1.5px solid '+_tc.col+';margin-bottom:14px">';
   html += '<div style="background:'+_tc.col+';color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px">';
   html += '<span style="font-size:18px">'+_tc.icon+'</span><div style="flex:1"><div style="font-size:13px;font-weight:600">'+_tc.lbl+'</div><div style="font-size:11px;opacity:.85">'+_tc.urg+'</div></div>';
@@ -9788,6 +9945,7 @@ function renderLeadDetail(l) {
 
   let html = '<div class="detail-panel">';
   html += renderLeadBriefing(l, fu);
+  html += renderLeadAssignmentState(l);
   html += renderEnrichmentLaunchpad(l);
   const qualScore = computeLeadQuality(l);
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">';
@@ -15408,11 +15566,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ══ MEGA-PATCH v2 ══════════════════════════════════════════
 function getDealRefId(lead) {
-  if (lead.ref_id) return lead.ref_id;
-  var st = (lead.state||'XX').toUpperCase().slice(0,2);
-  var h = 0, id = lead.id||'';
-  for(var i=0;i<id.length;i++) h=((h<<5)-h)+id.charCodeAt(i);
-  return st + '-' + (Math.abs(h) % 9000 + 1000);
+  return getLeadReferenceId(lead || {});
 }
 function assignRefIds(leads) { return leads.map(function(l){ if(!l.ref_id) l.ref_id=getDealRefId(l); return l; }); }
 
