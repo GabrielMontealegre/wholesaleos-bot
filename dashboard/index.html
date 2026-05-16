@@ -610,27 +610,7 @@ function buildModal(parts) {
     if(_notesEl)_notesEl.parentNode.insertBefore(_box,_notesEl);
     else _mc2.appendChild(_box);
   },600);
-  // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_attempted) {
-    setTimeout(function() {
-      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.phone) {
-            // Update lead in APP
-            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
-            if (idx > -1) Object.assign(APP.leads[idx], d);
-            // Show toast
-            var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
-            document.body.appendChild(t);
-            setTimeout(function(){ t.remove(); }, 5000);
-          }
-        })
-        .catch(function(e){ console.error('[skip-trace]', e.message); });
-    }, 800);
-  }
+  // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 
 function editUser(userId, currentName) {
@@ -987,6 +967,36 @@ function mdaLeadAddress(lead) {
   return mdaLeadUnique([lead.street, lead.city, lead.state, lead.zip || lead.zip_code]).join(', ');
 }
 
+function mdaLeadHasComps(lead) {
+  lead = lead || {};
+  var li = lead.lead_intelligence || {};
+  var compCollections = [lead.comps, lead.manual_comps, lead.sold_comps, li.comps, li.manual_comps];
+  return compCollections.some(function(value) {
+    return Array.isArray(value) && value.length > 0;
+  }) || !!(lead.comp_confidence || lead.compConfidence || li.comp_confidence);
+}
+
+function humanSkipTraceText(value, lead) {
+  var raw = mdaLeadText(value).toLowerCase();
+  if (lead && (lead.phone || lead.email)) return 'Contact info saved';
+  if (!raw || raw === 'skip_trace_candidate' || raw.indexOf('candidate') > -1 || raw.indexOf('high') > -1) {
+    return 'Needs contact lookup';
+  }
+  if (raw.indexOf('attempt') > -1 || raw.indexOf('not_found') > -1 || raw.indexOf('no_result') > -1) {
+    return 'Contact lookup attempted; no phone/email visible';
+  }
+  return mdaLeadText(value).replace(/_/g, ' ');
+}
+
+function humanContactReadiness(value, lead) {
+  var raw = mdaLeadText(value).toLowerCase();
+  if (lead && (lead.phone || lead.email)) return 'Ready for outreach';
+  if (!raw || raw.indexOf('skip') > -1 || raw.indexOf('missing') > -1 || raw.indexOf('lookup') > -1) {
+    return 'No phone/email saved. Skip trace recommended before outreach.';
+  }
+  return mdaLeadText(value).replace(/_/g, ' ');
+}
+
 function mdaBuildLeadAnalyzerPrefill(lead) {
   var li = lead.lead_intelligence || {};
   var evidence = li.evidence || {};
@@ -1042,8 +1052,8 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     'lead_intelligence.evidence.source_confidence_reason'
   ]));
   var workQueueBand = mdaLeadPick(lead, ['work_queue_band', 'lead_intelligence.work_queue_band']);
-  var contactReadiness = mdaLeadPick(lead, ['contact_readiness', 'lead_intelligence.contact_readiness']);
-  var skipTracePriority = mdaLeadPick(lead, ['skip_trace_priority', 'lead_intelligence.skip_trace_priority']);
+  var contactReadiness = humanContactReadiness(mdaLeadPick(lead, ['contact_readiness', 'lead_intelligence.contact_readiness']), lead);
+  var skipTracePriority = humanSkipTraceText(mdaLeadPick(lead, ['skip_trace_priority', 'lead_intelligence.skip_trace_priority', 'skip_trace_status']), lead);
   var referenceId = getLeadReferenceId(lead);
   var workflowState = leadWorkflowState(lead);
   var assignedTo = mdaLeadPick(lead, ['assigned_to', 'assignedTo']);
@@ -1073,6 +1083,14 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
   if (repairs > 0) values['mda-repairs'] = repairs;
   var asking = mdaLeadPickNumber(lead, ['asking_price', 'purchase_price', 'list_price', 'price', 'source_details.asking_price']);
   if (asking > 0) values['mda-purchase'] = asking;
+  var hasContact = !!(lead.phone || lead.email);
+  var missing = [];
+  if (arv <= 0) missing.push('ARV');
+  if (!mdaLeadHasComps(lead)) missing.push('comps');
+  if (repairs <= 0) missing.push('repairs');
+  if (!ownerName || !hasContact) missing.push('owner/contact');
+  if (taxesLiens <= 0) missing.push('taxes/liens');
+  if (!auctionDate) missing.push('auction date');
   var meta = [
     { label: 'Reference', value: referenceId },
     { label: 'Workflow', value: leadWorkflowLabel(workflowState) },
@@ -1097,6 +1115,7 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     label: address || ownerName || lead.id || 'Selected lead',
     values: values,
     meta: meta,
+    missing: missing,
     timeline: buildAcquisitionTimeline(lead, (typeof APP !== 'undefined' && APP.followups) ? APP.followups : []),
     applied: false
   };
@@ -1118,6 +1137,7 @@ function mdaApplyAnalyzerPreload() {
 function mdaRenderLoadedLeadBanner() {
   if (!MDA_LEAD_PREFILL) return '';
   var meta = MDA_LEAD_PREFILL.meta || [];
+  var missing = MDA_LEAD_PREFILL.missing || [];
   var timeline = MDA_LEAD_PREFILL.timeline || {};
   var timelinePreview = []
     .concat((timeline.urgency || []).slice(0, 2))
@@ -1127,6 +1147,12 @@ function mdaRenderLoadedLeadBanner() {
   var chips = meta.map(function(item) {
     return '<span style="display:inline-flex;gap:4px;align-items:center;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:999px;padding:4px 7px;color:#f5f5f7;font-size:10px;max-width:100%;white-space:normal;word-break:break-word;line-height:1.4"><strong style="color:#f4c542">' + mdaEscapeHtml(item.label) + ':</strong> ' + mdaEscapeHtml(item.value) + '</span>';
   }).join('');
+  var missingHtml = missing.length ? '<div style="margin-top:8px;padding:8px;border:1px solid #f59e0b55;background:#451a0322;border-radius:8px">' +
+    '<div style="font-size:10px;font-weight:900;color:#f59e0b;text-transform:uppercase;margin-bottom:5px">Manual fill needed</div>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">' + missing.map(function(item) {
+      return '<span style="font-size:10px;font-weight:800;color:#fed7aa;border:1px solid #f59e0b55;border-radius:999px;padding:3px 7px">' + mdaEscapeHtml(item) + '</span>';
+    }).join('') + '</div>' +
+  '</div>' : '<div style="font-size:10px;color:#86efac;margin-top:8px">Core analyzer fields are available from the lead. Verify before offer.</div>';
   var timelineHtml = timelinePreview.map(function(item) {
     var color = item.tone === 'hot' ? '#ef4444' : item.tone === 'warn' ? '#f59e0b' : item.tone === 'good' ? '#10b981' : '#94a3b8';
     return '<div style="font-size:10px;line-height:1.5;color:#d1d5db"><span style="color:' + color + ';font-weight:800">' + mdaEscapeHtml(item.title) + ':</span> ' + mdaEscapeHtml(item.detail) + '</div>';
@@ -1138,6 +1164,7 @@ function mdaRenderLoadedLeadBanner() {
       '<button class="btn btn-sm" style="background:#2c2c2e;color:#f5f5f7;border:1px solid #3a3a3c;font-size:11px" onclick="mdaClearLeadAnalyzerPreload()">Clear</button>' +
     '</div>' +
     (chips ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + chips + '</div>' : '') +
+    missingHtml +
     (timelineHtml ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3a3c;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px">' + timelineHtml + '</div>' : '') +
     '<div style="font-size:10px;color:#b8b8bd;margin-top:8px">Temporary autofill only. Nothing is saved back to the lead.</div>' +
   '</div>';
@@ -1157,8 +1184,15 @@ function analyzeLeadInManualDealAnalyzer(leadId) {
   MDA_LEAD_PREFILL = mdaBuildLeadAnalyzerPrefill(lead);
   if (typeof closeModal === 'function') closeModal();
   var navItem = document.querySelector(".nav-item[onclick*='deal_analyzer']");
-  navigate('deal_analyzer', navItem);
-  if (typeof toast === 'function') toast('Loaded lead into analyzer', 'success');
+  if (typeof navigate === 'function') navigate('deal_analyzer', navItem);
+  else {
+    APP.page = 'deal_analyzer';
+    if (typeof render === 'function') render();
+  }
+  var missing = (MDA_LEAD_PREFILL.missing || []);
+  if (typeof toast === 'function') {
+    toast(missing.length ? 'Loaded lead into analyzer. Fill manually: ' + missing.join(', ') : 'Loaded lead into analyzer', 'success');
+  }
 }
 
 function mdaCleanList(items, emptyText) {
@@ -2078,27 +2112,7 @@ function openLeadModal(leadId) {
     if(_notesEl)_notesEl.parentNode.insertBefore(_box,_notesEl);
     else _mc2.appendChild(_box);
   },600);
-  // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_attempted) {
-    setTimeout(function() {
-      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.phone) {
-            // Update lead in APP
-            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
-            if (idx > -1) Object.assign(APP.leads[idx], d);
-            // Show toast
-            var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
-            document.body.appendChild(t);
-            setTimeout(function(){ t.remove(); }, 5000);
-          }
-        })
-        .catch(function(e){ console.error('[skip-trace]', e.message); });
-    }, 800);
-  }
+  // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 
 
@@ -3494,7 +3508,9 @@ function leadBriefingLinks(lead) {
     {label:'Record', url:leadBriefingText(urls.source_record_url)},
     {label:'Query', url:leadBriefingText(urls.source_query_url)},
     {label:'Source', url:leadBriefingText(urls.source_url)},
-    {label:'Zillow', url:addr ? 'https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:addr})) : ''},
+    {label:'Zillow Search', url:leadEnrichmentSearchUrl('zillow', addr)},
+    {label:'Redfin Search', url:leadEnrichmentSearchUrl('redfin', addr)},
+    {label:'Realtor Search', url:leadEnrichmentSearchUrl('realtor', addr)},
     {label:'Google Maps', url:addr ? 'https://maps.google.com/?q=' + enc : ''},
     {label:'Street View', url:addr ? 'https://www.google.com/maps/search/?api=1&query=' + enc + '&layer=c' : ''}
   ].filter(function(link){ return !!link.url; });
@@ -3504,7 +3520,7 @@ function leadEnrichmentSearchUrl(site, query) {
   query = leadBriefingText(query);
   if (!query) return '';
   var enc = encodeURIComponent(query);
-  if (site === 'zillow') return 'https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:query}));
+  if (site === 'zillow') return 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com ' + query);
   if (site === 'redfin') return 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + query);
   if (site === 'realtor') return 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + query);
   if (site === 'maps') return 'https://maps.google.com/?q=' + enc;
@@ -3575,6 +3591,7 @@ function buildEnrichmentLaunchpad(lead) {
 
 function renderEnrichmentLaunchpad(lead) {
   var data = buildEnrichmentLaunchpad(lead);
+  var safeId = leadActivityDomId(lead && lead.id);
   function bullet(text) {
     return '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-bottom:3px">- ' + leadIntelText(text) + '</div>';
   }
@@ -3597,6 +3614,7 @@ function renderEnrichmentLaunchpad(lead) {
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Top Missing Fields</div>' + data.missing.slice(0, 5).map(bullet).join('') + '</div>' +
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:5px">Recommended Enrichment Order</div>' + data.order.map(bullet).join('') + '</div>' +
     '</div>' +
+    '<div id="lead-enrichment-status-' + safeId + '" style="font-size:10px;color:#94a3b8;margin:0 0 8px">' + (lead.enrichment_requested ? 'Enrichment requested. Use manual launch links below; no lookup has been completed automatically.' : 'No enrichment request saved yet.') + '</div>' +
     '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:6px">Manual Launch Links</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
   '</div>';
 }
@@ -3609,6 +3627,8 @@ function buildLeadBriefing(lead, followups) {
   var money = evidence.money || {};
   var timeline = li.timeline || {};
   var source = leadBriefingText(lead.source || lead.source_name || lead.source_type || evidence.source || 'Unknown source');
+  var sourceHay = (source + ' ' + leadBriefingText(lead.source_type || lead.source_name || lead.source_url || lead.source_record_url || lead.source_query_url)).toLowerCase();
+  var officialSource = /county|treasurer|sheriff|court|clerk|recorder|tax|foreclosure|official|gov|socrata|wayne|cook/.test(sourceHay);
   var distress = leadBriefingList(lead.distress_types).concat(leadBriefingList(lead.distress_signals)).concat(leadBriefingList(li.distress_types));
   if (!distress.length && lead.motivation) distress = leadBriefingList(lead.motivation);
   if (!distress.length && lead.category) distress = leadBriefingList(lead.category);
@@ -3618,6 +3638,7 @@ function buildLeadBriefing(lead, followups) {
   var auctionDate = leadBriefingText(lead.auction_date || lead.sale_date || lead.tax_sale_date || timeline.auction_date || timeline.sale_date);
   var confidence = leadBriefingText(lead.source_confidence_reason || li.source_confidence_reason || li.urgency_reason || li.confidence);
   var priority = leadBriefingText(lead.priority_label || li.priority_label || li.priority_tier || lead.work_queue_band || li.work_queue_band);
+  var parcel = leadBriefingText(lead.parcel || lead.apn || lead.parcel_apn || lead.parcel_id || lead.parcel_number || lead.pin || (lead.source_details && (lead.source_details.parcel || lead.source_details.apn || lead.source_details.pin)));
   var referenceId = getLeadReferenceId(lead);
   var workflowState = leadWorkflowState(lead);
   var assignedTo = leadBriefingText(lead.assigned_to || lead.assignedTo);
@@ -3636,6 +3657,8 @@ function buildLeadBriefing(lead, followups) {
   evidencePoints.push('Workflow: ' + leadWorkflowLabel(workflowState));
   if (assignedTo) evidencePoints.push('Assigned to: ' + assignedTo);
   evidencePoints.push('Source: ' + source);
+  if (officialSource) evidencePoints.push('Official/source-backed record signal');
+  if (parcel) evidencePoints.push('Parcel/APN evidence: ' + parcel);
   evidencePoints.push('Distress: ' + distress.join(', '));
   if (taxDue) evidencePoints.push('Tax due: ' + taxDue);
   if (liens) evidencePoints.push('Liens/taxes: ' + liens);
@@ -3644,13 +3667,18 @@ function buildLeadBriefing(lead, followups) {
   if (confidence) evidencePoints.push('Confidence: ' + confidence);
   var summary = (leadBriefingAddress(lead) || 'This lead') + ' is a ' + distress[0] + ' from ' + source + '.';
   var why = [];
-  if (taxDue || liens) why.push('tax/lien pressure is present');
+  if (officialSource) why.push('it comes from an official or source-backed record');
+  if (taxDue || liens) why.push((taxDue || liens) + ' in tax/lien pressure is saved');
+  if (/tax|foreclosure|auction|lien/i.test(source + ' ' + distress.join(' '))) why.push('foreclosure/tax distress is indicated');
+  if (parcel) why.push('parcel evidence is present');
+  if (confidence) why.push('source confidence notes are saved');
   if (auctionDate) why.push('there is a dated sale or auction signal');
-  if (priority) why.push('saved intelligence prioritizes it as ' + priority);
-  if (!hasContact) why.push('contact enrichment is still needed before outreach');
+  if (!hasContact) why.push('contact lookup is still needed before outreach');
+  if (!hasComps) why.push('comp enrichment is still missing');
+  if (!hasVerified) why.push('verification is still needed');
   if (!why.length) why.push('the saved source evidence needs verification before a firm offer');
   var nextAction = !hasVerified ? 'Verify the source record before outreach.'
-    : !hasContact ? 'Run or review skip trace before contacting.'
+    : !hasContact ? 'Run or review contact lookup before outreach.'
     : !hasComps ? 'Add comps or ARV before making a final offer.'
     : !hasOffer ? 'Open the Manual Deal Analyzer and build an offer range.'
     : 'Contact the seller and keep the analyzer numbers nearby.';
@@ -4063,6 +4091,39 @@ function updateLeadInApp(leadId, updated) {
   }
 }
 
+function queueLeadForEnrichment(leadId) {
+  var safeId = leadActivityDomId(leadId);
+  var section = document.getElementById('lead-enrichment-section-' + safeId);
+  var msg = document.getElementById('lead-enrichment-status-' + safeId);
+  if (section) {
+    section.open = true;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (msg) msg.textContent = 'Marking enrichment requested. Manual launch links only; no skip trace or scraping is running.';
+  return fetch('/api/leads/' + encodeURIComponent(leadId), {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      enrichment_requested: true,
+      enrichment_status: 'requested',
+      enrichment_requested_at: new Date().toISOString()
+    })
+  })
+    .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, data:d }; }); })
+    .then(function(result){
+      if (!result.ok || !result.data || result.data.error) throw new Error((result.data && result.data.error) || 'Could not queue enrichment');
+      updateLeadInApp(leadId, result.data);
+      if (msg) msg.textContent = 'Enrichment requested. Use the recommended manual enrichment order below.';
+      if (typeof toast === 'function') toast('Enrichment requested. Open manual links to continue.', 'success');
+      return result.data;
+    })
+    .catch(function(e){
+      if (msg) msg.textContent = e.message;
+      if (typeof toast === 'function') toast(e.message, 'error');
+      throw e;
+    });
+}
+
 function saveLeadCompWorkflow(leadId, options) {
   options = options || {};
   var safeId = leadActivityDomId(leadId);
@@ -4106,7 +4167,12 @@ function saveLeadCompWorkflow(leadId, options) {
 function queueLeadForCompReview(leadId) {
   var safeId = leadActivityDomId(leadId);
   var section = document.getElementById('lead-deal-section-' + safeId);
-  if (section) section.open = true;
+  var msg = document.getElementById('lead-comp-status-msg-' + safeId);
+  if (section) {
+    section.open = true;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (msg) msg.textContent = 'Marking lead as needing comp review. Add manual comps below; no comps are retrieved automatically.';
   return saveLeadCompWorkflow(leadId, { queueOnly: true });
 }
 
@@ -4223,9 +4289,8 @@ function renderLeadDetail(l) {
     html += '<span id="st-badge-' + l.id + '" style="background:#fff3e0;color:#e65100;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;border:1px solid #ffcc80;cursor:pointer" onclick="runSkipTrace(\'' + l.id + '\')">&#128269; Skip Trace Now</span>';
   }
   html += '</div>';
-  // Auto-run skip trace if no phone and not yet attempted
   if (!l.phone && !l.skip_trace_result) {
-    html += '<script>setTimeout(function(){ if(typeof runSkipTrace==="function") runSkipTrace("' + l.id + '"); },800);<\/script>';
+    html += '<div style="font-size:10px;color:#92400e;margin-top:5px">Needs contact lookup. Use manual enrichment before outreach.</div>';
   }
   html += '<span style="background:' + qualScore.color + ';color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">' + qualScore.emoji + ' ' + qualScore.label + '</span>';
   html += '</div>';
@@ -5263,27 +5328,7 @@ function showModal(html) {
     if(_notesEl)_notesEl.parentNode.insertBefore(_box,_notesEl);
     else _mc2.appendChild(_box);
   },600);
-  // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_attempted) {
-    setTimeout(function() {
-      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.phone) {
-            // Update lead in APP
-            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
-            if (idx > -1) Object.assign(APP.leads[idx], d);
-            // Show toast
-            var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
-            document.body.appendChild(t);
-            setTimeout(function(){ t.remove(); }, 5000);
-          }
-        })
-        .catch(function(e){ console.error('[skip-trace]', e.message); });
-    }, 800);
-  }
+  // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modal-overlay')) {
@@ -10175,27 +10220,7 @@ function openLeadModal(leadId) {
     if(_notesEl)_notesEl.parentNode.insertBefore(_box,_notesEl);
     else _mc2.appendChild(_box);
   },600);
-  // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_attempted) {
-    setTimeout(function() {
-      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.phone) {
-            // Update lead in APP
-            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
-            if (idx > -1) Object.assign(APP.leads[idx], d);
-            // Show toast
-            var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
-            document.body.appendChild(t);
-            setTimeout(function(){ t.remove(); }, 5000);
-          }
-        })
-        .catch(function(e){ console.error('[skip-trace]', e.message); });
-    }, 800);
-  }
+  // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 
 function renderLeadDetailSection(title, subtitle, body, open, id) {
@@ -10219,7 +10244,7 @@ function renderLeadAcquisitionSnapshot(lead, followups, mao, spread) {
   var auctionDays = (typeof daqDaysUntilAuction === 'function') ? daqDaysUntilAuction(lead) : null;
   var timing = auctionDays !== null ? (auctionDays >= 0 ? 'Auction in ' + auctionDays + ' days' : 'Auction date has passed') :
     (lead.auction_date || lead.sale_date ? 'Auction/sale date: ' + leadBriefingText(lead.auction_date || lead.sale_date) : 'Timing not verified');
-  var contactReadiness = leadBriefingText(lead.contact_readiness || li.contact_readiness || briefing.contactStatus || 'Contact readiness unknown');
+  var contactReadiness = humanContactReadiness(lead.contact_readiness || li.contact_readiness || briefing.contactStatus || '', lead);
   var verification = freshness.hasVerification ? ('Verified ' + (freshness.verifiedDays === 0 ? 'today' : freshness.verifiedDays + ' days ago')) : freshness.topAction;
   var priority = leadBriefingText(lead.priority_label || li.priority_label || li.priority_tier || lead.work_queue_band || 'Priority not classified');
   var assignedTo = leadBriefingText(lead.assigned_to || lead.assignedTo);
@@ -10274,7 +10299,7 @@ function renderLeadQuickActions(lead) {
       btn('Analyze Deal', 'event.stopPropagation();analyzeLeadInManualDealAnalyzer(' + JSON.stringify(lid) + ')', 'gold') +
       btn('Add Activity', 'event.stopPropagation();var d=document.getElementById("lead-activity-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var n=document.getElementById("lead-activity-note-' + safeId + '");if(n)n.focus();', '') +
       btn('Queue For Comp Review', 'event.stopPropagation();queueLeadForCompReview(' + JSON.stringify(lid) + ');', 'blue') +
-      btn('Queue For Enrichment', 'event.stopPropagation();var d=document.getElementById("lead-enrichment-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}', 'blue') +
+      btn('Queue For Enrichment', 'event.stopPropagation();queueLeadForEnrichment(' + JSON.stringify(lid) + ');', 'blue') +
       btn('Verify Source', 'event.stopPropagation();if(typeof saveSourceRecheckState==="function")saveSourceRecheckState(' + JSON.stringify(lid) + ',"verification_requested");', '') +
       btn('Assign Lead', 'event.stopPropagation();var d=document.getElementById("lead-operations-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var a=document.getElementById("lead-assigned-to-' + safeId + '");if(a)a.focus();', '') +
       btn('Mark Contacted', 'event.stopPropagation();if(typeof updateLeadStatus==="function")updateLeadStatus(' + JSON.stringify(lid) + ',"Contacted");', '') +
@@ -10383,9 +10408,9 @@ function renderLeadTimingLine(lead) {
   html += '<span style="font-size:11px;color:#94a3b8">Added: ' + tsAdded + ' &bull; ' + (tsDays > 0 ? tsDays + 'd' : tsHrs + 'h') + ' ago</span>';
   if (tsDays >= 3) html += '<span style="font-size:10px;color:#ef4444;font-weight:600">Lead value may decline after 3 days</span>';
   html += '</div>';
-  if (lead.skip_trace_date) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Skip traced: ' + new Date(lead.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div>';
-  else if (lead.skip_trace_attempted) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Skip trace: no data found</div>';
-  else if (!lead.phone) html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0">Skip trace queued or needed.</div>';
+  if (lead.skip_trace_date) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contact lookup reviewed: ' + new Date(lead.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div>';
+  else if (lead.skip_trace_attempted) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contact lookup attempted; no phone/email visible</div>';
+  else if (!lead.phone) html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0" title="No phone/email is saved. Use manual enrichment before outreach.">Needs contact lookup before outreach.</div>';
   if (lead.relatives && lead.relatives.length) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contacts: ' + lead.relatives.slice(0,3).join(', ') + '</div>';
   if (lead.phone_all && lead.phone_all.length > 1) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">More phones: ' + lead.phone_all.slice(1).join(', ') + '</div>';
   return html;
@@ -11424,27 +11449,7 @@ function showModal(html) {
     if(_notesEl)_notesEl.parentNode.insertBefore(_box,_notesEl);
     else _mc2.appendChild(_box);
   },600);
-  // Auto skip-trace: if lead has no phone, run in background
-  if (!l.phone && !l.skip_trace_attempted) {
-    setTimeout(function() {
-      fetch('/api/leads/' + leadId + '/skip-trace', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.phone) {
-            // Update lead in APP
-            var idx = (APP.leads||[]).findIndex(function(x){ return x.id===leadId; });
-            if (idx > -1) Object.assign(APP.leads[idx], d);
-            // Show toast
-            var t = document.createElement('div');
-            t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:#14532d;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-            t.textContent = '\uD83D\uDCDE Phone found: ' + d.phone + (d.name ? ' — ' + d.name : '');
-            document.body.appendChild(t);
-            setTimeout(function(){ t.remove(); }, 5000);
-          }
-        })
-        .catch(function(e){ console.error('[skip-trace]', e.message); });
-    }, 800);
-  }
+  // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modal-overlay')) {
@@ -17308,12 +17313,19 @@ function initUserRole() {
 }
 
 // ── TASK 1: Fix Google Maps / Redfin links in lead modal ──
+function resolveLeadForLinks(leadOrId) {
+  if (leadOrId && typeof leadOrId === 'object') return leadOrId;
+  var id = String(leadOrId || '');
+  return ((APP && APP.leads) || []).find(function(item) { return String(item.id) === id; }) || {};
+}
+
 function buildLeadLinks(lead) {
+  lead = resolveLeadForLinks(lead);
   var addr = (lead.address || '').replace(/TX_Extra/gi, 'TX');
   var enc  = encodeURIComponent(addr);
   return {
-    zillow:   lead._zillow_link   || ('https://www.zillow.com/search/real-estate/?searchQueryState=' + encodeURIComponent(JSON.stringify({usersSearchTerm:addr})) + ''),
-    redfin:   lead._redfin_link   || ('https://www.redfin.com/city/search?q=' + enc),
+    zillow:   leadEnrichmentSearchUrl('zillow', addr),
+    redfin:   leadEnrichmentSearchUrl('redfin', addr),
     maps:     lead._google_maps_link || ('https://maps.google.com/?q=' + enc),
     rent:     'https://www.rentometer.com/analysis/new?address=' + enc
   };
@@ -17549,11 +17561,12 @@ function applyRoleUI(role) {
 
 // ── FIX 1: Property links — always use full clean address ──
 function buildCleanLinks(lead) {
+  lead = resolveLeadForLinks(lead);
   var addr = (lead._clean_address || lead.address || '').replace(/[A-Z]{2}_w+/g, function(m){ return m.match(/^([A-Z]{2})/)[1]; });
   var enc  = encodeURIComponent(addr);
   return {
-    zillow:  lead._zillow_link  || 'https://www.zillow.com/search/real-estate/?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:addr}))+'',
-    redfin:  lead._redfin_link  || 'https://www.redfin.com/city/search?q='+enc,
+    zillow:  leadEnrichmentSearchUrl('zillow', addr),
+    redfin:  leadEnrichmentSearchUrl('redfin', addr),
     maps:    lead._google_maps_link || ('https://maps.google.com/?q=' + enc),
     rent:    'https://www.rentometer.com/analysis/new?address='+enc,
     address: addr
