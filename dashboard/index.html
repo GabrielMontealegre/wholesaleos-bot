@@ -2849,6 +2849,12 @@ function renderVerificationCommandCenter(leads, followups) {
 function buildAcquisitionTimeline(lead, followups) {
   lead = lead || {};
   followups = followups || [];
+  var activityMemory = [];
+  try {
+    activityMemory = (APP && APP.leadActivitiesById && APP.leadActivitiesById[lead.id]) || [];
+  } catch(e) {
+    activityMemory = [];
+  }
   var li = lead.lead_intelligence || {};
   var sourceDetails = lead.source_details || {};
   var timeline = li.timeline || {};
@@ -2980,6 +2986,25 @@ function buildAcquisitionTimeline(lead, followups) {
   } else {
     var needsFollowup = (contactDays === null && leadAgeDays !== null && leadAgeDays >= 1) || (contactDays !== null && contactDays >= 3) || (statusDays !== null && statusDays >= 7) || (auctionDays !== null && auctionDays <= 14);
     followupIntel.push(acquisitionTimelineItem('Follow-up reminder', needsFollowup ? 'Follow up recommended today' : 'No callback reminder saved', needsFollowup ? 'hot' : 'neutral'));
+  }
+
+  var activityFollowups = activityMemory.filter(function(activity) {
+    return activity && activity.next_follow_up_date;
+  }).sort(function(a, b) {
+    return String(a.next_follow_up_date || '').localeCompare(String(b.next_follow_up_date || ''));
+  });
+  if (activityFollowups.length) {
+    var activityFu = activityFollowups[0];
+    var activityDate = activityFu.next_follow_up_date || '';
+    var activityDays = acquisitionTimelineDaysUntil(activityDate);
+    var activityText = activityDate ? 'Activity follow-up ' + (activityDays === 1 ? 'tomorrow' : (activityDays === 0 ? 'today' : (activityDays < 0 ? Math.abs(activityDays) + ' day' + (Math.abs(activityDays) === 1 ? '' : 's') + ' overdue' : acquisitionTimelineFormatDate(activityDate)))) : 'Activity follow-up saved';
+    if (activityFu.outcome || activityFu.note) activityText += ': ' + leadIntelText(activityFu.outcome || activityFu.note).slice(0, 90);
+    next.push(acquisitionTimelineItem('Activity follow-up', activityText, acquisitionTimelineTone(activityDays)));
+    if (activityDays !== null && activityDays <= 0) {
+      followupIntel.push(acquisitionTimelineItem(activityDays < 0 ? 'Overdue activity follow-up' : 'Activity follow-up due', activityText, 'hot'));
+    } else if (activityDays === 1) {
+      followupIntel.push(acquisitionTimelineItem('Activity follow-up timing', 'Activity follow-up recommended tomorrow', 'warn'));
+    }
   }
 
   var recommended = li.recommended_next_action || lead.recommended_next_action || '';
@@ -3754,6 +3779,8 @@ function loadLeadActivities(leadId) {
     .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, data:d }; }); })
     .then(function(result){
       if (!result.ok || !result.data.ok) throw new Error(result.data.error || 'Could not load activity');
+      if (!APP.leadActivitiesById) APP.leadActivitiesById = {};
+      APP.leadActivitiesById[leadId] = result.data.activities || [];
       renderLeadActivityItems(leadId, result.data.activities || []);
       if (status) status.textContent = (result.data.count || 0) + ' activity record' + ((result.data.count || 0) === 1 ? '' : 's');
     })
