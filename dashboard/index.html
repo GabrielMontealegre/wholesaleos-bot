@@ -16389,6 +16389,228 @@ function leadsSetPerPage(n){
   render();
 }
 
+function selectedLeadIds(){
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  return Array.from(APP._selectedLeads).filter(Boolean);
+}
+
+function visibleLeadCheckboxes(){
+  return Array.from(document.querySelectorAll('.lead-cb'));
+}
+
+function renderBulkActionsBar(){
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  var count = APP._selectedLeads.size;
+  var stateOptions = ['assigned','in_review','active_outreach','comping','offer_prep','follow_up','dead_lead','under_contract','dispo_ready'].map(function(value){
+    var label = typeof leadWorkflowLabel === 'function' ? leadWorkflowLabel(value) : value;
+    return '<option value="'+value+'">'+label+'</option>';
+  }).join('');
+  var warning = count > 25 ? '<span id="bulk-max-warning" style="font-size:10px;color:#fbbf24;font-weight:800">Large batch: review before applying.</span>' : '<span id="bulk-max-warning" style="display:none;font-size:10px;color:#fbbf24;font-weight:800"></span>';
+  return '<div id="bulk-toolbar" style="display:'+(count>0?'flex':'none')+';align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:9px 10px;background:#0b1120;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb">'+
+    '<span id="bulk-count" style="font-size:11px;font-weight:900;color:#f8fafc">'+count+' selected</span>'+
+    warning+
+    '<button type="button" onclick="toggleSelectAllVisibleLeads(true)" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;cursor:pointer">Select Visible</button>'+
+    '<button type="button" onclick="clearLeadSelection()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;cursor:pointer">Clear</button>'+
+    '<select id="bulk-workflow-state" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px">'+stateOptions+'</select>'+
+    '<button type="button" onclick="bulkSetWorkflowState()" style="font-size:11px;border:1px solid #f4c542;border-radius:6px;background:#1f2937;color:#f4c542;padding:6px 8px;font-weight:900;cursor:pointer">Set Workflow</button>'+
+    '<input id="bulk-assigned-to" placeholder="Assignee" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;min-width:110px">'+
+    '<button type="button" onclick="bulkAssignOwner()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Assign</button>'+
+    '<button type="button" onclick="bulkQueueCompReview()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Comps</button>'+
+    '<button type="button" onclick="bulkQueueEnrichment()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Enrichment</button>'+
+    '<button type="button" onclick="bulkMarkVerification()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Mark Verification</button>'+
+    '<button type="button" onclick="bulkArchiveSelected()" style="font-size:11px;border:1px solid #fecaca;border-radius:6px;background:#450a0a;color:#fecaca;padding:6px 8px;font-weight:900;cursor:pointer">Archive</button>'+
+    '<span id="bulk-action-status" style="font-size:10px;color:#94a3b8"></span>'+
+  '</div>';
+}
+
+function updateBulkToolbar(){
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  var ids = selectedLeadIds();
+  var count = ids.length;
+  var toolbar = document.getElementById('bulk-toolbar');
+  var countEl = document.getElementById('bulk-count');
+  var warning = document.getElementById('bulk-max-warning');
+  if (toolbar) toolbar.style.display = count > 0 ? 'flex' : 'none';
+  if (countEl) countEl.textContent = count + ' lead' + (count === 1 ? '' : 's') + ' selected';
+  if (warning) {
+    warning.style.display = count > 25 ? '' : 'none';
+    warning.textContent = count > 25 ? 'Large batch: ' + count + ' selected. Review before applying.' : '';
+  }
+  visibleLeadCheckboxes().forEach(function(cb){
+    cb.checked = APP._selectedLeads.has(cb.dataset.id);
+  });
+  var allCb = document.getElementById('select-all-visible-leads');
+  if (allCb) {
+    var boxes = visibleLeadCheckboxes();
+    var selectedVisible = boxes.filter(function(cb){ return APP._selectedLeads.has(cb.dataset.id); }).length;
+    allCb.checked = boxes.length > 0 && selectedVisible === boxes.length;
+    allCb.indeterminate = selectedVisible > 0 && selectedVisible < boxes.length;
+  }
+}
+
+function toggleLeadSelection(id, checked){
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  id = String(id || '');
+  if (!id) return;
+  if (checked) APP._selectedLeads.add(id);
+  else APP._selectedLeads.delete(id);
+  updateBulkToolbar();
+}
+
+function toggleSelectAllVisibleLeads(checked){
+  if (!APP._selectedLeads) APP._selectedLeads = new Set();
+  visibleLeadCheckboxes().forEach(function(cb){
+    cb.checked = checked;
+    if (checked) APP._selectedLeads.add(cb.dataset.id);
+    else APP._selectedLeads.delete(cb.dataset.id);
+  });
+  updateBulkToolbar();
+}
+
+function clearLeadSelection(){
+  APP._selectedLeads = new Set();
+  updateBulkToolbar();
+}
+
+function bulkActionStatus(text, isError){
+  var el = document.getElementById('bulk-action-status');
+  if (el) {
+    el.textContent = text || '';
+    el.style.color = isError ? '#fecaca' : '#94a3b8';
+  }
+}
+
+function selectedLeadObjects(){
+  var ids = new Set(selectedLeadIds());
+  return (APP.leads || []).filter(function(lead){ return ids.has(String(lead.id)); });
+}
+
+async function applyBulkLeadUpdates(makeUpdates, label, options){
+  options = options || {};
+  var leads = selectedLeadObjects();
+  if (!leads.length) {
+    bulkActionStatus('Select at least one lead.', true);
+    if (typeof toast === 'function') toast('Select at least one lead', 'error');
+    return { ok:false, updated:0 };
+  }
+  if (leads.length > 25 && !options.skipLargeConfirm) {
+    if (!confirm('You selected ' + leads.length + ' leads. Continue with this operator-controlled workflow update?')) return { ok:false, updated:0, cancelled:true };
+  }
+  if (options.archive) {
+    var phrase = 'ARCHIVE ' + leads.length;
+    if (!confirm('Archive ' + leads.length + ' selected leads? This hides them from active lead views. Type confirmation is not required, but this action is intentional.')) return { ok:false, updated:0, cancelled:true };
+    if (!confirm('Final archive confirmation: ' + phrase)) return { ok:false, updated:0, cancelled:true };
+  }
+  var updated = 0;
+  bulkActionStatus('Applying ' + label + ' to ' + leads.length + ' lead' + (leads.length === 1 ? '' : 's') + '...');
+  try {
+    for (var i = 0; i < leads.length; i++) {
+      var lead = leads[i];
+      var updates = makeUpdates(lead) || {};
+      var res = await fetch('/api/leads/' + encodeURIComponent(lead.id), {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(updates)
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if (!res.ok || data.error) throw new Error(data.error || ('Bulk update failed for ' + (lead.address || lead.id)));
+      if (typeof updateLeadInApp === 'function') updateLeadInApp(lead.id, data);
+      else Object.assign(lead, updates);
+      updated++;
+    }
+    if (options.archive) {
+      var archivedIds = new Set(leads.map(function(lead){ return String(lead.id); }));
+      APP.leads = (APP.leads || []).filter(function(lead){ return !archivedIds.has(String(lead.id)); });
+      if (Array.isArray(APP.filtered)) APP.filtered = APP.filtered.filter(function(lead){ return !archivedIds.has(String(lead.id)); });
+    }
+  } catch(e) {
+    bulkActionStatus(e.message || 'Bulk action failed.', true);
+    if (typeof toast === 'function') toast(e.message || 'Bulk action failed', 'error');
+    return { ok:false, updated:updated, error:e.message };
+  }
+  bulkActionStatus(label + ' applied to ' + updated + ' lead' + (updated === 1 ? '' : 's') + '.');
+  if (typeof toast === 'function') toast(label + ' applied to ' + updated + ' lead' + (updated === 1 ? '' : 's'), 'success');
+  clearLeadSelection();
+  if (typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters({silent:true});
+  if (typeof render === 'function') render();
+  return { ok:true, updated:updated };
+}
+
+function bulkNowIso(){
+  return new Date().toISOString();
+}
+
+function bulkSetWorkflowState(){
+  var el = document.getElementById('bulk-workflow-state');
+  var state = el ? el.value : '';
+  if (!state) return bulkActionStatus('Choose a workflow state.', true);
+  return applyBulkLeadUpdates(function(){
+    return {
+      assignment_state: state,
+      workflow_state: state,
+      assignment_updated_at: bulkNowIso()
+    };
+  }, 'Workflow state');
+}
+
+function bulkAssignOwner(){
+  var el = document.getElementById('bulk-assigned-to');
+  var assignedTo = el ? el.value.trim() : '';
+  if (!assignedTo) return bulkActionStatus('Enter an assignee first.', true);
+  return applyBulkLeadUpdates(function(lead){
+    var updates = {
+      assigned_to: assignedTo,
+      assignment_updated_at: bulkNowIso()
+    };
+    if (!lead.assignment_state || lead.assignment_state === 'unassigned') {
+      updates.assignment_state = 'assigned';
+      updates.workflow_state = 'assigned';
+    }
+    return updates;
+  }, 'Assignee');
+}
+
+function bulkQueueCompReview(){
+  return applyBulkLeadUpdates(function(){
+    return {
+      comp_workflow_status: 'needs_comp_review',
+      comp_queued_at: bulkNowIso()
+    };
+  }, 'Comp review queue');
+}
+
+function bulkQueueEnrichment(){
+  return applyBulkLeadUpdates(function(){
+    return {
+      enrichment_requested: true,
+      enrichment_status: 'requested',
+      enrichment_requested_at: bulkNowIso()
+    };
+  }, 'Enrichment queue');
+}
+
+function bulkMarkVerification(){
+  return applyBulkLeadUpdates(function(){
+    return {
+      verification_requested: true,
+      verification_state: 'verification_requested',
+      source_recheck_state: 'verification_requested',
+      verification_requested_at: bulkNowIso()
+    };
+  }, 'Verification request');
+}
+
+function bulkArchiveSelected(){
+  return applyBulkLeadUpdates(function(){
+    return {
+      archived: true,
+      archive_reason: 'operator_bulk_archive',
+      archived_at: bulkNowIso(),
+      status: 'Archived'
+    };
+  }, 'Archive', {archive:true, skipLargeConfirm:true});
+}
+
 var _leadsPage = 0;
 var _leadsPerPage = 300;
 
@@ -16462,6 +16684,7 @@ function renderLeads() {
 
   var rows = pageLeads.map(function(l) {
     var rid = l.ref_id || getDealRefId(l);
+    var isSelected = APP._selectedLeads && APP._selectedLeads.has(String(l.id));
     var statusColor = scMap[l.status||'New Lead'] || '#86868b';
     var mc = typeof matchBuyersToLead === 'function' ? matchBuyersToLead(l, APP.buyers||[]).length : 0;
     var li = l.lead_intelligence || {};
@@ -16474,7 +16697,8 @@ function renderLeads() {
     var priorityText = [l.priority,l.priority_label,l.priority_tier,li.priority_tier,li.priority_label].filter(Boolean).join(' ');
     var createdText = l.created || l.created_at || l.createdAt || l.inserted_at || l.updated_at || '';
     var stateName = typeof window.wosStateNameFromValue === 'function' ? window.wosStateNameFromValue(l.state || l.state_name || '') : '';
-    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7" data-lead-id="'+leadRowAttr(l.id)+'" data-state="'+leadRowAttr(l.state||'')+'" data-state-name="'+leadRowAttr(l.state_name||stateName)+'" data-source="'+leadRowAttr(sourceText)+'" data-type="'+leadRowAttr(typeText)+'" data-lead-type="'+leadRowAttr(l.lead_type||'')+'" data-priority="'+leadRowAttr(priorityText)+'" data-created="'+leadRowAttr(createdText)+'" onclick="openLeadModal(this.dataset.leadId)">'+
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:'+(isSelected?'#e8f0fe':'transparent')+'" data-lead-id="'+leadRowAttr(l.id)+'" data-state="'+leadRowAttr(l.state||'')+'" data-state-name="'+leadRowAttr(l.state_name||stateName)+'" data-source="'+leadRowAttr(sourceText)+'" data-type="'+leadRowAttr(typeText)+'" data-lead-type="'+leadRowAttr(l.lead_type||'')+'" data-priority="'+leadRowAttr(priorityText)+'" data-created="'+leadRowAttr(createdText)+'" onclick="openLeadModal(this.dataset.leadId)">'+
+      '<td style="padding:9px 8px;width:34px;text-align:center"><input type="checkbox" class="lead-cb" data-id="'+leadRowAttr(l.id)+'" '+(isSelected?'checked ':'')+'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:15px;height:15px;cursor:pointer"></td>'+
       '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">'+rid+'</span></td>'+
       '<td style="padding:9px 8px;font-size:12px">'+(l.address||'').split(',')[0]+'</td>'+
       '<td style="padding:9px 8px;font-size:12px">'+(l.state||'')+'</td>'+
@@ -16486,6 +16710,7 @@ function renderLeads() {
     '</tr>';
   }).join('');
 
+  var selectHeader = '<th style="padding:9px 8px;width:34px;text-align:center"><input id="select-all-visible-leads" type="checkbox" onchange="toggleSelectAllVisibleLeads(this.checked)" style="width:15px;height:15px;cursor:pointer"></th>';
   var headers = ['REF #','ADDRESS','STATE','TYPE','STATUS','SPREAD','BUYERS','DATE'].map(function(h){
     return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">'+h+'</th>';
   }).join('');
@@ -16494,6 +16719,7 @@ function renderLeads() {
   return '<div>'+
     toolbar+
     loadWarning+
+    (typeof renderBulkActionsBar === 'function' ? renderBulkActionsBar() : '')+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+
       tabs+
       '<div style="margin-left:auto;display:flex;gap:8px">'+
@@ -16504,7 +16730,7 @@ function renderLeads() {
     pager+
     '<div style="overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px">'+
       '<table style="width:100%;border-collapse:collapse">'+
-        '<thead><tr style="background:#f5f5f7">'+headers+'</tr></thead>'+
+        '<thead><tr style="background:#f5f5f7">'+selectHeader+headers+'</tr></thead>'+
         '<tbody>'+rows+'</tbody>'+
       '</table>'+
     '</div>'+
@@ -18083,7 +18309,8 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
-    "<button onclick='toggleBulkDelete()' style='font-size:12px;padding:6px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;cursor:pointer;font-weight:600;'>Bulk Delete</button>";
+    "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
+    "<button onclick='clearLeadSelection()' title='Clear selected leads.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Clear Selection</button>";
 }
 function leadToolbarButton(label, calls, style){
   return "<button onclick='runLeadToolbarAction("+JSON.stringify(calls)+")' style='font-size:12px;padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-weight:600;"+style+"'>"+label+"</button>";
@@ -18096,7 +18323,7 @@ window.renderLeadActionToolbar = function(){
     leadToolbarButton("Re-analyze Comps", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#eef2ff;color:#3730a3;") +
     leadToolbarButton("Score All Leads", ["scoreAllLeads","runLeadScoring","scoreLeads"], "background:#ecfdf5;color:#047857;") +
     leadToolbarButton("Run Courthouse", ["runCourthouse","openCourthouse","runCourthouseSearch","openCourthouseTab"], "background:#fffbeb;color:#92400e;") +
-    "</div>" + filterBar + deleteBar;
+    "</div>" + filterBar;
 };
 function isLeadToolbarPage(){
   return typeof APP !== "undefined" && APP.page === "leads";
