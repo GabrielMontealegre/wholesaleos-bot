@@ -3936,9 +3936,11 @@ function buildLeadBriefing(lead, followups) {
     : !hasComps ? 'Add comps or ARV before making a final offer.'
     : !hasOffer ? 'Open the Manual Deal Analyzer and build an offer range.'
     : 'Contact the seller and keep the analyzer numbers nearby.';
+  var operatorWhy = (typeof researchLeadWhy === 'function') ? researchLeadWhy(lead) : why;
+  if (typeof researchLeadBestNextAction === 'function') nextAction = researchLeadBestNextAction(lead);
   return {
     summary: summary,
-    why: 'This lead matters because ' + why.join(', ') + '.',
+    why: operatorWhy.join(' '),
     nextAction: nextAction,
     evidencePoints: evidencePoints.slice(0, 6),
     missing: missing.length ? missing : ['No major missing info flags from saved fields'],
@@ -16914,6 +16916,7 @@ function renderBulkActionsBar(){
     '<button type="button" onclick="bulkQueueCompReview()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Comps</button>'+
     '<button type="button" onclick="bulkQueueEnrichment()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Enrichment</button>'+
     '<button type="button" onclick="bulkMarkVerification()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Mark Verification</button>'+
+    '<button type="button" onclick="startResearchSessionFromSelection()" style="font-size:11px;border:1px solid #f4c542;border-radius:6px;background:#1f2937;color:#f4c542;padding:6px 8px;font-weight:900;cursor:pointer">Start Research Session</button>'+
     '<button type="button" onclick="bulkArchiveSelected()" style="font-size:11px;border:1px solid #fecaca;border-radius:6px;background:#450a0a;color:#fecaca;padding:6px 8px;font-weight:900;cursor:pointer">Archive</button>'+
     '<span id="bulk-action-status" style="font-size:10px;color:#94a3b8"></span>'+
   '</div>';
@@ -17107,6 +17110,465 @@ function bulkArchiveSelected(){
   }, 'Archive', {archive:true, skipLargeConfirm:true});
 }
 
+function researchSafeText(value) {
+  return typeof leadIntelText === 'function' ? leadIntelText(value) : String(value == null ? '' : value);
+}
+
+function researchJsArg(value) {
+  return "'" + String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+}
+
+function researchMoneyValue(lead, paths) {
+  return typeof mdaLeadPickNumber === 'function' ? mdaLeadPickNumber(lead || {}, paths) : 0;
+}
+
+function researchLeadAddress(lead) {
+  return (typeof leadBriefingAddress === 'function' ? leadBriefingAddress(lead || {}) : '') || (lead && lead.address) || '';
+}
+
+function researchLeadTaxPressure(lead) {
+  return researchMoneyValue(lead, [
+    'tax_due','taxes_due','taxes_owed','taxes_liens','lien_amount',
+    'source_details.tax_due','source_details.taxes_due','source_details.lien_amount',
+    'lead_intelligence.evidence.money.tax_due','lead_intelligence.evidence.money.taxes_due','lead_intelligence.evidence.money.lien_amount'
+  ]);
+}
+
+function researchLeadAuctionDays(lead) {
+  if (typeof daqDaysUntilAuction === 'function') {
+    var days = daqDaysUntilAuction(lead);
+    if (days !== null && days !== undefined) return days;
+  }
+  var raw = (typeof mdaLeadPick === 'function') ? mdaLeadPick(lead || {}, [
+    'days_to_auction','days_to_sale','days_to_tax_sale','lead_intelligence.timeline.days_to_auction','lead_intelligence.timeline.days_to_sale'
+  ]) : '';
+  var parsed = parseInt(raw, 10);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function researchLeadSourceConfidence(lead) {
+  var text = String((lead && (lead.source_confidence || lead.source_confidence_score || lead.source_confidence_reason)) ||
+    (lead && lead.lead_intelligence && (lead.lead_intelligence.source_confidence || lead.lead_intelligence.source_confidence_score || lead.lead_intelligence.source_confidence_reason)) || '').toLowerCase();
+  var num = parseFloat(text);
+  if (!isNaN(num)) return num > 1 ? num : num * 100;
+  if (text.indexOf('high') > -1 || text.indexOf('official') > -1 || text.indexOf('county') > -1) return 80;
+  if (text.indexOf('medium') > -1) return 55;
+  if (text.indexOf('low') > -1) return 25;
+  return /county|tax|treasurer|sheriff|court|foreclosure|gov|socrata|wayne|cook/i.test([lead && lead.source, lead && lead.source_url, lead && lead.source_record_url].filter(Boolean).join(' ')) ? 70 : 35;
+}
+
+function researchLeadDistressStrength(lead) {
+  var text = [
+    lead && lead.source, lead && lead.category, lead && lead.motivation, lead && lead.distress_type,
+    Array.isArray(lead && lead.distress_types) ? lead.distress_types.join(' ') : lead && lead.distress_types,
+    lead && lead.lead_intelligence && lead.lead_intelligence.distress_cause
+  ].filter(Boolean).join(' ').toLowerCase();
+  var score = 0;
+  if (/foreclosure|auction|sheriff|tax sale/.test(text)) score += 35;
+  if (/tax|lien|delinquent/.test(text)) score += 25;
+  if (/code|violation|vacant|probate|absentee/.test(text)) score += 15;
+  if (researchLeadTaxPressure(lead) > 0) score += 15;
+  return Math.min(100, score);
+}
+
+function researchLeadScore(lead) {
+  var days = researchLeadAuctionDays(lead);
+  var urgency = days === null ? 0 : (days <= 7 ? 45 : days <= 14 ? 35 : days <= 30 ? 22 : 8);
+  var confidence = researchLeadSourceConfidence(lead) * 0.2;
+  var distress = researchLeadDistressStrength(lead) * 0.25;
+  var tax = Math.min(25, researchLeadTaxPressure(lead) / 1000);
+  return Math.round(urgency + confidence + distress + tax);
+}
+
+function researchLeadWhy(lead) {
+  var parts = [];
+  var sourceText = [lead && lead.source, lead && lead.source_name, lead && lead.source_type, lead && lead.source_url, lead && lead.source_record_url].filter(Boolean).join(' ');
+  var tax = researchLeadTaxPressure(lead);
+  var days = researchLeadAuctionDays(lead);
+  var confidence = researchLeadSourceConfidence(lead);
+  var distress = researchLeadDistressStrength(lead);
+  if (/county|treasurer|sheriff|court|tax|foreclosure|gov|socrata|wayne|cook/i.test(sourceText)) parts.push('High-confidence county/official source evidence.');
+  if (tax > 0) parts.push('Tax/lien pressure saved at ' + mdaMoney(tax) + '.');
+  if (days !== null) parts.push(days <= 14 ? 'Auction timing appears urgent: ' + days + ' days.' : 'Auction/sale timing saved: ' + days + ' days.');
+  if (distress >= 35) parts.push('Distress signals indicate likely motivation.');
+  if (!(lead && (lead.phone || lead.email))) parts.push('No contact info saved; manual lookup is needed before outreach.');
+  if (confidence < 50) parts.push('Source confidence is limited, so verify before pricing.');
+  if (!parts.length) parts.push('Saved evidence is limited; verify source, comps, and contact path before offer work.');
+  return parts.slice(0, 4);
+}
+
+function researchLeadBestNextAction(lead) {
+  var progress = researchLeadProgress(lead);
+  if (!progress.sourceVerified) return 'Verify source record first.';
+  if (!progress.compsAdded) return 'Open Zillow/Redfin/Realtor searches and enter 3-5 comps.';
+  if (!progress.arvEstimated) return 'Use entered comps to confirm ARV range.';
+  if (!progress.repairsEstimated) return 'Enter repair estimate from condition notes/photos.';
+  if (!progress.contactResearched) return 'Search owner/contact manually before outreach.';
+  return progress.offerReady ? 'Review MAO and prepare seller conversation.' : 'Resolve remaining offer-readiness gaps.';
+}
+
+function researchNormalizeComp(comp) {
+  comp = comp || {};
+  var price = Number(comp.sold_price || comp.price || comp.list_price || comp.value || 0) || 0;
+  var sqft = Number(comp.sqft || comp.square_feet || 0) || 0;
+  return {
+    address: comp.address || comp.property_address || '',
+    price: price,
+    sqft: sqft,
+    beds: comp.beds || '',
+    baths: comp.baths || '',
+    distance: comp.distance || '',
+    dom: comp.dom || '',
+    date: comp.sold_date || comp.sale_date || comp.date || '',
+    source: comp.source || '',
+    notes: comp.notes || '',
+    ppsf: price && sqft ? price / sqft : 0
+  };
+}
+
+function researchSavedComps(lead) {
+  var raw = [];
+  if (Array.isArray(lead && lead.manual_comps)) raw = raw.concat(lead.manual_comps);
+  if (Array.isArray(lead && lead.comps)) raw = raw.concat(lead.comps);
+  return raw.map(researchNormalizeComp).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; }).slice(0, 5);
+}
+
+function researchSessionDraft(leadId) {
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.compDrafts) APP.researchSession.compDrafts = {};
+  if (!APP.researchSession.compDrafts[leadId]) APP.researchSession.compDrafts[leadId] = [];
+  return APP.researchSession.compDrafts[leadId];
+}
+
+function researchLeadComps(lead) {
+  var id = String(lead && lead.id || '');
+  var draft = APP.researchSession && APP.researchSession.compDrafts && APP.researchSession.compDrafts[id] ? APP.researchSession.compDrafts[id] : [];
+  return researchSavedComps(lead).concat((draft || []).map(researchNormalizeComp)).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; }).slice(0, 5);
+}
+
+function researchCompStats(comps) {
+  comps = comps || [];
+  var prices = comps.map(function(c){ return c.price; }).filter(function(v){ return v > 0; });
+  var ppsf = comps.map(function(c){ return c.ppsf; }).filter(function(v){ return v > 0; });
+  var avg = prices.length ? prices.reduce(function(a,b){ return a+b; }, 0) / prices.length : 0;
+  var avgPpsf = ppsf.length ? ppsf.reduce(function(a,b){ return a+b; }, 0) / ppsf.length : 0;
+  var low = prices.length ? Math.min.apply(null, prices) : 0;
+  var high = prices.length ? Math.max.apply(null, prices) : 0;
+  var spread = avg ? (high - low) / avg : 0;
+  var confidence = comps.length >= 3 && ppsf.length >= 2 && spread <= 0.20 ? 'High' : comps.length >= 2 && spread <= 0.30 ? 'Medium' : comps.length ? 'Low' : 'Incomplete';
+  return { count: comps.length, avg: avg, avgPpsf: avgPpsf, low: low, high: high, spread: spread, confidence: confidence };
+}
+
+function researchLeadProgress(lead) {
+  var comps = researchLeadComps(lead || {});
+  var stats = researchCompStats(comps);
+  var verified = !!(lead && (lead.source_verified_at || lead.verified_at || lead.last_verified_at || lead.verification_state === 'recently_refreshed' || lead.source_recheck_state === 'recently_refreshed'));
+  var arv = Number(lead && lead.arv) || (stats.avg || 0);
+  var repairs = Number(lead && (lead.repairs || lead.repair_estimate)) || 0;
+  var contact = !!(lead && (lead.phone || lead.email || lead.contact_lookup_result || lead.skip_trace_attempted || lead.skip_trace_date));
+  var offerReady = verified && stats.count >= 3 && arv > 0 && repairs > 0;
+  var done = [verified, stats.count >= 3, arv > 0, repairs > 0, contact, offerReady].filter(Boolean).length;
+  return {
+    sourceVerified: verified,
+    compsAdded: stats.count >= 3,
+    arvEstimated: arv > 0,
+    repairsEstimated: repairs > 0,
+    contactResearched: contact,
+    offerReady: offerReady,
+    percent: Math.round(done / 6 * 100),
+    stats: stats,
+    arv: arv,
+    repairs: repairs
+  };
+}
+
+function startResearchSessionFromSelection() {
+  var ids = selectedLeadIds();
+  if (!ids.length) {
+    bulkActionStatus('Select 1-5 leads to start a research session.', true);
+    if (typeof toast === 'function') toast('Select 1-5 leads first', 'error');
+    return;
+  }
+  if (ids.length > 5) {
+    bulkActionStatus('Research Session is capped at 5 leads. Clear selection and choose fewer.', true);
+    if (typeof toast === 'function') toast('Research Session max is 5 selected leads', 'error');
+    return;
+  }
+  var selected = selectedLeadObjects().sort(function(a,b){ return researchLeadScore(b) - researchLeadScore(a); });
+  APP.researchSession = {
+    active: true,
+    leadIds: selected.map(function(lead){ return String(lead.id); }),
+    activeLeadId: selected[0] ? String(selected[0].id) : '',
+    createdAt: new Date().toISOString(),
+    compDrafts: {}
+  };
+  bulkActionStatus('Research Session started for ' + selected.length + ' lead' + (selected.length === 1 ? '' : 's') + '.', false);
+  if (typeof toast === 'function') toast('Research Session started', 'success');
+  if (typeof render === 'function') render();
+}
+
+function closeResearchSession() {
+  APP.researchSession = null;
+  if (typeof render === 'function') render();
+}
+
+function setResearchSessionLead(leadId) {
+  if (!APP.researchSession) return;
+  APP.researchSession.activeLeadId = String(leadId || '');
+  if (typeof render === 'function') render();
+}
+
+function researchSessionLeads() {
+  var ids = APP.researchSession && APP.researchSession.leadIds ? APP.researchSession.leadIds : [];
+  var idSet = new Set(ids.map(String));
+  return (APP.leads || []).filter(function(lead){ return idSet.has(String(lead.id)); })
+    .sort(function(a,b){ return ids.indexOf(String(a.id)) - ids.indexOf(String(b.id)); });
+}
+
+function researchRenderProgressChecklist(progress) {
+  var items = [
+    ['source verified', progress.sourceVerified],
+    ['comps added', progress.compsAdded],
+    ['ARV estimated', progress.arvEstimated],
+    ['repairs estimated', progress.repairsEstimated],
+    ['contact researched', progress.contactResearched],
+    ['offer ready', progress.offerReady]
+  ];
+  return items.map(function(item){
+    var ok = item[1];
+    return '<span style="font-size:10px;font-weight:900;border:1px solid ' + (ok ? '#10b98166' : '#334155') + ';border-radius:999px;padding:3px 7px;color:' + (ok ? '#86efac' : '#cbd5e1') + ';background:' + (ok ? '#064e3b44' : '#111827') + '">' + (ok ? 'Complete: ' : 'Missing: ') + researchSafeText(item[0]) + '</span>';
+  }).join('');
+}
+
+function renderResearchSessionCard(lead) {
+  var active = APP.researchSession && String(APP.researchSession.activeLeadId) === String(lead.id);
+  var progress = researchLeadProgress(lead);
+  var why = researchLeadWhy(lead).join(' ');
+  var compStatus = progress.stats.count ? progress.stats.count + ' comp' + (progress.stats.count === 1 ? '' : 's') + ' / ' + progress.stats.confidence : 'No comps yet';
+  var enrichment = lead.enrichment_requested ? 'Requested' : ((lead.phone || lead.email) ? 'Contact available' : 'Needs contact lookup');
+  var verification = progress.sourceVerified ? 'Verified/requested' : 'Verification needed';
+  var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.id || 'Lead');
+  return '<div style="background:' + (active ? '#10213f' : '#111827') + ';border:1px solid ' + (active ? '#f4c54266' : '#243044') + ';border-radius:9px;padding:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px">' +
+      '<div><div style="font-size:11px;color:#f4c542;font-weight:900">' + researchSafeText(ref) + '</div><div style="font-size:12px;font-weight:900;line-height:1.35">' + researchSafeText(researchLeadAddress(lead) || lead.address || 'Address not available') + '</div></div>' +
+      '<button type="button" onclick="setResearchSessionLead(' + researchJsArg(lead.id) + ')" style="border:1px solid #334155;border-radius:6px;background:#0b1120;color:#f4c542;font-size:10px;font-weight:900;padding:5px 8px;cursor:pointer">' + (active ? 'Active' : 'Open') + '</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;line-height:1.5;margin-bottom:7px">' + researchSafeText(why) + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-bottom:7px">' +
+      '<div style="font-size:10px;color:#94a3b8">Next: <strong style="color:#e5e7eb">' + researchSafeText(researchLeadBestNextAction(lead)) + '</strong></div>' +
+      '<div style="font-size:10px;color:#94a3b8">Comp: <strong style="color:#e5e7eb">' + researchSafeText(compStatus) + '</strong></div>' +
+      '<div style="font-size:10px;color:#94a3b8">Enrichment: <strong style="color:#e5e7eb">' + researchSafeText(enrichment) + '</strong></div>' +
+      '<div style="font-size:10px;color:#94a3b8">Verification: <strong style="color:#e5e7eb">' + researchSafeText(verification) + '</strong></div>' +
+    '</div>' +
+    '<div style="height:7px;background:#0b1120;border-radius:999px;overflow:hidden;border:1px solid #243044"><div style="height:100%;width:' + progress.percent + '%;background:' + (progress.offerReady ? '#10b981' : '#f4c542') + '"></div></div>' +
+    '<div style="font-size:10px;color:' + (progress.offerReady ? '#86efac' : '#fca5a5') + ';font-weight:900;margin-top:5px">' + progress.percent + '% - ' + (progress.offerReady ? 'READY FOR OFFER REVIEW' : 'NOT READY') + '</div>' +
+  '</div>';
+}
+
+function researchCompInput(leadId, row, field, placeholder, value) {
+  var id = 'research-comp-' + leadActivityDomId(leadId) + '-' + row + '-' + field;
+  return '<input id="' + id + '" oninput="researchCaptureDraft(' + researchJsArg(leadId) + ');updateResearchSessionCompPreview(' + researchJsArg(leadId) + ')" value="' + mdaEscapeAttr(value || '') + '" placeholder="' + placeholder + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0">';
+}
+
+function researchReadCompRow(leadId, row) {
+  var safe = leadActivityDomId(leadId);
+  function val(field) {
+    var el = document.getElementById('research-comp-' + safe + '-' + row + '-' + field);
+    return el ? String(el.value || '').trim() : '';
+  }
+  var price = Number(val('price').replace(/[^0-9.-]/g, '')) || 0;
+  var sqft = Number(val('sqft').replace(/[^0-9.-]/g, '')) || 0;
+  return {
+    address: val('address'),
+    price: price,
+    sqft: sqft,
+    beds: val('beds'),
+    baths: val('baths'),
+    distance: val('distance'),
+    dom: val('dom'),
+    date: val('date'),
+    source: val('source'),
+    notes: val('notes'),
+    ppsf: price && sqft ? price / sqft : 0
+  };
+}
+
+function researchCaptureDraft(leadId) {
+  var rows = [];
+  for (var i = 0; i < 5; i++) {
+    var row = researchReadCompRow(leadId, i);
+    if (row.address || row.price || row.sqft || row.beds || row.baths || row.distance || row.dom || row.date || row.source || row.notes) rows.push(row);
+  }
+  researchSessionDraft(String(leadId)).splice(0, 5);
+  Array.prototype.push.apply(researchSessionDraft(String(leadId)), rows.slice(0, 5));
+}
+
+function updateResearchSessionCompPreview(leadId) {
+  researchCaptureDraft(leadId);
+  var lead = (APP.leads || []).find(function(l){ return String(l.id) === String(leadId); }) || {};
+  var comps = researchLeadComps(lead);
+  var stats = researchCompStats(comps);
+  var el = document.getElementById('research-comp-preview-' + leadActivityDomId(leadId));
+  if (el) {
+    el.innerHTML = renderResearchCompSummaryHtml(comps, stats);
+  }
+}
+
+function researchUseComp(leadId, row) {
+  researchCaptureDraft(leadId);
+  updateResearchSessionCompPreview(leadId);
+  if (typeof toast === 'function') toast('Comp captured in this research session. No automatic scraping or fake comp created.', 'success');
+}
+
+function parseResearchCompPaste(leadId) {
+  var safe = leadActivityDomId(leadId);
+  var box = document.getElementById('research-comp-paste-' + safe);
+  var text = box ? String(box.value || '').trim() : '';
+  if (!text) return;
+  var priceMatch = text.match(/\$?\s?([1-9][0-9,]{4,})/);
+  var sqftMatch = text.match(/([0-9,]{3,5})\s*(?:sq\.?\s*ft|sqft|sf)/i);
+  var parsed = {
+    address: text.split(/\n/)[0].slice(0, 90),
+    price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : 0,
+    sqft: sqftMatch ? Number(sqftMatch[1].replace(/,/g, '')) : 0,
+    source: 'manual paste',
+    notes: text.slice(0, 180)
+  };
+  parsed.ppsf = parsed.price && parsed.sqft ? parsed.price / parsed.sqft : 0;
+  var draft = researchSessionDraft(String(leadId));
+  if (draft.length >= 5) draft.shift();
+  draft.push(parsed);
+  if (box) box.value = '';
+  if (typeof render === 'function') render();
+}
+
+function renderResearchCompSummaryHtml(comps, stats) {
+  var summary = stats.count ? 'Average sold/list price ' + mdaMoney(stats.avg) + ' | Avg PPSF ' + (stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'not enough sqft') + ' | Range ' + mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high) + ' | Confidence ' + stats.confidence : 'No entered comps yet.';
+  var ai = '';
+  if (stats.count >= 2) {
+    var sorted = comps.filter(function(c){ return c.price > 0; }).slice().sort(function(a,b){ return Math.abs(a.price - stats.avg) - Math.abs(b.price - stats.avg); });
+    var strongest = sorted[0];
+    var weakest = comps.slice().sort(function(a,b){
+      var ap = a.price && a.sqft ? 0 : 1;
+      var bp = b.price && b.sqft ? 0 : 1;
+      return bp - ap || Math.abs((b.price || 0) - stats.avg) - Math.abs((a.price || 0) - stats.avg);
+    })[0];
+    ai = '<div style="margin-top:8px;background:#07111f;border:1px solid #243044;border-radius:8px;padding:9px">' +
+      '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:5px">AI Comp Summary - entered comps only</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Probable ARV range from entered comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Strongest comp: ' + researchSafeText(strongest ? (strongest.address || mdaMoney(strongest.price)) : 'not enough data') + ' because it is closest to the current average.</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Weakest comp: ' + researchSafeText(weakest ? (weakest.address || mdaMoney(weakest.price)) : 'not enough data') + ' because it is missing detail or sits farthest from the average.</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Caution: this summarizes only comps the operator entered. Verify distance, condition, sqft, sale date, and property type before relying on ARV.</div>' +
+    '</div>';
+  } else {
+    ai = '<div style="margin-top:8px;font-size:10px;color:#94a3b8">AI comp summary locked until at least 2 real operator-entered comps exist.</div>';
+  }
+  return '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + researchSafeText(summary) + '</div>' + ai;
+}
+
+function renderResearchSellerFlow(lead) {
+  var text = [
+    lead && lead.source, lead && lead.category, lead && lead.motivation, lead && lead.distress_type,
+    Array.isArray(lead && lead.distress_types) ? lead.distress_types.join(' ') : lead && lead.distress_types
+  ].filter(Boolean).join(' ').toLowerCase();
+  var tax = researchLeadTaxPressure(lead);
+  var days = researchLeadAuctionDays(lead);
+  var contact = lead && (lead.phone || lead.email);
+  var questions = ['Can you confirm you are the right person to speak with about the property?', 'Is the property occupied, vacant, rented, or owner-occupied?', 'What repairs or condition issues should I know about before pricing it?'];
+  var pain = [];
+  if (/tax|lien|delinquent/.test(text) || tax > 0) {
+    questions.push('Are taxes, liens, or deadlines creating pressure right now?');
+    pain.push('tax or lien pressure');
+  }
+  if (/foreclosure|auction|sheriff/.test(text) || days !== null) {
+    questions.push('Is there a sale date, redemption deadline, or auction timeline we should plan around?');
+    pain.push('timeline pressure');
+  }
+  if (/code|violation/.test(text)) {
+    questions.push('What violations were cited and are fines still accumulating?');
+    pain.push('repair or code compliance pressure');
+  }
+  if (/absentee|landlord|tenant/.test(text)) {
+    questions.push('Is there a tenant, lease, access issue, or management problem affecting the decision?');
+    pain.push('tenant or management friction');
+  }
+  if (!contact) pain.push('contact lookup still needed before outreach');
+  questions = questions.slice(0, 5);
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:10px;margin-top:10px">' +
+    '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:6px">Seller Call Flow</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-bottom:6px"><strong style="color:#e5e7eb">Opening:</strong> Hi, I am calling about the property. I wanted to see if you are open to talking through options, but I still need to verify details before discussing final numbers.</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;line-height:1.55"><strong style="color:#e5e7eb">Questions:</strong><br>' + questions.map(function(q){ return '- ' + researchSafeText(q); }).join('<br>') + '</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:6px"><strong style="color:#e5e7eb">Likely pain points:</strong> ' + researchSafeText(pain.length ? pain.join(', ') : 'unknown until seller confirms motivation') + '.</div>' +
+    '<div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:6px"><strong style="color:#e5e7eb">Tone:</strong> calm, fact-checking, no pressure, and no claims about liens, title, value, or deadlines until verified.</div>' +
+  '</div>';
+}
+
+function renderResearchSessionLeadWorkspace(lead) {
+  if (!lead) return '';
+  var safe = leadActivityDomId(lead.id);
+  var address = researchLeadAddress(lead);
+  var links = [
+    ['Open Zillow Search', leadEnrichmentSearchUrl('zillow', address)],
+    ['Open Redfin Search', leadEnrichmentSearchUrl('redfin', address)],
+    ['Open Realtor Search', leadEnrichmentSearchUrl('realtor', address)]
+  ].filter(function(item){ return !!item[1]; }).map(function(item){
+    return '<a href="' + mdaEscapeAttr(item[1]) + '" target="_blank" style="font-size:10px;font-weight:900;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#0b1120;border-radius:999px;padding:6px 9px">' + item[0] + '</a>';
+  }).join('');
+  var comps = researchLeadComps(lead);
+  var stats = researchCompStats(comps);
+  var draft = researchSessionDraft(String(lead.id));
+  var rows = '';
+  for (var i = 0; i < 5; i++) {
+    var comp = draft[i] || {};
+    rows += '<div style="display:grid;grid-template-columns:1.2fr .65fr .5fr .4fr .4fr .45fr .4fr .6fr .65fr 1fr auto;gap:5px;margin-bottom:5px">' +
+      researchCompInput(lead.id, i, 'address', 'Comp address', comp.address) +
+      researchCompInput(lead.id, i, 'price', 'Sold/list $', comp.price) +
+      researchCompInput(lead.id, i, 'sqft', 'Sqft', comp.sqft) +
+      researchCompInput(lead.id, i, 'beds', 'Beds', comp.beds) +
+      researchCompInput(lead.id, i, 'baths', 'Baths', comp.baths) +
+      researchCompInput(lead.id, i, 'distance', 'Miles', comp.distance) +
+      researchCompInput(lead.id, i, 'dom', 'DOM', comp.dom) +
+      researchCompInput(lead.id, i, 'date', 'Date', comp.date) +
+      researchCompInput(lead.id, i, 'source', 'Source', comp.source) +
+      researchCompInput(lead.id, i, 'notes', 'Notes', comp.notes) +
+      '<button type="button" onclick="researchUseComp(' + researchJsArg(lead.id) + ',' + i + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#111827;color:#f4c542;padding:5px 7px;cursor:pointer">Use As Comp</button>' +
+    '</div>';
+  }
+  return '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:12px;color:#e5e7eb;margin-top:10px">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px"><div><div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:900">Active Lead Research</div><div style="font-size:12px;font-weight:900">' + researchSafeText(address || lead.address || 'Address not available') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:9px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Top Focus</div><div style="font-size:11px;line-height:1.5">' + researchSafeText(researchLeadBestNextAction(lead)) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Tax/Liens</div><div style="font-size:12px;font-weight:900">' + (researchLeadTaxPressure(lead) ? mdaMoney(researchLeadTaxPressure(lead)) : 'Not saved') + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Urgency</div><div style="font-size:12px;font-weight:900">' + (researchLeadAuctionDays(lead) !== null ? researchLeadAuctionDays(lead) + ' days' : 'Timing not verified') + '</div></div>' +
+    '</div>' +
+    '<details open style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:9px"><summary style="cursor:pointer;font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Real Comp Workflow</summary>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
+      '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Add Comp</button></div>' +
+      '<div style="overflow-x:auto">' + rows + '</div>' +
+      '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats) + '</div>' +
+    '</details>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + researchRenderProgressChecklist(researchLeadProgress(lead)) + '</div>' +
+    renderResearchSellerFlow(lead) +
+    '<details style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-top:9px"><summary style="cursor:pointer;font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Raw/Internal Research Context</summary><div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:8px">' + researchLeadWhy(lead).map(function(x){ return '- ' + researchSafeText(x); }).join('<br>') + '</div></details>' +
+  '</div>';
+}
+
+function renderResearchSessionPanel() {
+  if (!APP.researchSession || !APP.researchSession.active) return '';
+  var leads = researchSessionLeads();
+  if (!leads.length) return '';
+  var active = leads.find(function(lead){ return String(lead.id) === String(APP.researchSession.activeLeadId); }) || leads[0];
+  if (active) APP.researchSession.activeLeadId = String(active.id);
+  return '<div id="research-session-panel" style="background:#07111f;border:1px solid #1f2937;border-radius:12px;padding:13px;margin:0 0 14px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:13px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Controlled Research Session</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Operator-selected 1-5 lead workflow. Search links and manual comp entry only; no scraping, fake comps, or outbound automation.</div></div>' +
+      '<button type="button" onclick="closeResearchSession()" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;padding:7px 10px;cursor:pointer">Close Session</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:8px">' + leads.map(renderResearchSessionCard).join('') + '</div>' +
+    renderResearchSessionLeadWorkspace(active) +
+  '</div>';
+}
+
 var _leadsPage = 0;
 var _leadsPerPage = 300;
 
@@ -17216,6 +17678,7 @@ function renderLeads() {
     toolbar+
     loadWarning+
     (typeof renderBulkActionsBar === 'function' ? renderBulkActionsBar() : '')+
+    (typeof renderResearchSessionPanel === 'function' ? renderResearchSessionPanel() : '')+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">'+
       tabs+
       '<div style="margin-left:auto;display:flex;gap:8px">'+
