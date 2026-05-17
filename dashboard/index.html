@@ -17543,6 +17543,132 @@ function researchUseComp(leadId, row) {
   if (typeof toast === 'function') toast('Draft comp captured in this research session. Not saved to lead yet.', 'success');
 }
 
+function researchCompScoutState(leadId) {
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.compScout) APP.researchSession.compScout = {};
+  var id = String(leadId || '');
+  if (!APP.researchSession.compScout[id]) APP.researchSession.compScout[id] = { loading: false, result: null, error: '' };
+  return APP.researchSession.compScout[id];
+}
+
+async function runResearchCompScout(leadId) {
+  var state = researchCompScoutState(leadId);
+  state.loading = true;
+  state.error = '';
+  state.result = null;
+  if (typeof render === 'function') render();
+  try {
+    var res = await fetch('/api/research/comp-scout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id: leadId, source_preference: 'google', max_results: 5 })
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok || data.error) throw new Error(data.error || data.reason || 'Comp Scout failed');
+    state.result = data;
+    if (typeof toast === 'function') {
+      toast(data.blocked ? 'Comp Scout blocked; use manual search links' : 'Comp Scout returned ' + ((data.candidates || []).length) + ' candidate(s)', data.blocked ? 'error' : 'success');
+    }
+  } catch (e) {
+    state.error = e.message || String(e);
+    if (typeof toast === 'function') toast('Comp Scout failed: ' + state.error, 'error');
+  } finally {
+    state.loading = false;
+    if (typeof render === 'function') render();
+  }
+}
+
+function researchCompFromScoutCandidate(candidate) {
+  candidate = candidate || {};
+  var price = Number(candidate.price || 0) || 0;
+  var sqft = Number(candidate.sqft || 0) || 0;
+  var source = candidate.source ? 'Comp Scout - ' + candidate.source : 'Comp Scout';
+  var noteParts = [
+    'Unverified Comp Scout candidate',
+    candidate.status || '',
+    candidate.confidence_reason || '',
+    candidate.url || '',
+    candidate.snippet || ''
+  ].filter(Boolean);
+  return {
+    address: candidate.address || candidate.title || '',
+    price: price,
+    sqft: sqft,
+    beds: candidate.beds || '',
+    baths: candidate.baths || '',
+    distance: '',
+    dom: '',
+    date: candidate.date || '',
+    source: source,
+    notes: noteParts.join(' | ').slice(0, 260),
+    ppsf: price && sqft ? price / sqft : 0
+  };
+}
+
+function researchAcceptScoutCandidate(leadId, index) {
+  var state = researchCompScoutState(leadId);
+  var candidates = state.result && Array.isArray(state.result.candidates) ? state.result.candidates : [];
+  var candidate = candidates[index];
+  if (!candidate) {
+    if (typeof toast === 'function') toast('Comp candidate not found', 'error');
+    return;
+  }
+  researchCaptureDraft(leadId);
+  var draft = researchSessionDraft(String(leadId));
+  if (draft.length >= 5) {
+    if (typeof toast === 'function') toast('Draft comp rows are full. Clear a row before accepting another candidate.', 'error');
+    return;
+  }
+  draft.push(researchCompFromScoutCandidate(candidate));
+  if (typeof toast === 'function') toast('Candidate added to draft comps. Verify before ARV.', 'success');
+  if (typeof render === 'function') render();
+}
+
+function renderResearchCompScoutHtml(lead) {
+  var state = researchCompScoutState(lead.id);
+  var result = state.result || {};
+  var candidates = Array.isArray(result.candidates) ? result.candidates : [];
+  var status = '';
+  if (state.loading) {
+    status = '<div style="font-size:10px;color:#f4c542;font-weight:900;margin-top:7px">Comp Scout is checking public search results for this lead only...</div>';
+  } else if (state.error) {
+    status = '<div style="font-size:10px;color:#fca5a5;font-weight:900;margin-top:7px">Comp Scout error: ' + researchSafeText(state.error) + '</div>';
+  } else if (result.blocked) {
+    status = '<div style="font-size:10px;color:#fca5a5;line-height:1.5;margin-top:7px"><strong>Blocked:</strong> ' + researchSafeText(result.reason || 'Source required manual verification.') + '<br>' + researchSafeText(result.suggested_manual_action || 'Open search links manually and enter verified comps. No retry loop was started.') + '</div>';
+  } else if (result.extraction_status) {
+    status = '<div style="font-size:10px;color:#94a3b8;margin-top:7px">Extraction status: ' + researchSafeText(result.extraction_status) + '. ' + researchSafeText(result.suggested_manual_action || '') + '</div>';
+  }
+  var rows = candidates.map(function(candidate, index) {
+    var price = candidate.price ? mdaMoney(candidate.price) : 'Price not visible';
+    var details = [
+      candidate.beds ? candidate.beds + ' bd' : '',
+      candidate.baths ? candidate.baths + ' ba' : '',
+      candidate.sqft ? candidate.sqft + ' sqft' : '',
+      candidate.status || '',
+      candidate.date || ''
+    ].filter(Boolean).join(' | ');
+    return '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:7px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+        '<div style="min-width:0;flex:1"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Unverified Candidate - ' + researchSafeText(candidate.source || 'search') + '</div>' +
+        '<div style="font-size:11px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(candidate.title || candidate.address || 'Untitled result') + '</div>' +
+        '<div style="font-size:10px;color:#cbd5e1;line-height:1.45">' + researchSafeText(price + (details ? ' | ' + details : '')) + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8;line-height:1.45">' + researchSafeText(candidate.snippet || candidate.confidence_reason || '') + '</div>' +
+        (candidate.url ? '<a href="' + mdaEscapeAttr(candidate.url) + '" target="_blank" style="font-size:10px;color:#93c5fd;text-decoration:none">Open result</a>' : '') + '</div>' +
+        '<button type="button" onclick="researchAcceptScoutCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Use As Comp</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin:8px 0">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<div><div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900">Playwright Comp Scout</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Comp Scout suggests candidates only. Verify sold status, sqft, and similarity before using for ARV. No comps are saved automatically.</div></div>' +
+      '<button type="button" onclick="runResearchCompScout(' + researchJsArg(lead.id) + ')" ' + (state.loading ? 'disabled' : '') + ' style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:7px 10px;cursor:pointer">' + (state.loading ? 'Scouting...' : 'Scout Comps') + '</button>' +
+    '</div>' +
+    status +
+    rows +
+  '</div>';
+}
+
 function parseResearchCompPaste(leadId) {
   var safe = leadActivityDomId(leadId);
   var box = document.getElementById('research-comp-paste-' + safe);
@@ -17677,6 +17803,7 @@ function renderResearchSessionLeadWorkspace(lead) {
     '<details open style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:9px"><summary style="cursor:pointer;font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Real Comp Workflow</summary>' +
       '<div style="background:#451a03;border:1px solid #f59e0b66;border-radius:8px;padding:8px;margin:8px 0;color:#fed7aa;font-size:10px;line-height:1.5"><strong>Draft comps - not saved to lead yet.</strong> Research Session comps are session-local only. Unsaved research session comps may be lost if you switch leads, refresh, or close the session.</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
+      renderResearchCompScoutHtml(lead) +
       '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Add Comp</button></div>' +
       '<div style="overflow-x:auto">' + rows + '</div>' +
       '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +

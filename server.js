@@ -11,6 +11,7 @@ const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
 const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
+const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -189,6 +190,42 @@ app.get('/api/auth/role', (req, res) => {
     if (!user) return res.json({ role: 'user', isAdmin: false, userId: null });
     res.json({ role: user.role||'user', isAdmin: user.role==='admin', userId: user.id, name: user.name });
   } catch(e) { res.json({ role: 'user', isAdmin: false }); }
+});
+
+app.post('/api/research/comp-scout', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const leadId = String(body.lead_id || body.leadId || '').trim();
+    if (!leadId) return res.status(400).json({ ok: false, error: 'lead_id_required' });
+
+    const lead = db.getLeads().find(l => String(l.id) === leadId);
+    if (!lead) return res.status(404).json({ ok: false, error: 'lead_not_found' });
+
+    const maxResults = Math.min(Math.max(parseInt(body.max_results || body.maxResults || 5, 10) || 5, 1), 10);
+    const sourcePreference = String(body.source_preference || body.sourcePreference || 'google').trim().toLowerCase();
+    const result = await scoutCompsForLead({
+      lead,
+      sourcePreference,
+      maxResults
+    });
+
+    res.json(Object.assign({
+      ok: result.ok !== false,
+      lead_id: leadId,
+      max_results: maxResults,
+      source_preference: sourcePreference,
+      saved: false,
+      persistence: 'none',
+      safety: 'operator-triggered one-lead comp candidate scout; no ingestion, no outbound communication, no automatic save'
+    }, result));
+  } catch(e) {
+    res.status(500).json({
+      ok: false,
+      error: e.message,
+      saved: false,
+      persistence: 'none'
+    });
+  }
 });
 
 // Admin-only: protect sensitive routes
