@@ -17246,27 +17246,145 @@ function researchLeadComps(lead) {
   return researchSavedComps(lead).concat((draft || []).map(researchNormalizeComp)).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; }).slice(0, 5);
 }
 
+function researchSessionHasDraftComps() {
+  var drafts = APP.researchSession && APP.researchSession.compDrafts ? APP.researchSession.compDrafts : {};
+  return Object.keys(drafts).some(function(id) {
+    return (drafts[id] || []).some(function(comp) {
+      return comp && (comp.address || comp.price || comp.sqft || comp.beds || comp.baths || comp.distance || comp.dom || comp.date || comp.source || comp.notes);
+    });
+  });
+}
+
+function researchParseCompDate(value) {
+  if (!value) return null;
+  var d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function researchCompCompleteness(comp) {
+  var score = 0;
+  if (comp.price > 0) score += 20;
+  if (comp.sqft > 0) score += 20;
+  if (comp.beds) score += 10;
+  if (comp.baths) score += 10;
+  if (comp.distance !== '') score += 10;
+  if (comp.date) score += 10;
+  if (comp.source) score += 10;
+  if (comp.notes) score += 10;
+  return score;
+}
+
+function researchCompScore(comp, stats, subject) {
+  subject = subject || {};
+  var score = 0;
+  var reasons = [];
+  if (comp.price > 0 && stats.avg > 0) {
+    var priceDelta = Math.abs(comp.price - stats.avg) / stats.avg;
+    score += Math.max(0, 30 - priceDelta * 100);
+    reasons.push('price proximity');
+  }
+  if (comp.sqft > 0) {
+    score += 18;
+    if (subject.sqft) {
+      var sqftDelta = Math.abs(comp.sqft - subject.sqft) / subject.sqft;
+      score += Math.max(0, 12 - sqftDelta * 40);
+      reasons.push('sqft similarity');
+    } else {
+      reasons.push('sqft available');
+    }
+  }
+  if (comp.beds) {
+    score += subject.beds ? Math.max(0, 8 - Math.abs(Number(comp.beds) - Number(subject.beds)) * 4) : 5;
+    reasons.push('beds available');
+  }
+  if (comp.baths) {
+    score += subject.baths ? Math.max(0, 8 - Math.abs(Number(comp.baths) - Number(subject.baths)) * 4) : 5;
+    reasons.push('baths available');
+  }
+  if (comp.distance !== '') {
+    var miles = Number(String(comp.distance).replace(/[^0-9.-]/g, ''));
+    if (!isNaN(miles)) {
+      score += miles <= 0.5 ? 12 : miles <= 1 ? 9 : miles <= 2 ? 6 : 2;
+      reasons.push('distance entered');
+    }
+  }
+  var date = researchParseCompDate(comp.date);
+  if (date) {
+    var ageDays = Math.max(0, (Date.now() - date.getTime()) / 86400000);
+    score += ageDays <= 90 ? 12 : ageDays <= 180 ? 9 : ageDays <= 365 ? 5 : 2;
+    reasons.push('sale date recency');
+  }
+  if (comp.source) {
+    score += 6;
+    reasons.push('source noted');
+  }
+  if (comp.notes) {
+    score += 4;
+    reasons.push('notes entered');
+  }
+  return { comp: comp, score: Math.round(score), reasons: reasons.slice(0, 4) };
+}
+
+function researchRankComps(comps, stats, subject) {
+  var scored = (comps || []).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; })
+    .map(function(comp) { return researchCompScore(comp, stats, subject); })
+    .sort(function(a, b) { return b.score - a.score; });
+  return {
+    strongest: scored[0] || null,
+    weakest: scored.length > 1 ? scored[scored.length - 1] : null,
+    scored: scored
+  };
+}
+
 function researchCompStats(comps) {
   comps = comps || [];
   var prices = comps.map(function(c){ return c.price; }).filter(function(v){ return v > 0; });
   var ppsf = comps.map(function(c){ return c.ppsf; }).filter(function(v){ return v > 0; });
+  var sqftCount = comps.filter(function(c){ return c.price > 0 && c.sqft > 0; }).length;
+  var bedBathCount = comps.filter(function(c){ return c.price > 0 && c.sqft > 0 && c.beds && c.baths; }).length;
+  var recentCount = comps.filter(function(c){
+    var d = researchParseCompDate(c.date);
+    return d && ((Date.now() - d.getTime()) / 86400000) <= 365;
+  }).length;
   var avg = prices.length ? prices.reduce(function(a,b){ return a+b; }, 0) / prices.length : 0;
   var avgPpsf = ppsf.length ? ppsf.reduce(function(a,b){ return a+b; }, 0) / ppsf.length : 0;
   var low = prices.length ? Math.min.apply(null, prices) : 0;
   var high = prices.length ? Math.max.apply(null, prices) : 0;
   var spread = avg ? (high - low) / avg : 0;
-  var confidence = comps.length >= 3 && ppsf.length >= 2 && spread <= 0.20 ? 'High' : comps.length >= 2 && spread <= 0.30 ? 'Medium' : comps.length ? 'Low' : 'Incomplete';
-  return { count: comps.length, avg: avg, avgPpsf: avgPpsf, low: low, high: high, spread: spread, confidence: confidence };
+  var confidence = 'Incomplete';
+  var confidenceReason = 'No entered comps yet.';
+  if (comps.length > 0) {
+    confidence = 'Low';
+    confidenceReason = 'Low: fewer than 3 comps, missing sqft, or wide price variance.';
+  }
+  if (comps.length === 2 && sqftCount >= 2 && prices.length >= 2 && spread <= 0.30) {
+    confidence = 'Low';
+    confidenceReason = 'Low preliminary: 2 comps have price and sqft, but add at least one more comp before offer review.';
+  }
+  if (comps.length === 3 && sqftCount >= 2 && prices.length >= 2 && spread <= 0.30) {
+    confidence = 'Medium';
+    confidenceReason = 'Medium: 3 comps have enough price/sqft data, but verify similarity before offer review.';
+  }
+  if (comps.length >= 4 && comps.length <= 5 && sqftCount >= 4 && bedBathCount >= 4 && recentCount >= 3 && spread <= 0.18) {
+    confidence = 'High';
+    confidenceReason = 'High: 4-5 comps include price, sqft, beds/baths, recent dates, and low variance.';
+  }
+  return { count: comps.length, avg: avg, avgPpsf: avgPpsf, low: low, high: high, spread: spread, confidence: confidence, confidenceReason: confidenceReason, sqftCount: sqftCount, bedBathCount: bedBathCount, recentCount: recentCount };
 }
 
 function researchLeadProgress(lead) {
   var comps = researchLeadComps(lead || {});
   var stats = researchCompStats(comps);
   var verified = !!(lead && (lead.source_verified_at || lead.verified_at || lead.last_verified_at || lead.verification_state === 'recently_refreshed' || lead.source_recheck_state === 'recently_refreshed'));
-  var arv = Number(lead && lead.arv) || (stats.avg || 0);
+  var arv = Number(lead && lead.arv) || (stats.count >= 3 ? (stats.avg || 0) : 0);
   var repairs = Number(lead && (lead.repairs || lead.repair_estimate)) || 0;
   var contact = !!(lead && (lead.phone || lead.email || lead.contact_lookup_result || lead.skip_trace_attempted || lead.skip_trace_date));
   var offerReady = verified && stats.count >= 3 && arv > 0 && repairs > 0;
+  var blockers = [];
+  if (!verified) blockers.push('source verification checked');
+  if (stats.count < 3) blockers.push(stats.count === 2 ? 'Preliminary only - add at least one more comp' : 'at least 3 comps');
+  if (!(arv > 0)) blockers.push('ARV selected/confirmed');
+  if (!(repairs > 0)) blockers.push('repair estimate entered');
   var done = [verified, stats.count >= 3, arv > 0, repairs > 0, contact, offerReady].filter(Boolean).length;
   return {
     sourceVerified: verified,
@@ -17278,7 +17396,8 @@ function researchLeadProgress(lead) {
     percent: Math.round(done / 6 * 100),
     stats: stats,
     arv: arv,
-    repairs: repairs
+    repairs: repairs,
+    blockers: blockers
   };
 }
 
@@ -17308,12 +17427,16 @@ function startResearchSessionFromSelection() {
 }
 
 function closeResearchSession() {
+  if (researchSessionHasDraftComps() && !confirm('Unsaved research session comps may be lost. Draft comps are not saved to the lead yet. Close session anyway?')) return;
   APP.researchSession = null;
   if (typeof render === 'function') render();
 }
 
 function setResearchSessionLead(leadId) {
   if (!APP.researchSession) return;
+  if (researchSessionHasDraftComps() && String(APP.researchSession.activeLeadId || '') !== String(leadId || '') && typeof toast === 'function') {
+    toast('Unsaved research session comps may be lost if the session is closed. Draft comps are not saved to the lead yet.', 'success');
+  }
   APP.researchSession.activeLeadId = String(leadId || '');
   if (typeof render === 'function') render();
 }
@@ -17410,14 +17533,14 @@ function updateResearchSessionCompPreview(leadId) {
   var stats = researchCompStats(comps);
   var el = document.getElementById('research-comp-preview-' + leadActivityDomId(leadId));
   if (el) {
-    el.innerHTML = renderResearchCompSummaryHtml(comps, stats);
+    el.innerHTML = renderResearchCompSummaryHtml(comps, stats, lead);
   }
 }
 
 function researchUseComp(leadId, row) {
   researchCaptureDraft(leadId);
   updateResearchSessionCompPreview(leadId);
-  if (typeof toast === 'function') toast('Comp captured in this research session. No automatic scraping or fake comp created.', 'success');
+  if (typeof toast === 'function') toast('Draft comp captured in this research session. Not saved to lead yet.', 'success');
 }
 
 function parseResearchCompPaste(leadId) {
@@ -17442,23 +17565,33 @@ function parseResearchCompPaste(leadId) {
   if (typeof render === 'function') render();
 }
 
-function renderResearchCompSummaryHtml(comps, stats) {
+function renderResearchCompSummaryHtml(comps, stats, lead) {
+  lead = lead || {};
+  var subject = {
+    sqft: Number(lead.sqft || lead.square_feet || 0) || 0,
+    beds: Number(lead.beds || lead.bedrooms || 0) || 0,
+    baths: Number(lead.baths || lead.bathrooms || 0) || 0
+  };
   var summary = stats.count ? 'Average sold/list price ' + mdaMoney(stats.avg) + ' | Avg PPSF ' + (stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'not enough sqft') + ' | Range ' + mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high) + ' | Confidence ' + stats.confidence : 'No entered comps yet.';
   var ai = '';
   if (stats.count >= 2) {
-    var sorted = comps.filter(function(c){ return c.price > 0; }).slice().sort(function(a,b){ return Math.abs(a.price - stats.avg) - Math.abs(b.price - stats.avg); });
-    var strongest = sorted[0];
-    var weakest = comps.slice().sort(function(a,b){
-      var ap = a.price && a.sqft ? 0 : 1;
-      var bp = b.price && b.sqft ? 0 : 1;
-      return bp - ap || Math.abs((b.price || 0) - stats.avg) - Math.abs((a.price || 0) - stats.avg);
-    })[0];
+    var ranking = researchRankComps(comps, stats, subject);
+    var strongest = ranking.strongest;
+    var weakest = ranking.weakest;
+    var limited = stats.count < 3;
+    var strongestLabel = strongest ? (strongest.comp.address || mdaMoney(strongest.comp.price)) + ' (' + strongest.score + ' score)' : 'not enough data';
+    var weakestLabel = weakest ? (weakest.comp.address || mdaMoney(weakest.comp.price)) + ' (' + weakest.score + ' score)' : 'not enough data';
+    var strongestWhy = strongest && strongest.reasons.length ? strongest.reasons.join(', ') : 'available entered fields';
+    var weakestWhy = weakest && weakest.reasons.length ? weakest.reasons.join(', ') : 'least complete entered fields';
     ai = '<div style="margin-top:8px;background:#07111f;border:1px solid #243044;border-radius:8px;padding:9px">' +
-      '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:5px">AI Comp Summary - entered comps only</div>' +
-      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Probable ARV range from entered comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
-      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Strongest comp: ' + researchSafeText(strongest ? (strongest.address || mdaMoney(strongest.price)) : 'not enough data') + ' because it is closest to the current average.</div>' +
-      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Weakest comp: ' + researchSafeText(weakest ? (weakest.address || mdaMoney(weakest.price)) : 'not enough data') + ' because it is missing detail or sits farthest from the average.</div>' +
-      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Caution: this summarizes only comps the operator entered. Verify distance, condition, sqft, sale date, and property type before relying on ARV.</div>' +
+      '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:5px">AI Comp Summary - based only on entered comps</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + (limited ? '<strong style="color:#fbbf24">Limited comp set.</strong> ' : '') + 'Preliminary ARV range based only on entered comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
+      (limited
+        ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">With only 2 comps, treat both as preliminary support. Do not rank them as definitive strongest/weakest yet.</div>'
+        : '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Strongest comp: ' + researchSafeText(strongestLabel) + ' based on ' + researchSafeText(strongestWhy) + '.</div>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Weakest comp: ' + researchSafeText(weakestLabel) + ' because it scores lowest on available comp quality signals: ' + researchSafeText(weakestWhy) + '.</div>') +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Confidence: ' + researchSafeText(stats.confidenceReason) + '</div>' +
+      '<div style="font-size:10px;color:#fca5a5;line-height:1.55">Caution: needs verified sold comps before offer. Do not rely on this without source verification.</div>' +
     '</div>';
   } else {
     ai = '<div style="margin-top:8px;font-size:10px;color:#94a3b8">AI comp summary locked until at least 2 real operator-entered comps exist.</div>';
@@ -17542,12 +17675,14 @@ function renderResearchSessionLeadWorkspace(lead) {
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Urgency</div><div style="font-size:12px;font-weight:900">' + (researchLeadAuctionDays(lead) !== null ? researchLeadAuctionDays(lead) + ' days' : 'Timing not verified') + '</div></div>' +
     '</div>' +
     '<details open style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:9px"><summary style="cursor:pointer;font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Real Comp Workflow</summary>' +
+      '<div style="background:#451a03;border:1px solid #f59e0b66;border-radius:8px;padding:8px;margin:8px 0;color:#fed7aa;font-size:10px;line-height:1.5"><strong>Draft comps - not saved to lead yet.</strong> Research Session comps are session-local only. Unsaved research session comps may be lost if you switch leads, refresh, or close the session.</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
       '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Add Comp</button></div>' +
       '<div style="overflow-x:auto">' + rows + '</div>' +
-      '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats) + '</div>' +
+      '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +
     '</details>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + researchRenderProgressChecklist(researchLeadProgress(lead)) + '</div>' +
+    '<div style="font-size:10px;color:' + (researchLeadProgress(lead).offerReady ? '#86efac' : '#fca5a5') + ';font-weight:900;margin-bottom:8px">' + (researchLeadProgress(lead).offerReady ? 'READY FOR OFFER REVIEW' : 'NOT READY FOR OFFER REVIEW: ' + researchLeadProgress(lead).blockers.join(', ')) + '</div>' +
     renderResearchSellerFlow(lead) +
     '<details style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-top:9px"><summary style="cursor:pointer;font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Raw/Internal Research Context</summary><div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:8px">' + researchLeadWhy(lead).map(function(x){ return '- ' + researchSafeText(x); }).join('<br>') + '</div></details>' +
   '</div>';
