@@ -337,7 +337,8 @@ app.get('/api/leads/:id/activities', (req, res) => {
   try {
     const lead = db.getLeads().find(l => l.id === req.params.id);
     if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });
-    const activities = db.getLeadActivities(req.params.id);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const activities = db.getLeadActivities(req.params.id, { limit });
     res.json({ ok: true, lead_id: req.params.id, activities, count: activities.length });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });

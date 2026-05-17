@@ -2422,6 +2422,13 @@ function saveSourceRecheckState(leadId, state) {
     refreshedAt: state === 'recently_refreshed' ? new Date().toISOString() : (current.refreshedAt || '')
   };
   save('source_rechecks', APP.sourceRechecks);
+  if (typeof appendLeadActivityMemory === 'function') {
+    appendLeadActivityMemory(leadId, {
+      type: 'verification',
+      outcome: sourceRecheckStateLabel(state),
+      note: 'Operator marked source for manual verification/recheck.'
+    });
+  }
   toast(sourceRecheckStateLabel(state), 'success');
   render();
 }
@@ -3744,6 +3751,7 @@ function leadActivityLabel(type) {
     verification: 'Verification',
     skip_trace: 'Skip Trace',
     comp_review: 'Comp Review',
+    enrichment: 'Enrichment',
     offer_review: 'Offer Review',
     follow_up: 'Follow-Up',
     note: 'Note'
@@ -3756,7 +3764,7 @@ function renderLeadActivityMemory(lead) {
   var safeId = leadActivityDomId(lid);
   var typeOptions = [
     'call_attempt','text_attempt','email_attempt','voicemail','seller_response',
-    'verification','skip_trace','comp_review','offer_review','follow_up','note'
+    'verification','skip_trace','comp_review','enrichment','offer_review','follow_up','note'
   ].map(function(type) {
     return '<option value="' + type + '">' + leadIntelText(leadActivityLabel(type)) + '</option>';
   }).join('');
@@ -3852,6 +3860,33 @@ function submitLeadActivity(leadId) {
       loadLeadActivities(leadId);
     })
     .catch(function(e){ if (status) status.textContent = e.message; });
+}
+
+function appendLeadActivityMemory(leadId, activity) {
+  activity = activity || {};
+  return fetch('/api/leads/' + encodeURIComponent(leadId) + '/activities', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      type: activity.type || 'note',
+      outcome: activity.outcome || '',
+      note: activity.note || '',
+      next_follow_up_date: activity.next_follow_up_date || '',
+      created_by: APP.userId || 'operator'
+    })
+  })
+    .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, data:d }; }); })
+    .then(function(result){
+      if (!result.ok || !result.data.ok) throw new Error(result.data.error || 'Could not save activity');
+      if (typeof loadLeadActivities === 'function') loadLeadActivities(leadId);
+      return result.data.activity;
+    })
+    .catch(function(e){
+      var safeId = leadActivityDomId(leadId);
+      var status = document.getElementById('lead-activity-status-' + safeId);
+      if (status) status.textContent = 'Activity not saved: ' + e.message;
+      return null;
+    });
 }
 
 function renderLeadAssignmentState(lead) {
@@ -4114,6 +4149,13 @@ function queueLeadForEnrichment(leadId) {
       if (!result.ok || !result.data || result.data.error) throw new Error((result.data && result.data.error) || 'Could not queue enrichment');
       updateLeadInApp(leadId, result.data);
       if (msg) msg.textContent = 'Enrichment requested. Use the recommended manual enrichment order below.';
+      if (typeof appendLeadActivityMemory === 'function') {
+        appendLeadActivityMemory(leadId, {
+          type: 'enrichment',
+          outcome: 'Enrichment requested',
+          note: 'Operator queued manual enrichment launchpad review. No skip trace or scraping completed automatically.'
+        });
+      }
       if (typeof toast === 'function') toast('Enrichment requested. Open manual links to continue.', 'success');
       return result.data;
     })
@@ -4154,6 +4196,13 @@ function saveLeadCompWorkflow(leadId, options) {
       if (!result.ok || !result.data || result.data.error) throw new Error((result.data && result.data.error) || 'Could not save comp workflow');
       updateLeadInApp(leadId, result.data);
       if (msg) msg.textContent = options.queueOnly ? 'Queued for comp review.' : 'Comp session saved.';
+      if (typeof appendLeadActivityMemory === 'function') {
+        appendLeadActivityMemory(leadId, {
+          type: 'comp_review',
+          outcome: options.queueOnly ? 'Queued for comp review' : 'Comp session saved',
+          note: options.queueOnly ? 'Operator marked lead as needing manual comp review.' : 'Operator saved manual comp review details.'
+        });
+      }
       if (typeof toast === 'function') toast(options.queueOnly ? 'Queued for comp review' : 'Comp session saved', 'success');
       return result.data;
     })

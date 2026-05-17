@@ -1481,6 +1481,7 @@ const LEAD_ACTIVITY_TYPES = new Set([
   'verification',
   'skip_trace',
   'comp_review',
+  'enrichment',
   'offer_review',
   'follow_up',
   'note'
@@ -1504,11 +1505,16 @@ function normalizeLeadActivity(input) {
   };
 }
 
-function getLeadActivities(leadId) {
+function getLeadActivities(leadId, options) {
+  options = options || {};
+  var limit = Number(options.limit || 50);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 50;
+  limit = Math.min(Math.floor(limit), 200);
   const data = readDB();
   return (data.activities || [])
     .filter(function(activity) { return activity.lead_id === leadId; })
-    .sort(function(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+    .sort(function(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); })
+    .slice(0, limit);
 }
 
 function addLeadActivity(leadId, input) {
