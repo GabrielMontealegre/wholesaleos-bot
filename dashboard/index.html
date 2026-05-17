@@ -748,6 +748,9 @@ function renderManualDealAnalyzer() {
   function numberInput(id, label, placeholder) {
     return '<div><div style="' + labelStyle + '">' + label + '</div><input id="' + id + '" inputmode="decimal" oninput="updateManualDealAnalyzer()" placeholder="' + placeholder + '" style="' + fieldStyle + '"></div>';
   }
+  function researchTextarea(id, label, placeholder) {
+    return '<div><div style="' + labelStyle + '">' + label + '</div><textarea id="' + id + '" oninput="updateManualDealAnalyzer()" placeholder="' + placeholder + '" style="' + fieldStyle + ';min-height:62px;resize:vertical;font-size:11px;line-height:1.45"></textarea></div>';
+  }
   function compRow(i) {
     return '<div style="display:grid;grid-template-columns:1.3fr .8fr .55fr .45fr .45fr .75fr;gap:6px;margin-bottom:6px">' +
       '<input id="mda-comp-' + i + '-address" oninput="updateManualDealAnalyzer()" placeholder="Comp address" style="' + fieldStyle + ';padding:7px 8px;font-size:11px">' +
@@ -768,6 +771,7 @@ function renderManualDealAnalyzer() {
       <div style="font-size:11px;color:#946c00;background:#fef9e7;border:1px solid #f4d35e;border-radius:8px;padding:8px 10px">Use verified comps and county figures before making an offer.</div>
     </div>
     ${mdaRenderLoadedLeadBanner()}
+    ${mdaRenderResearchWorkspace(labelStyle, fieldStyle, researchTextarea)}
 
     <div style="display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,.95fr);gap:14px;align-items:start">
       <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:14px">
@@ -823,10 +827,10 @@ function renderManualDealAnalyzer() {
           </div>
           <div id="mda-negotiation-notes" style="font-size:10px;color:#cbd5e1;line-height:1.55">Enter ARV and price basis to build offer guidance.</div>
         </div>
-        <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:10px">
-          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:7px">Seller Questions / Call Guide</div>
-          <div id="mda-call-guide" style="font-size:10px;color:#cbd5e1;line-height:1.55">Enter deal details to build call guidance.</div>
-        </div>
+        <details style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:10px">
+          <summary style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:7px;cursor:pointer">Seller Questions / Call Guide</summary>
+          <div id="mda-call-guide" style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:8px">Enter deal details to build call guidance.</div>
+        </details>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px">
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">MAO</div><div id="mda-mao" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
           <div style="background:#0e1a2d;border:1px solid #334155;border-radius:8px;padding:10px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800">Spread</div><div id="mda-spread" style="font-size:18px;font-weight:900;color:#e2e8f0">$0</div></div>
@@ -852,6 +856,106 @@ function renderManualDealAnalyzer() {
       </div>
     </div>
   </div>`;
+}
+
+function mdaResearchLeadValue(key) {
+  var lead = MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.lead ? MDA_LEAD_PREFILL.lead : {};
+  if (key === 'address') return (MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.address) || mdaLeadAddress(lead) || '';
+  if (key === 'owner') return mdaLeadPick(lead, ['owner_name', 'owner', 'seller_name', 'name', 'source_details.owner_name']) || '';
+  if (key === 'record') return mdaLeadPick(lead, ['source_record_url', 'record_url', 'lead_intelligence.evidence.urls.source_record_url', 'source_details.source_record_url']) || '';
+  if (key === 'query') return mdaLeadPick(lead, ['source_query_url', 'query_url', 'lead_intelligence.evidence.urls.source_query_url', 'source_details.source_query_url']) || '';
+  if (key === 'source') return mdaLeadPick(lead, ['source_url', 'url', 'lead_intelligence.evidence.urls.source_url', 'source_details.source_url']) || '';
+  if (key === 'reference') return (MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.referenceId) || '';
+  if (key === 'taxes') return mdaLeadPickNumber(lead, ['tax_due', 'taxes_due', 'taxes_liens', 'lien_amount', 'lead_intelligence.timeline.tax_due']);
+  if (key === 'auction') return mdaLeadPick(lead, ['auction_date', 'sale_date', 'tax_sale_date', 'lead_intelligence.timeline.auction_date']) || '';
+  return '';
+}
+
+function mdaResearchLinks() {
+  var address = mdaResearchLeadValue('address');
+  var owner = mdaResearchLeadValue('owner');
+  var ownerQuery = [owner, address].filter(Boolean).join(' ');
+  return [
+    { id:'record', label:'County/source record', url:mdaResearchLeadValue('record') || mdaResearchLeadValue('query') || mdaResearchLeadValue('source'), hint:'Verify the saved source record first.' },
+    { id:'zillow', label:'Zillow search', url:leadEnrichmentSearchUrl('zillow', address), hint:'Search only; no guessed property URL.' },
+    { id:'redfin', label:'Redfin search', url:leadEnrichmentSearchUrl('redfin', address), hint:'Search only; no guessed property URL.' },
+    { id:'realtor', label:'Realtor search', url:leadEnrichmentSearchUrl('realtor', address), hint:'Search only; no guessed property URL.' },
+    { id:'maps', label:'Google Maps', url:leadEnrichmentSearchUrl('maps', address), hint:'Confirm location and surroundings.' },
+    { id:'street', label:'Street View', url:leadEnrichmentSearchUrl('street', address), hint:'Check visible condition cues manually.' },
+    { id:'cyber', label:'CyberBackgroundChecks', url:leadEnrichmentSearchUrl('cyber', ownerQuery || address), hint:'Manual owner/contact search.' },
+    { id:'fastpeople', label:'FastPeopleSearch', url:leadEnrichmentSearchUrl('fastpeople', ownerQuery || address), hint:'Manual owner/contact search.' },
+    { id:'whitepages', label:'Whitepages', url:leadEnrichmentSearchUrl('whitepages', ownerQuery || address), hint:'Optional manual lookup.' }
+  ];
+}
+
+function mdaRenderResearchWorkspace(labelStyle, fieldStyle, textarea) {
+  function metric(label, value, id, color) {
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;min-width:0">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;letter-spacing:.04em;margin-bottom:3px">' + label + '</div>' +
+      '<div id="' + id + '" style="font-size:12px;color:' + (color || '#e5e7eb') + ';font-weight:900;line-height:1.35;word-break:break-word">' + mdaEscapeHtml(value || '-') + '</div>' +
+    '</div>';
+  }
+  function linkButton(link) {
+    var disabled = !link.url;
+    return '<a id="mda-research-link-' + link.id + '" href="' + (disabled ? '#' : mdaEscapeAttr(link.url)) + '" target="_blank" title="' + mdaEscapeAttr(link.hint || '') + '" style="font-size:10px;font-weight:900;text-decoration:none;border:1px solid #334155;border-radius:999px;padding:6px 9px;background:' + (disabled ? '#111827' : '#172036') + ';color:' + (disabled ? '#64748b' : '#f4c542') + ';pointer-events:' + (disabled ? 'none' : 'auto') + '">' + mdaEscapeHtml(link.label) + '</a>';
+  }
+  var ref = mdaResearchLeadValue('reference') || 'Standalone';
+  var address = mdaResearchLeadValue('address') || 'No lead loaded';
+  var taxPressure = mdaResearchLeadValue('taxes') ? mdaMoney(mdaResearchLeadValue('taxes')) : 'Not entered';
+  var timing = mdaResearchLeadValue('auction') || 'Timing not verified';
+  var links = mdaResearchLinks().map(linkButton).join('');
+  var checklist = [
+    ['verify_source','Verify source record','Open county/source record first, confirm parcel/taxes/timing, then paste notes below.'],
+    ['check_comps','Check Zillow/Redfin/Realtor comps','Use safe search links and enter 3-5 sold comps.'],
+    ['check_maps','Check Google Maps / Street View','Confirm location, exterior cues, access, and neighborhood context.'],
+    ['contact_lookup','Search owner/contact manually','Use people-search links; do not assume phone/email exists.'],
+    ['enter_comps','Enter 3-5 comps','Paste sold prices and sqft into the comp section.'],
+    ['enter_repairs','Enter repair estimate','Use condition notes, photos, or walkthrough budget.'],
+    ['confirm_arv','Confirm ARV','Use manual ARV or comp-derived ARV range.'],
+    ['review_offer','Review MAO / offer','Only after verification, comps, ARV, and repairs are present.']
+  ].map(function(step) {
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="font-size:11px;color:#f8fafc;font-weight:900">' + step[1] + '</div><span id="mda-research-step-' + step[0] + '" style="font-size:9px;font-weight:900;border-radius:999px;padding:3px 7px;background:#374151;color:#d1d5db">Missing</span></div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:4px">' + step[2] + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div style="background:#07111f;border:1px solid #1f2937;border-radius:12px;padding:13px;margin:0 0 14px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:13px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Deal Research Workspace</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Manual comping, verification, and contact lookup for one selected lead. No scraping or fake data.</div></div>' +
+      '<div id="mda-ready-pill" style="font-size:10px;color:#fecaca;background:#7f1d1d;border:1px solid #991b1b;border-radius:999px;padding:5px 9px;font-weight:900">Not ready</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px">' +
+      metric('Lead ref', ref, 'mda-top-ref', '#f4c542') +
+      metric('Address', address, 'mda-top-address') +
+      metric('Tax/lien pressure', taxPressure, 'mda-top-tax') +
+      metric('Timing status', timing, 'mda-top-timing') +
+      metric('ARV', '-', 'mda-top-arv', '#10b981') +
+      metric('Repairs', '-', 'mda-top-repairs') +
+      metric('MAO', '-', 'mda-top-mao') +
+      metric('Spread', '-', 'mda-top-spread') +
+      metric('Ready status', 'Not ready', 'mda-top-ready', '#fca5a5') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:10px;align-items:start">' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:10px">' +
+        '<div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:8px">Research Checklist</div>' +
+        '<div id="mda-research-checklist" style="display:grid;gap:7px">' + checklist + '</div>' +
+      '</div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:10px">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:900">Research Links</div><div id="mda-research-first-link" style="font-size:10px;color:#94a3b8">Click county/source record first.</div></div>' +
+        '<div id="mda-research-links" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + links + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          textarea('mda-owner-notes', 'Owner/contact notes', 'Paste owner/contact findings. Do not invent phone/email.') +
+          textarea('mda-source-verification-notes', 'Source verification notes', 'Confirm source record, parcel, tax/lien amount, dates, and title concerns.') +
+          textarea('mda-condition-notes', 'Property condition notes', 'Paste Street View, photos, walkthrough, roof/HVAC/plumbing/electrical/foundation notes.') +
+          textarea('mda-comp-notes', 'Comp notes', 'Paste comp rationale, rejected comps, PPSF notes, and neighborhood boundaries.') +
+          textarea('mda-contact-lookup-result', 'Contact lookup result', 'No contact found, possible phone/email, owner mismatch, or needs skip trace.') +
+          textarea('mda-verification-result', 'Verification result', 'Verified, needs recheck, title risk, redemption risk, occupancy unknown, etc.') +
+        '</div>' +
+        '<div id="mda-ready-gate" style="margin-top:10px;background:#111827;border:1px solid #334155;border-radius:8px;padding:9px;font-size:11px;color:#cbd5e1;line-height:1.5">Not ready for offer review. Enter source verification, 3+ comps, ARV, and repairs.</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function mdaRaw(id) {
@@ -891,6 +995,133 @@ function mdaSetGuide(id, sections) {
     return '<div style="margin-bottom:8px"><div style="color:#f4c542;font-weight:800;text-transform:uppercase;font-size:9px;margin-bottom:3px">' + section.title + '</div>' +
       section.items.map(function(item) { return '<div style="margin-bottom:3px">- ' + item + '</div>'; }).join('') + '</div>';
   }).join('');
+}
+
+function mdaLooksUrl(value) {
+  return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function mdaResearchQueryFromInputs() {
+  var loadedAddress = mdaResearchLeadValue('address');
+  var sourceText = mdaRaw('mda-source');
+  if (loadedAddress) return loadedAddress;
+  return sourceText.split('|').map(function(part) { return part.trim(); }).filter(function(part) {
+    return part && !mdaLooksUrl(part);
+  })[0] || sourceText;
+}
+
+function mdaSetResearchLink(id, url) {
+  var el = document.getElementById('mda-research-link-' + id);
+  if (!el) return;
+  if (url) {
+    el.href = url;
+    el.style.pointerEvents = 'auto';
+    el.style.color = '#f4c542';
+    el.style.background = '#172036';
+  } else {
+    el.href = '#';
+    el.style.pointerEvents = 'none';
+    el.style.color = '#64748b';
+    el.style.background = '#111827';
+  }
+}
+
+function mdaUpdateResearchLinks() {
+  var query = mdaResearchQueryFromInputs();
+  var owner = mdaResearchLeadValue('owner');
+  var ownerQuery = [owner, query].filter(Boolean).join(' ');
+  var sourceInput = mdaRaw('mda-source');
+  var recordUrl = mdaResearchLeadValue('record') || mdaResearchLeadValue('query') || mdaResearchLeadValue('source') || (mdaLooksUrl(sourceInput) ? sourceInput : '');
+  mdaSetResearchLink('record', recordUrl);
+  mdaSetResearchLink('zillow', leadEnrichmentSearchUrl('zillow', query));
+  mdaSetResearchLink('redfin', leadEnrichmentSearchUrl('redfin', query));
+  mdaSetResearchLink('realtor', leadEnrichmentSearchUrl('realtor', query));
+  mdaSetResearchLink('maps', leadEnrichmentSearchUrl('maps', query));
+  mdaSetResearchLink('street', leadEnrichmentSearchUrl('street', query));
+  mdaSetResearchLink('cyber', leadEnrichmentSearchUrl('cyber', ownerQuery || query));
+  mdaSetResearchLink('fastpeople', leadEnrichmentSearchUrl('fastpeople', ownerQuery || query));
+  mdaSetResearchLink('whitepages', leadEnrichmentSearchUrl('whitepages', ownerQuery || query));
+  var first = document.getElementById('mda-research-first-link');
+  if (first) first.textContent = recordUrl ? 'Click county/source record first.' : 'No source URL loaded; start with address search links.';
+}
+
+function mdaSetResearchStep(key, status) {
+  var el = document.getElementById('mda-research-step-' + key);
+  if (!el) return;
+  var styles = {
+    complete: { text: 'Complete', bg: '#064e3b', color: '#bbf7d0', border: '#10b981' },
+    review: { text: 'Needs review', bg: '#451a03', color: '#fed7aa', border: '#f59e0b' },
+    missing: { text: 'Missing', bg: '#374151', color: '#d1d5db', border: '#4b5563' }
+  };
+  var style = styles[status] || styles.missing;
+  el.textContent = style.text;
+  el.style.background = style.bg;
+  el.style.color = style.color;
+  el.style.border = '1px solid ' + style.border;
+}
+
+function mdaUpdateResearchWorkspace(data) {
+  var sourceNotes = mdaRaw('mda-source-verification-notes');
+  var verificationResult = mdaRaw('mda-verification-result');
+  var conditionNotes = mdaRaw('mda-condition-notes');
+  var ownerNotes = mdaRaw('mda-owner-notes');
+  var contactResult = mdaRaw('mda-contact-lookup-result');
+  var compNotes = mdaRaw('mda-comp-notes');
+  var sourceInput = mdaRaw('mda-source');
+  var hasSource = !!(sourceInput || mdaResearchLeadValue('record') || mdaResearchLeadValue('source'));
+  var sourceVerified = !!(sourceNotes || verificationResult);
+  var hasAddress = !!mdaResearchQueryFromInputs();
+  var compsReady = data.comps.length >= 3;
+  var compsPartial = data.comps.length > 0 && data.comps.length < 3;
+  var hasArv = data.arv > 0;
+  var hasRepairs = data.repairs > 0;
+  var hasDealBasis = data.dealBasis > 0;
+  var mapsChecked = !!conditionNotes;
+  var contactChecked = !!(ownerNotes || contactResult);
+  var readyMissing = [];
+  if (!sourceVerified) readyMissing.push(hasSource ? 'source verification notes/result' : 'source record or address plus verification notes');
+  if (!compsReady) readyMissing.push('3+ manual sold comps');
+  if (!hasArv) readyMissing.push('ARV');
+  if (!hasRepairs) readyMissing.push('repair estimate');
+  if (!hasDealBasis) readyMissing.push('asking price or opening bid for offer review');
+  var ready = readyMissing.length === 0;
+
+  mdaUpdateResearchLinks();
+  mdaSetResearchStep('verify_source', sourceVerified ? 'complete' : (hasSource ? 'review' : 'missing'));
+  mdaSetResearchStep('check_comps', compsReady ? 'complete' : (compsPartial || compNotes ? 'review' : 'missing'));
+  mdaSetResearchStep('check_maps', mapsChecked ? 'complete' : (hasAddress ? 'review' : 'missing'));
+  mdaSetResearchStep('contact_lookup', contactChecked ? 'complete' : (mdaResearchLeadValue('owner') ? 'review' : 'missing'));
+  mdaSetResearchStep('enter_comps', compsReady ? 'complete' : (compsPartial ? 'review' : 'missing'));
+  mdaSetResearchStep('enter_repairs', hasRepairs ? (conditionNotes ? 'complete' : 'review') : 'missing');
+  mdaSetResearchStep('confirm_arv', hasArv ? (compsReady || data.manualArv ? 'complete' : 'review') : 'missing');
+  mdaSetResearchStep('review_offer', ready ? 'complete' : (hasArv && hasRepairs && hasDealBasis ? 'review' : 'missing'));
+
+  mdaSet('mda-top-ref', (MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.referenceId) || 'Standalone');
+  mdaSet('mda-top-address', mdaResearchQueryFromInputs() || 'No lead loaded');
+  mdaSet('mda-top-tax', data.taxes ? mdaMoney(data.taxes) : 'Not entered');
+  mdaSet('mda-top-timing', mdaResearchLeadValue('auction') || 'Timing not verified');
+  mdaSet('mda-top-arv', hasArv ? mdaMoney(data.arv) : '-', hasArv ? '#10b981' : '#fca5a5');
+  mdaSet('mda-top-repairs', hasRepairs ? mdaMoney(data.repairs) : '-', hasRepairs ? '#e5e7eb' : '#fca5a5');
+  mdaSet('mda-top-mao', data.mao ? mdaMoney(data.mao) : '-', data.mao >= 0 ? '#e5e7eb' : '#ef4444');
+  mdaSet('mda-top-spread', hasDealBasis && hasArv ? mdaMoney(data.spread) : '-', data.spread > 0 ? '#10b981' : '#ef4444');
+  mdaSet('mda-top-ready', ready ? 'Ready for offer review' : 'Not ready', ready ? '#bbf7d0' : '#fca5a5');
+
+  var pill = document.getElementById('mda-ready-pill');
+  if (pill) {
+    pill.textContent = ready ? 'Ready for offer review' : 'Not ready for offer review';
+    pill.style.background = ready ? '#064e3b' : '#7f1d1d';
+    pill.style.borderColor = ready ? '#10b981' : '#991b1b';
+    pill.style.color = ready ? '#bbf7d0' : '#fecaca';
+  }
+  var gate = document.getElementById('mda-ready-gate');
+  if (gate) {
+    gate.innerHTML = ready
+      ? '<strong style="color:#86efac">Ready for offer review.</strong> Source verification, 3+ comps, ARV, repairs, and price basis are present. Review MAO/offer before committing.'
+      : '<strong style="color:#fca5a5">Not ready for offer review.</strong> Missing: ' + readyMissing.map(mdaEscapeHtml).join(', ') + '.';
+    gate.style.borderColor = ready ? '#10b98166' : '#ef444466';
+  }
+
+  return { ready: ready, missing: readyMissing };
 }
 
 var MDA_LAST_COPY = null;
@@ -1110,8 +1341,11 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
     { label: 'Skip trace', value: skipTracePriority }
   ].filter(function(item) { return mdaLeadText(item.value); });
   return {
+    lead: lead,
     leadId: lead.id,
     referenceId: referenceId,
+    address: address,
+    sourceUrls: sourceUrls,
     label: address || ownerName || lead.id || 'Selected lead',
     values: values,
     meta: meta,
@@ -1591,6 +1825,17 @@ function updateManualDealAnalyzer() {
     }
   ];
 
+  var researchState = mdaUpdateResearchWorkspace({
+    comps: comps,
+    arv: arv,
+    manualArv: manualArv,
+    repairs: repairs,
+    dealBasis: dealBasis,
+    mao: mao,
+    spread: spread,
+    taxes: taxes
+  });
+
   MDA_LAST_COPY = {
     leadReference: MDA_LEAD_PREFILL ? MDA_LEAD_PREFILL.referenceId : '',
     source: mdaRaw('mda-source'),
@@ -1611,7 +1856,9 @@ function updateManualDealAnalyzer() {
     arvRange: compStats.suggestedArv ? mdaMoney(compStats.rangeLow) + ' - ' + mdaMoney(compStats.rangeHigh) + (manualArv ? ' suggested range' : ' used for ARV') : 'No comps yet',
     taxes: taxes,
     openingBid: openingBid,
-    repairs: repairs
+    repairs: repairs,
+    readyForOfferReview: researchState.ready,
+    researchMissing: researchState.missing
   };
 
   mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
