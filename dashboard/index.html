@@ -642,7 +642,7 @@ function addNewUser() {
 function initApp() {
 
   updateSidebarStats();
-  document.getElementById('nav-lead-count').textContent = APP.leads.length;
+  if (typeof updateLeadsBadge === 'function') updateLeadsBadge();
   const pending = APP.followups.filter(f => f.status === 'pending').length;
   document.getElementById('nav-fu-count').textContent = pending;
   document.getElementById('bot-status-text').textContent = 'Online · Webhook';
@@ -656,7 +656,7 @@ function initApp() {
 
 function updateSidebarStats() {
   var newLeadCount = APP.leads.filter(function(l) { return l.status === 'New Lead' || !l.status; }).length;
-  document.getElementById('sb-leads').textContent = APP.leads.length;
+  document.getElementById('sb-leads').textContent = (typeof loadedLeadCount === 'function' ? loadedLeadCount() : APP.leads.length).toLocaleString();
   // ⑤ Pipeline opportunity: show potential fees from active leads, not just closed
   const closedFees = APP.assignments.filter(a => a.status === 'Closed').reduce((s, a) => s + (a.fee || 0), 0);
   const pipelineFees = APP.leads.filter(l => (l.fee_lo||0) > 0 && l.status !== 'Dead' && l.status !== 'Closed').reduce((s, l) => s + (l.fee_lo||0), 0);
@@ -10223,6 +10223,109 @@ function openLeadModal(leadId) {
   // Contact lookup is operator-controlled from the enrichment tools. Opening a lead does not run skip trace.
 }
 
+function setLeadQuickActionStatus(leadId, message, tone) {
+  var safeId = leadActivityDomId(leadId);
+  var el = document.getElementById('lead-quick-action-status-' + safeId);
+  if (el) {
+    var color = tone === 'error' ? '#fca5a5' : tone === 'success' ? '#86efac' : '#cbd5e1';
+    el.style.color = color;
+    el.textContent = message;
+  }
+  if (typeof toast === 'function') toast(message, tone === 'error' ? 'error' : 'success');
+}
+
+function openLeadDetailSection(leadId, sectionKey, fallbackMessage) {
+  var safeId = leadActivityDomId(leadId);
+  var section = document.getElementById('lead-' + sectionKey + '-section-' + safeId);
+  if (section) {
+    section.open = true;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
+  }
+  if (fallbackMessage) setLeadQuickActionStatus(leadId, fallbackMessage, 'error');
+  return false;
+}
+
+function quickAnalyzeLeadDeal(leadId) {
+  if (typeof analyzeLeadInManualDealAnalyzer === 'function') {
+    analyzeLeadInManualDealAnalyzer(leadId);
+    return;
+  }
+  setLeadQuickActionStatus(leadId, 'Manual Deal Analyzer is not available yet.', 'error');
+}
+
+function quickAddLeadActivity(leadId) {
+  var safeId = leadActivityDomId(leadId);
+  var note = document.getElementById('lead-activity-note-' + safeId);
+  openLeadDetailSection(leadId, 'operations', 'Activity Memory is not available yet.');
+  if (note) {
+    note.focus();
+    setLeadQuickActionStatus(leadId, 'Activity Memory opened. Add the interaction details and save.', 'success');
+    return;
+  }
+  setLeadQuickActionStatus(leadId, 'Activity Memory is not available yet.', 'error');
+}
+
+function quickQueueLeadForCompReview(leadId) {
+  setLeadQuickActionStatus(leadId, 'Opening Comp Session. No comps are retrieved automatically.', 'success');
+  if (typeof queueLeadForCompReview === 'function') {
+    queueLeadForCompReview(leadId)
+      .then(function(){ setLeadQuickActionStatus(leadId, 'Queued for comp review. Add manual comps in the Comp Session.', 'success'); })
+      .catch(function(e){ setLeadQuickActionStatus(leadId, e.message || 'Could not queue comp review.', 'error'); });
+    return;
+  }
+  openLeadDetailSection(leadId, 'deal', 'Comp Session is not available yet.');
+}
+
+function quickQueueLeadForEnrichment(leadId) {
+  setLeadQuickActionStatus(leadId, 'Opening Enrichment Launchpad. No skip trace or scraping is running.', 'success');
+  if (typeof queueLeadForEnrichment === 'function') {
+    queueLeadForEnrichment(leadId)
+      .then(function(){ setLeadQuickActionStatus(leadId, 'Enrichment requested. Use the manual launch links below.', 'success'); })
+      .catch(function(e){ setLeadQuickActionStatus(leadId, e.message || 'Could not queue enrichment.', 'error'); });
+    return;
+  }
+  openLeadDetailSection(leadId, 'enrichment', 'Enrichment Launchpad is not available yet.');
+}
+
+function quickVerifyLeadSource(leadId) {
+  openLeadDetailSection(leadId, 'verification', 'Verification guidance is not available yet.');
+  setLeadQuickActionStatus(leadId, 'Verification requested. Recheck the source manually before relying on it.', 'success');
+  if (typeof saveSourceRecheckState === 'function') {
+    saveSourceRecheckState(leadId, 'verification_requested');
+  }
+}
+
+function quickAssignLead(leadId) {
+  var safeId = leadActivityDomId(leadId);
+  openLeadDetailSection(leadId, 'operations', 'Assignment controls are not available yet.');
+  var state = document.getElementById('lead-workflow-state-' + safeId);
+  var assignedTo = document.getElementById('lead-assigned-to-' + safeId);
+  if (assignedTo) assignedTo.focus();
+  if (state || assignedTo) {
+    setLeadQuickActionStatus(leadId, 'Assignment controls opened. Update state or assignee and save.', 'success');
+    return;
+  }
+  setLeadQuickActionStatus(leadId, 'Assignment controls are not available yet.', 'error');
+}
+
+function quickMarkLeadContacted(leadId) {
+  var safeId = leadActivityDomId(leadId);
+  var typeEl = document.getElementById('lead-activity-type-' + safeId);
+  var outcomeEl = document.getElementById('lead-activity-outcome-' + safeId);
+  var noteEl = document.getElementById('lead-activity-note-' + safeId);
+  openLeadDetailSection(leadId, 'operations', 'Activity Memory is required before marking contacted.');
+  if (!typeEl || !outcomeEl || !noteEl || typeof submitLeadActivity !== 'function') {
+    setLeadQuickActionStatus(leadId, 'Activity Memory is required before marking contacted.', 'error');
+    return;
+  }
+  typeEl.value = 'call_attempt';
+  outcomeEl.value = 'Contact attempt';
+  noteEl.value = 'Marked contacted from quick action.';
+  setLeadQuickActionStatus(leadId, 'Recording contact attempt in Activity Memory.', 'success');
+  submitLeadActivity(leadId);
+}
+
 function renderLeadDetailSection(title, subtitle, body, open, id) {
   return '<details ' + (open ? 'open ' : '') + (id ? 'id="' + id + '" ' : '') +
     'style="margin:10px 0;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb;overflow:hidden">' +
@@ -10296,14 +10399,15 @@ function renderLeadQuickActions(lead) {
   return '<div style="margin:0 0 10px;padding:10px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
     '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em;margin-bottom:8px">Quick Actions</div>' +
     '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
-      btn('Analyze Deal', 'event.stopPropagation();analyzeLeadInManualDealAnalyzer(' + JSON.stringify(lid) + ')', 'gold') +
-      btn('Add Activity', 'event.stopPropagation();var d=document.getElementById("lead-activity-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var n=document.getElementById("lead-activity-note-' + safeId + '");if(n)n.focus();', '') +
-      btn('Queue For Comp Review', 'event.stopPropagation();queueLeadForCompReview(' + JSON.stringify(lid) + ');', 'blue') +
-      btn('Queue For Enrichment', 'event.stopPropagation();queueLeadForEnrichment(' + JSON.stringify(lid) + ');', 'blue') +
-      btn('Verify Source', 'event.stopPropagation();if(typeof saveSourceRecheckState==="function")saveSourceRecheckState(' + JSON.stringify(lid) + ',"verification_requested");', '') +
-      btn('Assign Lead', 'event.stopPropagation();var d=document.getElementById("lead-operations-section-' + safeId + '");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}var a=document.getElementById("lead-assigned-to-' + safeId + '");if(a)a.focus();', '') +
-      btn('Mark Contacted', 'event.stopPropagation();if(typeof updateLeadStatus==="function")updateLeadStatus(' + JSON.stringify(lid) + ',"Contacted");', '') +
+      btn('Analyze Deal', 'event.stopPropagation();quickAnalyzeLeadDeal(' + JSON.stringify(lid) + ')', 'gold') +
+      btn('Add Activity', 'event.stopPropagation();quickAddLeadActivity(' + JSON.stringify(lid) + ')', '') +
+      btn('Queue For Comp Review', 'event.stopPropagation();quickQueueLeadForCompReview(' + JSON.stringify(lid) + ');', 'blue') +
+      btn('Queue For Enrichment', 'event.stopPropagation();quickQueueLeadForEnrichment(' + JSON.stringify(lid) + ');', 'blue') +
+      btn('Verify Source', 'event.stopPropagation();quickVerifyLeadSource(' + JSON.stringify(lid) + ');', '') +
+      btn('Assign Lead', 'event.stopPropagation();quickAssignLead(' + JSON.stringify(lid) + ');', '') +
+      btn('Mark Contacted', 'event.stopPropagation();quickMarkLeadContacted(' + JSON.stringify(lid) + ');', '') +
     '</div>' +
+    '<div id="lead-quick-action-status-' + safeId + '" style="font-size:10px;color:#94a3b8;margin-top:8px;min-height:14px">Choose an action to continue.</div>' +
   '</div>';
 }
 
@@ -16089,10 +16193,21 @@ function getDealRefId(lead) {
 }
 function assignRefIds(leads) { return leads.map(function(l){ if(!l.ref_id) l.ref_id=getDealRefId(l); return l; }); }
 
+function loadedLeadCount() {
+  var leads = Array.isArray(APP.leads) ? APP.leads : [];
+  return leads.length;
+}
+
 function updateLeadsBadge() {
-  var b=document.getElementById('nav-lead-count'); if(!b) return;
-  var n=(APP.leads||[]).filter(function(l){return !l.status||l.status==='New Lead'||l.status==='Uncontacted';}).length;
-  b.textContent=n; b.style.background=n>0?'#ff3b30':'#34c759'; b.style.display='';
+  var n = loadedLeadCount();
+  var b=document.getElementById('nav-lead-count');
+  if(b) {
+    b.textContent=n.toLocaleString();
+    b.style.background=n>0?'#ff3b30':'#34c759';
+    b.style.display='';
+  }
+  var sb=document.getElementById('sb-leads');
+  if(sb) sb.textContent=n.toLocaleString();
 }
 
 function matchBuyersToLead(lead, buyers) {
