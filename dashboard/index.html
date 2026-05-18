@@ -17528,6 +17528,10 @@ function researchCaptureDraft(leadId) {
 
 function updateResearchSessionCompPreview(leadId) {
   researchCaptureDraft(leadId);
+  researchRefreshSessionCompPreview(leadId);
+}
+
+function researchRefreshSessionCompPreview(leadId) {
   var lead = (APP.leads || []).find(function(l){ return String(l.id) === String(leadId); }) || {};
   var comps = researchLeadComps(lead);
   var stats = researchCompStats(comps);
@@ -17535,6 +17539,249 @@ function updateResearchSessionCompPreview(leadId) {
   if (el) {
     el.innerHTML = renderResearchCompSummaryHtml(comps, stats, lead);
   }
+}
+
+function researchLocalCompBridgeBaseUrl() {
+  var stored = '';
+  try { stored = localStorage.getItem('wholesaleos.localCompAgentUrl') || ''; } catch (e) { stored = ''; }
+  var fallback = 'http://127.0.0.1:8801';
+  var value = String(stored || fallback).trim().replace(/\/+$/, '');
+  return value || fallback;
+}
+
+function researchLocalCompBridgeSetBaseUrl(url) {
+  var value = String(url || '').trim().replace(/\/+$/, '');
+  if (!value) value = 'http://127.0.0.1:8801';
+  try { localStorage.setItem('wholesaleos.localCompAgentUrl', value); } catch (e) {}
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.localCompBridge) APP.researchSession.localCompBridge = {};
+  Object.keys(APP.researchSession.localCompBridge).forEach(function(leadId) {
+    if (APP.researchSession.localCompBridge[leadId]) {
+      APP.researchSession.localCompBridge[leadId].url = value;
+      APP.researchSession.localCompBridge[leadId].health = null;
+      APP.researchSession.localCompBridge[leadId].tabs = [];
+      APP.researchSession.localCompBridge[leadId].result = null;
+      APP.researchSession.localCompBridge[leadId].error = '';
+      APP.researchSession.localCompBridge[leadId].checkedAt = '';
+      APP.researchSession.localCompBridge[leadId].lastMessage = '';
+    }
+  });
+  if (typeof render === 'function') render();
+}
+
+function researchLocalCompBridgeState(leadId) {
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.localCompBridge) APP.researchSession.localCompBridge = {};
+  var id = String(leadId || '');
+  if (!APP.researchSession.localCompBridge[id]) APP.researchSession.localCompBridge[id] = {
+    url: researchLocalCompBridgeBaseUrl(),
+    health: null,
+    tabs: [],
+    session: null,
+    result: null,
+    error: '',
+    loadingHealth: false,
+    loadingCapture: false,
+    loadingScroll: false,
+    checkedAt: '',
+    autoCheckQueued: false,
+    lastMessage: ''
+  };
+  var state = APP.researchSession.localCompBridge[id];
+  state.url = researchLocalCompBridgeBaseUrl();
+  return state;
+}
+
+function researchLocalCompBridgeAutoCheck(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  if (state.autoCheckQueued || state.loadingHealth || state.checkedAt) return;
+  state.autoCheckQueued = true;
+  setTimeout(function() {
+    researchLocalCompBridgeCheck(leadId);
+  }, 0);
+}
+
+async function researchLocalCompBridgeCheck(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  var base = researchLocalCompBridgeBaseUrl();
+  state.loadingHealth = true;
+  state.error = '';
+  state.lastMessage = 'Checking local comp agent...';
+  if (typeof render === 'function') render();
+  try {
+    var healthRes = await fetch(base + '/health', { cache: 'no-store' });
+    var health = await healthRes.json().catch(function(){ return {}; });
+    if (!healthRes.ok || health.error) throw new Error(health.error || health.reason || 'Local comp agent health check failed');
+    var tabsRes = await fetch(base + '/tabs', { cache: 'no-store' });
+    var tabs = await tabsRes.json().catch(function(){ return {}; });
+    state.health = health;
+    state.tabs = Array.isArray(tabs.tabs) ? tabs.tabs : [];
+    state.checkedAt = new Date().toISOString();
+    state.lastMessage = health.ok ? 'Connected to local comp agent.' : 'Local comp agent responded but is not healthy.';
+  } catch (e) {
+    state.health = null;
+    state.tabs = [];
+    state.error = e.message || String(e);
+    state.checkedAt = new Date().toISOString();
+    state.lastMessage = 'Local comp agent offline or blocked.';
+    if (typeof toast === 'function') toast('Local Comp Agent unavailable: ' + state.error, 'error');
+  } finally {
+    state.loadingHealth = false;
+    state.autoCheckQueued = false;
+    if (typeof render === 'function') render();
+  }
+}
+
+function researchLocalCompCandidateToDraft(candidate) {
+  candidate = candidate || {};
+  var price = Number(candidate.price || 0) || 0;
+  var sqft = Number(candidate.sqft || 0) || 0;
+  var source = candidate.source ? 'Local Comp Agent - ' + candidate.source : 'Local Comp Agent';
+  var noteParts = [
+    'Unverified local browser candidate',
+    candidate.status || '',
+    candidate.confidence_reason || '',
+    candidate.url || '',
+    candidate.snippet || ''
+  ].filter(Boolean);
+  return {
+    address: candidate.address || candidate.title || '',
+    price: price,
+    sqft: sqft,
+    beds: candidate.beds || '',
+    baths: candidate.baths || '',
+    distance: '',
+    dom: '',
+    date: candidate.date || '',
+    source: source,
+    notes: noteParts.join(' | ').slice(0, 260),
+    ppsf: price && sqft ? price / sqft : 0
+  };
+}
+
+async function researchLocalCompBridgeCapture(leadId, scroll) {
+  var state = researchLocalCompBridgeState(leadId);
+  var base = researchLocalCompBridgeBaseUrl();
+  state.loadingCapture = !scroll;
+  state.loadingScroll = !!scroll;
+  state.error = '';
+  state.lastMessage = scroll ? 'Running one operator-triggered scroll and capture...' : 'Capturing visible comps...';
+  if (typeof render === 'function') render();
+  try {
+    var res = await fetch(base + (scroll ? '/scroll-and-capture-visible-comps' : '/capture-visible-comps'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ max_results: 5 })
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok || data.error) throw new Error(data.error || data.reason || 'Local comp capture failed');
+    state.result = data;
+    state.health = state.health || { ok: true, mode: 'localhost_only' };
+    state.lastMessage = (data.scroll_performed ? 'Scroll capture complete.' : 'Visible capture complete.') + ' ' + ((data.new_candidates_this_capture || 0)) + ' new candidate(s), ' + ((data.total_unique_candidates || (data.candidates || []).length || 0)) + ' total unique.';
+    if (typeof toast === 'function') toast('Local Comp Agent returned ' + ((data.candidates || []).length || 0) + ' candidate(s)', 'success');
+  } catch (e) {
+    state.error = e.message || String(e);
+    state.lastMessage = 'Local comp capture failed.';
+    if (typeof toast === 'function') toast('Local comp capture failed: ' + state.error, 'error');
+  } finally {
+    state.loadingCapture = false;
+    state.loadingScroll = false;
+    if (typeof render === 'function') render();
+  }
+}
+
+function researchLocalCompBridgeClear(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  state.result = null;
+  state.error = '';
+  state.lastMessage = 'Local capture session cleared.';
+  if (typeof toast === 'function') toast('Local capture session cleared', 'success');
+  if (typeof render === 'function') render();
+}
+
+function researchUseLocalCompCandidate(leadId, index) {
+  var state = researchLocalCompBridgeState(leadId);
+  var candidates = state.result && Array.isArray(state.result.candidates) ? state.result.candidates : [];
+  var candidate = candidates[index];
+  if (!candidate) {
+    if (typeof toast === 'function') toast('Local comp candidate not found', 'error');
+    return;
+  }
+  researchCaptureDraft(leadId);
+  var draft = researchSessionDraft(String(leadId));
+  if (draft.length >= 5) {
+    if (typeof toast === 'function') toast('Draft comp rows are full. Clear a row before accepting another candidate.', 'error');
+    return;
+  }
+  draft.push(researchLocalCompCandidateToDraft(candidate));
+  if (typeof toast === 'function') toast('Candidate added to draft comps. Verify before ARV.', 'success');
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function renderResearchLocalCompBridgeHtml(lead) {
+  var state = researchLocalCompBridgeState(lead.id);
+  researchLocalCompBridgeAutoCheck(lead.id);
+  var health = state.health || {};
+  var tabs = Array.isArray(state.tabs) ? state.tabs : [];
+  var result = state.result || {};
+  var candidates = Array.isArray(result.candidates) ? result.candidates : [];
+  var connected = !!health.ok;
+  var tabsText = tabs.length ? tabs.map(function(tab) {
+    return researchSafeText(tab.title || tab.url || 'Tab') + ' (' + researchSafeText(tab.source || 'page') + ')';
+  }).join(' · ') : 'No tabs loaded yet.';
+  var statusText = state.loadingHealth ? 'Checking local agent...' : (connected ? 'Connected' : (state.error ? 'Offline or blocked' : 'Not checked yet'));
+  var resultSummary = result && result.total_unique_candidates ? (result.new_candidates_this_capture + ' new / ' + result.total_unique_candidates + ' total unique') : 'No captures yet';
+  var resultNote = '';
+  if (result && (result.reason || result.suggested_manual_action || result.blocked || result.extraction_status === 'captcha_or_verification_detected' || result.extraction_status === 'unsupported_page')) {
+    resultNote = (result.blocked ? 'Blocked: ' : '') + researchSafeText(result.reason || result.extraction_status || '') + (result.suggested_manual_action ? ' ' + researchSafeText(result.suggested_manual_action) : '');
+  }
+  var candidateRows = candidates.map(function(candidate, index) {
+    var details = [
+      candidate.price ? mdaMoney(candidate.price) : 'Price not visible',
+      candidate.beds ? candidate.beds + ' bd' : '',
+      candidate.baths ? candidate.baths + ' ba' : '',
+      candidate.sqft ? candidate.sqft + ' sqft' : '',
+      candidate.status || '',
+      candidate.date || ''
+    ].filter(Boolean).join(' | ');
+    return '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:7px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+        '<div style="min-width:0;flex:1">' +
+          '<div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Unverified Candidate - ' + researchSafeText(candidate.source || 'local browser') + '</div>' +
+          '<div style="font-size:11px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(candidate.title || candidate.address || 'Untitled result') + '</div>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.45">' + researchSafeText(details) + '</div>' +
+          '<div style="font-size:10px;color:#94a3b8;line-height:1.45">' + researchSafeText(candidate.snippet || candidate.confidence_reason || '') + '</div>' +
+          '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Total unique candidates: ' + researchSafeText(String(result.total_unique_candidates || candidates.length || 0)) + '</div>' +
+          (candidate.url ? '<a href="' + mdaEscapeAttr(candidate.url) + '" target="_blank" style="font-size:10px;color:#93c5fd;text-decoration:none">Open result</a>' : '') +
+        '</div>' +
+        '<button type="button" onclick="researchUseLocalCompCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Use As Draft Comp</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  var setup = connected
+    ? '<div style="font-size:10px;color:#94a3b8;line-height:1.55">Local agent connected. Run visible capture first, then one-step scroll capture to add more unique candidates. No candidates are saved automatically.</div>'
+    : '<div style="font-size:10px;color:#fca5a5;line-height:1.55">Local agent not connected. Start the localhost Comp Agent, open Zillow/Redfin in the debug Chrome session, then click Check Local Agent. Endpoint defaults to <strong style="color:#e5e7eb">' + researchSafeText(state.url) + '</strong>.</div>';
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin:8px 0">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900">Local Comp Capture</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Connects Research Session to Gabriel&apos;s localhost comp agent for visible Zillow/Redfin candidates only.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+        '<input value="' + mdaEscapeAttr(state.url || researchLocalCompBridgeBaseUrl()) + '" onchange="researchLocalCompBridgeSetBaseUrl(this.value)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#e5e7eb;padding:6px 8px;min-width:220px" placeholder="http://127.0.0.1:8801">' +
+        '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 9px;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" ' + (state.loadingCapture ? 'disabled' : '') + ' style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 9px;cursor:pointer">Capture Visible</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',true)" ' + (state.loadingScroll ? 'disabled' : '') + ' style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 9px;cursor:pointer">Scroll + Capture</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeClear(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 9px;cursor:pointer">Clear Session View</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px">' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Connection</div><div style="font-size:12px;font-weight:900;color:' + (connected ? '#86efac' : '#fca5a5') + '">' + researchSafeText(statusText) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(state.lastMessage || 'Waiting for check.') + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Tabs</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + tabs.length + ' visible tab' + (tabs.length === 1 ? '' : 's') + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(tabsText) + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Latest Capture</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + researchSafeText(resultSummary) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + (result.scroll_performed ? 'One scroll per click performed.' : 'Visible capture only.') + (resultNote ? '<br><span style="color:#fca5a5">' + resultNote + '</span>' : '') + '</div></div>' +
+    '</div>' +
+    '<div style="margin-top:8px">' + setup + '</div>' +
+    (candidateRows ? candidateRows : '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:8px">No local candidates captured yet. Run visible capture or scroll + capture after opening the Zillow/Redfin results page in debug Chrome.</div>') +
+  '</div>';
 }
 
 function researchUseComp(leadId, row) {
@@ -17654,7 +17901,7 @@ function renderResearchCompScoutHtml(lead) {
         '<div style="font-size:10px;color:#cbd5e1;line-height:1.45">' + researchSafeText(price + (details ? ' | ' + details : '')) + '</div>' +
         '<div style="font-size:10px;color:#94a3b8;line-height:1.45">' + researchSafeText(candidate.snippet || candidate.confidence_reason || '') + '</div>' +
         (candidate.url ? '<a href="' + mdaEscapeAttr(candidate.url) + '" target="_blank" style="font-size:10px;color:#93c5fd;text-decoration:none">Open result</a>' : '') + '</div>' +
-        '<button type="button" onclick="researchAcceptScoutCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Use As Comp</button>' +
+        '<button type="button" onclick="researchAcceptScoutCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Use As Draft Comp</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -17803,6 +18050,7 @@ function renderResearchSessionLeadWorkspace(lead) {
     '<details open style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:9px"><summary style="cursor:pointer;font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Real Comp Workflow</summary>' +
       '<div style="background:#451a03;border:1px solid #f59e0b66;border-radius:8px;padding:8px;margin:8px 0;color:#fed7aa;font-size:10px;line-height:1.5"><strong>Draft comps - not saved to lead yet.</strong> Research Session comps are session-local only. Unsaved research session comps may be lost if you switch leads, refresh, or close the session.</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
+      renderResearchLocalCompBridgeHtml(lead) +
       renderResearchCompScoutHtml(lead) +
       '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Add Comp</button></div>' +
       '<div style="overflow-x:auto">' + rows + '</div>' +

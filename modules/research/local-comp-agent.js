@@ -16,9 +16,10 @@ function cleanText(value) {
 
 function json(res, status, body) {
   var payload = JSON.stringify(body, null, 2);
+  var origin = '*';
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': 'http://127.0.0.1',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Cache-Control': 'no-store'
