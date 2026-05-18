@@ -17211,8 +17211,15 @@ function researchNormalizeComp(comp) {
   comp = comp || {};
   var price = Number(comp.sold_price || comp.price || comp.list_price || comp.value || 0) || 0;
   var sqft = Number(comp.sqft || comp.square_feet || 0) || 0;
+  var saleType = String(comp.sale_type || comp.sold_or_list || comp.listing_type || '').toLowerCase();
+  if (!saleType) {
+    if (/sold/i.test(String(comp.status || comp.sale_status || ''))) saleType = 'sold';
+    else if (/list|active|for sale/i.test(String(comp.status || comp.sale_status || ''))) saleType = 'list';
+  }
+  if (saleType !== 'sold' && saleType !== 'list') saleType = 'list';
   return {
     address: comp.address || comp.property_address || '',
+    sale_type: saleType,
     price: price,
     sqft: sqft,
     beds: comp.beds || '',
@@ -17221,16 +17228,224 @@ function researchNormalizeComp(comp) {
     dom: comp.dom || '',
     date: comp.sold_date || comp.sale_date || comp.date || '',
     source: comp.source || '',
+    source_url: comp.source_url || comp.url || '',
+    confidence: comp.confidence || comp.verification_label || comp.confidence_level || 'unverified',
+    primary: !!comp.primary,
     notes: comp.notes || '',
     ppsf: price && sqft ? price / sqft : 0
   };
+}
+
+function researchBlankCompSlot() {
+  return {
+    address: '',
+    sale_type: 'list',
+    price: 0,
+    sqft: 0,
+    beds: '',
+    baths: '',
+    distance: '',
+    dom: '',
+    date: '',
+    source: '',
+    source_url: '',
+    confidence: 'unverified',
+    primary: false,
+    notes: '',
+    ppsf: 0
+  };
+}
+
+function researchCompSlotIsBlank(comp) {
+  comp = researchNormalizeComp(comp);
+  return !comp.address && !(comp.price > 0) && !(comp.sqft > 0) && !comp.beds && !comp.baths && comp.distance === '' && !comp.dom && !comp.date && !comp.source && !comp.source_url && !comp.notes && !comp.primary && String(comp.confidence || 'unverified') === 'unverified';
+}
+
+function researchCompSlotLabel(comp, row) {
+  comp = researchNormalizeComp(comp);
+  var mode = comp.sale_type === 'sold' ? 'Sold' : 'List';
+  var conf = comp.confidence ? String(comp.confidence).replace(/^unverified$/i, 'Unverified') : 'Unverified';
+  return 'Slot ' + (row + 1) + ' · ' + mode + ' · ' + conf + (comp.primary ? ' · Primary' : '');
+}
+
+function researchCompSlotAvgPpsf(comp) {
+  comp = researchNormalizeComp(comp);
+  return comp.price > 0 && comp.sqft > 0 ? comp.price / comp.sqft : 0;
+}
+
+function researchCompFieldId(leadId, row, field) {
+  return 'research-comp-' + leadActivityDomId(leadId) + '-' + row + '-' + field;
+}
+
+function researchCompFieldOnChange(leadId) {
+  return 'researchCaptureDraft(' + researchJsArg(leadId) + ');updateResearchSessionCompPreview(' + researchJsArg(leadId) + ')';
+}
+
+function researchCompTextInput(leadId, row, field, placeholder, value, extraStyle) {
+  return '<input id="' + researchCompFieldId(leadId, row, field) + '" oninput="' + researchCompFieldOnChange(leadId) + '" value="' + mdaEscapeAttr(value || '') + '" placeholder="' + placeholder + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0;' + (extraStyle || '') + '">';
+}
+
+function researchCompSelect(leadId, row, field, value, options, extraStyle) {
+  var html = '<select id="' + researchCompFieldId(leadId, row, field) + '" onchange="' + researchCompFieldOnChange(leadId) + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0;' + (extraStyle || '') + '">';
+  html += options.map(function(option) {
+    var optValue = typeof option === 'string' ? option : option.value;
+    var label = typeof option === 'string' ? option : option.label;
+    return '<option value="' + mdaEscapeAttr(optValue) + '"' + (String(value || '') === String(optValue) ? ' selected' : '') + '>' + mdaEscapeHtml(label) + '</option>';
+  }).join('');
+  html += '</select>';
+  return html;
+}
+
+function researchCompCheckbox(leadId, row, field, checked, label, extraStyle) {
+  return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#cbd5e1;font-weight:800;' + (extraStyle || '') + '">' +
+    '<input type="checkbox" id="' + researchCompFieldId(leadId, row, field) + '" onchange="researchSetPrimaryDraftCompFromCheckbox(' + researchJsArg(leadId) + ',' + row + ')"' + (checked ? ' checked' : '') + ' style="accent-color:#f4c542;transform:translateY(1px)">' +
+    researchSafeText(label || field) +
+  '</label>';
+}
+
+function researchSetPrimaryDraftComp(leadId, row) {
+  var draft = researchSessionDraft(String(leadId));
+  researchCaptureDraft(leadId);
+  draft = researchSessionDraft(String(leadId));
+  var comp = draft[row];
+  if (!comp || researchCompSlotIsBlank(comp)) {
+    if (typeof toast === 'function') toast('Fill the slot before marking it primary.', 'error');
+    return;
+  }
+  draft.forEach(function(slot, index) {
+    if (slot) slot.primary = index === row;
+  });
+  var safe = leadActivityDomId(leadId);
+  for (var i = 0; i < draft.length; i++) {
+    var el = document.getElementById('research-comp-' + safe + '-' + i + '-primary');
+    if (el) el.checked = i === row;
+  }
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function researchSetPrimaryDraftCompFromCheckbox(leadId, row) {
+  var draft = researchSessionDraft(String(leadId));
+  researchCaptureDraft(leadId);
+  draft = researchSessionDraft(String(leadId));
+  var comp = draft[row];
+  if (!comp || researchCompSlotIsBlank(comp)) {
+    if (typeof toast === 'function') toast('Fill the slot before marking it primary.', 'error');
+    return;
+  }
+  draft.forEach(function(slot, index) {
+    if (slot) slot.primary = index === row;
+  });
+  var safe = leadActivityDomId(leadId);
+  for (var i = 0; i < draft.length; i++) {
+    var el = document.getElementById('research-comp-' + safe + '-' + i + '-primary');
+    if (el) el.checked = i === row;
+  }
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function researchRemoveDraftCompSlot(leadId, row) {
+  var draft = researchSessionDraft(String(leadId));
+  researchCaptureDraft(leadId);
+  draft = researchSessionDraft(String(leadId));
+  draft[row] = researchBlankCompSlot();
+  while (draft.length < 5) draft.push(researchBlankCompSlot());
+  if (typeof toast === 'function') toast('Comp slot cleared.', 'success');
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function researchInsertDraftComp(leadId, comp) {
+  var draft = researchSessionDraft(String(leadId));
+  researchCaptureDraft(leadId);
+  draft = researchSessionDraft(String(leadId));
+  var normalized = researchNormalizeComp(comp);
+  var insertIndex = -1;
+  for (var i = 0; i < 5; i++) {
+    if (researchCompSlotIsBlank(draft[i])) {
+      insertIndex = i;
+      break;
+    }
+  }
+  if (insertIndex === -1 && draft.length < 5) insertIndex = draft.length;
+  if (insertIndex === -1) {
+    if (typeof toast === 'function') toast('All 5 comp slots are full. Clear one first.', 'error');
+    return false;
+  }
+  while (draft.length < 5) draft.push(researchBlankCompSlot());
+  draft[insertIndex] = normalized;
+  if (typeof toast === 'function') toast('Candidate added to a draft slot. Verify before ARV.', 'success');
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof render === 'function') render();
+  return true;
+}
+
+function researchRenderCompSlotHtml(lead, row, comp) {
+  lead = lead || {};
+  comp = researchNormalizeComp(comp || researchBlankCompSlot());
+  var safeLeadId = researchJsArg(lead.id);
+  var primary = !!comp.primary;
+  var blank = researchCompSlotIsBlank(comp);
+  var ppsf = researchCompSlotAvgPpsf(comp);
+  var primaryBadge = primary ? '<span style="font-size:9px;color:#f4c542;font-weight:900;text-transform:uppercase">Primary</span>' : '';
+  var blankBadge = blank ? '<span style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Empty</span>' : '<span style="font-size:9px;color:#86efac;font-weight:900;text-transform:uppercase">Filled</span>';
+  var cardBorder = primary ? '#f4c54280' : '#243044';
+  var cardBg = blank ? '#09101b' : '#0b1120';
+  var rowLabel = researchCompSlotLabel(comp, row);
+  var saleOptions = [
+    { value: 'list', label: 'List' },
+    { value: 'sold', label: 'Sold' }
+  ];
+  var confidenceOptions = [
+    { value: 'unverified', label: 'Unverified' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' }
+  ];
+  var currentPpsf = ppsf ? mdaMoney(ppsf) : '—';
+  var distanceText = comp.distance !== '' ? String(comp.distance) : '—';
+  return '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:10px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<div style="font-size:10px;color:#e5e7eb;font-weight:900">' + researchSafeText(rowLabel) + '</div>' +
+        blankBadge +
+        primaryBadge +
+        '<span style="font-size:9px;color:#94a3b8">Avg PPSF ' + researchSafeText(currentPpsf) + '</span>' +
+        '<span style="font-size:9px;color:#94a3b8">Distance ' + researchSafeText(distanceText) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+        researchCompSelect(lead.id, row, 'sale_type', comp.sale_type || 'list', saleOptions, 'width:78px') +
+        '<button type="button" onclick="researchSetPrimaryDraftComp(' + safeLeadId + ',' + row + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:' + (primary ? '#1f2937' : '#111827') + ';color:' + (primary ? '#f4c542' : '#e5e7eb') + ';padding:5px 8px;font-weight:900;cursor:pointer">' + (primary ? 'Primary' : 'Make Primary') + '</button>' +
+        '<button type="button" onclick="researchRemoveDraftCompSlot(' + safeLeadId + ',' + row + ')" style="font-size:10px;border:1px solid #7f1d1d;border-radius:6px;background:#3b0a0a;color:#fecaca;padding:5px 8px;font-weight:900;cursor:pointer">Remove</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(220px,1.5fr) .7fr .55fr .55fr .55fr .7fr;gap:6px;align-items:start">' +
+      researchCompTextInput(lead.id, row, 'address', 'Comp address', comp.address, 'grid-column:span 2') +
+      researchCompTextInput(lead.id, row, 'price', 'Price', comp.price ? comp.price : '', '') +
+      researchCompTextInput(lead.id, row, 'beds', 'Beds', comp.beds, '') +
+      researchCompTextInput(lead.id, row, 'baths', 'Baths', comp.baths, '') +
+      researchCompTextInput(lead.id, row, 'sqft', 'Sqft', comp.sqft, '') +
+      researchCompTextInput(lead.id, row, 'distance', 'Distance', comp.distance, '') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,1.4fr) .8fr minmax(220px,1.4fr);gap:6px;align-items:start;margin-top:6px">' +
+      researchCompTextInput(lead.id, row, 'source', 'Source', comp.source, '') +
+      researchCompTextInput(lead.id, row, 'source_url', 'Source URL', comp.source_url, '') +
+      researchCompSelect(lead.id, row, 'confidence', comp.confidence || 'unverified', confidenceOptions, '') +
+      researchCompTextInput(lead.id, row, 'notes', 'Notes', comp.notes, '') +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:9px;color:#94a3b8;line-height:1.4">' +
+      '<span>Marked unverified until you validate sold/list status, condition, and similarity.</span>' +
+      '<span>' + (comp.source_url ? '<a href="' + mdaEscapeAttr(comp.source_url) + '" target="_blank" style="color:#93c5fd;text-decoration:none">Open source</a>' : 'No source URL yet') + '</span>' +
+    '</div>' +
+  '</div>';
 }
 
 function researchSavedComps(lead) {
   var raw = [];
   if (Array.isArray(lead && lead.manual_comps)) raw = raw.concat(lead.manual_comps);
   if (Array.isArray(lead && lead.comps)) raw = raw.concat(lead.comps);
-  return raw.map(researchNormalizeComp).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; }).slice(0, 5);
+  return raw.map(researchNormalizeComp).filter(function(comp){ return !researchCompSlotIsBlank(comp); }).slice(0, 5);
 }
 
 function researchSessionDraft(leadId) {
@@ -17243,14 +17458,14 @@ function researchSessionDraft(leadId) {
 function researchLeadComps(lead) {
   var id = String(lead && lead.id || '');
   var draft = APP.researchSession && APP.researchSession.compDrafts && APP.researchSession.compDrafts[id] ? APP.researchSession.compDrafts[id] : [];
-  return researchSavedComps(lead).concat((draft || []).map(researchNormalizeComp)).filter(function(comp){ return comp.price > 0 || comp.address || comp.notes; }).slice(0, 5);
+  return researchSavedComps(lead).concat((draft || []).map(researchNormalizeComp)).filter(function(comp){ return !researchCompSlotIsBlank(comp); }).slice(0, 5);
 }
 
 function researchSessionHasDraftComps() {
   var drafts = APP.researchSession && APP.researchSession.compDrafts ? APP.researchSession.compDrafts : {};
   return Object.keys(drafts).some(function(id) {
     return (drafts[id] || []).some(function(comp) {
-      return comp && (comp.address || comp.price || comp.sqft || comp.beds || comp.baths || comp.distance || comp.dom || comp.date || comp.source || comp.notes);
+      return comp && !researchCompSlotIsBlank(comp);
     });
   });
 }
@@ -17499,10 +17714,17 @@ function researchReadCompRow(leadId, row) {
     var el = document.getElementById('research-comp-' + safe + '-' + row + '-' + field);
     return el ? String(el.value || '').trim() : '';
   }
+  function checked(field) {
+    var el = document.getElementById('research-comp-' + safe + '-' + row + '-' + field);
+    return !!(el && el.checked);
+  }
   var price = Number(val('price').replace(/[^0-9.-]/g, '')) || 0;
   var sqft = Number(val('sqft').replace(/[^0-9.-]/g, '')) || 0;
+  var saleType = val('sale_type') || 'list';
+  var confidence = val('confidence') || 'unverified';
   return {
     address: val('address'),
+    sale_type: saleType === 'sold' ? 'sold' : 'list',
     price: price,
     sqft: sqft,
     beds: val('beds'),
@@ -17511,6 +17733,9 @@ function researchReadCompRow(leadId, row) {
     dom: val('dom'),
     date: val('date'),
     source: val('source'),
+    source_url: val('source_url'),
+    confidence: confidence || 'unverified',
+    primary: checked('primary'),
     notes: val('notes'),
     ppsf: price && sqft ? price / sqft : 0
   };
@@ -17637,6 +17862,7 @@ function researchLocalCompCandidateToDraft(candidate) {
   var price = Number(candidate.price || 0) || 0;
   var sqft = Number(candidate.sqft || 0) || 0;
   var source = candidate.source ? 'Local Comp Agent - ' + candidate.source : 'Local Comp Agent';
+  var saleType = candidate.sale_type || (candidate.status && /sold/i.test(String(candidate.status)) ? 'sold' : 'list');
   var noteParts = [
     'Unverified local browser candidate',
     candidate.status || '',
@@ -17646,6 +17872,7 @@ function researchLocalCompCandidateToDraft(candidate) {
   ].filter(Boolean);
   return {
     address: candidate.address || candidate.title || '',
+    sale_type: saleType === 'sold' ? 'sold' : 'list',
     price: price,
     sqft: sqft,
     beds: candidate.beds || '',
@@ -17654,6 +17881,9 @@ function researchLocalCompCandidateToDraft(candidate) {
     dom: '',
     date: candidate.date || '',
     source: source,
+    source_url: candidate.url || candidate.source_url || '',
+    confidence: candidate.verification_label || candidate.confidence || 'unverified',
+    primary: !!candidate.primary,
     notes: noteParts.join(' | ').slice(0, 260),
     ppsf: price && sqft ? price / sqft : 0
   };
@@ -17707,16 +17937,7 @@ function researchUseLocalCompCandidate(leadId, index) {
     if (typeof toast === 'function') toast('Local comp candidate not found', 'error');
     return;
   }
-  researchCaptureDraft(leadId);
-  var draft = researchSessionDraft(String(leadId));
-  if (draft.length >= 5) {
-    if (typeof toast === 'function') toast('Draft comp rows are full. Clear a row before accepting another candidate.', 'error');
-    return;
-  }
-  draft.push(researchLocalCompCandidateToDraft(candidate));
-  if (typeof toast === 'function') toast('Candidate added to draft comps. Verify before ARV.', 'success');
-  researchRefreshSessionCompPreview(leadId);
-  if (typeof render === 'function') render();
+  researchInsertDraftComp(leadId, researchLocalCompCandidateToDraft(candidate));
 }
 
 function renderResearchLocalCompBridgeHtml(lead) {
@@ -17830,6 +18051,7 @@ function researchCompFromScoutCandidate(candidate) {
   var price = Number(candidate.price || 0) || 0;
   var sqft = Number(candidate.sqft || 0) || 0;
   var source = candidate.source ? 'Comp Scout - ' + candidate.source : 'Comp Scout';
+  var saleType = candidate.sale_type || (candidate.status && /sold/i.test(String(candidate.status)) ? 'sold' : 'list');
   var noteParts = [
     'Unverified Comp Scout candidate',
     candidate.status || '',
@@ -17839,6 +18061,7 @@ function researchCompFromScoutCandidate(candidate) {
   ].filter(Boolean);
   return {
     address: candidate.address || candidate.title || '',
+    sale_type: saleType === 'sold' ? 'sold' : 'list',
     price: price,
     sqft: sqft,
     beds: candidate.beds || '',
@@ -17847,6 +18070,9 @@ function researchCompFromScoutCandidate(candidate) {
     dom: '',
     date: candidate.date || '',
     source: source,
+    source_url: candidate.url || candidate.source_url || '',
+    confidence: candidate.verification_label || candidate.confidence || 'unverified',
+    primary: !!candidate.primary,
     notes: noteParts.join(' | ').slice(0, 260),
     ppsf: price && sqft ? price / sqft : 0
   };
@@ -17860,15 +18086,7 @@ function researchAcceptScoutCandidate(leadId, index) {
     if (typeof toast === 'function') toast('Comp candidate not found', 'error');
     return;
   }
-  researchCaptureDraft(leadId);
-  var draft = researchSessionDraft(String(leadId));
-  if (draft.length >= 5) {
-    if (typeof toast === 'function') toast('Draft comp rows are full. Clear a row before accepting another candidate.', 'error');
-    return;
-  }
-  draft.push(researchCompFromScoutCandidate(candidate));
-  if (typeof toast === 'function') toast('Candidate added to draft comps. Verify before ARV.', 'success');
-  if (typeof render === 'function') render();
+  researchInsertDraftComp(leadId, researchCompFromScoutCandidate(candidate));
 }
 
 function renderResearchCompScoutHtml(lead) {
@@ -17931,11 +18149,8 @@ function parseResearchCompPaste(leadId) {
     notes: text.slice(0, 180)
   };
   parsed.ppsf = parsed.price && parsed.sqft ? parsed.price / parsed.sqft : 0;
-  var draft = researchSessionDraft(String(leadId));
-  if (draft.length >= 5) draft.shift();
-  draft.push(parsed);
+  if (!researchInsertDraftComp(leadId, parsed)) return;
   if (box) box.value = '';
-  if (typeof render === 'function') render();
 }
 
 function renderResearchCompSummaryHtml(comps, stats, lead) {
@@ -17952,6 +18167,7 @@ function renderResearchCompSummaryHtml(comps, stats, lead) {
     var strongest = ranking.strongest;
     var weakest = ranking.weakest;
     var limited = stats.count < 3;
+    var primary = (comps || []).find(function(comp){ return comp && comp.primary; }) || null;
     var strongestLabel = strongest ? (strongest.comp.address || mdaMoney(strongest.comp.price)) + ' (' + strongest.score + ' score)' : 'not enough data';
     var weakestLabel = weakest ? (weakest.comp.address || mdaMoney(weakest.comp.price)) + ' (' + weakest.score + ' score)' : 'not enough data';
     var strongestWhy = strongest && strongest.reasons.length ? strongest.reasons.join(', ') : 'available entered fields';
@@ -17959,6 +18175,7 @@ function renderResearchCompSummaryHtml(comps, stats, lead) {
     ai = '<div style="margin-top:8px;background:#07111f;border:1px solid #243044;border-radius:8px;padding:9px">' +
       '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:5px">AI Comp Summary - based only on entered comps</div>' +
       '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + (limited ? '<strong style="color:#fbbf24">Limited comp set.</strong> ' : '') + 'Preliminary ARV range based only on entered comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
+      (primary ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Primary comp: <strong style="color:#e5e7eb">' + researchSafeText(primary.address || mdaMoney(primary.price) || 'Selected slot') + '</strong>.</div>' : '') +
       (limited
         ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">With only 2 comps, treat both as preliminary support. Do not rank them as definitive strongest/weakest yet.</div>'
         : '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Strongest comp: ' + researchSafeText(strongestLabel) + ' based on ' + researchSafeText(strongestWhy) + '.</div>' +
@@ -18025,20 +18242,7 @@ function renderResearchSessionLeadWorkspace(lead) {
   var draft = researchSessionDraft(String(lead.id));
   var rows = '';
   for (var i = 0; i < 5; i++) {
-    var comp = draft[i] || {};
-    rows += '<div style="display:grid;grid-template-columns:1.2fr .65fr .5fr .4fr .4fr .45fr .4fr .6fr .65fr 1fr auto;gap:5px;margin-bottom:5px">' +
-      researchCompInput(lead.id, i, 'address', 'Comp address', comp.address) +
-      researchCompInput(lead.id, i, 'price', 'Sold/list $', comp.price) +
-      researchCompInput(lead.id, i, 'sqft', 'Sqft', comp.sqft) +
-      researchCompInput(lead.id, i, 'beds', 'Beds', comp.beds) +
-      researchCompInput(lead.id, i, 'baths', 'Baths', comp.baths) +
-      researchCompInput(lead.id, i, 'distance', 'Miles', comp.distance) +
-      researchCompInput(lead.id, i, 'dom', 'DOM', comp.dom) +
-      researchCompInput(lead.id, i, 'date', 'Date', comp.date) +
-      researchCompInput(lead.id, i, 'source', 'Source', comp.source) +
-      researchCompInput(lead.id, i, 'notes', 'Notes', comp.notes) +
-      '<button type="button" onclick="researchUseComp(' + researchJsArg(lead.id) + ',' + i + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#111827;color:#f4c542;padding:5px 7px;cursor:pointer">Use As Comp</button>' +
-    '</div>';
+    rows += researchRenderCompSlotHtml(lead, i, draft[i] || researchBlankCompSlot()) + (i < 4 ? '<div style="height:8px"></div>' : '');
   }
   return '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:12px;color:#e5e7eb;margin-top:10px">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px"><div><div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:900">Active Lead Research</div><div style="font-size:12px;font-weight:900">' + researchSafeText(address || lead.address || 'Address not available') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
@@ -18052,8 +18256,9 @@ function renderResearchSessionLeadWorkspace(lead) {
       '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
       renderResearchLocalCompBridgeHtml(lead) +
       renderResearchCompScoutHtml(lead) +
-      '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Add Comp</button></div>' +
-      '<div style="overflow-x:auto">' + rows + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px;align-items:start"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Sync Slots</button></div>' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:4px 0 8px"><div style="font-size:10px;color:#94a3b8">Five structured slots max. Fill them manually or import local-agent candidates. Remove a slot to clear it.</div><div style="font-size:10px;color:#94a3b8">Primary comp is operator-marked only.</div></div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' + rows + '</div>' +
       '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +
     '</details>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + researchRenderProgressChecklist(researchLeadProgress(lead)) + '</div>' +
