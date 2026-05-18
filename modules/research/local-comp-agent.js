@@ -512,6 +512,225 @@ async function captureVisibleComps(options) {
   }
 }
 
+async function scrollAndCaptureVisibleComps(options) {
+  options = options || {};
+  var cdpUrl = options.cdpUrl || DEFAULT_CDP_URL;
+  var maxResults = Math.min(Math.max(parseInt(options.maxResults, 10) || 5, 1), MAX_RESULTS);
+
+  var targets;
+  try {
+    targets = await chromeTargets(cdpUrl);
+  } catch (e) {
+    return {
+      ok: false,
+      extraction_status: 'browser_not_connected',
+      reason: 'Could not connect to Chrome CDP at ' + cdpUrl + ': ' + e.message,
+      candidates: [],
+      scroll_performed: false
+    };
+  }
+
+  var target = chooseActiveTarget(targets);
+  if (!target) {
+    return {
+      ok: false,
+      extraction_status: 'browser_not_connected',
+      reason: 'No visible Chrome page target found at ' + cdpUrl + '.',
+      candidates: [],
+      scroll_performed: false
+    };
+  }
+
+  var source = detectSource(target.url, target.title);
+  if (source === 'unsupported') {
+    return {
+      ok: true,
+      extraction_status: 'unsupported_page',
+      page_url: target.url,
+      page_title: target.title,
+      source: source,
+      candidates: [],
+      scroll_performed: false,
+      reason: 'Current active page is not Zillow, Redfin, Realtor, or Google search results.'
+    };
+  }
+
+  var playwright;
+  try {
+    playwright = require('playwright');
+  } catch (e) {
+    try {
+      playwright = require(require.resolve('playwright', { paths: [BUNDLED_NODE_MODULES] })); 
+    } catch (bundleError) {
+      return {
+        ok: false,
+        extraction_status: 'browser_not_connected',
+        reason: 'Playwright is not installed locally: ' + bundleError.message,
+        candidates: [],
+        scroll_performed: false
+      };
+    }
+  }
+
+  var browser;
+  try {
+    browser = await playwright.chromium.connectOverCDP(await chromeWebSocketUrl(cdpUrl), { timeout: 120000 });
+    var contexts = browser.contexts();
+    var pages = [];
+    contexts.forEach(function(context) {
+      pages = pages.concat(context.pages());
+    });
+    var page = pages.find(function(p) { return p.url() === target.url; }) || pages.find(function(p) {
+      return detectSource(p.url(), '') === source;
+    });
+    if (!page) {
+      return {
+        ok: false,
+        extraction_status: 'browser_not_connected',
+        reason: 'Connected to Chrome, but could not attach to the selected tab.',
+        candidates: [],
+        scroll_performed: false
+      };
+    }
+
+    var pageInfo = {
+      url: page.url(),
+      title: await page.title().catch(function() { return target.title || ''; }),
+      source: source
+    };
+
+    var before = await extractVisibleCandidates(page, maxResults, source);
+    if (isCaptchaText(before.body_text)) {
+      return {
+        ok: true,
+        extraction_status: 'captcha_or_verification_detected',
+        source: source,
+        page_url: pageInfo.url,
+        page_title: pageInfo.title,
+        candidates: [],
+        scroll_performed: false,
+        reason: 'Visible page text indicates CAPTCHA or human verification. Complete it manually, then run capture again.'
+      };
+    }
+
+    var scrollBefore = await page.evaluate(function() {
+      function root() {
+        return document.querySelector('#search-page-list-container')
+          || Array.prototype.find.call(document.querySelectorAll('*'), function(node) {
+            if (!node || !node.getBoundingClientRect) return false;
+            var style = window.getComputedStyle(node);
+            var rect = node.getBoundingClientRect();
+            return rect.width > 50 && rect.height > 50
+              && node.scrollHeight > node.clientHeight + 100
+              && /(auto|scroll)/.test(style.overflowY || '') || /(auto|scroll)/.test(style.overflow || '');
+          })
+          || document.scrollingElement
+          || document.documentElement
+          || document.body;
+      }
+      var node = root();
+      return Number((node && node.scrollTop) || 0);
+    });
+    var scrollDelta = await page.evaluate(function() {
+      return Math.max(1200, Math.floor((window.innerHeight || 800) * 1.6));
+    });
+    await page.evaluate(function(delta) {
+      function root() {
+        return document.querySelector('#search-page-list-container')
+          || Array.prototype.find.call(document.querySelectorAll('*'), function(node) {
+            if (!node || !node.getBoundingClientRect) return false;
+            var style = window.getComputedStyle(node);
+            var rect = node.getBoundingClientRect();
+            return rect.width > 50 && rect.height > 50
+              && node.scrollHeight > node.clientHeight + 100
+              && ((style.overflowY || '').indexOf('auto') > -1 || (style.overflowY || '').indexOf('scroll') > -1 || (style.overflow || '').indexOf('auto') > -1 || (style.overflow || '').indexOf('scroll') > -1);
+          })
+          || document.scrollingElement
+          || document.documentElement
+          || document.body;
+      }
+      var node = root();
+      var next = Number((node && node.scrollTop) || 0) + Number(delta || 0);
+      if (node && node.scrollTo) node.scrollTo(0, next);
+      else window.scrollTo(0, next);
+    }, scrollDelta);
+    await page.waitForTimeout(1500);
+    var scrollAfter = await page.evaluate(function() {
+      function root() {
+        return document.querySelector('#search-page-list-container')
+          || Array.prototype.find.call(document.querySelectorAll('*'), function(node) {
+            if (!node || !node.getBoundingClientRect) return false;
+            var style = window.getComputedStyle(node);
+            var rect = node.getBoundingClientRect();
+            return rect.width > 50 && rect.height > 50
+              && node.scrollHeight > node.clientHeight + 100
+              && ((style.overflowY || '').indexOf('auto') > -1 || (style.overflowY || '').indexOf('scroll') > -1 || (style.overflow || '').indexOf('auto') > -1 || (style.overflow || '').indexOf('scroll') > -1);
+          })
+          || document.scrollingElement
+          || document.documentElement
+          || document.body;
+      }
+      var node = root();
+      return Number((node && node.scrollTop) || 0);
+    });
+
+    var raw = await extractVisibleCandidates(page, maxResults, source);
+    if (isCaptchaText(raw.body_text)) {
+      return {
+        ok: true,
+        extraction_status: 'captcha_or_verification_detected',
+        source: source,
+        page_url: pageInfo.url,
+        page_title: pageInfo.title,
+        candidates: [],
+        scroll_performed: true,
+        reason: 'Visible page text indicates CAPTCHA or human verification after scroll. Complete it manually, then run capture again.'
+      };
+    }
+
+    var captureCandidates = [];
+    (raw.candidates || []).forEach(function(item) {
+      captureCandidates.push(normalizeCandidate(item, pageInfo, captureCandidates.length));
+    });
+    captureCandidates = captureCandidates
+      .filter(function(c) {
+        return c.address || c.price || c.url;
+      })
+      .sort(function(a, b) {
+        return (b.confidence_score || 0) - (a.confidence_score || 0);
+      });
+    var captureResult = mergeCaptureIntoSession(pageInfo, captureCandidates);
+    var sessionCandidates = captureSession.candidates.slice(0, maxResults);
+
+    return {
+      ok: true,
+      extraction_status: sessionCandidates.length ? (sessionCandidates.some(function(c) { return c.extraction_status === 'extraction_partial'; }) ? 'extraction_partial' : 'candidates_found') : 'no_visible_candidates',
+      source: source,
+      page_url: pageInfo.url,
+      page_title: pageInfo.title,
+      capture_count: captureSession.capture_count,
+      new_candidates_this_capture: captureResult.new_count,
+      total_unique_candidates: captureSession.candidates.length,
+      candidates: sessionCandidates,
+      scroll_performed: true,
+      scroll_before: scrollBefore,
+      scroll_after: scrollAfter,
+      scroll_delta: scrollDelta,
+      safety_note: 'One operator-triggered scroll only. No loop, no navigation, no clicking, no CAPTCHA bypass, no persistence.'
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      extraction_status: 'browser_not_connected',
+      reason: e.message,
+      candidates: [],
+      scroll_performed: false
+    };
+  } finally {
+    if (browser) await browser.close().catch(function() {});
+  }
+}
+
 async function handle(req, res) {
   if (req.method === 'OPTIONS') return json(res, 200, { ok: true });
   var url = new URL(req.url, 'http://' + DEFAULT_HOST + ':' + DEFAULT_PORT);
@@ -578,6 +797,14 @@ async function handle(req, res) {
       cdpUrl: body.cdp_url || body.cdpUrl || DEFAULT_CDP_URL
     });
     return json(res, 200, result);
+  }
+  if (req.method === 'POST' && (url.pathname === '/scroll-and-capture-visible-comps' || url.pathname === '/capture-next-page-section')) {
+    var body2 = await parseBody(req);
+    var result2 = await scrollAndCaptureVisibleComps({
+      maxResults: body2.max_results || body2.maxResults,
+      cdpUrl: body2.cdp_url || body2.cdpUrl || DEFAULT_CDP_URL
+    });
+    return json(res, 200, result2);
   }
   return json(res, 404, { ok: false, error: 'not_found' });
 }
