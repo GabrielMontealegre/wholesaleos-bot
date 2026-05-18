@@ -6,6 +6,7 @@ const DEFAULT_PORT = Number(process.env.LOCAL_COMP_AGENT_PORT || 8791);
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_CDP_URL = process.env.CHROME_CDP_URL || 'http://127.0.0.1:9222';
 const MAX_RESULTS = 10;
+const BUNDLED_NODE_MODULES = process.env.CODEX_NODE_MODULES || 'C:\\Users\\criss\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules';
 var activePort = DEFAULT_PORT;
 
 function cleanText(value) {
@@ -45,6 +46,14 @@ async function fetchJson(url) {
 
 async function chromeTargets(cdpUrl) {
   return fetchJson(cdpUrl.replace(/\/$/, '') + '/json/list');
+}
+
+async function chromeWebSocketUrl(cdpUrl) {
+  var version = await fetchJson(cdpUrl.replace(/\/$/, '') + '/json/version');
+  if (!version || !version.webSocketDebuggerUrl) {
+    throw new Error('No webSocketDebuggerUrl returned from ' + cdpUrl);
+  }
+  return version.webSocketDebuggerUrl;
 }
 
 function detectSource(url, title) {
@@ -253,17 +262,21 @@ async function captureVisibleComps(options) {
   try {
     playwright = require('playwright');
   } catch (e) {
-    return {
-      ok: false,
-      extraction_status: 'browser_not_connected',
-      reason: 'Playwright is not installed locally: ' + e.message,
-      candidates: []
-    };
+    try {
+      playwright = require(require.resolve('playwright', { paths: [BUNDLED_NODE_MODULES] }));
+    } catch (bundleError) {
+      return {
+        ok: false,
+        extraction_status: 'browser_not_connected',
+        reason: 'Playwright is not installed locally: ' + bundleError.message,
+        candidates: []
+      };
+    }
   }
 
   var browser;
   try {
-    browser = await playwright.chromium.connectOverCDP(cdpUrl);
+    browser = await playwright.chromium.connectOverCDP(await chromeWebSocketUrl(cdpUrl), { timeout: 120000 });
     var contexts = browser.contexts();
     var pages = [];
     contexts.forEach(function(context) {
