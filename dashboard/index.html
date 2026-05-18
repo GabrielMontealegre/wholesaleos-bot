@@ -3857,7 +3857,7 @@ function renderEnrichmentLaunchpad(lead) {
   var links = data.links.length ? data.links.map(function(link) {
     return '<a href="' + mdaEscapeAttr(link.url) + '" target="_blank" title="' + leadIntelText(link.hint) + '" style="font-size:10px;font-weight:800;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#111827;border-radius:999px;padding:5px 8px">' + leadIntelText(link.label) + '</a>';
   }).join('') : '<span style="font-size:10px;color:#64748b">No safe enrichment links available until address, owner, or source URL is present.</span>';
-  return '<div style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+  return '<div id="research-contact-workspace-' + safe + '" style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
       '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Enrichment Launchpad</div>' +
       '<div style="font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px">Manual 1-5 lead workflow only. Opens search links; no scraping, storage, or automation.</div></div>' +
@@ -17800,6 +17800,38 @@ function researchInsertDraftComp(leadId, comp) {
   return true;
 }
 
+function researchCompSlotKey(comp) {
+  comp = researchNormalizeComp(comp);
+  return [
+    comp.source_url || '',
+    comp.address || '',
+    comp.price || '',
+    comp.sqft || ''
+  ].map(function(v) {
+    return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }).join('|');
+}
+
+function researchInsertDraftCompSilently(leadId, comp) {
+  var draft = researchSessionDraft(String(leadId));
+  while (draft.length < 5) draft.push(researchBlankCompSlot());
+  var normalized = researchNormalizeComp(comp);
+  var key = researchCompSlotKey(normalized);
+  for (var j = 0; j < draft.length; j++) {
+    if (!researchCompSlotIsBlank(draft[j]) && researchCompSlotKey(draft[j]) === key) {
+      draft[j] = normalized;
+      return true;
+    }
+  }
+  for (var i = 0; i < 5; i++) {
+    if (researchCompSlotIsBlank(draft[i])) {
+      draft[i] = normalized;
+      return true;
+    }
+  }
+  return false;
+}
+
 function researchRenderCompSlotHtml(lead, row, comp) {
   lead = lead || {};
   comp = researchNormalizeComp(comp || researchBlankCompSlot());
@@ -18032,6 +18064,34 @@ function researchLeadProgress(lead) {
     arv: arv,
     repairs: repairs,
     blockers: blockers
+  };
+}
+
+function researchSourceVerifiedForReview(lead) {
+  return !!(lead && (
+    lead.source_verified_at ||
+    lead.verified_at ||
+    lead.last_verified_at ||
+    lead.verification_state === 'recently_refreshed' ||
+    lead.source_recheck_state === 'recently_refreshed'
+  ));
+}
+
+function researchReviewGate(lead) {
+  lead = lead || {};
+  var comps = researchLeadComps(lead);
+  var contacts = researchLeadContacts(lead);
+  var sourceVerified = researchSourceVerifiedForReview(lead);
+  var blockers = [];
+  if (comps.length < 3) blockers.push('at least 3 comp slots filled');
+  if (contacts.length < 1) blockers.push('at least 1 contact slot filled');
+  if (!sourceVerified) blockers.push('source verification marked complete');
+  return {
+    ready: !blockers.length,
+    blockers: blockers,
+    compCount: comps.length,
+    contactCount: contacts.length,
+    sourceVerified: sourceVerified
   };
 }
 
@@ -18346,6 +18406,45 @@ function researchLocalCompBridgeClear(leadId) {
   state.lastMessage = 'Local capture session cleared.';
   if (typeof toast === 'function') toast('Local capture session cleared', 'success');
   if (typeof render === 'function') render();
+}
+
+async function researchGetLocalComps(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  var base = researchLocalCompBridgeBaseUrl();
+  state.loadingCapture = true;
+  state.error = '';
+  state.lastMessage = 'Getting visible local comps and importing unverified candidates...';
+  if (typeof render === 'function') render();
+  try {
+    var res = await fetch(base + '/capture-visible-comps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ max_results: 5 })
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok || data.error) throw new Error(data.error || data.reason || 'Local comp capture failed');
+    var candidates = Array.isArray(data.candidates) ? data.candidates : [];
+    var imported = 0;
+    state.result = data;
+    state.health = state.health || { ok: true, mode: 'localhost_only' };
+    researchCaptureDraft(leadId);
+    candidates.forEach(function(candidate) {
+      if (imported >= 5) return;
+      var draftComp = researchLocalCompCandidateToDraft(candidate);
+      draftComp.confidence = 'unverified';
+      if (researchInsertDraftCompSilently(leadId, draftComp)) imported += 1;
+    });
+    state.lastMessage = 'Local comp capture complete. Imported ' + imported + ' unverified candidate(s) into draft slots. Nothing was saved to the lead.';
+    if (typeof toast === 'function') toast('Imported ' + imported + ' local comp candidate(s) into draft slots', imported ? 'success' : 'error');
+  } catch (e) {
+    state.error = e.message || String(e);
+    state.lastMessage = 'Local comp import failed.';
+    if (typeof toast === 'function') toast('Get Local Comps failed: ' + state.error, 'error');
+  } finally {
+    state.loadingCapture = false;
+    researchRefreshSessionCompPreview(leadId);
+    if (typeof render === 'function') render();
+  }
 }
 
 function researchUseLocalCompCandidate(leadId, index) {
@@ -18740,6 +18839,102 @@ function renderLeadSkipTraceWorkspace(lead) {
   '</div>';
 }
 
+function researchFindLeadById(leadId) {
+  return (APP.leads || []).find(function(lead) {
+    return String(lead && lead.id) === String(leadId);
+  }) || {};
+}
+
+function researchSkipTraceSearchLinks(lead) {
+  lead = lead || {};
+  var signals = researchLeadContactSignals(lead);
+  var address = researchLeadAddress(lead) || lead.address || '';
+  var query = signals.owner_name || signals.mailing_address || address;
+  return [
+    { label: 'CyberBackgroundChecks', url: leadEnrichmentSearchUrl('cyber', query || address) },
+    { label: 'TruePeopleSearch', url: leadEnrichmentSearchUrl('truepeople', query || address) },
+    { label: 'FastPeopleSearch', url: leadEnrichmentSearchUrl('fastpeople', query || address) },
+    { label: 'Google Search', url: leadEnrichmentSearchUrl('google', query || address) }
+  ].filter(function(link){ return !!link.url; });
+}
+
+function researchOpenSkipTraceSearches(leadId) {
+  var lead = researchFindLeadById(leadId);
+  var links = researchSkipTraceSearchLinks(lead);
+  if (!links.length) {
+    if (typeof toast === 'function') toast('No owner, address, or mailing query is available for skip trace search.', 'error');
+    return;
+  }
+  links.forEach(function(link) {
+    window.open(link.url, '_blank', 'noopener,noreferrer');
+  });
+  if (typeof toast === 'function') toast('Opened manual skip-trace searches. No dialing, messaging, or scraping started.', 'success');
+}
+
+function researchOpenContactCandidateImport(leadId) {
+  var safe = leadActivityDomId(leadId);
+  var section = document.getElementById('research-contact-workspace-' + safe);
+  var box = document.getElementById('research-contact-paste-' + safe);
+  if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (box) {
+    setTimeout(function(){ box.focus(); }, 120);
+    if (typeof toast === 'function') toast('Paste a visible contact candidate, then click Import Contact.', 'success');
+    return;
+  }
+  if (typeof toast === 'function') toast('Contact import field is not visible yet.', 'error');
+}
+
+function researchMarkReadyForReview(leadId) {
+  var lead = researchFindLeadById(leadId);
+  var gate = researchReviewGate(lead);
+  if (!gate.ready) {
+    if (typeof toast === 'function') toast('Not ready for review: ' + gate.blockers.join(', '), 'error');
+    return false;
+  }
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.readyForReview) APP.researchSession.readyForReview = {};
+  APP.researchSession.readyForReview[String(leadId)] = {
+    marked_at: new Date().toISOString(),
+    comp_count: gate.compCount,
+    contact_count: gate.contactCount,
+    source_verified: gate.sourceVerified
+  };
+  if (typeof toast === 'function') toast('Marked ready for operator review. Draft data is still not saved to the lead.', 'success');
+  if (typeof render === 'function') render();
+  return true;
+}
+
+function renderResearchWorkflowActionBar(lead) {
+  lead = lead || {};
+  var gate = researchReviewGate(lead);
+  var safeLeadId = researchJsArg(lead.id);
+  var disabled = gate.ready ? '' : ' disabled';
+  var readyStyle = gate.ready
+    ? 'border:1px solid #10b981;background:#052e1a;color:#86efac;cursor:pointer'
+    : 'border:1px solid #334155;background:#111827;color:#64748b;cursor:not-allowed';
+  var status = gate.ready
+    ? 'Ready: 3+ comps, contact candidate, and source verification are present.'
+    : 'Not ready: ' + gate.blockers.join(', ');
+  return '<div style="background:#07111f;border:1px solid #1f2937;border-radius:10px;padding:10px;margin-bottom:9px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Structured Workflow Actions</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:2px">Operator-controlled actions only. No lead auto-save, dialing, messaging, scraping loop, or CAPTCHA bypass.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="researchGetLocalComps(' + safeLeadId + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Get Local Comps</button>' +
+        '<button type="button" onclick="researchOpenSkipTraceSearches(' + safeLeadId + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Open Skip Trace Search</button>' +
+        '<button type="button" onclick="researchOpenContactCandidateImport(' + safeLeadId + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Import Contact Candidate</button>' +
+        '<button type="button" onclick="researchMarkReadyForReview(' + safeLeadId + ')"' + disabled + ' style="font-size:10px;border-radius:7px;font-weight:900;padding:7px 9px;' + readyStyle + '">Ready For Review</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:#94a3b8">' +
+      '<span>Comp slots: ' + gate.compCount + '/3 minimum</span>' +
+      '<span>Contact slots: ' + gate.contactCount + '/1 minimum</span>' +
+      '<span>Source verification: ' + (gate.sourceVerified ? 'complete' : 'needed') + '</span>' +
+      '<span style="color:' + (gate.ready ? '#86efac' : '#fca5a5') + '">' + researchSafeText(status) + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderResearchSellerFlow(lead) {
   var text = [
     lead && lead.source, lead && lead.category, lead && lead.motivation, lead && lead.distress_type,
@@ -18797,6 +18992,7 @@ function renderResearchSessionLeadWorkspace(lead) {
   }
   return '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:12px;color:#e5e7eb;margin-top:10px">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px"><div><div style="font-size:11px;color:#f4c542;text-transform:uppercase;font-weight:900">Active Lead Research</div><div style="font-size:12px;font-weight:900">' + researchSafeText(address || lead.address || 'Address not available') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div></div>' +
+    renderResearchWorkflowActionBar(lead) +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:9px">' +
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Top Focus</div><div style="font-size:11px;line-height:1.5">' + researchSafeText(researchLeadBestNextAction(lead)) + '</div></div>' +
       '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Tax/Liens</div><div style="font-size:12px;font-weight:900">' + (researchLeadTaxPressure(lead) ? mdaMoney(researchLeadTaxPressure(lead)) : 'Not saved') + '</div></div>' +
