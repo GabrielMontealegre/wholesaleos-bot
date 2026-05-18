@@ -11,6 +11,7 @@ const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
 const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
+const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -25,25 +26,15 @@ process.on('uncaughtException', function(err) {
   var payload = err && err.stack ? err.stack : err;
   try { logger.fatal({ event: 'uncaughtException', error: payload }); }
   catch (logErr) { console.error('[uncaughtException]', payload, logErr && logErr.message ? logErr.message : logErr); }
+  process.exit(1);
 });
 
 process.on('unhandledRejection', function(reason) {
   var payload = reason && reason.stack ? reason.stack : reason;
   try { logger.fatal({ event: 'unhandledRejection', error: payload }); }
   catch (logErr) { console.error('[unhandledRejection]', payload, logErr && logErr.message ? logErr.message : logErr); }
+  process.exit(1);
 });
-
-var _scoutCompsForLead = null;
-function getScoutCompsForLead() {
-  if (_scoutCompsForLead) return _scoutCompsForLead;
-  try {
-    _scoutCompsForLead = require('./modules/research/comp-scout').scoutCompsForLead;
-    return _scoutCompsForLead;
-  } catch (e) {
-    logger.error('[comp-scout] load failed: ' + e.message);
-    return null;
-  }
-}
 
 function getCompAgent() {
   try { return require('./modules/agents/comp-agent'); }
@@ -189,31 +180,6 @@ function leadSourceTypeText(lead) {
   return String(details);
 }
 
-function leadMotivationScore(lead) {
-  return ((lead && lead.hot_score) || (lead && lead.motivation_score) || 0) + ((lead && lead.priorityScore) || 0);
-}
-
-function takeTopLeadsByScore(items, count, scoreFn) {
-  if (!count || count >= items.length) {
-    return items.slice().sort(function(a, b) { return scoreFn(b) - scoreFn(a); });
-  }
-  var top = [];
-  for (var i = 0; i < items.length; i++) {
-    var item = items[i];
-    var score = scoreFn(item);
-    if (top.length < count) {
-      top.push({ item: item, score: score });
-      if (top.length === count) top.sort(function(a, b) { return a.score - b.score; });
-      continue;
-    }
-    if (score > top[0].score) {
-      top[0] = { item: item, score: score };
-      top.sort(function(a, b) { return a.score - b.score; });
-    }
-  }
-  return top.sort(function(a, b) { return b.score - a.score; }).map(function(entry) { return entry.item; });
-}
-
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
   const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
@@ -229,13 +195,8 @@ app.get('/api/leads', (req, res) => {
   if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
   // Sort BEFORE limiting (correct order)
   var sortKey = sort || 'motivation_score';
-  var requestedLimit = top300 === '1' || top300 === 'true' ? 300 : (limit ? parseInt(limit, 10) : null);
   if (sortKey === 'motivation_score') {
-    if (requestedLimit && requestedLimit > 0 && requestedLimit < filtered.length) {
-      filtered = takeTopLeadsByScore(filtered, requestedLimit, leadMotivationScore);
-    } else {
-      filtered = filtered.slice().sort(function(a,b){ return leadMotivationScore(b) - leadMotivationScore(a); });
-    }
+    filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
   } else if (sortKey === 'created_at') {
     filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
   } else if (sortKey === 'spread') {
@@ -243,8 +204,10 @@ app.get('/api/leads', (req, res) => {
   }
   // top300 mode: dashboard shows only best 300 deals
   let pageLeads = filtered;
-  if (requestedLimit) {
-    pageLeads = filtered.slice(0, requestedLimit);
+  if (top300 === '1' || top300 === 'true') {
+    pageLeads = filtered.slice(0, 300);
+  } else if (limit) {
+    pageLeads = filtered.slice(0, parseInt(limit));
   }
   res.json({ leads: pageLeads.map(withLeadIntelligence), total: pageLeads.length, totalAll: leads.length });
 });
@@ -275,10 +238,6 @@ app.post('/api/research/comp-scout', async (req, res) => {
 
     const maxResults = Math.min(Math.max(parseInt(body.max_results || body.maxResults || 5, 10) || 5, 1), 10);
     const sourcePreference = String(body.source_preference || body.sourcePreference || 'google').trim().toLowerCase();
-    const scoutCompsForLead = getScoutCompsForLead();
-    if (!scoutCompsForLead) {
-      return res.status(503).json({ ok: false, blocked: true, source: sourcePreference, reason: 'comp_scout_unavailable' });
-    }
     const result = await scoutCompsForLead({
       lead,
       sourcePreference,
