@@ -1314,7 +1314,7 @@ function mdaBuildLeadAnalyzerPrefill(lead) {
   if (repairs > 0) values['mda-repairs'] = repairs;
   var asking = mdaLeadPickNumber(lead, ['asking_price', 'purchase_price', 'list_price', 'price', 'source_details.asking_price']);
   if (asking > 0) values['mda-purchase'] = asking;
-  var hasContact = !!(lead.phone || lead.email);
+  var hasContact = researchLeadContactReady(lead);
   var missing = [];
   if (arv <= 0) missing.push('ARV');
   if (!mdaLeadHasComps(lead)) missing.push('comps');
@@ -3777,10 +3777,12 @@ function leadEnrichmentSearchUrl(site, query) {
   if (site === 'zillow') return 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com ' + query);
   if (site === 'redfin') return 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + query);
   if (site === 'realtor') return 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + query);
+  if (site === 'google') return 'https://www.google.com/search?q=' + enc;
   if (site === 'maps') return 'https://maps.google.com/?q=' + enc;
   if (site === 'street') return 'https://www.google.com/maps/search/?api=1&query=' + enc + '&layer=c';
   if (site === 'cyber') return 'https://www.cyberbackgroundchecks.com/search?q=' + enc;
   if (site === 'fastpeople') return 'https://www.fastpeoplesearch.com/name/' + enc;
+  if (site === 'truepeople') return 'https://www.truepeoplesearch.com/results?name=' + enc;
   if (site === 'whitepages') return 'https://www.whitepages.com/name/' + enc;
   return '';
 }
@@ -3824,11 +3826,13 @@ function buildEnrichmentLaunchpad(lead) {
   var links = [
     {label:'Zillow Search', url:leadEnrichmentSearchUrl('zillow', address), hint:'Address-based value context'},
     {label:'Redfin Search', url:leadEnrichmentSearchUrl('redfin', address), hint:'Search result, not assumed property URL'},
+    {label:'Google Search', url:leadEnrichmentSearchUrl('google', address), hint:'Manual search fallback'},
     {label:'Google Maps', url:leadEnrichmentSearchUrl('maps', address), hint:'Location check'},
     {label:'Street View', url:leadEnrichmentSearchUrl('street', address), hint:'Visual condition check'},
     {label:'County Record', url:leadBriefingText(urls.source_record_url || urls.source_query_url || urls.source_url), hint:'Official/source verification'},
     {label:'CyberBackgroundChecks', url:leadEnrichmentSearchUrl('cyber', ownerQuery), hint:'Manual owner/contact search'},
     {label:'FastPeopleSearch', url:leadEnrichmentSearchUrl('fastpeople', ownerQuery), hint:'Manual owner/contact search'},
+    {label:'TruePeopleSearch', url:leadEnrichmentSearchUrl('truepeople', ownerQuery), hint:'Manual owner/contact search'},
     {label:'Whitepages', url:leadEnrichmentSearchUrl('whitepages', ownerQuery), hint:'Optional manual lookup'}
   ].filter(function(link){ return !!link.url; });
   return {
@@ -10814,6 +10818,7 @@ function renderLeadOperationsBlock(lead, followups, tz, safe) {
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;color:#fff">AI MSG</div>';
   html += '</div>';
   html += renderLeadActivityMemory(lead);
+  html += renderLeadSkipTraceWorkspace(lead);
   html += '<div class="action-row">';
   html += '<button class="btn btn-dark btn-sm" data-lead-id="' + mdaEscapeAttr(lid) + '" onclick="event.stopPropagation();analyzeLeadInManualDealAnalyzer(this.dataset.leadId)">Analyze Deal</button>';
   html += '<button class="btn btn-dark btn-sm" data-action="contract" data-lid="' + lid + '">Contract</button>';
@@ -10849,7 +10854,7 @@ function renderLeadTimingLine(lead) {
   html += '</div>';
   if (lead.skip_trace_date) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contact lookup reviewed: ' + new Date(lead.skip_trace_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div>';
   else if (lead.skip_trace_attempted) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contact lookup attempted; no phone/email visible</div>';
-  else if (!lead.phone) html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0" title="No phone/email is saved. Use manual enrichment before outreach.">Needs contact lookup before outreach.</div>';
+  else if (!researchLeadContactReady(lead)) html += '<div style="font-size:10px;color:#f59e0b;margin:2px 0" title="No phone/email is saved. Use manual enrichment before outreach.">Needs contact lookup before outreach.</div>';
   if (lead.relatives && lead.relatives.length) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">Contacts: ' + lead.relatives.slice(0,3).join(', ') + '</div>';
   if (lead.phone_all && lead.phone_all.length > 1) html += '<div style="font-size:10px;color:#94a3b8;margin:2px 0">More phones: ' + lead.phone_all.slice(1).join(', ') + '</div>';
   return html;
@@ -17187,11 +17192,12 @@ function researchLeadWhy(lead) {
   var days = researchLeadAuctionDays(lead);
   var confidence = researchLeadSourceConfidence(lead);
   var distress = researchLeadDistressStrength(lead);
+  var contactReady = researchLeadContactReady(lead);
   if (/county|treasurer|sheriff|court|tax|foreclosure|gov|socrata|wayne|cook/i.test(sourceText)) parts.push('High-confidence county/official source evidence.');
   if (tax > 0) parts.push('Tax/lien pressure saved at ' + mdaMoney(tax) + '.');
   if (days !== null) parts.push(days <= 14 ? 'Auction timing appears urgent: ' + days + ' days.' : 'Auction/sale timing saved: ' + days + ' days.');
   if (distress >= 35) parts.push('Distress signals indicate likely motivation.');
-  if (!(lead && (lead.phone || lead.email))) parts.push('No contact info saved; manual lookup is needed before outreach.');
+  if (!contactReady) parts.push('No contact info saved; manual lookup is needed before outreach.');
   if (confidence < 50) parts.push('Source confidence is limited, so verify before pricing.');
   if (!parts.length) parts.push('Saved evidence is limited; verify source, comps, and contact path before offer work.');
   return parts.slice(0, 4);
@@ -17234,6 +17240,419 @@ function researchNormalizeComp(comp) {
     notes: comp.notes || '',
     ppsf: price && sqft ? price / sqft : 0
   };
+}
+
+function researchBlankContactSlot() {
+  return {
+    owner_name: '',
+    possible_relative: '',
+    phone: '',
+    email: '',
+    mailing_address: '',
+    occupancy_hint: '',
+    owner_type: 'unknown',
+    confidence: 'unverified',
+    source: '',
+    source_url: '',
+    notes: '',
+    primary: false
+  };
+}
+
+function researchNormalizeContact(contact) {
+  contact = contact || {};
+  var ownerName = leadBriefingText(contact.owner_name || contact.owner || contact.name || contact.title || '');
+  var relative = leadBriefingText(contact.possible_relative || contact.relative_name || contact.relative || '');
+  var phone = leadBriefingText(contact.phone || contact.phone_number || contact.mobile || contact.cell || '');
+  var email = leadBriefingText(contact.email || contact.email_address || '');
+  var mailing = leadBriefingText(contact.mailing_address || contact.mailing || contact.address || contact.mail_address || '');
+  var occupancy = leadBriefingText(contact.occupancy_hint || contact.occupancy || contact.residency || '');
+  var ownerType = String(contact.owner_type || contact.entity_type || contact.llc_person_flag || '').toLowerCase();
+  var ownerTypeSource = [ownerName, relative, leadBriefingText(contact.notes || '')].join(' ');
+  if (!ownerType) {
+    if (/llc|l\.l\.c|inc|corp|trust|lp|llp|company|co\.?\b/i.test(ownerTypeSource)) ownerType = 'llc';
+    else if (ownerName || relative) ownerType = 'person';
+    else ownerType = 'unknown';
+  }
+  if (ownerType !== 'person' && ownerType !== 'llc') ownerType = 'unknown';
+  var confidence = String(contact.confidence || contact.verification_label || contact.confidence_level || 'unverified').toLowerCase();
+  if (['unverified', 'low', 'medium', 'high'].indexOf(confidence) === -1) confidence = 'unverified';
+  return {
+    owner_name: ownerName,
+    possible_relative: relative,
+    phone: phone,
+    email: email,
+    mailing_address: mailing,
+    occupancy_hint: occupancy,
+    owner_type: ownerType,
+    confidence: confidence,
+    source: leadBriefingText(contact.source || contact.source_name || contact.origin || ''),
+    source_url: leadBriefingText(contact.source_url || contact.url || contact.link || ''),
+    notes: leadBriefingText(contact.notes || contact.note || ''),
+    primary: !!contact.primary
+  };
+}
+
+function researchContactSlotIsBlank(contact) {
+  contact = researchNormalizeContact(contact);
+  return !contact.owner_name && !contact.possible_relative && !contact.phone && !contact.email && !contact.mailing_address && !contact.occupancy_hint && !contact.source && !contact.source_url && !contact.notes && !contact.primary && contact.owner_type === 'unknown' && String(contact.confidence || 'unverified') === 'unverified';
+}
+
+function researchContactSlotLabel(contact, row) {
+  contact = researchNormalizeContact(contact);
+  var ownerType = contact.owner_type === 'llc' ? 'LLC' : contact.owner_type === 'person' ? 'Person' : 'Unknown';
+  var conf = contact.confidence ? String(contact.confidence).replace(/^unverified$/i, 'Unverified') : 'Unverified';
+  return 'Slot ' + (row + 1) + ' · ' + ownerType + ' · ' + conf + (contact.primary ? ' · Primary' : '');
+}
+
+function researchContactSlotAvgPpsf() {
+  return 0;
+}
+
+function researchContactFieldId(leadId, row, field) {
+  return 'research-contact-' + leadActivityDomId(leadId) + '-' + row + '-' + field;
+}
+
+function researchContactFieldOnChange(leadId) {
+  return 'researchCaptureContactDraft(' + researchJsArg(leadId) + ');updateResearchSessionContactPreview(' + researchJsArg(leadId) + ')';
+}
+
+function researchContactTextInput(leadId, row, field, placeholder, value, extraStyle) {
+  return '<input id="' + researchContactFieldId(leadId, row, field) + '" oninput="' + researchContactFieldOnChange(leadId) + '" value="' + mdaEscapeAttr(value || '') + '" placeholder="' + placeholder + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0;' + (extraStyle || '') + '">';
+}
+
+function researchContactSelect(leadId, row, field, value, options, extraStyle) {
+  var html = '<select id="' + researchContactFieldId(leadId, row, field) + '" onchange="' + researchContactFieldOnChange(leadId) + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0;' + (extraStyle || '') + '">';
+  html += options.map(function(option) {
+    var optValue = typeof option === 'string' ? option : option.value;
+    var label = typeof option === 'string' ? option : option.label;
+    return '<option value="' + mdaEscapeAttr(optValue) + '"' + (String(value || '') === String(optValue) ? ' selected' : '') + '>' + mdaEscapeHtml(label) + '</option>';
+  }).join('');
+  html += '</select>';
+  return html;
+}
+
+function researchContactSlotConfidenceClass(value) {
+  var conf = String(value || 'unverified').toLowerCase();
+  if (conf === 'high') return '#10b981';
+  if (conf === 'medium') return '#f4c542';
+  if (conf === 'low') return '#f59e0b';
+  return '#94a3b8';
+}
+
+function researchContactSessionDraft(leadId) {
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.contactDrafts) APP.researchSession.contactDrafts = {};
+  if (!APP.researchSession.contactDrafts[leadId]) APP.researchSession.contactDrafts[leadId] = [];
+  return APP.researchSession.contactDrafts[leadId];
+}
+
+function researchLeadSavedContacts(lead) {
+  lead = lead || {};
+  var raw = [];
+  if (Array.isArray(lead.contacts)) raw = raw.concat(lead.contacts);
+  if (Array.isArray(lead.contact_candidates)) raw = raw.concat(lead.contact_candidates);
+  if (Array.isArray(lead.skip_trace_contacts)) raw = raw.concat(lead.skip_trace_contacts);
+  if (lead.owner_name || lead.phone || lead.email || lead.mailing_address || lead.owner_address) {
+    raw.push({
+      owner_name: lead.owner_name || lead.owner || lead.seller_name || '',
+      possible_relative: Array.isArray(lead.relatives) && lead.relatives.length ? lead.relatives[0] : '',
+      phone: lead.phone || (Array.isArray(lead.phone_all) && lead.phone_all.length ? lead.phone_all[0] : ''),
+      email: lead.email || '',
+      mailing_address: lead.mailing_address || lead.owner_mailing_address || lead.owner_address || '',
+      occupancy_hint: lead.occupancy_hint || lead.occupancy || lead.seller_type || '',
+      owner_type: lead.owner_type || (lead.owner_name && /llc|l\.l\.c|inc|corp|trust|lp|llp|company|co\.?\b/i.test(String(lead.owner_name)) ? 'llc' : lead.owner_name ? 'person' : 'unknown'),
+      confidence: lead.contact_confidence || 'unverified',
+      source: lead.source || lead.source_name || lead.category || '',
+      source_url: lead.source_record_url || lead.source_query_url || lead.source_url || '',
+      notes: lead.contact_notes || ''
+    });
+  }
+  return raw.map(researchNormalizeContact).filter(function(contact){ return !researchContactSlotIsBlank(contact); }).slice(0, 5);
+}
+
+function researchLeadContacts(lead) {
+  var id = String(lead && lead.id || '');
+  var draft = APP.researchSession && APP.researchSession.contactDrafts && APP.researchSession.contactDrafts[id] ? APP.researchSession.contactDrafts[id] : [];
+  var seen = {};
+  return researchLeadSavedContacts(lead).concat((draft || []).map(researchNormalizeContact)).filter(function(contact){
+    contact = researchNormalizeContact(contact);
+    if (researchContactSlotIsBlank(contact)) return false;
+    var key = researchContactSlotKey(contact);
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  }).slice(0, 5);
+}
+
+function researchLeadContactReady(lead) {
+  var contacts = researchLeadContacts(lead || {});
+  return !!(
+    (lead && (lead.phone || lead.email)) ||
+    contacts.some(function(contact) {
+      return !!(contact && (contact.phone || contact.email));
+    })
+  );
+}
+
+function researchLeadContactSignals(lead) {
+  lead = lead || {};
+  return {
+    owner_name: leadBriefingText(lead.owner_name || lead.owner || lead.seller_name || ''),
+    possible_relative: Array.isArray(lead.relatives) && lead.relatives.length ? leadBriefingText(lead.relatives[0]) : '',
+    phone: leadBriefingText(lead.phone || (Array.isArray(lead.phone_all) && lead.phone_all.length ? lead.phone_all[0] : '')),
+    email: leadBriefingText(lead.email || ''),
+    mailing_address: leadBriefingText(lead.mailing_address || lead.owner_mailing_address || lead.owner_address || ''),
+    occupancy_hint: leadBriefingText(lead.occupancy_hint || lead.occupancy || lead.seller_type || ''),
+    owner_type: leadBriefingText(lead.owner_type || (lead.owner_name && /llc|l\.l\.c|inc|corp|trust|lp|llp|company|co\.?\b/i.test(String(lead.owner_name)) ? 'llc' : lead.owner_name ? 'person' : 'unknown')),
+    source: leadBriefingText(lead.source || lead.source_name || lead.category || ''),
+    source_url: leadBriefingText(lead.source_record_url || lead.source_query_url || lead.source_url || ''),
+    confidence: leadBriefingText(lead.contact_confidence || lead.source_confidence || 'unverified')
+  };
+}
+
+function researchContactStats(contacts) {
+  contacts = contacts || [];
+  var phones = contacts.filter(function(c){ return !!c.phone; }).length;
+  var emails = contacts.filter(function(c){ return !!c.email; }).length;
+  var mailing = contacts.filter(function(c){ return !!c.mailing_address; }).length;
+  var primary = contacts.find(function(c){ return !!c.primary; }) || null;
+  var ownerNames = contacts.filter(function(c){ return !!c.owner_name; }).length;
+  var unverified = contacts.filter(function(c){ return String(c.confidence || 'unverified').toLowerCase() === 'unverified'; }).length;
+  return {
+    count: contacts.length,
+    phones: phones,
+    emails: emails,
+    mailing: mailing,
+    ownerNames: ownerNames,
+    unverified: unverified,
+    primary: primary,
+    readyForOutreach: !!(primary && (primary.phone || primary.email))
+  };
+}
+
+function researchReadContactRow(leadId, row) {
+  var safe = leadActivityDomId(leadId);
+  function val(field) {
+    var el = document.getElementById('research-contact-' + safe + '-' + row + '-' + field);
+    return el ? String(el.value || '').trim() : '';
+  }
+  var confidence = val('confidence') || 'unverified';
+  if (['unverified', 'low', 'medium', 'high'].indexOf(String(confidence).toLowerCase()) === -1) confidence = 'unverified';
+  var ownerType = val('owner_type') || 'unknown';
+  if (['person', 'llc', 'unknown'].indexOf(String(ownerType).toLowerCase()) === -1) ownerType = 'unknown';
+  return {
+    owner_name: val('owner_name'),
+    possible_relative: val('possible_relative'),
+    phone: val('phone'),
+    email: val('email'),
+    mailing_address: val('mailing_address'),
+    occupancy_hint: val('occupancy_hint'),
+    owner_type: ownerType,
+    confidence: confidence,
+    source: val('source'),
+    source_url: val('source_url'),
+    notes: val('notes'),
+    primary: !!(document.getElementById('research-contact-' + safe + '-' + row + '-primary') && document.getElementById('research-contact-' + safe + '-' + row + '-primary').checked)
+  };
+}
+
+function researchCaptureContactDraft(leadId) {
+  var rows = [];
+  for (var i = 0; i < 5; i++) {
+    var row = researchReadContactRow(leadId, i);
+    if (row.owner_name || row.possible_relative || row.phone || row.email || row.mailing_address || row.occupancy_hint || row.source || row.source_url || row.notes || row.primary || row.owner_type !== 'unknown' || String(row.confidence || 'unverified') !== 'unverified') rows.push(row);
+  }
+  researchContactSessionDraft(String(leadId)).splice(0, 5);
+  Array.prototype.push.apply(researchContactSessionDraft(String(leadId)), rows.slice(0, 5));
+}
+
+function updateResearchSessionContactPreview(leadId) {
+  researchCaptureContactDraft(leadId);
+  researchRefreshSessionContactPreview(leadId);
+}
+
+function researchRefreshSessionContactPreview(leadId) {
+  var lead = (APP.leads || []).find(function(l){ return String(l.id) === String(leadId); }) || {};
+  var contacts = researchLeadContacts(lead);
+  var el = document.getElementById('research-contact-preview-' + leadActivityDomId(leadId));
+  if (el) {
+    el.innerHTML = renderResearchContactProgressHtml(contacts, lead);
+  }
+}
+
+function renderResearchContactProgressHtml(contacts, lead) {
+  lead = lead || {};
+  contacts = contacts || [];
+  var stats = researchContactStats(contacts);
+  var primary = stats.primary || null;
+  var primaryLabel = primary ? (primary.owner_name || primary.possible_relative || primary.phone || primary.email || 'Primary selected') : 'No primary selected';
+  var nextStep = stats.readyForOutreach ? 'Verify the primary contact before outreach.' : 'Fill a slot, choose a primary contact, and add phone or email.';
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">' +
+      '<div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Draft Contact Status</div>' +
+      '<div style="font-size:10px;color:' + (stats.readyForOutreach ? '#86efac' : '#fca5a5') + ';font-weight:900">' + (stats.readyForOutreach ? 'READY FOR OUTREACH PREP' : 'NEEDS CONTACT LOOKUP') + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px">' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Candidate Count</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + stats.count + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Phones / Emails</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + stats.phones + ' / ' + stats.emails + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Primary</div><div style="font-size:12px;font-weight:900;color:#e5e7eb;line-height:1.35">' + researchSafeText(primaryLabel) + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Next Step</div><div style="font-size:10px;font-weight:900;color:#e5e7eb;line-height:1.45">' + researchSafeText(nextStep) + '</div></div>' +
+    '</div>' +
+  '</div>';
+}
+
+function researchContactCandidateToDraft(candidate) {
+  candidate = candidate || {};
+  var ownerName = leadBriefingText(candidate.owner_name || candidate.owner || candidate.name || candidate.title || '');
+  var noteParts = [
+    'Unverified local browser candidate',
+    candidate.confidence_reason || '',
+    candidate.url || candidate.source_url || '',
+    candidate.snippet || candidate.notes || ''
+  ].filter(Boolean);
+  var ownerType = String(candidate.owner_type || candidate.entity_type || candidate.llc_person_flag || '').toLowerCase();
+  if (!ownerType) {
+    var typeSource = [ownerName, candidate.notes || '', candidate.source || ''].join(' ');
+    if (/llc|l\.l\.c|inc|corp|trust|lp|llp|company|co\.?\b/i.test(typeSource)) ownerType = 'llc';
+    else if (ownerName) ownerType = 'person';
+    else ownerType = 'unknown';
+  }
+  if (ownerType !== 'person' && ownerType !== 'llc') ownerType = 'unknown';
+  return {
+    owner_name: ownerName,
+    possible_relative: leadBriefingText(candidate.possible_relative || candidate.relative_name || ''),
+    phone: leadBriefingText(candidate.phone || candidate.phone_number || ''),
+    email: leadBriefingText(candidate.email || candidate.email_address || ''),
+    mailing_address: leadBriefingText(candidate.mailing_address || candidate.address || ''),
+    occupancy_hint: leadBriefingText(candidate.occupancy_hint || candidate.occupancy || ''),
+    owner_type: ownerType,
+    confidence: 'unverified',
+    source: candidate.source ? 'Local Contact Agent - ' + candidate.source : 'Local Contact Agent',
+    source_url: leadBriefingText(candidate.url || candidate.source_url || ''),
+    notes: noteParts.join(' | ').slice(0, 260),
+    primary: !!candidate.primary
+  };
+}
+
+function researchInsertDraftContact(leadId, contact) {
+  var draft = researchContactSessionDraft(String(leadId));
+  researchCaptureContactDraft(leadId);
+  draft = researchContactSessionDraft(String(leadId));
+  var normalized = researchNormalizeContact(contact);
+  var contactKey = researchContactSlotKey(normalized);
+  var duplicateIndex = -1;
+  for (var j = 0; j < draft.length; j++) {
+    if (researchContactSlotKey(draft[j]) === contactKey) {
+      duplicateIndex = j;
+      break;
+    }
+  }
+  if (duplicateIndex > -1) {
+    draft[duplicateIndex] = normalized;
+    if (typeof toast === 'function') toast('Contact candidate updated in the draft slots.', 'success');
+    researchRefreshSessionContactPreview(leadId);
+    if (typeof render === 'function') render();
+    return true;
+  }
+  var insertIndex = -1;
+  for (var i = 0; i < 5; i++) {
+    if (researchContactSlotIsBlank(draft[i])) {
+      insertIndex = i;
+      break;
+    }
+  }
+  if (insertIndex === -1 && draft.length < 5) insertIndex = draft.length;
+  if (insertIndex === -1) {
+    if (typeof toast === 'function') toast('All 5 contact slots are full. Clear one first.', 'error');
+    return false;
+  }
+  while (draft.length < 5) draft.push(researchBlankContactSlot());
+  draft[insertIndex] = normalized;
+  if (typeof toast === 'function') toast('Candidate added to a draft contact slot. Verify before outreach.', 'success');
+  researchRefreshSessionContactPreview(leadId);
+  if (typeof render === 'function') render();
+  return true;
+}
+
+function researchContactSlotKey(contact) {
+  contact = researchNormalizeContact(contact);
+  return [
+    contact.owner_name || '',
+    contact.possible_relative || '',
+    contact.phone || '',
+    contact.email || '',
+    contact.mailing_address || ''
+  ].map(function(v) {
+    return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }).join('|');
+}
+
+function researchSetPrimaryDraftContact(leadId, row) {
+  var draft = researchContactSessionDraft(String(leadId));
+  researchCaptureContactDraft(leadId);
+  draft = researchContactSessionDraft(String(leadId));
+  var contact = draft[row];
+  if (!contact || researchContactSlotIsBlank(contact)) {
+    if (typeof toast === 'function') toast('Fill the slot before marking it primary.', 'error');
+    return;
+  }
+  draft.forEach(function(slot, index) {
+    if (slot) slot.primary = index === row;
+  });
+  var safe = leadActivityDomId(leadId);
+  for (var i = 0; i < draft.length; i++) {
+    var el = document.getElementById('research-contact-' + safe + '-' + i + '-primary');
+    if (el) el.checked = i === row;
+  }
+  researchRefreshSessionContactPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function researchSetPrimaryDraftContactFromCheckbox(leadId, row) {
+  researchSetPrimaryDraftContact(leadId, row);
+}
+
+function researchRemoveDraftContactSlot(leadId, row) {
+  var draft = researchContactSessionDraft(String(leadId));
+  researchCaptureContactDraft(leadId);
+  draft = researchContactSessionDraft(String(leadId));
+  draft[row] = researchBlankContactSlot();
+  while (draft.length < 5) draft.push(researchBlankContactSlot());
+  if (typeof toast === 'function') toast('Contact slot cleared.', 'success');
+  researchRefreshSessionContactPreview(leadId);
+  if (typeof render === 'function') render();
+}
+
+function researchImportContactCandidate(leadId, candidate) {
+  return researchInsertDraftContact(leadId, researchContactCandidateToDraft(candidate));
+}
+
+function researchParseContactPaste(leadId) {
+  var safe = leadActivityDomId(leadId);
+  var box = document.getElementById('research-contact-paste-' + safe);
+  var text = box ? String(box.value || '').trim() : '';
+  if (!text) return;
+  var raw = null;
+  try {
+    raw = JSON.parse(text);
+    if (Array.isArray(raw)) raw = raw[0] || null;
+  } catch (e) {
+    raw = null;
+  }
+  if (!raw) {
+    var phoneMatch = text.match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/);
+    var emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    var lines = text.split(/\n+/).map(function(line){ return line.trim(); }).filter(Boolean);
+    raw = {
+      owner_name: lines[0] || '',
+      phone: phoneMatch ? phoneMatch[0] : '',
+      email: emailMatch ? emailMatch[0] : '',
+      notes: text.slice(0, 260)
+    };
+  }
+  if (!researchImportContactCandidate(leadId, raw)) return;
+  if (box) box.value = '';
 }
 
 function researchBlankCompSlot() {
@@ -17593,7 +18012,7 @@ function researchLeadProgress(lead) {
   var verified = !!(lead && (lead.source_verified_at || lead.verified_at || lead.last_verified_at || lead.verification_state === 'recently_refreshed' || lead.source_recheck_state === 'recently_refreshed'));
   var arv = Number(lead && lead.arv) || (stats.count >= 3 ? (stats.avg || 0) : 0);
   var repairs = Number(lead && (lead.repairs || lead.repair_estimate)) || 0;
-  var contact = !!(lead && (lead.phone || lead.email || lead.contact_lookup_result || lead.skip_trace_attempted || lead.skip_trace_date));
+  var contact = researchLeadContactReady(lead) || !!(lead && (lead.contact_lookup_result || lead.skip_trace_attempted || lead.skip_trace_date));
   var offerReady = verified && stats.count >= 3 && arv > 0 && repairs > 0;
   var blockers = [];
   if (!verified) blockers.push('source verification checked');
@@ -17683,7 +18102,7 @@ function renderResearchSessionCard(lead) {
   var progress = researchLeadProgress(lead);
   var why = researchLeadWhy(lead).join(' ');
   var compStatus = progress.stats.count ? progress.stats.count + ' comp' + (progress.stats.count === 1 ? '' : 's') + ' / ' + progress.stats.confidence : 'No comps yet';
-  var enrichment = lead.enrichment_requested ? 'Requested' : ((lead.phone || lead.email) ? 'Contact available' : 'Needs contact lookup');
+  var enrichment = lead.enrichment_requested ? 'Requested' : (researchLeadContactReady(lead) ? 'Contact available' : 'Needs contact lookup');
   var verification = progress.sourceVerified ? 'Verified/requested' : 'Verification needed';
   var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.id || 'Lead');
   return '<div style="background:' + (active ? '#10213f' : '#111827') + ';border:1px solid ' + (active ? '#f4c54266' : '#243044') + ';border-radius:9px;padding:10px;color:#e5e7eb">' +
@@ -18189,6 +18608,138 @@ function renderResearchCompSummaryHtml(comps, stats, lead) {
   return '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + researchSafeText(summary) + '</div>' + ai;
 }
 
+function renderResearchContactSummaryHtml(contacts, lead) {
+  lead = lead || {};
+  contacts = contacts || [];
+  var signals = researchLeadContactSignals(lead);
+  var stats = researchContactStats(contacts);
+  var ownerLine = [signals.owner_name || 'Owner name not saved', signals.possible_relative ? 'Relative: ' + signals.possible_relative : '', signals.owner_type && signals.owner_type !== 'unknown' ? ('Type: ' + String(signals.owner_type).toUpperCase()) : 'Owner type not saved'].filter(Boolean).join(' · ');
+  var contactLine = [signals.phone ? 'Phone: ' + signals.phone : 'No phone saved', signals.email ? 'Email: ' + signals.email : 'No email saved'].join(' · ');
+  var mailingLine = [signals.mailing_address ? 'Mailing: ' + signals.mailing_address : 'Mailing address not saved', signals.occupancy_hint ? 'Occupancy: ' + signals.occupancy_hint : 'Occupancy not saved'].join(' · ');
+  var sourceLine = [signals.source ? 'Source: ' + signals.source : 'Source not saved', signals.source_url ? 'Source URL saved' : 'Source URL not saved', signals.confidence ? 'Confidence: ' + signals.confidence : 'Confidence not saved'].join(' · ');
+  var primary = stats.primary || null;
+  var primaryLine = primary ? (primary.owner_name || primary.possible_relative || primary.phone || primary.email || 'Primary selected') : 'No primary contact selected';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:8px 0 9px">' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Owner / Relative</div><div style="font-size:10px;color:#e5e7eb;line-height:1.5">' + researchSafeText(ownerLine) + '</div></div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Phones / Emails</div><div style="font-size:10px;color:#e5e7eb;line-height:1.5">' + researchSafeText(contactLine) + '<br><span style="color:#94a3b8">Workspace: ' + stats.phones + ' phone(s), ' + stats.emails + ' email(s), ' + stats.unverified + ' unverified.</span></div></div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Mailing / Occupancy</div><div style="font-size:10px;color:#e5e7eb;line-height:1.5">' + researchSafeText(mailingLine) + '</div></div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:4px">Source / Confidence</div><div style="font-size:10px;color:#e5e7eb;line-height:1.5">' + researchSafeText(sourceLine) + '<br><span style="color:#94a3b8">Primary: ' + researchSafeText(primaryLine) + '</span></div></div>' +
+  '</div>' +
+  '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin:2px 0 8px">' +
+    '<div style="font-size:10px;color:' + (stats.readyForOutreach ? '#86efac' : '#fca5a5') + ';font-weight:900">' + (stats.count ? stats.count + ' contact candidate' + (stats.count === 1 ? '' : 's') + ' in workspace' : 'No contact candidates in workspace yet') + '</div>' +
+    '<div style="font-size:10px;color:#94a3b8">' + (stats.readyForOutreach ? 'Ready for outreach prep after you verify the primary contact.' : 'Imported contacts stay unverified until operator review.') + '</div>' +
+  '</div>';
+}
+
+function researchRenderContactSlotHtml(lead, row, contact) {
+  lead = lead || {};
+  contact = researchNormalizeContact(contact || researchBlankContactSlot());
+  var safeLeadId = researchJsArg(lead.id);
+  var primary = !!contact.primary;
+  var blank = researchContactSlotIsBlank(contact);
+  var primaryBadge = primary ? '<span style="font-size:9px;color:#f4c542;font-weight:900;text-transform:uppercase">Primary</span>' : '';
+  var blankBadge = blank ? '<span style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Empty</span>' : '<span style="font-size:9px;color:#86efac;font-weight:900;text-transform:uppercase">Filled</span>';
+  var cardBorder = primary ? '#f4c54280' : '#243044';
+  var cardBg = blank ? '#09101b' : '#0b1120';
+  var rowLabel = researchContactSlotLabel(contact, row);
+  var ownerTypeOptions = [
+    { value: 'unknown', label: 'Unknown' },
+    { value: 'person', label: 'Person' },
+    { value: 'llc', label: 'LLC' }
+  ];
+  var confidenceOptions = [
+    { value: 'unverified', label: 'Unverified' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' }
+  ];
+  return '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:10px;padding:10px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<div style="font-size:10px;color:#e5e7eb;font-weight:900">' + researchSafeText(rowLabel) + '</div>' +
+        blankBadge +
+        primaryBadge +
+        '<span style="font-size:9px;color:#94a3b8">Unverified</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+        '<button type="button" onclick="researchSetPrimaryDraftContact(' + safeLeadId + ',' + row + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:' + (primary ? '#1f2937' : '#111827') + ';color:' + (primary ? '#f4c542' : '#e5e7eb') + ';padding:5px 8px;font-weight:900;cursor:pointer">' + (primary ? 'Primary' : 'Make Primary') + '</button>' +
+        '<button type="button" onclick="researchRemoveDraftContactSlot(' + safeLeadId + ',' + row + ')" style="font-size:10px;border:1px solid #7f1d1d;border-radius:6px;background:#3b0a0a;color:#fecaca;padding:5px 8px;font-weight:900;cursor:pointer">Remove</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(220px,1.45fr) minmax(180px,1fr) minmax(130px,.75fr) minmax(150px,.85fr);gap:6px;align-items:start">' +
+      researchContactTextInput(lead.id, row, 'owner_name', 'Owner / entity name', contact.owner_name, '') +
+      researchContactTextInput(lead.id, row, 'possible_relative', 'Possible relative', contact.possible_relative, '') +
+      researchContactTextInput(lead.id, row, 'phone', 'Phone', contact.phone, '') +
+      researchContactTextInput(lead.id, row, 'email', 'Email', contact.email, '') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(220px,1.45fr) minmax(180px,1fr) minmax(120px,.72fr) minmax(120px,.72fr);gap:6px;align-items:start;margin-top:6px">' +
+      researchContactTextInput(lead.id, row, 'mailing_address', 'Mailing address', contact.mailing_address, '') +
+      researchContactTextInput(lead.id, row, 'occupancy_hint', 'Occupancy hint', contact.occupancy_hint, '') +
+      researchContactSelect(lead.id, row, 'owner_type', contact.owner_type || 'unknown', ownerTypeOptions, '') +
+      researchContactSelect(lead.id, row, 'confidence', contact.confidence || 'unverified', confidenceOptions, '') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,1.4fr) minmax(240px,1.5fr);gap:6px;align-items:start;margin-top:6px">' +
+      researchContactTextInput(lead.id, row, 'source', 'Source', contact.source, '') +
+      researchContactTextInput(lead.id, row, 'source_url', 'Source URL', contact.source_url, '') +
+      researchContactTextInput(lead.id, row, 'notes', 'Notes', contact.notes, '') +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:9px;color:#94a3b8;line-height:1.4">' +
+      '<span>Imported contacts stay unverified until the operator checks them. No auto-calling, SMS, or email is triggered.</span>' +
+      '<span>' + (contact.source_url ? '<a href="' + mdaEscapeAttr(contact.source_url) + '" target="_blank" style="color:#93c5fd;text-decoration:none">Open source</a>' : 'No source URL yet') + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderLeadSkipTraceWorkspace(lead) {
+  lead = lead || {};
+  var safe = leadActivityDomId(lead.id);
+  var contacts = researchLeadContacts(lead);
+  var stats = researchContactStats(contacts);
+  var signals = researchLeadContactSignals(lead);
+  var ownerQuery = signals.owner_name || signals.mailing_address || researchLeadAddress(lead) || lead.address || '';
+  var address = researchLeadAddress(lead) || lead.address || '';
+  var links = [
+    ['CyberBackgroundChecks', leadEnrichmentSearchUrl('cyber', ownerQuery || address)],
+    ['FastPeopleSearch', leadEnrichmentSearchUrl('fastpeople', ownerQuery || address)],
+    ['TruePeopleSearch', leadEnrichmentSearchUrl('truepeople', ownerQuery || address)],
+    ['Whitepages', leadEnrichmentSearchUrl('whitepages', ownerQuery || address)],
+    ['Google Search', leadEnrichmentSearchUrl('google', ownerQuery || address)]
+  ].filter(function(item){ return !!item[1]; }).map(function(item){
+    return '<a href="' + mdaEscapeAttr(item[1]) + '" target="_blank" style="font-size:10px;font-weight:900;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#111827;border-radius:999px;padding:6px 9px">' + item[0] + '</a>';
+  }).join('');
+  var draft = researchContactSessionDraft(String(lead.id));
+  var rows = '';
+  for (var i = 0; i < 5; i++) {
+    rows += researchRenderContactSlotHtml(lead, i, draft[i] || researchBlankContactSlot()) + (i < 4 ? '<div style="height:8px"></div>' : '');
+  }
+  var ready = stats.readyForOutreach ? '#86efac' : '#fca5a5';
+  return '<div style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Skip Trace Workspace</div>' +
+      '<div style="font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px">Manual owner/contact review for one lead. No auto-calling, SMS, email, scraping, or persistence.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+        '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:' + (stats.readyForOutreach ? '#10b98122' : '#fca5a522') + ';color:' + ready + ';border:1px solid ' + ready + '55">' + (stats.readyForOutreach ? 'Ready for outreach prep' : 'Needs contact lookup') + '</span>' +
+        '<span style="font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;background:#1f2937;color:#f4c542;border:1px solid #334155">' + stats.count + ' candidate' + (stats.count === 1 ? '' : 's') + '</span>' +
+      '</div>' +
+    '</div>' +
+    renderResearchContactSummaryHtml(contacts, lead) +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin-bottom:9px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:6px">Manual Launch Links</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin-bottom:9px">' +
+      '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:start">' +
+        '<textarea id="research-contact-paste-' + safe + '" placeholder="Paste visible contact text or JSON candidate here. Parser only extracts visible values." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea>' +
+        '<button type="button" onclick="researchParseContactPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Import Contact</button>' +
+        '<button type="button" onclick="updateResearchSessionContactPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Sync Slots</button>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:6px">Imported candidates remain unverified until you review them. Future local-browser capture imports should call <code style="color:#f4c542">researchImportContactCandidate</code>.</div>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px">' + rows + '</div>' +
+    '<div id="research-contact-preview-' + safe + '" style="margin-top:8px">' + renderResearchContactProgressHtml(contacts, lead) + '</div>' +
+  '</div>';
+}
+
 function renderResearchSellerFlow(lead) {
   var text = [
     lead && lead.source, lead && lead.category, lead && lead.motivation, lead && lead.distress_type,
@@ -18254,16 +18805,17 @@ function renderResearchSessionLeadWorkspace(lead) {
     '<details open style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:9px"><summary style="cursor:pointer;font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Real Comp Workflow</summary>' +
       '<div style="background:#451a03;border:1px solid #f59e0b66;border-radius:8px;padding:8px;margin:8px 0;color:#fed7aa;font-size:10px;line-height:1.5"><strong>Draft comps - not saved to lead yet.</strong> Research Session comps are session-local only. Unsaved research session comps may be lost if you switch leads, refresh, or close the session.</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin:8px 0">Open search links, paste real comp text, then enter/adjust comp fields manually. No comp is generated automatically.</div>' +
-      renderResearchLocalCompBridgeHtml(lead) +
-      renderResearchCompScoutHtml(lead) +
-      '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px;align-items:start"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Sync Slots</button></div>' +
-      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:4px 0 8px"><div style="font-size:10px;color:#94a3b8">Five structured slots max. Fill them manually or import local-agent candidates. Remove a slot to clear it.</div><div style="font-size:10px;color:#94a3b8">Primary comp is operator-marked only.</div></div>' +
-      '<div style="display:flex;flex-direction:column;gap:8px">' + rows + '</div>' +
-      '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +
-    '</details>' +
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + researchRenderProgressChecklist(researchLeadProgress(lead)) + '</div>' +
-    '<div style="font-size:10px;color:' + (researchLeadProgress(lead).offerReady ? '#86efac' : '#fca5a5') + ';font-weight:900;margin-bottom:8px">' + (researchLeadProgress(lead).offerReady ? 'READY FOR OFFER REVIEW' : 'NOT READY FOR OFFER REVIEW: ' + researchLeadProgress(lead).blockers.join(', ')) + '</div>' +
-    renderResearchSellerFlow(lead) +
+        renderResearchLocalCompBridgeHtml(lead) +
+        renderResearchCompScoutHtml(lead) +
+        '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px;align-items:start"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse. Parser only extracts visible text/numbers." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button><button type="button" onclick="researchCaptureDraft(' + researchJsArg(lead.id) + ');updateResearchSessionCompPreview(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Sync Slots</button></div>' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:4px 0 8px"><div style="font-size:10px;color:#94a3b8">Five structured slots max. Fill them manually or import local-agent candidates. Remove a slot to clear it.</div><div style="font-size:10px;color:#94a3b8">Primary comp is operator-marked only.</div></div>' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' + rows + '</div>' +
+        '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +
+      '</details>' +
+      renderLeadSkipTraceWorkspace(lead) +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + researchRenderProgressChecklist(researchLeadProgress(lead)) + '</div>' +
+      '<div style="font-size:10px;color:' + (researchLeadProgress(lead).offerReady ? '#86efac' : '#fca5a5') + ';font-weight:900;margin-bottom:8px">' + (researchLeadProgress(lead).offerReady ? 'READY FOR OFFER REVIEW' : 'NOT READY FOR OFFER REVIEW: ' + researchLeadProgress(lead).blockers.join(', ')) + '</div>' +
+      renderResearchSellerFlow(lead) +
     '<details style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-top:9px"><summary style="cursor:pointer;font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Raw/Internal Research Context</summary><div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:8px">' + researchLeadWhy(lead).map(function(x){ return '- ' + researchSafeText(x); }).join('<br>') + '</div></details>' +
   '</div>';
 }
