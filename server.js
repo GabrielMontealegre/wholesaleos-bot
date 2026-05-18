@@ -17,6 +17,10 @@ const app  = express();
 app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 8080;
+const ENABLE_BACKGROUND_INGESTION = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || ''));
+if (!ENABLE_BACKGROUND_INGESTION) {
+  logger.info('Background ingestion disabled by WOS_ENABLE_BACKGROUND_INGESTION=false');
+}
 
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
@@ -175,7 +179,6 @@ app.get('/api/leads', (req, res) => {
     filtered = filtered.slice(0, parseInt(limit));
   }
   res.json({ leads: filtered.map(withLeadIntelligence), total: filtered.length, totalAll: leads.length });
-});
 
 
 
@@ -3795,6 +3798,7 @@ app.post('/api/deals/playwright', async (req, res) => {
 });
 
 // Daily ingestion — 2AM UTC via cron (replaces setInterval)
+if (ENABLE_BACKGROUND_INGESTION) {
 cron.schedule('0 2 * * *', async () => {
   logger.info('Running daily ingestion...');
   await runDailyIngestion();
@@ -3821,6 +3825,8 @@ try{var se=require('./modules/sources/socrata-extra');se.runExtraSocrataSources(
 try{var s30=require('./modules/sources/socrata-30');s30.runSocrata30Sources(200).catch(function(e){logger.error('[socrata-30] '+e.message);});}catch(e){logger.error('[socrata-30] load: '+e.message);}
 
 // ── Batch lead delete ──
+}
+
 // POST /api/leads/delete-batch  body: { ids: ['id1','id2',...] }
 app.post('/api/leads/delete-batch', function(req, res) {
   try {
@@ -4058,6 +4064,7 @@ app.get('/api/courthouse/status', requireAdmin, function(req, res) {
 });
 
 // Courthouse cron: run Playwright scraper daily at 5AM UTC (after Socrata/ArcGIS at 2AM)
+if (ENABLE_BACKGROUND_INGESTION) {
 cron.schedule('0 5 * * *', function() {
   logger.info('[Courthouse] Starting daily Playwright scrape');
   var scraper;
@@ -4069,6 +4076,8 @@ cron.schedule('0 5 * * *', function() {
 });
 
 // POST /api/leads/run-ingestion — trigger fresh lead fetch from all sources
+}
+
 app.post('/api/leads/run-ingestion', requireAdmin, async function(req, res) {
   var source = req.body && req.body.source || 'all';
   var count  = (req.body && req.body.count) || 100;

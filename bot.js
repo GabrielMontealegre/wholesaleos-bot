@@ -14,6 +14,10 @@ const OWNER_ID = process.env.BOT_OWNER_ID;
 const PORT     = process.env.PORT || 3000;
 const RAILWAY_URL = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null;
 const USE_WEBHOOK = !!RAILWAY_URL;
+const ENABLE_BACKGROUND_INGESTION = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || ''));
+if (!ENABLE_BACKGROUND_INGESTION) {
+  console.log('Background ingestion disabled by WOS_ENABLE_BACKGROUND_INGESTION=false');
+}
 
 let bot;
 if (USE_WEBHOOK) {
@@ -100,8 +104,6 @@ bot.onText(/\/leads (.+)/, async (msg) => {
     '3. Upload the CSV\n\n' +
     'Only real Propwire/public-record leads are allowed.'
   );
-});
-});
 
 // ── /markets — show best markets for this week ────────────────────────────
 bot.onText(/\/markets/, async (msg) => {
@@ -261,6 +263,7 @@ cron.schedule('0 14 * * *', async () => {
 });
 
 // Daily buyer scrape at 6AM MST (1PM UTC) — 15 hot markets
+if (ENABLE_BACKGROUND_INGESTION) {
 cron.schedule('0 13 * * *', async () => {
   console.log('[CRON] Daily buyer scrape starting...');
   try {
@@ -448,6 +451,8 @@ cron.schedule('0 14 * * 0,3', async () => {
 
 
 // ── EXPRESS SERVER ────────────────────────────────────────────────────────
+}
+
 const app = require('./server');
 
 if (USE_WEBHOOK) {

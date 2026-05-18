@@ -59,8 +59,11 @@
    GMAIL_APP_PASSWORD   = [16-char from Step 2]
    AI_MODE              = free
    PORT                 = 3000
+   WOS_ENABLE_BACKGROUND_INGESTION = false
 
 4. Railway will auto-deploy. Check logs for "WholesaleOS Bot started"
+
+   `WOS_ENABLE_BACKGROUND_INGESTION=false` is the default safety setting for production. Set it to `true` only if you intentionally want startup autoruns and scheduled ingestion jobs enabled.
 
 ---
 
