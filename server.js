@@ -4701,3 +4701,5 @@ app.listen(PORT, () => {
   // Phase 3B: restore queued enrichment jobs from db.json after restart
   try { enrichQ.restoreQueue(); } catch(e) { logger.error('enrichQ restore error: ' + e.message); }
 });
+
+});
