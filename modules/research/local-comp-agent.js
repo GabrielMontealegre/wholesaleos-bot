@@ -65,6 +65,44 @@ function detectSource(url, title) {
   return 'unsupported';
 }
 
+function isNoiseText(text) {
+  text = cleanText(text).toLowerCase();
+  if (!text) return true;
+  return /skip main navigation|skip to main content|sign in|sign up|log in|log in or sign up|get help|help center|advertise|privacy|terms|cookies|accessibility|find an agent|manage rentals/.test(text)
+    || /^(previous photo|next photo|save|share|more)/i.test(text)
+    || /^zillow$/i.test(text)
+    || /^menu$/i.test(text)
+    || text.length < 12;
+}
+
+function extractAddress(text) {
+  text = cleanText(text);
+  if (!text) return '';
+  var suffix = '(?:Street|St|Road|Rd|Avenue|Ave|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Circle|Cir|Place|Pl|Terrace|Ter|Trail|Trl|Loop|Parkway|Pkwy|Highway|Hwy|Way|Crescent|Cres|Square|Sq|Run|Row|Plaza|Pz|Driveway|Drwy)';
+  function isNoisyAddress(candidate) {
+    var lower = cleanText(candidate).toLowerCase();
+    var suffixIndex = lower.search(new RegExp('\\b' + suffix + '\\b', 'i'));
+    var prefix = suffixIndex > -1 ? lower.slice(0, suffixIndex) : lower;
+    return /sqft|sq\.?\s*ft|house for sale|home for sale|previous photo|next photo|showcase|save|share|map zoom|remove boundary|schools|buy rent sell|menu|google/.test(prefix);
+  }
+  var patterns = [
+    new RegExp('^\\d{1,6}\\s+[A-Za-z0-9#.\'-]+(?:\\s+[A-Za-z0-9#.\'-]+){0,8}\\s+' + suffix + '\\b(?:,\\s*[A-Za-z][A-Za-z .\'-]+)?(?:,\\s*[A-Z]{2}\\s+\\d{5}(?:-\\d{4})?)?', 'i'),
+    new RegExp('\\b\\d{1,6}\\s+[A-Za-z0-9#.\'-]+(?:\\s+[A-Za-z0-9#.\'-]+){0,8}\\s+' + suffix + '\\b(?:,\\s*[A-Za-z][A-Za-z .\'-]+)?(?:,\\s*[A-Z]{2}\\s+\\d{5}(?:-\\d{4})?)?', 'i'),
+    /\b\d{1,6}\s+[A-Za-z0-9#.'-]+(?:\s+[A-Za-z0-9#.'-]+){0,8},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/
+  ];
+  var numberMatches = text.match(/\b\d{1,6}\b/g) || [];
+  for (var n = 0; n < numberMatches.length; n++) {
+    var numberIndex = text.indexOf(numberMatches[n]);
+    if (numberIndex < 0) continue;
+    var piece = text.slice(numberIndex);
+    for (var i = 0; i < patterns.length; i++) {
+      var match = piece.match(patterns[i]);
+      if (match && !isNoisyAddress(match[0])) return cleanText(match[0]);
+    }
+  }
+  return '';
+}
+
 function chooseActiveTarget(targets) {
   targets = Array.isArray(targets) ? targets : [];
   var pages = targets.filter(function(target) {
@@ -75,10 +113,13 @@ function chooseActiveTarget(targets) {
 
 function parseCandidateText(text) {
   text = cleanText(text);
-  var priceMatch = text.match(/\$?\s?([1-9][0-9,]{4,})/);
+  var priceMatch = text.match(/\$\s*([1-9][0-9,]{2,}(?:\.\d+)?)\b/);
+  if (!priceMatch) {
+    priceMatch = text.match(/\b([1-9][0-9,]{2,}(?:\.\d+)?)\s*k\b/i);
+  }
   var sqftMatch = text.match(/([1-9][0-9,]{2,5})\s*(?:sq\.?\s*ft|sqft|sf|square feet)/i);
-  var bedMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:beds?|bd)\b/i);
-  var bathMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:baths?|ba)\b/i);
+  var bedMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:beds?|bds?|bd)/i);
+  var bathMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:baths?|bas?|ba)/i);
   var dateMatch = text.match(/\b((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\b/i);
   var status = '';
   if (/sold/i.test(text)) status = 'sold visible';
@@ -86,7 +127,7 @@ function parseCandidateText(text) {
   else if (/pending/i.test(text)) status = 'pending visible';
   else if (/off market/i.test(text)) status = 'off market visible';
   return {
-    price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : null,
+    price: priceMatch ? Math.round(Number(priceMatch[1].replace(/,/g, '')) * (/\bk\b/i.test(text) ? 1000 : 1)) : null,
     sqft: sqftMatch ? Number(sqftMatch[1].replace(/,/g, '')) : null,
     beds: bedMatch ? Number(bedMatch[1]) : null,
     baths: bathMatch ? Number(bathMatch[1]) : null,
@@ -98,6 +139,7 @@ function parseCandidateText(text) {
 function normalizeCandidate(raw, page, index) {
   var text = cleanText(raw.snippet || raw.title || '');
   var parsed = parseCandidateText(text);
+  var address = extractAddress(raw.title || text) || extractAddress(text) || cleanText(raw.title || text).replace(/^\$[\d,]+(?:\s+|\s*-\s*)?/, '').trim();
   var missing = [];
   if (!parsed.price) missing.push('price');
   if (!parsed.beds) missing.push('beds');
@@ -113,11 +155,24 @@ function normalizeCandidate(raw, page, index) {
   if (parsed.baths) reasons.push('visible baths');
   if (parsed.status) reasons.push('visible status');
   if (raw.href) reasons.push('visible link');
+  if (page.source === 'zillow' && /maps\.google\.com|google\.com\/maps/i.test(cleanText(raw.href))) {
+    reasons.push('map tile noise');
+  }
+  var score = 0;
+  if (raw.href) score += 20;
+  if (address) score += 30;
+  if (parsed.price) score += 25;
+  if (parsed.sqft) score += 10;
+  if (parsed.beds) score += 5;
+  if (parsed.baths) score += 5;
+  if (parsed.date) score += 5;
+  if (parsed.status) score += 5;
+  var confidenceLevel = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
   return {
     candidate_id: 'local-visible-' + Date.now() + '-' + index,
     source: page.source,
-    title: cleanText(raw.title || '').slice(0, 180),
-    address: cleanText(raw.title || '').slice(0, 180),
+    title: cleanText(address || raw.title || '').slice(0, 180),
+    address: cleanText(address || raw.title || '').slice(0, 180),
     price: parsed.price,
     beds: parsed.beds,
     baths: parsed.baths,
@@ -127,6 +182,8 @@ function normalizeCandidate(raw, page, index) {
     url: raw.href || '',
     snippet: text.slice(0, 600),
     extraction_status: missing.length ? 'extraction_partial' : 'candidate_visible_dom',
+    confidence_score: score,
+    confidence_level: confidenceLevel,
     confidence_reason: reasons.length
       ? 'Visible DOM only: ' + reasons.join(', ') + '. Operator must verify sold status, condition, distance, and similarity before ARV.'
       : 'Visible DOM candidate with limited structured fields. Operator must verify before use.',
@@ -139,11 +196,12 @@ function normalizeCandidate(raw, page, index) {
 }
 
 function candidateDedupKey(candidate) {
+  var addressKey = cleanText(candidate.address || candidate.title).toLowerCase().replace(/\s+/g, ' ');
+  var urlKey = cleanText(candidate.url).toLowerCase();
+  if (urlKey) return 'url|' + urlKey;
   return [
-    cleanText(candidate.url).toLowerCase(),
-    cleanText(candidate.title).toLowerCase(),
-    candidate.price || '',
-    candidate.sqft || ''
+    addressKey,
+    candidate.price || ''
   ].join('|');
 }
 
@@ -151,8 +209,10 @@ function isCaptchaText(text) {
   return /captcha|not a robot|verify you are human|human verification|unusual traffic|access denied/i.test(cleanText(text));
 }
 
-async function extractVisibleCandidates(page, maxResults) {
-  var raw = await page.evaluate(function(limit) {
+async function extractVisibleCandidates(page, maxResults, source) {
+  var raw = await page.evaluate(function(args) {
+    var limit = args.limit;
+    var pageSource = args.pageSource;
     function textOf(node) {
       return String(node && node.innerText || '').replace(/\s+/g, ' ').trim();
     }
@@ -173,10 +233,22 @@ async function extractVisibleCandidates(page, maxResults) {
       var heading = node.querySelector && node.querySelector('h1,h2,h3,[role="heading"]');
       return textOf(heading) || textOf(link) || textOf(node).slice(0, 140);
     }
+    function isNoiseText(text) {
+      text = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!text) return true;
+      return /skip main navigation|skip to main content|sign in|sign up|log in|log in or sign up|get help|help center|advertise|privacy|terms|cookies|accessibility|find an agent|manage rentals/.test(text)
+        || /^(previous photo|next photo|save|share|more)/i.test(text)
+        || /^zillow$/i.test(text)
+        || /^menu$/i.test(text)
+        || text.length < 12;
+    }
     function looksLikeCandidate(text, href) {
       var hay = (text + ' ' + href).toLowerCase();
-      var hasListingSource = /zillow|redfin|realtor|realestateandhomes|homes[-/]detail/.test(hay);
-      var hasPropertyTerms = /\$?\s?[1-9][0-9,]{4,}|beds?|baths?|bd\b|ba\b|sq\.?\s*ft|sqft|sold|for sale|pending|off market/i.test(text);
+      var hasListingSource = /(?:homedetails|realestateandhomes-detail|\/homes\/|\/home\/|\/listing\/)/i.test(hay);
+      var hasPropertyTerms = /\$\s*[1-9][0-9,]{2,}(?:\.\d+)?\b|\b[1-9][0-9,]{2,}(?:\.\d+)?\s*k\b|beds?|baths?|bd\b|ba\b|sq\.?\s*ft|sqft|sold|for sale|pending|off market/i.test(text);
+      if (isNoiseText(text)) return false;
+      if (pageSource !== 'google' && /maps\.google\.com|google\.com\/maps/i.test(hay)) return false;
+      if (pageSource === 'google') return hasPropertyTerms || /\/url\?|\/search\?/.test(hay);
       return hasListingSource || hasPropertyTerms;
     }
     var selector = [
@@ -214,7 +286,7 @@ async function extractVisibleCandidates(page, maxResults) {
       body_text: textOf(document.body).slice(0, 3000),
       candidates: out.slice(0, limit * 2)
     };
-  }, maxResults);
+  }, { limit: maxResults, pageSource: source });
   return raw || { body_text: '', candidates: [] };
 }
 
@@ -299,7 +371,7 @@ async function captureVisibleComps(options) {
       title: await page.title().catch(function() { return target.title || ''; }),
       source: source
     };
-    var raw = await extractVisibleCandidates(page, maxResults);
+    var raw = await extractVisibleCandidates(page, maxResults, source);
     if (isCaptchaText(raw.body_text)) {
       return {
         ok: true,
@@ -317,11 +389,30 @@ async function captureVisibleComps(options) {
     (raw.candidates || []).forEach(function(item) {
       var candidate = normalizeCandidate(item, pageInfo, candidates.length);
       var key = candidateDedupKey(candidate);
-      if (seen[key]) return;
-      seen[key] = true;
+      if (seen[key]) {
+        var existing = seen[key];
+        if (!existing.snippet && candidate.snippet) existing.snippet = candidate.snippet;
+        else if (candidate.snippet && existing.snippet.indexOf(candidate.snippet) === -1) {
+          existing.snippet = cleanText(existing.snippet + ' ' + candidate.snippet).slice(0, 600);
+        }
+        if (candidate.confidence_score > existing.confidence_score) {
+          existing.confidence_score = candidate.confidence_score;
+          existing.confidence_level = candidate.confidence_level;
+          existing.confidence_reason = candidate.confidence_reason;
+        }
+        return;
+      }
+      seen[key] = candidate;
       candidates.push(candidate);
     });
-    candidates = candidates.slice(0, maxResults);
+    candidates = candidates
+      .filter(function(c) {
+        return c.address || c.price || c.url;
+      })
+      .sort(function(a, b) {
+        return (b.confidence_score || 0) - (a.confidence_score || 0);
+      })
+      .slice(0, maxResults);
 
     return {
       ok: true,
