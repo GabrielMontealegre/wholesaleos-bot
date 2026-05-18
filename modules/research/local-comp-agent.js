@@ -8,6 +8,7 @@ const DEFAULT_CDP_URL = process.env.CHROME_CDP_URL || 'http://127.0.0.1:9222';
 const MAX_RESULTS = 10;
 const BUNDLED_NODE_MODULES = process.env.CODEX_NODE_MODULES || 'C:\\Users\\criss\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules';
 var activePort = DEFAULT_PORT;
+var captureSession = createCaptureSession();
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -205,6 +206,95 @@ function candidateDedupKey(candidate) {
   ].join('|');
 }
 
+function createCaptureSession() {
+  return {
+    session_id: 'local-capture-' + Date.now(),
+    created_at: new Date().toISOString(),
+    updated_at: '',
+    page_url: '',
+    page_title: '',
+    source: '',
+    capture_count: 0,
+    last_new_count: 0,
+    total_unique_candidates: 0,
+    candidates: [],
+    by_key: {}
+  };
+}
+
+function normalizeSessionCandidate(candidate) {
+  return {
+    candidate_id: candidate.candidate_id,
+    source: candidate.source,
+    title: candidate.title,
+    address: candidate.address,
+    price: candidate.price,
+    beds: candidate.beds,
+    baths: candidate.baths,
+    sqft: candidate.sqft,
+    status: candidate.status,
+    date: candidate.date,
+    url: candidate.url,
+    snippet: candidate.snippet,
+    extraction_status: candidate.extraction_status,
+    confidence_score: candidate.confidence_score,
+    confidence_level: candidate.confidence_level,
+    confidence_reason: candidate.confidence_reason,
+    missing_fields: candidate.missing_fields,
+    verification_label: candidate.verification_label,
+    capture_method: candidate.capture_method,
+    page_url: candidate.page_url,
+    page_title: candidate.page_title
+  };
+}
+
+function mergeCaptureIntoSession(pageInfo, candidates) {
+  var newCount = 0;
+  var merged = [];
+  candidates.forEach(function(candidate) {
+    var key = candidateDedupKey(candidate);
+    var existing = captureSession.by_key[key];
+    if (existing) {
+      if (!existing.snippet && candidate.snippet) existing.snippet = candidate.snippet;
+      else if (candidate.snippet && existing.snippet.indexOf(candidate.snippet) === -1) {
+        existing.snippet = cleanText(existing.snippet + ' ' + candidate.snippet).slice(0, 600);
+      }
+      if (candidate.confidence_score > existing.confidence_score) {
+        existing.confidence_score = candidate.confidence_score;
+        existing.confidence_level = candidate.confidence_level;
+        existing.confidence_reason = candidate.confidence_reason;
+      }
+      existing.matched_again = true;
+      return;
+    }
+    var stored = normalizeSessionCandidate(candidate);
+    captureSession.by_key[key] = stored;
+    captureSession.candidates.push(stored);
+    merged.push(stored);
+    newCount += 1;
+  });
+  captureSession.capture_count += 1;
+  captureSession.last_new_count = newCount;
+  captureSession.total_unique_candidates = captureSession.candidates.length;
+  captureSession.page_url = pageInfo.url;
+  captureSession.page_title = pageInfo.title;
+  captureSession.source = pageInfo.source;
+  captureSession.updated_at = new Date().toISOString();
+  captureSession.candidates.sort(function(a, b) {
+    return (b.confidence_score || 0) - (a.confidence_score || 0);
+  });
+  return {
+    new_count: newCount,
+    total_unique_candidates: captureSession.candidates.length,
+    merged: merged
+  };
+}
+
+function clearCaptureSession() {
+  captureSession = createCaptureSession();
+  return captureSession;
+}
+
 function isCaptchaText(text) {
   return /captcha|not a robot|verify you are human|human verification|unusual traffic|access denied/i.test(cleanText(text));
 }
@@ -384,43 +474,30 @@ async function captureVisibleComps(options) {
       };
     }
 
-    var seen = {};
-    var candidates = [];
+    var captureCandidates = [];
     (raw.candidates || []).forEach(function(item) {
-      var candidate = normalizeCandidate(item, pageInfo, candidates.length);
-      var key = candidateDedupKey(candidate);
-      if (seen[key]) {
-        var existing = seen[key];
-        if (!existing.snippet && candidate.snippet) existing.snippet = candidate.snippet;
-        else if (candidate.snippet && existing.snippet.indexOf(candidate.snippet) === -1) {
-          existing.snippet = cleanText(existing.snippet + ' ' + candidate.snippet).slice(0, 600);
-        }
-        if (candidate.confidence_score > existing.confidence_score) {
-          existing.confidence_score = candidate.confidence_score;
-          existing.confidence_level = candidate.confidence_level;
-          existing.confidence_reason = candidate.confidence_reason;
-        }
-        return;
-      }
-      seen[key] = candidate;
-      candidates.push(candidate);
+      captureCandidates.push(normalizeCandidate(item, pageInfo, captureCandidates.length));
     });
-    candidates = candidates
+    captureCandidates = captureCandidates
       .filter(function(c) {
         return c.address || c.price || c.url;
       })
       .sort(function(a, b) {
         return (b.confidence_score || 0) - (a.confidence_score || 0);
-      })
-      .slice(0, maxResults);
+      });
+    var captureResult = mergeCaptureIntoSession(pageInfo, captureCandidates);
+    var sessionCandidates = captureSession.candidates.slice(0, maxResults);
 
     return {
       ok: true,
-      extraction_status: candidates.length ? (candidates.some(function(c) { return c.extraction_status === 'extraction_partial'; }) ? 'extraction_partial' : 'candidates_found') : 'no_visible_candidates',
+      extraction_status: sessionCandidates.length ? (sessionCandidates.some(function(c) { return c.extraction_status === 'extraction_partial'; }) ? 'extraction_partial' : 'candidates_found') : 'no_visible_candidates',
       source: source,
       page_url: pageInfo.url,
       page_title: pageInfo.title,
-      candidates: candidates,
+      capture_count: captureSession.capture_count,
+      new_candidates_this_capture: captureResult.new_count,
+      total_unique_candidates: captureSession.candidates.length,
+      candidates: sessionCandidates,
       safety: 'Visible DOM only. No navigation, clicking, scrolling, persistence, ingestion, outbound communication, CAPTCHA bypass, proxy, or background loop.'
     };
   } catch (e) {
@@ -470,6 +547,29 @@ async function handle(req, res) {
         tabs: []
       });
     }
+  }
+  if (req.method === 'GET' && url.pathname === '/capture-session-status') {
+    return json(res, 200, {
+      ok: true,
+      session_id: captureSession.session_id,
+      created_at: captureSession.created_at,
+      updated_at: captureSession.updated_at,
+      page_url: captureSession.page_url,
+      page_title: captureSession.page_title,
+      source: captureSession.source,
+      capture_count: captureSession.capture_count,
+      last_new_count: captureSession.last_new_count,
+      total_unique_candidates: captureSession.total_unique_candidates,
+      candidates: captureSession.candidates.slice(0, MAX_RESULTS)
+    });
+  }
+  if (req.method === 'POST' && url.pathname === '/clear-capture-session') {
+    clearCaptureSession();
+    return json(res, 200, {
+      ok: true,
+      session_id: captureSession.session_id,
+      message: 'Capture session cleared.'
+    });
   }
   if (req.method === 'POST' && url.pathname === '/capture-visible-comps') {
     var body = await parseBody(req);
