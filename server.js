@@ -11,7 +11,6 @@ const { scrapeRealAuction } = require('./modules/scraper-realauction');
 const _rc = require('./modules/runtime-cache');
 const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
-const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -20,6 +19,46 @@ const PORT = process.env.PORT || 8080;
 const ENABLE_BACKGROUND_INGESTION = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || ''));
 if (!ENABLE_BACKGROUND_INGESTION) {
   logger.info('Background ingestion disabled by WOS_ENABLE_BACKGROUND_INGESTION=false');
+}
+
+process.on('uncaughtException', function(err) {
+  var payload = err && err.stack ? err.stack : err;
+  try { logger.fatal({ event: 'uncaughtException', error: payload }); }
+  catch (logErr) { console.error('[uncaughtException]', payload, logErr && logErr.message ? logErr.message : logErr); }
+});
+
+process.on('unhandledRejection', function(reason) {
+  var payload = reason && reason.stack ? reason.stack : reason;
+  try { logger.fatal({ event: 'unhandledRejection', error: payload }); }
+  catch (logErr) { console.error('[unhandledRejection]', payload, logErr && logErr.message ? logErr.message : logErr); }
+});
+
+var _scoutCompsForLead = null;
+function getScoutCompsForLead() {
+  if (_scoutCompsForLead) return _scoutCompsForLead;
+  try {
+    _scoutCompsForLead = require('./modules/research/comp-scout').scoutCompsForLead;
+    return _scoutCompsForLead;
+  } catch (e) {
+    logger.error('[comp-scout] load failed: ' + e.message);
+    return null;
+  }
+}
+
+function getCompAgent() {
+  try { return require('./modules/agents/comp-agent'); }
+  catch (e) {
+    logger.error('[comp-agent] load failed: ' + e.message);
+    return null;
+  }
+}
+
+function getSkipTraceAgent() {
+  try { return require('./modules/agents/skip-trace-agent'); }
+  catch (e) {
+    logger.error('[skip-trace] load failed: ' + e.message);
+    return null;
+  }
 }
 
 const enrichQ = require('./enrichment-queue'); // Phase 3A
@@ -150,6 +189,31 @@ function leadSourceTypeText(lead) {
   return String(details);
 }
 
+function leadMotivationScore(lead) {
+  return ((lead && lead.hot_score) || (lead && lead.motivation_score) || 0) + ((lead && lead.priorityScore) || 0);
+}
+
+function takeTopLeadsByScore(items, count, scoreFn) {
+  if (!count || count >= items.length) {
+    return items.slice().sort(function(a, b) { return scoreFn(b) - scoreFn(a); });
+  }
+  var top = [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var score = scoreFn(item);
+    if (top.length < count) {
+      top.push({ item: item, score: score });
+      if (top.length === count) top.sort(function(a, b) { return a.score - b.score; });
+      continue;
+    }
+    if (score > top[0].score) {
+      top[0] = { item: item, score: score };
+      top.sort(function(a, b) { return a.score - b.score; });
+    }
+  }
+  return top.sort(function(a, b) { return b.score - a.score; }).map(function(entry) { return entry.item; });
+}
+
 app.get('/api/leads', (req, res) => {
   const leads = db.getLeads();
   const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
@@ -165,20 +229,24 @@ app.get('/api/leads', (req, res) => {
   if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
   // Sort BEFORE limiting (correct order)
   var sortKey = sort || 'motivation_score';
+  var requestedLimit = top300 === '1' || top300 === 'true' ? 300 : (limit ? parseInt(limit, 10) : null);
   if (sortKey === 'motivation_score') {
-    filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
+    if (requestedLimit && requestedLimit > 0 && requestedLimit < filtered.length) {
+      filtered = takeTopLeadsByScore(filtered, requestedLimit, leadMotivationScore);
+    } else {
+      filtered = filtered.slice().sort(function(a,b){ return leadMotivationScore(b) - leadMotivationScore(a); });
+    }
   } else if (sortKey === 'created_at') {
     filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
   } else if (sortKey === 'spread') {
     filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
   }
   // top300 mode: dashboard shows only best 300 deals
-  if (top300 === '1' || top300 === 'true') {
-    filtered = filtered.slice(0, 300);
-  } else if (limit) {
-    filtered = filtered.slice(0, parseInt(limit));
+  let pageLeads = filtered;
+  if (requestedLimit) {
+    pageLeads = filtered.slice(0, requestedLimit);
   }
-  res.json({ leads: filtered.map(withLeadIntelligence), total: filtered.length, totalAll: leads.length });
+  res.json({ leads: pageLeads.map(withLeadIntelligence), total: pageLeads.length, totalAll: leads.length });
 });
 
 
@@ -207,6 +275,10 @@ app.post('/api/research/comp-scout', async (req, res) => {
 
     const maxResults = Math.min(Math.max(parseInt(body.max_results || body.maxResults || 5, 10) || 5, 1), 10);
     const sourcePreference = String(body.source_preference || body.sourcePreference || 'google').trim().toLowerCase();
+    const scoutCompsForLead = getScoutCompsForLead();
+    if (!scoutCompsForLead) {
+      return res.status(503).json({ ok: false, blocked: true, source: sourcePreference, reason: 'comp_scout_unavailable' });
+    }
     const result = await scoutCompsForLead({
       lead,
       sourcePreference,
@@ -2984,10 +3056,12 @@ app.post('/api/engine/enrich-lead', function(req, res) {
 
 // Schedule daily at 3AM MST (10AM UTC)
 var cron = require('node-cron');
-cron.schedule('0 10 * * *', function() {
-  // logger.info('[Engine] Cron triggered daily run');
-  runDailyEngine().catch(function(e) { logger.error('[Engine] Cron error:', e.message); });
-}, { timezone: 'America/Denver' });
+if (ENABLE_BACKGROUND_INGESTION) {
+  cron.schedule('0 10 * * *', function() {
+    // logger.info('[Engine] Cron triggered daily run');
+    runDailyEngine().catch(function(e) { logger.error('[Engine] Cron error:', e.message); });
+  }, { timezone: 'America/Denver' });
+}
 
 // logger.info('[Engine] Intelligence Engine loaded. Daily run scheduled at 3AM MST.');
 
@@ -3847,9 +3921,8 @@ app.post('/api/leads/delete-batch', function(req, res) {
 });
 // Alias: /api/leads/delete-bulk (same as delete-batch, matches dashboard bulkDelete() call)
 app.get('/api/leads/:id/comps', function(req, res) {
-  var agent;
-  try { agent = require('./modules/agents/comp-agent'); }
-  catch(e) { return res.status(503).json({ error: 'comp-agent unavailable: ' + e.message }); }
+  var agent = getCompAgent();
+  if (!agent) return res.status(503).json({ error: 'comp-agent unavailable' });
   agent.fetchCompsForLead(req.params.id)
     .then(function(result) {
       if (result && result.error) return res.status(404).json(result);
@@ -3930,11 +4003,13 @@ app.post('/api/buyers/:id/send-leads', function(req, res) {
 });
 
 // Daily comp batch — 4AM UTC
-cron.schedule('0 4 * * *', function() {
-  var ca2;
-  try { ca2 = require('./modules/agents/comp-agent'); } catch(e) { return; }
-  ca2.runDailyCompBatch().catch(function(e) { console.error('[comp-batch]', e.message); });
-}, { timezone: 'UTC' });
+if (ENABLE_BACKGROUND_INGESTION) {
+  cron.schedule('0 4 * * *', function() {
+    var ca2 = getCompAgent();
+    if (!ca2) return;
+    ca2.runDailyCompBatch().catch(function(e) { console.error('[comp-batch]', e.message); });
+  }, { timezone: 'UTC' });
+}
 
 
 // ================================================================
@@ -3943,21 +4018,21 @@ cron.schedule('0 4 * * *', function() {
 
 // POST /api/leads/:id/skip-trace — on-demand per lead
 app.post('/api/leads/:id/skip-trace', function(req, res) {
-  var agent;
-  try { agent = require('./modules/agents/skip-trace-agent'); }
-  catch(e) { return res.status(503).json({ error: 'skip-trace agent unavailable: ' + e.message }); }
+  var agent = getSkipTraceAgent();
+  if (!agent) return res.status(503).json({ error: 'skip-trace agent unavailable' });
   agent.skipTraceLead(req.params.id)
     .then(function(r) { res.json(r); })
     .catch(function(e) { logger.error('[skip-trace] ' + e.message); res.status(500).json({ error: e.message }); });
 });
 
 // Daily skip trace cron — 6AM UTC (after ingestion at 2AM, comps at 4AM)
-cron.schedule('0 6 * * *', function() {
-  var agent;
-  try { agent = require('./modules/agents/skip-trace-agent'); }
-  catch(e) { console.error('[skip-trace-cron] load error:', e.message); return; }
-  agent.runDailySkipTrace().catch(function(e) { console.error('[skip-trace-cron]', e.message); });
-}, { timezone: 'UTC' });
+if (ENABLE_BACKGROUND_INGESTION) {
+  cron.schedule('0 6 * * *', function() {
+    var agent = getSkipTraceAgent();
+    if (!agent) return;
+    agent.runDailySkipTrace().catch(function(e) { console.error('[skip-trace-cron]', e.message); });
+  }, { timezone: 'UTC' });
+}
 
 
 // DEBUG: test comp scraper
@@ -4197,17 +4272,17 @@ app.get('/api/leads/sources', function(req, res) {
 
 
 // ── Comp Agent — real ARV on-demand + daily 4AM cron ────────────────────
-try {
-  var _compAgent = require('./modules/agents/comp-agent');
 
   // POST /api/leads/reanalyze — on-demand full reanalysis
   app.post('/api/leads/reanalyze', async function(req, res) {
-    var body = req.body || {};
-    var maxLeads = Math.min(parseInt(body.max || 200), 1000);
-    var force = !!body.force;
-    // Run async, respond immediately with job started
-    res.json({ ok: true, message: 'Reanalysis started for up to ' + maxLeads + ' leads', max: maxLeads });
-    _compAgent.runCompAgent({ maxLeads: maxLeads, batchSize: 50, force: force })
+  var body = req.body || {};
+  var maxLeads = Math.min(parseInt(body.max || 200), 1000);
+  var force = !!body.force;
+  var compAgent = getCompAgent();
+  if (!compAgent) return res.status(503).json({ ok: false, error: 'comp-agent unavailable' });
+  // Run async, respond immediately with job started
+  res.json({ ok: true, message: 'Reanalysis started for up to ' + maxLeads + ' leads', max: maxLeads });
+  compAgent.runCompAgent({ maxLeads: maxLeads, batchSize: 50, force: force })
       .then(function(r) { logger.info({ event: 'comp_agent_done', updated: r.updated, failed: r.failed }); })
       .catch(function(e) { logger.error('[comp-agent] on-demand error: ' + e.message); });
   });
@@ -4217,7 +4292,9 @@ try {
     try {
       var lead = db.getLead ? db.getLead(req.params.id) : null;
       if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });
-      var result = await _compAgent.analyzeLead(lead);
+      var compAgent = getCompAgent();
+      if (!compAgent) return res.status(503).json({ ok: false, error: 'comp-agent unavailable' });
+      var result = await compAgent.analyzeLead(lead);
       if (result.analyzed) {
         db.updateLead(req.params.id, result);
         res.json({ ok: true, data: result });
@@ -4228,36 +4305,43 @@ try {
   });
 
   // 4AM daily cron — top 500 leads by motivation score
-  cron.schedule('0 4 * * *', function() {
-    logger.info('[comp-agent] 4AM cron starting');
-    _compAgent.runCompAgent({ maxLeads: 500, batchSize: 50 })
-      .catch(function(e) { logger.error('[comp-agent] cron error: ' + e.message); });
-  }, { timezone: 'UTC' });
+  if (ENABLE_BACKGROUND_INGESTION) {
+    cron.schedule('0 4 * * *', function() {
+      var compAgent = getCompAgent();
+      if (!compAgent) return;
+      logger.info('[comp-agent] 4AM cron starting');
+      compAgent.runCompAgent({ maxLeads: 500, batchSize: 50 })
+        .catch(function(e) { logger.error('[comp-agent] cron error: ' + e.message); });
+    }, { timezone: 'UTC' });
+  }
 
   logger.info('[comp-agent] routes + cron registered');
-} catch(e) { logger.error('[comp-agent] failed to load: ' + e.message); }
 
 
 // ── Skip Trace 3AM cron ─────────────────────────────────────────────────
-try {
-  var _skipTrace = require('./modules/agents/skip-trace-agent');
-  cron.schedule('0 3 * * *', function() {
-    logger.info('[skip-trace] 3AM cron starting');
-    _skipTrace.runSkipTraceAgent({ limit: 300 })
-      .then(function(r){ logger.info({ event: 'skip_trace_done', traced: r.traced, failed: r.failed }); })
-      .catch(function(e){ logger.error('[skip-trace] cron error: ' + e.message); });
-  }, { timezone: 'UTC' });
+  if (ENABLE_BACKGROUND_INGESTION) {
+    cron.schedule('0 3 * * *', function() {
+      var _skipTrace = getSkipTraceAgent();
+      if (!_skipTrace) return;
+      logger.info('[skip-trace] 3AM cron starting');
+      _skipTrace.runSkipTraceAgent({ limit: 300 })
+        .then(function(r){ logger.info({ event: 'skip_trace_done', traced: r.traced, failed: r.failed }); })
+        .catch(function(e){ logger.error('[skip-trace] cron error: ' + e.message); });
+    }, { timezone: 'UTC' });
+  }
   // POST /api/leads/skip-trace — on-demand
   app.post('/api/leads/skip-trace', async function(req, res) {
     var limit = Math.min(parseInt((req.body||{}).limit||50), 300);
     res.json({ ok: true, message: 'Skip trace started for up to ' + limit + ' leads' });
+    var _skipTrace = getSkipTraceAgent();
+    if (!_skipTrace) return res.status(503).json({ error: 'skip-trace agent unavailable' });
     _skipTrace.runSkipTraceAgent({ limit: limit })
       .catch(function(e){ logger.error('[skip-trace] on-demand error: ' + e.message); });
   });
   logger.info('[skip-trace] 3AM cron + route registered');
-} catch(e){ logger.error('[skip-trace] failed to load: ' + e.message); }
 
 // ── Telegram 7AM daily summary ──────────────────────────────────────────
+if (ENABLE_BACKGROUND_INGESTION) {
 cron.schedule('0 7 * * *', async function() {
   try {
     if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.BOT_OWNER_ID) return;
@@ -4282,6 +4366,7 @@ cron.schedule('0 7 * * *', async function() {
     logger.info('[telegram] 7AM summary sent');
   } catch(e){ logger.error('[telegram] 7AM cron error: ' + e.message); }
 }, { timezone: 'UTC' });
+}
 
 
 // ── Hot Lead Scorer + Alert + Outreach AI ───────────────────────────────
