@@ -113,6 +113,19 @@ function chooseActiveTarget(targets) {
   return pages[0] || null;
 }
 
+function chooseCaptureTarget(targets, options) {
+  options = options || {};
+  targets = Array.isArray(targets) ? targets : [];
+  var pages = targets.filter(function(target) {
+    return target && target.type === 'page' && target.url && !/^devtools:|^chrome:|^edge:|^about:/i.test(target.url);
+  });
+  var requestedId = cleanText(options.tabId || options.tab_id || '');
+  if (requestedId) {
+    return pages.find(function(target) { return String(target.id) === requestedId; }) || null;
+  }
+  return pages[0] || null;
+}
+
 function parseCandidateText(text) {
   text = cleanText(text);
   var priceMatch = text.match(/\$\s*([1-9][0-9,]{2,}(?:\.\d+)?)\b/);
@@ -398,12 +411,14 @@ async function captureVisibleComps(options) {
     };
   }
 
-  var target = chooseActiveTarget(targets);
+  var target = chooseCaptureTarget(targets, options);
   if (!target) {
     return {
       ok: false,
       extraction_status: 'browser_not_connected',
-      reason: 'No visible Chrome page target found at ' + cdpUrl + '.',
+      reason: options.tabId || options.tab_id
+        ? 'Selected Chrome tab is no longer available. Refresh tabs and select a supported Zillow, Redfin, Realtor, or Google tab.'
+        : 'No visible Chrome page target found at ' + cdpUrl + '.',
       candidates: []
     };
   }
@@ -417,7 +432,7 @@ async function captureVisibleComps(options) {
       page_title: target.title,
       source: source,
       candidates: [],
-      reason: 'Current active page is not Zillow, Redfin, Realtor, or Google search results.'
+      reason: 'Selected page is not Zillow, Redfin, Realtor, or Google search results.'
     };
   }
 
@@ -495,6 +510,7 @@ async function captureVisibleComps(options) {
       source: source,
       page_url: pageInfo.url,
       page_title: pageInfo.title,
+      selected_tab_id: target.id,
       capture_count: captureSession.capture_count,
       new_candidates_this_capture: captureResult.new_count,
       total_unique_candidates: captureSession.candidates.length,
@@ -531,12 +547,14 @@ async function scrollAndCaptureVisibleComps(options) {
     };
   }
 
-  var target = chooseActiveTarget(targets);
+  var target = chooseCaptureTarget(targets, options);
   if (!target) {
     return {
       ok: false,
       extraction_status: 'browser_not_connected',
-      reason: 'No visible Chrome page target found at ' + cdpUrl + '.',
+      reason: options.tabId || options.tab_id
+        ? 'Selected Chrome tab is no longer available. Refresh tabs and select a supported Zillow, Redfin, Realtor, or Google tab.'
+        : 'No visible Chrome page target found at ' + cdpUrl + '.',
       candidates: [],
       scroll_performed: false
     };
@@ -552,7 +570,7 @@ async function scrollAndCaptureVisibleComps(options) {
       source: source,
       candidates: [],
       scroll_performed: false,
-      reason: 'Current active page is not Zillow, Redfin, Realtor, or Google search results.'
+      reason: 'Selected page is not Zillow, Redfin, Realtor, or Google search results.'
     };
   }
 
@@ -709,6 +727,7 @@ async function scrollAndCaptureVisibleComps(options) {
       source: source,
       page_url: pageInfo.url,
       page_title: pageInfo.title,
+      selected_tab_id: target.id,
       capture_count: captureSession.capture_count,
       new_candidates_this_capture: captureResult.new_count,
       total_unique_candidates: captureSession.candidates.length,
@@ -755,7 +774,8 @@ async function handle(req, res) {
             id: t.id,
             title: t.title,
             url: t.url,
-            source: detectSource(t.url, t.title)
+            source: detectSource(t.url, t.title),
+            supported: detectSource(t.url, t.title) !== 'unsupported'
           };
         })
       });
@@ -795,7 +815,8 @@ async function handle(req, res) {
     var body = await parseBody(req);
     var result = await captureVisibleComps({
       maxResults: body.max_results || body.maxResults,
-      cdpUrl: body.cdp_url || body.cdpUrl || DEFAULT_CDP_URL
+      cdpUrl: body.cdp_url || body.cdpUrl || DEFAULT_CDP_URL,
+      tabId: body.tab_id || body.tabId
     });
     return json(res, 200, result);
   }
@@ -803,7 +824,8 @@ async function handle(req, res) {
     var body2 = await parseBody(req);
     var result2 = await scrollAndCaptureVisibleComps({
       maxResults: body2.max_results || body2.maxResults,
-      cdpUrl: body2.cdp_url || body2.cdpUrl || DEFAULT_CDP_URL
+      cdpUrl: body2.cdp_url || body2.cdpUrl || DEFAULT_CDP_URL,
+      tabId: body2.tab_id || body2.tabId
     });
     return json(res, 200, result2);
   }

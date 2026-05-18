@@ -18264,6 +18264,7 @@ function researchLocalCompBridgeSetBaseUrl(url) {
       APP.researchSession.localCompBridge[leadId].url = value;
       APP.researchSession.localCompBridge[leadId].health = null;
       APP.researchSession.localCompBridge[leadId].tabs = [];
+      APP.researchSession.localCompBridge[leadId].selectedTabId = '';
       APP.researchSession.localCompBridge[leadId].result = null;
       APP.researchSession.localCompBridge[leadId].error = '';
       APP.researchSession.localCompBridge[leadId].checkedAt = '';
@@ -18281,6 +18282,7 @@ function researchLocalCompBridgeState(leadId) {
     url: researchLocalCompBridgeBaseUrl(),
     health: null,
     tabs: [],
+    selectedTabId: '',
     session: null,
     result: null,
     error: '',
@@ -18320,6 +18322,9 @@ async function researchLocalCompBridgeCheck(leadId) {
     var tabs = await tabsRes.json().catch(function(){ return {}; });
     state.health = health;
     state.tabs = Array.isArray(tabs.tabs) ? tabs.tabs : [];
+    if (state.selectedTabId && !state.tabs.some(function(tab){ return String(tab.id) === String(state.selectedTabId); })) {
+      state.selectedTabId = '';
+    }
     state.checkedAt = new Date().toISOString();
     state.lastMessage = health.ok ? 'Connected to local comp agent.' : 'Local comp agent responded but is not healthy.';
   } catch (e) {
@@ -18334,6 +18339,47 @@ async function researchLocalCompBridgeCheck(leadId) {
     state.autoCheckQueued = false;
     if (typeof render === 'function') render();
   }
+}
+
+function researchLocalCompTabSource(tab) {
+  var text = String((tab && tab.source) || '').toLowerCase();
+  if (text) return text;
+  var haystack = String(((tab && tab.url) || '') + ' ' + ((tab && tab.title) || '')).toLowerCase();
+  if (haystack.indexOf('zillow.') > -1) return 'zillow';
+  if (haystack.indexOf('redfin.') > -1) return 'redfin';
+  if (haystack.indexOf('realtor.') > -1) return 'realtor';
+  if (haystack.indexOf('google.') > -1 && haystack.indexOf('/search') > -1) return 'google';
+  return 'unsupported';
+}
+
+function researchLocalCompTabSupported(tab) {
+  return ['zillow', 'redfin', 'realtor', 'google'].indexOf(researchLocalCompTabSource(tab)) > -1;
+}
+
+function researchLocalCompSelectedTab(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  var tabs = Array.isArray(state.tabs) ? state.tabs : [];
+  return tabs.find(function(tab) { return String(tab.id) === String(state.selectedTabId || ''); }) || null;
+}
+
+function researchLocalCompBridgeSelectTab(leadId, tabId) {
+  var state = researchLocalCompBridgeState(leadId);
+  var tabs = Array.isArray(state.tabs) ? state.tabs : [];
+  var tab = tabs.find(function(item) { return String(item.id) === String(tabId); });
+  if (!tab) {
+    state.selectedTabId = '';
+    state.lastMessage = 'Selected tab was not found. Refresh tabs and select a supported listing tab.';
+    if (typeof toast === 'function') toast(state.lastMessage, 'error');
+  } else if (!researchLocalCompTabSupported(tab)) {
+    state.selectedTabId = '';
+    state.lastMessage = 'Open a Zillow/Redfin/Realtor tab and select it first.';
+    if (typeof toast === 'function') toast('That tab is unsupported. Select Zillow, Redfin, Realtor, or Google results.', 'error');
+  } else {
+    state.selectedTabId = String(tab.id || '');
+    state.lastMessage = 'Selected local tab: ' + (tab.title || tab.url || researchLocalCompTabSource(tab));
+    if (typeof toast === 'function') toast('Selected ' + researchLocalCompTabSource(tab) + ' tab for local comp capture', 'success');
+  }
+  if (typeof render === 'function') render();
 }
 
 function researchLocalCompCandidateToDraft(candidate) {
@@ -18371,6 +18417,14 @@ function researchLocalCompCandidateToDraft(candidate) {
 async function researchLocalCompBridgeCapture(leadId, scroll) {
   var state = researchLocalCompBridgeState(leadId);
   var base = researchLocalCompBridgeBaseUrl();
+  var selectedTab = researchLocalCompSelectedTab(leadId);
+  if (!selectedTab || !researchLocalCompTabSupported(selectedTab)) {
+    state.error = 'Open a Zillow/Redfin/Realtor tab and select it first.';
+    state.lastMessage = state.error;
+    if (typeof toast === 'function') toast(state.error, 'error');
+    if (typeof render === 'function') render();
+    return;
+  }
   state.loadingCapture = !scroll;
   state.loadingScroll = !!scroll;
   state.error = '';
@@ -18380,7 +18434,7 @@ async function researchLocalCompBridgeCapture(leadId, scroll) {
     var res = await fetch(base + (scroll ? '/scroll-and-capture-visible-comps' : '/capture-visible-comps'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ max_results: 5 })
+      body: JSON.stringify({ max_results: 5, tab_id: state.selectedTabId })
     });
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok || data.error) throw new Error(data.error || data.reason || 'Local comp capture failed');
@@ -18411,6 +18465,14 @@ function researchLocalCompBridgeClear(leadId) {
 async function researchGetLocalComps(leadId) {
   var state = researchLocalCompBridgeState(leadId);
   var base = researchLocalCompBridgeBaseUrl();
+  var selectedTab = researchLocalCompSelectedTab(leadId);
+  if (!selectedTab || !researchLocalCompTabSupported(selectedTab)) {
+    state.error = 'Open a Zillow/Redfin/Realtor tab and select it first.';
+    state.lastMessage = state.error;
+    if (typeof toast === 'function') toast(state.error, 'error');
+    if (typeof render === 'function') render();
+    return;
+  }
   state.loadingCapture = true;
   state.error = '';
   state.lastMessage = 'Getting visible local comps and importing unverified candidates...';
@@ -18419,7 +18481,7 @@ async function researchGetLocalComps(leadId) {
     var res = await fetch(base + '/capture-visible-comps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ max_results: 5 })
+      body: JSON.stringify({ max_results: 5, tab_id: state.selectedTabId })
     });
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok || data.error) throw new Error(data.error || data.reason || 'Local comp capture failed');
@@ -18466,6 +18528,8 @@ function renderResearchLocalCompBridgeHtml(lead) {
   var result = state.result || {};
   var candidates = Array.isArray(result.candidates) ? result.candidates : [];
   var connected = !!health.ok;
+  var supportedTabs = tabs.filter(function(tab) { return researchLocalCompTabSupported(tab); });
+  var selectedTab = researchLocalCompSelectedTab(lead.id);
   var tabsText = tabs.length ? tabs.map(function(tab) {
     return researchSafeText(tab.title || tab.url || 'Tab') + ' (' + researchSafeText(tab.source || 'page') + ')';
   }).join(' · ') : 'No tabs loaded yet.';
@@ -18475,6 +18539,24 @@ function renderResearchLocalCompBridgeHtml(lead) {
   if (result && (result.reason || result.suggested_manual_action || result.blocked || result.extraction_status === 'captcha_or_verification_detected' || result.extraction_status === 'unsupported_page')) {
     resultNote = (result.blocked ? 'Blocked: ' : '') + researchSafeText(result.reason || result.extraction_status || '') + (result.suggested_manual_action ? ' ' + researchSafeText(result.suggested_manual_action) : '');
   }
+  var tabRows = tabs.map(function(tab) {
+    var source = researchLocalCompTabSource(tab);
+    var supported = researchLocalCompTabSupported(tab);
+    var selected = selectedTab && String(selectedTab.id) === String(tab.id);
+    var sourceColor = supported ? '#86efac' : '#94a3b8';
+    var borderColor = selected ? '#f4c542' : '#243044';
+    var button = supported
+      ? '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(lead.id) + ',' + researchJsArg(tab.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:' + (selected ? '#3b2f10' : '#111827') + ';color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">' + (selected ? 'Selected' : 'Select') + '</button>'
+      : '<span style="font-size:10px;color:#64748b;font-weight:900">Unsupported</span>';
+    return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid ' + borderColor + ';border-radius:8px;background:#0b1120;padding:8px;margin-top:6px">' +
+      '<div style="min-width:0;flex:1">' +
+        '<div style="font-size:10px;color:' + sourceColor + ';font-weight:900;text-transform:uppercase">' + researchSafeText(source) + (selected ? ' - selected' : '') + '</div>' +
+        '<div style="font-size:11px;color:#e5e7eb;font-weight:900;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + researchSafeText(tab.title || tab.url || 'Untitled tab') + '</div>' +
+        '<div style="font-size:10px;color:#64748b;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + researchSafeText(tab.url || '') + '</div>' +
+      '</div>' +
+      button +
+    '</div>';
+  }).join('');
   var candidateRows = candidates.map(function(candidate, index) {
     var details = [
       candidate.price ? mdaMoney(candidate.price) : 'Price not visible',
@@ -18499,7 +18581,7 @@ function renderResearchLocalCompBridgeHtml(lead) {
     '</div>';
   }).join('');
   var setup = connected
-    ? '<div style="font-size:10px;color:#94a3b8;line-height:1.55">Local agent connected. Run visible capture first, then one-step scroll capture to add more unique candidates. No candidates are saved automatically.</div>'
+    ? '<div style="font-size:10px;color:#94a3b8;line-height:1.55">Local agent connected. Select a supported Zillow/Redfin/Realtor/Google tab before capture. No candidates are saved automatically.</div>'
     : '<div style="font-size:10px;color:#fca5a5;line-height:1.55">Local agent not connected. Start the localhost Comp Agent, open Zillow/Redfin in the debug Chrome session, then click Check Local Agent. Endpoint defaults to <strong style="color:#e5e7eb">' + researchSafeText(state.url) + '</strong>.</div>';
   return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin:8px 0">' +
     '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
@@ -18515,8 +18597,16 @@ function renderResearchLocalCompBridgeHtml(lead) {
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px">' +
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Connection</div><div style="font-size:12px;font-weight:900;color:' + (connected ? '#86efac' : '#fca5a5') + '">' + researchSafeText(statusText) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(state.lastMessage || 'Waiting for check.') + '</div></div>' +
-      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Tabs</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + tabs.length + ' visible tab' + (tabs.length === 1 ? '' : 's') + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(tabsText) + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Selected Tab</div><div style="font-size:12px;font-weight:900;color:' + (selectedTab ? '#86efac' : '#fca5a5') + '">' + (selectedTab ? researchSafeText(researchLocalCompTabSource(selectedTab)) : 'None selected') + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + (selectedTab ? researchSafeText(selectedTab.title || selectedTab.url || '') : 'Open a Zillow/Redfin/Realtor tab and select it first.') + '</div></div>' +
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Latest Capture</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + researchSafeText(resultSummary) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + (result.scroll_performed ? 'One scroll per click performed.' : 'Visible capture only.') + (resultNote ? '<br><span style="color:#fca5a5">' + resultNote + '</span>' : '') + '</div></div>' +
+    '</div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:8px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">' +
+        '<div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Browser Tab Selector</div>' +
+        '<div style="font-size:10px;color:#94a3b8;line-height:1.45">' + tabs.length + ' visible tab' + (tabs.length === 1 ? '' : 's') + ' / ' + supportedTabs.length + ' supported. Dashboard and internal tabs are shown as unsupported.</div></div>' +
+        '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 9px;cursor:pointer">Refresh Tabs</button>' +
+      '</div>' +
+      (tabRows || '<div style="font-size:10px;color:#fca5a5;line-height:1.5;margin-top:7px">No browser tabs returned. Start debug Chrome, open Zillow/Redfin/Realtor, then refresh tabs.</div>') +
     '</div>' +
     '<div style="margin-top:8px">' + setup + '</div>' +
     (candidateRows ? candidateRows : '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:8px">No local candidates captured yet. Run visible capture or scroll + capture after opening the Zillow/Redfin results page in debug Chrome.</div>') +
