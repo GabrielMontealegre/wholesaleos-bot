@@ -179,6 +179,7 @@ app.get('/api/leads', (req, res) => {
     filtered = filtered.slice(0, parseInt(limit));
   }
   res.json({ leads: filtered.map(withLeadIntelligence), total: filtered.length, totalAll: leads.length });
+});
 
 
 
@@ -4700,6 +4701,4 @@ app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
   // Phase 3B: restore queued enrichment jobs from db.json after restart
   try { enrichQ.restoreQueue(); } catch(e) { logger.error('enrichQ restore error: ' + e.message); }
-});
-
 });
