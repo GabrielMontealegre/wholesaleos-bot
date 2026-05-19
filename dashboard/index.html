@@ -18426,10 +18426,10 @@ function researchLocalCompWorkflowStatus(leadId) {
   var selectedTab = researchLocalCompSelectedTab(leadId);
   if (!researchDashboardUnlocked()) return { label: 'Dashboard locked', color: '#fca5a5', detail: 'Waiting for unlock.' };
   if (state.loadingHealth) return { label: 'Waiting for unlock', color: '#fbbf24', detail: 'Checking local agent after unlock.' };
-  if (!state.health || !state.health.ok) return { label: 'Waiting for local agent', color: '#fca5a5', detail: 'Start Local Comp Agent first.' };
-  if (!selectedTab) return { label: 'Local agent connected', color: '#fbbf24', detail: 'Select a supported Zillow/Redfin/Realtor tab.' };
+  if (!state.health || !state.health.ok) return { label: 'Local agent disconnected', color: '#fca5a5', detail: 'Start Local Comp Agent first.' };
+  if (!selectedTab) return { label: 'Local agent connected', color: '#fbbf24', detail: 'Select supported Zillow/Redfin/Realtor tab.' };
   if (!researchLocalCompTabSupported(selectedTab)) return { label: 'Wrong tab selected', color: '#fca5a5', detail: 'Select a Zillow/Redfin/Realtor tab.' };
-  return { label: 'Ready for capture', color: '#86efac', detail: 'Supported tab selected.' };
+  return { label: 'Ready to capture', color: '#86efac', detail: 'Supported tab selected.' };
 }
 
 function researchLocalCompCandidateToDraft(candidate) {
@@ -18654,9 +18654,9 @@ function fiveLeadCompOpenSource(leadId, source) {
     if (typeof toast === 'function') toast('No address available for comp search.', 'error');
     return;
   }
-  fiveLeadCompSetStatus(leadId, 'opened', 'Opened ' + source + ' search. Use the dedicated local comp browser and solve verification manually if needed.');
+  fiveLeadCompSetStatus(leadId, 'opened', 'Opened ' + source + ' property search. Use the dedicated local comp browser and solve verification manually if needed.');
   window.open(url, '_blank', 'noopener,noreferrer');
-  if (typeof toast === 'function') toast('Opened ' + source + ' search. No scraping started.', 'success');
+  if (typeof toast === 'function') toast('Opened ' + source + ' property search. No scraping started.', 'success');
   if (typeof render === 'function') render();
 }
 
@@ -19351,7 +19351,7 @@ function renderFiveLeadCompTabSelector(lead) {
   }).join('');
   return '<div style="background:#07111f;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:8px">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
-      '<div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Local Browser Tab</div>' +
+      '<div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Select Tab</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.4">' + (selected ? 'Selected: ' + researchSafeText(researchLocalCompTabSource(selected)) : 'Select a Zillow/Redfin/Realtor tab.') + '</div></div>' +
       '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="font-size:9px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;font-weight:900;padding:5px 7px;cursor:pointer">Refresh Tabs</button>' +
     '</div>' +
@@ -19364,7 +19364,7 @@ function renderFiveLeadCompCandidates(lead) {
   if (!ranked.length) {
     return '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:8px">No captured candidates yet. Capture visible comps from the selected local browser tab.</div>';
   }
-  return '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">' + ranked.map(function(item, index) {
+  return '<details style="background:#07111f;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:8px"><summary style="cursor:pointer;font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Candidate Details / Manual Review</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">' + ranked.map(function(item, index) {
     var c = item.candidate || {};
     var details = [
       c.price ? mdaMoney(c.price) : 'price missing',
@@ -19385,7 +19385,7 @@ function renderFiveLeadCompCandidates(lead) {
         (c.url ? '<a href="' + mdaEscapeAttr(c.url) + '" target="_blank" style="font-size:9px;color:#93c5fd;text-decoration:none;font-weight:900">Open</a>' : '') +
       '</div>' +
     '</div>';
-  }).join('') + '</div>';
+  }).join('') + '</div></details>';
 }
 
 function renderFiveLeadCompCard(lead) {
@@ -19399,6 +19399,7 @@ function renderFiveLeadCompCard(lead) {
   var tax = researchLeadTaxPressure(lead);
   var contacts = researchLeadContacts(lead);
   var selected = researchLocalCompSelectedTab(lead.id);
+  var workflowStatus = researchLocalCompWorkflowStatus(lead.id);
   var result = bridge.result || {};
   var captured = result.total_unique_candidates || (Array.isArray(result.candidates) ? result.candidates.length : 0);
   var qualityWarning = captured && fiveLeadCompRankCandidates(lead).some(function(item){ return item.quality === 'low'; })
@@ -19420,14 +19421,17 @@ function renderFiveLeadCompCard(lead) {
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:7px;padding:7px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Next Action</div><div style="font-size:10px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(comps.length >= 3 ? 'Review ARV/MAO' : (selected ? 'Capture or use best 3' : 'Select local tab')) + '</div></div>' +
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
-      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('zillow') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Zillow</button>' +
-      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('redfin') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Redfin</button>' +
-      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('realtor') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Realtor</button>' +
+      '<span style="font-size:10px;color:#94a3b8;font-weight:900;align-self:center">Open Search</span>' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('zillow') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Zillow Property Search</button>' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('redfin') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Redfin Property Search</button>' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('realtor') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Realtor Property Search</button>' +
+      '<span style="font-size:10px;color:#94a3b8;font-weight:900;align-self:center">Select Tab</span>' +
       '<button type="button" onclick="fiveLeadCompCapture(' + researchJsArg(lead.id) + ',false)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Capture Visible</button>' +
       '<button type="button" onclick="fiveLeadCompCapture(' + researchJsArg(lead.id) + ',true)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Scroll + Capture</button>' +
       '<button type="button" onclick="fiveLeadCompUseBest3(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#052e1a;color:#86efac;font-weight:900;padding:6px 8px;cursor:pointer">Use Best 3</button>' +
       '<button type="button" onclick="fiveLeadCompNextLead(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Next Lead</button>' +
     '</div>' +
+    '<div style="font-size:10px;color:' + workflowStatus.color + ';font-weight:900;line-height:1.45;margin-top:7px">' + researchSafeText(workflowStatus.label) + ' - ' + researchSafeText(workflowStatus.detail) + '</div>' +
     renderFiveLeadCompTabSelector(lead) +
     '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">' + researchSafeText(leadState.lastMessage || '') + '</div>' +
     (captured < 3 && captured > 0 ? '<div style="font-size:10px;color:#fca5a5;line-height:1.4;margin-top:5px">Need more comps. Try Redfin or scroll once more.</div>' : '') +
@@ -19495,9 +19499,9 @@ function renderResearchSessionLeadWorkspace(lead) {
   var safe = leadActivityDomId(lead.id);
   var address = researchLeadAddress(lead);
   var links = [
-    ['Open Zillow Search', leadTargetedCompSearchUrl('zillow', lead)],
-    ['Open Redfin Search', leadTargetedCompSearchUrl('redfin', lead)],
-    ['Open Realtor Search', leadTargetedCompSearchUrl('realtor', lead)]
+    ['Zillow Property Search', leadTargetedCompSearchUrl('zillow', lead)],
+    ['Redfin Property Search', leadTargetedCompSearchUrl('redfin', lead)],
+    ['Realtor Property Search', leadTargetedCompSearchUrl('realtor', lead)]
   ].filter(function(item){ return !!item[1]; }).map(function(item){
     return '<a href="' + mdaEscapeAttr(item[1]) + '" target="_blank" style="font-size:10px;font-weight:900;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#0b1120;border-radius:999px;padding:6px 9px">' + item[0] + '</a>';
   }).join('');
