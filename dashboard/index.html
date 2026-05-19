@@ -425,6 +425,7 @@ const APP = {
   userId: 'admin',
   isAdmin: true,
   role: localStorage.getItem('montsan_role') || 'admin',
+  unlocked: false,
   pinInput: '',
   page: 'dashboard',
   selectedLead: null,
@@ -518,6 +519,8 @@ async function checkPin() {
     const appEl = document.getElementById('app');
     if (pinScreen) pinScreen.style.display = 'none';
     if (appEl) appEl.style.display = 'flex';
+    APP.unlocked = true;
+    window.WOS_DASHBOARD_UNLOCKED = true;
     const roleLabel = document.getElementById('user-role-label');
     if (roleLabel) roleLabel.textContent = 'Admin · Gabriel';
     initApp();
@@ -3785,6 +3788,23 @@ function leadEnrichmentSearchUrl(site, query) {
   if (site === 'truepeople') return 'https://www.truepeoplesearch.com/results?name=' + enc;
   if (site === 'whitepages') return 'https://www.whitepages.com/name/' + enc;
   return '';
+}
+
+function leadTargetedCompSearchUrl(site, lead) {
+  lead = lead || {};
+  var query = leadBriefingText([
+    lead.address || '',
+    lead.city || '',
+    lead.state || '',
+    lead.zip || lead.postal_code || lead.postal || ''
+  ].filter(Boolean).join(', ')) || leadBriefingText(researchLeadAddress(lead) || lead.address || '');
+  if (!query) return '';
+  var enc = encodeURIComponent(query);
+  var quoted = '"' + query + '"';
+  if (site === 'zillow') return 'https://www.zillow.com/homes/' + enc + '_rb/';
+  if (site === 'redfin') return 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + quoted);
+  if (site === 'realtor') return 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + quoted);
+  return leadEnrichmentSearchUrl(site, query);
 }
 
 function buildEnrichmentLaunchpad(lead) {
@@ -16515,6 +16535,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (saved === '1234') {
       document.getElementById('pin-screen').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
+      APP.unlocked = true;
+      window.WOS_DASHBOARD_UNLOCKED = true;
       initApp();
     } else {
       document.getElementById('pin-screen').style.display = 'flex';
@@ -16922,6 +16944,7 @@ function renderBulkActionsBar(){
     '<button type="button" onclick="bulkQueueEnrichment()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Enrichment</button>'+
     '<button type="button" onclick="bulkMarkVerification()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Mark Verification</button>'+
     '<button type="button" onclick="startResearchSessionFromSelection()" style="font-size:11px;border:1px solid #f4c542;border-radius:6px;background:#1f2937;color:#f4c542;padding:6px 8px;font-weight:900;cursor:pointer">Start Research Session</button>'+
+    '<button type="button" onclick="startFiveLeadCompSessionFromSelection()" style="font-size:11px;border:1px solid #10b981;border-radius:6px;background:#052e1a;color:#86efac;padding:6px 8px;font-weight:900;cursor:pointer">Start 5-Lead Comp Session</button>'+
     '<button type="button" onclick="bulkArchiveSelected()" style="font-size:11px;border:1px solid #fecaca;border-radius:6px;background:#450a0a;color:#fecaca;padding:6px 8px;font-weight:900;cursor:pointer">Archive</button>'+
     '<span id="bulk-action-status" style="font-size:10px;color:#94a3b8"></span>'+
   '</div>';
@@ -18274,6 +18297,14 @@ function researchLocalCompBridgeSetBaseUrl(url) {
   if (typeof render === 'function') render();
 }
 
+function researchDashboardUnlocked() {
+  if (APP && APP.unlocked) return true;
+  if (window.WOS_DASHBOARD_UNLOCKED) return true;
+  var pinScreen = document.getElementById('pin-screen');
+  var appEl = document.getElementById('app');
+  return !!(appEl && appEl.style.display !== 'none' && (!pinScreen || pinScreen.style.display === 'none'));
+}
+
 function researchLocalCompBridgeState(leadId) {
   if (!APP.researchSession) APP.researchSession = {};
   if (!APP.researchSession.localCompBridge) APP.researchSession.localCompBridge = {};
@@ -18299,6 +18330,7 @@ function researchLocalCompBridgeState(leadId) {
 }
 
 function researchLocalCompBridgeAutoCheck(leadId) {
+  if (!researchDashboardUnlocked()) return;
   var state = researchLocalCompBridgeState(leadId);
   if (state.autoCheckQueued || state.loadingHealth || state.checkedAt) return;
   state.autoCheckQueued = true;
@@ -18310,6 +18342,13 @@ function researchLocalCompBridgeAutoCheck(leadId) {
 async function researchLocalCompBridgeCheck(leadId) {
   var state = researchLocalCompBridgeState(leadId);
   var base = researchLocalCompBridgeBaseUrl();
+  if (!researchDashboardUnlocked()) {
+    state.health = null;
+    state.tabs = [];
+    state.error = 'Dashboard locked. Waiting for unlock.';
+    state.lastMessage = 'Waiting for unlock.';
+    return;
+  }
   state.loadingHealth = true;
   state.error = '';
   state.lastMessage = 'Checking local comp agent...';
@@ -18382,6 +18421,17 @@ function researchLocalCompBridgeSelectTab(leadId, tabId) {
   if (typeof render === 'function') render();
 }
 
+function researchLocalCompWorkflowStatus(leadId) {
+  var state = researchLocalCompBridgeState(leadId);
+  var selectedTab = researchLocalCompSelectedTab(leadId);
+  if (!researchDashboardUnlocked()) return { label: 'Dashboard locked', color: '#fca5a5', detail: 'Waiting for unlock.' };
+  if (state.loadingHealth) return { label: 'Waiting for unlock', color: '#fbbf24', detail: 'Checking local agent after unlock.' };
+  if (!state.health || !state.health.ok) return { label: 'Waiting for local agent', color: '#fca5a5', detail: 'Start Local Comp Agent first.' };
+  if (!selectedTab) return { label: 'Local agent connected', color: '#fbbf24', detail: 'Select a supported Zillow/Redfin/Realtor tab.' };
+  if (!researchLocalCompTabSupported(selectedTab)) return { label: 'Wrong tab selected', color: '#fca5a5', detail: 'Select a Zillow/Redfin/Realtor tab.' };
+  return { label: 'Ready for capture', color: '#86efac', detail: 'Supported tab selected.' };
+}
+
 function researchLocalCompCandidateToDraft(candidate) {
   candidate = candidate || {};
   var price = Number(candidate.price || 0) || 0;
@@ -18417,6 +18467,12 @@ function researchLocalCompCandidateToDraft(candidate) {
 async function researchLocalCompBridgeCapture(leadId, scroll) {
   var state = researchLocalCompBridgeState(leadId);
   var base = researchLocalCompBridgeBaseUrl();
+  if (!researchDashboardUnlocked()) {
+    state.error = 'Dashboard locked. Waiting for unlock.';
+    state.lastMessage = 'Waiting for unlock.';
+    if (typeof render === 'function') render();
+    return;
+  }
   var selectedTab = researchLocalCompSelectedTab(leadId);
   if (!selectedTab || !researchLocalCompTabSupported(selectedTab)) {
     state.error = 'Open a Zillow/Redfin/Realtor tab and select it first.';
@@ -18465,6 +18521,12 @@ function researchLocalCompBridgeClear(leadId) {
 async function researchGetLocalComps(leadId) {
   var state = researchLocalCompBridgeState(leadId);
   var base = researchLocalCompBridgeBaseUrl();
+  if (!researchDashboardUnlocked()) {
+    state.error = 'Dashboard locked. Waiting for unlock.';
+    state.lastMessage = 'Waiting for unlock.';
+    if (typeof render === 'function') render();
+    return;
+  }
   var selectedTab = researchLocalCompSelectedTab(leadId);
   if (!selectedTab || !researchLocalCompTabSupported(selectedTab)) {
     state.error = 'Open a Zillow/Redfin/Realtor tab and select it first.';
@@ -18509,6 +18571,248 @@ async function researchGetLocalComps(leadId) {
   }
 }
 
+function fiveLeadCompState() {
+  if (!APP.researchSession) APP.researchSession = {};
+  if (!APP.researchSession.fiveLeadComp) APP.researchSession.fiveLeadComp = {
+    active: false,
+    leadIds: [],
+    activeLeadId: '',
+    leadState: {},
+    createdAt: ''
+  };
+  return APP.researchSession.fiveLeadComp;
+}
+
+function fiveLeadCompLeadState(leadId) {
+  var session = fiveLeadCompState();
+  var id = String(leadId || '');
+  if (!session.leadState[id]) session.leadState[id] = {
+    status: 'not started',
+    captures: 0,
+    scrolls: 0,
+    usedBest: false,
+    lastMessage: 'Open a comp source, select its browser tab, then capture.',
+    lastUpdated: ''
+  };
+  return session.leadState[id];
+}
+
+function startFiveLeadCompSessionFromSelection() {
+  var ids = selectedLeadIds();
+  if (!ids.length) {
+    bulkActionStatus('Select 1-5 leads to start a 5-lead comp session.', true);
+    if (typeof toast === 'function') toast('Select 1-5 leads first', 'error');
+    return;
+  }
+  if (ids.length > 5) {
+    bulkActionStatus('5-Lead Comp Session is capped at 5 leads. Clear selection and choose fewer.', true);
+    if (typeof toast === 'function') toast('5-Lead Comp Session max is 5 selected leads', 'error');
+    return;
+  }
+  startResearchSessionFromSelection();
+  startFiveLeadCompSessionForResearchSession();
+}
+
+function startFiveLeadCompSessionForResearchSession() {
+  if (!APP.researchSession || !APP.researchSession.active) {
+    if (typeof toast === 'function') toast('Start a Research Session with 1-5 selected leads first.', 'error');
+    return;
+  }
+  var leads = researchSessionLeads().slice(0, 5);
+  var session = fiveLeadCompState();
+  session.active = true;
+  session.leadIds = leads.map(function(lead){ return String(lead.id); });
+  session.activeLeadId = session.activeLeadId || (leads[0] ? String(leads[0].id) : '');
+  session.createdAt = session.createdAt || new Date().toISOString();
+  leads.forEach(function(lead){ fiveLeadCompLeadState(lead.id); });
+  if (typeof toast === 'function') toast('5-Lead Comp Session started. Open, capture, use best 3, then move to next lead.', 'success');
+  if (typeof render === 'function') render();
+}
+
+function fiveLeadCompSetActive(leadId) {
+  var session = fiveLeadCompState();
+  session.activeLeadId = String(leadId || '');
+  setResearchSessionLead(leadId);
+}
+
+function fiveLeadCompSetStatus(leadId, status, message) {
+  var state = fiveLeadCompLeadState(leadId);
+  state.status = status || state.status || 'not started';
+  state.lastMessage = message || state.lastMessage || '';
+  state.lastUpdated = new Date().toISOString();
+}
+
+function fiveLeadCompLeadSearchQuery(lead) {
+  return researchLeadAddress(lead) || [lead && lead.address, lead && lead.city, lead && lead.state].filter(Boolean).join(', ');
+}
+
+function fiveLeadCompOpenSource(leadId, source) {
+  var lead = researchFindLeadById(leadId);
+  var query = fiveLeadCompLeadSearchQuery(lead);
+  var url = leadTargetedCompSearchUrl(source, lead);
+  if (!url) {
+    if (typeof toast === 'function') toast('No address available for comp search.', 'error');
+    return;
+  }
+  fiveLeadCompSetStatus(leadId, 'opened', 'Opened ' + source + ' search. Use the dedicated local comp browser and solve verification manually if needed.');
+  window.open(url, '_blank', 'noopener,noreferrer');
+  if (typeof toast === 'function') toast('Opened ' + source + ' search. No scraping started.', 'success');
+  if (typeof render === 'function') render();
+}
+
+function fiveLeadCompCandidateKey(candidate) {
+  return [
+    candidate && (candidate.url || candidate.source_url || ''),
+    candidate && (candidate.address || candidate.title || ''),
+    candidate && (candidate.price || '')
+  ].map(function(v){ return String(v || '').trim().toLowerCase().replace(/\s+/g, ' '); }).join('|');
+}
+
+function fiveLeadCompZipFromText(value) {
+  var match = String(value || '').match(/\b\d{5}(?:-\d{4})?\b/);
+  return match ? match[0].slice(0, 5) : '';
+}
+
+function fiveLeadCompAddressTokens(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function(token) {
+    return token.length > 2 && !/^(street|road|avenue|drive|lane|court|place|terrace|circle|glendale|homes|sale)$/.test(token);
+  }).slice(0, 8);
+}
+
+function fiveLeadCompCandidateScore(candidate, lead) {
+  candidate = candidate || {};
+  lead = lead || {};
+  var score = 0;
+  var reasons = [];
+  if (candidate.price > 0) { score += 30; reasons.push('price'); }
+  if (candidate.sqft > 0) { score += 20; reasons.push('sqft'); }
+  if (candidate.beds) { score += 8; reasons.push('beds'); }
+  if (candidate.baths) { score += 8; reasons.push('baths'); }
+  if (candidate.url || candidate.source_url) { score += 12; reasons.push('url'); }
+  if (/sold/i.test(String(candidate.status || ''))) { score += 12; reasons.push('sold status'); }
+  else if (/list|active|for sale/i.test(String(candidate.status || ''))) { score += 4; reasons.push('market support'); }
+  var leadText = [lead.address, lead.city, lead.state, lead.zip, lead.postal_code, lead.postal].filter(Boolean).join(' ').toLowerCase();
+  var candText = [candidate.address, candidate.title, candidate.snippet].filter(Boolean).join(' ').toLowerCase();
+  if (lead.city && candText.indexOf(String(lead.city).toLowerCase()) > -1) { score += 6; reasons.push('city match'); }
+  if (lead.state && candText.indexOf(String(lead.state).toLowerCase()) > -1) { score += 3; reasons.push('state match'); }
+  var leadZip = fiveLeadCompZipFromText(leadText);
+  var candZip = fiveLeadCompZipFromText(candText);
+  if (leadZip && candZip && leadZip === candZip) { score += 10; reasons.push('ZIP match'); }
+  var leadTokens = fiveLeadCompAddressTokens(lead.address || researchLeadAddress(lead));
+  var tokenMatches = leadTokens.filter(function(token) { return candText.indexOf(token) > -1; }).length;
+  if (tokenMatches >= 2) { score += 12; reasons.push('address token match'); }
+  else if (!tokenMatches && /homes for sale|real estate/i.test(candText)) { score -= 12; reasons.push('generic city-wide result'); }
+  if (/skip main navigation|privacy|sign in|advertise|menu/i.test(candText)) { score -= 80; reasons.push('noise filtered'); }
+  if (!candidate.price && !candidate.address && !candidate.title) { score -= 30; reasons.push('missing basics'); }
+  return {
+    candidate: candidate,
+    score: score,
+    reasons: reasons.slice(0, 5),
+    label: /sold/i.test(String(candidate.status || '')) ? 'sold comp' : 'market support',
+    quality: score >= 70 ? 'high' : score >= 45 ? 'medium' : 'low'
+  };
+}
+
+function fiveLeadCompRankCandidates(lead) {
+  lead = lead || {};
+  var bridge = researchLocalCompBridgeState(lead.id);
+  var candidates = bridge.result && Array.isArray(bridge.result.candidates) ? bridge.result.candidates : [];
+  var seen = {};
+  return candidates.map(function(candidate) {
+    return fiveLeadCompCandidateScore(candidate, lead);
+  }).filter(function(item) {
+    var key = fiveLeadCompCandidateKey(item.candidate);
+    if (seen[key]) return false;
+    seen[key] = true;
+    return item.score > 0;
+  }).sort(function(a, b) {
+    return b.score - a.score;
+  });
+}
+
+async function fiveLeadCompCapture(leadId, scroll) {
+  var bridge = researchLocalCompBridgeState(leadId);
+  var selectedTab = researchLocalCompSelectedTab(leadId);
+  if (!researchDashboardUnlocked()) {
+    bridge.error = 'Dashboard locked. Waiting for unlock.';
+    bridge.lastMessage = 'Waiting for unlock.';
+    fiveLeadCompSetStatus(leadId, 'not started', 'Dashboard locked. Waiting for unlock.');
+    if (typeof render === 'function') render();
+    return;
+  }
+  if (!bridge.health || !bridge.health.ok) {
+    bridge.error = 'Start Local Comp Agent first.';
+    bridge.lastMessage = bridge.error;
+    fiveLeadCompSetStatus(leadId, 'not started', bridge.error);
+    if (typeof toast === 'function') toast(bridge.error, 'error');
+    if (typeof render === 'function') render();
+    return;
+  }
+  if (!selectedTab || !researchLocalCompTabSupported(selectedTab)) {
+    bridge.error = 'Select a Zillow/Redfin/Realtor tab.';
+    bridge.lastMessage = bridge.error;
+    fiveLeadCompSetStatus(leadId, 'opened', bridge.error);
+    if (typeof toast === 'function') toast(bridge.error, 'error');
+    if (typeof render === 'function') render();
+    return;
+  }
+  await researchLocalCompBridgeCapture(leadId, !!scroll);
+  var result = bridge.result || {};
+  var leadState = fiveLeadCompLeadState(leadId);
+  leadState.captures += 1;
+  if (scroll) leadState.scrolls += 1;
+  var count = Array.isArray(result.candidates) ? result.candidates.length : 0;
+  var total = result.total_unique_candidates || count;
+  var status = total >= 3 ? 'captured' : 'needs review';
+  var message = total >= 3 ? total + ' unique candidates captured. Review or use best 3.' : 'Need more comps. Try Redfin or scroll once more.';
+  if (result.extraction_status === 'captcha_or_verification_detected') {
+    status = 'needs review';
+    message = 'Human verification detected. Complete it manually, then capture again.';
+  }
+  fiveLeadCompSetStatus(leadId, status, message);
+  if (typeof render === 'function') render();
+}
+
+function fiveLeadCompUseBest3(leadId) {
+  var lead = researchFindLeadById(leadId);
+  var ranked = fiveLeadCompRankCandidates(lead);
+  if (ranked.length < 3) {
+    fiveLeadCompSetStatus(leadId, 'needs review', 'Need more comps. Try Redfin or scroll once more.');
+    if (typeof toast === 'function') toast('Need more comps. Try Redfin or scroll once more.', 'error');
+    if (typeof render === 'function') render();
+    return false;
+  }
+  researchCaptureDraft(leadId);
+  var imported = 0;
+  ranked.slice(0, 3).forEach(function(item) {
+    var draft = researchLocalCompCandidateToDraft(item.candidate);
+    draft.confidence = 'unverified';
+    draft.notes = [item.label, 'Rank ' + item.score, item.reasons.join(', '), draft.notes].filter(Boolean).join(' | ').slice(0, 260);
+    if (researchInsertDraftCompSilently(leadId, draft)) imported += 1;
+  });
+  var comps = researchLeadComps(lead);
+  var stats = researchCompStats(comps);
+  var onlyMarketSupport = comps.length && !comps.some(function(comp){ return /sold/i.test(String(comp.sale_type || comp.status || comp.notes || '')); });
+  fiveLeadCompLeadState(leadId).usedBest = true;
+  fiveLeadCompSetStatus(leadId, imported >= 3 || comps.length >= 3 ? 'ready' : 'needs review',
+    imported >= 3 || comps.length >= 3
+      ? 'Best available candidates filled draft slots. Review active listings as market support, not sold comps.'
+      : 'Manual review required.');
+  if (onlyMarketSupport) fiveLeadCompLeadState(leadId).lastMessage += ' ARV confidence is lower because only active/listing support is present.';
+  researchRefreshSessionCompPreview(leadId);
+  if (typeof toast === 'function') toast('Used best ' + imported + ' local candidate(s). Draft only, not saved.', imported ? 'success' : 'error');
+  if (typeof render === 'function') render();
+  return imported > 0 && stats.count >= 3;
+}
+
+function fiveLeadCompNextLead(leadId) {
+  var session = fiveLeadCompState();
+  var ids = session.leadIds || [];
+  var idx = ids.indexOf(String(leadId));
+  var next = ids[idx + 1] || ids[0] || '';
+  if (next) fiveLeadCompSetActive(next);
+}
+
 function researchUseLocalCompCandidate(leadId, index) {
   var state = researchLocalCompBridgeState(leadId);
   var candidates = state.result && Array.isArray(state.result.candidates) ? state.result.candidates : [];
@@ -18530,6 +18834,7 @@ function renderResearchLocalCompBridgeHtml(lead) {
   var connected = !!health.ok;
   var supportedTabs = tabs.filter(function(tab) { return researchLocalCompTabSupported(tab); });
   var selectedTab = researchLocalCompSelectedTab(lead.id);
+  var workflowStatus = researchLocalCompWorkflowStatus(lead.id);
   var tabsText = tabs.length ? tabs.map(function(tab) {
     return researchSafeText(tab.title || tab.url || 'Tab') + ' (' + researchSafeText(tab.source || 'page') + ')';
   }).join(' · ') : 'No tabs loaded yet.';
@@ -18596,6 +18901,7 @@ function renderResearchLocalCompBridgeHtml(lead) {
       '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px">' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Workflow Status</div><div style="font-size:12px;font-weight:900;color:' + workflowStatus.color + '">' + researchSafeText(workflowStatus.label) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(workflowStatus.detail) + '</div></div>' +
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Connection</div><div style="font-size:12px;font-weight:900;color:' + (connected ? '#86efac' : '#fca5a5') + '">' + researchSafeText(statusText) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + researchSafeText(state.lastMessage || 'Waiting for check.') + '</div></div>' +
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Selected Tab</div><div style="font-size:12px;font-weight:900;color:' + (selectedTab ? '#86efac' : '#fca5a5') + '">' + (selectedTab ? researchSafeText(researchLocalCompTabSource(selectedTab)) : 'None selected') + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + (selectedTab ? researchSafeText(selectedTab.title || selectedTab.url || '') : 'Open a Zillow/Redfin/Realtor tab and select it first.') + '</div></div>' +
       '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Latest Capture</div><div style="font-size:12px;font-weight:900;color:#e5e7eb">' + researchSafeText(resultSummary) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.4;margin-top:4px">' + (result.scroll_performed ? 'One scroll per click performed.' : 'Visible capture only.') + (resultNote ? '<br><span style="color:#fca5a5">' + resultNote + '</span>' : '') + '</div></div>' +
@@ -19025,6 +19331,128 @@ function renderResearchWorkflowActionBar(lead) {
   '</div>';
 }
 
+function renderFiveLeadCompTabSelector(lead) {
+  var bridge = researchLocalCompBridgeState(lead.id);
+  var tabs = Array.isArray(bridge.tabs) ? bridge.tabs : [];
+  var selected = researchLocalCompSelectedTab(lead.id);
+  var rows = tabs.map(function(tab) {
+    var source = researchLocalCompTabSource(tab);
+    var supported = researchLocalCompTabSupported(tab);
+    var isSelected = selected && String(selected.id) === String(tab.id);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid ' + (isSelected ? '#f4c542' : '#243044') + ';border-radius:7px;padding:6px;background:#0b1120">' +
+      '<div style="min-width:0;flex:1">' +
+        '<div style="font-size:9px;text-transform:uppercase;font-weight:900;color:' + (supported ? '#86efac' : '#94a3b8') + '">' + researchSafeText(source) + (isSelected ? ' - selected' : '') + '</div>' +
+        '<div style="font-size:10px;color:#e5e7eb;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + researchSafeText(tab.title || tab.url || 'Untitled tab') + '</div>' +
+      '</div>' +
+      (supported
+        ? '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(lead.id) + ',' + researchJsArg(tab.id) + ')" style="font-size:9px;border:1px solid #334155;border-radius:6px;background:#111827;color:#f4c542;font-weight:900;padding:5px 7px;cursor:pointer">' + (isSelected ? 'Selected' : 'Select') + '</button>'
+        : '<span style="font-size:9px;color:#64748b;font-weight:900">Unsupported</span>') +
+    '</div>';
+  }).join('');
+  return '<div style="background:#07111f;border:1px solid #243044;border-radius:8px;padding:8px;margin-top:8px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Local Browser Tab</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.4">' + (selected ? 'Selected: ' + researchSafeText(researchLocalCompTabSource(selected)) : 'Select a Zillow/Redfin/Realtor tab.') + '</div></div>' +
+      '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="font-size:9px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;font-weight:900;padding:5px 7px;cursor:pointer">Refresh Tabs</button>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">' + (rows || '<div style="font-size:10px;color:#fca5a5">Start Local Comp Agent first.</div>') + '</div>' +
+  '</div>';
+}
+
+function renderFiveLeadCompCandidates(lead) {
+  var ranked = fiveLeadCompRankCandidates(lead).slice(0, 5);
+  if (!ranked.length) {
+    return '<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:8px">No captured candidates yet. Capture visible comps from the selected local browser tab.</div>';
+  }
+  return '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">' + ranked.map(function(item, index) {
+    var c = item.candidate || {};
+    var details = [
+      c.price ? mdaMoney(c.price) : 'price missing',
+      c.beds ? c.beds + ' bd' : '',
+      c.baths ? c.baths + ' ba' : '',
+      c.sqft ? c.sqft + ' sqft' : '',
+      item.label,
+      item.quality + ' quality'
+    ].filter(Boolean).join(' | ');
+    return '<div style="background:#0b1120;border:1px solid #243044;border-radius:8px;padding:7px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
+        '<div style="min-width:0;flex:1">' +
+          '<div style="font-size:9px;color:' + (item.label === 'sold comp' ? '#86efac' : '#fbbf24') + ';text-transform:uppercase;font-weight:900">#' + (index + 1) + ' ' + item.label + ' - unverified</div>' +
+          '<div style="font-size:10px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(c.title || c.address || 'Untitled candidate') + '</div>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.4">' + researchSafeText(details) + '</div>' +
+          '<div style="font-size:9px;color:#94a3b8;line-height:1.4">' + researchSafeText(item.reasons.join(', ') || c.confidence_reason || '') + '</div>' +
+        '</div>' +
+        (c.url ? '<a href="' + mdaEscapeAttr(c.url) + '" target="_blank" style="font-size:9px;color:#93c5fd;text-decoration:none;font-weight:900">Open</a>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderFiveLeadCompCard(lead) {
+  var leadState = fiveLeadCompLeadState(lead.id);
+  var bridge = researchLocalCompBridgeState(lead.id);
+  var comps = researchLeadComps(lead);
+  var stats = researchCompStats(comps);
+  var progress = researchLeadProgress(lead);
+  var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.id || 'Lead');
+  var address = researchLeadAddress(lead) || lead.address || 'Address not available';
+  var tax = researchLeadTaxPressure(lead);
+  var contacts = researchLeadContacts(lead);
+  var selected = researchLocalCompSelectedTab(lead.id);
+  var result = bridge.result || {};
+  var captured = result.total_unique_candidates || (Array.isArray(result.candidates) ? result.candidates.length : 0);
+  var qualityWarning = captured && fiveLeadCompRankCandidates(lead).some(function(item){ return item.quality === 'low'; })
+    ? '<div style="font-size:10px;color:#fbbf24;line-height:1.4;margin-top:5px">Manual review required. Some candidates have low confidence.</div>'
+    : '';
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:10px;padding:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div style="min-width:0;flex:1">' +
+        '<div style="font-size:10px;color:#f4c542;font-weight:900">' + researchSafeText(ref) + '</div>' +
+        '<div style="font-size:12px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(address) + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Tax/lien: ' + (tax ? mdaMoney(tax) : 'not visible') + ' | Contact: ' + (contacts.length ? contacts.length + ' candidate(s)' : 'needs lookup') + '</div>' +
+      '</div>' +
+      '<button type="button" onclick="fiveLeadCompSetActive(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#f4c542;font-weight:900;padding:5px 8px;cursor:pointer">Work Lead</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:6px;margin-top:8px">' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:7px;padding:7px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Status</div><div style="font-size:11px;color:#e5e7eb;font-weight:900">' + researchSafeText(leadState.status) + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:7px;padding:7px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Candidates</div><div style="font-size:11px;color:#e5e7eb;font-weight:900">' + captured + ' captured</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:7px;padding:7px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Approved Comps</div><div style="font-size:11px;color:#e5e7eb;font-weight:900">' + comps.length + '/5 slots | ' + researchSafeText(stats.confidence) + '</div></div>' +
+      '<div style="background:#0b1120;border:1px solid #243044;border-radius:7px;padding:7px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Next Action</div><div style="font-size:10px;color:#e5e7eb;font-weight:900;line-height:1.35">' + researchSafeText(comps.length >= 3 ? 'Review ARV/MAO' : (selected ? 'Capture or use best 3' : 'Select local tab')) + '</div></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('zillow') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Zillow</button>' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('redfin') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Redfin</button>' +
+      '<button type="button" onclick="fiveLeadCompOpenSource(' + researchJsArg(lead.id) + ',' + researchJsArg('realtor') + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Realtor</button>' +
+      '<button type="button" onclick="fiveLeadCompCapture(' + researchJsArg(lead.id) + ',false)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Capture Visible</button>' +
+      '<button type="button" onclick="fiveLeadCompCapture(' + researchJsArg(lead.id) + ',true)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Scroll + Capture</button>' +
+      '<button type="button" onclick="fiveLeadCompUseBest3(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#052e1a;color:#86efac;font-weight:900;padding:6px 8px;cursor:pointer">Use Best 3</button>' +
+      '<button type="button" onclick="fiveLeadCompNextLead(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Next Lead</button>' +
+    '</div>' +
+    renderFiveLeadCompTabSelector(lead) +
+    '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">' + researchSafeText(leadState.lastMessage || '') + '</div>' +
+    (captured < 3 && captured > 0 ? '<div style="font-size:10px;color:#fca5a5;line-height:1.4;margin-top:5px">Need more comps. Try Redfin or scroll once more.</div>' : '') +
+    qualityWarning +
+    renderFiveLeadCompCandidates(lead) +
+    '<div style="font-size:10px;color:' + (progress.offerReady ? '#86efac' : '#94a3b8') + ';line-height:1.45;margin-top:8px">ARV/MAO summary updates after draft slots fill. Draft comps are not saved to the lead.</div>' +
+  '</div>';
+}
+
+function renderFiveLeadCompSessionPanel(leads) {
+  leads = (leads || []).slice(0, 5);
+  var session = APP.researchSession && APP.researchSession.fiveLeadComp;
+  var active = !!(session && session.active);
+  return '<div style="background:#07111f;border:1px solid #1f2937;border-radius:10px;padding:11px;margin:10px 0;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:12px;color:#86efac;text-transform:uppercase;font-weight:900;letter-spacing:.06em">5-Lead Comp Session</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:2px">Open, Capture, Use Best 3, Next Lead. Operator-triggered only. No CAPTCHA bypass, auto-save, or background scraping.</div></div>' +
+      '<button type="button" onclick="startFiveLeadCompSessionForResearchSession()" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#052e1a;color:#86efac;font-weight:900;padding:7px 9px;cursor:pointer">' + (active ? 'Restart View' : 'Start 5-Lead Comp Session') + '</button>' +
+    '</div>' +
+    (active
+      ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px">' + leads.map(renderFiveLeadCompCard).join('') + '</div>'
+      : '<div style="font-size:10px;color:#94a3b8;line-height:1.5">Start this after selecting 1-5 leads. It uses the existing structured comp slots and local browser tab selector.</div>') +
+  '</div>';
+}
+
 function renderResearchSellerFlow(lead) {
   var text = [
     lead && lead.source, lead && lead.category, lead && lead.motivation, lead && lead.distress_type,
@@ -19067,9 +19495,9 @@ function renderResearchSessionLeadWorkspace(lead) {
   var safe = leadActivityDomId(lead.id);
   var address = researchLeadAddress(lead);
   var links = [
-    ['Open Zillow Search', leadEnrichmentSearchUrl('zillow', address)],
-    ['Open Redfin Search', leadEnrichmentSearchUrl('redfin', address)],
-    ['Open Realtor Search', leadEnrichmentSearchUrl('realtor', address)]
+    ['Open Zillow Search', leadTargetedCompSearchUrl('zillow', lead)],
+    ['Open Redfin Search', leadTargetedCompSearchUrl('redfin', lead)],
+    ['Open Realtor Search', leadTargetedCompSearchUrl('realtor', lead)]
   ].filter(function(item){ return !!item[1]; }).map(function(item){
     return '<a href="' + mdaEscapeAttr(item[1]) + '" target="_blank" style="font-size:10px;font-weight:900;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#0b1120;border-radius:999px;padding:6px 9px">' + item[0] + '</a>';
   }).join('');
@@ -19118,6 +19546,7 @@ function renderResearchSessionPanel() {
       '<button type="button" onclick="closeResearchSession()" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;padding:7px 10px;cursor:pointer">Close Session</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:8px">' + leads.map(renderResearchSessionCard).join('') + '</div>' +
+    renderFiveLeadCompSessionPanel(leads) +
     renderResearchSessionLeadWorkspace(active) +
   '</div>';
 }
