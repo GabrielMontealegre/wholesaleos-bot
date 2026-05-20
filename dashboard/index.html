@@ -19621,13 +19621,24 @@ function leadQueueIsPlaceholderLead(lead) {
   var values = [
     leadQueueAddress(lead),
     lead.address,
+    lead.property_address,
+    lead.site_address,
+    lead.full_address,
+    lead.city,
+    lead.state,
     lead.owner,
     lead.owner_name,
     lead.name,
     lead.ref_id,
-    lead.id
+    lead.reference_id,
+    lead.lead_reference_id,
+    lead.id,
+    lead.Column1,
+    lead.Column2,
+    lead.Column3,
+    lead.Column4
   ].map(function(value){ return String(value || '').trim().toLowerCase(); }).filter(Boolean);
-  var bad = /^(column[1-4]|unnamed)$/i;
+  var bad = /^(column\s*[1-4]|unnamed)$/i;
   if (!String(leadQueueAddress(lead) || '').trim()) return true;
   return values.some(function(value){ return bad.test(value); });
 }
@@ -19646,6 +19657,10 @@ function openLeadWorkspace(leadId) {
     if (typeof toast === 'function') toast('Lead not found', 'error');
     return;
   }
+  if (leadQueueIsPlaceholderLead(lead)) {
+    if (typeof toast === 'function') toast('Placeholder lead hidden from workspace. Choose a valid lead with an address.', 'error');
+    return;
+  }
   APP.leadWorkspaceId = String(lead.id);
   APP.selectedLead = String(lead.id);
   var previousSession = APP.researchSession || {};
@@ -19662,11 +19677,13 @@ function openLeadWorkspace(leadId) {
   };
   if (typeof render === 'function') render();
 }
+window.openLeadWorkspace = openLeadWorkspace;
 
 function closeLeadWorkspace() {
   APP.leadWorkspaceId = '';
   if (typeof render === 'function') render();
 }
+window.closeLeadWorkspace = closeLeadWorkspace;
 
 function renderLeadWorkspaceView(lead) {
   if (!lead) return '';
@@ -19904,7 +19921,7 @@ function renderLeads() {
     var workflow = leadQueueWorkflow(lead);
     var color = statusColors[lead.status || 'New Lead'] || '#86868b';
     var address = leadQueueAddress(lead);
-    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" onclick="openLeadWorkspace(this.dataset.leadId)">' +
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" onclick="openLeadWorkspace(this.dataset.leadId)">' +
       '<td style="padding:9px 8px;width:34px;text-align:center"><input type="checkbox" class="lead-cb" data-id="' + leadQueueAttr(id) + '" ' + (isSelected ? 'checked ' : '') + 'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:15px;height:15px;cursor:pointer"></td>' +
       '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">' + leadQueueSafeText(rid) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#1d1d1f;max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText(address.split(',')[0] || address) + '</td>' +
@@ -19914,7 +19931,7 @@ function renderLeads() {
       '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:' + color + ';background:' + color + '22;padding:2px 8px;border-radius:10px">' + leadQueueSafeText(workflow) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueCompStatus(lead)) + '</td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueContactStatus(lead)) + '</td>' +
-      '<td style="padding:9px 8px;text-align:right"><button type="button" onclick="event.stopPropagation();openLeadWorkspace(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Workspace</button></td>' +
+      '<td style="padding:9px 8px;text-align:right"><button type="button" data-open-workspace="1" onclick="event.stopPropagation();openLeadWorkspace(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Workspace</button></td>' +
     '</tr>';
   }).join('');
 
@@ -19923,6 +19940,7 @@ function renderLeads() {
   }).join('');
   var quarantineNotice = quarantined.length ? '<div style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px">' + quarantined.length.toLocaleString() + ' placeholder/blank-address lead(s) hidden from the active queue. They were not deleted.</div>' : '';
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
+  setTimeout(leadQueueQuarantineDomRows, 0);
 
   return '<div>' +
     toolbar +
@@ -19946,6 +19964,55 @@ function renderLeads() {
     (totalPages > 1 ? pager : '') +
   '</div>';
 }
+
+function leadQueueEventLooksLikeSelection(target) {
+  return !!(target && target.closest && target.closest('input[type="checkbox"], .lead-cb, .lead-cb-group, .wos-chk, select, textarea, input, label'));
+}
+
+function leadQueueDomRowLooksPlaceholder(row) {
+  if (!row) return false;
+  var id = row.getAttribute('data-lead-id') || '';
+  var lead = (APP.leads || []).find(function(item){ return String(item.id) === String(id); });
+  if (lead && leadQueueIsPlaceholderLead(lead)) return true;
+  var text = String(row.textContent || '').trim().toLowerCase();
+  return /(^|\s)(column\s*[1-4]|unnamed)(\s|$)/i.test(text) && !/\d+\s+\w+/.test(text);
+}
+
+function leadQueueQuarantineDomRows() {
+  document.querySelectorAll('tr[data-lead-id], .lead-row[data-lead-id], .lead-card[data-lead-id]').forEach(function(row) {
+    if (!leadQueueDomRowLooksPlaceholder(row)) return;
+    row.style.display = 'none';
+    row.setAttribute('data-placeholder-quarantined', '1');
+  });
+}
+
+function installLeadQueueWorkspaceDelegation() {
+  if (window.__leadQueueWorkspaceDelegationInstalled) return;
+  window.__leadQueueWorkspaceDelegationInstalled = true;
+  document.addEventListener('click', function(event) {
+    var target = event.target;
+    if (!target || leadQueueEventLooksLikeSelection(target)) return;
+    var button = target.closest && target.closest('[data-open-workspace]');
+    var row = target.closest && target.closest('tr[data-lead-id], .lead-row[data-lead-id], .lead-card[data-lead-id]');
+    var el = button || row;
+    if (!el) return;
+    var leadId = el.getAttribute('data-lead-id') || (row && row.getAttribute('data-lead-id')) || '';
+    if (!leadId) return;
+    if (leadQueueDomRowLooksPlaceholder(el) || (row && leadQueueDomRowLooksPlaceholder(row))) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      if (typeof toast === 'function') toast('Placeholder lead hidden from workspace. Choose a valid lead with an address.', 'error');
+      leadQueueQuarantineDomRows();
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    openLeadWorkspace(leadId);
+  }, true);
+}
+installLeadQueueWorkspaceDelegation();
 
 function renderBuyers(){
   var buyers=APP.buyers||[];
