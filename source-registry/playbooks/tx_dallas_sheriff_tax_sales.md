@@ -149,6 +149,6 @@ Use the controlled Dallas preview pipeline for operator review only:
    - Approve For Ingestion
    - Reject Candidate
    - Needs Repair
-5. Do not ingest approved candidates yet. Preview decisions remain local/operator review state only until an explicit future ingestion step exists.
+5. Approved candidates may be converted only through the controlled preview ingestion action. The action is one-candidate-at-a-time, duplicate-checked, defaults to dry-run behavior, and requires explicit operator confirmation before creating a lead.
 
 The preview queue is capped at small batches and keeps `should_ingest: false` on every candidate.

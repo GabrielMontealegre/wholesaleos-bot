@@ -442,6 +442,7 @@ const APP = {
   dallasPreviewBatch: JSON.parse(localStorage.getItem('montsan_dallas_preview_batch') || 'null'),
   dallasPreviewQueue: JSON.parse(localStorage.getItem('montsan_dallas_preview_queue') || '[]'),
   dallasPreviewReviews: JSON.parse(localStorage.getItem('montsan_dallas_preview_reviews') || '{}'),
+  dallasPreviewIngestions: JSON.parse(localStorage.getItem('montsan_dallas_preview_ingestions') || '{}'),
   dallasPreviewDraft: localStorage.getItem('montsan_dallas_preview_draft') || '',
 };
 
@@ -20922,6 +20923,14 @@ function dallasPreviewReviewStore() {
   return APP.dallasPreviewReviews;
 }
 
+function dallasPreviewIngestionStore() {
+  if (!APP.dallasPreviewIngestions) {
+    try { APP.dallasPreviewIngestions = JSON.parse(localStorage.getItem('montsan_dallas_preview_ingestions') || '{}'); }
+    catch (error) { APP.dallasPreviewIngestions = {}; }
+  }
+  return APP.dallasPreviewIngestions;
+}
+
 function dallasPreviewDecisionLabel(status) {
   return ({
     open: 'Open',
@@ -21008,9 +21017,11 @@ function sourcePreviewClearBatch() {
   APP.dallasPreviewBatch = null;
   APP.dallasPreviewQueue = [];
   APP.dallasPreviewDraft = '';
+  APP.dallasPreviewIngestions = {};
   save('dallas_preview_batch', null);
   save('dallas_preview_queue', []);
   save('dallas_preview_draft', '');
+  save('dallas_preview_ingestions', {});
   if (typeof render === 'function') render();
 }
 
@@ -21045,6 +21056,62 @@ function sourcePreviewOpenSource(candidateId) {
 function sourcePreviewOpenEvidence(candidateId) {
   var candidate = sourcePreviewFindCandidate(candidateId);
   dallasPreviewOpenUrl((candidate && candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || (candidate && candidate.source_record_url), candidate && candidate.source_url);
+}
+
+async function sourcePreviewIngestCandidate(candidateId, dryRun) {
+  var candidate = sourcePreviewFindCandidate(candidateId);
+  if (!candidate) {
+    if (typeof toast === 'function') toast('Preview candidate not found.', 'error');
+    return;
+  }
+  var review = sourcePreviewCandidateDecision(candidate);
+  if (review.decision !== 'approved') {
+    if (typeof toast === 'function') toast('Approve this candidate before creating a lead.', 'error');
+    return;
+  }
+  var flags = Array.isArray(candidate.repair_flags) ? candidate.repair_flags : [];
+  var overrideRepair = false;
+  if (flags.length && !dryRun) {
+    overrideRepair = window.confirm('This candidate has repair flags: ' + flags.join(', ') + '. Create lead anyway?');
+    if (!overrideRepair) return;
+  }
+  var confirmCreate = dryRun ? false : window.confirm('Create one real lead from this approved preview candidate?');
+  if (!dryRun && !confirmCreate) return;
+  try {
+    if (typeof toast === 'function') toast(dryRun ? 'Checking preview candidate...' : 'Creating approved lead...', 'info');
+    var resp = await fetch('/api/source-preview/dallas/ingest-approved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        candidate: candidate,
+        decision: review.decision,
+        dry_run: dryRun !== false,
+        confirm_create: confirmCreate,
+        override_repair: overrideRepair
+      })
+    });
+    var data = await resp.json();
+    var store = dallasPreviewIngestionStore();
+    store[String(candidate.id || candidate.preview_id || '')] = {
+      status: data.status || (data.ok ? 'ok' : 'error'),
+      updatedAt: new Date().toISOString(),
+      result: data
+    };
+    save('dallas_preview_ingestions', store);
+    if (!resp.ok || data.ok === false) throw new Error(data.error || data.message || 'Preview ingestion failed');
+    if (data.status === 'created') {
+      if (typeof toast === 'function') toast('Lead created: ' + ((data.lead && (data.lead.reference_id || data.lead.id)) || 'new lead'), 'success');
+      if (typeof loadLeadsFromAPI === 'function') await loadLeadsFromAPI();
+    } else if (data.status === 'duplicate') {
+      if (typeof toast === 'function') toast('Duplicate found: ' + ((data.existing_lead && (data.existing_lead.reference_id || data.existing_lead.id)) || 'existing lead'), 'info');
+    } else if (data.status === 'dry_run_ready') {
+      if (typeof toast === 'function') toast('Dry run ready. No lead created.', 'success');
+    }
+    if (typeof render === 'function') render();
+  } catch (error) {
+    if (typeof toast === 'function') toast(error.message || 'Preview ingestion failed', 'error');
+    if (typeof render === 'function') render();
+  }
 }
 
 function renderSourcePreviewTruth(candidate) {
@@ -21122,6 +21189,17 @@ function renderDallasPreviewQueue() {
     var sourceUrl = candidate.source_url || '';
     var evidenceUrl = (candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || candidate.source_record_url || sourceUrl;
     var repairFlags = Array.isArray(candidate.repair_flags) ? candidate.repair_flags : [];
+    var ingestion = dallasPreviewIngestionStore()[String(candidate.id || candidate.preview_id || '')] || null;
+    var ingestionResult = ingestion && ingestion.result ? ingestion.result : null;
+    var createdLead = ingestionResult && ingestionResult.lead;
+    var duplicateLead = ingestionResult && ingestionResult.existing_lead;
+    var canCreate = review.decision === 'approved';
+    var createDisabledStyle = canCreate ? '' : 'opacity:.55;';
+    var statusLine = '';
+    if (createdLead) statusLine = 'Created lead: ' + (createdLead.reference_id || createdLead.id || 'new lead');
+    else if (duplicateLead) statusLine = 'Duplicate: ' + (duplicateLead.reference_id || duplicateLead.id || 'existing lead');
+    else if (ingestionResult && ingestionResult.status === 'dry_run_ready') statusLine = 'Dry run passed. No lead created.';
+    else if (ingestionResult && ingestionResult.status === 'repair_required') statusLine = 'Repair override required before creating.';
     return '<div style="background:#fff;border:1px solid #dbe3ef;border-radius:12px;padding:12px">' +
       '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">' +
         '<div>' +
@@ -21131,14 +21209,17 @@ function renderDallasPreviewQueue() {
         '<span style="font-size:10px;color:' + badgeColor + ';background:' + badgeColor + '18;border:1px solid ' + badgeColor + '55;border-radius:999px;padding:3px 8px;font-weight:800">' + dallasPreviewSafeText(label) + '</span>' +
       '</div>' +
       '<div style="margin-top:8px;font-size:10px;color:#64748b;line-height:1.45">' +
-        'Preview only. should_ingest = <strong>false</strong>. Lead mutation is disabled until an explicit future ingestion step exists.' +
+        'Preview default: should_ingest = <strong>false</strong>. Lead creation requires approval plus the explicit Create Lead action.' +
       '</div>' +
+      (statusLine ? '<div style="margin-top:7px;font-size:10px;color:#065f46;background:#ecfdf5;border:1px solid #10b98155;border-radius:8px;padding:7px;font-weight:800">' + dallasPreviewSafeText(statusLine) + '</div>' : '') +
       '<div style="margin-top:8px">' + renderSourcePreviewTruth(candidate) + '</div>' +
       '<div style="margin-top:8px">' + renderSourcePreviewBrief(candidate) + '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'approved\')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#ecfdf5;color:#047857;font-weight:900;padding:6px 8px;cursor:pointer">Approve For Ingestion</button>' +
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'rejected\')" style="font-size:10px;border:1px solid #64748b;border-radius:7px;background:#f8fafc;color:#334155;font-weight:900;padding:6px 8px;cursor:pointer">Reject Candidate</button>' +
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'needs_repair\')" style="font-size:10px;border:1px solid #f59e0b;border-radius:7px;background:#fffbeb;color:#92400e;font-weight:900;padding:6px 8px;cursor:pointer">Needs Repair</button>' +
+        '<button type="button" onclick="sourcePreviewIngestCandidate(\'' + dallasPreviewJsString(candidate.id || '') + '\',true)" style="font-size:10px;border:1px solid #2563eb;border-radius:7px;background:#eff6ff;color:#1d4ed8;font-weight:900;padding:6px 8px;cursor:pointer;' + createDisabledStyle + '">Dry Run Create</button>' +
+        '<button type="button" onclick="sourcePreviewIngestCandidate(\'' + dallasPreviewJsString(candidate.id || '') + '\',false)" style="font-size:10px;border:1px solid #047857;border-radius:7px;background:#dcfce7;color:#065f46;font-weight:900;padding:6px 8px;cursor:pointer;' + createDisabledStyle + '">Create Lead</button>' +
         (sourceUrl ? '<button type="button" onclick="sourcePreviewOpenSource(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Source</button>' : '') +
         (evidenceUrl ? '<button type="button" onclick="sourcePreviewOpenEvidence(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Evidence</button>' : '') +
       '</div>' +

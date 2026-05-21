@@ -60,6 +60,14 @@ function getDallasPreviewPipeline() {
   }
 }
 
+function getSourcePreviewIngestion() {
+  try { return require('./source-registry/preview-ingestion'); }
+  catch (e) {
+    logger.error('[source-preview-ingestion] load failed: ' + e.message);
+    return null;
+  }
+}
+
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -301,6 +309,26 @@ app.post('/api/source-preview/dallas/preview', (req, res) => {
   } catch (e) {
     const status = e && e.code === 'preview_batch_too_large' ? 400 : 500;
     res.status(status).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
+  }
+});
+
+app.post('/api/source-preview/dallas/ingest-approved', (req, res) => {
+  try {
+    const ingestion = getSourcePreviewIngestion();
+    if (!ingestion) return res.status(500).json({ ok: false, error: 'preview_ingestion_unavailable', dry_run: true, should_ingest: false });
+    const result = ingestion.ingestApprovedPreviewCandidate(req.body || {}, {
+      getLeads: db.getLeads,
+      addLead: db.addLead,
+      normalizeAddress: db.normalizeAddress
+    });
+    const status = result.status === 'created' || result.status === 'duplicate' || result.status === 'dry_run_ready'
+      ? 200
+      : result.status === 'repair_required' || result.status === 'confirmation_required' || result.status === 'blocked'
+        ? 400
+        : 403;
+    res.status(status).json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
   }
 });
 
