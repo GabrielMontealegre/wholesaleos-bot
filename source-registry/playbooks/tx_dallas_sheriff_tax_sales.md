@@ -40,7 +40,10 @@ The adapter accepts object rows or text rows and normalizes:
 - address
 - owner/taxpayer/defendant
 - parcel/APN/account
-- amount owed / judgment / minimum bid / opening bid
+- judgment amount
+- suggested minimum bid
+- strike-off amount
+- appraisal value
 - case/cause/suit number
 - sale date
 - source URL
@@ -53,6 +56,37 @@ The adapter returns dry-run preview candidates only:
 - `should_ingest: false`
 - `lead_type: dry_run_preview`
 
+## Real Field Mapping
+
+Dallas County sheriff/tax sale and resale materials do not use one single money field. The adapter must preserve the meaning of each money field instead of flattening them.
+
+| Source field / label | Normalized field | Confidence | Repair fallback if missing | Notes |
+| --- | --- | --- | --- | --- |
+| `Property Address`, `situs`, portal address, notice heading | `address` | high when exact; medium when legal description only | `missing_address` | Address is the primary lead locator. If only a legal description exists, keep it in raw payload and evidence. |
+| `Owner`, `Taxpayer`, `Defendant`, `Borrower` | `owner_name` | medium | none | Optional on some resale rows and not always a legal owner of record. |
+| `Parcel`, `APN`, `account`, `tax account`, `DCAD account`, `property ID` | `parcel` / `apn` | high when exact | weak evidence if absent | Preserve exact county/DCAD account string. |
+| `Cause #`, `Cause Number`, `Suit Number` | `case_number` | high | weak evidence if absent | Trustworthy on foreclosure notices and useful for source traceability. |
+| `Judgment amount`, `amount of judgment`, `principal amount` | `judgment_amount` and `amount_owed` | high | `missing_amount` | This is the best candidate for amount owed when the notice includes it explicitly. |
+| `Suggested minimum bid amount`, `minimum bid`, `opening bid`, `bid amount` | `minimum_bid_amount` | high | `missing_amount` if no other amount exists | This is a bid floor, not a mortgage balance. Do not label it as mortgage debt. |
+| `Sheriff's deed strike off amount` | `strike_off_amount` | medium-high | weak evidence if only historical | Historical bid/result field. Useful for sale context, not current debt. |
+| `DCAD value`, `appraised value`, `assessed value`, `property value` | `dcad_value` | high | optional | Appraisal value, not amount owed. Keep distinct from tax/debt fields. |
+| `Sale date`, `Date of Sale`, `auction date` | `sale_date` / `auction_date` | high | timing not verified | This is the key urgency field. |
+| `Instrument #`, `file date`, `recorded date` | `instrument_number`, `instrument_file_date` | medium-high | weak evidence if missing | Important evidence reference for resale/recorded-document traceability. |
+| `Tax years included in judgment`, `post judgment tax years` | `tax_years_in_judgment`, `post_judgment_tax_years` | medium | optional | Clarifies what the judgment covers versus what may still be owed after judgment. |
+| `Mapsco`, `legal description`, `lot/block` | `mapsco`, `legal_description` | medium | optional | Useful when address is incomplete. Preserve raw text exactly. |
+| `Status`, `sale status` | `sale_status` | medium | optional | Indicates whether the property is pending, sold, held, or accepting bids. |
+| `Trustee`, `Sheriff`, `Substitute Trustee` | `trustee` | medium | optional | Trustee is usually more relevant for foreclosure notices than tax sale resales. |
+| `Plaintiff`, `lender`, `mortgagee`, `beneficiary` | `plaintiff` | medium | optional | More relevant to foreclosure notices. |
+| PDF/file name, page number, row number, record ID | `source_reference` / evidence ref | high | `weak_evidence` | Preserve the exact file and page/row reference. |
+
+## Amount Meaning
+
+- `judgment_amount`: the clearest debt-like amount when explicitly present.
+- `minimum_bid_amount`: bid floor, not amount owed.
+- `strike_off_amount`: historical sale result, not current debt.
+- `dcad_value`: appraised value, not debt.
+- `amount_owed`: only set when the source explicitly provides a debt-like amount or a judgment amount. Do not infer it from appraisal value.
+
 ## Evidence Expected
 
 Minimum useful evidence:
@@ -63,6 +97,8 @@ Minimum useful evidence:
 - amount owed/minimum bid/judgment amount when available
 - sale date when available
 - parcel/APN/account or case/cause number when available
+- if the row comes from a PDF, preserve the PDF file name plus page and row when available
+- if the row comes from a portal, preserve the record URL or detail URL plus any visible source record ID
 
 ## Freshness Rules
 
