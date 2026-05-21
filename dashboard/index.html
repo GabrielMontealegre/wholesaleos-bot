@@ -2431,6 +2431,411 @@ function renderLeadIntelligence(li) {
   return html;
 }
 
+var SOURCE_REGISTRY_ADAPTERS = [
+  'socrata_adapter',
+  'arcgis_adapter',
+  'csv_excel_adapter',
+  'pdf_list_adapter',
+  'html_table_adapter',
+  'courthouse_portal_adapter',
+  'searchable_portal_adapter',
+  'manual_review_adapter'
+];
+
+var SOURCE_REPAIR_TYPES = [
+  'parser_failed',
+  'missing_address',
+  'missing_amount',
+  'missing_source_url',
+  'placeholder_row',
+  'malformed_pdf_extraction',
+  'weak_evidence'
+];
+
+var SOURCE_REGISTRY_SEED = [
+  {
+    source_id: 'mi_wayne_tax_foreclosure_xlsx',
+    source_name: 'Wayne County MI Tax Foreclosure XLSX',
+    source_category: 'tax delinquent',
+    state: 'MI',
+    county: 'Wayne',
+    jurisdiction: 'Wayne County Treasurer',
+    source_url: 'https://www.waynecountymi.gov/Government/Elected-Officials/Treasurer',
+    interface_type: 'Excel file',
+    acquisition_method: 'direct download',
+    parser_adapter: 'csv_excel_adapter',
+    update_frequency: 'annual/seasonal',
+    freshness_rule: 'Use discovered XLSX file date or capture date; verify auction status before outreach.',
+    stale_after_days: 30,
+    verification_path: 'Open Wayne County Treasurer foreclosure page, download current foreclosure XLSX, verify parcel/address/amount row.',
+    enabled: false,
+    source_status: 'classified',
+    repair_strategy: 'Route missing parcel/address/amount or Column header rows to source repair.'
+  },
+  {
+    source_id: 'il_cook_tax_liens_socrata',
+    source_name: 'Cook County IL Tax Liens',
+    source_category: 'tax delinquent',
+    state: 'IL',
+    county: 'Cook',
+    jurisdiction: 'Cook County',
+    source_url: 'https://datacatalog.cookcountyil.gov/resource/tx2p-k2g9.json',
+    interface_type: 'Socrata API',
+    acquisition_method: 'API call',
+    parser_adapter: 'socrata_adapter',
+    update_frequency: 'dataset-managed',
+    freshness_rule: 'Use Socrata metadata/row update timestamp when available; otherwise use capture date.',
+    stale_after_days: 21,
+    verification_path: 'Open Cook County Socrata dataset/API row and confirm address, PIN, tax year, and amount.',
+    enabled: false,
+    source_status: 'classified',
+    repair_strategy: 'Route missing address/amount/PIN rows to repair; keep source row ID if available.'
+  },
+  {
+    source_id: 'tx_dallas_code_cases_socrata',
+    source_name: 'Dallas TX Code Cases',
+    source_category: 'code violation',
+    state: 'TX',
+    county: 'Dallas',
+    jurisdiction: 'City of Dallas',
+    source_url: 'https://www.dallasopendata.com/resource/n7km-yvgf.json',
+    interface_type: 'Socrata API',
+    acquisition_method: 'API call',
+    parser_adapter: 'socrata_adapter',
+    update_frequency: 'dataset-managed',
+    freshness_rule: 'Use Socrata update metadata when available; otherwise captured_at.',
+    stale_after_days: 30,
+    verification_path: 'Open Dallas Open Data record and confirm location/status before outreach.',
+    enabled: false,
+    source_status: 'classified',
+    repair_strategy: 'Route missing address or weak location rows to repair queue.'
+  },
+  {
+    source_id: 'az_glendale_code_violations_arcgis',
+    source_name: 'Glendale AZ Code Violations',
+    source_category: 'code violation',
+    state: 'AZ',
+    county: 'Maricopa',
+    jurisdiction: 'City of Glendale',
+    source_url: 'https://services1.arcgis.com/9fVTQQSiODPjLUTa/arcgis/rest/services/GlendaleOne_Code_Compliance_Cases/FeatureServer',
+    interface_type: 'ArcGIS API',
+    acquisition_method: 'API call',
+    parser_adapter: 'arcgis_adapter',
+    update_frequency: 'dataset-managed',
+    freshness_rule: 'Use ArcGIS edit/open date fields when present; otherwise captured_at.',
+    stale_after_days: 30,
+    verification_path: 'Open ArcGIS FeatureServer/layer record and confirm address, case type, and active status.',
+    enabled: false,
+    source_status: 'classified',
+    repair_strategy: 'Route missing address/object ID or inactive ambiguous cases to repair queue.'
+  },
+  {
+    source_id: 'az_maricopa_superior_court_docket',
+    source_name: 'Maricopa County Superior Court Docket Calendar',
+    source_category: 'foreclosure',
+    state: 'AZ',
+    county: 'Maricopa',
+    jurisdiction: 'Maricopa County Superior Court',
+    source_url: 'https://www.superiorcourt.maricopa.gov/docket/calendar/',
+    interface_type: 'court docket',
+    acquisition_method: 'manual upload',
+    parser_adapter: 'courthouse_portal_adapter',
+    update_frequency: 'daily',
+    freshness_rule: 'Court docket events are stale quickly; operator must verify docket date before action.',
+    stale_after_days: 7,
+    verification_path: 'Open court docket, search case/party, confirm current docket status manually.',
+    enabled: false,
+    source_status: 'manual_review',
+    repair_strategy: 'Route portal/case ambiguity to manual source repair.'
+  },
+  {
+    source_id: 'ar_pulaski_auction_notices_pdf',
+    source_name: 'Pulaski County AR Auction Notices',
+    source_category: 'auction',
+    state: 'AR',
+    county: 'Pulaski',
+    jurisdiction: 'Pulaski County Clerk',
+    source_url: 'https://pulaskiclerkar.gov/news-events/auction-notices/',
+    interface_type: 'document index',
+    acquisition_method: 'OCR/manual review fallback',
+    parser_adapter: 'pdf_list_adapter',
+    update_frequency: 'as posted',
+    freshness_rule: 'Use notice post date and PDF/file date; stale after auction date or 14 days if no sale date parsed.',
+    stale_after_days: 14,
+    verification_path: 'Open auction notice PDF/index and verify file/page/row before outreach.',
+    enabled: false,
+    source_status: 'manual_review',
+    repair_strategy: 'Route OCR failures, missing address, missing sale date, and weak row mapping to repair queue.'
+  }
+];
+
+function sourceTruthNormalize(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function sourceTruthLeadHaystack(lead) {
+  lead = lead || {};
+  var li = lead.lead_intelligence || {};
+  var evidence = li.evidence || {};
+  var urls = evidence.urls || {};
+  return [
+    lead.source_id,
+    lead.source,
+    lead.source_name,
+    lead.source_type,
+    lead.source_platform,
+    lead.source_url,
+    lead.source_record_url,
+    lead.source_query_url,
+    urls.source_url,
+    urls.source_record_url,
+    urls.source_query_url,
+    lead.category,
+    lead.motivation,
+    lead.county,
+    lead.city,
+    lead.state
+  ].map(sourceTruthNormalize).join(' ');
+}
+
+function sourceTruthMatchSource(lead) {
+  lead = lead || {};
+  var haystack = sourceTruthLeadHaystack(lead);
+  var explicit = sourceTruthNormalize(lead.source_id || lead.registry_source_id || (lead.lead_source_truth && lead.lead_source_truth.source_id));
+  if (explicit) {
+    var direct = SOURCE_REGISTRY_SEED.find(function(source) { return sourceTruthNormalize(source.source_id) === explicit; });
+    if (direct) return direct;
+  }
+  return SOURCE_REGISTRY_SEED.find(function(source) {
+    var sourceName = sourceTruthNormalize(source.source_name);
+    var sourceUrl = sourceTruthNormalize(source.source_url);
+    if (sourceName && haystack.indexOf(sourceName) > -1) return true;
+    if (sourceUrl && haystack.indexOf(sourceUrl) > -1) return true;
+    var sameGeo = sourceTruthNormalize(lead.state) === sourceTruthNormalize(source.state) &&
+      sourceTruthNormalize(lead.county).indexOf(sourceTruthNormalize(source.county)) > -1;
+    if (!sameGeo) return false;
+    if (source.parser_adapter === 'socrata_adapter' && /socrata|open data|opendata/.test(haystack)) return true;
+    if (source.parser_adapter === 'arcgis_adapter' && /arcgis|featureserver|mapserver/.test(haystack)) return true;
+    return haystack.indexOf(sourceTruthNormalize(source.source_category).split(' ')[0]) > -1;
+  }) || null;
+}
+
+function sourceTruthFallbackAdapter(lead) {
+  var text = sourceTruthLeadHaystack(lead);
+  if (/socrata|open data|opendata|resource\//.test(text)) return 'socrata_adapter';
+  if (/arcgis|featureserver|mapserver/.test(text)) return 'arcgis_adapter';
+  if (/xlsx|excel|csv/.test(text)) return 'csv_excel_adapter';
+  if (/pdf|notice|document/.test(text)) return 'pdf_list_adapter';
+  if (/court|docket|case/.test(text)) return 'courthouse_portal_adapter';
+  if (/portal|search/.test(text)) return 'searchable_portal_adapter';
+  return 'manual_review_adapter';
+}
+
+function sourceTruthFallbackCategory(lead) {
+  var text = sourceTruthLeadHaystack(lead);
+  if (/tax|lien|delinquent/.test(text)) return 'tax delinquent';
+  if (/foreclosure|sheriff/.test(text)) return 'foreclosure';
+  if (/auction|sale/.test(text)) return 'auction';
+  if (/code|violation|enforcement/.test(text)) return 'code violation';
+  if (/probate/.test(text)) return 'probate';
+  if (/permit/.test(text)) return 'permits';
+  if (/nuisance|vacant|abandoned/.test(text)) return 'nuisance';
+  return 'other';
+}
+
+function sourceTruthMoneyAmount(lead) {
+  return mdaLeadPickNumber(lead || {}, [
+    'tax_due', 'taxes_due', 'taxes_owed', 'lien_amount', 'taxes_liens', 'amount_owed',
+    'source_details.tax_due', 'source_details.taxes_due', 'source_details.lien_amount',
+    'lead_intelligence.evidence.money.tax_due', 'lead_intelligence.evidence.money.taxes_due', 'lead_intelligence.evidence.money.lien_amount'
+  ]);
+}
+
+function sourceTruthAddress(lead) {
+  return mdaLeadPick(lead || {}, ['address', 'property_address', 'site_address', 'situs_address', 'source_details.address']) || '';
+}
+
+function sourceTruthSourceUrl(lead, source) {
+  var li = (lead && lead.lead_intelligence) || {};
+  var urls = (li.evidence && li.evidence.urls) || {};
+  return mdaLeadPick(lead || {}, ['source_record_url', 'record_url', 'source_url', 'source_query_url', 'url', 'source_details.source_url']) ||
+    urls.source_record_url || urls.source_url || urls.source_query_url || (source && source.source_url) || '';
+}
+
+function sourceTruthEvidenceRef(lead) {
+  lead = lead || {};
+  var parts = [
+    mdaLeadPick(lead, ['parcel_id', 'parcel_apn', 'parcel_number', 'apn', 'pin', 'source_details.parcel_id']),
+    mdaLeadPick(lead, ['case_number', 'court_case_number', 'source_details.case_number']),
+    mdaLeadPick(lead, ['source_row_id', 'object_id', 'row_number', 'source_details.row_number']),
+    mdaLeadPick(lead, ['file_name', 'source_details.file_name']),
+    mdaLeadPick(lead, ['page_number', 'source_details.page_number'])
+  ].filter(Boolean);
+  return parts.length ? parts.join(' | ') : 'No row/file reference saved';
+}
+
+function sourceTruthDistressReason(lead) {
+  lead = lead || {};
+  var li = lead.lead_intelligence || {};
+  return mdaLeadPick(lead, [
+    'distress_reason',
+    'distress_type',
+    'motivation',
+    'category',
+    'lead_intelligence.distress_cause',
+    'lead_intelligence.urgency_reason'
+  ]) || li.distress_cause || 'Not classified';
+}
+
+function sourceTruthVerificationStatus(lead) {
+  return mdaLeadPick(lead || {}, [
+    'verification_state',
+    'source_recheck_state',
+    'verification.status',
+    'source_verification_status',
+    'lead_intelligence.verification_status'
+  ]) || 'needs_operator_verification';
+}
+
+function sourceTruthConfidenceText(lead) {
+  return mdaLeadPick(lead || {}, [
+    'source_confidence',
+    'sourceConfidence',
+    'source_confidence_reason',
+    'lead_intelligence.source_confidence',
+    'lead_intelligence.confidence',
+    'lead_intelligence.evidence.source_confidence'
+  ]) || '';
+}
+
+function sourceTruthFreshness(lead, source) {
+  var dateValue = mdaLeadPick(lead || {}, [
+    'source_verified_at', 'last_verified_at', 'verified_at', 'source_captured_at',
+    'captured_at', 'created_at', 'createdAt', 'lead_intelligence.timeline.last_verified_at',
+    'lead_intelligence.timeline.created_at'
+  ]);
+  var days = acquisitionTimelineDaysSince(dateValue);
+  var staleAfter = source && source.stale_after_days ? source.stale_after_days : 14;
+  var status = 'unknown';
+  if (days !== null && days !== undefined) status = days > staleAfter ? 'stale' : (days > Math.floor(staleAfter * 0.7) ? 'aging' : 'fresh');
+  return {
+    status: status,
+    days: days,
+    stale_after_days: staleAfter,
+    captured_at: dateValue || '',
+    rule: source ? source.freshness_rule : 'No registered source freshness rule.'
+  };
+}
+
+function sourceTruthRepairFlags(lead, source) {
+  lead = lead || {};
+  var flags = [];
+  var address = sourceTruthAddress(lead);
+  var amount = sourceTruthMoneyAmount(lead);
+  var sourceUrl = sourceTruthSourceUrl(lead, source);
+  var text = sourceTruthLeadHaystack(lead);
+  var parserFailed = mdaLeadPick(lead, [
+    'parser_error',
+    'parse_error',
+    'source_parse_error',
+    'source_details.parser_error',
+    'lead_intelligence.evidence.parser_error'
+  ]);
+  if (parserFailed || /parser_failed|parse failed|failed parse/.test(text)) flags.push('parser_failed');
+  if (!address) flags.push('missing_address');
+  if (/column\s*[1-4]|unnamed/.test(text + ' ' + sourceTruthNormalize(address))) flags.push('placeholder_row');
+  var category = source ? source.source_category : sourceTruthFallbackCategory(lead);
+  if ((category === 'tax delinquent' || category === 'liens') && !(amount > 0)) flags.push('missing_amount');
+  if (!sourceUrl) flags.push('missing_source_url');
+  if (source && source.parser_adapter === 'pdf_list_adapter' && sourceTruthEvidenceRef(lead) === 'No row/file reference saved') flags.push('malformed_pdf_extraction');
+  if (!source) flags.push('weak_evidence');
+  return flags.filter(function(flag, index, all) { return all.indexOf(flag) === index; });
+}
+
+function buildLeadSourceTruth(lead) {
+  lead = lead || {};
+  var source = sourceTruthMatchSource(lead);
+  var adapter = source ? source.parser_adapter : sourceTruthFallbackAdapter(lead);
+  var category = source ? source.source_category : sourceTruthFallbackCategory(lead);
+  var freshness = sourceTruthFreshness(lead, source);
+  var repairFlags = sourceTruthRepairFlags(lead, source);
+  var distressReason = sourceTruthDistressReason(lead);
+  if (!distressReason || distressReason === 'Not classified') distressReason = category;
+  var confidence = source && !repairFlags.length ? 'high' : (source ? 'medium' : 'low');
+  if (repairFlags.indexOf('placeholder_row') > -1 || repairFlags.indexOf('missing_address') > -1) confidence = 'low';
+  return {
+    source: source,
+    source_id: source ? source.source_id : 'unregistered_source',
+    source_name: source ? source.source_name : (mdaLeadPick(lead, ['source', 'source_name']) || 'Unregistered source'),
+    source_category: category,
+    county: source ? source.county : (lead.county || ''),
+    state: source ? source.state : (lead.state || ''),
+    interface_type: source ? source.interface_type : 'unknown',
+    acquisition_method: source ? source.acquisition_method : 'unknown',
+    parser_adapter: adapter,
+    source_url: sourceTruthSourceUrl(lead, source),
+    evidence_ref: sourceTruthEvidenceRef(lead),
+    amount: sourceTruthMoneyAmount(lead),
+    distress_reason: distressReason,
+    verification_status: sourceTruthVerificationStatus(lead),
+    source_confidence_text: sourceTruthConfidenceText(lead),
+    freshness: freshness,
+    confidence: confidence,
+    repair_flags: repairFlags,
+    verification_path: source ? source.verification_path : 'Create Source Registry entry, then verify source URL/record manually.',
+    repair_strategy: source ? source.repair_strategy : 'Classify this source before ingestion and route weak evidence to repair.'
+  };
+}
+
+function renderLeadSourceTruthPanel(lead) {
+  var truth = buildLeadSourceTruth(lead);
+  var source = truth.source;
+  var confidenceColor = truth.confidence === 'high' ? '#10b981' : truth.confidence === 'medium' ? '#f59e0b' : '#ef4444';
+  var freshColor = truth.freshness.status === 'fresh' ? '#10b981' : truth.freshness.status === 'aging' ? '#f59e0b' : truth.freshness.status === 'stale' ? '#ef4444' : '#94a3b8';
+  function tile(label, value, color) {
+    return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px;min-width:0">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;margin-bottom:3px">' + leadIntelText(label) + '</div>' +
+      '<div style="font-size:10px;color:' + (color || '#e5e7eb') + ';line-height:1.45;word-break:break-word;font-weight:700">' + leadIntelText(value || 'Unknown') + '</div>' +
+    '</div>';
+  }
+  var repairHtml = truth.repair_flags.length
+    ? truth.repair_flags.map(function(flag) {
+        return '<span style="font-size:10px;color:#fecaca;background:#7f1d1d55;border:1px solid #ef444455;border-radius:999px;padding:3px 7px;font-weight:800">' + leadIntelText(flag) + '</span>';
+      }).join('')
+    : '<span style="font-size:10px;color:#86efac;background:#052e1a;border:1px solid #10b98155;border-radius:999px;padding:3px 7px;font-weight:800">no repair flag</span>';
+  return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Source Registry / Source Truth</div>' +
+      '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Registry classification, parser adapter, freshness, traceability, and repair state.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;color:' + confidenceColor + ';background:' + confidenceColor + '22;border:1px solid ' + confidenceColor + '55;border-radius:999px;padding:3px 8px;font-weight:800">Confidence: ' + leadIntelText(truth.confidence) + '</span>' +
+        '<span style="font-size:10px;color:' + freshColor + ';background:' + freshColor + '22;border:1px solid ' + freshColor + '55;border-radius:999px;padding:3px 8px;font-weight:800">Freshness: ' + leadIntelText(truth.freshness.status) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-bottom:9px">' +
+      tile('Source', truth.source_name) +
+      tile('Category', truth.source_category) +
+      tile('County / State', [truth.county, truth.state].filter(Boolean).join(', ')) +
+      tile('Interface', truth.interface_type) +
+      tile('Adapter', truth.parser_adapter) +
+      tile('Acquisition', truth.acquisition_method) +
+      tile('Distress Reason', truth.distress_reason) +
+      tile('Verification', truth.verification_status) +
+      tile('Source Confidence', truth.source_confidence_text || truth.confidence) +
+      tile('Amount', truth.amount > 0 ? mdaMoney(truth.amount) : 'Not saved') +
+      tile('Evidence Ref', truth.evidence_ref) +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin-bottom:8px">' +
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:4px">Verification Path</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.5">' + leadIntelText(truth.verification_path) + '</div>' +
+      (truth.source_url ? '<a href="' + mdaEscapeAttr(truth.source_url) + '" target="_blank" style="display:inline-block;margin-top:5px;font-size:10px;color:#f4c542;text-decoration:none;font-weight:800">Open source / verification link</a>' : '') +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px">' + repairHtml + '</div>' +
+    '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Repair strategy: ' + leadIntelText(truth.repair_strategy) + '</div>' +
+    (!source ? '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:6px">This lead did not match a registered source. Classify the source before expanding ingestion.</div>' : '') +
+  '</div>';
+}
+
 function buildLeadEvidenceDetails(lead) {
   lead = lead || {};
   var li = lead.lead_intelligence || {};
@@ -10928,7 +11333,7 @@ function renderLeadDetail(l) {
   html += renderLeadQuickActions(l);
   html += renderLeadDetailSection('Deal Analysis', 'Deal math, buyer fit, and saved wholesale reasoning.', renderLeadDealAnalysisBlock(l, buyers, spread), true, 'lead-deal-section-' + safeId);
   html += renderLeadDetailSection('Operations', 'Assignment, contact controls, activity, notes, and follow-up work.', renderLeadOperationsBlock(l, fu, tz, safe), false, 'lead-operations-section-' + safeId);
-  html += renderLeadDetailSection('Verification', 'Source recheck workflow, freshness, timeline, and timing pressure.', renderSourceRecheckWorkflow(l, fu) + renderVerificationFreshness(l, fu) + renderAcquisitionTimeline(l, fu) + renderLeadTimingLine(l), false, 'lead-verification-section-' + safeId);
+  html += renderLeadDetailSection('Verification', 'Source registry, source truth, recheck workflow, freshness, timeline, and timing pressure.', renderLeadSourceTruthPanel(l) + renderSourceRecheckWorkflow(l, fu) + renderVerificationFreshness(l, fu) + renderAcquisitionTimeline(l, fu) + renderLeadTimingLine(l), false, 'lead-verification-section-' + safeId);
   html += renderLeadDetailSection('Enrichment', 'Manual enrichment launchpad, spend caution, distress tags, and missing info.', enrichmentBits, false, 'lead-enrichment-section-' + safeId);
   html += renderLeadDetailSection('Evidence Details', 'Plain-English briefing, saved evidence, missing evidence, and property links.', evidenceBits, false, 'lead-evidence-section-' + safeId);
   html += renderLeadDetailSection('Raw Source / Internal Intelligence', 'Raw confidence reasons, source internals, IDs, and saved intelligence arrays.', internalBits, false, 'lead-internal-section-' + safeId);
@@ -19776,6 +20181,7 @@ function renderResearchSessionLeadWorkspace(lead) {
       '<button type="button" onclick="researchOpenSkipTraceSearches(' + researchJsArg(lead.id) + ')" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:8px 10px;cursor:pointer">Skip Trace</button>' +
       '<button type="button" onclick="researchMarkReadyForReview(' + researchJsArg(lead.id) + ')" style="font-size:11px;border:1px solid ' + (gate.ready ? '#10b981' : '#334155') + ';border-radius:7px;background:' + (gate.ready ? '#052e1a' : '#111827') + ';color:' + (gate.ready ? '#86efac' : '#64748b') + ';font-weight:900;padding:8px 10px;cursor:pointer">Mark Ready</button>' +
     '</div>' +
+    renderLeadSourceTruthPanel(lead) +
     renderResearchLocalCompBridgeHtml(lead) +
     '<div style="background:#111827;border:1px solid #243044;border-radius:9px;padding:10px;margin-top:10px">' +
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
