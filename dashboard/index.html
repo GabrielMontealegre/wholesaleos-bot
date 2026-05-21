@@ -19537,6 +19537,265 @@ function renderResearchSessionLeadWorkspace(lead) {
   '</div>';
 }
 
+function researchFastLeadLocation(lead) {
+  lead = lead || {};
+  return [
+    lead.city || lead.property_city || lead.situs_city || lead.municipality || '',
+    lead.state || lead.property_state || lead.situs_state || ''
+  ].filter(Boolean).join(', ') || leadQueueState(lead);
+}
+
+function researchFastMotivationSummary(lead) {
+  var why = researchLeadWhy(lead || {});
+  if (why && why.length) return why.slice(0, 2).join(' ');
+  return researchLeadBestNextAction(lead || {});
+}
+
+function researchFastDistressLabel(lead) {
+  var strength = researchLeadDistressStrength(lead || {});
+  if (strength >= 70) return 'High distress';
+  if (strength >= 35) return 'Medium distress';
+  if (strength > 0) return 'Low distress';
+  return 'Needs verification';
+}
+
+function researchFastReadinessLabel(lead) {
+  var gate = researchReviewGate(lead || {});
+  return gate.ready ? 'Ready for review' : 'Not ready';
+}
+
+function researchFastActionLink(label, url) {
+  if (!url) return '';
+  return '<a href="' + mdaEscapeAttr(url) + '" target="_blank" rel="noopener noreferrer" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:8px 10px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:34px">' + researchSafeText(label) + '</a>';
+}
+
+function renderResearchCompSummaryHtml(comps, stats, lead) {
+  stats = stats || researchCompStats(comps || []);
+  var count = stats.count || 0;
+  var ppsf = stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'Need sqft';
+  var avg = stats.avg ? mdaMoney(stats.avg) : 'No comps';
+  var confidence = stats.confidence || 'low';
+  var range = count ? (mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high)) : 'Add comps';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px">' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Comps</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + count + '/3 minimum</div></div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Avg Price</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(avg) + '</div></div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Avg PPSF</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(ppsf) + '</div></div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Range</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(range) + '</div></div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Confidence</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(confidence) + '</div></div>' +
+  '</div>' +
+  '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">Based only on operator-entered or imported draft comps. Verify sold status, sqft, and similarity before using for ARV.</div>';
+}
+
+function renderResearchLocalCompBridgeHtml(lead) {
+  lead = lead || {};
+  var state = researchLocalCompBridgeState(lead.id);
+  var health = state.health || {};
+  var tabs = Array.isArray(state.tabs) ? state.tabs : [];
+  var result = state.result || {};
+  var candidates = Array.isArray(result.candidates) ? result.candidates : [];
+  var connected = !!health.ok;
+  var selectedTab = researchLocalCompSelectedTab(lead.id);
+  var workflowStatus = researchLocalCompWorkflowStatus(lead.id);
+  var supportedTabs = tabs.filter(function(tab) { return researchLocalCompTabSupported(tab); });
+  var candidateRows = candidates.slice(0, 3).map(function(candidate, index) {
+    var details = [
+      candidate.price ? mdaMoney(candidate.price) : 'price missing',
+      candidate.beds ? candidate.beds + ' bd' : '',
+      candidate.baths ? candidate.baths + ' ba' : '',
+      candidate.sqft ? candidate.sqft + ' sqft' : '',
+      candidate.status || ''
+    ].filter(Boolean).join(' | ');
+    return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-top:1px solid #243044;padding-top:7px;margin-top:7px">' +
+      '<div style="min-width:0"><div style="font-size:10px;color:#e5e7eb;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + researchSafeText(candidate.title || candidate.address || 'Untitled candidate') + '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.35">' + researchSafeText(details) + ' | Unverified</div></div>' +
+      '<button type="button" onclick="researchUseLocalCompCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Use</button>' +
+    '</div>';
+  }).join('');
+  var tabRows = supportedTabs.slice(0, 4).map(function(tab) {
+    var selected = selectedTab && String(selectedTab.id) === String(tab.id);
+    return '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(lead.id) + ',' + researchJsArg(tab.id) + ')" style="font-size:10px;border:1px solid ' + (selected ? '#f4c542' : '#334155') + ';border-radius:7px;background:#111827;color:' + (selected ? '#f4c542' : '#e5e7eb') + ';font-weight:900;padding:6px 8px;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + researchSafeText((selected ? 'Selected: ' : '') + researchLocalCompTabSource(tab) + ' - ' + (tab.title || tab.url || 'Tab')) + '</button>';
+  }).join('');
+  return '<div style="background:#111827;border:1px solid #243044;border-radius:9px;padding:10px;margin:8px 0">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900">Local Comp Capture</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.4">Localhost only. Operator-triggered capture. No auto-save, scraping loop, or CAPTCHA bypass.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" ' + (state.loadingCapture ? 'disabled' : '') + ' style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Capture Comp</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',true)" ' + (state.loadingScroll ? 'disabled' : '') + ' style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#e5e7eb;font-weight:900;padding:7px 9px;cursor:pointer">Scroll + Capture</button>' +
+        '<button type="button" onclick="fiveLeadCompUseBest3(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#052e1a;color:#86efac;font-weight:900;padding:7px 9px;cursor:pointer">Use Best 3</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:10px">' +
+      '<span style="border:1px solid #334155;border-radius:999px;padding:5px 8px;color:' + (connected ? '#86efac' : '#fca5a5') + '">' + (connected ? 'Local agent connected' : (state.error ? 'Local agent disconnected' : 'Waiting for local check')) + '</span>' +
+      '<span style="border:1px solid #334155;border-radius:999px;padding:5px 8px;color:' + (selectedTab ? '#86efac' : '#fbbf24') + '">' + (selectedTab ? 'Supported tab selected' : 'Select Zillow/Redfin/Realtor tab') + '</span>' +
+      '<span style="border:1px solid #334155;border-radius:999px;padding:5px 8px;color:#cbd5e1">' + researchSafeText(workflowStatus.label) + '</span>' +
+      '<span style="border:1px solid #334155;border-radius:999px;padding:5px 8px;color:#cbd5e1">' + (result.total_unique_candidates || candidates.length || 0) + ' unique candidates</span>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + (tabRows || '<span style="font-size:10px;color:#94a3b8">No supported tabs loaded. Open Zillow/Redfin/Realtor and click Check Local Agent.</span>') + '</div>' +
+    (candidateRows || '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:8px">No candidates captured yet.</div>') +
+    '<details style="margin-top:8px"><summary style="font-size:10px;color:#64748b;cursor:pointer;font-weight:900">Local capture details</summary>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:6px">Endpoint: ' + researchSafeText(state.url || researchLocalCompBridgeBaseUrl()) + '. ' + researchSafeText(state.lastMessage || workflowStatus.detail || '') + '</div>' +
+    '</details>' +
+  '</div>';
+}
+
+function researchFastCompInput(leadId, row, field, placeholder, value, extraStyle) {
+  return '<input id="' + researchCompFieldId(leadId, row, field) + '" oninput="researchCaptureDraft(' + researchJsArg(leadId) + ');researchRefreshSessionCompPreview(' + researchJsArg(leadId) + ')" value="' + mdaEscapeAttr(value || '') + '" placeholder="' + mdaEscapeAttr(placeholder) + '" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0;' + (extraStyle || '') + '">';
+}
+
+function researchFastCompSelect(leadId, row, field, value, options) {
+  var html = '<select id="' + researchCompFieldId(leadId, row, field) + '" onchange="researchCaptureDraft(' + researchJsArg(leadId) + ');researchRefreshSessionCompPreview(' + researchJsArg(leadId) + ')" style="font-size:10px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#e5e7eb;padding:6px;min-width:0">';
+  html += options.map(function(option) {
+    return '<option value="' + mdaEscapeAttr(option.value) + '"' + (String(value || '') === String(option.value) ? ' selected' : '') + '>' + mdaEscapeHtml(option.label) + '</option>';
+  }).join('');
+  return html + '</select>';
+}
+
+function renderResearchFastCompRows(lead) {
+  var draft = researchSessionDraft(String(lead.id));
+  var rows = [];
+  for (var i = 0; i < 3; i++) {
+    var comp = researchNormalizeComp(draft[i] || researchBlankCompSlot());
+    var blank = researchCompSlotIsBlank(comp);
+    var ppsf = researchCompSlotAvgPpsf(comp);
+    rows.push('<div style="background:' + (blank ? '#09101b' : '#111827') + ';border:1px solid ' + (comp.primary ? '#f4c54280' : '#243044') + ';border-radius:8px;padding:8px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px">' +
+        '<div style="font-size:10px;color:#e5e7eb;font-weight:900">Comp ' + (i + 1) + (comp.primary ? ' | Primary' : '') + '</div>' +
+        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">' +
+          '<span style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">' + (blank ? 'Empty' : 'Unverified') + '</span>' +
+          '<button type="button" onclick="researchSetPrimaryDraftComp(' + researchJsArg(lead.id) + ',' + i + ')" style="font-size:9px;border:1px solid #334155;border-radius:6px;background:#0b1120;color:#f4c542;font-weight:900;padding:4px 6px;cursor:pointer">Primary</button>' +
+          '<button type="button" onclick="researchRemoveDraftCompSlot(' + researchJsArg(lead.id) + ',' + i + ')" style="font-size:9px;border:1px solid #7f1d1d;border-radius:6px;background:#3b0a0a;color:#fecaca;font-weight:900;padding:4px 6px;cursor:pointer">Remove</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:minmax(150px,2fr) minmax(90px,1fr) minmax(70px,.8fr) minmax(70px,.8fr) minmax(80px,.8fr);gap:6px">' +
+        researchFastCompInput(lead.id, i, 'address', 'Address', comp.address, '') +
+        researchFastCompInput(lead.id, i, 'price', 'Price', comp.price || '', '') +
+        researchFastCompInput(lead.id, i, 'beds', 'Beds', comp.beds || '', '') +
+        researchFastCompInput(lead.id, i, 'baths', 'Baths', comp.baths || '', '') +
+        researchFastCompInput(lead.id, i, 'sqft', 'Sqft', comp.sqft || '', '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">' +
+        researchFastCompSelect(lead.id, i, 'sale_type', comp.sale_type || 'sold', [{ value: 'sold', label: 'Sold' }, { value: 'list', label: 'List' }]) +
+        researchFastCompSelect(lead.id, i, 'confidence', comp.confidence || 'unverified', [{ value: 'unverified', label: 'Unverified' }, { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]) +
+        '<span style="font-size:10px;color:#94a3b8">PPSF: ' + (ppsf ? mdaMoney(ppsf) : 'need price/sqft') + '</span>' +
+      '</div>' +
+      '<details style="margin-top:6px"><summary style="font-size:10px;color:#64748b;cursor:pointer;font-weight:900">Advanced fields</summary>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:6px">' +
+          researchFastCompInput(lead.id, i, 'source', 'Source', comp.source, '') +
+          researchFastCompInput(lead.id, i, 'source_url', 'Source URL', comp.source_url, '') +
+          researchFastCompInput(lead.id, i, 'distance', 'Distance', comp.distance, '') +
+          researchFastCompInput(lead.id, i, 'date', 'Sold/list date', comp.date, '') +
+          researchFastCompInput(lead.id, i, 'notes', 'Notes', comp.notes, '') +
+          '<input id="' + researchCompFieldId(lead.id, i, 'primary') + '" type="checkbox" ' + (comp.primary ? 'checked' : '') + ' onchange="researchSetPrimaryDraftCompFromCheckbox(' + researchJsArg(lead.id) + ',' + i + ')" style="display:none">' +
+        '</div>' +
+      '</details>' +
+    '</div>');
+  }
+  return rows.join('');
+}
+
+function renderLeadSkipTraceWorkspace(lead) {
+  lead = lead || {};
+  var safe = leadActivityDomId(lead.id);
+  var contacts = researchLeadContacts(lead);
+  var stats = researchContactStats(contacts);
+  var best = stats.primary || contacts[0] || researchBlankContactSlot();
+  var links = researchSkipTraceSearchLinks(lead).map(function(link) {
+    return '<a href="' + mdaEscapeAttr(link.url) + '" target="_blank" rel="noopener noreferrer" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:7px 9px;text-decoration:none">' + researchSafeText(link.label) + '</a>';
+  }).join('');
+  var draft = researchContactSessionDraft(String(lead.id));
+  var row = 0;
+  var editable = researchNormalizeContact(draft[row] || best || researchBlankContactSlot());
+  return '<div id="research-contact-workspace-' + safe + '" style="background:#111827;border:1px solid #243044;border-radius:9px;padding:10px;margin-top:10px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900">Contact</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.4">Best contact first. Manual review only. No dialing, SMS, email, or persistence.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + links + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px">' +
+      researchContactTextInput(lead.id, row, 'owner_name', 'Owner/contact name', editable.owner_name, '') +
+      researchContactTextInput(lead.id, row, 'phone', 'Phone', editable.phone, '') +
+      researchContactTextInput(lead.id, row, 'email', 'Email', editable.email, '') +
+      researchContactTextInput(lead.id, row, 'mailing_address', 'Mailing address', editable.mailing_address, '') +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center">' +
+      researchContactSelect(lead.id, row, 'confidence', editable.confidence || 'unverified', [{ value: 'unverified', label: 'Unverified' }, { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }], '') +
+      researchContactSelect(lead.id, row, 'owner_type', editable.owner_type || 'unknown', [{ value: 'unknown', label: 'Unknown' }, { value: 'person', label: 'Person' }, { value: 'llc', label: 'LLC' }], '') +
+      '<button type="button" onclick="researchSetPrimaryDraftContact(' + researchJsArg(lead.id) + ',0)" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#0b1120;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Primary</button>' +
+      '<button type="button" onclick="researchRemoveDraftContactSlot(' + researchJsArg(lead.id) + ',0)" style="font-size:10px;border:1px solid #7f1d1d;border-radius:7px;background:#3b0a0a;color:#fecaca;font-weight:900;padding:6px 8px;cursor:pointer">Clear</button>' +
+      '<span style="font-size:10px;color:' + (stats.readyForOutreach ? '#86efac' : '#fca5a5') + ';font-weight:900">' + (stats.readyForOutreach ? 'Contact ready after verification' : 'Needs contact lookup') + '</span>' +
+    '</div>' +
+    '<details style="margin-top:8px"><summary style="font-size:10px;color:#64748b;cursor:pointer;font-weight:900">Import / advanced contact details</summary>' +
+      '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:7px;align-items:start">' +
+        '<textarea id="research-contact-paste-' + safe + '" placeholder="Paste visible contact text or JSON candidate here." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea>' +
+        '<button type="button" onclick="researchParseContactPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Import</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:7px">' +
+        researchContactTextInput(lead.id, row, 'possible_relative', 'Possible relative', editable.possible_relative, '') +
+        researchContactTextInput(lead.id, row, 'occupancy_hint', 'Occupancy hint', editable.occupancy_hint, '') +
+        researchContactTextInput(lead.id, row, 'source', 'Source', editable.source, '') +
+        researchContactTextInput(lead.id, row, 'source_url', 'Source URL', editable.source_url, '') +
+        researchContactTextInput(lead.id, row, 'notes', 'Notes', editable.notes, '') +
+        '<input id="' + researchContactFieldId(lead.id, row, 'primary') + '" type="checkbox" ' + (editable.primary ? 'checked' : '') + ' onchange="researchSetPrimaryDraftContactFromCheckbox(' + researchJsArg(lead.id) + ',0)" style="display:none">' +
+      '</div>' +
+    '</details>' +
+    '<div id="research-contact-preview-' + safe + '" style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">' + stats.count + ' contact candidate(s), ' + stats.unverified + ' unverified.</div>' +
+  '</div>';
+}
+
+function renderResearchSessionLeadWorkspace(lead) {
+  if (!lead) return '';
+  var safe = leadActivityDomId(lead.id);
+  var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.id || 'Lead');
+  var address = researchLeadAddress(lead) || lead.address || 'Address not available';
+  var location = researchFastLeadLocation(lead);
+  var tax = researchLeadTaxPressure(lead);
+  var comps = researchLeadComps(lead);
+  var stats = researchCompStats(comps);
+  var progress = researchLeadProgress(lead);
+  var gate = researchReviewGate(lead);
+  return '<div style="background:#0b1120;border:1px solid #243044;border-radius:10px;padding:12px;color:#e5e7eb;margin-top:10px">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div style="min-width:0;flex:1"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">' + researchSafeText(ref) + '</div>' +
+      '<div style="font-size:18px;color:#e5e7eb;font-weight:900;line-height:1.2">' + researchSafeText(address) + '</div>' +
+      '<div style="font-size:11px;color:#94a3b8;line-height:1.45">' + researchSafeText(location || 'Location not saved') + '</div></div>' +
+      '<button type="button" onclick="closeLeadWorkspace()" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:8px 10px;cursor:pointer">Back to Queue</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px;margin-bottom:10px">' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Motivation</div><div style="font-size:11px;color:#e5e7eb;line-height:1.4">' + researchSafeText(researchFastMotivationSummary(lead)) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Tax / Violation</div><div style="font-size:13px;color:#e5e7eb;font-weight:900">' + (tax ? mdaMoney(tax) : 'Not visible') + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Distress</div><div style="font-size:13px;color:#e5e7eb;font-weight:900">' + researchSafeText(researchFastDistressLabel(lead)) + '</div></div>' +
+      '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Readiness</div><div style="font-size:13px;color:' + (gate.ready ? '#86efac' : '#fca5a5') + ';font-weight:900">' + researchSafeText(researchFastReadinessLabel(lead)) + '</div></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">' +
+      researchFastActionLink('Open Zillow', leadTargetedCompSearchUrl('zillow', lead)) +
+      researchFastActionLink('Open Redfin', leadTargetedCompSearchUrl('redfin', lead)) +
+      researchFastActionLink('Open Realtor', leadTargetedCompSearchUrl('realtor', lead)) +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:8px 10px;cursor:pointer">Capture Comp</button>' +
+      '<button type="button" onclick="researchOpenSkipTraceSearches(' + researchJsArg(lead.id) + ')" style="font-size:11px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:8px 10px;cursor:pointer">Skip Trace</button>' +
+      '<button type="button" onclick="researchMarkReadyForReview(' + researchJsArg(lead.id) + ')" style="font-size:11px;border:1px solid ' + (gate.ready ? '#10b981' : '#334155') + ';border-radius:7px;background:' + (gate.ready ? '#052e1a' : '#111827') + ';color:' + (gate.ready ? '#86efac' : '#64748b') + ';font-weight:900;padding:8px 10px;cursor:pointer">Mark Ready</button>' +
+    '</div>' +
+    renderResearchLocalCompBridgeHtml(lead) +
+    '<div style="background:#111827;border:1px solid #243044;border-radius:9px;padding:10px;margin-top:10px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
+        '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900">Top 3 Draft Comps</div><div style="font-size:10px;color:#94a3b8">Inline edit. Unverified until operator confirms source details. No auto-save.</div></div>' +
+        '<div style="font-size:10px;color:#94a3b8">' + (progress.compsAdded ? 'Comps added' : 'Need 3 comps') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:7px">' + renderResearchFastCompRows(lead) + '</div>' +
+      '<div id="research-comp-preview-' + safe + '" style="margin-top:8px">' + renderResearchCompSummaryHtml(comps, stats, lead) + '</div>' +
+      '<details style="margin-top:8px"><summary style="font-size:10px;color:#64748b;cursor:pointer;font-weight:900">Paste comp / safety details</summary>' +
+        '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:7px;align-items:start"><textarea id="research-comp-paste-' + safe + '" placeholder="Paste one real comp snippet here, then parse." style="background:#0b1120;color:#e5e7eb;border:1px solid #334155;border-radius:7px;padding:7px;font-size:10px;min-height:42px;resize:vertical"></textarea><button type="button" onclick="parseResearchCompPaste(' + researchJsArg(lead.id) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:7px 9px;cursor:pointer">Paste Comp</button></div>' +
+        '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:6px">Draft comps are session-local and may be lost if you switch leads, refresh, or close the session.</div>' +
+      '</details>' +
+    '</div>' +
+    renderLeadSkipTraceWorkspace(lead) +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' + researchRenderProgressChecklist(progress) + '</div>' +
+    '<div style="font-size:11px;color:' + (progress.offerReady ? '#86efac' : '#fca5a5') + ';font-weight:900;line-height:1.45;margin-top:8px">' + (progress.offerReady ? 'READY FOR OFFER REVIEW' : 'NOT READY: ' + progress.blockers.join(', ')) + '</div>' +
+    '<details style="background:#07111f;border:1px solid #1f2937;border-radius:8px;padding:9px;margin-top:10px"><summary style="font-size:10px;color:#64748b;cursor:pointer;font-weight:900;text-transform:uppercase">Evidence / internal details</summary><div style="font-size:10px;color:#cbd5e1;line-height:1.55;margin-top:8px">' + researchLeadWhy(lead).map(function(x){ return '- ' + researchSafeText(x); }).join('<br>') + '</div></details>' +
+  '</div>';
+}
+
 function renderResearchSessionPanel() {
   if (!APP.researchSession || !APP.researchSession.active) return '';
   var leads = researchSessionLeads();
