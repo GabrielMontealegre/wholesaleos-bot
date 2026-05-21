@@ -100,6 +100,32 @@
       "playbook": "source-registry/playbooks/tx_dallas_code_cases_socrata.md"
     },
     {
+      "source_id": "tx_dallas_sheriff_tax_sales_candidate",
+      "source_name": "Dallas County TX Sheriff Tax Sales",
+      "source_category": "tax delinquent",
+      "state": "TX",
+      "county": "Dallas",
+      "jurisdiction": "Dallas County Tax Office",
+      "source_url": "https://www.dallascounty.org/departments/tax/sheriff-sales.php",
+      "interface_type": "searchable portal",
+      "acquisition_method": "browser-assisted capture",
+      "parser_adapter": "searchable_portal_adapter",
+      "update_frequency": "monthly sheriff sale cycle",
+      "freshness_rule": "Verify the current Dallas County sheriff sale page and linked auction portal before outreach.",
+      "stale_after_days": 14,
+      "duplicate_rules": {
+        "primary_keys": ["parcel_id", "case_number", "source_reference", "county", "state"],
+        "fallback_keys": ["normalized_address", "sale_date", "county", "state"]
+      },
+      "required_fields": ["property_address", "file_reference"],
+      "evidence_fields_expected": ["source_url", "source_record_url", "source_reference", "property_address", "owner_name", "parcel_id", "amount_owed", "case_number", "sale_date", "captured_at"],
+      "verification_path": "Open Dallas County Tax Office Sheriff Sales, then verify property, amount, sale date, and case/parcel details in the linked Dallas sheriff sale auction portal.",
+      "enabled": false,
+      "source_status": "candidate",
+      "repair_strategy": "Route missing address, missing amount, missing source reference, or weak portal rows to Source Repair Queue. Do not automate login, bidding, or CAPTCHA handling.",
+      "playbook": "source-registry/playbooks/tx_dallas_sheriff_tax_sales.md"
+    },
+    {
       "source_id": "az_glendale_code_violations_arcgis",
       "source_name": "Glendale AZ Code Violations",
       "source_category": "code violation",
