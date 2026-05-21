@@ -2734,6 +2734,8 @@ function sourceTruthRepairFlags(lead, source) {
   var amount = sourceTruthMoneyAmount(lead);
   var sourceUrl = sourceTruthSourceUrl(lead, source);
   var text = sourceTruthLeadHaystack(lead);
+  var county = mdaLeadPick(lead, ['county', 'source_details.county', 'lead_intelligence.county']);
+  var state = mdaLeadPick(lead, ['state', 'state_code', 'source_details.state', 'lead_intelligence.state']);
   var parserFailed = mdaLeadPick(lead, [
     'parser_error',
     'parse_error',
@@ -2747,7 +2749,11 @@ function sourceTruthRepairFlags(lead, source) {
   var category = source ? source.source_category : sourceTruthFallbackCategory(lead);
   if ((category === 'tax delinquent' || category === 'liens') && !(amount > 0)) flags.push('missing_amount');
   if (!sourceUrl) flags.push('missing_source_url');
+  if (!county && !(source && source.county)) flags.push('missing_county');
+  if (!state && !(source && source.state)) flags.push('missing_state');
   if (source && source.parser_adapter === 'pdf_list_adapter' && sourceTruthEvidenceRef(lead) === 'No row/file reference saved') flags.push('malformed_pdf_extraction');
+  if (/duplicate_conflict|duplicate conflict|merge conflict/.test(text)) flags.push('duplicate_conflict');
+  if (/source_needs_review|needs source review|manual source review/.test(text)) flags.push('source_needs_review');
   if (!source) flags.push('weak_evidence');
   return flags.filter(function(flag, index, all) { return all.indexOf(flag) === index; });
 }
@@ -2833,6 +2839,171 @@ function renderLeadSourceTruthPanel(lead) {
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px">' + repairHtml + '</div>' +
     '<div style="font-size:10px;color:#94a3b8;line-height:1.45">Repair strategy: ' + leadIntelText(truth.repair_strategy) + '</div>' +
     (!source ? '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:6px">This lead did not match a registered source. Classify the source before expanding ingestion.</div>' : '') +
+  '</div>';
+}
+
+function sourceRepairStatusStore() {
+  if (typeof APP === 'undefined') return {};
+  if (!APP.sourceRepairs) {
+    try {
+      APP.sourceRepairs = JSON.parse(localStorage.getItem('montsan_source_repairs') || '{}');
+    } catch (error) {
+      APP.sourceRepairs = {};
+    }
+  }
+  return APP.sourceRepairs;
+}
+
+function sourceRepairStatus(leadId) {
+  var store = sourceRepairStatusStore();
+  return store[String(leadId || '')] || {};
+}
+
+function sourceRepairStatusLabel(status) {
+  return ({
+    reviewed: 'Reviewed',
+    verified: 'Verified',
+    manual_review: 'Needs Manual Review',
+    hidden_placeholder: 'Placeholder Hidden'
+  })[status] || 'Open';
+}
+
+function sourceRepairFlagLabel(flag) {
+  return ({
+    parser_failed: 'Parser Failure',
+    placeholder_row: 'Placeholder Row',
+    malformed_pdf_extraction: 'Malformed PDF Extraction',
+    missing_address: 'Missing Address',
+    missing_amount: 'Missing Amount',
+    missing_source_url: 'Missing Source URL',
+    missing_county: 'Missing County',
+    missing_state: 'Missing State',
+    weak_evidence: 'Weak Evidence',
+    stale_source: 'Stale Source',
+    duplicate_conflict: 'Duplicate Conflict',
+    source_needs_review: 'Source Needs Review'
+  })[flag] || flag;
+}
+
+function sourceRepairTone(flag) {
+  if (flag === 'placeholder_row' || flag === 'parser_failed' || flag === 'missing_address') return 'hot';
+  if (flag === 'missing_amount' || flag === 'malformed_pdf_extraction' || flag === 'stale_source') return 'warn';
+  return 'neutral';
+}
+
+function sourceRepairFileFacts(lead, truth) {
+  lead = lead || {};
+  truth = truth || buildLeadSourceTruth(lead);
+  var fileName = mdaLeadPick(lead, ['file_name', 'source_file_name', 'source_details.file_name', 'lead_intelligence.evidence.file_name']);
+  var url = truth.source_url || '';
+  if (!fileName && url) {
+    var clean = String(url).split('?')[0].split('#')[0];
+    fileName = clean.split('/').pop() || '';
+  }
+  var type = mdaLeadPick(lead, ['file_type', 'source_file_type', 'source_details.file_type']);
+  if (!type && fileName) {
+    var match = String(fileName).match(/\.([a-z0-9]{2,5})$/i);
+    if (match) type = match[1].toUpperCase();
+  }
+  if (!type && truth.interface_type) type = truth.interface_type;
+  return {
+    file_name: fileName || '',
+    file_type: type || '',
+    evidence_ref: truth.evidence_ref || 'No row/file reference saved'
+  };
+}
+
+function buildSourceRepairItem(lead) {
+  lead = lead || {};
+  var truth = buildLeadSourceTruth(lead);
+  var flags = (truth.repair_flags || []).slice();
+  if (truth.freshness && truth.freshness.status === 'stale') flags.push('stale_source');
+  if (!truth.source || truth.confidence === 'low') flags.push('source_needs_review');
+  flags = flags.filter(function(flag, index, all) { return all.indexOf(flag) === index; });
+  var status = sourceRepairStatus(lead.id);
+  var fileFacts = sourceRepairFileFacts(lead, truth);
+  var primaryFlag = flags[0] || '';
+  var priority = flags.reduce(function(score, flag) {
+    var tone = sourceRepairTone(flag);
+    return score + (tone === 'hot' ? 30 : tone === 'warn' ? 15 : 6);
+  }, 0);
+  return {
+    lead: lead,
+    truth: truth,
+    flags: flags,
+    primary_flag: primaryFlag,
+    status: status.status || 'open',
+    note: status.note || '',
+    updated_at: status.updatedAt || '',
+    hidden: status.status === 'hidden_placeholder',
+    file_facts: fileFacts,
+    priority: priority
+  };
+}
+
+function sourceRepairItems(leads, includeHidden) {
+  return (leads || []).map(buildSourceRepairItem).filter(function(item) {
+    if (!item.flags.length) return false;
+    if (!includeHidden && item.hidden) return false;
+    return true;
+  }).sort(function(a, b) {
+    if (a.status !== b.status) return a.status === 'open' ? -1 : b.status === 'open' ? 1 : 0;
+    return b.priority - a.priority;
+  });
+}
+
+function sourceRepairSetStatus(leadId, status) {
+  if (!leadId) return;
+  var store = sourceRepairStatusStore();
+  store[String(leadId)] = {
+    status: status,
+    updatedAt: new Date().toISOString()
+  };
+  save('source_repairs', store);
+  if (status === 'verified' && typeof saveSourceRecheckState === 'function') saveSourceRecheckState(leadId, 'recently_refreshed');
+  else {
+    if (typeof toast === 'function') toast(sourceRepairStatusLabel(status), status === 'hidden_placeholder' ? '' : 'success');
+    if (typeof render === 'function') render();
+  }
+}
+
+function sourceRepairOpenSource(leadId) {
+  var lead = (APP.leads || []).find(function(item) { return String(item.id) === String(leadId); }) || {};
+  if (typeof leadIntelligenceOpenSource === 'function') {
+    leadIntelligenceOpenSource(leadId);
+    return;
+  }
+  var truth = buildLeadSourceTruth(lead);
+  if (truth.source_url) window.open(truth.source_url, '_blank');
+  else if (typeof toast === 'function') toast('No source URL saved yet.', 'error');
+}
+
+function sourceRepairSetFilter(value) {
+  APP._sourceRepairFilter = value || 'all';
+  if (typeof render === 'function') render();
+}
+
+function sourceRepairToggleQueue(open) {
+  APP._sourceRepairQueueOpen = typeof open === 'boolean' ? open : !APP._sourceRepairQueueOpen;
+  if (typeof render === 'function') render();
+}
+
+function renderSourceRepairBanner(lead) {
+  var item = buildSourceRepairItem(lead);
+  if (!item.flags.length || item.hidden) return '';
+  var topFlags = item.flags.slice(0, 4);
+  var hot = topFlags.some(function(flag) { return sourceRepairTone(flag) === 'hot'; });
+  var color = hot ? '#ef4444' : '#f59e0b';
+  return '<div style="background:' + color + '15;border:1px solid ' + color + '66;border-radius:10px;padding:10px;color:#e5e7eb;margin-bottom:10px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:' + color + ';font-weight:900;text-transform:uppercase">Source Repair Needed</div>' +
+      '<div style="font-size:11px;color:#cbd5e1;line-height:1.45;margin-top:3px">' + topFlags.map(sourceRepairFlagLabel).join(', ') + '. Review source truth before outreach.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="sourceRepairOpenSource(' + JSON.stringify(String(lead.id || '')) + ')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#f4c542;font-weight:900;padding:6px 8px;cursor:pointer">Open Source</button>' +
+        '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(String(lead.id || '')) + ',\'manual_review\')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Needs Manual Review</button>' +
+        '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(String(lead.id || '')) + ',\'reviewed\')" style="font-size:10px;border:1px solid #334155;border-radius:7px;background:#111827;color:#e5e7eb;font-weight:900;padding:6px 8px;cursor:pointer">Mark Reviewed</button>' +
+      '</div>' +
+    '</div>' +
   '</div>';
 }
 
@@ -20648,6 +20819,81 @@ function leadQueuePlaceholderLeads(leads) {
   return (leads || []).filter(leadQueueIsPlaceholderLead);
 }
 
+function renderSourceRepairQueue(leads) {
+  if (!APP._sourceRepairQueueOpen) return '';
+  var filter = APP._sourceRepairFilter || 'all';
+  var items = sourceRepairItems(leads || [], filter === 'hidden');
+  if (filter !== 'all' && filter !== 'hidden') {
+    items = items.filter(function(item) {
+      return item.status === filter || item.flags.indexOf(filter) > -1 || item.truth.freshness.status === filter;
+    });
+  }
+  var allItems = sourceRepairItems(leads || [], true);
+  var counts = allItems.reduce(function(acc, item) {
+    acc.open += item.status === 'open' ? 1 : 0;
+    acc.manual += item.status === 'manual_review' ? 1 : 0;
+    acc.hidden += item.status === 'hidden_placeholder' ? 1 : 0;
+    acc.stale += item.flags.indexOf('stale_source') > -1 ? 1 : 0;
+    acc.placeholder += item.flags.indexOf('placeholder_row') > -1 ? 1 : 0;
+    acc.weak += item.flags.indexOf('weak_evidence') > -1 ? 1 : 0;
+    return acc;
+  }, { open: 0, manual: 0, hidden: 0, stale: 0, placeholder: 0, weak: 0 });
+  function filterButton(label, value, count) {
+    var active = filter === value;
+    return '<button type="button" onclick="sourceRepairSetFilter(' + JSON.stringify(value) + ')" style="font-size:11px;border:1px solid ' + (active ? '#d4af37' : '#d1d5db') + ';border-radius:999px;background:' + (active ? '#1a1a2e' : '#fff') + ';color:' + (active ? '#f7d774' : '#374151') + ';font-weight:800;padding:6px 10px;cursor:pointer">' + leadQueueSafeText(label) + (typeof count === 'number' ? ' (' + count.toLocaleString() + ')' : '') + '</button>';
+  }
+  function row(item) {
+    var lead = item.lead || {};
+    var truth = item.truth || {};
+    var id = String(lead.id || '');
+    var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.ref_id || id || 'Lead');
+    var flags = item.flags.slice(0, 4).map(function(flag) {
+      var tone = sourceRepairTone(flag);
+      var color = tone === 'hot' ? '#ef4444' : tone === 'warn' ? '#f59e0b' : '#64748b';
+      return '<span style="font-size:10px;color:' + color + ';background:' + color + '18;border:1px solid ' + color + '55;border-radius:999px;padding:3px 7px;font-weight:800">' + leadQueueSafeText(sourceRepairFlagLabel(flag)) + '</span>';
+    }).join('');
+    var sourceUrl = truth.source_url || '';
+    var fileText = [item.file_facts.file_type, item.file_facts.file_name, item.file_facts.evidence_ref].filter(Boolean).join(' | ') || 'No file/page/row reference saved';
+    var freshText = truth.freshness.status + (truth.freshness.days !== null && truth.freshness.days !== undefined ? ' | ' + truth.freshness.days + 'd old' : '') + ' | stale after ' + truth.freshness.stale_after_days + 'd';
+    var published = mdaLeadPick(lead, ['source_published_at', 'published_at', 'publication_date', 'source_details.published_at', 'lead_intelligence.timeline.source_published_at']) || 'not saved';
+    var firstSeen = mdaLeadPick(lead, ['first_seen_at', 'first_seen', 'created_at', 'created', 'lead_intelligence.timeline.first_seen_at']) || 'not saved';
+    var lastChecked = mdaLeadPick(lead, ['source_checked_at', 'last_checked_at', 'last_verified_at', 'source_verified_at', 'lead_intelligence.timeline.last_verified_at']) || truth.freshness.captured_at || 'not saved';
+    return '<div style="display:grid;grid-template-columns:minmax(150px,.8fr) minmax(210px,1.1fr) minmax(220px,1.3fr) minmax(160px,.8fr) auto;gap:8px;align-items:start;background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:10px">' +
+      '<div><div style="font-size:10px;color:#1a1a2e;font-weight:900">' + leadQueueSafeText(ref) + '</div><div style="font-size:11px;color:#374151;line-height:1.4">' + leadQueueSafeText(leadQueueAddress(lead) || 'Address missing') + '</div><div style="font-size:10px;color:#86868b">' + leadQueueSafeText([truth.county, truth.state].filter(Boolean).join(', ') || 'County/state missing') + '</div></div>' +
+      '<div><div style="font-size:10px;color:#86868b;text-transform:uppercase;font-weight:900">Source</div><div style="font-size:11px;color:#374151;line-height:1.4;font-weight:700">' + leadQueueSafeText(truth.source_name) + '</div><div style="font-size:10px;color:#64748b">' + leadQueueSafeText(truth.source_category + ' | ' + truth.parser_adapter) + '</div></div>' +
+      '<div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">' + flags + '</div><div style="font-size:10px;color:#64748b;line-height:1.4">' + leadQueueSafeText(fileText) + '</div></div>' +
+      '<div><div style="font-size:10px;color:#86868b;text-transform:uppercase;font-weight:900">Status</div><div style="font-size:11px;color:#374151;line-height:1.45">' + leadQueueSafeText(sourceRepairStatusLabel(item.status)) + '</div><div style="font-size:10px;color:#64748b;line-height:1.4">' + leadQueueSafeText(freshText) + '</div><div style="font-size:10px;color:#64748b">Verification: ' + leadQueueSafeText(truth.verification_status) + '</div><div style="font-size:10px;color:#64748b">Confidence: ' + leadQueueSafeText(truth.confidence) + '</div><div style="font-size:10px;color:#94a3b8;line-height:1.35;margin-top:3px">Published: ' + leadQueueSafeText(published) + '<br>First seen: ' + leadQueueSafeText(firstSeen) + '<br>Last checked: ' + leadQueueSafeText(lastChecked) + '</div></div>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;min-width:180px">' +
+        '<button type="button" onclick="openLeadModal(' + JSON.stringify(id) + ')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Lead</button>' +
+        (sourceUrl ? '<button type="button" onclick="sourceRepairOpenSource(' + JSON.stringify(id) + ')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Source</button>' : '') +
+        (sourceUrl ? '<button type="button" onclick="sourceRepairOpenSource(' + JSON.stringify(id) + ')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open PDF/File</button>' : '') +
+        '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(id) + ',\'reviewed\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Mark Reviewed</button>' +
+        '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(id) + ',\'verified\')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#ecfdf5;color:#047857;font-weight:800;padding:6px 8px;cursor:pointer">Mark Verified</button>' +
+        '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(id) + ',\'manual_review\')" style="font-size:10px;border:1px solid #f59e0b;border-radius:7px;background:#fffbeb;color:#92400e;font-weight:800;padding:6px 8px;cursor:pointer">Needs Manual Review</button>' +
+        (item.flags.indexOf('placeholder_row') > -1 ? '<button type="button" onclick="sourceRepairSetStatus(' + JSON.stringify(id) + ',\'hidden_placeholder\')" style="font-size:10px;border:1px solid #ef4444;border-radius:7px;background:#fef2f2;color:#991b1b;font-weight:800;padding:6px 8px;cursor:pointer">Hide Placeholder</button>' : '') +
+      '</div>' +
+    '</div>';
+  }
+  var visible = items.slice(0, 75);
+  return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px;color:#1d1d1f">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#1a1a2e">Source Repair Queue</div><div style="font-size:11px;color:#64748b;line-height:1.45;margin-top:2px">Review weak source evidence, malformed rows, stale sources, and parser failures. Actions are local/operator status only; no deletion.</div></div>' +
+      '<button type="button" onclick="sourceRepairToggleQueue(false)" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Close Queue</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+      filterButton('All Repair', 'all', allItems.filter(function(item){ return !item.hidden; }).length) +
+      filterButton('Open', 'open', counts.open) +
+      filterButton('Manual Review', 'manual_review', counts.manual) +
+      filterButton('Placeholder Rows', 'placeholder_row', counts.placeholder) +
+      filterButton('Weak Evidence', 'weak_evidence', counts.weak) +
+      filterButton('Stale', 'stale_source', counts.stale) +
+      filterButton('Hidden', 'hidden', counts.hidden) +
+    '</div>' +
+    (visible.length ? '<div style="display:flex;flex-direction:column;gap:8px">' + visible.map(row).join('') + '</div>' : '<div style="font-size:12px;color:#64748b;background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:16px;text-align:center">No repair items match this filter.</div>') +
+    (items.length > visible.length ? '<div style="font-size:11px;color:#64748b;margin-top:8px">Showing first ' + visible.length + ' of ' + items.length.toLocaleString() + ' repair items. Use filters to narrow the queue.</div>' : '') +
+  '</div>';
+}
+
 function openLeadWorkspace(leadId) {
   var lead = (APP.leads || []).find(function(item){ return String(item.id) === String(leadId); });
   if (!lead) {
@@ -20703,6 +20949,7 @@ function renderLeadWorkspaceView(lead) {
         '<span style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Workspace Steps</span>' +
         ['Verify Source','Open Search','Capture Comps','Use Best 3','Add Contact','Ready For Review'].map(function(step){ return '<span style="font-size:10px;border:1px solid #334155;border-radius:999px;padding:4px 8px;background:#0b1120;color:#cbd5e1;font-weight:800">' + step + '</span>'; }).join('') +
       '</div>' +
+      (typeof renderSourceRepairBanner === 'function' ? renderSourceRepairBanner(lead) : '') +
       renderLeadIntelligenceBrief(lead, []) +
       (typeof renderResearchSessionLeadWorkspace === 'function' ? renderResearchSessionLeadWorkspace(lead) : '<div>Research workspace unavailable.</div>') +
     '</div>' +
@@ -20934,6 +21181,7 @@ function renderLeads() {
     toolbar +
     loadWarning +
     quarantineNotice +
+    (typeof renderSourceRepairQueue === 'function' ? renderSourceRepairQueue(rawAll) : '') +
     (typeof renderBulkActionsBar === 'function' ? renderBulkActionsBar() : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">' +
       tabs +
@@ -22581,6 +22829,7 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
     "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
     "<button onclick='clearLeadSelection()' title='Clear selected leads.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Clear Selection</button>";
 }
