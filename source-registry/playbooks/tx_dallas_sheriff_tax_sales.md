@@ -137,3 +137,18 @@ node source-registry/adapters/tx-dallas-sheriff-tax-sales.js --sample
 ```
 
 The sample output is a fixture only. It is not a real production lead and must not be ingested.
+
+## Preview / Review Workflow
+
+Use the controlled Dallas preview pipeline for operator review only:
+
+1. Paste a small batch of copied visible portal rows, PDF text, or manual export text into the preview queue.
+2. Normalize the batch through the Dallas dry-run adapter.
+3. Review Source Truth, Lead Intelligence Brief, and repair flags.
+4. Mark each preview candidate as:
+   - Approve For Ingestion
+   - Reject Candidate
+   - Needs Repair
+5. Do not ingest approved candidates yet. Preview decisions remain local/operator review state only until an explicit future ingestion step exists.
+
+The preview queue is capped at small batches and keeps `should_ingest: false` on every candidate.

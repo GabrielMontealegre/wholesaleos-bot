@@ -52,6 +52,14 @@ function getSkipTraceAgent() {
   }
 }
 
+function getDallasPreviewPipeline() {
+  try { return require('./source-registry/dallas-preview-pipeline'); }
+  catch (e) {
+    logger.error('[dallas-preview] load failed: ' + e.message);
+    return null;
+  }
+}
+
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -260,6 +268,39 @@ app.post('/api/research/comp-scout', async (req, res) => {
       saved: false,
       persistence: 'none'
     });
+  }
+});
+
+app.get('/api/source-preview/dallas/sample', (req, res) => {
+  try {
+    const preview = getDallasPreviewPipeline();
+    if (!preview) return res.status(500).json({ ok: false, error: 'preview_pipeline_unavailable', dry_run: true, should_ingest: false });
+    res.json(Object.assign({ ok: true }, preview.runPreviewSample()));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
+  }
+});
+
+app.post('/api/source-preview/dallas/preview', (req, res) => {
+  try {
+    const preview = getDallasPreviewPipeline();
+    if (!preview) return res.status(500).json({ ok: false, error: 'preview_pipeline_unavailable', dry_run: true, should_ingest: false });
+    const body = req.body || {};
+    const text = typeof body === 'string' ? body : String(body.text || body.raw || body.preview_text || '').trim();
+    const records = Array.isArray(body.records) ? body.records : Array.isArray(body.rows) ? body.rows : null;
+    const sample = body.sample === true || body.use_sample === true || body.fixture === 'sample';
+    if (!sample && !text && !records) {
+      return res.status(400).json({ ok: false, error: 'preview_input_required', dry_run: true, should_ingest: false });
+    }
+    res.json(Object.assign({ ok: true }, preview.runPreviewBatch({
+      text,
+      records,
+      sample,
+      captured_at: body.captured_at || new Date().toISOString()
+    })));
+  } catch (e) {
+    const status = e && e.code === 'preview_batch_too_large' ? 400 : 500;
+    res.status(status).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
   }
 });
 

@@ -439,6 +439,10 @@ const APP = {
   followups: JSON.parse(localStorage.getItem('montsan_followups') || '[]'),
   contracts: JSON.parse(localStorage.getItem('montsan_contracts') || '[]'),
   sourceRechecks: JSON.parse(localStorage.getItem('montsan_source_rechecks') || '{}'),
+  dallasPreviewBatch: JSON.parse(localStorage.getItem('montsan_dallas_preview_batch') || 'null'),
+  dallasPreviewQueue: JSON.parse(localStorage.getItem('montsan_dallas_preview_queue') || '[]'),
+  dallasPreviewReviews: JSON.parse(localStorage.getItem('montsan_dallas_preview_reviews') || '{}'),
+  dallasPreviewDraft: localStorage.getItem('montsan_dallas_preview_draft') || '',
 };
 
 function defaultBuyers() {
@@ -20894,6 +20898,299 @@ function renderSourceRepairQueue(leads) {
   '</div>';
 }
 
+function dallasPreviewStore() {
+  if (!APP.dallasPreviewQueue) {
+    try { APP.dallasPreviewQueue = JSON.parse(localStorage.getItem('montsan_dallas_preview_queue') || '[]'); }
+    catch (error) { APP.dallasPreviewQueue = []; }
+  }
+  return APP.dallasPreviewQueue;
+}
+
+function dallasPreviewBatchStore() {
+  if (!APP.dallasPreviewBatch) {
+    try { APP.dallasPreviewBatch = JSON.parse(localStorage.getItem('montsan_dallas_preview_batch') || 'null'); }
+    catch (error) { APP.dallasPreviewBatch = null; }
+  }
+  return APP.dallasPreviewBatch;
+}
+
+function dallasPreviewReviewStore() {
+  if (!APP.dallasPreviewReviews) {
+    try { APP.dallasPreviewReviews = JSON.parse(localStorage.getItem('montsan_dallas_preview_reviews') || '{}'); }
+    catch (error) { APP.dallasPreviewReviews = {}; }
+  }
+  return APP.dallasPreviewReviews;
+}
+
+function dallasPreviewDecisionLabel(status) {
+  return ({
+    open: 'Open',
+    approved: 'Approved For Ingestion',
+    rejected: 'Rejected Candidate',
+    needs_repair: 'Needs Repair'
+  })[status] || 'Open';
+}
+
+function dallasPreviewSafeText(value) {
+  if (typeof mdaEscapeHtml === 'function') return mdaEscapeHtml(value);
+  return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function dallasPreviewJsString(value) {
+  return String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function dallasPreviewReview(candidateId, decision) {
+  var store = dallasPreviewReviewStore();
+  store[String(candidateId || '')] = {
+    decision: decision,
+    updatedAt: new Date().toISOString()
+  };
+  save('dallas_preview_reviews', store);
+  if (typeof toast === 'function') toast(dallasPreviewDecisionLabel(decision), decision === 'approved' ? 'success' : 'info');
+  if (typeof render === 'function') render();
+}
+
+function dallasPreviewOpenUrl(url, fallback) {
+  var target = url || fallback || '';
+  if (target) window.open(target, '_blank');
+  else if (typeof toast === 'function') toast('No URL saved for this preview candidate.', 'error');
+}
+
+function dallasPreviewLoadBatchState(batch) {
+  APP.dallasPreviewBatch = batch || null;
+  APP.dallasPreviewQueue = batch && Array.isArray(batch.candidates) ? batch.candidates : [];
+  save('dallas_preview_batch', APP.dallasPreviewBatch);
+  save('dallas_preview_queue', APP.dallasPreviewQueue);
+}
+
+async function sourcePreviewLoadSample() {
+  try {
+    if (typeof toast === 'function') toast('Loading Dallas preview sample...', 'info');
+    var resp = await fetch('/api/source-preview/dallas/sample', { headers: { 'Accept': 'application/json' } });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'preview sample failed');
+    dallasPreviewLoadBatchState(data.batch || data);
+    if (typeof toast === 'function') toast('Dallas preview sample loaded.', 'success');
+    if (typeof render === 'function') render();
+  } catch (error) {
+    if (typeof toast === 'function') toast(error.message || 'Preview sample failed', 'error');
+  }
+}
+
+async function sourcePreviewRunBatch() {
+  try {
+    var textarea = document.getElementById('dallas-preview-input');
+    var payloadText = textarea ? String(textarea.value || '').trim() : String(APP.dallasPreviewDraft || '').trim();
+    if (!payloadText) {
+      if (typeof toast === 'function') toast('Paste a small Dallas source batch first.', 'error');
+      return;
+    }
+    APP.dallasPreviewDraft = payloadText;
+    save('dallas_preview_draft', APP.dallasPreviewDraft);
+    if (typeof toast === 'function') toast('Previewing Dallas batch...', 'info');
+    var resp = await fetch('/api/source-preview/dallas/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ text: payloadText })
+    });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'preview batch failed');
+    dallasPreviewLoadBatchState(data.batch || data);
+    if (typeof toast === 'function') toast('Dallas preview batch loaded.', 'success');
+    if (typeof render === 'function') render();
+  } catch (error) {
+    if (typeof toast === 'function') toast(error.message || 'Preview batch failed', 'error');
+  }
+}
+
+function sourcePreviewClearBatch() {
+  APP.dallasPreviewBatch = null;
+  APP.dallasPreviewQueue = [];
+  APP.dallasPreviewDraft = '';
+  save('dallas_preview_batch', null);
+  save('dallas_preview_queue', []);
+  save('dallas_preview_draft', '');
+  if (typeof render === 'function') render();
+}
+
+function sourcePreviewSetDraft(value) {
+  APP.dallasPreviewDraft = String(value || '');
+  save('dallas_preview_draft', APP.dallasPreviewDraft);
+}
+
+function sourcePreviewToggleQueue(open) {
+  APP._dallasPreviewQueueOpen = typeof open === 'boolean' ? open : !APP._dallasPreviewQueueOpen;
+  if (typeof render === 'function') render();
+}
+
+function sourcePreviewCandidateDecision(candidate) {
+  var store = dallasPreviewReviewStore();
+  if (candidate && typeof candidate === 'object') candidate = candidate.id;
+  return store[String(candidate || '')] || { decision: 'open' };
+}
+
+function sourcePreviewFindCandidate(candidateId) {
+  if (candidateId && typeof candidateId === 'object') return candidateId;
+  return dallasPreviewStore().find(function(item) {
+    return String(item.id || item.preview_id || '') === String(candidateId || '');
+  }) || null;
+}
+
+function sourcePreviewOpenSource(candidateId) {
+  var candidate = sourcePreviewFindCandidate(candidateId);
+  dallasPreviewOpenUrl(candidate && candidate.source_url, candidate && candidate.source_record_url);
+}
+
+function sourcePreviewOpenEvidence(candidateId) {
+  var candidate = sourcePreviewFindCandidate(candidateId);
+  dallasPreviewOpenUrl((candidate && candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || (candidate && candidate.source_record_url), candidate && candidate.source_url);
+}
+
+function renderSourcePreviewTruth(candidate) {
+  var truth = candidate && candidate.source_truth ? candidate.source_truth : {};
+  var flags = Array.isArray(candidate && candidate.repair_flags) ? candidate.repair_flags : [];
+  var fresh = truth.freshness || {};
+  var freshness = fresh.status || 'unknown';
+  var sourceUrl = truth.source_url || candidate.source_url || '';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-top:8px">' +
+    [
+      ['Source', truth.source_name || candidate.source_name || 'Unknown'],
+      ['Category', truth.source_category || candidate.source_category || 'Unknown'],
+      ['County / State', [truth.county || candidate.county || '', truth.state || candidate.state || ''].filter(Boolean).join(', ') || 'Unknown'],
+      ['Adapter', truth.parser_adapter || candidate.parser_adapter || 'Unknown'],
+      ['Acquisition', truth.acquisition_method || candidate.acquisition_method || 'Unknown'],
+      ['Verification', truth.verification_status || 'Unknown'],
+      ['Freshness', freshness],
+      ['Confidence', truth.confidence || candidate.source_confidence || candidate.source_confidence_text || 'Unknown'],
+      ['Evidence Ref', truth.evidence_ref || (candidate.evidence && candidate.evidence.source_reference) || candidate.source_reference || 'Not saved'],
+      ['Amount', truth.amount > 0 ? mdaMoney(truth.amount) : (candidate.amount_owed > 0 ? mdaMoney(candidate.amount_owed) : 'Not saved')]
+    ].map(function(pair) {
+      return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px;min-width:0">' +
+        '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;letter-spacing:.03em;margin-bottom:3px">' + dallasPreviewSafeText(pair[0]) + '</div>' +
+        '<div style="font-size:10px;color:#e5e7eb;line-height:1.45;word-break:break-word;font-weight:700">' + dallasPreviewSafeText(pair[1]) + '</div>' +
+      '</div>';
+    }).join('') +
+    '</div>' +
+    (sourceUrl ? '<div style="margin-top:6px;font-size:10px;color:#cbd5e1;line-height:1.5">Source URL: <a href="' + mdaEscapeAttr(sourceUrl) + '" target="_blank" style="color:#f4c542;text-decoration:none;font-weight:800">Open source / verification</a></div>' : '') +
+    (flags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">' + flags.map(function(flag) { return '<span style="font-size:10px;color:#fecaca;background:#7f1d1d55;border:1px solid #ef444455;border-radius:999px;padding:3px 7px;font-weight:800">' + dallasPreviewSafeText(sourceRepairFlagLabel(flag)) + '</span>'; }).join('') + '</div>' : '');
+}
+
+function renderSourcePreviewBrief(candidate) {
+  var brief = candidate && candidate.lead_intelligence_brief ? candidate.lead_intelligence_brief : {};
+  var sourceTruth = candidate && candidate.source_truth ? candidate.source_truth : {};
+  var missing = Array.isArray(brief.missing_evidence) ? brief.missing_evidence : [];
+  return '<div style="background:#0b1120;border:1px solid #1f2937;border-radius:10px;padding:10px;color:#e5e7eb">' +
+    '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Lead Intelligence Brief</div>' +
+    '<div style="font-size:11px;color:#cbd5e1;line-height:1.55;margin-top:6px">' + dallasPreviewSafeText(brief.plain_english_summary || brief.summary || 'Preview-only Dallas candidate') + '</div>' +
+    '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">' +
+      [
+        ['Motivation', brief.motivation_explanation || (sourceTruth.distress_reason || 'Motivation not fully proven yet.')],
+        ['Amount', brief.amount_explanation || (candidate.amount_owed > 0 ? mdaMoney(candidate.amount_owed) : 'Amount not saved yet.')],
+        ['Urgency / Timing', brief.urgency_timing || brief.urgency_reason || 'Timing is not verified.'],
+        ['Next Step', brief.operator_next_step || brief.recommended_next_action || 'Verify source before outreach.']
+      ].map(function(pair) {
+        return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:8px">' +
+          '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:3px">' + dallasPreviewSafeText(pair[0]) + '</div>' +
+          '<div style="font-size:10px;color:#e5e7eb;line-height:1.45;word-break:break-word">' + dallasPreviewSafeText(pair[1]) + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<div style="margin-top:8px;font-size:10px;color:#cbd5e1;line-height:1.45">' +
+      '<strong style="color:#f8fafc">Missing evidence:</strong> ' + dallasPreviewSafeText(missing.length ? missing.join(', ') : 'None listed yet.') +
+    '</div>' +
+  '</div>';
+}
+
+function renderDallasPreviewQueue() {
+  if (!APP._dallasPreviewQueueOpen) return '';
+  var batch = dallasPreviewBatchStore();
+  var queue = dallasPreviewStore();
+  var reviews = dallasPreviewReviewStore();
+  var candidateCount = queue.length;
+  var reviewed = Object.keys(reviews).reduce(function(acc, key) {
+    var status = reviews[key] && reviews[key].decision;
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  function renderCandidate(candidate) {
+    var review = sourcePreviewCandidateDecision(candidate);
+    var sourceTruth = candidate.source_truth || {};
+    var brief = candidate.lead_intelligence_brief || {};
+    var label = dallasPreviewDecisionLabel(review.decision);
+    var badgeColor = review.decision === 'approved' ? '#10b981' : review.decision === 'rejected' ? '#64748b' : review.decision === 'needs_repair' ? '#f59e0b' : '#2563eb';
+    var sourceUrl = candidate.source_url || '';
+    var evidenceUrl = (candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || candidate.source_record_url || sourceUrl;
+    var repairFlags = Array.isArray(candidate.repair_flags) ? candidate.repair_flags : [];
+    return '<div style="background:#fff;border:1px solid #dbe3ef;border-radius:12px;padding:12px">' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">' +
+        '<div>' +
+          '<div style="font-size:11px;color:#1a1a2e;font-weight:900">' + dallasPreviewSafeText(candidate.address || 'Address missing') + '</div>' +
+          '<div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:2px">' + dallasPreviewSafeText(candidate.parcel || candidate.case_number || candidate.source_reference || 'No source reference saved') + '</div>' +
+        '</div>' +
+        '<span style="font-size:10px;color:' + badgeColor + ';background:' + badgeColor + '18;border:1px solid ' + badgeColor + '55;border-radius:999px;padding:3px 8px;font-weight:800">' + dallasPreviewSafeText(label) + '</span>' +
+      '</div>' +
+      '<div style="margin-top:8px;font-size:10px;color:#64748b;line-height:1.45">' +
+        'Preview only. should_ingest = <strong>false</strong>. Lead mutation is disabled until an explicit future ingestion step exists.' +
+      '</div>' +
+      '<div style="margin-top:8px">' + renderSourcePreviewTruth(candidate) + '</div>' +
+      '<div style="margin-top:8px">' + renderSourcePreviewBrief(candidate) + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+        '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'approved\')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#ecfdf5;color:#047857;font-weight:900;padding:6px 8px;cursor:pointer">Approve For Ingestion</button>' +
+        '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'rejected\')" style="font-size:10px;border:1px solid #64748b;border-radius:7px;background:#f8fafc;color:#334155;font-weight:900;padding:6px 8px;cursor:pointer">Reject Candidate</button>' +
+        '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'needs_repair\')" style="font-size:10px;border:1px solid #f59e0b;border-radius:7px;background:#fffbeb;color:#92400e;font-weight:900;padding:6px 8px;cursor:pointer">Needs Repair</button>' +
+        (sourceUrl ? '<button type="button" onclick="sourcePreviewOpenSource(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Source</button>' : '') +
+        (evidenceUrl ? '<button type="button" onclick="sourcePreviewOpenEvidence(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Evidence</button>' : '') +
+      '</div>' +
+      (repairFlags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">' + repairFlags.map(function(flag) { return '<span style="font-size:10px;color:#fecaca;background:#7f1d1d55;border:1px solid #ef444455;border-radius:999px;padding:3px 7px;font-weight:800">' + dallasPreviewSafeText(sourceRepairFlagLabel(flag)) + '</span>'; }).join('') + '</div>' : '') +
+    '</div>';
+  }
+  var summary = batch && batch.batch_summary ? batch.batch_summary : {};
+  var sourceName = batch && batch.source_metadata ? batch.source_metadata.source_name : 'Dallas County TX Sheriff Tax Sales';
+  return '<div style="background:#fff7ed;border:1px solid #f59e0b66;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div>' +
+        '<div style="font-size:14px;font-weight:900;color:#7c2d12">Dallas Preview Queue</div>' +
+        '<div style="font-size:11px;color:#9a3412;line-height:1.45;margin-top:2px">Preview candidates only. No ingestion, no auto-save, no production lead mutation. Small batches only.</div>' +
+        '<div style="font-size:10px;color:#9a3412;line-height:1.45;margin-top:4px">' + dallasPreviewSafeText(sourceName) + (batch && batch.safety_note ? ' · ' + dallasPreviewSafeText(batch.safety_note) : '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="sourcePreviewLoadSample()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Load Sample</button>' +
+        '<button type="button" onclick="sourcePreviewRunBatch()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Preview Batch</button>' +
+        '<button type="button" onclick="sourcePreviewClearBatch()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Clear Queue</button>' +
+        '<button type="button" onclick="sourcePreviewToggleQueue(false)" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Close Preview</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:10px;align-items:start">' +
+      '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
+        '<div style="font-size:11px;color:#374151;font-weight:900;margin-bottom:6px">Paste Dallas source rows or visible portal text</div>' +
+        '<textarea id="dallas-preview-input" oninput="sourcePreviewSetDraft(this.value)" placeholder="Paste a small batch of Dallas sheriff/tax sale rows, PDF text, or visible portal export here..." style="width:100%;min-height:160px;border:1px solid #d1d5db;border-radius:10px;padding:10px;font-size:12px;line-height:1.5;resize:vertical;background:#fff;color:#1f2937">' + dallasPreviewSafeText(APP.dallasPreviewDraft || '') + '</textarea>' +
+        '<div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:6px">Maximum preview batch size: ' + (batch && batch.batch_summary && batch.batch_summary.max_preview_records ? batch.batch_summary.max_preview_records : 10) + ' records. The server returns preview candidates only.</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
+        '<div style="font-size:11px;color:#374151;font-weight:900;margin-bottom:6px">Batch Status</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">' +
+          [
+            ['Candidates', candidateCount],
+            ['Reviewed', Object.keys(reviews).length],
+            ['Approved', reviewed.approved || 0],
+            ['Rejected', reviewed.rejected || 0],
+            ['Needs Repair', reviewed.needs_repair || 0],
+            ['Preview Only', batch && batch.should_ingest === false ? 'yes' : 'yes']
+          ].map(function(pair) {
+            return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:8px">' +
+              '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:3px">' + dallasPreviewSafeText(pair[0]) + '</div>' +
+              '<div style="font-size:12px;color:#111827;font-weight:900">' + dallasPreviewSafeText(pair[1]) + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    (batch && batch.batch_summary && batch.batch_summary.repair_summary ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">' + Object.keys(batch.batch_summary.repair_summary).map(function(flag) { return '<span style="font-size:10px;color:#92400e;background:#fffbeb;border:1px solid #f59e0b66;border-radius:999px;padding:3px 7px;font-weight:800">' + dallasPreviewSafeText(sourceRepairFlagLabel(flag)) + ': ' + dallasPreviewSafeText(batch.batch_summary.repair_summary[flag]) + '</span>'; }).join('') + '</div>' : '') +
+    (candidateCount ? '<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">' + queue.slice(0, 10).map(renderCandidate).join('') + '</div>' : '<div style="font-size:12px;color:#64748b;background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:16px;text-align:center;margin-top:12px">No preview candidates loaded yet. Load the sample or paste a small Dallas batch first.</div>') +
+  '</div>';
+}
+
 function openLeadWorkspace(leadId) {
   var lead = (APP.leads || []).find(function(item){ return String(item.id) === String(leadId); });
   if (!lead) {
@@ -21094,11 +21391,12 @@ function renderLeads() {
   var quarantined = leadQueuePlaceholderLeads(rawAll);
   var all = leadQueueVisibleLeads(rawAll);
   var toolbar = typeof window.renderLeadActionToolbar === 'function' ? window.renderLeadActionToolbar() : '';
+  var previewPanel = typeof renderDallasPreviewQueue === 'function' ? renderDallasPreviewQueue() : '';
   var baseTotal = baseLeads.length;
   var total = all.length;
 
   function stateMessage(title, detail) {
-    return '<div>' + toolbar +
+    return '<div>' + toolbar + previewPanel +
       '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:24px;text-align:center;background:#fff;color:#1d1d1f">' +
         '<div style="font-size:15px;font-weight:700;margin-bottom:6px">' + leadQueueSafeText(title) + '</div>' +
         '<div style="font-size:12px;color:#86868b;line-height:1.5">' + leadQueueSafeText(detail) + '</div>' +
@@ -21107,7 +21405,7 @@ function renderLeads() {
   }
 
   if (baseTotal === 0 && APP._leadsLoading) {
-    return '<div>' + toolbar + '<div class="loading-spinner"><div class="spinner"></div><div style="font-size:14px;font-weight:600">Loading leads...</div><div style="font-size:12px;margin-top:6px">Fetching your leads...</div></div></div>';
+    return '<div>' + toolbar + previewPanel + '<div class="loading-spinner"><div class="spinner"></div><div style="font-size:14px;font-weight:600">Loading leads...</div><div style="font-size:12px;margin-top:6px">Fetching your leads...</div></div></div>';
   }
   if (baseTotal === 0 && APP._leadsError) {
     return stateMessage('Failed to load leads', 'The dashboard could not hydrate leads from /api/leads. ' + APP._leadsError);
@@ -21179,6 +21477,7 @@ function renderLeads() {
 
   return '<div>' +
     toolbar +
+    previewPanel +
     loadWarning +
     quarantineNotice +
     (typeof renderSourceRepairQueue === 'function' ? renderSourceRepairQueue(rawAll) : '') +
@@ -22830,6 +23129,7 @@ function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
     "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
+    "<button onclick='sourcePreviewToggleQueue()' title='Open the Dallas preview queue for dry-run source candidates only.' style='font-size:12px;padding:6px 12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:6px;color:#1d4ed8;cursor:pointer;font-weight:700;'>Dallas Preview Queue</button>" +
     "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
     "<button onclick='clearLeadSelection()' title='Clear selected leads.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Clear Selection</button>";
 }
