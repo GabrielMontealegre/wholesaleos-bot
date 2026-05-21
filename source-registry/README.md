@@ -22,9 +22,15 @@ Core rule: a source should not create leads until it has a registry entry, a pla
 - `csv_excel_adapter`
 - `pdf_list_adapter`
 - `html_table_adapter`
-- `courthouse_portal_adapter`
 - `searchable_portal_adapter`
+- `court_docket_adapter`
+- `public_notice_adapter`
 - `manual_review_adapter`
+- `browser_assisted_capture_adapter`
+
+`courthouse_portal_adapter` is still accepted as a legacy alias for `court_docket_adapter`.
+
+See `playbooks/national-source-adapter-framework.md` for the adapter contract, classification helper, Texas expansion slot, and California expansion slot.
 
 ## Repair Types
 
@@ -35,6 +41,9 @@ Core rule: a source should not create leads until it has a registry entry, a pla
 - `placeholder_row`
 - `malformed_pdf_extraction`
 - `weak_evidence`
+- `stale_source`
+- `duplicate_conflict`
+- `source_needs_review`
 
 ## Lead Source Truth Layer
 
@@ -49,3 +58,5 @@ Lead source truth should answer:
 - whether a repair queue item is needed
 
 The registry does not run ingestion. It is classification and traceability infrastructure.
+
+New sources default to `source_status: candidate`, `enabled: false`, and dry-run-first until explicitly promoted.

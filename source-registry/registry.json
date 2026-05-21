@@ -7,9 +7,12 @@
     "csv_excel_adapter",
     "pdf_list_adapter",
     "html_table_adapter",
-    "courthouse_portal_adapter",
     "searchable_portal_adapter",
-    "manual_review_adapter"
+    "court_docket_adapter",
+    "public_notice_adapter",
+    "manual_review_adapter",
+    "browser_assisted_capture_adapter",
+    "courthouse_portal_adapter"
   ],
   "repair_types": [
     "parser_failed",
@@ -18,7 +21,10 @@
     "missing_source_url",
     "placeholder_row",
     "malformed_pdf_extraction",
-    "weak_evidence"
+    "weak_evidence",
+    "stale_source",
+    "duplicate_conflict",
+    "source_needs_review"
   ],
   "sources": [
     {

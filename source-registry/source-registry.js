@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const adapterFramework = require('./adapter-framework');
 
 const REGISTRY_PATH = path.join(__dirname, 'registry.json');
 
@@ -29,6 +30,7 @@ const INTERFACE_TYPES = [
   'document index',
   'court docket',
   'JavaScript app',
+  'public notice site',
   'manual-only'
 ];
 
@@ -42,25 +44,11 @@ const ACQUISITION_METHODS = [
 ];
 
 const ADAPTER_CATEGORIES = [
-  'socrata_adapter',
-  'arcgis_adapter',
-  'csv_excel_adapter',
-  'pdf_list_adapter',
-  'html_table_adapter',
-  'courthouse_portal_adapter',
-  'searchable_portal_adapter',
-  'manual_review_adapter'
+  ...adapterFramework.ADAPTER_FAMILIES,
+  'courthouse_portal_adapter'
 ];
 
-const REPAIR_TYPES = [
-  'parser_failed',
-  'missing_address',
-  'missing_amount',
-  'missing_source_url',
-  'placeholder_row',
-  'malformed_pdf_extraction',
-  'weak_evidence'
-];
+const REPAIR_TYPES = adapterFramework.COMMON_REPAIR_TYPES;
 
 function loadRegistry() {
   return JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
@@ -139,13 +127,7 @@ function validateRegistry(registry) {
 }
 
 function classifyAdapterFromUrl(url) {
-  const text = normalizeText(url);
-  if (text.includes('socrata') || text.includes('resource/') || text.includes('opendata')) return 'socrata_adapter';
-  if (text.includes('arcgis') || text.includes('featureserver') || text.includes('mapserver')) return 'arcgis_adapter';
-  if (text.endsWith('.csv') || text.endsWith('.xlsx') || text.endsWith('.xls')) return 'csv_excel_adapter';
-  if (text.endsWith('.pdf')) return 'pdf_list_adapter';
-  if (text.includes('court') || text.includes('docket')) return 'courthouse_portal_adapter';
-  return 'manual_review_adapter';
+  return adapterFramework.inferAdapterFamily({ source_url: url });
 }
 
 function sourceMatchesLead(source, lead) {
@@ -196,5 +178,9 @@ module.exports = {
   validateSource,
   validateRegistry,
   classifyAdapterFromUrl,
-  classifyLeadSource
+  classifyLeadSource,
+  classifySourceCandidate: adapterFramework.classifySourceCandidate,
+  getAdapterContract: adapterFramework.getAdapterContract,
+  validateAdapterFramework: adapterFramework.validateAdapterFramework,
+  canonicalAdapterFamily: adapterFramework.canonicalAdapterFamily
 };
