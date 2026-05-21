@@ -21282,26 +21282,14 @@ function openLeadWorkspace(leadId) {
     if (typeof toast === 'function') toast('Placeholder lead hidden from workspace. Choose a valid lead with an address.', 'error');
     return;
   }
-  APP.leadWorkspaceId = String(lead.id);
-  APP.selectedLead = String(lead.id);
-  var previousSession = APP.researchSession || {};
-  APP.researchSession = {
-    active: true,
-    leadIds: [String(lead.id)],
-    activeLeadId: String(lead.id),
-    createdAt: previousSession.createdAt || new Date().toISOString(),
-    compDrafts: previousSession.compDrafts || {},
-    contactDrafts: previousSession.contactDrafts || {},
-    localCompBridge: previousSession.localCompBridge || {},
-    compScout: previousSession.compScout || {},
-    readyForReview: previousSession.readyForReview || {}
-  };
-  if (typeof render === 'function') render();
+  APP.leadWorkspaceId = '';
+  if (typeof openLeadModal === 'function') openLeadModal(String(lead.id));
 }
 window.openLeadWorkspace = openLeadWorkspace;
 
 function closeLeadWorkspace() {
   APP.leadWorkspaceId = '';
+  if (typeof closeModal === 'function') closeModal();
   if (typeof render === 'function') render();
 }
 window.closeLeadWorkspace = closeLeadWorkspace;
@@ -21336,8 +21324,7 @@ function renderLeadWorkspaceView(lead) {
 
 function renderLeads() {
   var baseLeads = Array.isArray(APP.leads) ? APP.leads : [];
-  var workspaceLead = APP.leadWorkspaceId ? baseLeads.find(function(lead){ return String(lead.id) === String(APP.leadWorkspaceId); }) : null;
-  if (workspaceLead) return renderLeadWorkspaceView(workspaceLead);
+  APP.leadWorkspaceId = '';
   var rawAll = Array.isArray(APP.filtered) ? APP.filtered : baseLeads;
   var quarantined = leadQueuePlaceholderLeads(rawAll);
   var all = leadQueueVisibleLeads(rawAll);
@@ -21465,8 +21452,7 @@ function renderLeads() {
 
 function renderLeads() {
   var baseLeads = Array.isArray(APP.leads) ? APP.leads : [];
-  var workspaceLead = APP.leadWorkspaceId ? baseLeads.find(function(lead){ return String(lead.id) === String(APP.leadWorkspaceId); }) : null;
-  if (workspaceLead) return renderLeadWorkspaceView(workspaceLead);
+  APP.leadWorkspaceId = '';
 
   var rawAll = Array.isArray(APP.filtered) ? APP.filtered : baseLeads;
   var quarantined = leadQueuePlaceholderLeads(rawAll);
@@ -21535,7 +21521,7 @@ function renderLeads() {
     var workflow = leadQueueWorkflow(lead);
     var color = statusColors[lead.status || 'New Lead'] || '#86868b';
     var address = leadQueueAddress(lead);
-    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" onclick="openLeadWorkspace(this.dataset.leadId)">' +
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" onclick="openLeadModal(this.dataset.leadId)">' +
       '<td style="padding:9px 8px;width:34px;text-align:center"><input type="checkbox" class="lead-cb" data-id="' + leadQueueAttr(id) + '" ' + (isSelected ? 'checked ' : '') + 'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:15px;height:15px;cursor:pointer"></td>' +
       '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">' + leadQueueSafeText(rid) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#1d1d1f;max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText(address.split(',')[0] || address) + '</td>' +
@@ -21545,7 +21531,7 @@ function renderLeads() {
       '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:' + color + ';background:' + color + '22;padding:2px 8px;border-radius:10px">' + leadQueueSafeText(workflow) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueCompStatus(lead)) + '</td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueContactStatus(lead)) + '</td>' +
-      '<td style="padding:9px 8px;text-align:right"><button type="button" data-open-workspace="1" onclick="event.stopPropagation();openLeadWorkspace(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Workspace</button></td>' +
+      '<td style="padding:9px 8px;text-align:right"><button type="button" data-open-workspace="1" onclick="event.stopPropagation();openLeadModal(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Lead</button></td>' +
     '</tr>';
   }).join('');
 
@@ -21625,7 +21611,7 @@ function installLeadQueueWorkspaceDelegation() {
     event.preventDefault();
     event.stopPropagation();
     if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-    openLeadWorkspace(leadId);
+    if (typeof openLeadModal === 'function') openLeadModal(leadId);
   }, true);
 }
 installLeadQueueWorkspaceDelegation();
@@ -23354,6 +23340,243 @@ if(document.readyState==="loading"){
 } else { setTimeout(injectFilterBars,1200); }
 })();
 // ===== END LEAD FILTERS + BULK DELETE =====
+
+(function(){
+  function compactLeadText(value) {
+    if (typeof mdaEscapeHtml === 'function') return mdaEscapeHtml(value == null ? '' : value);
+    return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function compactLeadAttr(value) {
+    if (typeof mdaEscapeAttr === 'function') return mdaEscapeAttr(value == null ? '' : value);
+    return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function compactLeadResolve(leadId) {
+    var id = String(leadId || '');
+    return (APP.leads || []).find(function(lead) {
+      return String(lead.id || '') === id || String(lead.lead_id || '') === id || String(lead.ref_id || '') === id || String(lead.reference_id || '') === id;
+    }) || null;
+  }
+  function compactLeadPick(lead, keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var value = keys[i].split('.').reduce(function(obj, key){ return obj && obj[key] != null ? obj[key] : null; }, lead);
+      if (value != null && String(value).trim() !== '') return value;
+    }
+    return '';
+  }
+  function compactLeadFullAddress(lead) {
+    var address = compactLeadPick(lead, ['address','property_address','site_address','full_address']);
+    var city = compactLeadPick(lead, ['city','property_city','situs_city']);
+    var state = compactLeadPick(lead, ['state','property_state','situs_state']);
+    var zip = compactLeadPick(lead, ['zip','zipcode','postal_code','property_zip']);
+    var parts = [address, city, state, zip].filter(function(part){ return part != null && String(part).trim(); });
+    var full = parts.join(', ').replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
+    if (!full && typeof researchLeadAddress === 'function') full = researchLeadAddress(lead) || '';
+    if (!full && typeof leadQueueAddress === 'function') full = leadQueueAddress(lead) || '';
+    return full;
+  }
+  function compactLeadMoney(lead) {
+    var direct = compactLeadPick(lead, ['amount_owed','tax_due','tax_lien_amount','lien_amount','violation_amount','judgment_amount','minimum_bid','source_amount']);
+    if (!direct && typeof sourceTruthMoneyAmount === 'function') direct = sourceTruthMoneyAmount(lead);
+    var n = Number(String(direct || '').replace(/[^0-9.-]/g, ''));
+    if (Number.isFinite(n) && n > 0) return typeof mdaMoney === 'function' ? mdaMoney(n) : ('$' + Math.round(n).toLocaleString());
+    return 'Amount not verified';
+  }
+  function compactLeadSourceUrl(lead) {
+    var urls = typeof leadBriefingSourceUrls === 'function' ? leadBriefingSourceUrls(lead) : [];
+    if (Array.isArray(urls) && urls.length && urls[0] && urls[0].url) return urls[0].url;
+    return compactLeadPick(lead, ['source_record_url','record_url','source_url','url','evidence_url','verification_url','source_details.record_url','source_details.source_url','source_details.query_url']);
+  }
+  function compactLeadZillowUrl(lead) {
+    var directFields = ['zillow_url','zillowUrl','zillow_link','_zillow_link','property_zillow_url','property_url','listing_url','source_property_url','source_details.zillow_url','source_details.zillow_link'];
+    for (var i = 0; i < directFields.length; i++) {
+      var direct = compactLeadPick(lead, [directFields[i]]);
+      if (direct && /zillow\.com/i.test(String(direct))) return { url: String(direct), label: 'Zillow' };
+    }
+    var full = compactLeadFullAddress(lead);
+    var hasAddress = compactLeadPick(lead, ['address','property_address','site_address','full_address']);
+    if (hasAddress) return { url: 'https://www.zillow.com/homes/' + encodeURIComponent(full) + '_rb/', label: 'Zillow' };
+    if (full) return { url: 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com ' + full), label: 'Zillow fallback' };
+    return { url: 'https://www.zillow.com/homes/', label: 'Zillow fallback' };
+  }
+  function compactLeadSearchUrl(lead, source) {
+    if (source === 'zillow') return compactLeadZillowUrl(lead);
+    if (typeof leadTargetedCompSearchUrl === 'function') {
+      var targeted = leadTargetedCompSearchUrl(source, lead);
+      if (targeted) return { url: targeted, label: source === 'redfin' ? 'Redfin' : 'Realtor' };
+    }
+    var full = compactLeadFullAddress(lead);
+    var domain = source === 'redfin' ? 'redfin.com' : 'realtor.com';
+    return { url: 'https://www.google.com/search?q=' + encodeURIComponent('site:' + domain + ' ' + full), label: source === 'redfin' ? 'Redfin' : 'Realtor' };
+  }
+  function compactLeadWhy(lead) {
+    if (typeof leadIntelligencePlainSummary === 'function') return leadIntelligencePlainSummary(lead);
+    var reasons = typeof researchLeadWhy === 'function' ? researchLeadWhy(lead) : [];
+    if (Array.isArray(reasons) && reasons.length) return reasons.slice(0, 2).join(' ');
+    return 'Motivation is not fully proven yet. Verify the source record before outreach.';
+  }
+  function compactLeadNextStep(lead) {
+    if (typeof leadIntelligenceNextStep === 'function') return leadIntelligenceNextStep(lead);
+    if (typeof researchLeadBestNextAction === 'function') return researchLeadBestNextAction(lead);
+    return 'Verify source, add comps, then prepare outreach.';
+  }
+  function compactLeadDealMath(lead) {
+    var arv = Number(String(compactLeadPick(lead, ['arv','estimated_arv','after_repair_value']) || '').replace(/[^0-9.-]/g, ''));
+    var repairs = Number(String(compactLeadPick(lead, ['repairs','repair_estimate','estimated_repairs']) || '').replace(/[^0-9.-]/g, ''));
+    var mao = Number(String(compactLeadPick(lead, ['mao','max_allowable_offer','max_offer']) || '').replace(/[^0-9.-]/g, ''));
+    if ((!Number.isFinite(mao) || mao <= 0) && Number.isFinite(arv) && arv > 0) mao = Math.max(0, Math.round(arv * 0.7 - (Number.isFinite(repairs) ? repairs : 0)));
+    var firstOffer = Number(String(compactLeadPick(lead, ['first_offer','initial_offer']) || '').replace(/[^0-9.-]/g, ''));
+    if ((!Number.isFinite(firstOffer) || firstOffer <= 0) && mao > 0) firstOffer = Math.round(mao * 0.86);
+    var targetOffer = Number(String(compactLeadPick(lead, ['target_offer','offer_price']) || '').replace(/[^0-9.-]/g, ''));
+    if ((!Number.isFinite(targetOffer) || targetOffer <= 0) && mao > 0) targetOffer = Math.round(mao * 0.94);
+    var walkaway = Number(String(compactLeadPick(lead, ['walkaway','walkaway_offer']) || '').replace(/[^0-9.-]/g, ''));
+    if ((!Number.isFinite(walkaway) || walkaway <= 0) && mao > 0) walkaway = mao;
+    var confidence = compactLeadPick(lead, ['confidence','comp_confidence','arv_confidence','source_confidence']) || 'Needs review';
+    return { arv: arv, mao: mao, firstOffer: firstOffer, targetOffer: targetOffer, walkaway: walkaway, confidence: confidence };
+  }
+  function compactLeadMoneyCell(label, value) {
+    var display = Number.isFinite(value) && value > 0 ? (typeof mdaMoney === 'function' ? mdaMoney(value) : ('$' + Math.round(value).toLocaleString())) : '-';
+    return '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">' + compactLeadText(label) + '</div><div style="font-size:14px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(display) + '</div></div>';
+  }
+  function compactLeadComps(lead) {
+    var comps = [];
+    if (typeof researchLeadComps === 'function') comps = researchLeadComps(lead) || [];
+    if (!Array.isArray(comps) || !comps.length) comps = lead.comps || lead.draft_comps || lead.manual_comps || [];
+    if (!Array.isArray(comps)) comps = [];
+    comps = comps.slice(0, 3);
+    if (!comps.length) return '<div style="background:#111827;border:1px dashed #334155;border-radius:8px;padding:12px;color:#cbd5e1;font-size:12px;font-weight:800">Comps needed</div>';
+    return '<div style="display:flex;flex-direction:column;gap:7px">' + comps.map(function(comp, index) {
+      comp = typeof researchNormalizeComp === 'function' ? researchNormalizeComp(comp) : comp;
+      var title = comp.address || comp.title || comp.name || ('Comp ' + (index + 1));
+      var price = Number(String(comp.price || comp.sold_price || comp.list_price || '').replace(/[^0-9.-]/g, ''));
+      var sqft = comp.sqft || comp.square_feet || '';
+      var status = comp.status || comp.sold_list_status || comp.type || 'Unverified';
+      return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;background:#0b1220;border:1px solid #243044;border-radius:8px;padding:9px">' +
+        '<div><div style="font-size:12px;color:#f8fafc;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + compactLeadText(title) + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8;margin-top:3px">' + compactLeadText(status) + ' | ' + compactLeadText(sqft ? sqft + ' sqft' : 'sqft unknown') + ' | unverified</div></div>' +
+        '<div style="font-size:12px;color:#d4af37;font-weight:900">' + compactLeadText(Number.isFinite(price) && price > 0 ? ('$' + Math.round(price).toLocaleString()) : '-') + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  function compactLeadAction(label, url, extra) {
+    var disabled = !url;
+    return '<a href="' + compactLeadAttr(url || '#') + '" target="_blank" rel="noopener" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : '') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (extra ? '#d4af37' : '#111827') + ';color:' + (extra ? '#111827' : '#e5e7eb') + ';font-size:12px;font-weight:900">' + compactLeadText(label) + '</a>';
+  }
+  function compactLeadSkipTraceUrl(lead) {
+    var query = compactLeadPick(lead, ['owner_name','owner']) || compactLeadFullAddress(lead);
+    return 'https://www.google.com/search?q=' + encodeURIComponent(query + ' phone email address');
+  }
+  window.copyCompactLeadBrief = function(leadId) {
+    var lead = compactLeadResolve(leadId);
+    if (!lead) return;
+    var text = compactLeadWhy(lead) + '\n\nNext step: ' + compactLeadNextStep(lead);
+    if (typeof leadIntelligenceCopyBrief === 'function') return leadIntelligenceCopyBrief(lead);
+    navigator.clipboard && navigator.clipboard.writeText(text);
+    if (typeof toast === 'function') toast('Lead brief copied');
+  };
+  window.compactLeadSms = function(leadId) {
+    var lead = compactLeadResolve(leadId);
+    if (!lead) return;
+    var phone = compactLeadPick(lead, ['phone','phone_number','owner_phone','primary_phone']);
+    if (typeof openInSystemSMS === 'function') openInSystemSMS(phone || '');
+    else if (typeof toast === 'function') toast(phone ? 'SMS handler unavailable' : 'No phone saved for this lead', 'error');
+  };
+  window.compactLeadEmail = function(leadId) {
+    var lead = compactLeadResolve(leadId);
+    if (!lead) return;
+    var email = compactLeadPick(lead, ['email','owner_email','primary_email']);
+    if (typeof openInSystemEmail === 'function') openInSystemEmail(email || '');
+    else if (typeof toast === 'function') toast(email ? 'Email handler unavailable' : 'No email saved for this lead', 'error');
+  };
+  function renderCompactLeadModal(lead) {
+    var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.reference_id || lead.ref_id || lead.id || 'Lead');
+    var address = compactLeadFullAddress(lead) || 'Address not available';
+    var sourceType = compactLeadPick(lead, ['source_category','source_type','category','type']) || (typeof leadQueueTypeSource === 'function' ? leadQueueTypeSource(lead) : 'Source unknown');
+    var sourceName = compactLeadPick(lead, ['source_name','source','jurisdiction','county']) || 'Source not verified';
+    var amount = compactLeadMoney(lead);
+    var why = compactLeadWhy(lead);
+    var nextStep = compactLeadNextStep(lead);
+    var sourceUrl = compactLeadSourceUrl(lead);
+    var zillow = compactLeadSearchUrl(lead, 'zillow');
+    var redfin = compactLeadSearchUrl(lead, 'redfin');
+    var realtor = compactLeadSearchUrl(lead, 'realtor');
+    var math = compactLeadDealMath(lead);
+    var sourceTruth = typeof renderLeadSourceTruthPanel === 'function' ? renderLeadSourceTruthPanel(lead) : '';
+    var brief = typeof renderLeadIntelligenceBrief === 'function' ? renderLeadIntelligenceBrief(lead, []) : '';
+    return '<div style="width:min(560px,96vw);height:96vh;max-height:96vh;background:#07111f;color:#e5e7eb;border:1px solid #d4af37;border-right:none;border-radius:14px 0 0 14px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #1f2937;background:#0b1220">' +
+        '<div style="min-width:0"><div style="font-size:10px;color:#d4af37;font-weight:900;text-transform:uppercase;letter-spacing:.04em">' + compactLeadText(ref) + '</div>' +
+        '<div style="font-size:18px;color:#fff;font-weight:900;line-height:1.2;margin-top:4px">' + compactLeadText(address) + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><span style="font-size:10px;background:#172033;border:1px solid #334155;border-radius:999px;padding:4px 7px;font-weight:800">' + compactLeadText(sourceType) + '</span><span style="font-size:10px;background:#172033;border:1px solid #334155;border-radius:999px;padding:4px 7px;font-weight:800">' + compactLeadText(amount) + '</span></div></div>' +
+        '<button type="button" onclick="closeModal()" aria-label="Close lead" style="width:34px;height:34px;border-radius:999px;border:1px solid #334155;background:#111827;color:#fff;font-size:18px;font-weight:900;cursor:pointer;line-height:1">x</button>' +
+      '</div>' +
+      '<div style="overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px">' +
+          '<div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Why this lead matters</div><div style="font-size:13px;line-height:1.45;color:#f8fafc;margin-top:4px">' + compactLeadText(why) + '</div></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Came from</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(sourceName) + '</div></div><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Next step</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(nextStep) + '</div></div></div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px">' +
+          compactLeadAction(zillow.label, zillow.url, true) +
+          compactLeadAction('Redfin', redfin.url, false) +
+          compactLeadAction('Realtor', realtor.url, false) +
+          compactLeadAction('Source Record', sourceUrl, false) +
+          compactLeadAction('Skip Trace', compactLeadSkipTraceUrl(lead), false) +
+          '<button type="button" data-lead-id="' + compactLeadAttr(String(lead.id || '')) + '" onclick="compactLeadSms(this.dataset.leadId)" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">SMS</button>' +
+          '<button type="button" data-lead-id="' + compactLeadAttr(String(lead.id || '')) + '" onclick="compactLeadEmail(this.dataset.leadId)" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">Email</button>' +
+          '<button type="button" onclick="copyCompactLeadBrief(' + JSON.stringify(String(lead.id || '')) + ')" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">Copy Brief</button>' +
+        '</div>' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><div style="font-size:11px;color:#d4af37;font-weight:900;text-transform:uppercase;margin-bottom:9px">Deal Snapshot</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px">' +
+          compactLeadMoneyCell('ARV', math.arv) + compactLeadMoneyCell('MAO', math.mao) + compactLeadMoneyCell('First Offer', math.firstOffer) + compactLeadMoneyCell('Target', math.targetOffer) + compactLeadMoneyCell('Walkaway', math.walkaway) +
+          '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Confidence</div><div style="font-size:14px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(math.confidence) + '</div></div>' +
+        '</div>' + compactLeadComps(lead) + '</div>' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><div style="font-size:11px;color:#d4af37;font-weight:900;text-transform:uppercase;margin-bottom:8px">Source Truth / Lead Intelligence</div>' +
+          '<div style="font-size:12px;line-height:1.45;color:#dbeafe">' + compactLeadText(why) + '</div>' +
+          '<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;color:#f8fafc;font-weight:900">Advanced source and intelligence details</summary><div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">' + sourceTruth + brief + '</div></details>' +
+        '</div>' +
+        '<details style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><summary style="cursor:pointer;font-size:12px;color:#f8fafc;font-weight:900">Advanced comps</summary><div style="font-size:12px;color:#94a3b8;margin-top:8px">Structured comp slots remain available in the research workspace. This lead drawer keeps only the top 3 visible by default.</div></details>' +
+        '<details style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><summary style="cursor:pointer;font-size:12px;color:#f8fafc;font-weight:900">Advanced contacts</summary><div style="font-size:12px;color:#94a3b8;margin-top:8px">Skip trace/contact details stay operator-reviewed and hidden here until needed.</div></details>' +
+      '</div>' +
+    '</div>';
+  }
+  var previousCloseModal = window.closeModal;
+  window.closeModal = function(e) {
+    var overlay = document.getElementById('modal-overlay');
+    if (e && overlay && e.target !== overlay) return;
+    if (typeof previousCloseModal === 'function') previousCloseModal.apply(this, arguments);
+    if (overlay) {
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.padding = '';
+    }
+    var content = document.getElementById('modal-content');
+    if (content) {
+      content.className = 'modal';
+      content.style.cssText = '';
+    }
+  };
+  window.openLeadModal = function(leadId) {
+    var lead = compactLeadResolve(leadId);
+    if (!lead) {
+      if (typeof toast === 'function') toast('Lead not found', 'error');
+      return;
+    }
+    if (typeof leadQueueIsPlaceholderLead === 'function' && leadQueueIsPlaceholderLead(lead)) {
+      if (typeof toast === 'function') toast('Placeholder lead hidden from the active queue. Choose a valid lead with an address.', 'error');
+      return;
+    }
+    APP.selectedLead = String(lead.id || leadId || '');
+    APP.leadWorkspaceId = '';
+    var overlay = document.getElementById('modal-overlay');
+    var content = document.getElementById('modal-content');
+    if (!overlay || !content) return;
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'stretch';
+    overlay.style.justifyContent = 'flex-end';
+    overlay.style.padding = '2vh 0 2vh 2vw';
+    content.className = 'lead-compact-modal-host';
+    content.style.cssText = 'position:relative;background:transparent;border:none;box-shadow:none;padding:0;width:auto;max-width:100vw;max-height:none;overflow:visible;color:#e5e7eb';
+    content.innerHTML = renderCompactLeadModal(lead);
+  };
+})();
 </script>
 
 <script src="/dashboard/wos-theme-a1.js?v=1"></script>
