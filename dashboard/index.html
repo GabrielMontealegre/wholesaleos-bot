@@ -20753,8 +20753,29 @@ function leadQueueState(lead) {
 function leadQueueTypeSource(lead) {
   lead = lead || {};
   var li = lead.lead_intelligence || {};
-  return [lead.lead_type, lead.type, lead.category, lead.source, lead.source_name, lead.source_type, li.source_type]
-    .filter(Boolean).slice(0, 2).join(' / ') || 'Lead';
+  function labelPart(value) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    var lower = text.toLowerCase().replace(/\s+/g, ' ');
+    lower = lower.replace(/^raw\s*\/\s*/, '').replace(/^raw\s+/, '');
+    lower = lower.replace(/\bextra\b/g, '').replace(/\bimport\b/g, '').replace(/\bsource\b/g, '').trim();
+    if (!lower) return '';
+    if (/wayne[_\s-]*tax/.test(lower) || /wayne county tax/.test(lower)) return 'Wayne Tax';
+    if (/cook[_\s-]*tax/.test(lower) || /cook county tax/.test(lower)) return 'Cook Tax';
+    if (/dallas[_\s-]*tax/.test(lower) || /dallas county tax/.test(lower)) return 'Dallas Tax';
+    if (/socrata/.test(lower)) return 'Socrata';
+    if (/arcgis/.test(lower)) return 'ArcGIS';
+    if (/csv|excel|xlsx/.test(lower)) return 'CSV/Excel';
+    if (/pdf/.test(lower)) return 'PDF';
+    if (/court/.test(lower)) return 'Court';
+    if (/foreclos|auction/.test(lower)) return text.replace(/_/g, ' ').replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+    return text.replace(/^raw\s*\/\s*/i, '').replace(/_/g, ' ').replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+  }
+  var sourceLabel = [lead.source_name, lead.source_type, lead.source, li.source_type, lead.category, lead.type, lead.lead_type]
+    .map(labelPart)
+    .filter(Boolean)
+    .find(function(v){ return !/^(raw|lead)$/i.test(v); });
+  return sourceLabel || 'Lead';
 }
 
 function leadQueuePriority(lead) {
@@ -21521,7 +21542,7 @@ function renderLeads() {
     var workflow = leadQueueWorkflow(lead);
     var color = statusColors[lead.status || 'New Lead'] || '#86868b';
     var address = leadQueueAddress(lead);
-    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" onclick="openLeadModal(this.dataset.leadId)">' +
+    return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" data-open-lead-modal="1" onclick="openLeadModal(this.dataset.leadId)">' +
       '<td style="padding:9px 8px;width:34px;text-align:center"><input type="checkbox" class="lead-cb" data-id="' + leadQueueAttr(id) + '" ' + (isSelected ? 'checked ' : '') + 'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:15px;height:15px;cursor:pointer"></td>' +
       '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">' + leadQueueSafeText(rid) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#1d1d1f;max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText(address.split(',')[0] || address) + '</td>' +
@@ -21531,7 +21552,7 @@ function renderLeads() {
       '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:' + color + ';background:' + color + '22;padding:2px 8px;border-radius:10px">' + leadQueueSafeText(workflow) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueCompStatus(lead)) + '</td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueContactStatus(lead)) + '</td>' +
-      '<td style="padding:9px 8px;text-align:right"><button type="button" data-open-workspace="1" onclick="event.stopPropagation();openLeadModal(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Lead</button></td>' +
+      '<td style="padding:9px 8px;text-align:right"><button type="button" data-open-workspace="1" data-open-lead-modal="1" onclick="event.stopPropagation();openLeadModal(this.dataset.leadId)" data-lead-id="' + leadQueueAttr(id) + '" style="font-size:11px;border:1px solid #d4af37;border-radius:7px;background:#1a1a2e;color:#f7d774;font-weight:800;padding:5px 8px;cursor:pointer">Open Lead</button></td>' +
     '</tr>';
   }).join('');
 
@@ -21594,7 +21615,7 @@ function installLeadQueueWorkspaceDelegation() {
   document.addEventListener('click', function(event) {
     var target = event.target;
     if (!target || leadQueueEventLooksLikeSelection(target)) return;
-    var button = target.closest && target.closest('[data-open-workspace]');
+    var button = target.closest && target.closest('[data-open-workspace], [data-open-lead-modal]');
     var row = target.closest && target.closest('tr[data-lead-id], .lead-row[data-lead-id], .lead-card[data-lead-id]');
     var el = button || row;
     if (!el) return;
@@ -21615,6 +21636,25 @@ function installLeadQueueWorkspaceDelegation() {
   }, true);
 }
 installLeadQueueWorkspaceDelegation();
+
+if (!window.__leadModalOpenFallbackInstalled) {
+  window.__leadModalOpenFallbackInstalled = true;
+  document.addEventListener('click', function(event) {
+    var target = event.target;
+    if (!target || leadQueueEventLooksLikeSelection(target)) return;
+    var openTarget = target.closest && target.closest('[data-open-lead-modal="1"], [data-open-workspace="1"], tr[data-lead-id]');
+    if (!openTarget) return;
+    var leadId = openTarget.getAttribute('data-lead-id') || '';
+    if (!leadId && openTarget.closest) {
+      var row = openTarget.closest('tr[data-lead-id], .lead-row[data-lead-id], .lead-card[data-lead-id]');
+      if (row) leadId = row.getAttribute('data-lead-id') || '';
+    }
+    if (!leadId) return;
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    event.preventDefault();
+    if (typeof openLeadModal === 'function') openLeadModal(leadId);
+  }, true);
+}
 
 function renderBuyers(){
   var buyers=APP.buyers||[];
@@ -23490,7 +23530,7 @@ if(document.readyState==="loading"){
   function renderCompactLeadModal(lead) {
     var ref = typeof getLeadReferenceId === 'function' ? getLeadReferenceId(lead) : (lead.reference_id || lead.ref_id || lead.id || 'Lead');
     var address = compactLeadFullAddress(lead) || 'Address not available';
-    var sourceType = compactLeadPick(lead, ['source_category','source_type','category','type']) || (typeof leadQueueTypeSource === 'function' ? leadQueueTypeSource(lead) : 'Source unknown');
+    var sourceType = (typeof leadQueueTypeSource === 'function' ? leadQueueTypeSource(lead) : '') || compactLeadPick(lead, ['source_category','source_type','category','type']) || 'Source unknown';
     var sourceName = compactLeadPick(lead, ['source_name','source','jurisdiction','county']) || 'Source not verified';
     var amount = compactLeadMoney(lead);
     var why = compactLeadWhy(lead);
