@@ -587,6 +587,120 @@ function dallasVerifiedPriorityScore(status) {
   return confidence + dallasDistressPriorityWeight(status.distress_category) + dallasTimingPriorityScore(evidence.filing_or_sale_date) + completeness;
 }
 
+function dallasLeadFullAddressForList(lead) {
+  var address = leadListAddress(lead);
+  var city = leadListPick(lead || {}, ['city', 'property_city', 'situs_city', 'source_details.city']) || 'Dallas';
+  var state = leadListPick(lead || {}, ['state', 'property_state', 'situs_state', 'source_details.state']) || 'TX';
+  var zip = leadListPick(lead || {}, ['zip', 'zipcode', 'postal_code', 'property_zip', 'situs_zip', 'source_details.zip']);
+  return [address, city, state, zip].filter(function(part) { return part != null && String(part).trim(); }).join(', ').replace(/\s+/g, ' ').trim();
+}
+
+function dallasDirectUrlForList(lead, names, domainPattern) {
+  var value = leadListPick(lead || {}, names);
+  if (value && domainPattern.test(String(value))) return String(value);
+  return '';
+}
+
+function dallasCompSearchLinks(lead) {
+  var full = dallasLeadFullAddressForList(lead);
+  var address = leadListAddress(lead);
+  var city = leadListPick(lead || {}, ['city', 'property_city', 'situs_city', 'source_details.city']) || 'Dallas';
+  var zip = leadListPick(lead || {}, ['zip', 'zipcode', 'postal_code', 'property_zip', 'situs_zip', 'source_details.zip']);
+  var neighborhood = leadListPick(lead || {}, ['neighborhood', 'subdivision', 'legal_description', 'source_truth.legal_description']);
+  var soldQuery = [address, city, zip, neighborhood, 'sold comps'].filter(function(part) { return part != null && String(part).trim(); }).join(' ');
+  var mapQuery = full || address || [city, 'TX'].join(', ');
+  var zillowDirect = dallasDirectUrlForList(lead, ['zillow_url', 'zillowUrl', 'zillow_link', '_zillow_link', 'property_zillow_url', 'source_details.zillow_url'], /zillow\.com/i);
+  var redfinDirect = dallasDirectUrlForList(lead, ['redfin_url', 'redfinUrl', 'redfin_link', '_redfin_link', 'source_details.redfin_url'], /redfin\.com/i);
+  var realtorDirect = dallasDirectUrlForList(lead, ['realtor_url', 'realtorUrl', 'realtor_link', 'source_details.realtor_url'], /realtor\.com/i);
+  return {
+    property: {
+      zillow: zillowDirect || (full ? 'https://www.zillow.com/homes/' + encodeURIComponent(full) + '_rb/' : ''),
+      redfin: redfinDirect || (full ? 'https://www.redfin.com/search?searchType=4&query=' + encodeURIComponent(full) : ''),
+      realtor: realtorDirect || (full ? 'https://www.realtor.com/realestateandhomes-search/' + encodeURIComponent(full) : ''),
+      google_maps: mapQuery ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery) : '',
+      appraisal_district: (address || zip) ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + [address, zip].filter(Boolean).join(' ')) : ''
+    },
+    nearby_sold: {
+      zillow: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com/homedetails ' + soldQuery) : '',
+      redfin: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + soldQuery) : '',
+      realtor: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + soldQuery) : ''
+    },
+    search_basis: {
+      address: address || '',
+      city: city || '',
+      zip: zip || '',
+      neighborhood: neighborhood || ''
+    }
+  };
+}
+
+function dallasLeadNumericValue(lead, keys) {
+  var value = leadListPick(lead || {}, keys);
+  var parsed = Number(String(value || '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function dallasExtractCompPricesForList(lead) {
+  var containers = [lead && lead.comps, lead && lead.draft_comps, lead && lead.manual_comps, lead && lead.research_comps].filter(Array.isArray);
+  var prices = [];
+  containers.forEach(function(list) {
+    list.forEach(function(comp) {
+      var price = Number(String(leadListPick(comp || {}, ['price', 'sold_price', 'sale_price', 'list_price']) || '').replace(/[^0-9.-]/g, ''));
+      if (Number.isFinite(price) && price > 0) prices.push(price);
+    });
+  });
+  return prices.slice(0, 5);
+}
+
+function dallasCompIntelligenceForLead(lead, verifiedStatus) {
+  var status = verifiedStatus || dallasVerifiedAcquisitionStatus(lead);
+  var links = dallasCompSearchLinks(lead);
+  if (!status.queue_eligible) {
+    return {
+      eligible: false,
+      confidence: 'Low',
+      confidence_reason: 'Insufficient property confidence for valuation.',
+      links: links,
+      arv_guidance: { status: 'blocked', label: 'Insufficient property confidence for valuation.', range_low: null, range_high: null },
+      mao_guidance: { status: 'blocked', conservative: null, moderate: null, aggressive: null, note: 'Needs verified Dallas source evidence before comp review.' }
+    };
+  }
+  var compPrices = dallasExtractCompPricesForList(lead);
+  var explicitArv = dallasLeadNumericValue(lead, ['arv', 'estimated_arv', 'after_repair_value', 'lead_intelligence.arv']);
+  var low = 0;
+  var high = 0;
+  if (compPrices.length >= 2) {
+    compPrices.sort(function(a, b) { return a - b; });
+    low = compPrices[0];
+    high = compPrices[compPrices.length - 1];
+  } else if (explicitArv > 0) {
+    low = Math.round(explicitArv * 0.9);
+    high = Math.round(explicitArv * 1.1);
+  }
+  var evidenceCount = [links.property.zillow, links.property.redfin, links.property.realtor, links.property.google_maps, links.property.appraisal_district, status.evidence && status.evidence.parcel_apn].filter(Boolean).length;
+  var confidence = low && high && compPrices.length >= 3 ? 'High' : (evidenceCount >= 4 ? 'Medium' : 'Low');
+  var arvGuidance = low && high
+    ? { status: 'evidence_based', label: 'Preliminary range from saved comp/ARV evidence only.', range_low: low, range_high: high }
+    : { status: 'needs_review', label: 'Needs manual comp review.', range_low: null, range_high: null };
+  var maoGuidance = low && high
+    ? {
+        status: 'evidence_based',
+        conservative: Math.round(low * 0.65),
+        moderate: Math.round(((low + high) / 2) * 0.68),
+        aggressive: Math.round(high * 0.7),
+        note: 'Guidance uses existing valuation evidence only; verify sold comps before offer.'
+      }
+    : { status: 'needs_review', conservative: null, moderate: null, aggressive: null, note: 'Needs comp review.' };
+  return {
+    eligible: true,
+    confidence: confidence,
+    confidence_reason: confidence === 'High' ? 'Saved comp/ARV evidence exists for this Dallas property.' : (confidence === 'Medium' ? 'Strong property/search evidence exists, but sold comps still need manual review.' : 'Weak/no nearby valuation evidence saved.'),
+    links: links,
+    arv_guidance: arvGuidance,
+    mao_guidance: maoGuidance
+  };
+}
+
 function dallasVerifiedAcquisitionStatus(lead) {
   var evidence = dallasLeadEvidenceSnapshot(lead);
   var confidence = dallasEvidenceConfidence(lead);
@@ -623,6 +737,7 @@ function dallasVerifiedAcquisitionStatus(lead) {
     recommended_next_step: actionable ? 'Verify source record, confirm amount/timing, then underwrite before outreach.' : 'Repair missing Dallas source evidence before moving this lead into acquisition workflow.'
   };
   status.priority_score = dallasVerifiedPriorityScore(status);
+  status.comp_intelligence = dallasCompIntelligenceForLead(lead, status);
   return {
     is_dallas: status.is_dallas,
     source_family: status.source_family,
@@ -638,6 +753,7 @@ function dallasVerifiedAcquisitionStatus(lead) {
     confidence_score: status.confidence_score,
     confidence_reason: status.confidence_reason,
     evidence: status.evidence,
+    comp_intelligence: status.comp_intelligence,
     missing_evidence: status.missing_evidence,
     recommended_next_step: status.recommended_next_step
   };
@@ -752,6 +868,23 @@ function buildLeadIntakeStatus(leads, filtered) {
   var dallasStatuses = dallasLeads.map(dallasVerifiedAcquisitionStatus);
   var dallasActionable = dallasStatuses.filter(function(status) { return status.queue_eligible; });
   var dallasRepair = dallasStatuses.filter(function(status) { return status.status === 'Needs Repair' || status.status === 'Weak Lead'; });
+  var dallasHotList = dallasLeads.map(function(lead) {
+    var status = dallasVerifiedAcquisitionStatus(lead);
+    return {
+      id: String(lead.id || lead.lead_id || ''),
+      reference_id: String(lead.ref_id || lead.reference_id || lead.lead_reference_id || lead.id || ''),
+      address: leadListAddress(lead),
+      distress_category: status.distress_category,
+      confidence_level: status.confidence_level,
+      priority_score: status.priority_score,
+      queue_eligible: status.queue_eligible,
+      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence
+    };
+  }).filter(function(item) {
+    return item.queue_eligible;
+  }).sort(function(a, b) {
+    return b.priority_score - a.priority_score;
+  }).slice(0, 5);
   var newestCourthouse = courthouseLeads.slice().sort(function(a, b) {
     return new Date(b.created_at || b.created || b.createdAt || b.inserted_at || 0) - new Date(a.created_at || a.created || a.createdAt || a.inserted_at || 0);
   })[0] || null;
@@ -775,6 +908,7 @@ function buildLeadIntakeStatus(leads, filtered) {
       total_dallas: dallasLeads.length,
       actionable: dallasActionable.length,
       repair_or_weak: dallasRepair.length,
+      hot_list: dallasHotList,
       confidence: dallasStatuses.reduce(function(acc, status) {
         acc[status.confidence_level] = (acc[status.confidence_level] || 0) + 1;
         return acc;
