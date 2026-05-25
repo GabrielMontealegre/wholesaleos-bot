@@ -188,12 +188,22 @@ function withLeadIntelligence(lead) {
 
 function leadSourceTypeText(lead) {
   var details = lead && lead.source_details;
-  if (!details) return (lead && lead.motivation) || '';
+  var base = [
+    lead && lead.source,
+    lead && lead.source_name,
+    lead && lead.source_type,
+    lead && lead.source_key,
+    lead && lead.source_slug,
+    lead && lead.import_source,
+    lead && lead.provider,
+    lead && lead.motivation
+  ].filter(Boolean);
+  if (!details) return base.join(' ');
   if (typeof details === 'string') return details;
   if (typeof details === 'object') {
-    return [details.type, details.source_name, details.label, details.name].filter(Boolean).join(' ');
+    return base.concat([details.type, details.source_name, details.label, details.name, details.record_url, details.query_url]).filter(Boolean).join(' ');
   }
-  return String(details);
+  return base.concat([String(details)]).filter(Boolean).join(' ');
 }
 
 const LEADS_LIST_DEFAULT_LIMIT = 300;
@@ -266,6 +276,12 @@ function parseLeadListLimit(value) {
   return Math.min(parsed, LEADS_LIST_MAX_LIMIT);
 }
 
+function parseLeadListOffset(value) {
+  var parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
 function isPlaceholderLeadForList(lead) {
   if (!lead || typeof lead !== 'object') return false;
   var address = String(lead.address || '').trim();
@@ -274,6 +290,152 @@ function isPlaceholderLeadForList(lead) {
   var rid = String(lead.ref_id || lead.reference_id || lead.lead_reference_id || lead.id || '').trim();
   if (/^(column\s*[1-4]|unnamed)$/i.test(rid)) return true;
   return false;
+}
+
+function leadListPick(lead, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var parts = String(keys[i]).split('.');
+    var value = lead;
+    for (var j = 0; j < parts.length; j++) {
+      value = value && value[parts[j]] != null ? value[parts[j]] : null;
+      if (value == null) break;
+    }
+    if (value != null && String(value).trim() !== '') return value;
+  }
+  return '';
+}
+
+function leadListHasAny(lead, keys) {
+  return !!leadListPick(lead, keys);
+}
+
+function leadListAddress(lead) {
+  return String(leadListPick(lead || {}, ['address', 'property_address', 'site_address', 'full_address', 'normalized_address']) || '').trim();
+}
+
+function isWeakAddressTextForList(address) {
+  var text = String(address || '').trim();
+  var lower = text.toLowerCase();
+  if (!text) return true;
+  if (/^(column\s*[1-4]|unnamed)$/i.test(text)) return true;
+  if (/^\d{4}\s+(contact|beginning|calendar|schedule|directory)\b/i.test(text)) return true;
+  if (/^(phone\s+directory|contact|contacts|beginning|calendar|home|search|login|notice|notices)\b/i.test(lower)) return true;
+  if (/\b(phone directory|contact us|skip main navigation|beginning december|court calendar)\b/i.test(lower)) return true;
+  if (!/\d/.test(text)) return true;
+  return !/\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square)\b/i.test(text) && text.split(/\s+/).length < 4;
+}
+
+function leadListSourceConfidenceScore(lead) {
+  var raw = leadListPick(lead || {}, [
+    'source_confidence_score',
+    'confidence_score',
+    'lead_intelligence.source_confidence_score',
+    'lead_intelligence.confidence_score'
+  ]);
+  var parsed = Number(raw);
+  if (Number.isFinite(parsed)) return parsed > 1 ? parsed : parsed * 100;
+  var text = String(leadListPick(lead || {}, ['source_confidence', 'confidence', 'lead_intelligence.source_confidence']) || '').toLowerCase();
+  if (/high|strong|verified/.test(text)) return 85;
+  if (/medium|moderate/.test(text)) return 65;
+  if (/low|weak|unknown|scanned/.test(text)) return 35;
+  return 0;
+}
+
+function leadListHasSourceRecord(lead) {
+  return leadListHasAny(lead || {}, [
+    'source_record_url',
+    'record_url',
+    'source_url',
+    'verification_url',
+    'source_pdf_url',
+    'evidence_ref',
+    'source_reference',
+    'source_details.record_url',
+    'source_details.source_url',
+    'source_details.query_url',
+    '_courthouse_metadata.source_url',
+    '_courthouse_metadata.source_pdf_url'
+  ]);
+}
+
+function leadListHasDistressReason(lead) {
+  var text = [
+    leadListPick(lead || {}, ['distress', 'distress_type', 'doc_type', 'lead_type', 'category', 'source_category', 'priority_flag']),
+    Array.isArray(lead && lead.distress_types) ? lead.distress_types.join(' ') : '',
+    Array.isArray(lead && lead.priority_flags) ? lead.priority_flags.join(' ') : ''
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /tax|foreclos|auction|code|violation|probate|lien|vacant|delinquent|sheriff|court/.test(text);
+}
+
+function leadListHasAmountEvidence(lead) {
+  return leadListHasAny(lead || {}, [
+    'amount_owed',
+    'tax_due',
+    'tax_lien_amount',
+    'lien_amount',
+    'violation_amount',
+    'judgment_amount',
+    'minimum_bid',
+    'source_amount',
+    '_courthouse_metadata.lien_amount'
+  ]);
+}
+
+function leadListHasDateCaseEvidence(lead) {
+  return leadListHasAny(lead || {}, [
+    'case_number',
+    'parcel',
+    'apn',
+    'parcel_id',
+    'auction_date',
+    'sale_date',
+    'filing_date',
+    'filed_date',
+    'source_published_at',
+    '_courthouse_metadata.case_number',
+    '_courthouse_metadata.parcel',
+    '_courthouse_metadata.auction_date',
+    '_courthouse_metadata.filed_date'
+  ]);
+}
+
+function classifyLeadQualityForList(lead) {
+  lead = lead || {};
+  var flags = Array.isArray(lead.repair_flags) ? lead.repair_flags.slice() : [];
+  var address = leadListAddress(lead);
+  var weakAddress = isWeakAddressTextForList(address);
+  var sourceRecord = leadListHasSourceRecord(lead);
+  var distress = leadListHasDistressReason(lead);
+  var amount = leadListHasAmountEvidence(lead);
+  var dateCase = leadListHasDateCaseEvidence(lead);
+  var confidence = leadListSourceConfidenceScore(lead);
+  var hasOwnerParcelCaseAmountDate = leadListHasAny(lead, ['owner_name', 'owner', 'parcel', 'apn', 'parcel_id', 'case_number']) || amount || dateCase;
+  if (weakAddress && flags.indexOf('weak_address') === -1) flags.push('weak_address');
+  if (!sourceRecord && flags.indexOf('missing_source_url') === -1) flags.push('missing_source_url');
+  if (!amount && flags.indexOf('missing_amount') === -1) flags.push('missing_amount');
+  if (weakAddress && !hasOwnerParcelCaseAmountDate) {
+    return { label: 'Weak Lead', rank: 3, flags: flags.concat(['weak_evidence']).filter(function(v, i, a){ return a.indexOf(v) === i; }) };
+  }
+  if (flags.some(function(flag){ return /parser_failed|placeholder_row|malformed_pdf_extraction|missing_address|weak_address|missing_source_url/.test(String(flag)); })) {
+    return { label: 'Needs Repair', rank: 2, flags: flags.filter(function(v, i, a){ return a.indexOf(v) === i; }) };
+  }
+  if (address && !weakAddress && sourceRecord && distress && (amount || dateCase) && confidence >= 55) {
+    return { label: 'Actionable', rank: 0, flags: flags.filter(function(v, i, a){ return a.indexOf(v) === i; }) };
+  }
+  return { label: 'Needs Verification', rank: 1, flags: flags.filter(function(v, i, a){ return a.indexOf(v) === i; }) };
+}
+
+function isCourthouseLeadForList(lead) {
+  var text = [
+    lead && lead.source,
+    lead && lead.source_name,
+    lead && lead.source_type,
+    lead && lead.source_url,
+    lead && lead._source_module,
+    lead && lead._market,
+    lead && lead.provider
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /court|courthouse/.test(text);
 }
 
 function getLeadListSourceLabel(lead) {
@@ -323,6 +485,14 @@ function buildLeadIntakeStatus(leads, filtered) {
   var newestSource = newest ? getLeadListSourceLabel(newest) : '';
   var newestType = newest ? (newest.lead_type || newest.source_type || newest.type || '') : '';
   var backgroundStatus = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || '')) ? 'enabled' : 'disabled';
+  var courthouseLeads = all.filter(isCourthouseLeadForList);
+  var weakCourthouseLeads = courthouseLeads.filter(function(lead) {
+    var quality = classifyLeadQualityForList(lead);
+    return quality.label === 'Weak Lead' || quality.label === 'Needs Repair';
+  });
+  var newestCourthouse = courthouseLeads.slice().sort(function(a, b) {
+    return new Date(b.created_at || b.created || b.createdAt || b.inserted_at || 0) - new Date(a.created_at || a.created || a.createdAt || a.inserted_at || 0);
+  })[0] || null;
   return {
     total_leads: all.length,
     usable_leads: usableCount,
@@ -332,14 +502,20 @@ function buildLeadIntakeStatus(leads, filtered) {
     newest_lead_timestamp: newestTimestamp,
     newest_lead_source: newestSource,
     newest_lead_type: newestType,
-    background_ingestion_status: backgroundStatus
+    background_ingestion_status: backgroundStatus,
+    courthouse_quality: {
+      total: courthouseLeads.length,
+      weak_or_repair: weakCourthouseLeads.length,
+      newest_source: newestCourthouse ? getLeadListSourceLabel(newestCourthouse) : '',
+      newest_timestamp: newestCourthouse ? (newestCourthouse.created_at || newestCourthouse.created || newestCourthouse.createdAt || newestCourthouse.inserted_at || '') : ''
+    }
   };
 }
 
 app.get('/api/leads', (req, res) => {
   try {
     const leads = db.getLeads();
-    const { status, county, category, sort, state, source_type, top300 } = req.query;
+    const { status, county, category, sort, state, source_type, workflow, top300 } = req.query;
     let filtered = leads;
     // Filters (apply before sort)
     // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
@@ -350,25 +526,44 @@ app.get('/api/leads', (req, res) => {
     if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
     if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
     if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
+    if (workflow)    filtered = filtered.filter(l => [l.workflow_state, l.assignment_state, l.status].filter(Boolean).join(' ').toLowerCase().includes(String(workflow).toLowerCase()));
     // Sort BEFORE limiting (correct order)
     var sortKey = sort || 'motivation_score';
     if (sortKey === 'motivation_score') {
-      filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
-    } else if (sortKey === 'created_at') {
+      filtered = filtered.slice().sort(function(a,b){ return (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank) || (((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0))); });
+    } else if (sortKey === 'created_at' || sortKey === 'newest') {
       filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
     } else if (sortKey === 'spread') {
       filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
+    } else if (sortKey === 'state_az') {
+      filtered = filtered.slice().sort(function(a,b){ return String(a.state || '').localeCompare(String(b.state || '')) || (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank); });
+    } else if (sortKey === 'state_za') {
+      filtered = filtered.slice().sort(function(a,b){ return String(b.state || '').localeCompare(String(a.state || '')) || (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank); });
+    } else if (sortKey === 'source_confidence') {
+      filtered = filtered.slice().sort(function(a,b){ return (leadListSourceConfidenceScore(b) - leadListSourceConfidenceScore(a)) || (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank); });
+    } else if (sortKey === 'priority') {
+      filtered = filtered.slice().sort(function(a,b){ return (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank) || (((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0))); });
     }
     var requestedLimit = (top300 === '1' || top300 === 'true') ? 300 : parseLeadListLimit(req.query.limit);
-    var pageLeads = filtered.slice(0, requestedLimit);
+    var requestedOffset = parseLeadListOffset(req.query.offset);
+    var pageLeads = filtered.slice(requestedOffset, requestedOffset + requestedLimit);
     var safeLeads = pageLeads.map(function(lead) {
       try {
-        return sanitizeLeadForList(withLeadIntelligence(lead));
+        var enriched = withLeadIntelligence(lead);
+        var quality = classifyLeadQualityForList(enriched);
+        var safe = sanitizeLeadForList(enriched);
+        safe.lead_quality = quality;
+        safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
+        return safe;
       } catch (err) {
-        return sanitizeLeadForList(Object.assign({}, lead, {
+        var fallbackQuality = classifyLeadQualityForList(lead);
+        var fallback = sanitizeLeadForList(Object.assign({}, lead, {
           repair_flags: Array.from(new Set([].concat(lead && lead.repair_flags || [], ['list_serialization_failed']))),
           list_serialization_error: err && err.message ? err.message : 'serialization_failed'
         }));
+        fallback.lead_quality = fallbackQuality;
+        fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
+        return fallback;
       }
     });
     var intakeStatus = buildLeadIntakeStatus(leads, filtered);
@@ -378,6 +573,11 @@ app.get('/api/leads', (req, res) => {
       totalFiltered: filtered.length,
       totalAll: leads.length,
       limit: requestedLimit,
+      offset: requestedOffset,
+      page_count: safeLeads.length,
+      has_more: requestedOffset + requestedLimit < filtered.length,
+      next_offset: requestedOffset + requestedLimit < filtered.length ? requestedOffset + requestedLimit : null,
+      prev_offset: requestedOffset > 0 ? Math.max(0, requestedOffset - requestedLimit) : null,
       list_sanitized: true,
       intake_status: intakeStatus
     });
