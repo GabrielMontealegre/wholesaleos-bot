@@ -7236,10 +7236,11 @@ function addListeners() {
 async function loadLeadsFromAPI() {
   try {
     // Load leads from correct endpoint
-    const leadsRes = await fetch('/api/leads?limit=9999&sort=motivation_score');
+    const leadsRes = await fetch('/api/leads?limit=300&sort=motivation_score');
     if (leadsRes.ok) {
       const data = await leadsRes.json();
       const leads = data.leads || data || [];
+      APP._leadsTotalAll = Number(data.totalAll || data.totalFiltered || leads.length || 0);
       if (leads.length > 0) {
         APP.leads = leads;
         APP.filtered = leads;
@@ -7251,7 +7252,7 @@ async function loadLeadsFromAPI() {
           leadBadge.style.background = newLeadCount > 0 ? '#ff3b30' : '#34c759';
         }
         const sbLeads = document.getElementById('sb-leads');
-        if (sbLeads) sbLeads.textContent = APP.leads.length;
+        if (sbLeads) sbLeads.textContent = loadedLeadCount().toLocaleString();
         updateSidebarStats();
         render();
       }
@@ -13487,17 +13488,18 @@ function addListeners() {
 async function loadLeadsFromAPI() {
   try {
     // Load leads from correct endpoint
-    const leadsRes = await fetch('/api/leads');
+    const leadsRes = await fetch('/api/leads?limit=300&sort=motivation_score');
     if (leadsRes.ok) {
       const data = await leadsRes.json();
       const leads = data.leads || data || [];
+      APP._leadsTotalAll = Number(data.totalAll || data.totalFiltered || leads.length || 0);
       if (leads.length > 0) {
         APP.leads = leads;
         save('leads', APP.leads);
         const leadBadge = document.getElementById('nav-lead-count');
-        if (leadBadge) leadBadge.textContent = APP.leads.length;
+        if (leadBadge) leadBadge.textContent = loadedLeadCount().toLocaleString();
         const sbLeads = document.getElementById('sb-leads');
-        if (sbLeads) sbLeads.textContent = APP.leads.length;
+        if (sbLeads) sbLeads.textContent = loadedLeadCount().toLocaleString();
         if (APP.page === 'leads' || APP.page === 'dashboard' || APP.page === 'pipeline') render();
       }
     }
@@ -17471,7 +17473,8 @@ function assignRefIds(leads) { return leads.map(function(l){ if(!l.ref_id) l.ref
 
 function loadedLeadCount() {
   var leads = Array.isArray(APP.leads) ? APP.leads : [];
-  return leads.length;
+  var total = Number(APP._leadsTotalAll || 0);
+  return total > leads.length ? total : leads.length;
 }
 
 function ensureLeadsToolbarRendered() {
@@ -17682,10 +17685,11 @@ function renderDashboard() {
 function loadMatchingData() {
   return Promise.all([
     fetch('/api/buyers').then(function(r){return r.json();}).catch(function(){return {buyers:[]};}),
-    fetch('/api/leads').then(function(r){return r.json();}).catch(function(){return {leads:[]};})
+    fetch('/api/leads?limit=300&sort=motivation_score').then(function(r){return r.json();}).catch(function(){return {leads:[]};})
   ]).then(function(res){
     APP.buyers=res[0].buyers||res[0]||[];
     var ls=res[1].leads||res[1]||[];
+    APP._leadsTotalAll=Number((res[1]&&(res[1].totalAll||res[1].totalFiltered))||ls.length||0);
     if(ls.length){APP.leads=assignRefIds(ls);APP.filtered=APP.leads;}
     updateLeadsBadge();
     if(['buyers','matching','review','dashboard'].indexOf(APP.page)>-1) render();
@@ -17698,10 +17702,11 @@ loadLeadsFromAPI=async function(){
   APP._leadsError='';
   if(typeof render==='function'&&APP.page==='leads')render();
   try{
-    var lr=await fetch('/api/leads');
+    var lr=await fetch('/api/leads?limit=300&sort=motivation_score');
     if(!lr.ok) throw new Error('HTTP '+lr.status);
     var ld=await lr.json();
     var leads=Array.isArray(ld&&ld.leads)?ld.leads:(Array.isArray(ld)?ld:[]);
+    APP._leadsTotalAll=Number((ld&&(ld.totalAll||ld.totalFiltered))||leads.length||0);
     APP.leads=typeof assignRefIds==='function'?assignRefIds(leads):leads;
     if(typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters({silent:true});
     else APP.filtered=APP.leads;

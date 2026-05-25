@@ -196,36 +196,123 @@ function leadSourceTypeText(lead) {
   return String(details);
 }
 
+const LEADS_LIST_DEFAULT_LIMIT = 300;
+const LEADS_LIST_MAX_LIMIT = 1000;
+const LEADS_LIST_STRING_LIMIT = 2000;
+
+const LEADS_LIST_DROP_KEYS = new Set([
+  'raw',
+  'raw_data',
+  'raw_payload',
+  'raw_text',
+  'html',
+  'html_body',
+  'page_html',
+  'body_html',
+  'pdf_text',
+  'document_text',
+  'source_html',
+  'debug',
+  'debug_info',
+  'screenshot',
+  'screenshot_base64',
+  'ocr_text'
+]);
+
+function safeLeadListValue(value, depth) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'bigint') return String(value);
+  if (typeof value === 'function' || typeof value === 'symbol') return undefined;
+  if (typeof value === 'string') {
+    return value.length > LEADS_LIST_STRING_LIMIT
+      ? value.slice(0, LEADS_LIST_STRING_LIMIT) + '...[truncated]'
+      : value;
+  }
+  if (typeof value !== 'object') return Number.isFinite(value) || typeof value !== 'number' ? value : null;
+  if (value instanceof Date) return value.toISOString();
+  if (depth <= 0) return '[truncated_object]';
+  if (Array.isArray(value)) {
+    return value.slice(0, 50).map(function(item) { return safeLeadListValue(item, depth - 1); }).filter(function(item) { return item !== undefined; });
+  }
+  var out = {};
+  Object.keys(value).slice(0, 80).forEach(function(key) {
+    if (LEADS_LIST_DROP_KEYS.has(String(key).toLowerCase())) return;
+    var safe = safeLeadListValue(value[key], depth - 1);
+    if (safe !== undefined) out[key] = safe;
+  });
+  return out;
+}
+
+function sanitizeLeadForList(lead) {
+  var safe = safeLeadListValue(lead || {}, 4) || {};
+  var flags = Array.isArray(safe.repair_flags) ? safe.repair_flags.slice() : [];
+  var hadRawEvidence = false;
+  Object.keys(lead || {}).forEach(function(key) {
+    if (LEADS_LIST_DROP_KEYS.has(String(key).toLowerCase())) hadRawEvidence = true;
+  });
+  if (lead && lead.source_details && typeof lead.source_details === 'object') {
+    Object.keys(lead.source_details).forEach(function(key) {
+      if (LEADS_LIST_DROP_KEYS.has(String(key).toLowerCase())) hadRawEvidence = true;
+    });
+  }
+  if (hadRawEvidence && flags.indexOf('raw_evidence_omitted_from_list') === -1) flags.push('raw_evidence_omitted_from_list');
+  if (flags.length) safe.repair_flags = flags;
+  return safe;
+}
+
+function parseLeadListLimit(value) {
+  var parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return LEADS_LIST_DEFAULT_LIMIT;
+  return Math.min(parsed, LEADS_LIST_MAX_LIMIT);
+}
+
 app.get('/api/leads', (req, res) => {
-  const leads = db.getLeads();
-  const { status, county, category, limit, sort, state, source_type, top300 } = req.query;
-  let filtered = leads;
-  // Filters (apply before sort)
-  // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
-  const showArchived = req.query.archived === 'true';
-  if (!showArchived) filtered = filtered.filter(l => l.archived !== true);
-  if (status)      filtered = filtered.filter(l => l.status === status);
-  if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
-  if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
-  if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
-  if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
-  // Sort BEFORE limiting (correct order)
-  var sortKey = sort || 'motivation_score';
-  if (sortKey === 'motivation_score') {
-    filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
-  } else if (sortKey === 'created_at') {
-    filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
-  } else if (sortKey === 'spread') {
-    filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
+  try {
+    const leads = db.getLeads();
+    const { status, county, category, sort, state, source_type, top300 } = req.query;
+    let filtered = leads;
+    // Filters (apply before sort)
+    // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
+    const showArchived = req.query.archived === 'true';
+    if (!showArchived) filtered = filtered.filter(l => l.archived !== true);
+    if (status)      filtered = filtered.filter(l => l.status === status);
+    if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
+    if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
+    if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
+    if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
+    // Sort BEFORE limiting (correct order)
+    var sortKey = sort || 'motivation_score';
+    if (sortKey === 'motivation_score') {
+      filtered = filtered.slice().sort(function(a,b){ return ((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0)); });
+    } else if (sortKey === 'created_at') {
+      filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
+    } else if (sortKey === 'spread') {
+      filtered = filtered.slice().sort(function(a,b){ return (b.spread||0) - (a.spread||0); });
+    }
+    var requestedLimit = (top300 === '1' || top300 === 'true') ? 300 : parseLeadListLimit(req.query.limit);
+    var pageLeads = filtered.slice(0, requestedLimit);
+    var safeLeads = pageLeads.map(function(lead) {
+      try {
+        return sanitizeLeadForList(withLeadIntelligence(lead));
+      } catch (err) {
+        return sanitizeLeadForList(Object.assign({}, lead, {
+          repair_flags: Array.from(new Set([].concat(lead && lead.repair_flags || [], ['list_serialization_failed']))),
+          list_serialization_error: err && err.message ? err.message : 'serialization_failed'
+        }));
+      }
+    });
+    return res.json({
+      leads: safeLeads,
+      total: safeLeads.length,
+      totalFiltered: filtered.length,
+      totalAll: leads.length,
+      limit: requestedLimit,
+      list_sanitized: true
+    });
+  } catch (err) {
+    console.error('[api/leads] failed to build list response:', err);
+    return res.status(500).json({ ok: false, error: 'leads_list_failed', message: err && err.message ? err.message : 'Failed to load leads' });
   }
-  // top300 mode: dashboard shows only best 300 deals
-  let pageLeads = filtered;
-  if (top300 === '1' || top300 === 'true') {
-    pageLeads = filtered.slice(0, 300);
-  } else if (limit) {
-    pageLeads = filtered.slice(0, parseInt(limit));
-  }
-  res.json({ leads: pageLeads.map(withLeadIntelligence), total: pageLeads.length, totalAll: leads.length });
 });
 
 
