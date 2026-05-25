@@ -266,6 +266,76 @@ function parseLeadListLimit(value) {
   return Math.min(parsed, LEADS_LIST_MAX_LIMIT);
 }
 
+function isPlaceholderLeadForList(lead) {
+  if (!lead || typeof lead !== 'object') return false;
+  var address = String(lead.address || '').trim();
+  if (!address) return true;
+  if (/^(column\s*[1-4]|unnamed)$/i.test(address)) return true;
+  var rid = String(lead.ref_id || lead.reference_id || lead.lead_reference_id || lead.id || '').trim();
+  if (/^(column\s*[1-4]|unnamed)$/i.test(rid)) return true;
+  return false;
+}
+
+function getLeadListSourceLabel(lead) {
+  if (!lead || typeof lead !== 'object') return '';
+  var candidates = [
+    lead.source,
+    lead.source_name,
+    lead.source_type,
+    lead.source_key,
+    lead.source_slug,
+    lead.import_source,
+    lead.provider,
+    lead.source_url
+  ];
+  if (lead.source_details && typeof lead.source_details === 'object') {
+    candidates.push(lead.source_details.source_name);
+    candidates.push(lead.source_details.source_type);
+    candidates.push(lead.source_details.source_key);
+    candidates.push(lead.source_details.record_url);
+    candidates.push(lead.source_details.query_url);
+  } else if (typeof lead.source_details === 'string') {
+    candidates.push(lead.source_details);
+  }
+  for (var i = 0; i < candidates.length; i++) {
+    var value = candidates[i];
+    if (value == null) continue;
+    var text = String(value).trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function buildLeadIntakeStatus(leads, filtered) {
+  var all = Array.isArray(leads) ? leads : [];
+  var visible = Array.isArray(filtered) ? filtered : all;
+  var today = new Date().toISOString().slice(0, 10);
+  var newest = all.slice().sort(function(a, b) {
+    return new Date(b.created_at || b.created || b.createdAt || b.inserted_at || 0) - new Date(a.created_at || a.created || a.createdAt || a.inserted_at || 0);
+  })[0] || null;
+  var newToday = all.filter(function(lead) {
+    var created = String(lead.created_at || lead.created || lead.createdAt || lead.inserted_at || '');
+    return created.indexOf(today) === 0;
+  }).length;
+  var placeholderCount = all.filter(isPlaceholderLeadForList).length;
+  var usableCount = Math.max(0, all.length - placeholderCount);
+  var newestTimestamp = newest ? (newest.created_at || newest.created || newest.createdAt || newest.inserted_at || '') : '';
+  var newestSource = newest ? getLeadListSourceLabel(newest) : '';
+  var newestType = newest ? (newest.lead_type || newest.source_type || newest.type || '') : '';
+  var backgroundStatus = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || '')) ? 'enabled' : 'disabled';
+  return {
+    total_leads: all.length,
+    usable_leads: usableCount,
+    hidden_placeholder_leads: placeholderCount,
+    visible_leads: visible.length,
+    new_today: newToday,
+    newest_lead_timestamp: newestTimestamp,
+    newest_lead_source: newestSource,
+    newest_lead_type: newestType,
+    background_ingestion_status: backgroundStatus
+  };
+}
+
 app.get('/api/leads', (req, res) => {
   try {
     const leads = db.getLeads();
@@ -301,13 +371,15 @@ app.get('/api/leads', (req, res) => {
         }));
       }
     });
+    var intakeStatus = buildLeadIntakeStatus(leads, filtered);
     return res.json({
       leads: safeLeads,
       total: safeLeads.length,
       totalFiltered: filtered.length,
       totalAll: leads.length,
       limit: requestedLimit,
-      list_sanitized: true
+      list_sanitized: true,
+      intake_status: intakeStatus
     });
   } catch (err) {
     console.error('[api/leads] failed to build list response:', err);
