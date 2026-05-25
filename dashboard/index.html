@@ -21426,6 +21426,54 @@ function sourcePreviewOpenEvidence(candidateId) {
   dallasPreviewOpenUrl((candidate && candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || (candidate && candidate.source_record_url), candidate && candidate.source_url);
 }
 
+function sourcePreviewCandidateSummary(candidate) {
+  candidate = sourcePreviewFindCandidate(candidate);
+  if (!candidate) return '';
+  var truth = candidate.source_truth || {};
+  var brief = candidate.lead_intelligence_brief || {};
+  var evidence = candidate.evidence || {};
+  var flags = Array.isArray(candidate.repair_flags) ? candidate.repair_flags : [];
+  return [
+    'Dallas sheriff/tax sale preview candidate',
+    'Address: ' + (candidate.address || 'missing'),
+    'Owner: ' + (candidate.owner_name || candidate.owner || 'missing'),
+    'Parcel/APN: ' + (candidate.parcel || candidate.apn || 'missing'),
+    'Case/Cause: ' + (candidate.case_number || 'missing'),
+    'Amount/Judgment/Bid: ' + (candidate.amount_owed || candidate.judgment_amount || candidate.minimum_bid_amount || 'missing'),
+    'Sale date: ' + (candidate.sale_date || candidate.auction_date || 'missing'),
+    'Evidence ref: ' + (candidate.source_reference || truth.evidence_ref || evidence.source_reference || 'missing'),
+    'Source: ' + (candidate.source_url || truth.source_url || evidence.source_url || 'missing'),
+    'Repair flags: ' + (flags.length ? flags.join(', ') : 'none'),
+    'Next step: ' + (brief.operator_next_step || 'Verify source before ingestion.')
+  ].join('\n');
+}
+
+function sourcePreviewCopyCandidateSummary(candidateId) {
+  var text = sourcePreviewCandidateSummary(candidateId);
+  if (!text) {
+    if (typeof toast === 'function') toast('Preview candidate not found.', 'error');
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof toast === 'function') toast('Candidate summary copied.', 'success');
+    }).catch(function() {
+      window.prompt('Candidate summary', text);
+    });
+  } else {
+    window.prompt('Candidate summary', text);
+  }
+}
+
+function sourcePreviewOpenDallasSheriffCapture() {
+  APP._dallasPreviewQueueOpen = true;
+  if (typeof render === 'function') render();
+  setTimeout(function() {
+    var input = document.getElementById('dallas-preview-input');
+    if (input) input.focus();
+  }, 50);
+}
+
 async function sourcePreviewIngestCandidate(candidateId, dryRun) {
   var candidate = sourcePreviewFindCandidate(candidateId);
   if (!candidate) {
@@ -21588,6 +21636,7 @@ function renderDallasPreviewQueue() {
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'needs_repair\')" style="font-size:10px;border:1px solid #f59e0b;border-radius:7px;background:#fffbeb;color:#92400e;font-weight:900;padding:6px 8px;cursor:pointer">Needs Repair</button>' +
         '<button type="button" onclick="sourcePreviewIngestCandidate(\'' + dallasPreviewJsString(candidate.id || '') + '\',true)" style="font-size:10px;border:1px solid #2563eb;border-radius:7px;background:#eff6ff;color:#1d4ed8;font-weight:900;padding:6px 8px;cursor:pointer;' + createDisabledStyle + '">Dry Run Create</button>' +
         '<button type="button" onclick="sourcePreviewIngestCandidate(\'' + dallasPreviewJsString(candidate.id || '') + '\',false)" style="font-size:10px;border:1px solid #047857;border-radius:7px;background:#dcfce7;color:#065f46;font-weight:900;padding:6px 8px;cursor:pointer;' + createDisabledStyle + '">Create Lead</button>' +
+        '<button type="button" onclick="sourcePreviewCopyCandidateSummary(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Copy Candidate Summary</button>' +
         (sourceUrl ? '<button type="button" onclick="sourcePreviewOpenSource(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Source</button>' : '') +
         (evidenceUrl ? '<button type="button" onclick="sourcePreviewOpenEvidence(\'' + dallasPreviewJsString(candidate.id || '') + '\')" style="font-size:10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#1a1a2e;font-weight:800;padding:6px 8px;cursor:pointer">Open Evidence</button>' : '') +
       '</div>' +
@@ -21599,13 +21648,13 @@ function renderDallasPreviewQueue() {
   return '<div style="background:#fff7ed;border:1px solid #f59e0b66;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px">' +
       '<div>' +
-        '<div style="font-size:14px;font-weight:900;color:#7c2d12">Dallas Preview Queue</div>' +
-        '<div style="font-size:11px;color:#9a3412;line-height:1.45;margin-top:2px">Preview candidates only. No ingestion, no auto-save, no production lead mutation. Small batches only.</div>' +
+        '<div style="font-size:14px;font-weight:900;color:#7c2d12">Capture Dallas Sheriff Rows</div>' +
+        '<div style="font-size:11px;color:#9a3412;line-height:1.45;margin-top:2px">Paste or import Dallas sheriff/tax sale source rows into the preview queue. No ingestion, no auto-save, no production lead mutation.</div>' +
         '<div style="font-size:10px;color:#9a3412;line-height:1.45;margin-top:4px">' + dallasPreviewSafeText(sourceName) + (batch && batch.safety_note ? ' · ' + dallasPreviewSafeText(batch.safety_note) : '') + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
         '<button type="button" onclick="sourcePreviewLoadSample()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Load Sample</button>' +
-        '<button type="button" onclick="sourcePreviewRunBatch()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Preview Batch</button>' +
+        '<button type="button" onclick="sourcePreviewRunBatch()" style="font-size:11px;border:1px solid #92400e;border-radius:7px;background:#fff7ed;color:#92400e;font-weight:900;padding:7px 10px;cursor:pointer">Import Dallas Sheriff Rows</button>' +
         '<button type="button" onclick="sourcePreviewClearBatch()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Clear Queue</button>' +
         '<button type="button" onclick="sourcePreviewToggleQueue(false)" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Close Preview</button>' +
       '</div>' +
@@ -21852,6 +21901,15 @@ function renderLeads() {
     return stateMessage('No leads loaded', 'Lead hydration completed, but /api/leads returned zero leads.');
   }
   if (total === 0) {
+    if (APP._dallasSheriffOnly) {
+      return '<div>' + toolbar + previewPanel +
+        '<div title="No verified Dallas sheriff/tax sale leads yet. Capture or import real Dallas sheriff source rows first." style="border:1px solid #f59e0b66;background:#fff7ed;border-radius:10px;padding:24px;text-align:center;color:#1d1d1f">' +
+          '<div style="font-size:15px;font-weight:900;margin-bottom:6px;color:#92400e">No verified Dallas sheriff/tax sale leads yet.</div>' +
+          '<div style="font-size:12px;color:#9a3412;line-height:1.5;margin-bottom:14px">Capture or import real Dallas sheriff source rows first.</div>' +
+          '<button type="button" onclick="sourcePreviewOpenDallasSheriffCapture()" style="font-size:12px;border:1px solid #92400e;border-radius:8px;background:#1a1a2e;color:#f7d774;font-weight:900;padding:8px 12px;cursor:pointer">Capture Dallas Sheriff Rows</button>' +
+        '</div>' +
+      '</div>';
+    }
     return stateMessage('No usable leads match current filters', 'Leads are loaded. Placeholder rows like Column2, Unnamed, and blank-address leads are quarantined from the active queue.');
   }
 
@@ -23649,6 +23707,7 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='sourcePreviewOpenDallasSheriffCapture()' title='Paste or import Dallas sheriff/tax sale source rows into preview only.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:700;'>Capture Dallas Sheriff Rows</button>" +
     "<button onclick='toggleDallasSheriffQueue()' title='Show only actionable Dallas sheriff/tax-sale leads with property-level evidence, sale/tax timing, source proof, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasSheriffOnly ? "#fff7ed" : "#fff") + ";border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Dallas Sheriff Queue</button>" +
     "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +
     "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
