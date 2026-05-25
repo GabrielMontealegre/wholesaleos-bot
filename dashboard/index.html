@@ -17499,6 +17499,10 @@ function renderLeadIntakeStatusBar() {
   var dallasTotal = Number(dv.total_dallas || 0);
   var dallasActionable = Number(dv.actionable || 0);
   var dallasRepair = Number(dv.repair_or_weak || 0);
+  var ds = status.dallas_sheriff_tax_sale_queue || {};
+  var sheriffTotal = Number(ds.total_dallas_sheriff || 0);
+  var sheriffActionable = Number(ds.actionable || 0);
+  var sheriffRepair = Number(ds.repair_or_weak || 0);
   var bgLabel = bg === 'enabled' ? 'Background ingestion active' : (bg === 'disabled' ? 'Background ingestion disabled' : 'Background ingestion unknown');
   var latestBits = [];
   if (newestTs) latestBits.push(leadQueueSafeText(newestTs));
@@ -17511,6 +17515,8 @@ function renderLeadIntakeStatusBar() {
     '<span style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Hidden ' + leadQueueSafeText(hidden.toLocaleString()) + '</span>' +
     '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-weight:700">Visible ' + leadQueueSafeText(visible.toLocaleString()) + '</span>' +
     '<span style="background:#f5f5f7;color:#374151;padding:2px 8px;border-radius:999px;font-weight:700">' + leadQueueSafeText(bgLabel) + '</span>' +
+    (sheriffTotal ? '<span title="Dallas sheriff/tax-sale queue requires a real Dallas property, source proof, sale/tax timing, and medium/high confidence." style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Dallas sheriff ' + leadQueueSafeText(sheriffActionable.toLocaleString()) + ' actionable / ' + leadQueueSafeText(sheriffTotal.toLocaleString()) + '</span>' : '') +
+    (sheriffRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Sheriff weak/repair ' + leadQueueSafeText(sheriffRepair.toLocaleString()) + '</span>' : '') +
     (dallasTotal ? '<span title="Dallas queue requires property address, source proof, distress, timing or amount, and medium/high confidence." style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:999px;font-weight:700">Dallas verified ' + leadQueueSafeText(dallasActionable.toLocaleString()) + ' actionable / ' + leadQueueSafeText(dallasTotal.toLocaleString()) + '</span>' : '') +
     (dallasRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Dallas weak/repair ' + leadQueueSafeText(dallasRepair.toLocaleString()) + '</span>' : '') +
     (totalCourt ? '<span title="' + leadQueueAttr((cq.newest_source || '') + ' ' + (cq.newest_timestamp || '')) + '" style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Courthouse weak/repair ' + leadQueueSafeText(weakCourt.toLocaleString()) + ' / ' + leadQueueSafeText(totalCourt.toLocaleString()) + '</span>' : '') +
@@ -17521,11 +17527,13 @@ function renderLeadIntakeStatusBar() {
 
 function renderDallasHotList() {
   var status = APP._leadIntakeStatus || {};
-  var queue = status.dallas_verified_queue || {};
+  var sheriffQueue = status.dallas_sheriff_tax_sale_queue || {};
+  var queue = sheriffQueue.hot_list && sheriffQueue.hot_list.length ? sheriffQueue : (status.dallas_verified_queue || {});
   var items = Array.isArray(queue.hot_list) ? queue.hot_list.slice(0, 5) : [];
-  if (!items.length && APP._dallasVerifiedOnly) {
+  var sheriffMode = queue === sheriffQueue;
+  if (!items.length && (APP._dallasSheriffOnly || APP._dallasVerifiedOnly)) {
     items = (APP.leads || []).map(function(lead) {
-      var dallas = dallasVerifiedStatus(lead) || {};
+      var dallas = APP._dallasSheriffOnly ? (dallasSheriffStatus(lead) || {}) : (dallasVerifiedStatus(lead) || {});
       return {
         id: lead.id || '',
         reference_id: lead.ref_id || lead.reference_id || lead.id || '',
@@ -17544,12 +17552,12 @@ function renderDallasHotList() {
   }
   if (!items.length) return '';
   return '<div style="border:1px solid #10b98166;background:#f0fdf4;border-radius:10px;padding:10px 12px;margin-bottom:10px">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:12px;color:#047857;font-weight:900;text-transform:uppercase">Dallas Hot List</div><div style="font-size:10px;color:#047857;font-weight:800">Top actionable Dallas leads by timing, evidence, distress, and valuation evidence</div></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:12px;color:#047857;font-weight:900;text-transform:uppercase">' + (sheriffMode ? 'Dallas Sheriff Hot List' : 'Dallas Hot List') + '</div><div style="font-size:10px;color:#047857;font-weight:800">' + (sheriffMode ? 'Sheriff/tax-sale leads prioritized by sale date, evidence, distress, confidence, and valuation support' : 'Top actionable Dallas leads by timing, evidence, distress, and valuation evidence') + '</div></div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">' + items.map(function(item) {
       return '<button type="button" onclick="openLeadModal(' + JSON.stringify(String(item.id || '')) + ')" style="text-align:left;background:#fff;border:1px solid #bbf7d0;border-radius:9px;padding:9px;cursor:pointer">' +
         '<div style="font-size:10px;color:#047857;font-weight:900">' + leadQueueSafeText(item.reference_id || 'Dallas lead') + '</div>' +
         '<div style="font-size:12px;color:#111827;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">' + leadQueueSafeText(item.address || 'Address missing') + '</div>' +
-        '<div style="font-size:10px;color:#374151;margin-top:4px">' + leadQueueSafeText(item.distress_category || 'distress') + ' | ' + leadQueueSafeText(item.confidence_level || 'confidence') + ' evidence | Comp ' + leadQueueSafeText(item.comp_confidence || 'Low') + '</div>' +
+        '<div style="font-size:10px;color:#374151;margin-top:4px">' + leadQueueSafeText(item.distress_category || 'distress') + ' | ' + leadQueueSafeText(item.confidence_level || 'confidence') + ' evidence | ' + leadQueueSafeText(item.sale_date ? ('Sale ' + item.sale_date) : 'Timing review') + ' | Comp ' + leadQueueSafeText(item.comp_confidence || 'Low') + '</div>' +
       '</button>';
     }).join('') + '</div>' +
   '</div>';
@@ -17795,6 +17803,7 @@ function buildLeadApiUrl(offset) {
   if (filters.source) params.set('source_type', filters.source);
   if (filters.workflow) params.set('workflow', filters.workflow);
   if (APP._dallasVerifiedOnly) params.set('dallas_verified', '1');
+  if (APP._dallasSheriffOnly) params.set('dallas_sheriff_verified', '1');
   return '/api/leads?' + params.toString();
 }
 
@@ -20995,6 +21004,16 @@ function dallasVerifiedStatus(lead) {
   return null;
 }
 
+function dallasSheriffStatus(lead) {
+  lead = lead || {};
+  var sheriff = lead.sheriff_tax_sale_acquisition || {};
+  if (sheriff && sheriff.sheriff_tax_sale) return sheriff;
+  var dallas = dallasVerifiedStatus(lead);
+  if (!dallas) return null;
+  if (String(dallas.source_family || '').toLowerCase() === 'dallas_sheriff_tax_sales') return dallas;
+  return null;
+}
+
 function dallasVerifiedBadge(lead) {
   var dallas = dallasVerifiedStatus(lead);
   if (!dallas) return '';
@@ -21003,6 +21022,43 @@ function dallasVerifiedBadge(lead) {
   var bg = level === 'High' ? '#dcfce7' : level === 'Medium' ? '#ecfdf5' : level === 'Repair' ? '#fee2e2' : '#fef3c7';
   var title = (dallas.missing_evidence || []).length ? 'Missing: ' + dallas.missing_evidence.join(', ') : (dallas.confidence_reason || 'Dallas evidence reviewed');
   return '<span title="' + leadQueueAttr(title) + '" style="display:inline-flex;white-space:nowrap;font-size:10px;font-weight:900;color:' + color + ';background:' + bg + ';border:1px solid ' + color + '55;border-radius:999px;padding:3px 8px">Dallas ' + leadQueueSafeText(level) + '</span>';
+}
+
+function renderDallasSheriffPipelinePanel(lead) {
+  var sheriff = dallasSheriffStatus(lead);
+  if (!sheriff) return '';
+  var evidence = sheriff.evidence || {};
+  var comp = sheriff.comp_intelligence || {};
+  var missing = Array.isArray(sheriff.missing_evidence) ? sheriff.missing_evidence : [];
+  var color = sheriff.queue_eligible ? '#047857' : (sheriff.status === 'Needs Repair' || sheriff.status === 'Weak Lead' ? '#991b1b' : '#92400e');
+  var bg = sheriff.queue_eligible ? '#ecfdf5' : (sheriff.status === 'Needs Repair' || sheriff.status === 'Weak Lead' ? '#fef2f2' : '#fffbeb');
+  var sourceUrl = evidence.source_url || '';
+  var rows = [
+    ['Source URL', sourceUrl || 'missing'],
+    ['PDF/Page/Row Ref', evidence.pdf_page_reference || evidence.source_file_reference || evidence.source_reference || 'missing'],
+    ['Sale Date', evidence.filing_or_sale_date || 'missing'],
+    ['Amount / Judgment / Bid', evidence.amount_or_judgment || 'missing'],
+    ['Parcel / APN', evidence.parcel_apn || 'missing'],
+    ['Owner', evidence.owner || 'missing'],
+    ['Parser Adapter', sheriff.parser_adapter || 'unknown'],
+    ['Extraction Quality', sheriff.extraction_quality || 'unknown'],
+    ['Evidence Confidence', sheriff.confidence_level || 'Low'],
+    ['Comp Confidence', comp.confidence || 'Low']
+  ];
+  return '<div style="background:' + bg + ';border:1px solid ' + color + '55;border-radius:10px;padding:11px;color:#111827">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:' + color + ';text-transform:uppercase;font-weight:900">Dallas Sheriff / Tax Sale Pipeline</div>' +
+      '<div style="font-size:12px;color:#111827;font-weight:900;margin-top:3px">' + leadQueueSafeText(sheriff.status || 'Needs Verification') + ' | ' + leadQueueSafeText(sheriff.confidence_reason || 'Evidence review required') + '</div></div>' +
+      (sourceUrl ? '<a href="' + leadQueueAttr(sourceUrl) + '" target="_blank" rel="noopener noreferrer" style="font-size:10px;color:' + color + ';font-weight:900;text-decoration:none">Open Source</a>' : '') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;margin-top:9px">' +
+      rows.map(function(pair) {
+        return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:7px"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:900">' + leadQueueSafeText(pair[0]) + '</div><div style="font-size:10px;color:#111827;font-weight:800;word-break:break-word">' + leadQueueSafeText(pair[1]) + '</div></div>';
+      }).join('') +
+    '</div>' +
+    (sheriff.rejection_reason ? '<div style="font-size:10px;color:#991b1b;font-weight:900;margin-top:8px">Rejection reason: ' + leadQueueSafeText(sheriff.rejection_reason) + '</div>' : '') +
+    (missing.length ? '<div style="font-size:10px;color:#991b1b;font-weight:900;margin-top:5px">Missing evidence: ' + leadQueueSafeText(missing.join(', ')) + '</div>' : '') +
+  '</div>';
 }
 
 function renderDallasVerifiedBanner(lead) {
@@ -21864,7 +21920,9 @@ function renderLeads() {
     return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">' + header + '</th>';
   }).join('');
   var quarantineNotice = quarantined.length ? '<div style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px">' + quarantined.length.toLocaleString() + ' placeholder/blank-address lead(s) hidden from the active queue. They were not deleted.</div>' : '';
-  var dallasQueueNotice = APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '';
+  var dallasQueueNotice = APP._dallasSheriffOnly
+    ? '<div style="border:1px solid #f59e0b66;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Sheriff Queue: only actionable Dallas sheriff/tax-sale leads with source proof, sale/tax timing, real property evidence, and medium/high confidence. Weak rows are excluded.</div>'
+    : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
   setTimeout(leadQueueQuarantineDomRows, 0);
 
@@ -23591,6 +23649,7 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='toggleDallasSheriffQueue()' title='Show only actionable Dallas sheriff/tax-sale leads with property-level evidence, sale/tax timing, source proof, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasSheriffOnly ? "#fff7ed" : "#fff") + ";border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Dallas Sheriff Queue</button>" +
     "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +
     "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
     "<button onclick='sourcePreviewToggleQueue()' title='Open the Dallas preview queue for dry-run source candidates only.' style='font-size:12px;padding:6px 12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:6px;color:#1d4ed8;cursor:pointer;font-weight:700;'>Dallas Preview Queue</button>" +
@@ -23663,6 +23722,7 @@ window.applyLeadFilters = function(){
 window.clearLeadFilters = function(){
   APP._leadToolbarFilters = {state:"",county:"",source:"",type:"",workflow:"",age:"",priority:"",sort:"priority"};
   APP._dallasVerifiedOnly = false;
+  APP._dallasSheriffOnly = false;
   ["lfState","lfCounty","lfSource","lfType","lfWorkflow","lfAge","lfPriority","lfSort"].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value="";
   });
@@ -23674,11 +23734,23 @@ window.clearLeadFilters = function(){
 };
 window.toggleDallasVerifiedQueue = function(){
   APP._dallasVerifiedOnly = !APP._dallasVerifiedOnly;
+  if (APP._dallasVerifiedOnly) APP._dallasSheriffOnly = false;
   APP._leadApiOffset = 0;
   if (typeof _leadsPage !== "undefined") _leadsPage = 0;
   if (APP._dallasVerifiedOnly) {
     APP._leadToolbarFilters = Object.assign({}, getLeadToolbarFilters(), { sort: "source_confidence" });
   }
+  if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0 });
+  else if (typeof render === "function") render();
+};
+window.toggleDallasSheriffQueue = function(){
+  APP._dallasSheriffOnly = !APP._dallasSheriffOnly;
+  if (APP._dallasSheriffOnly) {
+    APP._dallasVerifiedOnly = false;
+    APP._leadToolbarFilters = Object.assign({}, getLeadToolbarFilters(), { sort: "source_confidence" });
+  }
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
   if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0 });
   else if (typeof render === "function") render();
 };
@@ -23903,7 +23975,8 @@ if(document.readyState==="loading"){
     };
   }
   function renderDallasCompIntelligence(lead) {
-    var dallas = typeof dallasVerifiedStatus === 'function' ? dallasVerifiedStatus(lead) : null;
+    var sheriff = typeof dallasSheriffStatus === 'function' ? dallasSheriffStatus(lead) : null;
+    var dallas = sheriff || (typeof dallasVerifiedStatus === 'function' ? dallasVerifiedStatus(lead) : null);
     if (!dallas) return '';
     if (!dallas.queue_eligible) {
       return '<div style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px"><div style="font-size:11px;color:#d4af37;font-weight:900;text-transform:uppercase;margin-bottom:6px">Dallas Comp Intelligence</div><div style="font-size:12px;color:#cbd5e1;font-weight:800">Insufficient property confidence for valuation.</div></div>';
@@ -23993,6 +24066,7 @@ if(document.readyState==="loading"){
         '<button type="button" onclick="closeModal()" aria-label="Close lead" title="Close" style="width:34px;height:34px;border-radius:999px;border:1px solid #334155;background:#111827;color:#fff;font-size:18px;font-weight:900;cursor:pointer;line-height:1">X</button>' +
       '</div>' +
       '<div style="overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">' +
+        (typeof renderDallasSheriffPipelinePanel === 'function' ? renderDallasSheriffPipelinePanel(lead) : '') +
         renderDallasVerifiedBanner(lead) +
         renderDallasCompIntelligence(lead) +
         '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px">' +

@@ -759,6 +759,50 @@ function dallasVerifiedAcquisitionStatus(lead) {
   };
 }
 
+function isDallasSheriffTaxSaleLeadForList(lead) {
+  if (!isDallasLeadForList(lead)) return false;
+  var family = dallasSourceFamily(lead);
+  if (family === 'dallas_sheriff_tax_sales') return true;
+  var text = leadListTextBlob(lead);
+  return /dallas county tax office|sheriff.?sale|tax.?sale|minimum bid|judgment amount|strike.?off|tx_dallas_sheriff_tax_sales|sheriffsaleauctions\.com/.test(text);
+}
+
+function dallasSheriffTaxSaleAcquisitionStatus(lead) {
+  var base = dallasVerifiedAcquisitionStatus(lead);
+  var evidence = base.evidence || {};
+  var isSheriff = isDallasSheriffTaxSaleLeadForList(lead);
+  var saleTiming = !!evidence.filing_or_sale_date;
+  var sourceProof = !!(evidence.source_url || evidence.source_reference || evidence.pdf_page_reference || evidence.source_file_reference);
+  var amountEvidence = !!evidence.amount_or_judgment;
+  var missing = Array.isArray(base.missing_evidence) ? base.missing_evidence.slice() : [];
+  if (!isSheriff && missing.indexOf('dallas_sheriff_tax_sale_source') === -1) missing.push('dallas_sheriff_tax_sale_source');
+  if (!saleTiming && missing.indexOf('sale_or_tax_timing') === -1) missing.push('sale_or_tax_timing');
+  if (!sourceProof && missing.indexOf('source_evidence') === -1) missing.push('source_evidence');
+  var confidenceOk = base.confidence_level === 'High' || base.confidence_level === 'Medium';
+  var queueEligible = isSheriff && base.queue_eligible && saleTiming && sourceProof && confidenceOk;
+  var status = queueEligible
+    ? 'Actionable'
+    : (base.status === 'Needs Repair' || base.status === 'Weak Lead' ? base.status : 'Needs Verification');
+  var rejection = queueEligible ? '' : missing.join(', ');
+  var priorityScore = base.priority_score + (saleTiming ? 22 : 0) + (amountEvidence ? 12 : 0) + (isSheriff ? 18 : 0);
+  var sheriffStatus = Object.assign({}, base, {
+    source_family: isSheriff ? 'dallas_sheriff_tax_sales' : base.source_family,
+    sheriff_tax_sale: true,
+    queue_eligible: queueEligible,
+    status: status,
+    rejection_reason: rejection,
+    missing_evidence: missing.filter(function(value, index, arr) { return arr.indexOf(value) === index; }),
+    priority_score: priorityScore,
+    amount_available: amountEvidence,
+    sale_timing_available: saleTiming,
+    recommended_next_step: queueEligible
+      ? 'Open source evidence, verify sale date and amount/bid, then complete comp review.'
+      : 'Repair Dallas sheriff/tax sale source evidence before moving this lead into the acquisition workflow.'
+  });
+  sheriffStatus.comp_intelligence = dallasCompIntelligenceForLead(lead, sheriffStatus);
+  return sheriffStatus;
+}
+
 function classifyLeadQualityForList(lead) {
   lead = lead || {};
   var flags = Array.isArray(lead.repair_flags) ? lead.repair_flags.slice() : [];
@@ -868,6 +912,10 @@ function buildLeadIntakeStatus(leads, filtered) {
   var dallasStatuses = dallasLeads.map(dallasVerifiedAcquisitionStatus);
   var dallasActionable = dallasStatuses.filter(function(status) { return status.queue_eligible; });
   var dallasRepair = dallasStatuses.filter(function(status) { return status.status === 'Needs Repair' || status.status === 'Weak Lead'; });
+  var dallasSheriffLeads = all.filter(isDallasSheriffTaxSaleLeadForList);
+  var dallasSheriffStatuses = dallasSheriffLeads.map(dallasSheriffTaxSaleAcquisitionStatus);
+  var dallasSheriffActionable = dallasSheriffStatuses.filter(function(status) { return status.queue_eligible; });
+  var dallasSheriffRepair = dallasSheriffStatuses.filter(function(status) { return status.status === 'Needs Repair' || status.status === 'Weak Lead'; });
   var dallasHotList = dallasLeads.map(function(lead) {
     var status = dallasVerifiedAcquisitionStatus(lead);
     return {
@@ -878,6 +926,25 @@ function buildLeadIntakeStatus(leads, filtered) {
       confidence_level: status.confidence_level,
       priority_score: status.priority_score,
       queue_eligible: status.queue_eligible,
+      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence
+    };
+  }).filter(function(item) {
+    return item.queue_eligible;
+  }).sort(function(a, b) {
+    return b.priority_score - a.priority_score;
+  }).slice(0, 5);
+  var dallasSheriffHotList = dallasSheriffLeads.map(function(lead) {
+    var status = dallasSheriffTaxSaleAcquisitionStatus(lead);
+    return {
+      id: String(lead.id || lead.lead_id || ''),
+      reference_id: String(lead.ref_id || lead.reference_id || lead.lead_reference_id || lead.id || ''),
+      address: leadListAddress(lead),
+      distress_category: status.distress_category,
+      confidence_level: status.confidence_level,
+      priority_score: status.priority_score,
+      queue_eligible: status.queue_eligible,
+      sale_date: status.evidence && status.evidence.filing_or_sale_date,
+      amount_or_judgment: status.evidence && status.evidence.amount_or_judgment,
       comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence
     };
   }).filter(function(item) {
@@ -913,6 +980,16 @@ function buildLeadIntakeStatus(leads, filtered) {
         acc[status.confidence_level] = (acc[status.confidence_level] || 0) + 1;
         return acc;
       }, { High: 0, Medium: 0, Low: 0, Repair: 0 })
+    },
+    dallas_sheriff_tax_sale_queue: {
+      total_dallas_sheriff: dallasSheriffLeads.length,
+      actionable: dallasSheriffActionable.length,
+      repair_or_weak: dallasSheriffRepair.length,
+      hot_list: dallasSheriffHotList,
+      confidence: dallasSheriffStatuses.reduce(function(acc, status) {
+        acc[status.confidence_level] = (acc[status.confidence_level] || 0) + 1;
+        return acc;
+      }, { High: 0, Medium: 0, Low: 0, Repair: 0 })
     }
   };
 }
@@ -920,7 +997,7 @@ function buildLeadIntakeStatus(leads, filtered) {
 app.get('/api/leads', (req, res) => {
   try {
     const leads = db.getLeads();
-    const { status, county, category, sort, state, source_type, workflow, top300, dallas_verified } = req.query;
+    const { status, county, category, sort, state, source_type, workflow, top300, dallas_verified, dallas_sheriff_verified } = req.query;
     let filtered = leads;
     // Filters (apply before sort)
     // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
@@ -937,10 +1014,20 @@ app.get('/api/leads', (req, res) => {
         return dallasVerifiedAcquisitionStatus(lead).queue_eligible;
       });
     }
+    if (/^(1|true|yes)$/i.test(String(dallas_sheriff_verified || ''))) {
+      filtered = filtered.filter(function(lead) {
+        return dallasSheriffTaxSaleAcquisitionStatus(lead).queue_eligible;
+      });
+    }
     // Sort BEFORE limiting (correct order)
     var dallasVerifiedOnly = /^(1|true|yes)$/i.test(String(dallas_verified || ''));
-    var sortKey = sort || (dallasVerifiedOnly ? 'dallas_verified_priority' : 'motivation_score');
-    if (sortKey === 'dallas_verified_priority') {
+    var dallasSheriffOnly = /^(1|true|yes)$/i.test(String(dallas_sheriff_verified || ''));
+    var sortKey = sort || (dallasSheriffOnly ? 'dallas_sheriff_priority' : (dallasVerifiedOnly ? 'dallas_verified_priority' : 'motivation_score'));
+    if (sortKey === 'dallas_sheriff_priority') {
+      filtered = filtered.slice().sort(function(a,b){
+        return dallasSheriffTaxSaleAcquisitionStatus(b).priority_score - dallasSheriffTaxSaleAcquisitionStatus(a).priority_score;
+      });
+    } else if (sortKey === 'dallas_verified_priority') {
       filtered = filtered.slice().sort(function(a,b){
         return dallasVerifiedAcquisitionStatus(b).priority_score - dallasVerifiedAcquisitionStatus(a).priority_score;
       });
@@ -968,6 +1055,7 @@ app.get('/api/leads', (req, res) => {
         var quality = classifyLeadQualityForList(enriched);
         var safe = sanitizeLeadForList(enriched);
         if (isDallasLeadForList(enriched)) safe.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(enriched);
+        if (isDallasSheriffTaxSaleLeadForList(enriched)) safe.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(enriched);
         safe.lead_quality = quality;
         safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
         return safe;
@@ -979,6 +1067,7 @@ app.get('/api/leads', (req, res) => {
         }));
         fallback.lead_quality = fallbackQuality;
         if (isDallasLeadForList(lead)) fallback.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(lead);
+        if (isDallasSheriffTaxSaleLeadForList(lead)) fallback.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(lead);
         fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
         return fallback;
       }
