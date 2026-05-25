@@ -1148,6 +1148,10 @@ function mdaEscapeAttr(value) {
   return mdaEscapeHtml(value);
 }
 
+function safe(value) {
+  return mdaEscapeHtml(value);
+}
+
 function mdaLeadText(value) {
   if (Array.isArray(value)) return value.map(mdaLeadText).filter(Boolean).join(', ');
   if (value && typeof value === 'object') return '';
@@ -4458,7 +4462,7 @@ function renderEnrichmentLaunchpad(lead) {
   var links = data.links.length ? data.links.map(function(link) {
     return '<a href="' + mdaEscapeAttr(link.url) + '" target="_blank" title="' + leadIntelText(link.hint) + '" style="font-size:10px;font-weight:800;color:#f4c542;text-decoration:none;border:1px solid #334155;background:#111827;border-radius:999px;padding:5px 8px">' + leadIntelText(link.label) + '</a>';
   }).join('') : '<span style="font-size:10px;color:#64748b">No safe enrichment links available until address, owner, or source URL is present.</span>';
-  return '<div id="research-contact-workspace-' + safe + '" style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
+  return '<div id="research-contact-workspace-' + safeId + '" style="margin:0 0 12px;padding:12px;background:#07111f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
       '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Enrichment Launchpad</div>' +
       '<div style="font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px">Manual 1-5 lead workflow only. Opens search links; no scraping, storage, or automation.</div></div>' +
