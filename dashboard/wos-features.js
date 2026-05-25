@@ -175,6 +175,13 @@ function _mountOnTab() {
   var _at = document.querySelector('.nav-link.active, [data-tab].active, [aria-selected="true"]');
   var _atText = _at ? (_at.textContent||'').toLowerCase().trim() : '';
   if (_atText === 'dashboard' || _atText === 'home') return;
+  if (typeof window.renderLeadActionToolbar === 'function' || document.getElementById('leadFilterBar')) {
+    var legacyToolbar = document.getElementById('wosToolbar');
+    var legacyPanel = document.getElementById('wosFilterPanel');
+    if (legacyToolbar) legacyToolbar.remove();
+    if (legacyPanel) legacyPanel.remove();
+    return;
+  }
   // Only mount if toolbar not already present
   if (document.getElementById('wosToolbar')) {
     // Already mounted — just re-add checkboxes if bulk mode is open
@@ -428,12 +435,19 @@ function _stateOpts() {
 
 // ── FILTER LOGIC ──────────────────────────────────────────────────────────
 window.wosToggleFilters = function() {
+  if (typeof window.toggleFilterBar === 'function') {
+    window.toggleFilterBar();
+    return;
+  }
   _filtersOpen = !_filtersOpen;
   var fp = document.getElementById('wosFilterPanel');
   if (fp) fp.style.display = _filtersOpen ? 'flex' : 'none';
 };
 
 window.wosFilter = function() {
+  if (typeof window.applyLeadFilters === 'function') {
+    return window.applyLeadFilters();
+  }
   _addDataAttrs();
   var state = (document.getElementById('wfState') || {}).value || '';
   var src   = (document.getElementById('wfSrc')   || {}).value || '';
@@ -477,6 +491,10 @@ window.wosFilter = function() {
 };
 
 window.wosClearFilter = function() {
+  if (typeof window.clearLeadFilters === 'function') {
+    window.clearLeadFilters();
+    return;
+  }
   ['wfState','wfSrc','wfAge','wfPri','wfPhone','wfArv','wfMotivation','wfScore','wfTop300'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
