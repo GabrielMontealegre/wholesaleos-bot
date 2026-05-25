@@ -384,9 +384,11 @@ function leadListHasAmountEvidence(lead) {
 function leadListHasDateCaseEvidence(lead) {
   return leadListHasAny(lead || {}, [
     'case_number',
+    'cause_number',
     'parcel',
     'apn',
     'parcel_id',
+    'account_number',
     'auction_date',
     'sale_date',
     'filing_date',
@@ -399,9 +401,140 @@ function leadListHasDateCaseEvidence(lead) {
   ]);
 }
 
+function leadListTextBlob(lead) {
+  lead = lead || {};
+  var details = lead.source_details || {};
+  var meta = lead._courthouse_metadata || {};
+  return [
+    lead.source,
+    lead.source_name,
+    lead.source_type,
+    lead.source_category,
+    lead.source_key,
+    lead.source_slug,
+    lead.provider,
+    lead.county,
+    lead.state,
+    lead.jurisdiction,
+    lead.category,
+    lead.type,
+    lead.lead_type,
+    lead.distress_type,
+    lead.doc_type,
+    lead.source_url,
+    lead.source_record_url,
+    typeof details === 'string' ? details : '',
+    details.source_name,
+    details.source_type,
+    details.source_category,
+    details.record_url,
+    details.query_url,
+    details.source_url,
+    meta.source_url,
+    meta.source_pdf_url,
+    meta.case_number,
+    meta.parcel
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function isDallasLeadForList(lead) {
+  var county = String(leadListPick(lead || {}, ['county', 'source_county', 'source_details.county', 'lead_intelligence.county']) || '').toLowerCase();
+  var state = String(leadListPick(lead || {}, ['state', 'state_code', 'source_details.state', 'lead_intelligence.state']) || '').toUpperCase();
+  var text = leadListTextBlob(lead);
+  return (county.indexOf('dallas') > -1 || /dallas county|dallasopendata|dallascounty\.org|dallascad|sheriffsaleauctions\.com/.test(text)) && (!state || state === 'TX' || /\btx\b|texas/.test(text));
+}
+
+function dallasLeadDistressCategory(lead) {
+  var text = leadListTextBlob(lead);
+  if (/sheriff|tax sale|tax foreclosure|resale|minimum bid/.test(text)) return 'sheriff/tax sale';
+  if (/tax|delinquen|lien/.test(text)) return 'tax delinquent';
+  if (/foreclos|trustee|auction/.test(text)) return 'foreclosure';
+  if (/code|violation|nuisance|permit/.test(text)) return 'code violation';
+  if (/probate|estate|decedent/.test(text)) return 'probate/estate';
+  if (/vacant|absentee/.test(text)) return 'vacant/absentee';
+  if (/public notice|legal notice|notice/.test(text)) return 'public notice';
+  return 'unknown distress';
+}
+
+function dallasLeadEvidenceSnapshot(lead) {
+  var sourceUrl = leadListPick(lead || {}, ['source_record_url', 'record_url', 'source_url', 'verification_url', 'source_details.record_url', 'source_details.source_url', 'source_details.query_url', '_courthouse_metadata.source_url', '_courthouse_metadata.source_pdf_url']);
+  var sourceRef = leadListPick(lead || {}, ['evidence_ref', 'source_reference', 'record_id', 'source_details.evidence_ref', 'source_details.source_reference', 'lead_intelligence.evidence.record_key']);
+  var pdfRef = leadListPick(lead || {}, ['pdf_page', 'page_ref', 'source_page', 'evidence_page', 'source_details.pdf_page', 'source_details.page_ref', 'lead_intelligence.evidence.page_ref']);
+  var caseNumber = leadListPick(lead || {}, ['case_number', 'cause_number', 'source_details.case_number', 'source_details.cause_number', '_courthouse_metadata.case_number']);
+  var parcel = leadListPick(lead || {}, ['parcel', 'apn', 'parcel_id', 'account_number', 'source_details.parcel', 'source_details.apn', '_courthouse_metadata.parcel']);
+  var timing = leadListPick(lead || {}, ['auction_date', 'sale_date', 'filing_date', 'filed_date', 'source_published_at', 'source_details.sale_date', 'source_details.filing_date', '_courthouse_metadata.auction_date', '_courthouse_metadata.filed_date']);
+  var amount = leadListPick(lead || {}, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'source_amount', 'source_details.amount_owed', 'source_details.judgment_amount', 'source_details.minimum_bid', '_courthouse_metadata.lien_amount']);
+  var owner = leadListPick(lead || {}, ['owner_name', 'owner', 'source_details.owner', 'source_details.owner_name']);
+  return {
+    source_url: sourceUrl || '',
+    pdf_page_reference: pdfRef || '',
+    case_or_cause_number: caseNumber || '',
+    parcel_apn: parcel || '',
+    filing_or_sale_date: timing || '',
+    amount_or_judgment: amount || '',
+    owner: owner || '',
+    source_reference: sourceRef || '',
+    has_source_proof: !!(sourceUrl || sourceRef),
+    has_property_evidence: !!(caseNumber || parcel || owner),
+    has_timing_or_amount: !!(timing || amount)
+  };
+}
+
+function dallasEvidenceConfidence(lead) {
+  var evidence = dallasLeadEvidenceSnapshot(lead);
+  var flags = Array.isArray(lead && lead.repair_flags) ? lead.repair_flags.join(' ').toLowerCase() : '';
+  var parserText = leadListTextBlob(lead);
+  var weakAddress = isWeakAddressTextForList(leadListAddress(lead));
+  if (weakAddress || /parser_failed|placeholder_row|malformed_pdf_extraction|weak_evidence|missing_address/.test(flags)) {
+    return { level: 'Repair', score: 20, reason: weakAddress ? 'Address or parser output is not property-level evidence.' : 'Repair flags indicate parser/evidence failure.' };
+  }
+  if (!evidence.has_source_proof) {
+    return { level: 'Low', score: 35, reason: 'No source URL or evidence reference is saved.' };
+  }
+  if ((evidence.pdf_page_reference || evidence.case_or_cause_number || evidence.parcel_apn) && evidence.has_timing_or_amount) {
+    return { level: 'High', score: 90, reason: 'Source proof includes case, parcel, PDF/page, timing, or amount evidence.' };
+  }
+  if (/socrata|arcgis|structured|opendata|dallasopendata/.test(parserText) && evidence.has_timing_or_amount) {
+    return { level: 'Medium', score: 70, reason: 'Structured source row has source proof and timing or amount evidence.' };
+  }
+  if (evidence.has_property_evidence || evidence.has_timing_or_amount) {
+    return { level: 'Medium', score: 60, reason: 'Evidence is property-level but still needs manual verification.' };
+  }
+  return { level: 'Low', score: 40, reason: 'Source proof exists, but property-level evidence is incomplete.' };
+}
+
+function dallasVerifiedAcquisitionStatus(lead) {
+  var evidence = dallasLeadEvidenceSnapshot(lead);
+  var confidence = dallasEvidenceConfidence(lead);
+  var distress = dallasLeadDistressCategory(lead);
+  var validProperty = !!leadListAddress(lead) && !isWeakAddressTextForList(leadListAddress(lead));
+  var hasDistress = distress !== 'unknown distress';
+  var actionable = validProperty && evidence.has_source_proof && hasDistress && evidence.has_timing_or_amount && (confidence.level === 'High' || confidence.level === 'Medium');
+  var missing = [];
+  if (!validProperty) missing.push('valid_property_address');
+  if (!evidence.has_source_proof) missing.push('source_url_or_evidence_reference');
+  if (!hasDistress) missing.push('distress_category');
+  if (!evidence.has_timing_or_amount) missing.push('timing_or_amount_evidence');
+  if (!(confidence.level === 'High' || confidence.level === 'Medium')) missing.push('medium_or_high_confidence');
+  return {
+    is_dallas: isDallasLeadForList(lead),
+    queue_eligible: actionable,
+    status: actionable ? 'Actionable' : (confidence.level === 'Repair' ? 'Needs Repair' : (validProperty && evidence.has_source_proof ? 'Needs Verification' : 'Weak Lead')),
+    distress_category: distress,
+    confidence_level: confidence.level,
+    confidence_score: confidence.score,
+    confidence_reason: confidence.reason,
+    evidence: evidence,
+    missing_evidence: missing,
+    recommended_next_step: actionable ? 'Verify source record, confirm amount/timing, then underwrite before outreach.' : 'Repair missing Dallas source evidence before moving this lead into acquisition workflow.'
+  };
+}
+
 function classifyLeadQualityForList(lead) {
   lead = lead || {};
   var flags = Array.isArray(lead.repair_flags) ? lead.repair_flags.slice() : [];
+  var dallasVerified = isDallasLeadForList(lead) ? dallasVerifiedAcquisitionStatus(lead) : null;
+  if (dallasVerified && flags.indexOf('dallas_verified_review') === -1) flags.push('dallas_verified_review');
   var address = leadListAddress(lead);
   var weakAddress = isWeakAddressTextForList(address);
   var sourceRecord = leadListHasSourceRecord(lead);
@@ -411,8 +544,20 @@ function classifyLeadQualityForList(lead) {
   var confidence = leadListSourceConfidenceScore(lead);
   var hasOwnerParcelCaseAmountDate = leadListHasAny(lead, ['owner_name', 'owner', 'parcel', 'apn', 'parcel_id', 'case_number']) || amount || dateCase;
   if (weakAddress && flags.indexOf('weak_address') === -1) flags.push('weak_address');
-  if (!sourceRecord && flags.indexOf('missing_source_url') === -1) flags.push('missing_source_url');
-  if (!amount && flags.indexOf('missing_amount') === -1) flags.push('missing_amount');
+  if (!sourceRecord && !(dallasVerified && dallasVerified.evidence && dallasVerified.evidence.has_source_proof) && flags.indexOf('missing_source_url') === -1) flags.push('missing_source_url');
+  if (!amount && !(dallasVerified && dateCase) && flags.indexOf('missing_amount') === -1) flags.push('missing_amount');
+  if (dallasVerified) {
+    (dallasVerified.missing_evidence || []).forEach(function(flag) {
+      var repairFlag = 'dallas_missing_' + flag;
+      if (flags.indexOf(repairFlag) === -1) flags.push(repairFlag);
+    });
+    if (dallasVerified.queue_eligible) {
+      return { label: 'Actionable', rank: 0, flags: flags.filter(function(v, i, a){ return a.indexOf(v) === i; }), dallas_verified: true };
+    }
+    if (dallasVerified.status === 'Needs Repair' || dallasVerified.status === 'Weak Lead') {
+      return { label: dallasVerified.status, rank: dallasVerified.status === 'Weak Lead' ? 3 : 2, flags: flags.concat(['dallas_not_verified']).filter(function(v, i, a){ return a.indexOf(v) === i; }), dallas_verified: false };
+    }
+  }
   if (weakAddress && !hasOwnerParcelCaseAmountDate) {
     return { label: 'Weak Lead', rank: 3, flags: flags.concat(['weak_evidence']).filter(function(v, i, a){ return a.indexOf(v) === i; }) };
   }
@@ -490,6 +635,10 @@ function buildLeadIntakeStatus(leads, filtered) {
     var quality = classifyLeadQualityForList(lead);
     return quality.label === 'Weak Lead' || quality.label === 'Needs Repair';
   });
+  var dallasLeads = all.filter(isDallasLeadForList);
+  var dallasStatuses = dallasLeads.map(dallasVerifiedAcquisitionStatus);
+  var dallasActionable = dallasStatuses.filter(function(status) { return status.queue_eligible; });
+  var dallasRepair = dallasStatuses.filter(function(status) { return status.status === 'Needs Repair' || status.status === 'Weak Lead'; });
   var newestCourthouse = courthouseLeads.slice().sort(function(a, b) {
     return new Date(b.created_at || b.created || b.createdAt || b.inserted_at || 0) - new Date(a.created_at || a.created || a.createdAt || a.inserted_at || 0);
   })[0] || null;
@@ -508,6 +657,15 @@ function buildLeadIntakeStatus(leads, filtered) {
       weak_or_repair: weakCourthouseLeads.length,
       newest_source: newestCourthouse ? getLeadListSourceLabel(newestCourthouse) : '',
       newest_timestamp: newestCourthouse ? (newestCourthouse.created_at || newestCourthouse.created || newestCourthouse.createdAt || newestCourthouse.inserted_at || '') : ''
+    },
+    dallas_verified_queue: {
+      total_dallas: dallasLeads.length,
+      actionable: dallasActionable.length,
+      repair_or_weak: dallasRepair.length,
+      confidence: dallasStatuses.reduce(function(acc, status) {
+        acc[status.confidence_level] = (acc[status.confidence_level] || 0) + 1;
+        return acc;
+      }, { High: 0, Medium: 0, Low: 0, Repair: 0 })
     }
   };
 }
@@ -515,7 +673,7 @@ function buildLeadIntakeStatus(leads, filtered) {
 app.get('/api/leads', (req, res) => {
   try {
     const leads = db.getLeads();
-    const { status, county, category, sort, state, source_type, workflow, top300 } = req.query;
+    const { status, county, category, sort, state, source_type, workflow, top300, dallas_verified } = req.query;
     let filtered = leads;
     // Filters (apply before sort)
     // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
@@ -527,6 +685,11 @@ app.get('/api/leads', (req, res) => {
     if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
     if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
     if (workflow)    filtered = filtered.filter(l => [l.workflow_state, l.assignment_state, l.status].filter(Boolean).join(' ').toLowerCase().includes(String(workflow).toLowerCase()));
+    if (/^(1|true|yes)$/i.test(String(dallas_verified || ''))) {
+      filtered = filtered.filter(function(lead) {
+        return dallasVerifiedAcquisitionStatus(lead).queue_eligible;
+      });
+    }
     // Sort BEFORE limiting (correct order)
     var sortKey = sort || 'motivation_score';
     if (sortKey === 'motivation_score') {
@@ -552,6 +715,7 @@ app.get('/api/leads', (req, res) => {
         var enriched = withLeadIntelligence(lead);
         var quality = classifyLeadQualityForList(enriched);
         var safe = sanitizeLeadForList(enriched);
+        if (isDallasLeadForList(enriched)) safe.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(enriched);
         safe.lead_quality = quality;
         safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
         return safe;
@@ -562,6 +726,7 @@ app.get('/api/leads', (req, res) => {
           list_serialization_error: err && err.message ? err.message : 'serialization_failed'
         }));
         fallback.lead_quality = fallbackQuality;
+        if (isDallasLeadForList(lead)) fallback.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(lead);
         fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
         return fallback;
       }

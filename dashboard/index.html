@@ -17495,6 +17495,10 @@ function renderLeadIntakeStatusBar() {
   var cq = status.courthouse_quality || {};
   var weakCourt = Number(cq.weak_or_repair || 0);
   var totalCourt = Number(cq.total || 0);
+  var dv = status.dallas_verified_queue || {};
+  var dallasTotal = Number(dv.total_dallas || 0);
+  var dallasActionable = Number(dv.actionable || 0);
+  var dallasRepair = Number(dv.repair_or_weak || 0);
   var bgLabel = bg === 'enabled' ? 'Background ingestion active' : (bg === 'disabled' ? 'Background ingestion disabled' : 'Background ingestion unknown');
   var latestBits = [];
   if (newestTs) latestBits.push(leadQueueSafeText(newestTs));
@@ -17507,6 +17511,8 @@ function renderLeadIntakeStatusBar() {
     '<span style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Hidden ' + leadQueueSafeText(hidden.toLocaleString()) + '</span>' +
     '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-weight:700">Visible ' + leadQueueSafeText(visible.toLocaleString()) + '</span>' +
     '<span style="background:#f5f5f7;color:#374151;padding:2px 8px;border-radius:999px;font-weight:700">' + leadQueueSafeText(bgLabel) + '</span>' +
+    (dallasTotal ? '<span title="Dallas queue requires property address, source proof, distress, timing or amount, and medium/high confidence." style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:999px;font-weight:700">Dallas verified ' + leadQueueSafeText(dallasActionable.toLocaleString()) + ' actionable / ' + leadQueueSafeText(dallasTotal.toLocaleString()) + '</span>' : '') +
+    (dallasRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Dallas weak/repair ' + leadQueueSafeText(dallasRepair.toLocaleString()) + '</span>' : '') +
     (totalCourt ? '<span title="' + leadQueueAttr((cq.newest_source || '') + ' ' + (cq.newest_timestamp || '')) + '" style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Courthouse weak/repair ' + leadQueueSafeText(weakCourt.toLocaleString()) + ' / ' + leadQueueSafeText(totalCourt.toLocaleString()) + '</span>' : '') +
     (newToday ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">New today ' + leadQueueSafeText(newToday.toLocaleString()) + '</span>' : '') +
     (latestBits.length ? '<span style="background:#ecfeff;color:#155e75;padding:2px 8px;border-radius:999px;font-weight:700">Newest ' + latestBits.join(' · ') + '</span>' : '') +
@@ -17752,6 +17758,7 @@ function buildLeadApiUrl(offset) {
   if (filters.county) params.set('county', filters.county);
   if (filters.source) params.set('source_type', filters.source);
   if (filters.workflow) params.set('workflow', filters.workflow);
+  if (APP._dallasVerifiedOnly) params.set('dallas_verified', '1');
   return '/api/leads?' + params.toString();
 }
 
@@ -20945,6 +20952,47 @@ function leadQueueQuality(lead) {
   return { label: 'Needs Verification', rank: 1, flags: flags };
 }
 
+function dallasVerifiedStatus(lead) {
+  lead = lead || {};
+  var dallas = lead.dallas_verified_acquisition || {};
+  if (dallas && dallas.is_dallas !== undefined) return dallas;
+  return null;
+}
+
+function dallasVerifiedBadge(lead) {
+  var dallas = dallasVerifiedStatus(lead);
+  if (!dallas) return '';
+  var level = dallas.confidence_level || 'Low';
+  var color = level === 'High' ? '#166534' : level === 'Medium' ? '#047857' : level === 'Repair' ? '#991b1b' : '#92400e';
+  var bg = level === 'High' ? '#dcfce7' : level === 'Medium' ? '#ecfdf5' : level === 'Repair' ? '#fee2e2' : '#fef3c7';
+  var title = (dallas.missing_evidence || []).length ? 'Missing: ' + dallas.missing_evidence.join(', ') : (dallas.confidence_reason || 'Dallas evidence reviewed');
+  return '<span title="' + leadQueueAttr(title) + '" style="display:inline-flex;white-space:nowrap;font-size:10px;font-weight:900;color:' + color + ';background:' + bg + ';border:1px solid ' + color + '55;border-radius:999px;padding:3px 8px">Dallas ' + leadQueueSafeText(level) + '</span>';
+}
+
+function renderDallasVerifiedBanner(lead) {
+  var dallas = dallasVerifiedStatus(lead);
+  if (!dallas) return '';
+  var evidence = dallas.evidence || {};
+  var missing = Array.isArray(dallas.missing_evidence) ? dallas.missing_evidence : [];
+  var color = dallas.queue_eligible ? '#047857' : (dallas.status === 'Needs Repair' || dallas.status === 'Weak Lead' ? '#991b1b' : '#92400e');
+  var bg = dallas.queue_eligible ? '#ecfdf5' : (dallas.status === 'Needs Repair' || dallas.status === 'Weak Lead' ? '#fef2f2' : '#fffbeb');
+  var sourceUrl = evidence.source_url || '';
+  return '<div style="background:' + bg + ';border:1px solid ' + color + '44;border-radius:10px;padding:10px;color:#1f2937">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:10px;color:' + color + ';text-transform:uppercase;font-weight:900">Dallas Verified Acquisition</div>' +
+      '<div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + leadQueueSafeText(dallas.status || 'Needs Verification') + ' | ' + leadQueueSafeText(dallas.distress_category || 'unknown distress') + ' | ' + leadQueueSafeText(dallas.confidence_level || 'Low') + ' confidence</div></div>' +
+      (sourceUrl ? '<a href="' + leadQueueAttr(sourceUrl) + '" target="_blank" rel="noopener noreferrer" style="font-size:10px;color:' + color + ';font-weight:900;text-decoration:none">Open Evidence</a>' : '') +
+    '</div>' +
+    '<div style="font-size:11px;color:#374151;line-height:1.45;margin-top:7px">' + leadQueueSafeText(dallas.confidence_reason || '') + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px">' +
+      [['Case/Cause', evidence.case_or_cause_number || 'missing'], ['Parcel/APN', evidence.parcel_apn || 'missing'], ['Timing', evidence.filing_or_sale_date || 'missing'], ['Amount', evidence.amount_or_judgment || 'missing'], ['Evidence Ref', evidence.source_reference || evidence.pdf_page_reference || 'missing']].map(function(pair) {
+        return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:7px"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:800">' + leadQueueSafeText(pair[0]) + '</div><div style="font-size:10px;color:#111827;font-weight:800;word-break:break-word">' + leadQueueSafeText(pair[1]) + '</div></div>';
+      }).join('') +
+    '</div>' +
+    (missing.length ? '<div style="font-size:10px;color:#991b1b;line-height:1.4;margin-top:7px;font-weight:800">Missing evidence: ' + leadQueueSafeText(missing.join(', ')) + '</div>' : '') +
+  '</div>';
+}
+
 function leadQueueQualityBadge(lead) {
   var q = leadQueueQuality(lead);
   var palette = {
@@ -21767,7 +21815,7 @@ function renderLeads() {
       '<td style="padding:9px 8px;font-size:12px">' + leadQueueSafeText(leadQueueState(lead)) + '</td>' +
       '<td title="' + leadQueueAttr(sourceDetail) + '" style="padding:9px 8px;font-size:11px;color:#374151;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><div style="font-weight:800;color:#1f2937">' + leadQueueSafeText(leadQueueTypeSource(lead)) + '</div><div style="font-size:9px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText([leadQueueCounty(lead), leadQueueState(lead)].filter(Boolean).join(', ') || sourceDetail) + '</div></td>' +
       '<td style="padding:9px 8px;font-size:11px;font-weight:700;color:#1a1a2e">' + leadQueueSafeText(leadQueuePriority(lead)) + '</td>' +
-      '<td style="padding:9px 8px">' + leadQueueQualityBadge(lead) + '</td>' +
+      '<td style="padding:9px 8px"><div style="display:flex;gap:5px;flex-wrap:wrap">' + leadQueueQualityBadge(lead) + dallasVerifiedBadge(lead) + '</div></td>' +
       '<td style="padding:9px 8px"><span style="font-size:10px;font-weight:700;color:' + color + ';background:' + color + '22;padding:2px 8px;border-radius:10px">' + leadQueueSafeText(workflow) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueCompStatus(lead)) + '</td>' +
       '<td style="padding:9px 8px;font-size:11px;color:#374151">' + leadQueueSafeText(leadQueueContactStatus(lead)) + '</td>' +
@@ -21779,6 +21827,7 @@ function renderLeads() {
     return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">' + header + '</th>';
   }).join('');
   var quarantineNotice = quarantined.length ? '<div style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px">' + quarantined.length.toLocaleString() + ' placeholder/blank-address lead(s) hidden from the active queue. They were not deleted.</div>' : '';
+  var dallasQueueNotice = APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '';
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
   setTimeout(leadQueueQuarantineDomRows, 0);
 
@@ -21786,6 +21835,7 @@ function renderLeads() {
     toolbar +
     renderLeadIntakeStatusBar() +
     previewPanel +
+    dallasQueueNotice +
     loadWarning +
     quarantineNotice +
     (typeof renderSourceRepairQueue === 'function' ? renderSourceRepairQueue(rawAll) : '') +
@@ -23503,6 +23553,7 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +
     "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
     "<button onclick='sourcePreviewToggleQueue()' title='Open the Dallas preview queue for dry-run source candidates only.' style='font-size:12px;padding:6px 12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:6px;color:#1d4ed8;cursor:pointer;font-weight:700;'>Dallas Preview Queue</button>" +
     "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
@@ -23573,6 +23624,7 @@ window.applyLeadFilters = function(){
 };
 window.clearLeadFilters = function(){
   APP._leadToolbarFilters = {state:"",county:"",source:"",type:"",workflow:"",age:"",priority:"",sort:"priority"};
+  APP._dallasVerifiedOnly = false;
   ["lfState","lfCounty","lfSource","lfType","lfWorkflow","lfAge","lfPriority","lfSort"].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value="";
   });
@@ -23581,6 +23633,16 @@ window.clearLeadFilters = function(){
   APP._leadApiOffset = 0;
   if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0 });
   else window.applyLeadToolbarFilters();
+};
+window.toggleDallasVerifiedQueue = function(){
+  APP._dallasVerifiedOnly = !APP._dallasVerifiedOnly;
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  if (APP._dallasVerifiedOnly) {
+    APP._leadToolbarFilters = Object.assign({}, getLeadToolbarFilters(), { sort: "source_confidence" });
+  }
+  if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0 });
+  else if (typeof render === "function") render();
 };
 var _selectedIds = {};
 function addCheckboxesToRows(){
@@ -23827,6 +23889,7 @@ if(document.readyState==="loading"){
         '<button type="button" onclick="closeModal()" aria-label="Close lead" title="Close" style="width:34px;height:34px;border-radius:999px;border:1px solid #334155;background:#111827;color:#fff;font-size:18px;font-weight:900;cursor:pointer;line-height:1">X</button>' +
       '</div>' +
       '<div style="overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">' +
+        renderDallasVerifiedBanner(lead) +
         '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px">' +
           '<div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Why this lead matters</div><div style="font-size:13px;line-height:1.45;color:#f8fafc;margin-top:4px">' + compactLeadText(why) + '</div></div>' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Came from</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(sourceName) + '</div></div><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Next step</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(nextStep) + '</div></div></div>' +
