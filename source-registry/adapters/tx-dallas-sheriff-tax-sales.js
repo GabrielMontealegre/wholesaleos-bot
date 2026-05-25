@@ -50,6 +50,9 @@ const FIELD_ALIASES = {
   source_file_name: ['source_file_name', 'file_name', 'pdf_name']
 };
 
+const DALLAS_BAD_ROW_RE = /\b(skip main navigation|phone directory|contact us|page not found|error 404|site map|privacy policy|terms of use|calendar|login|search dallas county)\b/i;
+const DALLAS_ADDRESS_SUFFIX_RE = /\b(st|street|ave|avenue|dr|drive|rd|road|ln|lane|ct|court|cir|circle|blvd|boulevard|way|trl|trail|pkwy|parkway|pl|place|ter|terrace|loop|hwy|highway|sq|square)\b/i;
+
 function firstPresent(record, aliases) {
   for (const key of aliases) {
     if (record && record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') return record[key];
@@ -59,6 +62,22 @@ function firstPresent(record, aliases) {
 
 function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function looksLikeDallasNavigationText(value) {
+  const text = cleanText(value);
+  if (!text) return false;
+  if (/^(column\s*[1-4]|unnamed)$/i.test(text)) return true;
+  if (/^(contact|contacts|directory|phone directory|page not found|home|search|login)$/i.test(text)) return true;
+  return DALLAS_BAD_ROW_RE.test(text);
+}
+
+function isDallasPropertyAddress(value) {
+  const text = cleanText(value);
+  if (!text || looksLikeDallasNavigationText(text)) return false;
+  if (!/\d/.test(text)) return false;
+  if (/^\d{4}\s+(contact|directory|calendar|schedule|phone)\b/i.test(text)) return false;
+  return DALLAS_ADDRESS_SUFFIX_RE.test(text);
 }
 
 function parseMoney(value) {
@@ -171,18 +190,34 @@ function normalizeDryRunRecord(rawRecord, options = {}) {
   const sourceRecordUrl = cleanText(firstPresent(raw, FIELD_ALIASES.source_record_url) || AUCTION_URL);
   const fileName = cleanText(firstPresent(raw, FIELD_ALIASES.source_file_name));
   const capturedAt = options.captured_at || new Date().toISOString();
+  const audit = buildExtractionAudit({
+    address,
+    amount_owed: amount,
+    judgment_amount: judgmentAmount,
+    minimum_bid_amount: minimumBidAmount,
+    strike_off_amount: strikeOffAmount,
+    parcel,
+    case_number: caseNumber,
+    sale_date: saleDate,
+    source_reference: sourceReference,
+    source_record_url: sourceRecordUrl,
+    raw_payload: raw
+  });
   const repairFlags = classifyRepairIssues({
     address,
     amount_owed: amount,
     judgment_amount: judgmentAmount,
     minimum_bid_amount: minimumBidAmount,
     strike_off_amount: strikeOffAmount,
+    parcel,
+    case_number: caseNumber,
+    sale_date: saleDate,
     source_url: SOURCE_URL,
     source_record_url: sourceRecordUrl,
     source_reference: sourceReference,
     raw_payload: raw
   });
-  const confidence = repairFlags.length ? (address && sourceReference ? 'medium' : 'low') : 'medium';
+  const confidence = audit.confidence_level.toLowerCase();
   const referencePart = sourceReference || parcel || caseNumber || address || 'preview';
   const previewId = `DRYRUN-${SOURCE_ID}-${String(referencePart).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)}`;
 
@@ -200,12 +235,21 @@ function normalizeDryRunRecord(rawRecord, options = {}) {
     source_record_url: sourceRecordUrl,
     source_file_name: fileName,
     source_reference: sourceReference,
+    source_family: 'dallas_sheriff_tax_sales',
+    parser_adapter: SOURCE_METADATA.parser_adapter,
+    extraction_quality: audit.extraction_quality,
+    evidence_quality: audit.evidence_quality,
+    extraction_confidence: audit.confidence_level,
+    malformed_extraction_reason: audit.rejection_reason,
     source_details: {
       source_name: SOURCE_METADATA.source_name,
       source_type: 'tax_sale',
       county: 'Dallas',
       acquisition_method: SOURCE_METADATA.acquisition_method,
       parser_adapter: SOURCE_METADATA.parser_adapter,
+      source_family: 'dallas_sheriff_tax_sales',
+      extraction_quality: audit.extraction_quality,
+      evidence_quality: audit.evidence_quality,
       source_reference: sourceReference,
       file_name: fileName || null
     },
@@ -241,7 +285,7 @@ function normalizeDryRunRecord(rawRecord, options = {}) {
     source_confidence: confidence,
     source_confidence_reason: buildConfidenceReasons({ address, amount, judgmentAmount, minimumBidAmount, strikeOffAmount, parcel, caseNumber, sourceReference, sourceRecordUrl, saleDate }),
     repair_flags: repairFlags,
-    source_truth: buildSourceTruthPreview({ address, amount, judgmentAmount, minimumBidAmount, strikeOffAmount, dcadValue, parcel, caseNumber, sourceReference, sourceRecordUrl, fileName, saleDate, confidence, repairFlags, instrumentNumber, instrumentFileDate, taxYearsInJudgment, postJudgmentTaxYears, mapsco, legalDescription, saleStatus, trustee, plaintiff }),
+    source_truth: buildSourceTruthPreview({ address, amount, judgmentAmount, minimumBidAmount, strikeOffAmount, dcadValue, parcel, caseNumber, sourceReference, sourceRecordUrl, fileName, saleDate, confidence, repairFlags, instrumentNumber, instrumentFileDate, taxYearsInJudgment, postJudgmentTaxYears, mapsco, legalDescription, saleStatus, trustee, plaintiff, audit }),
     lead_intelligence: buildLeadIntelligencePreview({ address, amount, judgmentAmount, minimumBidAmount, strikeOffAmount, dcadValue, parcel, caseNumber, sourceReference, sourceRecordUrl, saleDate, confidence, repairFlags }),
     lead_intelligence_brief: buildLeadIntelligenceBriefPreview({ address, amount, judgmentAmount, minimumBidAmount, strikeOffAmount, dcadValue, saleDate, sourceReference, confidence, repairFlags }),
     evidence: {
@@ -277,14 +321,55 @@ function classifyRepairIssues(candidate) {
   const flags = [];
   const rawText = cleanText(candidate.raw_payload && (candidate.raw_payload.raw_text || JSON.stringify(candidate.raw_payload))).toLowerCase();
   const amountKnown = (candidate.amount_owed > 0) || (candidate.judgment_amount > 0) || (candidate.minimum_bid_amount > 0) || (candidate.strike_off_amount > 0) || (candidate.dcad_value > 0);
+  const timingKnown = !!(candidate.sale_date || candidate.case_number);
   if (!candidate.address) flags.push('missing_address');
+  if (candidate.address && !isDallasPropertyAddress(candidate.address)) flags.push('weak_address');
   if (!amountKnown) flags.push('missing_amount');
   if (!candidate.source_url && !candidate.source_record_url) flags.push('missing_source_url');
-  if (!candidate.source_reference && !candidate.source_record_url) flags.push('weak_evidence');
-  if (/column\s*[1-4]|unnamed|header only|navigation|footer/.test(rawText)) flags.push('parser_failed');
+  if (!candidate.source_reference && !candidate.source_record_url && !candidate.case_number && !candidate.parcel) flags.push('weak_evidence');
+  if (!amountKnown && !timingKnown) flags.push('missing_timing_or_amount');
+  if (looksLikeDallasNavigationText(candidate.address) || /column\s*[1-4]|unnamed|header only|navigation|footer|page not found|phone directory|contact us/.test(rawText)) flags.push('parser_failed');
   if (/pdf/.test(rawText) && !candidate.source_reference) flags.push('malformed_pdf_extraction');
   if (!flags.length && (!candidate.source_reference || !amountKnown)) flags.push('weak_evidence');
   return Array.from(new Set(flags));
+}
+
+function buildExtractionAudit(fields) {
+  const rawText = cleanText(fields.raw_payload && (fields.raw_payload.raw_text || JSON.stringify(fields.raw_payload))).toLowerCase();
+  const amountKnown = (fields.amount_owed > 0) || (fields.judgment_amount > 0) || (fields.minimum_bid_amount > 0) || (fields.strike_off_amount > 0);
+  const sourceProof = !!(fields.source_record_url || fields.source_reference);
+  const propertyEvidence = !!(fields.parcel || fields.case_number || fields.source_reference);
+  const timingKnown = !!fields.sale_date;
+  const realAddress = isDallasPropertyAddress(fields.address);
+  const navText = looksLikeDallasNavigationText(fields.address) || /page not found|phone directory|skip main navigation|contact us/.test(rawText);
+  const missing = [];
+  if (!realAddress) missing.push('valid_dallas_property_address');
+  if (!sourceProof) missing.push('source_url_or_evidence_reference');
+  if (!amountKnown && !timingKnown) missing.push('timing_or_amount');
+  if (navText) missing.push('navigation_or_directory_text');
+
+  if (navText || !realAddress) {
+    return {
+      confidence_level: 'Repair',
+      extraction_quality: 'repair',
+      evidence_quality: 'bad_row',
+      rejection_reason: missing.join(', ')
+    };
+  }
+  if (sourceProof && propertyEvidence && (amountKnown || timingKnown)) {
+    return {
+      confidence_level: (fields.parcel || fields.case_number) && amountKnown ? 'High' : 'Medium',
+      extraction_quality: 'property_level',
+      evidence_quality: (fields.parcel || fields.case_number) ? 'strong' : 'medium',
+      rejection_reason: ''
+    };
+  }
+  return {
+    confidence_level: sourceProof ? 'Low' : 'Repair',
+    extraction_quality: 'partial',
+    evidence_quality: sourceProof ? 'weak' : 'missing_source_proof',
+    rejection_reason: missing.join(', ') || 'incomplete_property_evidence'
+  };
 }
 
 function buildSourceTruthPreview(fields) {
@@ -299,6 +384,11 @@ function buildSourceTruthPreview(fields) {
     interface_type: SOURCE_METADATA.interface_type,
     acquisition_method: SOURCE_METADATA.acquisition_method,
     parser_adapter: SOURCE_METADATA.parser_adapter,
+    source_family: 'dallas_sheriff_tax_sales',
+    extraction_quality: fields.audit ? fields.audit.extraction_quality : null,
+    evidence_quality: fields.audit ? fields.audit.evidence_quality : null,
+    extraction_confidence: fields.audit ? fields.audit.confidence_level : fields.confidence,
+    malformed_extraction_reason: fields.audit ? fields.audit.rejection_reason : '',
     source_url: SOURCE_URL,
     source_record_url: fields.sourceRecordUrl || AUCTION_URL,
     evidence_ref: fields.sourceReference || fields.fileName || 'No row/file reference saved',
@@ -444,6 +534,8 @@ module.exports = {
   runDryRun,
   sampleDryRun,
   classifyRepairIssues,
+  isDallasPropertyAddress,
+  looksLikeDallasNavigationText,
   buildSourceTruthPreview,
   buildLeadIntelligenceBriefPreview
 };

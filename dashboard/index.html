@@ -20985,10 +20985,11 @@ function renderDallasVerifiedBanner(lead) {
     '</div>' +
     '<div style="font-size:11px;color:#374151;line-height:1.45;margin-top:7px">' + leadQueueSafeText(dallas.confidence_reason || '') + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px">' +
-      [['Case/Cause', evidence.case_or_cause_number || 'missing'], ['Parcel/APN', evidence.parcel_apn || 'missing'], ['Timing', evidence.filing_or_sale_date || 'missing'], ['Amount', evidence.amount_or_judgment || 'missing'], ['Evidence Ref', evidence.source_reference || evidence.pdf_page_reference || 'missing']].map(function(pair) {
+      [['Source Family', dallas.source_family || 'unknown'], ['Parser', dallas.parser_adapter || 'unknown'], ['Extraction', dallas.extraction_quality || 'unknown'], ['Evidence', dallas.evidence_quality || 'unknown'], ['Case/Cause', evidence.case_or_cause_number || 'missing'], ['Parcel/APN', evidence.parcel_apn || 'missing'], ['Timing', evidence.filing_or_sale_date || 'missing'], ['Amount', evidence.amount_or_judgment || 'missing'], ['Evidence Ref', evidence.source_reference || evidence.pdf_page_reference || evidence.source_file_reference || 'missing']].map(function(pair) {
         return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:7px"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:800">' + leadQueueSafeText(pair[0]) + '</div><div style="font-size:10px;color:#111827;font-weight:800;word-break:break-word">' + leadQueueSafeText(pair[1]) + '</div></div>';
       }).join('') +
     '</div>' +
+    (dallas.rejection_reason ? '<div style="font-size:10px;color:#991b1b;line-height:1.4;margin-top:7px;font-weight:800">Rejection reason: ' + leadQueueSafeText(dallas.rejection_reason) + '</div>' : '') +
     (missing.length ? '<div style="font-size:10px;color:#991b1b;line-height:1.4;margin-top:7px;font-weight:800">Missing evidence: ' + leadQueueSafeText(missing.join(', ')) + '</div>' : '') +
   '</div>';
 }

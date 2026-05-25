@@ -405,6 +405,7 @@ function leadListTextBlob(lead) {
   lead = lead || {};
   var details = lead.source_details || {};
   var meta = lead._courthouse_metadata || {};
+  var truth = lead.source_truth || {};
   return [
     lead.source,
     lead.source_name,
@@ -430,6 +431,15 @@ function leadListTextBlob(lead) {
     details.record_url,
     details.query_url,
     details.source_url,
+    details.parser_adapter,
+    details.source_family,
+    truth.source_name,
+    truth.source_category,
+    truth.source_url,
+    truth.source_record_url,
+    truth.parser_adapter,
+    truth.source_family,
+    truth.distress_reason,
     meta.source_url,
     meta.source_pdf_url,
     meta.case_number,
@@ -444,30 +454,70 @@ function isDallasLeadForList(lead) {
   return (county.indexOf('dallas') > -1 || /dallas county|dallasopendata|dallascounty\.org|dallascad|sheriffsaleauctions\.com/.test(text)) && (!state || state === 'TX' || /\btx\b|texas/.test(text));
 }
 
+function isDallasBadRowTextForList(value) {
+  var text = String(value || '').trim();
+  if (!text) return false;
+  if (/^(column\s*[1-4]|unnamed)$/i.test(text)) return true;
+  if (/^(contact|contacts|directory|phone directory|page not found|home|search|login)$/i.test(text)) return true;
+  return /\b(skip main navigation|phone directory|contact us|page not found|error 404|site map|privacy policy|terms of use|calendar|login|search dallas county)\b/i.test(text);
+}
+
+function isDallasPropertyAddressForList(lead) {
+  var address = leadListAddress(lead);
+  if (!address || isWeakAddressTextForList(address) || isDallasBadRowTextForList(address)) return false;
+  if (/^\d{4}\s+(contact|directory|calendar|schedule|phone)\b/i.test(address)) return false;
+  return /\d/.test(address) && /\b(st|street|ave|avenue|dr|drive|rd|road|ln|lane|ct|court|cir|circle|blvd|boulevard|way|trl|trail|pkwy|parkway|pl|place|ter|terrace|loop|hwy|highway|sq|square)\b/i.test(address);
+}
+
+function dallasSourceFamily(lead) {
+  var text = leadListTextBlob(lead);
+  if (/tx_dallas_sheriff_tax_sales|sheriff|tax sale|sheriffsaleauctions|minimum bid|strike off/.test(text)) return 'dallas_sheriff_tax_sales';
+  if (/foreclos|trustee|auction notice/.test(text)) return 'dallas_foreclosure_notices';
+  if (/unsafe structure|fire damage|dangerous building|substandard/.test(text)) return 'dallas_unsafe_structures';
+  if (/code|violation|nuisance|open.?data|socrata|dallasopendata/.test(text)) return 'dallas_code_enforcement';
+  if (/probate|estate|decedent/.test(text)) return 'dallas_probate_public_notices';
+  if (/public notice|legal notice|notice/.test(text)) return 'dallas_public_notices';
+  return 'dallas_unknown_source';
+}
+
+function dallasParserAdapterForList(lead) {
+  return String(leadListPick(lead || {}, [
+    'parser_adapter',
+    'source_details.parser_adapter',
+    'source_truth.parser_adapter',
+    'adapter_family',
+    '_courthouse_metadata.parser_adapter'
+  ]) || (dallasSourceFamily(lead) === 'dallas_code_enforcement' ? 'socrata_adapter' : 'searchable_portal_adapter'));
+}
+
 function dallasLeadDistressCategory(lead) {
   var text = leadListTextBlob(lead);
-  if (/sheriff|tax sale|tax foreclosure|resale|minimum bid/.test(text)) return 'sheriff/tax sale';
+  if (/sheriff|tax sale|tax foreclosure|resale|minimum bid|strike off/.test(text)) return 'tax sale';
+  if (/foreclos|trustee|substitute trustee/.test(text)) return 'foreclosure';
   if (/tax|delinquen|lien/.test(text)) return 'tax delinquent';
-  if (/foreclos|trustee|auction/.test(text)) return 'foreclosure';
-  if (/code|violation|nuisance|permit/.test(text)) return 'code violation';
-  if (/probate|estate|decedent/.test(text)) return 'probate/estate';
+  if (/unsafe structure|fire damage|dangerous building|substandard/.test(text)) return 'unsafe structure';
+  if (/nuisance|public nuisance/.test(text)) return 'nuisance';
+  if (/code|violation|permit/.test(text)) return 'code violation';
+  if (/probate|estate|decedent/.test(text)) return 'probate';
   if (/vacant|absentee/.test(text)) return 'vacant/absentee';
   if (/public notice|legal notice|notice/.test(text)) return 'public notice';
   return 'unknown distress';
 }
 
 function dallasLeadEvidenceSnapshot(lead) {
-  var sourceUrl = leadListPick(lead || {}, ['source_record_url', 'record_url', 'source_url', 'verification_url', 'source_details.record_url', 'source_details.source_url', 'source_details.query_url', '_courthouse_metadata.source_url', '_courthouse_metadata.source_pdf_url']);
-  var sourceRef = leadListPick(lead || {}, ['evidence_ref', 'source_reference', 'record_id', 'source_details.evidence_ref', 'source_details.source_reference', 'lead_intelligence.evidence.record_key']);
-  var pdfRef = leadListPick(lead || {}, ['pdf_page', 'page_ref', 'source_page', 'evidence_page', 'source_details.pdf_page', 'source_details.page_ref', 'lead_intelligence.evidence.page_ref']);
-  var caseNumber = leadListPick(lead || {}, ['case_number', 'cause_number', 'source_details.case_number', 'source_details.cause_number', '_courthouse_metadata.case_number']);
-  var parcel = leadListPick(lead || {}, ['parcel', 'apn', 'parcel_id', 'account_number', 'source_details.parcel', 'source_details.apn', '_courthouse_metadata.parcel']);
-  var timing = leadListPick(lead || {}, ['auction_date', 'sale_date', 'filing_date', 'filed_date', 'source_published_at', 'source_details.sale_date', 'source_details.filing_date', '_courthouse_metadata.auction_date', '_courthouse_metadata.filed_date']);
-  var amount = leadListPick(lead || {}, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'source_amount', 'source_details.amount_owed', 'source_details.judgment_amount', 'source_details.minimum_bid', '_courthouse_metadata.lien_amount']);
+  var sourceUrl = leadListPick(lead || {}, ['source_record_url', 'record_url', 'source_url', 'verification_url', 'source_details.record_url', 'source_details.source_url', 'source_details.query_url', 'source_truth.source_record_url', 'source_truth.source_url', '_courthouse_metadata.source_url', '_courthouse_metadata.source_pdf_url']);
+  var sourceRef = leadListPick(lead || {}, ['evidence_ref', 'source_reference', 'record_id', 'source_details.evidence_ref', 'source_details.source_reference', 'source_truth.evidence_ref', 'lead_intelligence.evidence.record_key']);
+  var pdfRef = leadListPick(lead || {}, ['pdf_page', 'page_ref', 'source_page', 'evidence_page', 'source_details.pdf_page', 'source_details.page_ref', 'source_truth.pdf_page_reference', 'lead_intelligence.evidence.page_ref']);
+  var caseNumber = leadListPick(lead || {}, ['case_number', 'cause_number', 'source_details.case_number', 'source_details.cause_number', 'source_truth.case_number', '_courthouse_metadata.case_number']);
+  var parcel = leadListPick(lead || {}, ['parcel', 'apn', 'parcel_id', 'account_number', 'source_details.parcel', 'source_details.apn', 'source_truth.parcel', 'source_truth.parcel_apn', '_courthouse_metadata.parcel']);
+  var timing = leadListPick(lead || {}, ['auction_date', 'sale_date', 'filing_date', 'filed_date', 'source_published_at', 'source_details.sale_date', 'source_details.filing_date', 'source_truth.sale_date', 'source_truth.filing_or_sale_date', '_courthouse_metadata.auction_date', '_courthouse_metadata.filed_date']);
+  var amount = leadListPick(lead || {}, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'minimum_bid_amount', 'source_amount', 'source_details.amount_owed', 'source_details.judgment_amount', 'source_details.minimum_bid', 'source_truth.amount', 'source_truth.judgment_amount', 'source_truth.minimum_bid_amount', '_courthouse_metadata.lien_amount']);
   var owner = leadListPick(lead || {}, ['owner_name', 'owner', 'source_details.owner', 'source_details.owner_name']);
+  var fileRef = leadListPick(lead || {}, ['source_file_name', 'source_details.file_name', 'source_truth.file_name', 'source_truth.source_file_name']);
   return {
     source_url: sourceUrl || '',
     pdf_page_reference: pdfRef || '',
+    source_file_reference: fileRef || '',
     case_or_cause_number: caseNumber || '',
     parcel_apn: parcel || '',
     filing_or_sale_date: timing || '',
@@ -484,9 +534,10 @@ function dallasEvidenceConfidence(lead) {
   var evidence = dallasLeadEvidenceSnapshot(lead);
   var flags = Array.isArray(lead && lead.repair_flags) ? lead.repair_flags.join(' ').toLowerCase() : '';
   var parserText = leadListTextBlob(lead);
-  var weakAddress = isWeakAddressTextForList(leadListAddress(lead));
-  if (weakAddress || /parser_failed|placeholder_row|malformed_pdf_extraction|weak_evidence|missing_address/.test(flags)) {
-    return { level: 'Repair', score: 20, reason: weakAddress ? 'Address or parser output is not property-level evidence.' : 'Repair flags indicate parser/evidence failure.' };
+  var validDallasAddress = isDallasPropertyAddressForList(lead);
+  var extractionQuality = String(leadListPick(lead || {}, ['extraction_quality', 'source_details.extraction_quality', 'source_truth.extraction_quality']) || '').toLowerCase();
+  if (!validDallasAddress || /parser_failed|placeholder_row|malformed_pdf_extraction|weak_evidence|missing_address|weak_address/.test(flags) || extractionQuality === 'repair') {
+    return { level: 'Repair', score: 20, reason: !validDallasAddress ? 'Address or parser output is not validated as a Dallas property.' : 'Repair flags indicate parser/evidence failure.' };
   }
   if (!evidence.has_source_proof) {
     return { level: 'Low', score: 35, reason: 'No source URL or evidence reference is saved.' };
@@ -503,11 +554,48 @@ function dallasEvidenceConfidence(lead) {
   return { level: 'Low', score: 40, reason: 'Source proof exists, but property-level evidence is incomplete.' };
 }
 
+function dallasDistressPriorityWeight(category) {
+  var weights = {
+    foreclosure: 34,
+    'tax sale': 32,
+    'tax delinquent': 28,
+    'unsafe structure': 26,
+    nuisance: 22,
+    'code violation': 20,
+    probate: 16,
+    'public notice': 12,
+    'vacant/absentee': 10,
+    'unknown distress': 0
+  };
+  return weights[category] || 0;
+}
+
+function dallasTimingPriorityScore(value) {
+  var timestamp = Date.parse(value || '');
+  if (!Number.isFinite(timestamp)) return 0;
+  var days = Math.round((timestamp - Date.now()) / 86400000);
+  if (days >= 0 && days <= 45) return 28;
+  if (days > 45 && days <= 120) return 18;
+  if (days < 0 && days >= -45) return 10;
+  return 4;
+}
+
+function dallasVerifiedPriorityScore(status) {
+  var confidence = status.confidence_level === 'High' ? 30 : status.confidence_level === 'Medium' ? 20 : status.confidence_level === 'Low' ? 8 : 0;
+  var evidence = status.evidence || {};
+  var completeness = [evidence.source_url, evidence.case_or_cause_number, evidence.parcel_apn, evidence.amount_or_judgment, evidence.owner].filter(Boolean).length * 3;
+  return confidence + dallasDistressPriorityWeight(status.distress_category) + dallasTimingPriorityScore(evidence.filing_or_sale_date) + completeness;
+}
+
 function dallasVerifiedAcquisitionStatus(lead) {
   var evidence = dallasLeadEvidenceSnapshot(lead);
   var confidence = dallasEvidenceConfidence(lead);
   var distress = dallasLeadDistressCategory(lead);
-  var validProperty = !!leadListAddress(lead) && !isWeakAddressTextForList(leadListAddress(lead));
+  var sourceFamily = dallasSourceFamily(lead);
+  var parserAdapter = dallasParserAdapterForList(lead);
+  var extractionQuality = leadListPick(lead || {}, ['extraction_quality', 'source_details.extraction_quality', 'source_truth.extraction_quality']) || (confidence.level === 'Repair' ? 'repair' : (evidence.has_property_evidence ? 'property_level' : 'partial'));
+  var evidenceQuality = leadListPick(lead || {}, ['evidence_quality', 'source_details.evidence_quality', 'source_truth.evidence_quality']) || (evidence.has_source_proof && evidence.has_timing_or_amount ? 'strong' : 'weak');
+  var validProperty = isDallasPropertyAddressForList(lead);
   var hasDistress = distress !== 'unknown distress';
   var actionable = validProperty && evidence.has_source_proof && hasDistress && evidence.has_timing_or_amount && (confidence.level === 'High' || confidence.level === 'Medium');
   var missing = [];
@@ -516,8 +604,14 @@ function dallasVerifiedAcquisitionStatus(lead) {
   if (!hasDistress) missing.push('distress_category');
   if (!evidence.has_timing_or_amount) missing.push('timing_or_amount_evidence');
   if (!(confidence.level === 'High' || confidence.level === 'Medium')) missing.push('medium_or_high_confidence');
-  return {
+  var rejectionReason = actionable ? '' : missing.join(', ');
+  var status = {
     is_dallas: isDallasLeadForList(lead),
+    source_family: sourceFamily,
+    parser_adapter: parserAdapter,
+    extraction_quality: extractionQuality,
+    evidence_quality: evidenceQuality,
+    rejection_reason: rejectionReason,
     queue_eligible: actionable,
     status: actionable ? 'Actionable' : (confidence.level === 'Repair' ? 'Needs Repair' : (validProperty && evidence.has_source_proof ? 'Needs Verification' : 'Weak Lead')),
     distress_category: distress,
@@ -527,6 +621,25 @@ function dallasVerifiedAcquisitionStatus(lead) {
     evidence: evidence,
     missing_evidence: missing,
     recommended_next_step: actionable ? 'Verify source record, confirm amount/timing, then underwrite before outreach.' : 'Repair missing Dallas source evidence before moving this lead into acquisition workflow.'
+  };
+  status.priority_score = dallasVerifiedPriorityScore(status);
+  return {
+    is_dallas: status.is_dallas,
+    source_family: status.source_family,
+    parser_adapter: status.parser_adapter,
+    extraction_quality: status.extraction_quality,
+    evidence_quality: status.evidence_quality,
+    rejection_reason: status.rejection_reason,
+    priority_score: status.priority_score,
+    queue_eligible: status.queue_eligible,
+    status: status.status,
+    distress_category: status.distress_category,
+    confidence_level: status.confidence_level,
+    confidence_score: status.confidence_score,
+    confidence_reason: status.confidence_reason,
+    evidence: status.evidence,
+    missing_evidence: status.missing_evidence,
+    recommended_next_step: status.recommended_next_step
   };
 }
 
@@ -691,8 +804,13 @@ app.get('/api/leads', (req, res) => {
       });
     }
     // Sort BEFORE limiting (correct order)
-    var sortKey = sort || 'motivation_score';
-    if (sortKey === 'motivation_score') {
+    var dallasVerifiedOnly = /^(1|true|yes)$/i.test(String(dallas_verified || ''));
+    var sortKey = sort || (dallasVerifiedOnly ? 'dallas_verified_priority' : 'motivation_score');
+    if (sortKey === 'dallas_verified_priority') {
+      filtered = filtered.slice().sort(function(a,b){
+        return dallasVerifiedAcquisitionStatus(b).priority_score - dallasVerifiedAcquisitionStatus(a).priority_score;
+      });
+    } else if (sortKey === 'motivation_score') {
       filtered = filtered.slice().sort(function(a,b){ return (classifyLeadQualityForList(a).rank - classifyLeadQualityForList(b).rank) || (((b.hot_score||b.motivation_score||0)+(b.priorityScore||0)) - ((a.hot_score||a.motivation_score||0)+(a.priorityScore||0))); });
     } else if (sortKey === 'created_at' || sortKey === 'newest') {
       filtered = filtered.slice().sort(function(a,b){ return new Date(b.created_at||b.created||0) - new Date(a.created_at||a.created||0); });
