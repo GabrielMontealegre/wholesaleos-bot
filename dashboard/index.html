@@ -448,7 +448,7 @@ const APP = {
   dallasSourceAgentSelected: localStorage.getItem('montsan_dallas_source_agent_selected') || 'tx_dallas_sheriff_tax_sales',
   dallasSourceAgentStatus: null,
   dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
-  operationalMode: localStorage.getItem('montsan_operational_mode') || 'dallas',
+  operationalMode: localStorage.getItem('montsan_operational_mode') || 'national',
 };
 
 function defaultBuyers() {
@@ -604,7 +604,7 @@ function buildModal(parts) {
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
     if(!_l2)return;
     var _src=(_l2.source||'').toLowerCase();
-    var _viol=((_l2.violations||[]).join(' ')||'').toLowerCase();
+    var _viol=(Array.isArray(_l2.violations) ? _l2.violations.join(' ') : String(_l2.violations || '')).toLowerCase();
     var _isFC=_src.indexOf('pre-fc')>-1||_src.indexOf('foreclos')>-1||_viol.indexOf('nod')>-1;
     var _isTax=_src.indexOf('tax')>-1||_viol.indexOf('tax')>-1;
     var _isCode=_src.indexOf('code')>-1||_viol.indexOf('violation')>-1;
@@ -2357,7 +2357,7 @@ function openLeadModal(leadId) {
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
     if(!_l2)return;
     var _src=(_l2.source||'').toLowerCase();
-    var _viol=((_l2.violations||[]).join(' ')||'').toLowerCase();
+    var _viol=(Array.isArray(_l2.violations) ? _l2.violations.join(' ') : String(_l2.violations || '')).toLowerCase();
     var _isFC=_src.indexOf('pre-fc')>-1||_src.indexOf('foreclos')>-1||_viol.indexOf('nod')>-1;
     var _isTax=_src.indexOf('tax')>-1||_viol.indexOf('tax')>-1;
     var _isCode=_src.indexOf('code')>-1||_viol.indexOf('violation')>-1;
@@ -6552,7 +6552,7 @@ function showModal(html) {
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
     if(!_l2)return;
     var _src=(_l2.source||'').toLowerCase();
-    var _viol=((_l2.violations||[]).join(' ')||'').toLowerCase();
+    var _viol=(Array.isArray(_l2.violations) ? _l2.violations.join(' ') : String(_l2.violations || '')).toLowerCase();
     var _isFC=_src.indexOf('pre-fc')>-1||_src.indexOf('foreclos')>-1||_viol.indexOf('nod')>-1;
     var _isTax=_src.indexOf('tax')>-1||_viol.indexOf('tax')>-1;
     var _isCode=_src.indexOf('code')>-1||_viol.indexOf('violation')>-1;
@@ -11446,7 +11446,7 @@ function openLeadModal(leadId) {
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
     if(!_l2)return;
     var _src=(_l2.source||'').toLowerCase();
-    var _viol=((_l2.violations||[]).join(' ')||'').toLowerCase();
+    var _viol=(Array.isArray(_l2.violations) ? _l2.violations.join(' ') : String(_l2.violations || '')).toLowerCase();
     var _isFC=_src.indexOf('pre-fc')>-1||_src.indexOf('foreclos')>-1||_viol.indexOf('nod')>-1;
     var _isTax=_src.indexOf('tax')>-1||_viol.indexOf('tax')>-1;
     var _isCode=_src.indexOf('code')>-1||_viol.indexOf('violation')>-1;
@@ -12818,7 +12818,7 @@ function showModal(html) {
     var _l2=APP.leads.find(function(x){return x.id===leadId;});
     if(!_l2)return;
     var _src=(_l2.source||'').toLowerCase();
-    var _viol=((_l2.violations||[]).join(' ')||'').toLowerCase();
+    var _viol=(Array.isArray(_l2.violations) ? _l2.violations.join(' ') : String(_l2.violations || '')).toLowerCase();
     var _isFC=_src.indexOf('pre-fc')>-1||_src.indexOf('foreclos')>-1||_viol.indexOf('nod')>-1;
     var _isTax=_src.indexOf('tax')>-1||_viol.indexOf('tax')>-1;
     var _isCode=_src.indexOf('code')>-1||_viol.indexOf('violation')>-1;
@@ -17800,6 +17800,33 @@ function leadApiSortParam(sort) {
   return 'priority';
 }
 
+function safeRegionalModeFallback() {
+  var mode = 'national';
+  try {
+    mode = String((APP && (APP.operationalMode || APP.regionalMode || (APP.leadFilters && APP.leadFilters.regionalMode))) || localStorage.getItem('montsan_operational_mode') || 'national').toLowerCase();
+  } catch (e) {
+    mode = 'national';
+  }
+  var commandMap = typeof REGIONAL_COMMAND !== 'undefined' ? REGIONAL_COMMAND : null;
+  if (commandMap && commandMap[mode]) return mode;
+  return 'national';
+}
+
+function safeRegionalModeLabelFallback() {
+  var mode = safeRegionalModeFallback();
+  var commandMap = typeof REGIONAL_COMMAND !== 'undefined' ? REGIONAL_COMMAND : null;
+  if (commandMap && commandMap[mode] && commandMap[mode].label) return commandMap[mode].label;
+  if (mode === 'dallas') return 'Dallas Mode';
+  if (mode === 'dfw') return 'DFW Mode';
+  if (mode === 'texas') return 'Texas Mode';
+  return 'National Mode';
+}
+
+if (typeof window !== 'undefined') {
+  if (typeof window.regionalMode !== 'function') window.regionalMode = safeRegionalModeFallback;
+  if (typeof window.regionalModeLabel !== 'function') window.regionalModeLabel = safeRegionalModeLabelFallback;
+}
+
 function buildLeadApiUrl(offset) {
   var filters = typeof getLeadToolbarFilters === 'function' ? getLeadToolbarFilters() : {};
   var params = new URLSearchParams();
@@ -17807,8 +17834,9 @@ function buildLeadApiUrl(offset) {
   params.set('limit', String(APP._leadApiLimit || 300));
   params.set('offset', String(Math.max(0, Number.isFinite(resolvedOffset) ? resolvedOffset : 0)));
   params.set('sort', leadApiSortParam(filters.sort || 'priority'));
-  params.set('operational_mode', regionalMode());
-  if (regionalMode() === 'dfw') params.set('metro', 'DFW');
+  var mode = safeRegionalModeFallback();
+  params.set('operational_mode', mode);
+  if (mode === 'dfw') params.set('metro', 'DFW');
   if (APP._regionalQueue === 'weak_repair') params.set('queue', 'weak_repair');
   if (filters.state) params.set('state', filters.state);
   if (filters.county) params.set('county', filters.county);
@@ -22370,7 +22398,7 @@ console.log("✅ Patch v3 loaded — search, leads pagination, buyers full info,
 
 </script>
 
-<script src="/dashboard/courthouse-tab.js">
+<script>
 
 // =============================================
 // BUYER GENERATOR — on-demand buyer acquisition
@@ -23836,9 +23864,10 @@ var REGIONAL_COMMAND = {
   national: { label: 'National Mode', state: '', counties: [], api: 'national' }
 };
 function regionalMode(){
-  var mode = String(APP.operationalMode || localStorage.getItem('montsan_operational_mode') || 'dallas').toLowerCase();
-  if (!REGIONAL_COMMAND[mode]) mode = 'dallas';
+  var mode = String(APP.operationalMode || APP.regionalMode || (APP.leadFilters && APP.leadFilters.regionalMode) || localStorage.getItem('montsan_operational_mode') || 'national').toLowerCase();
+  if (!REGIONAL_COMMAND[mode]) mode = 'national';
   APP.operationalMode = mode;
+  APP.regionalMode = mode;
   return mode;
 }
 function regionalCommandConfig(){
@@ -23962,6 +23991,12 @@ window.applyLeadToolbarFilters = function(options){
   setTimeout(syncLeadFilterControls,0);
   return APP.filtered;
 };
+if (typeof window !== 'undefined') {
+  window.getLeadToolbarFilters = getLeadToolbarFilters;
+  window.readLeadToolbarFiltersFromDom = readLeadToolbarFiltersFromDom;
+  window.leadMatchesToolbarFilters = leadMatchesToolbarFilters;
+  window.syncLeadFilterControls = syncLeadFilterControls;
+}
 function injectFilterBars(){
   // Toolbar is rendered canonically by renderLeads().
 }
@@ -24010,6 +24045,7 @@ window.renderLeadActionToolbar = function(){
 window.setOperationalMode = function(mode){
   if (!REGIONAL_COMMAND[String(mode || '').toLowerCase()]) mode = 'dallas';
   APP.operationalMode = String(mode).toLowerCase();
+  APP.regionalMode = APP.operationalMode;
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
   APP._regionalQueue = '';

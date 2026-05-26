@@ -390,7 +390,12 @@ function _addDataAttrs() {
       row.dataset.arv      = (cells[6].textContent||"").trim() === "$0" ? "no" : "yes";
         row.dataset.hotScore = "0"; // will be set when leads are scored
       var dateStr = (cells[8].textContent||"").trim();
-      row.dataset.created  = dateStr ? new Date(dateStr).toISOString() : "";
+      if (dateStr) {
+        var parsedDate = new Date(dateStr);
+        row.dataset.created = isNaN(parsedDate.getTime()) ? "" : parsedDate.toISOString();
+      } else {
+        row.dataset.created = "";
+      }
     }
     // Override with APP.leads if available
     if (window.APP && APP.leads) {

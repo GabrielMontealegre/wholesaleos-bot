@@ -127,13 +127,14 @@ function _renderLeadList(filter) {
     : _leads.slice(0, 200);
 
   el.innerHTML = leads.map(function(l) {
+    var leadJson = JSON.stringify(String(l.id || ''));
     var score = l.hot_score || 0;
     var tier = l.hot_tier || 'COLD';
     var emoji = tier==='HOT'?'🔥':tier==='WARM'?'⚡':'❄️';
     var scoreColor = tier==='HOT'?'#ef4444':tier==='WARM'?'#f59e0b':'#9ca3af';
     var addr = [l.address, l.city, l.state].filter(Boolean).join(', ');
     var src = l.source_details || l.source || l.category || '';
-    return '<div onclick="wosOOpenLead(\"'+l.id+'\")" style="padding:10px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:6px;cursor:pointer;background:#fff;transition:border-color .15s;" onmouseover="this.style.borderColor=\"#7c3aed\"" onmouseout="this.style.borderColor=\"#e5e7eb\"">' +
+    return "<div onclick='wosOOpenLead(" + leadJson + ")' style='padding:10px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:6px;cursor:pointer;background:#fff;transition:border-color .15s;' onmouseover='this.style.borderColor=\"#7c3aed\"' onmouseout='this.style.borderColor=\"#e5e7eb\"'>" +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
       '<div style="font-size:12px;font-weight:600;color:#111;line-height:1.3;">'+addr+'</div>' +
       '<span style="font-size:11px;font-weight:700;color:'+scoreColor+';white-space:nowrap;margin-left:4px;">'+emoji+' '+score+'</span>' +
@@ -152,6 +153,7 @@ window.wosOOpenLead = function(leadId) {
   var el = document.getElementById('wosOComposer');
   if (!el) return;
 
+  var leadJson = JSON.stringify(String(leadId || ''));
   var addr = [lead.address, lead.city, lead.state, lead.zip].filter(Boolean).join(', ');
   var score = lead.hot_score || 0;
   var tier = lead.hot_tier || '—';
@@ -183,18 +185,18 @@ window.wosOOpenLead = function(leadId) {
     '</div>' +
     // Outreach type selector
     '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
-    '<button onclick="wosOGenerateMsg(\"'+leadId+'\",\"sms_seller\")" style="flex:1;padding:9px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Generate SMS</button>' +
-    '<button onclick="wosOGenerateMsg(\"'+leadId+'\",\"email_seller\")" style="flex:1;padding:9px;background:#4f46e5;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Generate Email</button>' +
-    '<button onclick="wosOScoreLead(\"'+leadId+'\")" style="padding:9px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:13px;cursor:pointer;">Score Lead</button>' +
+    "<button onclick='wosOGenerateMsg(" + leadJson + ",\"sms_seller\")' style='flex:1;padding:9px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;'>Generate SMS</button>" +
+    "<button onclick='wosOGenerateMsg(" + leadJson + ",\"email_seller\")' style='flex:1;padding:9px;background:#4f46e5;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;'>Generate Email</button>" +
+    "<button onclick='wosOScoreLead(" + leadJson + ")' style='padding:9px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:13px;cursor:pointer;'>Score Lead</button>" +
     '</div>' +
     // Message output area
     '<div id="wosOMsgArea" style="background:#f8f8fb;border:1px solid #e5e7eb;border-radius:10px;padding:16px;min-height:120px;">' +
-    '<div style="color:#9ca3af;font-size:13px;">Click Generate SMS or Generate Email above. AI will craft a unique message based on this specific lead's situation.</div>' +
+    '<div style="color:#9ca3af;font-size:13px;">Click Generate SMS or Generate Email above. AI will craft a unique message based on this specific lead\'s situation.</div>' +
     '</div>' +
     '<div id="wosOActionBtns" style="display:none;margin-top:12px;gap:8px;">' +
     '<button onclick="wosOCopyMsg()" style="padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:13px;cursor:pointer;">Copy</button>' +
     '<button onclick="wosOEditMsg()" style="padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:13px;cursor:pointer;">Edit</button>' +
-    '<button onclick="wosOSendEmail(\"'+leadId+'\")" style="padding:8px 16px;background:#059669;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Send Email</button>' +
+    "<button onclick='wosOSendEmail(" + leadJson + ")' style='padding:8px 16px;background:#059669;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;'>Send Email</button>" +
     '</div>';
 
   // Score the lead if not already scored
