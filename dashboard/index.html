@@ -412,7 +412,14 @@ tr.selected td{background:#f0f6ff}
 
 <script>
 
-
+window.regionalMode = window.regionalMode || function () {
+  return (
+    (window.APP && (window.APP.operationalMode || window.APP.regionalMode || (window.APP.leadFilters && window.APP.leadFilters.regionalMode))) ||
+    localStorage.getItem('wos_operational_mode') ||
+    localStorage.getItem('montsan_operational_mode') ||
+    'national'
+  );
+};
 
 
 
@@ -450,6 +457,7 @@ const APP = {
   dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
   operationalMode: localStorage.getItem('montsan_operational_mode') || 'national',
 };
+window.APP = APP;
 
 function defaultBuyers() {
   return []; // No fake buyers — add real ones from Connected Investors or Facebook groups
@@ -17800,20 +17808,9 @@ function leadApiSortParam(sort) {
   return 'priority';
 }
 
-function safeRegionalModeFallback() {
-  var mode = 'national';
-  try {
-    mode = String((APP && (APP.operationalMode || APP.regionalMode || (APP.leadFilters && APP.leadFilters.regionalMode))) || localStorage.getItem('montsan_operational_mode') || 'national').toLowerCase();
-  } catch (e) {
-    mode = 'national';
-  }
-  var commandMap = typeof REGIONAL_COMMAND !== 'undefined' ? REGIONAL_COMMAND : null;
-  if (commandMap && commandMap[mode]) return mode;
-  return 'national';
-}
-
 function safeRegionalModeLabelFallback() {
-  var mode = safeRegionalModeFallback();
+  var mode = typeof window.regionalMode === 'function' ? String(window.regionalMode()).toLowerCase() : 'national';
+  if (['dallas','dfw','texas','national'].indexOf(mode) === -1) mode = 'national';
   var commandMap = typeof REGIONAL_COMMAND !== 'undefined' ? REGIONAL_COMMAND : null;
   if (commandMap && commandMap[mode] && commandMap[mode].label) return commandMap[mode].label;
   if (mode === 'dallas') return 'Dallas Mode';
@@ -17823,7 +17820,6 @@ function safeRegionalModeLabelFallback() {
 }
 
 if (typeof window !== 'undefined') {
-  if (typeof window.regionalMode !== 'function') window.regionalMode = safeRegionalModeFallback;
   if (typeof window.regionalModeLabel !== 'function') window.regionalModeLabel = safeRegionalModeLabelFallback;
 }
 
@@ -17834,7 +17830,7 @@ function buildLeadApiUrl(offset) {
   params.set('limit', String(APP._leadApiLimit || 300));
   params.set('offset', String(Math.max(0, Number.isFinite(resolvedOffset) ? resolvedOffset : 0)));
   params.set('sort', leadApiSortParam(filters.sort || 'priority'));
-  var mode = safeRegionalModeFallback();
+  var mode = typeof window.regionalMode === 'function' ? String(window.regionalMode()).toLowerCase() : 'national';
   params.set('operational_mode', mode);
   if (mode === 'dfw') params.set('metro', 'DFW');
   if (APP._regionalQueue === 'weak_repair') params.set('queue', 'weak_repair');
@@ -22212,9 +22208,9 @@ function renderLeads() {
     : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
   var regionalNotice = '<div style="border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">' +
     regionalModeLabel() + ': ' +
-    (regionalMode() === 'dallas' ? 'Dallas County only. National courthouse rows are isolated from this workflow.' :
-     regionalMode() === 'dfw' ? 'DFW counties only: Dallas, Tarrant, Collin, Denton.' :
-     regionalMode() === 'texas' ? 'All Texas leads only.' :
+    (window.regionalMode() === 'dallas' ? 'Dallas County only. National courthouse rows are isolated from this workflow.' :
+     window.regionalMode() === 'dfw' ? 'DFW counties only: Dallas, Tarrant, Collin, Denton.' :
+     window.regionalMode() === 'texas' ? 'All Texas leads only.' :
      'National Intake: all regions and states.') +
     (APP._regionalQueue === 'weak_repair' ? ' Weak/Repair queue is active.' : '') +
   '</div>';
@@ -23864,14 +23860,15 @@ var REGIONAL_COMMAND = {
   national: { label: 'National Mode', state: '', counties: [], api: 'national' }
 };
 function regionalMode(){
-  var mode = String(APP.operationalMode || APP.regionalMode || (APP.leadFilters && APP.leadFilters.regionalMode) || localStorage.getItem('montsan_operational_mode') || 'national').toLowerCase();
+  var mode = String(APP.operationalMode || APP.regionalMode || (APP.leadFilters && APP.leadFilters.regionalMode) || localStorage.getItem('wos_operational_mode') || localStorage.getItem('montsan_operational_mode') || 'national').toLowerCase();
   if (!REGIONAL_COMMAND[mode]) mode = 'national';
   APP.operationalMode = mode;
   APP.regionalMode = mode;
   return mode;
 }
+window.regionalMode = regionalMode;
 function regionalCommandConfig(){
-  return REGIONAL_COMMAND[regionalMode()] || REGIONAL_COMMAND.dallas;
+  return REGIONAL_COMMAND[window.regionalMode()] || REGIONAL_COMMAND.national;
 }
 function leadRegionState(l){
   return String((l && (l.state || l.state_code || (l.source_details && l.source_details.state) || (l.lead_intelligence && l.lead_intelligence.state))) || '').toUpperCase();
@@ -23881,8 +23878,8 @@ function leadRegionCounty(l){
   return text.replace(/\s+county\b/g,'').trim();
 }
 function leadMatchesRegionalMode(l){
-  var mode = regionalMode();
-  var cfg = REGIONAL_COMMAND[mode] || REGIONAL_COMMAND.dallas;
+  var mode = window.regionalMode();
+  var cfg = REGIONAL_COMMAND[mode] || REGIONAL_COMMAND.national;
   if (mode === 'national') return true;
   var state = leadRegionState(l);
   var county = leadRegionCounty(l);
@@ -23896,13 +23893,14 @@ function regionalModeLabel(){
 }
 function saveLeadToolbarState(){
   try { localStorage.setItem('montsan_lead_toolbar_filters', JSON.stringify(APP._leadToolbarFilters || {})); } catch(e) {}
-  try { localStorage.setItem('montsan_operational_mode', regionalMode()); } catch(e) {}
+  try { localStorage.setItem('montsan_operational_mode', window.regionalMode()); } catch(e) {}
+  try { localStorage.setItem('wos_operational_mode', window.regionalMode()); } catch(e) {}
 }
 function getLeadToolbarFilters(){
   if (!APP._leadToolbarFilters) {
     try { APP._leadToolbarFilters = JSON.parse(localStorage.getItem('montsan_lead_toolbar_filters') || '{}') || {}; }
     catch(e) { APP._leadToolbarFilters = {}; }
-    if (!localStorage.getItem('montsan_lead_toolbar_filters') && regionalMode() === 'dallas') {
+    if (!localStorage.getItem('montsan_lead_toolbar_filters') && window.regionalMode() === 'dallas') {
       APP._leadToolbarFilters.state = 'TX';
       APP._leadToolbarFilters.county = 'Dallas';
     }
@@ -24004,7 +24002,7 @@ function addToolbarButtons(){
   // Toolbar is rendered canonically by renderLeads().
 }
 function renderRegionalModeControls(){
-  var active = regionalMode();
+  var active = window.regionalMode();
   var order = ['dallas','dfw','texas','national'];
   return "<div id='regionalCommandBar' style='display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#0b1120;border:1px solid #1f2937;border-radius:8px;padding:6px 8px;margin-right:4px;'>" +
     "<span style='font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:900;letter-spacing:.05em;'>Mode</span>" +
@@ -24568,7 +24566,7 @@ if(document.readyState==="loading"){
     APP.selectedLead = String(lead.id || leadId || '');
     APP.leadWorkspaceId = '';
     APP._leadQueueSnapshot = {
-      mode: regionalMode(),
+      mode: window.regionalMode(),
       filters: Object.assign({}, getLeadToolbarFilters()),
       page: typeof _leadsPage !== 'undefined' ? _leadsPage : 0,
       offset: APP._leadApiOffset || 0,

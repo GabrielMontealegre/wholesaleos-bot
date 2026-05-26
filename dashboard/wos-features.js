@@ -402,8 +402,10 @@ function _addDataAttrs() {
       var lid = row.dataset.leadId;
       var lead = APP.leads.find(function(l) { return l.id === lid; });
       if (lead) {
+        var srcValue = lead.source_details || lead.source || lead.motivation || lead.violations || row.dataset.src || '';
+        if (Array.isArray(srcValue)) srcValue = srcValue.join(' ');
         row.dataset.state    = (lead.state || row.dataset.state || '').toUpperCase();
-        row.dataset.src      = (lead.source_details || lead.source || lead.motivation || lead.violations || row.dataset.src || '').toLowerCase();
+        row.dataset.src      = String(srcValue || '').toLowerCase();
         row.dataset.priority = (lead.priority || '').toUpperCase();
         row.dataset.phone    = (lead.phone && lead.phone.length > 7) ? 'yes' : 'no';
         row.dataset.arv      = (lead.arv && lead.arv > 0) ? 'yes' : 'no';
