@@ -1009,7 +1009,7 @@ function mdaUseLocalCompCandidate(index) {
 function mdaRenderDallasCompCapturePanel() {
   if (typeof researchLocalCompBridgeState !== 'function') return '';
   if (!mdaDallasCompCaptureEligible()) {
-    return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:10px;margin-top:10px;color:#cbd5e1;font-size:11px;line-height:1.5">Dallas comp capture is available only for Dallas, Texas addresses. Paste or load a Dallas address to enable safe browser-assisted comp preview.</div>';
+    return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:10px;margin-top:10px;color:#cbd5e1;font-size:11px;line-height:1.5">Dallas comp capture is available only for Dallas, Texas addresses.</div>';
   }
   var leadId = mdaDallasCompCaptureLeadId();
   var links = mdaDallasCompResearchLinks();
@@ -1020,9 +1020,22 @@ function mdaRenderDallasCompCapturePanel() {
   var result = state.result || {};
   var candidates = Array.isArray(result.candidates) ? result.candidates.slice(0, 5) : [];
   var summary = typeof dallasCompPreviewSummary === 'function' ? dallasCompPreviewSummary(candidates) : { candidateCount: candidates.length, completeness: 0, guidance: 'Needs manual comp review.' };
+  var hasDrafts = candidates.length > 0;
+  var statusLabel = workflowStatus.label === 'Local agent disconnected'
+    ? 'Open a source tab first'
+    : workflowStatus.label === 'Wrong tab selected'
+      ? 'Select a Dallas source tab'
+      : workflowStatus.label === 'Ready to capture'
+        ? 'Ready to capture'
+        : 'Check source tab';
+  var statusDetail = workflowStatus.label === 'Local agent disconnected'
+    ? 'Open a Zillow, Redfin, or Realtor tab first, then click Capture Visible Comps.'
+    : workflowStatus.label === 'Wrong tab selected'
+      ? 'Choose a Zillow, Redfin, Realtor, or Google Maps tab.'
+      : workflowStatus.detail || state.lastMessage || 'Open a source tab before capture.';
   var tabButtons = tabs.map(function(tab) {
     var selected = selectedTab && String(selectedTab.id) === String(tab.id);
-    return '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(leadId) + ',' + researchJsArg(tab.id) + ')" style="font-size:10px;border:1px solid ' + (selected ? '#f4c542' : '#334155') + ';border-radius:999px;background:#111827;color:' + (selected ? '#f4c542' : '#e5e7eb') + ';font-weight:900;padding:5px 8px;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + mdaEscapeHtml((selected ? 'Selected: ' : '') + researchLocalCompTabSource(tab) + ' - ' + (tab.title || 'Tab')) + '</button>';
+    return '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(leadId) + ',' + researchJsArg(tab.id) + ')" style="font-size:11px;border:1px solid ' + (selected ? '#f4c542' : '#334155') + ';border-radius:8px;background:#111827;color:' + (selected ? '#f4c542' : '#e5e7eb') + ';font-weight:900;padding:8px 10px;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + mdaEscapeHtml((selected ? 'Selected: ' : '') + researchLocalCompTabSource(tab) + ' - ' + (tab.title || 'Tab')) + '</button>';
   }).join('');
   var rows = candidates.map(function(candidate, index) {
     var details = [
@@ -1034,7 +1047,7 @@ function mdaRenderDallasCompCapturePanel() {
       candidate.sale_list_status || candidate.status || ''
     ].filter(Boolean).join(' | ');
     return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#111827;border:1px solid #334155;border-radius:8px;padding:8px">' +
-      '<div style="min-width:0"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">' + mdaEscapeHtml(candidate.source || 'local browser') + ' | Unverified</div>' +
+      '<div style="min-width:0"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">' + mdaEscapeHtml(candidate.source || 'local browser') + ' | Draft</div>' +
       '<div style="font-size:12px;color:#f8fafc;font-weight:900;line-height:1.35">' + mdaEscapeHtml(candidate.address || candidate.title || 'Preview candidate') + '</div>' +
       '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:3px">' + mdaEscapeHtml(details || 'Visible-page extraction only') + '</div>' +
       '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">' + mdaEscapeHtml(candidate.confidence_reason || summary.guidance) + '</div>' +
@@ -1048,28 +1061,28 @@ function mdaRenderDallasCompCapturePanel() {
     return '<a href="' + (disabled ? '#' : mdaEscapeAttr(url)) + '" target="_blank" rel="noopener" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : '') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (emphasized ? '#f4c542' : '#111827') + ';color:' + (emphasized ? '#111827' : (disabled ? '#64748b' : '#e5e7eb')) + ';font-size:11px;font-weight:900">' + mdaEscapeHtml(label) + '</a>';
   }
   return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px;margin-top:10px">' +
-    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px"><div><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Browser-Assisted Comp Capture</div><div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">Dallas only. Operator-triggered, selected-tab, visible-page capture. No auto-save, no loops, no CAPTCHA bypass.</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
-      action('Open Zillow', links.zillow, true) +
+    '<div style="margin-bottom:8px"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Comps</div><div style="font-size:13px;color:#f8fafc;font-weight:900;line-height:1.35;margin-top:3px">Open a Zillow, Redfin, or Realtor tab first. Then click Capture Visible Comps.</div></div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',false)" style="border:1px solid #f4c542;border-radius:8px;padding:9px 12px;background:#f4c542;color:#111827;font-size:12px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:9px 12px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
+    '</div></div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(leadId) + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Source Tab') + '</button>' +
+      '<span style="font-size:10px;color:#94a3b8;line-height:1.45;align-self:center">' + mdaEscapeHtml(statusLabel) + '</span>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+      action('Open Zillow', links.zillow, false) +
       action('Open Redfin', links.redfin, false) +
       action('Open Realtor', links.realtor, false) +
       action('Open Maps', links.google_maps, false) +
       action('Open DCAD', links.appraisal_district, false) +
-    '</div></div>' +
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
-      '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(leadId) + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
-      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',false)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
-      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px">' +
-      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Workflow</div><div style="font-size:12px;color:' + workflowStatus.color + ';font-weight:900;margin-top:3px">' + mdaEscapeHtml(workflowStatus.label) + '</div></div>' +
-      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Preview comps</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.candidateCount + ' / 5') + '</div></div>' +
-      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Completeness</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.completeness + '%') + '</div></div>' +
-      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Guidance</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.guidance) + '</div></div>' +
-    '</div>' +
-    '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">' + mdaEscapeHtml(workflowStatus.detail || state.lastMessage || 'Select a supported Zillow, Redfin, or Realtor tab before capture.') + '</div>' +
-    (tabButtons ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + tabButtons + '</div>' : '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">No supported tabs loaded yet. Open a Dallas Zillow, Redfin, or Realtor page, then refresh tabs.</div>') +
-    (rows || '<div style="font-size:10px;color:#94a3b8;line-height:1.45">No preview comps captured yet.</div>') +
-    '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:8px">All captured comps stay unverified. ARV and MAO remain locked until 3 verified sold comps exist. Using a draft comp only fills analyzer inputs and does not save to any lead.</div>' +
+    '<div style="font-size:11px;color:#cbd5e1;line-height:1.45;margin-bottom:8px">' + mdaEscapeHtml(statusDetail) + '</div>' +
+    (tabButtons ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + tabButtons + '</div>' : '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">Open a Dallas source tab, then refresh tabs.</div>') +
+    (hasDrafts ? '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">' + '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Draft comps</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.candidateCount + ' / 5') + '</div></div>' + '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Review status</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.guidance) + '</div></div>' + (summary.candidateCount > 0 ? '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Coverage</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.completeness + '%') + '</div></div>' : '') + '</div>' : '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">No draft comps captured yet.</div>') +
+    (rows || '<div style="font-size:10px;color:#94a3b8;line-height:1.45">No draft comps captured yet.</div>') +
+    '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:8px">Captured comps are drafts until reviewed. No auto-save, no lead mutation.</div>' +
+    '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:4px">ARV and MAO stay locked until 3 verified sold comps are confirmed.</div>' +
   '</div>';
 }
 
