@@ -1,5 +1,10 @@
 'use strict';
 
+const {
+  buildDallasCompCaptureLinks,
+  summarizeDallasCompCapture
+} = require('./dallas-comp-capture-agent');
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -52,6 +57,7 @@ function isDallasAddress(value) {
 }
 
 function buildDallasCompResearchLinks(input = {}) {
+  const previewLinks = buildDallasCompCaptureLinks(input);
   const full = fullDallasAddress(input);
   const address = cleanText(pick(input, ['address', 'property_address', 'situs_address', 'street_address', 'full_address']));
   const city = cleanText(pick(input, ['city', 'property_city', 'situs_city'])) || 'Dallas';
@@ -64,18 +70,18 @@ function buildDallasCompResearchLinks(input = {}) {
   const dcadContext = parcel || [address, zip].filter(Boolean).join(' ');
   return {
     property: {
-      zillow: full ? `https://www.zillow.com/homes/${encodeURIComponent(full)}_rb/` : '',
-      redfin: full ? `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(full)}` : '',
-      realtor: full ? `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(full)}` : '',
-      google_maps: full ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}` : '',
-      dcad: 'https://www.dallascad.org/SearchAddr.aspx',
-      dcad_search: dcadContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:dallascad.org ${dcadContext}`)}` : 'https://www.dallascad.org/SearchAddr.aspx',
+      zillow: previewLinks.property.zillow || (full ? `https://www.zillow.com/homes/${encodeURIComponent(full)}_rb/` : ''),
+      redfin: previewLinks.property.redfin || (full ? `https://www.redfin.com/search?searchType=4&query=${encodeURIComponent(full)}` : ''),
+      realtor: previewLinks.property.realtor || (full ? `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(full)}` : ''),
+      google_maps: previewLinks.property.google_maps || (full ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}` : ''),
+      dcad: previewLinks.property.dcad || 'https://www.dallascad.org/SearchAddr.aspx',
+      dcad_search: previewLinks.property.dcad_search || (dcadContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:dallascad.org ${dcadContext}`)}` : 'https://www.dallascad.org/SearchAddr.aspx'),
       dallas_gis: fullContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:dallascounty.org GIS parcel ${fullContext}`)}` : 'https://www.dallascounty.org/departments/pubworks/GIS.php'
     },
     sold_comp_links: {
-      zillow: soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:zillow.com/homedetails ${soldContext}`)}` : '',
-      redfin: soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:redfin.com ${soldContext}`)}` : '',
-      realtor: soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:realtor.com/realestateandhomes-detail ${soldContext}`)}` : ''
+      zillow: previewLinks.sold.zillow || (soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:zillow.com/homedetails ${soldContext}`)}` : ''),
+      redfin: previewLinks.sold.redfin || (soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:redfin.com ${soldContext}`)}` : ''),
+      realtor: previewLinks.sold.realtor || (soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:realtor.com/realestateandhomes-detail ${soldContext}`)}` : '')
     },
     nearby_sale_links: {
       zillow: soldContext ? `https://www.google.com/search?q=${encodeURIComponent(`site:zillow.com/homedetails ${soldContext} nearby sold`)}` : '',
@@ -290,6 +296,7 @@ function propertySignals(input, evidence) {
 function generateDallasCompIntelligence(input = {}) {
   const links = buildDallasCompResearchLinks(input);
   const evidence = compEvidence(input);
+  const previewSummary = summarizeDallasCompCapture(evidence.comps);
   const missing = missingCompEvidence(evidence, input);
   const ppsf = rangeFrom(evidence.sqftComps.map((comp) => comp.ppsf).filter((value) => value > 0));
   const prices = rangeFrom(evidence.prices);
@@ -357,6 +364,8 @@ function generateDallasCompIntelligence(input = {}) {
     },
     property_quality_signals: propertySignals(input, evidence),
     valuation_evidence_score: valuationEvidenceScore,
+    comp_completeness_score: previewSummary.comp_completeness_score,
+    capture_preview_summary: previewSummary,
     acquisition_score_parts: scoreParts,
     acquisition_rank: rank,
     acquisition_reasoning: reasoning,
@@ -370,15 +379,17 @@ function generateDallasCompIntelligence(input = {}) {
     spread_estimate: spreadEstimate,
     arv_guidance: verifiedPriceEvidence
       ? { status: 'evidence_based', label: 'Preliminary range from verified/operator-entered comp evidence only.', range_low: arvLow, range_high: arvHigh }
-      : { status: 'needs_review', label: 'Needs manual comp review. Do not rely on this without verified sold comps.', range_low: null, range_high: null },
+      : { status: 'needs_review', label: previewSummary.list_only ? 'Market support only. Needs verified sold comps before ARV.' : 'Needs manual comp review. Do not rely on this without verified sold comps.', range_low: null, range_high: null },
     mao_guidance: maoEstimate
       ? Object.assign({ status: 'evidence_based', note: 'Guidance uses existing verified comp evidence only; verify before offer.' }, maoEstimate)
-      : { status: 'needs_review', conservative: null, moderate: null, aggressive: null, note: 'Needs comp review.' },
+      : { status: 'needs_review', conservative: null, moderate: null, aggressive: null, note: previewSummary.list_only ? 'Market support only. Do not derive MAO from list comps.' : 'Needs comp review.' },
     browser_capture_hooks: {
       local_comp_agent_ready: false,
       suggested_capture_sources: ['zillow', 'redfin', 'realtor'],
       one_lead_operator_triggered_only: true,
-      no_background_loops: true
+      no_background_loops: true,
+      preview_only: true,
+      max_candidates_per_capture: 5
     },
     safety: {
       no_fake_comps: true,

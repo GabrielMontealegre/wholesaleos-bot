@@ -760,6 +760,7 @@ function renderManualDealAnalyzer() {
   setTimeout(function() {
     mdaApplyAnalyzerPreload();
     updateManualDealAnalyzer();
+    mdaRefreshDallasCompCapturePanel();
   }, 0);
   var fieldStyle = 'background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:8px 10px;color:#1d1d1f;outline:none;width:100%';
   var labelStyle = 'font-size:10px;color:#86868b;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px';
@@ -909,6 +910,175 @@ function mdaResearchLinks() {
   ];
 }
 
+function mdaDallasCompCaptureLeadId() {
+  return MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.leadId ? String(MDA_LEAD_PREFILL.leadId) : '__mda_dallas_comp_capture__';
+}
+
+function mdaDallasCompCaptureAddress() {
+  return mdaResearchLeadValue('address') || mdaRaw('mda-source') || '';
+}
+
+function mdaDallasCompCaptureEligible() {
+  var lead = MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.lead ? MDA_LEAD_PREFILL.lead : {};
+  var address = mdaDallasCompCaptureAddress();
+  var city = String(lead.city || lead.property_city || lead.site_city || lead.mailing_city || '').trim();
+  var state = String(lead.state || lead.property_state || lead.site_state || lead.mailing_state || '').trim();
+  var zip = String(lead.zip || lead.property_zip || lead.site_zip || lead.mailing_zip || '').trim();
+  var county = String(lead.county || lead.property_county || lead.site_county || lead.jurisdiction || '').trim();
+  var addressText = String(address || '').trim();
+  var haystack = [addressText, city, state, zip, county].filter(Boolean).join(' ');
+  var dallasAddress = /\bdallas\s*,?\s*(tx|texas)\b/i.test(haystack);
+  var dallasCounty = /\bdallas\s+county\b/i.test(haystack);
+  var dallasZip = /\b75(?:2|3)\d{2}\b/.test(zip || addressText);
+  var dallasCity = /^dallas$/i.test(city);
+  var texasState = /^(tx|texas)$/i.test(state) || /\b(tx|texas)\b/i.test(haystack) || dallasZip;
+  return !!addressText && texasState && (dallasAddress || dallasCounty || dallasZip || dallasCity);
+}
+
+function mdaDallasCompCaptureLead() {
+  var lead = MDA_LEAD_PREFILL && MDA_LEAD_PREFILL.lead ? Object.assign({}, MDA_LEAD_PREFILL.lead) : {};
+  var address = mdaDallasCompCaptureAddress();
+  var parts = String(address || '').split(',');
+  if (!lead.address) lead.address = address;
+  if (!lead.street && parts[0]) lead.street = String(parts[0]).trim();
+  if (!lead.city && parts[1]) lead.city = String(parts[1]).trim();
+  if (!lead.state) {
+    var stateMatch = String(address || '').match(/,\s*([A-Z]{2})\b/i);
+    if (stateMatch) lead.state = stateMatch[1].toUpperCase();
+  }
+  if (!lead.zip) {
+    var zipMatch = String(address || '').match(/\b(\d{5})(?:-\d{4})?\b/);
+    if (zipMatch) lead.zip = zipMatch[1];
+  }
+  lead.id = mdaDallasCompCaptureLeadId();
+  lead.source_address = address;
+  return lead;
+}
+
+function mdaDallasCompResearchLinks() {
+  var lead = mdaDallasCompCaptureLead();
+  var address = mdaDallasCompCaptureAddress();
+  var dcad = address ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + address) : '';
+  return {
+    zillow: leadTargetedCompSearchUrl('zillow', lead),
+    redfin: leadTargetedCompSearchUrl('redfin', lead),
+    realtor: leadTargetedCompSearchUrl('realtor', lead),
+    google_maps: leadEnrichmentSearchUrl('maps', address),
+    appraisal_district: dcad
+  };
+}
+
+function mdaUseLocalCompCandidate(index) {
+  var leadId = mdaDallasCompCaptureLeadId();
+  var state = researchLocalCompBridgeState(leadId);
+  var candidates = state.result && Array.isArray(state.result.candidates) ? state.result.candidates : [];
+  var candidate = candidates[index];
+  if (!candidate) {
+    if (typeof toast === 'function') toast('Local comp candidate not found', 'error');
+    return;
+  }
+  var slot = 0;
+  for (var i = 1; i <= 5; i += 1) {
+    if (!mdaRaw('mda-comp-' + i + '-price')) {
+      slot = i;
+      break;
+    }
+  }
+  if (!slot) slot = 1;
+  MDA_UNVERIFIED_DRAFT_COMP_SLOTS[slot] = true;
+  mdaSetInputValue('mda-comp-' + slot + '-address', candidate.address || candidate.title || '');
+  mdaSetInputValue('mda-comp-' + slot + '-price', candidate.price || candidate.sold_list_price || '');
+  mdaSetInputValue('mda-comp-' + slot + '-sqft', candidate.sqft || '');
+  mdaSetInputValue('mda-comp-' + slot + '-beds', candidate.beds || '');
+  mdaSetInputValue('mda-comp-' + slot + '-baths', candidate.baths || '');
+  mdaSetInputValue('mda-comp-' + slot + '-date', candidate.date || candidate.captured_at || '');
+  var notesEl = document.getElementById('mda-comp-notes');
+  if (notesEl) {
+    var note = [
+      'Draft comp slot ' + slot,
+      candidate.source || 'local browser',
+      candidate.sale_list_status || candidate.status || 'unverified',
+      candidate.source_url || candidate.url || ''
+    ].filter(Boolean).join(' | ');
+    notesEl.value = notesEl.value ? (notesEl.value + '\n' + note) : note;
+  }
+  updateManualDealAnalyzer();
+  if (typeof toast === 'function') toast('Loaded preview comp into analyzer slot ' + slot + '. Not saved to any lead.', 'success');
+}
+
+function mdaRenderDallasCompCapturePanel() {
+  if (typeof researchLocalCompBridgeState !== 'function') return '';
+  if (!mdaDallasCompCaptureEligible()) {
+    return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:10px;margin-top:10px;color:#cbd5e1;font-size:11px;line-height:1.5">Dallas comp capture is available only for Dallas, Texas addresses. Paste or load a Dallas address to enable safe browser-assisted comp preview.</div>';
+  }
+  var leadId = mdaDallasCompCaptureLeadId();
+  var links = mdaDallasCompResearchLinks();
+  var state = researchLocalCompBridgeState(leadId);
+  var tabs = Array.isArray(state.tabs) ? state.tabs.filter(function(tab) { return researchLocalCompTabSupported(tab); }) : [];
+  var selectedTab = typeof researchLocalCompSelectedTab === 'function' ? researchLocalCompSelectedTab(leadId) : null;
+  var workflowStatus = typeof researchLocalCompWorkflowStatus === 'function' ? researchLocalCompWorkflowStatus(leadId) : { label: 'Not checked', color: '#94a3b8', detail: 'Check Local Agent first.' };
+  var result = state.result || {};
+  var candidates = Array.isArray(result.candidates) ? result.candidates.slice(0, 5) : [];
+  var summary = typeof dallasCompPreviewSummary === 'function' ? dallasCompPreviewSummary(candidates) : { candidateCount: candidates.length, completeness: 0, guidance: 'Needs manual comp review.' };
+  var tabButtons = tabs.map(function(tab) {
+    var selected = selectedTab && String(selectedTab.id) === String(tab.id);
+    return '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(leadId) + ',' + researchJsArg(tab.id) + ')" style="font-size:10px;border:1px solid ' + (selected ? '#f4c542' : '#334155') + ';border-radius:999px;background:#111827;color:' + (selected ? '#f4c542' : '#e5e7eb') + ';font-weight:900;padding:5px 8px;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + mdaEscapeHtml((selected ? 'Selected: ' : '') + researchLocalCompTabSource(tab) + ' - ' + (tab.title || 'Tab')) + '</button>';
+  }).join('');
+  var rows = candidates.map(function(candidate, index) {
+    var details = [
+      candidate.price ? mdaMoney(candidate.price) : 'price missing',
+      candidate.beds ? candidate.beds + ' bd' : '',
+      candidate.baths ? candidate.baths + ' ba' : '',
+      candidate.sqft ? candidate.sqft + ' sqft' : '',
+      candidate.distance || '',
+      candidate.sale_list_status || candidate.status || ''
+    ].filter(Boolean).join(' | ');
+    return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#111827;border:1px solid #334155;border-radius:8px;padding:8px">' +
+      '<div style="min-width:0"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">' + mdaEscapeHtml(candidate.source || 'local browser') + ' | Unverified</div>' +
+      '<div style="font-size:12px;color:#f8fafc;font-weight:900;line-height:1.35">' + mdaEscapeHtml(candidate.address || candidate.title || 'Preview candidate') + '</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:3px">' + mdaEscapeHtml(details || 'Visible-page extraction only') + '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">' + mdaEscapeHtml(candidate.confidence_reason || summary.guidance) + '</div>' +
+      (candidate.source_url ? '<a href="' + mdaEscapeAttr(candidate.source_url) + '" target="_blank" rel="noopener" style="font-size:10px;color:#93c5fd;text-decoration:none;display:inline-block;margin-top:4px">Open source</a>' : '') +
+      '</div>' +
+      '<button type="button" onclick="mdaUseLocalCompCandidate(' + index + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#f4c542;font-size:10px;font-weight:900;cursor:pointer">Use as Draft Comp</button>' +
+    '</div>';
+  }).join('');
+  function action(label, url, emphasized) {
+    var disabled = !url;
+    return '<a href="' + (disabled ? '#' : mdaEscapeAttr(url)) + '" target="_blank" rel="noopener" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : '') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (emphasized ? '#f4c542' : '#111827') + ';color:' + (emphasized ? '#111827' : (disabled ? '#64748b' : '#e5e7eb')) + ';font-size:11px;font-weight:900">' + mdaEscapeHtml(label) + '</a>';
+  }
+  return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px;margin-top:10px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px"><div><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Browser-Assisted Comp Capture</div><div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">Dallas only. Operator-triggered, selected-tab, visible-page capture. No auto-save, no loops, no CAPTCHA bypass.</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      action('Open Zillow', links.zillow, true) +
+      action('Open Redfin', links.redfin, false) +
+      action('Open Realtor', links.realtor, false) +
+      action('Open Maps', links.google_maps, false) +
+      action('Open DCAD', links.appraisal_district, false) +
+    '</div></div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(leadId) + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',false)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px">' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Workflow</div><div style="font-size:12px;color:' + workflowStatus.color + ';font-weight:900;margin-top:3px">' + mdaEscapeHtml(workflowStatus.label) + '</div></div>' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Preview comps</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.candidateCount + ' / 5') + '</div></div>' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Completeness</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.completeness + '%') + '</div></div>' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Guidance</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + mdaEscapeHtml(summary.guidance) + '</div></div>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">' + mdaEscapeHtml(workflowStatus.detail || state.lastMessage || 'Select a supported Zillow, Redfin, or Realtor tab before capture.') + '</div>' +
+    (tabButtons ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + tabButtons + '</div>' : '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">No supported tabs loaded yet. Open a Dallas Zillow, Redfin, or Realtor page, then refresh tabs.</div>') +
+    (rows || '<div style="font-size:10px;color:#94a3b8;line-height:1.45">No preview comps captured yet.</div>') +
+    '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:8px">All captured comps stay unverified. ARV and MAO remain locked until 3 verified sold comps exist. Using a draft comp only fills analyzer inputs and does not save to any lead.</div>' +
+  '</div>';
+}
+
+function mdaRefreshDallasCompCapturePanel() {
+  var mount = document.getElementById('mda-dallas-comp-capture-mount');
+  if (!mount) return;
+  mount.innerHTML = mdaRenderDallasCompCapturePanel();
+}
+
 function mdaRenderResearchWorkspace(labelStyle, fieldStyle, textarea) {
   function metric(label, value, id, color) {
     return '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;min-width:0">' +
@@ -973,6 +1143,7 @@ function mdaRenderResearchWorkspace(labelStyle, fieldStyle, textarea) {
           textarea('mda-contact-lookup-result', 'Contact lookup result', 'No contact found, possible phone/email, owner mismatch, or needs skip trace.') +
           textarea('mda-verification-result', 'Verification result', 'Verified, needs recheck, title risk, redemption risk, occupancy unknown, etc.') +
         '</div>' +
+        '<div id="mda-dallas-comp-capture-mount" style="margin-top:10px">' + mdaRenderDallasCompCapturePanel() + '</div>' +
         '<div id="mda-ready-gate" style="margin-top:10px;background:#111827;border:1px solid #334155;border-radius:8px;padding:9px;font-size:11px;color:#cbd5e1;line-height:1.5">Not ready for offer review. Enter source verification, 3+ comps, ARV, and repairs.</div>' +
       '</div>' +
     '</div>' +
@@ -1147,6 +1318,7 @@ function mdaUpdateResearchWorkspace(data) {
 
 var MDA_LAST_COPY = null;
 var MDA_LEAD_PREFILL = null;
+var MDA_UNVERIFIED_DRAFT_COMP_SLOTS = {};
 
 function mdaEscapeHtml(value) {
   return String(value == null ? '' : value)
@@ -1547,7 +1719,7 @@ function mdaCompDetails() {
     var beds = mdaNumber('mda-comp-' + i + '-beds');
     var baths = mdaNumber('mda-comp-' + i + '-baths');
     var saleDate = mdaRaw('mda-comp-' + i + '-date');
-    if (price > 0) {
+    if (price > 0 && !MDA_UNVERIFIED_DRAFT_COMP_SLOTS[i]) {
       comps.push({ price: price, sqft: sqft, address: address, beds: beds, baths: baths, saleDate: saleDate, ppsf: sqft > 0 ? price / sqft : 0 });
     }
   }
@@ -1572,7 +1744,7 @@ function mdaCompStats(comps, subjectSqft) {
   var lowPrice = prices.length ? Math.min.apply(null, prices) : 0;
   var highPrice = prices.length ? Math.max.apply(null, prices) : 0;
   var varianceRatio = avgPrice ? (highPrice - lowPrice) / avgPrice : 0;
-  var suggestedArv = subjectSqft && avgPpsf ? avgPpsf * subjectSqft : avgPrice;
+  var suggestedArv = comps.length >= 3 ? (subjectSqft && avgPpsf ? avgPpsf * subjectSqft : avgPrice) : 0;
   var rangeLow = suggestedArv ? suggestedArv * 0.93 : 0;
   var rangeHigh = suggestedArv ? suggestedArv * 1.07 : 0;
   var confidence = 'Incomplete';
@@ -1580,7 +1752,7 @@ function mdaCompStats(comps, subjectSqft) {
   if (comps.length >= 3 && ppsfValues.length >= 2 && varianceRatio <= 0.18) {
     confidence = 'High';
     confidenceColor = '#10b981';
-  } else if (comps.length >= 2 && varianceRatio <= 0.28) {
+  } else if (comps.length >= 3 && varianceRatio <= 0.28) {
     confidence = 'Medium';
     confidenceColor = '#f59e0b';
   } else if (comps.length > 0) {
@@ -1601,12 +1773,13 @@ function mdaCompStats(comps, subjectSqft) {
     rangeHigh: rangeHigh,
     confidence: confidence,
     confidenceColor: confidenceColor,
-    countQuality: comps.length >= 3 ? 'Strong count' : (comps.length === 2 ? 'Usable count' : (comps.length === 1 ? 'Single comp only' : 'No comps'))
+    countQuality: comps.length >= 3 ? 'Sold comp minimum met' : (comps.length === 2 ? 'Need one more sold comp' : (comps.length === 1 ? 'Single sold comp only' : 'No comps'))
   };
 }
 
 function updateManualDealAnalyzer() {
   if (!document.getElementById('mda-mao')) return;
+  mdaRefreshDallasCompCapturePanel();
   var purchase = mdaNumber('mda-purchase');
   var openingBid = mdaNumber('mda-opening-bid');
   var dealBasis = purchase || openingBid;
@@ -1649,7 +1822,7 @@ function updateManualDealAnalyzer() {
   if (!mdaRaw('mda-rent')) missing.push('Rent estimate: check Zillow rentals, Rentometer, or local active rentals.');
   if (!comps.length) missing.push('Comp values: enter at least 2-3 manual sold comps before trusting ARV.');
 
-  if (comps.length && !manualArv && compStats.suggestedArv) compWarnings.push('Manual ARV blank. Using comp-derived ARV for deal math.');
+  if (comps.length >= 3 && !manualArv && compStats.suggestedArv) compWarnings.push('Manual ARV blank. Using 3+ sold comps for preliminary ARV assist.');
   if (comps.length && comps.length < 3) compWarnings.push('Insufficient comp count. Add 3+ verified sold comps before trusting ARV.');
   if (comps.length && compStats.confidence === 'Low') compWarnings.push('Low comp confidence. Count, sqft coverage, or price consistency is weak.');
   if (comps.length && compStats.ppsfCount < Math.min(2, comps.length) && sqft) compWarnings.push('Average price per sqft is weak because most comps are missing sqft.');
@@ -1886,7 +2059,7 @@ function updateManualDealAnalyzer() {
     researchMissing: researchState.missing
   };
 
-  mdaSet('mda-mao', mdaMoney(mao), mao >= 0 ? '#e2e8f0' : '#ef4444');
+  mdaSet('mda-mao', arv ? mdaMoney(mao) : '-', arv ? (mao >= 0 ? '#e2e8f0' : '#ef4444') : '#94a3b8');
   mdaSet('mda-spread', mdaMoney(spread), spread > 0 ? '#10b981' : '#ef4444');
   mdaSet('mda-wholesale-profit', mdaMoney(wholesaleProfit), wholesaleProfit > 0 ? '#10b981' : '#ef4444');
   mdaSet('mda-flip-profit', mdaMoney(flipProfit), flipProfit >= 15000 ? '#10b981' : '#ef4444');
@@ -1895,7 +2068,7 @@ function updateManualDealAnalyzer() {
   mdaSet('mda-rental', rentalStatus + (rent && basisWithRepairs ? ' (' + (rentRatio * 100).toFixed(2) + '% / ' + (grossYield * 100).toFixed(1) + '% yield)' : ''), rentalColor);
   mdaSet('mda-next-action', nextAction);
   mdaSet('mda-comp-summary', comps.length ? 'Comps: ' + comps.length + ' entered | Avg sold ' + mdaMoney(compAvg) + ' | Avg ' + (compStats.avgPpsf ? mdaMoney(compStats.avgPpsf) + '/sqft' : 'PPSF unavailable') + ' | Range ' + mdaMoney(compLow) + ' - ' + mdaMoney(compHigh) : 'Comps: none entered');
-  mdaSet('mda-arv-assist', compStats.suggestedArv ? mdaMoney(compStats.rangeLow) + ' - ' + mdaMoney(compStats.rangeHigh) + (manualArv ? ' suggested range' : ' used for ARV') : 'No comps yet');
+  mdaSet('mda-arv-assist', compStats.suggestedArv ? mdaMoney(compStats.rangeLow) + ' - ' + mdaMoney(compStats.rangeHigh) + (manualArv ? ' suggested range' : ' used for ARV') : (comps.length ? 'Need 3 sold comps' : 'No comps yet'));
   mdaSet('mda-comp-confidence', compStats.confidence + (compStats.count ? ' | ' + compStats.countQuality : ''), compStats.confidenceColor);
   mdaSet('mda-deal-grade', dealGrade, dealGradeColor);
   mdaSet('mda-deal-grade-reason', dealGradeReason);
@@ -19108,11 +19281,21 @@ function researchRankComps(comps, stats, subject) {
 
 function researchCompStats(comps) {
   comps = comps || [];
-  var prices = comps.map(function(c){ return c.price; }).filter(function(v){ return v > 0; });
-  var ppsf = comps.map(function(c){ return c.ppsf; }).filter(function(v){ return v > 0; });
-  var sqftCount = comps.filter(function(c){ return c.price > 0 && c.sqft > 0; }).length;
-  var bedBathCount = comps.filter(function(c){ return c.price > 0 && c.sqft > 0 && c.beds && c.baths; }).length;
-  var recentCount = comps.filter(function(c){
+  var soldComps = comps.filter(function(c) {
+    return /sold/i.test(String(c.sale_type || c.status || c.notes || ''));
+  });
+  var verifiedSoldComps = soldComps.filter(function(c) {
+    return String(c.confidence || 'unverified').toLowerCase() !== 'unverified';
+  });
+  var listComps = comps.filter(function(c) {
+    return /list|active|market/i.test(String(c.sale_type || c.status || c.notes || '')) && !/sold/i.test(String(c.sale_type || c.status || c.notes || ''));
+  });
+  var valuationComps = verifiedSoldComps.length ? verifiedSoldComps : [];
+  var prices = valuationComps.map(function(c){ return c.price; }).filter(function(v){ return v > 0; });
+  var ppsf = valuationComps.map(function(c){ return c.ppsf; }).filter(function(v){ return v > 0; });
+  var sqftCount = valuationComps.filter(function(c){ return c.price > 0 && c.sqft > 0; }).length;
+  var bedBathCount = valuationComps.filter(function(c){ return c.price > 0 && c.sqft > 0 && c.beds && c.baths; }).length;
+  var recentCount = valuationComps.filter(function(c){
     var d = researchParseCompDate(c.date);
     return d && ((Date.now() - d.getTime()) / 86400000) <= 365;
   }).length;
@@ -19125,21 +19308,37 @@ function researchCompStats(comps) {
   var confidenceReason = 'No entered comps yet.';
   if (comps.length > 0) {
     confidence = 'Low';
-    confidenceReason = 'Low: fewer than 3 comps, missing sqft, or wide price variance.';
+    confidenceReason = 'Needs manual comp review. Draft comps do not support ARV until 3 verified sold comps exist.';
   }
-  if (comps.length === 2 && sqftCount >= 2 && prices.length >= 2 && spread <= 0.30) {
-    confidence = 'Low';
-    confidenceReason = 'Low preliminary: 2 comps have price and sqft, but add at least one more comp before offer review.';
+  if (listComps.length && !verifiedSoldComps.length) {
+    confidence = 'Market Support Only';
+    confidenceReason = 'Only listing or active comps are present. Use them for market support only, not ARV or MAO.';
   }
-  if (comps.length === 3 && sqftCount >= 2 && prices.length >= 2 && spread <= 0.30) {
+  if (verifiedSoldComps.length >= 3 && sqftCount >= 2 && prices.length >= 2 && spread <= 0.30) {
     confidence = 'Medium';
-    confidenceReason = 'Medium: 3 comps have enough price/sqft data, but verify similarity before offer review.';
+    confidenceReason = 'Medium: 3 verified sold comps support preliminary ARV review, but similarity still needs operator confirmation.';
   }
-  if (comps.length >= 4 && comps.length <= 5 && sqftCount >= 4 && bedBathCount >= 4 && recentCount >= 3 && spread <= 0.18) {
+  if (verifiedSoldComps.length >= 4 && verifiedSoldComps.length <= 5 && sqftCount >= 4 && bedBathCount >= 4 && recentCount >= 3 && spread <= 0.18) {
     confidence = 'High';
-    confidenceReason = 'High: 4-5 comps include price, sqft, beds/baths, recent dates, and low variance.';
+    confidenceReason = 'High: 4-5 verified sold comps include price, sqft, beds/baths, recent dates, and low variance.';
   }
-  return { count: comps.length, avg: avg, avgPpsf: avgPpsf, low: low, high: high, spread: spread, confidence: confidence, confidenceReason: confidenceReason, sqftCount: sqftCount, bedBathCount: bedBathCount, recentCount: recentCount };
+  return {
+    count: comps.length,
+    soldCount: soldComps.length,
+    listCount: listComps.length,
+    verifiedSoldCount: verifiedSoldComps.length,
+    avg: avg,
+    avgPpsf: avgPpsf,
+    low: low,
+    high: high,
+    spread: spread,
+    confidence: confidence,
+    confidenceReason: confidenceReason,
+    sqftCount: sqftCount,
+    bedBathCount: bedBathCount,
+    recentCount: recentCount,
+    arvReady: verifiedSoldComps.length >= 3
+  };
 }
 
 function researchLeadProgress(lead) {
@@ -19149,16 +19348,16 @@ function researchLeadProgress(lead) {
   var arv = Number(lead && lead.arv) || (stats.count >= 3 ? (stats.avg || 0) : 0);
   var repairs = Number(lead && (lead.repairs || lead.repair_estimate)) || 0;
   var contact = researchLeadContactReady(lead) || !!(lead && (lead.contact_lookup_result || lead.skip_trace_attempted || lead.skip_trace_date));
-  var offerReady = verified && stats.count >= 3 && arv > 0 && repairs > 0;
+  var offerReady = verified && stats.verifiedSoldCount >= 3 && arv > 0 && repairs > 0;
   var blockers = [];
   if (!verified) blockers.push('source verification checked');
-  if (stats.count < 3) blockers.push(stats.count === 2 ? 'Preliminary only - add at least one more comp' : 'at least 3 comps');
+  if (stats.verifiedSoldCount < 3) blockers.push(stats.listCount && !stats.verifiedSoldCount ? 'market support only - add 3 verified sold comps' : 'at least 3 verified sold comps');
   if (!(arv > 0)) blockers.push('ARV selected/confirmed');
   if (!(repairs > 0)) blockers.push('repair estimate entered');
   var done = [verified, stats.count >= 3, arv > 0, repairs > 0, contact, offerReady].filter(Boolean).length;
   return {
     sourceVerified: verified,
-    compsAdded: stats.count >= 3,
+    compsAdded: stats.verifiedSoldCount >= 3,
     arvEstimated: arv > 0,
     repairsEstimated: repairs > 0,
     contactResearched: contact,
@@ -19187,13 +19386,13 @@ function researchReviewGate(lead) {
   var contacts = researchLeadContacts(lead);
   var sourceVerified = researchSourceVerifiedForReview(lead);
   var blockers = [];
-  if (comps.length < 3) blockers.push('at least 3 comp slots filled');
+  if (stats.verifiedSoldCount < 3) blockers.push('at least 3 verified sold comps');
   if (contacts.length < 1) blockers.push('at least 1 contact slot filled');
   if (!sourceVerified) blockers.push('source verification marked complete');
   return {
     ready: !blockers.length,
     blockers: blockers,
-    compCount: comps.length,
+    compCount: stats.verifiedSoldCount,
     contactCount: contacts.length,
     sourceVerified: sourceVerified
   };
@@ -20154,9 +20353,14 @@ function renderResearchCompSummaryHtml(comps, stats, lead) {
     beds: Number(lead.beds || lead.bedrooms || 0) || 0,
     baths: Number(lead.baths || lead.bathrooms || 0) || 0
   };
-  var summary = stats.count ? 'Average sold/list price ' + mdaMoney(stats.avg) + ' | Avg PPSF ' + (stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'not enough sqft') + ' | Range ' + mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high) + ' | Confidence ' + stats.confidence : 'No entered comps yet.';
+  var summary = 'No entered comps yet.';
+  if (stats.listCount && !stats.verifiedSoldCount) {
+    summary = 'Market support only. Active/list comps are captured, but ARV/MAO stay locked until 3 verified sold comps exist.';
+  } else if (stats.verifiedSoldCount) {
+    summary = 'Verified sold comps: ' + stats.verifiedSoldCount + ' | Avg sold ' + mdaMoney(stats.avg) + ' | Avg PPSF ' + (stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'not enough sqft') + ' | Range ' + mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high) + ' | Confidence ' + stats.confidence;
+  }
   var ai = '';
-  if (stats.count >= 2) {
+  if (stats.verifiedSoldCount >= 3) {
     var ranking = researchRankComps(comps, stats, subject);
     var strongest = ranking.strongest;
     var weakest = ranking.weakest;
@@ -20168,17 +20372,19 @@ function renderResearchCompSummaryHtml(comps, stats, lead) {
     var weakestWhy = weakest && weakest.reasons.length ? weakest.reasons.join(', ') : 'least complete entered fields';
     ai = '<div style="margin-top:8px;background:#07111f;border:1px solid #243044;border-radius:8px;padding:9px">' +
       '<div style="font-size:9px;color:#f4c542;text-transform:uppercase;font-weight:900;margin-bottom:5px">AI Comp Summary - based only on entered comps</div>' +
-      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + (limited ? '<strong style="color:#fbbf24">Limited comp set.</strong> ' : '') + 'Preliminary ARV range based only on entered comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + (limited ? '<strong style="color:#fbbf24">Limited comp set.</strong> ' : '') + 'Preliminary ARV range based only on verified sold comps: <strong style="color:#e5e7eb">' + mdaMoney(stats.avg * 0.93) + ' - ' + mdaMoney(stats.avg * 1.07) + '</strong>.</div>' +
       (primary ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Primary comp: <strong style="color:#e5e7eb">' + researchSafeText(primary.address || mdaMoney(primary.price) || 'Selected slot') + '</strong>.</div>' : '') +
       (limited
         ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">With only 2 comps, treat both as preliminary support. Do not rank them as definitive strongest/weakest yet.</div>'
         : '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Strongest comp: ' + researchSafeText(strongestLabel) + ' based on ' + researchSafeText(strongestWhy) + '.</div>' +
           '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Weakest comp: ' + researchSafeText(weakestLabel) + ' because it scores lowest on available comp quality signals: ' + researchSafeText(weakestWhy) + '.</div>') +
       '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">Confidence: ' + researchSafeText(stats.confidenceReason) + '</div>' +
-      '<div style="font-size:10px;color:#fca5a5;line-height:1.55">Caution: needs verified sold comps before offer. Do not rely on this without source verification.</div>' +
+      '<div style="font-size:10px;color:#fca5a5;line-height:1.55">Caution: keep every comp source-verified. Do not rely on this without 3 verified sold comps.</div>' +
     '</div>';
+  } else if (stats.listCount && !stats.verifiedSoldCount) {
+    ai = '<div style="margin-top:8px;font-size:10px;color:#fbbf24">Market support only. Review list comps for neighborhood context, then add 3 verified sold comps before ARV or MAO.</div>';
   } else {
-    ai = '<div style="margin-top:8px;font-size:10px;color:#94a3b8">AI comp summary locked until at least 2 real operator-entered comps exist.</div>';
+    ai = '<div style="margin-top:8px;font-size:10px;color:#94a3b8">ARV and MAO stay locked until at least 3 verified sold comps exist.</div>';
   }
   return '<div style="font-size:10px;color:#cbd5e1;line-height:1.55">' + researchSafeText(summary) + '</div>' + ai;
 }
@@ -20652,19 +20858,19 @@ function researchFastActionLink(label, url) {
 
 function renderResearchCompSummaryHtml(comps, stats, lead) {
   stats = stats || researchCompStats(comps || []);
-  var count = stats.count || 0;
-  var ppsf = stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'Need sqft';
-  var avg = stats.avg ? mdaMoney(stats.avg) : 'No comps';
+  var count = stats.verifiedSoldCount || 0;
+  var ppsf = stats.avgPpsf ? mdaMoney(stats.avgPpsf) : 'Need verified sold sqft';
+  var avg = stats.avg ? mdaMoney(stats.avg) : (stats.listCount ? 'Market support only' : 'No comps');
   var confidence = stats.confidence || 'low';
-  var range = count ? (mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high)) : 'Add comps';
+  var range = count ? (mdaMoney(stats.low) + ' - ' + mdaMoney(stats.high)) : (stats.listCount ? 'Needs verified sold comps' : 'Add comps');
   return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px">' +
-    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Comps</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + count + '/3 minimum</div></div>' +
+    '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Verified Sold</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + count + '/3 minimum</div></div>' +
     '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Avg Price</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(avg) + '</div></div>' +
     '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Avg PPSF</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(ppsf) + '</div></div>' +
     '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Range</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(range) + '</div></div>' +
     '<div style="background:#07111f;border:1px solid #243044;border-radius:7px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Confidence</div><div style="font-size:12px;color:#e5e7eb;font-weight:900">' + researchSafeText(confidence) + '</div></div>' +
   '</div>' +
-  '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">Based only on operator-entered or imported draft comps. Verify sold status, sqft, and similarity before using for ARV.</div>';
+  '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:7px">' + researchSafeText(stats.listCount && !stats.verifiedSoldCount ? 'List comps can support market context only. ARV and MAO remain locked until 3 verified sold comps exist.' : 'Based only on operator-entered or imported draft comps. Verify sold status, sqft, and similarity before using for ARV.') + '</div>';
 }
 
 function renderResearchLocalCompBridgeHtml(lead) {
@@ -24382,6 +24588,87 @@ if(document.readyState==="loading"){
       }
     };
   }
+  function dallasCompPreviewSummary(candidates) {
+    candidates = Array.isArray(candidates) ? candidates : [];
+    var fields = ['address', 'status', 'price', 'beds', 'baths', 'sqft', 'source', 'source_url', 'captured_at'];
+    var present = 0;
+    var soldVisible = 0;
+    var listOnly = candidates.length > 0;
+    candidates.forEach(function(candidate) {
+      if (/sold|closed/i.test(String(candidate.sale_list_status || candidate.status || ''))) soldVisible += 1;
+      if (/sold|closed/i.test(String(candidate.sale_list_status || candidate.status || ''))) listOnly = false;
+      fields.forEach(function(field) {
+        var value = candidate && candidate[field];
+        if ((typeof value === 'number' && value > 0) || String(value || '').trim()) present += 1;
+      });
+    });
+    return {
+      candidateCount: candidates.length,
+      soldVisibleCount: soldVisible,
+      listOnly: listOnly,
+      completeness: candidates.length ? Math.round((present / (candidates.length * fields.length)) * 100) : 0,
+      guidance: candidates.length
+        ? (listOnly ? 'Market support only.' : 'Needs manual comp review.')
+        : 'No preview comps captured yet.'
+    };
+  }
+  function renderDallasCompCapturePanel(lead, property) {
+    if (typeof researchLocalCompBridgeState !== 'function') return '';
+    var state = researchLocalCompBridgeState(lead.id);
+    var tabs = Array.isArray(state.tabs) ? state.tabs.filter(function(tab) { return researchLocalCompTabSupported(tab); }) : [];
+    var selectedTab = typeof researchLocalCompSelectedTab === 'function' ? researchLocalCompSelectedTab(lead.id) : null;
+    var workflowStatus = typeof researchLocalCompWorkflowStatus === 'function' ? researchLocalCompWorkflowStatus(lead.id) : { label: 'Not checked', color: '#94a3b8', detail: 'Check Local Agent first.' };
+    var result = state.result || {};
+    var candidates = Array.isArray(result.candidates) ? result.candidates.slice(0, 5) : [];
+    var summary = dallasCompPreviewSummary(candidates);
+    var tabButtons = tabs.map(function(tab) {
+      var selected = selectedTab && String(selectedTab.id) === String(tab.id);
+      return '<button type="button" onclick="researchLocalCompBridgeSelectTab(' + researchJsArg(lead.id) + ',' + researchJsArg(tab.id) + ')" style="font-size:10px;border:1px solid ' + (selected ? '#f4c542' : '#334155') + ';border-radius:999px;background:#111827;color:' + (selected ? '#f4c542' : '#e5e7eb') + ';font-weight:900;padding:5px 8px;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + compactLeadText((selected ? 'Selected: ' : '') + researchLocalCompTabSource(tab) + ' - ' + (tab.title || 'Tab')) + '</button>';
+    }).join('');
+    var rows = candidates.map(function(candidate, index) {
+      var details = [
+        candidate.price ? compactLeadCurrency(candidate.price) : 'price missing',
+        candidate.beds ? candidate.beds + ' bd' : '',
+        candidate.baths ? candidate.baths + ' ba' : '',
+        candidate.sqft ? candidate.sqft + ' sqft' : '',
+        candidate.distance || '',
+        candidate.sale_list_status || candidate.status || ''
+      ].filter(Boolean).join(' | ');
+      return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#111827;border:1px solid #334155;border-radius:8px;padding:8px">' +
+        '<div style="min-width:0"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">' + compactLeadText(candidate.source || 'local browser') + ' | Unverified</div>' +
+        '<div style="font-size:12px;color:#f8fafc;font-weight:900;line-height:1.35">' + compactLeadText(candidate.address || candidate.title || 'Preview candidate') + '</div>' +
+        '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:3px">' + compactLeadText(details || 'Visible-page extraction only') + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">' + compactLeadText(candidate.confidence_reason || summary.guidance) + '</div>' +
+        (candidate.source_url ? '<a href="' + compactLeadAttr(candidate.source_url) + '" target="_blank" rel="noopener" style="font-size:10px;color:#93c5fd;text-decoration:none;display:inline-block;margin-top:4px">Open source</a>' : '') +
+        '</div>' +
+        '<button type="button" onclick="researchUseLocalCompCandidate(' + researchJsArg(lead.id) + ',' + index + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#f4c542;font-size:10px;font-weight:900;cursor:pointer">Use as Draft Comp</button>' +
+      '</div>';
+    }).join('');
+    return '<div style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px;margin-top:10px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px"><div><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Browser-Assisted Comp Capture</div><div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-top:3px">Dallas only. Operator-triggered, selected-tab, visible-page capture. No auto-save, no loops, no CAPTCHA bypass.</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        compactLeadAction('Open Zillow', property.zillow, true) +
+        compactLeadAction('Open Redfin', property.redfin, false) +
+        compactLeadAction('Open Realtor', property.realtor, false) +
+        compactLeadAction('Open Maps', property.google_maps, false) +
+        compactLeadAction('Open DCAD', property.appraisal_district || property.dcad_search || property.dcad, false) +
+      '</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px">' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Workflow</div><div style="font-size:12px;color:' + workflowStatus.color + ';font-weight:900;margin-top:3px">' + compactLeadText(workflowStatus.label) + '</div></div>' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Preview comps</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(summary.candidateCount) + ' / 5</div></div>' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Completeness</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(summary.completeness + '%') + '</div></div>' +
+        '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">Guidance</div><div style="font-size:12px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(summary.guidance) + '</div></div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">' + compactLeadText(workflowStatus.detail || state.lastMessage || 'Select a supported Zillow, Redfin, or Realtor tab before capture.') + '</div>' +
+      (tabButtons ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + tabButtons + '</div>' : '<div style="font-size:10px;color:#94a3b8;line-height:1.45;margin-bottom:8px">No supported tabs loaded yet. Open a Dallas Zillow, Redfin, or Realtor page, then refresh tabs.</div>') +
+      (rows || '<div style="font-size:10px;color:#94a3b8;line-height:1.45">No preview comps captured yet.</div>') +
+      '<div style="font-size:10px;color:#fca5a5;line-height:1.45;margin-top:8px">All captured comps stay unverified. ARV and MAO remain locked until 3 verified sold comps exist. Using a draft comp does not save it to the lead.</div>' +
+    '</div>';
+  }
   function renderDallasCompIntelligence(lead) {
     var sheriff = typeof dallasSheriffStatus === 'function' ? dallasSheriffStatus(lead) : null;
     var dallas = sheriff || (typeof dallasVerifiedStatus === 'function' ? dallasVerifiedStatus(lead) : null);
@@ -24449,6 +24736,7 @@ if(document.readyState==="loading"){
         '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">' + maoCells + '</div>' +
       '</div>' +
       (missing.length ? '<div style="font-size:10px;color:#f59e0b;font-weight:800;margin-top:8px">Missing comp evidence: ' + compactLeadText(missing.join(', ')) + '</div>' : '') +
+      renderDallasCompCapturePanel(lead, property) +
     '</div>';
   }
   function compactLeadSkipTraceUrl(lead) {

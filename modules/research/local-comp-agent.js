@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 const http = require('http');
+const {
+  normalizeDallasCompCandidate,
+  summarizeDallasCompCapture
+} = require('./dallas-comp-capture-agent');
 
 const DEFAULT_PORT = Number(process.env.LOCAL_COMP_AGENT_PORT || 8791);
 const DEFAULT_HOST = '127.0.0.1';
@@ -136,6 +140,7 @@ function parseCandidateText(text) {
   var bedMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:beds?|bds?|bd)/i);
   var bathMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:baths?|bas?|ba)/i);
   var dateMatch = text.match(/\b((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\b/i);
+  var distanceMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(mi|miles?|ft|feet|km)\b/i);
   var status = '';
   if (/sold/i.test(text)) status = 'sold visible';
   else if (/for sale|active/i.test(text)) status = 'list visible';
@@ -147,7 +152,8 @@ function parseCandidateText(text) {
     beds: bedMatch ? Number(bedMatch[1]) : null,
     baths: bathMatch ? Number(bathMatch[1]) : null,
     status: status,
-    date: dateMatch ? cleanText(dateMatch[1]) : ''
+    date: dateMatch ? cleanText(dateMatch[1]) : '',
+    distance: distanceMatch ? cleanText(distanceMatch[1] + ' ' + distanceMatch[2]) : ''
   };
 }
 
@@ -183,7 +189,7 @@ function normalizeCandidate(raw, page, index) {
   if (parsed.date) score += 5;
   if (parsed.status) score += 5;
   var confidenceLevel = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
-  return {
+  var normalized = normalizeDallasCompCandidate({
     candidate_id: 'local-visible-' + Date.now() + '-' + index,
     source: page.source,
     title: cleanText(address || raw.title || '').slice(0, 180),
@@ -192,22 +198,26 @@ function normalizeCandidate(raw, page, index) {
     beds: parsed.beds,
     baths: parsed.baths,
     sqft: parsed.sqft,
+    distance: parsed.distance,
     status: parsed.status,
     date: parsed.date,
-    url: raw.href || '',
+    source_url: raw.href || '',
     snippet: text.slice(0, 600),
-    extraction_status: missing.length ? 'extraction_partial' : 'candidate_visible_dom',
-    confidence_score: score,
-    confidence_level: confidenceLevel,
+    confidence: confidenceLevel,
     confidence_reason: reasons.length
       ? 'Visible DOM only: ' + reasons.join(', ') + '. Operator must verify sold status, condition, distance, and similarity before ARV.'
-      : 'Visible DOM candidate with limited structured fields. Operator must verify before use.',
-    missing_fields: missing,
-    verification_label: 'unverified',
-    capture_method: 'local_visible_dom',
-    page_url: page.url,
-    page_title: page.title
-  };
+      : 'Visible DOM candidate with limited structured fields. Operator must verify before use.'
+  }, { source: page.source });
+  normalized.title = cleanText(address || raw.title || '').slice(0, 180);
+  normalized.extraction_status = missing.length ? 'extraction_partial' : 'candidate_visible_dom';
+  normalized.confidence_score = score;
+  normalized.confidence_level = confidenceLevel;
+  normalized.missing_fields = missing;
+  normalized.verification_label = 'unverified';
+  normalized.capture_method = 'local_visible_dom';
+  normalized.page_url = page.url;
+  normalized.page_title = page.title;
+  return normalized;
 }
 
 function candidateDedupKey(candidate) {
@@ -243,12 +253,16 @@ function normalizeSessionCandidate(candidate) {
     title: candidate.title,
     address: candidate.address,
     price: candidate.price,
+    sold_list_price: candidate.sold_list_price || candidate.price,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
+    distance: candidate.distance || '',
+    sale_list_status: candidate.sale_list_status || candidate.status || '',
     status: candidate.status,
     date: candidate.date,
     url: candidate.url,
+    source_url: candidate.source_url || candidate.url,
     snippet: candidate.snippet,
     extraction_status: candidate.extraction_status,
     confidence_score: candidate.confidence_score,
@@ -256,6 +270,9 @@ function normalizeSessionCandidate(candidate) {
     confidence_reason: candidate.confidence_reason,
     missing_fields: candidate.missing_fields,
     verification_label: candidate.verification_label,
+    confidence: candidate.confidence || candidate.confidence_level || 'unverified',
+    captured_at: candidate.captured_at || new Date().toISOString(),
+    unverified: true,
     capture_method: candidate.capture_method,
     page_url: candidate.page_url,
     page_title: candidate.page_title
@@ -502,7 +519,8 @@ async function captureVisibleComps(options) {
         return (b.confidence_score || 0) - (a.confidence_score || 0);
       });
     var captureResult = mergeCaptureIntoSession(pageInfo, captureCandidates);
-    var sessionCandidates = captureSession.candidates.slice(0, maxResults);
+    var sessionCandidates = captureSession.candidates.slice(0, Math.min(maxResults, 5));
+    var summary = summarizeDallasCompCapture(sessionCandidates);
 
     return {
       ok: true,
@@ -515,6 +533,8 @@ async function captureVisibleComps(options) {
       new_candidates_this_capture: captureResult.new_count,
       total_unique_candidates: captureSession.candidates.length,
       candidates: sessionCandidates,
+      comp_completeness_score: summary.comp_completeness_score,
+      guidance_label: summary.guidance_label,
       safety: 'Visible DOM only. No navigation, clicking, scrolling, persistence, ingestion, outbound communication, CAPTCHA bypass, proxy, or background loop.'
     };
   } catch (e) {
@@ -719,7 +739,8 @@ async function scrollAndCaptureVisibleComps(options) {
         return (b.confidence_score || 0) - (a.confidence_score || 0);
       });
     var captureResult = mergeCaptureIntoSession(pageInfo, captureCandidates);
-    var sessionCandidates = captureSession.candidates.slice(0, maxResults);
+    var sessionCandidates = captureSession.candidates.slice(0, Math.min(maxResults, 5));
+    var summary = summarizeDallasCompCapture(sessionCandidates);
 
     return {
       ok: true,
@@ -732,6 +753,8 @@ async function scrollAndCaptureVisibleComps(options) {
       new_candidates_this_capture: captureResult.new_count,
       total_unique_candidates: captureSession.candidates.length,
       candidates: sessionCandidates,
+      comp_completeness_score: summary.comp_completeness_score,
+      guidance_label: summary.guidance_label,
       scroll_performed: true,
       scroll_before: scrollBefore,
       scroll_after: scrollAfter,
