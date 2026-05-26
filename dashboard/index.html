@@ -21846,8 +21846,13 @@ function sourcePreviewSetDraft(value) {
 
 function sourcePreviewToggleQueue(open) {
   APP._dallasPreviewQueueOpen = typeof open === 'boolean' ? open : !APP._dallasPreviewQueueOpen;
+  if (APP._dallasPreviewQueueOpen && APP.page !== 'leads' && typeof navigate === 'function') {
+    navigate('leads', document.querySelector(".nav-item[onclick*='leads']"));
+    return;
+  }
   if (typeof render === 'function') render();
 }
+window.sourcePreviewToggleQueue = sourcePreviewToggleQueue;
 
 function sourcePreviewCandidateDecision(candidate) {
   var store = dallasPreviewReviewStore();
