@@ -444,6 +444,10 @@ const APP = {
   dallasPreviewReviews: JSON.parse(localStorage.getItem('montsan_dallas_preview_reviews') || '{}'),
   dallasPreviewIngestions: JSON.parse(localStorage.getItem('montsan_dallas_preview_ingestions') || '{}'),
   dallasPreviewDraft: localStorage.getItem('montsan_dallas_preview_draft') || '',
+  dallasSourceAgentSources: [],
+  dallasSourceAgentSelected: localStorage.getItem('montsan_dallas_source_agent_selected') || 'tx_dallas_sheriff_tax_sales',
+  dallasSourceAgentStatus: null,
+  dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
 };
 
 function defaultBuyers() {
@@ -21381,6 +21385,96 @@ async function sourcePreviewRunBatch() {
   }
 }
 
+function dallasSourceAgentFallbackSources() {
+  return [
+    { source_id: 'tx_dallas_sheriff_tax_sales', source_name: 'Dallas County Tax Office Sheriff Sales', adapter_family: 'searchable_portal_adapter', source_category: 'tax_sale' },
+    { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', adapter_family: 'pdf_list_adapter', source_category: 'foreclosure' },
+    { source_id: 'tx_dallas_code_violations_socrata', source_name: 'Dallas OpenData Code Violations', adapter_family: 'socrata_adapter', source_category: 'code_violation' },
+    { source_id: 'tx_dallas_dcad_property_search', source_name: 'Dallas Central Appraisal District Property Search', adapter_family: 'searchable_portal_adapter', source_category: 'appraisal_property_records' }
+  ];
+}
+
+function dallasSourceAgentSources() {
+  return APP.dallasSourceAgentSources && APP.dallasSourceAgentSources.length ? APP.dallasSourceAgentSources : dallasSourceAgentFallbackSources();
+}
+
+async function sourcePreviewLoadDallasAgentSources() {
+  try {
+    var resp = await fetch('/api/source-preview/dallas/sources', { headers: { 'Accept': 'application/json' } });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'source list failed');
+    APP.dallasSourceAgentSources = Array.isArray(data.sources) ? data.sources : [];
+    if (!APP.dallasSourceAgentSelected && data.default_source_id) APP.dallasSourceAgentSelected = data.default_source_id;
+    APP.dallasSourceAgentStatus = { ok: true, message: 'Dallas source list loaded.' };
+    if (typeof render === 'function') render();
+  } catch (error) {
+    APP.dallasSourceAgentStatus = { ok: false, message: error.message || 'Dallas source list unavailable.' };
+    if (typeof render === 'function') render();
+  }
+}
+
+function sourcePreviewSetDallasAgentSource(value) {
+  APP.dallasSourceAgentSelected = String(value || 'tx_dallas_sheriff_tax_sales');
+  save('dallas_source_agent_selected', APP.dallasSourceAgentSelected);
+}
+
+function sourcePreviewOpenDallasAgent() {
+  APP._dallasPreviewQueueOpen = true;
+  if (!APP.dallasSourceAgentSources || !APP.dallasSourceAgentSources.length) {
+    sourcePreviewLoadDallasAgentSources();
+  }
+  if (typeof render === 'function') render();
+}
+
+async function sourcePreviewRunDallasAgent() {
+  try {
+    var sourceId = APP.dallasSourceAgentSelected || 'tx_dallas_sheriff_tax_sales';
+    if (typeof toast === 'function') toast('Running Dallas Source Agent preview...', 'info');
+    APP.dallasSourceAgentStatus = { ok: true, message: 'Running preview for ' + sourceId + '...' };
+    if (typeof render === 'function') render();
+    var resp = await fetch('/api/source-preview/dallas/run-source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        source_id: sourceId,
+        max_candidates: 10,
+        preview_only: true,
+        dry_run: true,
+        operator_triggered_only: true,
+        no_loop: true
+      })
+    });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || data.reason || 'Dallas Source Agent failed');
+    dallasPreviewLoadBatchState(data.batch || data);
+    var count = data.candidate_count || (data.batch && data.batch.candidates ? data.batch.candidates.length : 0);
+    var reason = data.reason ? ' ' + data.reason : '';
+    APP.dallasSourceAgentLastRun = {
+      at: new Date().toISOString(),
+      source_id: data.source_id || sourceId,
+      source_name: data.source_name || sourceId,
+      status: data.status || 'unknown',
+      reason: data.reason || '',
+      candidate_count: count,
+      repair_count: data.repair_count || 0,
+      actionable_count: data.actionable_count || 0,
+      weak_lead_count: data.weak_lead_count || 0,
+      manual_required: data.manual_required === true
+    };
+    save('dallas_source_agent_last_run', APP.dallasSourceAgentLastRun);
+    APP.dallasSourceAgentStatus = {
+      ok: true,
+      message: count ? ('Preview loaded: ' + count + ' candidate(s).') : ('No property-level candidates returned.' + reason)
+    };
+    if (typeof toast === 'function') toast(count ? 'Dallas Source Agent loaded preview candidates.' : 'Dallas source needs manual review.', count ? 'success' : 'info');
+    if (typeof render === 'function') render();
+  } catch (error) {
+    APP.dallasSourceAgentStatus = { ok: false, message: error.message || 'Dallas Source Agent failed.' };
+    if (typeof toast === 'function') toast(error.message || 'Dallas Source Agent failed', 'error');
+    if (typeof render === 'function') render();
+  }
+}
+
 function sourcePreviewClearBatch() {
   APP.dallasPreviewBatch = null;
   APP.dallasPreviewQueue = [];
@@ -21605,6 +21699,8 @@ function renderDallasPreviewQueue() {
     var sourceUrl = candidate.source_url || '';
     var evidenceUrl = (candidate.evidence && (candidate.evidence.source_record_url || candidate.evidence.source_url)) || candidate.source_record_url || sourceUrl;
     var repairFlags = Array.isArray(candidate.repair_flags) ? candidate.repair_flags : [];
+    var actionStatus = candidate.actionability_status || (repairFlags.length ? 'Needs Repair' : 'Needs Verification');
+    var actionScore = candidate.actionability_score || candidate.source_agent_actionability_score || 0;
     var ingestion = dallasPreviewIngestionStore()[String(candidate.id || candidate.preview_id || '')] || null;
     var ingestionResult = ingestion && ingestion.result ? ingestion.result : null;
     var createdLead = ingestionResult && ingestionResult.lead;
@@ -21621,6 +21717,7 @@ function renderDallasPreviewQueue() {
         '<div>' +
           '<div style="font-size:11px;color:#1a1a2e;font-weight:900">' + dallasPreviewSafeText(candidate.address || 'Address missing') + '</div>' +
           '<div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:2px">' + dallasPreviewSafeText(candidate.parcel || candidate.case_number || candidate.source_reference || 'No source reference saved') + '</div>' +
+          '<div style="font-size:10px;color:#92400e;line-height:1.45;margin-top:2px;font-weight:800">Actionability: ' + dallasPreviewSafeText(actionStatus) + ' · Score ' + dallasPreviewSafeText(actionScore) + '/100</div>' +
         '</div>' +
         '<span style="font-size:10px;color:' + badgeColor + ';background:' + badgeColor + '18;border:1px solid ' + badgeColor + '55;border-radius:999px;padding:3px 8px;font-weight:800">' + dallasPreviewSafeText(label) + '</span>' +
       '</div>' +
@@ -21645,19 +21742,54 @@ function renderDallasPreviewQueue() {
   }
   var summary = batch && batch.batch_summary ? batch.batch_summary : {};
   var sourceName = batch && batch.source_metadata ? batch.source_metadata.source_name : 'Dallas County TX Sheriff Tax Sales';
+  var agentSources = dallasSourceAgentSources();
+  var agentStatus = APP.dallasSourceAgentStatus || {};
+  var agentLastRun = APP.dallasSourceAgentLastRun || null;
+  var agentRunSummary = batch && batch.source_agent ? batch.source_agent : null;
+  var selectedAgentSource = APP.dallasSourceAgentSelected || 'tx_dallas_sheriff_tax_sales';
+  var agentSourceOptions = agentSources.map(function(source) {
+    var selected = String(source.source_id) === String(selectedAgentSource) ? ' selected' : '';
+    return '<option value="' + mdaEscapeAttr(source.source_id) + '"' + selected + '>' + dallasPreviewSafeText(source.source_name || source.source_id) + '</option>';
+  }).join('');
   return '<div style="background:#fff7ed;border:1px solid #f59e0b66;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px">' +
       '<div>' +
         '<div style="font-size:14px;font-weight:900;color:#7c2d12">Capture Dallas Sheriff Rows</div>' +
-        '<div style="font-size:11px;color:#9a3412;line-height:1.45;margin-top:2px">Paste or import Dallas sheriff/tax sale source rows into the preview queue. No ingestion, no auto-save, no production lead mutation.</div>' +
+        '<div style="font-size:11px;color:#9a3412;line-height:1.45;margin-top:2px">Run one Dallas source in preview mode or paste Dallas sheriff/tax sale rows. No ingestion, no auto-save, no production lead mutation.</div>' +
         '<div style="font-size:10px;color:#9a3412;line-height:1.45;margin-top:4px">' + dallasPreviewSafeText(sourceName) + (batch && batch.safety_note ? ' · ' + dallasPreviewSafeText(batch.safety_note) : '') + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="sourcePreviewLoadDallasAgentSources()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Refresh Sources</button>' +
         '<button type="button" onclick="sourcePreviewLoadSample()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Load Sample</button>' +
         '<button type="button" onclick="sourcePreviewRunBatch()" style="font-size:11px;border:1px solid #92400e;border-radius:7px;background:#fff7ed;color:#92400e;font-weight:900;padding:7px 10px;cursor:pointer">Import Dallas Sheriff Rows</button>' +
         '<button type="button" onclick="sourcePreviewClearBatch()" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Clear Queue</button>' +
         '<button type="button" onclick="sourcePreviewToggleQueue(false)" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Close Preview</button>' +
       '</div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid #f59e0b66;border-radius:10px;padding:10px;margin-bottom:10px;color:#e5e7eb">' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap">' +
+        '<div style="min-width:260px;flex:1">' +
+          '<div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em;margin-bottom:5px">Dallas Source Agent</div>' +
+          '<select onchange="sourcePreviewSetDallasAgentSource(this.value)" style="width:100%;border:1px solid #374151;border-radius:8px;background:#0b1120;color:#f8fafc;padding:8px;font-size:12px;font-weight:800">' + agentSourceOptions + '</select>' +
+          '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:5px">Runs one selected Dallas source only. Max 10 preview candidates. Portals that need login, bidding, or human verification return manual review status.</div>' +
+        '</div>' +
+        '<button type="button" onclick="sourcePreviewRunDallasAgent()" style="font-size:11px;border:1px solid #f59e0b;border-radius:8px;background:#f59e0b;color:#111827;font-weight:900;padding:9px 12px;cursor:pointer">Run Dallas Source Agent</button>' +
+      '</div>' +
+      (agentStatus.message ? '<div style="font-size:10px;color:' + (agentStatus.ok === false ? '#fecaca' : '#bbf7d0') + ';line-height:1.45;margin-top:7px;font-weight:800">' + dallasPreviewSafeText(agentStatus.message) + '</div>' : '') +
+      (agentLastRun ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
+        [
+          ['Last run', agentLastRun.at ? new Date(agentLastRun.at).toLocaleString() : 'unknown'],
+          ['Status', agentLastRun.status || 'unknown'],
+          ['Candidates', agentLastRun.candidate_count || 0],
+          ['Actionable', agentLastRun.actionable_count || 0],
+          ['Repair', agentLastRun.repair_count || 0],
+          ['Weak', agentLastRun.weak_lead_count || 0],
+          ['Manual required', agentLastRun.manual_required ? 'yes' : 'no']
+        ].map(function(pair) {
+          return '<span style="font-size:10px;border:1px solid #374151;border-radius:999px;padding:4px 8px;background:#0b1120;color:#cbd5e1;font-weight:800">' + dallasPreviewSafeText(pair[0]) + ': ' + dallasPreviewSafeText(pair[1]) + '</span>';
+        }).join('') +
+      '</div>' : '') +
+      (agentRunSummary ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:7px">Run summary: ' + dallasPreviewSafeText(agentRunSummary.status || 'unknown') + (agentRunSummary.reason ? ' - ' + dallasPreviewSafeText(agentRunSummary.reason) : '') + '</div>' : '') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:10px;align-items:start">' +
       '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
@@ -23707,6 +23839,7 @@ function addToolbarButtons(){
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
+    "<button onclick='sourcePreviewOpenDallasAgent()' title='Open the Dallas Source Agent preview controls. Runs one selected Dallas source only when triggered.' style='font-size:12px;padding:6px 12px;background:#111827;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:800;'>Run Dallas Source Agent</button>" +
     "<button onclick='sourcePreviewOpenDallasSheriffCapture()' title='Paste or import Dallas sheriff/tax sale source rows into preview only.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:700;'>Capture Dallas Sheriff Rows</button>" +
     "<button onclick='toggleDallasSheriffQueue()' title='Show only actionable Dallas sheriff/tax-sale leads with property-level evidence, sale/tax timing, source proof, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasSheriffOnly ? "#fff7ed" : "#fff") + ";border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Dallas Sheriff Queue</button>" +
     "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +

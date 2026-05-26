@@ -68,6 +68,14 @@ function getSourcePreviewIngestion() {
   }
 }
 
+function getDallasSourceAgent() {
+  try { return require('./modules/sources/dallas-source-agent'); }
+  catch (e) {
+    logger.error('[dallas-source-agent] load failed: ' + e.message);
+    return null;
+  }
+}
+
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -1174,6 +1182,65 @@ app.post('/api/source-preview/dallas/preview', (req, res) => {
   } catch (e) {
     const status = e && e.code === 'preview_batch_too_large' ? 400 : 500;
     res.status(status).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
+  }
+});
+
+app.get('/api/source-preview/dallas/sources', (req, res) => {
+  try {
+    const agent = getDallasSourceAgent();
+    if (!agent) return res.status(500).json({ ok: false, error: 'dallas_source_agent_unavailable', dry_run: true, should_ingest: false });
+    const sources = agent.loadDallasSources().map((source) => ({
+      source_id: source.source_id,
+      source_name: source.source_name,
+      source_category: source.source_category,
+      county: source.county,
+      state: source.state,
+      source_url: source.source_url,
+      interface_type: source.interface_type,
+      acquisition_method: source.acquisition_method,
+      adapter_family: agent.classifyAdapter(source),
+      source_family: agent.sourceFamily ? agent.sourceFamily(source) : source.source_category,
+      source_status: source.source_status || 'candidate',
+      enabled: source.enabled === true,
+      should_ingest: false
+    }));
+    res.json({
+      ok: true,
+      preview_only: true,
+      dry_run: true,
+      should_ingest: false,
+      default_source_id: agent.DEFAULT_SOURCE_ID,
+      max_candidates: agent.MAX_CANDIDATES,
+      sources
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
+  }
+});
+
+app.post('/api/source-preview/dallas/run-source', async (req, res) => {
+  try {
+    const agent = getDallasSourceAgent();
+    if (!agent) return res.status(500).json({ ok: false, error: 'dallas_source_agent_unavailable', dry_run: true, should_ingest: false });
+    const body = req.body || {};
+    const result = await agent.runDallasSourceAgent({
+      source_id: body.source_id || body.sourceId,
+      max_candidates: body.max_candidates || body.maxCandidates,
+      timeout_ms: body.timeout_ms || body.timeout,
+      preview_only: true,
+      dry_run: true,
+      operator_triggered_only: true,
+      no_loop: true
+    });
+    res.status(result && result.ok === false ? 400 : 200).json(Object.assign({
+      preview_only: true,
+      dry_run: true,
+      should_ingest: false,
+      operator_triggered_only: true,
+      no_loop: true
+    }, result));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, dry_run: true, preview_only: true, should_ingest: false });
   }
 });
 
