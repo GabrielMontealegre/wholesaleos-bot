@@ -1292,6 +1292,14 @@ app.get('/api/source-preview/dallas/sources', (req, res) => {
       adapter_family: agent.classifyAdapter(source),
       source_family: agent.sourceFamily ? agent.sourceFamily(source) : source.source_category,
       source_status: source.source_status || 'candidate',
+      ingestion_mode: source.ingestion_mode || 'preview-only',
+      legality_risk_flags: Array.isArray(source.legality_risk_flags) ? source.legality_risk_flags : [],
+      reliability_score: source.reliability_score || null,
+      parser_readiness: source.parser_readiness || '',
+      adapter_readiness: source.adapter_readiness || '',
+      ingestion_readiness: source.ingestion_readiness || '',
+      operator_label: source.operator_label || source.source_name,
+      notes: source.notes || source.verification_path || '',
       enabled: source.enabled === true,
       should_ingest: false
     }));

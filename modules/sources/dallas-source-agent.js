@@ -6,6 +6,7 @@ const crypto = require('crypto');
 
 const dallasPreview = require('../../source-registry/dallas-preview-pipeline');
 const sheriffAdapter = require('../../source-registry/adapters/tx-dallas-sheriff-tax-sales');
+const dallasDistressRegistry = require('../../source-registry/dallas-distress-source-registry');
 const { generateDallasPropertyIntelligence } = require('../research/dallas-property-intelligence-agent');
 const { generateDallasCompIntelligence } = require('../research/dallas-comp-intelligence-agent');
 
@@ -59,6 +60,13 @@ function loadDallasSources() {
   sources.forEach((source) => {
     if (!source || !source.source_id) return;
     byId.set(registrySourceId(source.source_id), normalizeSource(source));
+  });
+  dallasDistressRegistry.listDallasDistressSources().forEach((source) => {
+    if (!source || !source.source_key) return;
+    const normalized = dallasDistressRegistry.toDallasSourceAgentCandidate(source);
+    if (!byId.has(registrySourceId(normalized.source_id))) {
+      byId.set(registrySourceId(normalized.source_id), normalizeSource(normalized));
+    }
   });
   if (!byId.has('tx_dallas_sheriff_tax_sales')) {
     byId.set('tx_dallas_sheriff_tax_sales', normalizeSource({
@@ -128,6 +136,13 @@ function sourceMetadata(source) {
     stale_after_days: source.stale_after_days || 30,
     verification_path: source.verification_path || 'Open the official source and verify property-level evidence.',
     source_status: source.source_status || 'candidate',
+    ingestion_mode: source.ingestion_mode || 'preview-only',
+    legality_risk_flags: Array.isArray(source.legality_risk_flags) ? source.legality_risk_flags : [],
+    reliability_score: source.reliability_score || null,
+    parser_readiness: source.parser_readiness || '',
+    adapter_readiness: source.adapter_readiness || '',
+    ingestion_readiness: source.ingestion_readiness || '',
+    operator_label: source.operator_label || source.source_name,
     enabled: source.enabled === true,
     should_ingest: false
   };

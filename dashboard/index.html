@@ -21638,15 +21638,116 @@ async function sourcePreviewRunBatch() {
 
 function dallasSourceAgentFallbackSources() {
   return [
-    { source_id: 'tx_dallas_sheriff_tax_sales', source_name: 'Dallas County Tax Office Sheriff Sales', adapter_family: 'searchable_portal_adapter', source_category: 'tax_sale' },
-    { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', adapter_family: 'pdf_list_adapter', source_category: 'foreclosure' },
-    { source_id: 'tx_dallas_code_violations_socrata', source_name: 'Dallas OpenData Code Violations', adapter_family: 'socrata_adapter', source_category: 'code_violation' },
-    { source_id: 'tx_dallas_dcad_property_search', source_name: 'Dallas Central Appraisal District Property Search', adapter_family: 'searchable_portal_adapter', source_category: 'appraisal_property_records' }
+    { source_id: 'tx_dallas_pre_foreclosure_notices', source_name: 'Dallas foreclosure notices', operator_label: 'Foreclosure notices', adapter_family: 'pdf_list_adapter', source_category: 'pre_foreclosure', ingestion_mode: 'manual-review', reliability_score: 82, ingestion_readiness: 'not_enabled', source_status: 'candidate', notes: 'Verify address, sale date, and document reference before outreach.' },
+    { source_id: 'tx_dallas_tax_delinquent_accounts', source_name: 'Dallas tax delinquency review', operator_label: 'Tax delinquency', adapter_family: 'manual_review_adapter', source_category: 'tax_delinquent', ingestion_mode: 'manual-review', reliability_score: 76, ingestion_readiness: 'not_enabled', source_status: 'research_needed', notes: 'Use only when an official tax record confirms amount and property.' },
+    { source_id: 'tx_dallas_sheriff_sale', source_name: 'Dallas sheriff sale', operator_label: 'Sheriff sale', adapter_family: 'searchable_portal_adapter', source_category: 'sheriff_sale', ingestion_mode: 'preview-only', reliability_score: 84, ingestion_readiness: 'preview_only', source_status: 'candidate', notes: 'Preview only until address, case, amount, and sale date are verified.' },
+    { source_id: 'tx_dallas_probate_filings', source_name: 'Dallas probate review', operator_label: 'Probate', adapter_family: 'court_docket_adapter', source_category: 'probate', ingestion_mode: 'manual-review', reliability_score: 58, ingestion_readiness: 'not_enabled', source_status: 'research_needed', notes: 'Require a verified property connection before acquisition action.' },
+    { source_id: 'tx_dallas_eviction_filings', source_name: 'Dallas eviction review', operator_label: 'Eviction pressure', adapter_family: 'court_docket_adapter', source_category: 'eviction', ingestion_mode: 'manual-review', reliability_score: 42, ingestion_readiness: 'blocked_for_standalone_ingestion', source_status: 'research_needed', notes: 'Support context only when a verified owner/property lead already exists.' },
+    { source_id: 'tx_dallas_code_violations', source_name: 'Dallas code violations', operator_label: 'Code violations', adapter_family: 'socrata_adapter', source_category: 'code_violation', ingestion_mode: 'verified-only', reliability_score: 74, ingestion_readiness: 'manual_validation_required', source_status: 'candidate', notes: 'Good distress support when address and active status are verified.' },
+    { source_id: 'tx_dallas_water_shutoff_indicator', source_name: 'Dallas water shutoff indicator', operator_label: 'Utility shutoff signal', adapter_family: 'manual_review_adapter', source_category: 'water_shutoff_indicator', ingestion_mode: 'manual-review', reliability_score: 20, ingestion_readiness: 'blocked', source_status: 'blocked_pending_legal_review', notes: 'Do not use unless a lawful public or owner-provided source is confirmed.' },
+    { source_id: 'tx_dallas_fire_damage_indicator', source_name: 'Dallas fire damage indicator', operator_label: 'Fire damage', adapter_family: 'manual_review_adapter', source_category: 'fire_damage_indicator', ingestion_mode: 'manual-review', reliability_score: 46, ingestion_readiness: 'not_enabled', source_status: 'research_needed', notes: 'Use only when address-level public evidence exists.' },
+    { source_id: 'tx_dallas_divorce_filing_indicator', source_name: 'Dallas divorce filing indicator', operator_label: 'Divorce filing context', adapter_family: 'court_docket_adapter', source_category: 'divorce_filing_indicator', ingestion_mode: 'manual-review', reliability_score: 28, ingestion_readiness: 'blocked_for_standalone_ingestion', source_status: 'blocked_for_standalone_ingestion', notes: 'Sensitive context only; never use as a standalone property lead.' },
+    { source_id: 'tx_dallas_arrest_distress_indicator', source_name: 'Dallas arrest distress indicator', operator_label: 'Legal distress context', adapter_family: 'manual_review_adapter', source_category: 'arrest_distress_indicator', ingestion_mode: 'manual-review', reliability_score: 18, ingestion_readiness: 'blocked_for_standalone_ingestion', source_status: 'blocked_for_standalone_ingestion', notes: 'High-sensitivity context; do not target owners from this signal alone.' }
   ];
 }
 
 function dallasSourceAgentSources() {
   return APP.dallasSourceAgentSources && APP.dallasSourceAgentSources.length ? APP.dallasSourceAgentSources : dallasSourceAgentFallbackSources();
+}
+
+function dallasDistressSourceReadableCategory(value) {
+  return ({
+    pre_foreclosure: 'Foreclosure notices',
+    tax_delinquent: 'Tax delinquency',
+    sheriff_sale: 'Sheriff sale',
+    tax_sale: 'Sheriff sale',
+    probate: 'Probate',
+    eviction: 'Eviction pressure',
+    code_violation: 'Code violations',
+    water_shutoff_indicator: 'Utility shutoff signal',
+    fire_damage_indicator: 'Fire damage',
+    divorce_filing_indicator: 'Divorce filing context',
+    arrest_distress_indicator: 'Legal distress context'
+  })[value] || String(value || 'Source').replace(/_/g, ' ');
+}
+
+function dallasDistressSourceStatus(source) {
+  var text = [
+    source.ingestion_readiness,
+    source.source_status,
+    source.ingestion_mode
+  ].join(' ').toLowerCase();
+  if (/blocked/.test(text)) return { label: 'Blocked until reviewed', color: '#991b1b', bg: '#fef2f2', order: 3 };
+  if (/verified-only|manual_validation|required/.test(text)) return { label: 'Use after verification', color: '#047857', bg: '#ecfdf5', order: 1 };
+  if (/preview/.test(text)) return { label: 'Preview only', color: '#1d4ed8', bg: '#eff6ff', order: 0 };
+  return { label: 'Manual review', color: '#92400e', bg: '#fffbeb', order: 2 };
+}
+
+function renderDallasDistressSourceRegistryPanel() {
+  var sources = dallasSourceAgentSources().slice();
+  var wantedIds = {
+    tx_dallas_pre_foreclosure_notices: true,
+    tx_dallas_tax_delinquent_accounts: true,
+    tx_dallas_sheriff_sale: true,
+    tx_dallas_probate_filings: true,
+    tx_dallas_eviction_filings: true,
+    tx_dallas_code_violations: true,
+    tx_dallas_water_shutoff_indicator: true,
+    tx_dallas_fire_damage_indicator: true,
+    tx_dallas_divorce_filing_indicator: true,
+    tx_dallas_arrest_distress_indicator: true
+  };
+  var wanted = {
+    pre_foreclosure: true,
+    tax_delinquent: true,
+    sheriff_sale: true,
+    tax_sale: true,
+    probate: true,
+    eviction: true,
+    code_violation: true,
+    water_shutoff_indicator: true,
+    fire_damage_indicator: true,
+    divorce_filing_indicator: true,
+    arrest_distress_indicator: true
+  };
+  sources = sources.filter(function(source) {
+    return wantedIds[source.source_id] || wanted[source.source_category];
+  }).sort(function(a, b) {
+    var sa = dallasDistressSourceStatus(a);
+    var sb = dallasDistressSourceStatus(b);
+    return sa.order - sb.order || String(a.operator_label || a.source_name || '').localeCompare(String(b.operator_label || b.source_name || ''));
+  });
+  var readyCount = sources.filter(function(source) { return dallasDistressSourceStatus(source).order <= 1; }).length;
+  var blockedCount = sources.filter(function(source) { return dallasDistressSourceStatus(source).order === 3; }).length;
+  function card(source) {
+    var status = dallasDistressSourceStatus(source);
+    var label = source.operator_label || dallasDistressSourceReadableCategory(source.source_category);
+    var score = source.reliability_score ? Math.round(Number(source.reliability_score)) + '/100' : 'needs review';
+    var note = source.notes || source.verification_path || 'Verify source evidence before action.';
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px;min-width:0">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
+        '<div style="min-width:0"><div style="font-size:12px;color:#111827;font-weight:900;line-height:1.25">' + dallasPreviewSafeText(label) + '</div>' +
+        '<div style="font-size:10px;color:#64748b;line-height:1.4;margin-top:3px">' + dallasPreviewSafeText(note) + '</div></div>' +
+        '<span style="white-space:nowrap;font-size:10px;color:' + status.color + ';background:' + status.bg + ';border:1px solid ' + status.color + '33;border-radius:999px;padding:3px 7px;font-weight:900">' + dallasPreviewSafeText(status.label) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
+        '<span style="font-size:10px;color:#374151;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:3px 7px;font-weight:800">Trust: ' + dallasPreviewSafeText(score) + '</span>' +
+        '<span style="font-size:10px;color:#374151;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:3px 7px;font-weight:800">' + dallasPreviewSafeText(dallasDistressSourceReadableCategory(source.source_category)) + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#111827">Dallas Source Plan</div>' +
+      '<div style="font-size:12px;color:#64748b;line-height:1.45;margin-top:2px">Choose one source, verify the evidence, then decide what to review next. Nothing runs or saves on its own.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;color:#047857;background:#ecfdf5;border:1px solid #10b98155;border-radius:999px;padding:4px 8px;font-weight:900">' + readyCount + ' ready for review</span>' +
+        '<span style="font-size:10px;color:#991b1b;background:#fef2f2;border:1px solid #ef444455;border-radius:999px;padding:4px 8px;font-weight:900">' + blockedCount + ' protected</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">' + sources.map(card).join('') + '</div>' +
+    '<details style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;color:#374151;font-weight:900">Why some sources are locked</summary><div style="font-size:11px;color:#64748b;line-height:1.5;margin-top:6px">Sensitive sources like utility, divorce, eviction, and legal-distress records stay manual-review only. They cannot create leads by themselves and must be tied to verified property evidence before any acquisition action.</div></details>' +
+  '</div>';
 }
 
 async function sourcePreviewLoadDallasAgentSources() {
@@ -22103,6 +22204,7 @@ function renderDallasPreviewQueue() {
       '</div>' : '') +
       (agentRunSummary ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:7px">Run summary: ' + dallasPreviewSafeText(agentRunSummary.status || 'unknown') + (agentRunSummary.reason ? ' - ' + dallasPreviewSafeText(agentRunSummary.reason) : '') + '</div>' : '') +
     '</div>' +
+    renderDallasDistressSourceRegistryPanel() +
     '<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:10px;align-items:start">' +
       '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
         '<div style="font-size:11px;color:#374151;font-weight:900;margin-bottom:6px">Paste Dallas source rows or visible portal text</div>' +
