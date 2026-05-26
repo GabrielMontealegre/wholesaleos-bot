@@ -21679,6 +21679,46 @@ function renderSourcePreviewBrief(candidate) {
   '</div>';
 }
 
+function renderSourcePreviewPropertyIntelligence(candidate) {
+  var intel = candidate && (candidate.property_intelligence || candidate.dallas_property_intelligence);
+  if (!intel) return '';
+  var links = intel.links || {};
+  var property = links.property || {};
+  var comps = links.comps || links.nearby_sold || {};
+  function action(label, url, primary) {
+    if (!url) return '';
+    return '<a href="' + mdaEscapeAttr(url) + '" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;border:1px solid ' + (primary ? '#f59e0b' : '#334155') + ';border-radius:8px;padding:7px 8px;background:' + (primary ? '#f59e0b' : '#111827') + ';color:' + (primary ? '#111827' : '#e5e7eb') + ';font-size:10px;font-weight:900">' + dallasPreviewSafeText(label) + '</a>';
+  }
+  var arv = intel.arv_range;
+  var mao = intel.estimated_mao;
+  return '<div style="background:#111827;border:1px solid #334155;border-radius:10px;padding:10px;color:#e5e7eb">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:900;letter-spacing:.06em">Dallas Property Intelligence</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:4px">Next: ' + dallasPreviewSafeText(intel.next_best_action || 'Capture comps') + ' · ' + dallasPreviewSafeText(intel.acquisition_status || 'needs_comp_review') + '</div></div>' +
+      '<span style="font-size:10px;border:1px solid #475569;border-radius:999px;padding:4px 8px;color:#f8fafc;font-weight:900">Comp ' + dallasPreviewSafeText(intel.comp_status || 'needs_review') + '</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px;margin-bottom:7px">' +
+      action('Zillow', property.zillow, true) +
+      action('Redfin', property.redfin, false) +
+      action('Realtor', property.realtor, false) +
+      action('Maps', property.google_maps, false) +
+      action('DCAD', property.dcad_search || property.dcad, false) +
+      action('Dallas GIS', property.dallas_gis, false) +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px;margin-bottom:8px">' +
+      action('Zillow Sold', comps.zillow_sold || comps.zillow, false) +
+      action('Redfin Sold', comps.redfin_sold || comps.redfin, false) +
+      action('Realtor Sold', comps.realtor_sold || comps.realtor, false) +
+      action('Google Sold', comps.google_sold_comps, false) +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">ARV</div><div style="font-size:11px;color:#f8fafc;font-weight:900;margin-top:3px">' + dallasPreviewSafeText(arv && arv.low && arv.high ? (mdaMoney(arv.low) + ' - ' + mdaMoney(arv.high)) : 'Needs comp review') + '</div></div>' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">MAO</div><div style="font-size:11px;color:#f8fafc;font-weight:900;margin-top:3px">' + dallasPreviewSafeText(mao && mao.moderate ? mdaMoney(mao.moderate) : 'Needs verified comps') + '</div></div>' +
+      '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:8px"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900">Missing</div><div style="font-size:10px;color:#cbd5e1;line-height:1.35;margin-top:3px">' + dallasPreviewSafeText((intel.missing_comp_evidence || []).join(', ') || 'None listed') + '</div></div>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderDallasPreviewQueue() {
   if (!APP._dallasPreviewQueueOpen) return '';
   var batch = dallasPreviewBatchStore();
@@ -21727,6 +21767,7 @@ function renderDallasPreviewQueue() {
       (statusLine ? '<div style="margin-top:7px;font-size:10px;color:#065f46;background:#ecfdf5;border:1px solid #10b98155;border-radius:8px;padding:7px;font-weight:800">' + dallasPreviewSafeText(statusLine) + '</div>' : '') +
       '<div style="margin-top:8px">' + renderSourcePreviewTruth(candidate) + '</div>' +
       '<div style="margin-top:8px">' + renderSourcePreviewBrief(candidate) + '</div>' +
+      '<div style="margin-top:8px">' + renderSourcePreviewPropertyIntelligence(candidate) + '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'approved\')" style="font-size:10px;border:1px solid #10b981;border-radius:7px;background:#ecfdf5;color:#047857;font-weight:900;padding:6px 8px;cursor:pointer">Approve For Ingestion</button>' +
         '<button type="button" onclick="dallasPreviewReview(\'' + dallasPreviewJsString(candidate.id || '') + '\',\'rejected\')" style="font-size:10px;border:1px solid #64748b;border-radius:7px;background:#f8fafc;color:#334155;font-weight:900;padding:6px 8px;cursor:pointer">Reject Candidate</button>' +
@@ -24173,7 +24214,17 @@ if(document.readyState==="loading"){
     if (!dallas.queue_eligible) {
       return '<div style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px"><div style="font-size:11px;color:#d4af37;font-weight:900;text-transform:uppercase;margin-bottom:6px">Dallas Comp Intelligence</div><div style="font-size:12px;color:#cbd5e1;font-weight:800">Insufficient property confidence for valuation.</div></div>';
     }
-    var comp = dallas.comp_intelligence || {};
+    var propertyIntel = lead.property_intelligence || lead.dallas_property_intelligence || {};
+    var propertyIntelLinks = propertyIntel.links ? Object.assign({}, propertyIntel.links, {
+      nearby_sold: propertyIntel.links.nearby_sold || propertyIntel.links.comps || {}
+    }) : null;
+    var comp = Object.keys(propertyIntel).length ? {
+      links: propertyIntelLinks,
+      confidence: propertyIntel.valuation_confidence || 'Low',
+      confidence_reason: 'Dallas property intelligence is link-only until verified comps are captured.',
+      arv_guidance: propertyIntel.arv_range ? { status: 'evidence_based', label: 'Existing comp evidence only.', range_low: propertyIntel.arv_range.low, range_high: propertyIntel.arv_range.high } : { status: 'needs_review', label: 'Needs manual comp review.', range_low: null, range_high: null },
+      mao_guidance: propertyIntel.estimated_mao ? { status: 'evidence_based', conservative: propertyIntel.estimated_mao.conservative, moderate: propertyIntel.estimated_mao.moderate, aggressive: propertyIntel.estimated_mao.aggressive } : { status: 'needs_review' }
+    } : (dallas.comp_intelligence || {});
     var links = comp.links || compactLeadFallbackCompLinks(lead);
     var property = links.property || {};
     var sold = links.nearby_sold || {};

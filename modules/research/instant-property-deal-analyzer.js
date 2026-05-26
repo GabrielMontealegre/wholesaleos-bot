@@ -1,5 +1,7 @@
 'use strict';
 
+const { generateDallasPropertyIntelligence } = require('./dallas-property-intelligence-agent');
+
 const REQUIRED_EVIDENCE = Object.freeze([
   'property_address',
   'source_truth',
@@ -32,6 +34,12 @@ function createInstantDealAnalysisRequest(input = {}) {
     city,
     state,
     county,
+    property_intelligence: generateDallasPropertyIntelligence(Object.assign({}, input, {
+      address,
+      city,
+      state,
+      county
+    })),
     evidence_required: REQUIRED_EVIDENCE.slice(),
     missing_evidence: missing,
     no_fake_values: true,
@@ -44,6 +52,7 @@ function analyzeInstantPropertyDeal(input = {}) {
   const request = createInstantDealAnalysisRequest(input);
   return Object.assign({}, request, {
     analysis_status: request.ready_for_analysis ? 'evidence_ready_not_implemented' : 'missing_evidence',
+    property_intelligence: request.property_intelligence,
     arv: null,
     mao: null,
     ppsf: null,

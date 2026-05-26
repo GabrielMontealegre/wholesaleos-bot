@@ -6,6 +6,7 @@ const crypto = require('crypto');
 
 const dallasPreview = require('../../source-registry/dallas-preview-pipeline');
 const sheriffAdapter = require('../../source-registry/adapters/tx-dallas-sheriff-tax-sales');
+const { generateDallasPropertyIntelligence } = require('../research/dallas-property-intelligence-agent');
 
 const MAX_CANDIDATES = 10;
 const DEFAULT_SOURCE_ID = 'tx_dallas_sheriff_tax_sales';
@@ -316,6 +317,7 @@ function applyActionability(candidate, source) {
     dry_run: true,
     preview_only: true
   });
+  enriched.property_intelligence = generateDallasPropertyIntelligence(enriched);
   enriched.source_truth = Object.assign({}, candidate.source_truth || {}, {
     source_family: enriched.source_family,
     evidence_completeness_score: score,
@@ -333,6 +335,7 @@ function applyActionability(candidate, source) {
     source_agent_queue: queue,
     preview_only: true
   });
+  enriched.dallas_property_intelligence = enriched.property_intelligence;
   return enriched;
 }
 
