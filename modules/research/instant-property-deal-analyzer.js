@@ -1,6 +1,7 @@
 'use strict';
 
 const { generateDallasPropertyIntelligence } = require('./dallas-property-intelligence-agent');
+const { generateDallasCompIntelligence } = require('./dallas-comp-intelligence-agent');
 
 const REQUIRED_EVIDENCE = Object.freeze([
   'property_address',
@@ -27,6 +28,14 @@ function createInstantDealAnalysisRequest(input = {}) {
   if (!input.repair_estimate) missing.push('repair_estimate');
   if (!input.dom && !input.listing_status) missing.push('dom_or_listing_status');
   if (!input.confirmed_arv) missing.push('operator_confirmed_arv');
+  const normalized = Object.assign({}, input, {
+    address,
+    city,
+    state,
+    county
+  });
+  const propertyIntelligence = generateDallasPropertyIntelligence(normalized);
+  const compIntelligence = generateDallasCompIntelligence(normalized);
   return {
     version: 'instant_property_deal_analyzer_foundation_v1',
     status: 'foundation_only',
@@ -34,12 +43,9 @@ function createInstantDealAnalysisRequest(input = {}) {
     city,
     state,
     county,
-    property_intelligence: generateDallasPropertyIntelligence(Object.assign({}, input, {
-      address,
-      city,
-      state,
-      county
-    })),
+    property_intelligence: propertyIntelligence,
+    comp_intelligence: compIntelligence,
+    dallas_comp_intelligence: compIntelligence,
     evidence_required: REQUIRED_EVIDENCE.slice(),
     missing_evidence: missing,
     no_fake_values: true,
@@ -53,6 +59,8 @@ function analyzeInstantPropertyDeal(input = {}) {
   return Object.assign({}, request, {
     analysis_status: request.ready_for_analysis ? 'evidence_ready_not_implemented' : 'missing_evidence',
     property_intelligence: request.property_intelligence,
+    comp_intelligence: request.comp_intelligence,
+    dallas_comp_intelligence: request.dallas_comp_intelligence,
     arv: null,
     mao: null,
     ppsf: null,

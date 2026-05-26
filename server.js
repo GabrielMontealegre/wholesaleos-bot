@@ -76,6 +76,14 @@ function getDallasSourceAgent() {
   }
 }
 
+function getDallasCompIntelligenceAgent() {
+  try { return require('./modules/research/dallas-comp-intelligence-agent'); }
+  catch (e) {
+    logger.error('[dallas-comp-intelligence-agent] load failed: ' + e.message);
+    return null;
+  }
+}
+
 const enrichQ = require('./enrichment-queue'); // Phase 3A
 app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -694,28 +702,57 @@ function dallasExtractCompPricesForList(lead) {
 
 function dallasCompIntelligenceForLead(lead, verifiedStatus) {
   var status = verifiedStatus || dallasVerifiedAcquisitionStatus(lead);
-  var links = dallasCompSearchLinks(lead);
+  var agent = getDallasCompIntelligenceAgent();
+  var engine = null;
+  if (agent && typeof agent.generateDallasCompIntelligence === 'function') {
+    try {
+      engine = agent.generateDallasCompIntelligence(Object.assign({}, lead || {}, {
+        dallas_verified_acquisition: status
+      }));
+    } catch (e) {
+      logger.error('[dallas-comp-intelligence] failed: ' + e.message);
+    }
+  }
+  var links = engine && engine.links ? engine.links : dallasCompSearchLinks(lead);
   if (!status.queue_eligible) {
-    return {
+    return Object.assign({}, engine || {}, {
       eligible: false,
       confidence: 'Low',
+      comp_confidence: 'low',
       confidence_reason: 'Insufficient property confidence for valuation.',
       links: links,
+      research_links: engine && engine.research_links ? engine.research_links : links.property,
+      sold_comp_links: engine && engine.sold_comp_links ? engine.sold_comp_links : links.nearby_sold,
+      nearby_sale_links: engine && engine.nearby_sale_links ? engine.nearby_sale_links : links.nearby_sold,
       arv_guidance: { status: 'blocked', label: 'Insufficient property confidence for valuation.', range_low: null, range_high: null },
-      mao_guidance: { status: 'blocked', conservative: null, moderate: null, aggressive: null, note: 'Needs verified Dallas source evidence before comp review.' }
-    };
+      mao_guidance: { status: 'blocked', conservative: null, moderate: null, aggressive: null, note: 'Needs verified Dallas source evidence before comp review.' },
+      arv_low: null,
+      arv_mid: null,
+      arv_high: null,
+      mao_estimate: null,
+      repair_estimate: null,
+      spread_estimate: null
+    });
+  }
+  if (engine) {
+    return Object.assign({}, engine, {
+      eligible: true,
+      confidence: engine.confidence || (engine.comp_confidence ? String(engine.comp_confidence).replace(/^./, function(c) { return c.toUpperCase(); }) : 'Low'),
+      links: engine.links || links,
+      research_links: engine.research_links || (links && links.property) || {},
+      sold_comp_links: engine.sold_comp_links || {},
+      nearby_sale_links: engine.nearby_sale_links || {},
+      arv_guidance: engine.arv_guidance || { status: 'needs_review', label: 'Needs manual comp review.', range_low: null, range_high: null },
+      mao_guidance: engine.mao_guidance || { status: 'needs_review', conservative: null, moderate: null, aggressive: null, note: 'Needs comp review.' }
+    });
   }
   var compPrices = dallasExtractCompPricesForList(lead);
-  var explicitArv = dallasLeadNumericValue(lead, ['arv', 'estimated_arv', 'after_repair_value', 'lead_intelligence.arv']);
   var low = 0;
   var high = 0;
-  if (compPrices.length >= 2) {
+  if (compPrices.length >= 3) {
     compPrices.sort(function(a, b) { return a - b; });
     low = compPrices[0];
     high = compPrices[compPrices.length - 1];
-  } else if (explicitArv > 0) {
-    low = Math.round(explicitArv * 0.9);
-    high = Math.round(explicitArv * 1.1);
   }
   var evidenceCount = [links.property.zillow, links.property.redfin, links.property.realtor, links.property.google_maps, links.property.appraisal_district, status.evidence && status.evidence.parcel_apn].filter(Boolean).length;
   var confidence = low && high && compPrices.length >= 3 ? 'High' : (evidenceCount >= 4 ? 'Medium' : 'Low');
@@ -966,7 +1003,10 @@ function buildLeadIntakeStatus(leads, filtered) {
       confidence_level: status.confidence_level,
       priority_score: status.priority_score,
       queue_eligible: status.queue_eligible,
-      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence
+      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence,
+      acquisition_rank: status.comp_intelligence && status.comp_intelligence.acquisition_rank,
+      valuation_evidence_score: status.comp_intelligence && status.comp_intelligence.valuation_evidence_score,
+      next_best_action: status.comp_intelligence && status.comp_intelligence.next_best_action
     };
   }).filter(function(item) {
     return item.queue_eligible;
@@ -985,7 +1025,10 @@ function buildLeadIntakeStatus(leads, filtered) {
       queue_eligible: status.queue_eligible,
       sale_date: status.evidence && status.evidence.filing_or_sale_date,
       amount_or_judgment: status.evidence && status.evidence.amount_or_judgment,
-      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence
+      comp_confidence: status.comp_intelligence && status.comp_intelligence.confidence,
+      acquisition_rank: status.comp_intelligence && status.comp_intelligence.acquisition_rank,
+      valuation_evidence_score: status.comp_intelligence && status.comp_intelligence.valuation_evidence_score,
+      next_best_action: status.comp_intelligence && status.comp_intelligence.next_best_action
     };
   }).filter(function(item) {
     return item.queue_eligible;

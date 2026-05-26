@@ -1,5 +1,7 @@
 'use strict';
 
+const { generateDallasCompIntelligence } = require('./dallas-comp-intelligence-agent');
+
 function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -167,6 +169,7 @@ function generateDallasPropertyIntelligence(input = {}) {
   const links = researchLinks(input);
   const valuation = valuationFromEvidence(input);
   const decision = acquisitionDecision(input, valuation, links);
+  const compIntelligence = generateDallasCompIntelligence(input);
   return {
     version: 'dallas_property_intelligence_v1',
     market: 'Dallas County, TX',
@@ -182,6 +185,8 @@ function generateDallasPropertyIntelligence(input = {}) {
     ppsf_range: valuation.ppsf_range,
     valuation_confidence: valuation.valuation_confidence,
     missing_comp_evidence: valuation.missing_comp_evidence,
+    comp_intelligence: compIntelligence,
+    dallas_comp_intelligence: compIntelligence,
     acquisition_status: decision.acquisition_status,
     next_best_action: decision.next_best_action,
     safety: {
