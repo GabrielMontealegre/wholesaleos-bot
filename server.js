@@ -462,6 +462,38 @@ function isDallasLeadForList(lead) {
   return (county.indexOf('dallas') > -1 || /dallas county|dallasopendata|dallascounty\.org|dallascad|sheriffsaleauctions\.com/.test(text)) && (!state || state === 'TX' || /\btx\b|texas/.test(text));
 }
 
+const REGIONAL_DFW_COUNTIES = ['dallas', 'tarrant', 'collin', 'denton'];
+
+function leadRegionStateForList(lead) {
+  return String(leadListPick(lead || {}, ['state', 'state_code', 'source_details.state', 'lead_intelligence.state']) || '').trim().toUpperCase();
+}
+
+function leadRegionCountyForList(lead) {
+  return String(leadListPick(lead || {}, ['county', 'source_county', 'source_details.county', 'lead_intelligence.county', 'jurisdiction']) || '').trim().toLowerCase().replace(/\s+county\b/g, '');
+}
+
+function leadMatchesCountyNameForList(lead, countyName) {
+  var wanted = String(countyName || '').trim().toLowerCase().replace(/\s+county\b/g, '');
+  if (!wanted) return true;
+  var county = leadRegionCountyForList(lead);
+  var text = leadListTextBlob(lead);
+  return county.indexOf(wanted) > -1 || text.indexOf(wanted + ' county') > -1;
+}
+
+function leadMatchesRegionalModeForList(lead, mode) {
+  var normalized = String(mode || 'dallas').trim().toLowerCase();
+  var state = leadRegionStateForList(lead);
+  var county = leadRegionCountyForList(lead);
+  if (normalized === 'national') return true;
+  if (normalized === 'texas') return state === 'TX' || /\btx\b|texas/.test(leadListTextBlob(lead));
+  if (normalized === 'dfw') {
+    return leadMatchesRegionalModeForList(lead, 'texas') && REGIONAL_DFW_COUNTIES.some(function(name) {
+      return county.indexOf(name) > -1 || leadListTextBlob(lead).indexOf(name + ' county') > -1;
+    });
+  }
+  return isDallasLeadForList(lead);
+}
+
 function isDallasBadRowTextForList(value) {
   var text = String(value || '').trim();
   if (!text) return false;
@@ -973,6 +1005,13 @@ function buildLeadIntakeStatus(leads, filtered) {
     newest_lead_source: newestSource,
     newest_lead_type: newestType,
     background_ingestion_status: backgroundStatus,
+    regional_command: {
+      national: { total: all.length },
+      texas: { total: all.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'texas'); }).length },
+      dfw: { total: all.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'dfw'); }).length },
+      dallas: { total: all.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'dallas'); }).length },
+      active_default: 'dallas'
+    },
     courthouse_quality: {
       total: courthouseLeads.length,
       weak_or_repair: weakCourthouseLeads.length,
@@ -1005,14 +1044,23 @@ function buildLeadIntakeStatus(leads, filtered) {
 app.get('/api/leads', (req, res) => {
   try {
     const leads = db.getLeads();
-    const { status, county, category, sort, state, source_type, workflow, top300, dallas_verified, dallas_sheriff_verified } = req.query;
+    const { status, county, category, sort, state, source_type, workflow, top300, dallas_verified, dallas_sheriff_verified, operational_mode, region_mode, mode, metro, queue } = req.query;
     let filtered = leads;
     // Filters (apply before sort)
     // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
     const showArchived = req.query.archived === 'true';
     if (!showArchived) filtered = filtered.filter(l => l.archived !== true);
+    var regionalMode = String(operational_mode || region_mode || mode || '').trim().toLowerCase();
+    if (regionalMode) filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, regionalMode); });
+    if (String(metro || '').trim().toLowerCase() === 'dfw') filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'dfw'); });
+    if (String(queue || '').trim().toLowerCase() === 'weak_repair') {
+      filtered = filtered.filter(function(lead) {
+        var quality = classifyLeadQualityForList(lead);
+        return quality.label === 'Weak Lead' || quality.label === 'Needs Repair';
+      });
+    }
     if (status)      filtered = filtered.filter(l => l.status === status);
-    if (county)      filtered = filtered.filter(l => (l.county||'').toLowerCase().includes(county.toLowerCase()));
+    if (county)      filtered = filtered.filter(l => leadMatchesCountyNameForList(l, county));
     if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
     if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
     if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));

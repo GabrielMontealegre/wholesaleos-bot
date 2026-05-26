@@ -448,6 +448,7 @@ const APP = {
   dallasSourceAgentSelected: localStorage.getItem('montsan_dallas_source_agent_selected') || 'tx_dallas_sheriff_tax_sales',
   dallasSourceAgentStatus: null,
   dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
+  operationalMode: localStorage.getItem('montsan_operational_mode') || 'dallas',
 };
 
 function defaultBuyers() {
@@ -17802,6 +17803,9 @@ function buildLeadApiUrl(offset) {
   params.set('limit', String(APP._leadApiLimit || 300));
   params.set('offset', String(Math.max(0, Number.isFinite(resolvedOffset) ? resolvedOffset : 0)));
   params.set('sort', leadApiSortParam(filters.sort || 'priority'));
+  params.set('operational_mode', regionalMode());
+  if (regionalMode() === 'dfw') params.set('metro', 'DFW');
+  if (APP._regionalQueue === 'weak_repair') params.set('queue', 'weak_repair');
   if (filters.state) params.set('state', filters.state);
   if (filters.county) params.set('county', filters.county);
   if (filters.source) params.set('source_type', filters.source);
@@ -17832,7 +17836,7 @@ loadLeadsFromAPI=async function(options){
     APP._leadApiPrevOffset=ld&&ld.prev_offset!=null?Number(ld.prev_offset):null;
     APP._leadIntakeStatus = ld && ld.intake_status ? ld.intake_status : APP._leadIntakeStatus;
     APP.leads=typeof assignRefIds==='function'?assignRefIds(leads):leads;
-    if(typeof _leadsPage !== "undefined") _leadsPage = 0;
+    if(typeof _leadsPage !== "undefined" && (options.resetPage === true || options.offset != null)) _leadsPage = 0;
     if(typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters({silent:true});
     else APP.filtered=APP.leads;
   }catch(e){
@@ -22114,7 +22118,7 @@ function renderLeads() {
   var safeLimit = Number(APP._leadApiLimit || baseLeads.length || 300);
   var safePage = Math.floor(safeOffset / Math.max(1, safeLimit)) + 1;
   var safePages = Math.max(1, Math.ceil(safeFiltered / Math.max(1, safeLimit)));
-  var safePageText = 'Showing safe page of ' + total.toLocaleString() + ' from ' + safeTotal.toLocaleString() + ' total.';
+  var safePageText = regionalModeLabel() + ': showing safe page of ' + total.toLocaleString() + ' from ' + safeTotal.toLocaleString() + ' total.';
   if (safeFiltered && safeFiltered !== safeTotal) safePageText += ' Filtered pool ' + safeFiltered.toLocaleString() + '.';
   var pager = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;flex-wrap:wrap">' +
     '<button onclick="leadsPrevPage()" ' + (page === 0 && APP._leadApiPrevOffset == null ? 'disabled' : '') + ' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Prev</button>' +
@@ -22154,6 +22158,14 @@ function renderLeads() {
   var dallasQueueNotice = APP._dallasSheriffOnly
     ? '<div style="border:1px solid #f59e0b66;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Sheriff Queue: only actionable Dallas sheriff/tax-sale leads with source proof, sale/tax timing, real property evidence, and medium/high confidence. Weak rows are excluded.</div>'
     : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
+  var regionalNotice = '<div style="border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">' +
+    regionalModeLabel() + ': ' +
+    (regionalMode() === 'dallas' ? 'Dallas County only. National courthouse rows are isolated from this workflow.' :
+     regionalMode() === 'dfw' ? 'DFW counties only: Dallas, Tarrant, Collin, Denton.' :
+     regionalMode() === 'texas' ? 'All Texas leads only.' :
+     'National Intake: all regions and states.') +
+    (APP._regionalQueue === 'weak_repair' ? ' Weak/Repair queue is active.' : '') +
+  '</div>';
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
   setTimeout(leadQueueQuarantineDomRows, 0);
 
@@ -22162,6 +22174,7 @@ function renderLeads() {
     renderLeadIntakeStatusBar() +
     previewPanel +
     renderDallasHotList() +
+    regionalNotice +
     dallasQueueNotice +
     loadWarning +
     quarantineNotice +
@@ -23792,8 +23805,56 @@ function leadMatchesAge(l,age){
   var t = new Date(dateText).getTime();
   return isFinite(t) && (Date.now() - t) <= days * 86400000;
 }
+var REGIONAL_COMMAND = {
+  dallas: { label: 'Dallas Mode', state: 'TX', counties: ['dallas'], api: 'dallas' },
+  dfw: { label: 'DFW Mode', state: 'TX', counties: ['dallas','tarrant','collin','denton'], api: 'dfw' },
+  texas: { label: 'Texas Mode', state: 'TX', counties: [], api: 'texas' },
+  national: { label: 'National Mode', state: '', counties: [], api: 'national' }
+};
+function regionalMode(){
+  var mode = String(APP.operationalMode || localStorage.getItem('montsan_operational_mode') || 'dallas').toLowerCase();
+  if (!REGIONAL_COMMAND[mode]) mode = 'dallas';
+  APP.operationalMode = mode;
+  return mode;
+}
+function regionalCommandConfig(){
+  return REGIONAL_COMMAND[regionalMode()] || REGIONAL_COMMAND.dallas;
+}
+function leadRegionState(l){
+  return String((l && (l.state || l.state_code || (l.source_details && l.source_details.state) || (l.lead_intelligence && l.lead_intelligence.state))) || '').toUpperCase();
+}
+function leadRegionCounty(l){
+  var text = String((l && (l.county || l.source_county || l.jurisdiction || (l.source_details && l.source_details.county) || (l.lead_intelligence && l.lead_intelligence.county))) || '').toLowerCase();
+  return text.replace(/\s+county\b/g,'').trim();
+}
+function leadMatchesRegionalMode(l){
+  var mode = regionalMode();
+  var cfg = REGIONAL_COMMAND[mode] || REGIONAL_COMMAND.dallas;
+  if (mode === 'national') return true;
+  var state = leadRegionState(l);
+  var county = leadRegionCounty(l);
+  var text = normalizeLeadFilterText([county, state, l && l.source, l && l.source_name, l && l.source_url].filter(Boolean).join(' '));
+  if (cfg.state && state && state !== cfg.state && text.indexOf('texas') === -1 && text.indexOf(' tx ') === -1) return false;
+  if (mode === 'texas') return state === 'TX' || text.indexOf('texas') > -1 || text.indexOf('tx') > -1;
+  return cfg.counties.some(function(name){ return county.indexOf(name) > -1 || text.indexOf(name) > -1; });
+}
+function regionalModeLabel(){
+  return (regionalCommandConfig().label || 'Dallas Mode');
+}
+function saveLeadToolbarState(){
+  try { localStorage.setItem('montsan_lead_toolbar_filters', JSON.stringify(APP._leadToolbarFilters || {})); } catch(e) {}
+  try { localStorage.setItem('montsan_operational_mode', regionalMode()); } catch(e) {}
+}
 function getLeadToolbarFilters(){
-  APP._leadToolbarFilters = APP._leadToolbarFilters || {};
+  if (!APP._leadToolbarFilters) {
+    try { APP._leadToolbarFilters = JSON.parse(localStorage.getItem('montsan_lead_toolbar_filters') || '{}') || {}; }
+    catch(e) { APP._leadToolbarFilters = {}; }
+    if (!localStorage.getItem('montsan_lead_toolbar_filters') && regionalMode() === 'dallas') {
+      APP._leadToolbarFilters.state = 'TX';
+      APP._leadToolbarFilters.county = 'Dallas';
+    }
+  }
+  APP._leadToolbarFilters.sort = APP._leadToolbarFilters.sort || 'priority';
   return APP._leadToolbarFilters;
 }
 function readLeadToolbarFiltersFromDom(){
@@ -23806,12 +23867,18 @@ function readLeadToolbarFiltersFromDom(){
   filters.age = (document.getElementById("lfAge")||{}).value || "";
   filters.priority = (document.getElementById("lfPriority")||{}).value || "";
   filters.sort = (document.getElementById("lfSort")||{}).value || "priority";
+  saveLeadToolbarState();
   return filters;
 }
 function leadMatchesToolbarFilters(l,filters){
   var status = APP._leadsStatusFilter || "All";
   if (status !== "All" && (l.status || "New Lead") !== status) return false;
-  return leadMatchesState(l,filters.state) &&
+  if (APP._regionalQueue === 'weak_repair') {
+    var quality = typeof classifyLeadQualityForList === 'function' ? classifyLeadQualityForList(l) : (l.lead_quality || {});
+    if (quality.label !== 'Weak Lead' && quality.label !== 'Needs Repair') return false;
+  }
+  return leadMatchesRegionalMode(l) &&
+    leadMatchesState(l,filters.state) &&
     leadMatchesCounty(l,filters.county) &&
     leadMatchesSource(l,filters.source) &&
     leadMatchesType(l,filters.type) &&
@@ -23877,6 +23944,18 @@ function injectFilterBars(){
 function addToolbarButtons(){
   // Toolbar is rendered canonically by renderLeads().
 }
+function renderRegionalModeControls(){
+  var active = regionalMode();
+  var order = ['dallas','dfw','texas','national'];
+  return "<div id='regionalCommandBar' style='display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#0b1120;border:1px solid #1f2937;border-radius:8px;padding:6px 8px;margin-right:4px;'>" +
+    "<span style='font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:900;letter-spacing:.05em;'>Mode</span>" +
+    order.map(function(mode){
+      var cfg = REGIONAL_COMMAND[mode];
+      var isActive = active === mode;
+      return "<button type='button' onclick='setOperationalMode(\""+mode+"\")' style='font-size:11px;padding:5px 9px;border:1px solid "+(isActive?"#f59e0b":"#334155")+";border-radius:999px;background:"+(isActive?"#f59e0b":"#111827")+";color:"+(isActive?"#111827":"#e5e7eb")+";font-weight:900;cursor:pointer;'>"+cfg.label.replace(" Mode","")+"</button>";
+    }).join("") +
+  "</div>";
+}
 function filterToggleBtns(){
   return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
     "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
@@ -23884,6 +23963,7 @@ function filterToggleBtns(){
     "<button onclick='sourcePreviewOpenDallasSheriffCapture()' title='Paste or import Dallas sheriff/tax sale source rows into preview only.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:700;'>Capture Dallas Sheriff Rows</button>" +
     "<button onclick='toggleDallasSheriffQueue()' title='Show only actionable Dallas sheriff/tax-sale leads with property-level evidence, sale/tax timing, source proof, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasSheriffOnly ? "#fff7ed" : "#fff") + ";border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Dallas Sheriff Queue</button>" +
     "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +
+    "<button onclick='toggleWeakRepairQueue()' title='Show weak and repair leads for the current regional mode.' style='font-size:12px;padding:6px 12px;background:" + (APP._regionalQueue === "weak_repair" ? "#fee2e2" : "#fff") + ";border:1px solid #ef4444;border-radius:6px;color:#991b1b;cursor:pointer;font-weight:700;'>Weak/Repair</button>" +
     "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
     "<button onclick='sourcePreviewToggleQueue()' title='Open the Dallas preview queue for dry-run source candidates only.' style='font-size:12px;padding:6px 12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:6px;color:#1d4ed8;cursor:pointer;font-weight:700;'>Dallas Preview Queue</button>" +
     "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
@@ -23896,11 +23976,44 @@ window.renderLeadActionToolbar = function(){
   if (typeof APP === "undefined" || APP.page !== "leads") return "";
   setTimeout(syncLeadFilterControls,0);
   return "<div id='wosFilterToggleBar' style='position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;'>" +
+    renderRegionalModeControls() +
     filterToggleBtns() +
     leadToolbarButton("Re-analyze Comps", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#eef2ff;color:#3730a3;") +
     leadToolbarButton("Score All Leads", ["scoreAllLeads","runLeadScoring","scoreLeads"], "background:#ecfdf5;color:#047857;") +
     leadToolbarButton("Run Courthouse", ["runCourthouse","openCourthouse","runCourthouseSearch","openCourthouseTab"], "background:#fffbeb;color:#92400e;") +
     "</div>" + filterBar;
+};
+window.setOperationalMode = function(mode){
+  if (!REGIONAL_COMMAND[String(mode || '').toLowerCase()]) mode = 'dallas';
+  APP.operationalMode = String(mode).toLowerCase();
+  APP._dallasVerifiedOnly = false;
+  APP._dallasSheriffOnly = false;
+  APP._regionalQueue = '';
+  var filters = getLeadToolbarFilters();
+  if (APP.operationalMode === 'dallas') {
+    filters.state = 'TX';
+    filters.county = 'Dallas';
+  } else if (APP.operationalMode === 'dfw' || APP.operationalMode === 'texas') {
+    filters.state = 'TX';
+    filters.county = '';
+  } else if (APP.operationalMode === 'national') {
+    filters.state = '';
+    filters.county = '';
+  }
+  saveLeadToolbarState();
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0, resetPage: true });
+  else if (typeof window.applyLeadToolbarFilters === "function") window.applyLeadToolbarFilters();
+};
+window.toggleWeakRepairQueue = function(){
+  APP._regionalQueue = APP._regionalQueue === 'weak_repair' ? '' : 'weak_repair';
+  APP._dallasVerifiedOnly = false;
+  APP._dallasSheriffOnly = false;
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0, resetPage: true });
+  else if (typeof window.applyLeadToolbarFilters === "function") window.applyLeadToolbarFilters();
 };
 function isLeadToolbarPage(){
   return typeof APP !== "undefined" && APP.page === "leads";
@@ -23956,6 +24069,8 @@ window.clearLeadFilters = function(){
   APP._leadToolbarFilters = {state:"",county:"",source:"",type:"",workflow:"",age:"",priority:"",sort:"priority"};
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
+  APP._regionalQueue = '';
+  saveLeadToolbarState();
   ["lfState","lfCounty","lfSource","lfType","lfWorkflow","lfAge","lfPriority","lfSort"].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value="";
   });
@@ -23968,6 +24083,7 @@ window.clearLeadFilters = function(){
 window.toggleDallasVerifiedQueue = function(){
   APP._dallasVerifiedOnly = !APP._dallasVerifiedOnly;
   if (APP._dallasVerifiedOnly) APP._dallasSheriffOnly = false;
+  APP._regionalQueue = '';
   APP._leadApiOffset = 0;
   if (typeof _leadsPage !== "undefined") _leadsPage = 0;
   if (APP._dallasVerifiedOnly) {
@@ -23980,6 +24096,7 @@ window.toggleDallasSheriffQueue = function(){
   APP._dallasSheriffOnly = !APP._dallasSheriffOnly;
   if (APP._dallasSheriffOnly) {
     APP._dallasVerifiedOnly = false;
+    APP._regionalQueue = '';
     APP._leadToolbarFilters = Object.assign({}, getLeadToolbarFilters(), { sort: "source_confidence" });
   }
   APP._leadApiOffset = 0;
@@ -24344,6 +24461,12 @@ if(document.readyState==="loading"){
     var overlay = document.getElementById('modal-overlay');
     if (e && overlay && e.target !== overlay) return;
     if (typeof previousCloseModal === 'function') previousCloseModal.apply(this, arguments);
+    if (APP._leadQueueSnapshot) {
+      APP.operationalMode = APP._leadQueueSnapshot.mode || APP.operationalMode;
+      APP._leadToolbarFilters = APP._leadQueueSnapshot.filters || APP._leadToolbarFilters;
+      APP._leadApiOffset = APP._leadQueueSnapshot.offset != null ? APP._leadQueueSnapshot.offset : APP._leadApiOffset;
+      if (typeof _leadsPage !== 'undefined') _leadsPage = APP._leadQueueSnapshot.page || 0;
+    }
     if (overlay) {
       overlay.style.alignItems = 'center';
       overlay.style.justifyContent = 'center';
@@ -24367,6 +24490,13 @@ if(document.readyState==="loading"){
     }
     APP.selectedLead = String(lead.id || leadId || '');
     APP.leadWorkspaceId = '';
+    APP._leadQueueSnapshot = {
+      mode: regionalMode(),
+      filters: Object.assign({}, getLeadToolbarFilters()),
+      page: typeof _leadsPage !== 'undefined' ? _leadsPage : 0,
+      offset: APP._leadApiOffset || 0,
+      sort: (getLeadToolbarFilters() || {}).sort || 'priority'
+    };
     var overlay = document.getElementById('modal-overlay');
     var content = document.getElementById('modal-content');
     if (!overlay || !content) return;
