@@ -380,7 +380,7 @@ tr.selected td{background:#f0f6ff}
       </div>
       <button class="btn btn-outline btn-sm" onclick="showAIChat()">🤖 Ask AI</button>
       <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button>
-    <button class="btn btn-warning btn-sm" onclick="openAddressValidator()" title="Validate & fix all lead addresses">🔍 Validate Addresses</button>
+    <button class="btn btn-warning btn-sm" onclick="openAddressValidator()" title="Validate & fix all lead addresses" style="display:none">🔍 Validate Addresses</button>
     </div>
     <div class="content" id="content">
       <!-- Dynamic content renders here -->
@@ -1029,7 +1029,7 @@ function mdaRenderDallasCompCapturePanel() {
         ? 'Ready to capture'
         : 'Check source tab';
   var statusDetail = workflowStatus.label === 'Local agent disconnected'
-    ? 'Open a Zillow, Redfin, or Realtor tab first, then click Capture Visible Comps.'
+    ? 'Open a Zillow, Redfin, or Realtor tab first, then click Capture Draft Comps.'
     : workflowStatus.label === 'Wrong tab selected'
       ? 'Choose a Zillow, Redfin, Realtor, or Google Maps tab.'
       : workflowStatus.detail || state.lastMessage || 'Open a source tab before capture.';
@@ -1061,9 +1061,9 @@ function mdaRenderDallasCompCapturePanel() {
     return '<a href="' + (disabled ? '#' : mdaEscapeAttr(url)) + '" target="_blank" rel="noopener" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : '') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (emphasized ? '#f4c542' : '#111827') + ';color:' + (emphasized ? '#111827' : (disabled ? '#64748b' : '#e5e7eb')) + ';font-size:11px;font-weight:900">' + mdaEscapeHtml(label) + '</a>';
   }
   return '<div id="mda-dallas-comp-capture" style="background:#111827;border:1px solid #334155;border-radius:10px;padding:12px;margin-top:10px">' +
-    '<div style="margin-bottom:8px"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Comps</div><div style="font-size:13px;color:#f8fafc;font-weight:900;line-height:1.35;margin-top:3px">Open a Zillow, Redfin, or Realtor tab first. Then click Capture Visible Comps.</div></div>' +
+    '<div style="margin-bottom:8px"><div style="font-size:10px;color:#f4c542;font-weight:900;text-transform:uppercase">Dallas Comps</div><div style="font-size:13px;color:#f8fafc;font-weight:900;line-height:1.35;margin-top:3px">Open Zillow, Redfin, or Realtor first. Then click Capture Draft Comps.</div></div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
-      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',false)" style="border:1px solid #f4c542;border-radius:8px;padding:9px 12px;background:#f4c542;color:#111827;font-size:12px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
+      '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',false)" style="border:1px solid #f4c542;border-radius:8px;padding:9px 12px;background:#f4c542;color:#111827;font-size:12px;font-weight:900;cursor:pointer">Capture Draft Comps</button>' +
       '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(leadId) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:9px 12px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
     '</div></div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
@@ -17703,25 +17703,25 @@ function renderLeadIntakeStatusBar() {
   var sheriffTotal = Number(ds.total_dallas_sheriff || 0);
   var sheriffActionable = Number(ds.actionable || 0);
   var sheriffRepair = Number(ds.repair_or_weak || 0);
-  var bgLabel = bg === 'enabled' ? 'Background ingestion active' : (bg === 'disabled' ? 'Background ingestion disabled' : 'Background ingestion unknown');
+  var bgLabel = bg === 'enabled' ? 'Intake active' : (bg === 'disabled' ? 'Intake paused' : 'Intake status unknown');
   var latestBits = [];
   if (newestTs) latestBits.push(leadQueueSafeText(newestTs));
   if (newestSource) latestBits.push(leadQueueSafeText(newestSource));
   if (newestType) latestBits.push(leadQueueSafeText(newestType));
   return '<div id="lead-intake-status" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px 12px;background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;font-size:11px;color:#374151;line-height:1.5">' +
-    '<span style="font-weight:800;color:#1d1d1f">Lead Intake Status</span>' +
+    '<span style="font-weight:800;color:#1d1d1f">Lead Queue</span>' +
     '<span style="background:#1a1a2e;color:#fff;padding:2px 8px;border-radius:999px;font-weight:800">Total ' + leadQueueSafeText(total.toLocaleString()) + '</span>' +
     '<span style="background:#f0fff4;color:#166534;padding:2px 8px;border-radius:999px;font-weight:700">Usable ' + leadQueueSafeText(usable.toLocaleString()) + '</span>' +
     '<span style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Hidden ' + leadQueueSafeText(hidden.toLocaleString()) + '</span>' +
     '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-weight:700">Visible ' + leadQueueSafeText(visible.toLocaleString()) + '</span>' +
     '<span style="background:#f5f5f7;color:#374151;padding:2px 8px;border-radius:999px;font-weight:700">' + leadQueueSafeText(bgLabel) + '</span>' +
-    (sheriffTotal ? '<span title="Dallas sheriff/tax-sale queue requires a real Dallas property, source proof, sale/tax timing, and medium/high confidence." style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Dallas sheriff ' + leadQueueSafeText(sheriffActionable.toLocaleString()) + ' actionable / ' + leadQueueSafeText(sheriffTotal.toLocaleString()) + '</span>' : '') +
-    (sheriffRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Sheriff weak/repair ' + leadQueueSafeText(sheriffRepair.toLocaleString()) + '</span>' : '') +
-    (dallasTotal ? '<span title="Dallas queue requires property address, source proof, distress, timing or amount, and medium/high confidence." style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:999px;font-weight:700">Dallas verified ' + leadQueueSafeText(dallasActionable.toLocaleString()) + ' actionable / ' + leadQueueSafeText(dallasTotal.toLocaleString()) + '</span>' : '') +
-    (dallasRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Dallas weak/repair ' + leadQueueSafeText(dallasRepair.toLocaleString()) + '</span>' : '') +
-    (totalCourt ? '<span title="' + leadQueueAttr((cq.newest_source || '') + ' ' + (cq.newest_timestamp || '')) + '" style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Courthouse weak/repair ' + leadQueueSafeText(weakCourt.toLocaleString()) + ' / ' + leadQueueSafeText(totalCourt.toLocaleString()) + '</span>' : '') +
+    (sheriffTotal ? '<span title="Auction Soon requires a real Dallas property, source proof, sale/tax timing, and medium/high confidence." style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Auction Soon ' + leadQueueSafeText(sheriffActionable.toLocaleString()) + ' ready / ' + leadQueueSafeText(sheriffTotal.toLocaleString()) + '</span>' : '') +
+    (sheriffRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Auction Needs Research ' + leadQueueSafeText(sheriffRepair.toLocaleString()) + '</span>' : '') +
+    (dallasTotal ? '<span title="Distress Verified requires property address, source proof, distress, timing or amount, and medium/high confidence." style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:999px;font-weight:700">Distress Verified ' + leadQueueSafeText(dallasActionable.toLocaleString()) + ' ready / ' + leadQueueSafeText(dallasTotal.toLocaleString()) + '</span>' : '') +
+    (dallasRepair ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:999px;font-weight:700">Dallas Needs Research ' + leadQueueSafeText(dallasRepair.toLocaleString()) + '</span>' : '') +
+    (totalCourt ? '<span title="' + leadQueueAttr((cq.newest_source || '') + ' ' + (cq.newest_timestamp || '')) + '" style="background:#fff7ed;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">Source Needs Research ' + leadQueueSafeText(weakCourt.toLocaleString()) + ' / ' + leadQueueSafeText(totalCourt.toLocaleString()) + '</span>' : '') +
     (newToday ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-weight:700">New today ' + leadQueueSafeText(newToday.toLocaleString()) + '</span>' : '') +
-    (latestBits.length ? '<span style="background:#ecfeff;color:#155e75;padding:2px 8px;border-radius:999px;font-weight:700">Newest ' + latestBits.join(' · ') + '</span>' : '') +
+    (latestBits.length ? '<span style="background:#ecfeff;color:#155e75;padding:2px 8px;border-radius:999px;font-weight:700">Newest overall ' + latestBits.join(' · ') + '</span>' : '') +
   '</div>';
 }
 
@@ -21211,11 +21211,16 @@ function leadQueueAddressLooksWeak(lead) {
   var lower = text.toLowerCase();
   if (!text) return true;
   if (/^(column\s*[1-4]|unnamed)$/i.test(text)) return true;
+  if (/\b(public information request|phone directory|page not found|contact us|contact|search results|skip main navigation)\b/i.test(lower)) return true;
   if (/^\d{4}\s+(contact|beginning|calendar|schedule|directory)\b/i.test(text)) return true;
   if (/^(phone\s+directory|contact|contacts|beginning|calendar|home|search|login|notice|notices)\b/i.test(lower)) return true;
   if (/\b(phone directory|contact us|skip main navigation|beginning december|court calendar)\b/i.test(lower)) return true;
   if (!/\d/.test(text)) return true;
   return !/\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square)\b/i.test(text) && text.split(/\s+/).length < 4;
+}
+
+function leadQueueResearchAddressReady(lead) {
+  return !leadQueueAddressLooksWeak(lead);
 }
 
 function leadQueueConfidenceScore(lead) {
@@ -21231,8 +21236,10 @@ function leadQueueConfidenceScore(lead) {
 
 function leadQueueQuality(lead) {
   lead = lead || {};
-  if (lead.lead_quality && lead.lead_quality.label) {
-    return Object.assign({ rank: 1, flags: [] }, lead.lead_quality);
+  if (lead.lead_quality && lead.lead_quality.label && lead.lead_quality.label !== 'Actionable') {
+    var savedQuality = Object.assign({ rank: 1, flags: [] }, lead.lead_quality);
+    if (/weak|repair|verification/i.test(savedQuality.label)) savedQuality.label = 'Needs Research';
+    return savedQuality;
   }
   var flags = Array.isArray(lead.repair_flags) ? lead.repair_flags.slice() : [];
   var weakAddress = leadQueueAddressLooksWeak(lead);
@@ -21242,14 +21249,20 @@ function leadQueueQuality(lead) {
   var amount = leadQueueHasAny(lead, ['amount_owed','tax_due','tax_lien_amount','lien_amount','violation_amount','judgment_amount','minimum_bid','source_amount','_courthouse_metadata.lien_amount']);
   var dateCase = leadQueueHasAny(lead, ['case_number','parcel','apn','parcel_id','auction_date','sale_date','filing_date','filed_date','source_published_at','_courthouse_metadata.case_number','_courthouse_metadata.parcel','_courthouse_metadata.auction_date','_courthouse_metadata.filed_date']);
   var hasEvidence = leadQueueHasAny(lead, ['owner_name','owner','parcel','apn','parcel_id','case_number']) || amount || dateCase;
+  var hasContact = !!(lead.phone || lead.email || lead.owner_phone || lead.owner_email || (Array.isArray(lead.contacts) && lead.contacts.length));
+  var comps = typeof researchLeadComps === 'function' ? researchLeadComps(lead) : (lead.comps || lead.manual_comps || lead.draft_comps || []);
+  var hasComps = Array.isArray(comps) && comps.length > 0;
   if (weakAddress && flags.indexOf('weak_address') === -1) flags.push('weak_address');
   if (!sourceRecord && flags.indexOf('missing_source_url') === -1) flags.push('missing_source_url');
   if (!amount && flags.indexOf('missing_amount') === -1) flags.push('missing_amount');
   flags = flags.filter(function(value, index, arr){ return arr.indexOf(value) === index; });
-  if (weakAddress && !hasEvidence) return { label: 'Weak Lead', rank: 3, flags: flags.concat(['weak_evidence']).filter(function(value, index, arr){ return arr.indexOf(value) === index; }) };
-  if (flags.some(function(flag){ return /parser_failed|placeholder_row|malformed_pdf_extraction|missing_address|weak_address|missing_source_url/.test(String(flag)); })) return { label: 'Needs Repair', rank: 2, flags: flags };
-  if (!weakAddress && sourceRecord && distress && (amount || dateCase) && leadQueueConfidenceScore(lead) >= 55) return { label: 'Actionable', rank: 0, flags: flags };
-  return { label: 'Needs Verification', rank: 1, flags: flags };
+  if (weakAddress && !hasEvidence) return { label: 'Needs Research', rank: 3, flags: flags.concat(['weak_evidence']).filter(function(value, index, arr){ return arr.indexOf(value) === index; }) };
+  if (flags.some(function(flag){ return /parser_failed|placeholder_row|malformed_pdf_extraction|missing_address|weak_address|missing_source_url|missing_amount/.test(String(flag)); })) return { label: 'Needs Research', rank: 2, flags: flags };
+  if (!sourceRecord || !distress || (!amount && !dateCase)) return { label: 'Needs Research', rank: 2, flags: flags };
+  if (!hasComps) return { label: 'Comps Needed', rank: 1, flags: flags };
+  if (!hasContact) return { label: 'Needs Lookup', rank: 1, flags: flags };
+  if (leadQueueConfidenceScore(lead) >= 55) return { label: 'Ready To Call', rank: 0, flags: flags };
+  return { label: 'Distress Verified', rank: 1, flags: flags };
 }
 
 function dallasVerifiedStatus(lead) {
@@ -21344,12 +21357,15 @@ function renderDallasVerifiedBanner(lead) {
 function leadQueueQualityBadge(lead) {
   var q = leadQueueQuality(lead);
   var palette = {
-    'Actionable': ['#166534', '#dcfce7', '#86efac'],
-    'Needs Verification': ['#92400e', '#fef3c7', '#f59e0b'],
-    'Needs Repair': ['#991b1b', '#fee2e2', '#f87171'],
-    'Weak Lead': ['#475569', '#f1f5f9', '#94a3b8']
+    'Ready To Call': ['#166534', '#dcfce7', '#86efac'],
+    'Distress Verified': ['#047857', '#ecfdf5', '#10b981'],
+    'Comps Needed': ['#92400e', '#fef3c7', '#f59e0b'],
+    'Needs Lookup': ['#1d4ed8', '#eff6ff', '#60a5fa'],
+    'Needs Research': ['#991b1b', '#fee2e2', '#f87171'],
+    'Blocked': ['#475569', '#f1f5f9', '#94a3b8'],
+    'Draft': ['#475569', '#f1f5f9', '#94a3b8']
   };
-  var p = palette[q.label] || palette['Needs Verification'];
+  var p = palette[q.label] || palette['Needs Research'];
   var title = (q.flags || []).length ? q.flags.join(', ') : q.label;
   return '<span title="' + leadQueueAttr(title) + '" style="display:inline-flex;white-space:nowrap;font-size:10px;font-weight:900;color:' + p[0] + ';background:' + p[1] + ';border:1px solid ' + p[2] + ';border-radius:999px;padding:3px 8px">' + leadQueueSafeText(q.label) + '</span>';
 }
@@ -21373,7 +21389,7 @@ function leadQueueCompStatus(lead) {
   if (lead.comp_workflow_status) return lead.comp_workflow_status;
   if (lead.comp_confidence) return lead.comp_confidence;
   if (Array.isArray(lead.comps) && lead.comps.length) return lead.comps.length + ' saved';
-  return 'Needs comps';
+  return 'Comps Needed';
 }
 
 function leadQueueContactStatus(lead) {
@@ -22449,17 +22465,19 @@ function renderLeads() {
     return stateMessage('Failed to load leads', 'The dashboard could not hydrate leads from /api/leads. ' + APP._leadsError);
   }
   if (baseTotal === 0) {
+    var emptyMode = window.regionalMode();
+    if (emptyMode === 'dfw') return stateMessage('No DFW leads ready yet', 'Check National/Texas or review source readiness in Admin Tools.');
+    if (emptyMode === 'dallas') return stateMessage('No Dallas leads ready yet', 'Check Texas/National or review source readiness in Admin Tools.');
+    if (emptyMode === 'texas') return stateMessage('No Texas leads match the current filters', 'Clear filters or check National mode for non-Texas leads.');
     return stateMessage('No leads loaded', 'Lead hydration completed, but /api/leads returned zero leads.');
   }
   if (total === 0) {
-    if (APP._dallasSheriffOnly) {
-      return '<div>' + toolbar + previewPanel +
-        '<div title="No verified Dallas sheriff/tax sale leads yet. Capture or import real Dallas sheriff source rows first." style="border:1px solid #f59e0b66;background:#fff7ed;border-radius:10px;padding:24px;text-align:center;color:#1d1d1f">' +
-          '<div style="font-size:15px;font-weight:900;margin-bottom:6px;color:#92400e">No verified Dallas sheriff/tax sale leads yet.</div>' +
-          '<div style="font-size:12px;color:#9a3412;line-height:1.5;margin-bottom:14px">Capture or import real Dallas sheriff source rows first.</div>' +
-          '<button type="button" onclick="sourcePreviewOpenDallasSheriffCapture()" style="font-size:12px;border:1px solid #92400e;border-radius:8px;background:#1a1a2e;color:#f7d774;font-weight:900;padding:8px 12px;cursor:pointer">Capture Dallas Sheriff Rows</button>' +
-        '</div>' +
-      '</div>';
+    var mode = window.regionalMode();
+    if (mode === 'dfw') return stateMessage('No DFW leads ready yet', 'Check National/Texas or review source readiness in Admin Tools.');
+    if (mode === 'dallas') return stateMessage('No Dallas leads ready yet', 'Check Texas/National or review source readiness in Admin Tools.');
+    if (mode === 'texas') return stateMessage('No Texas leads match the current filters', 'Clear filters or check National mode for non-Texas leads.');
+    if (APP._regionalQueue || APP._operatorQueue || APP.search || Object.values(getLeadToolbarFilters()).some(function(v){ return v && v !== 'priority'; })) {
+      return stateMessage('No leads match active filters', 'Clear filters or switch markets to broaden the active queue.');
     }
     return stateMessage('No usable leads match current filters', 'Leads are loaded. Placeholder rows like Column2, Unnamed, and blank-address leads are quarantined from the active queue.');
   }
@@ -22530,15 +22548,18 @@ function renderLeads() {
   }).join('');
   var quarantineNotice = quarantined.length ? '<div style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px">' + quarantined.length.toLocaleString() + ' placeholder/blank-address lead(s) hidden from the active queue. They were not deleted.</div>' : '';
   var dallasQueueNotice = APP._dallasSheriffOnly
-    ? '<div style="border:1px solid #f59e0b66;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Sheriff Queue: only actionable Dallas sheriff/tax-sale leads with source proof, sale/tax timing, real property evidence, and medium/high confidence. Weak rows are excluded.</div>'
-    : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Dallas Verified Queue: only property-level Dallas leads with source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
+    ? '<div style="border:1px solid #f59e0b66;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Auction Soon: Dallas sheriff/tax-sale leads must have source proof, sale/tax timing, real property evidence, and medium/high confidence. Weak rows are excluded.</div>'
+    : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Distress Verified: Dallas leads must have property-level source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
+  var modeFilters = getLeadToolbarFilters();
   var regionalNotice = '<div style="border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">' +
     regionalModeLabel() + ': ' +
     (window.regionalMode() === 'dallas' ? 'Dallas County only. National courthouse rows are isolated from this workflow.' :
      window.regionalMode() === 'dfw' ? 'DFW counties only: Dallas, Tarrant, Collin, Denton.' :
      window.regionalMode() === 'texas' ? 'All Texas leads only.' :
      'National Intake: all regions and states.') +
-    (APP._regionalQueue === 'weak_repair' ? ' Weak/Repair queue is active.' : '') +
+    (window.regionalMode() === 'national' && modeFilters.state ? ' Filtered to ' + leadQueueSafeText(WOS_STATE_NAMES[String(modeFilters.state).toUpperCase()] || modeFilters.state) + '.' : '') +
+    (APP._regionalQueue === 'weak_repair' ? ' Needs Research queue is active.' : '') +
+    (APP._operatorQueue === 'comps_needed' ? ' Comps Needed queue is active.' : '') +
   '</div>';
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
   setTimeout(leadQueueQuarantineDomRows, 0);
@@ -24251,8 +24272,12 @@ function leadMatchesToolbarFilters(l,filters){
   var status = APP._leadsStatusFilter || "All";
   if (status !== "All" && (l.status || "New Lead") !== status) return false;
   if (APP._regionalQueue === 'weak_repair') {
-    var quality = typeof classifyLeadQualityForList === 'function' ? classifyLeadQualityForList(l) : (l.lead_quality || {});
-    if (quality.label !== 'Weak Lead' && quality.label !== 'Needs Repair') return false;
+    var quality = typeof leadQueueQuality === 'function' ? leadQueueQuality(l) : (typeof classifyLeadQualityForList === 'function' ? classifyLeadQualityForList(l) : (l.lead_quality || {}));
+    if (quality.label !== 'Needs Research' && quality.label !== 'Blocked' && quality.label !== 'Draft') return false;
+  }
+  if (APP._operatorQueue === 'comps_needed') {
+    var compLabel = typeof leadQueueCompStatus === 'function' ? leadQueueCompStatus(l) : '';
+    if (!/comp/i.test(compLabel) || !/need/i.test(compLabel)) return false;
   }
   return leadMatchesRegionalMode(l) &&
     leadMatchesState(l,filters.state) &&
@@ -24261,7 +24286,30 @@ function leadMatchesToolbarFilters(l,filters){
     leadMatchesType(l,filters.type) &&
     leadMatchesWorkflow(l,filters.workflow) &&
     leadMatchesPriority(l,filters.priority) &&
-    leadMatchesAge(l,filters.age);
+    leadMatchesAge(l,filters.age) &&
+    leadMatchesSearchQuery(l, APP.search || '');
+}
+
+function leadMatchesSearchQuery(lead, query) {
+  var q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+  var values = [
+    lead.id,
+    lead.ref_id,
+    lead.reference_id,
+    typeof getDealRefId === 'function' ? getDealRefId(lead) : '',
+    leadQueueAddress(lead),
+    lead.city,
+    lead.property_city,
+    leadQueueCounty(lead),
+    leadQueueState(lead),
+    leadQueueTypeSource(lead),
+    leadQueueSourceDetail(lead),
+    lead.owner,
+    lead.owner_name,
+    lead.seller_name
+  ];
+  return values.filter(Boolean).join(' ').toLowerCase().indexOf(q) > -1;
 }
 function syncLeadFilterControls(){
   var filters = getLeadToolbarFilters();
@@ -24339,32 +24387,76 @@ function renderRegionalModeControls(){
     }).join("") +
   "</div>";
 }
+
+function activeLeadFilterChips() {
+  var filters = getLeadToolbarFilters();
+  var chips = [];
+  var mode = window.regionalMode();
+  var modeText = regionalModeLabel().replace(' Mode', ' mode');
+  if (mode === 'national' && filters.state) modeText += ' - filtered to ' + (WOS_STATE_NAMES[String(filters.state).toUpperCase()] || filters.state);
+  chips.push(['Market', modeText]);
+  if (filters.state) chips.push(['State', WOS_STATE_NAMES[String(filters.state).toUpperCase()] || filters.state]);
+  if (filters.county) chips.push(['County', filters.county]);
+  if (filters.source) chips.push(['Source', filters.source]);
+  if (filters.workflow) chips.push(['Workflow', filters.workflow]);
+  if (APP._regionalQueue === 'weak_repair') chips.push(['Queue', 'Needs Research']);
+  if (APP._operatorQueue === 'comps_needed') chips.push(['Queue', 'Comps Needed']);
+  if (APP._dallasSheriffOnly) chips.push(['Queue', 'Auction Soon']);
+  if (APP._dallasVerifiedOnly) chips.push(['Queue', 'Distress Verified']);
+  if (APP.search) chips.push(['Search', APP.search]);
+  return '<div id="activeLeadFilterChips" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 16px 8px;margin-top:-4px">' +
+    chips.map(function(pair){
+      return '<span title="' + leadQueueAttr(pair[0] + ': ' + pair[1]) + '" style="font-size:11px;border:1px solid #cbd5e1;border-radius:999px;background:#f8fafc;color:#334155;font-weight:800;padding:4px 8px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText(pair[0] + ': ' + pair[1]) + '</span>';
+    }).join('') +
+  '</div>';
+}
+
+function operatorQueueButton(label, active, onclick, title) {
+  return "<button onclick='" + onclick + "' title='" + leadQueueAttr(title || label) + "' style='font-size:12px;padding:6px 12px;background:" + (active ? "#111827" : "#f8fafc") + ";border:1px solid " + (active ? "#111827" : "#cbd5e1") + ";border-radius:6px;color:" + (active ? "#fff" : "#334155") + ";cursor:pointer;font-weight:800;'>" + leadQueueSafeText(label) + "</button>";
+}
+
 function filterToggleBtns(){
-  return "<button onclick='openPullLeadsToolbar()' title='Open the existing lead pull modal. Nothing runs until confirmed.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #d4af37;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:600;'>+ Pull Leads</button>" +
-    "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Filters</button>" +
-    "<button onclick='sourcePreviewOpenDallasAgent()' title='Open the Dallas Source Agent preview controls. Runs one selected Dallas source only when triggered.' style='font-size:12px;padding:6px 12px;background:#111827;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:800;'>Run Dallas Source Agent</button>" +
-    "<button onclick='sourcePreviewOpenDallasSheriffCapture()' title='Paste or import Dallas sheriff/tax sale source rows into preview only.' style='font-size:12px;padding:6px 12px;background:#1a1a2e;border:1px solid #f59e0b;border-radius:6px;color:#f7d774;cursor:pointer;font-weight:700;'>Capture Dallas Sheriff Rows</button>" +
-    "<button onclick='toggleDallasSheriffQueue()' title='Show only actionable Dallas sheriff/tax-sale leads with property-level evidence, sale/tax timing, source proof, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasSheriffOnly ? "#fff7ed" : "#fff") + ";border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Dallas Sheriff Queue</button>" +
-    "<button onclick='toggleDallasVerifiedQueue()' title='Show only Dallas leads with property-level source proof, distress, timing or amount evidence, and medium/high confidence.' style='font-size:12px;padding:6px 12px;background:" + (APP._dallasVerifiedOnly ? "#ecfdf5" : "#fff") + ";border:1px solid #10b981;border-radius:6px;color:#047857;cursor:pointer;font-weight:700;'>Dallas Verified Queue</button>" +
-    "<button onclick='toggleWeakRepairQueue()' title='Show weak and repair leads for the current regional mode.' style='font-size:12px;padding:6px 12px;background:" + (APP._regionalQueue === "weak_repair" ? "#fee2e2" : "#fff") + ";border:1px solid #ef4444;border-radius:6px;color:#991b1b;cursor:pointer;font-weight:700;'>Weak/Repair</button>" +
-    "<button onclick='sourceRepairToggleQueue()' title='Open the source repair queue. No lead data is deleted.' style='font-size:12px;padding:6px 12px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;color:#92400e;cursor:pointer;font-weight:700;'>Source Repair Queue</button>" +
-    "<button onclick='sourcePreviewToggleQueue()' title='Open the Dallas preview queue for dry-run source candidates only.' style='font-size:12px;padding:6px 12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:6px;color:#1d4ed8;cursor:pointer;font-weight:700;'>Dallas Preview Queue</button>" +
+  var mode = window.regionalMode();
+  var dallasQueues = mode === 'dallas'
+    ? operatorQueueButton('Auction Soon', !!APP._dallasSheriffOnly, 'toggleDallasSheriffQueue()', 'Show Dallas auction/sheriff-tax-sale leads that pass evidence gates.') +
+      operatorQueueButton('Distress Verified', !!APP._dallasVerifiedOnly, 'toggleDallasVerifiedQueue()', 'Show Dallas leads with property-level source proof and distress evidence.')
+    : '';
+  return "<button onclick='toggleFilterBar()' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:700;'>Filters</button>" +
+    operatorQueueButton('Needs Research', APP._regionalQueue === 'weak_repair', 'toggleWeakRepairQueue()', 'Show leads that need source, address, or evidence repair before outreach.') +
+    operatorQueueButton('Comps Needed', APP._operatorQueue === 'comps_needed', 'toggleCompsNeededQueue()', 'Show leads that still need verified sold comps before valuation.') +
+    dallasQueues +
     "<button onclick='toggleSelectAllVisibleLeads(true)' title='Select all leads visible on this page.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Select Visible</button>" +
     "<button onclick='clearLeadSelection()' title='Clear selected leads.' style='font-size:12px;padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;color:#374151;cursor:pointer;font-weight:600;'>Clear Selection</button>";
 }
 function leadToolbarButton(label, calls, style){
   return "<button onclick='runLeadToolbarAction("+JSON.stringify(calls)+")' style='font-size:12px;padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-weight:600;"+style+"'>"+label+"</button>";
 }
+function renderAdminSystemTools() {
+  return '<details id="adminSystemTools" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151">' +
+    '<summary style="list-style:none;cursor:pointer;font-size:12px;font-weight:900;padding:7px 10px;color:#64748b">Admin / System Tools</summary>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #e5e7eb;padding:8px;max-width:760px">' +
+      '<button onclick="openPullLeadsToolbar()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Pull Leads</button>' +
+      '<button onclick="sourcePreviewOpenDallasAgent()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Dallas Source Agent</button>' +
+      '<button onclick="sourcePreviewOpenDallasSheriffCapture()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Import Dallas Source Rows</button>' +
+      '<button onclick="sourcePreviewToggleQueue()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Source Plan</button>' +
+      '<button onclick="sourceRepairToggleQueue()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Source Repair</button>' +
+      leadToolbarButton("Refresh Valuation Evidence", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#f8fafc;color:#334155;") +
+      leadToolbarButton("Refresh Lead Priority", ["scoreAllLeads","runLeadScoring","scoreLeads"], "background:#f8fafc;color:#334155;") +
+      leadToolbarButton("Source Tools", ["runCourthouse","openCourthouse","runCourthouseSearch","openCourthouseTab"], "background:#f8fafc;color:#334155;") +
+      '<button onclick="openAddressValidator()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Validate Addresses</button>' +
+    '</div>' +
+  '</details>';
+}
 window.renderLeadActionToolbar = function(){
   if (typeof APP === "undefined" || APP.page !== "leads") return "";
   setTimeout(syncLeadFilterControls,0);
+  var activeFilterBar = filterBar.replace("display:none", "display:" + (APP._leadFilterBarOpen ? "flex" : "none"));
   return "<div id='wosFilterToggleBar' style='position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;'>" +
     renderRegionalModeControls() +
     filterToggleBtns() +
-    leadToolbarButton("Re-analyze Comps", ["reanalyzeComps","reanalyzeAllComps","reanalyzeLeadComps","runCompsAnalysis"], "background:#eef2ff;color:#3730a3;") +
-    leadToolbarButton("Score All Leads", ["scoreAllLeads","runLeadScoring","scoreLeads"], "background:#ecfdf5;color:#047857;") +
-    leadToolbarButton("Run Courthouse", ["runCourthouse","openCourthouse","runCourthouseSearch","openCourthouseTab"], "background:#fffbeb;color:#92400e;") +
-    "</div>" + filterBar;
+    "<button onclick='navigate(\"deal_analyzer\",document.querySelector(\"[onclick*=deal_analyzer]\"))' style='font-size:12px;padding:6px 12px;background:#111827;border:1px solid #111827;border-radius:6px;color:#fff;cursor:pointer;font-weight:800;'>Analyze Property</button>" +
+    renderAdminSystemTools() +
+    "</div>" + activeLeadFilterChips() + activeFilterBar;
 };
 window.setOperationalMode = function(mode){
   if (!REGIONAL_COMMAND[String(mode || '').toLowerCase()]) mode = 'dallas';
@@ -24373,6 +24465,7 @@ window.setOperationalMode = function(mode){
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
   APP._regionalQueue = '';
+  APP._operatorQueue = '';
   var filters = getLeadToolbarFilters();
   if (APP.operationalMode === 'dallas') {
     filters.state = 'TX';
@@ -24392,6 +24485,17 @@ window.setOperationalMode = function(mode){
 };
 window.toggleWeakRepairQueue = function(){
   APP._regionalQueue = APP._regionalQueue === 'weak_repair' ? '' : 'weak_repair';
+  APP._operatorQueue = '';
+  APP._dallasVerifiedOnly = false;
+  APP._dallasSheriffOnly = false;
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0, resetPage: true });
+  else if (typeof window.applyLeadToolbarFilters === "function") window.applyLeadToolbarFilters();
+};
+window.toggleCompsNeededQueue = function(){
+  APP._operatorQueue = APP._operatorQueue === 'comps_needed' ? '' : 'comps_needed';
+  APP._regionalQueue = '';
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
   APP._leadApiOffset = 0;
@@ -24454,7 +24558,10 @@ window.clearLeadFilters = function(){
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
   APP._regionalQueue = '';
+  APP._operatorQueue = '';
+  APP.search = '';
   saveLeadToolbarState();
+  var search = document.getElementById('global-search'); if (search) search.value = '';
   ["lfState","lfCounty","lfSource","lfType","lfWorkflow","lfAge","lfPriority","lfSort"].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value="";
   });
@@ -24464,10 +24571,18 @@ window.clearLeadFilters = function(){
   if (typeof loadLeadsFromAPI === "function") loadLeadsFromAPI({ offset: 0 });
   else window.applyLeadToolbarFilters();
 };
+window.globalSearch = function(query) {
+  APP.search = String(query || '').trim();
+  APP._leadApiOffset = 0;
+  if (typeof _leadsPage !== "undefined") _leadsPage = 0;
+  if (typeof window.applyLeadToolbarFilters === 'function') window.applyLeadToolbarFilters();
+  else if (typeof render === 'function') render();
+};
 window.toggleDallasVerifiedQueue = function(){
   APP._dallasVerifiedOnly = !APP._dallasVerifiedOnly;
   if (APP._dallasVerifiedOnly) APP._dallasSheriffOnly = false;
   APP._regionalQueue = '';
+  APP._operatorQueue = '';
   APP._leadApiOffset = 0;
   if (typeof _leadsPage !== "undefined") _leadsPage = 0;
   if (APP._dallasVerifiedOnly) {
@@ -24481,6 +24596,7 @@ window.toggleDallasSheriffQueue = function(){
   if (APP._dallasSheriffOnly) {
     APP._dallasVerifiedOnly = false;
     APP._regionalQueue = '';
+    APP._operatorQueue = '';
     APP._leadToolbarFilters = Object.assign({}, getLeadToolbarFilters(), { sort: "source_confidence" });
   }
   APP._leadApiOffset = 0;
@@ -24609,6 +24725,7 @@ if(document.readyState==="loading"){
     return compactLeadPick(lead, ['source_record_url','record_url','source_url','url','evidence_url','verification_url','source_details.record_url','source_details.source_url','source_details.query_url']);
   }
   function compactLeadZillowUrl(lead) {
+    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) return { url: '', label: 'Zillow' };
     var directFields = ['zillow_url','zillowUrl','zillow_link','_zillow_link','property_zillow_url','property_url','listing_url','source_property_url','source_details.zillow_url','source_details.zillow_link'];
     for (var i = 0; i < directFields.length; i++) {
       var direct = compactLeadPick(lead, [directFields[i]]);
@@ -24621,6 +24738,9 @@ if(document.readyState==="loading"){
     return { url: 'https://www.zillow.com/homes/', label: 'Zillow fallback' };
   }
   function compactLeadSearchUrl(lead, source) {
+    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) {
+      return { url: '', label: source === 'zillow' ? 'Zillow' : (source === 'redfin' ? 'Redfin' : 'Realtor') };
+    }
     if (source === 'zillow') return compactLeadZillowUrl(lead);
     if (typeof leadTargetedCompSearchUrl === 'function') {
       var targeted = leadTargetedCompSearchUrl(source, lead);
@@ -24637,12 +24757,36 @@ if(document.readyState==="loading"){
     return 'Motivation is not fully proven yet. Verify the source record before outreach.';
   }
   function compactLeadNextStep(lead) {
+    var quality = typeof leadQueueQuality === 'function' ? leadQueueQuality(lead) : {};
+    var flags = Array.isArray(quality.flags) ? quality.flags.join(' ') : '';
+    var sourceUrl = compactLeadSourceUrl(lead);
+    var compStatus = typeof leadQueueCompStatus === 'function' ? leadQueueCompStatus(lead) : '';
+    var contactStatus = typeof leadQueueContactStatus === 'function' ? leadQueueContactStatus(lead) : '';
+    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) return 'Repair address before researching comps.';
+    if (!sourceUrl || /missing_source_url|source_repair_required|parser_failed|malformed/i.test(flags)) return 'Review source record before outreach.';
+    if (/missing_amount/i.test(flags)) return 'Review source record before outreach.';
+    if (/comp/i.test(compStatus) && /need|missing|blocked/i.test(compStatus)) return 'Open research links and add verified sold comps before ARV/MAO.';
+    if (/missing|lookup|skip trace|none/i.test(contactStatus)) return 'Skip trace before calling.';
+    if (quality.label === 'Ready To Call') return 'Ready to call.';
     if (typeof leadIntelligenceNextStep === 'function') return leadIntelligenceNextStep(lead);
     if (typeof researchLeadBestNextAction === 'function') return researchLeadBestNextAction(lead);
     return 'Verify source, add comps, then prepare outreach.';
   }
   function compactLeadDealMath(lead) {
+    var comps = typeof researchLeadComps === 'function' ? (researchLeadComps(lead) || []) : [];
+    var stats = typeof researchCompStats === 'function' ? researchCompStats(comps) : { verifiedSoldCount: 0, avg: 0, confidence: 'Incomplete' };
+    if (!stats || Number(stats.verifiedSoldCount || 0) < 3) {
+      return {
+        arv: 0,
+        mao: 0,
+        firstOffer: 0,
+        targetOffer: 0,
+        walkaway: 0,
+        confidence: 'Insufficient verified comp evidence - valuation blocked'
+      };
+    }
     var arv = Number(String(compactLeadPick(lead, ['arv','estimated_arv','after_repair_value']) || '').replace(/[^0-9.-]/g, ''));
+    if ((!Number.isFinite(arv) || arv <= 0) && Number(stats.avg || 0) > 0) arv = Math.round(Number(stats.avg || 0));
     var repairs = Number(String(compactLeadPick(lead, ['repairs','repair_estimate','estimated_repairs']) || '').replace(/[^0-9.-]/g, ''));
     var mao = Number(String(compactLeadPick(lead, ['mao','max_allowable_offer','max_offer']) || '').replace(/[^0-9.-]/g, ''));
     if ((!Number.isFinite(mao) || mao <= 0) && Number.isFinite(arv) && arv > 0) mao = Math.max(0, Math.round(arv * 0.7 - (Number.isFinite(repairs) ? repairs : 0)));
@@ -24652,7 +24796,7 @@ if(document.readyState==="loading"){
     if ((!Number.isFinite(targetOffer) || targetOffer <= 0) && mao > 0) targetOffer = Math.round(mao * 0.94);
     var walkaway = Number(String(compactLeadPick(lead, ['walkaway','walkaway_offer']) || '').replace(/[^0-9.-]/g, ''));
     if ((!Number.isFinite(walkaway) || walkaway <= 0) && mao > 0) walkaway = mao;
-    var confidence = compactLeadPick(lead, ['confidence','comp_confidence','arv_confidence','source_confidence']) || 'Needs review';
+    var confidence = stats.confidence || compactLeadPick(lead, ['confidence','comp_confidence','arv_confidence','source_confidence']) || 'Needs review';
     return { arv: arv, mao: mao, firstOffer: firstOffer, targetOffer: targetOffer, walkaway: walkaway, confidence: confidence };
   }
   function compactLeadMoneyCell(label, value) {
@@ -24692,19 +24836,20 @@ if(document.readyState==="loading"){
     var redfin = compactLeadSearchUrl(lead, 'redfin');
     var realtor = compactLeadSearchUrl(lead, 'realtor');
     var full = compactLeadFullAddress(lead);
+    var ready = typeof leadQueueResearchAddressReady !== 'function' || leadQueueResearchAddressReady(lead);
     var soldQuery = [full, 'sold comps'].filter(Boolean).join(' ');
     return {
       property: {
         zillow: zillow.url,
         redfin: redfin.url,
         realtor: realtor.url,
-        google_maps: full ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(full) : '',
-        appraisal_district: full ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + full) : ''
+        google_maps: ready && full ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(full) : '',
+        appraisal_district: ready && full ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + full) : ''
       },
       nearby_sold: {
-        zillow: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com/homedetails ' + soldQuery) : '',
-        redfin: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + soldQuery) : '',
-        realtor: soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + soldQuery) : ''
+        zillow: ready && soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com/homedetails ' + soldQuery) : '',
+        redfin: ready && soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:redfin.com ' + soldQuery) : '',
+        realtor: ready && soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:realtor.com/realestateandhomes-detail ' + soldQuery) : ''
       }
     };
   }
@@ -24774,7 +24919,7 @@ if(document.readyState==="loading"){
       '</div></div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
         '<button type="button" onclick="researchLocalCompBridgeCheck(' + researchJsArg(lead.id) + ')" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">' + (state.loadingHealth ? 'Checking...' : 'Check Local Agent') + '</button>' +
-        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">Capture Visible Comps</button>' +
+        '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',false)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">Capture Draft Comps</button>' +
         '<button type="button" onclick="researchLocalCompBridgeCapture(' + researchJsArg(lead.id) + ',true)" style="border:1px solid #334155;border-radius:8px;padding:7px 9px;background:#111827;color:#e5e7eb;font-size:10px;font-weight:900;cursor:pointer">One Scroll + Capture</button>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px">' +
@@ -24901,6 +25046,8 @@ if(document.readyState==="loading"){
     var qualityBadge = typeof leadQueueQualityBadge === 'function' ? leadQueueQualityBadge(lead) : '';
     var sourceTruth = typeof renderLeadSourceTruthPanel === 'function' ? renderLeadSourceTruthPanel(lead) : '';
     var brief = typeof renderLeadIntelligenceBrief === 'function' ? renderLeadIntelligenceBrief(lead, []) : '';
+    var addressReady = typeof leadQueueResearchAddressReady !== 'function' || leadQueueResearchAddressReady(lead);
+    var addressRepairMessage = addressReady ? '' : '<div style="border:1px solid #f59e0b66;background:#451a03;color:#fed7aa;border-radius:9px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">Address needs repair before research links.<br><span style="font-weight:700;color:#fdba74">Move to Needs Research and repair the source record.</span></div>';
     return '<div style="width:min(560px,96vw);height:96vh;max-height:96vh;background:#07111f;color:#e5e7eb;border:1px solid #d4af37;border-right:none;border-radius:14px 0 0 14px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #1f2937;background:#0b1220">' +
         '<div style="min-width:0"><div style="font-size:10px;color:#d4af37;font-weight:900;text-transform:uppercase;letter-spacing:.04em">' + compactLeadText(ref) + '</div>' +
@@ -24916,6 +25063,7 @@ if(document.readyState==="loading"){
           '<div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Why this lead matters</div><div style="font-size:13px;line-height:1.45;color:#f8fafc;margin-top:4px">' + compactLeadText(why) + '</div></div>' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Came from</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(sourceName) + '</div></div><div><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Next step</div><div style="font-size:12px;color:#e5e7eb;font-weight:800;margin-top:3px">' + compactLeadText(nextStep) + '</div></div></div>' +
         '</div>' +
+        addressRepairMessage +
         '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px">' +
           compactLeadAction(zillow.label, zillow.url, true) +
           compactLeadAction('Redfin', redfin.url, false) +
