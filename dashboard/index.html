@@ -672,7 +672,9 @@ function initApp() {
   checkDailyUpdate();
   // SYNC: load from Railway database immediately on open
   loadLeadsFromAPI();
-  setInterval(loadLeadsFromAPI, 30000);
+  setInterval(function() {
+    if (typeof loadLeadsFromAPI === 'function') loadLeadsFromAPI({ background: true });
+  }, 30000);
 }
 
 function updateSidebarStats() {
@@ -18009,6 +18011,49 @@ if (typeof window !== 'undefined') {
   if (typeof window.regionalModeLabel !== 'function') window.regionalModeLabel = safeRegionalModeLabelFallback;
 }
 
+function leadQueueModalIsOpen() {
+  var overlay = document.getElementById('modal-overlay');
+  return !!(overlay && overlay.style.display && overlay.style.display !== 'none');
+}
+
+function leadQueueMarkInteraction() {
+  if (typeof APP !== 'undefined') APP._leadQueueLastInteractionAt = Date.now();
+}
+
+function leadQueueRecentInteraction(ms) {
+  if (typeof APP === 'undefined') return false;
+  return Date.now() - Number(APP._leadQueueLastInteractionAt || 0) < (ms || 700);
+}
+
+function leadQueueRenderWhenStable() {
+  if (typeof render !== 'function' || APP.page !== 'leads') return;
+  if (leadQueueModalIsOpen()) return;
+  if (leadQueueRecentInteraction(1200)) {
+    clearTimeout(APP._leadQueueDeferredRenderTimer);
+    APP._leadQueueDeferredRenderTimer = setTimeout(leadQueueRenderWhenStable, 1300);
+    return;
+  }
+  render();
+}
+
+function leadQueueShouldSkipBackgroundRefresh() {
+  return APP.page === 'leads' && (leadQueueModalIsOpen() || leadQueueRecentInteraction(5000) || APP._leadsLoading);
+}
+
+if (typeof document !== 'undefined' && !window.__leadQueueInteractionGuardInstalled) {
+  window.__leadQueueInteractionGuardInstalled = true;
+  document.addEventListener('pointerdown', function(event) {
+    var target = event && event.target;
+    if (!target || !target.closest) return;
+    if (APP && APP.page === 'leads') {
+      leadQueueMarkInteraction();
+    }
+  }, true);
+  document.addEventListener('keydown', function() {
+    if (APP && APP.page === 'leads') leadQueueMarkInteraction();
+  }, true);
+}
+
 function buildLeadApiUrl(offset) {
   var filters = typeof getLeadToolbarFilters === 'function' ? getLeadToolbarFilters() : {};
   var params = new URLSearchParams();
@@ -18032,14 +18077,19 @@ function buildLeadApiUrl(offset) {
 var _wpOrig=loadLeadsFromAPI;
 loadLeadsFromAPI=async function(options){
   options = options || {};
+  if (options.background && leadQueueShouldSkipBackgroundRefresh()) return;
+  var loadSeq = Number(APP._leadApiLoadSeq || 0) + 1;
+  APP._leadApiLoadSeq = loadSeq;
   APP._leadsLoading=true;
   APP._leadsError='';
-  if(typeof render==='function'&&APP.page==='leads')render();
+  var hasExistingLeads = Array.isArray(APP.leads) && APP.leads.length > 0;
+  if(typeof render==='function'&&APP.page==='leads'&&!hasExistingLeads)render();
   try{
     var requestedOffset = Number(options.offset != null ? options.offset : (APP._leadApiOffset || 0));
     var lr=await fetch(buildLeadApiUrl(requestedOffset));
     if(!lr.ok) throw new Error('HTTP '+lr.status);
     var ld=await lr.json();
+    if (loadSeq !== APP._leadApiLoadSeq) return;
     var leads=Array.isArray(ld&&ld.leads)?ld.leads:(Array.isArray(ld)?ld:[]);
     APP._leadsTotalAll=Number((ld&&(ld.totalAll||ld.totalFiltered))||leads.length||0);
     APP._leadsTotalFiltered=Number((ld&&ld.totalFiltered)||APP._leadsTotalAll||leads.length||0);
@@ -18063,7 +18113,7 @@ loadLeadsFromAPI=async function(options){
   }
   try{var br=await fetch('/api/buyers');if(br.ok){var bd=await br.json();APP.buyers=bd.buyers||bd||[];}}catch(e){}
   updateLeadsBadge();
-  if(typeof render==='function'&&APP.page==='leads')render();
+  leadQueueRenderWhenStable();
 };
 console.log('✅ Mega-Patch v2 loaded');
 
@@ -22583,7 +22633,7 @@ function renderLeads() {
       '</div>' +
     '</div>' +
     pager +
-    '<div style="overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px;background:#fff">' +
+    '<div id="lead-queue-table-shell" style="min-height:360px;overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px;background:#fff">' +
       '<table style="width:100%;border-collapse:collapse">' +
         '<thead><tr style="background:#f5f5f7"><th style="padding:9px 8px;width:34px;text-align:center"><input id="select-all-visible-leads" type="checkbox" onchange="toggleSelectAllVisibleLeads(this.checked)" style="width:15px;height:15px;cursor:pointer"></th>' + headers + '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
