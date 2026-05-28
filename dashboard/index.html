@@ -18236,34 +18236,160 @@ function selectedLeadIds(){
   return Array.from(APP._selectedLeads).filter(Boolean);
 }
 
+function selectedLeadSourceUrl(lead) {
+  lead = lead || {};
+  var url = leadQueuePick(lead, [
+    'source_record_url',
+    'record_url',
+    'source_url',
+    'url',
+    'evidence_url',
+    'verification_url',
+    'source_details.record_url',
+    'source_details.source_url',
+    'source_details.query_url'
+  ]);
+  return /^https?:\/\//i.test(String(url || '').trim()) ? String(url).trim() : '';
+}
+
+function selectedLeadVerifiedSoldCompCount(lead) {
+  lead = lead || {};
+  var comps = typeof researchLeadComps === 'function' ? (researchLeadComps(lead) || []) : (lead.comps || lead.manual_comps || lead.draft_comps || []);
+  if (!Array.isArray(comps)) comps = [];
+  if (typeof researchCompStats === 'function') {
+    var stats = researchCompStats(comps) || {};
+    return Number(stats.verifiedSoldCount || 0);
+  }
+  return comps.filter(function(comp) {
+    comp = comp || {};
+    var status = String(comp.status || comp.sale_list_status || comp.type || '').toLowerCase();
+    var verified = comp.verified === true || comp.is_verified === true || /verified/.test(status);
+    return verified && /sold|closed/.test(status);
+  }).length;
+}
+
+function selectedLeadPreflight(lead) {
+  lead = lead || {};
+  var quality = typeof leadQueueAddressQuality === 'function'
+    ? leadQueueAddressQuality(lead)
+    : { status: 'missing', address: leadQueueAddress(lead) || '', message: 'Address needs repair before research links.' };
+  var sourceUrl = selectedLeadSourceUrl(lead);
+  var verifiedSold = selectedLeadVerifiedSoldCompCount(lead);
+  var addressStatus = 'Needs Research';
+  var compStatus = 'Comps Blocked';
+  var nextStep = 'Repair address from source record before comps.';
+  if (quality.status === 'partial') {
+    addressStatus = 'Needs Address Review';
+    nextStep = 'Add city/state or verify source record.';
+  } else if (quality.status === 'valid') {
+    addressStatus = 'Research Ready';
+    compStatus = verifiedSold >= 3 ? 'Ready For Review' : 'Comps Needed';
+    nextStep = verifiedSold >= 3 ? 'Review valuation evidence.' : 'Open research links and verify sold comps.';
+  }
+  return {
+    lead: lead,
+    addressQuality: quality,
+    sourceUrl: sourceUrl,
+    verifiedSoldCount: verifiedSold,
+    addressStatus: addressStatus,
+    sourceStatus: sourceUrl ? 'Source Record Available' : 'Source Review Needed',
+    compStatus: compStatus,
+    nextStep: nextStep
+  };
+}
+
+function selectedLeadPreflightSummary(leads) {
+  var items = (leads || []).map(selectedLeadPreflight);
+  return {
+    items: items,
+    selected: items.length,
+    readyForResearch: items.filter(function(item){ return item.addressQuality.status === 'valid'; }).length,
+    needsAddressReview: items.filter(function(item){ return item.addressQuality.status === 'partial'; }).length,
+    needsResearch: items.filter(function(item){ return item.addressQuality.status === 'junk' || item.addressQuality.status === 'missing'; }).length,
+    readyToOffer: items.filter(function(item){ return item.addressQuality.status === 'valid' && item.verifiedSoldCount >= 3; }).length
+  };
+}
+
+function selectedLeadStatusPill(label, tone) {
+  var palette = {
+    good: ['#166534', '#dcfce7', '#86efac'],
+    warn: ['#92400e', '#fef3c7', '#f59e0b'],
+    bad: ['#991b1b', '#fee2e2', '#f87171'],
+    calm: ['#1d4ed8', '#eff6ff', '#60a5fa'],
+    neutral: ['#475569', '#f1f5f9', '#94a3b8']
+  };
+  var p = palette[tone || 'neutral'] || palette.neutral;
+  return '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;font-weight:900;color:' + p[0] + ';background:' + p[1] + ';border:1px solid ' + p[2] + ';border-radius:999px;padding:3px 8px">' + leadQueueSafeText(label) + '</span>';
+}
+
 function visibleLeadCheckboxes(){
   return Array.from(document.querySelectorAll('.lead-cb'));
 }
 
 function renderBulkActionsBar(){
   if (!APP._selectedLeads) APP._selectedLeads = new Set();
-  var count = APP._selectedLeads.size;
+  var leads = selectedLeadObjects();
+  var summary = selectedLeadPreflightSummary(leads);
+  var count = summary.selected;
   var stateOptions = ['assigned','in_review','active_outreach','comping','offer_prep','follow_up','dead_lead','under_contract','dispo_ready'].map(function(value){
     var label = typeof leadWorkflowLabel === 'function' ? leadWorkflowLabel(value) : value;
     return '<option value="'+value+'">'+label+'</option>';
   }).join('');
-  var warning = count > 25 ? '<span id="bulk-max-warning" style="font-size:10px;color:#fbbf24;font-weight:800">Large batch: review before applying.</span>' : '<span id="bulk-max-warning" style="display:none;font-size:10px;color:#fbbf24;font-weight:800"></span>';
-  return '<div id="bulk-toolbar" style="display:'+(count>0?'flex':'none')+';align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:9px 10px;background:#0b1120;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb">'+
-    '<span id="bulk-count" style="font-size:11px;font-weight:900;color:#f8fafc">'+count+' selected</span>'+
-    warning+
-    '<button type="button" onclick="toggleSelectAllVisibleLeads(true)" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;cursor:pointer">Select Visible</button>'+
-    '<button type="button" onclick="clearLeadSelection()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;cursor:pointer">Clear</button>'+
-    '<select id="bulk-workflow-state" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px">'+stateOptions+'</select>'+
-    '<button type="button" onclick="bulkSetWorkflowState()" style="font-size:11px;border:1px solid #f4c542;border-radius:6px;background:#1f2937;color:#f4c542;padding:6px 8px;font-weight:900;cursor:pointer">Set Workflow</button>'+
-    '<input id="bulk-assigned-to" placeholder="Assignee" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;min-width:110px">'+
-    '<button type="button" onclick="bulkAssignOwner()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Assign</button>'+
-    '<button type="button" onclick="bulkQueueCompReview()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Comps</button>'+
-    '<button type="button" onclick="bulkQueueEnrichment()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Queue Enrichment</button>'+
-    '<button type="button" onclick="bulkMarkVerification()" style="font-size:11px;border:1px solid #334155;border-radius:6px;background:#111827;color:#e5e7eb;padding:6px 8px;font-weight:800;cursor:pointer">Mark Verification</button>'+
-    '<button type="button" onclick="startResearchSessionFromSelection()" style="font-size:11px;border:1px solid #f4c542;border-radius:6px;background:#1f2937;color:#f4c542;padding:6px 8px;font-weight:900;cursor:pointer">Start Research Session</button>'+
-    '<button type="button" onclick="startFiveLeadCompSessionFromSelection()" style="font-size:11px;border:1px solid #10b981;border-radius:6px;background:#052e1a;color:#86efac;padding:6px 8px;font-weight:900;cursor:pointer">Start 5-Lead Comp Session</button>'+
-    '<button type="button" onclick="bulkArchiveSelected()" style="font-size:11px;border:1px solid #fecaca;border-radius:6px;background:#450a0a;color:#fecaca;padding:6px 8px;font-weight:900;cursor:pointer">Archive</button>'+
-    '<span id="bulk-action-status" style="font-size:10px;color:#94a3b8"></span>'+
+  var leadCards = summary.items.slice(0, 10).map(function(item) {
+    var lead = item.lead || {};
+    var ref = lead.ref_id || lead.reference_id || lead.id || 'Lead';
+    var address = leadQueueAddress(lead) || item.addressQuality.address || 'Address not available';
+    var location = [leadQueueCounty(lead), leadQueueState(lead)].filter(Boolean).join(', ');
+    var addressTone = item.addressStatus === 'Research Ready' ? 'good' : (item.addressStatus === 'Needs Address Review' ? 'warn' : 'bad');
+    var compTone = item.compStatus === 'Ready For Review' ? 'good' : (item.compStatus === 'Comps Needed' ? 'warn' : 'bad');
+    return '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:start">' +
+      '<div style="min-width:0"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">' + leadQueueSafeText(ref) + '</div>' +
+      '<div style="font-size:13px;color:#111827;font-weight:900;line-height:1.3;margin-top:2px;word-break:break-word">' + leadQueueSafeText(address) + '</div>' +
+      '<div style="font-size:11px;color:#64748b;margin-top:3px">' + leadQueueSafeText(location || 'Location needs review') + '</div></div>' +
+      '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">' +
+        selectedLeadStatusPill(item.addressStatus, addressTone) +
+        selectedLeadStatusPill(item.sourceStatus, item.sourceUrl ? 'good' : 'warn') +
+        selectedLeadStatusPill(item.compStatus, compTone) +
+        '<div style="font-size:11px;color:#374151;line-height:1.35;font-weight:800;margin-top:2px">' + leadQueueSafeText(item.nextStep) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  var overLimit = count > 10;
+  var disabledAi = '<button type="button" disabled title="AI Deal Analyzer will accept research-ready leads only." style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#f1f5f9;color:#64748b;padding:7px 10px;font-weight:900;cursor:not-allowed">Send to AI Deal Analyzer - coming next</button>';
+  return '<div id="bulk-toolbar" style="display:' + (count > 0 ? 'block' : 'none') + ';margin:0 0 12px;padding:12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;color:#111827">' +
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div id="bulk-count" style="font-size:14px;font-weight:900;color:#111827">' + count + ' selected</div>' +
+      '<div style="font-size:11px;color:#64748b;font-weight:800;margin-top:3px">Preflight selected leads before research. No auto-save, no comp capture, no valuation changes.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+        '<button type="button" onclick="analyzeSelectedLeads()" style="font-size:12px;border:1px solid #111827;border-radius:7px;background:#111827;color:#fff;padding:7px 10px;font-weight:900;cursor:pointer">Analyze Selected</button>' +
+        '<button type="button" onclick="reviewSelectedLeads()" style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;padding:7px 10px;font-weight:900;cursor:pointer">Review Selected</button>' +
+        '<button type="button" onclick="clearLeadSelection()" style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;padding:7px 10px;font-weight:900;cursor:pointer">Clear Selection</button>' +
+        disabledAi +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+      selectedLeadStatusPill(summary.readyForResearch + ' ready for research', summary.readyForResearch ? 'good' : 'neutral') +
+      selectedLeadStatusPill(summary.needsAddressReview + ' needs address review', summary.needsAddressReview ? 'warn' : 'neutral') +
+      selectedLeadStatusPill(summary.needsResearch + ' needs research', summary.needsResearch ? 'bad' : 'neutral') +
+      selectedLeadStatusPill(summary.readyToOffer + ' ready to offer', summary.readyToOffer ? 'good' : 'neutral') +
+    '</div>' +
+    (overLimit ? '<div id="bulk-max-warning" style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;margin-bottom:10px">Analyze up to 10 leads at a time.</div>' : '<div id="bulk-max-warning" style="display:none"></div>') +
+    '<div id="bulk-action-status" style="font-size:12px;color:#334155;font-weight:900;margin-bottom:' + (leadCards ? '10px' : '0') + '"></div>' +
+    (leadCards ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:8px;margin-bottom:10px">' + leadCards + '</div>' : '') +
+    '<details style="border-top:1px solid #e5e7eb;padding-top:9px"><summary style="cursor:pointer;font-size:11px;color:#64748b;font-weight:900">Admin / System Tools</summary>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' +
+        '<select id="bulk-workflow-state" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px">' + stateOptions + '</select>' +
+        '<button type="button" onclick="bulkSetWorkflowState()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Set Workflow</button>' +
+        '<input id="bulk-assigned-to" placeholder="Assignee" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;min-width:110px">' +
+        '<button type="button" onclick="bulkAssignOwner()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Assign</button>' +
+        '<button type="button" onclick="bulkQueueCompReview()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Queue Comps</button>' +
+        '<button type="button" onclick="bulkQueueEnrichment()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Queue Enrichment</button>' +
+        '<button type="button" onclick="bulkMarkVerification()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Mark Verification</button>' +
+        '<button type="button" onclick="startResearchSessionFromSelection()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Start Research Session</button>' +
+        '<button type="button" onclick="startFiveLeadCompSessionFromSelection()" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#334155;padding:6px 8px;font-weight:800;cursor:pointer">Start 5-Lead Comp Session</button>' +
+        '<button type="button" onclick="bulkArchiveSelected()" style="font-size:11px;border:1px solid #fecaca;border-radius:6px;background:#fff;color:#991b1b;padding:6px 8px;font-weight:800;cursor:pointer">Archive</button>' +
+      '</div>' +
+    '</details>' +
   '</div>';
 }
 
@@ -18272,14 +18398,7 @@ function updateBulkToolbar(){
   var ids = selectedLeadIds();
   var count = ids.length;
   var toolbar = document.getElementById('bulk-toolbar');
-  var countEl = document.getElementById('bulk-count');
-  var warning = document.getElementById('bulk-max-warning');
-  if (toolbar) toolbar.style.display = count > 0 ? 'flex' : 'none';
-  if (countEl) countEl.textContent = count + ' lead' + (count === 1 ? '' : 's') + ' selected';
-  if (warning) {
-    warning.style.display = count > 25 ? '' : 'none';
-    warning.textContent = count > 25 ? 'Large batch: ' + count + ' selected. Review before applying.' : '';
-  }
+  if (toolbar) toolbar.outerHTML = renderBulkActionsBar();
   visibleLeadCheckboxes().forEach(function(cb){
     cb.checked = APP._selectedLeads.has(cb.dataset.id);
   });
@@ -18320,13 +18439,50 @@ function bulkActionStatus(text, isError){
   var el = document.getElementById('bulk-action-status');
   if (el) {
     el.textContent = text || '';
-    el.style.color = isError ? '#fecaca' : '#94a3b8';
+    el.style.color = isError ? '#991b1b' : '#334155';
   }
 }
 
 function selectedLeadObjects(){
   var ids = new Set(selectedLeadIds());
   return (APP.leads || []).filter(function(lead){ return ids.has(String(lead.id)); });
+}
+
+function reviewSelectedLeads(){
+  var leads = selectedLeadObjects();
+  if (!leads.length) {
+    bulkActionStatus('Select up to 10 leads to analyze.', true);
+    if (typeof toast === 'function') toast('Select up to 10 leads to analyze.', 'error');
+    return;
+  }
+  bulkActionStatus('Review the selected lead cards below. Use Open Lead for the full record.', false);
+}
+
+function analyzeSelectedLeads(){
+  var leads = selectedLeadObjects();
+  if (!leads.length) {
+    bulkActionStatus('Select up to 10 leads to analyze.', true);
+    if (typeof toast === 'function') toast('Select up to 10 leads to analyze.', 'error');
+    return;
+  }
+  if (leads.length > 10) {
+    bulkActionStatus('Analyze up to 10 leads at a time.', true);
+    if (typeof toast === 'function') toast('Analyze up to 10 leads at a time.', 'error');
+    return;
+  }
+  var summary = selectedLeadPreflightSummary(leads);
+  var message = '';
+  if (summary.needsResearch) {
+    message = 'Some selected leads need address repair before comps.';
+  } else if (summary.needsAddressReview) {
+    message = 'Some selected leads need city/state or source verification before comps.';
+  } else if (summary.items.some(function(item){ return item.compStatus === 'Comps Needed'; })) {
+    message = 'Comps needed - open research links and add verified sold comps.';
+  } else {
+    message = 'Ready for research.';
+  }
+  bulkActionStatus(message + ' AI Deal Analyzer will accept research-ready leads only.', summary.needsResearch || summary.needsAddressReview);
+  if (typeof toast === 'function') toast(message, summary.needsResearch || summary.needsAddressReview ? 'error' : 'success');
 }
 
 async function applyBulkLeadUpdates(makeUpdates, label, options){
