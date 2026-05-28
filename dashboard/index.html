@@ -21257,20 +21257,73 @@ function leadQueueHasAny(lead, keys) {
 }
 
 function leadQueueAddressLooksWeak(lead) {
-  var text = String(leadQueueAddress(lead) || '').trim();
-  var lower = text.toLowerCase();
-  if (!text) return true;
-  if (/^(column\s*[1-4]|unnamed)$/i.test(text)) return true;
-  if (/\b(public information request|phone directory|page not found|contact us|contact|search results|skip main navigation)\b/i.test(lower)) return true;
-  if (/^\d{4}\s+(contact|beginning|calendar|schedule|directory)\b/i.test(text)) return true;
-  if (/^(phone\s+directory|contact|contacts|beginning|calendar|home|search|login|notice|notices)\b/i.test(lower)) return true;
-  if (/\b(phone directory|contact us|skip main navigation|beginning december|court calendar)\b/i.test(lower)) return true;
-  if (!/\d/.test(text)) return true;
-  return !/\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square)\b/i.test(text) && text.split(/\s+/).length < 4;
+  var quality = leadQueueAddressQuality(lead);
+  return quality.status !== 'valid';
+}
+
+function leadQueueAddressQuality(lead) {
+  lead = lead || {};
+  var street = String(leadQueueAddress(lead) || '').trim().replace(/\s+/g, ' ');
+  var city = String(leadQueuePick(lead, ['city','property_city','situs_city']) || '').trim();
+  var state = String(leadQueueState(lead) || '').trim();
+  var zip = String(leadQueuePick(lead, ['zip','zipcode','postal_code','property_zip']) || '').trim();
+  var county = String(leadQueueCounty(lead) || '').trim();
+  var full = [street, city, state, zip].filter(function(part){ return part; }).join(', ');
+  var probe = [street, full, county].filter(Boolean).join(' ').toLowerCase();
+  var hasNumber = /\b\d{1,7}\b/.test(street);
+  var hasStreetWord = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square|plaza|expressway|expy|fwy|freeway)\b/i.test(street);
+  var hasCityState = !!(city && state);
+  var hasZip = /\b\d{5}(?:-\d{4})?\b/.test(zip || full);
+  if (!street && !full) {
+    return {
+      status: 'missing',
+      label: 'Needs Address Review',
+      address: '',
+      message: 'Address needs repair before research links.',
+      nextStep: 'Repair address or verify source record first.'
+    };
+  }
+  if (/^(column\s*[1-4]|unnamed)$/i.test(street) ||
+      /\b(public information request|phone directory|page not found|contact us|contact|search results|skip main navigation|court calendar|beginning december)\b/i.test(probe) ||
+      /^\d{1,7}\s+(contact|beginning|calendar|schedule|directory|public information request)\b/i.test(street) ||
+      /^(phone\s+directory|contact|contacts|beginning|calendar|home|search|login|notice|notices)\b/i.test(street)) {
+    return {
+      status: 'junk',
+      label: 'Needs Address Review',
+      address: full || street,
+      message: 'Address needs repair before research links.',
+      nextStep: 'Repair address or verify source record first.'
+    };
+  }
+  if (!hasNumber || !hasStreetWord) {
+    return {
+      status: 'junk',
+      label: 'Needs Address Review',
+      address: full || street,
+      message: 'Address needs repair before research links.',
+      nextStep: 'Repair address or verify source record first.'
+    };
+  }
+  if (!hasCityState && !hasZip) {
+    return {
+      status: 'partial',
+      label: 'Needs Address Review',
+      address: full || [street, county, state].filter(Boolean).join(', '),
+      message: 'Address is incomplete. Add city or verify source record before comps.',
+      nextStep: 'Add city or verify source record before comps.'
+    };
+  }
+  return {
+    status: 'valid',
+    label: 'Research Ready',
+    address: full || street,
+    message: '',
+    nextStep: ''
+  };
 }
 
 function leadQueueResearchAddressReady(lead) {
-  return !leadQueueAddressLooksWeak(lead);
+  return leadQueueAddressQuality(lead).status === 'valid';
 }
 
 function leadQueueConfidenceScore(lead) {
@@ -21433,6 +21486,8 @@ function leadQueueWorkflow(lead) {
 
 function leadQueueCompStatus(lead) {
   lead = lead || {};
+  var addressQuality = typeof leadQueueAddressQuality === 'function' ? leadQueueAddressQuality(lead) : { status: 'valid' };
+  if (addressQuality.status !== 'valid') return 'Comps blocked until address is repaired';
   var draft = APP.researchSession && APP.researchSession.compDrafts && APP.researchSession.compDrafts[String(lead.id)];
   var draftCount = Array.isArray(draft) ? draft.filter(function(comp){ return comp && typeof researchCompSlotIsBlank === 'function' && !researchCompSlotIsBlank(comp); }).length : 0;
   if (draftCount) return draftCount + ' draft';
@@ -24762,6 +24817,34 @@ if(document.readyState==="loading"){
     if (!full && typeof leadQueueAddress === 'function') full = leadQueueAddress(lead) || '';
     return full;
   }
+  function compactLeadAddressQuality(lead) {
+    if (typeof leadQueueAddressQuality === 'function') return leadQueueAddressQuality(lead);
+    var address = compactLeadFullAddress(lead);
+    if (!address) return { status: 'missing', label: 'Needs Address Review', address: '', message: 'Address needs repair before research links.', nextStep: 'Repair address or verify source record first.' };
+    if (/\b(public information request|phone directory|page not found|contact|search results)\b/i.test(address) || !/\b\d{1,7}\b/.test(address)) {
+      return { status: 'junk', label: 'Needs Address Review', address: address, message: 'Address needs repair before research links.', nextStep: 'Repair address or verify source record first.' };
+    }
+    return { status: 'valid', label: 'Research Ready', address: address, message: '', nextStep: '' };
+  }
+  function compactLeadResearchAddress(lead) {
+    var quality = compactLeadAddressQuality(lead);
+    return quality.status === 'valid' ? (quality.address || compactLeadFullAddress(lead)) : '';
+  }
+  function compactLeadCleanUrl(url) {
+    url = String(url || '').trim();
+    return /^https?:\/\//i.test(url) ? url : '';
+  }
+  function compactLeadIsDallasLead(lead) {
+    lead = lead || {};
+    var dallas = typeof dallasVerifiedStatus === 'function' ? dallasVerifiedStatus(lead) : null;
+    if (dallas && dallas.is_dallas === true) return true;
+    var city = String(compactLeadPick(lead, ['city','property_city','situs_city']) || '').toLowerCase();
+    var county = String((typeof leadQueueCounty === 'function' ? leadQueueCounty(lead) : '') || '').toLowerCase();
+    var state = String((typeof leadQueueState === 'function' ? leadQueueState(lead) : compactLeadPick(lead, ['state','property_state','situs_state'])) || '').toLowerCase();
+    return state === 'tx' || state === 'texas'
+      ? (city === 'dallas' || /(^|\b)dallas(\s+county)?($|\b)/.test(county))
+      : false;
+  }
   function compactLeadMoney(lead) {
     var direct = compactLeadPick(lead, ['amount_owed','tax_due','tax_lien_amount','lien_amount','violation_amount','judgment_amount','minimum_bid','source_amount']);
     if (!direct && typeof sourceTruthMoneyAmount === 'function') direct = sourceTruthMoneyAmount(lead);
@@ -24771,34 +24854,35 @@ if(document.readyState==="loading"){
   }
   function compactLeadSourceUrl(lead) {
     var urls = typeof leadBriefingSourceUrls === 'function' ? leadBriefingSourceUrls(lead) : [];
-    if (Array.isArray(urls) && urls.length && urls[0] && urls[0].url) return urls[0].url;
-    return compactLeadPick(lead, ['source_record_url','record_url','source_url','url','evidence_url','verification_url','source_details.record_url','source_details.source_url','source_details.query_url']);
+    if (Array.isArray(urls) && urls.length && urls[0] && urls[0].url) return compactLeadCleanUrl(urls[0].url);
+    if (urls && typeof urls === 'object') {
+      return compactLeadCleanUrl(urls.source_record_url || urls.source_query_url || urls.source_url);
+    }
+    return compactLeadCleanUrl(compactLeadPick(lead, ['source_record_url','record_url','source_url','url','evidence_url','verification_url','source_details.record_url','source_details.source_url','source_details.query_url']));
   }
   function compactLeadZillowUrl(lead) {
-    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) return { url: '', label: 'Zillow' };
+    var researchAddress = compactLeadResearchAddress(lead);
+    if (!researchAddress) return { url: '', label: 'Zillow' };
     var directFields = ['zillow_url','zillowUrl','zillow_link','_zillow_link','property_zillow_url','property_url','listing_url','source_property_url','source_details.zillow_url','source_details.zillow_link'];
     for (var i = 0; i < directFields.length; i++) {
       var direct = compactLeadPick(lead, [directFields[i]]);
-      if (direct && /zillow\.com/i.test(String(direct))) return { url: String(direct), label: 'Zillow' };
+      if (direct && /zillow\.com/i.test(String(direct))) return { url: compactLeadCleanUrl(direct), label: 'Zillow' };
     }
-    var full = compactLeadFullAddress(lead);
-    var hasAddress = compactLeadPick(lead, ['address','property_address','site_address','full_address']);
-    if (hasAddress) return { url: 'https://www.zillow.com/homes/' + encodeURIComponent(full) + '_rb/', label: 'Zillow' };
-    if (full) return { url: 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com ' + full), label: 'Zillow fallback' };
-    return { url: 'https://www.zillow.com/homes/', label: 'Zillow fallback' };
+    return { url: 'https://www.zillow.com/homes/' + encodeURIComponent(researchAddress) + '_rb/', label: 'Zillow' };
   }
   function compactLeadSearchUrl(lead, source) {
-    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) {
-      return { url: '', label: source === 'zillow' ? 'Zillow' : (source === 'redfin' ? 'Redfin' : 'Realtor') };
-    }
     if (source === 'zillow') return compactLeadZillowUrl(lead);
+    var researchAddress = compactLeadResearchAddress(lead);
+    if (!researchAddress) {
+      return { url: '', label: source === 'maps' ? 'Maps' : (source === 'redfin' ? 'Redfin' : 'Realtor') };
+    }
+    if (source === 'maps') return { url: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(researchAddress), label: 'Maps' };
     if (typeof leadTargetedCompSearchUrl === 'function') {
       var targeted = leadTargetedCompSearchUrl(source, lead);
       if (targeted) return { url: targeted, label: source === 'redfin' ? 'Redfin' : 'Realtor' };
     }
-    var full = compactLeadFullAddress(lead);
     var domain = source === 'redfin' ? 'redfin.com' : 'realtor.com';
-    return { url: 'https://www.google.com/search?q=' + encodeURIComponent('site:' + domain + ' ' + full), label: source === 'redfin' ? 'Redfin' : 'Realtor' };
+    return { url: 'https://www.google.com/search?q=' + encodeURIComponent('site:' + domain + ' "' + researchAddress + '"'), label: source === 'redfin' ? 'Redfin' : 'Realtor' };
   }
   function compactLeadWhy(lead) {
     if (typeof leadIntelligencePlainSummary === 'function') return leadIntelligencePlainSummary(lead);
@@ -24812,7 +24896,9 @@ if(document.readyState==="loading"){
     var sourceUrl = compactLeadSourceUrl(lead);
     var compStatus = typeof leadQueueCompStatus === 'function' ? leadQueueCompStatus(lead) : '';
     var contactStatus = typeof leadQueueContactStatus === 'function' ? leadQueueContactStatus(lead) : '';
-    if (typeof leadQueueResearchAddressReady === 'function' && !leadQueueResearchAddressReady(lead)) return 'Repair address before researching comps.';
+    var addressQuality = compactLeadAddressQuality(lead);
+    if (addressQuality.status === 'junk' || addressQuality.status === 'missing') return 'Repair address or verify source record first.';
+    if (addressQuality.status === 'partial') return 'Add city or verify source record before comps.';
     if (!sourceUrl || /missing_source_url|source_repair_required|parser_failed|malformed/i.test(flags)) return 'Review source record before outreach.';
     if (/missing_amount/i.test(flags)) return 'Review source record before outreach.';
     if (/comp/i.test(compStatus) && /need|missing|blocked/i.test(compStatus)) return 'Open research links and add verified sold comps before ARV/MAO.';
@@ -24859,7 +24945,11 @@ if(document.readyState==="loading"){
     if (!Array.isArray(comps) || !comps.length) comps = lead.comps || lead.draft_comps || lead.manual_comps || [];
     if (!Array.isArray(comps)) comps = [];
     comps = comps.slice(0, 3);
-    if (!comps.length) return '<div style="background:#111827;border:1px dashed #334155;border-radius:8px;padding:12px;color:#cbd5e1;font-size:12px;font-weight:800">Comps needed</div>';
+    if (!comps.length) {
+      var quality = compactLeadAddressQuality(lead);
+      var text = quality.status === 'valid' ? 'Comps needed - open research links and verify sold comps.' : 'Comps blocked until address is repaired.';
+      return '<div style="background:#111827;border:1px dashed #334155;border-radius:8px;padding:12px;color:#cbd5e1;font-size:12px;font-weight:800">' + compactLeadText(text) + '</div>';
+    }
     return '<div style="display:flex;flex-direction:column;gap:7px">' + comps.map(function(comp, index) {
       comp = typeof researchNormalizeComp === 'function' ? researchNormalizeComp(comp) : comp;
       var title = comp.address || comp.title || comp.name || ('Comp ' + (index + 1));
@@ -24875,8 +24965,25 @@ if(document.readyState==="loading"){
   }
   function compactLeadAction(label, url, extra) {
     var disabled = !url;
-    return '<a href="' + compactLeadAttr(url || '#') + '" target="_blank" rel="noopener" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : '') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (extra ? '#d4af37' : '#111827') + ';color:' + (extra ? '#111827' : '#e5e7eb') + ';font-size:12px;font-weight:900">' + compactLeadText(label) + '</a>';
+    return '<a href="' + compactLeadAttr(url || '#') + '" target="_blank" rel="noopener noreferrer" ' + (disabled ? 'aria-disabled="true" onclick="event.preventDefault()"' : 'onclick="return compactLeadOpenResearchLink(event,this.href)"') + ' style="text-decoration:none;text-align:center;border:1px solid #334155;border-radius:8px;padding:8px 9px;background:' + (disabled ? '#0b1220' : (extra ? '#d4af37' : '#111827')) + ';color:' + (disabled ? '#64748b' : (extra ? '#111827' : '#e5e7eb')) + ';font-size:12px;font-weight:900;cursor:' + (disabled ? 'not-allowed' : 'pointer') + '">' + compactLeadText(label) + '</a>';
   }
+  window.compactLeadOpenResearchLink = function(event, url) {
+    if (!url || url === '#') {
+      if (event && event.preventDefault) event.preventDefault();
+      return false;
+    }
+    var opened = null;
+    try {
+      opened = window.open(url, '_blank');
+      if (opened) opened.opener = null;
+    } catch (err) { opened = null; }
+    if (!opened) {
+      if (typeof toast === 'function') toast('Browser blocked the new tab. Allow popups or open manually.', 'error');
+      return true;
+    }
+    if (event && event.preventDefault) event.preventDefault();
+    return false;
+  };
   function compactLeadCurrency(value) {
     var n = Number(value);
     return Number.isFinite(n) && n > 0 ? (typeof mdaMoney === 'function' ? mdaMoney(n) : ('$' + Math.round(n).toLocaleString())) : '-';
@@ -24885,16 +24992,17 @@ if(document.readyState==="loading"){
     var zillow = compactLeadSearchUrl(lead, 'zillow');
     var redfin = compactLeadSearchUrl(lead, 'redfin');
     var realtor = compactLeadSearchUrl(lead, 'realtor');
-    var full = compactLeadFullAddress(lead);
-    var ready = typeof leadQueueResearchAddressReady !== 'function' || leadQueueResearchAddressReady(lead);
+    var full = compactLeadResearchAddress(lead);
+    var ready = !!full;
     var soldQuery = [full, 'sold comps'].filter(Boolean).join(' ');
+    var dallas = compactLeadIsDallasLead(lead);
     return {
       property: {
         zillow: zillow.url,
         redfin: redfin.url,
         realtor: realtor.url,
         google_maps: ready && full ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(full) : '',
-        appraisal_district: ready && full ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + full) : ''
+        appraisal_district: dallas && ready && full ? 'https://www.google.com/search?q=' + encodeURIComponent('site:dallascad.org ' + full) : ''
       },
       nearby_sold: {
         zillow: ready && soldQuery ? 'https://www.google.com/search?q=' + encodeURIComponent('site:zillow.com/homedetails ' + soldQuery) : '',
@@ -25055,7 +25163,10 @@ if(document.readyState==="loading"){
     '</div>';
   }
   function compactLeadSkipTraceUrl(lead) {
-    var query = compactLeadPick(lead, ['owner_name','owner']) || compactLeadFullAddress(lead);
+    var owner = compactLeadPick(lead, ['owner_name','owner']);
+    var quality = compactLeadAddressQuality(lead);
+    var query = owner || (quality.status === 'valid' || quality.status === 'partial' ? (quality.address || compactLeadFullAddress(lead)) : '');
+    if (!query) return '';
     return 'https://www.google.com/search?q=' + encodeURIComponent(query + ' phone email address');
   }
   window.copyCompactLeadBrief = function(leadId) {
@@ -25092,12 +25203,17 @@ if(document.readyState==="loading"){
     var zillow = compactLeadSearchUrl(lead, 'zillow');
     var redfin = compactLeadSearchUrl(lead, 'redfin');
     var realtor = compactLeadSearchUrl(lead, 'realtor');
+    var maps = compactLeadSearchUrl(lead, 'maps');
+    var skipTraceUrl = compactLeadSkipTraceUrl(lead);
     var math = compactLeadDealMath(lead);
     var qualityBadge = typeof leadQueueQualityBadge === 'function' ? leadQueueQualityBadge(lead) : '';
     var sourceTruth = typeof renderLeadSourceTruthPanel === 'function' ? renderLeadSourceTruthPanel(lead) : '';
     var brief = typeof renderLeadIntelligenceBrief === 'function' ? renderLeadIntelligenceBrief(lead, []) : '';
-    var addressReady = typeof leadQueueResearchAddressReady !== 'function' || leadQueueResearchAddressReady(lead);
-    var addressRepairMessage = addressReady ? '' : '<div style="border:1px solid #f59e0b66;background:#451a03;color:#fed7aa;border-radius:9px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">Address needs repair before research links.<br><span style="font-weight:700;color:#fdba74">Move to Needs Research and repair the source record.</span></div>';
+    var addressQuality = compactLeadAddressQuality(lead);
+    var addressReady = addressQuality.status === 'valid';
+    var addressRepairMessage = addressReady ? '' : '<div style="border:1px solid #f59e0b66;background:#451a03;color:#fed7aa;border-radius:9px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + compactLeadText(addressQuality.message || 'Address needs repair before research links.') + '<br><span style="font-weight:700;color:#fdba74">' + compactLeadText(addressQuality.nextStep || 'Repair address or verify source record first.') + '</span></div>';
+    var sourceRecordMessage = sourceUrl ? '' : '<div style="font-size:11px;color:#94a3b8;font-weight:800;line-height:1.45">Source record not available yet.</div>';
+    var skipTraceMessage = skipTraceUrl ? '' : '<div style="font-size:11px;color:#94a3b8;font-weight:800;line-height:1.45">Skip trace needs an owner or usable address.</div>';
     return '<div style="width:min(560px,96vw);height:96vh;max-height:96vh;background:#07111f;color:#e5e7eb;border:1px solid #d4af37;border-right:none;border-radius:14px 0 0 14px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #1f2937;background:#0b1220">' +
         '<div style="min-width:0"><div style="font-size:10px;color:#d4af37;font-weight:900;text-transform:uppercase;letter-spacing:.04em">' + compactLeadText(ref) + '</div>' +
@@ -25118,12 +25234,14 @@ if(document.readyState==="loading"){
           compactLeadAction(zillow.label, zillow.url, true) +
           compactLeadAction('Redfin', redfin.url, false) +
           compactLeadAction('Realtor', realtor.url, false) +
+          compactLeadAction('Maps', maps.url, false) +
           compactLeadAction('Source Record', sourceUrl, false) +
-          compactLeadAction('Skip Trace', compactLeadSkipTraceUrl(lead), false) +
+          compactLeadAction('Skip Trace', skipTraceUrl, false) +
           '<button type="button" data-lead-id="' + compactLeadAttr(String(lead.id || '')) + '" onclick="compactLeadSms(this.dataset.leadId)" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">SMS</button>' +
           '<button type="button" data-lead-id="' + compactLeadAttr(String(lead.id || '')) + '" onclick="compactLeadEmail(this.dataset.leadId)" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">Email</button>' +
           '<button type="button" onclick="copyCompactLeadBrief(' + JSON.stringify(String(lead.id || '')) + ')" style="border:1px solid #334155;border-radius:8px;padding:8px 9px;background:#111827;color:#e5e7eb;font-size:12px;font-weight:900;cursor:pointer">Copy Brief</button>' +
         '</div>' +
+        (sourceRecordMessage || skipTraceMessage ? '<div style="display:flex;flex-direction:column;gap:4px">' + sourceRecordMessage + skipTraceMessage + '</div>' : '') +
         '<div style="background:#0b1220;border:1px solid #243044;border-radius:10px;padding:12px"><div style="font-size:11px;color:#d4af37;font-weight:900;text-transform:uppercase;margin-bottom:9px">Deal Snapshot</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px">' +
           compactLeadMoneyCell('ARV', math.arv) + compactLeadMoneyCell('MAO', math.mao) + compactLeadMoneyCell('First Offer', math.firstOffer) + compactLeadMoneyCell('Target', math.targetOffer) + compactLeadMoneyCell('Walkaway', math.walkaway) +
           '<div style="background:#0b1220;border:1px solid #243044;border-radius:8px;padding:9px"><div style="font-size:10px;color:#94a3b8;font-weight:900;text-transform:uppercase">Confidence</div><div style="font-size:14px;color:#f8fafc;font-weight:900;margin-top:3px">' + compactLeadText(math.confidence) + '</div></div>' +
