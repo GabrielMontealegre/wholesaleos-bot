@@ -339,6 +339,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('calendar',this)"><span class="nav-icon">📅</span>Calendar</div>
       <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach Hub</div>
       <div class="nav-section">Deals</div>
+      <div class="nav-item" onclick="navigate('ai_deal_analyzer',this)"><span class="nav-icon">$</span>AI Deal Analyzer</div>
       <div class="nav-item" onclick="navigate('deal_analyzer',this)"><span class="nav-icon">$</span>Deal Analyzer</div>
       <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
@@ -709,7 +710,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',ai_deal_analyzer:'AI Deal Analyzer',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
   // Auto-init tabs
@@ -744,6 +745,7 @@ function render() {
     buyers: renderBuyers,
     assignments: renderAssignments,
     contracts: renderContracts,
+    ai_deal_analyzer: renderAIDealAnalyzer,
     deal_analyzer: renderManualDealAnalyzer,
     drive: renderDrive,
     bot: renderBot,
@@ -758,6 +760,367 @@ function render() {
 // ══════════════════════════════════════════════════════════
 //  TIMEZONE HELPER
 // ══════════════════════════════════════════════════════════
+var AI_DEAL_ANALYZER_STORAGE_KEY = 'wos_ai_deal_analyzer_v1_cards';
+
+function aiDealSafeText(value) {
+  if (typeof leadQueueSafeText === 'function') return leadQueueSafeText(value);
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+    return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch];
+  });
+}
+
+function aiDealNowIso() {
+  try { return new Date().toISOString(); } catch (e) { return ''; }
+}
+
+function aiDealCardId(prefix) {
+  return (prefix || 'deal') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function aiDealReadCards() {
+  try {
+    var raw = localStorage.getItem(AI_DEAL_ANALYZER_STORAGE_KEY);
+    var parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function aiDealWriteCards(cards) {
+  var safeCards = Array.isArray(cards) ? cards.slice(0, 10) : [];
+  try { localStorage.setItem(AI_DEAL_ANALYZER_STORAGE_KEY, JSON.stringify(safeCards)); } catch (e) {}
+  return safeCards;
+}
+
+function aiDealSetStatus(message, isError) {
+  var el = document.getElementById('ai-deal-status');
+  if (el) {
+    el.textContent = message || '';
+    el.style.color = isError ? '#991b1b' : '#334155';
+  }
+  if (message && typeof toast === 'function') toast(message, isError ? 'error' : 'success');
+}
+
+function aiDealStateAbbrevPattern() {
+  return '(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY|DC)';
+}
+
+function aiDealPseudoLeadFromAddress(input) {
+  var original = String(input || '').trim().replace(/\s+/g, ' ');
+  var lead = { id: aiDealCardId('pasted'), address: original, source: 'pasted input' };
+  var zipMatch = original.match(/\b\d{5}(?:-\d{4})?\b/);
+  if (zipMatch) lead.zip = zipMatch[0];
+  var parts = original.split(',').map(function(part){ return part.trim(); }).filter(Boolean);
+  if (parts.length >= 3) {
+    lead.address = parts[0];
+    lead.city = parts[1];
+    var stateZip = parts.slice(2).join(' ');
+    var stateMatch = stateZip.match(new RegExp('\\b' + aiDealStateAbbrevPattern() + '\\b', 'i'));
+    if (stateMatch) lead.state = stateMatch[1].toUpperCase();
+  } else {
+    var working = original;
+    if (lead.zip) working = working.replace(lead.zip, '').trim();
+    var stateMatch2 = working.match(new RegExp('\\b' + aiDealStateAbbrevPattern() + '\\b\\.?$', 'i'));
+    if (stateMatch2) {
+      lead.state = stateMatch2[1].toUpperCase();
+      working = working.replace(new RegExp('\\b' + stateMatch2[1] + '\\b\\.?$', 'i'), '').trim();
+      var tokens = working.split(/\s+/).filter(Boolean);
+      if (tokens.length > 3) {
+        lead.city = tokens.pop();
+        lead.address = tokens.join(' ');
+      } else {
+        lead.address = working;
+      }
+    }
+  }
+  return lead;
+}
+
+function classifyAnalyzerInput(input) {
+  var original = String(input || '').trim();
+  var isUrl = /^https?:\/\//i.test(original);
+  if (!original) {
+    return {
+      inputType: 'unclear text',
+      source: 'pasted input',
+      submittedInput: original,
+      lead: { id: aiDealCardId('blank'), address: '' },
+      addressQuality: { status: 'missing', label: 'Needs Address Review', address: '', message: 'Address needs repair before research links.', nextStep: 'Add the property address to analyze this link.' },
+      needsAddress: true
+    };
+  }
+  if (isUrl) {
+    var propertyHost = /zillow\.com|redfin\.com|realtor\.com/i.test(original);
+    return {
+      inputType: propertyHost ? 'property link' : 'link',
+      source: 'pasted input',
+      submittedInput: original,
+      lead: { id: aiDealCardId('url'), address: original, source_url: original },
+      addressQuality: { status: 'partial', label: 'Needs Address Review', address: '', message: 'Add the property address to analyze this link.', nextStep: 'Add the property address to analyze this link.' },
+      needsAddress: true
+    };
+  }
+  var lead = aiDealPseudoLeadFromAddress(original);
+  var quality = typeof leadQueueAddressQuality === 'function'
+    ? leadQueueAddressQuality(lead)
+    : { status: 'partial', label: 'Needs Address Review', address: original, message: 'Address is incomplete. Add city or verify source record before comps.', nextStep: 'Add city or verify source record before comps.' };
+  return {
+    inputType: 'address',
+    source: 'pasted input',
+    submittedInput: original,
+    lead: lead,
+    addressQuality: quality,
+    needsAddress: quality.status !== 'valid'
+  };
+}
+
+function validateValuationGate(evidence) {
+  evidence = evidence || {};
+  var verifiedSoldCount = Number(evidence.verifiedSoldCount || 0);
+  var hasVerifiedArv = evidence.verifiedArv === true;
+  return {
+    verifiedSoldCount: verifiedSoldCount,
+    arvLocked: verifiedSoldCount < 3 || !hasVerifiedArv,
+    maoLocked: !hasVerifiedArv,
+    valuationStatus: verifiedSoldCount >= 3
+      ? 'Ready for verified ARV review'
+      : 'Insufficient verified comp evidence - valuation blocked.',
+    arvStatus: verifiedSoldCount >= 3 ? 'Locked until ARV is confirmed from verified comps' : 'Locked',
+    maoStatus: hasVerifiedArv ? 'Ready for review' : 'Locked until ARV is verified'
+  };
+}
+
+function classifyNextBestAction(analysis) {
+  analysis = analysis || {};
+  if (analysis.addressQualityStatus === 'junk' || analysis.addressQualityStatus === 'missing') return 'Address needs review before comps.';
+  if (analysis.addressQualityStatus === 'partial') return 'Add city/state or verify source record.';
+  if ((analysis.verifiedSoldCount || 0) < 3) return 'Comps needed - open research links and add verified sold comps.';
+  if (!analysis.sourceRecordAvailable) return 'Needs source/property evidence before outreach.';
+  return 'Ready for review.';
+}
+
+function summarizeEvidenceForDeal(card) {
+  return 'AI summary pending - evidence collection needed.';
+}
+
+function buildEvidenceOnlyPrompt(card) {
+  card = card || {};
+  return [
+    'Summarize only the provided evidence for this property.',
+    'Do not invent comps, ARV, MAO, debts, ownership, DOM, or listing history.',
+    'Submitted input: ' + (card.submittedInput || ''),
+    'Address status: ' + (card.addressStatus || ''),
+    'Source record status: ' + (card.sourceRecordStatus || ''),
+    'Comp status: ' + (card.compStatus || '')
+  ].join('\n');
+}
+
+function createDealAnalysisCard(input, options) {
+  options = options || {};
+  var classified = options.classified || classifyAnalyzerInput(input);
+  var lead = options.lead || classified.lead || {};
+  var quality = options.addressQuality || classified.addressQuality || (typeof leadQueueAddressQuality === 'function' ? leadQueueAddressQuality(lead) : { status: 'missing', label: 'Needs Address Review' });
+  var sourceUrl = options.sourceUrl != null
+    ? options.sourceUrl
+    : (options.source === 'selected lead' && typeof selectedLeadSourceUrl === 'function' ? selectedLeadSourceUrl(lead) : '');
+  var verifiedSoldCount = options.verifiedSoldCount != null ? Number(options.verifiedSoldCount) : (typeof selectedLeadVerifiedSoldCompCount === 'function' ? selectedLeadVerifiedSoldCompCount(lead) : 0);
+  var valuationGate = validateValuationGate({ verifiedSoldCount: verifiedSoldCount, verifiedArv: false });
+  var addressStatus = quality.status === 'valid' ? 'Research Ready' : (quality.status === 'partial' ? 'Needs Address Review' : 'Needs Research');
+  var compStatus = quality.status === 'valid' ? (verifiedSoldCount >= 3 ? 'Ready For Review' : 'Comps Needed') : 'Comps Blocked';
+  var card = {
+    id: options.id || aiDealCardId(options.source === 'selected lead' ? 'lead' : 'pasted'),
+    createdAt: aiDealNowIso(),
+    source: options.source || classified.source || 'pasted input',
+    submittedInput: options.submittedInput || classified.submittedInput || String(input || ''),
+    leadId: lead.id || '',
+    ref: lead.ref_id || lead.reference_id || lead.ref || lead.id || '',
+    detectedAddress: quality.address || (typeof leadQueueAddress === 'function' ? leadQueueAddress(lead) : lead.address) || '',
+    detectedLocation: [typeof leadQueueCounty === 'function' ? leadQueueCounty(lead) : lead.county, typeof leadQueueState === 'function' ? leadQueueState(lead) : lead.state].filter(Boolean).join(', '),
+    inputType: classified.inputType || 'address',
+    addressQualityStatus: quality.status || 'missing',
+    addressStatus: addressStatus,
+    addressMessage: quality.message || '',
+    sourceRecordAvailable: !!sourceUrl,
+    sourceRecordStatus: sourceUrl ? 'Source record available' : 'Source evidence not found yet',
+    sourceUrl: sourceUrl || '',
+    compStatus: compStatus,
+    verifiedSoldCount: verifiedSoldCount,
+    valuationStatus: valuationGate.valuationStatus,
+    arvStatus: valuationGate.arvStatus,
+    maoStatus: valuationGate.maoStatus,
+    ownerStatus: 'Not verified',
+    listingHistoryStatus: 'Not verified',
+    debtTaxStatus: 'Not verified',
+    aiSummaryStatus: 'AI summary pending - evidence collection needed.',
+    nextBestAction: ''
+  };
+  var needsAddressFromInput = classified.needsAddress && !options.addressQuality;
+  card.nextBestAction = needsAddressFromInput ? 'Add the property address to analyze this link.' : classifyNextBestAction(card);
+  if (quality.status === 'junk' || quality.status === 'missing') card.nextBestAction = 'Address needs review before comps.';
+  if (quality.status === 'partial' && !classified.needsAddress) card.nextBestAction = 'Add city/state or verify source record.';
+  card.evidencePrompt = buildEvidenceOnlyPrompt(card);
+  return card;
+}
+
+function aiDealStatusPill(label, tone) {
+  var palette = {
+    good: ['#166534', '#dcfce7', '#86efac'],
+    warn: ['#92400e', '#fef3c7', '#f59e0b'],
+    bad: ['#991b1b', '#fee2e2', '#f87171'],
+    calm: ['#1d4ed8', '#eff6ff', '#60a5fa'],
+    neutral: ['#475569', '#f1f5f9', '#94a3b8']
+  };
+  var p = palette[tone || 'neutral'] || palette.neutral;
+  return '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:11px;font-weight:900;color:' + p[0] + ';background:' + p[1] + ';border:1px solid ' + p[2] + ';border-radius:999px;padding:4px 9px">' + aiDealSafeText(label) + '</span>';
+}
+
+function aiDealCardTone(status) {
+  if (/Research Ready|Ready/i.test(status || '')) return 'good';
+  if (/Needed|Review|Locked/i.test(status || '')) return 'warn';
+  return 'bad';
+}
+
+function renderAIDealAnalyzerCard(card) {
+  card = card || {};
+  var title = card.detectedAddress || card.submittedInput || 'Property needs review';
+  var subtitle = card.detectedLocation || (card.inputType === 'property link' ? 'Property link' : 'Location not verified');
+  return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:11px">' +
+    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div style="min-width:0"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase">' + aiDealSafeText(card.source || 'pasted input') + '</div>' +
+      '<div style="font-size:16px;color:#111827;font-weight:900;line-height:1.25;word-break:break-word;margin-top:2px">' + aiDealSafeText(title) + '</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-top:3px">' + aiDealSafeText(subtitle) + '</div></div>' +
+      aiDealStatusPill(card.addressStatus || 'Needs Research', aiDealCardTone(card.addressStatus)) +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      aiDealStatusPill(card.sourceRecordStatus || 'Source evidence not found yet', card.sourceRecordAvailable ? 'good' : 'warn') +
+      aiDealStatusPill(card.compStatus || 'Comps Needed', aiDealCardTone(card.compStatus)) +
+      aiDealStatusPill('ARV: ' + (card.arvStatus || 'Locked'), 'warn') +
+      aiDealStatusPill('MAO: ' + (card.maoStatus || 'Locked'), 'warn') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Owner</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(card.ownerStatus || 'Not verified') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source Evidence</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(card.sourceRecordStatus || 'Not found yet') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(card.verifiedSoldCount || 0) + ' verified sold</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Debt / Taxes</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(card.debtTaxStatus || 'Not verified') + '</div></div>' +
+    '</div>' +
+    '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(card.valuationStatus || 'Insufficient verified comp evidence - valuation blocked.') + '</div>' +
+    '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(card.nextBestAction || 'Needs research.') + '</div>' +
+    '<div style="font-size:11px;color:#64748b;line-height:1.45">' + aiDealSafeText(summarizeEvidenceForDeal(card)) + '</div>' +
+  '</div>';
+}
+
+function renderAIDealAnalyzer() {
+  var cards = aiDealReadCards();
+  var analyzing = 0;
+  var needsResearch = cards.filter(function(card){ return /Needs Research|Needs Address Review/i.test(card.addressStatus || '') || /source evidence not found/i.test(card.sourceRecordStatus || ''); }).length;
+  var compsNeeded = cards.filter(function(card){ return /Comps Needed|Comps Blocked/i.test(card.compStatus || ''); }).length;
+  var ready = cards.filter(function(card){ return /Ready For Review|Ready To Call/i.test(card.compStatus || card.nextBestAction || ''); }).length;
+  var results = cards.length
+    ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">' + cards.map(renderAIDealAnalyzerCard).join('') + '</div>'
+    : '<div style="border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;padding:24px;text-align:center;color:#64748b;font-size:13px;font-weight:800">Paste addresses or send selected leads here to start.</div>';
+  return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
+    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:22px;font-weight:900;color:#111827">AI Deal Analyzer</div>' +
+      '<div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">Analyze up to 10 addresses or property links with evidence-first deal intelligence.</div></div>' +
+      '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-weight:800">ARV and MAO stay locked until verified sold comps exist.</div>' +
+    '</div>' +
+    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">' +
+      '<textarea id="ai-deal-input" placeholder="Paste up to 10 property addresses or Zillow/Redfin/Realtor links..." style="width:100%;min-height:112px;resize:vertical;border:1px solid #cbd5e1;border-radius:8px;padding:11px 12px;font-size:13px;line-height:1.45;color:#111827;outline:none"></textarea>' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">' +
+        '<div style="font-size:12px;color:#64748b;font-weight:800">ARV and MAO stay locked until verified sold comps exist.</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<button type="button" onclick="aiDealAnalyzePastedProperties()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:900;cursor:pointer">Analyze Properties</button>' +
+          '<button type="button" onclick="aiDealClearDrafts()" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:900;cursor:pointer">Clear</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="ai-deal-status" style="font-size:12px;color:#334155;font-weight:900;margin-top:8px"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      aiDealStatusPill(analyzing + ' Analyzing', 'neutral') +
+      aiDealStatusPill(needsResearch + ' Needs Research', needsResearch ? 'warn' : 'neutral') +
+      aiDealStatusPill(compsNeeded + ' Comps Needed', compsNeeded ? 'warn' : 'neutral') +
+      aiDealStatusPill(ready + ' Ready', ready ? 'good' : 'neutral') +
+    '</div>' +
+    results +
+  '</div>';
+}
+
+function aiDealRefresh() {
+  if (APP.page === 'ai_deal_analyzer') render();
+}
+
+function aiDealAnalyzePastedProperties() {
+  var input = document.getElementById('ai-deal-input');
+  var lines = String(input && input.value || '').split(/\r?\n/).map(function(line){ return line.trim(); }).filter(Boolean);
+  if (!lines.length) {
+    aiDealSetStatus('Paste addresses or property links to analyze.', true);
+    return;
+  }
+  if (lines.length > 10) {
+    aiDealSetStatus('Analyze up to 10 properties at a time.', true);
+    return;
+  }
+  var cards = lines.map(function(line){ return createDealAnalysisCard(line, { source: 'pasted input' }); });
+  aiDealWriteCards(cards);
+  aiDealRefresh();
+  aiDealSetStatus(cards.length + ' analyzer card' + (cards.length === 1 ? '' : 's') + ' ready for review.', false);
+}
+
+function aiDealClearDrafts() {
+  aiDealWriteCards([]);
+  aiDealRefresh();
+  aiDealSetStatus('Analyzer drafts cleared.', false);
+}
+
+function sendSelectedLeadsToAIDealAnalyzer() {
+  var leads = typeof selectedLeadObjects === 'function' ? selectedLeadObjects() : [];
+  if (!leads.length) {
+    bulkActionStatus('Select up to 10 leads to analyze.', true);
+    if (typeof toast === 'function') toast('Select up to 10 leads to analyze.', 'error');
+    return;
+  }
+  if (leads.length > 10) {
+    bulkActionStatus('Analyze up to 10 properties at a time.', true);
+    if (typeof toast === 'function') toast('Analyze up to 10 properties at a time.', 'error');
+    return;
+  }
+  var items = leads.map(selectedLeadPreflight);
+  var ready = items.filter(function(item){ return item.addressQuality && item.addressQuality.status === 'valid'; });
+  if (!ready.length) {
+    bulkActionStatus('No selected leads are ready for AI Deal Analyzer yet.', true);
+    if (typeof toast === 'function') toast('No selected leads are ready for AI Deal Analyzer yet.', 'error');
+    return;
+  }
+  var existing = aiDealReadCards();
+  if (existing.length + ready.length > 10) {
+    bulkActionStatus('Analyze up to 10 properties at a time.', true);
+    if (typeof toast === 'function') toast('Analyze up to 10 properties at a time.', 'error');
+    return;
+  }
+  var cards = ready.map(function(item) {
+    var lead = item.lead || {};
+    return createDealAnalysisCard(leadQueueAddress(lead) || lead.id || '', {
+      source: 'selected lead',
+      submittedInput: leadQueueAddress(lead) || lead.ref_id || lead.reference_id || lead.id || '',
+      lead: lead,
+      addressQuality: item.addressQuality,
+      sourceUrl: item.sourceUrl,
+      verifiedSoldCount: item.verifiedSoldCount
+    });
+  });
+  aiDealWriteCards(existing.concat(cards).slice(0, 10));
+  var blocked = leads.length - ready.length;
+  var message = blocked > 0
+    ? 'Only research-ready leads were added. Some selected leads still need address repair.'
+    : ready.length + ' selected lead' + (ready.length === 1 ? '' : 's') + ' added to AI Deal Analyzer.';
+  bulkActionStatus(message, blocked > 0);
+  if (typeof toast === 'function') toast(message, blocked > 0 ? 'error' : 'success');
+  APP.page = 'ai_deal_analyzer';
+  var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /AI Deal Analyzer/.test(item.textContent || ''); });
+  navigate('ai_deal_analyzer', nav || null);
+}
+
 function renderManualDealAnalyzer() {
   setTimeout(function() {
     mdaApplyAnalyzerPreload();
@@ -18355,7 +18718,10 @@ function renderBulkActionsBar(){
     '</div>';
   }).join('');
   var overLimit = count > 10;
-  var disabledAi = '<button type="button" disabled title="AI Deal Analyzer will accept research-ready leads only." style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#f1f5f9;color:#64748b;padding:7px 10px;font-weight:900;cursor:not-allowed">Send to AI Deal Analyzer - coming next</button>';
+  var aiReady = summary.readyForResearch > 0;
+  var aiButton = aiReady
+    ? '<button type="button" onclick="sendSelectedLeadsToAIDealAnalyzer()" title="Send research-ready selected leads only." style="font-size:12px;border:1px solid #1d4ed8;border-radius:7px;background:#1d4ed8;color:#fff;padding:7px 10px;font-weight:900;cursor:pointer">Send to AI Deal Analyzer</button>'
+    : '<button type="button" disabled title="AI Deal Analyzer accepts research-ready leads only." style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#f1f5f9;color:#64748b;padding:7px 10px;font-weight:900;cursor:not-allowed">Send to AI Deal Analyzer - needs ready lead</button>';
   return '<div id="bulk-toolbar" style="display:' + (count > 0 ? 'block' : 'none') + ';margin:0 0 12px;padding:12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;color:#111827">' +
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
       '<div><div id="bulk-count" style="font-size:14px;font-weight:900;color:#111827">' + count + ' selected</div>' +
@@ -18364,7 +18730,7 @@ function renderBulkActionsBar(){
         '<button type="button" onclick="analyzeSelectedLeads()" style="font-size:12px;border:1px solid #111827;border-radius:7px;background:#111827;color:#fff;padding:7px 10px;font-weight:900;cursor:pointer">Analyze Selected</button>' +
         '<button type="button" onclick="reviewSelectedLeads()" style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;padding:7px 10px;font-weight:900;cursor:pointer">Review Selected</button>' +
         '<button type="button" onclick="clearLeadSelection()" style="font-size:12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;padding:7px 10px;font-weight:900;cursor:pointer">Clear Selection</button>' +
-        disabledAi +
+        aiButton +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
