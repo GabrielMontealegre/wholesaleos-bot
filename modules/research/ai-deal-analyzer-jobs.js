@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const db = require('../../db');
+const sourceEvidenceAdapter = require('./source-evidence-adapter');
 
 const JOB_STATUSES = new Set([
   'queued',
@@ -238,8 +239,36 @@ function findLead(leadId) {
   return (db.getLeads() || []).find((lead) => String(lead.id) === String(leadId)) || null;
 }
 
-function collectSourceEvidence(lead) {
-  if (!lead) return [];
+function collectSourceEvidence(lead, job) {
+  const pack = sourceEvidenceAdapter.buildSourceEvidencePack(job || {}, lead || null);
+  const proofLevel = sourceEvidenceAdapter.sourceEvidenceProofLevel(pack.source_url_type, pack.property_identity_status);
+  const evidence = [{
+    type: 'source_evidence_pack',
+    label: `${pack.source_status}: ${pack.source_label}`,
+    value: pack.source_url || pack.next_action,
+    source_url: pack.source_url,
+    status: pack.source_status,
+    evidence_role: proofLevel,
+    source_url_type: pack.source_url_type,
+    source_url_label: pack.source_label,
+    source_status: pack.source_status,
+    property_identity_status: pack.property_identity_status,
+    property_identity_label: pack.property_identity_label,
+    address_candidate: pack.address_candidate,
+    owner_candidate: pack.owner_candidate,
+    amount_candidate: pack.amount_candidate,
+    source_ref: pack.source_ref,
+    event_type: pack.event_type,
+    event_date: pack.event_date,
+    county: pack.county,
+    state: pack.state,
+    confidence: pack.confidence,
+    missing_fields: pack.missing_fields,
+    next_action: pack.next_action,
+    notes: pack.notes
+  }];
+
+  if (!lead) return evidence;
   const url = pick(lead, [
     'source_record_url',
     'record_url',
@@ -254,13 +283,13 @@ function collectSourceEvidence(lead) {
     '_courthouse_metadata.source_url',
     '_courthouse_metadata.source_pdf_url'
   ]);
-  const evidence = [];
   if (isHttpUrl(url)) {
     evidence.push({
       type: 'source_record',
       label: 'Source record available',
       source_url: cleanText(url),
-      status: 'available'
+      status: 'available',
+      evidence_role: proofLevel
     });
   }
   const caseNumber = pick(lead, ['case_number', 'cause_number', 'source_details.case_number', 'source_details.cause_number', 'source_truth.case_number', '_courthouse_metadata.case_number']);
@@ -270,6 +299,14 @@ function collectSourceEvidence(lead) {
   const amount = pick(lead, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'source_amount', 'source_details.amount_owed', 'source_truth.amount', '_courthouse_metadata.lien_amount']);
   if (amount) evidence.push({ type: 'amount_reference', label: 'Amount field present', value: cleanText(amount), status: 'needs_verification' });
   return evidence;
+}
+
+function sourceProofAvailable(sourceEvidence) {
+  return (Array.isArray(sourceEvidence) ? sourceEvidence : []).some((item) => item && item.evidence_role === 'source_proof');
+}
+
+function sourcePackFromEvidence(sourceEvidence) {
+  return (Array.isArray(sourceEvidence) ? sourceEvidence : []).find((item) => item && item.type === 'source_evidence_pack') || null;
 }
 
 function compPrice(comp) {
@@ -383,24 +420,32 @@ function valuationFromComps(compEvidence, lead) {
 function missingEvidenceFor(quality, sourceEvidence, compEvidence, valuation) {
   const missing = [];
   if (quality.status !== 'valid') missing.push('Verified property address');
-  if (!sourceEvidence.length) missing.push('Source/property evidence');
+  if (!sourceProofAvailable(sourceEvidence)) missing.push('Source/property evidence');
+  const pack = sourcePackFromEvidence(sourceEvidence);
+  if (pack && Array.isArray(pack.missing_fields)) {
+    pack.missing_fields.forEach((field) => {
+      if (field && !missing.includes(field)) missing.push(field);
+    });
+  }
   if (compEvidence.length < 3) missing.push('3 verified sold comps');
   if (valuation && valuation.arv_range && !valuation.mao_range) missing.push('Repair estimate for MAO');
   return missing;
 }
 
-function nextAction(status, missingEvidence) {
-  if (status === 'needs_address_review') return 'Repair address first';
-  if (status === 'needs_source_evidence') return 'Open source record first';
-  if (status === 'needs_comps') return 'Needs comp evidence';
+function nextAction(status, missingEvidence, sourceEvidence) {
+  const pack = sourcePackFromEvidence(sourceEvidence);
+  if (status === 'needs_address_review') return pack && pack.next_action ? pack.next_action : 'Repair address first';
+  if (status === 'needs_source_evidence') return pack && pack.next_action ? pack.next_action : 'Needs source/property evidence before outreach.';
+  if (status === 'needs_comps') return 'Source evidence found. Comps needed next.';
   if (status === 'ready_for_review') return 'Ready for review';
   if (status === 'failed') return 'Review failed job';
   return missingEvidence && missingEvidence.length ? 'Needs research' : 'Ready to offer';
 }
 
 function resultSummary(status, quality, sourceEvidence, compEvidence, valuation) {
+  const pack = sourcePackFromEvidence(sourceEvidence);
   if (status === 'needs_address_review') return quality.message || 'Address needs review before comps.';
-  if (status === 'needs_source_evidence') return 'Property address is usable, but source/property evidence is missing.';
+  if (status === 'needs_source_evidence') return pack && pack.next_action ? pack.next_action : 'Property address is usable, but source/property evidence is missing.';
   if (status === 'needs_comps') return 'Source evidence exists. Verified sold comps are still needed before valuation.';
   if (status === 'ready_for_review') return valuation && valuation.valuation_note ? valuation.valuation_note : 'Evidence is ready for review.';
   return `Evidence found: ${sourceEvidence.length} source item(s), ${compEvidence.length} verified sold comp(s).`;
@@ -408,7 +453,7 @@ function resultSummary(status, quality, sourceEvidence, compEvidence, valuation)
 
 function statusForEvidence(quality, sourceEvidence, compEvidence) {
   if (quality.status !== 'valid') return 'needs_address_review';
-  if (!sourceEvidence.length) return 'needs_source_evidence';
+  if (!sourceProofAvailable(sourceEvidence)) return 'needs_source_evidence';
   if (compEvidence.length < 3) return 'needs_comps';
   return 'ready_for_review';
 }
@@ -542,7 +587,7 @@ function runJob(jobIdValue) {
       quality = addressQuality(job.input_value);
     }
     const normalized = quality.normalized_address || (lead ? fullLeadAddress(lead) : '');
-    const sourceEvidence = collectSourceEvidence(lead);
+    const sourceEvidence = collectSourceEvidence(lead, job);
     const compEvidence = collectCompEvidence(lead);
     const valuation = valuationFromComps(compEvidence, lead);
     const status = statusForEvidence(quality, sourceEvidence, compEvidence);
@@ -555,7 +600,7 @@ function runJob(jobIdValue) {
       comp_evidence: compEvidence,
       missing_evidence: missing,
       result_summary: resultSummary(status, quality, sourceEvidence, compEvidence, valuation),
-      next_best_action: nextAction(status, missing),
+      next_best_action: nextAction(status, missing, sourceEvidence),
       valuation_locked: valuation.valuation_locked,
       arv_range: valuation.arv_range,
       mao_range: valuation.mao_range,

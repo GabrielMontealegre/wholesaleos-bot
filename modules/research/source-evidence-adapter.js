@@ -1,0 +1,274 @@
+'use strict';
+
+function cleanText(value) {
+  return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+}
+
+function pick(obj, keys) {
+  obj = obj || {};
+  for (const key of keys) {
+    const parts = String(key).split('.');
+    let cursor = obj;
+    for (const part of parts) {
+      if (!cursor || typeof cursor !== 'object') {
+        cursor = undefined;
+        break;
+      }
+      cursor = cursor[part];
+    }
+    if (cursor !== undefined && cursor !== null && String(cursor).trim() !== '') return cursor;
+  }
+  return '';
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(cleanText(value));
+}
+
+function parseUrl(sourceUrl) {
+  const value = cleanText(sourceUrl);
+  if (!isHttpUrl(value)) return null;
+  try {
+    return new URL(value);
+  } catch (error) {
+    return null;
+  }
+}
+
+function classifySourceUrl(sourceUrl) {
+  const value = cleanText(sourceUrl);
+  if (!value) return 'missing_source_url';
+  const parsed = parseUrl(value);
+  if (!parsed) return 'unknown';
+
+  const probe = `${parsed.hostname} ${parsed.pathname} ${parsed.search}`.toLowerCase();
+  if (/\.pdf(?:$|[?#])|\/pdf\/|document|notice|notices|download|file=/.test(probe)) return 'pdf_document';
+  if (/\b(parcel|apn|account|propertyid|property_id|case|cause|doc|record|detail|details)\b/.test(probe) &&
+      /[?/&=]|\d{4,}|[a-z]{2,}\d{2,}/i.test(probe)) return 'exact_property_record';
+  if (/\b(search|query|results|lookup|find|property-search|property_search)\b/.test(probe)) return 'county_search_page';
+  if (/\b(list|auction|foreclosure|sheriff|tax-sale|taxsale|delinquent|calendar|docket|socrata|resource)\b/.test(probe)) return 'list_page';
+  if (/\/$/.test(parsed.pathname) || parsed.pathname.split('/').filter(Boolean).length <= 1) return 'generic_portal';
+  if (/\b(treasurer|assessor|recorder|clerk|court|county|gov)\b/.test(probe)) return 'generic_portal';
+  return 'unknown';
+}
+
+function sourceTypeLabel(type) {
+  return ({
+    exact_property_record: 'Source record',
+    county_search_page: 'County search page',
+    list_page: 'List page',
+    pdf_document: 'PDF or document',
+    generic_portal: 'Generic portal',
+    missing_source_url: 'Missing',
+    unknown: 'Needs review'
+  })[type] || 'Needs review';
+}
+
+function sourceStatusLabel(type, identityStatus) {
+  if (type === 'missing_source_url') return 'Missing';
+  if (identityStatus === 'junk_address_blocked' || identityStatus === 'needs_source_repair') return 'Needs repair';
+  if (type === 'county_search_page') return 'Search page only';
+  if (type === 'generic_portal' || type === 'list_page' || type === 'unknown') return 'Needs review';
+  return 'Found';
+}
+
+function sourceUrlFrom(job, lead) {
+  const leadUrl = pick(lead, [
+    'source_record_url',
+    'record_url',
+    'verification_url',
+    'source_pdf_url',
+    'source_url',
+    'source_details.record_url',
+    'source_details.source_url',
+    'source_details.query_url',
+    'source_truth.source_record_url',
+    'source_truth.source_url',
+    '_courthouse_metadata.source_url',
+    '_courthouse_metadata.source_pdf_url'
+  ]);
+  if (isHttpUrl(leadUrl)) return cleanText(leadUrl);
+  if ((job || {}).input_type === 'property_link' && isHttpUrl((job || {}).input_value)) return cleanText(job.input_value);
+  return '';
+}
+
+function resolvePropertyIdentityFromExistingFields(job, lead) {
+  lead = lead || {};
+  job = job || {};
+  const addressCandidate = cleanText(pick(lead, [
+    'address',
+    'property_address',
+    'situs_address',
+    'site_address',
+    'mailing_address'
+  ]) || job.normalized_address || (job.input_type === 'pasted_address' ? job.input_value : ''));
+  return {
+    address_candidate: addressCandidate,
+    owner_candidate: cleanText(pick(lead, [
+      'owner',
+      'owner_name',
+      'property_owner',
+      'source_details.owner',
+      'source_truth.owner',
+      '_courthouse_metadata.owner'
+    ])),
+    amount_candidate: cleanText(pick(lead, [
+      'amount_owed',
+      'tax_due',
+      'tax_lien_amount',
+      'lien_amount',
+      'violation_amount',
+      'judgment_amount',
+      'minimum_bid',
+      'source_amount',
+      'source_details.amount_owed',
+      'source_truth.amount',
+      '_courthouse_metadata.lien_amount'
+    ])),
+    event_type: cleanText(pick(lead, [
+      'event_type',
+      'lead_type',
+      'distress_type',
+      'source_details.event_type',
+      'source_details.type',
+      'source_truth.event_type',
+      '_courthouse_metadata.lead_type'
+    ])),
+    event_date: cleanText(pick(lead, [
+      'event_date',
+      'auction_date',
+      'sale_date',
+      'hearing_date',
+      'filed_date',
+      'created_at',
+      'source_details.event_date',
+      'source_truth.event_date',
+      '_courthouse_metadata.auction_date'
+    ])),
+    source_ref: cleanText(pick(lead, [
+      'case_number',
+      'cause_number',
+      'parcel',
+      'apn',
+      'parcel_id',
+      'account_number',
+      'source_reference',
+      'source_details.case_number',
+      'source_details.cause_number',
+      'source_truth.case_number',
+      '_courthouse_metadata.case_number',
+      '_courthouse_metadata.parcel'
+    ])),
+    lead_ref: cleanText(job.lead_ref || pick(lead, ['ref_id', 'reference_id', 'ref', 'id']))
+  };
+}
+
+function classifyPropertyIdentityStatus(evidencePack) {
+  evidencePack = evidencePack || {};
+  const address = cleanText(evidencePack.address_candidate);
+  const sourceType = evidencePack.source_url_type || 'missing_source_url';
+  const missingUrl = sourceType === 'missing_source_url';
+  const isJunk = /\b(public information request|phone directory|page not found|contact us|contact|search results|court calendar)\b/i.test(address);
+  const hasNumber = /\b\d{1,7}\b/.test(address);
+  const hasStreetWord = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|square)\b/i.test(address);
+
+  if (isJunk) return 'junk_address_blocked';
+  if (!address || !hasNumber || !hasStreetWord) return missingUrl ? 'unresolved' : 'needs_source_repair';
+  if (sourceType === 'generic_portal') return 'needs_source_repair';
+  if (evidencePack.source_ref && (sourceType === 'exact_property_record' || sourceType === 'pdf_document')) return 'resolved';
+  if (sourceType === 'exact_property_record' || sourceType === 'pdf_document') return 'partial';
+  if (sourceType === 'county_search_page' || sourceType === 'list_page' || sourceType === 'generic_portal' || sourceType === 'unknown') return 'partial';
+  return 'unresolved';
+}
+
+function propertyIdentityLabel(status) {
+  return ({
+    resolved: 'Resolved',
+    partial: 'Partial',
+    unresolved: 'Needs repair',
+    junk_address_blocked: 'Needs repair',
+    needs_source_repair: 'Needs repair'
+  })[status] || 'Needs repair';
+}
+
+function sourceEvidenceProofLevel(sourceUrlType, propertyIdentityStatus) {
+  if (propertyIdentityStatus === 'resolved') return 'source_proof';
+  if (propertyIdentityStatus === 'partial' && (sourceUrlType === 'exact_property_record' || sourceUrlType === 'pdf_document')) return 'source_proof';
+  return 'source_context';
+}
+
+function missingFieldsFor(pack) {
+  const missing = [];
+  if (!pack.source_url) missing.push('Source record');
+  if (pack.property_identity_status !== 'resolved' && pack.property_identity_status !== 'partial') missing.push('Property identity');
+  if (!pack.address_candidate || pack.property_identity_status === 'junk_address_blocked') missing.push('Usable address');
+  return missing;
+}
+
+function getSourceEvidenceNextAction(evidencePack) {
+  evidencePack = evidencePack || {};
+  if (evidencePack.source_url && !cleanText(evidencePack.address_candidate)) return 'Add the property address to analyze this link.';
+  if (evidencePack.source_url_type === 'missing_source_url') return 'Needs source/property evidence before outreach.';
+  if (evidencePack.property_identity_status === 'junk_address_blocked' || evidencePack.property_identity_status === 'needs_source_repair') {
+    return 'Repair property identity from source record before comps.';
+  }
+  if (evidencePack.source_url_type === 'county_search_page') return 'County search page found - property identity still needs repair.';
+  if (evidencePack.property_identity_status === 'partial') return 'Source evidence found. Confirm property identity before comps.';
+  if (evidencePack.property_identity_status === 'resolved') return 'Source evidence found. Comps needed next.';
+  return 'Verify source/property evidence before outreach.';
+}
+
+function confidenceFor(pack) {
+  let score = 0;
+  if (pack.source_url) score += 20;
+  if (pack.source_url_type === 'exact_property_record' || pack.source_url_type === 'pdf_document') score += 25;
+  if (pack.address_candidate) score += 20;
+  if (pack.source_ref) score += 15;
+  if (pack.owner_candidate) score += 5;
+  if (pack.amount_candidate) score += 5;
+  if (pack.property_identity_status === 'resolved') score += 10;
+  if (pack.property_identity_status === 'junk_address_blocked') score = Math.min(score, 30);
+  return Math.max(0, Math.min(score, 95));
+}
+
+function buildSourceEvidencePack(job, lead) {
+  const sourceUrl = sourceUrlFrom(job, lead);
+  const sourceUrlType = classifySourceUrl(sourceUrl);
+  const identity = resolvePropertyIdentityFromExistingFields(job, lead);
+  const pack = Object.assign({
+    source_url: sourceUrl,
+    source_url_type: sourceUrlType,
+    source_label: sourceTypeLabel(sourceUrlType),
+    source_status: 'Missing',
+    county: cleanText(pick(lead, ['county', 'property_county', 'situs_county'])),
+    state: cleanText(pick(lead, ['state', 'property_state', 'situs_state'])).toUpperCase(),
+    missing_fields: [],
+    confidence: 0,
+    next_action: '',
+    notes: []
+  }, identity);
+  pack.property_identity_status = classifyPropertyIdentityStatus(pack);
+  pack.property_identity_label = propertyIdentityLabel(pack.property_identity_status);
+  pack.source_status = sourceStatusLabel(pack.source_url_type, pack.property_identity_status);
+  pack.missing_fields = missingFieldsFor(pack);
+  pack.confidence = confidenceFor(pack);
+  pack.next_action = getSourceEvidenceNextAction(pack);
+  if (pack.source_url && pack.property_identity_status === 'junk_address_blocked') {
+    pack.notes.push('The source may still be useful, but the property address must be repaired first.');
+  }
+  if (pack.source_url_type === 'generic_portal' || pack.source_url_type === 'county_search_page' || pack.source_url_type === 'list_page') {
+    pack.notes.push('This source is not treated as an exact property record yet.');
+  }
+  return pack;
+}
+
+module.exports = {
+  classifySourceUrl,
+  classifySourceRecordType: classifySourceUrl,
+  buildSourceEvidencePack,
+  resolvePropertyIdentityFromExistingFields,
+  classifyPropertyIdentityStatus,
+  getSourceEvidenceNextAction,
+  sourceTypeLabel,
+  sourceEvidenceProofLevel
+};
