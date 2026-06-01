@@ -1170,6 +1170,7 @@ function aiDealValuationText(job) {
 
 function aiDealEvidenceList(items, emptyText) {
   items = Array.isArray(items) ? items : [];
+  items = items.filter(function(item){ return !(item && item.type === 'source_evidence_pack'); });
   if (!items.length) return '<div style="font-size:12px;color:#64748b;font-weight:800">' + aiDealSafeText(emptyText || 'Not found yet') + '</div>';
   return '<div style="display:flex;flex-direction:column;gap:6px">' + items.slice(0, 4).map(function(item) {
     var label = item.label || item.type || 'Evidence';
@@ -1182,11 +1183,41 @@ function aiDealEvidenceList(items, emptyText) {
   }).join('') + '</div>';
 }
 
+function aiDealSourcePack(job) {
+  var sourceEvidence = Array.isArray(job && job.source_evidence) ? job.source_evidence : [];
+  return sourceEvidence.find(function(item){ return item && item.type === 'source_evidence_pack'; }) || null;
+}
+
+function aiDealSourceStatusText(pack, sourceEvidence) {
+  if (pack && pack.source_status) return pack.source_status;
+  return sourceEvidence && sourceEvidence.length ? 'Found' : 'Missing';
+}
+
+function aiDealSourceSection(pack, sourceEvidence) {
+  pack = pack || {};
+  var status = aiDealSourceStatusText(pack, sourceEvidence);
+  var identity = pack.property_identity_label || 'Needs repair';
+  var type = pack.source_url_label || (status === 'Missing' ? 'Missing' : 'Needs review');
+  var next = pack.next_action || (status === 'Missing' ? 'No source record yet - verify property before outreach.' : 'Source evidence found. Comps needed next.');
+  var note = Array.isArray(pack.notes) && pack.notes.length ? pack.notes[0] : '';
+  return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      aiDealStatusPill('Source: ' + status, status === 'Found' ? 'good' : 'warn') +
+      aiDealStatusPill('Property identity: ' + identity, identity === 'Resolved' ? 'good' : 'warn') +
+      aiDealStatusPill('Source type: ' + type, status === 'Found' ? 'good' : 'neutral') +
+    '</div>' +
+    '<div style="font-size:12px;color:#1d4ed8;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    (note ? '<div style="font-size:11px;color:#64748b;font-weight:800;line-height:1.4">' + aiDealSafeText(note) + '</div>' : '') +
+  '</div>';
+}
+
 function renderAIDealAnalyzerCard(job) {
   job = job || {};
   var sourceEvidence = Array.isArray(job.source_evidence) ? job.source_evidence : [];
   var compEvidence = Array.isArray(job.comp_evidence) ? job.comp_evidence : [];
   var missing = Array.isArray(job.missing_evidence) ? job.missing_evidence : [];
+  var sourcePack = aiDealSourcePack(job);
+  var sourceStatus = aiDealSourceStatusText(sourcePack, sourceEvidence);
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:11px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
       '<div style="min-width:0"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase">' + aiDealSafeText(aiDealInputTypeLabel(job.input_type)) + (job.lead_ref ? ' - ' + aiDealSafeText(job.lead_ref) : '') + '</div>' +
@@ -1195,17 +1226,18 @@ function renderAIDealAnalyzerCard(job) {
       aiDealStatusPill(aiDealStatusLabel(job.status), aiDealStatusTone(job.status)) +
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-      aiDealStatusPill(sourceEvidence.length ? 'Source evidence found' : 'Source evidence missing', sourceEvidence.length ? 'good' : 'warn') +
+      aiDealStatusPill('Source ' + sourceStatus.toLowerCase(), sourceStatus === 'Found' ? 'good' : 'warn') +
       aiDealStatusPill(compEvidence.length + ' verified sold comp' + (compEvidence.length === 1 ? '' : 's'), compEvidence.length >= 3 ? 'good' : 'warn') +
       aiDealStatusPill(job.arv_range ? 'ARV draft ready' : 'ARV locked', job.arv_range ? 'good' : 'warn') +
       aiDealStatusPill(job.mao_range ? 'MAO draft ready' : 'MAO locked', job.mao_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Owner</div><div style="font-size:12px;color:#111827;font-weight:800">Not verified</div></div>' +
-      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source Evidence</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(sourceEvidence.length ? sourceEvidence.length + ' item(s)' : 'Not found yet') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source Evidence</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(sourceStatus) + '</div></div>' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(compEvidence.length) + ' verified sold</div></div>' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Debt / Taxes</div><div style="font-size:12px;color:#111827;font-weight:800">Not verified</div></div>' +
     '</div>' +
+    aiDealSourceSection(sourcePack, sourceEvidence) +
     '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(job.result_summary || 'Insufficient verified comp evidence - valuation blocked.') + '</div>' +
     '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(job.next_best_action || 'Needs research.') + '</div>' +
     '<div style="font-size:12px;color:#334155;line-height:1.45;font-weight:800">' + aiDealSafeText(aiDealValuationText(job)) + '</div>' +
