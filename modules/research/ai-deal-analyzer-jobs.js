@@ -1,0 +1,535 @@
+'use strict';
+
+const crypto = require('crypto');
+const db = require('../../db');
+
+const JOB_STATUSES = new Set([
+  'queued',
+  'analyzing',
+  'needs_address_review',
+  'needs_source_evidence',
+  'needs_comps',
+  'ready_for_review',
+  'failed'
+]);
+
+const MAX_BATCH_SIZE = 10;
+
+const FUTURE_ADAPTERS = {
+  openai_research: {
+    enabled: /^(1|true|yes|on)$/i.test(String(process.env.AI_DEAL_ANALYZER_OPENAI_RESEARCH_ENABLED || '')),
+    purpose: 'Future Responses API web_search evidence collection'
+  },
+  firecrawl: {
+    enabled: /^(1|true|yes|on)$/i.test(String(process.env.AI_DEAL_ANALYZER_FIRECRAWL_ENABLED || '')),
+    purpose: 'Future public source page extraction'
+  },
+  playwright_source: {
+    enabled: /^(1|true|yes|on)$/i.test(String(process.env.AI_DEAL_ANALYZER_PLAYWRIGHT_ENABLED || '')),
+    purpose: 'Future operator-approved browser source adapter'
+  },
+  county_source: {
+    enabled: /^(1|true|yes|on)$/i.test(String(process.env.AI_DEAL_ANALYZER_COUNTY_SOURCE_ENABLED || '')),
+    purpose: 'Future county-specific public record adapter'
+  },
+  address_normalization: {
+    enabled: /^(1|true|yes|on)$/i.test(String(process.env.AI_DEAL_ANALYZER_ADDRESS_NORMALIZATION_ENABLED || '')),
+    purpose: 'Future geocoding/address normalization adapter'
+  }
+};
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function jobId() {
+  if (crypto.randomUUID) return `aidj_${crypto.randomUUID()}`;
+  return `aidj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function cleanText(value) {
+  return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+}
+
+function pick(obj, keys) {
+  obj = obj || {};
+  for (const key of keys) {
+    const parts = String(key).split('.');
+    let cursor = obj;
+    for (const part of parts) {
+      if (!cursor || typeof cursor !== 'object') {
+        cursor = undefined;
+        break;
+      }
+      cursor = cursor[part];
+    }
+    if (cursor !== undefined && cursor !== null && String(cursor).trim() !== '') return cursor;
+  }
+  return '';
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(cleanText(value));
+}
+
+function leadAddress(lead) {
+  return cleanText(pick(lead, ['address', 'property_address', 'situs_address', 'mailing_address', 'site_address']));
+}
+
+function leadCity(lead) {
+  return cleanText(pick(lead, ['city', 'property_city', 'situs_city']));
+}
+
+function leadState(lead) {
+  return cleanText(pick(lead, ['state', 'property_state', 'situs_state'])).toUpperCase();
+}
+
+function leadZip(lead) {
+  return cleanText(pick(lead, ['zip', 'zipcode', 'postal_code', 'property_zip', 'situs_zip']));
+}
+
+function leadCounty(lead) {
+  return cleanText(pick(lead, ['county', 'property_county', 'situs_county']));
+}
+
+function fullLeadAddress(lead) {
+  const parts = [leadAddress(lead), leadCity(lead), leadState(lead), leadZip(lead)].filter(Boolean);
+  return parts.join(', ');
+}
+
+function statePattern() {
+  return '(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY|DC)';
+}
+
+function pseudoLeadFromAddress(input) {
+  const original = cleanText(input);
+  const lead = { address: original };
+  const zipMatch = original.match(/\b\d{5}(?:-\d{4})?\b/);
+  if (zipMatch) lead.zip = zipMatch[0];
+
+  const parts = original.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    lead.address = parts[0];
+    lead.city = parts[1];
+    const stateZip = parts.slice(2).join(' ');
+    const stateMatch = stateZip.match(new RegExp(`\\b${statePattern()}\\b`, 'i'));
+    if (stateMatch) lead.state = stateMatch[1].toUpperCase();
+    return lead;
+  }
+
+  let working = original;
+  if (lead.zip) working = working.replace(lead.zip, '').trim();
+  const stateMatch = working.match(new RegExp(`\\b${statePattern()}\\b\\.?$`, 'i'));
+  if (stateMatch) {
+    lead.state = stateMatch[1].toUpperCase();
+    working = working.replace(new RegExp(`\\b${stateMatch[1]}\\b\\.?$`, 'i'), '').trim();
+    const tokens = working.split(/\s+/).filter(Boolean);
+    if (tokens.length > 3) {
+      lead.city = tokens.pop();
+      lead.address = tokens.join(' ');
+    } else {
+      lead.address = working;
+    }
+  }
+  return lead;
+}
+
+function addressQuality(leadOrText) {
+  const lead = typeof leadOrText === 'string' ? pseudoLeadFromAddress(leadOrText) : (leadOrText || {});
+  const street = cleanText(leadAddress(lead));
+  const city = leadCity(lead);
+  const state = leadState(lead);
+  const zip = leadZip(lead);
+  const county = leadCounty(lead);
+  const full = [street, city, state, zip].filter(Boolean).join(', ');
+  const probe = [street, full, county].filter(Boolean).join(' ').toLowerCase();
+  const hasNumber = /\b\d{1,7}\b/.test(street);
+  const hasStreetWord = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square|plaza|expressway|expy|fwy|freeway)\b/i.test(street);
+  const hasCityState = !!(city && state);
+  const hasZip = /\b\d{5}(?:-\d{4})?\b/.test(zip || full);
+
+  if (!street && !full) {
+    return { status: 'missing', label: 'Needs Address Review', normalized_address: '', message: 'Address needs repair before research links.' };
+  }
+  if (/^(column\s*[1-4]|unnamed)$/i.test(street) ||
+      /\b(public information request|phone directory|page not found|contact us|contact|search results|skip main navigation|court calendar|beginning december)\b/i.test(probe) ||
+      /^\d{1,7}\s+(contact|beginning|calendar|schedule|directory|public information request)\b/i.test(street) ||
+      /^(phone\s+directory|contact|contacts|beginning|calendar|home|search|login|notice|notices)\b/i.test(street)) {
+    return { status: 'junk', label: 'Needs Address Review', normalized_address: full || street, message: 'Address needs repair before research links.' };
+  }
+  if (!hasNumber || !hasStreetWord) {
+    return { status: 'junk', label: 'Needs Address Review', normalized_address: full || street, message: 'Address needs repair before research links.' };
+  }
+  if (!hasCityState && !hasZip) {
+    return { status: 'partial', label: 'Needs Address Review', normalized_address: full || [street, county, state].filter(Boolean).join(', '), message: 'Address is incomplete. Add city/state or verify source record before comps.' };
+  }
+  return { status: 'valid', label: 'Research Ready', normalized_address: full || street, message: '' };
+}
+
+function classifyInput(item) {
+  item = item || {};
+  const rawType = cleanText(item.input_type || item.inputType || item.type).toLowerCase();
+  const value = cleanText(item.input_value || item.inputValue || item.value || item.address || item.url || '');
+  const leadId = cleanText(item.lead_id || item.leadId || item.id || (item.lead && item.lead.id));
+  if (rawType === 'selected_lead' || leadId) return 'selected_lead';
+  if (/^https?:\/\//i.test(value)) return 'property_link';
+  return 'pasted_address';
+}
+
+function findLead(leadId) {
+  if (!leadId) return null;
+  return (db.getLeads() || []).find((lead) => String(lead.id) === String(leadId)) || null;
+}
+
+function collectSourceEvidence(lead) {
+  if (!lead) return [];
+  const url = pick(lead, [
+    'source_record_url',
+    'record_url',
+    'source_url',
+    'verification_url',
+    'source_pdf_url',
+    'source_details.record_url',
+    'source_details.source_url',
+    'source_details.query_url',
+    'source_truth.source_record_url',
+    'source_truth.source_url',
+    '_courthouse_metadata.source_url',
+    '_courthouse_metadata.source_pdf_url'
+  ]);
+  const evidence = [];
+  if (isHttpUrl(url)) {
+    evidence.push({
+      type: 'source_record',
+      label: 'Source record available',
+      source_url: cleanText(url),
+      status: 'available'
+    });
+  }
+  const caseNumber = pick(lead, ['case_number', 'cause_number', 'source_details.case_number', 'source_details.cause_number', 'source_truth.case_number', '_courthouse_metadata.case_number']);
+  if (caseNumber) evidence.push({ type: 'case_reference', label: 'Case/reference found', value: cleanText(caseNumber), status: 'found' });
+  const parcel = pick(lead, ['parcel', 'apn', 'parcel_id', 'account_number', 'source_details.parcel', 'source_details.apn', 'source_truth.parcel', 'source_truth.source_record_url', '_courthouse_metadata.parcel']);
+  if (parcel) evidence.push({ type: 'parcel_reference', label: 'Parcel/account found', value: cleanText(parcel), status: 'found' });
+  const amount = pick(lead, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'source_amount', 'source_details.amount_owed', 'source_truth.amount', '_courthouse_metadata.lien_amount']);
+  if (amount) evidence.push({ type: 'amount_reference', label: 'Amount field present', value: cleanText(amount), status: 'needs_verification' });
+  return evidence;
+}
+
+function compPrice(comp) {
+  const raw = pick(comp, ['sold_price', 'sale_price', 'price', 'closed_price']);
+  const n = Number(String(raw || '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function compSoldDate(comp) {
+  return cleanText(pick(comp, ['sold_date', 'sale_date', 'closed_date', 'date']));
+}
+
+function compSourceUrl(comp) {
+  return cleanText(pick(comp, ['source_url', 'url', 'sourceUrl', 'record_url']));
+}
+
+function compAddress(comp) {
+  return cleanText(pick(comp, ['address', 'comp_address', 'property_address']));
+}
+
+function isVerifiedSoldComp(comp) {
+  comp = comp || {};
+  const status = cleanText(pick(comp, ['status', 'sale_list_status', 'type'])).toLowerCase();
+  const verified = comp.verified === true || comp.is_verified === true || /verified/.test(status);
+  const sold = /sold|closed/.test(status) || !!compSoldDate(comp);
+  return verified && sold && compAddress(comp) && compPrice(comp) > 0 && compSoldDate(comp) && isHttpUrl(compSourceUrl(comp));
+}
+
+function collectCompEvidence(lead) {
+  if (!lead) return [];
+  const containers = [
+    lead.verified_comps,
+    lead.comps,
+    lead.manual_comps,
+    lead.research_comps,
+    lead.comp_evidence
+  ].filter(Array.isArray);
+  const comps = [];
+  containers.forEach((list) => {
+    list.forEach((comp) => {
+      if (!isVerifiedSoldComp(comp)) return;
+      comps.push({
+        type: 'verified_sold_comp',
+        address: compAddress(comp),
+        sold_price: compPrice(comp),
+        sold_date: compSoldDate(comp),
+        beds: pick(comp, ['beds', 'bedrooms']) || null,
+        baths: pick(comp, ['baths', 'bathrooms']) || null,
+        sqft: pick(comp, ['sqft', 'square_feet']) || null,
+        distance: pick(comp, ['distance', 'distance_miles']) || null,
+        source_url: compSourceUrl(comp),
+        verification_status: 'verified'
+      });
+    });
+  });
+  return comps.slice(0, 20);
+}
+
+function median(values) {
+  if (!values.length) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+function valuationFromComps(compEvidence, lead) {
+  const prices = compEvidence.map((comp) => Number(comp.sold_price)).filter((n) => Number.isFinite(n) && n > 0);
+  if (prices.length < 3) {
+    return {
+      valuation_locked: true,
+      arv_range: null,
+      mao_range: null,
+      valuation_note: 'Insufficient verified comp evidence - valuation blocked.'
+    };
+  }
+  const low = Math.min(...prices);
+  const high = Math.max(...prices);
+  const med = median(prices);
+  const arvRange = {
+    low,
+    high,
+    median: med,
+    count: prices.length,
+    basis: 'verified_sold_comps',
+    label: 'Draft from verified sold comps - review before making an offer.'
+  };
+  const repairRaw = pick(lead || {}, ['repair_estimate', 'repairs', 'repair_cost', 'estimated_repairs']);
+  const repairs = Number(String(repairRaw || '').replace(/[^0-9.-]/g, ''));
+  if (!Number.isFinite(repairs) || repairs <= 0) {
+    return {
+      valuation_locked: false,
+      arv_range: arvRange,
+      mao_range: null,
+      valuation_note: 'Draft ARV range is ready for review. Add repair estimate before MAO.'
+    };
+  }
+  return {
+    valuation_locked: false,
+    arv_range: arvRange,
+    mao_range: {
+      low: Math.round(low * 0.7 - repairs),
+      high: Math.round(high * 0.7 - repairs),
+      repairs,
+      basis: 'arv_x_70_percent_minus_manual_repairs',
+      label: 'Draft MAO from verified comps and manual repair estimate - review before offer.'
+    },
+    valuation_note: 'Valuation ready for review.'
+  };
+}
+
+function missingEvidenceFor(quality, sourceEvidence, compEvidence, valuation) {
+  const missing = [];
+  if (quality.status !== 'valid') missing.push('Verified property address');
+  if (!sourceEvidence.length) missing.push('Source/property evidence');
+  if (compEvidence.length < 3) missing.push('3 verified sold comps');
+  if (valuation && valuation.arv_range && !valuation.mao_range) missing.push('Repair estimate for MAO');
+  return missing;
+}
+
+function nextAction(status, missingEvidence) {
+  if (status === 'needs_address_review') return 'Repair address first';
+  if (status === 'needs_source_evidence') return 'Open source record first';
+  if (status === 'needs_comps') return 'Needs comp evidence';
+  if (status === 'ready_for_review') return 'Ready for review';
+  if (status === 'failed') return 'Review failed job';
+  return missingEvidence && missingEvidence.length ? 'Needs research' : 'Ready to offer';
+}
+
+function resultSummary(status, quality, sourceEvidence, compEvidence, valuation) {
+  if (status === 'needs_address_review') return quality.message || 'Address needs review before comps.';
+  if (status === 'needs_source_evidence') return 'Property address is usable, but source/property evidence is missing.';
+  if (status === 'needs_comps') return 'Source evidence exists. Verified sold comps are still needed before valuation.';
+  if (status === 'ready_for_review') return valuation && valuation.valuation_note ? valuation.valuation_note : 'Evidence is ready for review.';
+  return `Evidence found: ${sourceEvidence.length} source item(s), ${compEvidence.length} verified sold comp(s).`;
+}
+
+function statusForEvidence(quality, sourceEvidence, compEvidence) {
+  if (quality.status !== 'valid') return 'needs_address_review';
+  if (!sourceEvidence.length) return 'needs_source_evidence';
+  if (compEvidence.length < 3) return 'needs_comps';
+  return 'ready_for_review';
+}
+
+function readJobs() {
+  const data = db.readDB();
+  return Array.isArray(data.ai_deal_analyzer_jobs) ? data.ai_deal_analyzer_jobs : [];
+}
+
+function writeJobs(jobs) {
+  const data = db.readDB();
+  data.ai_deal_analyzer_jobs = Array.isArray(jobs) ? jobs.slice(0, 250) : [];
+  db.writeDB(data);
+  return data.ai_deal_analyzer_jobs;
+}
+
+function upsertJob(job) {
+  const jobs = readJobs();
+  const idx = jobs.findIndex((existing) => existing.job_id === job.job_id);
+  if (idx >= 0) jobs[idx] = job;
+  else jobs.unshift(job);
+  writeJobs(jobs);
+  return job;
+}
+
+function publicJob(job) {
+  return Object.assign({}, job, {
+    future_adapters: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
+      acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true };
+      return acc;
+    }, {})
+  });
+}
+
+function createJob(item) {
+  item = item || {};
+  const inputType = classifyInput(item);
+  const leadId = cleanText(item.lead_id || item.leadId || item.id || (item.lead && item.lead.id));
+  const lead = inputType === 'selected_lead' ? findLead(leadId) || item.lead || null : null;
+  const inputValue = cleanText(
+    item.input_value ||
+    item.inputValue ||
+    item.value ||
+    item.url ||
+    item.address ||
+    (lead ? fullLeadAddress(lead) || leadAddress(lead) : '')
+  );
+  const created = nowIso();
+  return {
+    job_id: jobId(),
+    created_at: created,
+    updated_at: created,
+    status: 'queued',
+    input_type: inputType,
+    input_value: inputValue,
+    normalized_address: '',
+    lead_id: lead ? lead.id : leadId,
+    lead_ref: cleanText(item.lead_ref || item.leadRef || (lead && (lead.ref_id || lead.reference_id || lead.ref || lead.id))),
+    source_evidence: [],
+    comp_evidence: [],
+    missing_evidence: [],
+    result_summary: 'Queued for evidence review.',
+    next_best_action: 'Needs research',
+    valuation_locked: true,
+    arv_range: null,
+    mao_range: null,
+    error: '',
+    adapter_status: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
+      acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true, purpose: FUTURE_ADAPTERS[key].purpose };
+      return acc;
+    }, {})
+  };
+}
+
+function createJobs(body, options) {
+  options = options || {};
+  const rawItems = Array.isArray(body && body.items)
+    ? body.items
+    : Array.isArray(body && body.inputs)
+      ? body.inputs
+      : [];
+  if (!rawItems.length) {
+    const err = new Error('At least one property or selected lead is required.');
+    err.status = 400;
+    throw err;
+  }
+  if (rawItems.length > MAX_BATCH_SIZE) {
+    const err = new Error('Analyze up to 10 properties at a time.');
+    err.status = 400;
+    throw err;
+  }
+  const jobs = rawItems.map(createJob);
+  const existing = readJobs();
+  writeJobs(jobs.concat(existing).slice(0, 250));
+  if (options.runNow) {
+    return jobs.map((job) => runJob(job.job_id));
+  }
+  return jobs.map(publicJob);
+}
+
+function listJobs(limit) {
+  const max = Math.min(Math.max(parseInt(limit || 50, 10) || 50, 1), 100);
+  return readJobs().slice(0, max).map(publicJob);
+}
+
+function getJob(jobIdValue) {
+  const job = readJobs().find((candidate) => candidate.job_id === jobIdValue);
+  return job ? publicJob(job) : null;
+}
+
+function runJob(jobIdValue) {
+  const jobs = readJobs();
+  const idx = jobs.findIndex((candidate) => candidate.job_id === jobIdValue);
+  if (idx < 0) {
+    const err = new Error('Analyzer job not found.');
+    err.status = 404;
+    throw err;
+  }
+  let job = jobs[idx];
+  try {
+    job = Object.assign({}, job, { status: 'analyzing', updated_at: nowIso(), error: '' });
+    const lead = job.input_type === 'selected_lead' ? findLead(job.lead_id) : null;
+    let quality;
+    if (lead) {
+      quality = addressQuality(lead);
+    } else if (job.input_type === 'property_link') {
+      quality = { status: 'partial', label: 'Needs Address Review', normalized_address: '', message: 'Add the property address to analyze this link.' };
+    } else {
+      quality = addressQuality(job.input_value);
+    }
+    const normalized = quality.normalized_address || (lead ? fullLeadAddress(lead) : '');
+    const sourceEvidence = collectSourceEvidence(lead);
+    const compEvidence = collectCompEvidence(lead);
+    const valuation = valuationFromComps(compEvidence, lead);
+    const status = statusForEvidence(quality, sourceEvidence, compEvidence);
+    const missing = missingEvidenceFor(quality, sourceEvidence, compEvidence, valuation);
+    job = Object.assign({}, job, {
+      updated_at: nowIso(),
+      status,
+      normalized_address: normalized,
+      source_evidence: sourceEvidence,
+      comp_evidence: compEvidence,
+      missing_evidence: missing,
+      result_summary: resultSummary(status, quality, sourceEvidence, compEvidence, valuation),
+      next_best_action: nextAction(status, missing),
+      valuation_locked: valuation.valuation_locked,
+      arv_range: valuation.arv_range,
+      mao_range: valuation.mao_range,
+      error: ''
+    });
+    jobs[idx] = job;
+    writeJobs(jobs);
+    return publicJob(job);
+  } catch (error) {
+    job = Object.assign({}, job, {
+      updated_at: nowIso(),
+      status: 'failed',
+      error: error && error.message ? error.message : 'Analyzer job failed.',
+      result_summary: 'Analyzer job failed before evidence could be reviewed.',
+      next_best_action: 'Review failed job',
+      valuation_locked: true,
+      arv_range: null,
+      mao_range: null
+    });
+    jobs[idx] = job;
+    writeJobs(jobs);
+    return publicJob(job);
+  }
+}
+
+module.exports = {
+  JOB_STATUSES,
+  MAX_BATCH_SIZE,
+  FUTURE_ADAPTERS,
+  createJobs,
+  listJobs,
+  getJob,
+  runJob,
+  addressQuality,
+  classifyInput
+};

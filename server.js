@@ -12,6 +12,7 @@ const _rc = require('./modules/runtime-cache');
 const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const { scoutCompsForLead } = require('./modules/research/comp-scout');
+const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -1239,6 +1240,67 @@ app.post('/api/research/comp-scout', async (req, res) => {
       error: e.message,
       saved: false,
       persistence: 'none'
+    });
+  }
+});
+
+app.post('/api/ai-deal-analyzer/jobs', (req, res) => {
+  try {
+    const body = req.body || {};
+    const jobs = aiDealAnalyzerJobs.createJobs(body, {
+      runNow: body.run_now === true || body.runNow === true
+    });
+    return res.status(201).json({
+      ok: true,
+      jobs,
+      count: jobs.length,
+      safety: 'operator-triggered deterministic evidence pass only; no scraping, no LLM calls, no lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to create analyzer jobs'
+    });
+  }
+});
+
+app.get('/api/ai-deal-analyzer/jobs', (req, res) => {
+  try {
+    const jobs = aiDealAnalyzerJobs.listJobs(req.query.limit);
+    return res.json({ ok: true, jobs, count: jobs.length });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load analyzer jobs'
+    });
+  }
+});
+
+app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
+  try {
+    const job = aiDealAnalyzerJobs.getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ ok: false, error: 'Analyzer job not found' });
+    return res.json({ ok: true, job });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load analyzer job'
+    });
+  }
+});
+
+app.post('/api/ai-deal-analyzer/jobs/:jobId/run', (req, res) => {
+  try {
+    const job = aiDealAnalyzerJobs.runJob(req.params.jobId);
+    return res.json({
+      ok: true,
+      job,
+      safety: 'deterministic evidence review only; no scraping, no LLM calls, no lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to run analyzer job'
     });
   }
 });
