@@ -1,6 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const db = require('../../db');
 
 const JOB_STATUSES = new Set([
@@ -14,6 +16,12 @@ const JOB_STATUSES = new Set([
 ]);
 
 const MAX_BATCH_SIZE = 10;
+const DB_PATH = process.env.DB_PATH || './data/db.json';
+const DB_FILE = path.resolve(DB_PATH);
+const JOB_STORE_FILE = path.resolve(
+  process.env.AI_DEAL_ANALYZER_JOBS_PATH ||
+  path.join(path.dirname(DB_FILE), 'ai-deal-analyzer-jobs.json')
+);
 
 const FUTURE_ADAPTERS = {
   openai_research: {
@@ -40,6 +48,55 @@ const FUTURE_ADAPTERS = {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function ensureJobStoreDir() {
+  const dir = path.dirname(JOB_STORE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function safeParseJobsFile() {
+  ensureJobStoreDir();
+  if (!fs.existsSync(JOB_STORE_FILE)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(JOB_STORE_FILE, 'utf8'));
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.jobs)) return parsed.jobs;
+  } catch (error) {
+    return [];
+  }
+  return [];
+}
+
+function readLegacyJobs() {
+  try {
+    const data = db.readDB();
+    return Array.isArray(data.ai_deal_analyzer_jobs) ? data.ai_deal_analyzer_jobs : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function normalizeJobList(jobs) {
+  const seen = new Set();
+  return (Array.isArray(jobs) ? jobs : [])
+    .filter((job) => job && job.job_id && !seen.has(job.job_id) && seen.add(job.job_id))
+    .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))
+    .slice(0, 250);
+}
+
+function writeJobsFile(jobs) {
+  ensureJobStoreDir();
+  const canonicalJobs = normalizeJobList(jobs);
+  const payload = {
+    version: 1,
+    updated_at: nowIso(),
+    jobs: canonicalJobs
+  };
+  const tmp = `${JOB_STORE_FILE}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
+  fs.renameSync(tmp, JOB_STORE_FILE);
+  return canonicalJobs;
 }
 
 function jobId() {
@@ -357,15 +414,17 @@ function statusForEvidence(quality, sourceEvidence, compEvidence) {
 }
 
 function readJobs() {
-  const data = db.readDB();
-  return Array.isArray(data.ai_deal_analyzer_jobs) ? data.ai_deal_analyzer_jobs : [];
+  const storeJobs = safeParseJobsFile();
+  if (storeJobs.length) return normalizeJobList(storeJobs);
+
+  const legacyJobs = readLegacyJobs();
+  if (legacyJobs.length) return writeJobsFile(legacyJobs);
+
+  return [];
 }
 
 function writeJobs(jobs) {
-  const data = db.readDB();
-  data.ai_deal_analyzer_jobs = Array.isArray(jobs) ? jobs.slice(0, 250) : [];
-  db.writeDB(data);
-  return data.ai_deal_analyzer_jobs;
+  return writeJobsFile(jobs);
 }
 
 function upsertJob(job) {
