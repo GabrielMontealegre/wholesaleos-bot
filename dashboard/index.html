@@ -23292,10 +23292,13 @@ function renderDallasOfficialSourceCapturePanel() {
       '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:9px">' +
+      countCard('Evidence links found', counts.evidence_links_found, '#1d4ed8', '#eff6ff') +
+      countCard('Files/pages checked', counts.files_pages_checked, '#334155', '#f8fafc') +
+      countCard('Candidates extracted', counts.candidates_extracted, '#111827', '#fff') +
       countCard('Candidates found', counts.total_candidates, '#111827', '#fff') +
       countCard('Ready for review', counts.research_ready, '#047857', '#ecfdf5') +
       countCard('Needs source repair', counts.source_repair_needed, '#92400e', '#fffbeb') +
-      countCard('Invalid/junk blocked', counts.invalid_junk, '#991b1b', '#fef2f2') +
+      countCard('Blocked/junk', counts.invalid_junk, '#991b1b', '#fef2f2') +
       countCard('With source URL', counts.with_source_url, '#1d4ed8', '#eff6ff') +
     '</div>' +
     (APP.dallasOfficialCaptureMessage ? '<div style="font-size:10px;color:#1e3a8a;background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:7px;margin-bottom:8px;font-weight:800">' + dallasPreviewSafeText(APP.dallasOfficialCaptureMessage) + '</div>' : '') +
