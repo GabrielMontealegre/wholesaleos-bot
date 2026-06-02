@@ -62,7 +62,13 @@ function emptyCounts() {
     file_rows_checked: 0,
     code_violations_attempted: false,
     code_violation_rows_checked: 0,
-    code_violation_candidates_extracted: 0
+    code_violation_candidates_extracted: 0,
+    code_violation_active_rows_checked: 0,
+    code_violation_recent_rows_checked: 0,
+    code_violation_research_ready: 0,
+    code_violation_source_repair_needed: 0,
+    code_violation_closed_old_count: 0,
+    code_violation_fallback_used: false
   };
 }
 
@@ -256,6 +262,13 @@ function normalizeCandidate(rawCandidate, source, index, capturedAt) {
     source_proof_url: proofUrl || sourceUrl || null,
     captured_at: cleanText(firstValue(rawCandidate.captured_at, evidence.captured_at, capturedAt)) || capturedAt,
     confidence: cleanText(firstValue(rawCandidate.extraction_confidence, rawCandidate.source_confidence, truth.confidence, rawCandidate.actionability_status, 'Low')),
+    candidate_priority_score: rawCandidate.candidate_priority_score == null ? null : Number(rawCandidate.candidate_priority_score),
+    recency_score: rawCandidate.recency_score == null ? null : Number(rawCandidate.recency_score),
+    status_score: rawCandidate.status_score == null ? null : Number(rawCandidate.status_score),
+    distress_signal_strength: cleanText(rawCandidate.distress_signal_strength) || null,
+    is_active_or_open: rawCandidate.is_active_or_open === true,
+    is_recent: rawCandidate.is_recent === true,
+    is_closed_old: rawCandidate.is_closed_old === true,
     should_ingest: false,
     preview_only: true,
     missing_evidence: [],
@@ -352,6 +365,12 @@ function summarizeRunEvidence(lastRun) {
     if (result.code_violations_attempted === true) summary.code_violations_attempted = true;
     summary.code_violation_rows_checked += countNumber(result.code_violation_rows_checked);
     summary.code_violation_candidates_extracted += countNumber(result.code_violation_candidates_extracted);
+    summary.code_violation_active_rows_checked += countNumber(result.code_violation_active_rows_checked);
+    summary.code_violation_recent_rows_checked += countNumber(result.code_violation_recent_rows_checked);
+    summary.code_violation_research_ready += countNumber(result.code_violation_research_ready);
+    summary.code_violation_source_repair_needed += countNumber(result.code_violation_source_repair_needed);
+    summary.code_violation_closed_old_count += countNumber(result.code_violation_closed_old_count);
+    if (result.code_violation_fallback_used === true) summary.code_violation_fallback_used = true;
   }
   return summary;
 }
@@ -409,6 +428,12 @@ async function runOfficialSourceCapture(options = {}) {
   let codeViolationsAttempted = false;
   let totalCodeViolationRowsChecked = 0;
   let totalCodeViolationCandidatesExtracted = 0;
+  let totalCodeViolationActiveRowsChecked = 0;
+  let totalCodeViolationRecentRowsChecked = 0;
+  let totalCodeViolationResearchReady = 0;
+  let totalCodeViolationSourceRepairNeeded = 0;
+  let totalCodeViolationClosedOldCount = 0;
+  let codeViolationFallbackUsed = false;
 
   for (const sourceId of sourceIds.length ? sourceIds : [PRIMARY_SOURCE_ID]) {
     const source = dallasSourceAgent.findSource(sourceId);
@@ -429,6 +454,12 @@ async function runOfficialSourceCapture(options = {}) {
         codeViolationsAttempted = true;
         totalCodeViolationRowsChecked += countNumber(codeResult && codeResult.code_violation_rows_checked);
         totalCodeViolationCandidatesExtracted += codeCandidates.length;
+        totalCodeViolationActiveRowsChecked += countNumber(codeResult && codeResult.code_violation_active_rows_checked);
+        totalCodeViolationRecentRowsChecked += countNumber(codeResult && codeResult.code_violation_recent_rows_checked);
+        totalCodeViolationResearchReady += countNumber(codeResult && codeResult.code_violation_research_ready);
+        totalCodeViolationSourceRepairNeeded += countNumber(codeResult && codeResult.code_violation_source_repair_needed);
+        totalCodeViolationClosedOldCount += countNumber(codeResult && codeResult.code_violation_closed_old_count);
+        if (codeResult && codeResult.code_violation_fallback_used === true) codeViolationFallbackUsed = true;
         totalAdapterCandidates += codeCandidates.length;
         normalizedCandidates = normalizedCandidates.concat(codeCandidates.map((candidate, index) => normalizeCandidate(candidate, source, index, capturedAt)));
         if (!codeCandidates.length) {
@@ -447,6 +478,12 @@ async function runOfficialSourceCapture(options = {}) {
           code_violations_attempted: true,
           code_violation_rows_checked: countNumber(codeResult && codeResult.code_violation_rows_checked),
           code_violation_candidates_extracted: codeCandidates.length,
+          code_violation_active_rows_checked: countNumber(codeResult && codeResult.code_violation_active_rows_checked),
+          code_violation_recent_rows_checked: countNumber(codeResult && codeResult.code_violation_recent_rows_checked),
+          code_violation_research_ready: countNumber(codeResult && codeResult.code_violation_research_ready),
+          code_violation_source_repair_needed: countNumber(codeResult && codeResult.code_violation_source_repair_needed),
+          code_violation_closed_old_count: countNumber(codeResult && codeResult.code_violation_closed_old_count),
+          code_violation_fallback_used: codeResult && codeResult.code_violation_fallback_used === true,
           source_url: source.source_url,
           manual_required: false
         });
@@ -603,6 +640,12 @@ async function runOfficialSourceCapture(options = {}) {
     code_violations_attempted: codeViolationsAttempted,
     code_violation_rows_checked: totalCodeViolationRowsChecked,
     code_violation_candidates_extracted: totalCodeViolationCandidatesExtracted,
+    code_violation_active_rows_checked: totalCodeViolationActiveRowsChecked,
+    code_violation_recent_rows_checked: totalCodeViolationRecentRowsChecked,
+    code_violation_research_ready: totalCodeViolationResearchReady,
+    code_violation_source_repair_needed: totalCodeViolationSourceRepairNeeded,
+    code_violation_closed_old_count: totalCodeViolationClosedOldCount,
+    code_violation_fallback_used: codeViolationFallbackUsed,
     warnings,
     errors,
     results: runResults
@@ -640,6 +683,12 @@ async function runOfficialSourceCapture(options = {}) {
     code_violations_attempted: codeViolationsAttempted,
     code_violation_rows_checked: totalCodeViolationRowsChecked,
     code_violation_candidates_extracted: totalCodeViolationCandidatesExtracted,
+    code_violation_active_rows_checked: totalCodeViolationActiveRowsChecked,
+    code_violation_recent_rows_checked: totalCodeViolationRecentRowsChecked,
+    code_violation_research_ready: totalCodeViolationResearchReady,
+    code_violation_source_repair_needed: totalCodeViolationSourceRepairNeeded,
+    code_violation_closed_old_count: totalCodeViolationClosedOldCount,
+    code_violation_fallback_used: codeViolationFallbackUsed,
     warnings,
     errors
   };
