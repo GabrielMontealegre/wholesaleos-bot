@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const openaiWebResearch = require('./openai-web-research-provider');
 
 const PROVIDER_STATUSES = new Set([
   'not_configured',
@@ -56,12 +57,25 @@ function getConfiguredCompProviders(env) {
   env = env || process.env;
   const preferred = cleanText(env.COMP_RESEARCH_PROVIDER || 'none').toLowerCase();
   const providers = [];
-  if (preferred && preferred !== 'none') {
+  const openaiConfig = openaiWebResearch.getConfig(env);
+  if (openaiConfig.configured) {
     providers.push({
+      id: 'openai_web_research',
+      label: providerLabel('openai_web_research'),
+      enabled: true,
+      implemented: true,
+      source: 'ENABLE_OPENAI_WEB_RESEARCH'
+    });
+  }
+  if (preferred && preferred !== 'none') {
+    if (preferred === 'openai_web_research' && !openaiConfig.configured) {
+      return providers;
+    }
+    if (!providers.some((provider) => provider.id === preferred)) providers.push({
       id: preferred,
       label: providerLabel(preferred),
       enabled: true,
-      implemented: false,
+      implemented: preferred === 'openai_web_research' && openaiConfig.configured,
       source: 'COMP_RESEARCH_PROVIDER'
     });
   }
@@ -85,6 +99,7 @@ function getConfiguredCompProviders(env) {
 
 function providerLabel(id) {
   return ({
+    openai_web_research: 'OpenAI web research',
     openai: 'OpenAI research',
     firecrawl: 'Firecrawl',
     playwright: 'Browser-assisted research',
@@ -239,12 +254,62 @@ function runCompResearch(job, options) {
     });
   }
   const provider = providers[0];
+  if (provider.id === 'openai_web_research' && provider.implemented) {
+    if (!options.executeProvider) {
+      return summarizeCompResearchState(job, {
+        provider_status: 'ready_to_research',
+        provider: provider.id,
+        candidates: existingCandidates,
+        message: 'OpenAI web research is ready. Click Research Comps to gather public evidence.',
+        missing_fields: []
+      });
+    }
+    return openaiWebResearch.runOpenAIWebResearch(job, options)
+      .then((result) => summarizeOpenAIResearchState(job, provider, result))
+      .catch((error) => summarizeCompResearchState(job, {
+        provider_status: 'failed',
+        provider: provider.id,
+        candidates: existingCandidates,
+        message: 'Comp research needs review.',
+        missing_fields: ['OpenAI web research result'],
+        warnings: [error && error.message ? error.message : 'OpenAI web research failed.']
+      }));
+  }
   return summarizeCompResearchState(job, {
     provider_status: 'ready_to_research',
     provider: provider.id,
     candidates: existingCandidates,
     message: 'Comp research provider is configured but not implemented yet.',
     missing_fields: []
+  });
+}
+
+function researchResultMessage(result) {
+  result = result || {};
+  if (result.status === 'failed') return 'Comp research needs review.';
+  if (Array.isArray(result.comp_candidates) && result.comp_candidates.length) return 'Candidate comps found - review evidence.';
+  return 'Not enough public comp evidence found.';
+}
+
+function summarizeOpenAIResearchState(job, provider, result) {
+  result = result || {};
+  const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
+  const status = result.status === 'failed'
+    ? 'failed'
+    : hasCandidates
+      ? 'candidates_found'
+      : 'no_candidates_found';
+  return summarizeCompResearchState(job, {
+    provider_status: status,
+    provider: provider.id,
+    candidates: result.comp_candidates || [],
+    message: researchResultMessage(result),
+    missing_fields: result.missing_evidence || [],
+    property_evidence: result.property_evidence || [],
+    source_evidence: result.source_evidence || [],
+    warnings: result.warnings || [],
+    citations: result.citations || [],
+    raw_summary: result.raw_summary || ''
   });
 }
 
@@ -264,6 +329,11 @@ function summarizeCompResearchState(job, result) {
     verified_comp_count: verifiedCount,
     missing_evidence: missing,
     next_action: cleanText(result.message) || 'Comp research needs review.',
+    property_evidence: Array.isArray(result.property_evidence) ? result.property_evidence : [],
+    source_evidence: Array.isArray(result.source_evidence) ? result.source_evidence : [],
+    warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean) : [],
+    citations: Array.isArray(result.citations) ? result.citations : [],
+    raw_summary: cleanText(result.raw_summary),
     updated_at: new Date().toISOString()
   };
 }

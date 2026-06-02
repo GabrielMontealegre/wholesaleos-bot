@@ -366,8 +366,8 @@ function collectCompEvidence(lead) {
   return comps.slice(0, 20);
 }
 
-function applyCompResearchState(job) {
-  const state = compResearchProvider.runCompResearch(job || {});
+function mergeCompResearchState(job, state) {
+  state = state || {};
   return Object.assign({}, job, {
     comp_research_status: state.provider_status,
     comp_research_provider: state.provider,
@@ -379,8 +379,21 @@ function applyCompResearchState(job) {
     ),
     comp_missing_evidence: state.missing_evidence,
     comp_next_action: state.next_action,
+    comp_research_property_evidence: state.property_evidence || [],
+    comp_research_source_evidence: state.source_evidence || [],
+    comp_research_warnings: state.warnings || [],
+    comp_research_citations: state.citations || [],
+    comp_research_summary: state.raw_summary || '',
     comp_research_updated_at: state.updated_at
   });
+}
+
+function applyCompResearchState(job, options) {
+  const state = compResearchProvider.runCompResearch(job || {}, options || {});
+  if (state && typeof state.then === 'function') {
+    return state.then((resolvedState) => mergeCompResearchState(job, resolvedState));
+  }
+  return mergeCompResearchState(job, state);
 }
 
 function median(values) {
@@ -541,6 +554,11 @@ function createJob(item) {
     verified_comp_count: 0,
     comp_missing_evidence: ['3 verified sold comps'],
     comp_next_action: 'Comp provider not configured yet.',
+    comp_research_property_evidence: [],
+    comp_research_source_evidence: [],
+    comp_research_warnings: [],
+    comp_research_citations: [],
+    comp_research_summary: '',
     comp_research_updated_at: '',
     missing_evidence: [],
     result_summary: 'Queued for evidence review.',
@@ -653,7 +671,7 @@ function runJob(jobIdValue) {
   }
 }
 
-function runCompResearchForJob(jobIdValue) {
+async function runCompResearchForJob(jobIdValue, options) {
   let job = getJob(jobIdValue);
   if (!job) {
     const err = new Error('Analyzer job not found.');
@@ -670,7 +688,7 @@ function runCompResearchForJob(jobIdValue) {
     err.status = 404;
     throw err;
   }
-  job = applyCompResearchState(jobs[idx]);
+  job = await applyCompResearchState(jobs[idx], Object.assign({}, options || {}, { executeProvider: true }));
   job.updated_at = nowIso();
   jobs[idx] = job;
   writeJobs(jobs);
@@ -689,6 +707,7 @@ function getCompCandidates(jobIdValue) {
 
 function getCompResearchConfig() {
   const providers = compResearchProvider.getConfiguredCompProviders();
+  const implemented = providers.some((provider) => provider.implemented === true);
   return {
     provider_status: providers.length ? 'ready_to_research' : 'not_configured',
     configured: providers.length > 0,
@@ -699,7 +718,9 @@ function getCompResearchConfig() {
       implemented: provider.implemented === true
     })),
     message: providers.length
-      ? 'Comp research provider is configured but not implemented yet.'
+      ? implemented
+        ? 'Comp research provider is configured.'
+        : 'Comp research provider is configured but not implemented yet.'
       : 'Comp provider not configured yet.'
   };
 }

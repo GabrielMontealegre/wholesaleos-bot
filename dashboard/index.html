@@ -1241,10 +1241,18 @@ function aiDealCompCandidatesList(candidates) {
   candidates = Array.isArray(candidates) ? candidates : [];
   if (!candidates.length) return '';
   return '<div style="display:flex;flex-direction:column;gap:6px">' + candidates.slice(0, 3).map(function(candidate) {
-    return '<div style="font-size:12px;color:#334155;line-height:1.35">' +
-      '<strong>' + aiDealSafeText(candidate.comp_address || 'Comp candidate') + '</strong>' +
-      ' - ' + aiDealSafeText(candidate.verification_status || 'candidate') +
-      (candidate.source_url ? ' <a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open</a>' : '') +
+    var verified = String(candidate.verification_status || '').toLowerCase() === 'verified';
+    var missing = Array.isArray(candidate.missing_fields) ? candidate.missing_fields.filter(Boolean) : [];
+    var saleBits = [];
+    if (candidate.sold_price) saleBits.push('$' + Number(candidate.sold_price).toLocaleString());
+    if (candidate.sold_date) saleBits.push(candidate.sold_date);
+    return '<div style="border:1px solid #bbf7d0;background:#fff;border-radius:7px;padding:7px;font-size:12px;color:#334155;line-height:1.4">' +
+      '<div style="font-weight:900;color:#14532d">' + (verified ? 'Verified comp' : 'Candidate comp') + '</div>' +
+      '<div><strong>' + aiDealSafeText(candidate.comp_address || 'Address not verified yet') + '</strong></div>' +
+      (saleBits.length ? '<div>' + aiDealSafeText(saleBits.join(' - ')) + '</div>' : '<div>Sold details not verified yet.</div>') +
+      '<div>' + aiDealSafeText(verified ? 'Verified sold comp' : 'Not verified yet') + '</div>' +
+      (missing.length ? '<div style="color:#92400e;font-weight:800">Missing: ' + aiDealSafeText(missing.join(', ')) + '</div>' : '') +
+      (candidate.source_url ? '<a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open source</a>' : '<div style="color:#92400e;font-weight:800">Source link missing.</div>') +
     '</div>';
   }).join('') + '</div>';
 }
@@ -1261,7 +1269,13 @@ function aiDealCompResearchSection(job) {
       ? 'Repair property identity before comps.'
       : status === 'blocked_needs_source_evidence'
         ? 'Source repair needed before comps.'
-        : 'Comp research provider is configured but not implemented yet.');
+        : status === 'ready_to_research'
+          ? 'OpenAI web research is ready. Click Research Comps to gather public evidence.'
+          : status === 'candidates_found'
+            ? 'Candidate comps found - review evidence.'
+            : status === 'no_candidates_found'
+              ? 'Not enough public comp evidence found.'
+              : 'Comp research needs review.');
   return '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">' +
     '<div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Comp Research</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
@@ -1451,6 +1465,7 @@ async function aiDealRunJob(jobId) {
 async function aiDealResearchComps(jobId) {
   if (!jobId) return;
   try {
+    aiDealSetStatus('Researching public evidence...', false);
     var data = await aiDealFetchJson('/api/ai-deal-analyzer/jobs/' + encodeURIComponent(jobId) + '/comp-research', { method: 'POST' });
     if (data.job) {
       AI_DEAL_ANALYZER_JOBS = AI_DEAL_ANALYZER_JOBS.map(function(job){ return job.job_id === data.job.job_id ? data.job : job; });
