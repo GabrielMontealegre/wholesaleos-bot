@@ -53,7 +53,7 @@ function textFromHtml(html) {
 }
 
 function parseMoney(value) {
-  const match = cleanText(value).match(/\$?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{1,2})?|[0-9]+(?:\.\d{1,2})?)/);
+  const match = cleanText(value).match(/\$?\s*([0-9]+(?:,[0-9]{3})*(?:\.\d{1,2})?|[0-9]+(?:\.\d{1,2})?)/);
   if (!match) return null;
   const parsed = Number(match[1].replace(/,/g, ''));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
