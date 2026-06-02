@@ -1303,16 +1303,16 @@ app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
   }
 });
 
-app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', (req, res) => {
+app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => {
   try {
-    const job = aiDealAnalyzerJobs.runCompResearchForJob(req.params.jobId);
+    const job = await aiDealAnalyzerJobs.runCompResearchForJob(req.params.jobId);
     return res.json({
       ok: true,
       job,
       comp_research_status: job.comp_research_status,
       comp_research_provider: job.comp_research_provider,
       comp_candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
-      safety: 'operator-triggered comp provider readiness check only; no scraping, no LLM calls, no lead mutation'
+      safety: 'operator-triggered comp provider check only; no autonomous ingestion, no lead mutation, no valuation unlock from candidates'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
