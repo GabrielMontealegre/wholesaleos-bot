@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const dallasSourceAgent = require('./dallas-source-agent');
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 const controlledBrowserCapture = require('./dallas-controlled-browser-capture');
+const realFileParser = require('./dallas-real-file-parser');
 
 const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'dallas-source-candidates.json');
 const MAX_RUN_CANDIDATES = 10;
@@ -46,7 +47,16 @@ function emptyCounts() {
     browser_pages_checked: 0,
     browser_links_followed: 0,
     visible_tables_found: 0,
-    visible_text_blocks_checked: 0
+    visible_text_blocks_checked: 0,
+    file_parser_attempted: false,
+    files_detected: 0,
+    pdf_files_detected: 0,
+    csv_files_detected: 0,
+    xlsx_files_detected: 0,
+    files_parsed: 0,
+    files_blocked: 0,
+    file_text_blocks_checked: 0,
+    file_rows_checked: 0
   };
 }
 
@@ -302,13 +312,22 @@ function summarizeRunEvidence(lastRun) {
   for (const result of results) {
     summary.evidence_links_found += countNumber(result.evidence_links_found);
     summary.files_pages_checked += countNumber(result.files_pages_checked || result.files_pages_attempted);
-    const extractedCandidates = countNumber(result.adapter_candidate_count) + countNumber(result.browser_candidate_count);
+    const extractedCandidates = countNumber(result.adapter_candidate_count) + countNumber(result.file_parser_candidate_count) + countNumber(result.browser_candidate_count);
     summary.candidates_extracted += extractedCandidates || countNumber(result.candidate_count);
     if (result.browser_capture_attempted === true) summary.browser_capture_attempted = true;
     summary.browser_pages_checked += countNumber(result.browser_pages_checked);
     summary.browser_links_followed += countNumber(result.browser_links_followed);
     summary.visible_tables_found += countNumber(result.visible_tables_found);
     summary.visible_text_blocks_checked += countNumber(result.visible_text_blocks_checked);
+    if (result.file_parser_attempted === true) summary.file_parser_attempted = true;
+    summary.files_detected += countNumber(result.files_detected);
+    summary.pdf_files_detected += countNumber(result.pdf_files_detected);
+    summary.csv_files_detected += countNumber(result.csv_files_detected);
+    summary.xlsx_files_detected += countNumber(result.xlsx_files_detected);
+    summary.files_parsed += countNumber(result.files_parsed);
+    summary.files_blocked += countNumber(result.files_blocked);
+    summary.file_text_blocks_checked += countNumber(result.file_text_blocks_checked);
+    summary.file_rows_checked += countNumber(result.file_rows_checked);
   }
   return summary;
 }
@@ -332,6 +351,15 @@ async function runOfficialSourceCapture(options = {}) {
   let totalEvidenceLinksFound = 0;
   let totalFilesPagesChecked = 0;
   let totalAdapterCandidates = 0;
+  let fileParserAttempted = false;
+  let totalFilesDetected = 0;
+  let totalPdfFilesDetected = 0;
+  let totalCsvFilesDetected = 0;
+  let totalXlsxFilesDetected = 0;
+  let totalFilesParsed = 0;
+  let totalFilesBlocked = 0;
+  let totalFileTextBlocksChecked = 0;
+  let totalFileRowsChecked = 0;
   let browserCaptureAttempted = false;
   let totalBrowserPagesChecked = 0;
   let totalBrowserLinksFollowed = 0;
@@ -371,8 +399,22 @@ async function runOfficialSourceCapture(options = {}) {
         });
       }
       const adapterCandidates = adapterResult && Array.isArray(adapterResult.candidates) ? adapterResult.candidates : [];
+      const parserLinks = [].concat(evidenceLinks, adapterResult && Array.isArray(adapterResult.discovered_links) ? adapterResult.discovered_links : []);
+      let fileParserResult = null;
+      if (!candidates.length && parserLinks.length) {
+        fileParserResult = await realFileParser.runDallasRealFileParser({
+          source,
+          source_url: source.source_url,
+          evidence_links: parserLinks,
+          max_candidates: maxCandidates,
+          max_files: options.max_files || options.maxFiles || 8,
+          timeout_ms: options.timeout_ms || options.timeout || 10000,
+          captured_at: capturedAt
+        });
+      }
+      const fileParserCandidates = fileParserResult && Array.isArray(fileParserResult.candidates) ? fileParserResult.candidates : [];
       let browserResult = null;
-      if (!candidates.length && !adapterCandidates.length) {
+      if (!candidates.length && !adapterCandidates.length && !fileParserCandidates.length) {
         browserResult = await controlledBrowserCapture.runDallasControlledBrowserCapture({
           source,
           source_url: source.source_url,
@@ -385,20 +427,30 @@ async function runOfficialSourceCapture(options = {}) {
       }
       const browserCandidates = browserResult && Array.isArray(browserResult.candidates) ? browserResult.candidates : [];
       if (browserResult) browserCaptureAttempted = true;
+      if (fileParserResult) fileParserAttempted = true;
       totalEvidenceLinksFound += Number(adapterResult && adapterResult.evidence_links_found || evidenceLinks.length || 0);
       totalFilesPagesChecked += Number(adapterResult && adapterResult.files_pages_attempted || 0);
-      totalAdapterCandidates += adapterCandidates.length + browserCandidates.length;
+      totalAdapterCandidates += adapterCandidates.length + fileParserCandidates.length + browserCandidates.length;
+      totalFilesDetected += Number(fileParserResult && fileParserResult.files_detected || 0);
+      totalPdfFilesDetected += Number(fileParserResult && fileParserResult.pdf_files_detected || 0);
+      totalCsvFilesDetected += Number(fileParserResult && fileParserResult.csv_files_detected || 0);
+      totalXlsxFilesDetected += Number(fileParserResult && fileParserResult.xlsx_files_detected || 0);
+      totalFilesParsed += Number(fileParserResult && fileParserResult.files_parsed || 0);
+      totalFilesBlocked += Number(fileParserResult && fileParserResult.files_blocked || 0);
+      totalFileTextBlocksChecked += Number(fileParserResult && fileParserResult.file_text_blocks_checked || 0);
+      totalFileRowsChecked += Number(fileParserResult && fileParserResult.file_rows_checked || 0);
       totalBrowserPagesChecked += Number(browserResult && browserResult.browser_pages_checked || 0);
       totalBrowserLinksFollowed += Number(browserResult && browserResult.browser_links_followed || 0);
       totalVisibleTablesFound += Number(browserResult && browserResult.visible_tables_found || 0);
       totalVisibleTextBlocksChecked += Number(browserResult && browserResult.visible_text_blocks_checked || 0);
       normalizedCandidates = normalizedCandidates.concat(candidates.map((candidate, index) => normalizeCandidate(candidate, source, index, capturedAt)));
       normalizedCandidates = normalizedCandidates.concat(adapterCandidates.map((candidate, index) => normalizeCandidate(candidate, source, candidates.length + index, capturedAt)));
-      normalizedCandidates = normalizedCandidates.concat(browserCandidates.map((candidate, index) => normalizeCandidate(candidate, source, candidates.length + adapterCandidates.length + index, capturedAt)));
-      if (!candidates.length && !adapterCandidates.length && !browserCandidates.length) {
+      normalizedCandidates = normalizedCandidates.concat(fileParserCandidates.map((candidate, index) => normalizeCandidate(candidate, source, candidates.length + adapterCandidates.length + index, capturedAt)));
+      normalizedCandidates = normalizedCandidates.concat(browserCandidates.map((candidate, index) => normalizeCandidate(candidate, source, candidates.length + adapterCandidates.length + fileParserCandidates.length + index, capturedAt)));
+      if (!candidates.length && !adapterCandidates.length && !fileParserCandidates.length && !browserCandidates.length) {
         warnings.push({
           source_id: sourceId,
-          message: (browserResult && browserResult.blocked_reason) || (adapterResult && adapterResult.blocked_reason) || result.reason || 'No property-level candidates found. Source may need browser-assisted review.'
+          message: (fileParserResult && fileParserResult.blocked_reason) || (browserResult && browserResult.blocked_reason) || (adapterResult && adapterResult.blocked_reason) || result.reason || 'No property-level candidates found. Source may need browser-assisted review.'
         });
       }
       runResults.push({
@@ -406,14 +458,26 @@ async function runOfficialSourceCapture(options = {}) {
         source_name: source.source_name,
         status: result.status || 'unknown',
         reason: result.reason || '',
-        candidate_count: candidates.length + adapterCandidates.length + browserCandidates.length,
+        candidate_count: candidates.length + adapterCandidates.length + fileParserCandidates.length + browserCandidates.length,
         static_candidate_count: candidates.length,
         adapter_candidate_count: adapterCandidates.length,
+        file_parser_candidate_count: fileParserCandidates.length,
         browser_candidate_count: browserCandidates.length,
         evidence_links_found: Number(adapterResult && adapterResult.evidence_links_found || evidenceLinks.length || 0),
         files_pages_checked: Number(adapterResult && adapterResult.files_pages_attempted || 0),
         adapter_status: adapterResult && adapterResult.status || '',
         adapter_blocked_reason: adapterResult && adapterResult.blocked_reason || '',
+        file_parser_attempted: !!fileParserResult,
+        files_detected: Number(fileParserResult && fileParserResult.files_detected || 0),
+        pdf_files_detected: Number(fileParserResult && fileParserResult.pdf_files_detected || 0),
+        csv_files_detected: Number(fileParserResult && fileParserResult.csv_files_detected || 0),
+        xlsx_files_detected: Number(fileParserResult && fileParserResult.xlsx_files_detected || 0),
+        files_parsed: Number(fileParserResult && fileParserResult.files_parsed || 0),
+        files_blocked: Number(fileParserResult && fileParserResult.files_blocked || 0),
+        file_text_blocks_checked: Number(fileParserResult && fileParserResult.file_text_blocks_checked || 0),
+        file_rows_checked: Number(fileParserResult && fileParserResult.file_rows_checked || 0),
+        file_parser_status: fileParserResult && fileParserResult.status || '',
+        file_parser_blocked_reason: fileParserResult && fileParserResult.blocked_reason || '',
         browser_capture_attempted: !!browserResult,
         browser_pages_checked: Number(browserResult && browserResult.browser_pages_checked || 0),
         browser_links_followed: Number(browserResult && browserResult.browser_links_followed || 0),
@@ -443,6 +507,15 @@ async function runOfficialSourceCapture(options = {}) {
     evidence_links_found: totalEvidenceLinksFound,
     files_pages_checked: totalFilesPagesChecked,
     candidates_extracted: totalAdapterCandidates,
+    file_parser_attempted: fileParserAttempted,
+    files_detected: totalFilesDetected,
+    pdf_files_detected: totalPdfFilesDetected,
+    csv_files_detected: totalCsvFilesDetected,
+    xlsx_files_detected: totalXlsxFilesDetected,
+    files_parsed: totalFilesParsed,
+    files_blocked: totalFilesBlocked,
+    file_text_blocks_checked: totalFileTextBlocksChecked,
+    file_rows_checked: totalFileRowsChecked,
     browser_capture_attempted: browserCaptureAttempted,
     browser_pages_checked: totalBrowserPagesChecked,
     browser_links_followed: totalBrowserLinksFollowed,
@@ -468,6 +541,15 @@ async function runOfficialSourceCapture(options = {}) {
     evidence_links_found: totalEvidenceLinksFound,
     files_pages_checked: totalFilesPagesChecked,
     candidates_extracted: totalAdapterCandidates,
+    file_parser_attempted: fileParserAttempted,
+    files_detected: totalFilesDetected,
+    pdf_files_detected: totalPdfFilesDetected,
+    csv_files_detected: totalCsvFilesDetected,
+    xlsx_files_detected: totalXlsxFilesDetected,
+    files_parsed: totalFilesParsed,
+    files_blocked: totalFilesBlocked,
+    file_text_blocks_checked: totalFileTextBlocksChecked,
+    file_rows_checked: totalFileRowsChecked,
     browser_capture_attempted: browserCaptureAttempted,
     browser_pages_checked: totalBrowserPagesChecked,
     browser_links_followed: totalBrowserLinksFollowed,
