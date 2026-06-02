@@ -1483,6 +1483,7 @@ app.post('/api/source-preview/dallas/official-sources/run', async (req, res) => 
       source_ids: body.source_ids || body.sourceIds,
       include_secondary: body.include_secondary === true || body.includeSecondary === true,
       max_candidates: body.max_candidates || body.maxCandidates,
+      max_browser_pages: body.max_browser_pages || body.maxBrowserPages,
       timeout_ms: body.timeout_ms || body.timeout
     });
     res.status(result && result.ok === false ? 400 : 200).json(Object.assign({
