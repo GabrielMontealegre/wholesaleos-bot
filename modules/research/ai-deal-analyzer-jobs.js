@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../../db');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
+const compResearchProvider = require('./comp-research-provider');
 
 const JOB_STATUSES = new Set([
   'queued',
@@ -365,6 +366,23 @@ function collectCompEvidence(lead) {
   return comps.slice(0, 20);
 }
 
+function applyCompResearchState(job) {
+  const state = compResearchProvider.runCompResearch(job || {});
+  return Object.assign({}, job, {
+    comp_research_status: state.provider_status,
+    comp_research_provider: state.provider,
+    comp_research_provider_label: state.provider_label,
+    comp_candidates: state.candidates,
+    verified_comp_count: Math.max(
+      Array.isArray(job && job.comp_evidence) ? job.comp_evidence.length : 0,
+      state.verified_comp_count || 0
+    ),
+    comp_missing_evidence: state.missing_evidence,
+    comp_next_action: state.next_action,
+    comp_research_updated_at: state.updated_at
+  });
+}
+
 function median(values) {
   if (!values.length) return null;
   const sorted = values.slice().sort((a, b) => a - b);
@@ -516,6 +534,14 @@ function createJob(item) {
     lead_ref: cleanText(item.lead_ref || item.leadRef || (lead && (lead.ref_id || lead.reference_id || lead.ref || lead.id))),
     source_evidence: [],
     comp_evidence: [],
+    comp_research_status: 'not_configured',
+    comp_research_provider: 'none',
+    comp_research_provider_label: 'Not configured',
+    comp_candidates: [],
+    verified_comp_count: 0,
+    comp_missing_evidence: ['3 verified sold comps'],
+    comp_next_action: 'Comp provider not configured yet.',
+    comp_research_updated_at: '',
     missing_evidence: [],
     result_summary: 'Queued for evidence review.',
     next_best_action: 'Needs research',
@@ -606,6 +632,7 @@ function runJob(jobIdValue) {
       mao_range: valuation.mao_range,
       error: ''
     });
+    job = applyCompResearchState(job);
     jobs[idx] = job;
     writeJobs(jobs);
     return publicJob(job);
@@ -626,6 +653,57 @@ function runJob(jobIdValue) {
   }
 }
 
+function runCompResearchForJob(jobIdValue) {
+  let job = getJob(jobIdValue);
+  if (!job) {
+    const err = new Error('Analyzer job not found.');
+    err.status = 404;
+    throw err;
+  }
+  if (job.status === 'queued' || !Array.isArray(job.source_evidence) || !job.source_evidence.length) {
+    runJob(jobIdValue);
+  }
+  const jobs = readJobs();
+  const idx = jobs.findIndex((candidate) => candidate.job_id === jobIdValue);
+  if (idx < 0) {
+    const err = new Error('Analyzer job not found.');
+    err.status = 404;
+    throw err;
+  }
+  job = applyCompResearchState(jobs[idx]);
+  job.updated_at = nowIso();
+  jobs[idx] = job;
+  writeJobs(jobs);
+  return publicJob(job);
+}
+
+function getCompCandidates(jobIdValue) {
+  const job = getJob(jobIdValue);
+  if (!job) {
+    const err = new Error('Analyzer job not found.');
+    err.status = 404;
+    throw err;
+  }
+  return Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
+}
+
+function getCompResearchConfig() {
+  const providers = compResearchProvider.getConfiguredCompProviders();
+  return {
+    provider_status: providers.length ? 'ready_to_research' : 'not_configured',
+    configured: providers.length > 0,
+    providers: providers.map((provider) => ({
+      id: provider.id,
+      label: provider.label,
+      enabled: provider.enabled === true,
+      implemented: provider.implemented === true
+    })),
+    message: providers.length
+      ? 'Comp research provider is configured but not implemented yet.'
+      : 'Comp provider not configured yet.'
+  };
+}
+
 module.exports = {
   JOB_STATUSES,
   MAX_BATCH_SIZE,
@@ -634,6 +712,9 @@ module.exports = {
   listJobs,
   getJob,
   runJob,
+  runCompResearchForJob,
+  getCompCandidates,
+  getCompResearchConfig,
   addressQuality,
   classifyInput
 };

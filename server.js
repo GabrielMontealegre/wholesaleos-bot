@@ -1276,6 +1276,20 @@ app.get('/api/ai-deal-analyzer/jobs', (req, res) => {
   }
 });
 
+app.get('/api/ai-deal-analyzer/comp-research/config', (req, res) => {
+  try {
+    return res.json(Object.assign({
+      ok: true,
+      safety: 'provider configuration only; no API keys returned and no provider calls made'
+    }, aiDealAnalyzerJobs.getCompResearchConfig()));
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load comp research configuration'
+    });
+  }
+});
+
 app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
   try {
     const job = aiDealAnalyzerJobs.getJob(req.params.jobId);
@@ -1285,6 +1299,42 @@ app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err && err.message ? err.message : 'Failed to load analyzer job'
+    });
+  }
+});
+
+app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', (req, res) => {
+  try {
+    const job = aiDealAnalyzerJobs.runCompResearchForJob(req.params.jobId);
+    return res.json({
+      ok: true,
+      job,
+      comp_research_status: job.comp_research_status,
+      comp_research_provider: job.comp_research_provider,
+      comp_candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
+      safety: 'operator-triggered comp provider readiness check only; no scraping, no LLM calls, no lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to run comp research check'
+    });
+  }
+});
+
+app.get('/api/ai-deal-analyzer/jobs/:jobId/comp-candidates', (req, res) => {
+  try {
+    const candidates = aiDealAnalyzerJobs.getCompCandidates(req.params.jobId);
+    return res.json({
+      ok: true,
+      candidates,
+      count: candidates.length,
+      safety: 'candidate list only; candidate comps do not unlock valuation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load comp candidates'
     });
   }
 });

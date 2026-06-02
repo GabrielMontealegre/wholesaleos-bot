@@ -1211,10 +1211,76 @@ function aiDealSourceSection(pack, sourceEvidence) {
   '</div>';
 }
 
+function aiDealCompResearchLabel(status) {
+  return ({
+    not_configured: 'Not configured',
+    blocked_needs_address: 'Needs address',
+    blocked_needs_source_evidence: 'Needs source evidence',
+    ready_to_research: 'Ready to research',
+    researching: 'Researching',
+    candidates_found: 'Candidates found',
+    no_candidates_found: 'No candidates found',
+    failed: 'Needs review'
+  })[status] || 'Not configured';
+}
+
+function aiDealCompProviderLabel(job) {
+  job = job || {};
+  if (job.comp_research_provider_label) return job.comp_research_provider_label;
+  if (job.comp_research_provider && job.comp_research_provider !== 'none') return job.comp_research_provider;
+  return 'Not configured';
+}
+
+function aiDealCompResearchTone(status) {
+  if (status === 'ready_to_research' || status === 'candidates_found') return 'good';
+  if (status === 'not_configured' || status === 'blocked_needs_address' || status === 'blocked_needs_source_evidence') return 'warn';
+  return 'neutral';
+}
+
+function aiDealCompCandidatesList(candidates) {
+  candidates = Array.isArray(candidates) ? candidates : [];
+  if (!candidates.length) return '';
+  return '<div style="display:flex;flex-direction:column;gap:6px">' + candidates.slice(0, 3).map(function(candidate) {
+    return '<div style="font-size:12px;color:#334155;line-height:1.35">' +
+      '<strong>' + aiDealSafeText(candidate.comp_address || 'Comp candidate') + '</strong>' +
+      ' - ' + aiDealSafeText(candidate.verification_status || 'candidate') +
+      (candidate.source_url ? ' <a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open</a>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function aiDealCompResearchSection(job) {
+  job = job || {};
+  var status = job.comp_research_status || 'not_configured';
+  var label = aiDealCompResearchLabel(status);
+  var candidates = Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
+  var verified = Number(job.verified_comp_count || (Array.isArray(job.comp_evidence) ? job.comp_evidence.length : 0)) || 0;
+  var next = job.comp_next_action || (status === 'not_configured'
+    ? 'Comp provider not configured yet.'
+    : status === 'blocked_needs_address'
+      ? 'Repair property identity before comps.'
+      : status === 'blocked_needs_source_evidence'
+        ? 'Source repair needed before comps.'
+        : 'Comp research provider is configured but not implemented yet.');
+  return '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">' +
+    '<div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Comp Research</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      aiDealStatusPill('Provider: ' + aiDealCompProviderLabel(job), status === 'not_configured' ? 'warn' : 'good') +
+      aiDealStatusPill('Status: ' + label, aiDealCompResearchTone(status)) +
+      aiDealStatusPill('Verified sold comps: ' + verified, verified >= 3 ? 'good' : 'warn') +
+      aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Draft ready' : 'Locked'), job.arv_range ? 'good' : 'warn') +
+    '</div>' +
+    '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    aiDealCompCandidatesList(candidates) +
+    '<div><button type="button" onclick="aiDealResearchComps(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #16a34a;background:#16a34a;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Research Comps</button></div>' +
+  '</div>';
+}
+
 function renderAIDealAnalyzerCard(job) {
   job = job || {};
   var sourceEvidence = Array.isArray(job.source_evidence) ? job.source_evidence : [];
   var compEvidence = Array.isArray(job.comp_evidence) ? job.comp_evidence : [];
+  var verifiedCompCount = Number(job.verified_comp_count || compEvidence.length) || 0;
   var missing = Array.isArray(job.missing_evidence) ? job.missing_evidence : [];
   var sourcePack = aiDealSourcePack(job);
   var sourceStatus = aiDealSourceStatusText(sourcePack, sourceEvidence);
@@ -1227,17 +1293,18 @@ function renderAIDealAnalyzerCard(job) {
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       aiDealStatusPill('Source ' + sourceStatus.toLowerCase(), sourceStatus === 'Found' ? 'good' : 'warn') +
-      aiDealStatusPill(compEvidence.length + ' verified sold comp' + (compEvidence.length === 1 ? '' : 's'), compEvidence.length >= 3 ? 'good' : 'warn') +
+      aiDealStatusPill(verifiedCompCount + ' verified sold comp' + (verifiedCompCount === 1 ? '' : 's'), verifiedCompCount >= 3 ? 'good' : 'warn') +
       aiDealStatusPill(job.arv_range ? 'ARV draft ready' : 'ARV locked', job.arv_range ? 'good' : 'warn') +
       aiDealStatusPill(job.mao_range ? 'MAO draft ready' : 'MAO locked', job.mao_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Owner</div><div style="font-size:12px;color:#111827;font-weight:800">Not verified</div></div>' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source Evidence</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(sourceStatus) + '</div></div>' +
-      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(compEvidence.length) + ' verified sold</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(verifiedCompCount) + ' verified sold</div></div>' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Debt / Taxes</div><div style="font-size:12px;color:#111827;font-weight:800">Not verified</div></div>' +
     '</div>' +
     aiDealSourceSection(sourcePack, sourceEvidence) +
+    aiDealCompResearchSection(job) +
     '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(job.result_summary || 'Insufficient verified comp evidence - valuation blocked.') + '</div>' +
     '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(job.next_best_action || 'Needs research.') + '</div>' +
     '<div style="font-size:12px;color:#334155;line-height:1.45;font-weight:800">' + aiDealSafeText(aiDealValuationText(job)) + '</div>' +
@@ -1378,6 +1445,20 @@ async function aiDealRunJob(jobId) {
     }
   } catch (e) {
     aiDealSetStatus(e.message || 'Evidence check failed.', true);
+  }
+}
+
+async function aiDealResearchComps(jobId) {
+  if (!jobId) return;
+  try {
+    var data = await aiDealFetchJson('/api/ai-deal-analyzer/jobs/' + encodeURIComponent(jobId) + '/comp-research', { method: 'POST' });
+    if (data.job) {
+      AI_DEAL_ANALYZER_JOBS = AI_DEAL_ANALYZER_JOBS.map(function(job){ return job.job_id === data.job.job_id ? data.job : job; });
+      aiDealRefresh();
+      aiDealSetStatus(data.job.comp_next_action || 'Comp research status updated.', data.job.comp_research_status === 'not_configured' || data.job.comp_research_status === 'blocked_needs_address' || data.job.comp_research_status === 'blocked_needs_source_evidence');
+    }
+  } catch (e) {
+    aiDealSetStatus(e.message || 'Comp research could not be checked.', true);
   }
 }
 
