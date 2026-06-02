@@ -456,6 +456,9 @@ const APP = {
   dallasSourceAgentSelected: localStorage.getItem('montsan_dallas_source_agent_selected') || 'tx_dallas_sheriff_tax_sales',
   dallasSourceAgentStatus: null,
   dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
+  dallasOfficialCaptureStatus: null,
+  dallasOfficialCaptureCandidates: [],
+  dallasOfficialCaptureMessage: '',
   operationalMode: localStorage.getItem('montsan_operational_mode') || 'national',
 };
 window.APP = APP;
@@ -22834,6 +22837,14 @@ function sourcePreviewOpenDallasAgent() {
   if (!APP.dallasSourceAgentSources || !APP.dallasSourceAgentSources.length) {
     sourcePreviewLoadDallasAgentSources();
   }
+  sourcePreviewLoadDallasOfficialCaptureStatus();
+  if (typeof render === 'function') render();
+}
+
+function sourcePreviewOpenDallasOfficialCapture() {
+  APP._dallasPreviewQueueOpen = true;
+  sourcePreviewLoadDallasOfficialCaptureStatus();
+  sourcePreviewLoadDallasOfficialCaptureCandidates();
   if (typeof render === 'function') render();
 }
 
@@ -22882,6 +22893,72 @@ async function sourcePreviewRunDallasAgent() {
   } catch (error) {
     APP.dallasSourceAgentStatus = { ok: false, message: error.message || 'Dallas Source Agent failed.' };
     if (typeof toast === 'function') toast(error.message || 'Dallas Source Agent failed', 'error');
+    if (typeof render === 'function') render();
+  }
+}
+
+async function sourcePreviewLoadDallasOfficialCaptureStatus() {
+  try {
+    var resp = await fetch('/api/source-preview/dallas/official-sources/status', { headers: { 'Accept': 'application/json' } });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'Dallas source capture status unavailable.');
+    APP.dallasOfficialCaptureStatus = data;
+    if (typeof render === 'function') render();
+  } catch (error) {
+    APP.dallasOfficialCaptureMessage = error.message || 'Dallas source capture status unavailable.';
+    if (typeof render === 'function') render();
+  }
+}
+
+async function sourcePreviewLoadDallasOfficialCaptureCandidates() {
+  try {
+    var resp = await fetch('/api/source-preview/dallas/official-sources/candidates?limit=25', { headers: { 'Accept': 'application/json' } });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'Dallas candidates unavailable.');
+    APP.dallasOfficialCaptureStatus = APP.dallasOfficialCaptureStatus || {};
+    APP.dallasOfficialCaptureStatus.counts = data.counts || APP.dallasOfficialCaptureStatus.counts || {};
+    APP.dallasOfficialCaptureStatus.last_run = data.last_run || APP.dallasOfficialCaptureStatus.last_run || null;
+    APP.dallasOfficialCaptureCandidates = Array.isArray(data.candidates) ? data.candidates : [];
+    APP.dallasOfficialCaptureMessage = '';
+    if (typeof render === 'function') render();
+  } catch (error) {
+    APP.dallasOfficialCaptureMessage = error.message || 'Dallas candidates unavailable.';
+    if (typeof render === 'function') render();
+  }
+}
+
+async function sourcePreviewRunDallasOfficialCapture() {
+  try {
+    APP.dallasOfficialCaptureMessage = 'Checking Dallas official sources...';
+    if (typeof toast === 'function') toast('Checking Dallas official sources...', 'info');
+    if (typeof render === 'function') render();
+    var resp = await fetch('/api/source-preview/dallas/official-sources/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        source_ids: ['tx_dallas_sheriff_tax_sales'],
+        max_candidates: 10,
+        preview_only: true,
+        dry_run: true
+      })
+    });
+    var data = await resp.json();
+    if (!resp.ok || data.ok === false) throw new Error(data.error || 'Dallas official source check failed.');
+    APP.dallasOfficialCaptureStatus = {
+      ok: true,
+      counts: data.counts || {},
+      last_run: data.last_run || null,
+      candidate_count: data.stored_candidate_count || 0
+    };
+    APP.dallasOfficialCaptureCandidates = Array.isArray(data.candidates) ? data.candidates : [];
+    APP.dallasOfficialCaptureMessage = data.candidates && data.candidates.length
+      ? 'Official source candidates are ready for review.'
+      : 'No property-level candidates found. Source may need browser-assisted review.';
+    await sourcePreviewLoadDallasOfficialCaptureCandidates();
+    if (typeof toast === 'function') toast(APP.dallasOfficialCaptureMessage, data.candidates && data.candidates.length ? 'success' : 'info');
+  } catch (error) {
+    APP.dallasOfficialCaptureMessage = error.message || 'Dallas official source check failed.';
+    if (typeof toast === 'function') toast(APP.dallasOfficialCaptureMessage, 'error');
     if (typeof render === 'function') render();
   }
 }
@@ -23155,6 +23232,78 @@ function renderSourcePreviewPropertyIntelligence(candidate) {
   '</div>';
 }
 
+function renderDallasOfficialSourceCapturePanel() {
+  var status = APP.dallasOfficialCaptureStatus || {};
+  var counts = status.counts || {};
+  var lastRun = status.last_run || null;
+  var candidates = Array.isArray(APP.dallasOfficialCaptureCandidates) ? APP.dallasOfficialCaptureCandidates : [];
+  var lastRunText = lastRun && lastRun.captured_at ? new Date(lastRun.captured_at).toLocaleString() : 'Not run yet';
+  function countCard(label, value, color, bg) {
+    return '<div style="background:' + (bg || '#fff') + ';border:1px solid #e5e7eb;border-radius:8px;padding:8px">' +
+      '<div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:900;margin-bottom:3px">' + dallasPreviewSafeText(label) + '</div>' +
+      '<div style="font-size:14px;color:' + (color || '#111827') + ';font-weight:900">' + dallasPreviewSafeText(value || 0) + '</div>' +
+    '</div>';
+  }
+  function statusBadge(candidate) {
+    var label = candidate.workflow_status || 'Needs review';
+    var color = label === 'Research Ready' ? '#047857' : label === 'Invalid/Junk' ? '#991b1b' : '#92400e';
+    var bg = label === 'Research Ready' ? '#ecfdf5' : label === 'Invalid/Junk' ? '#fef2f2' : '#fffbeb';
+    return '<span style="font-size:10px;color:' + color + ';background:' + bg + ';border:1px solid ' + color + '44;border-radius:999px;padding:3px 8px;font-weight:900">' + dallasPreviewSafeText(label) + '</span>';
+  }
+  function renderCandidate(candidate) {
+    var address = candidate.property_address || 'Address needs repair';
+    var source = candidate.source_name || 'Dallas official source';
+    var sourceUrl = candidate.source_proof_url || candidate.source_url || '';
+    var proof = candidate.source_proof_text || candidate.case_number || candidate.parcel_id || 'Source proof needs review';
+    var missing = Array.isArray(candidate.missing_evidence) ? candidate.missing_evidence : [];
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
+        '<div style="min-width:0"><div style="font-size:12px;color:#111827;font-weight:900;line-height:1.35">' + dallasPreviewSafeText(address) + '</div>' +
+        '<div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:3px">' + dallasPreviewSafeText(source) + ' | ' + dallasPreviewSafeText(candidate.category || 'official source') + '</div></div>' +
+        statusBadge(candidate) +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:8px">' +
+        [
+          ['Source proof', proof],
+          ['Address', candidate.address_quality || 'unknown'],
+          ['Property identity', candidate.property_identity_status || 'unknown'],
+          ['Parcel / case', candidate.parcel_id || candidate.case_number || 'missing'],
+          ['Date / amount', candidate.sale_date || candidate.auction_date || candidate.opening_bid || candidate.tax_amount || candidate.judgment_amount || 'missing']
+        ].map(function(pair) {
+          return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:7px">' +
+            '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:900;margin-bottom:3px">' + dallasPreviewSafeText(pair[0]) + '</div>' +
+            '<div style="font-size:10px;color:#334155;line-height:1.35;font-weight:800;word-break:break-word">' + dallasPreviewSafeText(pair[1]) + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="font-size:10px;color:#374151;line-height:1.45;margin-top:8px"><strong>Next step:</strong> ' + dallasPreviewSafeText(candidate.next_action || 'Review the source before action.') + '</div>' +
+      (missing.length ? '<div style="font-size:10px;color:#92400e;line-height:1.45;margin-top:5px"><strong>Missing:</strong> ' + dallasPreviewSafeText(missing.join(', ')) + '</div>' : '') +
+      (sourceUrl ? '<div style="margin-top:7px"><a href="' + mdaEscapeAttr(sourceUrl) + '" target="_blank" rel="noopener" style="font-size:10px;color:#1d4ed8;text-decoration:none;font-weight:900">Open official source</a></div>' : '') +
+    '</div>';
+  }
+  return '<div style="background:#eef6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#1e3a8a">Dallas Source Capture</div>' +
+      '<div style="font-size:11px;color:#1d4ed8;line-height:1.45;margin-top:2px">Checks Dallas County official sources in preview mode. Nothing is added to production leads automatically.</div>' +
+      '<div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:3px">Last run: ' + dallasPreviewSafeText(lastRunText) + '</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button type="button" onclick="sourcePreviewRunDallasOfficialCapture()" style="font-size:11px;border:1px solid #1d4ed8;border-radius:7px;background:#1d4ed8;color:#fff;font-weight:900;padding:7px 10px;cursor:pointer">Run Dallas Official Source Check</button>' +
+        '<button type="button" onclick="sourcePreviewLoadDallasOfficialCaptureCandidates()" style="font-size:11px;border:1px solid #bfdbfe;border-radius:7px;background:#fff;color:#1d4ed8;font-weight:900;padding:7px 10px;cursor:pointer">View Candidates</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:9px">' +
+      countCard('Candidates found', counts.total_candidates, '#111827', '#fff') +
+      countCard('Ready for review', counts.research_ready, '#047857', '#ecfdf5') +
+      countCard('Needs source repair', counts.source_repair_needed, '#92400e', '#fffbeb') +
+      countCard('Invalid/junk blocked', counts.invalid_junk, '#991b1b', '#fef2f2') +
+      countCard('With source URL', counts.with_source_url, '#1d4ed8', '#eff6ff') +
+    '</div>' +
+    (APP.dallasOfficialCaptureMessage ? '<div style="font-size:10px;color:#1e3a8a;background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:7px;margin-bottom:8px;font-weight:800">' + dallasPreviewSafeText(APP.dallasOfficialCaptureMessage) + '</div>' : '') +
+    (lastRun && lastRun.status ? '<div style="font-size:10px;color:#475569;line-height:1.45;margin-bottom:8px">Run status: ' + dallasPreviewSafeText(lastRun.status) + (lastRun.warnings && lastRun.warnings.length ? ' | ' + dallasPreviewSafeText(lastRun.warnings[0].message || '') : '') + '</div>' : '') +
+    (candidates.length ? '<div style="display:flex;flex-direction:column;gap:8px">' + candidates.slice(0, 6).map(renderCandidate).join('') + '</div>' : '<div style="font-size:12px;color:#64748b;background:#fff;border:1px solid #dbeafe;border-radius:9px;padding:14px;text-align:center">No official-source candidates loaded yet. Run the check to see whether Dallas County returns property-level rows or needs browser-assisted review.</div>') +
+  '</div>';
+}
+
 function renderDallasPreviewQueue() {
   if (!APP._dallasPreviewQueueOpen) return '';
   var batch = dallasPreviewBatchStore();
@@ -23243,6 +23392,7 @@ function renderDallasPreviewQueue() {
         '<button type="button" onclick="sourcePreviewToggleQueue(false)" style="font-size:11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;font-weight:800;padding:7px 10px;cursor:pointer">Close Preview</button>' +
       '</div>' +
     '</div>' +
+    renderDallasOfficialSourceCapturePanel() +
     '<div style="background:#111827;border:1px solid #f59e0b66;border-radius:10px;padding:10px;margin-bottom:10px;color:#e5e7eb">' +
       '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap">' +
         '<div style="min-width:260px;flex:1">' +
@@ -25479,6 +25629,7 @@ function renderAdminSystemTools() {
     '<summary style="list-style:none;cursor:pointer;font-size:12px;font-weight:900;padding:7px 10px;color:#64748b">Admin / System Tools</summary>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #e5e7eb;padding:8px;max-width:760px">' +
       '<button onclick="openPullLeadsToolbar()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Pull Leads</button>' +
+      '<button onclick="sourcePreviewOpenDallasOfficialCapture()" style="font-size:11px;padding:6px 9px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-weight:900;cursor:pointer">Dallas Source Capture</button>' +
       '<button onclick="sourcePreviewOpenDallasAgent()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Dallas Source Agent</button>' +
       '<button onclick="sourcePreviewOpenDallasSheriffCapture()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Import Dallas Source Rows</button>' +
       '<button onclick="sourcePreviewToggleQueue()" style="font-size:11px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer">Source Plan</button>' +

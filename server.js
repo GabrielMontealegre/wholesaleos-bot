@@ -77,6 +77,14 @@ function getDallasSourceAgent() {
   }
 }
 
+function getDallasOfficialSourceCapture() {
+  try { return require('./modules/sources/dallas-official-source-capture'); }
+  catch (e) {
+    logger.error('[dallas-official-source-capture] load failed: ' + e.message);
+    return null;
+  }
+}
+
 function getDallasCompIntelligenceAgent() {
   try { return require('./modules/research/dallas-comp-intelligence-agent'); }
   catch (e) {
@@ -1452,6 +1460,53 @@ app.post('/api/source-preview/dallas/run-source', async (req, res) => {
     }, result));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, dry_run: true, preview_only: true, should_ingest: false });
+  }
+});
+
+app.get('/api/source-preview/dallas/official-sources/status', (req, res) => {
+  try {
+    const capture = getDallasOfficialSourceCapture();
+    if (!capture) return res.status(500).json({ ok: false, error: 'dallas_official_source_capture_unavailable', preview_only: true, should_ingest: false });
+    res.json(capture.getOfficialSourceCaptureStatus());
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, preview_only: true, should_ingest: false });
+  }
+});
+
+app.post('/api/source-preview/dallas/official-sources/run', async (req, res) => {
+  try {
+    const capture = getDallasOfficialSourceCapture();
+    if (!capture) return res.status(500).json({ ok: false, error: 'dallas_official_source_capture_unavailable', preview_only: true, should_ingest: false });
+    const body = req.body || {};
+    const result = await capture.runOfficialSourceCapture({
+      source_id: body.source_id || body.sourceId,
+      source_ids: body.source_ids || body.sourceIds,
+      include_secondary: body.include_secondary === true || body.includeSecondary === true,
+      max_candidates: body.max_candidates || body.maxCandidates,
+      timeout_ms: body.timeout_ms || body.timeout
+    });
+    res.status(result && result.ok === false ? 400 : 200).json(Object.assign({
+      preview_only: true,
+      dry_run: true,
+      should_ingest: false,
+      operator_triggered_only: true,
+      no_auto_ingestion: true
+    }, result));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, preview_only: true, dry_run: true, should_ingest: false });
+  }
+});
+
+app.get('/api/source-preview/dallas/official-sources/candidates', (req, res) => {
+  try {
+    const capture = getDallasOfficialSourceCapture();
+    if (!capture) return res.status(500).json({ ok: false, error: 'dallas_official_source_capture_unavailable', preview_only: true, should_ingest: false });
+    res.json(capture.listOfficialSourceCandidates({
+      limit: req.query.limit,
+      status: req.query.status || req.query.workflow_status
+    }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, preview_only: true, should_ingest: false });
   }
 });
 
