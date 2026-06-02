@@ -32,65 +32,7 @@ function sourcePackFromJob(job) {
 }
 
 function buildEvidenceOnlyPrompt(job, options) {
-  job = job || {};
-  options = options || {};
-  const pack = sourcePackFromJob(job) || {};
-  const maxResults = options.max_results || 6;
-  return [
-    'Research this real estate lead using public web evidence only.',
-    'Return JSON only. Do not include markdown.',
-    '',
-    'Hard rules:',
-    '- Do not invent comps, ARV, MAO, owner, debt, DOM, listing history, sold price, auction amount, or source facts.',
-    '- Every factual claim must include a citation/source_url.',
-    '- Candidate comps are candidate only unless sold status, sold price, sold date, comp address, and source URL are all present.',
-    '- Do not estimate ARV or MAO.',
-    '- If evidence is missing, list it in missing_evidence.',
-    '',
-    'Subject:',
-    `job_id: ${cleanText(job.job_id)}`,
-    `input_type: ${cleanText(job.input_type)}`,
-    `input_value: ${cleanText(job.input_value)}`,
-    `normalized_address: ${cleanText(job.normalized_address)}`,
-    `lead_ref: ${cleanText(job.lead_ref)}`,
-    `source_url: ${cleanText(pack.source_url)}`,
-    `source_url_type: ${cleanText(pack.source_url_type)}`,
-    `source_status: ${cleanText(pack.source_status)}`,
-    `property_identity_status: ${cleanText(pack.property_identity_status)}`,
-    `county: ${cleanText(pack.county)}`,
-    `state: ${cleanText(pack.state)}`,
-    `source_ref: ${cleanText(pack.source_ref)}`,
-    '',
-    'Return this exact JSON shape:',
-    JSON.stringify({
-      status: 'candidates_found | no_candidates_found | failed',
-      subject: { normalized_address: '', source_url: '', property_identity_status: '' },
-      property_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
-      source_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
-      comp_candidates: [{
-        comp_address: '',
-        sold_status: 'sold',
-        sold_price: null,
-        sold_date: '',
-        beds: null,
-        baths: null,
-        sqft: null,
-        distance_miles: null,
-        source_url: '',
-        source_label: '',
-        confidence: 0,
-        verification_status: 'candidate',
-        missing_fields: [],
-        notes: []
-      }],
-      missing_evidence: [],
-      warnings: [],
-      citations: [{ title: '', url: '' }],
-      raw_summary: ''
-    }),
-    '',
-    `Return at most ${maxResults} comp candidates.`
-  ].join('\n');
+  return require('./free-research-provider-router').buildPublicEvidenceResearchPrompt(job || {}, options || {});
 }
 
 function extractOutputText(response) {

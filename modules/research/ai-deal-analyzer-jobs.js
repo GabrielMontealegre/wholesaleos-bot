@@ -715,7 +715,8 @@ function getCompResearchConfig() {
       id: provider.id,
       label: provider.label,
       enabled: provider.enabled === true,
-      implemented: provider.implemented === true
+      implemented: provider.implemented === true,
+      model: provider.model || ''
     })),
     message: providers.length
       ? implemented
