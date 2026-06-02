@@ -6,12 +6,15 @@ const dallasSourceAgent = require('./dallas-source-agent');
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 const controlledBrowserCapture = require('./dallas-controlled-browser-capture');
 const realFileParser = require('./dallas-real-file-parser');
+const codeViolationsAdapter = require('./dallas-code-violations-adapter');
 
 const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'dallas-source-candidates.json');
 const MAX_RUN_CANDIDATES = 10;
 const MAX_STORED_CANDIDATES = 200;
 const PRIMARY_SOURCE_ID = 'tx_dallas_sheriff_tax_sales';
 const SECONDARY_SOURCE_ID = 'tx_dallas_county_clerk_foreclosure_notices';
+const CODE_VIOLATIONS_SOURCE_ID = 'tx_dallas_code_violations_socrata';
+const CODE_VIOLATIONS_SOURCE_IDS = new Set([CODE_VIOLATIONS_SOURCE_ID, 'tx_dallas_code_violations']);
 
 const EMPTY_STORE = {
   version: '1.0.0',
@@ -56,7 +59,10 @@ function emptyCounts() {
     files_parsed: 0,
     files_blocked: 0,
     file_text_blocks_checked: 0,
-    file_rows_checked: 0
+    file_rows_checked: 0,
+    code_violations_attempted: false,
+    code_violation_rows_checked: 0,
+    code_violation_candidates_extracted: 0
   };
 }
 
@@ -178,6 +184,7 @@ function nextActionFor(status, addressQuality, sourceStatus) {
 function sourceTypeFor(source) {
   const category = cleanText(source.source_category).toLowerCase();
   if (/foreclosure/.test(category)) return 'foreclosure_notice';
+  if (/code_violation|code violation/.test(category)) return 'code_violation';
   if (/sheriff|tax_sale|tax sale/.test(`${source.source_id} ${category}`)) return 'sheriff_sale';
   if (/tax/.test(category)) return 'tax_foreclosure';
   return category || 'official_source';
@@ -186,6 +193,7 @@ function sourceTypeFor(source) {
 function categoryFor(source) {
   const category = cleanText(source.source_category).toLowerCase();
   if (/foreclosure/.test(category)) return 'foreclosure_notice';
+  if (/code_violation|code violation/.test(category)) return 'code_violation';
   if (/tax_sale|tax sale|sheriff/.test(`${source.source_id} ${category}`)) return 'sheriff_sale';
   if (/tax/.test(category)) return 'tax_foreclosure';
   return category || 'official_source';
@@ -197,8 +205,8 @@ function missingEvidence(candidate) {
   if (!cleanText(candidate.source_proof_url)) missing.push('source proof URL');
   if (!cleanText(candidate.source_proof_text)) missing.push('source proof text');
   if (!cleanText(candidate.event_type)) missing.push('event type');
-  if (!cleanText(firstValue(candidate.sale_date, candidate.auction_date))) missing.push('sale or event date');
-  if (!cleanText(firstValue(candidate.parcel_id, candidate.case_number))) missing.push('parcel or case number');
+  if (!cleanText(firstValue(candidate.sale_date, candidate.auction_date, candidate.opened_date))) missing.push('sale or event date');
+  if (!cleanText(firstValue(candidate.parcel_id, candidate.case_number, candidate.record_id))) missing.push('parcel, case, or record id');
   return Array.from(new Set(missing));
 }
 
@@ -232,8 +240,13 @@ function normalizeCandidate(rawCandidate, source, index, capturedAt) {
     zip: cleanText(rawCandidate.zip) || null,
     parcel_id: cleanText(firstValue(rawCandidate.parcel_id, rawCandidate.parcel, rawCandidate.apn)) || null,
     case_number: cleanText(firstValue(rawCandidate.case_number, rawCandidate.cause_number)) || null,
+    record_id: cleanText(rawCandidate.record_id) || null,
     owner_name: cleanText(rawCandidate.owner_name) || null,
     event_type: cleanText(firstValue(rawCandidate.event_type, categoryFor(source))) || null,
+    violation_type: cleanText(rawCandidate.violation_type) || null,
+    violation_status: cleanText(rawCandidate.violation_status) || null,
+    opened_date: cleanText(rawCandidate.opened_date) || null,
+    closed_date: cleanText(rawCandidate.closed_date) || null,
     sale_date: cleanText(rawCandidate.sale_date) || null,
     auction_date: cleanText(firstValue(rawCandidate.auction_date, rawCandidate.sale_date)) || null,
     opening_bid: asNumber(firstValue(rawCandidate.opening_bid, rawCandidate.minimum_bid_amount)) || null,
@@ -250,8 +263,16 @@ function normalizeCandidate(rawCandidate, source, index, capturedAt) {
   };
   const addressQuality = classifyAddressQuality(normalized);
   const sourceStatus = sourceEvidenceStatus(normalized);
-  const identityStatus = propertyIdentityStatus(addressQuality, sourceStatus);
-  const status = workflowStatus(addressQuality, sourceStatus, identityStatus);
+  let identityStatus = propertyIdentityStatus(addressQuality, sourceStatus);
+  let status = workflowStatus(addressQuality, sourceStatus, identityStatus);
+  const rawWorkflowStatus = cleanText(rawCandidate.workflow_status);
+  if (rawWorkflowStatus === 'Invalid/Junk' || rawWorkflowStatus === 'Source Repair Needed') {
+    status = rawWorkflowStatus;
+  }
+  const rawIdentityStatus = cleanText(rawCandidate.property_identity_status);
+  if (rawIdentityStatus === 'junk_address_blocked' || rawIdentityStatus === 'needs_source_repair' || rawIdentityStatus === 'partial') {
+    identityStatus = rawIdentityStatus;
+  }
   normalized.address_quality = addressQuality;
   normalized.source_evidence_status = sourceStatus;
   normalized.property_identity_status = identityStatus;
@@ -273,7 +294,7 @@ function dedupeKey(candidate) {
     cleanText(candidate.property_address).toLowerCase(),
     cleanText(candidate.source_proof_url || candidate.source_url).toLowerCase(),
     cleanText(firstValue(candidate.sale_date, candidate.auction_date)).toLowerCase(),
-    cleanText(firstValue(candidate.case_number, candidate.parcel_id)).toLowerCase()
+    cleanText(firstValue(candidate.case_number, candidate.parcel_id, candidate.record_id)).toLowerCase()
   ].filter(Boolean).join('|') || candidate.candidate_id;
 }
 
@@ -328,8 +349,27 @@ function summarizeRunEvidence(lastRun) {
     summary.files_blocked += countNumber(result.files_blocked);
     summary.file_text_blocks_checked += countNumber(result.file_text_blocks_checked);
     summary.file_rows_checked += countNumber(result.file_rows_checked);
+    if (result.code_violations_attempted === true) summary.code_violations_attempted = true;
+    summary.code_violation_rows_checked += countNumber(result.code_violation_rows_checked);
+    summary.code_violation_candidates_extracted += countNumber(result.code_violation_candidates_extracted);
   }
   return summary;
+}
+
+function combineCandidateAndRunCounts(candidateCounts, runCounts) {
+  const candidate = Object.assign(emptyCounts(), candidateCounts || {});
+  const run = Object.assign(emptyCounts(), runCounts || {});
+  return Object.assign(emptyCounts(), candidate, run, {
+    total_candidates: candidate.total_candidates,
+    research_ready: candidate.research_ready,
+    source_repair_needed: candidate.source_repair_needed,
+    invalid_junk: candidate.invalid_junk,
+    missing_address: candidate.missing_address,
+    with_sale_date: candidate.with_sale_date,
+    with_amount: candidate.with_amount,
+    with_parcel: candidate.with_parcel,
+    with_source_url: candidate.with_source_url
+  });
 }
 
 function sourceIdsFromOptions(options = {}) {
@@ -337,13 +377,14 @@ function sourceIdsFromOptions(options = {}) {
   if (options.source_id || options.sourceId) return [cleanText(options.source_id || options.sourceId)];
   const ids = [PRIMARY_SOURCE_ID];
   if (options.include_secondary === true || options.includeSecondary === true) ids.push(SECONDARY_SOURCE_ID);
+  if (options.include_code_violations === true || options.includeCodeViolations === true) ids.push(CODE_VIOLATIONS_SOURCE_ID);
   return ids;
 }
 
 async function runOfficialSourceCapture(options = {}) {
   const capturedAt = nowIso();
   const maxCandidates = Math.max(1, Math.min(Number(options.max_candidates || options.maxCandidates || MAX_RUN_CANDIDATES) || MAX_RUN_CANDIDATES, MAX_RUN_CANDIDATES));
-  const sourceIds = sourceIdsFromOptions(options).filter((sourceId) => sourceId === PRIMARY_SOURCE_ID || sourceId === SECONDARY_SOURCE_ID);
+  const sourceIds = sourceIdsFromOptions(options).filter((sourceId) => sourceId === PRIMARY_SOURCE_ID || sourceId === SECONDARY_SOURCE_ID || CODE_VIOLATIONS_SOURCE_IDS.has(sourceId));
   const warnings = [];
   const errors = [];
   const runResults = [];
@@ -365,6 +406,9 @@ async function runOfficialSourceCapture(options = {}) {
   let totalBrowserLinksFollowed = 0;
   let totalVisibleTablesFound = 0;
   let totalVisibleTextBlocksChecked = 0;
+  let codeViolationsAttempted = false;
+  let totalCodeViolationRowsChecked = 0;
+  let totalCodeViolationCandidatesExtracted = 0;
 
   for (const sourceId of sourceIds.length ? sourceIds : [PRIMARY_SOURCE_ID]) {
     const source = dallasSourceAgent.findSource(sourceId);
@@ -373,6 +417,41 @@ async function runOfficialSourceCapture(options = {}) {
       continue;
     }
     try {
+      if (CODE_VIOLATIONS_SOURCE_IDS.has(sourceId)) {
+        const codeResult = await codeViolationsAdapter.runDallasCodeViolationsAdapter({
+          source,
+          source_url: source.source_url,
+          max_rows: options.max_code_violation_rows || options.maxCodeViolationRows || options.max_candidates || options.maxCandidates || 25,
+          timeout_ms: options.timeout_ms || options.timeout || 10000,
+          captured_at: capturedAt
+        });
+        const codeCandidates = codeResult && Array.isArray(codeResult.candidates) ? codeResult.candidates : [];
+        codeViolationsAttempted = true;
+        totalCodeViolationRowsChecked += countNumber(codeResult && codeResult.code_violation_rows_checked);
+        totalCodeViolationCandidatesExtracted += codeCandidates.length;
+        totalAdapterCandidates += codeCandidates.length;
+        normalizedCandidates = normalizedCandidates.concat(codeCandidates.map((candidate, index) => normalizeCandidate(candidate, source, index, capturedAt)));
+        if (!codeCandidates.length) {
+          warnings.push({
+            source_id: sourceId,
+            message: (codeResult && codeResult.blocked_reason) || 'No Dallas OpenData code violation candidates found in the capped sample.'
+          });
+        }
+        runResults.push({
+          source_id: sourceId,
+          source_name: source.source_name,
+          status: codeResult && codeResult.status || 'unknown',
+          reason: codeResult && codeResult.blocked_reason || '',
+          candidate_count: codeCandidates.length,
+          adapter_candidate_count: codeCandidates.length,
+          code_violations_attempted: true,
+          code_violation_rows_checked: countNumber(codeResult && codeResult.code_violation_rows_checked),
+          code_violation_candidates_extracted: codeCandidates.length,
+          source_url: source.source_url,
+          manual_required: false
+        });
+        continue;
+      }
       const result = await dallasSourceAgent.runDallasSourceAgent({
         source_id: sourceId,
         max_candidates: maxCandidates,
@@ -521,6 +600,9 @@ async function runOfficialSourceCapture(options = {}) {
     browser_links_followed: totalBrowserLinksFollowed,
     visible_tables_found: totalVisibleTablesFound,
     visible_text_blocks_checked: totalVisibleTextBlocksChecked,
+    code_violations_attempted: codeViolationsAttempted,
+    code_violation_rows_checked: totalCodeViolationRowsChecked,
+    code_violation_candidates_extracted: totalCodeViolationCandidatesExtracted,
     warnings,
     errors,
     results: runResults
@@ -535,7 +617,7 @@ async function runOfficialSourceCapture(options = {}) {
     should_ingest: false,
     dry_run: true,
     last_run: store.last_run,
-    counts: Object.assign({}, store.counts, summarizeRunEvidence(store.last_run)),
+    counts: combineCandidateAndRunCounts(store.counts, summarizeRunEvidence(store.last_run)),
     candidates: normalizedCandidates,
     stored_candidate_count: store.candidates.length,
     evidence_links_found: totalEvidenceLinksFound,
@@ -555,6 +637,9 @@ async function runOfficialSourceCapture(options = {}) {
     browser_links_followed: totalBrowserLinksFollowed,
     visible_tables_found: totalVisibleTablesFound,
     visible_text_blocks_checked: totalVisibleTextBlocksChecked,
+    code_violations_attempted: codeViolationsAttempted,
+    code_violation_rows_checked: totalCodeViolationRowsChecked,
+    code_violation_candidates_extracted: totalCodeViolationCandidatesExtracted,
     warnings,
     errors
   };
@@ -569,7 +654,7 @@ function getOfficialSourceCaptureStatus(options = {}) {
     market: store.market || { county: 'Dallas', state: 'TX' },
     updated_at: store.updated_at || null,
     last_run: store.last_run || null,
-    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
+    counts: combineCandidateAndRunCounts(store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
     candidate_count: Array.isArray(store.candidates) ? store.candidates.length : 0
   };
 }
@@ -584,7 +669,7 @@ function listOfficialSourceCandidates(options = {}) {
     ok: true,
     preview_only: true,
     should_ingest: false,
-    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
+    counts: combineCandidateAndRunCounts(store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
     candidates: candidates.slice(0, limit),
     candidate_count: candidates.length,
     last_run: store.last_run || null
@@ -595,6 +680,7 @@ module.exports = {
   STORE_PATH,
   PRIMARY_SOURCE_ID,
   SECONDARY_SOURCE_ID,
+  CODE_VIOLATIONS_SOURCE_ID,
   classifyAddressQuality,
   normalizeCandidate,
   summarizeCandidates,

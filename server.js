@@ -1482,7 +1482,9 @@ app.post('/api/source-preview/dallas/official-sources/run', async (req, res) => 
       source_id: body.source_id || body.sourceId,
       source_ids: body.source_ids || body.sourceIds,
       include_secondary: body.include_secondary === true || body.includeSecondary === true,
+      include_code_violations: body.include_code_violations === true || body.includeCodeViolations === true,
       max_candidates: body.max_candidates || body.maxCandidates,
+      max_code_violation_rows: body.max_code_violation_rows || body.maxCodeViolationRows,
       max_files: body.max_files || body.maxFiles,
       max_browser_pages: body.max_browser_pages || body.maxBrowserPages,
       timeout_ms: body.timeout_ms || body.timeout
