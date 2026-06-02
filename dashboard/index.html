@@ -22992,8 +22992,11 @@ async function sourcePreviewRunDallasOfficialCapture() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
-        source_ids: ['tx_dallas_sheriff_tax_sales', 'tx_dallas_code_violations_socrata'],
+        source_ids: ['tx_dallas_sheriff_tax_sales', 'tx_dallas_county_clerk_foreclosure_notices', 'tx_dallas_code_violations_socrata'],
+        include_foreclosure_notices: true,
         max_candidates: 10,
+        max_foreclosure_notice_rows: 25,
+        max_foreclosure_files: 6,
         max_code_violation_rows: 25,
         preview_only: true,
         dry_run: true
@@ -23365,6 +23368,10 @@ function renderDallasOfficialSourceCapturePanel() {
       countCard('Files parsed', counts.files_parsed, '#047857', '#ecfdf5') +
       countCard('Files blocked', counts.files_blocked, '#92400e', '#fffbeb') +
       countCard('File rows checked', counts.file_rows_checked, '#334155', '#f8fafc') +
+      countCard('Foreclosure notices checked', counts.foreclosure_notice_rows_checked, '#334155', '#f8fafc') +
+      countCard('Foreclosure notice candidates', counts.foreclosure_notice_candidates_extracted, '#047857', '#ecfdf5') +
+      countCard('Ready foreclosure candidates', counts.foreclosure_notice_research_ready, '#047857', '#ecfdf5') +
+      countCard('Foreclosure notices needing repair', counts.foreclosure_notice_source_repair_needed, '#92400e', '#fffbeb') +
       countCard('Code violations checked', counts.code_violation_rows_checked, '#334155', '#f8fafc') +
       countCard('Active/open checked', counts.code_violation_active_rows_checked, '#334155', '#f8fafc') +
       countCard('Recent checked', counts.code_violation_recent_rows_checked, '#334155', '#f8fafc') +

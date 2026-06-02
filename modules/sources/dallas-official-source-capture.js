@@ -7,6 +7,7 @@ const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapt
 const controlledBrowserCapture = require('./dallas-controlled-browser-capture');
 const realFileParser = require('./dallas-real-file-parser');
 const codeViolationsAdapter = require('./dallas-code-violations-adapter');
+const foreclosureNoticeAdapter = require('./dallas-foreclosure-notice-adapter');
 
 const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'dallas-source-candidates.json');
 const MAX_RUN_CANDIDATES = 10;
@@ -68,7 +69,14 @@ function emptyCounts() {
     code_violation_research_ready: 0,
     code_violation_source_repair_needed: 0,
     code_violation_closed_old_count: 0,
-    code_violation_fallback_used: false
+    code_violation_fallback_used: false,
+    foreclosure_notices_attempted: false,
+    foreclosure_notice_rows_checked: 0,
+    foreclosure_notice_candidates_extracted: 0,
+    foreclosure_notice_research_ready: 0,
+    foreclosure_notice_source_repair_needed: 0,
+    foreclosure_notice_blocked: 0,
+    foreclosure_notice_files_checked: 0
   };
 }
 
@@ -371,6 +379,13 @@ function summarizeRunEvidence(lastRun) {
     summary.code_violation_source_repair_needed += countNumber(result.code_violation_source_repair_needed);
     summary.code_violation_closed_old_count += countNumber(result.code_violation_closed_old_count);
     if (result.code_violation_fallback_used === true) summary.code_violation_fallback_used = true;
+    if (result.foreclosure_notices_attempted === true) summary.foreclosure_notices_attempted = true;
+    summary.foreclosure_notice_rows_checked += countNumber(result.foreclosure_notice_rows_checked);
+    summary.foreclosure_notice_candidates_extracted += countNumber(result.foreclosure_notice_candidates_extracted);
+    summary.foreclosure_notice_research_ready += countNumber(result.foreclosure_notice_research_ready);
+    summary.foreclosure_notice_source_repair_needed += countNumber(result.foreclosure_notice_source_repair_needed);
+    summary.foreclosure_notice_blocked += countNumber(result.foreclosure_notice_blocked);
+    summary.foreclosure_notice_files_checked += countNumber(result.foreclosure_notice_files_checked);
   }
   return summary;
 }
@@ -396,8 +411,9 @@ function sourceIdsFromOptions(options = {}) {
   if (options.source_id || options.sourceId) return [cleanText(options.source_id || options.sourceId)];
   const ids = [PRIMARY_SOURCE_ID];
   if (options.include_secondary === true || options.includeSecondary === true) ids.push(SECONDARY_SOURCE_ID);
+  if (options.include_foreclosure_notices === true || options.includeForeclosureNotices === true) ids.push(SECONDARY_SOURCE_ID);
   if (options.include_code_violations === true || options.includeCodeViolations === true) ids.push(CODE_VIOLATIONS_SOURCE_ID);
-  return ids;
+  return Array.from(new Set(ids));
 }
 
 async function runOfficialSourceCapture(options = {}) {
@@ -434,6 +450,13 @@ async function runOfficialSourceCapture(options = {}) {
   let totalCodeViolationSourceRepairNeeded = 0;
   let totalCodeViolationClosedOldCount = 0;
   let codeViolationFallbackUsed = false;
+  let foreclosureNoticesAttempted = false;
+  let totalForeclosureNoticeRowsChecked = 0;
+  let totalForeclosureNoticeCandidatesExtracted = 0;
+  let totalForeclosureNoticeResearchReady = 0;
+  let totalForeclosureNoticeSourceRepairNeeded = 0;
+  let totalForeclosureNoticeBlocked = 0;
+  let totalForeclosureNoticeFilesChecked = 0;
 
   for (const sourceId of sourceIds.length ? sourceIds : [PRIMARY_SOURCE_ID]) {
     const source = dallasSourceAgent.findSource(sourceId);
@@ -486,6 +509,60 @@ async function runOfficialSourceCapture(options = {}) {
           code_violation_fallback_used: codeResult && codeResult.code_violation_fallback_used === true,
           source_url: source.source_url,
           manual_required: false
+        });
+        continue;
+      }
+      if (sourceId === SECONDARY_SOURCE_ID && (options.include_foreclosure_notices === true || options.includeForeclosureNotices === true || options.include_secondary === true || options.includeSecondary === true || cleanText(options.source_id || options.sourceId) === SECONDARY_SOURCE_ID || (Array.isArray(options.source_ids) && options.source_ids.includes(SECONDARY_SOURCE_ID)))) {
+        const foreclosureResult = await foreclosureNoticeAdapter.runDallasForeclosureNoticeAdapter({
+          source,
+          source_url: source.source_url,
+          max_rows: options.max_foreclosure_notice_rows || options.maxForeclosureNoticeRows || options.max_candidates || options.maxCandidates || 25,
+          max_files: options.max_foreclosure_files || options.maxForeclosureFiles || options.max_files || options.maxFiles || 6,
+          timeout_ms: options.timeout_ms || options.timeout || 10000,
+          captured_at: capturedAt
+        });
+        const foreclosureCandidates = foreclosureResult && Array.isArray(foreclosureResult.candidates) ? foreclosureResult.candidates : [];
+        foreclosureNoticesAttempted = true;
+        totalForeclosureNoticeRowsChecked += countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_rows_checked);
+        totalForeclosureNoticeCandidatesExtracted += foreclosureCandidates.length;
+        totalForeclosureNoticeResearchReady += countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_research_ready);
+        totalForeclosureNoticeSourceRepairNeeded += countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_source_repair_needed);
+        totalForeclosureNoticeBlocked += countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_blocked);
+        totalForeclosureNoticeFilesChecked += countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_files_checked);
+        totalEvidenceLinksFound += countNumber(foreclosureResult && foreclosureResult.evidence_links_found);
+        totalFilesDetected += countNumber(foreclosureResult && foreclosureResult.files_detected);
+        totalFilesParsed += countNumber(foreclosureResult && foreclosureResult.files_parsed);
+        totalFilesBlocked += countNumber(foreclosureResult && foreclosureResult.files_blocked);
+        totalFileRowsChecked += countNumber(foreclosureResult && foreclosureResult.file_rows_checked);
+        totalAdapterCandidates += foreclosureCandidates.length;
+        normalizedCandidates = normalizedCandidates.concat(foreclosureCandidates.map((candidate, index) => normalizeCandidate(candidate, source, index, capturedAt)));
+        if (!foreclosureCandidates.length) {
+          warnings.push({
+            source_id: sourceId,
+            message: (foreclosureResult && foreclosureResult.blocked_reason) || 'No Dallas County Clerk foreclosure notice candidates found in the capped check.'
+          });
+        }
+        runResults.push({
+          source_id: sourceId,
+          source_name: source.source_name,
+          status: foreclosureResult && foreclosureResult.status || 'unknown',
+          reason: foreclosureResult && foreclosureResult.blocked_reason || '',
+          candidate_count: foreclosureCandidates.length,
+          adapter_candidate_count: foreclosureCandidates.length,
+          foreclosure_notices_attempted: true,
+          foreclosure_notice_rows_checked: countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_rows_checked),
+          foreclosure_notice_candidates_extracted: foreclosureCandidates.length,
+          foreclosure_notice_research_ready: countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_research_ready),
+          foreclosure_notice_source_repair_needed: countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_source_repair_needed),
+          foreclosure_notice_blocked: countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_blocked),
+          foreclosure_notice_files_checked: countNumber(foreclosureResult && foreclosureResult.foreclosure_notice_files_checked),
+          evidence_links_found: countNumber(foreclosureResult && foreclosureResult.evidence_links_found),
+          files_detected: countNumber(foreclosureResult && foreclosureResult.files_detected),
+          files_parsed: countNumber(foreclosureResult && foreclosureResult.files_parsed),
+          files_blocked: countNumber(foreclosureResult && foreclosureResult.files_blocked),
+          file_rows_checked: countNumber(foreclosureResult && foreclosureResult.file_rows_checked),
+          source_url: source.source_url,
+          manual_required: !foreclosureCandidates.length
         });
         continue;
       }
@@ -646,6 +723,13 @@ async function runOfficialSourceCapture(options = {}) {
     code_violation_source_repair_needed: totalCodeViolationSourceRepairNeeded,
     code_violation_closed_old_count: totalCodeViolationClosedOldCount,
     code_violation_fallback_used: codeViolationFallbackUsed,
+    foreclosure_notices_attempted: foreclosureNoticesAttempted,
+    foreclosure_notice_rows_checked: totalForeclosureNoticeRowsChecked,
+    foreclosure_notice_candidates_extracted: totalForeclosureNoticeCandidatesExtracted,
+    foreclosure_notice_research_ready: totalForeclosureNoticeResearchReady,
+    foreclosure_notice_source_repair_needed: totalForeclosureNoticeSourceRepairNeeded,
+    foreclosure_notice_blocked: totalForeclosureNoticeBlocked,
+    foreclosure_notice_files_checked: totalForeclosureNoticeFilesChecked,
     warnings,
     errors,
     results: runResults
@@ -689,6 +773,13 @@ async function runOfficialSourceCapture(options = {}) {
     code_violation_source_repair_needed: totalCodeViolationSourceRepairNeeded,
     code_violation_closed_old_count: totalCodeViolationClosedOldCount,
     code_violation_fallback_used: codeViolationFallbackUsed,
+    foreclosure_notices_attempted: foreclosureNoticesAttempted,
+    foreclosure_notice_rows_checked: totalForeclosureNoticeRowsChecked,
+    foreclosure_notice_candidates_extracted: totalForeclosureNoticeCandidatesExtracted,
+    foreclosure_notice_research_ready: totalForeclosureNoticeResearchReady,
+    foreclosure_notice_source_repair_needed: totalForeclosureNoticeSourceRepairNeeded,
+    foreclosure_notice_blocked: totalForeclosureNoticeBlocked,
+    foreclosure_notice_files_checked: totalForeclosureNoticeFilesChecked,
     warnings,
     errors
   };
