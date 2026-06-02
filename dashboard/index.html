@@ -1218,7 +1218,7 @@ function aiDealCompResearchLabel(status) {
     blocked_needs_source_evidence: 'Needs source evidence',
     ready_to_research: 'Ready to research',
     researching: 'Researching',
-    candidates_found: 'Candidates found',
+    candidates_found: 'Candidate evidence found',
     no_candidates_found: 'No candidates found',
     failed: 'Needs review'
   })[status] || 'Not configured';
@@ -1227,6 +1227,14 @@ function aiDealCompResearchLabel(status) {
 function aiDealCompProviderLabel(job) {
   job = job || {};
   if (job.comp_research_provider_label) return job.comp_research_provider_label;
+  var labels = {
+    gemini_web_research: 'Gemini',
+    groq_research: 'Groq',
+    openrouter_research: 'OpenRouter',
+    openai_web_research: 'OpenAI',
+    deterministic_fallback: 'Fallback'
+  };
+  if (labels[job.comp_research_provider]) return labels[job.comp_research_provider];
   if (job.comp_research_provider && job.comp_research_provider !== 'none') return job.comp_research_provider;
   return 'Not configured';
 }
@@ -1270,7 +1278,7 @@ function aiDealCompResearchSection(job) {
       : status === 'blocked_needs_source_evidence'
         ? 'Source repair needed before comps.'
         : status === 'ready_to_research'
-          ? 'OpenAI web research is ready. Click Research Comps to gather public evidence.'
+          ? aiDealCompProviderLabel(job) + ' research is ready. Click Research Comps to gather public evidence.'
           : status === 'candidates_found'
             ? 'Candidate comps found - review evidence.'
             : status === 'no_candidates_found'
@@ -1279,8 +1287,8 @@ function aiDealCompResearchSection(job) {
   return '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">' +
     '<div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Comp Research</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-      aiDealStatusPill('Provider: ' + aiDealCompProviderLabel(job), status === 'not_configured' ? 'warn' : 'good') +
-      aiDealStatusPill('Status: ' + label, aiDealCompResearchTone(status)) +
+      aiDealStatusPill('Research provider: ' + aiDealCompProviderLabel(job), status === 'not_configured' ? 'warn' : 'good') +
+      aiDealStatusPill('Research status: ' + label, aiDealCompResearchTone(status)) +
       aiDealStatusPill('Verified sold comps: ' + verified, verified >= 3 ? 'good' : 'warn') +
       aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Draft ready' : 'Locked'), job.arv_range ? 'good' : 'warn') +
     '</div>' +

@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const openaiWebResearch = require('./openai-web-research-provider');
+const researchProviderRouter = require('./free-research-provider-router');
 
 const PROVIDER_STATUSES = new Set([
   'not_configured',
@@ -55,54 +55,23 @@ function candidateId() {
 
 function getConfiguredCompProviders(env) {
   env = env || process.env;
-  const preferred = cleanText(env.COMP_RESEARCH_PROVIDER || 'none').toLowerCase();
-  const providers = [];
-  const openaiConfig = openaiWebResearch.getConfig(env);
-  if (openaiConfig.configured) {
-    providers.push({
-      id: 'openai_web_research',
-      label: providerLabel('openai_web_research'),
-      enabled: true,
-      implemented: true,
-      source: 'ENABLE_OPENAI_WEB_RESEARCH'
-    });
-  }
-  if (preferred && preferred !== 'none') {
-    if (preferred === 'openai_web_research' && !openaiConfig.configured) {
-      return providers;
-    }
-    if (!providers.some((provider) => provider.id === preferred)) providers.push({
-      id: preferred,
-      label: providerLabel(preferred),
-      enabled: true,
-      implemented: preferred === 'openai_web_research' && openaiConfig.configured,
-      source: 'COMP_RESEARCH_PROVIDER'
-    });
-  }
-  [
-    ['openai', 'ENABLE_OPENAI_COMP_RESEARCH'],
-    ['firecrawl', 'ENABLE_FIRECRAWL_COMP_RESEARCH'],
-    ['playwright', 'ENABLE_PLAYWRIGHT_COMP_RESEARCH']
-  ].forEach(([id, key]) => {
-    if (envEnabled(env[key]) && !providers.some((provider) => provider.id === id)) {
-      providers.push({
-        id,
-        label: providerLabel(id),
-        enabled: true,
-        implemented: false,
-        source: key
-      });
-    }
-  });
-  return providers;
+  return researchProviderRouter.getConfiguredResearchProviders(env).map((provider) => ({
+    id: provider.id,
+    label: provider.label,
+    enabled: provider.enabled === true,
+    implemented: provider.implemented === true,
+    source: provider.source || '',
+    model: provider.model || ''
+  }));
 }
 
 function providerLabel(id) {
   return ({
-    openai_web_research: 'OpenAI web research',
-    openai: 'OpenAI research',
-    firecrawl: 'Firecrawl',
-    playwright: 'Browser-assisted research',
+    gemini_web_research: 'Gemini',
+    groq_research: 'Groq',
+    openrouter_research: 'OpenRouter',
+    openai_web_research: 'OpenAI',
+    deterministic_fallback: 'Fallback',
     attom: 'ATTOM',
     batchdata: 'BatchData',
     propstream: 'PropStream',
@@ -254,25 +223,25 @@ function runCompResearch(job, options) {
     });
   }
   const provider = providers[0];
-  if (provider.id === 'openai_web_research' && provider.implemented) {
+  if (provider.implemented) {
     if (!options.executeProvider) {
       return summarizeCompResearchState(job, {
         provider_status: 'ready_to_research',
         provider: provider.id,
         candidates: existingCandidates,
-        message: 'OpenAI web research is ready. Click Research Comps to gather public evidence.',
+        message: `${provider.label} research is ready. Click Research Comps to gather public evidence.`,
         missing_fields: []
       });
     }
-    return openaiWebResearch.runOpenAIWebResearch(job, options)
-      .then((result) => summarizeOpenAIResearchState(job, provider, result))
+    return researchProviderRouter.runResearchProvider(job, options)
+      .then((result) => summarizeRouterResearchState(job, provider, result))
       .catch((error) => summarizeCompResearchState(job, {
         provider_status: 'failed',
         provider: provider.id,
         candidates: existingCandidates,
         message: 'Comp research needs review.',
-        missing_fields: ['OpenAI web research result'],
-        warnings: [error && error.message ? error.message : 'OpenAI web research failed.']
+        missing_fields: ['Public research result'],
+        warnings: [error && error.message ? error.message : 'Public research failed.']
       }));
   }
   return summarizeCompResearchState(job, {
@@ -291,7 +260,7 @@ function researchResultMessage(result) {
   return 'Not enough public comp evidence found.';
 }
 
-function summarizeOpenAIResearchState(job, provider, result) {
+function summarizeRouterResearchState(job, provider, result) {
   result = result || {};
   const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
   const status = result.status === 'failed'
