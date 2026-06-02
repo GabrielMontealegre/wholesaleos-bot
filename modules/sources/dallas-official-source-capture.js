@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const dallasSourceAgent = require('./dallas-source-agent');
+const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 
 const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'dallas-source-candidates.json');
 const MAX_RUN_CANDIDATES = 10;
@@ -36,7 +37,10 @@ function emptyCounts() {
     with_sale_date: 0,
     with_amount: 0,
     with_parcel: 0,
-    with_source_url: 0
+    with_source_url: 0,
+    evidence_links_found: 0,
+    files_pages_checked: 0,
+    candidates_extracted: 0
   };
 }
 
@@ -281,6 +285,21 @@ function summarizeCandidates(candidates) {
   return counts;
 }
 
+function summarizeRunEvidence(lastRun) {
+  const summary = {
+    evidence_links_found: 0,
+    files_pages_checked: 0,
+    candidates_extracted: 0
+  };
+  const results = Array.isArray(lastRun && lastRun.results) ? lastRun.results : [];
+  for (const result of results) {
+    summary.evidence_links_found += Number(result.evidence_links_found || 0);
+    summary.files_pages_checked += Number(result.files_pages_checked || result.files_pages_attempted || 0);
+    summary.candidates_extracted += Number(result.adapter_candidate_count || result.candidate_count || 0);
+  }
+  return summary;
+}
+
 function sourceIdsFromOptions(options = {}) {
   if (Array.isArray(options.source_ids) && options.source_ids.length) return options.source_ids.map(cleanText).filter(Boolean);
   if (options.source_id || options.sourceId) return [cleanText(options.source_id || options.sourceId)];
@@ -297,6 +316,9 @@ async function runOfficialSourceCapture(options = {}) {
   const errors = [];
   const runResults = [];
   let normalizedCandidates = [];
+  let totalEvidenceLinksFound = 0;
+  let totalFilesPagesChecked = 0;
+  let totalAdapterCandidates = 0;
 
   for (const sourceId of sourceIds.length ? sourceIds : [PRIMARY_SOURCE_ID]) {
     const source = dallasSourceAgent.findSource(sourceId);
@@ -316,14 +338,44 @@ async function runOfficialSourceCapture(options = {}) {
         captured_at: capturedAt
       });
       const candidates = result && result.batch && Array.isArray(result.batch.candidates) ? result.batch.candidates : [];
+      const evidenceLinks = result && result.batch && result.batch.source_agent && Array.isArray(result.batch.source_agent.evidence_links)
+        ? result.batch.source_agent.evidence_links
+        : [];
+      let adapterResult = null;
+      if (!candidates.length || evidenceLinks.length) {
+        adapterResult = await browserFileEvidenceAdapter.runDallasBrowserFileEvidenceAdapter({
+          source,
+          source_url: source.source_url,
+          evidence_links: evidenceLinks,
+          max_candidates: maxCandidates,
+          timeout_ms: options.timeout_ms || options.timeout || 10000,
+          captured_at: capturedAt
+        });
+      }
+      const adapterCandidates = adapterResult && Array.isArray(adapterResult.candidates) ? adapterResult.candidates : [];
+      totalEvidenceLinksFound += Number(adapterResult && adapterResult.evidence_links_found || evidenceLinks.length || 0);
+      totalFilesPagesChecked += Number(adapterResult && adapterResult.files_pages_attempted || 0);
+      totalAdapterCandidates += adapterCandidates.length;
       normalizedCandidates = normalizedCandidates.concat(candidates.map((candidate, index) => normalizeCandidate(candidate, source, index, capturedAt)));
-      if (!candidates.length) warnings.push({ source_id: sourceId, message: result.reason || 'No property-level candidates found. Source may need browser-assisted review.' });
+      normalizedCandidates = normalizedCandidates.concat(adapterCandidates.map((candidate, index) => normalizeCandidate(candidate, source, candidates.length + index, capturedAt)));
+      if (!candidates.length && !adapterCandidates.length) {
+        warnings.push({
+          source_id: sourceId,
+          message: (adapterResult && adapterResult.blocked_reason) || result.reason || 'No property-level candidates found. Source may need browser-assisted review.'
+        });
+      }
       runResults.push({
         source_id: sourceId,
         source_name: source.source_name,
         status: result.status || 'unknown',
         reason: result.reason || '',
-        candidate_count: candidates.length,
+        candidate_count: candidates.length + adapterCandidates.length,
+        static_candidate_count: candidates.length,
+        adapter_candidate_count: adapterCandidates.length,
+        evidence_links_found: Number(adapterResult && adapterResult.evidence_links_found || evidenceLinks.length || 0),
+        files_pages_checked: Number(adapterResult && adapterResult.files_pages_attempted || 0),
+        adapter_status: adapterResult && adapterResult.status || '',
+        adapter_blocked_reason: adapterResult && adapterResult.blocked_reason || '',
         manual_required: result.manual_required === true,
         source_url: source.source_url
       });
@@ -343,6 +395,9 @@ async function runOfficialSourceCapture(options = {}) {
     preview_only: true,
     should_ingest: false,
     status: errors.length && !normalizedCandidates.length ? 'blocked_or_failed' : (normalizedCandidates.length ? 'candidates_found' : 'needs_browser_assist'),
+    evidence_links_found: totalEvidenceLinksFound,
+    files_pages_checked: totalFilesPagesChecked,
+    candidates_extracted: totalAdapterCandidates,
     warnings,
     errors,
     results: runResults
@@ -357,9 +412,12 @@ async function runOfficialSourceCapture(options = {}) {
     should_ingest: false,
     dry_run: true,
     last_run: store.last_run,
-    counts: store.counts,
+    counts: Object.assign({}, store.counts, summarizeRunEvidence(store.last_run)),
     candidates: normalizedCandidates,
     stored_candidate_count: store.candidates.length,
+    evidence_links_found: totalEvidenceLinksFound,
+    files_pages_checked: totalFilesPagesChecked,
+    candidates_extracted: totalAdapterCandidates,
     warnings,
     errors
   };
@@ -374,7 +432,7 @@ function getOfficialSourceCaptureStatus(options = {}) {
     market: store.market || { county: 'Dallas', state: 'TX' },
     updated_at: store.updated_at || null,
     last_run: store.last_run || null,
-    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || [])),
+    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
     candidate_count: Array.isArray(store.candidates) ? store.candidates.length : 0
   };
 }
@@ -389,7 +447,7 @@ function listOfficialSourceCandidates(options = {}) {
     ok: true,
     preview_only: true,
     should_ingest: false,
-    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || [])),
+    counts: Object.assign(emptyCounts(), store.counts || summarizeCandidates(store.candidates || []), summarizeRunEvidence(store.last_run)),
     candidates: candidates.slice(0, limit),
     candidate_count: candidates.length,
     last_run: store.last_run || null
