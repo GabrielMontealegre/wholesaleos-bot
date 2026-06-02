@@ -85,6 +85,14 @@ function getDallasOfficialSourceCapture() {
   }
 }
 
+function getDallasSourcePriorityRouter() {
+  try { return require('./modules/sources/dallas-source-priority-router'); }
+  catch (e) {
+    logger.error('[dallas-source-priority-router] load failed: ' + e.message);
+    return null;
+  }
+}
+
 function getDallasCompIntelligenceAgent() {
   try { return require('./modules/research/dallas-comp-intelligence-agent'); }
   catch (e) {
@@ -1400,6 +1408,10 @@ app.get('/api/source-preview/dallas/sources', (req, res) => {
   try {
     const agent = getDallasSourceAgent();
     if (!agent) return res.status(500).json({ ok: false, error: 'dallas_source_agent_unavailable', dry_run: true, should_ingest: false });
+    const capture = getDallasOfficialSourceCapture();
+    const status = capture ? capture.getOfficialSourceCaptureStatus() : null;
+    const priorityRouter = getDallasSourcePriorityRouter();
+    const sourcePlan = priorityRouter ? priorityRouter.buildDallasSourcePriorityPlan(status || {}) : null;
     const sources = agent.loadDallasSources().map((source) => ({
       source_id: source.source_id,
       source_name: source.source_name,
@@ -1430,6 +1442,13 @@ app.get('/api/source-preview/dallas/sources', (req, res) => {
       should_ingest: false,
       default_source_id: agent.DEFAULT_SOURCE_ID,
       max_candidates: agent.MAX_CANDIDATES,
+      source_plan: sourcePlan,
+      highest_priority_sources: sourcePlan ? sourcePlan.highest_priority_sources : [],
+      ready_now_sources: sourcePlan ? sourcePlan.ready_now_sources : [],
+      needs_adapter_sources: sourcePlan ? sourcePlan.needs_adapter_sources : [],
+      support_only_sources: sourcePlan ? sourcePlan.support_only_sources : [],
+      blocked_sensitive_sources: sourcePlan ? sourcePlan.blocked_sensitive_sources : [],
+      recommended_next_source: sourcePlan ? sourcePlan.recommended_next_source : null,
       sources
     });
   } catch (e) {
@@ -1467,7 +1486,18 @@ app.get('/api/source-preview/dallas/official-sources/status', (req, res) => {
   try {
     const capture = getDallasOfficialSourceCapture();
     if (!capture) return res.status(500).json({ ok: false, error: 'dallas_official_source_capture_unavailable', preview_only: true, should_ingest: false });
-    res.json(capture.getOfficialSourceCaptureStatus());
+    const status = capture.getOfficialSourceCaptureStatus();
+    const priorityRouter = getDallasSourcePriorityRouter();
+    const sourcePlan = priorityRouter ? priorityRouter.buildDallasSourcePriorityPlan(status) : null;
+    res.json(Object.assign({}, status, {
+      source_plan: sourcePlan,
+      highest_priority_sources: sourcePlan ? sourcePlan.highest_priority_sources : [],
+      ready_now_sources: sourcePlan ? sourcePlan.ready_now_sources : [],
+      needs_adapter_sources: sourcePlan ? sourcePlan.needs_adapter_sources : [],
+      support_only_sources: sourcePlan ? sourcePlan.support_only_sources : [],
+      blocked_sensitive_sources: sourcePlan ? sourcePlan.blocked_sensitive_sources : [],
+      recommended_next_source: sourcePlan ? sourcePlan.recommended_next_source : null
+    }));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, preview_only: true, should_ingest: false });
   }
@@ -1489,12 +1519,21 @@ app.post('/api/source-preview/dallas/official-sources/run', async (req, res) => 
       max_browser_pages: body.max_browser_pages || body.maxBrowserPages,
       timeout_ms: body.timeout_ms || body.timeout
     });
+    const priorityRouter = getDallasSourcePriorityRouter();
+    const sourcePlan = priorityRouter ? priorityRouter.buildDallasSourcePriorityPlan({ counts: result && result.counts }) : null;
     res.status(result && result.ok === false ? 400 : 200).json(Object.assign({
       preview_only: true,
       dry_run: true,
       should_ingest: false,
       operator_triggered_only: true,
-      no_auto_ingestion: true
+      no_auto_ingestion: true,
+      source_plan: sourcePlan,
+      highest_priority_sources: sourcePlan ? sourcePlan.highest_priority_sources : [],
+      ready_now_sources: sourcePlan ? sourcePlan.ready_now_sources : [],
+      needs_adapter_sources: sourcePlan ? sourcePlan.needs_adapter_sources : [],
+      support_only_sources: sourcePlan ? sourcePlan.support_only_sources : [],
+      blocked_sensitive_sources: sourcePlan ? sourcePlan.blocked_sensitive_sources : [],
+      recommended_next_source: sourcePlan ? sourcePlan.recommended_next_source : null
     }, result));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, preview_only: true, dry_run: true, should_ingest: false });
@@ -1505,9 +1544,20 @@ app.get('/api/source-preview/dallas/official-sources/candidates', (req, res) => 
   try {
     const capture = getDallasOfficialSourceCapture();
     if (!capture) return res.status(500).json({ ok: false, error: 'dallas_official_source_capture_unavailable', preview_only: true, should_ingest: false });
-    res.json(capture.listOfficialSourceCandidates({
+    const result = capture.listOfficialSourceCandidates({
       limit: req.query.limit,
       status: req.query.status || req.query.workflow_status
+    });
+    const priorityRouter = getDallasSourcePriorityRouter();
+    const sourcePlan = priorityRouter ? priorityRouter.buildDallasSourcePriorityPlan({ counts: result && result.counts }) : null;
+    res.json(Object.assign({}, result, {
+      source_plan: sourcePlan,
+      highest_priority_sources: sourcePlan ? sourcePlan.highest_priority_sources : [],
+      ready_now_sources: sourcePlan ? sourcePlan.ready_now_sources : [],
+      needs_adapter_sources: sourcePlan ? sourcePlan.needs_adapter_sources : [],
+      support_only_sources: sourcePlan ? sourcePlan.support_only_sources : [],
+      blocked_sensitive_sources: sourcePlan ? sourcePlan.blocked_sensitive_sources : [],
+      recommended_next_source: sourcePlan ? sourcePlan.recommended_next_source : null
     }));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, preview_only: true, should_ingest: false });

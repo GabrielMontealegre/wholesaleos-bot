@@ -456,6 +456,7 @@ const APP = {
   dallasSourceAgentSelected: localStorage.getItem('montsan_dallas_source_agent_selected') || 'tx_dallas_sheriff_tax_sales',
   dallasSourceAgentStatus: null,
   dallasSourceAgentLastRun: JSON.parse(localStorage.getItem('montsan_dallas_source_agent_last_run') || 'null'),
+  dallasSourcePlan: null,
   dallasOfficialCaptureStatus: null,
   dallasOfficialCaptureCandidates: [],
   dallasOfficialCaptureMessage: '',
@@ -22745,6 +22746,58 @@ function dallasDistressSourceStatus(source) {
   return { label: 'Manual review', color: '#92400e', bg: '#fffbeb', order: 2 };
 }
 
+function renderDallasNextBestSourcesPanel() {
+  var plan = APP.dallasSourcePlan || (APP.dallasOfficialCaptureStatus && APP.dallasOfficialCaptureStatus.source_plan) || null;
+  if (!plan || !plan.recommended_next_source) return '';
+  var next = plan.recommended_next_source || {};
+  var highest = Array.isArray(plan.highest_priority_sources) ? plan.highest_priority_sources : [];
+  var ready = Array.isArray(plan.ready_now_sources) ? plan.ready_now_sources : [];
+  var needsAdapter = Array.isArray(plan.needs_adapter_sources) ? plan.needs_adapter_sources : [];
+  var supportOnly = Array.isArray(plan.support_only_sources) ? plan.support_only_sources : [];
+  var blocked = Array.isArray(plan.blocked_sensitive_sources) ? plan.blocked_sensitive_sources : [];
+  function sourceChip(source, label) {
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:8px;min-width:0">' +
+      '<div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:900;margin-bottom:3px">' + dallasPreviewSafeText(label || source.readiness || 'Source') + '</div>' +
+      '<div style="font-size:11px;color:#111827;font-weight:900;line-height:1.3">' + dallasPreviewSafeText(source.source_name || 'Dallas source') + '</div>' +
+      '<div style="font-size:10px;color:#64748b;line-height:1.4;margin-top:3px">' + dallasPreviewSafeText(source.expected_lead_type || source.category || '') + '</div>' +
+    '</div>';
+  }
+  function detail(label, value) {
+    return '<div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:8px">' +
+      '<div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:900;margin-bottom:3px">' + dallasPreviewSafeText(label) + '</div>' +
+      '<div style="font-size:11px;color:#1f2937;line-height:1.4;font-weight:800">' + dallasPreviewSafeText(value || 'Needs review') + '</div>' +
+    '</div>';
+  }
+  return '<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px;margin-bottom:12px;color:#1f2937">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:14px;font-weight:900;color:#1e3a8a">Next Best Dallas Sources</div>' +
+      '<div style="font-size:11px;color:#1d4ed8;line-height:1.45;margin-top:2px">Source selection only. No scraping, ingestion, or lead changes run from this panel.</div></div>' +
+      '<span style="font-size:10px;color:#92400e;background:#fffbeb;border:1px solid #f59e0b66;border-radius:999px;padding:4px 8px;font-weight:900">Code violations are support only unless active/open</span>' +
+    '</div>' +
+    '<div style="background:#fff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;margin-bottom:9px">' +
+      '<div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:900">Best next source</div>' +
+      '<div style="font-size:15px;color:#111827;font-weight:900;line-height:1.25;margin-top:3px">' + dallasPreviewSafeText(next.source_name || 'Dallas foreclosure notices') + '</div>' +
+      '<div style="font-size:11px;color:#334155;line-height:1.5;margin-top:5px">' + dallasPreviewSafeText(next.why_it_matters || '') + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:8px">' +
+        detail('Why this matters', next.why_it_matters) +
+        detail('Expected lead type', next.expected_lead_type) +
+        detail('Expected lead value', next.expected_lead_value) +
+        detail('Ready now', next.readiness) +
+        detail('What we need to build next', next.next_build_recommendation || next.extraction_method_needed) +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-bottom:8px">' +
+      sourceChip(highest[0] || next, 'Highest priority') +
+      sourceChip(ready[0] || {}, 'Ready now') +
+      sourceChip(needsAdapter[0] || next, 'Needs adapter') +
+      sourceChip(supportOnly[0] || {}, 'Support signal only') +
+    '</div>' +
+    '<details><summary style="cursor:pointer;font-size:11px;color:#374151;font-weight:900">Blocked pending legal review</summary>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:8px">' + blocked.slice(0, 4).map(function(source) { return sourceChip(source, 'Blocked pending legal review'); }).join('') + '</div>' +
+    '</details>' +
+  '</div>';
+}
+
 function renderDallasDistressSourceRegistryPanel() {
   var sources = dallasSourceAgentSources().slice();
   var wantedIds = {
@@ -22818,6 +22871,7 @@ async function sourcePreviewLoadDallasAgentSources() {
     var data = await resp.json();
     if (!resp.ok || data.ok === false) throw new Error(data.error || 'source list failed');
     APP.dallasSourceAgentSources = Array.isArray(data.sources) ? data.sources : [];
+    APP.dallasSourcePlan = data.source_plan || APP.dallasSourcePlan || null;
     if (!APP.dallasSourceAgentSelected && data.default_source_id) APP.dallasSourceAgentSelected = data.default_source_id;
     APP.dallasSourceAgentStatus = { ok: true, message: 'Dallas source list loaded.' };
     if (typeof render === 'function') render();
@@ -22903,6 +22957,7 @@ async function sourcePreviewLoadDallasOfficialCaptureStatus() {
     var data = await resp.json();
     if (!resp.ok || data.ok === false) throw new Error(data.error || 'Dallas source capture status unavailable.');
     APP.dallasOfficialCaptureStatus = data;
+    APP.dallasSourcePlan = data.source_plan || APP.dallasSourcePlan || null;
     if (typeof render === 'function') render();
   } catch (error) {
     APP.dallasOfficialCaptureMessage = error.message || 'Dallas source capture status unavailable.';
@@ -22918,6 +22973,7 @@ async function sourcePreviewLoadDallasOfficialCaptureCandidates() {
     APP.dallasOfficialCaptureStatus = APP.dallasOfficialCaptureStatus || {};
     APP.dallasOfficialCaptureStatus.counts = data.counts || APP.dallasOfficialCaptureStatus.counts || {};
     APP.dallasOfficialCaptureStatus.last_run = data.last_run || APP.dallasOfficialCaptureStatus.last_run || null;
+    APP.dallasSourcePlan = data.source_plan || APP.dallasSourcePlan || null;
     APP.dallasOfficialCaptureCandidates = Array.isArray(data.candidates) ? data.candidates : [];
     APP.dallasOfficialCaptureMessage = '';
     if (typeof render === 'function') render();
@@ -22949,8 +23005,10 @@ async function sourcePreviewRunDallasOfficialCapture() {
       ok: true,
       counts: data.counts || {},
       last_run: data.last_run || null,
+      source_plan: data.source_plan || null,
       candidate_count: data.stored_candidate_count || 0
     };
+    APP.dallasSourcePlan = data.source_plan || APP.dallasSourcePlan || null;
     APP.dallasOfficialCaptureCandidates = Array.isArray(data.candidates) ? data.candidates : [];
     APP.dallasOfficialCaptureMessage = data.candidates && data.candidates.length
       ? 'Official source candidates are ready for review.'
@@ -22986,6 +23044,9 @@ function sourcePreviewToggleQueue(open) {
   if (APP._dallasPreviewQueueOpen && APP.page !== 'leads' && typeof navigate === 'function') {
     navigate('leads', document.querySelector(".nav-item[onclick*='leads']"));
     return;
+  }
+  if (APP._dallasPreviewQueueOpen && !APP.dallasSourcePlan) {
+    sourcePreviewLoadDallasOfficialCaptureStatus();
   }
   if (typeof render === 'function') render();
 }
@@ -23438,6 +23499,7 @@ function renderDallasPreviewQueue() {
       '</div>' : '') +
       (agentRunSummary ? '<div style="font-size:10px;color:#cbd5e1;line-height:1.45;margin-top:7px">Run summary: ' + dallasPreviewSafeText(agentRunSummary.status || 'unknown') + (agentRunSummary.reason ? ' - ' + dallasPreviewSafeText(agentRunSummary.reason) : '') + '</div>' : '') +
     '</div>' +
+    renderDallasNextBestSourcesPanel() +
     renderDallasDistressSourceRegistryPanel() +
     '<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:10px;align-items:start">' +
       '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px">' +
