@@ -362,6 +362,44 @@ function harvestProviderSources(response, text, parsedCandidates) {
   return sources.filter((source) => isHttpUrl(source.url));
 }
 
+function isGoogleGroundingRedirectUrl(url) {
+  const hp = hostAndPath(url);
+  return /vertexaisearch\.cloud\.google\.com$/i.test(hp.host) && /grounding-api-redirect/i.test(hp.path);
+}
+
+async function resolveGroundingSourceUrl(source, options) {
+  const url = cleanText(source && source.url);
+  if (!isHttpUrl(url) || !isGoogleGroundingRedirectUrl(url)) return Object.assign({}, source);
+  const fetchImpl = options && options.fetchImpl || global.fetch;
+  if (typeof fetchImpl !== 'function') return Object.assign({}, source);
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutMs = Math.min(Math.max(parseInt(options && (options.timeout_ms || options.timeoutMs) || 3500, 10) || 3500, 1000), 5000);
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetchImpl(url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller ? controller.signal : undefined
+    });
+    const finalUrl = cleanText(response && response.url);
+    if (isHttpUrl(finalUrl) && !isGoogleGroundingRedirectUrl(finalUrl)) {
+      return Object.assign({}, source, {
+        url: finalUrl,
+        resolved_url: finalUrl,
+        resolved_from_grounding_redirect: true,
+        original_url: url
+      });
+    }
+  } catch (error) {
+    return Object.assign({}, source, {
+      resolve_error: cleanText(error && error.message)
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+  return Object.assign({}, source);
+}
+
 function groundingPresent(response) {
   const candidate = response && response.candidates && response.candidates[0] || null;
   return !!(candidate && (candidate.groundingMetadata || candidate.grounding_metadata));
@@ -438,19 +476,24 @@ function candidateFromHarvestedSource(source, context) {
   const classification = classifySourceUrl(source.url, source.title, source.evidence);
   const title = displayTitleFromSource(source, classification);
   const sourceType = classifySourceType(source.url, classification);
+  const identity = extractPropertyIdentityFromSourceUrl(source.url, source.title, classification);
   const signals = inferSignalsFromSource(source, context);
   const generic = sourceClassificationIsGeneric(classification);
   const propertySpecific = sourceClassificationIsPropertySpecific(classification);
   if (classification === 'generic_homepage' || classification === 'broad_article_or_blog') return null;
   return {
     candidate_title: title || 'Gemini source URL needs review',
-    address: '',
-    city: '',
-    state: '',
+    address: identity.normalized_address || identity.address || '',
+    property_address: identity.normalized_address || identity.address || '',
+    display_address: identity.normalized_address || identity.address || '',
+    city: identity.city || '',
+    state: identity.state || '',
+    zip: identity.zip || '',
     county: '',
     source_url: source.url,
     source_title: title,
     source_type: sourceType,
+    property_identity: identity,
     strategy_match: context && context.strategy_labels || [],
     distress_signals: signals,
     visible_price_or_bid: '',
@@ -482,6 +525,11 @@ function candidateFromHarvestedSource(source, context) {
     call_angle: 'Verify source evidence before calling.',
     created_from_grounding_url: true,
     source_classification: classification,
+    source_evidence_status: identity.source_evidence_status,
+    source_evidence_label: identity.source_evidence_label,
+    property_identity_status: identity.property_identity_status,
+    property_identity_label: identity.property_identity_label,
+    property_identity_basis: identity.property_identity_basis,
     source_harvest_source: source.harvest_source
   };
 }
@@ -514,6 +562,170 @@ function addressLikePath(path) {
   const text = cleanText(path).replace(/[-_/]+/g, ' ');
   return /\b\d{2,7}\b/.test(text) &&
     /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|unit|apt)\b/i.test(text);
+}
+
+function decodeURIComponentSafe(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+  try {
+    return decodeURIComponent(text);
+  } catch (error) {
+    return text;
+  }
+}
+
+function titleCaseWord(word) {
+  const text = cleanText(word);
+  if (!text) return '';
+  const lower = text.toLowerCase();
+  const specials = {
+    tx: 'TX',
+    il: 'IL',
+    ca: 'CA',
+    ny: 'NY',
+    fl: 'FL',
+    nj: 'NJ',
+    dc: 'DC',
+    ln: 'Ln',
+    rd: 'Rd',
+    dr: 'Dr',
+    st: 'St',
+    ave: 'Ave',
+    blvd: 'Blvd',
+    pkwy: 'Pkwy',
+    hwy: 'Hwy',
+    ct: 'Ct',
+    cir: 'Cir',
+    ter: 'Ter',
+    apt: 'Apt',
+    unit: 'Unit',
+    no: 'No'
+  };
+  if (specials[lower]) return specials[lower];
+  if (/^\d+$/.test(lower)) return lower;
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function titleCaseText(value) {
+  return cleanText(value).split(/\s+/).map(titleCaseWord).filter(Boolean).join(' ');
+}
+
+function normalizeSourceSlug(value) {
+  return decodeURIComponentSafe(value)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractPropertyIdentityFromSourceUrl(sourceUrl, sourceTitle, sourceClassification) {
+  const classification = cleanText(sourceClassification) || classifySourceUrl(sourceUrl, sourceTitle);
+  const hostPath = hostAndPath(sourceUrl);
+  const path = decodeURIComponentSafe(hostPath.path);
+  const title = cleanText(sourceTitle);
+  const out = {
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    normalized_address: '',
+    property_identity_status: sourceClassificationIsPropertySpecific(classification) ? 'partial' : 'needs_source_repair',
+    property_identity_label: sourceClassificationIsPropertySpecific(classification) ? 'Partial from source URL' : 'Needs repair',
+    property_identity_basis: sourceClassificationIsPropertySpecific(classification) ? 'source_url' : 'source_url_unverified',
+    source_evidence_status: sourceClassificationIsPropertySpecific(classification) ? 'property_source_url' : 'source_url',
+    source_evidence_label: sourceClassificationIsPropertySpecific(classification) ? 'Property URL' : 'Source URL',
+    address_extracted_from_source_url: false,
+    market_match_basis: '',
+    source_classification: classification
+  };
+
+  if (!sourceClassificationIsPropertySpecific(classification)) return out;
+
+  let rawAddress = '';
+  let rawCity = '';
+  let rawState = '';
+  let rawZip = '';
+
+  if (/realtor\.com$/i.test(hostPath.host)) {
+    const match = path.match(/realestateandhomes-detail\/([^/?#]+)/i);
+    const slug = normalizeSourceSlug(match && match[1] || '');
+    const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    }
+  } else if (/redfin\.com$/i.test(hostPath.host)) {
+    const match = path.match(/\/(?<state>[A-Za-z]{2})\/(?<city>[A-Za-z][A-Za-z-]*)\/(?<street>[^/?#]+?)\/home\//i);
+    if (match && match.groups) {
+      rawState = match.groups.state;
+      rawCity = match.groups.city;
+      rawAddress = normalizeSourceSlug(match.groups.street).replace(/\b\d{5}(?:-\d{4})?$/i, '').trim();
+      const zipMatch = cleanText(match.groups.street).match(/\b(\d{5})(?:-\d{4})?$/);
+      rawZip = zipMatch ? zipMatch[1] : '';
+    }
+  } else if (/zillow\.com$/i.test(hostPath.host)) {
+    const match = path.match(/homedetails\/([^/?#]+)/i);
+    const slug = normalizeSourceSlug(match && match[1] || '');
+    const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    }
+  } else if (/auction\.com$/i.test(hostPath.host)) {
+    const auctionSegment = normalizeSourceSlug((path.split('/').filter(Boolean).pop()) || '');
+    const slugSource = auctionSegment;
+    const details = slugSource.match(/(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    } else {
+      const hyphenDetails = auctionSegment.match(/^(?<address>.+?)-([A-Za-z][A-Za-z-]*)-([A-Za-z]{2})-(\d{5})(?:-|$)/i);
+      if (hyphenDetails) {
+        rawAddress = normalizeSourceSlug((hyphenDetails.groups && hyphenDetails.groups.address) || hyphenDetails[1] || '');
+        rawCity = hyphenDetails[2] || '';
+        rawState = hyphenDetails[3] || '';
+        rawZip = hyphenDetails[4] || '';
+      }
+    }
+  }
+
+  if (!rawAddress && title) {
+    const titleMatch = normalizeSourceSlug(title).match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (titleMatch && titleMatch.groups) {
+      rawAddress = titleMatch.groups.address;
+      rawCity = titleMatch.groups.city;
+      rawState = titleMatch.groups.state;
+      rawZip = titleMatch.groups.zip;
+    }
+  }
+
+  const normalizedParts = [
+    titleCaseText(rawAddress),
+    titleCaseText(rawCity),
+    [rawState ? rawState.toUpperCase() : '', rawZip].filter(Boolean).join(' ')
+  ].filter(Boolean);
+  const cityStateZip = [titleCaseText(rawCity), [rawState ? rawState.toUpperCase() : '', rawZip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  out.address = titleCaseText(rawAddress);
+  out.city = titleCaseText(rawCity);
+  out.state = rawState ? rawState.toUpperCase() : '';
+  out.zip = rawZip;
+  out.normalized_address = normalizedParts.join(', ');
+  out.address_extracted_from_source_url = !!out.address || !!out.city || !!out.state || !!out.zip;
+  out.property_identity_status = out.address_extracted_from_source_url
+    ? (out.address && out.city && out.state && out.zip ? 'resolved' : 'partial')
+    : 'needs_source_repair';
+  out.property_identity_label = out.address_extracted_from_source_url
+    ? (out.property_identity_status === 'resolved' ? 'Resolved from source URL' : 'Partial from source URL')
+    : 'Needs repair';
+  out.market_match_basis = cityStateZip || normalizedParts.join(', ');
+  out.source_evidence_status = out.address_extracted_from_source_url ? 'property_source_url' : 'source_url';
+  out.source_evidence_label = out.address_extracted_from_source_url ? 'Property URL' : 'Source URL';
+  return out;
 }
 
 function isBlockedSource(url) {
@@ -650,7 +862,9 @@ function normalizeConfidence(value, status) {
   return status === 'Call Ready' ? 'High' : status === 'Research Ready' ? 'Medium' : 'Low';
 }
 
-function marketMatchScore(candidate, context) {
+function marketMatchDetails(candidate, context) {
+  const selected = `${safeLower(context && context.location)} ${safeLower(context && context.market)}`.trim();
+  const identity = candidate && candidate.property_identity || {};
   const haystack = [
     candidate && candidate.address,
     candidate && candidate.property_address,
@@ -659,18 +873,45 @@ function marketMatchScore(candidate, context) {
     candidate && candidate.state,
     candidate && candidate.county,
     candidate && candidate.source_title,
-    candidate && candidate.candidate_title
+    candidate && candidate.candidate_title,
+    candidate && candidate.source_url,
+    identity.address,
+    identity.city,
+    identity.state,
+    identity.zip,
+    identity.normalized_address,
+    identity.market_match_basis
   ].map(safeLower).join(' ');
-  const selected = `${safeLower(context && context.location)} ${safeLower(context && context.market)}`;
-  if (!selected.trim()) return 10;
-  if (/\bdallas\b/.test(selected)) {
-    if (/\bdallas\b/.test(haystack) || /\bdallas county\b/.test(haystack)) return 10;
-    if (/\btx\b|\btexas\b/.test(haystack) && !/\b(houston|harris|austin|travis|fort worth|tarrant|san antonio|bexar)\b/.test(haystack)) return 5;
-    return 0;
+  const dallasRegex = /\bdallas\b/;
+  const outOfMarketRegex = /\b(houston|harris|austin|travis|fort worth|tarrant|san antonio|bexar|chicago|cook|cook county)\b/i;
+
+  if (!selected) {
+    return { score: 10, label: 'Matches selected market', basis: 'No market specified' };
   }
-  const tokens = uniqueList(selected.split(/[^a-z0-9]+/i).filter((token) => token.length > 2 && !/^(county|state|city|texas|tx|national)$/.test(token)));
-  if (!tokens.length) return 10;
-  return tokens.some((token) => haystack.includes(token)) ? 10 : 0;
+  if (dallasRegex.test(selected)) {
+    if (outOfMarketRegex.test(haystack)) {
+      return { score: 0, label: 'Market mismatch', basis: 'Out-of-market city/county in source URL or text' };
+    }
+    if (/\bdallas county\b/.test(haystack) || (/\bdallas\b/.test(haystack) && /\b(tx|texas)\b/.test(haystack))) {
+      return { score: 10, label: 'Matches selected market', basis: identity.address_extracted_from_source_url ? 'City/state/zip extracted from source URL' : 'Dallas match from source text' };
+    }
+    if (/\b(tx|texas)\b/.test(haystack)) {
+      return { score: 5, label: 'Likely in selected market', basis: 'State matches selected market; county not verified' };
+    }
+    return { score: 0, label: 'Market mismatch', basis: 'No selected-market evidence in source URL or text' };
+  }
+  const tokens = uniqueList(selected.split(/[^a-z0-9]+/i).filter((token) => token.length > 2 && !/^(county|state|city|texas|tx|national)$/i.test(token)));
+  if (!tokens.length) return { score: 10, label: 'Matches selected market', basis: 'No specific market tokens to compare' };
+  const match = tokens.some((token) => haystack.includes(token));
+  return {
+    score: match ? 10 : 0,
+    label: match ? 'Matches selected market' : 'Market mismatch',
+    basis: match ? 'Selected market tokens found in source URL or text' : 'Selected market tokens not found in source URL or text'
+  };
+}
+
+function marketMatchScore(candidate, context) {
+  return marketMatchDetails(candidate, context).score;
 }
 
 function distressSignalScore(signals, proofText) {
@@ -696,7 +937,8 @@ function sourceQualityLabel(sourceUrl, sourceType, propertySpecific, sourceGener
 
 function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, signals, proofText, sourceClassification) {
   const propertySpecific = sourceClassificationIsPropertySpecific(sourceClassification) || isPropertySpecificSourceUrl(sourceUrl);
-  const marketScore = marketMatchScore(candidate, context);
+  const marketMatch = marketMatchDetails(candidate, context);
+  const marketScore = marketMatch.score;
   const sourceQualityScore = !isHttpUrl(sourceUrl) ? 0 : sourceGeneric ? 5 : propertySpecific ? 20 : 10;
   const addressScore = quality === 'valid' ? 20 : quality === 'partial' ? 8 : 0;
   const signalScore = distressSignalScore(signals, proofText);
@@ -706,6 +948,8 @@ function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric
     property_specific_score: propertySpecific ? 20 : 0,
     address_confidence_score: addressScore,
     market_match_score: marketScore,
+    market_match_label: marketMatch.label,
+    market_match_basis: marketMatch.basis,
     source_quality_score: sourceQualityScore,
     distress_signal_score: signalScore,
     actionability_score: actionabilityScore,
@@ -742,13 +986,15 @@ function normalizeCandidate(candidate, context) {
   const sourceType = classifySourceType(sourceUrl, candidate.source_type || candidate.sourceType);
   const sourceClassification = classifySourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal);
   const sourceGeneric = sourceClassificationIsGeneric(sourceClassification) || isGenericSourceUrl(sourceUrl);
-  const address = cleanText(candidate.address || candidate.property_address || candidate.display_address);
+  const extractedIdentity = extractPropertyIdentityFromSourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, sourceClassification);
+  const mergedIdentity = Object.assign({}, extractedIdentity, candidate.property_identity || {});
+  const address = cleanText(candidate.address || candidate.property_address || candidate.display_address || mergedIdentity.normalized_address || mergedIdentity.address);
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
   const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
   const proofText = cleanText(candidate.evidence_snippet || candidate.why_it_might_be_deal || candidate.summary || title);
   const quality = addressQuality(address, proofText);
-  const score = scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText, sourceClassification);
+  const score = scoreCandidate(Object.assign({}, candidate, { property_identity: mergedIdentity }), context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText, sourceClassification);
   const createdFromGroundingUrl = candidate.created_from_grounding_url === true;
   const explanations = qualityExplanations(score, sourceGeneric, quality, sourceClassification, createdFromGroundingUrl);
   const missing = uniqueList([]
@@ -774,6 +1020,9 @@ function normalizeCandidate(candidate, context) {
   const sourceTitle = cleanText(candidate.source_title || candidate.title || title);
   const sourceUrls = uniqueList([sourceUrl].concat(context.provider_source_urls || [])).filter(isHttpUrl);
   const why = proofText || explanations[0] || 'Gemini found a public source candidate. Verify the source before outreach.';
+  const addressNote = mergedIdentity.address_extracted_from_source_url
+    ? 'Address extracted from property URL - verify before offer.'
+    : '';
   const next = cleanText(candidate.suggested_next_action) || (
     sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace'
       ? 'Verify official/property source before offer. Do not assume equity or ARV.'
@@ -788,10 +1037,17 @@ function normalizeCandidate(candidate, context) {
     candidate_id: hashId('gld', `${displayAddress}|${sourceUrl}|${sourceTitle}`),
     display_address: displayAddress,
     address_or_source_text: displayAddress,
-    city: cleanText(candidate.city),
-    state: cleanText(candidate.state),
+    address_extracted_from_source_url: mergedIdentity.address_extracted_from_source_url === true,
+    property_identity_status: mergedIdentity.property_identity_status || 'needs_source_repair',
+    property_identity_label: mergedIdentity.property_identity_label || 'Needs repair',
+    property_identity_basis: mergedIdentity.property_identity_basis || 'source_url',
+    source_evidence_status: mergedIdentity.source_evidence_status || 'source_url',
+    source_evidence_label: mergedIdentity.source_evidence_label || 'Source URL',
+    city: cleanText(candidate.city || mergedIdentity.city),
+    state: cleanText(candidate.state || mergedIdentity.state),
+    zip: cleanText(candidate.zip || mergedIdentity.zip),
     county: cleanText(candidate.county),
-    location: [candidate.city, candidate.county, candidate.state].map(cleanText).filter(Boolean).join(', ') || cleanText(context.location || context.market),
+    location: [candidate.city || mergedIdentity.city, candidate.county, candidate.state || mergedIdentity.state, mergedIdentity.zip].map(cleanText).filter(Boolean).join(', ') || cleanText(context.location || context.market),
     source_url: isHttpUrl(sourceUrl) && !blockedSource ? sourceUrl : '',
     source_title: sourceTitle,
     source_type: sourceType,
@@ -799,12 +1055,19 @@ function normalizeCandidate(candidate, context) {
     source_classification_label: sourceClassificationLabel(sourceClassification),
     source_quality: sourceQualityLabel(sourceUrl, sourceType, score.property_specific, sourceGeneric, sourceClassification),
     property_specific_source: score.property_specific,
-    market_match: score.market_match_score > 0 ? 'Matches selected market' : 'Market mismatch',
+    market_match: score.market_match_label || (score.market_match_score > 0 ? 'Matches selected market' : 'Market mismatch'),
+    market_match_basis: score.market_match_basis || '',
+    address_extracted_from_source_url: mergedIdentity.address_extracted_from_source_url === true,
+    property_identity_status: mergedIdentity.property_identity_status || 'needs_source_repair',
+    property_identity_label: mergedIdentity.property_identity_label || 'Needs repair',
+    property_identity_basis: mergedIdentity.property_identity_basis || 'source_url',
+    source_evidence_status: mergedIdentity.source_evidence_status || 'source_url',
+    source_evidence_label: mergedIdentity.source_evidence_label || 'Source URL',
     lead_source_type: sourceType,
     strategy_tags: strategyTags,
     signal_summary: distressSignals.join(', '),
     why_it_matters: why,
-    why_this_might_be_a_deal: why,
+    why_this_might_be_a_deal: addressNote ? `${why} ${addressNote}`.trim() : why,
     quality_explanations: explanations,
     distress_motivation_signals: distressSignals,
     visible_price_or_bid: cleanText(candidate.visible_price_or_bid),
@@ -834,9 +1097,12 @@ function normalizeCandidate(candidate, context) {
     provider_grounding_present: context.provider_grounding_present === true,
     provider_source_urls: sourceUrls,
     created_from_grounding_url: createdFromGroundingUrl,
-    why_card_exists: createdFromGroundingUrl
-      ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.'
-      : 'Created from Gemini structured candidate output.',
+    source_url_type: sourceType,
+    why_card_exists: addressNote
+      ? `${addressNote} ${createdFromGroundingUrl ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.' : 'Created from Gemini structured candidate output.'}`
+      : (createdFromGroundingUrl
+        ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.'
+        : 'Created from Gemini structured candidate output.'),
     property_specific_score: score.property_specific_score,
     address_confidence_score: score.address_confidence_score,
     market_match_score: score.market_match_score,
@@ -929,19 +1195,43 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       provider_source_urls: groundingUrls
     };
     const harvestedSources = harvestProviderSources(response, text, parsed.candidates);
-    const providerSourceUrls = harvestedSources.map((source) => source.url).filter(isHttpUrl);
-    context.provider_source_urls = uniqueList(groundingUrls.concat(providerSourceUrls));
+    const resolvedSources = [];
+    for (const source of harvestedSources.slice(0, MAX_DISCOVERY_RESULTS)) {
+      resolvedSources.push(await resolveGroundingSourceUrl(source, options));
+    }
+    const providerSourceUrls = uniqueList(
+      groundingUrls
+        .concat(resolvedSources.map((source) => source.url).filter(isHttpUrl))
+        .concat(resolvedParsedCandidates.map((candidate) => candidate && candidate.source_url).filter(isHttpUrl))
+    );
+    context.provider_source_urls = providerSourceUrls;
     const parsedCandidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
-    const sourceCandidates = parsedCandidates.length
+    const resolvedParsedCandidates = parsedCandidates.length
+      ? await Promise.all(parsedCandidates.map(async (candidate) => {
+        const source = await resolveGroundingSourceUrl({
+          url: candidate && (candidate.source_url || candidate.url || candidate.sourceUrl),
+          title: candidate && (candidate.source_title || candidate.title),
+          evidence: candidate && (candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal),
+          harvest_source: 'parsed_candidate'
+        }, options);
+        return Object.assign({}, candidate, {
+          source_url: source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
+          source_url_original: source.original_url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
+          source_url_resolved: source.resolved_from_grounding_redirect === true,
+          source_url_resolve_error: source.resolve_error || ''
+        });
+      }))
+      : [];
+    const sourceCandidates = resolvedParsedCandidates.length
       ? []
-      : harvestedSources
+      : resolvedSources
         .map((source) => candidateFromHarvestedSource(source, context))
         .filter(Boolean);
-    const cards = parsedCandidates.concat(sourceCandidates)
+    const cards = resolvedParsedCandidates.concat(sourceCandidates)
       .map((candidate) => normalizeCandidate(candidate, context))
       .sort((a, b) => (Number(b.scout_priority_score || 0) - Number(a.scout_priority_score || 0)))
       .slice(0, requestedCount);
-    const harvestSummary = summarizeSourceHarvest(harvestedSources, cards);
+    const harvestSummary = summarizeSourceHarvest(resolvedSources, cards);
     return {
       attempted: true,
       status: 'available',
