@@ -581,6 +581,8 @@ function providerSummaryFrom(result) {
     ? 'Available'
     : result.status === 'temporarily_unavailable'
       ? 'Temporarily unavailable'
+    : result.status === 'timed_out'
+      ? 'Timed out'
     : result.status === 'failed'
       ? 'Failed'
       : 'Not configured';
@@ -630,7 +632,7 @@ async function runJob(jobId, options = {}) {
         gemini_live_cards_checked: geminiCards.length,
         gemini_source_urls_found_count: providerSummary.source_urls_found_count
       },
-      provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
+    provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
       provider_message: providerSummary.message || 'Scout used saved leads mode only.',
       provider_summary: providerSummary,
       error: ''

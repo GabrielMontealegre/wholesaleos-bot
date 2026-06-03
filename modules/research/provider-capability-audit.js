@@ -32,11 +32,21 @@ function safeModel(value, fallback) {
 function isTransientGeminiProbeError(error) {
   const message = cleanText(error && error.message ? error.message : '');
   const status = Number(error && (error.status || error.statusCode || error.code) || 0);
-  return status === 429 || status === 503 || /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy)\b/i.test(message);
+  return status === 429 || status === 503 || status === 408 || status === 504 || /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy|abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(message);
+}
+
+function isGeminiProbeTimeoutError(error) {
+  const message = cleanText(error && error.message ? error.message : '');
+  const status = Number(error && (error.status || error.statusCode || error.code) || 0);
+  return status === 408 || status === 504 || /\b(abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(message);
 }
 
 function transientGeminiProbeMessage(error) {
-  return cleanText(error && error.message ? error.message : 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only. Try again in a few minutes.');
+  const message = cleanText(error && error.message ? error.message : '');
+  if (/\b(abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(message)) {
+    return 'Gemini live discovery timed out before returning candidates. Try again, reduce batch size, or use saved-leads mode.';
+  }
+  return cleanText(message || 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only. Try again in a few minutes.');
 }
 
 function recognizedEnvNames() {
@@ -196,10 +206,12 @@ function chooseRecommendation(audit) {
     };
   }
   if (audit.gemini_enabled && audit.gemini_key_present && audit.gemini_live_probe_attempted && !audit.gemini_live_probe_success) {
-    if (audit.gemini_live_probe_status === 'temporarily_unavailable' || audit.gemini_live_probe_retryable === true) {
+    if (audit.gemini_live_probe_status === 'temporarily_unavailable' || audit.gemini_live_probe_status === 'timed_out' || audit.gemini_live_probe_retryable === true) {
       return {
         recommended_provider_path: 'gemini_grounding_configured_but_temporarily_unavailable',
-        reason: 'Gemini is configured, but Google Search grounding is temporarily unavailable/high demand. Try again later or configure Brave/Firecrawl fallback.'
+        reason: audit.gemini_live_probe_status === 'timed_out'
+          ? 'Gemini is configured, but live discovery timed out before returning candidates. Try again, reduce batch size, or use saved-leads mode.'
+          : 'Gemini is configured, but Google Search grounding is temporarily unavailable/high demand. Try again later or configure Brave/Firecrawl fallback.'
       };
     }
     return {
@@ -258,7 +270,11 @@ async function auditProviderCapabilities(options) {
       const retryable = isTransientGeminiProbeError(error);
       audit.gemini_live_probe_attempted = true;
       audit.gemini_live_probe_success = false;
-      audit.gemini_live_probe_status = retryable ? 'temporarily_unavailable' : 'failed';
+      audit.gemini_live_probe_status = isGeminiProbeTimeoutError(error)
+        ? 'timed_out'
+        : retryable
+          ? 'temporarily_unavailable'
+          : 'failed';
       audit.gemini_live_probe_retryable = retryable;
       audit.gemini_live_probe_message = transientGeminiProbeMessage(error);
       audit.gemini_grounding_metadata_present = false;

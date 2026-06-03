@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
 const MAX_DISCOVERY_RESULTS = 50;
 const GEMINI_TRANSIENT_PATTERN = /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy)\b/i;
+const GEMINI_TIMEOUT_PATTERN = /\b(abort|aborted|aborterror|timed out|timeout|deadline exceeded|operation was aborted)\b/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -21,7 +22,15 @@ function envEnabled(value) {
 function classifyGeminiError(error) {
   const message = cleanText(error && error.message ? error.message : '');
   const status = Number(error && (error.status || error.statusCode || error.code) || 0);
+  const timedOut = status === 408 || status === 504 || GEMINI_TIMEOUT_PATTERN.test(message);
   const retryable = status === 429 || status === 503 || GEMINI_TRANSIENT_PATTERN.test(message);
+  if (timedOut) {
+    return {
+      retryable: true,
+      status: 'timed_out',
+      message: 'Gemini live discovery timed out before returning candidates. Try again, reduce batch size, or use saved-leads mode.'
+    };
+  }
   return {
     retryable,
     status: retryable ? 'temporarily_unavailable' : 'failed',
@@ -379,7 +388,7 @@ async function fetchGeminiJson(url, body, headers, options) {
   options = options || {};
   const fetchImpl = options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== 'function') throw new Error('Gemini Live Discovery requires fetch support.');
-  const timeoutMs = Math.min(Math.max(parseInt(options.timeout_ms || options.timeoutMs || 15000, 10) || 15000, 1000), 25000);
+  const timeoutMs = Math.min(Math.max(parseInt(options.timeout_ms || options.timeoutMs || 60000, 10) || 60000, 1000), 75000);
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
