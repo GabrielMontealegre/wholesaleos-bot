@@ -1199,12 +1199,6 @@ async function runGeminiScoutDiscovery(job, options = {}) {
     for (const source of harvestedSources.slice(0, MAX_DISCOVERY_RESULTS)) {
       resolvedSources.push(await resolveGroundingSourceUrl(source, options));
     }
-    const providerSourceUrls = uniqueList(
-      groundingUrls
-        .concat(resolvedSources.map((source) => source.url).filter(isHttpUrl))
-        .concat(resolvedParsedCandidates.map((candidate) => candidate && candidate.source_url).filter(isHttpUrl))
-    );
-    context.provider_source_urls = providerSourceUrls;
     const parsedCandidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
     const resolvedParsedCandidates = parsedCandidates.length
       ? await Promise.all(parsedCandidates.map(async (candidate) => {
@@ -1222,6 +1216,12 @@ async function runGeminiScoutDiscovery(job, options = {}) {
         });
       }))
       : [];
+    const providerSourceUrls = uniqueList(
+      groundingUrls
+        .concat(resolvedSources.map((source) => source.url).filter(isHttpUrl))
+        .concat(resolvedParsedCandidates.map((candidate) => candidate && candidate.source_url).filter(isHttpUrl))
+    );
+    context.provider_source_urls = providerSourceUrls;
     const sourceCandidates = resolvedParsedCandidates.length
       ? []
       : resolvedSources
