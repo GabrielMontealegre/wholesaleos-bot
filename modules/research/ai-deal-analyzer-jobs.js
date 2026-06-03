@@ -545,6 +545,9 @@ function createJob(item) {
     normalized_address: '',
     lead_id: lead ? lead.id : leadId,
     lead_ref: cleanText(item.lead_ref || item.leadRef || (lead && (lead.ref_id || lead.reference_id || lead.ref || lead.id))),
+    source_url: isHttpUrl(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
+      ? cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
+      : '',
     source_evidence: [],
     comp_evidence: [],
     comp_research_status: 'not_configured',

@@ -13,6 +13,7 @@ const logger = require('pino')({ level: 'info' });
 const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
+const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -1315,6 +1316,98 @@ app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err && err.message ? err.message : 'Failed to load analyzer job'
+    });
+  }
+});
+
+app.post('/api/findme-scout/jobs', (req, res) => {
+  try {
+    const job = findMeScoutJobs.createJob(req.body || {});
+    return res.status(201).json({
+      ok: true,
+      job,
+      safety: 'operator-created Scout job only; no scraping, no autonomous ingestion, no production lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to create Scout job'
+    });
+  }
+});
+
+app.get('/api/findme-scout/jobs', (req, res) => {
+  try {
+    const jobs = findMeScoutJobs.listJobs(req.query.limit);
+    return res.json({ ok: true, jobs, count: jobs.length });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load Scout jobs'
+    });
+  }
+});
+
+app.get('/api/findme-scout/jobs/:jobId', (req, res) => {
+  try {
+    const job = findMeScoutJobs.getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ ok: false, error: 'Scout job not found' });
+    return res.json({ ok: true, job });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load Scout job'
+    });
+  }
+});
+
+app.post('/api/findme-scout/jobs/:jobId/run', (req, res) => {
+  try {
+    const job = findMeScoutJobs.runJob(req.params.jobId);
+    return res.json({
+      ok: true,
+      job,
+      safety: 'deterministic existing-data Scout run only; no provider calls, no lead mutation, no valuation unlock'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to run Scout job'
+    });
+  }
+});
+
+app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/status', (req, res) => {
+  try {
+    const result = findMeScoutJobs.updateCard(req.params.jobId, req.params.cardId, req.body || {});
+    return res.json({
+      ok: true,
+      job: result.job,
+      card: result.card,
+      safety: 'Scout card note/status update only; no production lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to update Scout card'
+    });
+  }
+});
+
+app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/analyzer', (req, res) => {
+  try {
+    const result = findMeScoutJobs.sendCardToAnalyzer(req.params.jobId, req.params.cardId);
+    return res.json({
+      ok: true,
+      job: result.job,
+      card: result.card,
+      analyzer_job: result.analyzer_job,
+      safety: 'operator-triggered analyzer handoff only; candidate evidence does not unlock ARV or MAO'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to send Scout card to AI Deal Analyzer'
     });
   }
 });

@@ -73,6 +73,8 @@ function sourceStatusLabel(type, identityStatus) {
 }
 
 function sourceUrlFrom(job, lead) {
+  const jobUrl = pick(job, ['source_url', 'sourceUrl', 'source_proof_url', 'sourceProofUrl']);
+  if (isHttpUrl(jobUrl)) return cleanText(jobUrl);
   const leadUrl = pick(lead, [
     'source_record_url',
     'record_url',
