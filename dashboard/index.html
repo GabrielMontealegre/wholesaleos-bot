@@ -1771,6 +1771,7 @@ function renderFindMeScoutCard(card, jobId) {
   var missing = Array.isArray(card.missing_evidence) ? card.missing_evidence : [];
   var providerUrls = Array.isArray(card.provider_source_urls) ? card.provider_source_urls : [];
   var strategyTags = Array.isArray(card.strategy_tags) ? card.strategy_tags : [];
+  var qualityNotes = Array.isArray(card.quality_explanations) ? card.quality_explanations : [];
   var cardId = findMeAttr(card.card_id || '');
   var sourceUrl = card.source_url || '';
   var canAnalyze = card.can_send_to_analyzer === true;
@@ -1789,6 +1790,9 @@ function renderFindMeScoutCard(card, jobId) {
       findMePill(card.pipeline_status || 'New', card.pipeline_status === 'Sent to Analyzer' ? 'good' : 'neutral') +
       (card.provider ? findMePill('Provider: ' + card.provider, card.provider_grounding_present ? 'good' : 'warn') : '') +
       (providerUrls.length ? findMePill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
+      (card.source_quality ? findMePill('Source: ' + card.source_quality, card.property_specific_source ? 'good' : 'warn') : '') +
+      (card.market_match ? findMePill(card.market_match, card.market_match === 'Matches selected market' ? 'good' : 'warn') : '') +
+      findMePill(card.property_specific_source ? 'Property-specific source' : 'Needs exact property source', card.property_specific_source ? 'good' : 'warn') +
     '</div>' +
     (card.provider ? '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:8px 9px;font-size:12px;color:#166534;font-weight:900;line-height:1.45">Live public discovery via ' + findMeSafeText(card.provider) + (card.source_title ? '<div style="color:#334155;font-weight:800;margin-top:2px">' + findMeSafeText(card.source_title) + '</div>' : '') + '</div>' : '') +
     (strategyTags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + strategyTags.map(function(tag){ return findMePill(tag, 'neutral'); }).join('') + '</div>' : '') +
@@ -1797,6 +1801,7 @@ function renderFindMeScoutCard(card, jobId) {
       '<div style="border:1px solid #dbeafe;border-radius:8px;background:#eff6ff;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">What to do next</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:3px">' + findMeSafeText(card.next_best_action || 'Review evidence.') + '</div></div>' +
     '</div>' +
     '<div style="font-size:12px;color:#334155;line-height:1.45"><strong>Call angle:</strong> ' + findMeSafeText(card.call_angle || 'Verify evidence before calling.') + '</div>' +
+    (qualityNotes.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + qualityNotes.map(function(note){ return findMePill(note, /found|Matches/i.test(note) ? 'good' : 'warn'); }).join('') + '</div>' : '') +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       (signals.length ? signals.map(function(signal){ return findMePill(signal, 'good'); }).join('') : findMePill('No clear distress signal yet', 'warn')) +
       (missing.length ? missing.map(function(item){ return findMePill('Missing: ' + item, 'warn'); }).join('') : '') +

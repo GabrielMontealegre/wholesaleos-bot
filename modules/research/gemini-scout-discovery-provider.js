@@ -102,15 +102,77 @@ function strategyLabels(strategies) {
   return uniqueList((Array.isArray(strategies) ? strategies : []).map((strategy) => labels[strategy] || cleanText(strategy).replace(/_/g, ' ')));
 }
 
+function marketSearchTerms(job) {
+  const market = cleanText(job && job.market);
+  const location = cleanText(job && job.location);
+  const base = location || market || 'Dallas County, TX';
+  const cityState = /\bdallas\b/i.test(base) && !/\btx\b|\btexas\b/i.test(base)
+    ? `${base} TX`
+    : base;
+  return {
+    base,
+    city_state: cityState,
+    county: base
+  };
+}
+
+function buildSearchQueryTemplates(job) {
+  const terms = marketSearchTerms(job);
+  const selected = new Set(Array.isArray(job && job.strategies) ? job.strategies : []);
+  const queries = [];
+  function add(query) {
+    const text = cleanText(query);
+    if (text) queries.push(text);
+  }
+  if (selected.has('fixer') || selected.has('ugly') || selected.has('as_is')) {
+    add(`site:redfin.com ${terms.city_state} fixer upper house`);
+    add(`site:realtor.com ${terms.city_state} as is house for sale`);
+    add(`site:zillow.com ${terms.city_state} fixer upper house`);
+    add(`${terms.city_state} "investor special" house for sale`);
+    add(`${terms.city_state} "cash only" house for sale`);
+    add(`${terms.city_state} "needs TLC" "for sale"`);
+  }
+  if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon')) {
+    add(`site:auction.com ${terms.city_state} foreclosure auction property`);
+    add(`${terms.city_state} foreclosure auction property`);
+    add(`${terms.city_state} public auction property`);
+  }
+  if (selected.has('foreclosure_notice') || selected.has('trustee_notice') || selected.has('pre_foreclosure')) {
+    add(`${terms.county} trustee sale property`);
+    add(`${terms.county} foreclosure notice property address`);
+  }
+  if (selected.has('tax_foreclosure') || selected.has('tax_sale') || selected.has('tax_delinquent') || selected.has('tax_lien')) {
+    add(`${terms.county} tax foreclosure property`);
+    add(`${terms.county} struck off resale property`);
+  }
+  if (selected.has('price_cut') || selected.has('long_dom') || selected.has('stale_listing')) {
+    add(`${terms.city_state} "as-is" "price reduced" house`);
+    add(`${terms.city_state} "motivated seller" house for sale`);
+  }
+  if (!queries.length) {
+    add(`site:redfin.com ${terms.city_state} fixer upper house`);
+    add(`site:realtor.com ${terms.city_state} as is house for sale`);
+    add(`site:auction.com ${terms.city_state} foreclosure auction property`);
+  }
+  return uniqueList(queries).slice(0, 12);
+}
+
 function buildDiscoveryPrompt(job, requestedCount) {
   const location = cleanText(job.location) || cleanText(job.market) || 'Dallas County, TX';
   const count = Math.max(1, Math.min(parseInt(requestedCount || job.batch_size || 10, 10) || 10, MAX_DISCOVERY_RESULTS));
   const strategies = strategyLabels(job.strategies);
+  const queries = buildSearchQueryTemplates(job);
   return [
     'You are helping a real estate acquisition operator find public, source-cited candidate properties.',
     `Market/location: ${location}.`,
     `Strategies: ${strategies.join(', ') || 'distressed property opportunities'}.`,
     `Return up to ${count} candidates, ranked strongest to weakest.`,
+    '',
+    'Use these search query starting points. Prefer exact property pages over broad result pages:',
+    queries.map((query) => `- ${query}`).join('\n'),
+    '',
+    'Prefer exact property pages, listing/property URLs, official property notices/documents, and auction property pages.',
+    'Avoid homepages, generic search pages, category pages, broad city pages, blog posts, SEO pages, and pages with no visible address.',
     '',
     'Hard rules:',
     '- Return only candidate properties or property-specific source pages with source URLs.',
@@ -137,6 +199,7 @@ function buildDiscoveryPrompt(job, requestedCount) {
         visible_price_or_bid: '',
         auction_date_or_timing: '',
         listing_status: '',
+        evidence_snippet: '',
         why_it_might_be_deal: '',
         missing_evidence: [],
         risk_flags: [],
@@ -240,8 +303,19 @@ function isGenericSourceUrl(url) {
   if (/google\./i.test(hp.host)) return true;
   if (hp.path === '/' || hp.path === '') return true;
   if (/\/(search|sitemap|login|account|contact|about|help|privacy|terms)\/?$/i.test(hp.path)) return true;
-  if (/(zillow|redfin|realtor|auction)\.com$/i.test(hp.host) && !/(homedetails|property|details|listing|auction|foreclosure)/i.test(hp.path)) return true;
+  if (/(zillow|redfin|realtor|auction)\.com$/i.test(hp.host) && !isPropertySpecificSourceUrl(url)) return true;
   return false;
+}
+
+function isPropertySpecificSourceUrl(url) {
+  const hp = hostAndPath(url);
+  if (!hp.host || !hp.path || hp.path === '/') return false;
+  if (/redfin\.com$/i.test(hp.host)) return /\/home\/\d+/i.test(hp.path);
+  if (/zillow\.com$/i.test(hp.host)) return /\/homedetails\//i.test(hp.path);
+  if (/realtor\.com$/i.test(hp.host)) return /\/realestateandhomes-detail\//i.test(hp.path);
+  if (/auction\.com$/i.test(hp.host)) return /\/(details|auction|property)\//i.test(hp.path);
+  if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host)) return /\.(pdf|aspx|php|html?)$/i.test(hp.path) || /\b(document|record|foreclosure|trustee|sale|tax|sheriff|property|parcel)\b/i.test(hp.path);
+  return /\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(hp.path) && !/\b(search|city|county|category|blog|article)\b/i.test(hp.path);
 }
 
 function classifySourceType(url, sourceType) {
@@ -282,14 +356,81 @@ function normalizeConfidence(value, status) {
   return status === 'Call Ready' ? 'High' : status === 'Research Ready' ? 'Medium' : 'Low';
 }
 
-function statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, signals) {
-  if (!isHttpUrl(sourceUrl) || sourceGeneric) return 'Needs Source Proof';
+function marketMatchScore(candidate, context) {
+  const haystack = [
+    candidate && candidate.address,
+    candidate && candidate.property_address,
+    candidate && candidate.display_address,
+    candidate && candidate.city,
+    candidate && candidate.state,
+    candidate && candidate.county,
+    candidate && candidate.source_title,
+    candidate && candidate.candidate_title
+  ].map(safeLower).join(' ');
+  const selected = `${safeLower(context && context.location)} ${safeLower(context && context.market)}`;
+  if (!selected.trim()) return 10;
+  if (/\bdallas\b/.test(selected)) {
+    if (/\bdallas\b/.test(haystack) || /\bdallas county\b/.test(haystack)) return 10;
+    if (/\btx\b|\btexas\b/.test(haystack) && !/\b(houston|harris|austin|travis|fort worth|tarrant|san antonio|bexar)\b/.test(haystack)) return 5;
+    return 0;
+  }
+  const tokens = uniqueList(selected.split(/[^a-z0-9]+/i).filter((token) => token.length > 2 && !/^(county|state|city|texas|tx|national)$/.test(token)));
+  if (!tokens.length) return 10;
+  return tokens.some((token) => haystack.includes(token)) ? 10 : 0;
+}
+
+function distressSignalScore(signals, proofText) {
+  const text = `${normalizeArray(signals).join(' ')} ${cleanText(proofText)}`.toLowerCase();
+  if (/\b(foreclos|trustee|tax sale|tax foreclosure|sheriff|auction|cash only|investor special|as.?is|needs tlc|fixer|repair|price cut|reduced|distressed|motivated)\b/.test(text)) return 20;
+  if (/\b(for sale|listing|public source|property)\b/.test(text)) return 8;
+  return 0;
+}
+
+function sourceQualityLabel(sourceUrl, sourceType, propertySpecific, sourceGeneric) {
+  if (!isHttpUrl(sourceUrl)) return 'Missing source URL';
+  if (sourceGeneric) return 'Generic listing/search page';
+  if (propertySpecific && sourceType === 'official_public_source') return 'Property-specific official source';
+  if (propertySpecific) return 'Property-specific public source';
+  return 'Public source needs review';
+}
+
+function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, signals, proofText) {
+  const propertySpecific = isPropertySpecificSourceUrl(sourceUrl);
+  const marketScore = marketMatchScore(candidate, context);
+  const sourceQualityScore = !isHttpUrl(sourceUrl) ? 0 : sourceGeneric ? 5 : propertySpecific ? 20 : 10;
+  const addressScore = quality === 'valid' ? 20 : quality === 'partial' ? 8 : 0;
+  const signalScore = distressSignalScore(signals, proofText);
+  const actionabilityScore = propertySpecific && quality === 'valid' && marketScore >= 10 && signalScore > 0 ? 20 : propertySpecific && isHttpUrl(sourceUrl) ? 8 : 0;
+  return {
+    property_specific: propertySpecific,
+    property_specific_score: propertySpecific ? 20 : 0,
+    address_confidence_score: addressScore,
+    market_match_score: marketScore,
+    source_quality_score: sourceQualityScore,
+    distress_signal_score: signalScore,
+    actionability_score: actionabilityScore,
+    scout_priority_score: sourceQualityScore + addressScore + marketScore + signalScore + actionabilityScore
+  };
+}
+
+function qualityExplanations(score, sourceGeneric, quality) {
+  const out = [];
+  if (!score.property_specific) out.push(sourceGeneric ? 'Generic listing/search page, not exact property proof' : 'Source is not clearly property-specific');
+  if (quality !== 'valid') out.push('No visible usable property address found');
+  if (score.market_match_score <= 0) out.push('Market mismatch');
+  if (score.distress_signal_score <= 0) out.push('Missing distress signal');
+  if (score.property_specific && quality === 'valid') out.push('Property-specific public source found');
+  if (score.distress_signal_score > 0) out.push('Visible distress/listing signal found');
+  return uniqueList(out);
+}
+
+function statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, signals, score, proofText) {
+  if (!isHttpUrl(sourceUrl) || sourceGeneric || !score.property_specific) return 'Needs Source Proof';
   if (quality === 'junk') return 'Junk/Archive';
   if (quality === 'missing' || quality === 'partial') return 'Needs Address Repair';
-  const signalText = normalizeArray(signals).join(' ').toLowerCase();
-  const hasMoneySignal = /\b(foreclos|trustee|tax sale|tax foreclosure|auction|as.?is|fixer|repair|price cut|reduced|distressed|cash)\b/.test(signalText);
-  if (sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace') return hasMoneySignal ? 'Research Ready' : 'Needs Source Proof';
-  return hasMoneySignal ? 'Research Ready' : 'Support Signal Only';
+  if (score.market_match_score <= 0) return 'Needs Source Proof';
+  if (score.distress_signal_score <= 0) return 'Support Signal Only';
+  return 'Research Ready';
 }
 
 function normalizeCandidate(candidate, context) {
@@ -303,14 +444,18 @@ function normalizeCandidate(candidate, context) {
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
   const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
-  const proofText = cleanText(candidate.why_it_might_be_deal || candidate.summary || title);
+  const proofText = cleanText(candidate.evidence_snippet || candidate.why_it_might_be_deal || candidate.summary || title);
   const quality = addressQuality(address, proofText);
+  const score = scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText);
+  const explanations = qualityExplanations(score, sourceGeneric, quality);
   const missing = uniqueList([]
     .concat(normalizeArray(candidate.missing_evidence))
     .concat(blockedSource ? ['approved public source'] : [])
     .concat(!isHttpUrl(sourceUrl) ? ['source URL'] : [])
-    .concat(sourceGeneric ? ['property-specific source URL'] : [])
+    .concat(!score.property_specific || sourceGeneric ? ['property-specific source URL'] : [])
     .concat(quality !== 'valid' ? ['usable property address'] : [])
+    .concat(score.market_match_score <= 0 ? ['selected market match'] : [])
+    .concat(score.distress_signal_score <= 0 ? ['visible distress/listing signal'] : [])
     .concat(sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace' ? ['official/property source verification', 'equity not verified', 'ARV/MAO not verified'] : [])
   );
   const riskFlags = uniqueList([]
@@ -321,10 +466,10 @@ function normalizeCandidate(candidate, context) {
   );
   const status = blockedSource
     ? 'Junk/Archive'
-    : statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, distressSignals);
+    : statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, score, proofText);
   const sourceTitle = cleanText(candidate.source_title || candidate.title || title);
   const sourceUrls = uniqueList([sourceUrl].concat(context.provider_source_urls || [])).filter(isHttpUrl);
-  const why = proofText || 'Gemini found a public source candidate. Verify the source before outreach.';
+  const why = proofText || explanations[0] || 'Gemini found a public source candidate. Verify the source before outreach.';
   const next = cleanText(candidate.suggested_next_action) || (
     sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace'
       ? 'Verify official/property source before offer. Do not assume equity or ARV.'
@@ -346,11 +491,15 @@ function normalizeCandidate(candidate, context) {
     source_url: isHttpUrl(sourceUrl) && !blockedSource ? sourceUrl : '',
     source_title: sourceTitle,
     source_type: sourceType,
+    source_quality: sourceQualityLabel(sourceUrl, sourceType, score.property_specific, sourceGeneric),
+    property_specific_source: score.property_specific,
+    market_match: score.market_match_score > 0 ? 'Matches selected market' : 'Market mismatch',
     lead_source_type: sourceType,
     strategy_tags: strategyTags,
     signal_summary: distressSignals.join(', '),
     why_it_matters: why,
     why_this_might_be_a_deal: why,
+    quality_explanations: explanations,
     distress_motivation_signals: distressSignals,
     visible_price_or_bid: cleanText(candidate.visible_price_or_bid),
     auction_date_or_timing: cleanText(candidate.auction_date_or_timing),
@@ -378,6 +527,13 @@ function normalizeCandidate(candidate, context) {
     provider: 'Gemini',
     provider_grounding_present: context.provider_grounding_present === true,
     provider_source_urls: sourceUrls,
+    property_specific_score: score.property_specific_score,
+    address_confidence_score: score.address_confidence_score,
+    market_match_score: score.market_match_score,
+    source_quality_score: score.source_quality_score,
+    distress_signal_score: score.distress_signal_score,
+    actionability_score: score.actionability_score,
+    scout_priority_score: score.scout_priority_score,
     preview_only: true,
     should_ingest: false,
     created_from: 'Gemini live public discovery'
@@ -455,8 +611,9 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       provider_source_urls: groundingUrls
     };
     const cards = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
-      .slice(0, requestedCount)
-      .map((candidate) => normalizeCandidate(candidate, context));
+      .map((candidate) => normalizeCandidate(candidate, context))
+      .sort((a, b) => (Number(b.scout_priority_score || 0) - Number(a.scout_priority_score || 0)))
+      .slice(0, requestedCount);
     return {
       attempted: true,
       status: 'available',
@@ -492,10 +649,12 @@ module.exports = {
   MAX_DISCOVERY_RESULTS,
   geminiConfig,
   buildDiscoveryPrompt,
+  buildSearchQueryTemplates,
   extractGeminiText,
   extractGroundingUrls,
   parseProviderCandidates,
   normalizeCandidate,
+  isPropertySpecificSourceUrl,
   runGeminiScoutDiscovery,
   isGenericSourceUrl,
   classifySourceType,

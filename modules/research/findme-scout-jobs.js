@@ -522,7 +522,8 @@ function cardRank(card) {
   }[card.status] || 0;
   const signalScore = (card.distress_motivation_signals || []).length * 8;
   const sourceScore = card.source_url ? 10 : 0;
-  return statusScore + signalScore + sourceScore;
+  const scoutPriority = Number(card.scout_priority_score || 0) || 0;
+  return statusScore + signalScore + sourceScore + scoutPriority;
 }
 
 function dedupeCards(cards) {
@@ -684,6 +685,9 @@ function buildAnalyzerItem(job, card) {
       source_type: card.lead_source_type || '',
       source_url: card.source_url || '',
       source_title: card.source_title || '',
+      source_quality: card.source_quality || '',
+      property_specific_source: card.property_specific_source === true,
+      market_match: card.market_match || '',
       strategy_tags: Array.isArray(card.strategy_tags) ? card.strategy_tags : [],
       provider: card.provider || '',
       provider_grounding_present: card.provider_grounding_present === true,
