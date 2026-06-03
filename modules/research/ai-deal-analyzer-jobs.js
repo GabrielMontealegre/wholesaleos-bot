@@ -548,6 +548,19 @@ function createJob(item) {
     source_url: isHttpUrl(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
       ? cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
       : '',
+    source_type: cleanText(item.source_type || item.sourceType || item.lead_source_type || item.leadSourceType || item.source || ''),
+    scout_context: item.scout_context && typeof item.scout_context === 'object' ? {
+      scout_job_id: cleanText(item.scout_context.scout_job_id),
+      scout_card_id: cleanText(item.scout_context.scout_card_id),
+      source_kind: cleanText(item.scout_context.source_kind),
+      original_ref: cleanText(item.scout_context.original_ref),
+      source_type: cleanText(item.scout_context.source_type),
+      scout_status: cleanText(item.scout_context.scout_status),
+      scout_reason: cleanText(item.scout_context.scout_reason),
+      distress_signals: Array.isArray(item.scout_context.distress_signals) ? item.scout_context.distress_signals.map(cleanText).filter(Boolean) : [],
+      missing_evidence: Array.isArray(item.scout_context.missing_evidence) ? item.scout_context.missing_evidence.map(cleanText).filter(Boolean) : [],
+      call_angle: cleanText(item.scout_context.call_angle)
+    } : null,
     source_evidence: [],
     comp_evidence: [],
     comp_research_status: 'not_configured',

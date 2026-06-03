@@ -1129,6 +1129,7 @@ function sendSelectedLeadsToAIDealAnalyzer() {
 
 var AI_DEAL_ANALYZER_JOBS = [];
 var AI_DEAL_ANALYZER_LOADING = false;
+var AI_DEAL_COMP_RESEARCH_CONFIG = null;
 
 function aiDealStatusLabel(status) {
   return ({
@@ -1251,6 +1252,82 @@ function aiDealCompResearchTone(status) {
   return 'neutral';
 }
 
+function aiDealProviderStatusText() {
+  var cfg = AI_DEAL_COMP_RESEARCH_CONFIG || {};
+  var providers = Array.isArray(cfg.providers) ? cfg.providers : [];
+  var ready = providers.find(function(provider){ return provider && provider.enabled && provider.implemented; }) ||
+    providers.find(function(provider){ return provider && provider.enabled; });
+  if (!cfg.configured || !ready) return 'Comp Research Provider: Not Configured';
+  return 'Comp Research Provider: ' + (ready.label || ready.id || 'Provider') + ' configured';
+}
+
+function aiDealProviderStatusStrip() {
+  var configured = !!(AI_DEAL_COMP_RESEARCH_CONFIG && AI_DEAL_COMP_RESEARCH_CONFIG.configured);
+  var message = AI_DEAL_COMP_RESEARCH_CONFIG && AI_DEAL_COMP_RESEARCH_CONFIG.message
+    ? AI_DEAL_COMP_RESEARCH_CONFIG.message
+    : 'Comp research provider is not configured yet. Enable Gemini/Groq/OpenRouter/OpenAI provider before running public comp research.';
+  return '<div id="ai-deal-provider-strip" style="border:1px solid ' + (configured ? '#bbf7d0' : '#fde68a') + ';background:' + (configured ? '#f0fdf4' : '#fffbeb') + ';color:' + (configured ? '#166534' : '#92400e') + ';border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' +
+    aiDealSafeText(aiDealProviderStatusText()) + ' - ' + aiDealSafeText(message) +
+  '</div>';
+}
+
+function aiDealCompBlockers(job) {
+  job = job || {};
+  var blockers = [];
+  var status = job.comp_research_status || 'not_configured';
+  var cfg = AI_DEAL_COMP_RESEARCH_CONFIG || {};
+  if (!cfg.configured || status === 'not_configured') blockers.push('Provider not configured');
+  if (job.status === 'needs_address_review' || status === 'blocked_needs_address') blockers.push('Address incomplete');
+  if (job.status === 'needs_source_evidence' || status === 'blocked_needs_source_evidence') blockers.push('Missing source evidence');
+  var pack = aiDealSourcePack(job);
+  if (pack && (pack.source_url_type === 'generic_portal' || pack.source_url_type === 'county_search_page' || pack.source_url_type === 'list_page')) {
+    blockers.push('Source is a generic portal, not a property record');
+  }
+  if (!Number(job.verified_comp_count || 0)) blockers.push('No verified sold comps found yet');
+  if (Array.isArray(job.comp_candidates) && job.comp_candidates.length) blockers.push('Candidate comps do not unlock valuation');
+  return Array.from(new Set(blockers));
+}
+
+function aiDealCompResearchEligibility(job) {
+  var status = job && job.comp_research_status || 'not_configured';
+  var cfg = AI_DEAL_COMP_RESEARCH_CONFIG || {};
+  if (!cfg.configured) {
+    return {
+      eligible: false,
+      message: 'Comp research provider is not configured yet. Enable Gemini/Groq/OpenRouter/OpenAI provider before running public comp research.'
+    };
+  }
+  if (status === 'blocked_needs_address' || (job && job.status === 'needs_address_review')) {
+    return { eligible: false, message: 'Repair property identity before comp research.' };
+  }
+  if (status === 'blocked_needs_source_evidence' || (job && job.status === 'needs_source_evidence')) {
+    return { eligible: false, message: 'Verify source/property evidence before comp research.' };
+  }
+  if (status !== 'ready_to_research') {
+    return { eligible: false, message: job && job.comp_next_action || 'Comp research is not ready for this property yet.' };
+  }
+  return { eligible: true, message: 'Research public comp evidence.' };
+}
+
+function aiDealScoutSection(job) {
+  var ctx = job && job.scout_context;
+  if (!ctx) return '';
+  var signals = Array.isArray(ctx.distress_signals) ? ctx.distress_signals : [];
+  var missing = Array.isArray(ctx.missing_evidence) ? ctx.missing_evidence : [];
+  return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:7px">' +
+    '<div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Sent from FindMe Scout</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      aiDealStatusPill('Scout status: ' + (ctx.scout_status || 'Needs review'), ctx.scout_status === 'Call Ready' || ctx.scout_status === 'Research Ready' ? 'good' : 'warn') +
+      (ctx.source_type ? aiDealStatusPill('Source: ' + ctx.source_type, 'neutral') : '') +
+      (ctx.original_ref ? aiDealStatusPill('Ref: ' + ctx.original_ref, 'neutral') : '') +
+    '</div>' +
+    (ctx.scout_reason ? '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45">' + aiDealSafeText(ctx.scout_reason) + '</div>' : '') +
+    (signals.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + signals.map(function(signal){ return aiDealStatusPill(signal, 'good'); }).join('') + '</div>' : '') +
+    (missing.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + missing.map(function(item){ return aiDealStatusPill('Missing: ' + item, 'warn'); }).join('') + '</div>' : '') +
+    (ctx.call_angle ? '<div style="font-size:12px;color:#334155;line-height:1.45"><strong>Call angle:</strong> ' + aiDealSafeText(ctx.call_angle) + '</div>' : '') +
+  '</div>';
+}
+
 function aiDealCompCandidatesList(candidates) {
   candidates = Array.isArray(candidates) ? candidates : [];
   if (!candidates.length) return '';
@@ -1277,6 +1354,8 @@ function aiDealCompResearchSection(job) {
   var label = aiDealCompResearchLabel(status);
   var candidates = Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
   var verified = Number(job.verified_comp_count || (Array.isArray(job.comp_evidence) ? job.comp_evidence.length : 0)) || 0;
+  var eligibility = aiDealCompResearchEligibility(job);
+  var blockers = aiDealCompBlockers(job);
   var next = job.comp_next_action || (status === 'not_configured'
     ? 'Comp provider not configured yet.'
     : status === 'blocked_needs_address'
@@ -1299,8 +1378,9 @@ function aiDealCompResearchSection(job) {
       aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Draft ready' : 'Locked'), job.arv_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    (blockers.length ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Why comps are blocked</div>' + blockers.map(aiDealSafeText).join(' | ') + '</div>' : '') +
     aiDealCompCandidatesList(candidates) +
-    '<div><button type="button" onclick="aiDealResearchComps(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #16a34a;background:#16a34a;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Research Comps</button></div>' +
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="aiDealResearchComps(\'' + aiDealSafeText(job.job_id || '') + '\')" ' + (eligibility.eligible ? '' : 'disabled ') + 'title="' + aiDealSafeText(eligibility.message) + '" style="border:1px solid ' + (eligibility.eligible ? '#16a34a' : '#cbd5e1') + ';background:' + (eligibility.eligible ? '#16a34a' : '#f1f5f9') + ';color:' + (eligibility.eligible ? '#fff' : '#64748b') + ';border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:' + (eligibility.eligible ? 'pointer' : 'not-allowed') + '">Research Comps</button><span style="font-size:11px;color:#64748b;font-weight:800">' + aiDealSafeText(eligibility.message) + '</span></div>' +
   '</div>';
 }
 
@@ -1331,6 +1411,7 @@ function renderAIDealAnalyzerCard(job) {
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps</div><div style="font-size:12px;color:#111827;font-weight:800">' + aiDealSafeText(verifiedCompCount) + ' verified sold</div></div>' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Debt / Taxes</div><div style="font-size:12px;color:#111827;font-weight:800">Not verified</div></div>' +
     '</div>' +
+    aiDealScoutSection(job) +
     aiDealSourceSection(sourcePack, sourceEvidence) +
     aiDealCompResearchSection(job) +
     '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:900;line-height:1.45">' + aiDealSafeText(job.result_summary || 'Insufficient verified comp evidence - valuation blocked.') + '</div>' +
@@ -1373,6 +1454,8 @@ function renderAIDealResults(jobs) {
 }
 
 function aiDealUpdateJobUI() {
+  var provider = document.getElementById('ai-deal-provider-strip-wrap');
+  if (provider) provider.innerHTML = aiDealProviderStatusStrip();
   var badges = document.getElementById('ai-deal-status-badges');
   if (badges) badges.innerHTML = renderAIDealStatusBadges(AI_DEAL_ANALYZER_JOBS);
   var results = document.getElementById('ai-deal-results');
@@ -1401,14 +1484,32 @@ async function aiDealLoadJobs(silent) {
   }
 }
 
+async function aiDealLoadCompConfig(silent) {
+  try {
+    var data = await aiDealFetchJson('/api/ai-deal-analyzer/comp-research/config');
+    AI_DEAL_COMP_RESEARCH_CONFIG = data;
+    aiDealUpdateJobUI();
+  } catch (e) {
+    AI_DEAL_COMP_RESEARCH_CONFIG = {
+      configured: false,
+      provider_status: 'not_configured',
+      providers: [],
+      message: 'Comp research provider is not configured yet.'
+    };
+    aiDealUpdateJobUI();
+    if (!silent) aiDealSetStatus(e.message || 'Comp research provider status could not be loaded.', true);
+  }
+}
+
 function renderAIDealAnalyzer() {
-  setTimeout(function(){ aiDealLoadJobs(true); }, 0);
+  setTimeout(function(){ aiDealLoadCompConfig(true); aiDealLoadJobs(true); }, 0);
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
       '<div><div style="font-size:22px;font-weight:900;color:#111827">AI Deal Analyzer</div>' +
       '<div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">Analyze up to 10 addresses or property links with evidence-first deal intelligence.</div></div>' +
       '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-weight:800">ARV and MAO stay locked until verified sold comps exist.</div>' +
     '</div>' +
+    '<div id="ai-deal-provider-strip-wrap">' + aiDealProviderStatusStrip() + '</div>' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">' +
       '<textarea id="ai-deal-input" placeholder="Paste up to 10 property addresses or Zillow/Redfin/Realtor links..." style="width:100%;min-height:112px;resize:vertical;border:1px solid #cbd5e1;border-radius:8px;padding:11px 12px;font-size:13px;line-height:1.45;color:#111827;outline:none"></textarea>' +
       '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">' +
@@ -1479,6 +1580,13 @@ async function aiDealRunJob(jobId) {
 async function aiDealResearchComps(jobId) {
   if (!jobId) return;
   try {
+    if (!AI_DEAL_COMP_RESEARCH_CONFIG) await aiDealLoadCompConfig(true);
+    var job = (AI_DEAL_ANALYZER_JOBS || []).find(function(candidate){ return candidate.job_id === jobId; }) || {};
+    var eligibility = aiDealCompResearchEligibility(job);
+    if (!eligibility.eligible) {
+      aiDealSetStatus(eligibility.message, true);
+      return;
+    }
     aiDealSetStatus('Researching public evidence...', false);
     var data = await aiDealFetchJson('/api/ai-deal-analyzer/jobs/' + encodeURIComponent(jobId) + '/comp-research', { method: 'POST' });
     if (data.job) {
@@ -1546,6 +1654,7 @@ async function sendSelectedLeadsToAIDealAnalyzer() {
 var FINDME_SCOUT_JOBS = [];
 var FINDME_SCOUT_ACTIVE_JOB = null;
 var FINDME_SCOUT_LOADED = false;
+var FINDME_SCOUT_SELECTED = {};
 
 function findMeSafeText(value) {
   if (typeof aiDealSafeText === 'function') return aiDealSafeText(value);
@@ -1598,6 +1707,58 @@ function findMeStatusTone(status) {
   return 'neutral';
 }
 
+function findMeStatusLabel(status) {
+  return status === 'Junk/Archive' ? 'Junk / Archive' : (status || 'Needs Review');
+}
+
+function findMeStatusExplanation(status) {
+  return ({
+    'Call Ready': 'Enough address/source evidence to start outreach. Valuation still may need comps.',
+    'Research Ready': 'Good enough to send to Analyzer for more evidence and comps.',
+    'Needs Source Proof': 'Address may be usable, but source/property evidence is missing.',
+    'Needs Address Repair': 'Address is incomplete, junk, or not property-specific.',
+    'Support Signal Only': 'Useful as a distress signal, not enough alone.',
+    'Junk/Archive': 'Not a usable lead.'
+  })[status] || 'Needs review before outreach.';
+}
+
+function findMeCardBlockedReason(card) {
+  if (!card) return 'Card is not eligible for Analyzer.';
+  if (card.can_send_to_analyzer === true) return '';
+  if (card.status === 'Needs Address Repair') return 'Repair address before Analyzer.';
+  if (card.status === 'Needs Source Proof') return 'Add source proof before Analyzer.';
+  if (card.status === 'Support Signal Only') return 'Support signal only - needs a stronger source before Analyzer.';
+  if (card.status === 'Junk/Archive') return 'Junk/archive cards are not sent to Analyzer.';
+  return 'Only Call Ready and Research Ready cards can be sent to Analyzer.';
+}
+
+function findMeActiveJobId() {
+  var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
+  return active && active.job_id || '';
+}
+
+function findMeSelectedCards() {
+  var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
+  var cards = active && Array.isArray(active.cards) ? active.cards : [];
+  return cards.filter(function(card){ return card && FINDME_SCOUT_SELECTED[card.card_id]; });
+}
+
+function findMeSelectedCount() {
+  return findMeSelectedCards().length;
+}
+
+function findMeToggleCardSelection(cardId, checked) {
+  if (checked) FINDME_SCOUT_SELECTED[cardId] = true;
+  else delete FINDME_SCOUT_SELECTED[cardId];
+  if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+}
+
+function findMeClearSelection() {
+  FINDME_SCOUT_SELECTED = {};
+  if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+  findMeSetStatus('Scout selection cleared.', false);
+}
+
 function renderFindMeScoutCard(card, jobId) {
   card = card || {};
   var signals = Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [];
@@ -1605,12 +1766,15 @@ function renderFindMeScoutCard(card, jobId) {
   var cardId = findMeAttr(card.card_id || '');
   var sourceUrl = card.source_url || '';
   var canAnalyze = card.can_send_to_analyzer === true;
+  var selected = !!FINDME_SCOUT_SELECTED[card.card_id];
+  var blockedReason = findMeCardBlockedReason(card);
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
-      '<div style="min-width:0"><div style="font-size:16px;font-weight:900;color:#111827;line-height:1.25;word-break:break-word">' + findMeSafeText(card.address_or_source_text || 'Source item needs review') + '</div>' +
-      '<div style="font-size:12px;color:#64748b;margin-top:3px">' + findMeSafeText(card.location || card.lead_source_type || 'Location needs review') + '</div></div>' +
-      findMePill(card.status || 'Needs Research', findMeStatusTone(card.status)) +
+      '<div style="display:flex;gap:9px;align-items:flex-start;min-width:0"><input type="checkbox" ' + (selected ? 'checked ' : '') + 'onchange="findMeToggleCardSelection(\'' + cardId + '\',this.checked)" style="margin-top:3px;width:16px;height:16px;flex:0 0 auto"><div style="min-width:0"><div style="font-size:16px;font-weight:900;color:#111827;line-height:1.25;word-break:break-word">' + findMeSafeText(card.address_or_source_text || 'Source item needs review') + '</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-top:3px">' + findMeSafeText(card.location || card.lead_source_type || 'Location needs review') + '</div></div></div>' +
+      findMePill(findMeStatusLabel(card.status), findMeStatusTone(card.status)) +
     '</div>' +
+    '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 9px;font-size:12px;color:#334155;font-weight:800;line-height:1.45"><strong>' + findMeSafeText(findMeStatusLabel(card.status)) + ':</strong> ' + findMeSafeText(findMeStatusExplanation(card.status)) + (blockedReason ? '<div style="color:#92400e;margin-top:3px">' + findMeSafeText(blockedReason) + '</div>' : '') + '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       findMePill('Confidence: ' + (card.confidence_level || 'Low'), card.confidence_level === 'High' ? 'good' : 'neutral') +
       findMePill(card.dirty_lead_category || 'Source Repair Needed', card.status === 'Junk/Archive' ? 'bad' : 'neutral') +
@@ -1645,7 +1809,24 @@ function findMeCounts(job) {
     findMePill((c.needs_address_repair || 0) + ' Needs Address Repair', c.needs_address_repair ? 'warn' : 'neutral') +
     findMePill((c.needs_source_proof || 0) + ' Needs Source Proof', c.needs_source_proof ? 'warn' : 'neutral') +
     findMePill((c.support_signal_only || 0) + ' Support Signal Only', c.support_signal_only ? 'neutral' : 'neutral') +
-    findMePill((c.junk_archive || 0) + ' Junk/Archive', c.junk_archive ? 'bad' : 'neutral') +
+    findMePill((c.junk_archive || 0) + ' Junk / Archive', c.junk_archive ? 'bad' : 'neutral') +
+  '</div>';
+}
+
+function findMeBulkActionBar(active) {
+  if (!active || !Array.isArray(active.cards)) return '';
+  var selected = findMeSelectedCards();
+  if (!selected.length) return '';
+  var eligible = selected.filter(function(card){ return card.can_send_to_analyzer === true; });
+  var blocked = selected.length - eligible.length;
+  return '<div style="position:sticky;top:0;z-index:4;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 8px 20px rgba(15,23,42,.18)">' +
+    '<div style="font-size:13px;font-weight:900">' + selected.length + ' selected' + (blocked ? ' - ' + blocked + ' blocked from Analyzer' : '') + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button type="button" onclick="findMeBulkSendToAnalyzer()" style="border:1px solid #fff;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Send Selected to AI Deal Analyzer</button>' +
+      '<button type="button" onclick="findMeBulkUpdateStatus(\'Called\')" style="border:1px solid #475569;background:#1f2937;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Mark Selected Called</button>' +
+      '<button type="button" onclick="findMeBulkUpdateStatus(\'Follow-Up\')" style="border:1px solid #475569;background:#1f2937;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Mark Selected Follow-Up</button>' +
+      '<button type="button" onclick="findMeClearSelection()" style="border:1px solid #475569;background:#111827;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Clear Selection</button>' +
+    '</div>' +
   '</div>';
 }
 
@@ -1667,13 +1848,13 @@ function renderFindMeScout() {
   var cards = active && Array.isArray(active.cards) ? active.cards : [];
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div><div style="font-size:20px;font-weight:900;color:#111827">FindMe Scout</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find 10 to 20 call-worthy opportunities from leads and source candidates already in the system.</div></div>' +
+      '<div><div style="font-size:20px;font-weight:900;color:#111827">FindMe Scout</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find 10, 20, or 50 call-worthy opportunities from leads and source candidates already in the system.</div></div>' +
       '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:390px">Scout never invents owner, debt, comps, ARV, MAO, DOM, sale date, or auction amount. Bad addresses stay blocked from valuation.</div>' +
     '</div>' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:grid;grid-template-columns:180px 1fr 130px;gap:12px;align-items:end">' +
       '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Market</div><select id="findme-market" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option>Dallas</option><option>Texas</option><option>National</option></select></div>' +
       '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Location</div><input id="findme-location" placeholder="State, county, city, or ZIP" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
-      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Batch size</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="10">10</option><option value="20">20</option></select></div>' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Batch size</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></div>' +
       '<div style="grid-column:1 / -1"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:6px">Strategy</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px">' +
         strategies.map(function(item, idx) {
           var checked = idx === 2 || idx === 3 || idx === 7 ? ' checked' : '';
@@ -1683,6 +1864,7 @@ function renderFindMeScout() {
       '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Opportunities</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
     (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Scout Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default strategies') + '</div></div>' + findMePill((active.provider_status === 'not_configured' ? 'Provider not configured' : 'Provider ready'), active.provider_status === 'not_configured' ? 'warn' : 'good') + '</div>' + findMeCounts(active) + '</div>' : '') +
+    findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
       (cards.length ? cards.map(function(card){ return renderFindMeScoutCard(card, active.job_id); }).join('') : '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Scout cards yet. Choose a market and strategy, then click Find Opportunities.</div>') +
     '</div>' +
@@ -1727,6 +1909,7 @@ async function findMeCreateAndRunJob() {
     });
     var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
     FINDME_SCOUT_ACTIVE_JOB = run.job;
+    FINDME_SCOUT_SELECTED = {};
     FINDME_SCOUT_JOBS = [run.job].concat(FINDME_SCOUT_JOBS || []).slice(0, 20);
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
     findMeSetStatus((run.job.cards || []).length + ' Scout card' + ((run.job.cards || []).length === 1 ? '' : 's') + ' ready.', false);
@@ -1776,6 +1959,60 @@ async function findMeSendToAnalyzer(jobId, cardId) {
     findMeSetStatus('Sent to AI Deal Analyzer.', false);
   } catch (e) {
     findMeSetStatus(e.message || 'Analyzer handoff failed.', true);
+  }
+}
+
+async function findMeBulkSendToAnalyzer() {
+  var jobId = findMeActiveJobId();
+  var selected = findMeSelectedCards();
+  var eligible = selected.filter(function(card){ return card.can_send_to_analyzer === true; });
+  var blocked = selected.length - eligible.length;
+  if (!selected.length) {
+    findMeSetStatus('Select Scout cards first.', true);
+    return;
+  }
+  if (!eligible.length) {
+    findMeSetStatus('No selected cards are eligible for AI Deal Analyzer yet. Repair address/source evidence first.', true);
+    return;
+  }
+  var sent = 0;
+  try {
+    for (var i = 0; i < eligible.length; i += 1) {
+      var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cards/' + encodeURIComponent(eligible[i].card_id) + '/analyzer', { method: 'POST' });
+      sent += 1;
+      FINDME_SCOUT_ACTIVE_JOB = data.job;
+    }
+    FINDME_SCOUT_SELECTED = {};
+    if (typeof aiDealLoadJobs === 'function') await aiDealLoadJobs(true);
+    if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+    findMeSetStatus(sent + ' sent to AI Deal Analyzer.' + (blocked ? ' ' + blocked + ' stayed blocked because they need repair/source proof.' : ''), blocked > 0);
+  } catch (e) {
+    if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+    findMeSetStatus(e.message || 'Bulk analyzer handoff failed.', true);
+  }
+}
+
+async function findMeBulkUpdateStatus(status) {
+  var jobId = findMeActiveJobId();
+  var selected = findMeSelectedCards();
+  if (!selected.length) {
+    findMeSetStatus('Select Scout cards first.', true);
+    return;
+  }
+  try {
+    for (var i = 0; i < selected.length; i += 1) {
+      var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cards/' + encodeURIComponent(selected[i].card_id) + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline_status: status })
+      });
+      FINDME_SCOUT_ACTIVE_JOB = data.job;
+    }
+    FINDME_SCOUT_SELECTED = {};
+    if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+    findMeSetStatus(selected.length + ' Scout card' + (selected.length === 1 ? '' : 's') + ' updated.', false);
+  } catch (e) {
+    findMeSetStatus(e.message || 'Bulk status update failed.', true);
   }
 }
 
