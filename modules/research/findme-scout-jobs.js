@@ -579,6 +579,8 @@ function providerSummaryFrom(result) {
   result = result || {};
   const status = result.status === 'available'
     ? 'Available'
+    : result.status === 'temporarily_unavailable'
+      ? 'Temporarily unavailable'
     : result.status === 'failed'
       ? 'Failed'
       : 'Not configured';
@@ -618,7 +620,7 @@ async function runJob(jobId, options = {}) {
       .slice(0, job.batch_size || MAX_BATCH_SIZE);
     job = Object.assign({}, job, {
       updated_at: nowIso(),
-      status: 'complete',
+    status: 'complete',
       cards,
       counts: summarizeCards(cards),
       source_summary: {
