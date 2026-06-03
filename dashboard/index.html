@@ -1791,10 +1791,12 @@ function renderFindMeScoutCard(card, jobId) {
       (card.provider ? findMePill('Provider: ' + card.provider, card.provider_grounding_present ? 'good' : 'warn') : '') +
       (providerUrls.length ? findMePill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
       (card.source_quality ? findMePill('Source: ' + card.source_quality, card.property_specific_source ? 'good' : 'warn') : '') +
+      (card.source_classification_label || card.source_classification ? findMePill('Class: ' + (card.source_classification_label || card.source_classification), card.property_specific_source ? 'good' : 'warn') : '') +
       (card.market_match ? findMePill(card.market_match, card.market_match === 'Matches selected market' ? 'good' : 'warn') : '') +
       findMePill(card.property_specific_source ? 'Property-specific source' : 'Needs exact property source', card.property_specific_source ? 'good' : 'warn') +
     '</div>' +
     (card.provider ? '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:8px 9px;font-size:12px;color:#166534;font-weight:900;line-height:1.45">Live public discovery via ' + findMeSafeText(card.provider) + (card.source_title ? '<div style="color:#334155;font-weight:800;margin-top:2px">' + findMeSafeText(card.source_title) + '</div>' : '') + '</div>' : '') +
+    (card.created_from_grounding_url ? '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:8px 9px;font-size:12px;color:#92400e;font-weight:900;line-height:1.45">Created from Gemini source URL<div style="color:#334155;font-weight:800;margin-top:2px">' + findMeSafeText(card.why_card_exists || 'Grounded search returned a public source URL, but not a complete property candidate.') + '</div></div>' : '') +
     (strategyTags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + strategyTags.map(function(tag){ return findMePill(tag, 'neutral'); }).join('') + '</div>' : '') +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Why this matters</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:3px">' + findMeSafeText(card.why_this_might_be_a_deal || 'Existing evidence needs review.') + '</div></div>' +
@@ -1835,6 +1837,10 @@ function findMeProviderSummary(active) {
   var geminiStatus = summary.gemini_live_discovery || (active && active.provider_status === 'available' ? 'Available' : active && active.provider_status === 'temporarily_unavailable' ? 'Temporarily unavailable' : active && active.provider_status === 'timed_out' ? 'Timed out' : active && active.provider_status === 'failed' ? 'Failed' : 'Not configured');
   var urls = Number(summary.source_urls_found_count || 0) || 0;
   var candidates = Number(summary.candidates_found || 0) || 0;
+  var harvested = Number(summary.urls_harvested || 0) || 0;
+  var cardsFromUrls = Number(summary.cards_from_grounding_urls || 0) || 0;
+  var propertyUrls = Number(summary.property_specific_urls || 0) || 0;
+  var filteredUrls = Number(summary.generic_urls_filtered || 0) || 0;
   var warnings = Array.isArray(summary.warnings) ? summary.warnings.filter(Boolean) : [];
   var tone = geminiStatus === 'Available' ? 'good' : geminiStatus === 'Temporarily unavailable' || geminiStatus === 'Timed out' ? 'warn' : geminiStatus === 'Failed' ? 'bad' : 'warn';
   return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:7px">' +
@@ -1843,6 +1849,10 @@ function findMeProviderSummary(active) {
       findMePill('Gemini Live Discovery: ' + geminiStatus, tone) +
       findMePill('Source URLs found: ' + urls, urls ? 'good' : 'neutral') +
       findMePill('Live candidates found: ' + candidates, candidates ? 'good' : 'neutral') +
+      findMePill('URLs harvested: ' + harvested, harvested ? 'good' : 'neutral') +
+      findMePill('Cards from source URLs: ' + cardsFromUrls, cardsFromUrls ? 'good' : 'neutral') +
+      findMePill('Property-specific URLs: ' + propertyUrls, propertyUrls ? 'good' : 'neutral') +
+      findMePill('Generic URLs filtered: ' + filteredUrls, filteredUrls ? 'warn' : 'neutral') +
     '</div>' +
     '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45">Last provider result: ' + findMeSafeText(summary.message || active && active.provider_message || 'Saved Leads Mode is available. Gemini Live Discovery runs only when configured.') + '</div>' +
     (warnings.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + warnings.slice(0, 4).map(function(item){ return findMePill(item, 'warn'); }).join('') + '</div>' : '') +
