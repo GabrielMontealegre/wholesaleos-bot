@@ -416,8 +416,7 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       tools: [{ google_search: {} }],
       generationConfig: {
         temperature: 0,
-        maxOutputTokens: 4096,
-        responseMimeType: 'application/json'
+        maxOutputTokens: 4096
       }
     }, {
       'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
