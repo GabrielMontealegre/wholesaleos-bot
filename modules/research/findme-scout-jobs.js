@@ -16,7 +16,7 @@ const STORE_FILE = path.resolve(
 );
 
 const MAX_JOBS = 100;
-const MAX_BATCH_SIZE = 20;
+const MAX_BATCH_SIZE = 50;
 const STATUSES = new Set([
   'New',
   'Call Today',
@@ -162,11 +162,12 @@ function strategyLabel(strategy) {
 function defaultJobInput(body) {
   body = body || {};
   const batch = Number(body.batch_size || body.batchSize || 10);
+  const safeBatch = batch === 50 ? 50 : batch === 20 ? 20 : 10;
   return {
     market: cleanText(body.market || 'Dallas') || 'Dallas',
     location: cleanText(body.location || body.county || body.city || body.zip || ''),
     strategies: normalizeStrategies(body.strategies || body.strategy || ['foreclosure_notice', 'tax_foreclosure', 'code_violation']),
-    batch_size: batch === 20 ? 20 : 10
+    batch_size: safeBatch
   };
 }
 
@@ -659,8 +660,21 @@ function sendCardToAnalyzer(jobId, cardId, options = {}) {
       input_value: card.address_or_source_text,
       address: card.address_or_source_text,
       source_url: card.source_url,
+      source_type: card.lead_source_type,
       source: 'FindMe Scout',
-      lead_ref: card.lead_id || card.candidate_id || card.card_id
+      lead_ref: card.lead_id || card.candidate_id || card.card_id,
+      scout_context: {
+        scout_job_id: job.job_id,
+        scout_card_id: card.card_id,
+        source_kind: card.source_kind || '',
+        original_ref: card.lead_id || card.candidate_id || card.analyzer_job_id || card.card_id,
+        source_type: card.lead_source_type || '',
+        scout_status: card.status || '',
+        scout_reason: card.why_this_might_be_a_deal || '',
+        distress_signals: Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [],
+        missing_evidence: Array.isArray(card.missing_evidence) ? card.missing_evidence : [],
+        call_angle: card.call_angle || ''
+      }
     }]
   }, { runNow: true });
   card.pipeline_status = 'Sent to Analyzer';
