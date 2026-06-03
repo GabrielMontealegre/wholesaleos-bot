@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
 const MAX_DISCOVERY_RESULTS = 50;
+const GEMINI_TRANSIENT_PATTERN = /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy)\b/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -15,6 +16,19 @@ function safeLower(value) {
 
 function envEnabled(value) {
   return /^(1|true|yes|on)$/i.test(String(value || '').trim());
+}
+
+function classifyGeminiError(error) {
+  const message = cleanText(error && error.message ? error.message : '');
+  const status = Number(error && (error.status || error.statusCode || error.code) || 0);
+  const retryable = status === 429 || status === 503 || GEMINI_TRANSIENT_PATTERN.test(message);
+  return {
+    retryable,
+    status: retryable ? 'temporarily_unavailable' : 'failed',
+    message: retryable
+      ? 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only. Try again in a few minutes.'
+      : cleanText(error && error.message ? error.message : 'Gemini Live Discovery failed. Scout used saved leads mode only.')
+  };
 }
 
 function isHttpUrl(value) {
@@ -449,17 +463,18 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       warnings: uniqueList(parsed.warnings)
     };
   } catch (error) {
+    const classified = classifyGeminiError(error);
     return {
       attempted: true,
-      status: 'failed',
-      message: cleanText(error && error.message ? error.message : 'Gemini Live Discovery failed. Scout used saved leads mode only.'),
+      status: classified.status,
+      message: classified.message,
       model: config.model,
       cards: [],
       candidates_found: 0,
       source_urls_found_count: 0,
       source_urls: [],
       grounding_present: false,
-      warnings: ['Gemini Live Discovery failed. Scout used saved leads mode only.']
+      warnings: [classified.message]
     };
   }
 }
@@ -474,5 +489,6 @@ module.exports = {
   normalizeCandidate,
   runGeminiScoutDiscovery,
   isGenericSourceUrl,
-  classifySourceType
+  classifySourceType,
+  classifyGeminiError
 };

@@ -1,5 +1,7 @@
 'use strict';
 
+const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider');
+
 const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
 const GROQ_DEFAULT_MODEL = 'llama-3.1-70b-versatile';
 const OPENROUTER_DEFAULT_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
@@ -25,6 +27,16 @@ function isHttpUrl(value) {
 
 function safeModel(value, fallback) {
   return cleanText(value || fallback);
+}
+
+function isTransientGeminiProbeError(error) {
+  const message = cleanText(error && error.message ? error.message : '');
+  const status = Number(error && (error.status || error.statusCode || error.code) || 0);
+  return status === 429 || status === 503 || /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy)\b/i.test(message);
+}
+
+function transientGeminiProbeMessage(error) {
+  return cleanText(error && error.message ? error.message : 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only. Try again in a few minutes.');
 }
 
 function recognizedEnvNames() {
@@ -184,6 +196,12 @@ function chooseRecommendation(audit) {
     };
   }
   if (audit.gemini_enabled && audit.gemini_key_present && audit.gemini_live_probe_attempted && !audit.gemini_live_probe_success) {
+    if (audit.gemini_live_probe_status === 'temporarily_unavailable' || audit.gemini_live_probe_retryable === true) {
+      return {
+        recommended_provider_path: 'gemini_grounding_configured_but_temporarily_unavailable',
+        reason: 'Gemini is configured, but Google Search grounding is temporarily unavailable/high demand. Try again later or configure Brave/Firecrawl fallback.'
+      };
+    }
     return {
       recommended_provider_path: 'no_live_provider_configured',
       reason: 'Gemini is configured but Google Search grounding did not return usable source URLs.'
@@ -237,8 +255,12 @@ async function auditProviderCapabilities(options) {
       audit.gemini_grounding_metadata_present = geminiProbe.grounding_metadata_present;
       audit.gemini_source_urls_returned_count = geminiProbe.source_urls_returned_count;
     } catch (error) {
+      const retryable = isTransientGeminiProbeError(error);
       audit.gemini_live_probe_attempted = true;
       audit.gemini_live_probe_success = false;
+      audit.gemini_live_probe_status = retryable ? 'temporarily_unavailable' : 'failed';
+      audit.gemini_live_probe_retryable = retryable;
+      audit.gemini_live_probe_message = transientGeminiProbeMessage(error);
       audit.gemini_grounding_metadata_present = false;
       audit.gemini_source_urls_returned_count = 0;
       audit.gemini_probe_error = cleanText(error && error.message ? error.message : 'Gemini probe failed.');
