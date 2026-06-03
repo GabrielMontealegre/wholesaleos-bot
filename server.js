@@ -1388,13 +1388,13 @@ app.get('/api/findme-scout/jobs/:jobId', (req, res) => {
   }
 });
 
-app.post('/api/findme-scout/jobs/:jobId/run', (req, res) => {
+app.post('/api/findme-scout/jobs/:jobId/run', async (req, res) => {
   try {
-    const job = findMeScoutJobs.runJob(req.params.jobId);
+    const job = await findMeScoutJobs.runJob(req.params.jobId, req.body || {});
     return res.json({
       ok: true,
       job,
-      safety: 'deterministic existing-data Scout run only; no provider calls, no lead mutation, no valuation unlock'
+      safety: 'operator-triggered Scout run only; no autonomous ingestion, no lead mutation, no valuation unlock'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
