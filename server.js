@@ -1412,6 +1412,29 @@ app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/analyzer', (req, res) => {
   }
 });
 
+app.post('/api/findme-scout/jobs/:jobId/cards/analyzer', (req, res) => {
+  try {
+    const body = req.body || {};
+    const result = findMeScoutJobs.sendCardsToAnalyzer(req.params.jobId, body.card_ids || body.cardIds || body.cards || [], {
+      selected_count: body.selected_count || body.selectedCount || body.selected_cards || body.selectedCards
+    });
+    return res.json({
+      ok: true,
+      job: result.job,
+      cards: result.cards,
+      sent: result.sent,
+      blocked: result.blocked,
+      analyzer_jobs: result.analyzer_jobs,
+      safety: 'operator-triggered analyzer handoff only; candidate evidence does not unlock ARV or MAO'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to send Scout cards to AI Deal Analyzer'
+    });
+  }
+});
+
 app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => {
   try {
     const job = await aiDealAnalyzerJobs.runCompResearchForJob(req.params.jobId);

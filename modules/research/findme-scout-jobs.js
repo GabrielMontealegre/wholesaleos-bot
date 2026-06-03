@@ -613,6 +613,30 @@ function findCard(job, cardId) {
   return card;
 }
 
+function buildAnalyzerItem(job, card) {
+  return {
+    input_type: 'pasted_address',
+    input_value: card.address_or_source_text,
+    address: card.address_or_source_text,
+    source_url: card.source_url,
+    source_type: card.lead_source_type,
+    source: 'FindMe Scout',
+    lead_ref: card.lead_id || card.candidate_id || card.card_id,
+    scout_context: {
+      scout_job_id: job.job_id,
+      scout_card_id: card.card_id,
+      source_kind: card.source_kind || '',
+      original_ref: card.lead_id || card.candidate_id || card.analyzer_job_id || card.card_id,
+      source_type: card.lead_source_type || '',
+      scout_status: card.status || '',
+      scout_reason: card.why_this_might_be_a_deal || '',
+      distress_signals: Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [],
+      missing_evidence: Array.isArray(card.missing_evidence) ? card.missing_evidence : [],
+      call_angle: card.call_angle || ''
+    }
+  };
+}
+
 function updateCard(jobId, cardId, body, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
@@ -654,29 +678,7 @@ function sendCardToAnalyzer(jobId, cardId, options = {}) {
     err.status = 400;
     throw err;
   }
-  const analyzerJobs = aiDealAnalyzerJobs.createJobs({
-    items: [{
-      input_type: 'pasted_address',
-      input_value: card.address_or_source_text,
-      address: card.address_or_source_text,
-      source_url: card.source_url,
-      source_type: card.lead_source_type,
-      source: 'FindMe Scout',
-      lead_ref: card.lead_id || card.candidate_id || card.card_id,
-      scout_context: {
-        scout_job_id: job.job_id,
-        scout_card_id: card.card_id,
-        source_kind: card.source_kind || '',
-        original_ref: card.lead_id || card.candidate_id || card.analyzer_job_id || card.card_id,
-        source_type: card.lead_source_type || '',
-        scout_status: card.status || '',
-        scout_reason: card.why_this_might_be_a_deal || '',
-        distress_signals: Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [],
-        missing_evidence: Array.isArray(card.missing_evidence) ? card.missing_evidence : [],
-        call_angle: card.call_angle || ''
-      }
-    }]
-  }, { runNow: true });
+  const analyzerJobs = aiDealAnalyzerJobs.createJobs({ items: [buildAnalyzerItem(job, card)] }, { runNow: true });
   card.pipeline_status = 'Sent to Analyzer';
   card.sent_to_analyzer_at = nowIso();
   card.analyzer_job_id = analyzerJobs && analyzerJobs[0] && analyzerJobs[0].job_id || '';
@@ -688,6 +690,49 @@ function sendCardToAnalyzer(jobId, cardId, options = {}) {
     job: publicJob(job),
     card,
     analyzer_job: analyzerJobs && analyzerJobs[0] || null
+  };
+}
+
+function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
+  const jobs = readJobs(options.storePath);
+  const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
+  if (idx < 0) {
+    const err = new Error('Scout job not found.');
+    err.status = 404;
+    throw err;
+  }
+  const job = jobs[idx];
+  const requestedIds = Array.isArray(cardIds) ? Array.from(new Set(cardIds.map(cleanText).filter(Boolean))) : [];
+  const selectedCount = Math.max(parseInt(options.selected_count || options.selectedCount || requestedIds.length, 10) || requestedIds.length, requestedIds.length);
+  if (!requestedIds.length) {
+    const err = new Error('Select Scout cards first.');
+    err.status = 400;
+    throw err;
+  }
+  if (selectedCount > 20 || requestedIds.length > 20) {
+    const err = new Error('Send up to 20 to AI Deal Analyzer at a time.');
+    err.status = 400;
+    throw err;
+  }
+  const cards = requestedIds.map((cardId) => findCard(job, cardId));
+  const eligible = cards.filter((card) => card.can_send_to_analyzer === true);
+  if (!eligible.length) {
+    const err = new Error('Repair address/source evidence before sending Scout cards to AI Deal Analyzer.');
+    err.status = 400;
+    throw err;
+  }
+  const analyzerJobs = [];
+  let latestResult = null;
+  eligible.forEach((card) => {
+    latestResult = sendCardToAnalyzer(jobId, card.card_id, options);
+    analyzerJobs.push(latestResult.analyzer_job);
+  });
+  return {
+    job: latestResult ? latestResult.job : publicJob(job),
+    cards: eligible.map((card) => card.card_id),
+    sent: eligible.length,
+    blocked: cards.length - eligible.length,
+    analyzer_jobs: analyzerJobs
   };
 }
 
@@ -712,6 +757,7 @@ module.exports = {
   runJob,
   updateCard,
   sendCardToAnalyzer,
+  sendCardsToAnalyzer,
   addressQualityFromText,
   strategySignals,
   dirtyLeadCategory
