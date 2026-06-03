@@ -161,6 +161,7 @@ function baseAudit(env) {
     gemini_live_probe_success: false,
     gemini_grounding_metadata_present: false,
     gemini_source_urls_returned_count: 0,
+    gemini_live_probe_status: geminiKey && geminiEnabled ? 'not_probed' : 'disabled',
     groq_key_present: groqKey,
     groq_enabled: groqEnabled,
     groq_model: safeModel(env.GROQ_RESEARCH_MODEL, GROQ_DEFAULT_MODEL),
@@ -206,6 +207,12 @@ function chooseRecommendation(audit) {
     };
   }
   if (audit.gemini_enabled && audit.gemini_key_present && audit.gemini_live_probe_attempted && !audit.gemini_live_probe_success) {
+    if (audit.gemini_live_probe_status === 'configured_probe_empty') {
+      return {
+        recommended_provider_path: 'gemini_grounding_configured_but_no_urls_from_probe',
+        reason: 'Gemini is configured, but the tiny probe did not return usable URLs. Live Scout may still work with stronger strategy queries.'
+      };
+    }
     if (audit.gemini_live_probe_status === 'temporarily_unavailable' || audit.gemini_live_probe_status === 'timed_out' || audit.gemini_live_probe_retryable === true) {
       return {
         recommended_provider_path: 'gemini_grounding_configured_but_temporarily_unavailable',
@@ -266,6 +273,11 @@ async function auditProviderCapabilities(options) {
       audit.gemini_live_probe_success = geminiProbe.success;
       audit.gemini_grounding_metadata_present = geminiProbe.grounding_metadata_present;
       audit.gemini_source_urls_returned_count = geminiProbe.source_urls_returned_count;
+      if (geminiProbe.grounding_metadata_present && geminiProbe.source_urls_returned_count === 0) {
+        audit.gemini_live_probe_status = 'configured_probe_empty';
+        audit.gemini_live_probe_retryable = false;
+        audit.gemini_live_probe_message = 'Gemini is configured, but the tiny probe did not return usable URLs. Live Scout may still work with stronger strategy queries.';
+      }
     } catch (error) {
       const retryable = isTransientGeminiProbeError(error);
       audit.gemini_live_probe_attempted = true;
