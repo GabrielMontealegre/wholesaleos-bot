@@ -1314,13 +1314,19 @@ function aiDealScoutSection(job) {
   if (!ctx) return '';
   var signals = Array.isArray(ctx.distress_signals) ? ctx.distress_signals : [];
   var missing = Array.isArray(ctx.missing_evidence) ? ctx.missing_evidence : [];
+  var tags = Array.isArray(ctx.strategy_tags) ? ctx.strategy_tags : [];
+  var providerUrls = Array.isArray(ctx.provider_source_urls) ? ctx.provider_source_urls : [];
   return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:7px">' +
     '<div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Sent from FindMe Scout</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       aiDealStatusPill('Scout status: ' + (ctx.scout_status || 'Needs review'), ctx.scout_status === 'Call Ready' || ctx.scout_status === 'Research Ready' ? 'good' : 'warn') +
       (ctx.source_type ? aiDealStatusPill('Source: ' + ctx.source_type, 'neutral') : '') +
+      (ctx.provider ? aiDealStatusPill('Provider: ' + ctx.provider, ctx.provider_grounding_present ? 'good' : 'warn') : '') +
+      (providerUrls.length ? aiDealStatusPill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
       (ctx.original_ref ? aiDealStatusPill('Ref: ' + ctx.original_ref, 'neutral') : '') +
     '</div>' +
+    (ctx.source_title ? '<div style="font-size:12px;color:#334155;line-height:1.45"><strong>Source:</strong> ' + aiDealSafeText(ctx.source_title) + '</div>' : '') +
+    (tags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + tags.map(function(tag){ return aiDealStatusPill(tag, 'neutral'); }).join('') + '</div>' : '') +
     (ctx.scout_reason ? '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45">' + aiDealSafeText(ctx.scout_reason) + '</div>' : '') +
     (signals.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + signals.map(function(signal){ return aiDealStatusPill(signal, 'good'); }).join('') + '</div>' : '') +
     (missing.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + missing.map(function(item){ return aiDealStatusPill('Missing: ' + item, 'warn'); }).join('') + '</div>' : '') +
@@ -1763,6 +1769,8 @@ function renderFindMeScoutCard(card, jobId) {
   card = card || {};
   var signals = Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [];
   var missing = Array.isArray(card.missing_evidence) ? card.missing_evidence : [];
+  var providerUrls = Array.isArray(card.provider_source_urls) ? card.provider_source_urls : [];
+  var strategyTags = Array.isArray(card.strategy_tags) ? card.strategy_tags : [];
   var cardId = findMeAttr(card.card_id || '');
   var sourceUrl = card.source_url || '';
   var canAnalyze = card.can_send_to_analyzer === true;
@@ -1779,7 +1787,11 @@ function renderFindMeScoutCard(card, jobId) {
       findMePill('Confidence: ' + (card.confidence_level || 'Low'), card.confidence_level === 'High' ? 'good' : 'neutral') +
       findMePill(card.dirty_lead_category || 'Source Repair Needed', card.status === 'Junk/Archive' ? 'bad' : 'neutral') +
       findMePill(card.pipeline_status || 'New', card.pipeline_status === 'Sent to Analyzer' ? 'good' : 'neutral') +
+      (card.provider ? findMePill('Provider: ' + card.provider, card.provider_grounding_present ? 'good' : 'warn') : '') +
+      (providerUrls.length ? findMePill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
     '</div>' +
+    (card.provider ? '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:8px 9px;font-size:12px;color:#166534;font-weight:900;line-height:1.45">Live public discovery via ' + findMeSafeText(card.provider) + (card.source_title ? '<div style="color:#334155;font-weight:800;margin-top:2px">' + findMeSafeText(card.source_title) + '</div>' : '') + '</div>' : '') +
+    (strategyTags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + strategyTags.map(function(tag){ return findMePill(tag, 'neutral'); }).join('') + '</div>' : '') +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
       '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Why this matters</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:3px">' + findMeSafeText(card.why_this_might_be_a_deal || 'Existing evidence needs review.') + '</div></div>' +
       '<div style="border:1px solid #dbeafe;border-radius:8px;background:#eff6ff;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">What to do next</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:3px">' + findMeSafeText(card.next_best_action || 'Review evidence.') + '</div></div>' +
@@ -1813,6 +1825,25 @@ function findMeCounts(job) {
   '</div>';
 }
 
+function findMeProviderSummary(active) {
+  var summary = active && active.provider_summary || {};
+  var geminiStatus = summary.gemini_live_discovery || (active && active.provider_status === 'available' ? 'Available' : active && active.provider_status === 'failed' ? 'Failed' : 'Not configured');
+  var urls = Number(summary.source_urls_found_count || 0) || 0;
+  var candidates = Number(summary.candidates_found || 0) || 0;
+  var warnings = Array.isArray(summary.warnings) ? summary.warnings.filter(Boolean) : [];
+  var tone = geminiStatus === 'Available' ? 'good' : geminiStatus === 'Failed' ? 'bad' : 'warn';
+  return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:7px">' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
+      findMePill('Saved Leads Mode: Available', 'good') +
+      findMePill('Gemini Live Discovery: ' + geminiStatus, tone) +
+      findMePill('Source URLs found: ' + urls, urls ? 'good' : 'neutral') +
+      findMePill('Live candidates found: ' + candidates, candidates ? 'good' : 'neutral') +
+    '</div>' +
+    '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45">Last provider result: ' + findMeSafeText(summary.message || active && active.provider_message || 'Saved Leads Mode is available. Gemini Live Discovery runs only when configured.') + '</div>' +
+    (warnings.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + warnings.slice(0, 4).map(function(item){ return findMePill(item, 'warn'); }).join('') + '</div>' : '') +
+  '</div>';
+}
+
 function findMeBulkActionBar(active) {
   if (!active || !Array.isArray(active.cards)) return '';
   var selected = findMeSelectedCards();
@@ -1843,13 +1874,14 @@ function renderFindMeScout() {
     ['long_dom', 'long DOM / stale listing'],
     ['code_violation', 'code violation'],
     ['auction_soon', 'auction soon'],
+    ['auction_public', 'Auction / Public Auction Listings'],
     ['vacant_absentee', 'vacant/absentee if evidence exists']
   ];
   var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
   var cards = active && Array.isArray(active.cards) ? active.cards : [];
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div><div style="font-size:20px;font-weight:900;color:#111827">FindMe Scout</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find 10, 20, or 50 call-worthy opportunities from leads and source candidates already in the system.</div></div>' +
+      '<div><div style="font-size:20px;font-weight:900;color:#111827">FindMe Scout</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find 10, 20, or 50 call-worthy opportunities from saved leads, source candidates, and configured live public discovery.</div></div>' +
       '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:390px">Scout never invents owner, debt, comps, ARV, MAO, DOM, sale date, or auction amount. Bad addresses stay blocked from valuation.</div>' +
     '</div>' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:grid;grid-template-columns:180px 1fr 130px;gap:12px;align-items:end">' +
@@ -1864,7 +1896,7 @@ function renderFindMeScout() {
       '</div></div>' +
       '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Opportunities</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
-    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Scout Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default strategies') + '</div></div>' + findMePill((active.provider_status === 'not_configured' ? 'Provider not configured' : 'Provider ready'), active.provider_status === 'not_configured' ? 'warn' : 'good') + '</div>' + findMeCounts(active) + '</div>' : '') +
+    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Scout Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default strategies') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeProviderSummary(active) + '</div>' : '') +
     findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
       (cards.length ? cards.map(function(card){ return renderFindMeScoutCard(card, active.job_id); }).join('') : '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Scout cards yet. Choose a market and strategy, then click Find Opportunities.</div>') +

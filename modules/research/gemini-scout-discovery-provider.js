@@ -1,0 +1,479 @@
+'use strict';
+
+const crypto = require('crypto');
+
+const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
+const MAX_DISCOVERY_RESULTS = 50;
+
+function cleanText(value) {
+  return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+}
+
+function safeLower(value) {
+  return cleanText(value).toLowerCase();
+}
+
+function envEnabled(value) {
+  return /^(1|true|yes|on)$/i.test(String(value || '').trim());
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(cleanText(value));
+}
+
+function uniqueList(values) {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const item = cleanText(value);
+    const key = item.toLowerCase();
+    if (!item || seen.has(key)) return;
+    seen.add(key);
+    out.push(item);
+  });
+  return out;
+}
+
+function hashId(prefix, value) {
+  return `${prefix}_${crypto.createHash('sha1').update(cleanText(value)).digest('hex').slice(0, 16)}`;
+}
+
+function geminiConfig(env = process.env) {
+  const keyPresent = !!cleanText(env.GEMINI_API_KEY);
+  const enabled = envEnabled(env.ENABLE_GEMINI_WEB_RESEARCH);
+  return {
+    configured: keyPresent && enabled,
+    key_present: keyPresent,
+    enabled,
+    model: cleanText(env.GEMINI_RESEARCH_MODEL || GEMINI_DEFAULT_MODEL),
+    status: keyPresent && enabled ? 'available' : 'not_configured',
+    message: keyPresent && !enabled
+      ? 'Gemini key may exist, but live Gemini research is disabled until ENABLE_GEMINI_WEB_RESEARCH=true.'
+      : keyPresent && enabled
+        ? 'Gemini Live Discovery is available.'
+        : 'Gemini Live Discovery is not configured.'
+  };
+}
+
+function strategyLabels(strategies) {
+  const labels = {
+    fixer: 'ugly/as-is/fixer',
+    ugly: 'ugly/as-is/fixer',
+    as_is: 'ugly/as-is/fixer',
+    pre_foreclosure: 'pre-foreclosure',
+    foreclosure_notice: 'foreclosure/trustee notice',
+    trustee_notice: 'foreclosure/trustee notice',
+    tax_foreclosure: 'tax foreclosure/tax sale',
+    tax_sale: 'tax foreclosure/tax sale',
+    tax_delinquent: 'tax delinquent/tax lien',
+    tax_lien: 'tax delinquent/tax lien',
+    price_cut: 'price cut',
+    long_dom: 'long DOM / stale listing',
+    stale_listing: 'long DOM / stale listing',
+    code_violation: 'code violation',
+    auction_soon: 'auction soon',
+    auction_public: 'auction/public auction listings',
+    public_auction: 'auction/public auction listings',
+    vacant_absentee: 'vacant/absentee if evidence exists'
+  };
+  return uniqueList((Array.isArray(strategies) ? strategies : []).map((strategy) => labels[strategy] || cleanText(strategy).replace(/_/g, ' ')));
+}
+
+function buildDiscoveryPrompt(job, requestedCount) {
+  const location = cleanText(job.location) || cleanText(job.market) || 'Dallas County, TX';
+  const count = Math.max(1, Math.min(parseInt(requestedCount || job.batch_size || 10, 10) || 10, MAX_DISCOVERY_RESULTS));
+  const strategies = strategyLabels(job.strategies);
+  return [
+    'You are helping a real estate acquisition operator find public, source-cited candidate properties.',
+    `Market/location: ${location}.`,
+    `Strategies: ${strategies.join(', ') || 'distressed property opportunities'}.`,
+    `Return up to ${count} candidates, ranked strongest to weakest.`,
+    '',
+    'Hard rules:',
+    '- Return only candidate properties or property-specific source pages with source URLs.',
+    '- Do not invent addresses, owner names, debt, DOM, auction amounts, tax amounts, sold prices, listing history, phone, email, ARV, or MAO.',
+    '- If a field is not visible from the public source, set it to an empty string or say not verified.',
+    '- Do not use Foreclosure.com as a source.',
+    '- Do not use login, paywall, CAPTCHA, or subscription-only pages.',
+    '- Auction.com or marketplace pages are candidate discovery only, not official proof.',
+    '- Equity, hedge fund demand, ARV, and MAO are not verified here.',
+    '',
+    'Respond as JSON only with this shape:',
+    JSON.stringify({
+      candidates: [{
+        candidate_title: '',
+        address: '',
+        city: '',
+        state: '',
+        county: '',
+        source_url: '',
+        source_title: '',
+        source_type: '',
+        strategy_match: [],
+        distress_signals: [],
+        visible_price_or_bid: '',
+        auction_date_or_timing: '',
+        listing_status: '',
+        why_it_might_be_deal: '',
+        missing_evidence: [],
+        risk_flags: [],
+        confidence: '',
+        suggested_next_action: '',
+        call_angle: ''
+      }],
+      warnings: []
+    }, null, 2)
+  ].join('\n');
+}
+
+function extractGeminiText(response) {
+  const parts = response && response.candidates && response.candidates[0] &&
+    response.candidates[0].content && Array.isArray(response.candidates[0].content.parts)
+    ? response.candidates[0].content.parts
+    : [];
+  return parts.map((part) => cleanText(part && part.text)).filter(Boolean).join('\n');
+}
+
+function extractGroundingUrls(response) {
+  const candidates = Array.isArray(response && response.candidates) ? response.candidates : [];
+  const urls = [];
+  candidates.forEach((candidate) => {
+    const metadata = candidate && (candidate.groundingMetadata || candidate.grounding_metadata) || {};
+    const chunks = Array.isArray(metadata.groundingChunks) ? metadata.groundingChunks : [];
+    chunks.forEach((chunk) => {
+      const url = chunk && chunk.web && chunk.web.uri || chunk && chunk.retrievedContext && chunk.retrievedContext.uri || '';
+      if (isHttpUrl(url)) urls.push(url);
+    });
+  });
+  return uniqueList(urls);
+}
+
+function groundingPresent(response) {
+  const candidate = response && response.candidates && response.candidates[0] || null;
+  return !!(candidate && (candidate.groundingMetadata || candidate.grounding_metadata));
+}
+
+function extractJsonText(text) {
+  text = String(text || '').trim();
+  if (!text) return '';
+  if (/^```/i.test(text)) text = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const firstObject = text.indexOf('{');
+  const lastObject = text.lastIndexOf('}');
+  if (firstObject >= 0 && lastObject > firstObject) return text.slice(firstObject, lastObject + 1);
+  const firstArray = text.indexOf('[');
+  const lastArray = text.lastIndexOf(']');
+  if (firstArray >= 0 && lastArray > firstArray) return text.slice(firstArray, lastArray + 1);
+  return text;
+}
+
+function parseProviderCandidates(text, groundingUrls) {
+  try {
+    const parsed = JSON.parse(extractJsonText(text));
+    if (Array.isArray(parsed)) return { candidates: parsed, warnings: [] };
+    return {
+      candidates: Array.isArray(parsed && parsed.candidates) ? parsed.candidates : [],
+      warnings: Array.isArray(parsed && parsed.warnings) ? parsed.warnings.map(cleanText).filter(Boolean) : []
+    };
+  } catch (error) {
+    const urls = uniqueList((String(text || '').match(/https?:\/\/[^\s"'<>),]+/gi) || []).concat(groundingUrls || []));
+    return {
+      candidates: urls.map((url, idx) => ({
+        candidate_title: `Public source result ${idx + 1}`,
+        source_url: url,
+        source_title: '',
+        source_type: '',
+        address: '',
+        strategy_match: [],
+        distress_signals: [],
+        why_it_might_be_deal: 'Gemini returned a source URL, but not enough structured property detail.',
+        missing_evidence: ['structured property details'],
+        risk_flags: ['provider output was not valid JSON'],
+        confidence: 'Low',
+        suggested_next_action: 'Open the source and verify whether it is property-specific before outreach.',
+        call_angle: 'Verify source evidence before calling.'
+      })),
+      warnings: ['Gemini output could not be parsed as JSON; using source URLs only.']
+    };
+  }
+}
+
+function hostAndPath(url) {
+  try {
+    const parsed = new URL(cleanText(url));
+    return { host: parsed.hostname.toLowerCase(), path: parsed.pathname.toLowerCase(), href: parsed.href };
+  } catch (error) {
+    return { host: '', path: '', href: '' };
+  }
+}
+
+function isBlockedSource(url) {
+  const hp = hostAndPath(url);
+  return /\bforeclosure\.com$/i.test(hp.host);
+}
+
+function isGenericSourceUrl(url) {
+  const hp = hostAndPath(url);
+  if (!hp.host) return true;
+  if (/google\./i.test(hp.host)) return true;
+  if (hp.path === '/' || hp.path === '') return true;
+  if (/\/(search|sitemap|login|account|contact|about|help|privacy|terms)\/?$/i.test(hp.path)) return true;
+  if (/(zillow|redfin|realtor|auction)\.com$/i.test(hp.host) && !/(homedetails|property|details|listing|auction|foreclosure)/i.test(hp.path)) return true;
+  return false;
+}
+
+function classifySourceType(url, sourceType) {
+  const explicit = safeLower(sourceType);
+  const hp = hostAndPath(url);
+  if (/auction\.com$/i.test(hp.host) || /\bauction\b/.test(explicit)) return 'auction_marketplace';
+  if (/(zillow|redfin|realtor|trulia|homes)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
+  if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host)) return 'official_public_source';
+  return cleanText(sourceType) || 'public_web';
+}
+
+function looksLikeAddress(value) {
+  const text = cleanText(value);
+  return /\b\d{1,7}\b/.test(text) &&
+    /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square|plaza|expy|fwy|freeway)\b/i.test(text);
+}
+
+function addressQuality(address, sourceText) {
+  const text = cleanText(address);
+  const probe = `${text} ${cleanText(sourceText)}`.toLowerCase();
+  if (!text) return 'missing';
+  if (/\b(contact us|login|search results|homepage|home page|privacy policy|terms of use|foreclosure\.com)\b/i.test(probe)) return 'junk';
+  return looksLikeAddress(text) ? 'valid' : 'partial';
+}
+
+function normalizeArray(value) {
+  if (Array.isArray(value)) return value.map(cleanText).filter(Boolean);
+  const text = cleanText(value);
+  return text ? text.split(/[,;|]/).map(cleanText).filter(Boolean) : [];
+}
+
+function normalizeConfidence(value, status) {
+  const text = safeLower(value);
+  if (status === 'Needs Source Proof' || status === 'Needs Address Repair') return text === 'blocked' ? 'Blocked' : 'Repair';
+  if (/high/.test(text)) return 'High';
+  if (/medium|med/.test(text)) return 'Medium';
+  if (/low/.test(text)) return 'Low';
+  return status === 'Call Ready' ? 'High' : status === 'Research Ready' ? 'Medium' : 'Low';
+}
+
+function statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, signals) {
+  if (!isHttpUrl(sourceUrl) || sourceGeneric) return 'Needs Source Proof';
+  if (quality === 'junk') return 'Junk/Archive';
+  if (quality === 'missing' || quality === 'partial') return 'Needs Address Repair';
+  const signalText = normalizeArray(signals).join(' ').toLowerCase();
+  const hasMoneySignal = /\b(foreclos|trustee|tax sale|tax foreclosure|auction|as.?is|fixer|repair|price cut|reduced|distressed|cash)\b/.test(signalText);
+  if (sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace') return hasMoneySignal ? 'Research Ready' : 'Needs Source Proof';
+  return hasMoneySignal ? 'Research Ready' : 'Support Signal Only';
+}
+
+function normalizeCandidate(candidate, context) {
+  candidate = candidate || {};
+  context = context || {};
+  const sourceUrl = cleanText(candidate.source_url || candidate.url || candidate.sourceUrl);
+  const blockedSource = isBlockedSource(sourceUrl);
+  const sourceGeneric = isGenericSourceUrl(sourceUrl);
+  const sourceType = classifySourceType(sourceUrl, candidate.source_type || candidate.sourceType);
+  const address = cleanText(candidate.address || candidate.property_address || candidate.display_address);
+  const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
+  const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
+  const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
+  const proofText = cleanText(candidate.why_it_might_be_deal || candidate.summary || title);
+  const quality = addressQuality(address, proofText);
+  const missing = uniqueList([]
+    .concat(normalizeArray(candidate.missing_evidence))
+    .concat(blockedSource ? ['approved public source'] : [])
+    .concat(!isHttpUrl(sourceUrl) ? ['source URL'] : [])
+    .concat(sourceGeneric ? ['property-specific source URL'] : [])
+    .concat(quality !== 'valid' ? ['usable property address'] : [])
+    .concat(sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace' ? ['official/property source verification', 'equity not verified', 'ARV/MAO not verified'] : [])
+  );
+  const riskFlags = uniqueList([]
+    .concat(normalizeArray(candidate.risk_flags))
+    .concat(blockedSource ? ['blocked source'] : [])
+    .concat(sourceType === 'auction_marketplace' ? ['auction marketplace candidate only'] : [])
+    .concat(sourceType === 'listing_marketplace' ? ['listing marketplace candidate only'] : [])
+  );
+  const status = blockedSource
+    ? 'Junk/Archive'
+    : statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, quality, distressSignals);
+  const sourceTitle = cleanText(candidate.source_title || candidate.title || title);
+  const sourceUrls = uniqueList([sourceUrl].concat(context.provider_source_urls || [])).filter(isHttpUrl);
+  const why = proofText || 'Gemini found a public source candidate. Verify the source before outreach.';
+  const next = cleanText(candidate.suggested_next_action) || (
+    sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace'
+      ? 'Verify official/property source before offer. Do not assume equity or ARV.'
+      : status === 'Research Ready'
+        ? 'Send to AI Deal Analyzer for source verification and comp research gates.'
+        : 'Repair missing source/address evidence before outreach.'
+  );
+  const displayAddress = address || title || cleanText(candidate.source_title) || 'Live source candidate needs review';
+  return {
+    card_id: hashId('fmc', `gemini|${displayAddress}|${sourceUrl}|${sourceTitle}`),
+    source_kind: 'gemini_live_discovery',
+    candidate_id: hashId('gld', `${displayAddress}|${sourceUrl}|${sourceTitle}`),
+    display_address: displayAddress,
+    address_or_source_text: displayAddress,
+    city: cleanText(candidate.city),
+    state: cleanText(candidate.state),
+    county: cleanText(candidate.county),
+    location: [candidate.city, candidate.county, candidate.state].map(cleanText).filter(Boolean).join(', ') || cleanText(context.location || context.market),
+    source_url: isHttpUrl(sourceUrl) && !blockedSource ? sourceUrl : '',
+    source_title: sourceTitle,
+    source_type: sourceType,
+    lead_source_type: sourceType,
+    strategy_tags: strategyTags,
+    signal_summary: distressSignals.join(', '),
+    why_it_matters: why,
+    why_this_might_be_a_deal: why,
+    distress_motivation_signals: distressSignals,
+    visible_price_or_bid: cleanText(candidate.visible_price_or_bid),
+    auction_date_or_timing: cleanText(candidate.auction_date_or_timing),
+    listing_status: cleanText(candidate.listing_status),
+    missing_evidence: missing,
+    risk_flags: riskFlags,
+    confidence: normalizeConfidence(candidate.confidence, status),
+    confidence_level: normalizeConfidence(candidate.confidence, status),
+    next_action: next,
+    next_best_action: next,
+    call_angle: cleanText(candidate.call_angle) || 'Verify source evidence and ask about timing and condition.',
+    status,
+    dirty_lead_category: status === 'Research Ready' || status === 'Call Ready'
+      ? 'Research Ready'
+      : status === 'Needs Address Repair'
+        ? 'Needs Address Repair'
+        : status === 'Needs Source Proof'
+          ? 'Source Repair Needed'
+          : status === 'Support Signal Only'
+            ? 'Support Signal Only'
+            : 'Junk / Archive Candidate',
+    pipeline_status: 'New',
+    note: '',
+    can_send_to_analyzer: status === 'Call Ready' || status === 'Research Ready',
+    provider: 'Gemini',
+    provider_grounding_present: context.provider_grounding_present === true,
+    provider_source_urls: sourceUrls,
+    preview_only: true,
+    should_ingest: false,
+    created_from: 'Gemini live public discovery'
+  };
+}
+
+async function fetchGeminiJson(url, body, headers, options) {
+  options = options || {};
+  const fetchImpl = options.fetchImpl || global.fetch;
+  if (typeof fetchImpl !== 'function') throw new Error('Gemini Live Discovery requires fetch support.');
+  const timeoutMs = Math.min(Math.max(parseInt(options.timeout_ms || options.timeoutMs || 15000, 10) || 15000, 1000), 25000);
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
+      body: JSON.stringify(body),
+      signal: controller ? controller.signal : undefined
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (error) { data = null; }
+    if (!response.ok) {
+      const message = data && data.error && data.error.message ? data.error.message : `Gemini Live Discovery failed with HTTP ${response.status}`;
+      const err = new Error(message);
+      err.status = response.status;
+      throw err;
+    }
+    return data;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function runGeminiScoutDiscovery(job, options = {}) {
+  const env = options.env || process.env;
+  const config = geminiConfig(env);
+  const requestedCount = Math.max(1, Math.min(parseInt(job && job.batch_size || 10, 10) || 10, MAX_DISCOVERY_RESULTS));
+  if (!config.configured) {
+    return {
+      attempted: false,
+      status: config.status,
+      message: config.message,
+      model: config.model,
+      cards: [],
+      candidates_found: 0,
+      source_urls_found_count: 0,
+      source_urls: [],
+      grounding_present: false,
+      warnings: [config.message]
+    };
+  }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent`;
+  const prompt = buildDiscoveryPrompt(job, requestedCount);
+  try {
+    const response = await fetchGeminiJson(url, {
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json'
+      }
+    }, {
+      'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
+    }, options);
+    const groundingUrls = extractGroundingUrls(response);
+    const text = extractGeminiText(response);
+    const parsed = parseProviderCandidates(text, groundingUrls);
+    const context = {
+      market: job && job.market,
+      location: job && job.location,
+      strategy_labels: strategyLabels(job && job.strategies),
+      provider_grounding_present: groundingPresent(response),
+      provider_source_urls: groundingUrls
+    };
+    const cards = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
+      .slice(0, requestedCount)
+      .map((candidate) => normalizeCandidate(candidate, context));
+    return {
+      attempted: true,
+      status: 'available',
+      message: cards.length
+        ? `Gemini Live Discovery returned ${cards.length} candidate card${cards.length === 1 ? '' : 's'}.`
+        : 'Gemini Live Discovery returned source grounding but no property-specific candidates.',
+      model: config.model,
+      cards,
+      candidates_found: cards.length,
+      source_urls_found_count: groundingUrls.length,
+      source_urls: groundingUrls,
+      grounding_present: context.provider_grounding_present,
+      warnings: uniqueList(parsed.warnings)
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      status: 'failed',
+      message: cleanText(error && error.message ? error.message : 'Gemini Live Discovery failed. Scout used saved leads mode only.'),
+      model: config.model,
+      cards: [],
+      candidates_found: 0,
+      source_urls_found_count: 0,
+      source_urls: [],
+      grounding_present: false,
+      warnings: ['Gemini Live Discovery failed. Scout used saved leads mode only.']
+    };
+  }
+}
+
+module.exports = {
+  MAX_DISCOVERY_RESULTS,
+  geminiConfig,
+  buildDiscoveryPrompt,
+  extractGeminiText,
+  extractGroundingUrls,
+  parseProviderCandidates,
+  normalizeCandidate,
+  runGeminiScoutDiscovery,
+  isGenericSourceUrl,
+  classifySourceType
+};

@@ -6,6 +6,7 @@ const path = require('path');
 
 const db = require('../../db');
 const aiDealAnalyzerJobs = require('./ai-deal-analyzer-jobs');
+const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -44,6 +45,8 @@ const STRATEGY_LABELS = {
   stale_listing: 'long DOM / stale listing',
   code_violation: 'code violation',
   auction_soon: 'auction soon',
+  auction_public: 'auction/public auction listings',
+  public_auction: 'auction/public auction listings',
   vacant_absentee: 'vacant/absentee if evidence exists',
   vacant: 'vacant/absentee if evidence exists',
   absentee: 'vacant/absentee if evidence exists'
@@ -187,8 +190,15 @@ function createJob(body, options = {}) {
     cards: [],
     counts: emptyCounts(),
     provider_status: 'not_configured',
-    provider_message: 'Provider research is optional and disabled unless configured.',
-    safety: 'deterministic existing-data scout only; no scraping, no autonomous ingestion, no production lead mutation',
+    provider_message: 'Gemini Live Discovery is optional and disabled unless configured.',
+    provider_summary: {
+      saved_leads_mode: 'Available',
+      gemini_live_discovery: 'Not configured',
+      source_urls_found_count: 0,
+      candidates_found: 0,
+      warnings: []
+    },
+    safety: 'operator-created Scout job only; no autonomous ingestion, no production lead mutation',
     error: ''
   };
   const jobs = readJobs(options.storePath);
@@ -324,6 +334,7 @@ function strategySignals(record, strategies) {
     if ((strategy === 'long_dom' || strategy === 'stale_listing') && /\b(days on market|dom|stale listing|expired listing|failed listing)\b/.test(text)) add(strategy);
     if (strategy === 'code_violation' && /\b(code violation|code compliance|violation|unsafe structure|nuisance)\b/.test(text)) add(strategy);
     if (strategy === 'auction_soon' && /\b(auction|sale date|auction date|opening bid)\b/.test(text)) add(strategy);
+    if ((strategy === 'auction_public' || strategy === 'public_auction') && /\b(auction\.com|public auction|auction|opening bid|bid starts|sale date)\b/.test(text)) add(strategy);
     if ((strategy === 'vacant_absentee' || strategy === 'vacant' || strategy === 'absentee') && /\b(vacant|abandoned|absentee|non.?owner|out.?of.?state)\b/.test(text)) add(strategy);
   });
   if (!signals.length) {
@@ -556,7 +567,37 @@ function collectAnalyzerCards(job) {
   }
 }
 
-function runJob(jobId, options = {}) {
+async function collectGeminiDiscoveryCards(job, options = {}) {
+  const result = await geminiScoutDiscoveryProvider.runGeminiScoutDiscovery(job, options);
+  return {
+    result,
+    cards: Array.isArray(result && result.cards) ? result.cards : []
+  };
+}
+
+function providerSummaryFrom(result) {
+  result = result || {};
+  const status = result.status === 'available'
+    ? 'Available'
+    : result.status === 'failed'
+      ? 'Failed'
+      : 'Not configured';
+  return {
+    saved_leads_mode: 'Available',
+    gemini_live_discovery: status,
+    provider: 'Gemini',
+    model: cleanText(result.model),
+    attempted: result.attempted === true,
+    grounding_present: result.grounding_present === true,
+    source_urls_found_count: Number(result.source_urls_found_count || 0) || 0,
+    candidates_found: Number(result.candidates_found || 0) || 0,
+    source_urls: Array.isArray(result.source_urls) ? result.source_urls.filter(isHttpUrl).slice(0, 20) : [],
+    warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean).slice(0, 10) : [],
+    message: cleanText(result.message)
+  };
+}
+
+async function runJob(jobId, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
   if (idx < 0) {
@@ -569,7 +610,10 @@ function runJob(jobId, options = {}) {
     const leadCards = collectLeadCards(job);
     const candidateCards = collectCandidateCards(job);
     const analyzerCards = collectAnalyzerCards(job);
-    const cards = dedupeCards(leadCards.concat(candidateCards, analyzerCards))
+    const geminiDiscovery = await collectGeminiDiscoveryCards(job, options);
+    const geminiCards = Array.isArray(geminiDiscovery.cards) ? geminiDiscovery.cards : [];
+    const providerSummary = providerSummaryFrom(geminiDiscovery.result);
+    const cards = dedupeCards(leadCards.concat(candidateCards, analyzerCards, geminiCards))
       .sort((a, b) => cardRank(b) - cardRank(a))
       .slice(0, job.batch_size || MAX_BATCH_SIZE);
     job = Object.assign({}, job, {
@@ -580,10 +624,13 @@ function runJob(jobId, options = {}) {
       source_summary: {
         existing_leads_checked: leadCards.length,
         dallas_preview_candidates_checked: candidateCards.length,
-        analyzer_jobs_checked: analyzerCards.length
+        analyzer_jobs_checked: analyzerCards.length,
+        gemini_live_cards_checked: geminiCards.length,
+        gemini_source_urls_found_count: providerSummary.source_urls_found_count
       },
-      provider_status: 'not_configured',
-      provider_message: 'Scout used existing saved leads and preview candidates only. Provider search hooks remain disabled unless configured.',
+      provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
+      provider_message: providerSummary.message || 'Scout used saved leads mode only.',
+      provider_summary: providerSummary,
       error: ''
     });
     jobs[idx] = job;
@@ -595,7 +642,10 @@ function runJob(jobId, options = {}) {
       status: 'failed',
       error: error && error.message ? error.message : 'Scout job failed.',
       cards: [],
-      counts: emptyCounts()
+      counts: emptyCounts(),
+      provider_summary: Object.assign(providerSummaryFrom({ status: 'failed', message: 'Scout job failed before provider discovery.' }), {
+        warnings: [error && error.message ? error.message : 'Scout job failed.']
+      })
     });
     jobs[idx] = job;
     writeStore(jobs, options.storePath);
@@ -628,6 +678,12 @@ function buildAnalyzerItem(job, card) {
       source_kind: card.source_kind || '',
       original_ref: card.lead_id || card.candidate_id || card.analyzer_job_id || card.card_id,
       source_type: card.lead_source_type || '',
+      source_url: card.source_url || '',
+      source_title: card.source_title || '',
+      strategy_tags: Array.isArray(card.strategy_tags) ? card.strategy_tags : [],
+      provider: card.provider || '',
+      provider_grounding_present: card.provider_grounding_present === true,
+      provider_source_urls: Array.isArray(card.provider_source_urls) ? card.provider_source_urls : [],
       scout_status: card.status || '',
       scout_reason: card.why_this_might_be_a_deal || '',
       distress_signals: Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [],
