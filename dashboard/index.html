@@ -1819,8 +1819,9 @@ function findMeBulkActionBar(active) {
   if (!selected.length) return '';
   var eligible = selected.filter(function(card){ return card.can_send_to_analyzer === true; });
   var blocked = selected.length - eligible.length;
+  var capNote = selected.length > 20 ? ' - send up to 20 to AI Deal Analyzer at a time' : '';
   return '<div style="position:sticky;top:0;z-index:4;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 8px 20px rgba(15,23,42,.18)">' +
-    '<div style="font-size:13px;font-weight:900">' + selected.length + ' selected' + (blocked ? ' - ' + blocked + ' blocked from Analyzer' : '') + '</div>' +
+    '<div style="font-size:13px;font-weight:900">' + selected.length + ' selected' + capNote + (blocked ? ' - ' + blocked + ' blocked from Analyzer' : '') + '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       '<button type="button" onclick="findMeBulkSendToAnalyzer()" style="border:1px solid #fff;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Send Selected to AI Deal Analyzer</button>' +
       '<button type="button" onclick="findMeBulkUpdateStatus(\'Called\')" style="border:1px solid #475569;background:#1f2937;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Mark Selected Called</button>' +
@@ -1965,6 +1966,10 @@ async function findMeSendToAnalyzer(jobId, cardId) {
 async function findMeBulkSendToAnalyzer() {
   var jobId = findMeActiveJobId();
   var selected = findMeSelectedCards();
+  if (selected.length > 20) {
+    findMeSetStatus('Send up to 20 to AI Deal Analyzer at a time.', true);
+    return;
+  }
   var eligible = selected.filter(function(card){ return card.can_send_to_analyzer === true; });
   var blocked = selected.length - eligible.length;
   if (!selected.length) {
@@ -1977,15 +1982,20 @@ async function findMeBulkSendToAnalyzer() {
   }
   var sent = 0;
   try {
-    for (var i = 0; i < eligible.length; i += 1) {
-      var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cards/' + encodeURIComponent(eligible[i].card_id) + '/analyzer', { method: 'POST' });
-      sent += 1;
-      FINDME_SCOUT_ACTIVE_JOB = data.job;
-    }
+    var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cards/analyzer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        card_ids: selected.map(function(card){ return card.card_id; }),
+        selected_count: selected.length
+      })
+    });
+    sent = Number(data.sent || eligible.length || 0);
+    FINDME_SCOUT_ACTIVE_JOB = data.job;
     FINDME_SCOUT_SELECTED = {};
     if (typeof aiDealLoadJobs === 'function') await aiDealLoadJobs(true);
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
-    findMeSetStatus(sent + ' sent to AI Deal Analyzer.' + (blocked ? ' ' + blocked + ' stayed blocked because they need repair/source proof.' : ''), blocked > 0);
+    findMeSetStatus(sent + ' sent to AI Deal Analyzer.' + (Number(data.blocked || blocked) ? ' ' + Number(data.blocked || blocked) + ' stayed blocked because they need repair/source proof.' : ''), Number(data.blocked || blocked) > 0);
   } catch (e) {
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
     findMeSetStatus(e.message || 'Bulk analyzer handoff failed.', true);
