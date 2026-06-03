@@ -14,6 +14,7 @@ const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
+const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -1303,6 +1304,32 @@ app.get('/api/ai-deal-analyzer/comp-research/config', (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err && err.message ? err.message : 'Failed to load comp research configuration'
+    });
+  }
+});
+
+app.get('/api/provider-capabilities', async (req, res) => {
+  try {
+    const result = await providerCapabilityAudit.auditProviderCapabilities({ probe: false });
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load provider capabilities'
+    });
+  }
+});
+
+app.post('/api/provider-capabilities/probe', async (req, res) => {
+  try {
+    const result = await providerCapabilityAudit.auditProviderCapabilities({ probe: true });
+    return res.json(Object.assign({}, result, {
+      safety: 'Explicit provider capability probe only; no API keys returned, no leads created, no analyzer jobs created.'
+    }));
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to probe provider capabilities'
     });
   }
 });
