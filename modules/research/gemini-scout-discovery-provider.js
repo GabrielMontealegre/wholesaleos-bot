@@ -116,6 +116,22 @@ function marketSearchTerms(job) {
   };
 }
 
+function marketListingPath(job, site) {
+  const location = cleanText(job && job.location) || cleanText(job && job.market);
+  const lower = location.toLowerCase();
+  if (/\bdallas\b/.test(lower)) {
+    if (site === 'redfin') return 'site:redfin.com/TX/Dallas';
+    if (site === 'realtor') return 'site:realtor.com/realestateandhomes-detail';
+    if (site === 'zillow') return 'site:zillow.com/homedetails';
+    if (site === 'auction') return 'site:auction.com/details';
+  }
+  if (site === 'redfin') return 'site:redfin.com';
+  if (site === 'realtor') return 'site:realtor.com/realestateandhomes-detail';
+  if (site === 'zillow') return 'site:zillow.com/homedetails';
+  if (site === 'auction') return 'site:auction.com/details';
+  return '';
+}
+
 function buildSearchQueryTemplates(job) {
   const terms = marketSearchTerms(job);
   const selected = new Set(Array.isArray(job && job.strategies) ? job.strategies : []);
@@ -125,6 +141,9 @@ function buildSearchQueryTemplates(job) {
     if (text) queries.push(text);
   }
   if (selected.has('fixer') || selected.has('ugly') || selected.has('as_is')) {
+    add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
+    add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
+    add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
     add(`site:redfin.com ${terms.city_state} fixer upper house`);
     add(`site:realtor.com ${terms.city_state} as is house for sale`);
     add(`site:zillow.com ${terms.city_state} fixer upper house`);
@@ -133,13 +152,15 @@ function buildSearchQueryTemplates(job) {
     add(`${terms.city_state} "needs TLC" "for sale"`);
   }
   if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon')) {
+    add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`site:auction.com ${terms.city_state} foreclosure auction property`);
     add(`${terms.city_state} foreclosure auction property`);
-    add(`${terms.city_state} public auction property`);
+    add(`${terms.city_state} public auction house`);
   }
   if (selected.has('foreclosure_notice') || selected.has('trustee_notice') || selected.has('pre_foreclosure')) {
-    add(`${terms.county} trustee sale property`);
+    add(`${terms.county} trustee sale notice property`);
     add(`${terms.county} foreclosure notice property address`);
+    add(`${terms.county} sheriff sale property`);
   }
   if (selected.has('tax_foreclosure') || selected.has('tax_sale') || selected.has('tax_delinquent') || selected.has('tax_lien')) {
     add(`${terms.county} tax foreclosure property`);
@@ -150,9 +171,12 @@ function buildSearchQueryTemplates(job) {
     add(`${terms.city_state} "motivated seller" house for sale`);
   }
   if (!queries.length) {
-    add(`site:redfin.com ${terms.city_state} fixer upper house`);
-    add(`site:realtor.com ${terms.city_state} as is house for sale`);
-    add(`site:auction.com ${terms.city_state} foreclosure auction property`);
+    add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
+    add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
+    add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
+    add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
+    add(`${terms.county} trustee sale notice property`);
+    add(`${terms.county} tax foreclosure property`);
   }
   return uniqueList(queries).slice(0, 12);
 }
@@ -220,18 +244,122 @@ function extractGeminiText(response) {
   return parts.map((part) => cleanText(part && part.text)).filter(Boolean).join('\n');
 }
 
-function extractGroundingUrls(response) {
+function sourceKey(url) {
+  try {
+    const parsed = new URL(cleanText(url));
+    parsed.hash = '';
+    return parsed.href.replace(/\/$/, '').toLowerCase();
+  } catch (error) {
+    return cleanText(url).replace(/\/$/, '').toLowerCase();
+  }
+}
+
+function mergeSource(list, item) {
+  const url = cleanText(item && (item.url || item.uri || item.source_url || item.sourceUrl));
+  if (!isHttpUrl(url)) return;
+  const key = sourceKey(url);
+  if (!key) return;
+  const existing = list.find((candidate) => candidate.key === key);
+  const title = cleanText(item && (item.title || item.source_title || item.sourceTitle));
+  const evidence = cleanText(item && (item.evidence || item.text || item.snippet));
+  if (existing) {
+    if (!existing.title && title) existing.title = title;
+    if (!existing.evidence && evidence) existing.evidence = evidence;
+    return;
+  }
+  list.push({
+    key,
+    url,
+    title,
+    evidence,
+    harvest_source: cleanText(item && item.harvest_source) || 'source_url'
+  });
+}
+
+function extractGroundingSources(response) {
   const candidates = Array.isArray(response && response.candidates) ? response.candidates : [];
-  const urls = [];
+  const sources = [];
   candidates.forEach((candidate) => {
     const metadata = candidate && (candidate.groundingMetadata || candidate.grounding_metadata) || {};
     const chunks = Array.isArray(metadata.groundingChunks) ? metadata.groundingChunks : [];
     chunks.forEach((chunk) => {
-      const url = chunk && chunk.web && chunk.web.uri || chunk && chunk.retrievedContext && chunk.retrievedContext.uri || '';
-      if (isHttpUrl(url)) urls.push(url);
+      const web = chunk && chunk.web || {};
+      const retrieved = chunk && chunk.retrievedContext || chunk && chunk.retrieved_context || {};
+      mergeSource(sources, {
+        url: web.uri || retrieved.uri || '',
+        title: web.title || retrieved.title || '',
+        harvest_source: 'grounding_chunk'
+      });
+    });
+    const supports = Array.isArray(metadata.groundingSupports) ? metadata.groundingSupports
+      : Array.isArray(metadata.grounding_supports) ? metadata.grounding_supports
+        : [];
+    supports.forEach((support) => {
+      const segment = support && support.segment || {};
+      const indexes = Array.isArray(support && support.groundingChunkIndices) ? support.groundingChunkIndices
+        : Array.isArray(support && support.grounding_chunk_indices) ? support.grounding_chunk_indices
+          : [];
+      indexes.forEach((idx) => {
+        const chunk = chunks[idx] || {};
+        const web = chunk.web || {};
+        const retrieved = chunk.retrievedContext || chunk.retrieved_context || {};
+        mergeSource(sources, {
+          url: web.uri || retrieved.uri || '',
+          title: web.title || retrieved.title || '',
+          evidence: segment.text || '',
+          harvest_source: 'grounding_support'
+        });
+      });
     });
   });
-  return uniqueList(urls);
+  return sources;
+}
+
+function extractGroundingUrls(response) {
+  return extractGroundingSources(response).map((source) => source.url).filter(isHttpUrl);
+}
+
+function extractTextSources(text) {
+  const sources = [];
+  uniqueList(String(text || '').match(/https?:\/\/[^\s"'<>),]+/gi) || []).forEach((url) => {
+    mergeSource(sources, { url, harvest_source: 'response_text' });
+  });
+  return sources;
+}
+
+function collectSourcesFromValue(value, sources) {
+  if (!value) return;
+  if (typeof value === 'string') {
+    if (isHttpUrl(value)) mergeSource(sources, { url: value, harvest_source: 'parsed_json' });
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSourcesFromValue(item, sources));
+    return;
+  }
+  if (typeof value === 'object') {
+    const url = value.source_url || value.sourceUrl || value.url || value.uri || value.link || '';
+    if (isHttpUrl(url)) {
+      mergeSource(sources, {
+        url,
+        title: value.source_title || value.sourceTitle || value.title || '',
+        evidence: value.evidence_snippet || value.snippet || value.summary || '',
+        harvest_source: 'parsed_json'
+      });
+    }
+    Object.keys(value).forEach((key) => {
+      if (!/url|uri|link|source|citation/i.test(key)) return;
+      collectSourcesFromValue(value[key], sources);
+    });
+  }
+}
+
+function harvestProviderSources(response, text, parsedCandidates) {
+  const sources = [];
+  extractGroundingSources(response).forEach((source) => mergeSource(sources, source));
+  extractTextSources(text).forEach((source) => mergeSource(sources, source));
+  collectSourcesFromValue(parsedCandidates, sources);
+  return sources.filter((source) => isHttpUrl(source.url));
 }
 
 function groundingPresent(response) {
@@ -283,6 +411,96 @@ function parseProviderCandidates(text, groundingUrls) {
   }
 }
 
+function inferSignalsFromSource(source, context) {
+  const text = `${cleanText(source && source.title)} ${cleanText(source && source.url)} ${cleanText(source && source.evidence)} ${(context && context.strategy_labels || []).join(' ')}`.toLowerCase();
+  const signals = [];
+  if (/\b(fixer|needs[-\s]?tlc|as[-\s]?is|cash[-\s]?only|investor[-\s]?special|repair)\b/i.test(text)) signals.push('fixer/as-is signal from source text');
+  if (/\b(foreclos|trustee|pre[-\s]?foreclosure)\b/i.test(text)) signals.push('foreclosure/trustee signal from source text');
+  if (/\b(tax[-\s]?sale|tax[-\s]?foreclosure|struck[-\s]?off|resale)\b/i.test(text)) signals.push('tax foreclosure/tax sale signal from source text');
+  if (/\bauction\b/i.test(text)) signals.push('public auction signal from source text');
+  if (/\b(price[-\s]?reduced|price[-\s]?cut|motivated)\b/i.test(text)) signals.push('price cut/motivation signal from source text');
+  return uniqueList(signals);
+}
+
+function displayTitleFromSource(source, classification) {
+  const title = cleanText(source && source.title);
+  if (title) return title;
+  try {
+    const parsed = new URL(cleanText(source && source.url));
+    const path = parsed.pathname.replace(/^\/+|\/+$/g, '').replace(/[-_]+/g, ' ');
+    return cleanText(path) || sourceClassificationLabel(classification);
+  } catch (error) {
+    return sourceClassificationLabel(classification);
+  }
+}
+
+function candidateFromHarvestedSource(source, context) {
+  const classification = classifySourceUrl(source.url, source.title, source.evidence);
+  const title = displayTitleFromSource(source, classification);
+  const sourceType = classifySourceType(source.url, classification);
+  const signals = inferSignalsFromSource(source, context);
+  const generic = sourceClassificationIsGeneric(classification);
+  const propertySpecific = sourceClassificationIsPropertySpecific(classification);
+  if (classification === 'generic_homepage' || classification === 'broad_article_or_blog') return null;
+  return {
+    candidate_title: title || 'Gemini source URL needs review',
+    address: '',
+    city: '',
+    state: '',
+    county: '',
+    source_url: source.url,
+    source_title: title,
+    source_type: sourceType,
+    strategy_match: context && context.strategy_labels || [],
+    distress_signals: signals,
+    visible_price_or_bid: '',
+    auction_date_or_timing: '',
+    listing_status: '',
+    evidence_snippet: cleanText(source.evidence) || 'Gemini grounding returned this public source URL.',
+    why_it_might_be_deal: propertySpecific
+      ? 'Gemini grounding returned a property-specific public source URL. Verify the visible address and source details before outreach.'
+      : generic
+        ? 'Gemini grounding returned a broad listing/search source. It may help discovery, but it is not exact property proof.'
+        : 'Gemini grounding returned a public source URL that needs property/source verification.',
+    missing_evidence: uniqueList([
+      propertySpecific ? 'verified visible property address' : 'property-specific source URL',
+      'source page details',
+      sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace' ? 'official/property source verification' : '',
+      sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace' ? 'equity not verified' : '',
+      sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace' ? 'ARV/MAO not verified' : ''
+    ].filter(Boolean)),
+    risk_flags: uniqueList([
+      'created from Gemini source URL',
+      classification === 'auction_property_page' || classification === 'auction_search_page' ? 'auction marketplace candidate only' : '',
+      classification === 'listing_property_page' || classification === 'listing_search_page' ? 'listing marketplace candidate only' : '',
+      generic ? 'not exact property proof' : ''
+    ].filter(Boolean)),
+    confidence: propertySpecific ? 'Low' : 'Blocked',
+    suggested_next_action: propertySpecific
+      ? 'Open the source and verify visible address, timing/status, and official/source evidence before analyzer handoff.'
+      : 'Use this source only for discovery. Find an exact property page or official/property source before outreach.',
+    call_angle: 'Verify source evidence before calling.',
+    created_from_grounding_url: true,
+    source_classification: classification,
+    source_harvest_source: source.harvest_source
+  };
+}
+
+function summarizeSourceHarvest(sources, cards) {
+  const classifications = sources.map((source) => classifySourceUrl(source.url, source.title, source.evidence));
+  const cardList = Array.isArray(cards) ? cards : [];
+  return {
+    grounding_urls_found: sources.filter((source) => source.harvest_source === 'grounding_chunk' || source.harvest_source === 'grounding_support').length,
+    urls_harvested: sources.length,
+    property_specific_urls: classifications.filter(sourceClassificationIsPropertySpecific).length,
+    generic_urls_filtered: classifications.filter((classification) => classification === 'generic_homepage' || classification === 'broad_article_or_blog').length,
+    cards_from_grounding_urls: cardList.filter((card) => card.created_from_grounding_url === true).length,
+    research_ready_count: cardList.filter((card) => card.status === 'Research Ready' || card.status === 'Call Ready').length,
+    needs_source_proof_count: cardList.filter((card) => card.status === 'Needs Source Proof').length,
+    needs_address_repair_count: cardList.filter((card) => card.status === 'Needs Address Repair').length
+  };
+}
+
 function hostAndPath(url) {
   try {
     const parsed = new URL(cleanText(url));
@@ -292,12 +510,70 @@ function hostAndPath(url) {
   }
 }
 
+function addressLikePath(path) {
+  const text = cleanText(path).replace(/[-_/]+/g, ' ');
+  return /\b\d{2,7}\b/.test(text) &&
+    /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|unit|apt)\b/i.test(text);
+}
+
 function isBlockedSource(url) {
   const hp = hostAndPath(url);
   return /\bforeclosure\.com$/i.test(hp.host);
 }
 
+function classifySourceUrl(url, title, evidence) {
+  const hp = hostAndPath(url);
+  const sourceText = `${cleanText(title)} ${cleanText(evidence)} ${hp.path}`.toLowerCase();
+  if (!hp.host) return 'unknown_source';
+  if (hp.path === '/' || hp.path === '') return 'generic_homepage';
+  if (/\/(blog|article|news|learn|resources|guides?)\b/i.test(hp.path)) return 'broad_article_or_blog';
+  if (/(redfin|zillow|realtor|trulia|homes)\.com$/i.test(hp.host)) {
+    if (/redfin\.com$/i.test(hp.host) && /\/home\/\d+/i.test(hp.path)) return 'listing_property_page';
+    if (/zillow\.com$/i.test(hp.host) && /\/homedetails\//i.test(hp.path)) return 'listing_property_page';
+    if (/realtor\.com$/i.test(hp.host) && /\/realestateandhomes-detail\//i.test(hp.path)) return 'listing_property_page';
+    if (addressLikePath(hp.path) && !/\b(search|city|homes|for-sale|realestateandhomes-search)\b/i.test(hp.path)) return 'listing_property_page';
+    return /\/(search|city|homes|for-sale|realestateandhomes-search|apartments|rentals)\b/i.test(hp.path)
+      ? 'listing_search_page'
+      : 'generic_homepage';
+  }
+  if (/auction\.com$/i.test(hp.host)) {
+    if (/\/(details|detail|auction|property)\//i.test(hp.path) || addressLikePath(hp.path)) return 'auction_property_page';
+    return /\/(search|residential|commercial|bank-owned|foreclosure|asset|property-search|calendar)\b/i.test(hp.path)
+      ? 'auction_search_page'
+      : 'generic_homepage';
+  }
+  if (/\.gov$/i.test(hp.host) || (/\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host))) {
+    if (/\b(document|record|instrument|notice|foreclosure|trustee|sheriff|tax|parcel|property)\b/i.test(sourceText) && (/\.(pdf|aspx|php|html?)$/i.test(hp.path) || addressLikePath(hp.path))) {
+      return 'official_property_notice';
+    }
+    return 'unknown_source';
+  }
+  if (/\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(sourceText) && !/\b(search|city|county|category)\b/i.test(sourceText)) return 'exact_property_page';
+  if (/\b(search|city|county|category|results)\b/i.test(sourceText)) return 'listing_search_page';
+  return 'unknown_source';
+}
+
+function sourceClassificationIsPropertySpecific(classification) {
+  return [
+    'exact_property_page',
+    'auction_property_page',
+    'official_property_notice',
+    'listing_property_page'
+  ].includes(cleanText(classification));
+}
+
+function sourceClassificationIsGeneric(classification) {
+  return [
+    'listing_search_page',
+    'auction_search_page',
+    'generic_homepage',
+    'broad_article_or_blog'
+  ].includes(cleanText(classification));
+}
+
 function isGenericSourceUrl(url) {
+  const classification = classifySourceUrl(url);
+  if (classification === 'generic_homepage' || classification === 'broad_article_or_blog' || classification === 'listing_search_page' || classification === 'auction_search_page') return true;
   const hp = hostAndPath(url);
   if (!hp.host) return true;
   if (/google\./i.test(hp.host)) return true;
@@ -308,12 +584,15 @@ function isGenericSourceUrl(url) {
 }
 
 function isPropertySpecificSourceUrl(url) {
+  const classification = classifySourceUrl(url);
+  if (sourceClassificationIsPropertySpecific(classification)) return true;
+  if (sourceClassificationIsGeneric(classification)) return false;
   const hp = hostAndPath(url);
   if (!hp.host || !hp.path || hp.path === '/') return false;
   if (/redfin\.com$/i.test(hp.host)) return /\/home\/\d+/i.test(hp.path);
   if (/zillow\.com$/i.test(hp.host)) return /\/homedetails\//i.test(hp.path);
   if (/realtor\.com$/i.test(hp.host)) return /\/realestateandhomes-detail\//i.test(hp.path);
-  if (/auction\.com$/i.test(hp.host)) return /\/(details|auction|property)\//i.test(hp.path);
+  if (/auction\.com$/i.test(hp.host)) return /\/(details|auction|property)\//i.test(hp.path) || addressLikePath(hp.path);
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host)) return /\.(pdf|aspx|php|html?)$/i.test(hp.path) || /\b(document|record|foreclosure|trustee|sale|tax|sheriff|property|parcel)\b/i.test(hp.path);
   return /\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(hp.path) && !/\b(search|city|county|category|blog|article)\b/i.test(hp.path);
 }
@@ -325,6 +604,21 @@ function classifySourceType(url, sourceType) {
   if (/(zillow|redfin|realtor|trulia|homes)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host)) return 'official_public_source';
   return cleanText(sourceType) || 'public_web';
+}
+
+function sourceClassificationLabel(classification) {
+  const labels = {
+    exact_property_page: 'Exact property page',
+    auction_property_page: 'Auction property page',
+    official_property_notice: 'Official property notice',
+    listing_property_page: 'Listing property page',
+    listing_search_page: 'Listing/search page',
+    auction_search_page: 'Auction search page',
+    generic_homepage: 'Generic homepage',
+    broad_article_or_blog: 'Broad article/blog',
+    unknown_source: 'Unknown source'
+  };
+  return labels[cleanText(classification)] || 'Unknown source';
 }
 
 function looksLikeAddress(value) {
@@ -386,16 +680,22 @@ function distressSignalScore(signals, proofText) {
   return 0;
 }
 
-function sourceQualityLabel(sourceUrl, sourceType, propertySpecific, sourceGeneric) {
+function sourceQualityLabel(sourceUrl, sourceType, propertySpecific, sourceGeneric, sourceClassification) {
   if (!isHttpUrl(sourceUrl)) return 'Missing source URL';
+  if (sourceClassification === 'auction_search_page') return 'Auction search page';
+  if (sourceClassification === 'listing_search_page') return 'Listing/search page';
+  if (sourceClassification === 'generic_homepage') return 'Generic homepage';
+  if (sourceClassification === 'broad_article_or_blog') return 'Broad article/blog';
   if (sourceGeneric) return 'Generic listing/search page';
   if (propertySpecific && sourceType === 'official_public_source') return 'Property-specific official source';
+  if (sourceClassification === 'auction_property_page') return 'Auction property page';
+  if (sourceClassification === 'listing_property_page') return 'Listing property page';
   if (propertySpecific) return 'Property-specific public source';
   return 'Public source needs review';
 }
 
-function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, signals, proofText) {
-  const propertySpecific = isPropertySpecificSourceUrl(sourceUrl);
+function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, signals, proofText, sourceClassification) {
+  const propertySpecific = sourceClassificationIsPropertySpecific(sourceClassification) || isPropertySpecificSourceUrl(sourceUrl);
   const marketScore = marketMatchScore(candidate, context);
   const sourceQualityScore = !isHttpUrl(sourceUrl) ? 0 : sourceGeneric ? 5 : propertySpecific ? 20 : 10;
   const addressScore = quality === 'valid' ? 20 : quality === 'partial' ? 8 : 0;
@@ -413,8 +713,9 @@ function scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric
   };
 }
 
-function qualityExplanations(score, sourceGeneric, quality) {
+function qualityExplanations(score, sourceGeneric, quality, sourceClassification, createdFromGroundingUrl) {
   const out = [];
+  if (createdFromGroundingUrl) out.push('Created from Gemini source URL');
   if (!score.property_specific) out.push(sourceGeneric ? 'Generic listing/search page, not exact property proof' : 'Source is not clearly property-specific');
   if (quality !== 'valid') out.push('No visible usable property address found');
   if (score.market_match_score <= 0) out.push('Market mismatch');
@@ -438,16 +739,18 @@ function normalizeCandidate(candidate, context) {
   context = context || {};
   const sourceUrl = cleanText(candidate.source_url || candidate.url || candidate.sourceUrl);
   const blockedSource = isBlockedSource(sourceUrl);
-  const sourceGeneric = isGenericSourceUrl(sourceUrl);
   const sourceType = classifySourceType(sourceUrl, candidate.source_type || candidate.sourceType);
+  const sourceClassification = classifySourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal);
+  const sourceGeneric = sourceClassificationIsGeneric(sourceClassification) || isGenericSourceUrl(sourceUrl);
   const address = cleanText(candidate.address || candidate.property_address || candidate.display_address);
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
   const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
   const proofText = cleanText(candidate.evidence_snippet || candidate.why_it_might_be_deal || candidate.summary || title);
   const quality = addressQuality(address, proofText);
-  const score = scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText);
-  const explanations = qualityExplanations(score, sourceGeneric, quality);
+  const score = scoreCandidate(candidate, context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText, sourceClassification);
+  const createdFromGroundingUrl = candidate.created_from_grounding_url === true;
+  const explanations = qualityExplanations(score, sourceGeneric, quality, sourceClassification, createdFromGroundingUrl);
   const missing = uniqueList([]
     .concat(normalizeArray(candidate.missing_evidence))
     .concat(blockedSource ? ['approved public source'] : [])
@@ -461,6 +764,7 @@ function normalizeCandidate(candidate, context) {
   const riskFlags = uniqueList([]
     .concat(normalizeArray(candidate.risk_flags))
     .concat(blockedSource ? ['blocked source'] : [])
+    .concat(createdFromGroundingUrl ? ['created from Gemini source URL'] : [])
     .concat(sourceType === 'auction_marketplace' ? ['auction marketplace candidate only'] : [])
     .concat(sourceType === 'listing_marketplace' ? ['listing marketplace candidate only'] : [])
   );
@@ -491,7 +795,9 @@ function normalizeCandidate(candidate, context) {
     source_url: isHttpUrl(sourceUrl) && !blockedSource ? sourceUrl : '',
     source_title: sourceTitle,
     source_type: sourceType,
-    source_quality: sourceQualityLabel(sourceUrl, sourceType, score.property_specific, sourceGeneric),
+    source_classification: sourceClassification,
+    source_classification_label: sourceClassificationLabel(sourceClassification),
+    source_quality: sourceQualityLabel(sourceUrl, sourceType, score.property_specific, sourceGeneric, sourceClassification),
     property_specific_source: score.property_specific,
     market_match: score.market_match_score > 0 ? 'Matches selected market' : 'Market mismatch',
     lead_source_type: sourceType,
@@ -527,6 +833,10 @@ function normalizeCandidate(candidate, context) {
     provider: 'Gemini',
     provider_grounding_present: context.provider_grounding_present === true,
     provider_source_urls: sourceUrls,
+    created_from_grounding_url: createdFromGroundingUrl,
+    why_card_exists: createdFromGroundingUrl
+      ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.'
+      : 'Created from Gemini structured candidate output.',
     property_specific_score: score.property_specific_score,
     address_confidence_score: score.address_confidence_score,
     market_match_score: score.market_match_score,
@@ -584,6 +894,14 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       source_urls_found_count: 0,
       source_urls: [],
       grounding_present: false,
+      grounding_urls_found: 0,
+      urls_harvested: 0,
+      property_specific_urls: 0,
+      generic_urls_filtered: 0,
+      cards_from_grounding_urls: 0,
+      research_ready_count: 0,
+      needs_source_proof_count: 0,
+      needs_address_repair_count: 0,
       warnings: [config.message]
     };
   }
@@ -600,8 +918,8 @@ async function runGeminiScoutDiscovery(job, options = {}) {
     }, {
       'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
     }, options);
-    const groundingUrls = extractGroundingUrls(response);
     const text = extractGeminiText(response);
+    const groundingUrls = extractGroundingUrls(response);
     const parsed = parseProviderCandidates(text, groundingUrls);
     const context = {
       market: job && job.market,
@@ -610,23 +928,43 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       provider_grounding_present: groundingPresent(response),
       provider_source_urls: groundingUrls
     };
-    const cards = (Array.isArray(parsed.candidates) ? parsed.candidates : [])
+    const harvestedSources = harvestProviderSources(response, text, parsed.candidates);
+    const providerSourceUrls = harvestedSources.map((source) => source.url).filter(isHttpUrl);
+    context.provider_source_urls = uniqueList(groundingUrls.concat(providerSourceUrls));
+    const parsedCandidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+    const sourceCandidates = parsedCandidates.length
+      ? []
+      : harvestedSources
+        .map((source) => candidateFromHarvestedSource(source, context))
+        .filter(Boolean);
+    const cards = parsedCandidates.concat(sourceCandidates)
       .map((candidate) => normalizeCandidate(candidate, context))
       .sort((a, b) => (Number(b.scout_priority_score || 0) - Number(a.scout_priority_score || 0)))
       .slice(0, requestedCount);
+    const harvestSummary = summarizeSourceHarvest(harvestedSources, cards);
     return {
       attempted: true,
       status: 'available',
       message: cards.length
-        ? `Gemini Live Discovery returned ${cards.length} candidate card${cards.length === 1 ? '' : 's'}.`
+        ? sourceCandidates.length
+          ? `Gemini Live Discovery harvested ${cards.length} source URL card${cards.length === 1 ? '' : 's'}.`
+          : `Gemini Live Discovery returned ${cards.length} candidate card${cards.length === 1 ? '' : 's'}.`
         : 'Gemini Live Discovery returned source grounding but no property-specific candidates.',
       model: config.model,
       cards,
       candidates_found: cards.length,
-      source_urls_found_count: groundingUrls.length,
-      source_urls: groundingUrls,
+      source_urls_found_count: context.provider_source_urls.length,
+      source_urls: context.provider_source_urls,
       grounding_present: context.provider_grounding_present,
-      warnings: uniqueList(parsed.warnings)
+      grounding_urls_found: harvestSummary.grounding_urls_found,
+      urls_harvested: harvestSummary.urls_harvested,
+      property_specific_urls: harvestSummary.property_specific_urls,
+      generic_urls_filtered: harvestSummary.generic_urls_filtered,
+      cards_from_grounding_urls: harvestSummary.cards_from_grounding_urls,
+      research_ready_count: harvestSummary.research_ready_count,
+      needs_source_proof_count: harvestSummary.needs_source_proof_count,
+      needs_address_repair_count: harvestSummary.needs_address_repair_count,
+      warnings: uniqueList(parsed.warnings.concat(sourceCandidates.length ? ['Created cards from Gemini source URLs because structured candidates were empty.'] : []))
     };
   } catch (error) {
     const classified = classifyGeminiError(error);
@@ -640,6 +978,14 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       source_urls_found_count: 0,
       source_urls: [],
       grounding_present: false,
+      grounding_urls_found: 0,
+      urls_harvested: 0,
+      property_specific_urls: 0,
+      generic_urls_filtered: 0,
+      cards_from_grounding_urls: 0,
+      research_ready_count: 0,
+      needs_source_proof_count: 0,
+      needs_address_repair_count: 0,
       warnings: [classified.message]
     };
   }
@@ -658,5 +1004,8 @@ module.exports = {
   runGeminiScoutDiscovery,
   isGenericSourceUrl,
   classifySourceType,
+  classifySourceUrl,
+  harvestProviderSources,
+  candidateFromHarvestedSource,
   classifyGeminiError
 };
