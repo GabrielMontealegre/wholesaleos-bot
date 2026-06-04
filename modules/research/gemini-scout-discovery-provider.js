@@ -838,6 +838,22 @@ function extractPropertyIdentityFromSourceUrl(sourceUrl, sourceTitle, sourceClas
         rawZip = hyphenDetails[4] || '';
       }
     }
+  } else if (/har\.com$/i.test(hostPath.host)) {
+    const match = path.match(/\/homedetail\/([^/?#]+)(?:\/\d+)?/i);
+    const slug = decodeURIComponentSafe(match && match[1] || '');
+    const parts = slug.split('-').map(cleanText).filter(Boolean);
+    if (parts.length >= 4) {
+      const zipPart = parts[parts.length - 1];
+      const statePart = parts[parts.length - 2];
+      const cityPart = parts[parts.length - 3];
+      const addressParts = parts.slice(0, -3);
+      if (/^\d{5}(?:-\d{4})?$/.test(zipPart) && /^[A-Za-z]{2}$/.test(statePart) && cityPart) {
+        rawAddress = normalizeSourceSlug(addressParts.join('-'));
+        rawCity = normalizeSourceSlug(cityPart);
+        rawState = statePart;
+        rawZip = zipPart.slice(0, 5);
+      }
+    }
   }
 
   if (!rawAddress && title) {
@@ -891,12 +907,13 @@ function classifySourceUrl(url, title, evidence) {
   if (!hp.host) return 'unknown_source';
   if (hp.path === '/' || hp.path === '') return 'generic_homepage';
   if (/\/(blog|article|news|learn|resources|guides?)\b/i.test(hp.path)) return 'broad_article_or_blog';
-  if (/(redfin|zillow|realtor|trulia|homes)\.com$/i.test(hp.host)) {
+  if (/(redfin|zillow|realtor|trulia|homes|har)\.com$/i.test(hp.host)) {
     if (/redfin\.com$/i.test(hp.host) && /\/home\/\d+/i.test(hp.path)) return 'listing_property_page';
     if (/zillow\.com$/i.test(hp.host) && /\/homedetails\//i.test(hp.path)) return 'listing_property_page';
     if (/realtor\.com$/i.test(hp.host) && /\/realestateandhomes-detail\//i.test(hp.path)) return 'listing_property_page';
+    if (/har\.com$/i.test(hp.host) && /\/homedetail\//i.test(hp.path)) return 'listing_property_page';
     if (addressLikePath(hp.path) && !/\b(search|city|homes|for-sale|realestateandhomes-search)\b/i.test(hp.path)) return 'listing_property_page';
-    return /\/(search|city|homes|for-sale|realestateandhomes-search|apartments|rentals)\b/i.test(hp.path)
+    return /\/(search|city|homes|for-sale|realestateandhomes-search|apartments|rentals|homes-for-sale)\b/i.test(hp.path)
       ? 'listing_search_page'
       : 'generic_homepage';
   }
@@ -912,7 +929,7 @@ function classifySourceUrl(url, title, evidence) {
     }
     return 'unknown_source';
   }
-  if (/\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(sourceText) && !/\b(search|city|county|category)\b/i.test(sourceText)) return 'exact_property_page';
+  if (/\b(property|listing|details|home|house|auction|foreclosure|parcel|homedetail|homedetails)\b/i.test(sourceText) && !/\b(search|city|county|category)\b/i.test(sourceText)) return 'exact_property_page';
   if (/\b(search|city|county|category|results)\b/i.test(sourceText)) return 'listing_search_page';
   return 'unknown_source';
 }
@@ -960,6 +977,7 @@ function isPropertySpecificSourceUrl(url) {
   if (/redfin\.com$/i.test(hp.host)) return /\/home\/\d+/i.test(hp.path);
   if (/zillow\.com$/i.test(hp.host)) return /\/homedetails\//i.test(hp.path);
   if (/realtor\.com$/i.test(hp.host)) return /\/realestateandhomes-detail\//i.test(hp.path);
+  if (/har\.com$/i.test(hp.host)) return /\/homedetail\//i.test(hp.path);
   if (/auction\.com$/i.test(hp.host)) return /\/(details|auction|property)\//i.test(hp.path) || addressLikePath(hp.path);
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host)) return /\.(pdf|aspx|php|html?)$/i.test(hp.path) || /\b(document|record|foreclosure|trustee|sale|tax|sheriff|property|parcel)\b/i.test(hp.path);
   return /\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(hp.path) && !/\b(search|city|county|category|blog|article)\b/i.test(hp.path);
@@ -971,7 +989,7 @@ function classifySourceType(url, sourceType) {
   if (canonical.is_google_redirect_like && !canonical.canonicalized) return cleanText(sourceType) || 'public_web';
   const hp = hostAndPath(canonical.canonical_url || url);
   if (/auction\.com$/i.test(hp.host) || /\bauction\b/.test(explicit)) return 'auction_marketplace';
-  if (/(zillow|redfin|realtor|trulia|homes)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
+  if (/(zillow|redfin|realtor|trulia|homes|har)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host)) return 'official_public_source';
   return cleanText(sourceType) || 'public_web';
 }
