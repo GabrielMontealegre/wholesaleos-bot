@@ -1336,32 +1336,79 @@ function aiDealScoutSection(job) {
   '</div>';
 }
 
-function aiDealCompCandidatesList(candidates) {
-  candidates = Array.isArray(candidates) ? candidates : [];
-  if (!candidates.length) return '';
-  return '<div style="display:flex;flex-direction:column;gap:6px">' + candidates.slice(0, 3).map(function(candidate) {
-    var verified = String(candidate.verification_status || '').toLowerCase() === 'verified';
-    var missing = Array.isArray(candidate.missing_fields) ? candidate.missing_fields.filter(Boolean) : [];
-    var saleBits = [];
-    if (candidate.sold_price) saleBits.push('$' + Number(candidate.sold_price).toLocaleString());
-    if (candidate.sold_date) saleBits.push(candidate.sold_date);
-    return '<div style="border:1px solid #bbf7d0;background:#fff;border-radius:7px;padding:7px;font-size:12px;color:#334155;line-height:1.4">' +
-      '<div style="font-weight:900;color:#14532d">' + (verified ? 'Verified comp' : 'Candidate comp') + '</div>' +
-      '<div><strong>' + aiDealSafeText(candidate.comp_address || 'Address not verified yet') + '</strong></div>' +
-      (saleBits.length ? '<div>' + aiDealSafeText(saleBits.join(' - ')) + '</div>' : '<div>Sold details not verified yet.</div>') +
-      '<div>' + aiDealSafeText(verified ? 'Verified sold comp' : 'Not verified yet') + '</div>' +
-      (missing.length ? '<div style="color:#92400e;font-weight:800">Missing: ' + aiDealSafeText(missing.join(', ')) + '</div>' : '') +
-      (candidate.source_url ? '<a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open source</a>' : '<div style="color:#92400e;font-weight:800">Source link missing.</div>') +
-    '</div>';
-  }).join('') + '</div>';
+function aiDealFormatMoney(value) {
+  var num = Number(value || 0);
+  return Number.isFinite(num) && num > 0 ? '$' + num.toLocaleString() : '';
+}
+
+function aiDealArvLabel(range) {
+  if (!range) return 'Locked';
+  var bits = [];
+  if (range.low) bits.push(aiDealFormatMoney(range.low));
+  if (range.high) bits.push(aiDealFormatMoney(range.high));
+  return bits.length ? bits.join(' - ') : 'Preliminary range ready';
+}
+
+function aiDealCompCard(candidate, tone) {
+  candidate = candidate || {};
+  var missing = Array.isArray(candidate.missing_fields) ? candidate.missing_fields.filter(Boolean) : [];
+  var notes = Array.isArray(candidate.notes) ? candidate.notes.filter(Boolean) : [];
+  var saleBits = [];
+  if (candidate.sold_price) saleBits.push(aiDealFormatMoney(candidate.sold_price));
+  if (candidate.sold_date) saleBits.push(candidate.sold_date);
+  if (candidate.listing_status) saleBits.push(candidate.listing_status);
+  var border = tone === 'good' ? '#bbf7d0' : tone === 'warn' ? '#fde68a' : '#e5e7eb';
+  return '<div style="border:1px solid ' + border + ';background:#fff;border-radius:7px;padding:8px;font-size:12px;color:#334155;line-height:1.4;display:flex;flex-direction:column;gap:4px">' +
+    '<div style="font-weight:900;color:#111827">' + aiDealSafeText(candidate.comp_classification || 'Comp evidence') + '</div>' +
+    '<div><strong>' + aiDealSafeText(candidate.comp_address || 'Address not verified yet') + '</strong></div>' +
+    (saleBits.length ? '<div>' + aiDealSafeText(saleBits.join(' - ')) + '</div>' : '<div>Sold details not verified yet.</div>') +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+      (candidate.source_quality ? aiDealStatusPill(candidate.source_quality, tone === 'good' ? 'good' : 'warn') : '') +
+      (candidate.comp_confidence_score ? aiDealStatusPill('Confidence ' + candidate.comp_confidence_score, 'neutral') : '') +
+      (candidate.proximity_evidence_score ? aiDealStatusPill('Proximity ' + candidate.proximity_evidence_score, 'neutral') : '') +
+      (candidate.recency_score ? aiDealStatusPill('Recency ' + candidate.recency_score, 'neutral') : '') +
+    '</div>' +
+    (candidate.why_included ? '<div>' + aiDealSafeText(candidate.why_included) + '</div>' : '') +
+    (missing.length ? '<div style="color:#92400e;font-weight:800">Missing: ' + aiDealSafeText(missing.join(', ')) + '</div>' : '') +
+    (notes.length ? '<div style="color:#64748b;font-weight:800">' + aiDealSafeText(notes.slice(0, 2).join(' | ')) + '</div>' : '') +
+    (candidate.source_url ? '<a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open source</a>' : '<div style="color:#92400e;font-weight:800">Source link missing.</div>') +
+  '</div>';
+}
+
+function aiDealCompBucket(title, list, tone, emptyText) {
+  list = Array.isArray(list) ? list : [];
+  return '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:7px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-size:11px;color:#111827;font-weight:900;text-transform:uppercase">' + aiDealSafeText(title) + '</div>' + aiDealStatusPill(String(list.length), list.length ? tone : 'neutral') + '</div>' +
+    (list.length ? list.slice(0, 4).map(function(candidate){ return aiDealCompCard(candidate, tone); }).join('') : '<div style="font-size:12px;color:#64748b;font-weight:800">' + aiDealSafeText(emptyText) + '</div>') +
+  '</div>';
+}
+
+function aiDealCompCandidatesList(job) {
+  job = job || {};
+  var verified = Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [];
+  var candidate = Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [];
+  var market = Array.isArray(job.market_support) ? job.market_support : [];
+  var notUsable = Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [];
+  var flat = Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
+  if (!verified.length && !candidate.length && !market.length && !notUsable.length && flat.length) {
+    candidate = flat;
+  }
+  if (!verified.length && !candidate.length && !market.length && !notUsable.length) return '';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">' +
+    aiDealCompBucket('Verified Sold Comps', verified, 'good', 'None yet. ARV stays locked until 3 verified sold comps are found.') +
+    aiDealCompBucket('Candidate Sold Comps', candidate, 'warn', 'No incomplete sold-comp candidates.') +
+    aiDealCompBucket('Market Support', market, 'neutral', 'No market support results.') +
+    aiDealCompBucket('Not Usable', notUsable, 'neutral', 'No excluded results.') +
+  '</div>';
 }
 
 function aiDealCompResearchSection(job) {
   job = job || {};
   var status = job.comp_research_status || 'not_configured';
   var label = aiDealCompResearchLabel(status);
-  var candidates = Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
   var verified = Number(job.verified_comp_count || (Array.isArray(job.comp_evidence) ? job.comp_evidence.length : 0)) || 0;
+  var candidateCount = Number(job.candidate_comp_count || (Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps.length : 0)) || 0;
+  var marketCount = Number(job.market_support_count || (Array.isArray(job.market_support) ? job.market_support.length : 0)) || 0;
   var eligibility = aiDealCompResearchEligibility(job);
   var blockers = aiDealCompBlockers(job);
   var next = job.comp_next_action || (status === 'not_configured'
@@ -1383,11 +1430,14 @@ function aiDealCompResearchSection(job) {
       aiDealStatusPill('Research provider: ' + aiDealCompProviderLabel(job), status === 'not_configured' ? 'warn' : 'good') +
       aiDealStatusPill('Research status: ' + label, aiDealCompResearchTone(status)) +
       aiDealStatusPill('Verified sold comps: ' + verified, verified >= 3 ? 'good' : 'warn') +
-      aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Draft ready' : 'Locked'), job.arv_range ? 'good' : 'warn') +
+      aiDealStatusPill('Candidate comps: ' + candidateCount, candidateCount ? 'warn' : 'neutral') +
+      aiDealStatusPill('Market support: ' + marketCount, marketCount ? 'neutral' : 'neutral') +
+      aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Preliminary ARV' : 'Locked'), job.arv_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Valuation gate</div>' + aiDealSafeText(job.arv_range ? ('Preliminary ARV: ' + aiDealArvLabel(job.arv_range) + '. ' + (job.mao_range ? 'Draft MAO has repair evidence.' : 'MAO stays locked until repair evidence exists.')) : 'ARV and MAO are locked until at least 3 verified sold comps are found. Candidate comps and market support do not unlock valuation.') + '</div>' +
     (blockers.length ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Why comps are blocked</div>' + blockers.map(aiDealSafeText).join(' | ') + '</div>' : '') +
-    aiDealCompCandidatesList(candidates) +
+    aiDealCompCandidatesList(job) +
     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="aiDealResearchComps(\'' + aiDealSafeText(job.job_id || '') + '\')" ' + (eligibility.eligible ? '' : 'disabled ') + 'title="' + aiDealSafeText(eligibility.message) + '" style="border:1px solid ' + (eligibility.eligible ? '#16a34a' : '#cbd5e1') + ';background:' + (eligibility.eligible ? '#16a34a' : '#f1f5f9') + ';color:' + (eligibility.eligible ? '#fff' : '#64748b') + ';border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:' + (eligibility.eligible ? 'pointer' : 'not-allowed') + '">Research Comps</button><span style="font-size:11px;color:#64748b;font-weight:800">' + aiDealSafeText(eligibility.message) + '</span></div>' +
   '</div>';
 }

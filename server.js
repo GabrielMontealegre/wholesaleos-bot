@@ -1471,6 +1471,15 @@ app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => 
       comp_research_status: job.comp_research_status,
       comp_research_provider: job.comp_research_provider,
       comp_candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
+      verified_sold_comps: Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [],
+      candidate_sold_comps: Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [],
+      market_support: Array.isArray(job.market_support) ? job.market_support : [],
+      not_usable_comp_results: Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [],
+      verified_comp_count: job.verified_comp_count || 0,
+      candidate_comp_count: job.candidate_comp_count || 0,
+      market_support_count: job.market_support_count || 0,
+      arv_range: job.arv_range || null,
+      mao_range: job.mao_range || null,
       safety: 'operator-triggered comp provider check only; no autonomous ingestion, no lead mutation, no valuation unlock from candidates'
     });
   } catch (err) {
@@ -1483,10 +1492,22 @@ app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => 
 
 app.get('/api/ai-deal-analyzer/jobs/:jobId/comp-candidates', (req, res) => {
   try {
-    const candidates = aiDealAnalyzerJobs.getCompCandidates(req.params.jobId);
+    const result = aiDealAnalyzerJobs.getCompCandidates(req.params.jobId);
+    const candidates = Array.isArray(result) ? result : (Array.isArray(result.candidates) ? result.candidates : []);
     return res.json({
       ok: true,
       candidates,
+      verified_sold_comps: Array.isArray(result.verified_sold_comps) ? result.verified_sold_comps : [],
+      candidate_sold_comps: Array.isArray(result.candidate_sold_comps) ? result.candidate_sold_comps : [],
+      market_support: Array.isArray(result.market_support) ? result.market_support : [],
+      not_usable_comp_results: Array.isArray(result.not_usable_comp_results) ? result.not_usable_comp_results : [],
+      verified_comp_count: result.verified_comp_count || 0,
+      candidate_comp_count: result.candidate_comp_count || 0,
+      market_support_count: result.market_support_count || 0,
+      not_usable_comp_count: result.not_usable_comp_count || 0,
+      valuation_locked: result.valuation_locked !== false,
+      arv_range: result.arv_range || null,
+      mao_range: result.mao_range || null,
       count: candidates.length,
       safety: 'candidate list only; candidate comps do not unlock valuation'
     });
