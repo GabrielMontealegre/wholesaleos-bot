@@ -369,9 +369,39 @@ function isGoogleGroundingRedirectUrl(url) {
 
 async function resolveGroundingSourceUrl(source, options) {
   const url = cleanText(source && source.url);
-  if (!isHttpUrl(url) || !isGoogleGroundingRedirectUrl(url)) return Object.assign({}, source);
+  if (!isHttpUrl(url)) return Object.assign({}, source);
+  const canonical = canonicalizeSourceUrl(url);
+  if (!canonical.is_google_redirect_like) {
+    return Object.assign({}, source, {
+      url: canonical.canonical_url || url,
+      canonical_url: canonical.canonical_url || url,
+      original_url: canonical.original_url || url,
+      canonicalized: canonical.canonicalized === true,
+      canonicalization_source: canonical.canonicalization_source || 'original',
+      canonicalization_note: canonical.canonicalization_note || ''
+    });
+  }
+  if (canonical.canonicalized && canonical.canonical_url && canonical.canonical_url !== url) {
+    return Object.assign({}, source, {
+      url: canonical.canonical_url,
+      canonical_url: canonical.canonical_url,
+      original_url: canonical.original_url || url,
+      canonicalized: true,
+      canonicalization_source: canonical.canonicalization_source || 'query_param',
+      canonicalization_note: canonical.canonicalization_note || 'Source URL was canonicalized from redirect query parameters.'
+    });
+  }
   const fetchImpl = options && options.fetchImpl || global.fetch;
-  if (typeof fetchImpl !== 'function') return Object.assign({}, source);
+  if (typeof fetchImpl !== 'function') {
+    return Object.assign({}, source, {
+      url,
+      canonical_url: canonical.canonical_url || url,
+      original_url: canonical.original_url || url,
+      canonicalized: canonical.canonicalized === true,
+      canonicalization_source: canonical.canonicalization_source || 'redirect_like',
+      canonicalization_note: canonical.canonicalization_note || 'Google grounding redirect did not yield an extractable target URL.'
+    });
+  }
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeoutMs = Math.min(Math.max(parseInt(options && (options.timeout_ms || options.timeoutMs) || 3500, 10) || 3500, 1000), 5000);
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -382,22 +412,36 @@ async function resolveGroundingSourceUrl(source, options) {
       signal: controller ? controller.signal : undefined
     });
     const finalUrl = cleanText(response && response.url);
-    if (isHttpUrl(finalUrl) && !isGoogleGroundingRedirectUrl(finalUrl)) {
+    if (isHttpUrl(finalUrl) && !isGoogleRedirectLikeUrl(finalUrl)) {
       return Object.assign({}, source, {
-        url: finalUrl,
-        resolved_url: finalUrl,
+        url: stripTrackingParams(finalUrl),
+        canonical_url: stripTrackingParams(finalUrl),
+        resolved_url: stripTrackingParams(finalUrl),
         resolved_from_grounding_redirect: true,
-        original_url: url
+        original_url: url,
+        canonicalized: true,
+        canonicalization_source: 'redirect_follow',
+        canonicalization_note: 'Source URL was canonicalized from Gemini/Google grounding result.'
       });
     }
   } catch (error) {
     return Object.assign({}, source, {
-      resolve_error: cleanText(error && error.message)
+      resolve_error: cleanText(error && error.message),
+      original_url: url,
+      canonical_url: url,
+      canonicalization_note: cleanText(error && error.message)
     });
   } finally {
     if (timer) clearTimeout(timer);
   }
-  return Object.assign({}, source);
+  return Object.assign({}, source, {
+    url,
+    canonical_url: url,
+    original_url: url,
+    canonicalized: false,
+    canonicalization_source: 'redirect_like',
+    canonicalization_note: 'Google grounding redirect did not yield an extractable target URL.'
+  });
 }
 
 function groundingPresent(response) {
@@ -464,7 +508,9 @@ function displayTitleFromSource(source, classification) {
   const title = cleanText(source && source.title);
   if (title) return title;
   try {
-    const parsed = new URL(cleanText(source && source.url));
+    const canonical = canonicalizeSourceUrl(source && (source.canonical_url || source.url));
+    if (canonical.is_google_redirect_like && !canonical.canonicalized) return sourceClassificationLabel(classification);
+    const parsed = new URL(cleanText(canonical.canonical_url || source && source.url));
     const path = parsed.pathname.replace(/^\/+|\/+$/g, '').replace(/[-_]+/g, ' ');
     return cleanText(path) || sourceClassificationLabel(classification);
   } catch (error) {
@@ -473,10 +519,13 @@ function displayTitleFromSource(source, classification) {
 }
 
 function candidateFromHarvestedSource(source, context) {
-  const classification = classifySourceUrl(source.url, source.title, source.evidence);
+  const sourceUrlOriginal = cleanText(source.original_url || source.source_url_original || source.url);
+  const canonical = canonicalizeSourceUrl(source.canonical_url || source.url);
+  const sourceUrl = cleanText(canonical.canonical_url || source.canonical_url || source.url);
+  const classification = classifySourceUrl(sourceUrl, source.title, source.evidence);
   const title = displayTitleFromSource(source, classification);
-  const sourceType = classifySourceType(source.url, classification);
-  const identity = extractPropertyIdentityFromSourceUrl(source.url, source.title, classification);
+  const sourceType = classifySourceType(sourceUrl, classification);
+  const identity = extractPropertyIdentityFromSourceUrl(sourceUrl, source.title, classification);
   const signals = inferSignalsFromSource(source, context);
   const generic = sourceClassificationIsGeneric(classification);
   const propertySpecific = sourceClassificationIsPropertySpecific(classification);
@@ -490,7 +539,12 @@ function candidateFromHarvestedSource(source, context) {
     state: identity.state || '',
     zip: identity.zip || '',
     county: '',
-    source_url: source.url,
+    source_url: sourceUrl,
+    source_url_original: sourceUrlOriginal,
+    source_url_canonicalized: canonical.canonicalized === true || (sourceUrlOriginal && sourceUrlOriginal !== sourceUrl),
+    canonical_source_url: sourceUrl,
+    source_url_canonicalization_source: canonical.canonicalization_source || source.canonicalization_source || 'original',
+    source_url_canonicalization_note: canonical.canonicalization_note || source.canonicalization_note || '',
     source_title: title,
     source_type: sourceType,
     property_identity: identity,
@@ -535,7 +589,7 @@ function candidateFromHarvestedSource(source, context) {
 }
 
 function summarizeSourceHarvest(sources, cards) {
-  const classifications = sources.map((source) => classifySourceUrl(source.url, source.title, source.evidence));
+  const classifications = sources.map((source) => classifySourceUrl(canonicalizeSourceUrl(source.url).canonical_url || source.url, source.title, source.evidence));
   const cardList = Array.isArray(cards) ? cards : [];
   return {
     grounding_urls_found: sources.filter((source) => source.harvest_source === 'grounding_chunk' || source.harvest_source === 'grounding_support').length,
@@ -556,6 +610,95 @@ function hostAndPath(url) {
   } catch (error) {
     return { host: '', path: '', href: '' };
   }
+}
+
+function isGoogleRedirectLikeUrl(url) {
+  const hp = hostAndPath(url);
+  if (/vertexaisearch\.cloud\.google\.com$/i.test(hp.host) && /grounding-api-redirect/i.test(hp.path)) return true;
+  if (/google\.(com|[a-z.]+)$/i.test(hp.host) && /\/url\b/i.test(hp.path)) return true;
+  return false;
+}
+
+function stripTrackingParams(url) {
+  const text = cleanText(url);
+  if (!isHttpUrl(text)) return text;
+  try {
+    const parsed = new URL(text);
+    Array.from(parsed.searchParams.keys()).forEach((key) => {
+      if (/^(utm_|gclid|gbraid|wbraid|yclid|fbclid|msclkid|ref|source|campaign|cmpid|cid|mkt_tok)/i.test(key)) {
+        parsed.searchParams.delete(key);
+      }
+    });
+    parsed.hash = '';
+    return parsed.href;
+  } catch (error) {
+    return text;
+  }
+}
+
+function extractRedirectTargetUrl(url) {
+  const text = cleanText(url);
+  if (!isHttpUrl(text)) return '';
+  try {
+    const parsed = new URL(text);
+    const keys = ['url', 'u', 'q', 'target', 'redirect', 'dest', 'destination', 'to', 'r'];
+    for (const key of keys) {
+      const value = parsed.searchParams.get(key);
+      if (!value) continue;
+      const decoded = decodeURIComponentSafe(value);
+      if (isHttpUrl(decoded)) return stripTrackingParams(decoded);
+      const nested = decoded.match(/https?:\/\/[^\s"'<>)+\]]+/i);
+      if (nested && nested[0]) return stripTrackingParams(nested[0]);
+    }
+  } catch (error) {
+    return '';
+  }
+  return '';
+}
+
+function canonicalizeSourceUrl(url, options) {
+  const original = cleanText(url);
+  const out = {
+    original_url: original,
+    canonical_url: original,
+    canonicalized: false,
+    canonicalization_source: 'original',
+    canonicalization_note: '',
+    is_google_redirect_like: isGoogleRedirectLikeUrl(original)
+  };
+  if (!isHttpUrl(original)) return out;
+
+  const paramTarget = extractRedirectTargetUrl(original);
+  if (isHttpUrl(paramTarget)) {
+    return Object.assign({}, out, {
+      canonical_url: paramTarget,
+      canonicalized: true,
+      canonicalization_source: 'query_param',
+      canonicalization_note: 'Source URL was canonicalized from redirect query parameters.'
+    });
+  }
+
+  if (out.is_google_redirect_like) {
+    if (/vertexaisearch\.cloud\.google\.com$/i.test(hostAndPath(original).host) && /grounding-api-redirect/i.test(hostAndPath(original).path)) {
+      return Object.assign({}, out, {
+        canonicalization_note: 'Google grounding redirect did not yield an extractable target URL.'
+      });
+    }
+    return Object.assign({}, out, {
+      canonicalization_note: 'Google redirect did not yield an extractable target URL.'
+    });
+  }
+
+  const stripped = stripTrackingParams(original);
+  if (stripped && stripped !== original) {
+    return Object.assign({}, out, {
+      canonical_url: stripped,
+      canonicalized: true,
+      canonicalization_source: 'tracking_stripped',
+      canonicalization_note: 'Tracking parameters were removed from the source URL.'
+    });
+  }
+  return out;
 }
 
 function addressLikePath(path) {
@@ -618,8 +761,10 @@ function normalizeSourceSlug(value) {
 }
 
 function extractPropertyIdentityFromSourceUrl(sourceUrl, sourceTitle, sourceClassification) {
-  const classification = cleanText(sourceClassification) || classifySourceUrl(sourceUrl, sourceTitle);
-  const hostPath = hostAndPath(sourceUrl);
+  const canonical = canonicalizeSourceUrl(sourceUrl);
+  const effectiveUrl = canonical.canonicalized && canonical.canonical_url ? canonical.canonical_url : canonical.is_google_redirect_like ? '' : canonical.canonical_url;
+  const classification = cleanText(sourceClassification) || classifySourceUrl(effectiveUrl || sourceUrl, sourceTitle);
+  const hostPath = hostAndPath(effectiveUrl || sourceUrl);
   const path = decodeURIComponentSafe(hostPath.path);
   const title = cleanText(sourceTitle);
   const out = {
@@ -639,6 +784,7 @@ function extractPropertyIdentityFromSourceUrl(sourceUrl, sourceTitle, sourceClas
   };
 
   if (!sourceClassificationIsPropertySpecific(classification)) return out;
+  if (canonical.is_google_redirect_like && !canonical.canonicalized) return out;
 
   let rawAddress = '';
   let rawCity = '';
@@ -734,8 +880,14 @@ function isBlockedSource(url) {
 }
 
 function classifySourceUrl(url, title, evidence) {
-  const hp = hostAndPath(url);
+  const canonical = canonicalizeSourceUrl(url);
+  const effectiveUrl = canonical.canonicalized && canonical.canonical_url ? canonical.canonical_url : canonical.is_google_redirect_like ? '' : canonical.canonical_url;
+  const hp = hostAndPath(effectiveUrl || url);
   const sourceText = `${cleanText(title)} ${cleanText(evidence)} ${hp.path}`.toLowerCase();
+  if (canonical.is_google_redirect_like && !canonical.canonicalized) {
+    if (/\b(search|results|listing|homes|for-sale|marketplace)\b/i.test(sourceText)) return 'listing_search_page';
+    return 'unknown_source';
+  }
   if (!hp.host) return 'unknown_source';
   if (hp.path === '/' || hp.path === '') return 'generic_homepage';
   if (/\/(blog|article|news|learn|resources|guides?)\b/i.test(hp.path)) return 'broad_article_or_blog';
@@ -784,9 +936,11 @@ function sourceClassificationIsGeneric(classification) {
 }
 
 function isGenericSourceUrl(url) {
-  const classification = classifySourceUrl(url);
+  const canonical = canonicalizeSourceUrl(url);
+  if (canonical.is_google_redirect_like && !canonical.canonicalized) return true;
+  const classification = classifySourceUrl(canonical.canonical_url || url);
   if (classification === 'generic_homepage' || classification === 'broad_article_or_blog' || classification === 'listing_search_page' || classification === 'auction_search_page') return true;
-  const hp = hostAndPath(url);
+  const hp = hostAndPath(canonical.canonical_url || url);
   if (!hp.host) return true;
   if (/google\./i.test(hp.host)) return true;
   if (hp.path === '/' || hp.path === '') return true;
@@ -796,10 +950,12 @@ function isGenericSourceUrl(url) {
 }
 
 function isPropertySpecificSourceUrl(url) {
-  const classification = classifySourceUrl(url);
+  const canonical = canonicalizeSourceUrl(url);
+  if (canonical.is_google_redirect_like && !canonical.canonicalized) return false;
+  const classification = classifySourceUrl(canonical.canonical_url || url);
   if (sourceClassificationIsPropertySpecific(classification)) return true;
   if (sourceClassificationIsGeneric(classification)) return false;
-  const hp = hostAndPath(url);
+  const hp = hostAndPath(canonical.canonical_url || url);
   if (!hp.host || !hp.path || hp.path === '/') return false;
   if (/redfin\.com$/i.test(hp.host)) return /\/home\/\d+/i.test(hp.path);
   if (/zillow\.com$/i.test(hp.host)) return /\/homedetails\//i.test(hp.path);
@@ -811,7 +967,9 @@ function isPropertySpecificSourceUrl(url) {
 
 function classifySourceType(url, sourceType) {
   const explicit = safeLower(sourceType);
-  const hp = hostAndPath(url);
+  const canonical = canonicalizeSourceUrl(url);
+  if (canonical.is_google_redirect_like && !canonical.canonicalized) return cleanText(sourceType) || 'public_web';
+  const hp = hostAndPath(canonical.canonical_url || url);
   if (/auction\.com$/i.test(hp.host) || /\bauction\b/.test(explicit)) return 'auction_marketplace';
   if (/(zillow|redfin|realtor|trulia|homes)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host)) return 'official_public_source';
@@ -981,7 +1139,11 @@ function statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, qua
 function normalizeCandidate(candidate, context) {
   candidate = candidate || {};
   context = context || {};
-  const sourceUrl = cleanText(candidate.source_url || candidate.url || candidate.sourceUrl);
+  const sourceUrlRaw = cleanText(candidate.source_url || candidate.url || candidate.sourceUrl);
+  const sourceUrlOriginal = cleanText(candidate.source_url_original || candidate.original_source_url || sourceUrlRaw);
+  const canonicalInfo = canonicalizeSourceUrl(candidate.canonical_source_url || candidate.final_source_url || sourceUrlRaw);
+  const sourceUrl = cleanText(canonicalInfo.canonical_url || candidate.canonical_source_url || candidate.final_source_url || sourceUrlRaw);
+  const canonicalizationNote = cleanText(candidate.source_url_canonicalization_note || candidate.canonicalization_note || canonicalInfo.canonicalization_note || candidate.source_url_resolve_error);
   const blockedSource = isBlockedSource(sourceUrl);
   const sourceType = classifySourceType(sourceUrl, candidate.source_type || candidate.sourceType);
   const sourceClassification = classifySourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal);
@@ -1023,6 +1185,9 @@ function normalizeCandidate(candidate, context) {
   const addressNote = mergedIdentity.address_extracted_from_source_url
     ? 'Address extracted from property URL - verify before offer.'
     : '';
+  const canonicalizationNoteText = canonicalizationNote || (sourceUrlOriginal && sourceUrlOriginal !== sourceUrl
+    ? 'Source URL was canonicalized from Gemini/Google grounding result.'
+    : '');
   const next = cleanText(candidate.suggested_next_action) || (
     sourceType === 'auction_marketplace' || sourceType === 'listing_marketplace'
       ? 'Verify official/property source before offer. Do not assume equity or ARV.'
@@ -1049,6 +1214,10 @@ function normalizeCandidate(candidate, context) {
     county: cleanText(candidate.county),
     location: [candidate.city || mergedIdentity.city, candidate.county, candidate.state || mergedIdentity.state, mergedIdentity.zip].map(cleanText).filter(Boolean).join(', ') || cleanText(context.location || context.market),
     source_url: isHttpUrl(sourceUrl) && !blockedSource ? sourceUrl : '',
+    source_url_original: isHttpUrl(sourceUrlOriginal) ? sourceUrlOriginal : '',
+    canonical_source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
+    source_url_canonicalized: canonicalInfo.canonicalized === true || (!!sourceUrlOriginal && sourceUrlOriginal !== sourceUrl),
+    source_url_canonicalization_note: canonicalizationNoteText,
     source_title: sourceTitle,
     source_type: sourceType,
     source_classification: sourceClassification,
@@ -1098,10 +1267,12 @@ function normalizeCandidate(candidate, context) {
     provider_source_urls: sourceUrls,
     created_from_grounding_url: createdFromGroundingUrl,
     source_url_type: sourceType,
+    canonical_source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
+    original_source_url: isHttpUrl(sourceUrlOriginal) ? sourceUrlOriginal : '',
     why_card_exists: addressNote
-      ? `${addressNote} ${createdFromGroundingUrl ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.' : 'Created from Gemini structured candidate output.'}`
+      ? `${addressNote} ${canonicalizationNoteText ? canonicalizationNoteText + ' ' : ''}${createdFromGroundingUrl ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.' : 'Created from Gemini structured candidate output.'}`.trim()
       : (createdFromGroundingUrl
-        ? 'Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.'
+        ? `${canonicalizationNoteText ? canonicalizationNoteText + ' ' : ''}Created from Gemini source URL because grounded search returned a public source but no complete structured candidate.`.trim()
         : 'Created from Gemini structured candidate output.'),
     property_specific_score: score.property_specific_score,
     address_confidence_score: score.address_confidence_score,
@@ -1210,9 +1381,12 @@ async function runGeminiScoutDiscovery(job, options = {}) {
         }, options);
         return Object.assign({}, candidate, {
           source_url: source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
-          source_url_original: source.original_url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
+          source_url_original: source.original_url || cleanText(candidate && (candidate.source_url_original || candidate.original_source_url || candidate.source_url || candidate.url || candidate.sourceUrl)),
+          canonical_source_url: source.canonical_url || source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
           source_url_resolved: source.resolved_from_grounding_redirect === true,
-          source_url_resolve_error: source.resolve_error || ''
+          source_url_resolve_error: source.resolve_error || '',
+          source_url_canonicalized: source.canonicalized === true || (source.canonical_url && source.canonical_url !== cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl))),
+          source_url_canonicalization_note: source.canonicalization_note || ''
         });
       }))
       : [];
