@@ -140,17 +140,19 @@ function buildPublicEvidenceResearchPrompt(job, options) {
   const pack = sourcePackFromJob(job) || {};
   const maxResults = options.max_results || options.maxResults || 6;
   return [
-    'Research this real estate lead using public evidence only.',
+    'Research public sold-comp evidence for this real estate lead using public web sources only.',
     'Return JSON only. Do not include markdown or commentary outside JSON.',
     '',
     'Hard evidence rules:',
     '- Do not invent comps, ARV, MAO, owner, debt, DOM, listing history, sold price, auction amount, or source facts.',
     '- Every factual claim must include a citation/source_url.',
-    '- A sold comp may be reported only when comp address, sold status, sold price, sold date, and source URL are present.',
-    '- List, active, pending, estimated, or unclear records must be marked as market support only, not verified sold comps.',
+    '- A verified sold comp may be reported only when comp address, sold/closed status, sold price, sold date, and source URL are present.',
+    '- Active, pending, list price, estimate, rent, auction, or unclear records must be marked as market support only, not verified sold comps.',
+    '- Generic portals, homepages, search pages, and broad market pages are not sold-comp proof.',
     '- Candidate comps do not unlock ARV or MAO.',
     '- Do not estimate ARV or MAO.',
     '- If evidence is missing, list it in missing_evidence.',
+    '- Prefer nearby, recent, similar residential sold records. If proximity, similarity, or recency is not visible, mark it missing.',
     '',
     'Subject:',
     `job_id: ${cleanText(job.job_id)}`,
@@ -166,25 +168,34 @@ function buildPublicEvidenceResearchPrompt(job, options) {
     `state: ${cleanText(pack.state)}`,
     `source_ref: ${cleanText(pack.source_ref)}`,
     '',
+    'Search target:',
+    '- Find public sold/closed comparable sales near the subject address.',
+    '- Return market/listing support separately when sold evidence is not complete.',
+    '- Rank exact sold records with address, sold price, sold date, and source URL first.',
+    '',
     'Return this exact JSON shape:',
     JSON.stringify({
       status: 'candidates_found | no_candidates_found | failed',
       subject: { normalized_address: '', source_url: '', property_identity_status: '' },
       property_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
       source_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
-      comp_candidates: [{
+      comp_results: [{
         comp_address: '',
         sold_status: 'sold | active | pending | unknown',
         sold_price: null,
         sold_date: '',
+        listing_status: '',
         beds: null,
         baths: null,
         sqft: null,
         distance_miles: null,
         source_url: '',
+        source_title: '',
+        source_type: 'sold_record | listing_page | market_page | estimate | unknown',
         source_label: '',
         confidence: 0,
-        verification_status: 'candidate',
+        verification_status: 'candidate | market_support | not_usable',
+        why_included: '',
         missing_fields: [],
         notes: []
       }],
@@ -224,14 +235,18 @@ function normalizeCompCandidate(candidate) {
     sold_status: cleanText(candidate.sold_status || candidate.status || 'candidate').toLowerCase(),
     sold_price: numberValue(candidate.sold_price || candidate.sale_price),
     sold_date: cleanText(candidate.sold_date || candidate.sale_date || candidate.closed_date),
+    listing_status: cleanText(candidate.listing_status || candidate.list_status),
     beds: candidate.beds == null ? null : candidate.beds,
     baths: candidate.baths == null ? null : candidate.baths,
     sqft: candidate.sqft == null ? null : candidate.sqft,
     distance_miles: candidate.distance_miles == null ? null : candidate.distance_miles,
     source_url: cleanText(candidate.source_url || candidate.url),
+    source_title: cleanText(candidate.source_title || candidate.title),
+    source_type: cleanText(candidate.source_type || candidate.record_type || candidate.source_kind),
     source_label: cleanText(candidate.source_label || candidate.source || 'Public web evidence'),
     confidence: numberValue(candidate.confidence),
     verification_status: cleanText(candidate.verification_status || 'candidate').toLowerCase(),
+    why_included: cleanText(candidate.why_included || candidate.notes_summary || candidate.reason),
     missing_fields: Array.isArray(candidate.missing_fields) ? candidate.missing_fields.map(cleanText).filter(Boolean) : [],
     notes: Array.isArray(candidate.notes) ? candidate.notes.map(cleanText).filter(Boolean) : []
   };
@@ -240,7 +255,12 @@ function normalizeCompCandidate(candidate) {
 function normalizeResearchResult(result, provider) {
   result = result || {};
   provider = provider || {};
-  const candidates = (Array.isArray(result.comp_candidates) ? result.comp_candidates : [])
+  const rawCandidates = Array.isArray(result.comp_results)
+    ? result.comp_results
+    : Array.isArray(result.comp_candidates)
+      ? result.comp_candidates
+      : [];
+  const candidates = rawCandidates
     .map(normalizeCompCandidate)
     .filter((candidate) => candidate.comp_address || candidate.source_url || candidate.sold_price || candidate.sold_date);
   const citations = (Array.isArray(result.citations) ? result.citations : [])
@@ -307,6 +327,37 @@ function extractGeminiText(response) {
   return parts.map((part) => cleanText(part && part.text)).filter(Boolean).join('\n');
 }
 
+function extractGeminiCitations(response) {
+  const grounding = response && response.candidates && response.candidates[0]
+    ? response.candidates[0].groundingMetadata || response.candidates[0].grounding_metadata
+    : null;
+  const chunks = Array.isArray(grounding && grounding.groundingChunks)
+    ? grounding.groundingChunks
+    : Array.isArray(grounding && grounding.grounding_chunks)
+      ? grounding.grounding_chunks
+      : [];
+  return chunks.map((chunk) => {
+    const web = chunk && (chunk.web || chunk.retrievedContext || chunk.retrieved_context);
+    return {
+      title: cleanText(web && (web.title || web.name)),
+      url: cleanText(web && (web.uri || web.url))
+    };
+  }).filter((citation) => isHttpUrl(citation.url));
+}
+
+function mergeCitations(result, citations) {
+  result = result || {};
+  const seen = new Set();
+  const merged = [];
+  (Array.isArray(result.citations) ? result.citations : []).concat(Array.isArray(citations) ? citations : []).forEach((citation) => {
+    const url = cleanText(citation && (citation.url || citation.source_url));
+    if (!isHttpUrl(url) || seen.has(url)) return;
+    seen.add(url);
+    merged.push({ title: cleanText(citation && citation.title), url });
+  });
+  return Object.assign({}, result, { citations: merged });
+}
+
 async function fetchJson(url, body, headers, options) {
   options = options || {};
   const fetchImpl = options.fetchImpl || global.fetch;
@@ -332,10 +383,17 @@ async function runGeminiResearch(job, provider, options) {
   const env = options.env || process.env;
   const prompt = buildPublicEvidenceResearchPrompt(job, provider);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(provider.model)}:generateContent`;
-  const data = await fetchJson(url, { contents: [{ parts: [{ text: prompt }] }] }, {
+  const data = await fetchJson(url, {
+    contents: [{ parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 4096
+    }
+  }, {
     'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
   }, options);
-  return parseStructuredOutput(extractGeminiText(data), provider);
+  return mergeCitations(parseStructuredOutput(extractGeminiText(data), provider), extractGeminiCitations(data));
 }
 
 async function runGroqResearch(job, provider, options) {

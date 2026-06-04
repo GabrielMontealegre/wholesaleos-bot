@@ -368,15 +368,28 @@ function collectCompEvidence(lead) {
 
 function mergeCompResearchState(job, state) {
   state = state || {};
+  const verifiedSoldComps = Array.isArray(state.verified_sold_comps) ? state.verified_sold_comps : [];
+  const candidateSoldComps = Array.isArray(state.candidate_sold_comps) ? state.candidate_sold_comps : [];
+  const marketSupport = Array.isArray(state.market_support) ? state.market_support : [];
+  const notUsable = Array.isArray(state.not_usable_comp_results) ? state.not_usable_comp_results : [];
+  const providerArv = state.arv_range || null;
+  const providerMao = state.mao_range || null;
   return Object.assign({}, job, {
     comp_research_status: state.provider_status,
     comp_research_provider: state.provider,
     comp_research_provider_label: state.provider_label,
     comp_candidates: state.candidates,
+    verified_sold_comps: verifiedSoldComps,
+    candidate_sold_comps: candidateSoldComps,
+    market_support: marketSupport,
+    not_usable_comp_results: notUsable,
     verified_comp_count: Math.max(
       Array.isArray(job && job.comp_evidence) ? job.comp_evidence.length : 0,
       state.verified_comp_count || 0
     ),
+    candidate_comp_count: state.candidate_comp_count || candidateSoldComps.length,
+    market_support_count: state.market_support_count || marketSupport.length,
+    not_usable_comp_count: state.not_usable_comp_count || notUsable.length,
     comp_missing_evidence: state.missing_evidence,
     comp_next_action: state.next_action,
     comp_research_property_evidence: state.property_evidence || [],
@@ -384,7 +397,10 @@ function mergeCompResearchState(job, state) {
     comp_research_warnings: state.warnings || [],
     comp_research_citations: state.citations || [],
     comp_research_summary: state.raw_summary || '',
-    comp_research_updated_at: state.updated_at
+    comp_research_updated_at: state.updated_at,
+    valuation_locked: providerArv ? false : job.valuation_locked,
+    arv_range: providerArv || job.arv_range || null,
+    mao_range: providerMao || job.mao_range || null
   });
 }
 
@@ -591,7 +607,14 @@ function createJob(item) {
     comp_research_provider: 'none',
     comp_research_provider_label: 'Not configured',
     comp_candidates: [],
+    verified_sold_comps: [],
+    candidate_sold_comps: [],
+    market_support: [],
+    not_usable_comp_results: [],
     verified_comp_count: 0,
+    candidate_comp_count: 0,
+    market_support_count: 0,
+    not_usable_comp_count: 0,
     comp_missing_evidence: ['3 verified sold comps'],
     comp_next_action: 'Comp provider not configured yet.',
     comp_research_property_evidence: [],
@@ -742,7 +765,20 @@ function getCompCandidates(jobIdValue) {
     err.status = 404;
     throw err;
   }
-  return Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
+  return {
+    candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
+    verified_sold_comps: Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [],
+    candidate_sold_comps: Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [],
+    market_support: Array.isArray(job.market_support) ? job.market_support : [],
+    not_usable_comp_results: Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [],
+    verified_comp_count: Number(job.verified_comp_count || 0) || 0,
+    candidate_comp_count: Number(job.candidate_comp_count || 0) || 0,
+    market_support_count: Number(job.market_support_count || 0) || 0,
+    not_usable_comp_count: Number(job.not_usable_comp_count || 0) || 0,
+    valuation_locked: job.valuation_locked !== false,
+    arv_range: job.arv_range || null,
+    mao_range: job.mao_range || null
+  };
 }
 
 function getCompResearchConfig() {
