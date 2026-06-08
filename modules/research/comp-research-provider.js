@@ -284,6 +284,9 @@ function normalizeCompCandidate(rawCandidate, provider) {
     provider: cleanText(rawCandidate.provider || provider.id || provider.label || 'unknown'),
     subject_job_id: cleanText(rawCandidate.subject_job_id || rawCandidate.job_id),
     comp_address: cleanText(pick(rawCandidate, ['comp_address', 'address', 'property_address'])),
+    city: cleanText(pick(rawCandidate, ['city'])),
+    state: cleanText(pick(rawCandidate, ['state'])),
+    zip: cleanText(pick(rawCandidate, ['zip', 'postal_code'])),
     sold_status: cleanText(pick(rawCandidate, ['sold_status', 'status', 'sale_status'])).toLowerCase(),
     sold_price: numberValue(pick(rawCandidate, ['sold_price', 'sale_price', 'price', 'closed_price'])),
     sold_date: cleanText(pick(rawCandidate, ['sold_date', 'sale_date', 'closed_date', 'date'])),
@@ -291,6 +294,7 @@ function normalizeCompCandidate(rawCandidate, provider) {
     beds: pick(rawCandidate, ['beds', 'bedrooms']) || null,
     baths: pick(rawCandidate, ['baths', 'bathrooms']) || null,
     sqft: pick(rawCandidate, ['sqft', 'square_feet']) || null,
+    lot_size: cleanText(pick(rawCandidate, ['lot_size', 'lot'])),
     distance_miles: pick(rawCandidate, ['distance_miles', 'distance']) || null,
     source_url: cleanText(pick(rawCandidate, ['source_url', 'url', 'record_url'])),
     source_title: cleanText(pick(rawCandidate, ['source_title', 'title'])),
@@ -298,7 +302,9 @@ function normalizeCompCandidate(rawCandidate, provider) {
     source_label: cleanText(rawCandidate.source_label || rawCandidate.source || provider.label || ''),
     confidence: numberValue(rawCandidate.confidence),
     verification_status: cleanText(rawCandidate.verification_status || 'candidate').toLowerCase(),
+    comp_group: cleanText(rawCandidate.comp_group),
     why_included: cleanText(rawCandidate.why_included || rawCandidate.reason || rawCandidate.notes_summary),
+    why_not_verified: cleanText(rawCandidate.why_not_verified || rawCandidate.reason_excluded),
     missing_fields: arrayText(rawCandidate.missing_fields),
     notes: arrayText(rawCandidate.notes),
     created_at: cleanText(rawCandidate.created_at) || new Date().toISOString()
@@ -327,6 +333,7 @@ function classifyCompCandidate(candidate, job, seen) {
   const quality = sourceQuality(candidate);
   const validation = validateVerifiedCompCandidate(candidate);
   const kind = saleStatusKind(candidate);
+  const requestedGroup = cleanText(candidate.comp_group || candidate.verification_status).toLowerCase();
   const dedupeKey = normalizeAddressKey(candidate.comp_address) || cleanText(candidate.source_url).toLowerCase();
   const subjectKey = subjectAddressKeyForJob(job);
   const compKey = addressConflictKey(candidate.comp_address);
@@ -337,6 +344,9 @@ function classifyCompCandidate(candidate, job, seen) {
   if (!cleanText(candidate.comp_address)) missing.add('Comp address');
   if (quality.generic) missing.add('Property-specific source URL');
   if (duplicate) missing.add('Unique comp record');
+  if (candidate.distance_miles === null || candidate.distance_miles === undefined || cleanText(candidate.distance_miles) === '') {
+    missing.add('Distance not verified');
+  }
 
   candidate.source_quality = quality.label;
   candidate.source_quality_score = quality.score;
@@ -344,6 +354,7 @@ function classifyCompCandidate(candidate, job, seen) {
   candidate.recency_score = scoreRecency(candidate);
   candidate.similarity_score = scoreSimilarity(candidate);
   candidate.proximity_evidence_score = scoreProximity(candidate);
+  candidate.distance_note = missing.has('Distance not verified') ? 'Distance not verified.' : '';
   candidate.comp_confidence_score = Math.round((
     candidate.source_quality_score +
     candidate.sold_evidence_score +
@@ -358,6 +369,7 @@ function classifyCompCandidate(candidate, job, seen) {
     candidate.comp_classification = 'Subject Sale Evidence';
     candidate.comp_group = 'subject_sale_evidence';
     candidate.notes = candidate.notes.concat('This is the subject property\'s own sale/listing evidence, not a comparable sale.');
+    candidate.why_not_verified = 'Subject property cannot be used as its own comparable sale.';
     return candidate;
   }
   if (duplicate) {
@@ -365,6 +377,14 @@ function classifyCompCandidate(candidate, job, seen) {
     candidate.comp_classification = 'Not Usable';
     candidate.comp_group = 'not_usable';
     candidate.notes = candidate.notes.concat('Duplicate comp/source result.');
+    candidate.why_not_verified = candidate.why_not_verified || 'Duplicate comp/source result.';
+    return candidate;
+  }
+  if (/\bnot[_\s-]?usable\b/.test(requestedGroup)) {
+    candidate.verification_status = 'not_usable';
+    candidate.comp_classification = 'Not Usable';
+    candidate.comp_group = 'not_usable';
+    candidate.why_not_verified = candidate.why_not_verified || candidate.why_included || 'Provider marked this result not usable.';
     return candidate;
   }
   if (validation.verified && !quality.generic) {
@@ -378,6 +398,7 @@ function classifyCompCandidate(candidate, job, seen) {
     candidate.comp_classification = 'Candidate Sold Comp';
     candidate.comp_group = 'candidate_sold';
     candidate.notes = candidate.notes.concat('Sold evidence is incomplete; does not unlock valuation.');
+    candidate.why_not_verified = candidate.why_not_verified || `Missing verified comp evidence: ${candidate.missing_fields.join(', ') || 'complete sold evidence'}.`;
     return candidate;
   }
   if (kind === 'market_support' || numberValue(candidate.sold_price) > 0 || cleanText(candidate.source_url)) {
@@ -385,12 +406,14 @@ function classifyCompCandidate(candidate, job, seen) {
     candidate.comp_classification = 'Market Support';
     candidate.comp_group = 'market_support';
     candidate.notes = candidate.notes.concat('Market support only; not a verified sold comp.');
+    candidate.why_not_verified = candidate.why_not_verified || 'Market support only; sold/closed comp evidence is incomplete.';
     return candidate;
   }
   candidate.verification_status = 'not_usable';
   candidate.comp_classification = 'Not Usable';
   candidate.comp_group = 'not_usable';
   candidate.notes = candidate.notes.concat('Not enough public comp evidence to use.');
+  candidate.why_not_verified = candidate.why_not_verified || `Missing usable comp evidence: ${candidate.missing_fields.join(', ') || 'public sold-comp proof'}.`;
   return candidate;
 }
 
@@ -576,7 +599,10 @@ function summarizeRouterResearchState(job, provider, result) {
     citations: result.citations || [],
     raw_summary: result.raw_summary || '',
     normalized_from_text: result.normalized_from_text === true,
-    normalization_note: cleanText(result.normalization_note)
+    normalization_note: cleanText(result.normalization_note),
+    comp_search_strategy: cleanText(result.comp_search_strategy),
+    missing_evidence_summary: cleanText(result.missing_evidence_summary),
+    next_action: cleanText(result.next_action)
   });
 }
 
@@ -601,6 +627,14 @@ function summarizeCompResearchState(job, result) {
   if (valuation.arv_range && !valuation.mao_range && missing.indexOf('Repair estimate for MAO') === -1) {
     missing.push('Repair estimate for MAO');
   }
+  let nextAction = cleanText(result.message) || valuation.valuation_note || 'Comp research needs review.';
+  if (!verifiedCount && groups.subject_sale_evidence.length && !groups.candidate_sold_comps.length && !groups.market_support.length) {
+    nextAction = 'Only subject property evidence found. More nearby sold comps are needed.';
+  } else if (!verifiedCount && groups.market_support.length && !groups.candidate_sold_comps.length) {
+    nextAction = 'Gemini found market support, but no verified sold comps yet.';
+  } else if (!verifiedCount && groups.subject_sale_evidence.length) {
+    nextAction = 'Subject property evidence was excluded from comps. More nearby sold comps are needed.';
+  }
   return {
     provider_status: status,
     provider: cleanText(result.provider || 'none'),
@@ -617,7 +651,10 @@ function summarizeCompResearchState(job, result) {
     market_support_count: groups.market_support.length,
     not_usable_comp_count: groups.not_usable_comp_results.length,
     missing_evidence: missing,
-    next_action: cleanText(result.message) || valuation.valuation_note || 'Comp research needs review.',
+    next_action: nextAction,
+    comp_search_strategy: cleanText(result.comp_search_strategy),
+    missing_evidence_summary: cleanText(result.missing_evidence_summary),
+    provider_next_action: cleanText(result.next_action),
     valuation_locked: valuation.valuation_locked,
     arv_range: valuation.arv_range,
     mao_range: valuation.mao_range,
