@@ -398,6 +398,8 @@ function mergeCompResearchState(job, state) {
     comp_research_citations: state.citations || [],
     comp_research_summary: state.raw_summary || '',
     comp_research_updated_at: state.updated_at,
+    normalized_from_text: state.normalized_from_text === true,
+    normalization_note: cleanText(state.normalization_note),
     valuation_locked: providerArv ? false : job.valuation_locked,
     arv_range: providerArv || job.arv_range || null,
     mao_range: providerMao || job.mao_range || null
@@ -533,7 +535,9 @@ function publicJob(job) {
     future_adapters: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
       acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true };
       return acc;
-    }, {})
+    }, {}),
+    normalized_from_text: job.normalized_from_text === true,
+    normalization_note: cleanText(job.normalization_note)
   });
 }
 
@@ -623,6 +627,8 @@ function createJob(item) {
     comp_research_citations: [],
     comp_research_summary: '',
     comp_research_updated_at: '',
+    normalized_from_text: false,
+    normalization_note: '',
     missing_evidence: [],
     result_summary: 'Queued for evidence review.',
     next_best_action: 'Needs research',
