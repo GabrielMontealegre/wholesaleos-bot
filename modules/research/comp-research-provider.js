@@ -10,6 +10,10 @@ const PROVIDER_STATUSES = new Set([
   'ready_to_research',
   'researching',
   'candidates_found',
+  'partial_results',
+  'completed',
+  'completed_no_results',
+  'no_usable_comp_evidence',
   'no_candidates_found',
   'failed'
 ]);
@@ -488,19 +492,35 @@ function runCompResearch(job, options) {
 
 function researchResultMessage(result) {
   result = result || {};
+  const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
   if (result.status === 'failed') return 'Comp research needs review.';
-  if (Array.isArray(result.comp_candidates) && result.comp_candidates.length) return 'Candidate comps found - review evidence.';
+  if (hasCandidates) return 'Candidate comps found - review evidence.';
+  if (result.status === 'partial_results') return 'Gemini found public market evidence, but no verified sold comps yet.';
+  if (result.status === 'completed' || result.status === 'completed_no_results') return 'Gemini found public market evidence, but no verified sold comps yet.';
+  if (result.status === 'no_usable_comp_evidence') return 'No usable public comp evidence found.';
   return 'Not enough public comp evidence found.';
 }
 
 function summarizeRouterResearchState(job, provider, result) {
   result = result || {};
   const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
-  const status = result.status === 'failed'
-    ? 'failed'
-    : hasCandidates
-      ? 'candidates_found'
-      : 'no_candidates_found';
+  const evidenceCount = [
+    Array.isArray(result.property_evidence) ? result.property_evidence.length : 0,
+    Array.isArray(result.source_evidence) ? result.source_evidence.length : 0,
+    Array.isArray(result.citations) ? result.citations.length : 0,
+    cleanText(result.raw_summary) ? 1 : 0,
+    result.normalized_from_text === true ? 1 : 0
+  ].reduce((sum, value) => sum + (Number(value) || 0), 0);
+  let status = cleanText(result.status);
+  if (!PROVIDER_STATUSES.has(status)) {
+    status = hasCandidates ? 'candidates_found' : (evidenceCount > 0 ? 'completed' : 'no_usable_comp_evidence');
+  } else if (!hasCandidates && status === 'candidates_found') {
+    status = evidenceCount > 0 ? 'completed' : 'no_usable_comp_evidence';
+  } else if (!hasCandidates && status === 'partial_results') {
+    status = evidenceCount > 0 ? 'completed' : 'no_usable_comp_evidence';
+  } else if (status === 'completed_no_results' && evidenceCount > 0) {
+    status = 'completed';
+  }
   return summarizeCompResearchState(job, {
     provider_status: status,
     provider: provider.id,
@@ -511,7 +531,9 @@ function summarizeRouterResearchState(job, provider, result) {
     source_evidence: result.source_evidence || [],
     warnings: result.warnings || [],
     citations: result.citations || [],
-    raw_summary: result.raw_summary || ''
+    raw_summary: result.raw_summary || '',
+    normalized_from_text: result.normalized_from_text === true,
+    normalization_note: cleanText(result.normalization_note)
   });
 }
 
@@ -552,6 +574,8 @@ function summarizeCompResearchState(job, result) {
     arv_range: valuation.arv_range,
     mao_range: valuation.mao_range,
     valuation_note: valuation.valuation_note,
+    normalized_from_text: result.normalized_from_text === true,
+    normalization_note: cleanText(result.normalization_note),
     property_evidence: Array.isArray(result.property_evidence) ? result.property_evidence : [],
     source_evidence: Array.isArray(result.source_evidence) ? result.source_evidence : [],
     warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean) : [],

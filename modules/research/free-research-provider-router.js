@@ -252,17 +252,28 @@ function normalizeCompCandidate(candidate) {
   };
 }
 
+function normalizeCompCandidateArray(value) {
+  const raw = Array.isArray(value) ? value : [];
+  return raw.map(normalizeCompCandidate).filter((candidate) => candidate.comp_address || candidate.source_url || candidate.sold_price || candidate.sold_date);
+}
+
 function normalizeResearchResult(result, provider) {
   result = result || {};
   provider = provider || {};
-  const rawCandidates = Array.isArray(result.comp_results)
-    ? result.comp_results
-    : Array.isArray(result.comp_candidates)
-      ? result.comp_candidates
-      : [];
-  const candidates = rawCandidates
-    .map(normalizeCompCandidate)
-    .filter((candidate) => candidate.comp_address || candidate.source_url || candidate.sold_price || candidate.sold_date);
+  const rawCandidates = []
+    .concat(normalizeCompCandidateArray(result.comp_results))
+    .concat(normalizeCompCandidateArray(result.comp_candidates))
+    .concat(normalizeCompCandidateArray(result.results))
+    .concat(normalizeCompCandidateArray(result.comps))
+    .concat(normalizeCompCandidateArray(result.sold_comps))
+    .concat(normalizeCompCandidateArray(result.candidate_comps));
+  const seen = new Set();
+  const candidates = rawCandidates.filter((candidate) => {
+    const key = [cleanText(candidate.comp_address).toLowerCase(), cleanText(candidate.source_url).toLowerCase(), cleanText(candidate.sold_price), cleanText(candidate.sold_date)].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const citations = (Array.isArray(result.citations) ? result.citations : [])
     .map((citation) => ({ title: cleanText(citation && citation.title), url: cleanText(citation && (citation.url || citation.source_url)) }))
     .filter((citation) => isHttpUrl(citation.url));
@@ -278,27 +289,307 @@ function normalizeResearchResult(result, provider) {
     warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean) : [],
     citations,
     raw_summary: cleanText(result.raw_summary),
+    normalized_from_text: result.normalized_from_text === true,
+    normalization_note: cleanText(result.normalization_note),
     created_at: cleanText(result.created_at) || new Date().toISOString()
   };
 }
 
-function parseStructuredOutput(text, provider) {
+function extractUrlsFromText(text) {
+  const urls = [];
+  const seen = new Set();
+  String(text || '').replace(/https?:\/\/[^\s<>"'`]+/gi, (url) => {
+    const value = cleanText(url).replace(/[),.;!?]+$/, '');
+    if (isHttpUrl(value) && !seen.has(value)) {
+      seen.add(value);
+      urls.push(value);
+    }
+    return url;
+  });
+  return urls;
+}
+
+function extractDateFromText(text) {
+  const match = cleanText(text).match(/\b((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\b/i);
+  return match ? cleanText(match[1]) : '';
+}
+
+function extractMoneyFromText(text) {
+  const raw = cleanText(text);
+  const match = raw.match(/\$\s*([1-9][0-9,]{2,}(?:\.\d+)?)\b/);
+  if (match) return Math.round(Number(match[1].replace(/,/g, '')));
+  const kMatch = raw.match(/\b([1-9][0-9,]{2,}(?:\.\d+)?)\s*k\b/i);
+  if (kMatch) return Math.round(Number(kMatch[1].replace(/,/g, '')) * 1000);
+  return 0;
+}
+
+function addressCase(value) {
+  return cleanText(value).replace(/\b([a-z])([a-z]*)\b/g, (match, first, rest) => first.toUpperCase() + rest.toLowerCase());
+}
+
+function titleCaseStreet(value) {
+  return cleanText(value)
+    .replace(/\b([nswe])\b/gi, (match) => match.toUpperCase())
+    .replace(/\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|square|run)\b/gi, (match) => ({
+      st: 'St',
+      street: 'Street',
+      ave: 'Ave',
+      avenue: 'Avenue',
+      rd: 'Rd',
+      road: 'Road',
+      dr: 'Dr',
+      drive: 'Drive',
+      ln: 'Ln',
+      lane: 'Lane',
+      ct: 'Ct',
+      court: 'Court',
+      cir: 'Cir',
+      circle: 'Circle',
+      blvd: 'Blvd',
+      boulevard: 'Boulevard',
+      way: 'Way',
+      pl: 'Pl',
+      place: 'Place',
+      pkwy: 'Pkwy',
+      parkway: 'Parkway',
+      hwy: 'Hwy',
+      highway: 'Highway',
+      ter: 'Ter',
+      terrace: 'Terrace',
+      trl: 'Trl',
+      trail: 'Trail',
+      loop: 'Loop',
+      sq: 'Sq',
+      square: 'Square',
+      run: 'Run'
+    })[match.toLowerCase()] || match)
+    .replace(/\b(\d+)(st|nd|rd|th)\b/gi, (m, n, suf) => `${n}${suf.toLowerCase()}`);
+}
+
+function extractAddressFromUrl(url) {
+  const clean = cleanText(url);
+  if (!isHttpUrl(clean)) return '';
+  try {
+    const parsed = new URL(clean);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const path = decodeURIComponent(parsed.pathname || '');
+    let address = '';
+    let city = '';
+    let state = '';
+    let zip = '';
+
+    if (/realtor\.com$/i.test(host)) {
+      const match = path.match(/realestateandhomes-detail\/([^/?#]+)/i);
+      if (match) {
+        const slug = cleanText(match[1]).replace(/_/g, ' ');
+        const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+        if (details && details.groups) {
+          address = details.groups.address;
+          city = details.groups.city;
+          state = details.groups.state;
+          zip = details.groups.zip;
+        }
+      }
+    } else if (/redfin\.com$/i.test(host)) {
+      const match = path.match(/\/(?<state>[A-Za-z]{2})\/(?<city>[A-Za-z][A-Za-z-]*)\/(?<street>[^/?#]+?)\/home\//i);
+      if (match && match.groups) {
+        state = match.groups.state;
+        city = match.groups.city;
+        const street = cleanText(match.groups.street);
+        const zipMatch = street.match(/\b(\d{5})(?:-\d{4})?$/);
+        zip = zipMatch ? zipMatch[1] : '';
+        address = street.replace(/\b\d{5}(?:-\d{4})?$/i, '').replace(/-/g, ' ').trim();
+      }
+    } else if (/zillow\.com$/i.test(host)) {
+      const match = path.match(/homedetails\/([^/?#]+)/i);
+      if (match) {
+        const slug = cleanText(match[1]).replace(/_/g, ' ');
+        const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+        if (details && details.groups) {
+          address = details.groups.address;
+          city = details.groups.city;
+          state = details.groups.state;
+          zip = details.groups.zip;
+        }
+      }
+    } else if (/har\.com$/i.test(host)) {
+      const match = path.match(/\/homedetail\/([^/?#]+)(?:\/\d+)?/i);
+      if (match) {
+        const slug = cleanText(match[1]).replace(/_/g, ' ');
+        const parts = slug.split('-').map(cleanText).filter(Boolean);
+        if (parts.length >= 4) {
+          const zipPart = parts[parts.length - 1];
+          const statePart = parts[parts.length - 2];
+          const cityPart = parts[parts.length - 3];
+          const addressParts = parts.slice(0, -3);
+          if (/^\d{5}(?:-\d{4})?$/.test(zipPart) && /^[A-Za-z]{2}$/.test(statePart) && cityPart) {
+            address = addressParts.join('-').replace(/-/g, ' ').trim();
+            city = cityPart;
+            state = statePart;
+            zip = zipPart.slice(0, 5);
+          }
+        }
+      }
+    } else if (/auction\.com$/i.test(host)) {
+      const parts = path.split('/').filter(Boolean).map((segment) => cleanText(segment));
+      const slug = parts[parts.length - 1] || '';
+      const normalizedSlug = slug.replace(/_/g, ' ');
+      const details = normalizedSlug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+      if (details && details.groups) {
+        address = details.groups.address;
+        city = details.groups.city;
+        state = details.groups.state;
+        zip = details.groups.zip;
+      }
+    }
+
+    const normalizedParts = [
+      addressCase(titleCaseStreet(address)),
+      addressCase(city),
+      [state ? state.toUpperCase() : '', zip].filter(Boolean).join(' ')
+    ].filter(Boolean);
+    return normalizedParts.join(', ');
+  } catch (error) {
+    return '';
+  }
+}
+
+function extractAddressFromText(text, urls) {
+  const raw = cleanText(text);
+  const patterns = [
+    /\b\d{1,6}\s+[A-Za-z0-9#.'-]+(?:\s+[A-Za-z0-9#.'-]+){0,8}\s+(?:Street|St|Road|Rd|Avenue|Ave|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Circle|Cir|Place|Pl|Terrace|Ter|Trail|Trl|Loop|Parkway|Pkwy|Highway|Hwy|Way|Crescent|Cres|Square|Sq|Run|Row|Plaza|Pz|Driveway|Drwy)\b(?:,\s*[A-Za-z][A-Za-z .'-]+)?(?:,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?)?/i,
+    /\b\d{1,6}\s+[A-Za-z0-9#.'-]+(?:\s+[A-Za-z0-9#.'-]+){0,8},\s*[A-Za-z][A-Za-z .'-]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/i
+  ];
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match && match[0]) return cleanText(match[0]);
+  }
+  const sourceUrls = Array.isArray(urls) ? urls : extractUrlsFromText(raw);
+  for (const url of sourceUrls) {
+    const extracted = extractAddressFromUrl(url);
+    if (extracted) return extracted;
+  }
+  return '';
+}
+
+function extractStatusFromText(text) {
+  const raw = cleanText(text).toLowerCase();
+  if (/\b(sold|closed)\b/.test(raw)) return 'sold';
+  if (/\b(active|for sale|listed|listing)\b/.test(raw)) return 'active';
+  if (/\b(pending|contingent)\b/.test(raw)) return 'pending';
+  if (/\b(price cut|price reduced|reduced)\b/.test(raw)) return 'active';
+  if (/\b(rent|estimate|zestimate|market support)\b/.test(raw)) return 'market_support';
+  return '';
+}
+
+function extractCompSourceLine(text, startIndex) {
+  const raw = String(text || '');
+  const start = Math.max(0, startIndex || 0);
+  const before = raw.lastIndexOf('\n', start);
+  const after = raw.indexOf('\n', start);
+  return cleanText(raw.slice(before >= 0 ? before + 1 : 0, after >= 0 ? after : raw.length));
+}
+
+function parseResearchBlock(text, citations) {
+  const raw = cleanText(text);
+  const urls = extractUrlsFromText(raw);
+  const address = extractAddressFromText(raw, urls);
+  const status = extractStatusFromText(raw);
+  const price = extractMoneyFromText(raw);
+  const date = extractDateFromText(raw);
+  const sourceUrl = urls[0] || (Array.isArray(citations) && citations.length === 1 ? citations[0].url : '');
+  const sourceTitle = Array.isArray(citations) && citations.length === 1 ? citations[0].title : '';
+  const candidate = {
+    comp_address: address,
+    sold_status: status || (/\b(sold|closed)\b/i.test(raw) ? 'sold' : /\b(active|listed|for sale)\b/i.test(raw) ? 'active' : /\b(pending)\b/i.test(raw) ? 'pending' : 'candidate'),
+    sold_price: price,
+    sold_date: date,
+    listing_status: /\b(active|listed|for sale)\b/i.test(raw) ? 'active' : /\b(pending)\b/i.test(raw) ? 'pending' : '',
+    source_url: sourceUrl,
+    source_title: sourceTitle,
+    source_type: sourceUrl ? (/\b(auction\.com)\b/i.test(sourceUrl) ? 'auction_property_page' : /\/(homedetail|homedetails|realestateandhomes-detail|home\/)/i.test(sourceUrl) ? 'listing_property_page' : 'public_web') : '',
+    source_label: sourceTitle || 'Gemini grounded summary',
+    confidence: sourceUrl ? 55 : 30,
+    why_included: raw.slice(0, 240),
+    missing_fields: [],
+    notes: []
+  };
+  const evidenceFlags = [];
+  if (candidate.comp_address) evidenceFlags.push('address');
+  if (candidate.sold_price > 0) evidenceFlags.push('price');
+  if (candidate.sold_date) evidenceFlags.push('date');
+  if (candidate.source_url) evidenceFlags.push('source');
+  if (candidate.sold_status) evidenceFlags.push('status');
+  const visible = new Set();
+  if (!candidate.comp_address) visible.add('Comp address');
+  if (!candidate.sold_price) visible.add('Sold price');
+  if (!candidate.sold_date && candidate.sold_status === 'sold') visible.add('Sold date');
+  if (!candidate.source_url) visible.add('Source URL');
+  if (!/\b(sold|closed|active|listed|pending)\b/i.test(raw)) visible.add('Sale/list status');
+  candidate.missing_fields = Array.from(visible);
+  const usable = evidenceFlags.length >= 2;
+  return {
+    candidate: usable ? candidate : null,
+    source_urls: urls,
+    evidence_text: raw
+  };
+}
+
+function textFallbackResearchResult(text, provider, citations) {
+  const raw = cleanText(text);
+  const chunks = raw.split(/\n+/).map((line) => cleanText(line)).filter(Boolean);
+  const sourceLines = chunks.filter((line) => /https?:\/\//i.test(line) || /\b(sold|closed|active|pending|listed|for sale|price reduced|rent|estimate|zestimate)\b/i.test(line));
+  const parsed = [];
+  const seen = new Set();
+  sourceLines.forEach((line) => {
+    const block = parseResearchBlock(line, citations);
+    if (!block || !block.candidate) return;
+    const candidate = normalizeCompCandidate(block.candidate);
+    const key = [cleanText(candidate.comp_address).toLowerCase(), cleanText(candidate.source_url).toLowerCase(), cleanText(candidate.sold_price), cleanText(candidate.sold_date)].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    parsed.push(candidate);
+  });
+
+  const sourceEvidence = (Array.isArray(citations) ? citations : []).map((citation) => ({
+    label: citation.title || 'Grounding source',
+    value: citation.title || citation.url,
+    source_url: citation.url,
+    confidence: 50
+  })).filter((item) => item.source_url);
+
+  const hasUsableEvidence = parsed.length > 0 || sourceEvidence.length > 0;
+  return normalizeResearchResult({
+    status: parsed.length ? 'partial_results' : (hasUsableEvidence ? 'completed' : 'no_usable_comp_evidence'),
+    comp_results: parsed,
+    source_evidence: sourceEvidence,
+    citations,
+    missing_evidence: parsed.length ? ['Review sources before using'] : ['No usable comp evidence found'],
+    warnings: [parsed.length ? 'Provider response was normalized from text; verify sources before using.' : 'Provider response was normalized from text but did not contain usable comp evidence.'],
+    raw_summary: raw.slice(0, 4000),
+    normalized_from_text: true,
+    normalization_note: parsed.length
+      ? 'Provider response was normalized from text; verify sources before using.'
+      : 'Provider response was normalized from text but did not contain usable comp evidence.'
+  }, provider);
+}
+
+function parseStructuredOutput(text, provider, citations) {
   if (!cleanText(text)) {
     return normalizeResearchResult({
-      status: 'failed',
+      status: 'no_usable_comp_evidence',
       missing_evidence: ['Structured research output'],
-      warnings: ['Research provider returned no structured output.']
+      warnings: ['Research provider returned no structured output.'],
+      raw_summary: '',
+      normalized_from_text: true,
+      normalization_note: 'Provider response was empty.'
     }, provider);
   }
   try {
-    return normalizeResearchResult(JSON.parse(extractJsonText(text)), provider);
+    const parsed = JSON.parse(extractJsonText(text));
+    return normalizeResearchResult(Array.isArray(parsed) ? { comp_results: parsed } : parsed, provider);
   } catch (error) {
-    return normalizeResearchResult({
-      status: 'failed',
-      missing_evidence: ['Structured research output'],
-      warnings: ['Research provider output could not be parsed as JSON.'],
-      raw_summary: String(text || '').slice(0, 1200)
-    }, provider);
+    return textFallbackResearchResult(text, provider, citations);
   }
 }
 
@@ -393,7 +684,7 @@ async function runGeminiResearch(job, provider, options) {
   }, {
     'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
   }, options);
-  return mergeCitations(parseStructuredOutput(extractGeminiText(data), provider), extractGeminiCitations(data));
+  return mergeCitations(parseStructuredOutput(extractGeminiText(data), provider, extractGeminiCitations(data)), extractGeminiCitations(data));
 }
 
 async function runGroqResearch(job, provider, options) {
