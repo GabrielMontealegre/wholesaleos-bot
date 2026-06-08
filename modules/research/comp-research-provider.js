@@ -59,6 +59,22 @@ function normalizeAddressKey(value) {
     .trim();
 }
 
+function addressConflictKey(value) {
+  return normalizeAddressKey(value).replace(/\b\d{5}(?:-\d{4})?\b/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function addressLike(value) {
+  const address = cleanText(value);
+  if (!address) return false;
+  if (/\b(public information request|phone directory|page not found|contact us|contact|search results|court calendar)\b/i.test(address)) return false;
+  const hasNumber = /\b\d{1,7}\b/.test(address);
+  const hasStreetWord = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|square)\b/i.test(address);
+  const hasCityStateOrZip = /\b\d{5}(?:-\d{4})?\b/.test(address) ||
+    /,\s*[A-Za-z][A-Za-z\s.-]+,\s*[A-Z]{2}\b/.test(address) ||
+    /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY|DC)\b/.test(address);
+  return hasNumber && hasStreetWord && hasCityStateOrZip;
+}
+
 function looksGenericSourceUrl(value) {
   const url = cleanText(value);
   if (!isHttpUrl(url)) return true;
@@ -74,6 +90,12 @@ function looksGenericSourceUrl(value) {
   } catch (error) {
     return true;
   }
+}
+
+function subjectAddressKeyForJob(job) {
+  const pack = sourcePackFromJob(job);
+  const value = cleanText((job && job.normalized_address) || (pack && pack.address_candidate) || (pack && pack.source_url_address_candidate) || (job && job.input_value) || '');
+  return addressConflictKey(value);
 }
 
 function sourceQuality(candidate) {
@@ -189,10 +211,7 @@ function sourcePackFromJob(job) {
 
 function hasUsableAddress(job, pack) {
   const address = cleanText((job && job.normalized_address) || (pack && pack.address_candidate) || '');
-  if (!address) return false;
-  if (/\b(public information request|phone directory|page not found|contact us|contact|search results|court calendar)\b/i.test(address)) return false;
-  return /\b\d{1,7}\b/.test(address) &&
-    /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|sq|square)\b/i.test(address);
+  return addressLike(address);
 }
 
 function buildCompResearchRequest(job) {
@@ -204,6 +223,8 @@ function buildCompResearchRequest(job) {
     input_value: job.input_value || '',
     normalized_address: cleanText(job.normalized_address || (pack && pack.address_candidate) || ''),
     source_url: cleanText((pack && pack.source_url) || ''),
+    source_url_address_candidate: cleanText((pack && pack.source_url_address_candidate) || ''),
+    address_extracted_from_source_url: pack && pack.address_extracted_from_source_url === true,
     source_url_type: cleanText((pack && pack.source_url_type) || ''),
     property_identity_status: cleanText((pack && pack.property_identity_status) || ''),
     source_evidence_role: cleanText((pack && pack.evidence_role) || ''),
@@ -217,6 +238,8 @@ function validateCompResearchInput(job) {
   const request = buildCompResearchRequest(job);
   const pack = sourcePackFromJob(job);
   const identityStatus = request.property_identity_status;
+  const subjectAddress = cleanText((job && job.normalized_address) || (pack && pack.address_candidate) || request.normalized_address || '');
+  const sourceAddress = cleanText(request.source_url_address_candidate || '');
   if (!hasUsableAddress(job, pack) || identityStatus === 'junk_address_blocked' || identityStatus === 'needs_source_repair') {
     return {
       ok: false,
@@ -225,6 +248,14 @@ function validateCompResearchInput(job) {
         ? 'Source may be useful, but property identity must be repaired before comp research.'
         : 'Repair property identity before comps.',
       missing_fields: ['Usable property address']
+    };
+  }
+  if (subjectAddress && sourceAddress && addressLike(subjectAddress) && addressLike(sourceAddress) && addressConflictKey(subjectAddress) !== addressConflictKey(sourceAddress)) {
+    return {
+      ok: false,
+      provider_status: 'blocked_needs_source_evidence',
+      message: 'Source URL address conflicts with Analyzer address. Verify before comp research.',
+      missing_fields: ['Source/property evidence']
     };
   }
   if (!request.source_url || identityStatus === 'unresolved' || !request.source_evidence_role || request.source_evidence_role !== 'source_proof') {
@@ -297,6 +328,9 @@ function classifyCompCandidate(candidate, job, seen) {
   const validation = validateVerifiedCompCandidate(candidate);
   const kind = saleStatusKind(candidate);
   const dedupeKey = normalizeAddressKey(candidate.comp_address) || cleanText(candidate.source_url).toLowerCase();
+  const subjectKey = subjectAddressKeyForJob(job);
+  const compKey = addressConflictKey(candidate.comp_address);
+  const isSubjectProperty = !!(subjectKey && compKey && subjectKey === compKey);
   const duplicate = !!(dedupeKey && seen.has(dedupeKey));
   if (dedupeKey) seen.add(dedupeKey);
   const missing = new Set(arrayText(candidate.missing_fields).concat(validation.missing_fields));
@@ -319,6 +353,13 @@ function classifyCompCandidate(candidate, job, seen) {
   ) / 5);
   candidate.missing_fields = Array.from(missing);
 
+  if (isSubjectProperty) {
+    candidate.verification_status = 'subject_sale_evidence';
+    candidate.comp_classification = 'Subject Sale Evidence';
+    candidate.comp_group = 'subject_sale_evidence';
+    candidate.notes = candidate.notes.concat('This is the subject property\'s own sale/listing evidence, not a comparable sale.');
+    return candidate;
+  }
   if (duplicate) {
     candidate.verification_status = 'not_usable';
     candidate.comp_classification = 'Not Usable';
@@ -363,12 +404,14 @@ function verifiedCompCount(candidates) {
 function groupedCompCandidates(candidates) {
   const grouped = {
     verified_sold_comps: [],
+    subject_sale_evidence: [],
     candidate_sold_comps: [],
     market_support: [],
     not_usable_comp_results: []
   };
   (Array.isArray(candidates) ? candidates : []).forEach((candidate) => {
     if (candidate.comp_group === 'verified_sold') grouped.verified_sold_comps.push(candidate);
+    else if (candidate.comp_group === 'subject_sale_evidence') grouped.subject_sale_evidence.push(candidate);
     else if (candidate.comp_group === 'candidate_sold') grouped.candidate_sold_comps.push(candidate);
     else if (candidate.comp_group === 'market_support') grouped.market_support.push(candidate);
     else grouped.not_usable_comp_results.push(candidate);
@@ -551,6 +594,9 @@ function summarizeCompResearchState(job, result) {
   if (verifiedCount > 0 && verifiedCount < 3 && missing.indexOf('Insufficient verified sold comps') === -1) {
     missing.push('Insufficient verified sold comps');
   }
+  if (!verifiedCount && groups.subject_sale_evidence.length && missing.indexOf('Subject property sale evidence excluded from verified comp count') === -1) {
+    missing.push('Subject property sale evidence excluded from verified comp count');
+  }
   const valuation = valuationFromVerifiedComps(job, groups.verified_sold_comps);
   if (valuation.arv_range && !valuation.mao_range && missing.indexOf('Repair estimate for MAO') === -1) {
     missing.push('Repair estimate for MAO');
@@ -561,10 +607,12 @@ function summarizeCompResearchState(job, result) {
     provider_label: result.provider && result.provider !== 'none' ? providerLabel(result.provider) : 'Not configured',
     candidates,
     verified_sold_comps: groups.verified_sold_comps,
+    subject_sale_evidence: groups.subject_sale_evidence,
     candidate_sold_comps: groups.candidate_sold_comps,
     market_support: groups.market_support,
     not_usable_comp_results: groups.not_usable_comp_results,
     verified_comp_count: verifiedCount,
+    subject_sale_evidence_count: groups.subject_sale_evidence.length,
     candidate_comp_count: groups.candidate_sold_comps.length,
     market_support_count: groups.market_support.length,
     not_usable_comp_count: groups.not_usable_comp_results.length,
@@ -592,8 +640,10 @@ module.exports = {
   buildCompResearchRequest,
   validateCompResearchInput,
   runCompResearch,
+  normalizeAddressKey,
   normalizeCompCandidate,
   validateVerifiedCompCandidate,
   classifyCompCandidate,
-  summarizeCompResearchState
+  summarizeCompResearchState,
+  addressConflictKey
 };
