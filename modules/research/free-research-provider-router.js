@@ -146,13 +146,16 @@ function buildPublicEvidenceResearchPrompt(job, options) {
     'Hard evidence rules:',
     '- Do not invent comps, ARV, MAO, owner, debt, DOM, listing history, sold price, auction amount, or source facts.',
     '- Every factual claim must include a citation/source_url.',
-    '- A verified sold comp may be reported only when comp address, sold/closed status, sold price, sold date, and source URL are present.',
+    '- A verified sold comp may be reported only when it is a different property from the subject and comp address, sold/closed status, sold price, sold date, and source URL are present.',
+    '- Return the subject property only under subject_sale_evidence. Never return it as a comp.',
     '- Active, pending, list price, estimate, rent, auction, or unclear records must be marked as market support only, not verified sold comps.',
     '- Generic portals, homepages, search pages, and broad market pages are not sold-comp proof.',
     '- Candidate comps do not unlock ARV or MAO.',
     '- Do not estimate ARV or MAO.',
     '- If evidence is missing, list it in missing_evidence.',
-    '- Prefer nearby, recent, similar residential sold records. If proximity, similarity, or recency is not visible, mark it missing.',
+    '- Prefer nearby, recent, similar residential sold records in the same city, neighborhood, or ZIP. If proximity, similarity, or recency is not visible, mark it missing.',
+    '- Do not invent distance. If distance is not visible, say Distance not verified.',
+    '- Do not use Foreclosure.com.',
     '',
     'Subject:',
     `job_id: ${cleanText(job.job_id)}`,
@@ -169,9 +172,11 @@ function buildPublicEvidenceResearchPrompt(job, options) {
     `source_ref: ${cleanText(pack.source_ref)}`,
     '',
     'Search target:',
-    '- Find public sold/closed comparable sales near the subject address.',
+    '- Find different nearby public sold/closed comparable sales near the subject address.',
+    '- Search multiple angles: nearby sold homes, recent sold homes, same ZIP sold homes, similar homes sold near the subject street/city, public Realtor/Redfin/Zillow/HAR sold pages if visible, sale-history pages if visible, and county/appraisal pages as support only.',
     '- Return market/listing support separately when sold evidence is not complete.',
     '- Rank exact sold records with address, sold price, sold date, and source URL first.',
+    '- Exclude the subject property from verified_sold_comps and candidate_sold_comps even if it has sold evidence.',
     '',
     'Return this exact JSON shape:',
     JSON.stringify({
@@ -179,27 +184,84 @@ function buildPublicEvidenceResearchPrompt(job, options) {
       subject: { normalized_address: '', source_url: '', property_identity_status: '' },
       property_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
       source_evidence: [{ label: '', value: '', source_url: '', confidence: 0 }],
-      comp_results: [{
-        comp_address: '',
-        sold_status: 'sold | active | pending | unknown',
+      subject_sale_evidence: [{
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
         sold_price: null,
         sold_date: '',
-        listing_status: '',
+        status: 'sold | active | pending | unknown',
+        source_url: '',
+        source_title: '',
+        source_type: 'subject_property_source',
+        missing_evidence: [],
+        confidence: 0,
+        reason: 'Subject property evidence only, not a comparable sale'
+      }],
+      verified_sold_comps: [{
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        sold_price: null,
+        sold_date: '',
+        status: 'sold | closed',
         beds: null,
         baths: null,
         sqft: null,
-        distance_miles: null,
+        lot_size: '',
         source_url: '',
         source_title: '',
-        source_type: 'sold_record | listing_page | market_page | estimate | unknown',
-        source_label: '',
-        confidence: 0,
-        verification_status: 'candidate | market_support | not_usable',
-        why_included: '',
-        missing_fields: [],
-        notes: []
+        source_type: 'sold_record | listing_sale_history | county_record | unknown',
+        why_similar: '',
+        missing_evidence: [],
+        confidence: 0
+      }],
+      candidate_sold_comps: [{
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        sold_price: null,
+        sold_date: '',
+        status: 'sold | closed | unknown',
+        source_url: '',
+        source_title: '',
+        source_type: '',
+        why_similar: '',
+        missing_evidence: [],
+        why_not_verified: '',
+        confidence: 0
+      }],
+      market_support: [{
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        listing_status: 'active | pending | estimate | market | unknown',
+        price: null,
+        source_url: '',
+        source_title: '',
+        source_type: '',
+        reason: '',
+        why_not_verified: '',
+        missing_evidence: [],
+        confidence: 0
+      }],
+      not_usable: [{
+        address: '',
+        source_url: '',
+        source_title: '',
+        source_type: '',
+        reason_excluded: '',
+        missing_evidence: [],
+        confidence: 0
       }],
       missing_evidence: [],
+      missing_evidence_summary: '',
+      comp_search_strategy: '',
+      next_action: '',
       warnings: [],
       citations: [{ title: '', url: '' }],
       raw_summary: ''
@@ -230,15 +292,24 @@ function normalizeEvidenceList(list) {
 
 function normalizeCompCandidate(candidate) {
   candidate = candidate || {};
+  const missingFields = Array.isArray(candidate.missing_fields)
+    ? candidate.missing_fields
+    : Array.isArray(candidate.missing_evidence)
+      ? candidate.missing_evidence
+      : [];
   return {
     comp_address: cleanText(candidate.comp_address || candidate.address),
+    city: cleanText(candidate.city),
+    state: cleanText(candidate.state),
+    zip: cleanText(candidate.zip || candidate.postal_code),
     sold_status: cleanText(candidate.sold_status || candidate.status || 'candidate').toLowerCase(),
-    sold_price: numberValue(candidate.sold_price || candidate.sale_price),
+    sold_price: numberValue(candidate.sold_price || candidate.sale_price || candidate.price),
     sold_date: cleanText(candidate.sold_date || candidate.sale_date || candidate.closed_date),
     listing_status: cleanText(candidate.listing_status || candidate.list_status),
     beds: candidate.beds == null ? null : candidate.beds,
     baths: candidate.baths == null ? null : candidate.baths,
     sqft: candidate.sqft == null ? null : candidate.sqft,
+    lot_size: cleanText(candidate.lot_size || candidate.lot),
     distance_miles: candidate.distance_miles == null ? null : candidate.distance_miles,
     source_url: cleanText(candidate.source_url || candidate.url),
     source_title: cleanText(candidate.source_title || candidate.title),
@@ -246,8 +317,10 @@ function normalizeCompCandidate(candidate) {
     source_label: cleanText(candidate.source_label || candidate.source || 'Public web evidence'),
     confidence: numberValue(candidate.confidence),
     verification_status: cleanText(candidate.verification_status || 'candidate').toLowerCase(),
-    why_included: cleanText(candidate.why_included || candidate.notes_summary || candidate.reason),
-    missing_fields: Array.isArray(candidate.missing_fields) ? candidate.missing_fields.map(cleanText).filter(Boolean) : [],
+    comp_group: cleanText(candidate.comp_group),
+    why_included: cleanText(candidate.why_included || candidate.why_similar || candidate.notes_summary || candidate.reason || candidate.reason_included),
+    why_not_verified: cleanText(candidate.why_not_verified || candidate.reason_excluded),
+    missing_fields: missingFields.map(cleanText).filter(Boolean),
     notes: Array.isArray(candidate.notes) ? candidate.notes.map(cleanText).filter(Boolean) : []
   };
 }
@@ -257,10 +330,22 @@ function normalizeCompCandidateArray(value) {
   return raw.map(normalizeCompCandidate).filter((candidate) => candidate.comp_address || candidate.source_url || candidate.sold_price || candidate.sold_date);
 }
 
+function normalizeCompCandidateBucket(value, defaults) {
+  defaults = defaults || {};
+  const raw = Array.isArray(value) ? value : [];
+  return raw.map((candidate) => normalizeCompCandidate(Object.assign({}, candidate || {}, defaults)))
+    .filter((candidate) => candidate.comp_address || candidate.source_url || candidate.sold_price || candidate.sold_date);
+}
+
 function normalizeResearchResult(result, provider) {
   result = result || {};
   provider = provider || {};
   const rawCandidates = []
+    .concat(normalizeCompCandidateBucket(result.subject_sale_evidence, { verification_status: 'subject_sale_evidence', comp_group: 'subject_sale_evidence' }))
+    .concat(normalizeCompCandidateBucket(result.verified_sold_comps, { verification_status: 'verified', comp_group: 'verified_sold' }))
+    .concat(normalizeCompCandidateBucket(result.candidate_sold_comps, { verification_status: 'candidate', comp_group: 'candidate_sold' }))
+    .concat(normalizeCompCandidateBucket(result.market_support, { verification_status: 'market_support', comp_group: 'market_support' }))
+    .concat(normalizeCompCandidateBucket(result.not_usable, { verification_status: 'not_usable', comp_group: 'not_usable' }))
     .concat(normalizeCompCandidateArray(result.comp_results))
     .concat(normalizeCompCandidateArray(result.comp_candidates))
     .concat(normalizeCompCandidateArray(result.results))
@@ -286,6 +371,9 @@ function normalizeResearchResult(result, provider) {
     source_evidence: normalizeEvidenceList(result.source_evidence),
     comp_candidates: candidates,
     missing_evidence: Array.isArray(result.missing_evidence) ? result.missing_evidence.map(cleanText).filter(Boolean) : [],
+    missing_evidence_summary: cleanText(result.missing_evidence_summary),
+    comp_search_strategy: cleanText(result.comp_search_strategy || result.search_strategy_used),
+    next_action: cleanText(result.next_action),
     warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean) : [],
     citations,
     raw_summary: cleanText(result.raw_summary),

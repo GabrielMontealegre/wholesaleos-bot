@@ -1375,7 +1375,9 @@ function aiDealCompCard(candidate, tone) {
     '</div>' +
     (candidate.comp_group === 'subject_sale_evidence' ? '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:7px 8px;color:#991b1b;font-size:12px;font-weight:900;line-height:1.45">This is the subject property\'s own sale/listing evidence, not a comparable sale.</div>' : '') +
     (candidate.why_included ? '<div>' + aiDealSafeText(candidate.why_included) + '</div>' : '') +
+    (candidate.why_not_verified ? '<div style="color:#92400e;font-weight:800">Why not verified: ' + aiDealSafeText(candidate.why_not_verified) + '</div>' : '') +
     (missing.length ? '<div style="color:#92400e;font-weight:800">Missing: ' + aiDealSafeText(missing.join(', ')) + '</div>' : '') +
+    (candidate.distance_note ? '<div style="color:#64748b;font-weight:800">' + aiDealSafeText(candidate.distance_note) + '</div>' : '') +
     (notes.length ? '<div style="color:#64748b;font-weight:800">' + aiDealSafeText(notes.slice(0, 2).join(' | ')) + '</div>' : '') +
     (candidate.source_url ? '<a href="' + aiDealSafeText(candidate.source_url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900">Open source</a>' : '<div style="color:#92400e;font-weight:800">Source link missing.</div>') +
   '</div>';
@@ -1409,7 +1411,7 @@ function aiDealCompCandidatesList(job) {
   }
   if (!verified.length && !subject.length && !candidate.length && !market.length && !notUsable.length) return '';
   return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">' +
-    aiDealCompBucket('Verified Sold Comps', verified, 'good', 'None yet. ARV stays locked until 3 verified sold comps are found.') +
+    aiDealCompBucket('Verified Sold Comps (Different Properties)', verified, 'good', 'None yet. ARV stays locked until 3 verified sold comps from different properties are found.') +
     aiDealCompBucket('Subject Sale Evidence', subject, 'warn', 'No subject property sale/listing evidence found.') +
     aiDealCompBucket('Candidate Sold Comps', candidate, 'warn', 'No incomplete sold-comp candidates.') +
     aiDealCompBucket('Market Support', market, 'neutral', 'No market support results.') +
@@ -1446,6 +1448,13 @@ function aiDealCompResearchSection(job) {
                 : status === 'no_candidates_found'
               ? 'Not enough public comp evidence found.'
               : 'Comp research needs review.');
+  if (!verified && subjectCount && !candidateCount && !marketCount) {
+    next = 'Only subject property evidence found. More nearby sold comps are needed.';
+  } else if (!verified && marketCount && !candidateCount) {
+    next = 'Gemini found market support, but no verified sold comps yet.';
+  } else if (!verified && subjectCount) {
+    next = 'Subject property evidence was excluded from comps. More nearby sold comps are needed.';
+  }
   return '<div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">' +
     '<div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Comp Research</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
@@ -1458,6 +1467,7 @@ function aiDealCompResearchSection(job) {
       aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Preliminary ARV' : 'Locked'), job.arv_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    (job.comp_search_strategy ? '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Search strategy</div>' + aiDealSafeText(job.comp_search_strategy) + '</div>' : '') +
     (normalizedText || normalizationNote ? '<div style="border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Provider normalization</div>' + aiDealSafeText(normalizationNote || 'Provider response was normalized from text; verify sources before using.') + '</div>' : '') +
     '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Valuation gate</div>' + aiDealSafeText(job.arv_range ? ('Preliminary ARV: ' + aiDealArvLabel(job.arv_range) + '. ' + (job.mao_range ? 'Draft MAO has repair evidence.' : 'MAO stays locked until repair evidence exists.')) : 'ARV and MAO are locked until at least 3 verified sold comps are found. Candidate comps and market support do not unlock valuation.') + '</div>' +
     (blockers.length ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Why comps are blocked</div>' + blockers.map(aiDealSafeText).join(' | ') + '</div>' : '') +
