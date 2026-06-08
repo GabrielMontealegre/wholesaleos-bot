@@ -1368,11 +1368,12 @@ function aiDealCompCard(candidate, tone) {
     '<div><strong>' + aiDealSafeText(candidate.comp_address || 'Address not verified yet') + '</strong></div>' +
     (saleBits.length ? '<div>' + aiDealSafeText(saleBits.join(' - ')) + '</div>' : '<div>Sold details not verified yet.</div>') +
     '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
-      (candidate.source_quality ? aiDealStatusPill(candidate.source_quality, tone === 'good' ? 'good' : 'warn') : '') +
-      (candidate.comp_confidence_score ? aiDealStatusPill('Confidence ' + candidate.comp_confidence_score, 'neutral') : '') +
-      (candidate.proximity_evidence_score ? aiDealStatusPill('Proximity ' + candidate.proximity_evidence_score, 'neutral') : '') +
-      (candidate.recency_score ? aiDealStatusPill('Recency ' + candidate.recency_score, 'neutral') : '') +
+    (candidate.source_quality ? aiDealStatusPill(candidate.source_quality, tone === 'good' ? 'good' : 'warn') : '') +
+    (candidate.comp_confidence_score ? aiDealStatusPill('Confidence ' + candidate.comp_confidence_score, 'neutral') : '') +
+    (candidate.proximity_evidence_score ? aiDealStatusPill('Proximity ' + candidate.proximity_evidence_score, 'neutral') : '') +
+    (candidate.recency_score ? aiDealStatusPill('Recency ' + candidate.recency_score, 'neutral') : '') +
     '</div>' +
+    (candidate.comp_group === 'subject_sale_evidence' ? '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:7px 8px;color:#991b1b;font-size:12px;font-weight:900;line-height:1.45">This is the subject property\'s own sale/listing evidence, not a comparable sale.</div>' : '') +
     (candidate.why_included ? '<div>' + aiDealSafeText(candidate.why_included) + '</div>' : '') +
     (missing.length ? '<div style="color:#92400e;font-weight:800">Missing: ' + aiDealSafeText(missing.join(', ')) + '</div>' : '') +
     (notes.length ? '<div style="color:#64748b;font-weight:800">' + aiDealSafeText(notes.slice(0, 2).join(' | ')) + '</div>' : '') +
@@ -1391,16 +1392,25 @@ function aiDealCompBucket(title, list, tone, emptyText) {
 function aiDealCompCandidatesList(job) {
   job = job || {};
   var verified = Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [];
+  var subject = Array.isArray(job.subject_sale_evidence) ? job.subject_sale_evidence : [];
   var candidate = Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [];
   var market = Array.isArray(job.market_support) ? job.market_support : [];
   var notUsable = Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [];
   var flat = Array.isArray(job.comp_candidates) ? job.comp_candidates : [];
-  if (!verified.length && !candidate.length && !market.length && !notUsable.length && flat.length) {
-    candidate = flat;
+  if (!verified.length && !subject.length && !candidate.length && !market.length && !notUsable.length && flat.length) {
+    flat.forEach(function(item) {
+      if (!item) return;
+      if (item.comp_group === 'verified_sold') verified.push(item);
+      else if (item.comp_group === 'subject_sale_evidence') subject.push(item);
+      else if (item.comp_group === 'candidate_sold') candidate.push(item);
+      else if (item.comp_group === 'market_support') market.push(item);
+      else notUsable.push(item);
+    });
   }
-  if (!verified.length && !candidate.length && !market.length && !notUsable.length) return '';
+  if (!verified.length && !subject.length && !candidate.length && !market.length && !notUsable.length) return '';
   return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">' +
     aiDealCompBucket('Verified Sold Comps', verified, 'good', 'None yet. ARV stays locked until 3 verified sold comps are found.') +
+    aiDealCompBucket('Subject Sale Evidence', subject, 'warn', 'No subject property sale/listing evidence found.') +
     aiDealCompBucket('Candidate Sold Comps', candidate, 'warn', 'No incomplete sold-comp candidates.') +
     aiDealCompBucket('Market Support', market, 'neutral', 'No market support results.') +
     aiDealCompBucket('Not Usable', notUsable, 'neutral', 'No excluded results.') +
@@ -1412,6 +1422,7 @@ function aiDealCompResearchSection(job) {
   var status = job.comp_research_status || 'not_configured';
   var label = aiDealCompResearchLabel(status);
   var verified = Number(job.verified_comp_count || (Array.isArray(job.comp_evidence) ? job.comp_evidence.length : 0)) || 0;
+  var subjectCount = Number(job.subject_sale_evidence_count || (Array.isArray(job.subject_sale_evidence) ? job.subject_sale_evidence.length : 0)) || 0;
   var candidateCount = Number(job.candidate_comp_count || (Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps.length : 0)) || 0;
   var marketCount = Number(job.market_support_count || (Array.isArray(job.market_support) ? job.market_support.length : 0)) || 0;
   var normalizedText = !!job.normalized_from_text;
@@ -1441,6 +1452,7 @@ function aiDealCompResearchSection(job) {
       aiDealStatusPill('Research provider: ' + aiDealCompProviderLabel(job), status === 'not_configured' ? 'warn' : 'good') +
       aiDealStatusPill('Research status: ' + label, aiDealCompResearchTone(status)) +
       aiDealStatusPill('Verified sold comps: ' + verified, verified >= 3 ? 'good' : 'warn') +
+      aiDealStatusPill('Subject sale evidence: ' + subjectCount, subjectCount ? 'warn' : 'neutral') +
       aiDealStatusPill('Candidate comps: ' + candidateCount, candidateCount ? 'warn' : 'neutral') +
       aiDealStatusPill('Market support: ' + marketCount, marketCount ? 'neutral' : 'neutral') +
       aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Preliminary ARV' : 'Locked'), job.arv_range ? 'good' : 'warn') +

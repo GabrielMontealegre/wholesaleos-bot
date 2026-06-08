@@ -256,6 +256,12 @@ function collectSourceEvidence(lead, job) {
     property_identity_status: pack.property_identity_status,
     property_identity_label: pack.property_identity_label,
     address_candidate: pack.address_candidate,
+    city_candidate: pack.city_candidate,
+    state_candidate: pack.state_candidate,
+    zip_candidate: pack.zip_candidate,
+    source_url_address_candidate: pack.source_url_address_candidate,
+    address_extracted_from_source_url: pack.address_extracted_from_source_url,
+    property_identity_basis: pack.property_identity_basis,
     owner_candidate: pack.owner_candidate,
     amount_candidate: pack.amount_candidate,
     source_ref: pack.source_ref,
@@ -336,8 +342,13 @@ function isVerifiedSoldComp(comp) {
   return verified && sold && compAddress(comp) && compPrice(comp) > 0 && compSoldDate(comp) && isHttpUrl(compSourceUrl(comp));
 }
 
-function collectCompEvidence(lead) {
-  if (!lead) return [];
+function collectCompEvidence(lead, subjectAddress) {
+  if (!lead) {
+    return { verified_sold_comps: [], subject_sale_evidence: [] };
+  }
+  const subjectKey = compResearchProvider.addressConflictKey
+    ? compResearchProvider.addressConflictKey(subjectAddress)
+    : (compResearchProvider.normalizeAddressKey ? compResearchProvider.normalizeAddressKey(subjectAddress) : '');
   const containers = [
     lead.verified_comps,
     lead.comps,
@@ -345,11 +356,36 @@ function collectCompEvidence(lead) {
     lead.research_comps,
     lead.comp_evidence
   ].filter(Array.isArray);
-  const comps = [];
+  const verifiedSoldComps = [];
+  const subjectSaleEvidence = [];
   containers.forEach((list) => {
     list.forEach((comp) => {
+      const addressKey = compResearchProvider.addressConflictKey
+        ? compResearchProvider.addressConflictKey(compAddress(comp))
+        : (compResearchProvider.normalizeAddressKey ? compResearchProvider.normalizeAddressKey(compAddress(comp)) : cleanText(compAddress(comp)).toLowerCase());
+      const isSubject = !!(subjectKey && addressKey && addressKey === subjectKey);
+      if (isSubject) {
+        subjectSaleEvidence.push({
+          type: 'subject_sale_evidence',
+          address: compAddress(comp),
+          sold_price: compPrice(comp),
+          sold_date: compSoldDate(comp),
+          beds: pick(comp, ['beds', 'bedrooms']) || null,
+          baths: pick(comp, ['baths', 'bathrooms']) || null,
+          sqft: pick(comp, ['sqft', 'square_feet']) || null,
+          distance: pick(comp, ['distance', 'distance_miles']) || null,
+          source_url: compSourceUrl(comp),
+          source_title: cleanText(pick(comp, ['source_title', 'title'])),
+          source_type: cleanText(pick(comp, ['source_type', 'record_type', 'source_kind'])),
+          verification_status: 'subject_sale_evidence',
+          comp_classification: 'Subject Sale Evidence',
+          comp_group: 'subject_sale_evidence',
+          notes: ['This is the subject property\'s own sale/listing evidence, not a comparable sale.']
+        });
+        return;
+      }
       if (!isVerifiedSoldComp(comp)) return;
-      comps.push({
+      verifiedSoldComps.push({
         type: 'verified_sold_comp',
         address: compAddress(comp),
         sold_price: compPrice(comp),
@@ -363,7 +399,10 @@ function collectCompEvidence(lead) {
       });
     });
   });
-  return comps.slice(0, 20);
+  return {
+    verified_sold_comps: verifiedSoldComps.slice(0, 20),
+    subject_sale_evidence: subjectSaleEvidence.slice(0, 20)
+  };
 }
 
 function mergeCompResearchState(job, state) {
@@ -372,6 +411,11 @@ function mergeCompResearchState(job, state) {
   const candidateSoldComps = Array.isArray(state.candidate_sold_comps) ? state.candidate_sold_comps : [];
   const marketSupport = Array.isArray(state.market_support) ? state.market_support : [];
   const notUsable = Array.isArray(state.not_usable_comp_results) ? state.not_usable_comp_results : [];
+  const subjectSaleEvidence = Array.isArray(state.subject_sale_evidence)
+    ? state.subject_sale_evidence
+    : Array.isArray(job && job.subject_sale_evidence)
+      ? job.subject_sale_evidence
+      : [];
   const providerArv = state.arv_range || null;
   const providerMao = state.mao_range || null;
   return Object.assign({}, job, {
@@ -380,6 +424,7 @@ function mergeCompResearchState(job, state) {
     comp_research_provider_label: state.provider_label,
     comp_candidates: state.candidates,
     verified_sold_comps: verifiedSoldComps,
+    subject_sale_evidence: subjectSaleEvidence,
     candidate_sold_comps: candidateSoldComps,
     market_support: marketSupport,
     not_usable_comp_results: notUsable,
@@ -387,6 +432,7 @@ function mergeCompResearchState(job, state) {
       Array.isArray(job && job.comp_evidence) ? job.comp_evidence.length : 0,
       state.verified_comp_count || 0
     ),
+    subject_sale_evidence_count: state.subject_sale_evidence_count || subjectSaleEvidence.length,
     candidate_comp_count: state.candidate_comp_count || candidateSoldComps.length,
     market_support_count: state.market_support_count || marketSupport.length,
     not_usable_comp_count: state.not_usable_comp_count || notUsable.length,
@@ -607,11 +653,13 @@ function createJob(item) {
     } : null,
     source_evidence: [],
     comp_evidence: [],
+    subject_sale_evidence: [],
     comp_research_status: 'not_configured',
     comp_research_provider: 'none',
     comp_research_provider_label: 'Not configured',
     comp_candidates: [],
     verified_sold_comps: [],
+    subject_sale_evidence_count: 0,
     candidate_sold_comps: [],
     market_support: [],
     not_usable_comp_results: [],
@@ -701,16 +749,23 @@ function runJob(jobIdValue) {
     }
     const normalized = quality.normalized_address || (lead ? fullLeadAddress(lead) : '');
     const sourceEvidence = collectSourceEvidence(lead, job);
-    const compEvidence = collectCompEvidence(lead);
+    const compCollection = collectCompEvidence(lead, normalized || fullLeadAddress(lead) || leadAddress(lead) || job.input_value);
+    const compEvidence = compCollection.verified_sold_comps;
+    const subjectSaleEvidence = compCollection.subject_sale_evidence;
     const valuation = valuationFromComps(compEvidence, lead);
     const status = statusForEvidence(quality, sourceEvidence, compEvidence);
     const missing = missingEvidenceFor(quality, sourceEvidence, compEvidence, valuation);
+    if (compEvidence.length === 0 && subjectSaleEvidence.length) {
+      missing.push('Subject property sale evidence excluded from verified comp count');
+    }
     job = Object.assign({}, job, {
       updated_at: nowIso(),
       status,
       normalized_address: normalized,
       source_evidence: sourceEvidence,
       comp_evidence: compEvidence,
+      subject_sale_evidence: subjectSaleEvidence,
+      subject_sale_evidence_count: subjectSaleEvidence.length,
       missing_evidence: missing,
       result_summary: resultSummary(status, quality, sourceEvidence, compEvidence, valuation),
       next_best_action: nextAction(status, missing, sourceEvidence),
@@ -774,10 +829,12 @@ function getCompCandidates(jobIdValue) {
   return {
     candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
     verified_sold_comps: Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [],
+    subject_sale_evidence: Array.isArray(job.subject_sale_evidence) ? job.subject_sale_evidence : [],
     candidate_sold_comps: Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [],
     market_support: Array.isArray(job.market_support) ? job.market_support : [],
     not_usable_comp_results: Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [],
     verified_comp_count: Number(job.verified_comp_count || 0) || 0,
+    subject_sale_evidence_count: Number(job.subject_sale_evidence_count || 0) || 0,
     candidate_comp_count: Number(job.candidate_comp_count || 0) || 0,
     market_support_count: Number(job.market_support_count || 0) || 0,
     not_usable_comp_count: Number(job.not_usable_comp_count || 0) || 0,
