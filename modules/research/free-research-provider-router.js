@@ -791,21 +791,36 @@ async function fetchJson(url, body, headers, options) {
   options = options || {};
   const fetchImpl = options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== 'function') throw new Error('Research provider requires a runtime with fetch support.');
-  const response = await fetchImpl(url, {
-    method: 'POST',
-    headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
-    body: JSON.stringify(body)
-  });
-  const text = await response.text();
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch (error) { data = null; }
-  if (!response.ok) {
-    const message = data && data.error && data.error.message ? data.error.message : `Research provider failed with HTTP ${response.status}`;
-    const err = new Error(message);
-    err.status = response.status;
-    throw err;
+  const timeoutMs = Math.min(Math.max(parseInt(options.timeout_ms || options.timeoutMs || 25000, 10) || 25000, 1000), 40000);
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
+      body: JSON.stringify(body),
+      signal: controller ? controller.signal : undefined
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (error) { data = null; }
+    if (!response.ok) {
+      const message = data && data.error && data.error.message ? data.error.message : `Research provider failed with HTTP ${response.status}`;
+      const err = new Error(message);
+      err.status = response.status;
+      throw err;
+    }
+    return data;
+  } catch (error) {
+    if (error && (error.name === 'AbortError' || /\b(abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(cleanText(error.message)))) {
+      const err = new Error('Provider request timed out.');
+      err.status = 408;
+      throw err;
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-  return data;
 }
 
 async function runGeminiResearch(job, provider, options) {

@@ -1467,9 +1467,13 @@ app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => 
     const job = await aiDealAnalyzerJobs.runCompResearchForJob(req.params.jobId);
     return res.json({
       ok: true,
+      job_id: job.job_id,
       job,
       comp_research_status: job.comp_research_status,
       comp_research_provider: job.comp_research_provider,
+      valuation_locked: job.valuation_locked !== false,
+      comp_next_action: job.comp_next_action || '',
+      error_category: job.comp_research_error_category || '',
       comp_candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
       verified_sold_comps: Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [],
       candidate_sold_comps: Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [],
@@ -1485,6 +1489,12 @@ app.post('/api/ai-deal-analyzer/jobs/:jobId/comp-research', async (req, res) => 
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
+      job_id: req.params.jobId,
+      comp_research_status: 'failed_cleanly',
+      valuation_locked: true,
+      verified_comp_count: 0,
+      comp_next_action: 'Provider error. No valuation was generated.',
+      error_category: 'provider_error',
       error: err && err.message ? err.message : 'Failed to run comp research check'
     });
   }

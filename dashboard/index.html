@@ -1221,8 +1221,10 @@ function aiDealSourceSection(pack, sourceEvidence) {
 function aiDealCompResearchLabel(status) {
   return ({
     not_configured: 'Not configured',
+    provider_not_configured: 'Not configured',
     blocked_needs_address: 'Needs address',
     blocked_needs_source_evidence: 'Needs source evidence',
+    blocked_source_address_conflict: 'Source conflict',
     ready_to_research: 'Ready to research',
     researching: 'Researching',
     temporarily_unavailable: 'Temporarily unavailable',
@@ -1230,6 +1232,8 @@ function aiDealCompResearchLabel(status) {
     timed_out: 'Timed out',
     auth_error: 'Auth error',
     quota_or_rate_limited: 'Rate limited',
+    provider_error: 'Provider error',
+    failed_cleanly: 'Provider error',
     candidates_found: 'Candidate evidence found',
     partial_results: 'Partial evidence found',
     completed: 'Completed',
@@ -1258,8 +1262,10 @@ function aiDealCompProviderLabel(job) {
 function aiDealCompResearchTone(status) {
   if (status === 'ready_to_research' || status === 'candidates_found' || status === 'partial_results') return 'good';
   if (status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'timed_out' || status === 'auth_error' || status === 'quota_or_rate_limited') return 'warn';
+  if (status === 'researching') return 'neutral';
+  if (status === 'provider_error' || status === 'failed_cleanly') return 'warn';
   if (status === 'completed' || status === 'completed_no_results' || status === 'no_usable_comp_evidence') return 'neutral';
-  if (status === 'not_configured' || status === 'blocked_needs_address' || status === 'blocked_needs_source_evidence') return 'warn';
+  if (status === 'not_configured' || status === 'provider_not_configured' || status === 'blocked_needs_address' || status === 'blocked_needs_source_evidence' || status === 'blocked_source_address_conflict') return 'warn';
   return 'neutral';
 }
 
@@ -1287,9 +1293,10 @@ function aiDealCompBlockers(job) {
   var blockers = [];
   var status = job.comp_research_status || 'not_configured';
   var cfg = AI_DEAL_COMP_RESEARCH_CONFIG || {};
-  if (!cfg.configured || status === 'not_configured') blockers.push('Provider not configured');
+  if (!cfg.configured || status === 'not_configured' || status === 'provider_not_configured') blockers.push('Provider not configured');
   if (job.status === 'needs_address_review' || status === 'blocked_needs_address') blockers.push('Address incomplete');
   if (job.status === 'needs_source_evidence' || status === 'blocked_needs_source_evidence') blockers.push('Missing source evidence');
+  if (status === 'blocked_source_address_conflict') blockers.push('Source/property address conflict');
   var pack = aiDealSourcePack(job);
   if (pack && (pack.source_url_type === 'generic_portal' || pack.source_url_type === 'county_search_page' || pack.source_url_type === 'list_page')) {
     blockers.push('Source is a generic portal, not a property record');
@@ -1311,7 +1318,7 @@ function aiDealCompResearchEligibility(job) {
   if (status === 'blocked_needs_address' || (job && job.status === 'needs_address_review')) {
     return { eligible: false, message: 'Repair property identity before comp research.' };
   }
-  if (status === 'blocked_needs_source_evidence' || (job && job.status === 'needs_source_evidence')) {
+  if (status === 'blocked_needs_source_evidence' || status === 'blocked_source_address_conflict' || (job && job.status === 'needs_source_evidence')) {
     return { eligible: false, message: 'Verify source/property evidence before comp research.' };
   }
   if (status !== 'ready_to_research') {
@@ -1439,16 +1446,24 @@ function aiDealCompResearchSection(job) {
   var blockers = aiDealCompBlockers(job);
   var next = job.comp_next_action || (status === 'not_configured'
     ? 'Comp provider not configured yet.'
+    : status === 'provider_not_configured'
+      ? 'Comp provider not configured yet.'
     : status === 'blocked_needs_address'
       ? 'Repair property identity before comps.'
       : status === 'blocked_needs_source_evidence'
         ? 'Source repair needed before comps.'
+        : status === 'blocked_source_address_conflict'
+          ? 'Source URL address conflicts with Analyzer address. Verify before comp research.'
+          : status === 'researching'
+            ? 'Comp research is running.'
         : status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited'
           ? 'Gemini is temporarily unavailable/high demand. Try again later.'
           : status === 'timed_out'
             ? 'Gemini live comp research timed out before returning evidence. Try again later.'
             : status === 'auth_error'
               ? 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.'
+              : status === 'provider_error' || status === 'failed_cleanly'
+                ? 'Provider error. No valuation was generated.'
         : status === 'ready_to_research'
           ? aiDealCompProviderLabel(job) + ' research is ready. Click Research Comps to gather public evidence.'
           : status === 'candidates_found' || status === 'partial_results'
@@ -1480,6 +1495,7 @@ function aiDealCompResearchSection(job) {
     '</div>' +
     '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
     ((status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited' || status === 'timed_out') ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">Gemini configured. Try again later. No valuation was generated.</div>' : '') +
+    ((status === 'provider_error' || status === 'failed_cleanly') ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">Provider error. No valuation was generated.</div>' : '') +
     (job.comp_search_strategy ? '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Search strategy</div>' + aiDealSafeText(job.comp_search_strategy) + '</div>' : '') +
     (normalizedText || normalizationNote ? '<div style="border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Provider normalization</div>' + aiDealSafeText(normalizationNote || 'Provider response was normalized from text; verify sources before using.') + '</div>' : '') +
     '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Valuation gate</div>' + aiDealSafeText(job.arv_range ? ('Preliminary ARV: ' + aiDealArvLabel(job.arv_range) + '. ' + (job.mao_range ? 'Draft MAO has repair evidence.' : 'MAO stays locked until repair evidence exists.')) : 'ARV and MAO are locked until at least 3 verified sold comps are found. Candidate comps and market support do not unlock valuation.') + '</div>' +
@@ -1698,7 +1714,7 @@ async function aiDealResearchComps(jobId) {
     if (data.job) {
       AI_DEAL_ANALYZER_JOBS = AI_DEAL_ANALYZER_JOBS.map(function(job){ return job.job_id === data.job.job_id ? data.job : job; });
       aiDealRefresh();
-      aiDealSetStatus(data.job.comp_next_action || 'Comp research status updated.', data.job.comp_research_status === 'not_configured' || data.job.comp_research_status === 'blocked_needs_address' || data.job.comp_research_status === 'blocked_needs_source_evidence');
+      aiDealSetStatus(data.job.comp_next_action || 'Comp research status updated.', data.job.comp_research_status === 'not_configured' || data.job.comp_research_status === 'provider_not_configured' || data.job.comp_research_status === 'blocked_needs_address' || data.job.comp_research_status === 'blocked_needs_source_evidence' || data.job.comp_research_status === 'blocked_source_address_conflict' || data.job.comp_research_status === 'provider_error' || data.job.comp_research_status === 'failed_cleanly');
     }
   } catch (e) {
     aiDealSetStatus(e.message || 'Comp research could not be checked.', true);
