@@ -332,23 +332,22 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('pipeline',this)"><span class="nav-icon">📊</span>Pipeline</div>
       <div class="nav-item" onclick="navigate('gmail',this)"><span class="nav-icon">📬</span>Email</div>
       <div class="nav-item" onclick="navigate('sms',this)"><span class="nav-icon">💬</span>SMS<span class="nav-badge green" id="nav-sms-count" style="display:none">0</span></div>
-      <div class="nav-item" onclick="navigate('dialer',this)"><span class="nav-icon">📞</span>Dialer</div>
+      <div class="nav-item" onclick="navigate('dialer',this)"><span class="nav-icon">☎️</span>Dialer</div>
       <div class="nav-item" onclick="navigate('drive',this)"><span class="nav-icon">☁️</span>Google Drive</div>
       <div class="nav-section">Outreach</div>
       <div class="nav-item" onclick="navigate('followups',this)"><span class="nav-icon">🔔</span>Follow-Ups<span class="nav-badge green" id="nav-fu-count">0</span></div>
       <div class="nav-item" onclick="navigate('calendar',this)"><span class="nav-icon">📅</span>Calendar</div>
       <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach Hub</div>
       <div class="nav-section">Deals</div>
-      <div class="nav-item" onclick="navigate('findme_scout',this)"><span class="nav-icon">FM</span>FindMe Scout</div>
-      <div class="nav-item" onclick="navigate('ai_deal_analyzer',this)"><span class="nav-icon">$</span>AI Deal Analyzer</div>
-      <div class="nav-item" onclick="navigate('morning_call_desk',this)"><span class="nav-icon">CD</span>Daily Call Pipeline</div>
-      <div class="nav-item" onclick="navigate('deal_analyzer',this)"><span class="nav-icon">$</span>Deal Analyzer</div>
-      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
+      <div class="nav-item" onclick="navigate('findme_scout',this)"><span class="nav-icon">🧭</span>FindMe Scout</div>
+      <div class="nav-item" onclick="navigate('ai_deal_analyzer',this)"><span class="nav-icon">🧠</span>AI Deal Analyzer</div>
+      <div class="nav-item" onclick="navigate('morning_call_desk',this)"><span class="nav-icon">☎️</span>Daily Call Pipeline</div>
+      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">👥</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
       <div class="nav-item" onclick="navigate('automation',this)"><span class="nav-icon">🚀</span>Automation</div>
-      <div class="nav-item" onclick="navigate('contracts_lib',this)"><span class="nav-icon">📑</span>Contracts Library</div>
+      <div class="nav-item" onclick="navigate('contracts_lib',this)"><span class="nav-icon">🗂️</span>Contracts Library</div>
       
       <div class="nav-item" onclick="navigate('import',this)"><span class="nav-icon">📥</span>Import</div>
       <div class="nav-item" onclick="navigate('review',this)"><span class="nav-icon">🔍</span>Review Queue<span class="nav-badge" id="nav-review-count" style="display:none">0</span></div>
@@ -444,6 +443,9 @@ const APP = {
   search: '',
   leads: JSON.parse(localStorage.getItem('montsan_leads') || '[]'),
   buyers: JSON.parse(localStorage.getItem('montsan_buyers') || JSON.stringify(defaultBuyers())),
+  buyboxes: [],
+  buyboxRecommendations: [],
+  commandMarket: localStorage.getItem('montsan_command_market') || 'Dallas',
   assignments: JSON.parse(localStorage.getItem('montsan_assignments') || '[]'),
   calendar: JSON.parse(localStorage.getItem('montsan_calendar') || '[]'),
   followups: JSON.parse(localStorage.getItem('montsan_followups') || '[]'),
@@ -2377,6 +2379,138 @@ function dealCallSetFilter(filter) {
   dealCallLoadDossiers(true);
 }
 
+function commandText(value) {
+  return String(value == null ? '' : value).trim();
+}
+
+function commandDossierHaystack(dossier) {
+  dossier = dossier || {};
+  var property = dossier.property || {};
+  return [
+    property.full_address,
+    property.city,
+    property.state,
+    property.county,
+    property.source_url,
+    property.canonical_source_url,
+    property.market_match_status,
+    (dossier.workflow || {}).notes
+  ].map(commandText).join(' ');
+}
+
+function commandIsDallasDossier(dossier) {
+  var text = commandDossierHaystack(dossier);
+  return /\bDallas\b/i.test(text) || /\b752\d{2}\b/.test(text);
+}
+
+function commandIsTexasDossier(dossier) {
+  return /\bTX\b|\bTexas\b/i.test(commandDossierHaystack(dossier));
+}
+
+function commandVisibleDossiers() {
+  var list = Array.isArray(DEAL_CALL_DOSSIERS) ? DEAL_CALL_DOSSIERS : [];
+  var market = APP.commandMarket || 'Dallas';
+  if (market === 'Dallas') return list.filter(commandIsDallasDossier);
+  if (market === 'Texas') return list.filter(commandIsTexasDossier);
+  return list;
+}
+
+function commandSetMarket(market) {
+  APP.commandMarket = market || 'Dallas';
+  localStorage.setItem('montsan_command_market', APP.commandMarket);
+  render();
+}
+
+function commandDossierCounts(dossiers) {
+  var out = { total: dossiers.length, callToday: 0, needContact: 0, researchMore: 0, followUp: 0 };
+  dossiers.forEach(function(d) {
+    var outcome = commandText((d.workflow || {}).outcome);
+    if (outcome === 'Call Today') out.callToday++;
+    if (outcome === 'Need Contact Lookup' || /manual lookup/i.test(commandText((d.contact || {}).target))) out.needContact++;
+    if (outcome === 'Research More') out.researchMore++;
+    if (/follow/i.test(outcome)) out.followUp++;
+  });
+  return out;
+}
+
+function commandIsTemplateBuyBox(box) {
+  var text = [box && box.name, box && box.source, box && box.notes].map(commandText).join(' ');
+  return /auto-generated|generated|template|market/i.test(text);
+}
+
+function commandIsVerifiedBuyer(buyer) {
+  var text = [buyer && buyer.name, buyer && buyer.source, buyer && buyer.notes].map(commandText).join(' ');
+  if (/auto-generated|generated|template|market/i.test(text)) return false;
+  return !!(buyer && buyer.name && (buyer.phone || buyer.email || buyer.contact));
+}
+
+function commandFactLine(dossier) {
+  var notes = commandText((dossier.workflow || {}).notes);
+  if (!notes) return 'Facts not verified yet.';
+  return notes.length > 260 ? notes.slice(0, 257) + '...' : notes;
+}
+
+function commandDossierLocation(dossier) {
+  var property = dossier.property || {};
+  var text = commandDossierHaystack(dossier);
+  return {
+    address: property.full_address || '',
+    city: property.city || (/\bDallas\b/i.test(text) ? 'Dallas' : ''),
+    state: property.state || (/\bTX\b|\bTexas\b/i.test(text) ? 'TX' : ''),
+    county: property.county || (/\bDallas\b/i.test(text) ? 'Dallas' : '')
+  };
+}
+
+function commandBuyerMatchesForDossier(dossier) {
+  var loc = commandDossierLocation(dossier);
+  var hay = commandDossierHaystack(dossier).toLowerCase();
+  return (APP.buyers || []).filter(commandIsVerifiedBuyer).map(function(buyer) {
+    var score = 0, reasons = [], missing = [];
+    var states = buyer.states || (buyer.state ? [buyer.state] : []);
+    var counties = buyer.counties || (buyer.county ? [buyer.county] : []);
+    var cities = buyer.cities || (buyer.city ? [buyer.city] : []);
+    if (!states.length || states.some(function(s){ return String(s).toLowerCase() === String(loc.state || 'TX').toLowerCase(); })) { score += 30; reasons.push('Texas buyer'); }
+    if (counties.some(function(c){ return hay.indexOf(String(c).toLowerCase()) > -1; })) { score += 25; reasons.push('county fit'); }
+    if (cities.some(function(c){ return hay.indexOf(String(c).toLowerCase()) > -1; })) { score += 20; reasons.push('city fit'); }
+    if (!counties.length && !cities.length) { score += 8; reasons.push('state-level fit'); }
+    if (!buyer.phone && !buyer.email) missing.push('buyer contact not verified');
+    if (!/(preliminary arv|verified sold comps)/i.test(commandText(((dossier.valuation || {}).valuation_status)))) missing.push('valuation not verified');
+    return { buyer: buyer, score: score, reasons: reasons, missing: missing };
+  }).filter(function(match){ return match.score >= 25; }).sort(function(a,b){ return b.score - a.score; }).slice(0, 3);
+}
+
+function commandBuyBoxMatchesForDossier(dossier) {
+  var loc = commandDossierLocation(dossier);
+  var hay = commandDossierHaystack(dossier).toLowerCase();
+  return (APP.buyboxes || []).filter(function(box){ return box && box.active !== false; }).map(function(box) {
+    var score = 0, reasons = [], missing = [];
+    if (!box.state || String(box.state).toLowerCase() === String(loc.state || 'TX').toLowerCase()) { score += 25; reasons.push('state fit'); }
+    if (box.county && hay.indexOf(String(box.county).toLowerCase()) > -1) { score += 20; reasons.push('county fit'); }
+    if (!box.county && /dallas/i.test(hay)) { score += 8; reasons.push('Dallas source'); }
+    if ((box.preferredCategories || []).some(function(c){ return hay.indexOf(String(c).toLowerCase()) > -1; })) { score += 8; reasons.push('strategy signal'); }
+    if (commandIsTemplateBuyBox(box)) missing.push('template buy box - not verified buyer');
+    if (!/(preliminary arv|verified sold comps)/i.test(commandText(((dossier.valuation || {}).valuation_status)))) missing.push('buyer match limited - valuation not verified');
+    return { box: box, score: score, reasons: reasons, missing: missing, template: commandIsTemplateBuyBox(box) };
+  }).filter(function(match){ return match.score >= 25; }).sort(function(a,b){ return b.score - a.score; }).slice(0, 3);
+}
+
+function commandBuyerMatchPanel(dossier) {
+  var buyerMatches = commandBuyerMatchesForDossier(dossier);
+  var boxMatches = commandBuyBoxMatchesForDossier(dossier);
+  var buyerHtml = buyerMatches.length ? buyerMatches.map(function(match) {
+    return '<div style="font-size:12px;color:#0f172a;font-weight:800">' + dealCallSafeText(match.buyer.name) + ' <span style="color:#64748b;font-weight:700">(' + match.score + ' pts: ' + dealCallSafeText(match.reasons.join(', ')) + ')</span></div>';
+  }).join('') : '<div style="font-size:12px;color:#64748b;font-weight:800">No verified buyer match yet.</div>';
+  var boxHtml = boxMatches.length ? boxMatches.map(function(match) {
+    return '<div style="font-size:12px;color:#0f172a;font-weight:800">' + dealCallSafeText(match.box.name || 'Buy box') + (match.template ? ' <span style="color:#92400e">(Template / Not Verified Buyer)</span>' : '') + ' <span style="color:#64748b;font-weight:700">(' + match.score + ' pts)</span></div>';
+  }).join('') : '<div style="font-size:12px;color:#64748b;font-weight:800">No active buy box match yet.</div>';
+  var missing = [].concat.apply([], buyerMatches.map(function(m){ return m.missing || []; }).concat(boxMatches.map(function(m){ return m.missing || []; }))).filter(function(v, i, arr){ return v && arr.indexOf(v) === i; });
+  return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px">' +
+    '<div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase;margin-bottom:5px">Buyer match status</div>' +
+    buyerHtml + '<div style="height:6px"></div>' + boxHtml +
+    '<div style="font-size:11px;color:#475569;font-weight:800;margin-top:6px">' + dealCallSafeText(missing.join(' | ') || 'Ready for manual buyer review.') + '</div>' +
+  '</div>';
+}
+
 function renderDealCallDossierCard(dossier) {
   dossier = dossier || {};
   var property = dossier.property || {};
@@ -2389,6 +2523,8 @@ function renderDealCallDossierCard(dossier) {
   var id = dealCallSafeText(dossier.dossier_id || '');
   var proof = property.source_proof_status || 'Needs Source Proof';
   var source = property.source_url || property.canonical_source_url || '';
+  var facts = commandFactLine(dossier);
+  var contactVerified = !!(contact.phone || contact.email);
   var compGrid = dealCallCompGroup('Subject Sale Evidence', groups.subject_sale_evidence, 'No subject sale evidence') +
     dealCallCompGroup('Verified Sold Comps', groups.verified_sold_comps, 'No verified sold comps') +
     dealCallCompGroup('Candidate Sold Comps', groups.candidate_sold_comps, 'No candidate comps') +
@@ -2405,14 +2541,18 @@ function renderDealCallDossierCard(dossier) {
       dealCallPill(property.property_identity_status || 'Identity not verified', /resolved|partial|verified/i.test(property.property_identity_status || '') ? 'good' : 'warn') +
       dealCallPill(contact.target || 'Manual Lookup Needed', dealCallContactTone(contact)) +
       dealCallPill(valuation.valuation_status || 'Locked', valuation.valuation_status === 'Preliminary ARV Available' ? 'good' : 'warn') +
+      dealCallPill(contactVerified ? 'Verified Contact' : 'Needs Contact Lookup', contactVerified ? 'good' : 'warn') +
+      dealCallPill(/locked/i.test(valuation.valuation_status || '') ? 'ARV Locked' : 'Value Evidence', /locked/i.test(valuation.valuation_status || '') ? 'warn' : 'good') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">' +
       '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Why this property matters</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:4px">' + dealCallSafeText((dossier.why_this_property_matters || {}).why_now || 'Motivation not verified yet.') + '</div></div>' +
       '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Best call target</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(contact.target || 'Manual Lookup Needed') + '</div><div style="font-size:12px;color:#334155;font-weight:800;margin-top:4px">' + dealCallSafeText(contact.name || contact.phone || contact.email || contact.warning || 'Do manual contact lookup before dialing.') + '</div></div>' +
       '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Value status</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(dealCallValuationText(dossier)) + '</div></div>' +
     '</div>' +
+    '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Source-backed facts</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45">' + dealCallSafeText(facts) + '</div></div>' +
+    commandBuyerMatchPanel(dossier) +
     '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Signals</div>' + dealCallShortList(signals, 'No verified motivation signal yet') + '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">' + compGrid + '</div>' +
+    '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Comp / valuation evidence</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">' + compGrid + '</div></details>' +
     '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;color:#166534;font-weight:900;font-size:12px;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Call script</div><div>' + dealCallSafeText(script.opening_line || 'Hi, I am calling about the property.') + '</div><div style="margin-top:3px">' + dealCallSafeText(script.why_calling || 'Confirm property details before making claims.') + '</div><div style="margin-top:3px">' + dealCallSafeText((script.role_specific_questions || []).slice(0, 3).join(' | ')) + '</div></div>' +
     '<div style="display:grid;grid-template-columns:1fr 190px;gap:8px;align-items:start">' +
       '<textarea id="deal-call-notes-' + id + '" placeholder="Call notes" style="width:100%;min-height:58px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 9px;font-size:12px;color:#111827">' + dealCallSafeText(workflow.notes || '') + '</textarea>' +
@@ -19662,13 +19802,86 @@ function renderDashboard() {
   '</div>';
 }
 
+renderDashboard = function() {
+  var leads=APP.leads||[], buyers=APP.buyers||[];
+  if (!DEAL_CALL_DOSSIERS_LOADED) setTimeout(function(){ dealCallLoadDossiers(true); }, 0);
+  if (!(APP.buyboxes || []).length && !APP._commandBuyBoxesLoading) {
+    APP._commandBuyBoxesLoading = true;
+    loadMatchingData().finally(function(){ APP._commandBuyBoxesLoading = false; });
+  }
+  var fus=APP.followups||[], now=Date.now();
+  var dossiers = commandVisibleDossiers();
+  var counts = commandDossierCounts(dossiers);
+  var verifiedBuyers = buyers.filter(commandIsVerifiedBuyer);
+  var activeBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); });
+  var templateBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && commandIsTemplateBuyBox(box); });
+  var upc=fus.filter(function(f){return f.status==='pending';}).sort(function(a,b){return new Date(a.date)-new Date(b.date);}).slice(0,8);
+  var evHtml=upc.length?upc.map(function(f){
+    var d=new Date(f.date),da=Math.round((d-now)/86400000);
+    var c=da<0?'#ff3b30':da<3?'#ff9500':'#34c759', lbl=da<0?'OVERDUE':da===0?'TODAY':'in '+da+'d';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f5f5f7;border-radius:8px;margin-bottom:6px"><div><div style="font-size:12px;font-weight:600">'+(f.type||'Follow-up')+'</div><div style="font-size:11px;color:#86868b">'+(f.note||f.leadAddress||'')+'</div></div><span style="font-size:10px;font-weight:700;color:'+c+'">'+lbl+'</span></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#86868b;font-size:12px">No upcoming events.<br>Add follow-ups to track them here.</div>';
+  var callCards = dossiers.slice(0, 8).map(function(dossier) {
+    var property = dossier.property || {};
+    var workflow = dossier.workflow || {};
+    var source = property.source_url || property.canonical_source_url || '';
+    var matches = commandBuyerMatchesForDossier(dossier);
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start">' +
+      '<div style="min-width:0"><div style="font-size:13px;font-weight:900;color:#111827;word-break:break-word">' + dealCallSafeText(property.full_address || 'Address needs repair') + '</div>' +
+      '<div style="font-size:11px;color:#64748b;font-weight:800;margin-top:2px">' + dealCallSafeText(workflow.outcome || 'Research More') + ' | ' + dealCallSafeText((dossier.contact || {}).target || 'Manual Lookup Needed') + '</div>' +
+      '<div style="font-size:11px;color:#334155;font-weight:800;margin-top:4px;line-height:1.4">' + dealCallSafeText((dossier.why_this_property_matters || {}).why_now || 'Reason not verified yet.') + '</div>' +
+      '<div style="font-size:10px;color:#64748b;margin-top:4px;word-break:break-word">' + dealCallSafeText(source || 'Needs source proof') + '</div></div>' +
+      '<div style="text-align:right;min-width:86px">' + dealCallPill(matches.length ? matches.length + ' buyer match' : 'No buyer match', matches.length ? 'good' : 'warn') + '</div>' +
+    '</div>';
+  }).join('');
+  var rawDeals=leads.filter(function(l){return l.spread>0;}).sort(function(a,b){return b.spread-a.spread;}).slice(0,25);
+  var dHtml=rawDeals.map(function(l,i){
+    var rid=getDealRefId(l), bm=matchBuyersToLead(l,buyers).length;
+    return '<div style="display:grid;grid-template-columns:28px 76px 1fr auto auto;gap:8px;align-items:center;padding:9px 12px;background:'+(i%2?'#fff':'#f9f9f9')+';border-radius:6px;cursor:pointer" data-lead-id="'+l.id+'" onclick="openLeadModal(this.dataset.leadId)">'+
+      '<div style="font-size:12px;color:#86868b;font-weight:700">'+(i+1)+'</div>'+
+      '<div style="font-size:10px;font-weight:700;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;text-align:center">'+rid+'</div>'+
+      '<div><div style="font-size:12px;font-weight:600">'+(l.type||'SFR')+' | '+(l.state||'-')+' | '+(l.repair_class||'-')+'</div><div style="font-size:10px;color:#86868b">ARV $'+(l.arv||0).toLocaleString()+' | Offer $'+(l.offer||0).toLocaleString()+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#34c759">$'+(l.spread||0).toLocaleString()+'</div><div style="font-size:10px;color:#86868b">spread</div></div>'+
+      '<div>'+(bm?'<span style="font-size:10px;font-weight:700;color:#0071e3;background:#f0f6ff;padding:2px 6px;border-radius:5px">'+bm+' buyers</span>':'')+'</div></div>';
+  }).join('');
+  return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">'+
+    '<div><div style="font-size:20px;font-weight:900;color:#111827">Dallas Command Center</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Daily calls first. Raw all-state lead queue stays below.</div></div>'+
+    '<select onchange="commandSetMarket(this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;color:#111827;background:#fff"><option value="Dallas" '+(APP.commandMarket==='Dallas'?'selected':'')+'>Dallas</option><option value="Texas" '+(APP.commandMarket==='Texas'?'selected':'')+'>Texas</option><option value="National" '+(APP.commandMarket==='National'?'selected':'')+'>National</option></select>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+
+    '<div style="background:#111827;color:#fff;border-radius:8px;padding:14px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">CALL PIPELINE</div><div style="font-size:28px;font-weight:900">'+counts.total+'</div><div style="font-size:11px;opacity:.75">'+APP.commandMarket+' dossiers</div></div>'+
+    '<div style="background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:8px;padding:14px"><div style="font-size:11px;font-weight:900;margin-bottom:4px">CALL TODAY</div><div style="font-size:28px;font-weight:900">'+counts.callToday+'</div><div style="font-size:11px;font-weight:800">ready for outreach</div></div>'+
+    '<div style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:8px;padding:14px"><div style="font-size:11px;font-weight:900;margin-bottom:4px">BUYER MONEY PATH</div><div style="font-size:28px;font-weight:900">'+verifiedBuyers.length+'</div><div style="font-size:11px;font-weight:800">'+activeBuyBoxes.length+' active buy boxes</div></div>'+
+    '<div style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:8px;padding:14px"><div style="font-size:11px;font-weight:900;margin-bottom:4px">NEED CONTACT LOOKUP</div><div style="font-size:28px;font-weight:900">'+counts.needContact+'</div><div style="font-size:11px;font-weight:800">'+counts.researchMore+' research more</div></div>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;margin-bottom:16px">'+
+    '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:15px;font-weight:900;color:#111827">Daily Call Pipeline</div><button class="btn btn-sm" style="background:#111827;color:#fff" onclick="navigate(\'morning_call_desk\',null)">Open Pipeline</button></div><div style="display:flex;flex-direction:column;gap:8px">'+(callCards||'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-weight:800">No Dallas dossiers loaded yet. Open Daily Call Pipeline or refresh.</div>')+'</div></div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px"><div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:8px">Buyers & Buy Boxes</div><div style="font-size:12px;color:#334155;font-weight:800;line-height:1.7">Verified buyers: '+verifiedBuyers.length+'<br>Active buy boxes: '+activeBuyBoxes.length+'<br>Generated/template buy boxes: '+templateBuyBoxes.length+'</div><button class="btn btn-sm" style="margin-top:9px;background:#eff6ff;color:#1d4ed8" onclick="navigate(\'buyers\',null)">Open Buyers</button></div><div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:6px">Buyer Finder Engine</div><div style="font-size:12px;color:#92400e;font-weight:800;line-height:1.5">Status panel only. No connected buyer-finder engine is active here. Use existing buyers and buy boxes; add buyer source search later if approved.</div></div><div><div style="font-size:15px;font-weight:900;margin-bottom:8px;color:#111827">Upcoming Events</div><div style="max-height:220px;overflow-y:auto">'+evHtml+'</div></div></div>'+
+  '</div>'+
+  renderCostAwarenessCommandCenter(leads,fus)+
+  renderSourceRecheckCommandCenter(leads,fus)+
+  renderVerificationCommandCenter(leads,fus)+
+  renderTodaySummaryCard(leads,fus)+
+  renderDailyAcquisitionQueue(leads,fus)+
+  '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px">'+
+    '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700">All-State Raw Queue</div><span style="font-size:11px;color:#86868b">'+rawDeals.length+' shown</span></div><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:8px">Use this as a secondary queue. Dallas call dossiers above are the operator default.</div>'+
+    '<div style="max-height:580px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:10px">'+(dHtml||'<div style="padding:40px;text-align:center;color:#86868b">Import leads to see top deals.</div>')+'</div></div>'+
+    '<div><div style="background:#f5f5f7;border-radius:12px;padding:14px"><div style="font-size:13px;font-weight:700;margin-bottom:6px">About Credits</div>'+
+    '<div style="font-size:11px;color:#86868b;line-height:1.7">Credits power the <strong>automated buyer & deal search</strong> across all 50 states. Each city search costs 1 credit. <strong>Always free:</strong> viewing leads, buyers, matching, outreach, and sending deals.</div></div></div>'+
+  '</div>';
+};
+
 function loadMatchingData() {
   return Promise.all([
     fetch('/api/buyers').then(function(r){return r.json();}).catch(function(){return {buyers:[]};}),
-    fetch('/api/leads?limit=300&sort=motivation_score').then(function(r){return r.json();}).catch(function(){return {leads:[]};})
+    fetch('/api/leads?limit=300&sort=motivation_score').then(function(r){return r.json();}).catch(function(){return {leads:[]};}),
+    fetch('/api/buyboxes').then(function(r){return r.json();}).catch(function(){return {buyboxes:[]};}),
+    fetch('/api/buyboxes/recommendations').then(function(r){return r.json();}).catch(function(){return {recommendations:[]};})
   ]).then(function(res){
     APP.buyers=res[0].buyers||res[0]||[];
     var ls=res[1].leads||res[1]||[];
+    APP.buyboxes=res[2].buyboxes||res[2]||[];
+    APP.buyboxRecommendations=res[3].recommendations||res[3]||[];
     APP._leadsTotalAll=Number((res[1]&&(res[1].totalAll||res[1].totalFiltered))||ls.length||0);
     APP._leadIntakeStatus = res[1] && res[1].intake_status ? res[1].intake_status : APP._leadIntakeStatus;
     if(ls.length){APP.leads=assignRefIds(ls);APP.filtered=APP.leads;}
@@ -24895,6 +25108,74 @@ function renderBuyers(){
     '</div>';
 }
 
+function renderCommandBuyers(){
+  var buyers=APP.buyers||[];
+  var boxes=APP.buyboxes||[];
+  if (!boxes.length && !APP._buyersBuyBoxesLoading) {
+    APP._buyersBuyBoxesLoading = true;
+    loadMatchingData().finally(function(){ APP._buyersBuyBoxesLoading = false; });
+  }
+  var verifiedBuyers=buyers.filter(commandIsVerifiedBuyer);
+  var activeBoxes=boxes.filter(function(box){return box && box.active !== false && !commandIsTemplateBuyBox(box);});
+  var templateBoxes=boxes.filter(function(box){return box && box.active !== false && commandIsTemplateBuyBox(box);});
+  var recs=(APP.buyboxRecommendations||[]).slice(0,4).map(function(rec){
+    return '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><div style="font-size:12px;font-weight:900;color:#111827">'+dealCallSafeText(rec.platform||rec.type||'Source')+'</div><div style="font-size:11px;color:#64748b;font-weight:800;margin-top:3px">'+dealCallSafeText(rec.description||'Buyer source recommendation')+'</div></div>';
+  }).join('');
+  var buyerCards=buyers.map(function(b){
+    var states=(b.states&&b.states.length)?b.states.join(", "):(b.state||"Any state");
+    var types=(b.buyTypes||[]).join(", ")||"Any type";
+    var maxP=b.maxPrice?"$"+Number(b.maxPrice).toLocaleString():"Any";
+    var minP=b.minPrice?"$"+Number(b.minPrice).toLocaleString():"$0";
+    var sc=b.score||75, scC=sc>=80?"#34c759":sc>=50?"#ff9500":"#ff3b30";
+    var mc=(APP.leads||[]).filter(function(l){return typeof matchBuyersToLead==='function'&&matchBuyersToLead(l,[b]).length>0;}).length;
+    var cities=(b.cities||[]).join(", ");
+    var verified=commandIsVerifiedBuyer(b);
+    return '<div style="background:#fff;border:1px solid #e5e5ea;border-radius:8px;padding:14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+      '<div><div style="font-size:15px;font-weight:900;color:#111827">'+dealCallSafeText(b.name||'Buyer')+"</div>"+
+      '<div style="font-size:12px;color:#64748b;font-weight:800">'+dealCallSafeText((b.city||"")+(b.state?", "+b.state:""))+"</div></div>"+
+      '<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:'+scC+'">'+sc+'</div><div style="font-size:9px;color:#86868b">trust</div></div></div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+      dealCallPill(verified?'Verified buyer':'Needs contact proof', verified?'good':'warn')+
+      dealCallPill(mc+' matching deal'+(mc!==1?'s':''), mc?'good':'neutral')+
+      '</div>'+
+      '<div style="background:#f9fafb;border-radius:8px;padding:9px;margin-bottom:10px;font-size:12px;color:#334155;font-weight:800;line-height:1.5">'+
+      '<div>Phone: '+dealCallSafeText(b.phone||"No phone")+"</div>"+
+      '<div>Email: '+(b.email?dealCallSafeText(b.email):'<span style="color:#64748b">No email - add to send deals</span>')+"</div></div>"+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;font-size:11px;color:#334155">'+
+      '<div><span style="color:#64748b">Types:</span> <strong>'+dealCallSafeText(types)+"</strong></div>"+
+      '<div><span style="color:#64748b">Budget:</span> <strong>'+dealCallSafeText(minP+" - "+maxP)+"</strong></div>"+
+      '<div><span style="color:#64748b">States:</span> <strong>'+dealCallSafeText(states)+"</strong></div>"+
+      (cities?'<div><span style="color:#64748b">Cities:</span> <strong>'+dealCallSafeText(cities)+"</strong></div>":"")+
+      (b.strategy?'<div><span style="color:#64748b">Strategy:</span> <strong>'+dealCallSafeText(b.strategy)+"</strong></div>":"")+
+      '</div>'+
+      '<div style="display:flex;gap:6px;justify-content:flex-end">'+
+      '<button class="btn btn-sm" style="background:#f5f5f7;font-size:11px" data-buyer-id="'+dealCallSafeText(b.id)+'" onclick="editBuyer(this.dataset.buyerId)">Edit</button>'+
+      '<button class="btn btn-dark btn-sm" style="font-size:11px" data-buyer-id="'+dealCallSafeText(b.id)+'" onclick="sendDealsToOneBuyer(this.dataset.buyerId)">Send</button>'+
+      '</div></div>';
+  }).join("");
+  var boxRows=activeBoxes.concat(templateBoxes).slice(0,10).map(function(box){
+    var template=commandIsTemplateBuyBox(box);
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #eef2f7"><div><div style="font-size:12px;font-weight:900;color:#111827">'+dealCallSafeText(box.name||'Buy box')+'</div><div style="font-size:11px;color:#64748b;font-weight:800">'+dealCallSafeText((box.county||'Any county')+', '+(box.state||'Any state')+' | '+(box.strategy||'Any strategy'))+'</div></div>'+dealCallPill(template?'Template / Not Verified Buyer':'Active buy box', template?'warn':'good')+'</div>';
+  }).join('');
+  var empty='<div style="text-align:center;padding:50px;color:#64748b"><div style="font-size:15px;font-weight:900;margin-bottom:12px">No buyers yet</div><button class="btn btn-dark" onclick="openAddBuyer()">+ Add First Buyer</button></div>';
+  return '<div style="max-width:1180px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><div style="font-size:20px;font-weight:900;color:#111827">Buyers & Buy Boxes</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Verified buyers stay separate from generated/template buy boxes.</div></div><div style="display:flex;gap:8px"><button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button><button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8" onclick="extractBuyBoxesFromBuyersTab()">Extract Buy Boxes</button><button class="btn btn-sm" style="background:#f5f5f7" onclick="loadMatchingData()">Sync</button></div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'+
+      '<div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:12px"><div style="font-size:11px;color:#166534;font-weight:900">VERIFIED BUYERS</div><div style="font-size:26px;color:#166534;font-weight:900">'+verifiedBuyers.length+'</div></div>'+
+      '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px"><div style="font-size:11px;color:#1d4ed8;font-weight:900">ACTIVE BUY BOXES</div><div style="font-size:26px;color:#1d4ed8;font-weight:900">'+activeBoxes.length+'</div></div>'+
+      '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px"><div style="font-size:11px;color:#92400e;font-weight:900">TEMPLATES</div><div style="font-size:26px;color:#92400e;font-weight:900">'+templateBoxes.length+'</div></div>'+
+      '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:11px;color:#64748b;font-weight:900">BUYER FINDER ENGINE</div><div style="font-size:12px;color:#334155;font-weight:800;margin-top:7px">Not connected. Status only; no fake buyers.</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start">'+
+      '<div>'+(buyers.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">'+buyerCards+'</div>':empty)+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:8px">Buy Box Status</div>'+(boxRows||'<div style="font-size:12px;color:#64748b;font-weight:800">No buy boxes loaded yet. Extract from verified buyers or sync.</div>')+'</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:8px">Buyer Source Recommendations</div>'+(recs||'<div style="font-size:12px;color:#64748b;font-weight:800">No recommendations loaded.</div>')+'</div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:6px">Title Companies</div><div style="font-size:12px;color:#334155;font-weight:800;line-height:1.5">Recommendation only for now. Do not create a Title Companies module until closing workflow needs it.</div></div></div>'+
+    '</div></div>';
+}
+
+renderBuyers = renderCommandBuyers;
+window.renderBuyers = renderCommandBuyers;
+
 // Redirect buy box tab to buyers
 function renderBuyBoxes(){ APP.page='buyers'; return renderBuyers(); }
 
@@ -25493,7 +25774,7 @@ function buildLeadLinks(lead) {
   if (typeof _origRenderBuyers !== 'function') return;
 
   window.renderBuyers = function() {
-    _origRenderBuyers.apply(this, arguments);
+    var buyerHtml = _origRenderBuyers.apply(this, arguments);
 
     // Inject state filter if not already present
     setTimeout(function() {
@@ -25536,6 +25817,7 @@ function buildLeadLinks(lead) {
         filterBuyersDisplay();
       });
     }, 300);
+    return buyerHtml;
   };
 
   window.filterBuyersDisplay = function() {
