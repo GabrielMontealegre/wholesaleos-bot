@@ -421,7 +421,7 @@ function mergeCompResearchState(job, state) {
   return Object.assign({}, job, {
     comp_research_status: state.provider_status,
     comp_research_provider: state.provider,
-    comp_research_provider_label: state.provider_label,
+    comp_research_provider_label: state.provider_label || job.comp_research_provider_label,
     comp_candidates: state.candidates,
     verified_sold_comps: verifiedSoldComps,
     subject_sale_evidence: subjectSaleEvidence,
@@ -443,9 +443,11 @@ function mergeCompResearchState(job, state) {
     comp_research_warnings: state.warnings || [],
     comp_research_citations: state.citations || [],
     comp_research_summary: state.raw_summary || '',
+    comp_research_started_at: cleanText(state.started_at || job.comp_research_started_at),
     comp_search_strategy: cleanText(state.comp_search_strategy),
     comp_missing_evidence_summary: cleanText(state.missing_evidence_summary),
     comp_provider_next_action: cleanText(state.provider_next_action),
+    comp_research_error_category: cleanText(state.error_category || job.comp_research_error_category),
     comp_research_updated_at: state.updated_at,
     normalized_from_text: state.normalized_from_text === true,
     normalization_note: cleanText(state.normalization_note),
@@ -579,6 +581,74 @@ function upsertJob(job) {
   return job;
 }
 
+function currentCompProviderInfo(env) {
+  const providers = compResearchProvider.getConfiguredCompProviders(env);
+  const provider = providers.find((candidate) => candidate && candidate.implemented === true) || providers[0] || null;
+  return {
+    provider,
+    provider_id: provider ? cleanText(provider.id) : 'none',
+    provider_label: provider ? cleanText(provider.label || provider.id) : 'Not configured'
+  };
+}
+
+function compResearchErrorCategory(error) {
+  const status = cleanText(error && error.provider_status);
+  if (status && status !== 'failed') return status;
+  if (status === 'failed') return 'provider_error';
+  const message = cleanText(error && error.message ? error.message : '');
+  if (/\b(high demand|try again later|temporarily unavailable|busy|overloaded)\b/i.test(message)) return 'temporarily_unavailable';
+  if (/\b(timeout|timed out|aborted|abort)\b/i.test(message)) return 'timed_out';
+  if (/\b(auth|unauthorized|forbidden|api key not valid|permission)\b/i.test(message)) return 'auth_error';
+  if (/\b(quota|rate limit|too many requests|resource exhausted)\b/i.test(message)) return 'quota_or_rate_limited';
+  return 'provider_error';
+}
+
+function normalizeResolvedCompResearchFailure(job, providerInfo, resolved, startedAt) {
+  resolved = resolved || {};
+  const category = compResearchErrorCategory({
+    provider_status: cleanText(resolved.comp_research_status),
+    message: cleanText(resolved.comp_next_action || (Array.isArray(resolved.comp_research_warnings) ? resolved.comp_research_warnings[0] : '') || '')
+  });
+  const nextAction = category === 'temporarily_unavailable' || category === 'quota_or_rate_limited'
+    ? 'Gemini is temporarily unavailable/high demand. Try again later.'
+    : category === 'timed_out'
+      ? 'Comp research timed out. Try again later.'
+      : category === 'auth_error'
+        ? 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.'
+        : 'Provider error. No valuation was generated.';
+  return persistCompResearchJobState(job, {
+    provider_status: category === 'provider_error' ? 'failed_cleanly' : category,
+    provider: providerInfo && providerInfo.provider_id ? providerInfo.provider_id : cleanText(resolved.comp_research_provider) || 'none',
+    provider_label: providerInfo && providerInfo.provider_label ? providerInfo.provider_label : cleanText(resolved.comp_research_provider_label) || 'Not configured',
+    started_at: cleanText(startedAt || resolved.comp_research_started_at),
+    error_category: category,
+    candidates: [],
+    message: nextAction,
+    missing_fields: ['Public research result'],
+    warnings: Array.isArray(resolved.comp_research_warnings) && resolved.comp_research_warnings.length
+      ? resolved.comp_research_warnings
+      : [cleanText(resolved.comp_next_action || 'Provider error.')],
+    property_evidence: [],
+    source_evidence: [],
+    citations: [],
+    raw_summary: '',
+    normalized_from_text: false,
+    normalization_note: '',
+    comp_search_strategy: cleanText(resolved.comp_search_strategy),
+    missing_evidence_summary: cleanText(resolved.comp_missing_evidence_summary),
+    next_action: nextAction,
+    arv_range: null,
+    mao_range: null
+  });
+}
+
+function persistCompResearchJobState(job, state) {
+  const merged = mergeCompResearchState(job, state);
+  merged.updated_at = nowIso();
+  upsertJob(merged);
+  return publicJob(merged);
+}
+
 function publicJob(job) {
   return Object.assign({}, job, {
     future_adapters: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
@@ -677,9 +747,11 @@ function createJob(item) {
     comp_research_warnings: [],
     comp_research_citations: [],
     comp_research_summary: '',
+    comp_research_started_at: '',
     comp_search_strategy: '',
     comp_missing_evidence_summary: '',
     comp_provider_next_action: '',
+    comp_research_error_category: '',
     comp_research_updated_at: '',
     normalized_from_text: false,
     normalization_note: '',
@@ -802,6 +874,7 @@ function runJob(jobIdValue) {
 }
 
 async function runCompResearchForJob(jobIdValue, options) {
+  options = options || {};
   let job = getJob(jobIdValue);
   if (!job) {
     const err = new Error('Analyzer job not found.');
@@ -809,20 +882,91 @@ async function runCompResearchForJob(jobIdValue, options) {
     throw err;
   }
   if (job.status === 'queued' || !Array.isArray(job.source_evidence) || !job.source_evidence.length) {
-    runJob(jobIdValue);
+    job = runJob(jobIdValue);
   }
-  const jobs = readJobs();
-  const idx = jobs.findIndex((candidate) => candidate.job_id === jobIdValue);
-  if (idx < 0) {
-    const err = new Error('Analyzer job not found.');
-    err.status = 404;
-    throw err;
+  job = getJob(jobIdValue) || job;
+  const providerInfo = currentCompProviderInfo(options.env);
+  const validation = compResearchProvider.validateCompResearchInput(job);
+  if (!validation.ok) {
+    return persistCompResearchJobState(job, {
+      provider_status: cleanText(validation.provider_status) || 'failed_cleanly',
+      provider: providerInfo.provider_id,
+      provider_label: providerInfo.provider_label,
+      error_category: cleanText(validation.provider_status) || 'failed_cleanly',
+      candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
+      message: cleanText(validation.message),
+      missing_fields: Array.isArray(validation.missing_fields) ? validation.missing_fields : [],
+      warnings: [],
+      property_evidence: Array.isArray(job.comp_research_property_evidence) ? job.comp_research_property_evidence : [],
+      source_evidence: Array.isArray(job.comp_research_source_evidence) ? job.comp_research_source_evidence : []
+    });
   }
-  job = await applyCompResearchState(jobs[idx], Object.assign({}, options || {}, { executeProvider: true }));
-  job.updated_at = nowIso();
-  jobs[idx] = job;
-  writeJobs(jobs);
-  return publicJob(job);
+  if (!providerInfo.provider) {
+    return persistCompResearchJobState(job, {
+      provider_status: 'provider_not_configured',
+      provider: 'none',
+      provider_label: 'Not configured',
+      error_category: 'provider_not_configured',
+      candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
+      message: 'Comp provider not configured yet.',
+      missing_fields: ['Configured comp research provider']
+    });
+  }
+  const startedAt = nowIso();
+  job = Object.assign({}, job, {
+    comp_research_status: 'researching',
+    comp_research_provider: providerInfo.provider_id,
+    comp_research_provider_label: providerInfo.provider_label,
+    comp_research_started_at: startedAt,
+    comp_research_error_category: '',
+    comp_next_action: 'Comp research is running.',
+    comp_research_updated_at: startedAt,
+    updated_at: startedAt
+  });
+  upsertJob(job);
+  try {
+    const resolved = await applyCompResearchState(job, Object.assign({}, options, {
+      executeProvider: true,
+      timeoutMs: options.timeoutMs || options.timeout_ms || 25000
+    }));
+    if (resolved && (resolved.comp_research_status === 'failed' || resolved.comp_research_status === 'provider_error' || resolved.comp_research_status === 'failed_cleanly')) {
+      return normalizeResolvedCompResearchFailure(job, providerInfo, resolved, startedAt);
+    }
+    resolved.comp_research_started_at = startedAt;
+    resolved.comp_research_error_category = cleanText(
+      resolved.comp_research_status === 'temporarily_unavailable' ||
+      resolved.comp_research_status === 'provider_temporarily_unavailable' ||
+      resolved.comp_research_status === 'timed_out' ||
+      resolved.comp_research_status === 'auth_error' ||
+      resolved.comp_research_status === 'quota_or_rate_limited'
+        ? resolved.comp_research_status
+        : ''
+    );
+    resolved.comp_research_updated_at = nowIso();
+    resolved.updated_at = resolved.comp_research_updated_at;
+    upsertJob(resolved);
+    return publicJob(resolved);
+  } catch (error) {
+    const category = compResearchErrorCategory(error);
+    return persistCompResearchJobState(job, {
+      provider_status: category === 'provider_error' ? 'failed_cleanly' : category,
+      provider: providerInfo.provider_id,
+      provider_label: providerInfo.provider_label,
+      error_category: category,
+      candidates: [],
+      message: category === 'temporarily_unavailable' || category === 'quota_or_rate_limited'
+        ? 'Gemini is temporarily unavailable/high demand. Try again later.'
+        : category === 'timed_out'
+          ? 'Comp research timed out. Try again later.'
+          : category === 'auth_error'
+            ? 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.'
+            : 'Provider error. No valuation was generated.',
+      missing_fields: ['Public research result'],
+      warnings: [cleanText(error && (error.provider_raw_message || error.message) ? (error.provider_raw_message || error.message) : 'Provider error.')],
+      property_evidence: Array.isArray(job.comp_research_property_evidence) ? job.comp_research_property_evidence : [],
+      source_evidence: Array.isArray(job.comp_research_source_evidence) ? job.comp_research_source_evidence : []
+    });
+  }
 }
 
 function getCompCandidates(jobIdValue) {

@@ -5,8 +5,10 @@ const researchProviderRouter = require('./free-research-provider-router');
 
 const PROVIDER_STATUSES = new Set([
   'not_configured',
+  'provider_not_configured',
   'blocked_needs_address',
   'blocked_needs_source_evidence',
+  'blocked_source_address_conflict',
   'ready_to_research',
   'researching',
   'temporarily_unavailable',
@@ -14,6 +16,8 @@ const PROVIDER_STATUSES = new Set([
   'timed_out',
   'auth_error',
   'quota_or_rate_limited',
+  'provider_error',
+  'failed_cleanly',
   'candidates_found',
   'partial_results',
   'completed',
@@ -258,7 +262,7 @@ function validateCompResearchInput(job) {
   if (subjectAddress && sourceAddress && addressLike(subjectAddress) && addressLike(sourceAddress) && addressConflictKey(subjectAddress) !== addressConflictKey(sourceAddress)) {
     return {
       ok: false,
-      provider_status: 'blocked_needs_source_evidence',
+      provider_status: 'blocked_source_address_conflict',
       message: 'Source URL address conflicts with Analyzer address. Verify before comp research.',
       missing_fields: ['Source/property evidence']
     };
@@ -522,8 +526,8 @@ function runCompResearch(job, options) {
     });
   }
   if (!providers.length) {
-    return summarizeCompResearchState(job, {
-      provider_status: 'not_configured',
+      return summarizeCompResearchState(job, {
+      provider_status: 'provider_not_configured',
       provider: 'none',
       candidates: existingCandidates,
       message: 'Comp provider not configured yet.',
@@ -544,7 +548,7 @@ function runCompResearch(job, options) {
     return researchProviderRouter.runResearchProvider(job, options)
       .then((result) => summarizeRouterResearchState(job, provider, result))
       .catch((error) => summarizeCompResearchState(job, {
-        provider_status: cleanText(error && error.provider_status) || 'failed',
+        provider_status: cleanText(error && error.provider_status) || 'provider_error',
         provider: provider.id,
         candidates: existingCandidates,
         message: cleanText(error && error.message) || 'Comp research needs review.',
@@ -568,11 +572,14 @@ function runCompResearch(job, options) {
 function researchResultMessage(result) {
   result = result || {};
   const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
+  if (result.status === 'provider_not_configured' || result.status === 'not_configured') return 'Comp provider not configured yet.';
+  if (result.status === 'blocked_source_address_conflict') return 'Source URL address conflicts with Analyzer address. Verify before comp research.';
   if (result.status === 'temporarily_unavailable' || result.status === 'provider_temporarily_unavailable' || result.status === 'quota_or_rate_limited') {
     return 'Gemini is temporarily unavailable/high demand. Try again later.';
   }
   if (result.status === 'timed_out') return 'Gemini live comp research timed out before returning evidence. Try again later.';
   if (result.status === 'auth_error') return 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.';
+  if (result.status === 'provider_error' || result.status === 'failed_cleanly') return 'Provider error. No valuation was generated.';
   if (result.status === 'failed') return 'Comp research needs review.';
   if (hasCandidates) return 'Candidate comps found - review evidence.';
   if (result.status === 'partial_results') return 'Gemini found public market evidence, but no verified sold comps yet.';
@@ -648,6 +655,10 @@ function summarizeCompResearchState(job, result) {
     nextAction = 'Gemini live comp research timed out before returning evidence. Try again later.';
   } else if (status === 'auth_error') {
     nextAction = 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.';
+  } else if (status === 'provider_error' || status === 'failed_cleanly') {
+    nextAction = 'Provider error. No valuation was generated.';
+  } else if (status === 'blocked_source_address_conflict') {
+    nextAction = 'Source URL address conflicts with Analyzer address. Verify before comp research.';
   }
   if (!verifiedCount && groups.subject_sale_evidence.length && !groups.candidate_sold_comps.length && !groups.market_support.length) {
     nextAction = 'Only subject property evidence found. More nearby sold comps are needed.';
