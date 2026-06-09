@@ -1268,16 +1268,24 @@ app.post('/api/ai-deal-analyzer/jobs', (req, res) => {
     const jobs = aiDealAnalyzerJobs.createJobs(body, {
       runNow: body.run_now === true || body.runNow === true
     });
+    const firstJob = Array.isArray(jobs) && jobs.length ? jobs[0] : null;
     return res.status(201).json({
       ok: true,
+      job_id: firstJob && firstJob.job_id ? firstJob.job_id : '',
+      job: firstJob || null,
       jobs,
       count: jobs.length,
+      status: firstJob && firstJob.status ? firstJob.status : '',
+      source_url: firstJob && firstJob.source_url ? firstJob.source_url : '',
+      valuation_locked: firstJob ? firstJob.valuation_locked !== false : true,
+      comp_research_status: firstJob && firstJob.comp_research_status ? firstJob.comp_research_status : 'not_configured',
       safety: 'operator-triggered deterministic evidence pass only; no scraping, no LLM calls, no lead mutation'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to create analyzer jobs'
+      error: err && err.message ? err.message : 'Analyzer job could not be created. Check address/source and try again.',
+      error_category: err && err.error_category ? err.error_category : ((err && err.status) === 400 ? 'validation_error' : 'storage_error')
     });
   }
 });
