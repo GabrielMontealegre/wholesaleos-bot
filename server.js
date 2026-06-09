@@ -14,6 +14,7 @@ const { dealEngine, runDailyIngestion } = require('./modules/deal-engine');
 const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
+const dealCallDossiers = require('./modules/research/deal-call-dossiers');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -1351,6 +1352,90 @@ app.get('/api/ai-deal-analyzer/jobs/:jobId', (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err && err.message ? err.message : 'Failed to load analyzer job'
+    });
+  }
+});
+
+app.get('/api/deal-call-dossiers', (req, res) => {
+  try {
+    const dossiers = dealCallDossiers.listDossiers({
+      limit: req.query.limit,
+      filter: req.query.filter,
+      includeBad: req.query.include_bad === 'true'
+    });
+    return res.json({
+      ok: true,
+      dossiers,
+      count: dossiers.length,
+      safety: 'Morning Call Desk read only; no production lead mutation'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load Deal Call Dossiers'
+    });
+  }
+});
+
+app.post('/api/deal-call-dossiers', (req, res) => {
+  try {
+    const result = dealCallDossiers.createDossier(req.body || {});
+    return res.status(result.deduped ? 200 : 201).json({
+      ok: true,
+      dossier: result.dossier,
+      deduped: result.deduped,
+      safety: 'operator-created call dossier only; no production lead mutation, no valuation unlock'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to create Deal Call Dossier'
+    });
+  }
+});
+
+app.post('/api/deal-call-dossiers/call-sheet', (req, res) => {
+  try {
+    const result = dealCallDossiers.copyCallSheet(req.body || {});
+    return res.json({
+      ok: true,
+      text: result.text,
+      count: result.count,
+      safety: 'copy-only call sheet; no lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to build call sheet'
+    });
+  }
+});
+
+app.get('/api/deal-call-dossiers/:dossierId', (req, res) => {
+  try {
+    const dossier = dealCallDossiers.getDossier(req.params.dossierId);
+    if (!dossier) return res.status(404).json({ ok: false, error: 'Deal Call Dossier not found' });
+    return res.json({ ok: true, dossier });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to load Deal Call Dossier'
+    });
+  }
+});
+
+app.post('/api/deal-call-dossiers/:dossierId/outcome', (req, res) => {
+  try {
+    const dossier = dealCallDossiers.updateOutcome(req.params.dossierId, req.body || {});
+    return res.json({
+      ok: true,
+      dossier,
+      safety: 'call outcome update only; no production lead mutation'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to update Deal Call Dossier'
     });
   }
 });
