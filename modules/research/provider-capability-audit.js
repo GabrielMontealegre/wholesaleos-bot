@@ -29,6 +29,14 @@ function safeModel(value, fallback) {
   return cleanText(value || fallback);
 }
 
+function parseGeminiFallbackModels(env) {
+  env = env || process.env;
+  return String(env.GEMINI_RESEARCH_FALLBACK_MODELS || '')
+    .split(',')
+    .map(cleanText)
+    .filter(Boolean);
+}
+
 function isTransientGeminiProbeError(error) {
   const message = cleanText(error && error.message ? error.message : '');
   const status = Number(error && (error.status || error.statusCode || error.code) || 0);
@@ -43,6 +51,12 @@ function isGeminiProbeTimeoutError(error) {
 
 function transientGeminiProbeMessage(error) {
   const message = cleanText(error && error.message ? error.message : '');
+  if (/\b(api key not valid|permission denied|forbidden|unauthorized|auth)\b/i.test(message)) {
+    return 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.';
+  }
+  if (/\b(quota|rate limit|too many requests|resource exhausted)\b/i.test(message)) {
+    return 'Gemini is configured, but quota or rate limits blocked the live probe. Try again later or add fallback models.';
+  }
   if (/\b(abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(message)) {
     return 'Gemini live discovery timed out before returning candidates. Try again, reduce batch size, or use saved-leads mode.';
   }
@@ -51,7 +65,7 @@ function transientGeminiProbeMessage(error) {
 
 function recognizedEnvNames() {
   return {
-    gemini: ['ENABLE_GEMINI_WEB_RESEARCH', 'GEMINI_API_KEY', 'GEMINI_RESEARCH_MODEL', 'GEMINI_RESEARCH_MAX_RESULTS'],
+    gemini: ['ENABLE_GEMINI_WEB_RESEARCH', 'GEMINI_API_KEY', 'GEMINI_RESEARCH_MODEL', 'GEMINI_RESEARCH_MAX_RESULTS', 'GEMINI_RESEARCH_FALLBACK_MODELS'],
     groq: ['ENABLE_GROQ_RESEARCH', 'GROQ_API_KEY', 'GROQ_RESEARCH_MODEL', 'GROQ_RESEARCH_MAX_RESULTS'],
     openrouter: ['ENABLE_OPENROUTER_RESEARCH', 'OPENROUTER_API_KEY', 'OPENROUTER_RESEARCH_MODEL', 'OPENROUTER_RESEARCH_MAX_RESULTS'],
     openai: ['ENABLE_OPENAI_WEB_RESEARCH', 'OPENAI_API_KEY', 'OPENAI_WEB_RESEARCH_MODEL', 'OPENAI_WEB_RESEARCH_MAX_RESULTS'],
@@ -115,21 +129,52 @@ async function fetchJson(url, body, headers, options) {
 async function probeGeminiGrounding(env, options) {
   env = env || process.env;
   options = options || {};
-  const model = safeModel(env.GEMINI_RESEARCH_MODEL, GEMINI_DEFAULT_MODEL);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const response = await fetchJson(url, {
-    contents: [{ parts: [{ text: PROBE_QUERY }] }],
-    tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0, maxOutputTokens: 512 }
-  }, {
-    'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
-  }, options);
-  const urls = extractGeminiGroundingUrls(response);
+  const primary = safeModel(env.GEMINI_RESEARCH_MODEL, GEMINI_DEFAULT_MODEL);
+  const modelsToTry = [primary].concat(parseGeminiFallbackModels(env)).filter(Boolean)
+    .filter((model, index, arr) => arr.indexOf(model) === index);
+  let lastError = null;
+  const attemptedModels = [];
+  for (const model of modelsToTry) {
+    attemptedModels.push(model);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+      const response = await fetchJson(url, {
+        contents: [{ parts: [{ text: PROBE_QUERY }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0, maxOutputTokens: 512 }
+      }, {
+        'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
+      }, options);
+      const urls = extractGeminiGroundingUrls(response);
+      return {
+        attempted: true,
+        success: urls.length > 0,
+        grounding_metadata_present: urls.length > 0 || !!(response && response.candidates && response.candidates[0] && response.candidates[0].groundingMetadata),
+        source_urls_returned_count: urls.length,
+        model_used: model,
+        models_attempted: attemptedModels.slice()
+      };
+    } catch (error) {
+      lastError = error;
+      if (!isTransientGeminiProbeError(error)) {
+        error.models_attempted = attemptedModels.slice();
+        error.model_used = model;
+        throw error;
+      }
+    }
+  }
+  if (lastError) {
+    lastError.models_attempted = attemptedModels.slice();
+    lastError.model_used = attemptedModels[attemptedModels.length - 1] || primary;
+    throw lastError;
+  }
   return {
     attempted: true,
-    success: urls.length > 0,
-    grounding_metadata_present: urls.length > 0 || !!(response && response.candidates && response.candidates[0] && response.candidates[0].groundingMetadata),
-    source_urls_returned_count: urls.length
+    success: false,
+    grounding_metadata_present: false,
+    source_urls_returned_count: 0,
+    model_used: primary,
+    models_attempted: attemptedModels
   };
 }
 
@@ -155,6 +200,7 @@ function baseAudit(env) {
     gemini_key_present: geminiKey,
     gemini_enabled: geminiEnabled,
     gemini_model: safeModel(env.GEMINI_RESEARCH_MODEL, GEMINI_DEFAULT_MODEL),
+    gemini_fallback_models: String(env.GEMINI_RESEARCH_FALLBACK_MODELS || '').split(',').map(cleanText).filter(Boolean),
     gemini_google_search_supported_by_code: true,
     gemini_router_google_search_supported_by_code: false,
     gemini_live_probe_attempted: false,
@@ -196,14 +242,14 @@ function chooseRecommendation(audit) {
   }
   if (audit.gemini_key_present && !audit.gemini_enabled) {
     return {
-      recommended_provider_path: 'no_live_provider_configured',
+      recommended_provider_path: 'enable_gemini_web_research',
       reason: 'Gemini key may exist, but live Gemini research is disabled until ENABLE_GEMINI_WEB_RESEARCH=true.'
     };
   }
   if (audit.gemini_enabled && audit.gemini_key_present && !audit.gemini_live_probe_attempted) {
     return {
-      recommended_provider_path: 'no_live_provider_configured',
-      reason: 'Gemini appears enabled, but Google Search grounding has not been proven yet. Run the explicit provider capability probe before using it for Scout discovery.'
+      recommended_provider_path: 'gemini_configured_not_yet_probed',
+      reason: 'Gemini is configured. Run the explicit provider capability probe to confirm live Google Search grounding.'
     };
   }
   if (audit.gemini_enabled && audit.gemini_key_present && audit.gemini_live_probe_attempted && !audit.gemini_live_probe_success) {
@@ -213,17 +259,35 @@ function chooseRecommendation(audit) {
         reason: 'Gemini is configured, but the tiny probe did not return usable URLs. Live Scout may still work with stronger strategy queries.'
       };
     }
+    if (audit.gemini_live_probe_status === 'auth_error') {
+      return {
+        recommended_provider_path: 'gemini_configured_auth_error',
+        reason: 'Gemini is configured, but authentication or permission failed. Verify the Gemini API key and model access.'
+      };
+    }
+    if (audit.gemini_live_probe_status === 'quota_or_rate_limited') {
+      return {
+        recommended_provider_path: 'gemini_configured_quota_or_rate_limited',
+        reason: 'Gemini is configured, but quota or rate limits blocked the probe. Try again later or add fallback models.'
+      };
+    }
     if (audit.gemini_live_probe_status === 'temporarily_unavailable' || audit.gemini_live_probe_status === 'timed_out' || audit.gemini_live_probe_retryable === true) {
       return {
-        recommended_provider_path: 'gemini_grounding_configured_but_temporarily_unavailable',
+        recommended_provider_path: 'gemini_configured_temporarily_unavailable',
         reason: audit.gemini_live_probe_status === 'timed_out'
           ? 'Gemini is configured, but live discovery timed out before returning candidates. Try again, reduce batch size, or use saved-leads mode.'
           : 'Gemini is configured, but Google Search grounding is temporarily unavailable/high demand. Try again later or configure Brave/Firecrawl fallback.'
       };
     }
+    if (audit.gemini_live_probe_status === 'parsing_issue') {
+      return {
+        recommended_provider_path: 'gemini_configured_parsing_issue',
+        reason: 'Gemini is configured, but the provider probe returned an output shape that could not be normalized cleanly.'
+      };
+    }
     return {
-      recommended_provider_path: 'no_live_provider_configured',
-      reason: 'Gemini is configured but Google Search grounding did not return usable source URLs.'
+      recommended_provider_path: 'gemini_configured_probe_failed',
+      reason: 'Gemini is configured, but the live probe failed and needs review.'
     };
   }
   if (audit.brave_key_present && audit.brave_enabled) {
@@ -273,6 +337,8 @@ async function auditProviderCapabilities(options) {
       audit.gemini_live_probe_success = geminiProbe.success;
       audit.gemini_grounding_metadata_present = geminiProbe.grounding_metadata_present;
       audit.gemini_source_urls_returned_count = geminiProbe.source_urls_returned_count;
+      audit.gemini_model_used = cleanText(geminiProbe.model_used);
+      audit.gemini_models_attempted = Array.isArray(geminiProbe.models_attempted) ? geminiProbe.models_attempted.slice() : [];
       if (geminiProbe.grounding_metadata_present && geminiProbe.source_urls_returned_count === 0) {
         audit.gemini_live_probe_status = 'configured_probe_empty';
         audit.gemini_live_probe_retryable = false;
@@ -282,15 +348,23 @@ async function auditProviderCapabilities(options) {
       const retryable = isTransientGeminiProbeError(error);
       audit.gemini_live_probe_attempted = true;
       audit.gemini_live_probe_success = false;
+      const message = cleanText(error && error.message ? error.message : '');
+      const status = Number(error && (error.status || error.statusCode || error.code) || 0);
       audit.gemini_live_probe_status = isGeminiProbeTimeoutError(error)
         ? 'timed_out'
-        : retryable
-          ? 'temporarily_unavailable'
-          : 'failed';
+        : (status === 401 || status === 403 || /\b(api key not valid|permission denied|forbidden|unauthorized|auth)\b/i.test(message))
+          ? 'auth_error'
+          : (status === 429 || /\b(quota|rate limit|too many requests|resource exhausted)\b/i.test(message))
+            ? 'quota_or_rate_limited'
+            : retryable
+              ? 'temporarily_unavailable'
+              : 'failed';
       audit.gemini_live_probe_retryable = retryable;
       audit.gemini_live_probe_message = transientGeminiProbeMessage(error);
       audit.gemini_grounding_metadata_present = false;
       audit.gemini_source_urls_returned_count = 0;
+      audit.gemini_model_used = cleanText(error && error.model_used);
+      audit.gemini_models_attempted = Array.isArray(error && error.models_attempted) ? error.models_attempted.slice() : [];
       audit.gemini_probe_error = cleanText(error && error.message ? error.message : 'Gemini probe failed.');
     }
   }

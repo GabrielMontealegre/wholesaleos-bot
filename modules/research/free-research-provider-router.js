@@ -119,6 +119,56 @@ function providerConfig(id, env) {
   };
 }
 
+function parseGeminiFallbackModels(env) {
+  env = env || process.env;
+  return String(env.GEMINI_RESEARCH_FALLBACK_MODELS || '')
+    .split(',')
+    .map(cleanText)
+    .filter(Boolean);
+}
+
+function geminiTransientStatus(error) {
+  const message = cleanText(error && error.message ? error.message : '');
+  const status = Number(error && (error.status || error.statusCode || error.code) || 0);
+  if (status === 401 || status === 403 || /\b(api key not valid|permission denied|forbidden|unauthorized|auth)\b/i.test(message)) {
+    return 'auth_error';
+  }
+  if (status === 429 || /\b(quota|rate limit|too many requests|resource exhausted)\b/i.test(message)) {
+    return 'quota_or_rate_limited';
+  }
+  if (status === 408 || status === 504 || /\b(abort|aborted|timeout|timed out|deadline exceeded|operation was aborted)\b/i.test(message)) {
+    return 'timed_out';
+  }
+  if (status === 503 || /\b(high demand|try again later|overloaded|temporarily unavailable|busy|unavailable)\b/i.test(message)) {
+    return 'temporarily_unavailable';
+  }
+  return 'failed';
+}
+
+function geminiOperatorMessage(error) {
+  const status = geminiTransientStatus(error);
+  if (status === 'temporarily_unavailable' || status === 'quota_or_rate_limited') {
+    return 'Gemini is temporarily unavailable/high demand. Try again later.';
+  }
+  if (status === 'timed_out') {
+    return 'Gemini live comp research timed out before returning evidence. Try again later.';
+  }
+  if (status === 'auth_error') {
+    return 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and access.';
+  }
+  return cleanText(error && error.message ? error.message : 'Gemini comp research failed.');
+}
+
+function makeGeminiProviderError(error, modelTried, attemptedModels) {
+  const err = new Error(geminiOperatorMessage(error));
+  err.status = error && error.status;
+  err.provider_status = geminiTransientStatus(error);
+  err.provider_model = cleanText(modelTried);
+  err.provider_models_attempted = Array.isArray(attemptedModels) ? attemptedModels.slice() : [];
+  err.provider_raw_message = cleanText(error && error.message ? error.message : '');
+  return err;
+}
+
 function getConfiguredResearchProviders(env) {
   env = env || process.env;
   return [
@@ -761,18 +811,40 @@ async function fetchJson(url, body, headers, options) {
 async function runGeminiResearch(job, provider, options) {
   const env = options.env || process.env;
   const prompt = buildPublicEvidenceResearchPrompt(job, provider);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(provider.model)}:generateContent`;
-  const data = await fetchJson(url, {
-    contents: [{ parts: [{ text: prompt }] }],
-    tools: [{ google_search: {} }],
-    generationConfig: {
-      temperature: 0,
-      maxOutputTokens: 4096
+  const fallbackModels = parseGeminiFallbackModels(env);
+  const modelsToTry = [cleanText(provider.model)].concat(fallbackModels).filter(Boolean)
+    .filter((model, index, arr) => arr.indexOf(model) === index);
+  let lastError = null;
+  const attemptedModels = [];
+  for (const model of modelsToTry) {
+    attemptedModels.push(model);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+      const data = await fetchJson(url, {
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 4096
+        }
+      }, {
+        'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
+      }, options);
+      const merged = mergeCitations(parseStructuredOutput(extractGeminiText(data), provider, extractGeminiCitations(data)), extractGeminiCitations(data));
+      merged.provider_model_used = model;
+      merged.provider_models_attempted = attemptedModels.slice();
+      if (model !== cleanText(provider.model)) {
+        merged.warnings = (Array.isArray(merged.warnings) ? merged.warnings : []).concat(`Gemini fallback model used: ${model}`);
+      }
+      return merged;
+    } catch (error) {
+      lastError = makeGeminiProviderError(error, model, attemptedModels);
+      if (!['temporarily_unavailable', 'timed_out', 'quota_or_rate_limited'].includes(lastError.provider_status)) {
+        throw lastError;
+      }
     }
-  }, {
-    'x-goog-api-key': options.apiKey || env.GEMINI_API_KEY
-  }, options);
-  return mergeCitations(parseStructuredOutput(extractGeminiText(data), provider, extractGeminiCitations(data)), extractGeminiCitations(data));
+  }
+  throw lastError || makeGeminiProviderError(new Error('Gemini comp research failed.'), cleanText(provider.model), attemptedModels);
 }
 
 async function runGroqResearch(job, provider, options) {
