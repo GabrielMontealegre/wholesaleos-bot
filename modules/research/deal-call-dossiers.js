@@ -660,6 +660,8 @@ function callSheetText(dossiers) {
       `Contact: ${dossier.contact.target}${dossier.contact.phone ? ' | ' + dossier.contact.phone : ''}${dossier.contact.email ? ' | ' + dossier.contact.email : ''}`,
       `Why call: ${dossier.why_this_property_matters.recommendation}. ${dossier.why_this_property_matters.why_now}`,
       `Signals: ${signals}`,
+      `Facts: ${cleanText(dossier.workflow && dossier.workflow.notes) || 'Not verified yet.'}`,
+      `Next action: ${dossier.why_this_property_matters.recommendation || 'Research more before calling.'}`,
       `Valuation: ${dossier.valuation.valuation_status}. ${dossier.valuation.valuation_locked_reason || ''}`,
       `Comps: ${dossier.valuation.verified_sold_comps_count} verified, ${dossier.valuation.candidate_sold_comps_count} candidate, ${dossier.valuation.market_support_count} market support.`,
       `Missing: ${(dossier.signals.flatMap((signal) => signal.missing_evidence || [])).slice(0, 5).join(', ') || dossier.valuation.valuation_locked_reason || 'None listed'}`,
