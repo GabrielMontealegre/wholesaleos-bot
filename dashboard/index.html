@@ -2511,6 +2511,43 @@ function commandBuyerMatchPanel(dossier) {
   '</div>';
 }
 
+function dealCallFactValue(facts, key) {
+  var item = facts && facts[key];
+  return dealCallSafeText(item && item.value ? item.value : 'Not verified yet.');
+}
+
+function dealCallSourceFactsPanel(dossier) {
+  var facts = (dossier && dossier.source_backed_facts) || {};
+  var rows = [
+    ['Asking/List Price', dealCallFactValue(facts, 'asking_price')],
+    ['Source Estimate', dealCallFactValue(facts, 'estimated_value') + ' (not verified ARV)'],
+    ['Beds/Baths/Sqft', dealCallFactValue(facts, 'beds') + ' / ' + dealCallFactValue(facts, 'baths') + ' / ' + dealCallFactValue(facts, 'sqft')],
+    ['Year/Lot', dealCallFactValue(facts, 'year_built') + ' / ' + dealCallFactValue(facts, 'lot_size')],
+    ['Property Type', dealCallFactValue(facts, 'property_type')]
+  ];
+  return '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:7px">Source-Backed Facts</div>' +
+    rows.map(function(row){ return '<div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid #e5e7eb;padding-top:6px;margin-top:6px;font-size:12px"><span style="color:#64748b;font-weight:900">' + dealCallSafeText(row[0]) + '</span><span style="color:#111827;font-weight:900;text-align:right">' + row[1] + '</span></div>'; }).join('') +
+  '</div>';
+}
+
+function dealCallEvidencePanels(dossier) {
+  var facts = (dossier && dossier.source_backed_facts) || {};
+  var valuation = (dossier && dossier.valuation) || {};
+  var contact = (dossier && dossier.contact) || {};
+  var contactPath = dealCallFactValue(facts, 'source_contact_path');
+  if (contact.phone || contact.email) contactPath = [contact.phone, contact.email].filter(Boolean).join(' | ');
+  if (contact.target === 'Public Contact Form') contactPath = 'Public contact form/button visible. Phone/email not verified.';
+  var missing = Array.isArray(facts.missing_fields) ? facts.missing_fields.slice(0, 8).join(', ') : 'Not verified yet.';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">' +
+    '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Contact Path</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(contactPath || 'Contact not verified. Manual lookup needed.') + '</div></div>' +
+    '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Tax / Assessment Evidence</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallFactValue(facts, 'tax_history') + '<br>Tax/assessment evidence - not ARV.</div></div>' +
+    '<div style="border:1px solid #e0e7ff;background:#eef2ff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#3730a3;font-weight:900;text-transform:uppercase">Nearby Value Indicators</div><div style="font-size:12px;color:#3730a3;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallFactValue(facts, 'nearby_value_indicators') + '<br>Not verified sold comps.</div></div>' +
+    '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Listing / Auction Status</div><div style="font-size:12px;color:#111827;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallFactValue(facts, 'listing_status') + ' | ' + dealCallFactValue(facts, 'auction_status') + '</div></div>' +
+    '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:10px"><div style="font-size:10px;color:#991b1b;font-weight:900;text-transform:uppercase">Missing Evidence</div><div style="font-size:12px;color:#991b1b;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(missing || 'None listed') + '</div></div>' +
+    '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Valuation Gate Status</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(valuation.valuation_locked_reason || 'ARV locked until verified sold comps. MAO locked until ARV plus repair evidence.') + '</div></div>' +
+  '</div>';
+}
+
 function renderDealCallDossierCard(dossier) {
   dossier = dossier || {};
   var property = dossier.property || {};
@@ -2523,7 +2560,6 @@ function renderDealCallDossierCard(dossier) {
   var id = dealCallSafeText(dossier.dossier_id || '');
   var proof = property.source_proof_status || 'Needs Source Proof';
   var source = property.source_url || property.canonical_source_url || '';
-  var facts = commandFactLine(dossier);
   var contactVerified = !!(contact.phone || contact.email);
   var compGrid = dealCallCompGroup('Subject Sale Evidence', groups.subject_sale_evidence, 'No subject sale evidence') +
     dealCallCompGroup('Verified Sold Comps', groups.verified_sold_comps, 'No verified sold comps') +
@@ -2549,7 +2585,8 @@ function renderDealCallDossierCard(dossier) {
       '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Best call target</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(contact.target || 'Manual Lookup Needed') + '</div><div style="font-size:12px;color:#334155;font-weight:800;margin-top:4px">' + dealCallSafeText(contact.name || contact.phone || contact.email || contact.warning || 'Do manual contact lookup before dialing.') + '</div></div>' +
       '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Value status</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(dealCallValuationText(dossier)) + '</div></div>' +
     '</div>' +
-    '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Source-backed facts</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45">' + dealCallSafeText(facts) + '</div></div>' +
+    dealCallSourceFactsPanel(dossier) +
+    dealCallEvidencePanels(dossier) +
     commandBuyerMatchPanel(dossier) +
     '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Signals</div>' + dealCallShortList(signals, 'No verified motivation signal yet') + '</div>' +
     '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Comp / valuation evidence</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">' + compGrid + '</div></details>' +

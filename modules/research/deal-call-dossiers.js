@@ -121,6 +121,150 @@ function normalizeAddress(value) {
     .replace(/\s+/g, ' ');
 }
 
+function decodeURIComponentSafe(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+  try {
+    return decodeURIComponent(text);
+  } catch (_) {
+    return text;
+  }
+}
+
+function hostAndPath(url) {
+  try {
+    const parsed = new URL(cleanText(url));
+    return { host: parsed.hostname.replace(/^www\./i, '').toLowerCase(), path: parsed.pathname || '' };
+  } catch (_) {
+    return { host: '', path: '' };
+  }
+}
+
+function titleCaseWord(word) {
+  const text = cleanText(word);
+  if (!text) return '';
+  const lower = text.toLowerCase();
+  const specials = {
+    tx: 'TX',
+    st: 'St',
+    ave: 'Ave',
+    blvd: 'Blvd',
+    rd: 'Rd',
+    dr: 'Dr',
+    ln: 'Ln',
+    ct: 'Ct',
+    cir: 'Cir',
+    pkwy: 'Pkwy',
+    hwy: 'Hwy',
+    ter: 'Ter',
+    trl: 'Trl',
+    way: 'Way'
+  };
+  if (specials[lower]) return specials[lower];
+  if (/^\d+$/.test(lower)) return lower;
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function titleCaseText(value) {
+  return cleanText(value).split(/\s+/).map(titleCaseWord).filter(Boolean).join(' ');
+}
+
+function normalizeSourceSlug(value) {
+  return decodeURIComponentSafe(value)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function addressFromKnownPropertyUrl(url, title) {
+  const hp = hostAndPath(url);
+  const pathText = decodeURIComponentSafe(hp.path);
+  let rawAddress = '';
+  let rawCity = '';
+  let rawState = '';
+  let rawZip = '';
+
+  if (/realtor\.com$/i.test(hp.host)) {
+    const match = pathText.match(/realestateandhomes-detail\/([^/?#]+)/i);
+    const slug = normalizeSourceSlug(match && match[1] || '');
+    const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    }
+  } else if (/redfin\.com$/i.test(hp.host)) {
+    const match = pathText.match(/\/(?<state>[A-Za-z]{2})\/(?<city>[A-Za-z][A-Za-z-]*)\/(?<street>[^/?#]+?)\/home\//i);
+    if (match && match.groups) {
+      rawState = match.groups.state;
+      rawCity = match.groups.city;
+      rawAddress = normalizeSourceSlug(match.groups.street).replace(/\b\d{5}(?:-\d{4})?$/i, '').trim();
+      const zipMatch = cleanText(match.groups.street).match(/\b(\d{5})(?:-\d{4})?$/);
+      rawZip = zipMatch ? zipMatch[1] : '';
+    }
+  } else if (/zillow\.com$/i.test(hp.host)) {
+    const match = pathText.match(/homedetails\/([^/?#]+)/i);
+    const slug = normalizeSourceSlug(match && match[1] || '');
+    const details = slug.match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    }
+  } else if (/har\.com$/i.test(hp.host)) {
+    const match = pathText.match(/\/homedetail\/([^/?#]+)(?:\/\d+)?/i);
+    const parts = decodeURIComponentSafe(match && match[1] || '').split('-').map(cleanText).filter(Boolean);
+    if (parts.length >= 4) {
+      const zipPart = parts[parts.length - 1];
+      const statePart = parts[parts.length - 2];
+      const cityPart = parts[parts.length - 3];
+      const addressParts = parts.slice(0, -3);
+      if (/^\d{5}(?:-\d{4})?$/.test(zipPart) && /^[A-Za-z]{2}$/.test(statePart) && cityPart) {
+        rawAddress = normalizeSourceSlug(addressParts.join('-'));
+        rawCity = normalizeSourceSlug(cityPart);
+        rawState = statePart;
+        rawZip = zipPart.slice(0, 5);
+      }
+    }
+  } else if (/auction\.com$|hubzu\.com$/i.test(hp.host)) {
+    const slug = normalizeSourceSlug((pathText.split('/').filter(Boolean).pop()) || '');
+    const details = slug.match(/(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (details && details.groups) {
+      rawAddress = details.groups.address;
+      rawCity = details.groups.city;
+      rawState = details.groups.state;
+      rawZip = details.groups.zip;
+    }
+  }
+
+  if (!rawAddress && title) {
+    const titleMatch = normalizeSourceSlug(title).match(/^(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
+    if (titleMatch && titleMatch.groups) {
+      rawAddress = titleMatch.groups.address;
+      rawCity = titleMatch.groups.city;
+      rawState = titleMatch.groups.state;
+      rawZip = titleMatch.groups.zip;
+    }
+  }
+
+  const address = titleCaseText(rawAddress);
+  const city = titleCaseText(rawCity);
+  const state = rawState ? rawState.toUpperCase() : '';
+  const zip = rawZip ? rawZip.slice(0, 5) : '';
+  const full = [address, city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  return {
+    address,
+    city,
+    state,
+    zip,
+    full_address: full,
+    address_extracted_from_source_url: !!full,
+    basis: full ? 'Address extracted from property URL - verify before offer.' : ''
+  };
+}
+
 function addressKey(address) {
   return safeLower(address).replace(/[^a-z0-9]+/g, '');
 }
@@ -145,6 +289,18 @@ function marketMatchStatus(sourcePack, ctx, address) {
   if (basis) return basis;
   if (/\bDallas\b/i.test(address) && /\bTX\b/i.test(address)) return 'Likely in market';
   return 'Not verified';
+}
+
+function propertyUrlType(sourceUrl, sourceTitle) {
+  const repaired = addressFromKnownPropertyUrl(sourceUrl, sourceTitle);
+  const hp = hostAndPath(sourceUrl);
+  if (!hp.host) return 'unknown';
+  if (/\/(search|for-sale|homes-for-sale|foreclosure-bank-owned-auctions|county|category|results)\b/i.test(hp.path)) return 'list_page';
+  if (repaired.address_extracted_from_source_url) return 'exact_property_record';
+  if (/\/(realestateandhomes-detail|homedetail|homedetails)\//i.test(hp.path)) return 'exact_property_record';
+  if (/redfin\.com$/i.test(hp.host) && /\/home\/\d+/i.test(hp.path)) return 'exact_property_record';
+  if (/auction\.com$|hubzu\.com$/i.test(hp.host) && /\/(details|detail|property|auction)\//i.test(hp.path)) return 'exact_property_record';
+  return 'unknown';
 }
 
 function buildSignals(source, sourceUrl) {
@@ -190,7 +346,7 @@ function firstHttpUrl(items) {
   return '';
 }
 
-function contactFrom(source, lead) {
+function contactFrom(source, lead, sourceBackedFacts) {
   const name = cleanText(pick(source, ['contact_name', 'agent_name', 'listing_agent', 'public_contact_name']) || pick(lead, ['contact_name', 'agent_name', 'listing_agent']));
   const phone = cleanText(pick(source, ['phone', 'contact_phone', 'agent_phone', 'listing_agent_phone']) || pick(lead, ['phone', 'contact_phone', 'agent_phone']));
   const email = cleanText(pick(source, ['email', 'contact_email', 'agent_email', 'listing_agent_email']) || pick(lead, ['email', 'contact_email', 'agent_email']));
@@ -205,6 +361,17 @@ function contactFrom(source, lead) {
       source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
       confidence: sourceUrl ? 'verified from source field' : 'present but source not verified',
       warning: sourceUrl ? '' : 'Contact not verified. Manual lookup needed.'
+    };
+  }
+  if (sourceBackedFacts && sourceBackedFacts.source_contact_path) {
+    return {
+      target: 'Public Contact Form',
+      name: '',
+      phone: '',
+      email: '',
+      source_url: cleanText((sourceBackedFacts.source_contact_path || {}).source_url),
+      confidence: 'public contact path visible',
+      warning: 'Public contact form/button visible. Phone/email not verified.'
     };
   }
   return {
@@ -338,6 +505,140 @@ function compactComp(comp) {
   };
 }
 
+function sourceFact(value, sourceUrl, label, evidenceText) {
+  const text = cleanText(value);
+  if (!text) return null;
+  return {
+    value: text,
+    label: cleanText(label),
+    source_url: isHttpUrl(sourceUrl) ? cleanText(sourceUrl) : '',
+    evidence: cleanText(evidenceText).slice(0, 260)
+  };
+}
+
+function addFact(out, key, value, sourceUrl, label, evidenceText) {
+  if (out[key]) return;
+  const fact = sourceFact(value, sourceUrl, label || key, evidenceText);
+  if (fact) out[key] = fact;
+}
+
+function extractMoneyNear(text, patterns) {
+  const body = cleanText(text);
+  for (const pattern of patterns) {
+    const match = body.match(pattern);
+    if (match && (match[1] || match[2])) return match[1] || match[2];
+  }
+  return '';
+}
+
+function extractNumberNear(text, patterns) {
+  const body = cleanText(text);
+  for (const pattern of patterns) {
+    const match = body.match(pattern);
+    if (match && (match[1] || match[2])) return match[1] || match[2];
+  }
+  return '';
+}
+
+function extractJsonLdTexts(text) {
+  const body = String(text || '');
+  const chunks = [];
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = re.exec(body)) !== null) {
+    const raw = cleanText(match[1]);
+    if (raw) chunks.push(raw);
+  }
+  return chunks;
+}
+
+function collectSourceText(source, sourcePack) {
+  const ctx = source && source.scout_context || {};
+  const lead = source && source.lead || {};
+  const pieces = [
+    source && source.source_page_text,
+    source && source.page_text,
+    source && source.source_text,
+    source && source.html,
+    source && source.raw_text,
+    source && source.result_summary,
+    source && source.comp_research_summary,
+    source && source.input_value,
+    sourcePack && sourcePack.source_text,
+    sourcePack && sourcePack.evidence_text,
+    sourcePack && sourcePack.snippet,
+    sourcePack && sourcePack.address_candidate,
+    ctx.scout_reason,
+    ctx.call_angle,
+    Array.isArray(ctx.distress_signals) ? ctx.distress_signals.join(' ') : '',
+    Array.isArray(ctx.missing_evidence) ? ctx.missing_evidence.join(' ') : '',
+    lead.notes,
+    lead.description,
+    lead.source_text
+  ].map(cleanText).filter(Boolean);
+  const jsonLd = pieces.flatMap(extractJsonLdTexts);
+  return pieces.concat(jsonLd).join(' ');
+}
+
+function structuredSourceValue(source, sourcePack, keys) {
+  const objects = [source, sourcePack, source && source.lead, source && source.scout_context].filter(Boolean);
+  for (const obj of objects) {
+    const value = pick(obj, keys);
+    if (cleanText(value)) return value;
+  }
+  return '';
+}
+
+function buildSourceBackedFacts(source, sourcePack, sourceUrl) {
+  const text = collectSourceText(source, sourcePack);
+  const facts = {
+    evidence_source_url: sourceFact(sourceUrl, sourceUrl, 'Evidence source URL', sourceUrl),
+    extracted_at: nowIso(),
+    missing_fields: []
+  };
+  addFact(facts, 'asking_price', structuredSourceValue(source, sourcePack, ['asking_price', 'list_price', 'price', 'listing_price']), sourceUrl, 'Asking/list price');
+  addFact(facts, 'estimated_value', structuredSourceValue(source, sourcePack, ['estimated_value', 'source_estimate', 'estimate', 'realtor_estimate', 'redfin_estimate', 'zestimate']), sourceUrl, 'Source estimate - not verified ARV');
+  addFact(facts, 'beds', structuredSourceValue(source, sourcePack, ['beds', 'bedrooms']), sourceUrl, 'Beds');
+  addFact(facts, 'baths', structuredSourceValue(source, sourcePack, ['baths', 'bathrooms']), sourceUrl, 'Baths');
+  addFact(facts, 'sqft', structuredSourceValue(source, sourcePack, ['sqft', 'square_feet', 'living_area']), sourceUrl, 'Sqft');
+  addFact(facts, 'year_built', structuredSourceValue(source, sourcePack, ['year_built', 'yearBuilt']), sourceUrl, 'Year built');
+  addFact(facts, 'lot_size', structuredSourceValue(source, sourcePack, ['lot_size', 'lotSize', 'lot_acres']), sourceUrl, 'Lot size');
+  addFact(facts, 'property_type', structuredSourceValue(source, sourcePack, ['property_type', 'home_type', 'source_type']), sourceUrl, 'Property type');
+  addFact(facts, 'listing_status', structuredSourceValue(source, sourcePack, ['listing_status', 'status']), sourceUrl, 'Listing/auction status');
+  addFact(facts, 'DOM', structuredSourceValue(source, sourcePack, ['DOM', 'dom', 'days_on_market']), sourceUrl, 'Days on market');
+  addFact(facts, 'last_sold_price', structuredSourceValue(source, sourcePack, ['last_sold_price', 'last_sale_price', 'sold_price']), sourceUrl, 'Last sold price');
+  addFact(facts, 'last_sold_date', structuredSourceValue(source, sourcePack, ['last_sold_date', 'last_sale_date', 'sold_date']), sourceUrl, 'Last sold date');
+  addFact(facts, 'auction_opening_bid', structuredSourceValue(source, sourcePack, ['auction_opening_bid', 'opening_bid', 'minimum_bid']), sourceUrl, 'Auction opening bid');
+  addFact(facts, 'auction_status', structuredSourceValue(source, sourcePack, ['auction_status']), sourceUrl, 'Auction status');
+
+  if (text) {
+    addFact(facts, 'asking_price', extractMoneyNear(text, [/(?:list(?:ed|ing)? price|asking price|price)\D{0,40}(\$[\d,]+)/i, /(\$[\d,]+)\s*(?:list(?:ed|ing)? price|asking)/i]), sourceUrl, 'Asking/list price', text);
+    addFact(facts, 'estimated_value', extractMoneyNear(text, [/(?:estimate|estimated value|realtor estimate|redfin estimate|zestimate)\D{0,60}(\$[\d,]+)/i]), sourceUrl, 'Source estimate - not verified ARV', text);
+    addFact(facts, 'beds', extractNumberNear(text, [/\b(\d+(?:\.\d+)?)\s*(?:bed|beds|bedrooms)\b/i, /(?:bedrooms?|beds?)\D{0,25}(\d+(?:\.\d+)?)/i]), sourceUrl, 'Beds', text);
+    addFact(facts, 'baths', extractNumberNear(text, [/\b(\d+(?:\.\d+)?)\s*(?:bath|baths|bathrooms)\b/i, /(?:bathrooms?|baths?)\D{0,25}(\d+(?:\.\d+)?)/i]), sourceUrl, 'Baths', text);
+    addFact(facts, 'sqft', extractNumberNear(text, [/\b([\d,]+)\s*(?:sq\.?\s*ft|sqft|square feet)\b/i]), sourceUrl, 'Sqft', text);
+    addFact(facts, 'lot_size', extractNumberNear(text, [/\b([\d.]+)\s*(?:acre|acres)\s*(?:lot)?\b/i, /lot(?: size)?\D{0,40}([\d.]+\s*acre[s]?|[\d,]+\s*sq\.?\s*ft)/i]), sourceUrl, 'Lot size', text);
+    addFact(facts, 'year_built', extractNumberNear(text, [/(?:year built|built in)\D{0,25}(\d{4})/i]), sourceUrl, 'Year built', text);
+    addFact(facts, 'last_sold_price', extractMoneyNear(text, [/(?:sold|last sold|last sale)\D{0,80}(\$[\d,]+)/i]), sourceUrl, 'Last sold price', text);
+    addFact(facts, 'last_sold_date', extractNumberNear(text, [/(?:sold|last sold|last sale)\D{0,80}((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i]), sourceUrl, 'Last sold date', text);
+    addFact(facts, 'DOM', extractNumberNear(text, [/(?:days on market|DOM)\D{0,25}(\d{1,4})/i]), sourceUrl, 'Days on market', text);
+    if (/contact agent|contact listing agent|request a tour|ask a question/i.test(text)) {
+      addFact(facts, 'source_contact_path', 'Public contact form/button visible', sourceUrl, 'Contact path', 'Contact agent/form button visible in source text.');
+      facts.source_contact_button_visible = sourceFact('Yes', sourceUrl, 'Public contact button/form visible', 'Contact agent/form button visible in source text.');
+    }
+    if (/tax|assessment|assessed value|property tax/i.test(text)) {
+      facts.tax_history = sourceFact('Tax/assessment evidence visible in source text. Verify before use.', sourceUrl, 'Tax/assessment evidence - not ARV', text);
+    }
+    if (/nearby home|nearby value|home value|similar homes/i.test(text)) {
+      facts.nearby_value_indicators = sourceFact('Nearby value indicators visible - not verified sold comps.', sourceUrl, 'Nearby value indicators - not verified sold comps', text);
+    }
+  }
+
+  ['asking_price','estimated_value','beds','baths','sqft','year_built','lot_size','property_type','listing_status','DOM','last_sold_price','last_sold_date','tax_history','assessment_history','nearby_value_indicators','auction_opening_bid','auction_status','source_contact_path','listing_agent_name','brokerage','agent_phone','agent_email']
+    .forEach((key) => { if (!facts[key]) facts.missing_fields.push(key); });
+  return facts;
+}
+
 function resolveAnalyzerJob(id) {
   return id && aiDealAnalyzerJobs.getJob ? aiDealAnalyzerJobs.getJob(id) : null;
 }
@@ -373,6 +674,16 @@ function sourceFromInput(input) {
       source_url: cleanText(card.canonical_source_url || card.source_url),
       source_url_original: cleanText(card.original_source_url || card.source_url_original),
       canonical_source_url: cleanText(card.canonical_source_url),
+      source_title: cleanText(card.source_title || card.candidate_title),
+      source_page_text: [
+        card.source_title,
+        card.evidence_snippet,
+        card.signal_summary,
+        card.why_it_matters,
+        card.why_this_might_be_a_deal,
+        Array.isArray(card.missing_evidence) ? card.missing_evidence.join(' ') : '',
+        Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals.join(' ') : ''
+      ].map(cleanText).filter(Boolean).join(' '),
       source_type: cleanText(card.source_type || card.lead_source_type || card.source_classification),
       scout_context: {
         scout_status: cleanText(card.status),
@@ -391,7 +702,7 @@ function sourceFromInput(input) {
       source_evidence: [{
         type: 'source_evidence_pack',
         source_url: cleanText(card.canonical_source_url || card.source_url),
-        source_url_type: card.source_classification === 'listing_search_page' || card.source_classification === 'auction_search_page' ? 'list_page' : 'exact_property_record',
+        source_url_type: card.source_classification === 'listing_search_page' || card.source_classification === 'auction_search_page' ? 'list_page' : propertyUrlType(cleanText(card.canonical_source_url || card.source_url), cleanText(card.source_title || card.candidate_title)),
         source_status: card.source_url ? 'Found' : 'Missing',
         evidence_role: card.can_send_to_analyzer ? 'source_proof' : 'source_context',
         property_identity_status: card.status === 'Needs Address Repair' ? 'unresolved' : 'partial',
@@ -434,17 +745,27 @@ function sourceFromInput(input) {
     input_value: address,
     normalized_address: normalizeAddress(address),
     source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
+    source_title: cleanText(input.source_title || input.sourceTitle || input.title),
+    source_page_text: cleanText(input.source_page_text || input.sourcePageText || input.source_text || input.sourceText || input.page_text || input.pageText || input.html || input.description || input.notes),
+    asking_price: cleanText(input.asking_price || input.askingPrice || input.list_price || input.listPrice),
+    estimated_value: cleanText(input.estimated_value || input.estimatedValue || input.source_estimate || input.sourceEstimate),
+    beds: cleanText(input.beds || input.bedrooms),
+    baths: cleanText(input.baths || input.bathrooms),
+    sqft: cleanText(input.sqft || input.square_feet || input.squareFeet),
+    lot_size: cleanText(input.lot_size || input.lotSize),
+    year_built: cleanText(input.year_built || input.yearBuilt),
+    listing_status: cleanText(input.listing_status || input.listingStatus),
     source_type: cleanText(input.source_type || input.sourceType),
     source_evidence: sourceUrl ? [{
       type: 'source_evidence_pack',
       source_url: sourceUrl,
-      source_url_type: 'unknown',
+      source_url_type: propertyUrlType(sourceUrl, cleanText(input.source_title || input.sourceTitle || input.title)),
       source_status: 'Needs review',
-      evidence_role: 'source_context',
-      property_identity_status: 'partial',
+      evidence_role: propertyUrlType(sourceUrl, cleanText(input.source_title || input.sourceTitle || input.title)) === 'exact_property_record' ? 'source_proof' : 'source_context',
+      property_identity_status: propertyUrlType(sourceUrl, cleanText(input.source_title || input.sourceTitle || input.title)) === 'exact_property_record' ? 'partial' : 'unresolved',
       address_candidate: address,
       next_action: 'Verify source proof before calling.',
-      missing_fields: ['Source proof']
+      missing_fields: propertyUrlType(sourceUrl, cleanText(input.source_title || input.sourceTitle || input.title)) === 'exact_property_record' ? ['Verify property facts before offer'] : ['Source proof']
     }] : []
   };
 }
@@ -467,14 +788,19 @@ function buildDossier(input) {
   ]);
   const originalSourceUrl = cleanText(ctx.source_url_original || source.source_url_original);
   const canonicalSourceUrl = cleanText(ctx.canonical_source_url || source.canonical_source_url || sourceUrl);
+  const urlIdentity = addressFromKnownPropertyUrl(canonicalSourceUrl || sourceUrl, cleanText(source.source_title || (sourcePack && sourcePack.source_title)));
+  const repairedAddress = /^public source result\s*\d*$/i.test(address) && urlIdentity.full_address
+    ? urlIdentity.full_address
+    : address;
   const proofStatus = sourceProofStatus(source, sourcePack);
   const signals = buildSignals(source, sourceUrl);
   const valuation = valuationFrom(source);
-  const contact = contactFrom(source, source.lead || null);
+  const sourceBackedFacts = buildSourceBackedFacts(source, sourcePack, canonicalSourceUrl || sourceUrl);
+  const contact = contactFrom(source, source.lead || null, sourceBackedFacts);
   const why = whyThisMatters(source, signals, valuation, proofStatus);
   const created = nowIso();
   const dossier = {
-    dossier_id: hashId('dcd', `${address}|${sourceUrl}|${source.source_kind || ''}`),
+    dossier_id: hashId('dcd', `${repairedAddress}|${sourceUrl}|${source.source_kind || ''}`),
     created_at: created,
     updated_at: created,
     source_kind: source.source_kind || 'unknown',
@@ -485,18 +811,21 @@ function buildDossier(input) {
       lead_id: cleanText(source.lead_id)
     },
     property: {
-      full_address: address,
-      city: cleanText((sourcePack && sourcePack.city_candidate) || pick(source, ['city'])),
-      state: cleanText((sourcePack && sourcePack.state_candidate) || pick(source, ['state'])),
-      zip: cleanText((sourcePack && sourcePack.zip_candidate) || pick(source, ['zip'])),
+      full_address: repairedAddress,
+      city: cleanText((sourcePack && sourcePack.city_candidate) || pick(source, ['city']) || urlIdentity.city),
+      state: cleanText((sourcePack && sourcePack.state_candidate) || pick(source, ['state']) || urlIdentity.state),
+      zip: cleanText((sourcePack && sourcePack.zip_candidate) || pick(source, ['zip']) || urlIdentity.zip),
       county: cleanText((sourcePack && sourcePack.county) || pick(source, ['county'])),
       source_url: sourceUrl,
       canonical_source_url: canonicalSourceUrl && canonicalSourceUrl !== sourceUrl ? canonicalSourceUrl : '',
       original_source_url: originalSourceUrl && originalSourceUrl !== sourceUrl ? originalSourceUrl : '',
       source_type: cleanText(source.source_type || (sourcePack && sourcePack.source_url_type) || ctx.source_classification),
       source_proof_status: proofStatus,
-      property_identity_status: propertyIdentityStatus(sourcePack, ctx),
-      market_match_status: marketMatchStatus(sourcePack, ctx, address),
+      property_identity_status: urlIdentity.address_extracted_from_source_url ? (urlIdentity.address && urlIdentity.city && urlIdentity.state && urlIdentity.zip ? 'resolved_from_source_url' : 'partial_from_source_url') : propertyIdentityStatus(sourcePack, ctx),
+      property_identity_basis: urlIdentity.basis,
+      address_extracted_from_source_url: urlIdentity.address_extracted_from_source_url,
+      market_match_status: marketMatchStatus(sourcePack, ctx, repairedAddress),
+      market_match_basis: urlIdentity.city && urlIdentity.state ? `${urlIdentity.city}, ${urlIdentity.state} from source URL` : '',
       source_address_conflict_warning: proofStatus === 'Source/Address Conflict'
         ? 'Source URL address conflicts with Analyzer address. Verify before calling.'
         : ''
@@ -504,6 +833,7 @@ function buildDossier(input) {
     why_this_property_matters: why,
     signals,
     valuation,
+    source_backed_facts: sourceBackedFacts,
     contact,
     call_script: null,
     workflow: {
@@ -568,9 +898,46 @@ function createDossier(input, options = {}) {
 }
 
 function publicDossier(dossier) {
+  dossier = dossier || {};
+  const property = dossier.property || {};
+  const sourceUrl = cleanText(property.canonical_source_url || property.source_url);
+  const urlIdentity = addressFromKnownPropertyUrl(sourceUrl, cleanText(property.source_title));
+  const repairedProperty = Object.assign({}, property);
+  if (/^public source result\s*\d*$/i.test(cleanText(repairedProperty.full_address)) && urlIdentity.full_address) {
+    repairedProperty.full_address = urlIdentity.full_address;
+    repairedProperty.city = repairedProperty.city || urlIdentity.city;
+    repairedProperty.state = repairedProperty.state || urlIdentity.state;
+    repairedProperty.zip = repairedProperty.zip || urlIdentity.zip;
+    repairedProperty.property_identity_status = 'resolved_from_source_url';
+    repairedProperty.property_identity_basis = urlIdentity.basis;
+    repairedProperty.address_extracted_from_source_url = true;
+    repairedProperty.market_match_status = marketMatchStatus(null, null, repairedProperty.full_address);
+    repairedProperty.market_match_basis = urlIdentity.city && urlIdentity.state ? `${urlIdentity.city}, ${urlIdentity.state} from source URL` : '';
+  }
+  const existingFacts = dossier.source_backed_facts && typeof dossier.source_backed_facts === 'object' ? dossier.source_backed_facts : null;
+  const viewFacts = existingFacts || buildSourceBackedFacts({
+    source_url: sourceUrl,
+    source_page_text: cleanText(dossier.workflow && dossier.workflow.notes),
+    input_value: cleanText(repairedProperty.full_address),
+    source_type: cleanText(repairedProperty.source_type)
+  }, {
+    source_url: sourceUrl,
+    source_url_type: cleanText(repairedProperty.source_type),
+    address_candidate: cleanText(repairedProperty.full_address)
+  }, sourceUrl);
+  const repairedContact = Object.assign({}, dossier.contact || {});
+  if ((!repairedContact.phone && !repairedContact.email) && viewFacts.source_contact_path) {
+    repairedContact.target = 'Public Contact Form';
+    repairedContact.source_url = cleanText((viewFacts.source_contact_path || {}).source_url);
+    repairedContact.confidence = 'public contact path visible';
+    repairedContact.warning = 'Public contact form/button visible. Phone/email not verified.';
+  }
   const valuation = dossier.valuation || {};
   const groups = valuation.groups || {};
   return Object.assign({}, dossier, {
+    property: repairedProperty,
+    source_backed_facts: viewFacts,
+    contact: repairedContact,
     valuation: Object.assign({}, valuation, {
       groups: {
         subject_sale_evidence: (Array.isArray(groups.subject_sale_evidence) ? groups.subject_sale_evidence : []).map(compactComp),
@@ -650,21 +1017,44 @@ function updateOutcome(dossierId, body, options = {}) {
   return publicDossier(dossier);
 }
 
+function factValue(facts, key) {
+  const item = facts && facts[key];
+  return cleanText(item && item.value) || 'Not verified yet.';
+}
+
+function sourceFactsSummary(facts) {
+  facts = facts || {};
+  return [
+    `Asking/list price: ${factValue(facts, 'asking_price')}`,
+    `Source estimate: ${factValue(facts, 'estimated_value')} (not verified ARV)`,
+    `Beds/Baths/Sqft: ${factValue(facts, 'beds')} bed / ${factValue(facts, 'baths')} bath / ${factValue(facts, 'sqft')} sqft`,
+    `Year/Lot: ${factValue(facts, 'year_built')} / ${factValue(facts, 'lot_size')}`,
+    `Listing/Auction status: ${factValue(facts, 'listing_status') || factValue(facts, 'auction_status')}`,
+    `Tax/assessment: ${factValue(facts, 'tax_history')} (not ARV)`,
+    `Nearby value indicators: ${factValue(facts, 'nearby_value_indicators')} (not verified sold comps)`,
+    `Contact path: ${factValue(facts, 'source_contact_path')}`
+  ].join('\n');
+}
+
 function callSheetText(dossiers) {
   return (Array.isArray(dossiers) ? dossiers : []).map((dossier, index) => {
     const signals = (Array.isArray(dossier.signals) ? dossier.signals : []).map((signal) => signal.name).join(', ') || 'Motivation not verified yet.';
     const script = dossier.call_script || {};
+    const facts = dossier.source_backed_facts || {};
+    const valuationLocked = dossier.valuation.valuation_status !== 'Preliminary ARV Available';
     return [
       `${index + 1}. ${dossier.property.full_address}`,
       `Source: ${dossier.property.source_url || 'Needs source proof'}`,
-      `Contact: ${dossier.contact.target}${dossier.contact.phone ? ' | ' + dossier.contact.phone : ''}${dossier.contact.email ? ' | ' + dossier.contact.email : ''}`,
+      `Contact: ${dossier.contact.target}${dossier.contact.phone ? ' | ' + dossier.contact.phone : ''}${dossier.contact.email ? ' | ' + dossier.contact.email : ''}${!dossier.contact.phone && !dossier.contact.email ? ' | Contact not verified. Manual lookup needed.' : ''}`,
       `Why call: ${dossier.why_this_property_matters.recommendation}. ${dossier.why_this_property_matters.why_now}`,
       `Signals: ${signals}`,
-      `Facts: ${cleanText(dossier.workflow && dossier.workflow.notes) || 'Not verified yet.'}`,
+      `Source-backed facts:\n${sourceFactsSummary(facts)}`,
       `Next action: ${dossier.why_this_property_matters.recommendation || 'Research more before calling.'}`,
       `Valuation: ${dossier.valuation.valuation_status}. ${dossier.valuation.valuation_locked_reason || ''}`,
+      `ARV gate: ${valuationLocked ? 'ARV locked unless 3 verified sold comps exist. Source estimates/nearby values do not unlock ARV.' : 'Preliminary ARV available from verified sold comps.'}`,
+      `MAO gate: ${dossier.valuation.mao_range ? 'MAO evidence present.' : 'MAO locked unless ARV plus repair evidence/manual estimate exists.'}`,
       `Comps: ${dossier.valuation.verified_sold_comps_count} verified, ${dossier.valuation.candidate_sold_comps_count} candidate, ${dossier.valuation.market_support_count} market support.`,
-      `Missing: ${(dossier.signals.flatMap((signal) => signal.missing_evidence || [])).slice(0, 5).join(', ') || dossier.valuation.valuation_locked_reason || 'None listed'}`,
+      `Missing: ${([].concat(facts.missing_fields || [], dossier.signals.flatMap((signal) => signal.missing_evidence || []))).slice(0, 8).join(', ') || dossier.valuation.valuation_locked_reason || 'None listed'}`,
       `Opening: ${script.opening_line || ''} ${script.why_calling || ''}`.trim(),
       `Key questions: ${[].concat(script.condition_questions || [], script.timeline_questions || [], script.price_questions || []).slice(0, 5).join(' | ')}`,
       'Notes:',
