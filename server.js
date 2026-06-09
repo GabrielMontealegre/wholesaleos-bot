@@ -1366,6 +1366,7 @@ app.get('/api/deal-call-dossiers', (req, res) => {
       texasOnly: req.query.texas_only === 'true',
       hideAuction: req.query.hide_auction === 'true',
       hideResearch: req.query.hide_research === 'true',
+      hideLowValue: req.query.hide_low_value === 'true',
       prioritizeWholesale: req.query.prioritize_wholesale === 'true'
     });
     return res.json({

@@ -269,6 +269,67 @@ function addressKey(address) {
   return safeLower(address).replace(/[^a-z0-9]+/g, '');
 }
 
+function callBatchAddressKey(dossier) {
+  return addressKey(dossier && dossier.property && dossier.property.full_address);
+}
+
+function supportingSourceFor(dossier) {
+  const property = dossier && dossier.property || {};
+  const workflow = dossier && dossier.workflow || {};
+  const sourceUrl = cleanText(property.source_url || property.canonical_source_url);
+  return {
+    dossier_id: cleanText(dossier && dossier.dossier_id),
+    source_url: sourceUrl,
+    canonical_source_url: cleanText(property.canonical_source_url),
+    original_source_url: cleanText(property.original_source_url),
+    source_type: cleanText(property.source_type),
+    source_proof_status: cleanText(property.source_proof_status),
+    property_identity_status: cleanText(property.property_identity_status),
+    market_match_status: cleanText(property.market_match_status),
+    outcome: cleanText(workflow.outcome),
+    updated_at: cleanText(dossier && dossier.updated_at)
+  };
+}
+
+function sourceRank(dossier) {
+  const property = dossier && dossier.property || {};
+  const workflow = dossier && dossier.workflow || {};
+  const intel = dossier && dossier.deal_intelligence || {};
+  let score = Number(dossier && dossier.priority_score || 0) || 0;
+  if (property.source_proof_status === 'Source Proof Present') score += 1000;
+  if (property.address_extracted_from_source_url) score += 80;
+  if (/^A:/.test(cleanText(intel.wholesale_priority))) score += 70;
+  if (/^B:/.test(cleanText(intel.wholesale_priority))) score += 50;
+  if (/^C:/.test(cleanText(intel.wholesale_priority))) score += 15;
+  if (/Auction|Bank-Owned|REO/i.test(cleanText(intel.deal_type))) score -= 120;
+  if (/Recent Sale|Low-Value/i.test(cleanText(intel.deal_type))) score -= 160;
+  if (workflow.outcome === 'Bad Lead') score -= 1000;
+  return score;
+}
+
+function groupDossiersByCallAddress(dossiers) {
+  const groups = new Map();
+  (Array.isArray(dossiers) ? dossiers : []).forEach((dossier) => {
+    const key = callBatchAddressKey(dossier);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(dossier);
+  });
+  return Array.from(groups.values()).map((group) => {
+    const sorted = group.slice().sort((a, b) => sourceRank(b) - sourceRank(a) || String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+    const primary = Object.assign({}, sorted[0]);
+    const seenSources = new Set();
+    primary.supporting_sources = sorted.map(supportingSourceFor).filter((source) => {
+      const key = safeLower(source.source_url || source.canonical_source_url || source.dossier_id);
+      if (!key || seenSources.has(key)) return false;
+      seenSources.add(key);
+      return true;
+    });
+    primary.call_batch_dedupe_key = callBatchAddressKey(primary);
+    return primary;
+  });
+}
+
 function sourceProofStatus(job, sourcePack) {
   const status = cleanText(job && job.comp_research_status);
   if (status === 'blocked_source_address_conflict') return 'Source/Address Conflict';
@@ -323,6 +384,9 @@ function buildSignals(source, sourceUrl) {
   const text = [
     source && source.input_value,
     source && source.result_summary,
+    source && source.source_page_text,
+    source && source.source_text,
+    source && source.page_text,
     source && source.source_type,
     source && source.comp_research_summary
   ].map(cleanText).join(' ');
@@ -561,9 +625,28 @@ function compBuckets(valuation) {
     candidate_sold_comps: Array.isArray(groups.candidate_sold_comps) ? groups.candidate_sold_comps : [],
     active_pending_market_support: Array.isArray(groups.market_support) ? groups.market_support : [],
     nearby_value_indicators_not_comps: [],
+    tax_assessment_evidence_not_arv: [],
     subject_sale_evidence: Array.isArray(groups.subject_sale_evidence) ? groups.subject_sale_evidence : [],
     not_usable_excluded: Array.isArray(groups.not_usable) ? groups.not_usable : []
   };
+}
+
+function wholesaleScoreFor(ctx) {
+  ctx = ctx || {};
+  let score = 0;
+  if (ctx.sourceProof) score += 20;
+  if (ctx.distressed) score += 18;
+  if (ctx.contactRoute) score += 14;
+  if (ctx.active || ctx.priceOrDom) score += 10;
+  score += Math.min(Number(ctx.verifiedComps || 0), 3) * 8;
+  if (ctx.repairTier && ctx.repairTier !== 'Unknown') score += 8;
+  if (ctx.marketMatched) score += 8;
+  if (ctx.addressGood) score += 8;
+  if (ctx.auction) score -= 24;
+  if (ctx.sourcePoor) score -= 22;
+  if (ctx.recentSale) score -= 35;
+  if (ctx.badLead) score -= 100;
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 function classifyDeal(dossier, source) {
@@ -579,11 +662,13 @@ function classifyDeal(dossier, source) {
   const priceOrDom = /\b(price reduced|price cut|reduced|long dom|days on market|stale listing)\b/i.test(text) || factPresent(facts, 'DOM');
   const sourcePoor = !sourceProof || /Needs Source Proof|Needs Address Repair|Source Context Only/i.test(cleanText(dossier.property.source_proof_status));
   const verifiedComps = Number(valuation.verified_sold_comps_count || 0) || 0;
+  const repairEvidence = repairEvidenceFrom(text, facts);
+  const recentSale = isRecentSaleCandidate(text, dossier);
   let dealType = 'Unknown';
 
   if (auction) dealType = /\breo|bank[- ]owned\b/i.test(text) ? 'Investor Opportunity - REO' : 'Investor Opportunity - Auction / Bank-Owned';
   else if (sourcePoor) dealType = contactRoute ? 'Contact Lookup Needed' : 'Research More - Need Better Source';
-  else if (isRecentSaleCandidate(text, dossier)) dealType = 'Recent Sale / Comp Candidate';
+  else if (recentSale) dealType = 'Recent Sale / Comp Candidate';
   else if (distressed && active) dealType = 'Wholesale Candidate - Active Distressed Listing';
   else if (/\b(as[- ]is|fixer|needs tlc|investor special|cash only)\b/i.test(text)) dealType = 'Wholesale Candidate - As-Is / Fixer / Investor Special';
   else if (priceOrDom) dealType = 'Wholesale Candidate - Price Reduction / Long DOM';
@@ -610,9 +695,29 @@ function classifyDeal(dossier, source) {
   if (auction) blockers.push('Assignment/auction terms not verified.');
   if (!distressed && dealType.indexOf('Wholesale Candidate') === 0) blockers.push('Distress/motivation signal not verified.');
 
+  const compBucketState = compBuckets(valuation);
+  if (facts.nearby_value_indicators) compBucketState.nearby_value_indicators_not_comps = [facts.nearby_value_indicators];
+  if (facts.tax_history || facts.assessment_history) compBucketState.tax_assessment_evidence_not_arv = [facts.tax_history || facts.assessment_history].filter(Boolean);
+  const wholesaleDealScore = wholesaleScoreFor({
+    sourceProof,
+    distressed,
+    contactRoute,
+    active,
+    priceOrDom,
+    verifiedComps,
+    repairTier: repairEvidence.repair_discussion_assumption,
+    marketMatched: /Dallas|TX|market/i.test(cleanText(dossier.property && dossier.property.market_match_status)),
+    addressGood: !!cleanText(dossier.property && dossier.property.full_address),
+    auction,
+    sourcePoor,
+    recentSale,
+    badLead: dossier.workflow && dossier.workflow.outcome === 'Bad Lead'
+  });
+
   return {
     deal_type: dealType,
     wholesale_priority: priority,
+    wholesale_deal_score: wholesaleDealScore,
     wholesale_feasibility: feasibility,
     why_it_may_be_wholesale: dealType.indexOf('Wholesale Candidate') === 0 ? 'Source-backed listing or distress signals may support a wholesale conversation.' : '',
     why_it_may_not_be_wholesaleable: blockers.join(' '),
@@ -621,10 +726,12 @@ function classifyDeal(dossier, source) {
     must_verify_before_assignment: auction ? ['assignability', 'buyer premium', 'deposit', 'closing timeline', 'occupancy', 'title/lien/HOA/tax issues', 'access/inspection', 'cash-only terms'] : ['assignability', 'clear buyer demand', 'title issues', 'closing timeline'],
     must_verify_before_buyer_blast: ['verified source facts', 'real comps', 'repair evidence', 'photos/access', 'assignment terms'],
     best_next_action: priority === 'A: Call First' ? 'Call first, then document answers before offer.' : priority === 'B: Contact Lookup First' ? 'Do contact lookup before calling.' : priority === 'D: Investor/Auction Only' ? 'Verify auction/assignment terms before treating as wholesale.' : 'Research source proof and comps first.',
-    comp_buckets: compBuckets(valuation),
-    repair_evidence: repairEvidenceFrom(text, facts),
+    comp_buckets: compBucketState,
+    repair_evidence: repairEvidence,
     numbers_to_verify: numbersToVerify(dossier),
-    spread_status: verifiedComps >= 3 ? 'Preliminary scenario may be possible only after repair evidence.' : 'Spread unknown - verified comps required.'
+    spread_status: verifiedComps >= 3
+      ? (repairEvidence.repair_discussion_assumption !== 'Unknown' ? 'Scenario only - verify before offer.' : 'Spread unknown - repair estimate required.')
+      : 'Spread unknown - verified comps and repair estimate required.'
   };
 }
 
@@ -1251,7 +1358,7 @@ function publicDossier(dossier) {
     preview_only: true,
     should_ingest: false
   });
-  viewDossier.deal_intelligence = dossier.deal_intelligence || classifyDeal(viewDossier, null);
+  viewDossier.deal_intelligence = Object.assign({}, dossier.deal_intelligence || {}, classifyDeal(viewDossier, null));
   viewDossier.call_script = dossier.call_script && dossier.call_script.opening_line ? dossier.call_script : scriptForDealType(viewDossier);
   if (viewDossier.workflow && viewDossier.workflow.outcome === 'Call Today' && viewDossier.contact && viewDossier.contact.target === 'Manual Lookup Needed') {
     viewDossier.workflow = Object.assign({}, viewDossier.workflow, { outcome: 'Need Contact Lookup' });
@@ -1296,12 +1403,16 @@ function listDossiers(options = {}) {
   if (options.hideResearch === true) {
     dossiers = dossiers.filter((dossier) => !/^Research More/i.test(cleanText(dossier.workflow && dossier.workflow.outcome)));
   }
+  if (options.hideLowValue === true) {
+    dossiers = dossiers.filter((dossier) => !/Low-Value|Recent Sale|Comp Candidate/i.test(cleanText(dossier.deal_intelligence && dossier.deal_intelligence.deal_type)));
+  }
   if (options.prioritizeWholesale === true) {
     dossiers = dossiers.filter((dossier) => !/^F:/.test(cleanText(dossier.deal_intelligence && dossier.deal_intelligence.wholesale_priority)));
   }
+  dossiers = groupDossiersByCallAddress(dossiers);
   const seen = new Set();
   dossiers = dossiers.filter((dossier) => {
-    const key = `${addressKey(dossier.property && dossier.property.full_address)}|${safeLower(dossier.property && (dossier.property.source_url || dossier.property.canonical_source_url))}`;
+    const key = callBatchAddressKey(dossier);
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return !!cleanText(dossier.property && dossier.property.full_address) && !/^public source result/i.test(cleanText(dossier.property && dossier.property.full_address));
@@ -1377,12 +1488,18 @@ function callSheetText(dossiers) {
     const valuationLocked = dossier.valuation.valuation_status !== 'Preliminary ARV Available';
     const intel = dossier.deal_intelligence || {};
     const nums = Array.isArray(intel.numbers_to_verify) ? intel.numbers_to_verify.slice(0, 8).map((row) => `${row.label}: ${row.value || row.status}`).join(' | ') : '';
+    const supportingSources = (Array.isArray(dossier.supporting_sources) ? dossier.supporting_sources : [])
+      .map((source) => cleanText(source.source_url || source.canonical_source_url))
+      .filter(isHttpUrl)
+      .filter((url, idx, arr) => arr.indexOf(url) === idx);
     return [
       `${index + 1}. ${dossier.property.full_address}`,
       `Deal type: ${intel.deal_type || 'Unknown'}`,
       `Wholesale priority: ${intel.wholesale_priority || 'C: Research/Comps First'}`,
+      `Wholesale deal score: ${Number(intel.wholesale_deal_score || 0) || 0}/100`,
       `Wholesale feasibility: ${intel.wholesale_feasibility || 'Unknown'}`,
       `Source: ${dossier.property.source_url || 'Needs source proof'}`,
+      `Supporting sources: ${supportingSources.length ? supportingSources.join(' | ') : 'None listed'}`,
       `Contact: ${dossier.contact.target}${dossier.contact.phone ? ' | ' + dossier.contact.phone : ''}${dossier.contact.email ? ' | ' + dossier.contact.email : ''}${!dossier.contact.phone && !dossier.contact.email ? ' | Contact not verified. Manual lookup needed.' : ''}`,
       `Why call: ${dossier.why_this_property_matters.recommendation}. ${dossier.why_this_property_matters.why_now}`,
       `Wholesale check: ${intel.why_it_may_be_wholesale || 'Not proven as wholesale lead.'} ${intel.why_it_may_not_be_wholesaleable || ''}`.trim(),
@@ -1410,7 +1527,7 @@ function callSheetText(dossiers) {
 function copyCallSheet(body, options = {}) {
   const ids = Array.isArray(body && body.dossier_ids) ? body.dossier_ids.map(cleanText).filter(Boolean) : [];
   const dossiers = ids.length
-    ? ids.map((id) => getDossier(id, options)).filter(Boolean)
+    ? groupDossiersByCallAddress(ids.map((id) => getDossier(id, options)).filter(Boolean))
     : listDossiers({
       limit: body && body.limit || 20,
       filter: body && body.filter,
@@ -1419,6 +1536,7 @@ function copyCallSheet(body, options = {}) {
       texasOnly: body && body.texas_only === true,
       hideAuction: body && body.hide_auction === true,
       hideResearch: body && body.hide_research === true,
+      hideLowValue: body && body.hide_low_value === true,
       prioritizeWholesale: body && body.prioritize_wholesale === true
     });
   return { text: callSheetText(dossiers), count: dossiers.length };
