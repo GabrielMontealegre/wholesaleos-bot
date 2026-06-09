@@ -1361,7 +1361,12 @@ app.get('/api/deal-call-dossiers', (req, res) => {
     const dossiers = dealCallDossiers.listDossiers({
       limit: req.query.limit,
       filter: req.query.filter,
-      includeBad: req.query.include_bad === 'true'
+      includeBad: req.query.include_bad === 'true',
+      dallasOnly: req.query.dallas_only === 'true',
+      texasOnly: req.query.texas_only === 'true',
+      hideAuction: req.query.hide_auction === 'true',
+      hideResearch: req.query.hide_research === 'true',
+      prioritizeWholesale: req.query.prioritize_wholesale === 'true'
     });
     return res.json({
       ok: true,
