@@ -9,6 +9,11 @@ const PROVIDER_STATUSES = new Set([
   'blocked_needs_source_evidence',
   'ready_to_research',
   'researching',
+  'temporarily_unavailable',
+  'provider_temporarily_unavailable',
+  'timed_out',
+  'auth_error',
+  'quota_or_rate_limited',
   'candidates_found',
   'partial_results',
   'completed',
@@ -539,12 +544,16 @@ function runCompResearch(job, options) {
     return researchProviderRouter.runResearchProvider(job, options)
       .then((result) => summarizeRouterResearchState(job, provider, result))
       .catch((error) => summarizeCompResearchState(job, {
-        provider_status: 'failed',
+        provider_status: cleanText(error && error.provider_status) || 'failed',
         provider: provider.id,
         candidates: existingCandidates,
-        message: 'Comp research needs review.',
+        message: cleanText(error && error.message) || 'Comp research needs review.',
         missing_fields: ['Public research result'],
-        warnings: [error && error.message ? error.message : 'Public research failed.']
+        warnings: [
+          cleanText(error && error.provider_raw_message ? error.provider_raw_message : error && error.message ? error.message : 'Public research failed.')
+        ],
+        provider_models_attempted: Array.isArray(error && error.provider_models_attempted) ? error.provider_models_attempted : [],
+        provider_model: cleanText(error && error.provider_model)
       }));
   }
   return summarizeCompResearchState(job, {
@@ -559,6 +568,11 @@ function runCompResearch(job, options) {
 function researchResultMessage(result) {
   result = result || {};
   const hasCandidates = Array.isArray(result.comp_candidates) && result.comp_candidates.length > 0;
+  if (result.status === 'temporarily_unavailable' || result.status === 'provider_temporarily_unavailable' || result.status === 'quota_or_rate_limited') {
+    return 'Gemini is temporarily unavailable/high demand. Try again later.';
+  }
+  if (result.status === 'timed_out') return 'Gemini live comp research timed out before returning evidence. Try again later.';
+  if (result.status === 'auth_error') return 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.';
   if (result.status === 'failed') return 'Comp research needs review.';
   if (hasCandidates) return 'Candidate comps found - review evidence.';
   if (result.status === 'partial_results') return 'Gemini found public market evidence, but no verified sold comps yet.';
@@ -628,6 +642,13 @@ function summarizeCompResearchState(job, result) {
     missing.push('Repair estimate for MAO');
   }
   let nextAction = cleanText(result.message) || valuation.valuation_note || 'Comp research needs review.';
+  if (status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited') {
+    nextAction = 'Gemini is temporarily unavailable/high demand. Try again later.';
+  } else if (status === 'timed_out') {
+    nextAction = 'Gemini live comp research timed out before returning evidence. Try again later.';
+  } else if (status === 'auth_error') {
+    nextAction = 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.';
+  }
   if (!verifiedCount && groups.subject_sale_evidence.length && !groups.candidate_sold_comps.length && !groups.market_support.length) {
     nextAction = 'Only subject property evidence found. More nearby sold comps are needed.';
   } else if (!verifiedCount && groups.market_support.length && !groups.candidate_sold_comps.length) {

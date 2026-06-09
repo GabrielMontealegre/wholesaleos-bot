@@ -1225,6 +1225,11 @@ function aiDealCompResearchLabel(status) {
     blocked_needs_source_evidence: 'Needs source evidence',
     ready_to_research: 'Ready to research',
     researching: 'Researching',
+    temporarily_unavailable: 'Temporarily unavailable',
+    provider_temporarily_unavailable: 'Temporarily unavailable',
+    timed_out: 'Timed out',
+    auth_error: 'Auth error',
+    quota_or_rate_limited: 'Rate limited',
     candidates_found: 'Candidate evidence found',
     partial_results: 'Partial evidence found',
     completed: 'Completed',
@@ -1252,6 +1257,7 @@ function aiDealCompProviderLabel(job) {
 
 function aiDealCompResearchTone(status) {
   if (status === 'ready_to_research' || status === 'candidates_found' || status === 'partial_results') return 'good';
+  if (status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'timed_out' || status === 'auth_error' || status === 'quota_or_rate_limited') return 'warn';
   if (status === 'completed' || status === 'completed_no_results' || status === 'no_usable_comp_evidence') return 'neutral';
   if (status === 'not_configured' || status === 'blocked_needs_address' || status === 'blocked_needs_source_evidence') return 'warn';
   return 'neutral';
@@ -1437,6 +1443,12 @@ function aiDealCompResearchSection(job) {
       ? 'Repair property identity before comps.'
       : status === 'blocked_needs_source_evidence'
         ? 'Source repair needed before comps.'
+        : status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited'
+          ? 'Gemini is temporarily unavailable/high demand. Try again later.'
+          : status === 'timed_out'
+            ? 'Gemini live comp research timed out before returning evidence. Try again later.'
+            : status === 'auth_error'
+              ? 'Gemini is configured but authentication or permission failed. Verify the Gemini API key and model access.'
         : status === 'ready_to_research'
           ? aiDealCompProviderLabel(job) + ' research is ready. Click Research Comps to gather public evidence.'
           : status === 'candidates_found' || status === 'partial_results'
@@ -1467,6 +1479,7 @@ function aiDealCompResearchSection(job) {
       aiDealStatusPill('Valuation: ' + (job.arv_range ? 'Preliminary ARV' : 'Locked'), job.arv_range ? 'good' : 'warn') +
     '</div>' +
     '<div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45">' + aiDealSafeText(next) + '</div>' +
+    ((status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited' || status === 'timed_out') ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">Gemini configured. Try again later. No valuation was generated.</div>' : '') +
     (job.comp_search_strategy ? '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Search strategy</div>' + aiDealSafeText(job.comp_search_strategy) + '</div>' : '') +
     (normalizedText || normalizationNote ? '<div style="border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Provider normalization</div>' + aiDealSafeText(normalizationNote || 'Provider response was normalized from text; verify sources before using.') + '</div>' : '') +
     '<div style="border:1px solid #d1fae5;background:#fff;color:#14532d;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Valuation gate</div>' + aiDealSafeText(job.arv_range ? ('Preliminary ARV: ' + aiDealArvLabel(job.arv_range) + '. ' + (job.mao_range ? 'Draft MAO has repair evidence.' : 'MAO stays locked until repair evidence exists.')) : 'ARV and MAO are locked until at least 3 verified sold comps are found. Candidate comps and market support do not unlock valuation.') + '</div>' +
