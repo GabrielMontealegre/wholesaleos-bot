@@ -2364,7 +2364,7 @@ async function dealCallCopySheet() {
   try {
     var body = DEAL_CALL_BATCH_IDS.length
       ? { dossier_ids: DEAL_CALL_BATCH_IDS }
-      : { limit: 20, filter: DEAL_CALL_DOSSIER_FILTER };
+      : { limit: 20, filter: DEAL_CALL_DOSSIER_FILTER, dallas_only: true, hide_auction: true, hide_research: true, hide_low_value: true, prioritize_wholesale: true };
     var data = await dealCallFetchJson('/api/deal-call-dossiers/call-sheet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2398,7 +2398,7 @@ function dealCallIsTexas(dossier) {
 
 function dealCallUniqueKey(dossier) {
   var property = dossier && dossier.property || {};
-  return String(property.full_address || '').toLowerCase().replace(/[^a-z0-9]+/g, '') + '|' + String(property.source_url || property.canonical_source_url || '').toLowerCase();
+  return String(property.full_address || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 function dealCallDealIntel(dossier) {
@@ -2409,20 +2409,26 @@ function dealCallBuildBatch(size) {
   size = Math.min(Math.max(parseInt(size, 10) || 10, 10), 20);
   var dallasOnly = !!(document.getElementById('deal-call-batch-dallas') || {}).checked;
   var texasOnly = !!(document.getElementById('deal-call-batch-texas') || {}).checked;
-  var hideAuction = !!(document.getElementById('deal-call-batch-hide-auction') || {}).checked;
-  var hideResearch = !!(document.getElementById('deal-call-batch-hide-research') || {}).checked;
+  var includeAuction = !!(document.getElementById('deal-call-batch-include-auction') || {}).checked;
+  var includeResearch = !!(document.getElementById('deal-call-batch-include-research') || {}).checked;
+  var includeLowValue = !!(document.getElementById('deal-call-batch-include-low-value') || {}).checked;
   var seen = {};
   var rows = (DEAL_CALL_DOSSIERS || []).filter(function(dossier) {
     var workflow = dossier.workflow || {};
     var property = dossier.property || {};
     var intel = dealCallDealIntel(dossier);
+    var proof = property.source_proof_status || '';
     var key = dealCallUniqueKey(dossier);
     if (!property.full_address || /^public source result/i.test(property.full_address)) return false;
     if (workflow.outcome === 'Bad Lead') return false;
     if (dallasOnly && !dealCallIsDallas(dossier)) return false;
     if (texasOnly && !dealCallIsTexas(dossier)) return false;
-    if (hideAuction && /Auction|Bank-Owned|REO/i.test(intel.deal_type || '')) return false;
-    if (hideResearch && /Research More/i.test(workflow.outcome || '')) return false;
+    if (/Cook County|Chicago|Illinois|\bIL\b/i.test([property.full_address, property.county, property.state].join(' ')) && dallasOnly) return false;
+    if (/Needs Address Repair|Needs Source Proof|Source\/Address Conflict/i.test(proof)) return false;
+    if (!includeAuction && /Auction|Bank-Owned|REO/i.test(intel.deal_type || '')) return false;
+    if (!includeResearch && /Research More/i.test(workflow.outcome || '')) return false;
+    if (!includeLowValue && /Low-Value|Recent Sale|Comp Candidate/i.test(intel.deal_type || '')) return false;
+    if (/^F:/.test(intel.wholesale_priority || '')) return false;
     if (seen[key]) return false;
     seen[key] = true;
     return true;
@@ -2630,6 +2636,7 @@ function dealCallWholesalePanel(dossier) {
   var repair = intel.repair_evidence || {};
   return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px">' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+      dealCallPill('Deal Score ' + (Number(intel.wholesale_deal_score || 0) || 0) + '/100', Number(intel.wholesale_deal_score || 0) >= 65 ? 'good' : Number(intel.wholesale_deal_score || 0) <= 25 ? 'bad' : 'warn') +
       dealCallPill(intel.deal_type || 'Unknown', /^Wholesale Candidate/i.test(intel.deal_type || '') ? 'good' : /Auction|Bank-Owned|REO/i.test(intel.deal_type || '') ? 'warn' : 'neutral') +
       dealCallPill(intel.wholesale_priority || 'C: Research/Comps First', /^A:/.test(intel.wholesale_priority || '') ? 'good' : /^F:/.test(intel.wholesale_priority || '') ? 'bad' : 'warn') +
       dealCallPill('Wholesale: ' + (intel.wholesale_feasibility || 'Unknown'), intel.wholesale_feasibility === 'Yes' ? 'good' : 'warn') +
@@ -2642,6 +2649,22 @@ function dealCallWholesalePanel(dossier) {
     '</div>' +
     '<div style="font-size:11px;color:#475569;font-weight:800;margin-top:8px">' + dealCallSafeText(intel.spread_status || 'Spread unknown - verified comps required.') + '</div>' +
   '</div>';
+}
+
+function dealCallSupportingSourcesPanel(dossier) {
+  var sources = Array.isArray(dossier && dossier.supporting_sources) ? dossier.supporting_sources : [];
+  sources = sources.filter(function(source) { return source && (source.source_url || source.canonical_source_url); });
+  if (!sources.length) return '';
+  return '<details open style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Supporting Sources</summary>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">' +
+      sources.slice(0, 6).map(function(source, idx) {
+        var url = source.source_url || source.canonical_source_url || '';
+        return '<div style="display:flex;gap:8px;justify-content:space-between;align-items:flex-start;border-top:1px solid #e5e7eb;padding-top:6px;font-size:12px">' +
+          '<div style="min-width:0;color:#334155;font-weight:800;line-height:1.35"><div style="color:#111827;font-weight:900">Source ' + (idx + 1) + ': ' + dealCallSafeText(source.source_type || 'public property source') + '</div><div>' + dealCallSafeText(source.source_proof_status || 'Source status not verified') + ' | ' + dealCallSafeText(source.outcome || 'No outcome') + '</div></div>' +
+          '<a href="' + dealCallSafeText(url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900;white-space:nowrap">Open</a>' +
+        '</div>';
+      }).join('') +
+    '</div></details>';
 }
 
 function renderDealCallDossierCard(dossier) {
@@ -2686,6 +2709,7 @@ function renderDealCallDossierCard(dossier) {
       '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Value status</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(dealCallValuationText(dossier)) + '</div></div>' +
     '</div>' +
     dealCallSourceFactsPanel(dossier) +
+    dealCallSupportingSourcesPanel(dossier) +
     dealCallEvidencePanels(dossier) +
     dealCallNumbersPanel(dossier) +
     commandBuyerMatchPanel(dossier) +
@@ -2724,8 +2748,9 @@ function renderMorningCallDesk() {
         '<button type="button" onclick="dealCallBuildBatch(20)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 20</button>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-dallas" type="checkbox" checked> Dallas only</label>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-texas" type="checkbox"> Texas</label>' +
-        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-hide-auction" type="checkbox" checked> Hide Auction/Bank-Owned</label>' +
-        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-hide-research" type="checkbox"> Hide Research More</label>' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-auction" type="checkbox"> Include Auction/REO Investor Opportunities</label>' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-research" type="checkbox"> Include Research More</label>' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-low-value" type="checkbox"> Include Low-Value Research</label>' +
         (DEAL_CALL_BATCH_IDS.length ? '<button type="button" onclick="dealCallClearBatch()" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Clear Batch</button><span style="font-size:12px;color:#1d4ed8;font-weight:900">' + DEAL_CALL_BATCH_IDS.length + ' selected for call sheet</span>' : '<span style="font-size:12px;color:#1d4ed8;font-weight:900">Batch uses unique addresses, no Bad Lead, no no-address rows.</span>') +
       '</div>' +
       '<div style="grid-column:1 / -1;display:flex;gap:6px;flex-wrap:wrap">' + filters.map(function(filter){ return '<button type="button" onclick="dealCallSetFilter(\'' + dealCallSafeText(filter) + '\')" style="border:1px solid ' + (DEAL_CALL_DOSSIER_FILTER === filter ? '#111827' : '#cbd5e1') + ';background:' + (DEAL_CALL_DOSSIER_FILTER === filter ? '#111827' : '#fff') + ';color:' + (DEAL_CALL_DOSSIER_FILTER === filter ? '#fff' : '#334155') + ';border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;cursor:pointer">' + dealCallSafeText(filter || 'All') + '</button>'; }).join('') + '</div>' +
