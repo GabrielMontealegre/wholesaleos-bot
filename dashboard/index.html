@@ -1681,7 +1681,7 @@ async function aiDealAnalyzePastedProperties() {
     aiDealRefresh();
     aiDealSetStatus(lines.length + ' analyzer job' + (lines.length === 1 ? '' : 's') + ' created.', false);
   } catch (e) {
-    aiDealSetStatus(e.message || 'Analyzer jobs could not be created.', true);
+    aiDealSetStatus('Analyzer job could not be created. Check address/source and try again.', true);
   }
 }
 
@@ -1768,8 +1768,8 @@ async function sendSelectedLeadsToAIDealAnalyzer() {
     var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /AI Deal Analyzer/.test(item.textContent || ''); });
     navigate('ai_deal_analyzer', nav || null);
   } catch (e) {
-    bulkActionStatus(e.message || 'Analyzer jobs could not be created.', true);
-    if (typeof toast === 'function') toast(e.message || 'Analyzer jobs could not be created.', 'error');
+    bulkActionStatus('Analyzer job could not be created. Check address/source and try again.', true);
+    if (typeof toast === 'function') toast('Analyzer job could not be created. Check address/source and try again.', 'error');
   }
 }
 

@@ -96,8 +96,18 @@ function writeJobsFile(jobs) {
     jobs: canonicalJobs
   };
   const tmp = `${JOB_STORE_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
-  fs.renameSync(tmp, JOB_STORE_FILE);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
+    fs.renameSync(tmp, JOB_STORE_FILE);
+  } catch (error) {
+    try {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch (_) {}
+    const err = new Error('Analyzer job store could not be updated.');
+    err.status = 500;
+    err.error_category = 'storage_error';
+    throw err;
+  }
   return canonicalJobs;
 }
 
@@ -650,18 +660,60 @@ function persistCompResearchJobState(job, state) {
 }
 
 function publicJob(job) {
+  const sourcePack = sourcePackFromEvidence(job && job.source_evidence);
   return Object.assign({}, job, {
     future_adapters: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
       acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true };
       return acc;
     }, {}),
     normalized_from_text: job.normalized_from_text === true,
-    normalization_note: cleanText(job.normalization_note)
+    normalization_note: cleanText(job.normalization_note),
+    source_evidence_summary: sourcePack ? {
+      source_status: cleanText(sourcePack.source_status),
+      source_url_type: cleanText(sourcePack.source_url_type),
+      property_identity_status: cleanText(sourcePack.property_identity_status),
+      address_candidate: cleanText(sourcePack.address_candidate),
+      next_action: cleanText(sourcePack.next_action)
+    } : null
   });
+}
+
+function validateCreateJobItem(item) {
+  item = item || {};
+  const inputType = classifyInput(item);
+  const leadId = cleanText(item.lead_id || item.leadId || item.id || (item.lead && item.lead.id));
+  const sourceUrlRaw = cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl);
+  const inputValue = cleanText(
+    item.input_value ||
+    item.inputValue ||
+    item.value ||
+    item.url ||
+    item.address ||
+    ''
+  );
+  if (sourceUrlRaw && !isHttpUrl(sourceUrlRaw)) {
+    const err = new Error('Source URL must be a valid public http(s) link.');
+    err.status = 400;
+    err.error_category = 'validation_error';
+    throw err;
+  }
+  if (inputType === 'selected_lead' && !leadId && !(item.lead && item.lead.id)) {
+    const err = new Error('Selected lead id is required.');
+    err.status = 400;
+    err.error_category = 'validation_error';
+    throw err;
+  }
+  if (!inputValue && !sourceUrlRaw && inputType !== 'selected_lead') {
+    const err = new Error('Address or property link is required.');
+    err.status = 400;
+    err.error_category = 'validation_error';
+    throw err;
+  }
 }
 
 function createJob(item) {
   item = item || {};
+  validateCreateJobItem(item);
   const inputType = classifyInput(item);
   const leadId = cleanText(item.lead_id || item.leadId || item.id || (item.lead && item.lead.id));
   const lead = inputType === 'selected_lead' ? findLead(leadId) || item.lead || null : null;
@@ -673,8 +725,11 @@ function createJob(item) {
     item.address ||
     (lead ? fullLeadAddress(lead) || leadAddress(lead) : '')
   );
+  const sourceUrl = isHttpUrl(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
+    ? cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
+    : '';
   const created = nowIso();
-  return {
+  const job = {
     job_id: jobId(),
     created_at: created,
     updated_at: created,
@@ -684,9 +739,7 @@ function createJob(item) {
     normalized_address: '',
     lead_id: lead ? lead.id : leadId,
     lead_ref: cleanText(item.lead_ref || item.leadRef || (lead && (lead.ref_id || lead.reference_id || lead.ref || lead.id))),
-    source_url: isHttpUrl(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
-      ? cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
-      : '',
+    source_url: sourceUrl,
     source_type: cleanText(item.source_type || item.sourceType || item.lead_source_type || item.leadSourceType || item.source || ''),
     scout_context: item.scout_context && typeof item.scout_context === 'object' ? {
       scout_job_id: cleanText(item.scout_context.scout_job_id),
@@ -767,6 +820,26 @@ function createJob(item) {
       return acc;
     }, {})
   };
+  const quality = lead
+    ? addressQuality(lead)
+    : inputType === 'property_link'
+      ? { status: 'partial', label: 'Needs Address Review', normalized_address: '', message: 'Add the property address to analyze this link.' }
+      : addressQuality(inputValue);
+  job.normalized_address = cleanText(quality && quality.normalized_address);
+  try {
+    job.source_evidence = collectSourceEvidence(lead, job);
+  } catch (_) {
+    job.source_evidence = [];
+  }
+  const pack = sourcePackFromEvidence(job.source_evidence);
+  if (pack && cleanText(pack.next_action)) {
+    job.result_summary = cleanText(pack.next_action);
+    job.next_best_action = cleanText(pack.next_action);
+  } else if (quality && cleanText(quality.message)) {
+    job.result_summary = cleanText(quality.message);
+    job.next_best_action = cleanText(quality.message);
+  }
+  return job;
 }
 
 function createJobs(body, options) {
