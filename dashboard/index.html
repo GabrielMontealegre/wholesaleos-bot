@@ -2362,9 +2362,15 @@ async function dealCallUpdateOutcome(dossierId, outcome) {
 
 async function dealCallCopySheet() {
   try {
-    var body = DEAL_CALL_BATCH_IDS.length
-      ? { dossier_ids: DEAL_CALL_BATCH_IDS }
-      : { limit: 20, filter: DEAL_CALL_DOSSIER_FILTER, dallas_only: true, hide_auction: true, hide_research: true, hide_low_value: true, prioritize_wholesale: true };
+    if (!DEAL_CALL_BATCH_IDS.length) {
+      dealCallSelectBatchRows(10, false);
+      if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
+    }
+    if (!DEAL_CALL_BATCH_IDS.length) {
+      dealCallSetStatus('Build a current call batch before copying a call sheet.', true);
+      return;
+    }
+    var body = { dossier_ids: DEAL_CALL_BATCH_IDS };
     var data = await dealCallFetchJson('/api/deal-call-dossiers/call-sheet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2405,45 +2411,184 @@ function dealCallDealIntel(dossier) {
   return (dossier && dossier.deal_intelligence) || {};
 }
 
-function dealCallBuildBatch(size) {
-  size = Math.min(Math.max(parseInt(size, 10) || 10, 10), 20);
+function dealCallBatchOptions() {
   var dallasOnly = !!(document.getElementById('deal-call-batch-dallas') || {}).checked;
   var texasOnly = !!(document.getElementById('deal-call-batch-texas') || {}).checked;
   var includeAuction = !!(document.getElementById('deal-call-batch-include-auction') || {}).checked;
   var includeResearch = !!(document.getElementById('deal-call-batch-include-research') || {}).checked;
   var includeLowValue = !!(document.getElementById('deal-call-batch-include-low-value') || {}).checked;
+  return {
+    dallasOnly: dallasOnly,
+    texasOnly: texasOnly,
+    includeAuction: includeAuction,
+    includeResearch: includeResearch,
+    includeLowValue: includeLowValue
+  };
+}
+
+function dealCallIsWholesaleSafeDossier(dossier, options, seen) {
+  var workflow = dossier.workflow || {};
+  var property = dossier.property || {};
+  var intel = dealCallDealIntel(dossier);
+  var proof = property.source_proof_status || '';
+  var key = dealCallUniqueKey(dossier);
+  if (!property.full_address || /^public source result/i.test(property.full_address)) return false;
+  if (workflow.outcome === 'Bad Lead') return false;
+  if (options.dallasOnly && !dealCallIsDallas(dossier)) return false;
+  if (options.texasOnly && !dealCallIsTexas(dossier)) return false;
+  if (/Cook County|Chicago|Illinois|\bIL\b/i.test([property.full_address, property.county, property.state].join(' ')) && options.dallasOnly) return false;
+  if (/Needs Address Repair|Needs Source Proof|Source\/Address Conflict/i.test(proof)) return false;
+  if (!options.includeAuction && /Auction|Bank-Owned|REO/i.test(intel.deal_type || '')) return false;
+  if (!options.includeResearch && /Research More/i.test(workflow.outcome || '')) return false;
+  if (!options.includeLowValue && /Low-Value|Recent Sale|Comp Candidate/i.test(intel.deal_type || '')) return false;
+  if (/^F:/.test(intel.wholesale_priority || '')) return false;
+  if (seen && seen[key]) return false;
+  if (seen) seen[key] = true;
+  return true;
+}
+
+function dealCallSelectBatchRows(size, showStatus) {
+  size = Math.min(Math.max(parseInt(size, 10) || 10, 10), 20);
+  var options = dealCallBatchOptions();
   var seen = {};
   var rows = (DEAL_CALL_DOSSIERS || []).filter(function(dossier) {
-    var workflow = dossier.workflow || {};
-    var property = dossier.property || {};
-    var intel = dealCallDealIntel(dossier);
-    var proof = property.source_proof_status || '';
-    var key = dealCallUniqueKey(dossier);
-    if (!property.full_address || /^public source result/i.test(property.full_address)) return false;
-    if (workflow.outcome === 'Bad Lead') return false;
-    if (dallasOnly && !dealCallIsDallas(dossier)) return false;
-    if (texasOnly && !dealCallIsTexas(dossier)) return false;
-    if (/Cook County|Chicago|Illinois|\bIL\b/i.test([property.full_address, property.county, property.state].join(' ')) && dallasOnly) return false;
-    if (/Needs Address Repair|Needs Source Proof|Source\/Address Conflict/i.test(proof)) return false;
-    if (!includeAuction && /Auction|Bank-Owned|REO/i.test(intel.deal_type || '')) return false;
-    if (!includeResearch && /Research More/i.test(workflow.outcome || '')) return false;
-    if (!includeLowValue && /Low-Value|Recent Sale|Comp Candidate/i.test(intel.deal_type || '')) return false;
-    if (/^F:/.test(intel.wholesale_priority || '')) return false;
-    if (seen[key]) return false;
-    seen[key] = true;
-    return true;
+    return dealCallIsWholesaleSafeDossier(dossier, options, seen);
   }).sort(function(a, b) {
     return (Number(b.priority_score || 0) - Number(a.priority_score || 0));
   }).slice(0, size);
   DEAL_CALL_BATCH_IDS = rows.map(function(dossier){ return dossier.dossier_id; });
+  if (showStatus) {
+    if (rows.length < 10) {
+      dealCallSetStatus('Only ' + rows.length + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.', true);
+    } else {
+      dealCallSetStatus('Built ' + rows.length + '-dossier work batch.', false);
+    }
+  }
+  return rows;
+}
+
+function dealCallBuildBatch(size) {
+  dealCallSelectBatchRows(size, true);
   if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
-  dealCallSetStatus('Built ' + rows.length + '-dossier work batch.', false);
 }
 
 function dealCallClearBatch() {
   DEAL_CALL_BATCH_IDS = [];
   if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
   dealCallSetStatus('Batch cleared.', false);
+}
+
+function dealCallCardSourceUrl(card) {
+  if (!card) return '';
+  return card.source_url || card.canonical_source_url || (Array.isArray(card.provider_source_urls) && card.provider_source_urls[0]) || '';
+}
+
+function dealCallScoutCardAddress(card) {
+  return String(card && (card.display_address || card.address || card.source_text || '') || '').trim();
+}
+
+function dealCallScoutCardKey(card) {
+  return dealCallScoutCardAddress(card).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function dealCallIsCandidateDossierDuplicate(card, existingKeys) {
+  var key = dealCallScoutCardKey(card);
+  return !!(key && existingKeys[key]);
+}
+
+function dealCallEligibleScoutDossierCard(card, existingKeys, includeAuction) {
+  var address = dealCallScoutCardAddress(card);
+  var source = dealCallCardSourceUrl(card);
+  var status = card && card.status || '';
+  var sourceProof = card && (card.source_evidence_label || card.source_evidence_status || card.source_quality || '') || '';
+  var market = card && (card.market_match || card.market_match_basis || '') || '';
+  var sourceClass = card && (card.source_classification || card.source_type || '') || '';
+  if (!address || /^public source result/i.test(address)) return false;
+  if (!source) return false;
+  if (!/\bDallas\b/i.test(address + ' ' + market) && !/\b752\d{2}\b/.test(address)) return false;
+  if (/Cook County|Chicago|Illinois|\bIL\b|Houston|Harris/i.test(address + ' ' + market)) return false;
+  if (/Needs Address Repair|Needs Source Proof|Support Signal Only|Junk/i.test(status)) return false;
+  if (/generic|homepage|search|category|list_page/i.test(sourceProof + ' ' + sourceClass)) return false;
+  if (!includeAuction && /Auction|Bank-Owned|REO|auction_marketplace/i.test(sourceProof + ' ' + sourceClass + ' ' + source)) return false;
+  if (dealCallIsCandidateDossierDuplicate(card, existingKeys)) return false;
+  return status === 'Call Ready' || status === 'Research Ready';
+}
+
+async function dealCallFindBetterDallasCandidates() {
+  var options = dealCallBatchOptions();
+  var currentRows = dealCallSelectBatchRows(10, false);
+  var missing = Math.max(0, 10 - currentRows.length);
+  if (!missing) {
+    if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
+    dealCallSetStatus('Current wholesale-safe batch already has 10 candidates.', false);
+    return;
+  }
+  try {
+    dealCallSetStatus('Finding better Dallas candidates...', false);
+    var created = await findMeFetchJson('/api/findme-scout/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        market: 'Dallas',
+        location: 'Dallas County, TX',
+        batch_size: 20,
+        strategies: ['fixer', 'price_cut', 'long_dom', 'foreclosure_notice', 'pre_foreclosure'].concat(options.includeAuction ? ['auction_public'] : [])
+      })
+    });
+    var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
+    var job = run.job || {};
+    var existingKeys = {};
+    (DEAL_CALL_DOSSIERS || []).forEach(function(dossier) {
+      var key = dealCallUniqueKey(dossier);
+      if (key) existingKeys[key] = true;
+    });
+    var cards = (Array.isArray(job.cards) ? job.cards : []).filter(function(card) {
+      return dealCallEligibleScoutDossierCard(card, existingKeys, options.includeAuction);
+    }).slice(0, Math.min(missing, 10));
+    var added = 0;
+    var compAttempted = 0;
+    for (var i = 0; i < cards.length; i += 1) {
+      var card = cards[i];
+      var analyzerJobId = '';
+      try {
+        var sent = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(job.job_id) + '/cards/' + encodeURIComponent(card.card_id) + '/analyzer', { method: 'POST' });
+        analyzerJobId = sent && sent.analyzer_job && sent.analyzer_job.job_id || '';
+        if (analyzerJobId) {
+          compAttempted += 1;
+          try {
+            await aiDealFetchJson('/api/ai-deal-analyzer/jobs/' + encodeURIComponent(analyzerJobId) + '/comp-research', { method: 'POST' });
+          } catch (compErr) {
+            // Comp provider can be busy; dossier remains source-backed and valuation locked.
+          }
+          await dealCallCreate({ analyzer_job_id: analyzerJobId });
+        } else {
+          await dealCallCreate({ scout_job_id: job.job_id, scout_card_id: card.card_id });
+        }
+        existingKeys[dealCallScoutCardKey(card)] = true;
+        added += 1;
+      } catch (addErr) {
+        try {
+          await dealCallCreate({ scout_job_id: job.job_id, scout_card_id: card.card_id });
+          existingKeys[dealCallScoutCardKey(card)] = true;
+          added += 1;
+        } catch (fallbackErr) {}
+      }
+    }
+    await dealCallLoadDossiers(true);
+    dealCallSelectBatchRows(10, false);
+    if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
+    if (!added) {
+      var providerMessage = job.provider_message || 'Only ' + currentRows.length + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.';
+      dealCallSetStatus(providerMessage, true);
+    } else {
+      var finalRows = DEAL_CALL_BATCH_IDS.length;
+      var suffix = finalRows < 10 ? ' Only ' + finalRows + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.' : '';
+      dealCallSetStatus('Added ' + added + ' source-backed Dallas candidate' + (added === 1 ? '' : 's') + '. Comp research attempted for ' + compAttempted + '.' + suffix, finalRows < 10);
+    }
+  } catch (e) {
+    if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
+    dealCallSetStatus(e.message || 'Candidate discovery unavailable. Existing source-backed dossiers still usable.', true);
+  }
 }
 
 function commandText(value) {
@@ -2746,6 +2891,7 @@ function renderMorningCallDesk() {
       '<div style="grid-column:1 / -1;border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
         '<button type="button" onclick="dealCallBuildBatch(10)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 10</button>' +
         '<button type="button" onclick="dealCallBuildBatch(20)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 20</button>' +
+        '<button type="button" onclick="dealCallFindBetterDallasCandidates()" style="border:1px solid #047857;background:#ecfdf5;color:#047857;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Find Better Dallas Candidates</button>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-dallas" type="checkbox" checked> Dallas only</label>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-texas" type="checkbox"> Texas</label>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-auction" type="checkbox"> Include Auction/REO Investor Opportunities</label>' +
