@@ -1367,7 +1367,7 @@ app.get('/api/deal-call-dossiers', (req, res) => {
       ok: true,
       dossiers,
       count: dossiers.length,
-      safety: 'Morning Call Desk read only; no production lead mutation'
+      safety: 'Daily Call Pipeline read only; no production lead mutation'
     });
   } catch (err) {
     return res.status(500).json({
