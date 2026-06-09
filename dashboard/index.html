@@ -341,7 +341,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-section">Deals</div>
       <div class="nav-item" onclick="navigate('findme_scout',this)"><span class="nav-icon">FM</span>FindMe Scout</div>
       <div class="nav-item" onclick="navigate('ai_deal_analyzer',this)"><span class="nav-icon">$</span>AI Deal Analyzer</div>
-      <div class="nav-item" onclick="navigate('morning_call_desk',this)"><span class="nav-icon">CD</span>Morning Call Desk</div>
+      <div class="nav-item" onclick="navigate('morning_call_desk',this)"><span class="nav-icon">CD</span>Daily Call Pipeline</div>
       <div class="nav-item" onclick="navigate('deal_analyzer',this)"><span class="nav-icon">$</span>Deal Analyzer</div>
       <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">💼</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
@@ -716,7 +716,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',findme_scout:'FindMe Scout',ai_deal_analyzer:'AI Deal Analyzer',morning_call_desk:'Morning Call Desk',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',findme_scout:'FindMe Scout',ai_deal_analyzer:'AI Deal Analyzer',morning_call_desk:'Daily Call Pipeline',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
   // Auto-init tabs
@@ -1552,7 +1552,7 @@ function renderAIDealAnalyzerCard(job) {
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       (job.status === 'queued' || job.status === 'failed' ? '<button type="button" onclick="aiDealRunJob(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Check Evidence</button>' : '') +
-      '<button type="button" onclick="dealCallCreateFromAnalyzer(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Morning Call Desk</button>' +
+      '<button type="button" onclick="dealCallCreateFromAnalyzer(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Daily Call Pipeline</button>' +
     '</div>' +
   '</div>';
 }
@@ -1937,7 +1937,7 @@ function renderFindMeScoutCard(card, jobId) {
     (card.note ? '<div style="font-size:12px;color:#334155;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:8px"><strong>Note:</strong> ' + findMeSafeText(card.note) + '</div>' : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<button type="button" onclick="findMeSendToAnalyzer(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" ' + (canAnalyze ? '' : 'disabled ') + 'title="' + (canAnalyze ? 'Send this card to AI Deal Analyzer.' : 'Repair address/source evidence before analyzer handoff.') + '" style="border:1px solid #111827;background:' + (canAnalyze ? '#111827' : '#e5e7eb') + ';color:' + (canAnalyze ? '#fff' : '#64748b') + ';border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:' + (canAnalyze ? 'pointer' : 'not-allowed') + '">Send to AI Deal Analyzer</button>' +
-      '<button type="button" onclick="dealCallCreateFromScout(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Morning Call Desk</button>' +
+      '<button type="button" onclick="dealCallCreateFromScout(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Daily Call Pipeline</button>' +
       (card.lead_id ? '<button type="button" onclick="openLeadModal(\'' + findMeAttr(card.lead_id) + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Lead</button>' : '') +
       (sourceUrl ? '<a href="' + findMeAttr(sourceUrl) + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;border:1px solid #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900">Open Source</a>' : '') +
       '<button type="button" onclick="findMeAddNote(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add Note</button>' +
@@ -2279,9 +2279,9 @@ async function dealCallLoadDossiers(silent) {
     DEAL_CALL_DOSSIERS = Array.isArray(data.dossiers) ? data.dossiers : [];
     DEAL_CALL_DOSSIERS_LOADED = true;
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
-    if (!silent) dealCallSetStatus('Morning Call Desk refreshed.', false);
+    if (!silent) dealCallSetStatus('Daily Call Pipeline refreshed.', false);
   } catch (e) {
-    if (!silent) dealCallSetStatus(e.message || 'Could not load Morning Call Desk.', true);
+    if (!silent) dealCallSetStatus(e.message || 'Could not load Daily Call Pipeline.', true);
   }
 }
 
@@ -2303,9 +2303,9 @@ async function dealCallCreateFromAnalyzer(jobId) {
   try {
     await dealCallCreate({ analyzer_job_id: jobId });
     APP.page = 'morning_call_desk';
-    var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /Morning Call Desk/.test(item.textContent || ''); });
+    var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /Daily Call Pipeline/.test(item.textContent || ''); });
     navigate('morning_call_desk', nav || null);
-    dealCallSetStatus('Added to Morning Call Desk.', false);
+    dealCallSetStatus('Added to Daily Call Pipeline.', false);
   } catch (e) {
     dealCallSetStatus(e.message || 'Deal Call Dossier could not be created.', true);
   }
@@ -2316,9 +2316,9 @@ async function dealCallCreateFromScout(jobId, cardId) {
   try {
     await dealCallCreate({ scout_job_id: jobId, scout_card_id: cardId });
     APP.page = 'morning_call_desk';
-    var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /Morning Call Desk/.test(item.textContent || ''); });
+    var nav = Array.from(document.querySelectorAll('.nav-item')).find(function(item){ return /Daily Call Pipeline/.test(item.textContent || ''); });
     navigate('morning_call_desk', nav || null);
-    dealCallSetStatus('Added to Morning Call Desk.', false);
+    dealCallSetStatus('Added to Daily Call Pipeline.', false);
   } catch (e) {
     dealCallSetStatus(e.message || 'Deal Call Dossier could not be created.', true);
   }
@@ -2430,7 +2430,7 @@ function renderMorningCallDesk() {
   var filters = ['', 'Call Today', 'Contact Verified', 'Manual Lookup Needed', 'Source Proof Present', 'Needs Source Proof', 'Needs Address Repair', 'Verified Sold Comps Present', 'ARV Locked', 'Distress Signal Present', 'Follow-Up Due'];
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div><div style="font-size:20px;font-weight:900;color:#111827">Morning Call Desk</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Top call dossiers from Scout, AI Deal Analyzer, saved leads, or pasted property/source proof.</div></div>' +
+      '<div><div style="font-size:20px;font-weight:900;color:#111827">Daily Call Pipeline</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Top call dossiers from Scout, AI Deal Analyzer, saved leads, or pasted property/source proof.</div></div>' +
       '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:430px">No fake owner, phone, comps, ARV, MAO, debt, DOM, tax, or auction facts. Contact lookup stays manual unless explicit source fields exist.</div>' +
     '</div>' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">' +
