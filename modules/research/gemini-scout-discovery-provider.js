@@ -144,9 +144,12 @@ function buildSearchQueryTemplates(job) {
     add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
     add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
     add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
+    add(`site:har.com/homedetail ${terms.city_state} fixer upper house`);
     add(`site:redfin.com ${terms.city_state} fixer upper house`);
     add(`site:realtor.com ${terms.city_state} as is house for sale`);
     add(`site:zillow.com ${terms.city_state} fixer upper house`);
+    add(`site:realtor.com/realestateandhomes-detail ${terms.city_state} investor special`);
+    add(`site:har.com/homedetail ${terms.city_state} as-is house`);
     add(`${terms.city_state} "investor special" house for sale`);
     add(`${terms.city_state} "cash only" house for sale`);
     add(`${terms.city_state} "needs TLC" "for sale"`);
@@ -154,6 +157,8 @@ function buildSearchQueryTemplates(job) {
   if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon')) {
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`site:auction.com ${terms.city_state} foreclosure auction property`);
+    add(`site:auction.com/details ${terms.city_state} auction property`);
+    add(`site:hubzu.com ${terms.city_state} auction property`);
     add(`${terms.city_state} foreclosure auction property`);
     add(`${terms.city_state} public auction house`);
   }
@@ -174,6 +179,7 @@ function buildSearchQueryTemplates(job) {
     add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
     add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
     add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
+    add(`site:har.com/homedetail ${terms.city_state} as-is house`);
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`${terms.county} trustee sale notice property`);
     add(`${terms.county} tax foreclosure property`);
@@ -192,10 +198,10 @@ function buildDiscoveryPrompt(job, requestedCount) {
     `Strategies: ${strategies.join(', ') || 'distressed property opportunities'}.`,
     `Return up to ${count} candidates, ranked strongest to weakest.`,
     '',
-    'Use these search query starting points. Prefer exact property pages over broad result pages:',
+    'Use these search query starting points as a two-pass search plan. Pass A: property/listing pages. Pass B: official/auction/distress sources. Prefer exact property pages over broad result pages:',
     queries.map((query) => `- ${query}`).join('\n'),
     '',
-    'Prefer exact property pages, listing/property URLs, official property notices/documents, and auction property pages.',
+    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, HAR homedetail pages, Realtor detail pages, Redfin /home pages, and Zillow homedetails pages.',
     'Avoid homepages, generic search pages, category pages, broad city pages, blog posts, SEO pages, and pages with no visible address.',
     '',
     'Hard rules:',
@@ -616,6 +622,7 @@ function isGoogleRedirectLikeUrl(url) {
   const hp = hostAndPath(url);
   if (/vertexaisearch\.cloud\.google\.com$/i.test(hp.host) && /grounding-api-redirect/i.test(hp.path)) return true;
   if (/google\.(com|[a-z.]+)$/i.test(hp.host) && /\/url\b/i.test(hp.path)) return true;
+  if (/google\.(com|[a-z.]+)$/i.test(hp.host) && /\/search\b/i.test(hp.path)) return true;
   return false;
 }
 
@@ -641,14 +648,22 @@ function extractRedirectTargetUrl(url) {
   if (!isHttpUrl(text)) return '';
   try {
     const parsed = new URL(text);
-    const keys = ['url', 'u', 'q', 'target', 'redirect', 'dest', 'destination', 'to', 'r'];
+    const keys = ['url', 'u', 'q', 'target', 'redirect', 'dest', 'destination', 'to', 'r', 'adurl'];
     for (const key of keys) {
       const value = parsed.searchParams.get(key);
       if (!value) continue;
-      const decoded = decodeURIComponentSafe(value);
+      const decoded = decodeURIComponentRepeated(value);
       if (isHttpUrl(decoded)) return stripTrackingParams(decoded);
       const nested = decoded.match(/https?:\/\/[^\s"'<>)+\]]+/i);
       if (nested && nested[0]) return stripTrackingParams(nested[0]);
+    }
+    const decodedFull = decodeURIComponentRepeated(text);
+    const nestedFull = decodedFull.match(/https?:\/\/[^\s"'<>)+\]]+/i);
+    if (nestedFull && nestedFull[0] && nestedFull[0] !== text) {
+      const nestedHp = hostAndPath(nestedFull[0]);
+      if (!(nestedHp.host === hostAndPath(text).host && nestedHp.path === hostAndPath(text).path)) {
+        return stripTrackingParams(nestedFull[0]);
+      }
     }
   } catch (error) {
     return '';
@@ -717,6 +732,17 @@ function decodeURIComponentSafe(value) {
   }
 }
 
+function decodeURIComponentRepeated(value, limit) {
+  let text = cleanText(value);
+  const max = Math.max(1, Math.min(parseInt(limit || 4, 10) || 4, 8));
+  for (let i = 0; i < max; i += 1) {
+    const decoded = decodeURIComponentSafe(text);
+    if (decoded === text) break;
+    text = decoded;
+  }
+  return text;
+}
+
 function titleCaseWord(word) {
   const text = cleanText(word);
   if (!text) return '';
@@ -751,6 +777,38 @@ function titleCaseWord(word) {
 
 function titleCaseText(value) {
   return cleanText(value).split(/\s+/).map(titleCaseWord).filter(Boolean).join(' ');
+}
+
+function extractAddressFromSourceText() {
+  const values = Array.from(arguments || []).map((value) => cleanText(value)).filter(Boolean);
+  const haystack = values.join(' ')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!haystack) return null;
+  const match = haystack.match(/\b(?<street>\d{2,7}\s+[A-Za-z0-9.'# -]+?\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop))(?:[,\s]+(?<city>Dallas))(?:[,\s]+(?<state>TX|Texas))?(?:[,\s]+(?<zip>\d{5})(?:-\d{4})?)?\b/i);
+  if (!match || !match.groups) return null;
+  const street = titleCaseText(match.groups.street);
+  const city = titleCaseText(match.groups.city || '');
+  const state = match.groups.state ? 'TX' : '';
+  const zip = match.groups.zip || '';
+  const stateZip = [state, zip].filter(Boolean).join(' ');
+  const normalized = [street, [city, stateZip].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+  if (!street) return null;
+  return {
+    address: street,
+    city,
+    state,
+    zip,
+    normalized_address: normalized,
+    address_extracted_from_source_url: false,
+    property_identity_status: city && (state || zip) ? 'partial' : 'needs_source_repair',
+    property_identity_label: city && (state || zip) ? 'Partial from source text' : 'Needs repair',
+    property_identity_basis: 'source_text',
+    source_evidence_status: 'source_text',
+    source_evidence_label: 'Source text',
+    market_match_basis: normalized
+  };
 }
 
 function normalizeSourceSlug(value) {
@@ -1167,7 +1225,28 @@ function normalizeCandidate(candidate, context) {
   const sourceClassification = classifySourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal);
   const sourceGeneric = sourceClassificationIsGeneric(sourceClassification) || isGenericSourceUrl(sourceUrl);
   const extractedIdentity = extractPropertyIdentityFromSourceUrl(sourceUrl, candidate.source_title || candidate.title || candidate.candidate_title, sourceClassification);
-  const mergedIdentity = Object.assign({}, extractedIdentity, candidate.property_identity || {});
+  const textRescueIdentity = extractAddressFromSourceText(
+    candidate.address,
+    candidate.property_address,
+    candidate.display_address,
+    sourceUrl,
+    candidate.source_title,
+    candidate.title,
+    candidate.candidate_title,
+    candidate.evidence_snippet,
+    candidate.summary,
+    candidate.why_it_might_be_deal,
+    candidate.call_angle
+  );
+  const identityFallback = extractedIdentity && extractedIdentity.normalized_address ? extractedIdentity : (textRescueIdentity || extractedIdentity);
+  const mergedIdentity = Object.assign({}, identityFallback, candidate.property_identity || {});
+  if (!extractedIdentity.address_extracted_from_source_url && textRescueIdentity && textRescueIdentity.normalized_address && !(candidate.property_identity && candidate.property_identity.normalized_address)) {
+    mergedIdentity.address_rescued_from_source_text = true;
+    mergedIdentity.property_identity_status = mergedIdentity.property_identity_status || textRescueIdentity.property_identity_status;
+    mergedIdentity.property_identity_label = mergedIdentity.property_identity_label || textRescueIdentity.property_identity_label;
+    mergedIdentity.property_identity_basis = mergedIdentity.property_identity_basis || textRescueIdentity.property_identity_basis;
+    mergedIdentity.market_match_basis = mergedIdentity.market_match_basis || textRescueIdentity.market_match_basis;
+  }
   const address = cleanText(candidate.address || candidate.property_address || candidate.display_address || mergedIdentity.normalized_address || mergedIdentity.address);
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
@@ -1202,6 +1281,8 @@ function normalizeCandidate(candidate, context) {
   const why = proofText || explanations[0] || 'Gemini found a public source candidate. Verify the source before outreach.';
   const addressNote = mergedIdentity.address_extracted_from_source_url
     ? 'Address extracted from property URL - verify before offer.'
+    : mergedIdentity.address_rescued_from_source_text
+      ? 'Address rescued from source title/snippet - verify before offer.'
     : '';
   const canonicalizationNoteText = canonicalizationNote || (sourceUrlOriginal && sourceUrlOriginal !== sourceUrl
     ? 'Source URL was canonicalized from Gemini/Google grounding result.'
@@ -1487,6 +1568,9 @@ module.exports = {
   isGenericSourceUrl,
   classifySourceType,
   classifySourceUrl,
+  canonicalizeSourceUrl,
+  extractRedirectTargetUrl,
+  extractAddressFromSourceText,
   harvestProviderSources,
   candidateFromHarvestedSource,
   classifyGeminiError

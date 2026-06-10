@@ -2542,9 +2542,29 @@ async function dealCallFindBetterDallasCandidates() {
       var key = dealCallUniqueKey(dossier);
       if (key) existingKeys[key] = true;
     });
-    var cards = (Array.isArray(job.cards) ? job.cards : []).filter(function(card) {
+    var allCards = Array.isArray(job.cards) ? job.cards : [];
+    var summaryCounts = {
+      checked: allCards.length,
+      eligible: 0,
+      sourceProof: 0,
+      addressRepair: 0,
+      duplicate: 0,
+      auctionBlocked: 0,
+      manualReview: 0
+    };
+    allCards.forEach(function(card) {
+      var status = commandText(card.status);
+      var sourceProof = commandText(card.source_evidence_status) + ' ' + commandText(card.source_classification) + ' ' + commandText(card.source_quality);
+      if (status === 'Needs Source Proof') summaryCounts.sourceProof += 1;
+      if (status === 'Needs Address Repair') summaryCounts.addressRepair += 1;
+      if (dealCallIsCandidateDossierDuplicate(card, existingKeys)) summaryCounts.duplicate += 1;
+      if (!options.includeAuction && /Auction|Bank-Owned|REO|auction_marketplace/i.test(sourceProof + ' ' + commandText(card.source_url))) summaryCounts.auctionBlocked += 1;
+    });
+    summaryCounts.manualReview = summaryCounts.sourceProof + summaryCounts.addressRepair;
+    var cards = allCards.filter(function(card) {
       return dealCallEligibleScoutDossierCard(card, existingKeys, options.includeAuction);
     }).slice(0, Math.min(missing, 10));
+    summaryCounts.eligible = cards.length;
     var added = 0;
     var compAttempted = 0;
     for (var i = 0; i < cards.length; i += 1) {
@@ -2578,12 +2598,13 @@ async function dealCallFindBetterDallasCandidates() {
     dealCallSelectBatchRows(10, false);
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
     if (!added) {
-      var providerMessage = job.provider_message || 'Only ' + currentRows.length + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.';
+      var providerMessage = (job.provider_message || 'Only ' + currentRows.length + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.') +
+        ' Scout checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates, ' + summaryCounts.auctionBlocked + ' auction blocked, ' + summaryCounts.manualReview + ' manual review.';
       dealCallSetStatus(providerMessage, true);
     } else {
       var finalRows = DEAL_CALL_BATCH_IDS.length;
       var suffix = finalRows < 10 ? ' Only ' + finalRows + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.' : '';
-      dealCallSetStatus('Added ' + added + ' source-backed Dallas candidate' + (added === 1 ? '' : 's') + '. Comp research attempted for ' + compAttempted + '.' + suffix, finalRows < 10);
+      dealCallSetStatus('Added ' + added + ' source-backed Dallas candidate' + (added === 1 ? '' : 's') + '. Scout checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates. Comp research attempted for ' + compAttempted + '.' + suffix, finalRows < 10);
     }
   } catch (e) {
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
