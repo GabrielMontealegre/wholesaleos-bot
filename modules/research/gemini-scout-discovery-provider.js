@@ -97,6 +97,14 @@ function strategyLabels(strategies) {
     auction_soon: 'auction soon',
     auction_public: 'auction/public auction listings',
     public_auction: 'auction/public auction listings',
+    investor_special: 'investor special',
+    cash_only: 'cash only',
+    fsbo: 'FSBO',
+    failed_listing: 'failed listing / relisted',
+    relisted: 'failed listing / relisted',
+    back_on_market: 'back on market',
+    bank_owned: 'bank-owned / REO',
+    reo: 'bank-owned / REO',
     vacant_absentee: 'vacant/absentee if evidence exists'
   };
   return uniqueList((Array.isArray(strategies) ? strategies : []).map((strategy) => labels[strategy] || cleanText(strategy).replace(/_/g, ' ')));
@@ -154,7 +162,7 @@ function buildSearchQueryTemplates(job) {
     const text = cleanText(query);
     if (text) queries.push(text);
   }
-  if (selected.has('fixer') || selected.has('ugly') || selected.has('as_is')) {
+  if (selected.has('fixer') || selected.has('ugly') || selected.has('as_is') || selected.has('investor_special') || selected.has('cash_only')) {
     add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
     add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
     add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
@@ -168,13 +176,23 @@ function buildSearchQueryTemplates(job) {
     add(`${terms.city_state} "cash only" house for sale`);
     add(`${terms.city_state} "needs TLC" "for sale"`);
   }
-  if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon')) {
+  if (selected.has('fsbo')) {
+    add(`${terms.city_state} "for sale by owner" house`);
+    add(`${terms.city_state} FSBO fixer house`);
+  }
+  if (selected.has('failed_listing') || selected.has('relisted') || selected.has('back_on_market')) {
+    add(`${terms.city_state} "back on market" house`);
+    add(`${terms.city_state} "relisted" "for sale" house`);
+    add(`${terms.city_state} "expired listing" house`);
+  }
+  if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon') || selected.has('bank_owned') || selected.has('reo')) {
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`site:auction.com ${terms.city_state} foreclosure auction property`);
     add(`site:auction.com/details ${terms.city_state} auction property`);
     add(`site:hubzu.com ${terms.city_state} auction property`);
     add(`${terms.city_state} foreclosure auction property`);
     add(`${terms.city_state} public auction house`);
+    add(`${terms.city_state} bank owned REO house`);
   }
   if (selected.has('foreclosure_notice') || selected.has('trustee_notice') || selected.has('pre_foreclosure')) {
     add(`${terms.county} trustee sale notice property`);

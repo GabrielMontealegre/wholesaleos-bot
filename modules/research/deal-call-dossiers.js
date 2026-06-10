@@ -392,10 +392,12 @@ function buildSignals(source, sourceUrl) {
   ].map(cleanText).join(' ');
   [
     ['fixer/as-is', /\b(fixer|as[- ]is|needs tlc|cash only|investor)\b/i],
+    ['cash-only buyer/listing signal', /\bcash only|cash buyer\b/i],
+    ['FSBO signal', /\bfsbo|for sale by owner\b/i],
+    ['failed/relisted/back-on-market signal', /\bfailed listing|expired listing|relisted|back on market\b/i],
     ['auction', /\bauction\b/i],
     ['foreclosure/pre-foreclosure', /\bforeclosure|pre[- ]foreclosure|trustee\b/i],
-    ['price cut', /\bprice cut|price reduced|reduced\b/i],
-    ['public source signal', /https?:\/\//i]
+    ['price cut', /\bprice cut|price reduced|reduced\b/i]
   ].forEach(([name, pattern]) => {
     if (pattern.test(text)) add(name, 'candidate', sourceUrl, ['Verify source evidence before offer'], false);
   });
@@ -1104,9 +1106,13 @@ function sourceFromInput(input) {
         source_url_type: card.source_classification === 'listing_search_page' || card.source_classification === 'auction_search_page' ? 'list_page' : propertyUrlType(cleanText(card.canonical_source_url || card.source_url), cleanText(card.source_title || card.candidate_title)),
         source_status: card.source_url ? 'Found' : 'Missing',
         evidence_role: card.can_send_to_analyzer ? 'source_proof' : 'source_context',
-        property_identity_status: card.status === 'Needs Address Repair' ? 'unresolved' : 'partial',
+        property_identity_status: cleanText(card.property_identity_status) || (card.status === 'Needs Address Repair' ? 'unresolved' : 'partial'),
         address_candidate: cleanText(card.display_address || card.address_or_source_text),
         source_url_address_candidate: cleanText(card.display_address || card.address_or_source_text),
+        city_candidate: cleanText(card.city),
+        state_candidate: cleanText(card.state),
+        zip_candidate: cleanText(card.zip),
+        county: cleanText(card.county),
         next_action: cleanText(card.next_best_action),
         missing_fields: Array.isArray(card.missing_evidence) ? card.missing_evidence : []
       }]

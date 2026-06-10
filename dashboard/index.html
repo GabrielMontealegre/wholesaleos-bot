@@ -1966,6 +1966,8 @@ function renderFindMeScoutCard(card, jobId) {
   var canAnalyze = card.can_send_to_analyzer === true;
   var selected = !!FINDME_SCOUT_SELECTED[card.card_id];
   var blockedReason = findMeCardBlockedReason(card);
+  var topFacts = Array.isArray(card.top_facts) ? card.top_facts : [];
+  var matchedCriteria = Array.isArray(card.matched_criteria) ? card.matched_criteria : [];
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
       '<div style="display:flex;gap:9px;align-items:flex-start;min-width:0"><input type="checkbox" ' + (selected ? 'checked ' : '') + 'onchange="findMeToggleCardSelection(\'' + cardId + '\',this.checked)" style="margin-top:3px;width:16px;height:16px;flex:0 0 auto"><div style="min-width:0"><div style="font-size:16px;font-weight:900;color:#111827;line-height:1.25;word-break:break-word">' + findMeSafeText(card.address_or_source_text || 'Source item needs review') + '</div>' +
@@ -1977,6 +1979,8 @@ function renderFindMeScoutCard(card, jobId) {
       findMePill('Confidence: ' + (card.confidence_level || 'Low'), card.confidence_level === 'High' ? 'good' : 'neutral') +
       findMePill(card.dirty_lead_category || 'Source Repair Needed', card.status === 'Junk/Archive' ? 'bad' : 'neutral') +
       findMePill(card.pipeline_status || 'New', card.pipeline_status === 'Sent to Analyzer' ? 'good' : 'neutral') +
+      (card.lead_bucket || card.acquisition_bucket ? findMePill('Bucket: ' + (card.lead_bucket || card.acquisition_bucket), /Comp-Supported|Criteria-Matched/i.test(card.lead_bucket || card.acquisition_bucket) ? 'good' : /Research|Repair/i.test(card.lead_bucket || card.acquisition_bucket) ? 'warn' : 'bad') : '') +
+      (card.wholesale_priority ? findMePill('Priority: ' + card.wholesale_priority, /^[AB]/.test(card.wholesale_priority) ? 'good' : /^[CD]/.test(card.wholesale_priority) ? 'warn' : 'bad') : '') +
       (card.provider ? findMePill('Provider: ' + card.provider, card.provider_grounding_present ? 'good' : 'warn') : '') +
       (providerUrls.length ? findMePill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
       (card.source_quality ? findMePill('Source: ' + card.source_quality, card.property_specific_source ? 'good' : 'warn') : '') +
@@ -1990,10 +1994,16 @@ function renderFindMeScoutCard(card, jobId) {
     (card.created_from_grounding_url ? '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:8px 9px;font-size:12px;color:#92400e;font-weight:900;line-height:1.45">Created from Gemini source URL<div style="color:#334155;font-weight:800;margin-top:2px">' + findMeSafeText(card.why_card_exists || 'Grounded search returned a public source URL, but not a complete property candidate.') + '</div></div>' : '') +
     (strategyTags.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + strategyTags.map(function(tag){ return findMePill(tag, 'neutral'); }).join('') + '</div>' : '') +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Why this matters</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:3px">' + findMeSafeText(card.why_this_might_be_a_deal || 'Existing evidence needs review.') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;padding:10px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Found because</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:3px">' + findMeSafeText(card.found_because || card.why_this_might_be_a_deal || 'Existing evidence needs review.') + '</div></div>' +
       '<div style="border:1px solid #dbeafe;border-radius:8px;background:#eff6ff;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">What to do next</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:3px">' + findMeSafeText(card.next_best_action || 'Review evidence.') + '</div></div>' +
     '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comp status</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.comp_status || 'Comps missing; ARV/MAO locked.') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Contact status</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.contact_status || 'Contact not verified. Manual lookup needed.') + '</div></div>' +
+    '</div>' +
     '<div style="font-size:12px;color:#334155;line-height:1.45"><strong>Call angle:</strong> ' + findMeSafeText(card.call_angle || 'Verify evidence before calling.') + '</div>' +
+    (matchedCriteria.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + matchedCriteria.map(function(item){ return findMePill('Criteria: ' + item, 'good'); }).join('') + '</div>' : '') +
+    (topFacts.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + topFacts.map(function(item){ return findMePill(item, 'neutral'); }).join('') + '</div>' : '') +
     (qualityNotes.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + qualityNotes.map(function(note){ return findMePill(note, /found|Matches/i.test(note) ? 'good' : 'warn'); }).join('') + '</div>' : '') +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       (signals.length ? signals.map(function(signal){ return findMePill(signal, 'good'); }).join('') : findMePill('No clear distress signal yet', 'warn')) +
@@ -2127,15 +2137,21 @@ function renderFindMeScout() {
   if (!FINDME_SCOUT_LOADED) setTimeout(function(){ findMeLoadJobs(true); }, 0);
   var strategies = [
     ['fixer', 'ugly/as-is/fixer'],
+    ['investor_special', 'investor special'],
+    ['cash_only', 'cash only'],
     ['pre_foreclosure', 'pre-foreclosure'],
     ['foreclosure_notice', 'foreclosure/trustee notice'],
     ['tax_foreclosure', 'tax foreclosure/tax sale'],
     ['tax_delinquent', 'tax delinquent/tax lien'],
     ['price_cut', 'price cut'],
     ['long_dom', 'long DOM / stale listing'],
+    ['fsbo', 'FSBO'],
+    ['failed_listing', 'failed listing / relisted'],
+    ['back_on_market', 'back on market'],
     ['code_violation', 'code violation'],
     ['auction_soon', 'auction soon'],
     ['auction_public', 'Auction / Public Auction Listings'],
+    ['bank_owned', 'REO / bank-owned'],
     ['vacant_absentee', 'vacant/absentee if evidence exists']
   ];
   var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
@@ -2675,10 +2691,12 @@ function acquisitionStrategyControls(prefix) {
   var items = [
     ['fixer', 'As-is / fixer', true],
     ['investor_special', 'Investor special', true],
+    ['cash_only', 'Cash only', true],
     ['price_cut', 'Price reduction', true],
     ['long_dom', 'Long DOM', true],
     ['fsbo', 'FSBO', false],
     ['failed_listing', 'Failed listing / relisted', true],
+    ['back_on_market', 'Back on market', true],
     ['pre_foreclosure', 'Pre-foreclosure public source', true],
     ['code_violation', 'Code violation public source', true],
     ['tax_delinquent', 'Tax delinquent public source', false],
@@ -2722,7 +2740,7 @@ function acquisitionWorkspacePanel(compact) {
       '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(5,minmax(110px,.6fr));gap:8px;align-items:end">' +
-      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Request</div><input id="acq-request-text" value="Get me 20 distressed wholesale candidates in Dallas County" placeholder="Get me 50 distressed wholesale candidates in Dallas County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Acquisition request</div><input id="acq-request-text" value="Find me 20 as-is/fixer, price-reduced, long-DOM candidates in Dallas County" placeholder="Find me 10/20/50 [criteria] in [market]" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">City</div><input id="acq-city" value="Dallas" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">County</div><input id="acq-county" value="Dallas County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">State</div><input id="acq-state" value="TX" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
