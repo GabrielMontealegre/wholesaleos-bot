@@ -7,6 +7,7 @@ const path = require('path');
 const db = require('../../db');
 const aiDealAnalyzerJobs = require('./ai-deal-analyzer-jobs');
 const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider');
+const manualReviewQueue = require('./manual-review-queue');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -166,9 +167,23 @@ function defaultJobInput(body) {
   body = body || {};
   const batch = Number(body.batch_size || body.batchSize || 10);
   const safeBatch = batch === 50 ? 50 : batch === 20 ? 20 : 10;
+  const state = cleanText(body.state || body.market_state || '');
+  const county = cleanText(body.county || body.market_county || '');
+  const city = cleanText(body.city || body.market_city || '');
+  const zip = cleanText(body.zip || body.postal_code || '');
+  const locationParts = [city, county, state || cleanText(body.market), zip].filter(Boolean);
+  const location = cleanText(body.location || locationParts.join(', ') || '');
   return {
-    market: cleanText(body.market || 'Dallas') || 'Dallas',
-    location: cleanText(body.location || body.county || body.city || body.zip || ''),
+    market: cleanText(body.market || state || city || 'Dallas') || 'Dallas',
+    location,
+    state,
+    county,
+    city,
+    zip,
+    include_research: body.include_research !== false,
+    include_auction: body.include_auction === true || body.includeAuction === true,
+    max_provider_calls: Math.min(Math.max(parseInt(body.max_provider_calls || body.maxProviderCalls || 1, 10) || 1, 1), 3),
+    max_comp_attempts: Math.min(Math.max(parseInt(body.max_comp_attempts || body.maxCompAttempts || 0, 10) || 0, 0), 5),
     strategies: normalizeStrategies(body.strategies || body.strategy || ['foreclosure_notice', 'tax_foreclosure', 'code_violation']),
     batch_size: safeBatch
   };
@@ -184,6 +199,14 @@ function createJob(body, options = {}) {
     status: 'queued',
     market: input.market,
     location: input.location,
+    state: input.state,
+    county: input.county,
+    city: input.city,
+    zip: input.zip,
+    include_research: input.include_research,
+    include_auction: input.include_auction,
+    max_provider_calls: input.max_provider_calls,
+    max_comp_attempts: input.max_comp_attempts,
     strategies: input.strategies,
     strategy_labels: input.strategies.map(strategyLabel),
     batch_size: input.batch_size,
@@ -204,6 +227,8 @@ function createJob(body, options = {}) {
       research_ready_count: 0,
       needs_source_proof_count: 0,
       needs_address_repair_count: 0,
+      manual_review_rows_added: 0,
+      manual_review_queue_count: 0,
       warnings: []
     },
     safety: 'operator-created Scout job only; no autonomous ingestion, no production lead mutation',
@@ -318,12 +343,28 @@ function marketMatches(record, market, location) {
   const text = recordText(record);
   const marketText = safeLower(market);
   const loc = safeLower(location);
+  const state = safeLower(record && (record.market_state || record.state || record.property_state || record.situs_state));
+  const county = safeLower(record && (record.market_county || record.county || record.property_county || record.situs_county));
+  const city = safeLower(record && (record.market_city || record.city || record.property_city || record.situs_city));
+  const zip = safeLower(record && (record.zip || record.zipcode || record.postal_code));
+  const recordLocationText = [text, state, county, city, zip].join(' ');
   if (marketText === 'dallas') {
     if (!/\bdallas\b|tx\b|texas\b|75[23]\d{2}/.test(text)) return false;
   } else if (marketText === 'texas') {
     if (!/\btx\b|texas\b|75[0-9]\d{2}/.test(text)) return false;
   }
-  return !loc || text.indexOf(loc) >= 0;
+  if (!loc) return true;
+  const locTokens = loc.split(/[,|]+/).map(cleanText).map((item) => item.toLowerCase()).filter(Boolean);
+  if (!locTokens.length) return true;
+  return locTokens.every((token) => {
+    if (/^\d{5}$/.test(token)) return recordLocationText.indexOf(token) >= 0;
+    if (/^(tx|texas)$/i.test(token)) return /\btx\b|\btexas\b/.test(recordLocationText);
+    if (/county$/i.test(token)) {
+      const countyToken = token.replace(/\s+county$/i, '');
+      return recordLocationText.indexOf(countyToken) >= 0;
+    }
+    return recordLocationText.indexOf(token) >= 0;
+  });
 }
 
 function strategySignals(record, strategies) {
@@ -637,6 +678,9 @@ async function runJob(jobId, options = {}) {
     const cards = dedupeCards(leadCards.concat(candidateCards, analyzerCards, geminiCards))
       .sort((a, b) => cardRank(b) - cardRank(a))
       .slice(0, job.batch_size || MAX_BATCH_SIZE);
+    const manualReview = manualReviewQueue.addScoutBlockers(job, cards);
+    const eligibleCount = cards.filter((card) => card.status === 'Call Ready' || card.status === 'Research Ready').length;
+    const businessPass = eligibleCount > 0 || Number(manualReview.added || 0) > 0 || Number(manualReview.deduped || 0) > 0;
     job = Object.assign({}, job, {
       updated_at: nowIso(),
     status: 'complete',
@@ -655,11 +699,24 @@ async function runJob(jobId, options = {}) {
         cards_from_grounding_urls: providerSummary.cards_from_grounding_urls,
         research_ready_count: providerSummary.research_ready_count,
         needs_source_proof_count: providerSummary.needs_source_proof_count,
-        needs_address_repair_count: providerSummary.needs_address_repair_count
+        needs_address_repair_count: providerSummary.needs_address_repair_count,
+        manual_review_rows_added: manualReview.added,
+        manual_review_rows_deduped: manualReview.deduped,
+        manual_review_queue_count: manualReview.queue_count,
+        business_pass: businessPass,
+        business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
       },
     provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
       provider_message: providerSummary.message || 'Scout used saved leads mode only.',
-      provider_summary: providerSummary,
+      provider_summary: Object.assign({}, providerSummary, {
+        manual_review_rows_added: manualReview.added,
+        manual_review_rows_deduped: manualReview.deduped,
+        manual_review_queue_count: manualReview.queue_count,
+        business_pass: businessPass,
+        business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
+      }),
+      business_pass: businessPass,
+      business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.',
       error: ''
     });
     jobs[idx] = job;
