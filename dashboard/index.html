@@ -1558,9 +1558,68 @@ function renderAIDealAnalyzerCard(job) {
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       (job.status === 'queued' || job.status === 'failed' ? '<button type="button" onclick="aiDealRunJob(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Check Evidence</button>' : '') +
+      '<button type="button" onclick="acquisitionOpenAnalyzerModal(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Detail</button>' +
       '<button type="button" onclick="dealCallCreateFromAnalyzer(\'' + aiDealSafeText(job.job_id || '') + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Daily Call Pipeline</button>' +
     '</div>' +
   '</div>';
+}
+
+function acquisitionOpenAnalyzerModal(jobId) {
+  var job = (AI_DEAL_ANALYZER_JOBS || []).find(function(item){ return item.job_id === jobId; });
+  if (!job) return;
+  var sourcePack = aiDealSourcePack(job);
+  var source = sourcePack.source_url || sourcePack.canonical_source_url || job.source_url || '';
+  var address = aiDealJobTitle(job);
+  var eligibility = aiDealCompResearchEligibility(job);
+  var sourceEvidence = Array.isArray(job.source_evidence) ? job.source_evidence : [];
+  var missing = Array.isArray(job.missing_evidence) ? job.missing_evidence : [];
+  var compBody = aiDealCompResearchSection(job);
+  var body = '<div style="display:flex;flex-direction:column;gap:11px;color:#111827">' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      aiDealStatusPill(aiDealStatusLabel(job.status), aiDealStatusTone(job.status)) +
+      aiDealStatusPill(job.verified_comp_count + ' verified sold comps', Number(job.verified_comp_count || 0) >= 3 ? 'good' : 'warn') +
+      aiDealStatusPill(job.arv_range ? 'ARV draft ready' : 'ARV locked', job.arv_range ? 'good' : 'warn') +
+      aiDealStatusPill(job.mao_range ? 'MAO draft ready' : 'MAO locked', job.mao_range ? 'good' : 'warn') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source URL</div><div style="font-size:12px;font-weight:900;word-break:break-word">' + aiDealSafeText(source || 'Needs source proof') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comps status</div><div style="font-size:12px;font-weight:900">' + aiDealSafeText(job.comp_research_status || 'not_configured') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Contact path</div><div style="font-size:12px;font-weight:900">Contact not verified. Manual lookup needed.</div></div>' +
+    '</div>' +
+    aiDealScoutSection(job) +
+    aiDealSourceSection(sourcePack, sourceEvidence) +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px">' +
+      '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:9px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Why this may be a wholesale deal</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;margin-top:5px">' + aiDealSafeText(job.result_summary || 'Source-backed evidence needs review.') + '</div></div>' +
+      '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px"><div style="font-size:10px;color:#991b1b;font-weight:900;text-transform:uppercase">What is missing before offer</div><div style="font-size:12px;color:#991b1b;font-weight:900;margin-top:5px">' + aiDealSafeText(missing.join(', ') || 'Verified sold comps, repairs, ARV, and MAO evidence.') + '</div></div>' +
+      '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:9px"><div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Best next action</div><div style="font-size:12px;color:#166534;font-weight:900;margin-top:5px">' + aiDealSafeText(job.next_best_action || 'Research evidence and comps.') + '</div></div>' +
+    '</div>' +
+    compBody +
+    '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Evidence Details</summary><div style="font-size:12px;color:#334155;font-weight:800;margin-top:8px">Verified Sold Comps require different property, address, sold price, sold date, source URL, nearby market, similar type, and similar size. Candidate comps, active listings, estimates, and subject evidence do not unlock ARV/MAO.</div></details>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' + acquisitionSourceLinks(address, source) +
+      '<button type="button" onclick="aiDealResearchComps(\'' + aiDealSafeText(jobId) + '\')" ' + (eligibility.eligible ? '' : 'disabled ') + 'title="' + aiDealSafeText(eligibility.message) + '" style="border:1px solid ' + (eligibility.eligible ? '#16a34a' : '#cbd5e1') + ';background:' + (eligibility.eligible ? '#16a34a' : '#f1f5f9') + ';color:' + (eligibility.eligible ? '#fff' : '#64748b') + ';border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:' + (eligibility.eligible ? 'pointer' : 'not-allowed') + '">Research Comps</button>' +
+      '<button type="button" onclick="dealCallCreateFromAnalyzer(\'' + aiDealSafeText(jobId) + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Add to Call Pipeline</button>' +
+      '<button type="button" onclick="acquisitionCopyAnalyzerBrief(\'' + aiDealSafeText(jobId) + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Copy Brief</button>' +
+      '<button type="button" disabled title="Add to call pipeline before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Mark Bad Lead</button>' +
+      '<button type="button" disabled title="Add to call pipeline before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Need Contact Lookup</button>' +
+      '<button type="button" disabled title="Add to call pipeline before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Research More</button>' +
+      '<span style="font-size:11px;color:#64748b;font-weight:800">' + aiDealSafeText(eligibility.message) + '</span>' +
+    '</div>' +
+  '</div>';
+  acquisitionShowModal(address || 'Analyzer detail', body);
+}
+
+function acquisitionCopyAnalyzerBrief(jobId) {
+  var job = (AI_DEAL_ANALYZER_JOBS || []).find(function(item){ return item.job_id === jobId; });
+  if (!job) return;
+  var sourcePack = aiDealSourcePack(job);
+  var source = sourcePack.source_url || sourcePack.canonical_source_url || job.source_url || '';
+  return acquisitionCopyBrief(
+    aiDealJobTitle(job),
+    source,
+    job.result_summary || '',
+    Array.isArray(job.missing_evidence) ? job.missing_evidence.join(', ') : '',
+    job.next_best_action || ''
+  );
 }
 
 function aiDealJobCounts(jobs) {
@@ -1944,6 +2003,7 @@ function renderFindMeScoutCard(card, jobId) {
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<button type="button" onclick="findMeSendToAnalyzer(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" ' + (canAnalyze ? '' : 'disabled ') + 'title="' + (canAnalyze ? 'Send this card to AI Deal Analyzer.' : 'Repair address/source evidence before analyzer handoff.') + '" style="border:1px solid #111827;background:' + (canAnalyze ? '#111827' : '#e5e7eb') + ';color:' + (canAnalyze ? '#fff' : '#64748b') + ';border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:' + (canAnalyze ? 'pointer' : 'not-allowed') + '">Send to AI Deal Analyzer</button>' +
       '<button type="button" onclick="dealCallCreateFromScout(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Daily Call Pipeline</button>' +
+      '<button type="button" onclick="acquisitionOpenScoutCardModal(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Detail</button>' +
       (card.lead_id ? '<button type="button" onclick="openLeadModal(\'' + findMeAttr(card.lead_id) + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Lead</button>' : '') +
       (sourceUrl ? '<a href="' + findMeAttr(sourceUrl) + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;border:1px solid #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900">Open Source</a>' : '') +
       '<button type="button" onclick="findMeAddNote(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add Note</button>' +
@@ -1951,6 +2011,59 @@ function renderFindMeScoutCard(card, jobId) {
       '<button type="button" onclick="findMeUpdateCardStatus(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\',\'Follow-Up\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Move to Follow-Up</button>' +
     '</div>' +
   '</div>';
+}
+
+function acquisitionOpenScoutCardModal(jobId, cardId) {
+  var job = (FINDME_SCOUT_JOBS || []).find(function(item){ return item.job_id === jobId; }) || FINDME_SCOUT_ACTIVE_JOB || {};
+  var card = ((job.cards || [])).find(function(item){ return item.card_id === cardId; });
+  if (!card) return;
+  var source = card.source_url || card.canonical_source_url || (Array.isArray(card.provider_source_urls) ? card.provider_source_urls[0] : '');
+  var address = card.address_or_source_text || card.display_address || card.address || '';
+  var missing = Array.isArray(card.missing_evidence) ? card.missing_evidence : [];
+  var signals = Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [];
+  var body = '<div style="display:flex;flex-direction:column;gap:11px;color:#111827">' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      findMePill(findMeStatusLabel(card.status), findMeStatusTone(card.status)) +
+      findMePill(card.source_quality || 'Source quality not verified', card.property_specific_source ? 'good' : 'warn') +
+      findMePill(card.market_match || 'Market not verified', /Matches/i.test(card.market_match || '') ? 'good' : 'warn') +
+      findMePill(card.can_send_to_analyzer ? 'Analyzer eligible' : 'Analyzer blocked', card.can_send_to_analyzer ? 'good' : 'warn') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source</div><div style="font-size:12px;font-weight:900;word-break:break-word">' + findMeSafeText(source || 'Needs source proof') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Deal type</div><div style="font-size:12px;font-weight:900">' + findMeSafeText(card.lead_source_type || (card.strategy_tags || []).join(', ') || 'Not verified') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Contact path</div><div style="font-size:12px;font-weight:900">Contact not verified. Manual lookup needed.</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px">' +
+      '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:9px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Why this may be a wholesale deal</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;margin-top:5px">' + findMeSafeText(card.why_this_might_be_a_deal || 'Candidate evidence needs review.') + '</div></div>' +
+      '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px"><div style="font-size:10px;color:#991b1b;font-weight:900;text-transform:uppercase">What is missing before calling / offer</div><div style="font-size:12px;color:#991b1b;font-weight:900;margin-top:5px">' + findMeSafeText(missing.join(', ') || 'Verify source, contact, comps, and repairs before offer.') + '</div></div>' +
+      '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:9px"><div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Best next action</div><div style="font-size:12px;color:#166534;font-weight:900;margin-top:5px">' + findMeSafeText(card.next_best_action || 'Research source proof first.') + '</div></div>' +
+    '</div>' +
+    '<div style="font-size:12px;color:#334155;font-weight:800"><strong>Distress signals:</strong> ' + findMeSafeText(signals.join(', ') || 'No verified distress signal yet.') + '</div>' +
+    '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;color:#166534;font-weight:900;font-size:12px;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Property-Specific Script</div>' + findMeSafeText(card.call_angle || 'Verify the public record evidence, then ask about timeline, condition, and seller flexibility.') + '</div>' +
+    '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Evidence Details</summary><div style="font-size:12px;color:#334155;font-weight:800;margin-top:8px">Provider: ' + findMeSafeText(card.provider || 'Saved/local source') + '<br>Source classification: ' + findMeSafeText(card.source_classification || 'Not verified') + '<br>Property identity: ' + findMeSafeText(card.property_identity_status || 'Not verified') + '<br>Comps: locked until verified sold comps.</div></details>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' + acquisitionSourceLinks(address, source) +
+      '<button type="button" onclick="findMeSendToAnalyzer(\'' + findMeAttr(jobId) + '\',\'' + findMeAttr(cardId) + '\')" ' + (card.can_send_to_analyzer ? '' : 'disabled ') + 'style="border:1px solid #111827;background:' + (card.can_send_to_analyzer ? '#111827' : '#e5e7eb') + ';color:' + (card.can_send_to_analyzer ? '#fff' : '#64748b') + ';border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:' + (card.can_send_to_analyzer ? 'pointer' : 'not-allowed') + '">Send to Analyzer</button>' +
+      '<button type="button" onclick="dealCallCreateFromScout(\'' + findMeAttr(jobId) + '\',\'' + findMeAttr(cardId) + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Add to Call Pipeline</button>' +
+      '<button type="button" onclick="acquisitionCopyScoutBrief(\'' + findMeAttr(jobId) + '\',\'' + findMeAttr(cardId) + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Copy Brief</button>' +
+      '<button type="button" disabled title="Create a call dossier before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Mark Bad Lead</button>' +
+      '<button type="button" disabled title="Create a call dossier before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Need Contact Lookup</button>' +
+      '<button type="button" disabled title="Create a call dossier before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Research More</button>' +
+    '</div>' +
+  '</div>';
+  acquisitionShowModal(address || 'Scout candidate', body);
+}
+
+function acquisitionCopyScoutBrief(jobId, cardId) {
+  var job = (FINDME_SCOUT_JOBS || []).find(function(item){ return item.job_id === jobId; }) || FINDME_SCOUT_ACTIVE_JOB || {};
+  var card = ((job.cards || [])).find(function(item){ return item.card_id === cardId; });
+  if (!card) return;
+  return acquisitionCopyBrief(
+    card.address_or_source_text || card.display_address || card.address || '',
+    card.source_url || card.canonical_source_url || '',
+    card.why_this_might_be_a_deal || '',
+    Array.isArray(card.missing_evidence) ? card.missing_evidence.join(', ') : '',
+    card.next_best_action || ''
+  );
 }
 
 function findMeCounts(job) {
@@ -2537,7 +2650,7 @@ function dealCallBatchBlockerSummary(options) {
 }
 
 function dealCallSelectBatchRows(size, showStatus) {
-  size = Math.min(Math.max(parseInt(size, 10) || 10, 10), 20);
+  size = Math.min(Math.max(parseInt(size, 10) || 10, 10), 50);
   var options = dealCallBatchOptions();
   var seen = {};
   var rows = (DEAL_CALL_DOSSIERS || []).filter(function(dossier) {
@@ -2555,6 +2668,121 @@ function dealCallSelectBatchRows(size, showStatus) {
     }
   }
   return rows;
+}
+
+function acquisitionStrategyControls(prefix) {
+  prefix = prefix || 'acq';
+  var items = [
+    ['fixer', 'As-is / fixer', true],
+    ['investor_special', 'Investor special', true],
+    ['price_cut', 'Price reduction', true],
+    ['long_dom', 'Long DOM', true],
+    ['fsbo', 'FSBO', false],
+    ['failed_listing', 'Failed listing / relisted', true],
+    ['pre_foreclosure', 'Pre-foreclosure public source', true],
+    ['code_violation', 'Code violation public source', true],
+    ['tax_delinquent', 'Tax delinquent public source', false],
+    ['auction_public', 'Auction / REO / Bank-owned', false]
+  ];
+  return items.map(function(item) {
+    return '<label style="display:flex;gap:7px;align-items:center;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:7px 8px;font-size:12px;color:#334155;font-weight:800"><input type="checkbox" data-' + prefix + '-strategy="' + item[0] + '"' + (item[2] ? ' checked' : '') + '> ' + dealCallSafeText(item[1]) + '</label>';
+  }).join('');
+}
+
+function acquisitionCheckedStrategies(prefix) {
+  prefix = prefix || 'acq';
+  return Array.from(document.querySelectorAll('[data-' + prefix + '-strategy]:checked')).map(function(input) {
+    return input.getAttribute('data-' + prefix + '-strategy');
+  }).filter(Boolean);
+}
+
+function acquisitionRequestDefaults(text) {
+  text = commandText(text);
+  var count = /\b50\b/.test(text) ? 50 : /\b20\b/.test(text) ? 20 : 10;
+  var city = /\bcharlotte\b/i.test(text) ? 'Charlotte' : /\bhouston\b/i.test(text) ? 'Houston' : /\btampa\b/i.test(text) ? 'Tampa' : 'Dallas';
+  var state = city === 'Charlotte' ? 'NC' : city === 'Tampa' ? 'FL' : 'TX';
+  var county = /\bdallas county\b/i.test(text) ? 'Dallas County' : city === 'Dallas' ? 'Dallas County' : '';
+  return { count: count, city: city, state: state, county: county };
+}
+
+function acquisitionWorkspacePanel(compact) {
+  var verifiedBuyers = (APP.buyers || []).filter(commandIsVerifiedBuyer).length;
+  var activeBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); }).length;
+  var options = typeof dealCallBatchOptions === 'function' ? dealCallBatchOptions() : { marketLabel: 'Dallas County, TX' };
+  var counts = typeof dealCallCountForSummary === 'function' ? dealCallCountForSummary(options) : { wholesaleSafe: 0, manualReview: 0, compReady: 0 };
+  return '<div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px">' +
+    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
+      '<div><div style="font-size:20px;color:#111827;font-weight:900">Acquisition Workspace</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Request source-backed wholesale candidates, review them, analyze evidence, build call batches, then match buyers.</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        dealCallPill('Search / Request Leads', 'good') +
+        dealCallPill('Review Candidates', 'neutral') +
+        dealCallPill('Analyze Deal', 'neutral') +
+        dealCallPill('Contact / Call', 'neutral') +
+        dealCallPill('Match Buyers', 'neutral') +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(5,minmax(110px,.6fr));gap:8px;align-items:end">' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Request</div><input id="acq-request-text" value="Get me 20 distressed wholesale candidates in Dallas County" placeholder="Get me 50 distressed wholesale candidates in Dallas County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">City</div><input id="acq-city" value="Dallas" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">County</div><input id="acq-county" value="Dallas County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">State</div><input id="acq-state" value="TX" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Property type</div><select id="acq-property-type" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option>SFR</option><option>Multifamily</option><option>Land</option><option>Any</option></select></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Count</div><select id="acq-count" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option>10</option><option selected>20</option><option>50</option></select></div>' +
+      '<div style="grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px">' + acquisitionStrategyControls('acq') + '</div>' +
+      '<div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="acquisitionRunRequest()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Find Source-Backed Candidates</button><button type="button" onclick="navigate(\'findme_scout\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Scout</button><button type="button" onclick="navigate(\'morning_call_desk\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Call Pipeline</button><span id="acq-request-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
+      dealCallSummaryBox('Default batch', counts.wholesaleSafe || 0, 'A/B/C, no auction by default.', counts.wholesaleSafe >= 10 ? 'good' : 'warn') +
+      dealCallSummaryBox('Manual review', counts.manualReview || 0, 'Source/address repair rows.', counts.manualReview ? 'warn' : 'neutral') +
+      dealCallSummaryBox('Comp-ready', counts.compReady || 0, '3+ verified sold comps only.', counts.compReady ? 'good' : 'warn') +
+      dealCallSummaryBox('Verified buyers', verifiedBuyers, activeBuyBoxes + ' active buy boxes.', verifiedBuyers ? 'good' : 'warn') +
+    '</div>' +
+    (compact ? '' : '<div style="font-size:12px;color:#475569;font-weight:800;line-height:1.45">Default excludes auction/bank-owned, bad leads, no-address rows, duplicates, wrong market, and generic source pages. Auction/REO stays Investor / Auction Only unless explicitly included.</div>') +
+  '</div>';
+}
+
+async function acquisitionRunRequest() {
+  var text = commandText((document.getElementById('acq-request-text') || {}).value);
+  var defaults = acquisitionRequestDefaults(text);
+  var city = commandText((document.getElementById('acq-city') || {}).value) || defaults.city;
+  var county = commandText((document.getElementById('acq-county') || {}).value) || defaults.county;
+  var state = commandText((document.getElementById('acq-state') || {}).value) || defaults.state;
+  var propertyType = commandText((document.getElementById('acq-property-type') || {}).value) || 'SFR';
+  var count = Number((document.getElementById('acq-count') || {}).value || defaults.count) || defaults.count;
+  var strategies = acquisitionCheckedStrategies('acq');
+  var includeAuction = strategies.indexOf('auction_public') >= 0;
+  var status = document.getElementById('acq-request-status');
+  if (!strategies.length) {
+    if (status) status.textContent = 'Choose at least one source-backed signal.';
+    return;
+  }
+  try {
+    if (status) status.textContent = 'Finding source-backed candidates...';
+    var created = await findMeFetchJson('/api/findme-scout/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        market: city || state || 'Dallas',
+        state: state,
+        county: county,
+        city: city,
+        location: [city, county, state].filter(Boolean).join(', '),
+        batch_size: count === 50 ? 50 : count === 20 ? 20 : 10,
+        property_type: propertyType,
+        include_research: true,
+        include_auction: includeAuction,
+        max_provider_calls: 1,
+        max_comp_attempts: 0,
+        strategies: strategies
+      })
+    });
+    var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
+    FINDME_SCOUT_ACTIVE_JOB = run.job;
+    FINDME_SCOUT_JOBS = [run.job].concat(FINDME_SCOUT_JOBS || []).slice(0, 20);
+    if (status) status.textContent = (run.job.cards || []).length + ' candidates ready in Scout. No leads mutated.';
+  } catch (e) {
+    if (status) status.textContent = e.message || 'Provider/tool unavailable. Verified data only.';
+  }
 }
 
 function dealCallBuildBatch(size) {
@@ -2915,8 +3143,8 @@ function dealCallWholesalePanel(dossier) {
       dealCallPill('Wholesale: ' + (intel.wholesale_feasibility || 'Unknown'), intel.wholesale_feasibility === 'Yes' ? 'good' : 'warn') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">' +
-      '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#1d4ed8">Why it may work</div>' + dealCallSafeText(intel.why_it_may_be_wholesale || 'Not proven as wholesale lead yet.') + '</div>' +
-      '<div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#92400e">Why blocked</div>' + dealCallSafeText(intel.why_it_may_not_be_wholesaleable || 'Verify source, comps, condition, and contact path.') + '</div>' +
+      '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#1d4ed8">Why this may be a wholesale deal</div>' + dealCallSafeText(intel.why_it_may_be_wholesale || 'Not proven as wholesale lead yet.') + '</div>' +
+      '<div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#92400e">Why this may NOT be a wholesale deal</div>' + dealCallSafeText(intel.why_it_may_not_be_wholesaleable || 'Verify source, comps, condition, and contact path.') + '</div>' +
       '<div style="font-size:12px;color:#111827;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#64748b">Repair/condition</div>' + dealCallSafeText(repair.repair_discussion_assumption || 'Unknown') + ' - ' + dealCallSafeText(repair.basis || repair.warning || 'Not a repair estimate.') + '</div>' +
       '<div style="font-size:12px;color:#111827;font-weight:900;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;color:#64748b">Best next action</div>' + dealCallSafeText(intel.best_next_action || 'Research source proof and comps first.') + '</div>' +
     '</div>' +
@@ -2947,12 +3175,12 @@ function dealCallEvidenceWorkbenchPanel(dossier) {
     .slice(0, 10);
   var nextAction = intel.best_next_action || (workflow.outcome === 'Call Today' ? 'Call' : contact.target === 'Manual Lookup Needed' ? 'Contact lookup' : 'Research comps');
   return '<div style="border:1px solid #d1d5db;background:#ffffff;border-radius:8px;padding:10px">' +
-    '<div style="font-size:11px;color:#111827;font-weight:900;text-transform:uppercase;margin-bottom:8px">Evidence Workbench</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px">' +
-      '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:9px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Deal Thesis</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:5px">May work: ' + dealCallSafeText(intel.why_it_may_be_wholesale || 'Not proven yet.') + '<br>May not be ready: ' + dealCallSafeText(intel.why_it_may_not_be_wholesaleable || 'Source, comps, condition, and contact still need proof.') + '</div></div>' +
+      '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:9px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Why this may be a wholesale deal</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(intel.why_it_may_be_wholesale || 'Not proven yet.') + '</div></div>' +
+      '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:9px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Why this may NOT be a wholesale deal</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(intel.why_it_may_not_be_wholesaleable || 'Source, comps, condition, and contact still need proof.') + '</div></div>' +
       '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#334155;font-weight:900;text-transform:uppercase">Real Known Numbers</div><div style="font-size:12px;color:#111827;font-weight:800;line-height:1.45;margin-top:5px">' + dealCallSafeText(realNumbers.join(' | ')) + '</div></div>' +
-      '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px"><div style="font-size:10px;color:#991b1b;font-weight:900;text-transform:uppercase">Missing Numbers</div><div style="font-size:12px;color:#991b1b;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(missing.join(', ')) + '</div></div>' +
-      '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:9px"><div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Next Action</div><div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(nextAction || 'Manual review') + '</div></div>' +
+      '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px"><div style="font-size:10px;color:#991b1b;font-weight:900;text-transform:uppercase">What is missing before calling / offer</div><div style="font-size:12px;color:#991b1b;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(missing.join(', ')) + '</div></div>' +
+      '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:9px"><div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Best next action</div><div style="font-size:12px;color:#166534;font-weight:900;line-height:1.45;margin-top:5px">' + dealCallSafeText(nextAction || 'Manual review') + '</div></div>' +
     '</div>' +
   '</div>';
 }
@@ -2970,7 +3198,142 @@ function dealCallSupportingSourcesPanel(dossier) {
           '<a href="' + dealCallSafeText(url) + '" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;font-weight:900;white-space:nowrap">Open</a>' +
         '</div>';
       }).join('') +
-    '</div></details>';
+  '</div></details>';
+}
+
+function acquisitionSourceLinks(address, source) {
+  var encoded = encodeURIComponent(address || '');
+  var links = [];
+  if (source) links.push('<a href="' + dealCallSafeText(source) + '" target="_blank" rel="noopener noreferrer" style="border:1px solid #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;text-decoration:none">Open Source</a>');
+  if (address) {
+    links.push('<a href="https://www.google.com/maps/search/?api=1&query=' + encoded + '" target="_blank" rel="noopener noreferrer" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;text-decoration:none">Maps</a>');
+    links.push('<a href="https://www.zillow.com/homes/' + encoded + '_rb/" target="_blank" rel="noopener noreferrer" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;text-decoration:none">Zillow</a>');
+    links.push('<a href="https://www.realtor.com/realestateandhomes-search/' + encoded + '" target="_blank" rel="noopener noreferrer" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;text-decoration:none">Realtor</a>');
+    links.push('<a href="https://www.redfin.com/stingray/do/query-location?location=' + encoded + '" target="_blank" rel="noopener noreferrer" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;text-decoration:none">Redfin</a>');
+  }
+  return links.join('');
+}
+
+function acquisitionShowModal(title, body) {
+  var content = document.getElementById('modal-content');
+  if (!content) return;
+  content.innerHTML = '<button class="modal-close" onclick="closeModal()">x</button><div class="modal-title">' + dealCallSafeText(title) + '</div>' + body;
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function acquisitionBriefText(title, source, why, missing, nextAction) {
+  return [
+    'Property: ' + commandText(title || 'Unknown'),
+    'Source: ' + commandText(source || 'Needs source proof'),
+    'Why call/research: ' + commandText(why || 'Not verified yet'),
+    'Missing evidence: ' + commandText(missing || 'Verify source, contact, comps, repairs, ARV, and MAO before offer'),
+    'Next action: ' + commandText(nextAction || 'Research source proof')
+  ].join('\n');
+}
+
+async function acquisitionCopyBrief(title, source, why, missing, nextAction) {
+  var text = acquisitionBriefText(title, source, why, missing, nextAction);
+  try {
+    if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    toast('Brief copied.', 'success');
+  } catch (e) {
+    prompt('Copy brief:', text);
+  }
+}
+
+function acquisitionCopyDossierBrief(dossierId) {
+  var dossier = (DEAL_CALL_DOSSIERS || []).find(function(item){ return item.dossier_id === dossierId; });
+  if (!dossier) return;
+  var property = dossier.property || {};
+  var source = property.source_url || property.canonical_source_url || '';
+  var intel = dealCallDealIntel(dossier);
+  var facts = dossier.source_backed_facts || {};
+  return acquisitionCopyBrief(
+    property.full_address || '',
+    source,
+    intel.why_it_may_be_wholesale || ((dossier.why_this_property_matters || {}).why_now || ''),
+    Array.isArray(facts.missing_fields) ? facts.missing_fields.join(', ') : '',
+    intel.best_next_action || ''
+  );
+}
+
+async function acquisitionSendDossierToAnalyzer(dossierId) {
+  var dossier = (DEAL_CALL_DOSSIERS || []).find(function(item){ return item.dossier_id === dossierId; });
+  if (!dossier) return;
+  var property = dossier.property || {};
+  var source = property.source_url || property.canonical_source_url || '';
+  if (!property.full_address || !source) {
+    toast('Address and source URL required before Analyzer.', 'error');
+    return;
+  }
+  try {
+    var data = await aiDealFetchJson('/api/ai-deal-analyzer/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input_type: 'address_source',
+        input_value: property.full_address,
+        address: property.full_address,
+        source_url: source,
+        source_title: property.source_title || '',
+        source_type: property.source_type || '',
+        scout_context: {
+          provider: 'Deal Call Dossier',
+          source_url: source,
+          why_it_matters: ((dossier.why_this_property_matters || {}).why_now || ''),
+          missing_evidence: ((dossier.source_backed_facts || {}).missing_fields || []),
+          call_angle: ((dossier.call_script || {}).opening_line || '')
+        }
+      })
+    });
+    toast('Analyzer job created.', 'success');
+    AI_DEAL_ANALYZER_JOBS = [data.job].concat(AI_DEAL_ANALYZER_JOBS || []).slice(0, 50);
+  } catch (e) {
+    toast(e.message || 'Analyzer job could not be created.', 'error');
+  }
+}
+
+function acquisitionDossierModalBody(dossier) {
+  var property = dossier.property || {};
+  var contact = dossier.contact || {};
+  var valuation = dossier.valuation || {};
+  var intel = dealCallDealIntel(dossier);
+  var source = property.source_url || property.canonical_source_url || '';
+  var script = dossier.call_script || {};
+  return '<div style="display:flex;flex-direction:column;gap:11px;color:#111827">' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      dealCallPill(intel.wholesale_priority || 'C: Research / Comps First', /^A:/.test(intel.wholesale_priority || '') ? 'good' : /^F:/.test(intel.wholesale_priority || '') ? 'bad' : 'warn') +
+      dealCallPill(intel.deal_type || 'Unknown deal type', /Auction|Bank-Owned|REO/i.test(intel.deal_type || '') ? 'warn' : 'good') +
+      dealCallPill(valuation.valuation_status || 'ARV/MAO locked', valuation.arv_range ? 'good' : 'warn') +
+      dealCallPill(contact.target || 'Need Contact Lookup', dealCallContactTone(contact)) +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">County / State</div><div style="font-size:12px;font-weight:900">' + dealCallSafeText([property.county, property.state].filter(Boolean).join(', ') || 'Not verified') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source URL</div><div style="font-size:12px;font-weight:900;word-break:break-word">' + dealCallSafeText(source || 'Needs source proof') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Buyer match status</div><div style="font-size:12px;font-weight:900">' + dealCallSafeText(commandBuyerMatchesForDossier(dossier).length ? 'Verified buyer match candidates exist' : 'Buyer match limited - valuation not verified') + '</div></div>' +
+    '</div>' +
+    dealCallEvidenceWorkbenchPanel(dossier) +
+    dealCallWholesalePanel(dossier) +
+    dealCallSourceFactsPanel(dossier) +
+    '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Evidence Details</summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">' + dealCallSupportingSourcesPanel(dossier) + dealCallEvidencePanels(dossier) + dealCallNumbersPanel(dossier) + '</div></details>' +
+    commandBuyerMatchPanel(dossier) +
+    '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;color:#166534;font-weight:900;font-size:12px;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Property-Specific Script</div><div>' + dealCallSafeText(script.opening_line || 'Hi, I am calling about ' + (property.full_address || 'this property') + '.') + '</div><div style="margin-top:4px">' + dealCallSafeText(script.why_calling || 'Verify source-backed facts before making claims.') + '</div><div style="margin-top:4px">' + dealCallSafeText([].concat(script.condition_questions || [], script.price_questions || [], script.role_specific_questions || []).slice(0, 7).join(' | ')) + '</div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' + acquisitionSourceLinks(property.full_address || '', source) +
+      '<button type="button" onclick="acquisitionSendDossierToAnalyzer(\'' + dealCallSafeText(dossier.dossier_id || '') + '\')" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Send to Analyzer</button>' +
+      '<button type="button" disabled title="This is already a Deal Call Dossier." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Add to Call Pipeline</button>' +
+      '<button type="button" onclick="acquisitionCopyDossierBrief(\'' + dealCallSafeText(dossier.dossier_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Copy Brief</button>' +
+      '<button type="button" onclick="dealCallUpdateOutcome(\'' + dealCallSafeText(dossier.dossier_id || '') + '\',\'Bad Lead\');closeModal()" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Mark Bad Lead</button>' +
+      '<button type="button" onclick="dealCallUpdateOutcome(\'' + dealCallSafeText(dossier.dossier_id || '') + '\',\'Need Contact Lookup\');closeModal()" style="border:1px solid #92400e;background:#fff;color:#92400e;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Need Contact Lookup</button>' +
+      '<button type="button" onclick="dealCallUpdateOutcome(\'' + dealCallSafeText(dossier.dossier_id || '') + '\',\'Research More\');closeModal()" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Research More</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function acquisitionOpenDossierModal(dossierId) {
+  var dossier = (DEAL_CALL_DOSSIERS || []).find(function(item){ return item.dossier_id === dossierId; });
+  if (!dossier) return;
+  var property = dossier.property || {};
+  acquisitionShowModal(property.full_address || 'Property details', acquisitionDossierModalBody(dossier));
 }
 
 function renderDealCallDossierCard(dossier) {
@@ -2995,7 +3358,7 @@ function renderDealCallDossierCard(dossier) {
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:11px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
       '<div style="min-width:0"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase">Deal Call Dossier</div><div style="font-size:17px;color:#111827;font-weight:900;line-height:1.25;word-break:break-word">' + dealCallSafeText(property.full_address || 'Address needs repair') + '</div><div style="font-size:12px;color:#64748b;margin-top:3px">' + dealCallSafeText(source || 'Needs source proof') + '</div></div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + dealCallPill(workflow.outcome || 'Research More', workflow.outcome === 'Call Today' ? 'good' : workflow.outcome === 'Bad Lead' ? 'bad' : 'neutral') + dealCallPill('Priority ' + (dossier.priority_score || 0), 'neutral') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + dealCallPill(workflow.outcome || 'Research More', workflow.outcome === 'Call Today' ? 'good' : workflow.outcome === 'Bad Lead' ? 'bad' : 'neutral') + dealCallPill('Priority ' + (dossier.priority_score || 0), 'neutral') + '<button type="button" onclick="acquisitionOpenDossierModal(\'' + id + '\')" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:900;cursor:pointer">Open Detail</button></div>' +
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       dealCallPill(intel.deal_type || 'Unknown', /^Wholesale Candidate/i.test(intel.deal_type || '') ? 'good' : /Auction|Bank-Owned|REO/i.test(intel.deal_type || '') ? 'warn' : 'neutral') +
@@ -3015,10 +3378,7 @@ function renderDealCallDossierCard(dossier) {
       '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px"><div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Best call target</div><div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(contact.target || 'Manual Lookup Needed') + '</div><div style="font-size:12px;color:#334155;font-weight:800;margin-top:4px">' + dealCallSafeText(contact.name || contact.phone || contact.email || contact.warning || 'Do manual contact lookup before dialing.') + '</div></div>' +
       '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#92400e;font-weight:900;text-transform:uppercase">Value status</div><div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45;margin-top:4px">' + dealCallSafeText(dealCallValuationText(dossier)) + '</div></div>' +
     '</div>' +
-    dealCallSourceFactsPanel(dossier) +
-    dealCallSupportingSourcesPanel(dossier) +
-    dealCallEvidencePanels(dossier) +
-    dealCallNumbersPanel(dossier) +
+    '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Evidence Details</summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">' + dealCallSourceFactsPanel(dossier) + dealCallSupportingSourcesPanel(dossier) + dealCallEvidencePanels(dossier) + dealCallNumbersPanel(dossier) + '</div></details>' +
     commandBuyerMatchPanel(dossier) +
     '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Signals</div>' + dealCallShortList(signals, 'No verified motivation signal yet') + '</div>' +
     '<details style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><summary style="font-size:11px;color:#334155;font-weight:900;cursor:pointer">Comp / valuation evidence</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">' + compGrid + '</div></details>' +
@@ -3100,6 +3460,7 @@ function renderMorningCallDesk() {
       dealCallSummaryBox('Auction/REO', counts.auction, 'Investor review only unless included.', counts.auction ? 'warn' : 'neutral') +
       dealCallSummaryBox('Comp-ready', counts.compReady, '3+ verified sold comps.', counts.compReady ? 'good' : 'warn') +
     '</div>' +
+    acquisitionWorkspacePanel(true) +
     '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px;font-size:12px;color:#334155;font-weight:900;line-height:1.45">Default Build 10 will not pad junk. If short: ' + blockers.source_proof + ' need source proof, ' + blockers.address_repair + ' need address repair, ' + blockers.auction_reo + ' auction/REO blocked, ' + blockers.comp_only + ' comp-only/low-value blocked, ' + blockers.duplicates + ' duplicates, ' + blockers.wrong_market + ' wrong market.</div>' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">' +
       '<div style="grid-column:1 / -1;border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end">' +
@@ -3116,6 +3477,7 @@ function renderMorningCallDesk() {
       '<div style="grid-column:1 / -1;border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
         '<button type="button" onclick="dealCallBuildBatch(10)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 10</button>' +
         '<button type="button" onclick="dealCallBuildBatch(20)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 20</button>' +
+        '<button type="button" onclick="dealCallBuildBatch(50)" style="border:1px solid #1d4ed8;background:#fff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Build 50</button>' +
         '<button type="button" onclick="dealCallFindBetterMarketCandidates()" style="border:1px solid #047857;background:#ecfdf5;color:#047857;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Find Better Candidates</button>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-auction" type="checkbox"> Include Auction/REO Investor Opportunities</label>' +
         '<label style="font-size:12px;color:#334155;font-weight:900"><input id="deal-call-batch-include-research" type="checkbox"> Include Research More</label>' +
@@ -20390,9 +20752,11 @@ renderDashboard = function() {
       '<div>'+(bm?'<span style="font-size:10px;font-weight:700;color:#0071e3;background:#f0f6ff;padding:2px 6px;border-radius:5px">'+bm+' buyers</span>':'')+'</div></div>';
   }).join('');
   return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">'+
-    '<div><div style="font-size:20px;font-weight:900;color:#111827">Dallas Command Center</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Daily calls first. Raw all-state lead queue stays below.</div></div>'+
+    '<div><div style="font-size:20px;font-weight:900;color:#111827">Acquisition Workspace</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Request leads, review candidates, analyze evidence, call, then match buyers.</div></div>'+
     '<select onchange="commandSetMarket(this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;color:#111827;background:#fff"><option value="Dallas" '+(APP.commandMarket==='Dallas'?'selected':'')+'>Dallas</option><option value="Texas" '+(APP.commandMarket==='Texas'?'selected':'')+'>Texas</option><option value="National" '+(APP.commandMarket==='National'?'selected':'')+'>National</option></select>'+
   '</div>'+
+  acquisitionWorkspacePanel(false)+
+  '<div style="height:14px"></div>'+
   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+
     '<div style="background:#111827;color:#fff;border-radius:8px;padding:14px"><div style="font-size:11px;opacity:.7;margin-bottom:4px">CALL PIPELINE</div><div style="font-size:28px;font-weight:900">'+counts.total+'</div><div style="font-size:11px;opacity:.75">'+APP.commandMarket+' dossiers</div></div>'+
     '<div style="background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:8px;padding:14px"><div style="font-size:11px;font-weight:900;margin-bottom:4px">CALL TODAY</div><div style="font-size:28px;font-weight:900">'+counts.callToday+'</div><div style="font-size:11px;font-weight:800">ready for outreach</div></div>'+
