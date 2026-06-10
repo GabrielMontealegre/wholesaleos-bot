@@ -48,6 +48,14 @@ const STRATEGY_LABELS = {
   auction_soon: 'auction soon',
   auction_public: 'auction/public auction listings',
   public_auction: 'auction/public auction listings',
+  investor_special: 'investor special',
+  cash_only: 'cash only',
+  fsbo: 'FSBO',
+  failed_listing: 'failed listing / relisted',
+  relisted: 'failed listing / relisted',
+  back_on_market: 'back on market',
+  bank_owned: 'bank-owned / REO',
+  reo: 'bank-owned / REO',
   vacant_absentee: 'vacant/absentee if evidence exists',
   vacant: 'vacant/absentee if evidence exists',
   absentee: 'vacant/absentee if evidence exists'
@@ -84,6 +92,48 @@ function pick(obj, keys) {
 
 function isHttpUrl(value) {
   return /^https?:\/\//i.test(cleanText(value));
+}
+
+function sourceDomain(value) {
+  try {
+    return new URL(cleanText(value)).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch (error) {
+    return '';
+  }
+}
+
+function isGenericSourceUrl(value) {
+  const text = cleanText(value);
+  if (!isHttpUrl(text)) return false;
+  try {
+    const parsed = new URL(text);
+    const pathText = decodeURIComponent(parsed.pathname || '').toLowerCase();
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    if (/google\./i.test(host)) return true;
+    if (/\/(search|results|category|for-sale|homes-for-sale|foreclosure-bank-owned-auctions|county|departments|government)\b/i.test(pathText)) return true;
+    if (/\/(foreclosures|sheriff-sales|tax|recording)\.php$/i.test(pathText)) return true;
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+function isPropertySpecificSourceUrl(value) {
+  const text = cleanText(value);
+  if (!isHttpUrl(text) || isGenericSourceUrl(text)) return false;
+  try {
+    const parsed = new URL(text);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const pathText = decodeURIComponent(parsed.pathname || '');
+    if (/realtor\.com$/i.test(host) && /\/realestateandhomes-detail\//i.test(pathText)) return true;
+    if (/redfin\.com$/i.test(host) && /\/home\/\d+/i.test(pathText)) return true;
+    if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(pathText)) return true;
+    if (/har\.com$/i.test(host) && /\/homedetail\//i.test(pathText)) return true;
+    if (/auction\.com$|hubzu\.com$/i.test(host) && /\/(details|detail|property|auction)\//i.test(pathText)) return true;
+    return /\b\d{2,7}\b/.test(pathText) && /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(pathText);
+  } catch (error) {
+    return false;
+  }
 }
 
 function storeDir(filePath = STORE_FILE) {
@@ -381,9 +431,14 @@ function strategySignals(record, strategies) {
     if ((strategy === 'tax_delinquent' || strategy === 'tax_lien') && /\b(tax delin|tax lien|delinquent tax|struck.?off)\b/.test(text)) add(strategy);
     if (strategy === 'price_cut' && /\b(price cut|price reduced|price drop|reduction)\b/.test(text)) add(strategy);
     if ((strategy === 'long_dom' || strategy === 'stale_listing') && /\b(days on market|dom|stale listing|expired listing|failed listing)\b/.test(text)) add(strategy);
+    if (strategy === 'investor_special' && /\b(investor special|investor opportunity|handyman special)\b/.test(text)) add(strategy);
+    if (strategy === 'cash_only' && /\b(cash only|cash buyer|cash offer)\b/.test(text)) add(strategy);
+    if (strategy === 'fsbo' && /\b(fsbo|for sale by owner)\b/.test(text)) add(strategy);
+    if ((strategy === 'failed_listing' || strategy === 'relisted' || strategy === 'back_on_market') && /\b(failed listing|expired listing|relisted|back on market)\b/.test(text)) add(strategy);
     if (strategy === 'code_violation' && /\b(code violation|code compliance|violation|unsafe structure|nuisance)\b/.test(text)) add(strategy);
     if (strategy === 'auction_soon' && /\b(auction|sale date|auction date|opening bid)\b/.test(text)) add(strategy);
     if ((strategy === 'auction_public' || strategy === 'public_auction') && /\b(auction\.com|public auction|auction|opening bid|bid starts|sale date)\b/.test(text)) add(strategy);
+    if ((strategy === 'bank_owned' || strategy === 'reo') && /\b(bank owned|bank-owned|reo|real estate owned)\b/.test(text)) add(strategy);
     if ((strategy === 'vacant_absentee' || strategy === 'vacant' || strategy === 'absentee') && /\b(vacant|abandoned|absentee|non.?owner|out.?of.?state)\b/.test(text)) add(strategy);
   });
   if (!signals.length) {
@@ -406,6 +461,77 @@ function missingEvidenceFor(addressQuality, sourceUrl, signals, sourceType) {
     missing.push('foreclosure/tax sale timing');
   }
   return Array.from(new Set(missing));
+}
+
+function foundBecause(signals, fallback) {
+  const labels = (Array.isArray(signals) ? signals : []).map((signal) => cleanText(signal.label)).filter(Boolean);
+  if (labels.length) return `Matched requested criteria: ${labels.join(', ')}.`;
+  return cleanText(fallback) || 'No requested acquisition criteria matched yet.';
+}
+
+function compStatusFor(record) {
+  const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
+  if (verified >= 3) return '3+ verified sold comps present';
+  if (verified > 0) return `${verified} verified sold comp${verified === 1 ? '' : 's'}; ARV still locked until 3.`;
+  return 'Comps missing; ARV/MAO locked.';
+}
+
+function contactStatusFor(record) {
+  const text = recordText(record);
+  if (/\b(contact not verified|manual lookup)\b/i.test(text)) return 'Contact not verified. Manual lookup needed.';
+  if (/\b(agent_phone|listing_agent_phone|contact_phone|phone|email|contact_email)\b/i.test(text)) return 'Possible contact field present; verify source before use.';
+  return 'Contact not verified. Manual lookup needed.';
+}
+
+function acquisitionBucketFor(status, record) {
+  const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
+  if ((status === 'Call Ready' || status === 'Research Ready') && verified >= 3) return 'Comp-Supported Wholesale Candidates';
+  if (status === 'Call Ready' || status === 'Research Ready') return 'Criteria-Matched Candidates - Comps Missing';
+  if (status === 'Needs Source Proof' || status === 'Needs Address Repair' || status === 'Support Signal Only') return 'Research / Source Repair';
+  return 'Skip / Bad Lead';
+}
+
+function wholesalePriorityFor(status, record) {
+  const bucket = acquisitionBucketFor(status, record);
+  if (bucket === 'Comp-Supported Wholesale Candidates') return 'A';
+  if (status === 'Call Ready') return 'B';
+  if (status === 'Research Ready') return 'C';
+  if (bucket === 'Research / Source Repair') return 'D';
+  return 'F';
+}
+
+function topFactsFor(record, sourceType, signals) {
+  const facts = [];
+  if (sourceType) facts.push(`Source type: ${sourceType}`);
+  (Array.isArray(signals) ? signals : []).slice(0, 3).forEach((signal) => {
+    if (signal && signal.label) facts.push(`Criteria: ${signal.label}`);
+  });
+  const text = recordText(record);
+  if (/\b(as.?is|fixer|needs tlc|cash only|investor special)\b/i.test(text)) facts.push('Visible as-is/fixer language.');
+  if (/\b(price cut|price reduced|price drop|reduction)\b/i.test(text)) facts.push('Visible price-reduction language.');
+  if (/\b(auction|reo|bank.?owned)\b/i.test(text)) facts.push('Auction/REO candidate only.');
+  return facts.slice(0, 5);
+}
+
+function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
+  const status = card.status;
+  const bucket = acquisitionBucketFor(status, record);
+  return Object.assign(card, {
+    acquisition_bucket: bucket,
+    lead_bucket: bucket,
+    wholesale_priority: wholesalePriorityFor(status, record),
+    found_because: foundBecause(signals, card.why_this_might_be_a_deal),
+    matched_criteria: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean),
+    top_facts: topFactsFor(record, sourceType, signals),
+    comp_status: compStatusFor(record),
+    contact_status: contactStatusFor(record),
+    source_domain: sourceDomain(sourceUrl),
+    source_classification: card.source_classification || (isGenericSourceUrl(sourceUrl) ? 'generic_search_source' : isPropertySpecificSourceUrl(sourceUrl) ? 'exact_property_source' : ''),
+    source_quality: card.source_quality || (isPropertySpecificSourceUrl(sourceUrl) ? 'Property-specific public source' : isGenericSourceUrl(sourceUrl) ? 'Generic/list source; needs property proof' : ''),
+    property_specific_source: card.property_specific_source === true || isPropertySpecificSourceUrl(sourceUrl),
+    next_action: card.next_action || card.next_best_action,
+    open_source_url: isHttpUrl(sourceUrl) ? sourceUrl : ''
+  });
 }
 
 function statusFor(record, addressQuality, hasSource, signals) {
@@ -454,7 +580,7 @@ function cardFromLead(lead, job) {
   const sourceType = sourceTypeFrom(lead, 'saved lead');
   const status = statusFor(lead, addressQuality, isHttpUrl(sourceUrl), signals);
   const missing = missingEvidenceFor(addressQuality, sourceUrl, signals, sourceType);
-  return {
+  return decorateAcquisitionCard({
     card_id: hashId('fmc', `lead|${lead.id}|${address}|${sourceUrl}`),
     source_kind: 'saved_lead',
     lead_id: cleanText(lead.id),
@@ -476,7 +602,17 @@ function cardFromLead(lead, job) {
     preview_only: true,
     should_ingest: false,
     created_from: 'existing saved lead'
-  };
+  }, lead, signals, sourceUrl, sourceType);
+}
+
+function candidateHasPropertySpecificProof(candidate, sourceUrl) {
+  if (!isHttpUrl(sourceUrl)) return false;
+  if (isPropertySpecificSourceUrl(sourceUrl)) return true;
+  if (isGenericSourceUrl(sourceUrl)) return false;
+  if (isHttpUrl(pick(candidate, ['source_record_url', 'record_url', 'verification_url', 'source_proof_url']))) return true;
+  if (isHttpUrl(pick(candidate, ['source_pdf_url'])) && cleanText(pick(candidate, ['file_reference', 'file_name', 'page_number', 'row_number']))) return true;
+  if (cleanText(pick(candidate, ['source_record_id', 'source_row_id', 'case_number', 'parcel_id'])) && !/foreclosures\.php|sheriff-sales\.php/i.test(sourceUrl)) return true;
+  return false;
 }
 
 function cardFromCandidate(candidate, job) {
@@ -488,15 +624,20 @@ function cardFromCandidate(candidate, job) {
     ? addressQuality
     : addressQualityFromText(address, candidate.source_proof_text);
   const sourceType = sourceTypeFrom(candidate, 'source candidate');
-  const status = statusFor(candidate, normalizedAddressQuality, isHttpUrl(sourceUrl), signals);
-  const missing = Array.from(new Set([].concat(candidate.missing_evidence || [], missingEvidenceFor(normalizedAddressQuality, sourceUrl, signals, sourceType)).filter(Boolean)));
-  return {
+  const hasPropertyProof = candidateHasPropertySpecificProof(candidate, sourceUrl);
+  const status = statusFor(candidate, normalizedAddressQuality, hasPropertyProof, signals);
+  const missing = Array.from(new Set([]
+    .concat(candidate.missing_evidence || [])
+    .concat(missingEvidenceFor(normalizedAddressQuality, sourceUrl, signals, sourceType))
+    .concat(hasPropertyProof ? [] : ['property-specific source proof'])
+    .filter(Boolean)));
+  return decorateAcquisitionCard({
     card_id: hashId('fmc', `candidate|${candidate.candidate_id || candidate.id}|${address}|${sourceUrl}`),
     source_kind: 'dallas_preview_candidate',
     candidate_id: cleanText(candidate.candidate_id || candidate.id),
     address_or_source_text: address || cleanText(candidate.source_proof_text) || 'Source candidate needs review',
     location: candidateLocation(candidate),
-    source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
+    source_url: hasPropertyProof && isHttpUrl(sourceUrl) ? sourceUrl : (isHttpUrl(sourceUrl) ? sourceUrl : ''),
     lead_source_type: sourceType,
     why_this_might_be_a_deal: signals.length ? `Official source candidate matched ${signals.map((signal) => signal.label).join(', ')}.` : 'Official Dallas preview candidate with evidence to review.',
     distress_motivation_signals: signals.map((signal) => signal.label),
@@ -508,11 +649,17 @@ function cardFromCandidate(candidate, job) {
     dirty_lead_category: dirtyLeadCategory(status),
     pipeline_status: 'New',
     note: '',
-    can_send_to_analyzer: status === 'Call Ready' || status === 'Research Ready',
+    can_send_to_analyzer: hasPropertyProof && (status === 'Call Ready' || status === 'Research Ready'),
+    source_evidence_status: hasPropertyProof ? 'property-specific source proof present' : 'needs property-specific source proof',
+    source_evidence_label: hasPropertyProof ? 'Property-specific source proof' : 'Generic/list source only',
+    property_specific_source: hasPropertyProof,
+    source_classification: hasPropertyProof ? 'exact_property_source' : 'generic_search_source',
+    source_quality: hasPropertyProof ? 'Property-specific public source' : 'Generic/list source; needs property proof',
+    quality_explanations: hasPropertyProof ? ['Property-specific public source found'] : ['Generic listing/search page, not exact property proof'],
     preview_only: true,
     should_ingest: false,
     created_from: 'Dallas preview/source candidate'
-  };
+  }, candidate, signals, sourceUrl, sourceType);
 }
 
 function cardFromAnalyzerJob(analyzerJob, job) {
@@ -526,7 +673,7 @@ function cardFromAnalyzerJob(analyzerJob, job) {
   const addressQuality = addressQualityFromText(address, analyzerJob.input_value);
   const status = statusFor(probe, addressQuality, isHttpUrl(sourceUrl), signals);
   const missing = Array.from(new Set([].concat(analyzerJob.missing_evidence || [], missingEvidenceFor(addressQuality, sourceUrl, signals, analyzerJob.input_type || 'analyzer evidence')).filter(Boolean)));
-  return {
+  return decorateAcquisitionCard({
     card_id: hashId('fmc', `analyzer|${analyzerJob.job_id}|${address}|${sourceUrl}`),
     source_kind: 'ai_deal_analyzer_job',
     analyzer_job_id: cleanText(analyzerJob.job_id),
@@ -549,7 +696,7 @@ function cardFromAnalyzerJob(analyzerJob, job) {
     preview_only: true,
     should_ingest: false,
     created_from: 'existing AI Deal Analyzer evidence'
-  };
+  }, analyzerJob, signals, sourceUrl, 'analyzer evidence');
 }
 
 function dirtyLeadCategory(status) {
