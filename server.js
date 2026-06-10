@@ -15,6 +15,7 @@ const { scoutCompsForLead } = require('./modules/research/comp-scout');
 const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
 const dealCallDossiers = require('./modules/research/deal-call-dossiers');
+const manualReviewQueue = require('./modules/research/manual-review-queue');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -3042,26 +3043,21 @@ app.post('/api/outreach/buyer-intro', async (req, res) => {
 
 app.get('/api/review-queue', (req, res) => {
   try {
-    const dbData = db.readDB();
-    res.json({ queue: dbData.reviewQueue || [], count: (dbData.reviewQueue||[]).length });
+    const queue = manualReviewQueue.readQueue();
+    res.json({ queue, count: queue.length, summary: manualReviewQueue.summary(queue) });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/review-queue/action', (req, res) => {
   try {
     const { id, action } = req.body;
-    const dbData = db.readDB();
-    if (!dbData.reviewQueue) return res.json({ ok: true });
-    const item = dbData.reviewQueue.find(d => d.id === id);
-    if (!item) return res.status(404).json({ error: 'Not found' });
-    dbData.reviewQueue = dbData.reviewQueue.filter(d => d.id !== id);
-    if (action === 'accept') {
-      if (!dbData.leads) dbData.leads = [];
-      dbData.leads.push({ ...item, status: 'New', validationStatus: 'manual_accepted', created: new Date().toISOString().slice(0,10) });
-      db.addNotification('deal', 'Lead accepted from review queue', item.address||'Unknown');
-    }
-    db.writeDB(dbData);
-    res.json({ ok: true, action, remaining: dbData.reviewQueue.length });
+    const status = action === 'accept' || action === 'resolve' ? 'resolved'
+      : action === 'reject' ? 'bad_source'
+        : action === 'reviewed' ? 'reviewed'
+          : 'open';
+    const row = manualReviewQueue.updateStatus(id, status, { action_note: 'Manual review action from operator queue. No lead auto-promotion.' });
+    const queue = manualReviewQueue.readQueue();
+    res.json({ ok: true, action, row, remaining: queue.length, summary: manualReviewQueue.summary(queue), safety: 'Manual review queue does not auto-create production leads.' });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -3232,77 +3228,39 @@ app.post('/api/scraper/deals', async (req, res) => {
 
 // Get review queue
 app.get('/api/review-queue', (req, res) => {
-  const dbData = db.readDB();
-  res.json({ queue: dbData.reviewQueue || [], count: (dbData.reviewQueue||[]).length });
+  const queue = manualReviewQueue.readQueue();
+  res.json({ queue, count: queue.length, summary: manualReviewQueue.summary(queue) });
 });
 
 // Accept a review queue item Ã¢ÂÂ validate + enrich Ã¢ÂÂ add as real lead
 app.post('/api/review-queue/:id/accept', async (req, res) => {
   try {
-    const dbData = db.readDB();
-    const idx = (dbData.reviewQueue||[]).findIndex(r => r.id === req.params.id);
-    if (idx === -1) return res.json({ ok: false, error: 'Not found' });
-    const item = dbData.reviewQueue[idx];
-
-    // Enrich with real data
-    const enriched = await scraper.validateAndEnrichLead(item.address, item.state || '');
-    const classification = scraper.classifyDeal({ ...item, arvEstimate: enriched.arvEstimate });
-
-    const lead = {
-      ...item,
-      id: require('uuid').v4(),
-      arv: enriched.arvEstimate || item.listPrice || 0,
-      offer: Math.round((enriched.arvEstimate || item.listPrice || 0) * 0.65),
-      repairs: Math.round((enriched.arvEstimate || item.listPrice || 0) * 0.10),
-      beds: enriched.beds || item.beds || 0,
-      baths: enriched.baths || item.baths || 0,
-      sqft: enriched.sqft || item.sqft || 0,
-      rentEstimate: enriched.rentEstimate || 0,
-      photoUrl: enriched.photoUrl || '',
-      zillowUrl: enriched.zillowUrl || '',
-      redfinUrl: enriched.redfinUrl || '',
-      streetViewUrl: enriched.streetViewUrl || '',
-      comps: enriched.comps || [],
-      dealType: classification.type,
-      dealTypeReason: classification.reason,
-      dataSource: enriched.dataSource || item.source,
-      verified: enriched.valid,
-      status: 'New Lead',
-      userId: req.body.userId || 'admin',
-      created: new Date().toISOString(),
-    };
-    // Compute fee
-    const spread = lead.arv - lead.offer - lead.repairs;
-    lead.spread = spread;
-    lead.fee_lo = Math.round(spread * 0.35);
-    lead.fee_hi = Math.round(spread * 0.55);
-
-    db.addLead(lead);
-    dbData.reviewQueue.splice(idx, 1);
-    db.writeDB(dbData);
-    db.addNotification('deal', 'Lead accepted from Review Queue', lead.address);
-    res.json({ ok: true, lead });
+    const row = manualReviewQueue.updateStatus(req.params.id, 'resolved', {
+      action_note: 'Resolved from manual review. Create a Deal Call Dossier separately only after source/address proof exists.'
+    });
+    res.json({ ok: true, row, safety: 'No production lead was created or mutated.' });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // Reject a review queue item
 app.post('/api/review-queue/:id/reject', (req, res) => {
   try {
-    const dbData = db.readDB();
-    dbData.reviewQueue = (dbData.reviewQueue||[]).filter(r => r.id !== req.params.id);
-    db.writeDB(dbData);
-    res.json({ ok: true });
+    const row = manualReviewQueue.updateStatus(req.params.id, 'bad_source', {
+      action_note: 'Rejected as bad source. No lead auto-promotion.'
+    });
+    res.json({ ok: true, row });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // Skip (keep in queue for later)
 app.post('/api/review-queue/:id/skip', (req, res) => {
   try {
-    const dbData = db.readDB();
-    const item = (dbData.reviewQueue||[]).find(r => r.id === req.params.id);
-    if (item) { item.skipped = true; item.skippedAt = new Date().toISOString(); }
-    db.writeDB(dbData);
-    res.json({ ok: true });
+    const row = manualReviewQueue.updateStatus(req.params.id, 'reviewed', {
+      skipped: true,
+      skippedAt: new Date().toISOString(),
+      action_note: 'Kept for later manual review.'
+    });
+    res.json({ ok: true, row });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 

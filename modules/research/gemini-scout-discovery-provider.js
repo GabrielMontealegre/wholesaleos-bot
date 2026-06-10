@@ -104,16 +104,29 @@ function strategyLabels(strategies) {
 
 function marketSearchTerms(job) {
   const market = cleanText(job && job.market);
+  const state = cleanText(job && job.state);
+  const county = cleanText(job && job.county);
+  const city = cleanText(job && job.city);
+  const zip = cleanText(job && job.zip);
   const location = cleanText(job && job.location);
-  const base = location || market || 'Dallas County, TX';
-  const cityState = /\bdallas\b/i.test(base) && !/\btx\b|\btexas\b/i.test(base)
-    ? `${base} TX`
-    : base;
+  const base = location || [city, county, state || market, zip].filter(Boolean).join(', ') || market || 'Dallas County, TX';
+  const cityStateSeed = [city || base, state || (/\btexas\b|\btx\b/i.test(base) ? 'TX' : '')].filter(Boolean).join(' ');
+  const cityState = /\bdallas\b/i.test(cityStateSeed) && !/\btx\b|\btexas\b/i.test(cityStateSeed)
+    ? `${cityStateSeed} TX`
+    : cityStateSeed;
   return {
     base,
     city_state: cityState,
-    county: base
+    county: county || base,
+    state,
+    city,
+    zip
   };
+}
+
+function isTexasMarket(job, terms) {
+  const text = [job && job.market, job && job.location, job && job.state, terms && terms.base, terms && terms.city_state].map(cleanText).join(' ');
+  return /\bTX\b|\bTexas\b|\bDallas\b/i.test(text);
 }
 
 function marketListingPath(job, site) {
@@ -135,6 +148,7 @@ function marketListingPath(job, site) {
 function buildSearchQueryTemplates(job) {
   const terms = marketSearchTerms(job);
   const selected = new Set(Array.isArray(job && job.strategies) ? job.strategies : []);
+  const texasMarket = isTexasMarket(job, terms);
   const queries = [];
   function add(query) {
     const text = cleanText(query);
@@ -144,12 +158,12 @@ function buildSearchQueryTemplates(job) {
     add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
     add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
     add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
-    add(`site:har.com/homedetail ${terms.city_state} fixer upper house`);
+    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} fixer upper house`);
     add(`site:redfin.com ${terms.city_state} fixer upper house`);
     add(`site:realtor.com ${terms.city_state} as is house for sale`);
     add(`site:zillow.com ${terms.city_state} fixer upper house`);
     add(`site:realtor.com/realestateandhomes-detail ${terms.city_state} investor special`);
-    add(`site:har.com/homedetail ${terms.city_state} as-is house`);
+    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} as-is house`);
     add(`${terms.city_state} "investor special" house for sale`);
     add(`${terms.city_state} "cash only" house for sale`);
     add(`${terms.city_state} "needs TLC" "for sale"`);
@@ -179,7 +193,7 @@ function buildSearchQueryTemplates(job) {
     add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
     add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
     add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
-    add(`site:har.com/homedetail ${terms.city_state} as-is house`);
+    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} as-is house`);
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`${terms.county} trustee sale notice property`);
     add(`${terms.county} tax foreclosure property`);
@@ -201,7 +215,7 @@ function buildDiscoveryPrompt(job, requestedCount) {
     'Use these search query starting points as a two-pass search plan. Pass A: property/listing pages. Pass B: official/auction/distress sources. Prefer exact property pages over broad result pages:',
     queries.map((query) => `- ${query}`).join('\n'),
     '',
-    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, HAR homedetail pages, Realtor detail pages, Redfin /home pages, and Zillow homedetails pages.',
+    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, Realtor detail pages, Redfin /home pages, Zillow homedetails pages, and HAR homedetail pages only for Texas markets.',
     'Avoid homepages, generic search pages, category pages, broad city pages, blog posts, SEO pages, and pages with no visible address.',
     '',
     'Hard rules:',
