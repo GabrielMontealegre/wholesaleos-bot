@@ -102,6 +102,48 @@ function sourceDomain(value) {
   }
 }
 
+function isRejectedVisibleSource(record, sourceUrl) {
+  const domain = sourceDomain(sourceUrl);
+  const text = `${recordText(record)} ${cleanText(sourceUrl)}`.toLowerCase();
+  if (!isHttpUrl(sourceUrl)) return true;
+  if (/foreclosure\.com$/i.test(domain)) return true;
+  if (/(dallasopendata|opendata|socrata|arcgis)\b/i.test(text)) return true;
+  if (/\b(archive|archived|dataset|about this dataset|open data|data portal)\b/i.test(text)) return true;
+  if (/\b(code violation|code compliance|violations dataset|public records dataset)\b/i.test(text)) return true;
+  if (/\b(bank owned|bank-owned|reo|real estate owned)\b/i.test(text)) return true;
+  return false;
+}
+
+function hasCurrentListingPortalSource(sourceUrl) {
+  const domain = sourceDomain(sourceUrl);
+  return /(redfin|realtor|zillow|har|fsbo|homes)\.com$/i.test(domain) && isPropertySpecificSourceUrl(sourceUrl);
+}
+
+function hasAllowedPropertySpecificSource(record, sourceUrl) {
+  if (!isHttpUrl(sourceUrl) || isGenericSourceUrl(sourceUrl) || isRejectedVisibleSource(record, sourceUrl)) return false;
+  if (hasCurrentListingPortalSource(sourceUrl)) return true;
+  if (isPropertySpecificSourceUrl(sourceUrl)) {
+    const domain = sourceDomain(sourceUrl);
+    if (/(auction|realauction|hubzu)\.com$/i.test(domain)) return true;
+    if (/\.gov$|county|clerk|sheriff|tax/i.test(domain)) return true;
+  }
+  return false;
+}
+
+function visibleDealFinderGate(record, card, sourceUrl, signals) {
+  const address = cleanText(card && (card.address_or_source_text || card.display_address));
+  const source = cleanText(sourceUrl || card && (card.open_source_url || card.source_url || card.canonical_source_url));
+  const sourceOk = hasAllowedPropertySpecificSource(record, source);
+  const addressOk = addressQualityFromText(address, recordText(record)) === 'valid';
+  const criteriaOk = Array.isArray(signals) && signals.length > 0;
+  return {
+    ok: sourceOk && addressOk && criteriaOk,
+    sourceOk,
+    addressOk,
+    criteriaOk
+  };
+}
+
 function isGenericSourceUrl(value) {
   const text = cleanText(value);
   if (!isHttpUrl(text)) return false;
@@ -129,7 +171,7 @@ function isPropertySpecificSourceUrl(value) {
     if (/redfin\.com$/i.test(host) && /\/home\/\d+/i.test(pathText)) return true;
     if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(pathText)) return true;
     if (/har\.com$/i.test(host) && /\/homedetail\//i.test(pathText)) return true;
-    if (/auction\.com$|hubzu\.com$/i.test(host) && /\/(details|detail|property|auction)\//i.test(pathText)) return true;
+    if (/auction\.com$|realauction\.com$|hubzu\.com$/i.test(host) && /\/(details|detail|property|auction)\//i.test(pathText)) return true;
     return /\b\d{2,7}\b/.test(pathText) && /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(pathText);
   } catch (error) {
     return false;
@@ -234,7 +276,7 @@ function defaultJobInput(body) {
     include_auction: body.include_auction === true || body.includeAuction === true,
     max_provider_calls: Math.min(Math.max(parseInt(body.max_provider_calls || body.maxProviderCalls || 1, 10) || 1, 1), 3),
     max_comp_attempts: Math.min(Math.max(parseInt(body.max_comp_attempts || body.maxCompAttempts || 0, 10) || 0, 0), 5),
-    strategies: normalizeStrategies(body.strategies || body.strategy || ['foreclosure_notice', 'tax_foreclosure', 'code_violation']),
+    strategies: normalizeStrategies(body.strategies || body.strategy || ['fixer', 'as_is', 'investor_special', 'cash_only', 'price_cut', 'long_dom', 'failed_listing', 'relisted', 'back_on_market', 'fsbo', 'pre_foreclosure']),
     batch_size: safeBatch
   };
 }
@@ -485,17 +527,19 @@ function contactStatusFor(record) {
   return 'Contact not verified. Manual lookup needed.';
 }
 
-function acquisitionBucketFor(status, record) {
+function acquisitionBucketFor(status, record, card, signals, sourceUrl) {
   const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
   const candidate = Number(record && (record.candidate_comp_count || record.candidate_sold_comps_count) || 0) || 0;
-  if ((status === 'Call Ready' || status === 'Research Ready') && (verified > 0 || candidate > 0)) return 'Has Comps';
-  if (status === 'Call Ready' || status === 'Research Ready') return 'Needs Comps';
+  const visibleGate = visibleDealFinderGate(record, card || {}, sourceUrl || card && card.source_url, signals || []);
+  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok && (verified > 0 || candidate > 0)) return 'Has Comps';
+  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok) return 'Needs Comps';
+  if ((status === 'Call Ready' || status === 'Research Ready') && !visibleGate.ok) return 'Research / Source Repair';
   if (status === 'Needs Source Proof' || status === 'Needs Address Repair' || status === 'Support Signal Only') return 'Research / Source Repair';
   return 'Skip / Bad Lead';
 }
 
-function wholesalePriorityFor(status, record) {
-  const bucket = acquisitionBucketFor(status, record);
+function wholesalePriorityFor(status, record, card, signals, sourceUrl) {
+  const bucket = acquisitionBucketFor(status, record, card, signals, sourceUrl);
   if (bucket === 'Has Comps') return 'A';
   if (status === 'Call Ready') return 'B';
   if (status === 'Research Ready') return 'C';
@@ -518,11 +562,18 @@ function topFactsFor(record, sourceType, signals) {
 
 function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
   const status = card.status;
-  const bucket = acquisitionBucketFor(status, record);
+  const visibleGate = visibleDealFinderGate(record, card, sourceUrl, signals);
+  const bucket = acquisitionBucketFor(status, record, card, signals, sourceUrl);
+  const sourceRepairReasons = []
+    .concat(visibleGate.sourceOk ? [] : ['current property-specific listing/source URL'])
+    .concat(visibleGate.addressOk ? [] : ['full usable property address'])
+    .concat(visibleGate.criteriaOk ? [] : ['matched wholesale listing criteria']);
   return Object.assign(card, {
     acquisition_bucket: bucket,
     lead_bucket: bucket,
-    wholesale_priority: wholesalePriorityFor(status, record),
+    visible_in_deal_finder_main: visibleGate.ok,
+    filtered_from_main_reason: visibleGate.ok ? '' : sourceRepairReasons.join(', '),
+    wholesale_priority: wholesalePriorityFor(status, record, card, signals, sourceUrl),
     found_because: foundBecause(signals, card.why_this_might_be_a_deal),
     matched_criteria: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean),
     top_facts: topFactsFor(record, sourceType, signals),
@@ -533,7 +584,8 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
     source_quality: card.source_quality || (isPropertySpecificSourceUrl(sourceUrl) ? 'Property-specific public source' : isGenericSourceUrl(sourceUrl) ? 'Generic/list source; needs property proof' : ''),
     property_specific_source: card.property_specific_source === true || isPropertySpecificSourceUrl(sourceUrl),
     next_action: card.next_action || card.next_best_action,
-    open_source_url: isHttpUrl(sourceUrl) ? sourceUrl : ''
+    open_source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
+    can_send_to_analyzer: card.can_send_to_analyzer === true && visibleGate.ok
   });
 }
 
@@ -1070,5 +1122,8 @@ module.exports = {
   sendCardsToAnalyzer,
   addressQualityFromText,
   strategySignals,
-  dirtyLeadCategory
+  dirtyLeadCategory,
+  acquisitionBucketFor,
+  hasAllowedPropertySpecificSource,
+  visibleDealFinderGate
 };

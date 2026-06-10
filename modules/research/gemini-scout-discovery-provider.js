@@ -159,21 +159,21 @@ function buildSearchQueryTemplates(job) {
   const terms = marketSearchTerms(job);
   const selected = new Set(Array.isArray(job && job.strategies) ? job.strategies : []);
   const texasMarket = isTexasMarket(job, terms);
+  const auctionEnabled = job && job.include_auction === true;
   const queries = [];
   function add(query) {
     const text = cleanText(query);
     if (text) queries.push(text);
   }
   if (selected.has('fixer') || selected.has('ugly') || selected.has('as_is') || selected.has('investor_special') || selected.has('cash_only')) {
-    add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
-    add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
-    add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
-    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} fixer upper house`);
-    add(`site:redfin.com ${terms.city_state} fixer upper house`);
-    add(`site:realtor.com ${terms.city_state} as is house for sale`);
-    add(`site:zillow.com ${terms.city_state} fixer upper house`);
-    add(`site:realtor.com/realestateandhomes-detail ${terms.city_state} investor special`);
-    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} as-is house`);
+    add(`${terms.city_state} as-is investor special site:redfin.com`);
+    add(`${terms.city_state} fixer cash only site:redfin.com`);
+    add(`${terms.city_state} price reduced as-is site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} investor special site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} as-is fixer site:zillow.com/homedetails`);
+    add(`${terms.city_state} investor special site:zillow.com/homedetails`);
+    if (texasMarket) add(`${terms.city_state} as-is investor site:har.com/homedetail`);
+    if (texasMarket) add(`${terms.city_state} price reduced fixer site:har.com/homedetail`);
     add(`${terms.city_state} "investor special" house for sale`);
     add(`${terms.city_state} "cash only" house for sale`);
     add(`${terms.city_state} "needs TLC" "for sale"`);
@@ -187,7 +187,7 @@ function buildSearchQueryTemplates(job) {
     add(`${terms.city_state} "relisted" "for sale" house`);
     add(`${terms.city_state} "expired listing" house`);
   }
-  if (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon') || selected.has('bank_owned') || selected.has('reo')) {
+  if (auctionEnabled && (selected.has('auction_public') || selected.has('public_auction') || selected.has('auction_soon') || selected.has('bank_owned') || selected.has('reo'))) {
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`site:auction.com ${terms.city_state} foreclosure auction property`);
     add(`site:auction.com/details ${terms.city_state} auction property`);
@@ -208,19 +208,26 @@ function buildSearchQueryTemplates(job) {
     add(`${terms.county} struck off resale property`);
   }
   if (selected.has('price_cut') || selected.has('long_dom') || selected.has('stale_listing')) {
+    add(`${terms.city_state} price reduced fixer site:redfin.com`);
+    add(`${terms.city_state} long DOM as-is site:redfin.com`);
+    add(`${terms.city_state} price reduced as-is site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} long DOM fixer site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} price reduced fixer site:zillow.com/homedetails`);
+    if (texasMarket) add(`${terms.city_state} price reduced fixer site:har.com/homedetail`);
     add(`${terms.city_state} "as-is" "price reduced" house`);
     add(`${terms.city_state} "motivated seller" house for sale`);
   }
   if (!queries.length) {
-    add(`${marketListingPath(job, 'redfin')} ${terms.city_state} fixer upper house`);
-    add(`${marketListingPath(job, 'realtor')} ${terms.city_state} as-is`);
-    add(`${marketListingPath(job, 'zillow')} ${terms.city_state} fixer upper`);
-    if (texasMarket) add(`site:har.com/homedetail ${terms.city_state} as-is house`);
-    add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
-    add(`${terms.county} trustee sale notice property`);
-    add(`${terms.county} tax foreclosure property`);
+    add(`${terms.city_state} as-is investor special site:redfin.com`);
+    add(`${terms.city_state} fixer cash only site:redfin.com`);
+    add(`${terms.city_state} price reduced as-is site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} investor special site:realtor.com/realestateandhomes-detail`);
+    add(`${terms.city_state} as-is fixer site:zillow.com/homedetails`);
+    add(`${terms.city_state} investor special site:zillow.com/homedetails`);
+    if (texasMarket) add(`${terms.city_state} as-is investor site:har.com/homedetail`);
+    if (texasMarket) add(`${terms.city_state} price reduced fixer site:har.com/homedetail`);
   }
-  return uniqueList(queries).slice(0, 12);
+  return uniqueList(queries).slice(0, 16);
 }
 
 function buildDiscoveryPrompt(job, requestedCount) {
@@ -234,19 +241,22 @@ function buildDiscoveryPrompt(job, requestedCount) {
     `Strategies: ${strategies.join(', ') || 'distressed property opportunities'}.`,
     `Return up to ${count} candidates, ranked strongest to weakest.`,
     '',
-    'Use these search query starting points as a two-pass search plan. Pass A: property/listing pages. Pass B: official/auction/distress sources. Prefer exact property pages over broad result pages:',
+    'Use these search query starting points as a listing-portal-first search plan. Search current property-specific listing pages first. Use official/code/tax public records only when they are current, full-address, and property-specific:',
     queries.map((query) => `- ${query}`).join('\n'),
     '',
-    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, RealAuction public property pages, Realtor detail pages, Redfin /home pages, Zillow homedetails pages, and HAR homedetail pages only for Texas markets.',
-    'Avoid homepages, generic search pages, category pages, broad city pages, blog posts, SEO pages, and pages with no visible address.',
+    'Priority source order: Redfin property pages, Realtor property pages, publicly accessible Zillow homedetails pages, HAR homedetail pages for Texas, public FSBO/listing detail pages, then auction/pre-auction only when explicitly enabled.',
+    'Avoid stale archive datasets, Dallas OpenData archive/about pages, generic code datasets, homepages, search/category pages, broad city pages, blog posts, SEO pages, intersections, incomplete addresses, sold-only pages as lead sources, and pages with no visible address.',
     '',
     'Hard rules:',
     '- Return only candidate properties or property-specific source pages with source URLs.',
+    '- Return current active or recently active residential listing pages when possible.',
+    '- Every returned lead candidate must have a full property address, property-specific source URL, and matched wholesale criteria.',
     '- Do not invent addresses, owner names, debt, DOM, auction amounts, tax amounts, sold prices, listing history, phone, email, ARV, or MAO.',
     '- If a field is not visible from the public source, set it to an empty string or say not verified.',
     '- Do not use Foreclosure.com as a source.',
     '- Do not use login, paywall, CAPTCHA, or subscription-only pages.',
     '- Auction.com, RealAuction, Hubzu, or marketplace pages are candidate discovery only, not official proof.',
+    '- Exclude bank-owned / REO unless auction or REO is explicitly requested.',
     '- Equity, hedge fund demand, ARV, and MAO are not verified here.',
     '',
     'Respond as JSON only with this shape:',
