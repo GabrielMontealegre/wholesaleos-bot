@@ -1379,7 +1379,7 @@ app.get('/api/deal-call-dossiers', (req, res) => {
   } catch (err) {
     return res.status(500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to load Deal Call Dossiers'
+      error: err && err.message ? err.message : 'Failed to load Deal Details'
     });
   }
 });
@@ -1396,7 +1396,7 @@ app.post('/api/deal-call-dossiers', (req, res) => {
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to create Deal Call Dossier'
+      error: err && err.message ? err.message : 'Failed to create Deal Details'
     });
   }
 });
@@ -1421,12 +1421,12 @@ app.post('/api/deal-call-dossiers/call-sheet', (req, res) => {
 app.get('/api/deal-call-dossiers/:dossierId', (req, res) => {
   try {
     const dossier = dealCallDossiers.getDossier(req.params.dossierId);
-    if (!dossier) return res.status(404).json({ ok: false, error: 'Deal Call Dossier not found' });
+    if (!dossier) return res.status(404).json({ ok: false, error: 'Deal Details not found' });
     return res.json({ ok: true, dossier });
   } catch (err) {
     return res.status(500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to load Deal Call Dossier'
+      error: err && err.message ? err.message : 'Failed to load Deal Details'
     });
   }
 });
@@ -1442,7 +1442,7 @@ app.post('/api/deal-call-dossiers/:dossierId/outcome', (req, res) => {
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to update Deal Call Dossier'
+      error: err && err.message ? err.message : 'Failed to update Deal Details'
     });
   }
 });
@@ -1453,12 +1453,12 @@ app.post('/api/findme-scout/jobs', (req, res) => {
     return res.status(201).json({
       ok: true,
       job,
-      safety: 'operator-created Scout job only; no scraping, no autonomous ingestion, no production lead mutation'
+      safety: 'operator-created Deal Finder job only; no scraping, no autonomous ingestion, no production lead mutation'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to create Scout job'
+      error: err && err.message ? err.message : 'Failed to create Deal Finder job'
     });
   }
 });
@@ -1470,7 +1470,7 @@ app.get('/api/findme-scout/jobs', (req, res) => {
   } catch (err) {
     return res.status(500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to load Scout jobs'
+      error: err && err.message ? err.message : 'Failed to load Deal Finder jobs'
     });
   }
 });
@@ -1478,12 +1478,12 @@ app.get('/api/findme-scout/jobs', (req, res) => {
 app.get('/api/findme-scout/jobs/:jobId', (req, res) => {
   try {
     const job = findMeScoutJobs.getJob(req.params.jobId);
-    if (!job) return res.status(404).json({ ok: false, error: 'Scout job not found' });
+    if (!job) return res.status(404).json({ ok: false, error: 'Deal Finder job not found' });
     return res.json({ ok: true, job });
   } catch (err) {
     return res.status(500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to load Scout job'
+      error: err && err.message ? err.message : 'Failed to load Deal Finder job'
     });
   }
 });
@@ -1494,12 +1494,12 @@ app.post('/api/findme-scout/jobs/:jobId/run', async (req, res) => {
     return res.json({
       ok: true,
       job,
-      safety: 'operator-triggered Scout run only; no autonomous ingestion, no lead mutation, no valuation unlock'
+      safety: 'operator-triggered Deal Finder run only; no autonomous ingestion, no lead mutation, no valuation unlock'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to run Scout job'
+      error: err && err.message ? err.message : 'Failed to run Deal Finder job'
     });
   }
 });
@@ -1511,12 +1511,12 @@ app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/status', (req, res) => {
       ok: true,
       job: result.job,
       card: result.card,
-      safety: 'Scout card note/status update only; no production lead mutation'
+      safety: 'Deal Finder card note/status update only; no production lead mutation'
     });
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to update Scout card'
+      error: err && err.message ? err.message : 'Failed to update Deal Finder card'
     });
   }
 });
@@ -1534,7 +1534,7 @@ app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/analyzer', (req, res) => {
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to send Scout card to AI Deal Analyzer'
+      error: err && err.message ? err.message : 'Failed to send Deal Finder card to AI Deal Analyzer'
     });
   }
 });
@@ -1557,7 +1557,7 @@ app.post('/api/findme-scout/jobs/:jobId/cards/analyzer', (req, res) => {
   } catch (err) {
     return res.status(err.status || 500).json({
       ok: false,
-      error: err && err.message ? err.message : 'Failed to send Scout cards to AI Deal Analyzer'
+      error: err && err.message ? err.message : 'Failed to send Deal Finder cards to AI Deal Analyzer'
     });
   }
 });
@@ -3236,7 +3236,7 @@ app.get('/api/review-queue', (req, res) => {
 app.post('/api/review-queue/:id/accept', async (req, res) => {
   try {
     const row = manualReviewQueue.updateStatus(req.params.id, 'resolved', {
-      action_note: 'Resolved from manual review. Create a Deal Call Dossier separately only after source/address proof exists.'
+      action_note: 'Resolved from manual review. Create Deal Details separately only after source/address proof exists.'
     });
     res.json({ ok: true, row, safety: 'No production lead was created or mutated.' });
   } catch(e) { res.json({ ok: false, error: e.message }); }

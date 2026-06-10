@@ -36,7 +36,7 @@ function classifyGeminiError(error) {
     status: retryable ? 'temporarily_unavailable' : 'failed',
     message: retryable
       ? 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only. Try again in a few minutes.'
-      : cleanText(error && error.message ? error.message : 'Gemini Live Discovery failed. Scout used saved leads mode only.')
+      : cleanText(error && error.message ? error.message : 'Gemini Live Discovery failed. Deal Finder used saved leads mode only.')
   };
 }
 
@@ -145,11 +145,13 @@ function marketListingPath(job, site) {
     if (site === 'realtor') return 'site:realtor.com/realestateandhomes-detail';
     if (site === 'zillow') return 'site:zillow.com/homedetails';
     if (site === 'auction') return 'site:auction.com/details';
+    if (site === 'realauction') return 'site:realauction.com';
   }
   if (site === 'redfin') return 'site:redfin.com';
   if (site === 'realtor') return 'site:realtor.com/realestateandhomes-detail';
   if (site === 'zillow') return 'site:zillow.com/homedetails';
   if (site === 'auction') return 'site:auction.com/details';
+  if (site === 'realauction') return 'site:realauction.com';
   return '';
 }
 
@@ -189,6 +191,8 @@ function buildSearchQueryTemplates(job) {
     add(`${marketListingPath(job, 'auction')} ${terms.city_state} auction property`);
     add(`site:auction.com ${terms.city_state} foreclosure auction property`);
     add(`site:auction.com/details ${terms.city_state} auction property`);
+    add(`${marketListingPath(job, 'realauction')} ${terms.city_state} foreclosure auction property`);
+    add(`site:realauction.com ${terms.county} auction property address`);
     add(`site:hubzu.com ${terms.city_state} auction property`);
     add(`${terms.city_state} foreclosure auction property`);
     add(`${terms.city_state} public auction house`);
@@ -233,7 +237,7 @@ function buildDiscoveryPrompt(job, requestedCount) {
     'Use these search query starting points as a two-pass search plan. Pass A: property/listing pages. Pass B: official/auction/distress sources. Prefer exact property pages over broad result pages:',
     queries.map((query) => `- ${query}`).join('\n'),
     '',
-    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, Realtor detail pages, Redfin /home pages, Zillow homedetails pages, and HAR homedetail pages only for Texas markets.',
+    'Prefer exact property pages, listing/property URLs, official property notices/documents, auction property detail pages, RealAuction public property pages, Realtor detail pages, Redfin /home pages, Zillow homedetails pages, and HAR homedetail pages only for Texas markets.',
     'Avoid homepages, generic search pages, category pages, broad city pages, blog posts, SEO pages, and pages with no visible address.',
     '',
     'Hard rules:',
@@ -242,7 +246,7 @@ function buildDiscoveryPrompt(job, requestedCount) {
     '- If a field is not visible from the public source, set it to an empty string or say not verified.',
     '- Do not use Foreclosure.com as a source.',
     '- Do not use login, paywall, CAPTCHA, or subscription-only pages.',
-    '- Auction.com or marketplace pages are candidate discovery only, not official proof.',
+    '- Auction.com, RealAuction, Hubzu, or marketplace pages are candidate discovery only, not official proof.',
     '- Equity, hedge fund demand, ARV, and MAO are not verified here.',
     '',
     'Respond as JSON only with this shape:',
@@ -910,7 +914,7 @@ function extractPropertyIdentityFromSourceUrl(sourceUrl, sourceTitle, sourceClas
       rawState = details.groups.state;
       rawZip = details.groups.zip;
     }
-  } else if (/auction\.com$/i.test(hostPath.host)) {
+  } else if (/(auction\.com|realauction\.com)$/i.test(hostPath.host)) {
     const auctionSegment = normalizeSourceSlug((path.split('/').filter(Boolean).pop()) || '');
     const slugSource = auctionSegment;
     const details = slugSource.match(/(?<address>.+?)\s+(?<city>[A-Za-z][A-Za-z-]*)\s+(?<state>[A-Za-z]{2})\s+(?<zip>\d{5})(?:\s|$)/i);
@@ -1007,9 +1011,9 @@ function classifySourceUrl(url, title, evidence) {
       ? 'listing_search_page'
       : 'generic_homepage';
   }
-  if (/auction\.com$/i.test(hp.host)) {
+  if (/(auction\.com|realauction\.com)$/i.test(hp.host)) {
     if (/\/(details|detail|auction|property)\//i.test(hp.path) || addressLikePath(hp.path)) return 'auction_property_page';
-    return /\/(search|residential|commercial|bank-owned|foreclosure|asset|property-search|calendar)\b/i.test(hp.path)
+    return /\/(search|allsearch|residential|commercial|bank-owned|foreclosure|asset|property-search|calendar|index)\b/i.test(hp.path)
       ? 'auction_search_page'
       : 'generic_homepage';
   }
@@ -1052,7 +1056,7 @@ function isGenericSourceUrl(url) {
   if (/google\./i.test(hp.host)) return true;
   if (hp.path === '/' || hp.path === '') return true;
   if (/\/(search|sitemap|login|account|contact|about|help|privacy|terms)\/?$/i.test(hp.path)) return true;
-  if (/(zillow|redfin|realtor|auction)\.com$/i.test(hp.host) && !isPropertySpecificSourceUrl(url)) return true;
+  if (/(zillow|redfin|realtor|auction|realauction)\.com$/i.test(hp.host) && !isPropertySpecificSourceUrl(url)) return true;
   return false;
 }
 
@@ -1068,7 +1072,7 @@ function isPropertySpecificSourceUrl(url) {
   if (/zillow\.com$/i.test(hp.host)) return /\/homedetails\//i.test(hp.path);
   if (/realtor\.com$/i.test(hp.host)) return /\/realestateandhomes-detail\//i.test(hp.path);
   if (/har\.com$/i.test(hp.host)) return /\/homedetail\//i.test(hp.path);
-  if (/auction\.com$/i.test(hp.host)) return /\/(details|auction|property)\//i.test(hp.path) || addressLikePath(hp.path);
+  if (/(auction\.com|realauction\.com)$/i.test(hp.host)) return /\/(details|detail|auction|property)\//i.test(hp.path) || addressLikePath(hp.path);
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host)) return /\.(pdf|aspx|php|html?)$/i.test(hp.path) || /\b(document|record|foreclosure|trustee|sale|tax|sheriff|property|parcel)\b/i.test(hp.path);
   return /\b(property|listing|details|home|house|auction|foreclosure|parcel)\b/i.test(hp.path) && !/\b(search|city|county|category|blog|article)\b/i.test(hp.path);
 }
@@ -1078,7 +1082,7 @@ function classifySourceType(url, sourceType) {
   const canonical = canonicalizeSourceUrl(url);
   if (canonical.is_google_redirect_like && !canonical.canonicalized) return cleanText(sourceType) || 'public_web';
   const hp = hostAndPath(canonical.canonical_url || url);
-  if (/auction\.com$/i.test(hp.host) || /\bauction\b/.test(explicit)) return 'auction_marketplace';
+  if (/(auction\.com|realauction\.com)$/i.test(hp.host) || /\bauction\b/.test(explicit)) return 'auction_marketplace';
   if (/(zillow|redfin|realtor|trulia|homes|har)\.com$/i.test(hp.host) || /\blisting\b/.test(explicit)) return 'listing_marketplace';
   if (/\.gov$/i.test(hp.host) || /\.org$/i.test(hp.host) && /\b(county|court|clerk|sheriff|tax)\b/i.test(hp.host)) return 'official_public_source';
   return cleanText(sourceType) || 'public_web';

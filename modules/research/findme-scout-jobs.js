@@ -216,7 +216,7 @@ function strategyLabel(strategy) {
 function defaultJobInput(body) {
   body = body || {};
   const batch = Number(body.batch_size || body.batchSize || 10);
-  const safeBatch = batch === 50 ? 50 : batch === 20 ? 20 : 10;
+  const safeBatch = batch === 50 ? 50 : batch === 30 ? 30 : batch === 20 ? 20 : 10;
   const state = cleanText(body.state || body.market_state || '');
   const county = cleanText(body.county || body.market_county || '');
   const city = cleanText(body.city || body.market_city || '');
@@ -281,7 +281,7 @@ function createJob(body, options = {}) {
       manual_review_queue_count: 0,
       warnings: []
     },
-    safety: 'operator-created Scout job only; no autonomous ingestion, no production lead mutation',
+    safety: 'operator-created Deal Finder job only; no autonomous ingestion, no production lead mutation',
     error: ''
   };
   const jobs = readJobs(options.storePath);
@@ -437,7 +437,7 @@ function strategySignals(record, strategies) {
     if ((strategy === 'failed_listing' || strategy === 'relisted' || strategy === 'back_on_market') && /\b(failed listing|expired listing|relisted|back on market)\b/.test(text)) add(strategy);
     if (strategy === 'code_violation' && /\b(code violation|code compliance|violation|unsafe structure|nuisance)\b/.test(text)) add(strategy);
     if (strategy === 'auction_soon' && /\b(auction|sale date|auction date|opening bid)\b/.test(text)) add(strategy);
-    if ((strategy === 'auction_public' || strategy === 'public_auction') && /\b(auction\.com|public auction|auction|opening bid|bid starts|sale date)\b/.test(text)) add(strategy);
+    if ((strategy === 'auction_public' || strategy === 'public_auction') && /\b(auction\.com|realauction\.com|realauction|public auction|auction|opening bid|bid starts|sale date)\b/.test(text)) add(strategy);
     if ((strategy === 'bank_owned' || strategy === 'reo') && /\b(bank owned|bank-owned|reo|real estate owned)\b/.test(text)) add(strategy);
     if ((strategy === 'vacant_absentee' || strategy === 'vacant' || strategy === 'absentee') && /\b(vacant|abandoned|absentee|non.?owner|out.?of.?state)\b/.test(text)) add(strategy);
   });
@@ -471,8 +471,10 @@ function foundBecause(signals, fallback) {
 
 function compStatusFor(record) {
   const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
+  const candidate = Number(record && (record.candidate_comp_count || record.candidate_sold_comps_count) || 0) || 0;
   if (verified >= 3) return '3+ verified sold comps present';
   if (verified > 0) return `${verified} verified sold comp${verified === 1 ? '' : 's'}; ARV still locked until 3.`;
+  if (candidate > 0) return `${candidate} candidate sold comp${candidate === 1 ? '' : 's'} with source; ARV/MAO still locked.`;
   return 'Comps missing; ARV/MAO locked.';
 }
 
@@ -485,15 +487,16 @@ function contactStatusFor(record) {
 
 function acquisitionBucketFor(status, record) {
   const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
-  if ((status === 'Call Ready' || status === 'Research Ready') && verified >= 3) return 'Comp-Supported Wholesale Candidates';
-  if (status === 'Call Ready' || status === 'Research Ready') return 'Criteria-Matched Candidates - Comps Missing';
+  const candidate = Number(record && (record.candidate_comp_count || record.candidate_sold_comps_count) || 0) || 0;
+  if ((status === 'Call Ready' || status === 'Research Ready') && (verified > 0 || candidate > 0)) return 'Has Comps';
+  if (status === 'Call Ready' || status === 'Research Ready') return 'Needs Comps';
   if (status === 'Needs Source Proof' || status === 'Needs Address Repair' || status === 'Support Signal Only') return 'Research / Source Repair';
   return 'Skip / Bad Lead';
 }
 
 function wholesalePriorityFor(status, record) {
   const bucket = acquisitionBucketFor(status, record);
-  if (bucket === 'Comp-Supported Wholesale Candidates') return 'A';
+  if (bucket === 'Has Comps') return 'A';
   if (status === 'Call Ready') return 'B';
   if (status === 'Research Ready') return 'C';
   if (bucket === 'Research / Source Repair') return 'D';
@@ -810,7 +813,7 @@ async function runJob(jobId, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
   if (idx < 0) {
-    const err = new Error('Scout job not found.');
+    const err = new Error('Deal Finder job not found.');
     err.status = 404;
     throw err;
   }
@@ -854,7 +857,7 @@ async function runJob(jobId, options = {}) {
         business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
       },
     provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
-      provider_message: providerSummary.message || 'Scout used saved leads mode only.',
+      provider_message: providerSummary.message || 'Deal Finder used saved leads mode only.',
       provider_summary: Object.assign({}, providerSummary, {
         manual_review_rows_added: manualReview.added,
         manual_review_rows_deduped: manualReview.deduped,
@@ -873,11 +876,11 @@ async function runJob(jobId, options = {}) {
     job = Object.assign({}, job, {
       updated_at: nowIso(),
       status: 'failed',
-      error: error && error.message ? error.message : 'Scout job failed.',
+      error: error && error.message ? error.message : 'Deal Finder job failed.',
       cards: [],
       counts: emptyCounts(),
-      provider_summary: Object.assign(providerSummaryFrom({ status: 'failed', message: 'Scout job failed before provider discovery.' }), {
-        warnings: [error && error.message ? error.message : 'Scout job failed.']
+      provider_summary: Object.assign(providerSummaryFrom({ status: 'failed', message: 'Deal Finder job failed before provider discovery.' }), {
+        warnings: [error && error.message ? error.message : 'Deal Finder job failed.']
       })
     });
     jobs[idx] = job;
@@ -889,7 +892,7 @@ async function runJob(jobId, options = {}) {
 function findCard(job, cardId) {
   const card = (Array.isArray(job && job.cards) ? job.cards : []).find((candidate) => candidate.card_id === cardId);
   if (!card) {
-    const err = new Error('Scout card not found.');
+    const err = new Error('Deal Finder card not found.');
     err.status = 404;
     throw err;
   }
@@ -903,7 +906,7 @@ function buildAnalyzerItem(job, card) {
     address: card.address_or_source_text,
     source_url: card.canonical_source_url || card.source_url,
     source_type: card.lead_source_type,
-    source: 'FindMe Scout',
+    source: 'Deal Finder',
     lead_ref: card.lead_id || card.candidate_id || card.card_id,
     scout_context: {
       scout_job_id: job.job_id,
@@ -948,7 +951,7 @@ function updateCard(jobId, cardId, body, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
   if (idx < 0) {
-    const err = new Error('Scout job not found.');
+    const err = new Error('Deal Finder job not found.');
     err.status = 404;
     throw err;
   }
@@ -956,7 +959,7 @@ function updateCard(jobId, cardId, body, options = {}) {
   const card = findCard(job, cardId);
   const status = cleanText(body && (body.pipeline_status || body.pipelineStatus || body.status));
   if (status && !STATUSES.has(status)) {
-    const err = new Error('Invalid Scout status.');
+    const err = new Error('Invalid Deal Finder status.');
     err.status = 400;
     throw err;
   }
@@ -974,7 +977,7 @@ function sendCardToAnalyzer(jobId, cardId, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
   if (idx < 0) {
-    const err = new Error('Scout job not found.');
+    const err = new Error('Deal Finder job not found.');
     err.status = 404;
     throw err;
   }
@@ -1004,7 +1007,7 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
   if (idx < 0) {
-    const err = new Error('Scout job not found.');
+    const err = new Error('Deal Finder job not found.');
     err.status = 404;
     throw err;
   }
@@ -1012,7 +1015,7 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
   const requestedIds = Array.isArray(cardIds) ? Array.from(new Set(cardIds.map(cleanText).filter(Boolean))) : [];
   const selectedCount = Math.max(parseInt(options.selected_count || options.selectedCount || requestedIds.length, 10) || requestedIds.length, requestedIds.length);
   if (!requestedIds.length) {
-    const err = new Error('Select Scout cards first.');
+    const err = new Error('Select Deal Finder cards first.');
     err.status = 400;
     throw err;
   }
@@ -1024,7 +1027,7 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
   const cards = requestedIds.map((cardId) => findCard(job, cardId));
   const eligible = cards.filter((card) => card.can_send_to_analyzer === true);
   if (!eligible.length) {
-    const err = new Error('Repair address/source evidence before sending Scout cards to AI Deal Analyzer.');
+    const err = new Error('Repair address/source evidence before sending Deal Finder cards to AI Deal Analyzer.');
     err.status = 400;
     throw err;
   }
