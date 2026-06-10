@@ -1928,12 +1928,16 @@ function findMeCardBlockedReason(card) {
 }
 
 function findMeActiveJobId() {
-  var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
+  var active = findMeCurrentDisplayJob();
   return active && active.job_id || '';
 }
 
+function findMeCurrentDisplayJob() {
+  return findMeBestDisplayJob(FINDME_SCOUT_ACTIVE_JOB, FINDME_SCOUT_JOBS);
+}
+
 function findMeSelectedCards() {
-  var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
+  var active = findMeCurrentDisplayJob();
   var cards = active && Array.isArray(active.cards) ? active.cards : [];
   return cards.filter(function(card){ return card && FINDME_SCOUT_SELECTED[card.card_id]; });
 }
@@ -1965,6 +1969,92 @@ function findMeSimpleBucket(card) {
   return 'Research / Source Repair';
 }
 
+function findMeCardSourceUrl(card) {
+  card = card || {};
+  return card.source_url || card.canonical_source_url || card.open_source_url || (Array.isArray(card.provider_source_urls) ? card.provider_source_urls[0] : '') || '';
+}
+
+function findMeSourceDomainFromUrl(url) {
+  try {
+    return String(new URL(url).hostname || '').replace(/^www\./, '').toLowerCase();
+  } catch (e) {
+    return String(url || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '').toLowerCase();
+  }
+}
+
+function findMeCardAddressText(card) {
+  card = card || {};
+  return String(card.address_or_source_text || card.display_address || card.address || '').trim();
+}
+
+function findMeCardHasFullAddress(card) {
+  var address = findMeCardAddressText(card);
+  var location = String(card.location || '').trim();
+  var city = String(card.city || '').trim();
+  var state = String(card.state || '').trim();
+  var combined = [address, location, city, state].join(' ');
+  if (!address || /^public source result\s*\d*$/i.test(address)) return false;
+  if (/\b[A-Z0-9 .'-]+\s*&\s*[A-Z0-9 .'-]+\b/i.test(address)) return false;
+  if (!/\d{2,}\s+[A-Za-z0-9]/.test(address)) return false;
+  return /\b(TX|Texas|Dallas)\b/i.test(combined);
+}
+
+function findMeCardHasCurrentPropertySource(card) {
+  var url = findMeCardSourceUrl(card);
+  var domain = findMeSourceDomainFromUrl(url);
+  var classification = String(card && card.source_classification || '').toLowerCase();
+  var quality = String(card && card.source_quality || '').toLowerCase();
+  if (!/^https?:\/\//i.test(url)) return false;
+  if (/dallasopendata|opendata|data\.|archive|dataset|search|category|about/i.test(url)) return false;
+  if (/generic|search|archive|dataset|category|homepage/i.test(classification + ' ' + quality)) return false;
+  if (/realtor\.com|redfin\.com|zillow\.com|har\.com/.test(domain)) return true;
+  return card && card.property_specific_source === true && /property-specific|exact_property|listing_property|official_property/i.test(classification + ' ' + quality);
+}
+
+function findMeCardHasCriteria(card) {
+  card = card || {};
+  if (Array.isArray(card.matched_criteria) && card.matched_criteria.filter(Boolean).length) return true;
+  return !!String(card.found_because || card.why_this_might_be_a_deal || '').trim();
+}
+
+function findMeMainVisibleCards(cards) {
+  var seen = {};
+  return (Array.isArray(cards) ? cards : []).filter(function(card) {
+    var bucket = findMeSimpleBucket(card);
+    if (bucket !== 'Has Comps' && bucket !== 'Needs Comps') return false;
+    if (/Bad|Junk|Archive/i.test(String(card.status || '') + ' ' + String(card.lead_bucket || card.acquisition_bucket || ''))) return false;
+    if (!findMeCardHasFullAddress(card)) return false;
+    if (!findMeCardHasCurrentPropertySource(card)) return false;
+    if (!findMeCardHasCriteria(card)) return false;
+    var key = (findMeCardAddressText(card).toLowerCase().replace(/[^a-z0-9]+/g, ' ') + '|' + findMeCardSourceUrl(card).toLowerCase().split('?')[0]).trim();
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+function findMeJobWithDisplayCards(job, fallbackNote) {
+  var cards = findMeMainVisibleCards(job && job.cards);
+  if (!job || !cards.length) return null;
+  var copy = Object.assign({}, job, {
+    cards: cards,
+    _display_note: fallbackNote || '',
+    _source_cards_count: Array.isArray(job.cards) ? job.cards.length : cards.length
+  });
+  return copy;
+}
+
+function findMeBestDisplayJob(active, jobs) {
+  var activeDisplay = findMeJobWithDisplayCards(active, '');
+  if (activeDisplay) return activeDisplay;
+  var list = Array.isArray(jobs) ? jobs : [];
+  for (var i = 0; i < list.length; i += 1) {
+    var fallback = findMeJobWithDisplayCards(list[i], 'Showing latest source-backed Deal Finder history. These leads passed source/criteria gates but still need comps.');
+    if (fallback) return fallback;
+  }
+  return active || list[0] || null;
+}
+
 function findMeBucketColumn(title, cards, jobId, help) {
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0">' +
     '<div><div style="font-size:15px;color:#111827;font-weight:900">' + findMeSafeText(title) + '</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:2px">' + findMeSafeText(help || '') + '</div></div>' +
@@ -1974,12 +2064,13 @@ function findMeBucketColumn(title, cards, jobId, help) {
 
 function findMeResultsLayout(cards, jobId) {
   cards = Array.isArray(cards) ? cards : [];
-  if (!cards.length) return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Deal Finder cards yet. Choose a market and criteria, then click Find Deals.</div>';
+  if (!cards.length) return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">Run Deal Finder to search Dallas listing sources.</div>';
   var hasComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Has Comps'; });
   var needsComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Needs Comps'; });
   var repair = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Research / Source Repair'; });
   var skipped = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Bad / Skipped'; });
-  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;align-items:start">' +
+  var needsMessage = needsComps.length ? '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:10px 12px;font-size:12px;font-weight:900">These leads passed source/criteria gates but still need comps.</div>' : '';
+  return needsMessage + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;align-items:start">' +
     findMeBucketColumn('Has Comps', hasComps, jobId, 'Source-backed leads with at least one verified or candidate sold comp source.') +
     findMeBucketColumn('Needs Comps', needsComps, jobId, 'Valid source-backed leads. Comps missing or not verified yet.') +
   '</div>' +
@@ -2189,8 +2280,9 @@ function renderFindMeScout() {
     ['auction_public', 'auction / pre-auction if wholesale relevant (Auction.com / RealAuction)'],
     ['vacant_absentee', 'vacant/absentee if evidence exists']
   ];
-  var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
+  var active = findMeCurrentDisplayJob();
   var cards = active && Array.isArray(active.cards) ? active.cards : [];
+  var displayNote = active && active._display_note ? '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:10px 12px;font-size:12px;font-weight:900">' + findMeSafeText(active._display_note) + '</div>' : '';
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
       '<div><div style="font-size:20px;font-weight:900;color:#111827">Deal Finder</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find source-backed wholesale-style leads. Comps help the bucket, but missing comps do not hide a valid lead.</div></div>' +
@@ -2210,6 +2302,7 @@ function renderFindMeScout() {
       '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Deals</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
     (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Deal Finder Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default criteria') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'temporarily_unavailable' ? 'Live discovery temporarily busy' : active.provider_status === 'timed_out' ? 'Live discovery timed out' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'temporarily_unavailable' || active.provider_status === 'timed_out' ? 'warn' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeProviderSummary(active) + '</div>' : '') +
+    displayNote +
     findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
       findMeResultsLayout(cards, active && active.job_id) +
