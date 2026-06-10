@@ -1136,7 +1136,7 @@ function sourceFromInput(input) {
   const address = cleanText(input.address || input.input_value || input.inputValue || input.value);
   const sourceUrl = cleanText(input.source_url || input.sourceUrl || input.source_proof_url || input.sourceProofUrl);
   if (!address) {
-    const err = new Error('Address is required to create a Deal Call Dossier.');
+    const err = new Error('Address is required to create Deal Details.');
     err.status = 400;
     throw err;
   }
@@ -1181,7 +1181,7 @@ function buildDossier(input) {
   const ctx = source.scout_context || {};
   const address = normalizeAddress(source.normalized_address || source.input_value || (sourcePack && sourcePack.address_candidate));
   if (!address) {
-    const err = new Error('Address is required to create a Deal Call Dossier.');
+    const err = new Error('Address is required to create Deal Details.');
     err.status = 400;
     throw err;
   }
@@ -1437,7 +1437,7 @@ function updateOutcome(dossierId, body, options = {}) {
   const dossiers = readStore(options.storePath);
   const idx = dossiers.findIndex((item) => item.dossier_id === dossierId);
   if (idx < 0) {
-    const err = new Error('Deal Call Dossier not found.');
+    const err = new Error('Deal Details not found.');
     err.status = 404;
     throw err;
   }

@@ -101,7 +101,7 @@ function blockerReasonForCard(card) {
   const explanations = Array.isArray(card && card.quality_explanations) ? card.quality_explanations.map(cleanText).filter(Boolean) : [];
   const note = cleanText(card && (card.source_url_canonicalization_note || card.why_card_exists || card.next_action || card.next_best_action));
   return explanations.concat(missing).concat(note ? [note] : []).filter(Boolean).slice(0, 8).join('; ') ||
-    'Blocked Scout card needs manual source/address review.';
+    'Blocked Deal Finder card needs manual source/address review.';
 }
 
 function recommendedActionFor(blockerType) {
@@ -129,7 +129,7 @@ function rowFromScoutCard(job, card) {
     id: hashId('mrq', idSeed),
     created_at: nowIso(),
     updated_at: nowIso(),
-    source: 'FindMe Scout',
+    source: 'Deal Finder',
     source_kind: cleanText(card && card.source_kind),
     scout_job_id: cleanText(job && job.job_id),
     scout_card_id: cleanText(card && card.card_id),

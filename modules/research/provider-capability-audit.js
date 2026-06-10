@@ -237,7 +237,7 @@ function chooseRecommendation(audit) {
   if (audit.gemini_live_probe_success && audit.gemini_grounding_metadata_present && audit.gemini_source_urls_returned_count > 0) {
     return {
       recommended_provider_path: 'gemini_grounding_first',
-      reason: 'Gemini Google Search grounding is usable for FindMe Scout public web discovery.'
+      reason: 'Gemini Google Search grounding is usable for Deal Finder public web discovery.'
     };
   }
   if (audit.gemini_key_present && !audit.gemini_enabled) {
@@ -256,7 +256,7 @@ function chooseRecommendation(audit) {
     if (audit.gemini_live_probe_status === 'configured_probe_empty') {
       return {
         recommended_provider_path: 'gemini_grounding_configured_but_no_urls_from_probe',
-        reason: 'Gemini is configured, but the tiny probe did not return usable URLs. Live Scout may still work with stronger strategy queries.'
+        reason: 'Gemini is configured, but the tiny probe did not return usable URLs. Deal Finder may still work with stronger strategy queries.'
       };
     }
     if (audit.gemini_live_probe_status === 'auth_error') {
@@ -311,7 +311,7 @@ function chooseRecommendation(audit) {
   if (audit.openai_key_present && audit.openai_enabled) {
     return {
       recommended_provider_path: 'no_live_provider_configured',
-      reason: 'OpenAI web research is supported for Analyzer comp research, but the requested Scout provider path still needs Gemini grounding or a search layer such as Brave/Firecrawl.'
+        reason: 'OpenAI web research is supported for Analyzer comp research, but Deal Finder still needs Gemini grounding or a search layer such as Brave/Firecrawl.'
     };
   }
   if (audit.groq_key_present && audit.groq_enabled) {
@@ -342,7 +342,7 @@ async function auditProviderCapabilities(options) {
       if (geminiProbe.grounding_metadata_present && geminiProbe.source_urls_returned_count === 0) {
         audit.gemini_live_probe_status = 'configured_probe_empty';
         audit.gemini_live_probe_retryable = false;
-        audit.gemini_live_probe_message = 'Gemini is configured, but the tiny probe did not return usable URLs. Live Scout may still work with stronger strategy queries.';
+        audit.gemini_live_probe_message = 'Gemini is configured, but the tiny probe did not return usable URLs. Deal Finder may still work with stronger strategy queries.';
       }
     } catch (error) {
       const retryable = isTransientGeminiProbeError(error);

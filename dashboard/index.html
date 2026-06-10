@@ -339,10 +339,10 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('calendar',this)"><span class="nav-icon">📅</span>Calendar</div>
       <div class="nav-item" onclick="navigate('outreach',this)"><span class="nav-icon">✉️</span>Outreach Hub</div>
       <div class="nav-section">Deals</div>
-      <div class="nav-item" onclick="navigate('findme_scout',this)"><span class="nav-icon">🧭</span>FindMe Scout</div>
+      <div class="nav-item" onclick="navigate('findme_scout',this)"><span class="nav-icon">🧭</span>Deal Finder</div>
       <div class="nav-item" onclick="navigate('ai_deal_analyzer',this)"><span class="nav-icon">🧠</span>AI Deal Analyzer</div>
       <div class="nav-item" onclick="navigate('morning_call_desk',this)"><span class="nav-icon">☎️</span>Daily Call Pipeline</div>
-      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">👥</span>Buyers & Buy Boxes<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
+      <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">👥</span>Buyers<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
@@ -718,7 +718,7 @@ function navigate(page, el) {
   APP.selectedLead = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers & Buy Boxes',assignments:'Assignments',contracts:'Contracts & AI Fill',findme_scout:'FindMe Scout',ai_deal_analyzer:'AI Deal Analyzer',morning_call_desk:'Daily Call Pipeline',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
+  const titles = {dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',followups:'Follow-Up Tracker',calendar:'Calendar',import:'Import CSV / Excel',search:'Search Deals',states:'All States',users:'User Management',matching:'Deal Matching',gmail:'Email',apis:'API Integrations',automation:'Automation Control Center',contracts_lib:'Contracts Library',buyboxes:'Buy Box Manager',outreach:'Outreach Hub',buyers:'Buyers',assignments:'Assignments',contracts:'Contracts & AI Fill',findme_scout:'Deal Finder',ai_deal_analyzer:'AI Deal Analyzer',morning_call_desk:'Daily Call Pipeline',deal_analyzer:'Manual Deal Analyzer',drive:'Google Drive',bot:'Bot Status',settings:'Settings',review:'Review Queue'};
   document.getElementById('page-title').textContent = titles[page] || page;
   render();
   // Auto-init tabs
@@ -1346,9 +1346,9 @@ function aiDealScoutSection(job) {
   var tags = Array.isArray(ctx.strategy_tags) ? ctx.strategy_tags : [];
   var providerUrls = Array.isArray(ctx.provider_source_urls) ? ctx.provider_source_urls : [];
   return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:7px">' +
-    '<div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Sent from FindMe Scout</div>' +
+    '<div style="font-size:10px;color:#1d4ed8;font-weight:900;text-transform:uppercase">Sent from Deal Finder</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-      aiDealStatusPill('Scout status: ' + (ctx.scout_status || 'Needs review'), ctx.scout_status === 'Call Ready' || ctx.scout_status === 'Research Ready' ? 'good' : 'warn') +
+      aiDealStatusPill('Deal Finder status: ' + (ctx.scout_status || 'Needs review'), ctx.scout_status === 'Call Ready' || ctx.scout_status === 'Research Ready' ? 'good' : 'warn') +
       (ctx.source_type ? aiDealStatusPill('Source: ' + ctx.source_type, 'neutral') : '') +
       (ctx.provider ? aiDealStatusPill('Provider: ' + ctx.provider, ctx.provider_grounding_present ? 'good' : 'warn') : '') +
       (providerUrls.length ? aiDealStatusPill(providerUrls.length + ' source URL' + (providerUrls.length === 1 ? '' : 's'), 'good') : '') +
@@ -1865,7 +1865,7 @@ function findMeAttr(value) {
 async function findMeFetchJson(url, options) {
   var res = await fetch(url, options || {});
   var data = await res.json().catch(function(){ return {}; });
-  if (!res.ok || data.ok === false) throw new Error(data.error || 'FindMe Scout request failed.');
+  if (!res.ok || data.ok === false) throw new Error(data.error || 'Deal Finder request failed.');
   return data;
 }
 
@@ -1951,7 +1951,39 @@ function findMeToggleCardSelection(cardId, checked) {
 function findMeClearSelection() {
   FINDME_SCOUT_SELECTED = {};
   if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
-  findMeSetStatus('Scout selection cleared.', false);
+  findMeSetStatus('Deal Finder selection cleared.', false);
+}
+
+function findMeSimpleBucket(card) {
+  card = card || {};
+  var bucket = String(card.lead_bucket || card.acquisition_bucket || '');
+  var compText = String(card.comp_status || '');
+  var status = String(card.status || '');
+  if (/Has Comps|Comp-Supported/i.test(bucket) || /verified sold comp|candidate sold comp/i.test(compText)) return 'Has Comps';
+  if (/Call Ready|Research Ready/i.test(status) || /Needs Comps|Criteria-Matched/i.test(bucket)) return 'Needs Comps';
+  if (/Skip|Bad|Junk|Archive/i.test(bucket + ' ' + status)) return 'Bad / Skipped';
+  return 'Research / Source Repair';
+}
+
+function findMeBucketColumn(title, cards, jobId, help) {
+  return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0">' +
+    '<div><div style="font-size:15px;color:#111827;font-weight:900">' + findMeSafeText(title) + '</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:2px">' + findMeSafeText(help || '') + '</div></div>' +
+    (cards.length ? cards.map(function(card){ return renderFindMeScoutCard(card, jobId); }).join('') : '<div style="border:1px dashed #cbd5e1;border-radius:8px;padding:14px;color:#64748b;font-size:12px;font-weight:800;text-align:center">No cards in this bucket.</div>') +
+  '</div>';
+}
+
+function findMeResultsLayout(cards, jobId) {
+  cards = Array.isArray(cards) ? cards : [];
+  if (!cards.length) return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Deal Finder cards yet. Choose a market and criteria, then click Find Deals.</div>';
+  var hasComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Has Comps'; });
+  var needsComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Needs Comps'; });
+  var repair = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Research / Source Repair'; });
+  var skipped = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Bad / Skipped'; });
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;align-items:start">' +
+    findMeBucketColumn('Has Comps', hasComps, jobId, 'Source-backed leads with at least one verified or candidate sold comp source.') +
+    findMeBucketColumn('Needs Comps', needsComps, jobId, 'Valid source-backed leads. Comps missing or not verified yet.') +
+  '</div>' +
+  ((repair.length || skipped.length) ? '<details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><summary style="font-size:13px;color:#334155;font-weight:900;cursor:pointer">Research / Source Repair and Bad / Skipped (' + (repair.length + skipped.length) + ')</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;margin-top:10px">' + repair.concat(skipped).map(function(card){ return renderFindMeScoutCard(card, jobId); }).join('') + '</div></details>' : '');
 }
 
 function renderFindMeScoutCard(card, jobId) {
@@ -1962,12 +1994,14 @@ function renderFindMeScoutCard(card, jobId) {
   var strategyTags = Array.isArray(card.strategy_tags) ? card.strategy_tags : [];
   var qualityNotes = Array.isArray(card.quality_explanations) ? card.quality_explanations : [];
   var cardId = findMeAttr(card.card_id || '');
-  var sourceUrl = card.source_url || '';
+  var sourceUrl = card.source_url || card.canonical_source_url || '';
   var canAnalyze = card.can_send_to_analyzer === true;
   var selected = !!FINDME_SCOUT_SELECTED[card.card_id];
   var blockedReason = findMeCardBlockedReason(card);
   var topFacts = Array.isArray(card.top_facts) ? card.top_facts : [];
   var matchedCriteria = Array.isArray(card.matched_criteria) ? card.matched_criteria : [];
+  var mapsQuery = encodeURIComponent(card.address_or_source_text || card.display_address || card.address || card.location || '');
+  var sourceDomain = card.source_domain || (sourceUrl ? sourceUrl.replace(/^https?:\/\//, '').split('/')[0] : '');
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
       '<div style="display:flex;gap:9px;align-items:flex-start;min-width:0"><input type="checkbox" ' + (selected ? 'checked ' : '') + 'onchange="findMeToggleCardSelection(\'' + cardId + '\',this.checked)" style="margin-top:3px;width:16px;height:16px;flex:0 0 auto"><div style="min-width:0"><div style="font-size:16px;font-weight:900;color:#111827;line-height:1.25;word-break:break-word">' + findMeSafeText(card.address_or_source_text || 'Source item needs review') + '</div>' +
@@ -2000,6 +2034,7 @@ function renderFindMeScoutCard(card, jobId) {
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">' +
       '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comp status</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.comp_status || 'Comps missing; ARV/MAO locked.') + '</div></div>' +
       '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Contact status</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.contact_status || 'Contact not verified. Manual lookup needed.') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source domain</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(sourceDomain || 'Needs source proof') + '</div></div>' +
     '</div>' +
     '<div style="font-size:12px;color:#334155;line-height:1.45"><strong>Call angle:</strong> ' + findMeSafeText(card.call_angle || 'Verify evidence before calling.') + '</div>' +
     (matchedCriteria.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + matchedCriteria.map(function(item){ return findMePill('Criteria: ' + item, 'good'); }).join('') + '</div>' : '') +
@@ -2013,12 +2048,14 @@ function renderFindMeScoutCard(card, jobId) {
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<button type="button" onclick="findMeSendToAnalyzer(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" ' + (canAnalyze ? '' : 'disabled ') + 'title="' + (canAnalyze ? 'Send this card to AI Deal Analyzer.' : 'Repair address/source evidence before analyzer handoff.') + '" style="border:1px solid #111827;background:' + (canAnalyze ? '#111827' : '#e5e7eb') + ';color:' + (canAnalyze ? '#fff' : '#64748b') + ';border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:' + (canAnalyze ? 'pointer' : 'not-allowed') + '">Send to AI Deal Analyzer</button>' +
       '<button type="button" onclick="dealCallCreateFromScout(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #111827;background:#fff;color:#111827;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add to Daily Call Pipeline</button>' +
-      '<button type="button" onclick="acquisitionOpenScoutCardModal(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Detail</button>' +
+      '<button type="button" onclick="acquisitionOpenScoutCardModal(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Deal Details</button>' +
       (card.lead_id ? '<button type="button" onclick="openLeadModal(\'' + findMeAttr(card.lead_id) + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Open Lead</button>' : '') +
       (sourceUrl ? '<a href="' + findMeAttr(sourceUrl) + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;border:1px solid #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900">Open Source</a>' : '') +
+      (mapsQuery ? '<a href="https://www.google.com/maps/search/?api=1&query=' + mapsQuery + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900">Maps</a>' : '') +
       '<button type="button" onclick="findMeAddNote(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Add Note</button>' +
       '<button type="button" onclick="findMeUpdateCardStatus(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\',\'Called\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Mark Called</button>' +
       '<button type="button" onclick="findMeUpdateCardStatus(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\',\'Follow-Up\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Move to Follow-Up</button>' +
+      '<button type="button" onclick="findMeUpdateCardStatus(\'' + findMeAttr(jobId) + '\',\'' + cardId + '\',\'Bad Lead\')" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Mark Bad Lead</button>' +
     '</div>' +
   '</div>';
 }
@@ -2060,7 +2097,7 @@ function acquisitionOpenScoutCardModal(jobId, cardId) {
       '<button type="button" disabled title="Create a call dossier before outcome updates." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Research More</button>' +
     '</div>' +
   '</div>';
-  acquisitionShowModal(address || 'Scout candidate', body);
+  acquisitionShowModal(address || 'Deal Details', body);
 }
 
 function acquisitionCopyScoutBrief(jobId, cardId) {
@@ -2136,47 +2173,46 @@ function findMeBulkActionBar(active) {
 function renderFindMeScout() {
   if (!FINDME_SCOUT_LOADED) setTimeout(function(){ findMeLoadJobs(true); }, 0);
   var strategies = [
-    ['fixer', 'ugly/as-is/fixer'],
+    ['fixer', 'as-is / fixer'],
     ['investor_special', 'investor special'],
     ['cash_only', 'cash only'],
-    ['pre_foreclosure', 'pre-foreclosure'],
-    ['foreclosure_notice', 'foreclosure/trustee notice'],
-    ['tax_foreclosure', 'tax foreclosure/tax sale'],
-    ['tax_delinquent', 'tax delinquent/tax lien'],
-    ['price_cut', 'price cut'],
-    ['long_dom', 'long DOM / stale listing'],
+    ['price_cut', 'price reduction'],
+    ['long_dom', 'long DOM'],
+    ['failed_listing', 'failed listing'],
+    ['back_on_market', 'relisted / back on market'],
     ['fsbo', 'FSBO'],
-    ['failed_listing', 'failed listing / relisted'],
-    ['back_on_market', 'back on market'],
+    ['pre_foreclosure', 'pre-foreclosure'],
+    ['foreclosure_notice', 'foreclosure-style public signal'],
+    ['tax_foreclosure', 'tax foreclosure / tax sale'],
+    ['tax_delinquent', 'tax delinquent / tax lien'],
     ['code_violation', 'code violation'],
-    ['auction_soon', 'auction soon'],
-    ['auction_public', 'Auction / Public Auction Listings'],
-    ['bank_owned', 'REO / bank-owned'],
+    ['auction_public', 'auction / pre-auction if wholesale relevant (Auction.com / RealAuction)'],
     ['vacant_absentee', 'vacant/absentee if evidence exists']
   ];
   var active = FINDME_SCOUT_ACTIVE_JOB || (FINDME_SCOUT_JOBS && FINDME_SCOUT_JOBS[0]) || null;
   var cards = active && Array.isArray(active.cards) ? active.cards : [];
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div><div style="font-size:20px;font-weight:900;color:#111827">FindMe Scout</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find 10, 20, or 50 call-worthy opportunities from saved leads, source candidates, and configured live public discovery.</div></div>' +
-      '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:390px">Scout never invents owner, debt, comps, ARV, MAO, DOM, sale date, or auction amount. Bad addresses stay blocked from valuation.</div>' +
+      '<div><div style="font-size:20px;font-weight:900;color:#111827">Deal Finder</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Find source-backed wholesale-style leads. Comps help the bucket, but missing comps do not hide a valid lead.</div></div>' +
+      '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:390px">Deal Finder never invents owner, contacts, comps, ARV, MAO, DOM, taxes, repairs, seller motivation, or auction amounts.</div>' +
     '</div>' +
-    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:grid;grid-template-columns:180px 1fr 130px;gap:12px;align-items:end">' +
-      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Market</div><select id="findme-market" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option>Dallas</option><option>Texas</option><option>National</option></select></div>' +
-      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Location</div><input id="findme-location" placeholder="State, county, city, or ZIP" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
-      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Batch size</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></div>' +
+    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:grid;grid-template-columns:150px 190px 1fr 130px;gap:12px;align-items:end">' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">State</div><select id="findme-state" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="TX" selected>Texas</option><option value="NC">North Carolina</option><option value="FL">Florida</option><option value="National">National</option></select></div>' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">County</div><input id="findme-county" value="Dallas County" placeholder="County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">City / ZIP optional</div><input id="findme-city" value="Dallas" placeholder="City or ZIP" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Count</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option><option value="50">50</option></select></div>' +
       '<div style="grid-column:1 / -1"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:6px">Strategy</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px">' +
         strategies.map(function(item, idx) {
-          var checked = idx === 2 || idx === 3 || idx === 7 ? ' checked' : '';
+          var checked = idx === 0 || idx === 1 || idx === 2 || idx === 3 || idx === 4 ? ' checked' : '';
           return '<label style="display:flex;gap:7px;align-items:center;border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 9px;font-size:12px;color:#334155;font-weight:800"><input type="checkbox" data-findme-strategy="' + item[0] + '"' + checked + '> ' + findMeSafeText(item[1]) + '</label>';
         }).join('') +
       '</div></div>' +
-      '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Opportunities</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
+      '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Deals</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
-    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Scout Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default strategies') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'temporarily_unavailable' ? 'Live discovery temporarily busy' : active.provider_status === 'timed_out' ? 'Live discovery timed out' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'temporarily_unavailable' || active.provider_status === 'timed_out' ? 'warn' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeProviderSummary(active) + '</div>' : '') +
+    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Deal Finder Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default criteria') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'temporarily_unavailable' ? 'Live discovery temporarily busy' : active.provider_status === 'timed_out' ? 'Live discovery timed out' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'temporarily_unavailable' || active.provider_status === 'timed_out' ? 'warn' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeProviderSummary(active) + '</div>' : '') +
     findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
-      (cards.length ? cards.map(function(card){ return renderFindMeScoutCard(card, active.job_id); }).join('') : '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Scout cards yet. Choose a market and strategy, then click Find Opportunities.</div>') +
+      findMeResultsLayout(cards, active && active.job_id) +
     '</div>' +
   '</div>';
 }
@@ -2195,15 +2231,18 @@ async function findMeLoadJobs(silent) {
       }
       document.getElementById('content').innerHTML = renderFindMeScout();
     }
-    if (!silent) findMeSetStatus('Scout jobs refreshed.', false);
+    if (!silent) findMeSetStatus('Deal Finder jobs refreshed.', false);
   } catch (e) {
-    if (!silent) findMeSetStatus(e.message || 'Scout jobs could not be loaded.', true);
+    if (!silent) findMeSetStatus(e.message || 'Deal Finder jobs could not be loaded.', true);
   }
 }
 
 async function findMeCreateAndRunJob() {
-  var market = (document.getElementById('findme-market') || {}).value || 'Dallas';
-  var location = (document.getElementById('findme-location') || {}).value || '';
+  var state = (document.getElementById('findme-state') || {}).value || 'TX';
+  var county = (document.getElementById('findme-county') || {}).value || 'Dallas County';
+  var city = (document.getElementById('findme-city') || {}).value || 'Dallas';
+  var market = city || county || state || 'Dallas';
+  var location = [city, county, state].filter(Boolean).join(', ');
   var batch = (document.getElementById('findme-batch') || {}).value || '10';
   var strategies = findMeCheckedStrategies();
   if (!strategies.length) {
@@ -2215,7 +2254,7 @@ async function findMeCreateAndRunJob() {
     var created = await findMeFetchJson('/api/findme-scout/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: market, location: location, batch_size: Number(batch), strategies: strategies })
+      body: JSON.stringify({ market: market, location: location, state: state, county: county, city: city, batch_size: Number(batch), strategies: strategies })
     });
     var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
     FINDME_SCOUT_ACTIVE_JOB = run.job;
@@ -2227,10 +2266,10 @@ async function findMeCreateAndRunJob() {
     if (!readyCount && (providerStatus === 'timed_out' || providerStatus === 'temporarily_unavailable')) {
       findMeSetStatus(run.job.provider_message || 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only.', true);
     } else {
-      findMeSetStatus(readyCount + ' Scout card' + (readyCount === 1 ? '' : 's') + ' ready.', false);
+      findMeSetStatus(readyCount + ' Deal Finder card' + (readyCount === 1 ? '' : 's') + ' ready.', false);
     }
   } catch (e) {
-    findMeSetStatus(e.message || 'Scout could not find opportunities.', true);
+    findMeSetStatus(e.message || 'Deal Finder could not find deals.', true);
   }
 }
 
@@ -2243,14 +2282,14 @@ async function findMeUpdateCardStatus(jobId, cardId, status) {
     });
     FINDME_SCOUT_ACTIVE_JOB = data.job;
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
-    findMeSetStatus('Scout card updated.', false);
+    findMeSetStatus('Deal Finder card updated.', false);
   } catch (e) {
-    findMeSetStatus(e.message || 'Scout card could not be updated.', true);
+    findMeSetStatus(e.message || 'Deal Finder card could not be updated.', true);
   }
 }
 
 async function findMeAddNote(jobId, cardId) {
-  var note = prompt('Add a note for this Scout card:');
+  var note = prompt('Add a note for this Deal Finder card:');
   if (note === null) return;
   try {
     var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cards/' + encodeURIComponent(cardId) + '/status', {
@@ -2288,7 +2327,7 @@ async function findMeBulkSendToAnalyzer() {
   var eligible = selected.filter(function(card){ return card.can_send_to_analyzer === true; });
   var blocked = selected.length - eligible.length;
   if (!selected.length) {
-    findMeSetStatus('Select Scout cards first.', true);
+    findMeSetStatus('Select Deal Finder cards first.', true);
     return;
   }
   if (!eligible.length) {
@@ -2321,7 +2360,7 @@ async function findMeBulkUpdateStatus(status) {
   var jobId = findMeActiveJobId();
   var selected = findMeSelectedCards();
   if (!selected.length) {
-    findMeSetStatus('Select Scout cards first.', true);
+    findMeSetStatus('Select Deal Finder cards first.', true);
     return;
   }
   try {
@@ -2335,7 +2374,7 @@ async function findMeBulkUpdateStatus(status) {
     }
     FINDME_SCOUT_SELECTED = {};
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
-    findMeSetStatus(selected.length + ' Scout card' + (selected.length === 1 ? '' : 's') + ' updated.', false);
+    findMeSetStatus(selected.length + ' Deal Finder card' + (selected.length === 1 ? '' : 's') + ' updated.', false);
   } catch (e) {
     findMeSetStatus(e.message || 'Bulk status update failed.', true);
   }
@@ -2480,7 +2519,7 @@ async function dealCallCreateFromAnalyzer(jobId) {
     navigate('morning_call_desk', nav || null);
     dealCallSetStatus('Added to Daily Call Pipeline.', false);
   } catch (e) {
-    dealCallSetStatus(e.message || 'Deal Call Dossier could not be created.', true);
+    dealCallSetStatus(e.message || 'Deal Details could not be created.', true);
   }
 }
 
@@ -2493,7 +2532,7 @@ async function dealCallCreateFromScout(jobId, cardId) {
     navigate('morning_call_desk', nav || null);
     dealCallSetStatus('Added to Daily Call Pipeline.', false);
   } catch (e) {
-    dealCallSetStatus(e.message || 'Deal Call Dossier could not be created.', true);
+    dealCallSetStatus(e.message || 'Deal Details could not be created.', true);
   }
 }
 
@@ -2503,9 +2542,9 @@ async function dealCallCreateFromPasted() {
   try {
     await dealCallCreate({ address: address, source_url: sourceUrl });
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
-    dealCallSetStatus('Deal Call Dossier created.', false);
+    dealCallSetStatus('Deal Details created.', false);
   } catch (e) {
-    dealCallSetStatus(e.message || 'Deal Call Dossier could not be created.', true);
+    dealCallSetStatus(e.message || 'Deal Details could not be created.', true);
   }
 }
 
@@ -2700,7 +2739,7 @@ function acquisitionStrategyControls(prefix) {
     ['pre_foreclosure', 'Pre-foreclosure public source', true],
     ['code_violation', 'Code violation public source', true],
     ['tax_delinquent', 'Tax delinquent public source', false],
-    ['auction_public', 'Auction / REO / Bank-owned', false]
+    ['auction_public', 'Auction / pre-auction (Auction.com / RealAuction, source-backed only)', false]
   ];
   return items.map(function(item) {
     return '<label style="display:flex;gap:7px;align-items:center;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:7px 8px;font-size:12px;color:#334155;font-weight:800"><input type="checkbox" data-' + prefix + '-strategy="' + item[0] + '"' + (item[2] ? ' checked' : '') + '> ' + dealCallSafeText(item[1]) + '</label>';
@@ -2716,7 +2755,7 @@ function acquisitionCheckedStrategies(prefix) {
 
 function acquisitionRequestDefaults(text) {
   text = commandText(text);
-  var count = /\b50\b/.test(text) ? 50 : /\b20\b/.test(text) ? 20 : 10;
+  var count = /\b50\b/.test(text) ? 50 : /\b30\b/.test(text) ? 30 : /\b20\b/.test(text) ? 20 : 10;
   var city = /\bcharlotte\b/i.test(text) ? 'Charlotte' : /\bhouston\b/i.test(text) ? 'Houston' : /\btampa\b/i.test(text) ? 'Tampa' : 'Dallas';
   var state = city === 'Charlotte' ? 'NC' : city === 'Tampa' ? 'FL' : 'TX';
   var county = /\bdallas county\b/i.test(text) ? 'Dallas County' : city === 'Dallas' ? 'Dallas County' : '';
@@ -2730,7 +2769,7 @@ function acquisitionWorkspacePanel(compact) {
   var counts = typeof dealCallCountForSummary === 'function' ? dealCallCountForSummary(options) : { wholesaleSafe: 0, manualReview: 0, compReady: 0 };
   return '<div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
-      '<div><div style="font-size:20px;color:#111827;font-weight:900">Acquisition Workspace</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Request source-backed wholesale candidates, review them, analyze evidence, build call batches, then match buyers.</div></div>' +
+      '<div><div style="font-size:20px;color:#111827;font-weight:900">Deal Finder</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Find source-backed wholesale-style leads, review comps when available, send good leads to Daily Call Pipeline, then match buyers.</div></div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
         dealCallPill('Search / Request Leads', 'good') +
         dealCallPill('Review Candidates', 'neutral') +
@@ -2740,14 +2779,14 @@ function acquisitionWorkspacePanel(compact) {
       '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(5,minmax(110px,.6fr));gap:8px;align-items:end">' +
-      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Acquisition request</div><input id="acq-request-text" value="Find me 20 as-is/fixer, price-reduced, long-DOM candidates in Dallas County" placeholder="Find me 10/20/50 [criteria] in [market]" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Deal request</div><input id="acq-request-text" value="Find me 20 as-is/fixer, price-reduced, long-DOM candidates in Dallas County" placeholder="Find me 10/20/30/50 [criteria] in [market]" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">City</div><input id="acq-city" value="Dallas" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">County</div><input id="acq-county" value="Dallas County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
-      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">State</div><input id="acq-state" value="TX" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">State</div><select id="acq-state" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option value="TX" selected>Texas</option><option value="NC">North Carolina</option><option value="FL">Florida</option></select></div>' +
       '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Property type</div><select id="acq-property-type" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option>SFR</option><option>Multifamily</option><option>Land</option><option>Any</option></select></div>' +
-      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Count</div><select id="acq-count" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option>10</option><option selected>20</option><option>50</option></select></div>' +
+      '<div><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:4px">Count</div><select id="acq-count" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827;background:#fff"><option>10</option><option selected>20</option><option>30</option><option>50</option></select></div>' +
       '<div style="grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px">' + acquisitionStrategyControls('acq') + '</div>' +
-      '<div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="acquisitionRunRequest()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Find Source-Backed Candidates</button><button type="button" onclick="navigate(\'findme_scout\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Scout</button><button type="button" onclick="navigate(\'morning_call_desk\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Call Pipeline</button><span id="acq-request-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
+      '<div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="acquisitionRunRequest()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Find Deals</button><button type="button" onclick="navigate(\'findme_scout\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Deal Finder</button><button type="button" onclick="navigate(\'morning_call_desk\',null)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900;cursor:pointer">Open Daily Call Pipeline</button><span id="acq-request-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
       dealCallSummaryBox('Default batch', counts.wholesaleSafe || 0, 'A/B/C, no auction by default.', counts.wholesaleSafe >= 10 ? 'good' : 'warn') +
@@ -2785,7 +2824,7 @@ async function acquisitionRunRequest() {
         county: county,
         city: city,
         location: [city, county, state].filter(Boolean).join(', '),
-        batch_size: count === 50 ? 50 : count === 20 ? 20 : 10,
+        batch_size: count === 50 ? 50 : count === 30 ? 30 : count === 20 ? 20 : 10,
         property_type: propertyType,
         include_research: true,
         include_auction: includeAuction,
@@ -2797,7 +2836,7 @@ async function acquisitionRunRequest() {
     var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
     FINDME_SCOUT_ACTIVE_JOB = run.job;
     FINDME_SCOUT_JOBS = [run.job].concat(FINDME_SCOUT_JOBS || []).slice(0, 20);
-    if (status) status.textContent = (run.job.cards || []).length + ' candidates ready in Scout. No leads mutated.';
+    if (status) status.textContent = (run.job.cards || []).length + ' candidates ready in Deal Finder. No leads mutated.';
   } catch (e) {
     if (status) status.textContent = e.message || 'Provider/tool unavailable. Verified data only.';
   }
@@ -2945,14 +2984,14 @@ async function dealCallFindBetterMarketCandidates() {
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
     if (!added) {
       var providerMessage = (job.provider_message || 'Only ' + currentRows.length + ' wholesale-safe candidates available. Turn on Research/Auction toggles for more volume.') +
-        ' Scout checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates, ' + summaryCounts.auctionBlocked + ' auction blocked, ' + summaryCounts.manualReview + ' manual review.';
+        ' Deal Finder checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates, ' + summaryCounts.auctionBlocked + ' auction blocked, ' + summaryCounts.manualReview + ' manual review.';
       if (!summaryCounts.manualReview) providerMessage = 'Business FAIL: ' + providerMessage;
       else providerMessage = 'Business PASS: exact blocker rows created. ' + providerMessage;
       dealCallSetStatus(providerMessage, true);
     } else {
       var finalRows = DEAL_CALL_BATCH_IDS.length;
       var suffix = finalRows < 10 ? ' Only ' + finalRows + ' wholesale-safe candidates available. Blockers sent to manual review where possible.' : '';
-      dealCallSetStatus('Business PASS: added ' + added + ' source-backed candidate' + (added === 1 ? '' : 's') + ' for ' + options.marketLabel + '. Scout checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates. Comp research attempted for ' + compAttempted + '.' + suffix, finalRows < 10);
+      dealCallSetStatus('Business PASS: added ' + added + ' source-backed candidate' + (added === 1 ? '' : 's') + ' for ' + options.marketLabel + '. Deal Finder checked ' + summaryCounts.checked + ': ' + summaryCounts.eligible + ' eligible, ' + summaryCounts.sourceProof + ' need source proof, ' + summaryCounts.addressRepair + ' need address repair, ' + summaryCounts.duplicate + ' duplicates. Comp research attempted for ' + compAttempted + '.' + suffix, finalRows < 10);
     }
   } catch (e) {
     if (APP.page === 'morning_call_desk') document.getElementById('content').innerHTML = renderMorningCallDesk();
@@ -3296,7 +3335,7 @@ async function acquisitionSendDossierToAnalyzer(dossierId) {
         source_title: property.source_title || '',
         source_type: property.source_type || '',
         scout_context: {
-          provider: 'Deal Call Dossier',
+          provider: 'Deal Details',
           source_url: source,
           why_it_matters: ((dossier.why_this_property_matters || {}).why_now || ''),
           missing_evidence: ((dossier.source_backed_facts || {}).missing_fields || []),
@@ -3338,7 +3377,7 @@ function acquisitionDossierModalBody(dossier) {
     '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;color:#166534;font-weight:900;font-size:12px;line-height:1.45"><div style="font-size:10px;text-transform:uppercase;margin-bottom:4px">Property-Specific Script</div><div>' + dealCallSafeText(script.opening_line || 'Hi, I am calling about ' + (property.full_address || 'this property') + '.') + '</div><div style="margin-top:4px">' + dealCallSafeText(script.why_calling || 'Verify source-backed facts before making claims.') + '</div><div style="margin-top:4px">' + dealCallSafeText([].concat(script.condition_questions || [], script.price_questions || [], script.role_specific_questions || []).slice(0, 7).join(' | ')) + '</div></div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' + acquisitionSourceLinks(property.full_address || '', source) +
       '<button type="button" onclick="acquisitionSendDossierToAnalyzer(\'' + dealCallSafeText(dossier.dossier_id || '') + '\')" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Send to Analyzer</button>' +
-      '<button type="button" disabled title="This is already a Deal Call Dossier." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Add to Call Pipeline</button>' +
+      '<button type="button" disabled title="This is already in Deal Details." style="border:1px solid #e5e7eb;background:#f1f5f9;color:#64748b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:not-allowed">Add to Call Pipeline</button>' +
       '<button type="button" onclick="acquisitionCopyDossierBrief(\'' + dealCallSafeText(dossier.dossier_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Copy Brief</button>' +
       '<button type="button" onclick="dealCallUpdateOutcome(\'' + dealCallSafeText(dossier.dossier_id || '') + '\',\'Bad Lead\');closeModal()" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Mark Bad Lead</button>' +
       '<button type="button" onclick="dealCallUpdateOutcome(\'' + dealCallSafeText(dossier.dossier_id || '') + '\',\'Need Contact Lookup\');closeModal()" style="border:1px solid #92400e;background:#fff;color:#92400e;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Need Contact Lookup</button>' +
@@ -3375,8 +3414,8 @@ function renderDealCallDossierCard(dossier) {
   var outcomes = ['Call Today','Called - No Answer','Called - Interested','Called - Not Interested','Left Voicemail','Needs Follow-Up','Research More','Bad Lead','Need Contact Lookup','Offer Later'];
   return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:11px">' +
     '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">' +
-      '<div style="min-width:0"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase">Deal Call Dossier</div><div style="font-size:17px;color:#111827;font-weight:900;line-height:1.25;word-break:break-word">' + dealCallSafeText(property.full_address || 'Address needs repair') + '</div><div style="font-size:12px;color:#64748b;margin-top:3px">' + dealCallSafeText(source || 'Needs source proof') + '</div></div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + dealCallPill(workflow.outcome || 'Research More', workflow.outcome === 'Call Today' ? 'good' : workflow.outcome === 'Bad Lead' ? 'bad' : 'neutral') + dealCallPill('Priority ' + (dossier.priority_score || 0), 'neutral') + '<button type="button" onclick="acquisitionOpenDossierModal(\'' + id + '\')" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:900;cursor:pointer">Open Detail</button></div>' +
+      '<div style="min-width:0"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase">Deal Details</div><div style="font-size:17px;color:#111827;font-weight:900;line-height:1.25;word-break:break-word">' + dealCallSafeText(property.full_address || 'Address needs repair') + '</div><div style="font-size:12px;color:#64748b;margin-top:3px">' + dealCallSafeText(source || 'Needs source proof') + '</div></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + dealCallPill(workflow.outcome || 'Research More', workflow.outcome === 'Call Today' ? 'good' : workflow.outcome === 'Bad Lead' ? 'bad' : 'neutral') + dealCallPill('Priority ' + (dossier.priority_score || 0), 'neutral') + '<button type="button" onclick="acquisitionOpenDossierModal(\'' + id + '\')" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:900;cursor:pointer">Open Deal Details</button></div>' +
     '</div>' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       dealCallPill(intel.deal_type || 'Unknown', /^Wholesale Candidate/i.test(intel.deal_type || '') ? 'good' : /Auction|Bank-Owned|REO/i.test(intel.deal_type || '') ? 'warn' : 'neutral') +
@@ -3467,7 +3506,7 @@ function renderMorningCallDesk() {
     : DEAL_CALL_DOSSIERS;
   return '<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px">' +
     '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div><div style="font-size:20px;font-weight:900;color:#111827">Daily Call Pipeline</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Top call dossiers from Scout, AI Deal Analyzer, saved leads, or pasted property/source proof.</div></div>' +
+      '<div><div style="font-size:20px;font-weight:900;color:#111827">Daily Call Pipeline</div><div style="font-size:13px;color:#64748b;margin-top:4px;line-height:1.45">Top Deal Details from Deal Finder, AI Deal Analyzer, saved leads, or pasted property/source proof.</div></div>' +
       '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 10px;font-weight:900;max-width:430px">No fake owner, phone, comps, ARV, MAO, debt, DOM, tax, or auction facts. Contact lookup stays manual unless explicit source fields exist.</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
@@ -3507,7 +3546,7 @@ function renderMorningCallDesk() {
     '</div>' +
     '<textarea id="deal-call-sheet-output" readonly placeholder="Copied call sheet will appear here if clipboard is unavailable." style="width:100%;min-height:86px;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-size:12px;color:#334155;display:' + (DEAL_CALL_DOSSIERS.length ? 'block' : 'none') + '"></textarea>' +
     '<div style="display:flex;flex-direction:column;gap:10px">' +
-      (displayDossiers.length ? displayDossiers.map(renderDealCallDossierCard).join('') : '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No call dossiers yet. Add from FindMe Scout, AI Deal Analyzer, or paste a property/source above.</div>') +
+      (displayDossiers.length ? displayDossiers.map(renderDealCallDossierCard).join('') : '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">No Deal Details yet. Add from Deal Finder, AI Deal Analyzer, or paste a property/source above.</div>') +
     '</div>' +
   '</div>';
 }
@@ -20770,7 +20809,7 @@ renderDashboard = function() {
       '<div>'+(bm?'<span style="font-size:10px;font-weight:700;color:#0071e3;background:#f0f6ff;padding:2px 6px;border-radius:5px">'+bm+' buyers</span>':'')+'</div></div>';
   }).join('');
   return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">'+
-    '<div><div style="font-size:20px;font-weight:900;color:#111827">Acquisition Workspace</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Request leads, review candidates, analyze evidence, call, then match buyers.</div></div>'+
+    '<div><div style="font-size:20px;font-weight:900;color:#111827">Deal Finder</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Find source-backed wholesale-style leads, review comps when available, call, then match buyers.</div></div>'+
     '<select onchange="commandSetMarket(this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;color:#111827;background:#fff"><option value="Dallas" '+(APP.commandMarket==='Dallas'?'selected':'')+'>Dallas</option><option value="Texas" '+(APP.commandMarket==='Texas'?'selected':'')+'>Texas</option><option value="National" '+(APP.commandMarket==='National'?'selected':'')+'>National</option></select>'+
   '</div>'+
   acquisitionWorkspacePanel(false)+
@@ -20783,7 +20822,7 @@ renderDashboard = function() {
   '</div>'+
   '<div style="display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;margin-bottom:16px">'+
     '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:15px;font-weight:900;color:#111827">Daily Call Pipeline</div><button class="btn btn-sm" style="background:#111827;color:#fff" onclick="navigate(\'morning_call_desk\',null)">Open Pipeline</button></div><div style="display:flex;flex-direction:column;gap:8px">'+(callCards||'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-weight:800">No Dallas dossiers loaded yet. Open Daily Call Pipeline or refresh.</div>')+'</div></div>'+
-    '<div style="display:flex;flex-direction:column;gap:10px"><div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:8px">Buyers & Buy Boxes</div><div style="font-size:12px;color:#334155;font-weight:800;line-height:1.7">Verified buyers: '+verifiedBuyers.length+'<br>Active buy boxes: '+activeBuyBoxes.length+'<br>Generated/template buy boxes: '+templateBuyBoxes.length+'</div><button class="btn btn-sm" style="margin-top:9px;background:#eff6ff;color:#1d4ed8" onclick="navigate(\'buyers\',null)">Open Buyers</button></div><div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:6px">Buyer Finder Engine</div><div style="font-size:12px;color:#92400e;font-weight:800;line-height:1.5">Status panel only. No connected buyer-finder engine is active here. Use existing buyers and buy boxes; add buyer source search later if approved.</div></div><div><div style="font-size:15px;font-weight:900;margin-bottom:8px;color:#111827">Upcoming Events</div><div style="max-height:220px;overflow-y:auto">'+evHtml+'</div></div></div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px"><div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:8px">Buyers</div><div style="font-size:12px;color:#334155;font-weight:800;line-height:1.7">Verified buyers: '+verifiedBuyers.length+'<br>Buy box rules: '+activeBuyBoxes.length+' active, '+templateBuyBoxes.length+' template</div><button class="btn btn-sm" style="margin-top:9px;background:#eff6ff;color:#1d4ed8" onclick="navigate(\'buyers\',null)">Open Buyers</button></div><div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:6px">Buyer Finder Engine</div><div style="font-size:12px;color:#92400e;font-weight:800;line-height:1.5">Status panel only. No connected buyer-finder engine is active here. Use existing buyers; add buyer source search later if approved.</div></div><div><div style="font-size:15px;font-weight:900;margin-bottom:8px;color:#111827">Upcoming Events</div><div style="max-height:220px;overflow-y:auto">'+evHtml+'</div></div></div>'+
   '</div>'+
   renderCostAwarenessCommandCenter(leads,fus)+
   renderSourceRecheckCommandCenter(leads,fus)+
@@ -26035,6 +26074,23 @@ function renderBuyers(){
     '</div>';
 }
 
+var BUYER_LIST_FILTER = '';
+function buyerListSetFilter(value) {
+  BUYER_LIST_FILTER = String(value || '');
+  if (APP.page === 'buyers') document.getElementById('content').innerHTML = renderBuyers();
+}
+function buyerMatchesFilter(buyer, filter) {
+  filter = String(filter || '').trim().toLowerCase();
+  if (!filter) return true;
+  var text = [
+    buyer.name, buyer.company, buyer.phone, buyer.email, buyer.market, buyer.county, buyer.state,
+    buyer.strategy, buyer.property_type, buyer.source, buyer.tag, buyer.tags,
+    Array.isArray(buyer.cities) ? buyer.cities.join(' ') : '',
+    Array.isArray(buyer.states) ? buyer.states.join(' ') : '',
+    Array.isArray(buyer.buyTypes) ? buyer.buyTypes.join(' ') : ''
+  ].join(' ').toLowerCase();
+  return text.indexOf(filter) >= 0;
+}
 function renderCommandBuyers(){
   var buyers=APP.buyers||[];
   var boxes=APP.buyboxes||[];
@@ -26048,7 +26104,8 @@ function renderCommandBuyers(){
   var recs=(APP.buyboxRecommendations||[]).slice(0,4).map(function(rec){
     return '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:10px"><div style="font-size:12px;font-weight:900;color:#111827">'+dealCallSafeText(rec.platform||rec.type||'Source')+'</div><div style="font-size:11px;color:#64748b;font-weight:800;margin-top:3px">'+dealCallSafeText(rec.description||'Buyer source recommendation')+'</div></div>';
   }).join('');
-  var buyerCards=buyers.map(function(b){
+  var filteredBuyers=buyers.filter(function(b){ return buyerMatchesFilter(b, BUYER_LIST_FILTER); });
+  var buyerCards=filteredBuyers.map(function(b){
     var states=(b.states&&b.states.length)?b.states.join(", "):(b.state||"Any state");
     var types=(b.buyTypes||[]).join(", ")||"Any type";
     var maxP=b.maxPrice?"$"+Number(b.maxPrice).toLocaleString():"Any";
@@ -26085,18 +26142,19 @@ function renderCommandBuyers(){
     var template=commandIsTemplateBuyBox(box);
     return '<div style="display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #eef2f7"><div><div style="font-size:12px;font-weight:900;color:#111827">'+dealCallSafeText(box.name||'Buy box')+'</div><div style="font-size:11px;color:#64748b;font-weight:800">'+dealCallSafeText((box.county||'Any county')+', '+(box.state||'Any state')+' | '+(box.strategy||'Any strategy'))+'</div></div>'+dealCallPill(template?'Template / Not Verified Buyer':'Active buy box', template?'warn':'good')+'</div>';
   }).join('');
-  var empty='<div style="text-align:center;padding:50px;color:#64748b"><div style="font-size:15px;font-weight:900;margin-bottom:12px">No buyers yet</div><button class="btn btn-dark" onclick="openAddBuyer()">+ Add First Buyer</button></div>';
+  var empty='<div style="text-align:center;padding:50px;color:#64748b"><div style="font-size:15px;font-weight:900;margin-bottom:8px">No buyer list file found yet</div><div style="font-size:12px;font-weight:800;margin-bottom:12px">Import Gabriel buyer list to activate this page. CSV fields: name, company, phone, email, market, county, state, strategy, property_type, notes, source.</div><button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button></div>';
   return '<div style="max-width:1180px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><div style="font-size:20px;font-weight:900;color:#111827">Buyers & Buy Boxes</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Verified buyers stay separate from generated/template buy boxes.</div></div><div style="display:flex;gap:8px"><button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button><button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8" onclick="extractBuyBoxesFromBuyersTab()">Extract Buy Boxes</button><button class="btn btn-sm" style="background:#f5f5f7" onclick="loadMatchingData()">Sync</button></div></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><div style="font-size:20px;font-weight:900;color:#111827">Buyers</div><div style="font-size:12px;color:#64748b;font-weight:800;margin-top:3px">Gabriel buyer list. Templates and buy box rules stay secondary and are not counted as verified buyers.</div></div><div style="display:flex;gap:8px"><button class="btn btn-dark" onclick="openAddBuyer()">+ Add Buyer</button><button class="btn btn-sm" style="background:#f5f5f7" onclick="loadMatchingData()">Sync</button></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'+
       '<div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:12px"><div style="font-size:11px;color:#166534;font-weight:900">VERIFIED BUYERS</div><div style="font-size:26px;color:#166534;font-weight:900">'+verifiedBuyers.length+'</div></div>'+
-      '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px"><div style="font-size:11px;color:#1d4ed8;font-weight:900">ACTIVE BUY BOXES</div><div style="font-size:26px;color:#1d4ed8;font-weight:900">'+activeBoxes.length+'</div></div>'+
+      '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px"><div style="font-size:11px;color:#1d4ed8;font-weight:900">VISIBLE BUYERS</div><div style="font-size:26px;color:#1d4ed8;font-weight:900">'+filteredBuyers.length+'</div></div>'+
       '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px"><div style="font-size:11px;color:#92400e;font-weight:900">TEMPLATES</div><div style="font-size:26px;color:#92400e;font-weight:900">'+templateBoxes.length+'</div></div>'+
       '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:11px;color:#64748b;font-weight:900">BUYER FINDER ENGINE</div><div style="font-size:12px;color:#334155;font-weight:800;margin-top:7px">Not connected. Status only; no fake buyers.</div></div>'+
     '</div>'+
+    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:14px"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Search buyer list</div><input value="'+dealCallSafeText(BUYER_LIST_FILTER)+'" oninput="buyerListSetFilter(this.value)" placeholder="Name, company, market, county, state, strategy, property type, source/tag" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;color:#111827"></div>'+
     '<div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start">'+
       '<div>'+(buyers.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">'+buyerCards+'</div>':empty)+'</div>'+
-      '<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:8px">Buy Box Status</div>'+(boxRows||'<div style="font-size:12px;color:#64748b;font-weight:800">No buy boxes loaded yet. Extract from verified buyers or sync.</div>')+'</div><div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:8px">Buyer Source Recommendations</div>'+(recs||'<div style="font-size:12px;color:#64748b;font-weight:800">No recommendations loaded.</div>')+'</div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:900;color:#111827;margin-bottom:6px">Title Companies</div><div style="font-size:12px;color:#334155;font-weight:800;line-height:1.5">Recommendation only for now. Do not create a Title Companies module until closing workflow needs it.</div></div></div>'+
+      '<div style="display:flex;flex-direction:column;gap:12px"><details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><summary style="font-size:13px;font-weight:900;color:#111827;cursor:pointer">Advanced: Buy Box Rules</summary><div style="margin-top:10px">'+(boxRows||'<div style="font-size:12px;color:#64748b;font-weight:800">No buy box rules loaded yet. Sync when needed.</div>')+'</div><button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;margin-top:10px" onclick="extractBuyBoxesFromBuyersTab()">Extract Buy Boxes</button></details><details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><summary style="font-size:13px;font-weight:900;color:#111827;cursor:pointer">Buyer Source Recommendations</summary><div style="margin-top:10px">'+(recs||'<div style="font-size:12px;color:#64748b;font-weight:800">No recommendations loaded.</div>')+'</div></details></div>'+
     '</div></div>';
 }
 
