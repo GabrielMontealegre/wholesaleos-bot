@@ -6,6 +6,7 @@ const path = require('path');
 const db = require('../../db');
 const aiDealAnalyzerJobs = require('./ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./findme-scout-jobs');
+const leadEvidence = require('./lead-evidence');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -413,6 +414,18 @@ function firstHttpUrl(items) {
 }
 
 function contactFrom(source, lead, sourceBackedFacts) {
+  const evidence = source && source.lead_evidence || {};
+  if (cleanText(evidence.public_contact_route) && evidence.public_contact_route !== 'Manual Lookup Needed') {
+    return {
+      target: cleanText(evidence.public_contact_route),
+      name: '',
+      phone: '',
+      email: '',
+      source_url: isHttpUrl(evidence.canonical_source_url) ? cleanText(evidence.canonical_source_url) : '',
+      confidence: cleanText(evidence.contact_verification_status) || 'Public contact route from source.',
+      warning: 'Phone/email not invented. Open source to contact or verify listing agent.'
+    };
+  }
   const name = cleanText(pick(source, ['contact_name', 'agent_name', 'listing_agent', 'public_contact_name']) || pick(lead, ['contact_name', 'agent_name', 'listing_agent']));
   const phone = cleanText(pick(source, ['phone', 'contact_phone', 'agent_phone', 'listing_agent_phone']) || pick(lead, ['phone', 'contact_phone', 'agent_phone']));
   const email = cleanText(pick(source, ['email', 'contact_email', 'agent_email', 'listing_agent_email']) || pick(lead, ['email', 'contact_email', 'agent_email']));
@@ -740,16 +753,53 @@ function classifyDeal(dossier, source) {
 function scriptForDealType(dossier) {
   const intel = dossier.deal_intelligence || {};
   const facts = dossier.source_backed_facts || {};
+  const evidence = dossier.lead_evidence || {};
   const address = dossier.property.full_address || 'the property';
   const ask = compactFact(facts, 'asking_price').value;
   const status = compactFact(facts, 'listing_status').value || compactFact(facts, 'auction_status').value;
+  const phrase = cleanText(evidence.exact_source_phrase || compactFact(facts, 'exact_source_phrase').value);
   const sourceFacts = [
+    phrase ? `source phrase: ${phrase}` : '',
     ask ? `source shows asking/list price ${ask}` : '',
     status ? `source status: ${status}` : '',
     compactFact(facts, 'beds').value || compactFact(facts, 'sqft').value
       ? `source facts: ${compactFact(facts, 'beds').value || '?'} bed / ${compactFact(facts, 'baths').value || '?'} bath / ${compactFact(facts, 'sqft').value || '?'} sqft`
       : ''
-  ].filter(Boolean);
+    ].filter(Boolean);
+  if (phrase) {
+    const lower = phrase.toLowerCase();
+    const supported = [];
+    if (/investor special|investor opportunity/.test(lower)) supported.push('marketed as an investor opportunity');
+    if (/cash only|hard money only|traditional financing unavailable/.test(lower)) supported.push('cash or non-traditional financing language');
+    if (/as[- ]?is|as is sale/.test(lower)) supported.push('as-is language');
+    if (/back on (?:the )?market|relisted/.test(lower)) supported.push('back-on-market or relisted language');
+    if (/price (cut|reduced|drop|reduction)/.test(lower)) supported.push('price-reduction language');
+    if (/estate sale/.test(lower)) supported.push('estate-sale language');
+    if (/fixer|needs\s+(tlc|work|repair)|rehab/.test(lower)) supported.push('condition/repair language');
+    if (/fsbo|for sale by owner/.test(lower)) supported.push('FSBO language');
+    const questions = [];
+    if (/back on (?:the )?market|relisted/.test(lower)) questions.push('What happened with the prior buyer or listing attempt?');
+    if (/fixer|needs\s+(tlc|work|repair)|rehab|as[- ]?is|as is sale/.test(lower)) questions.push('What condition issues should a cash buyer know before underwriting?');
+    else questions.push('What property condition details should a buyer verify first?');
+    if (/cash only|hard money only|traditional financing unavailable/.test(lower)) questions.push('What financing or condition issue is driving the cash-only requirement?');
+    else questions.push('Would the seller consider a clean cash/as-is offer?');
+    if (/price (cut|reduced|drop|reduction)/.test(lower)) questions.push('What price would get serious attention after the reduction?');
+    else questions.push('How flexible is the seller for a clean as-is closing?');
+    questions.push('Is the property vacant or occupied?');
+    questions.push('Are utilities on and is access available for photos or walkthrough?');
+    return {
+      opening_line: `Hi, I am calling about ${address}.`,
+      why_calling: `I saw it described as "${phrase}"${ask ? ` with an asking price of ${ask}` : ''}. I wanted to confirm what is current and whether a clean cash/as-is offer would be considered.`,
+      condition_questions: questions.slice(0, 2),
+      timeline_questions: [questions[3]],
+      price_questions: [questions[2]],
+      motivation_questions: [questions[0]],
+      source_confirmation_questions: ['Can you confirm that exact source description is still current?', 'Who is the best public contact for offer questions?'],
+      role_specific_questions: questions.slice(0, 5),
+      close_next_step: ['Ask for current status.', 'Ask for photos/access.', 'Document price, condition, and timeline before comp research.'],
+      source_backed_facts: supported.concat(sourceFacts)
+    };
+  }
   if (/Auction|Bank-Owned|REO/i.test(intel.deal_type || '')) {
     return {
       opening_line: `Hi, I am calling about the auction/bank-owned property at ${address}.`,
@@ -982,7 +1032,7 @@ function collectSourceText(source, sourcePack) {
 }
 
 function structuredSourceValue(source, sourcePack, keys) {
-  const objects = [source, sourcePack, source && source.lead, source && source.scout_context].filter(Boolean);
+  const objects = [source, sourcePack, source && source.lead_evidence, source && source.lead, source && source.scout_context, source && source.scout_context && source.scout_context.lead_evidence].filter(Boolean);
   for (const obj of objects) {
     const value = pick(obj, keys);
     if (cleanText(value)) return value;
@@ -992,11 +1042,15 @@ function structuredSourceValue(source, sourcePack, keys) {
 
 function buildSourceBackedFacts(source, sourcePack, sourceUrl) {
   const text = collectSourceText(source, sourcePack);
+  const evidence = leadEvidence.normalizeLeadEvidence(source && (source.lead_evidence || source.scout_context && source.scout_context.lead_evidence || source) || {});
   const facts = {
     evidence_source_url: sourceFact(sourceUrl, sourceUrl, 'Evidence source URL', sourceUrl),
     extracted_at: nowIso(),
     missing_fields: []
   };
+  addFact(facts, 'exact_source_phrase', evidence.exact_source_phrase, sourceUrl, 'Exact source-backed wholesale phrase', evidence.exact_source_phrase);
+  addFact(facts, 'matched_criterion', evidence.matched_criterion, sourceUrl, 'Matched wholesale criterion', evidence.exact_source_phrase);
+  addFact(facts, 'source_contact_path', evidence.public_contact_route !== 'Manual Lookup Needed' ? evidence.public_contact_route : '', sourceUrl, 'Public contact route', evidence.contact_verification_status);
   addFact(facts, 'asking_price', structuredSourceValue(source, sourcePack, ['asking_price', 'list_price', 'price', 'listing_price']), sourceUrl, 'Asking/list price');
   addFact(facts, 'estimated_value', structuredSourceValue(source, sourcePack, ['estimated_value', 'source_estimate', 'estimate', 'realtor_estimate', 'redfin_estimate', 'zestimate']), sourceUrl, 'Source estimate - not verified ARV');
   addFact(facts, 'beds', structuredSourceValue(source, sourcePack, ['beds', 'bedrooms']), sourceUrl, 'Beds');
@@ -1066,6 +1120,7 @@ function sourceFromInput(input) {
   const scout = resolveScoutCard(scoutJobId, scoutCardId);
   if (scout) {
     const card = scout.card;
+    const evidence = leadEvidence.normalizeLeadEvidence(card || {});
     return {
       source_kind: 'findme_scout_card',
       scout_job_id: scoutJobId,
@@ -1076,8 +1131,16 @@ function sourceFromInput(input) {
       source_url_original: cleanText(card.original_source_url || card.source_url_original),
       canonical_source_url: cleanText(card.canonical_source_url),
       source_title: cleanText(card.source_title || card.candidate_title),
+      lead_evidence: evidence,
+      asking_price: evidence.asking_price,
+      beds: evidence.beds,
+      baths: evidence.baths,
+      sqft: evidence.sqft,
+      year_built: evidence.year_built,
+      listing_status: evidence.listing_status,
       source_page_text: [
         card.source_title,
+        evidence.exact_source_phrase,
         card.evidence_snippet,
         card.signal_summary,
         card.why_it_matters,
@@ -1098,7 +1161,8 @@ function sourceFromInput(input) {
         property_identity_status: cleanText(card.property_identity_status),
         source_url: cleanText(card.source_url),
         source_url_original: cleanText(card.original_source_url || card.source_url_original),
-        canonical_source_url: cleanText(card.canonical_source_url)
+        canonical_source_url: cleanText(card.canonical_source_url),
+        lead_evidence: evidence
       },
       source_evidence: [{
         type: 'source_evidence_pack',
@@ -1151,6 +1215,7 @@ function sourceFromInput(input) {
     normalized_address: normalizeAddress(address),
     source_url: isHttpUrl(sourceUrl) ? sourceUrl : '',
     source_title: cleanText(input.source_title || input.sourceTitle || input.title),
+    lead_evidence: leadEvidence.normalizeLeadEvidence(input || {}),
     source_page_text: cleanText(input.source_page_text || input.sourcePageText || input.source_text || input.sourceText || input.page_text || input.pageText || input.html || input.description || input.notes),
     asking_price: cleanText(input.asking_price || input.askingPrice || input.list_price || input.listPrice),
     estimated_value: cleanText(input.estimated_value || input.estimatedValue || input.source_estimate || input.sourceEstimate),
@@ -1193,6 +1258,13 @@ function buildDossier(input) {
   ]);
   const originalSourceUrl = cleanText(ctx.source_url_original || source.source_url_original);
   const canonicalSourceUrl = cleanText(ctx.canonical_source_url || source.canonical_source_url || sourceUrl);
+  const baseLeadEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, source.lead_evidence || {}, source, {
+    source_url: canonicalSourceUrl || sourceUrl,
+    normalized_address: address
+  }), {
+    normalized_address: address,
+    canonical_source_url: canonicalSourceUrl || sourceUrl
+  });
   const urlIdentity = addressFromKnownPropertyUrl(canonicalSourceUrl || sourceUrl, cleanText(source.source_title || (sourcePack && sourcePack.source_title)));
   const repairedAddress = /^public source result\s*\d*$/i.test(address) && urlIdentity.full_address
     ? urlIdentity.full_address
@@ -1239,6 +1311,7 @@ function buildDossier(input) {
     signals,
     valuation,
     source_backed_facts: sourceBackedFacts,
+    lead_evidence: baseLeadEvidence,
     contact,
     call_script: null,
     workflow: {
@@ -1254,6 +1327,16 @@ function buildDossier(input) {
     preview_only: true,
     should_ingest: false
   };
+  dossier.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, baseLeadEvidence, {
+    contact_route: contact.target,
+    public_contact_route: contact.target,
+    comp_status: baseLeadEvidence.comp_status
+  }), {
+    dossier_id: dossier.dossier_id,
+    analyzer_job_id: dossier.refs.analyzer_job_id,
+    normalized_address: repairedAddress,
+    canonical_source_url: canonicalSourceUrl || sourceUrl
+  });
   dossier.deal_intelligence = classifyDeal(dossier, source);
   dossier.call_script = scriptForDealType(dossier);
   dossier.priority_score = priorityScore(dossier);
@@ -1348,9 +1431,31 @@ function publicDossier(dossier) {
   }
   const valuation = dossier.valuation || {};
   const groups = valuation.groups || {};
+  const viewLeadEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, dossier.lead_evidence || {}, {
+    normalized_address: repairedProperty.full_address,
+    source_url: sourceUrl,
+    listing_status: (viewFacts.listing_status || viewFacts.auction_status || {}).value,
+    asking_price: (viewFacts.asking_price || {}).value,
+    beds: (viewFacts.beds || {}).value,
+    baths: (viewFacts.baths || {}).value,
+    sqft: (viewFacts.sqft || {}).value,
+    year_built: (viewFacts.year_built || {}).value,
+    exact_source_phrase: (viewFacts.exact_source_phrase || {}).value,
+    matched_criterion: (viewFacts.matched_criterion || {}).value,
+    public_contact_route: repairedContact.target || ''
+  }), {
+    dossier_id: dossier.dossier_id,
+    analyzer_job_id: dossier.refs && dossier.refs.analyzer_job_id || '',
+    normalized_address: repairedProperty.full_address,
+    canonical_source_url: sourceUrl,
+    comp_status: Number(valuation.verified_sold_comps_count || 0) >= 3
+      ? '3+ verified sold comps present; ARV gate can open.'
+      : 'Needs Comps'
+  });
   const viewDossier = Object.assign({}, dossier, {
     property: repairedProperty,
     source_backed_facts: viewFacts,
+    lead_evidence: viewLeadEvidence,
     contact: repairedContact,
     valuation: Object.assign({}, valuation, {
       groups: {
