@@ -59,17 +59,120 @@ function normalizeUrlHost(value) {
 function normalizeAddressKey(value) {
   return cleanText(value).toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\b(apartment|apt|unit|suite|ste|#)\s*[a-z0-9-]+\b/g, ' ')
     .replace(/\b(street)\b/g, 'st')
     .replace(/\b(avenue)\b/g, 'ave')
     .replace(/\b(road)\b/g, 'rd')
     .replace(/\b(drive)\b/g, 'dr')
     .replace(/\b(lane)\b/g, 'ln')
+    .replace(/\b(court)\b/g, 'ct')
+    .replace(/\b(place)\b/g, 'pl')
+    .replace(/\b(boulevard)\b/g, 'blvd')
+    .replace(/\b(circle)\b/g, 'cir')
+    .replace(/\b(parkway)\b/g, 'pkwy')
+    .replace(/\b(highway)\b/g, 'hwy')
+    .replace(/\b(terrace)\b/g, 'ter')
+    .replace(/\b(trail)\b/g, 'trl')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 function addressConflictKey(value) {
   return normalizeAddressKey(value).replace(/\b\d{5}(?:-\d{4})?\b/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function streetAddressKey(value) {
+  const normalized = addressConflictKey(value)
+    .replace(/\b(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|ia|id|il|in|ks|ky|la|ma|md|me|mi|mn|mo|ms|mt|nc|nd|ne|nh|nj|nm|nv|ny|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|va|vt|wa|wi|wv|wy|dc|texas)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const match = normalized.match(/\b(\d{1,7}\s+[a-z0-9 ]+?\b(?:st|ave|rd|dr|ln|ct|cir|blvd|way|pl|pkwy|hwy|ter|trl|loop|sq))\b/);
+  return match ? match[1].replace(/\s+/g, ' ').trim() : '';
+}
+
+function canonicalSourceUrlKey(value) {
+  const raw = cleanText(value);
+  if (!isHttpUrl(raw)) return '';
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = '';
+    parsed.search = '';
+    return `${parsed.hostname.replace(/^www\./i, '').toLowerCase()}${decodeURIComponent(parsed.pathname || '').toLowerCase().replace(/\/+$/, '')}`;
+  } catch (error) {
+    return '';
+  }
+}
+
+function addressFromPropertyUrl(value) {
+  const raw = cleanText(value);
+  if (!isHttpUrl(raw)) return '';
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const path = decodeURIComponent(parsed.pathname || '');
+    let slug = '';
+    if (/realtor\.com$/i.test(host)) {
+      const match = path.match(/\/realestateandhomes-detail\/([^/]+)/i);
+      if (match) slug = match[1].replace(/_M\d.+$/i, '');
+    } else if (/redfin\.com$/i.test(host)) {
+      const parts = path.split('/').filter(Boolean);
+      slug = parts.length >= 3 ? parts[2] : '';
+    } else if (/zillow\.com$/i.test(host)) {
+      const match = path.match(/\/homedetails\/([^/]+)/i);
+      if (match) slug = match[1].replace(/_zpid.*$/i, '');
+    } else if (/har\.com$/i.test(host)) {
+      const match = path.match(/\/homedetail\/([^/]+)/i);
+      if (match) slug = match[1].replace(/\/\d+$/i, '');
+    } else if (/auction\.com$|realauction\.com$|hubzu\.com$/i.test(host)) {
+      const parts = path.split('/').filter(Boolean);
+      slug = parts.find((part) => /\d{2,7}[-_][a-z0-9-]+/i.test(part)) || '';
+    }
+    if (!slug) return '';
+    return slug
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b(?:tx|texas|dallas|houston|chicago|il|ca|fl|az)\b\s*\d{5}(?:\s+\d+)?\b/ig, ' ')
+      .replace(/\b\d{5}(?:-\d{4})?\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  } catch (error) {
+    return '';
+  }
+}
+
+function subjectIdentityForJob(job) {
+  const pack = sourcePackFromJob(job);
+  const addressValues = [
+    job && job.normalized_address,
+    pack && pack.address_candidate,
+    pack && pack.source_url_address_candidate,
+    job && job.input_value,
+    addressFromPropertyUrl(job && job.source_url),
+    addressFromPropertyUrl(pack && pack.source_url)
+  ].map(cleanText).filter(Boolean);
+  const urlValues = [
+    job && job.source_url,
+    pack && pack.source_url
+  ].map(canonicalSourceUrlKey).filter(Boolean);
+  return {
+    addressKeys: new Set(addressValues.map(addressConflictKey).filter(Boolean)),
+    streetKeys: new Set(addressValues.map(streetAddressKey).filter(Boolean)),
+    urlKeys: new Set(urlValues)
+  };
+}
+
+function isSubjectCandidate(candidate, job) {
+  const subject = subjectIdentityForJob(job);
+  const candidateAddresses = [
+    candidate && candidate.comp_address,
+    [candidate && candidate.comp_address, candidate && candidate.city, candidate && candidate.state, candidate && candidate.zip].map(cleanText).filter(Boolean).join(', '),
+    addressFromPropertyUrl(candidate && candidate.source_url)
+  ].map(cleanText).filter(Boolean);
+  const candidateAddressKeys = candidateAddresses.map(addressConflictKey).filter(Boolean);
+  const candidateStreetKeys = candidateAddresses.map(streetAddressKey).filter(Boolean);
+  const candidateUrlKey = canonicalSourceUrlKey(candidate && candidate.source_url);
+  if (candidateUrlKey && subject.urlKeys.has(candidateUrlKey)) return true;
+  if (candidateAddressKeys.some((key) => subject.addressKeys.has(key))) return true;
+  return candidateStreetKeys.some((key) => subject.streetKeys.has(key));
 }
 
 function addressLike(value) {
@@ -344,13 +447,13 @@ function classifyCompCandidate(candidate, job, seen) {
   const kind = saleStatusKind(candidate);
   const requestedGroup = cleanText(candidate.comp_group || candidate.verification_status).toLowerCase();
   const dedupeKey = normalizeAddressKey(candidate.comp_address) || cleanText(candidate.source_url).toLowerCase();
-  const subjectKey = subjectAddressKeyForJob(job);
-  const compKey = addressConflictKey(candidate.comp_address);
-  const isSubjectProperty = !!(subjectKey && compKey && subjectKey === compKey);
+  const isSubjectProperty = isSubjectCandidate(candidate, job);
   const duplicate = !!(dedupeKey && seen.has(dedupeKey));
   if (dedupeKey) seen.add(dedupeKey);
   const missing = new Set(arrayText(candidate.missing_fields).concat(validation.missing_fields));
   if (!cleanText(candidate.comp_address)) missing.add('Comp address');
+  if (!(numberValue(candidate.sold_price) > 0)) missing.add('Sold price');
+  if (!cleanText(candidate.sold_date)) missing.add('Sold date');
   if (quality.generic) missing.add('Property-specific source URL');
   if (duplicate) missing.add('Unique comp record');
   if (candidate.distance_miles === null || candidate.distance_miles === undefined || cleanText(candidate.distance_miles) === '') {
@@ -402,12 +505,20 @@ function classifyCompCandidate(candidate, job, seen) {
     candidate.comp_group = 'verified_sold';
     return candidate;
   }
-  if (kind === 'sold' && cleanText(candidate.comp_address) && isHttpUrl(candidate.source_url)) {
+  if (kind === 'sold' && cleanText(candidate.comp_address) && isHttpUrl(candidate.source_url) && !quality.generic && numberValue(candidate.sold_price) > 0 && cleanText(candidate.sold_date)) {
     candidate.verification_status = 'candidate';
     candidate.comp_classification = 'Candidate Sold Comp';
     candidate.comp_group = 'candidate_sold';
     candidate.notes = candidate.notes.concat('Sold evidence is incomplete; does not unlock valuation.');
     candidate.why_not_verified = candidate.why_not_verified || `Missing verified comp evidence: ${candidate.missing_fields.join(', ') || 'complete sold evidence'}.`;
+    return candidate;
+  }
+  if (kind === 'sold') {
+    candidate.verification_status = 'not_usable';
+    candidate.comp_classification = 'Not Usable';
+    candidate.comp_group = 'not_usable';
+    candidate.notes = candidate.notes.concat('Sold evidence is missing required price, date, address, or property source.');
+    candidate.why_not_verified = candidate.why_not_verified || `Missing usable sold-comp evidence: ${candidate.missing_fields.join(', ') || 'complete sold evidence'}.`;
     return candidate;
   }
   if (kind === 'market_support' || numberValue(candidate.sold_price) > 0 || cleanText(candidate.source_url)) {

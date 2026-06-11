@@ -135,13 +135,47 @@ function visibleDealFinderGate(record, card, sourceUrl, signals) {
   const source = cleanText(sourceUrl || card && (card.open_source_url || card.source_url || card.canonical_source_url));
   const sourceOk = hasAllowedPropertySpecificSource(record, source);
   const addressOk = addressQualityFromText(address, recordText(record)) === 'valid';
-  const criteriaOk = Array.isArray(signals) && signals.length > 0;
+  const criteriaOk = hasSourceBackedWholesaleCriterion(record, card, signals);
+  const currentOk = isCurrentAcquisitionOpportunity(record, card);
   return {
-    ok: sourceOk && addressOk && criteriaOk,
+    ok: sourceOk && addressOk && criteriaOk && currentOk,
     sourceOk,
     addressOk,
-    criteriaOk
+    criteriaOk,
+    currentOk
   };
+}
+
+function criterionEvidenceText(record, card) {
+  const pieces = [
+    pick(record, ['description', 'listing_description', 'property_description', 'public_remarks', 'remarks', 'source_text', 'source_excerpt', 'source_snippet', 'evidence_snippet', 'why_included', 'comp_research_summary', 'raw_summary']),
+    pick(record, ['source_details.description', 'source_details.remarks', 'source_details.source_text']),
+    pick(record, ['scout_context.scout_reason', 'scout_context.why_card_exists']),
+    card && card.signal_summary,
+    card && card.why_it_matters,
+    card && card.why_this_might_be_a_deal
+  ];
+  return pieces.map(cleanText).filter(Boolean).join(' ').toLowerCase();
+}
+
+function hasSourceBackedWholesaleCriterion(record, card, signals) {
+  if (!Array.isArray(signals) || !signals.length) return false;
+  const text = criterionEvidenceText(record, card);
+  if (!text) return false;
+  if (/source evidence exists|verified sold comps are still needed|public source result|gemini returned a source url/i.test(text) &&
+      !/\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b/i.test(text)) {
+    return false;
+  }
+  return /\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|rehab|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|notice of default|code violation|tax delinquent)\b/i.test(text);
+}
+
+function isCurrentAcquisitionOpportunity(record, card) {
+  const text = [recordText(record), criterionEvidenceText(record, card)].join(' ');
+  const statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
+  const hasSoldOrClosed = /\b(sold|closed|off.?market|auction ended|sale completed)\b/i.test(statusText);
+  const hasCurrentSignal = /\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText);
+  if (hasSoldOrClosed && !hasCurrentSignal) return false;
+  return true;
 }
 
 function isGenericSourceUrl(value) {
@@ -567,7 +601,8 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
   const sourceRepairReasons = []
     .concat(visibleGate.sourceOk ? [] : ['current property-specific listing/source URL'])
     .concat(visibleGate.addressOk ? [] : ['full usable property address'])
-    .concat(visibleGate.criteriaOk ? [] : ['matched wholesale listing criteria']);
+    .concat(visibleGate.criteriaOk ? [] : ['source-backed wholesale listing criteria'])
+    .concat(visibleGate.currentOk ? [] : ['current or plausibly current sale opportunity']);
   return Object.assign(card, {
     acquisition_bucket: bucket,
     lead_bucket: bucket,
