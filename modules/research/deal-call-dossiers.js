@@ -7,6 +7,7 @@ const db = require('../../db');
 const aiDealAnalyzerJobs = require('./ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./findme-scout-jobs');
 const leadEvidence = require('./lead-evidence');
+const propertyIdentity = require('./property-identity');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -116,10 +117,7 @@ function sourcePackFromJob(job) {
 }
 
 function normalizeAddress(value) {
-  return cleanText(value)
-    .replace(/\s*,\s*/g, ', ')
-    .replace(/\bTX\b/i, 'TX')
-    .replace(/\s+/g, ' ');
+  return propertyIdentity.canonicalAddress(value);
 }
 
 function decodeURIComponentSafe(value) {
@@ -178,6 +176,18 @@ function normalizeSourceSlug(value) {
 }
 
 function addressFromKnownPropertyUrl(url, title) {
+  const parsedIdentity = propertyIdentity.addressFromPropertyUrl(url, title);
+  if (parsedIdentity.full_address) {
+    return {
+      address: parsedIdentity.street,
+      city: parsedIdentity.city,
+      state: parsedIdentity.state,
+      zip: parsedIdentity.zip,
+      full_address: parsedIdentity.full_address,
+      address_extracted_from_source_url: true,
+      basis: parsedIdentity.basis
+    };
+  }
   const hp = hostAndPath(url);
   const pathText = decodeURIComponentSafe(hp.path);
   let rawAddress = '';
@@ -267,11 +277,26 @@ function addressFromKnownPropertyUrl(url, title) {
 }
 
 function addressKey(address) {
-  return safeLower(address).replace(/[^a-z0-9]+/g, '');
+  return propertyIdentity.canonicalPropertyKey({ normalized_address: address });
 }
 
 function callBatchAddressKey(dossier) {
-  return addressKey(dossier && dossier.property && dossier.property.full_address);
+  return propertyIdentity.canonicalPropertyKey(identityInputForDossier(dossier));
+}
+
+function identityInputForDossier(dossier) {
+  const property = dossier && dossier.property || {};
+  const evidence = dossier && dossier.lead_evidence || {};
+  return {
+    normalized_address: cleanText(property.full_address || evidence.normalized_address),
+    address: cleanText(property.full_address || evidence.normalized_address),
+    city: cleanText(property.city),
+    state: cleanText(property.state),
+    zip: cleanText(property.zip),
+    source_url: cleanText(property.canonical_source_url || property.source_url || evidence.canonical_source_url),
+    canonical_source_url: cleanText(property.canonical_source_url || evidence.canonical_source_url),
+    source_title: cleanText(property.source_title)
+  };
 }
 
 function supportingSourceFor(dossier) {
@@ -1126,7 +1151,7 @@ function sourceFromInput(input) {
       scout_job_id: scoutJobId,
       scout_card_id: scoutCardId,
       input_value: cleanText(card.address_or_source_text),
-      normalized_address: cleanText(card.display_address || card.address_or_source_text),
+      normalized_address: cleanText(evidence.normalized_address || card.display_address || card.address_or_source_text),
       source_url: cleanText(card.canonical_source_url || card.source_url),
       source_url_original: cleanText(card.original_source_url || card.source_url_original),
       canonical_source_url: cleanText(card.canonical_source_url),
@@ -1171,8 +1196,8 @@ function sourceFromInput(input) {
         source_status: card.source_url ? 'Found' : 'Missing',
         evidence_role: card.can_send_to_analyzer ? 'source_proof' : 'source_context',
         property_identity_status: cleanText(card.property_identity_status) || (card.status === 'Needs Address Repair' ? 'unresolved' : 'partial'),
-        address_candidate: cleanText(card.display_address || card.address_or_source_text),
-        source_url_address_candidate: cleanText(card.display_address || card.address_or_source_text),
+        address_candidate: cleanText(evidence.normalized_address || card.display_address || card.address_or_source_text),
+        source_url_address_candidate: cleanText(evidence.normalized_address || card.display_address || card.address_or_source_text),
         city_candidate: cleanText(card.city),
         state_candidate: cleanText(card.state),
         zip_candidate: cleanText(card.zip),
@@ -1244,12 +1269,6 @@ function buildDossier(input) {
   const source = sourceFromInput(input);
   const sourcePack = sourcePackFromJob(source);
   const ctx = source.scout_context || {};
-  const address = normalizeAddress(source.normalized_address || source.input_value || (sourcePack && sourcePack.address_candidate));
-  if (!address) {
-    const err = new Error('Address is required to create Deal Details.');
-    err.status = 400;
-    throw err;
-  }
   const sourceUrl = firstHttpUrl([
     source.source_url,
     sourcePack && sourcePack.source_url,
@@ -1258,17 +1277,41 @@ function buildDossier(input) {
   ]);
   const originalSourceUrl = cleanText(ctx.source_url_original || source.source_url_original);
   const canonicalSourceUrl = cleanText(ctx.canonical_source_url || source.canonical_source_url || sourceUrl);
+  const urlIdentity = addressFromKnownPropertyUrl(canonicalSourceUrl || sourceUrl, cleanText(source.source_title || (sourcePack && sourcePack.source_title)));
+  const address = propertyIdentity.canonicalAddress(Object.assign({}, source.lead_evidence || {}, source, {
+    normalized_address: source.normalized_address || source.input_value || (sourcePack && sourcePack.address_candidate),
+    source_url: canonicalSourceUrl || sourceUrl,
+    source_url_address_candidate: sourcePack && (sourcePack.source_url_address_candidate || sourcePack.address_candidate),
+    city: (sourcePack && sourcePack.city_candidate) || source.city || urlIdentity.city,
+    state: (sourcePack && sourcePack.state_candidate) || source.state || urlIdentity.state,
+    zip: (sourcePack && sourcePack.zip_candidate) || source.zip || urlIdentity.zip,
+    source_title: source.source_title || (sourcePack && sourcePack.source_title)
+  }));
+  if (!address) {
+    const err = new Error('Address is required to create Deal Details.');
+    err.status = 400;
+    throw err;
+  }
+  const repairedAddress = propertyIdentity.canonicalAddress(Object.assign({}, source.lead_evidence || {}, source, {
+    normalized_address: address,
+    source_url: canonicalSourceUrl || sourceUrl,
+    source_url_address_candidate: sourcePack && (sourcePack.source_url_address_candidate || sourcePack.address_candidate),
+    city: (sourcePack && sourcePack.city_candidate) || source.city || urlIdentity.city,
+    state: (sourcePack && sourcePack.state_candidate) || source.state || urlIdentity.state,
+    zip: (sourcePack && sourcePack.zip_candidate) || source.zip || urlIdentity.zip,
+    source_title: source.source_title || (sourcePack && sourcePack.source_title)
+  }));
+  const addressParts = propertyIdentity.canonicalParts({
+    normalized_address: repairedAddress,
+    source_url: canonicalSourceUrl || sourceUrl
+  });
   const baseLeadEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, source.lead_evidence || {}, source, {
     source_url: canonicalSourceUrl || sourceUrl,
-    normalized_address: address
+    normalized_address: repairedAddress
   }), {
-    normalized_address: address,
+    normalized_address: repairedAddress,
     canonical_source_url: canonicalSourceUrl || sourceUrl
   });
-  const urlIdentity = addressFromKnownPropertyUrl(canonicalSourceUrl || sourceUrl, cleanText(source.source_title || (sourcePack && sourcePack.source_title)));
-  const repairedAddress = /^public source result\s*\d*$/i.test(address) && urlIdentity.full_address
-    ? urlIdentity.full_address
-    : address;
   const proofStatus = sourceProofStatus(source, sourcePack);
   const signals = buildSignals(source, sourceUrl);
   const valuation = valuationFrom(source);
@@ -1289,9 +1332,9 @@ function buildDossier(input) {
     },
     property: {
       full_address: repairedAddress,
-      city: cleanText((sourcePack && sourcePack.city_candidate) || pick(source, ['city']) || urlIdentity.city),
-      state: cleanText((sourcePack && sourcePack.state_candidate) || pick(source, ['state']) || urlIdentity.state),
-      zip: cleanText((sourcePack && sourcePack.zip_candidate) || pick(source, ['zip']) || urlIdentity.zip),
+      city: cleanText(addressParts.city || (sourcePack && sourcePack.city_candidate) || pick(source, ['city']) || urlIdentity.city),
+      state: cleanText(addressParts.state || (sourcePack && sourcePack.state_candidate) || pick(source, ['state']) || urlIdentity.state),
+      zip: cleanText(addressParts.zip || (sourcePack && sourcePack.zip_candidate) || pick(source, ['zip']) || urlIdentity.zip),
       county: cleanText((sourcePack && sourcePack.county) || pick(source, ['county'])),
       source_url: sourceUrl,
       canonical_source_url: canonicalSourceUrl && canonicalSourceUrl !== sourceUrl ? canonicalSourceUrl : '',
@@ -1367,10 +1410,49 @@ function priorityScore(dossier) {
 function mergeDossier(existing, incoming) {
   if (!existing) return incoming;
   const workflow = existing.workflow || {};
+  const existingProperty = existing.property || {};
+  const incomingProperty = incoming.property || {};
+  const sourceUrl = cleanText(existingProperty.canonical_source_url || existingProperty.source_url || incomingProperty.canonical_source_url || incomingProperty.source_url);
+  const canonicalAddress = propertyIdentity.canonicalAddress(Object.assign({}, existing.lead_evidence || {}, incoming.lead_evidence || {}, {
+    normalized_address: existingProperty.full_address || incomingProperty.full_address,
+    source_url: sourceUrl,
+    city: existingProperty.city || incomingProperty.city,
+    state: existingProperty.state || incomingProperty.state,
+    zip: existingProperty.zip || incomingProperty.zip
+  }));
+  const addressParts = propertyIdentity.canonicalParts({ normalized_address: canonicalAddress, source_url: sourceUrl });
+  const mergedLeadEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, incoming.lead_evidence || {}, existing.lead_evidence || {}, {
+    normalized_address: canonicalAddress,
+    source_url: sourceUrl,
+    contact_route: cleanText((existing.contact || {}).target || (incoming.contact || {}).target)
+  }), {
+    dossier_id: existing.dossier_id,
+    analyzer_job_id: cleanText((existing.refs || {}).analyzer_job_id || (incoming.refs || {}).analyzer_job_id),
+    normalized_address: canonicalAddress,
+    canonical_source_url: sourceUrl
+  });
   return Object.assign({}, incoming, {
     dossier_id: existing.dossier_id,
     created_at: existing.created_at,
     updated_at: nowIso(),
+    refs: Object.assign({}, incoming.refs || {}, existing.refs || {}, {
+      analyzer_job_id: cleanText((existing.refs || {}).analyzer_job_id || (incoming.refs || {}).analyzer_job_id),
+      scout_job_id: cleanText((existing.refs || {}).scout_job_id || (incoming.refs || {}).scout_job_id),
+      scout_card_id: cleanText((existing.refs || {}).scout_card_id || (incoming.refs || {}).scout_card_id),
+      lead_id: cleanText((existing.refs || {}).lead_id || (incoming.refs || {}).lead_id)
+    }),
+    property: Object.assign({}, incomingProperty, existingProperty, {
+      full_address: canonicalAddress,
+      city: cleanText(existingProperty.city || incomingProperty.city || addressParts.city),
+      state: cleanText(existingProperty.state || incomingProperty.state || addressParts.state),
+      zip: cleanText(existingProperty.zip || incomingProperty.zip || addressParts.zip),
+      source_url: cleanText(existingProperty.source_url || incomingProperty.source_url || sourceUrl),
+      canonical_source_url: cleanText(existingProperty.canonical_source_url || incomingProperty.canonical_source_url),
+      original_source_url: cleanText(existingProperty.original_source_url || incomingProperty.original_source_url)
+    }),
+    source_backed_facts: Object.assign({}, incoming.source_backed_facts || {}, existing.source_backed_facts || {}),
+    lead_evidence: mergedLeadEvidence,
+    contact: Object.assign({}, incoming.contact || {}, existing.contact || {}),
     workflow: {
       outcome: workflow.outcome || incoming.workflow.outcome,
       notes: cleanText(workflow.notes),
@@ -1385,13 +1467,39 @@ function mergeDossier(existing, incoming) {
 function createDossier(input, options = {}) {
   const dossiers = readStore(options.storePath);
   const incoming = buildDossier(input || {});
-  const key = `${addressKey(incoming.property.full_address)}|${safeLower(incoming.property.source_url || incoming.property.canonical_source_url)}`;
-  const idx = dossiers.findIndex((item) => `${addressKey(item.property && item.property.full_address)}|${safeLower(item.property && (item.property.source_url || item.property.canonical_source_url))}` === key);
-  const saved = mergeDossier(idx >= 0 ? dossiers[idx] : null, incoming);
-  if (idx >= 0) dossiers[idx] = saved;
-  else dossiers.unshift(saved);
+  const matches = [];
+  dossiers.forEach((item, index) => {
+    if (propertyIdentity.sameProperty(identityInputForDossier(item), identityInputForDossier(incoming))) matches.push({ item, index });
+  });
+  let saved = incoming;
+  let canonicalIndex = -1;
+  if (matches.length) {
+    const primary = matches.map((match) => match.item).concat(incoming)
+      .sort((a, b) => sourceRank(b) - sourceRank(a) || String(b.updated_at || '').localeCompare(String(a.updated_at || '')))[0];
+    const primaryMatch = matches.find((match) => match.item.dossier_id === primary.dossier_id) || matches[0];
+    canonicalIndex = primaryMatch.index;
+    saved = mergeDossier(primaryMatch.item, incoming);
+    dossiers[canonicalIndex] = saved;
+    matches.forEach((match) => {
+      if (match.index === canonicalIndex) return;
+      dossiers[match.index] = Object.assign({}, match.item, {
+        updated_at: nowIso(),
+        parked_duplicate: true,
+        duplicate_of_dossier_id: saved.dossier_id
+      });
+    });
+  } else {
+    dossiers.unshift(saved);
+  }
   writeStore(dossiers, options.storePath);
-  return { dossier: publicDossier(saved), deduped: idx >= 0 };
+  return {
+    dossier: publicDossier(saved),
+    created: !matches.length,
+    reused: !!matches.length,
+    merged: !!matches.length,
+    deduped: !!matches.length,
+    canonical_dossier_id: saved.dossier_id
+  };
 }
 
 function publicDossier(dossier) {
@@ -1400,8 +1508,15 @@ function publicDossier(dossier) {
   const sourceUrl = cleanText(property.canonical_source_url || property.source_url);
   const urlIdentity = addressFromKnownPropertyUrl(sourceUrl, cleanText(property.source_title));
   const repairedProperty = Object.assign({}, property);
-  if (/^public source result\s*\d*$/i.test(cleanText(repairedProperty.full_address)) && urlIdentity.full_address) {
-    repairedProperty.full_address = urlIdentity.full_address;
+  const viewAddress = propertyIdentity.canonicalAddress({
+    normalized_address: repairedProperty.full_address,
+    source_url: sourceUrl,
+    city: repairedProperty.city || urlIdentity.city,
+    state: repairedProperty.state || urlIdentity.state,
+    zip: repairedProperty.zip || urlIdentity.zip
+  });
+  if (viewAddress && viewAddress !== cleanText(repairedProperty.full_address)) {
+    repairedProperty.full_address = viewAddress;
     repairedProperty.city = repairedProperty.city || urlIdentity.city;
     repairedProperty.state = repairedProperty.state || urlIdentity.state;
     repairedProperty.zip = repairedProperty.zip || urlIdentity.zip;
@@ -1499,6 +1614,7 @@ function matchesFilter(dossier, filter) {
 function listDossiers(options = {}) {
   const limit = Math.min(Math.max(parseInt(options.limit || 20, 10) || 20, 1), 100);
   let dossiers = readStore(options.storePath)
+    .filter((dossier) => dossier && dossier.parked_duplicate !== true)
     .filter((dossier) => !(dossier.workflow && dossier.workflow.outcome === 'Bad Lead') || options.includeBad === true)
     .filter((dossier) => matchesFilter(dossier, options.filter))
     .map(publicDossier);

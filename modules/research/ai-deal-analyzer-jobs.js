@@ -7,6 +7,7 @@ const db = require('../../db');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const compResearchProvider = require('./comp-research-provider');
 const leadEvidence = require('./lead-evidence');
+const propertyIdentity = require('./property-identity');
 
 const JOB_STATUSES = new Set([
   'queued',
@@ -163,8 +164,7 @@ function leadCounty(lead) {
 }
 
 function fullLeadAddress(lead) {
-  const parts = [leadAddress(lead), leadCity(lead), leadState(lead), leadZip(lead)].filter(Boolean);
-  return parts.join(', ');
+  return propertyIdentity.canonicalAddress(lead || {});
 }
 
 function statePattern() {
@@ -206,12 +206,14 @@ function pseudoLeadFromAddress(input) {
 
 function addressQuality(leadOrText) {
   const lead = typeof leadOrText === 'string' ? pseudoLeadFromAddress(leadOrText) : (leadOrText || {});
-  const street = cleanText(leadAddress(lead));
-  const city = leadCity(lead);
-  const state = leadState(lead);
-  const zip = leadZip(lead);
+  const canonical = propertyIdentity.canonicalAddress(lead);
+  const parts = propertyIdentity.canonicalParts(Object.assign({}, lead, { normalized_address: canonical }));
+  const street = cleanText(parts.street || leadAddress(lead));
+  const city = cleanText(parts.city || leadCity(lead));
+  const state = cleanText(parts.state || leadState(lead));
+  const zip = cleanText(parts.zip || leadZip(lead));
   const county = leadCounty(lead);
-  const full = [street, city, state, zip].filter(Boolean).join(', ');
+  const full = canonical || [street, city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const probe = [street, full, county].filter(Boolean).join(' ').toLowerCase();
   const hasNumber = /\b\d{1,7}\b/.test(street);
   const hasStreetWord = /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop|run|sq|square|plaza|expressway|expy|fwy|freeway)\b/i.test(street);
@@ -849,7 +851,11 @@ function createJob(item) {
     ? addressQuality(lead)
     : inputType === 'property_link'
       ? { status: 'partial', label: 'Needs Address Review', normalized_address: '', message: 'Add the property address to analyze this link.' }
-      : addressQuality(inputValue);
+      : addressQuality(Object.assign({}, item, {
+        input_value: inputValue,
+        normalized_address: baseLeadEvidence.normalized_address,
+        source_url: sourceUrl || baseLeadEvidence.canonical_source_url
+      }));
   job.normalized_address = cleanText(quality && quality.normalized_address);
   job.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, item, job.lead_evidence || {}, {
     normalized_address: job.normalized_address || baseLeadEvidence.normalized_address,
@@ -876,6 +882,44 @@ function createJob(item) {
   return job;
 }
 
+function analyzerJobsMatch(existing, incoming) {
+  if (!existing || !incoming || existing.status === 'failed') return false;
+  return propertyIdentity.sameProperty(existing, incoming);
+}
+
+function firstNonEmpty() {
+  for (let i = 0; i < arguments.length; i += 1) {
+    const value = cleanText(arguments[i]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function mergeAnalyzerJob(existing, incoming) {
+  const canonicalAddress = propertyIdentity.canonicalAddress(Object.assign({}, existing, incoming, {
+    source_url: firstNonEmpty(incoming.source_url, existing.source_url),
+    normalized_address: firstNonEmpty(existing.normalized_address, incoming.normalized_address)
+  }));
+  const mergedEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, existing.lead_evidence || {}, incoming.lead_evidence || {}, incoming, existing, {
+    normalized_address: canonicalAddress,
+    source_url: firstNonEmpty(existing.source_url, incoming.source_url)
+  }), {
+    analyzer_job_id: existing.job_id,
+    normalized_address: canonicalAddress,
+    canonical_source_url: firstNonEmpty(existing.source_url, incoming.source_url)
+  });
+  return Object.assign({}, existing, {
+    updated_at: nowIso(),
+    input_value: firstNonEmpty(existing.input_value, incoming.input_value),
+    normalized_address: canonicalAddress,
+    source_url: firstNonEmpty(existing.source_url, incoming.source_url),
+    source_type: firstNonEmpty(existing.source_type, incoming.source_type),
+    lead_ref: firstNonEmpty(existing.lead_ref, incoming.lead_ref),
+    lead_evidence: mergedEvidence,
+    scout_context: existing.scout_context || incoming.scout_context || null
+  });
+}
+
 function createJobs(body, options) {
   options = options || {};
   const rawItems = Array.isArray(body && body.items)
@@ -893,13 +937,32 @@ function createJobs(body, options) {
     err.status = 400;
     throw err;
   }
-  const jobs = rawItems.map(createJob);
   const existing = readJobs();
-  writeJobs(jobs.concat(existing).slice(0, 250));
+  const createdJobs = rawItems.map(createJob);
+  const outputJobs = [];
+  const mergedExisting = existing.slice();
+  const newJobs = [];
+  createdJobs.forEach((job) => {
+    const idx = mergedExisting.findIndex((candidate) => analyzerJobsMatch(candidate, job));
+    if (idx >= 0) {
+      mergedExisting[idx] = mergeAnalyzerJob(mergedExisting[idx], job);
+      outputJobs.push(mergedExisting[idx]);
+      return;
+    }
+    const pendingIdx = newJobs.findIndex((candidate) => analyzerJobsMatch(candidate, job));
+    if (pendingIdx >= 0) {
+      newJobs[pendingIdx] = mergeAnalyzerJob(newJobs[pendingIdx], job);
+      outputJobs.push(newJobs[pendingIdx]);
+      return;
+    }
+    newJobs.push(job);
+    outputJobs.push(job);
+  });
+  writeJobs(newJobs.concat(mergedExisting).slice(0, 250));
   if (options.runNow) {
-    return jobs.map((job) => runJob(job.job_id));
+    return outputJobs.map((job) => job.status === 'queued' ? runJob(job.job_id) : publicJob(job));
   }
-  return jobs.map(publicJob);
+  return outputJobs.map(publicJob);
 }
 
 function listJobs(limit) {
@@ -930,7 +993,7 @@ function runJob(jobIdValue) {
     } else if (job.input_type === 'property_link') {
       quality = { status: 'partial', label: 'Needs Address Review', normalized_address: '', message: 'Add the property address to analyze this link.' };
     } else {
-      quality = addressQuality(job.input_value);
+      quality = addressQuality(job);
     }
     const normalized = quality.normalized_address || (lead ? fullLeadAddress(lead) : '');
     const sourceEvidence = collectSourceEvidence(lead, job);
