@@ -1,6 +1,7 @@
 'use strict';
 
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
+const propertyIdentity = require('./property-identity');
 
 const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|investor special|investor opportunity|cash only|fixer|needs\s+(?:tlc|work|repair)|rehab|back on (?:the )?market|relisted|price (?:cut|reduced|drop|reduction)|estate sale|fsbo|for sale by owner|hard money only|traditional financing unavailable|pre[- ]?foreclosure)\b/i;
 const CLOSED_RE = /\b(sold|closed|off[- ]?market|auction ended|sale completed)\b/i;
@@ -41,9 +42,7 @@ function sourceDomain(value) {
 }
 
 function normalizeAddress(value) {
-  return cleanText(value)
-    .replace(/\s*,\s*/g, ', ')
-    .replace(/\btx\b/i, 'TX');
+  return propertyIdentity.canonicalAddress(value);
 }
 
 function sourceUrlFrom(input) {
@@ -152,15 +151,7 @@ function normalizeLeadEvidence(input, overrides) {
   const sourceUrl = cleanText(overrides.canonical_source_url || sourceUrlFrom(input));
   const phrase = cleanText(overrides.exact_source_phrase || exactPhraseFrom(input));
   const sourceType = sourceUrl ? sourceEvidenceAdapter.classifySourceUrl(sourceUrl) : 'missing_source_url';
-  const address = normalizeAddress(overrides.normalized_address || pick(input, [
-    'lead_evidence.normalized_address',
-    'normalized_address',
-    'address_or_source_text',
-    'display_address',
-    'address',
-    'property_address',
-    'input_value'
-  ]));
+  const address = propertyIdentity.canonicalAddress(input, overrides);
   const contactRoute = cleanText(overrides.public_contact_route) || contactRouteFrom(input, sourceUrl, phrase);
   const evidence = {
     normalized_address: address,
@@ -216,6 +207,8 @@ module.exports = {
   sourceDomain,
   normalizeAddress,
   normalizeLeadEvidence,
+  canonicalPropertyKey: propertyIdentity.canonicalPropertyKey,
+  sameProperty: propertyIdentity.sameProperty,
   dealFinderGroup,
   isCurrentOpportunity
 };

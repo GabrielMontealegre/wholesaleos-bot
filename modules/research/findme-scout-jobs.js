@@ -1037,8 +1037,12 @@ function buildAnalyzerItem(job, card) {
   });
   return {
     input_type: 'pasted_address',
-    input_value: card.address_or_source_text,
-    address: card.address_or_source_text,
+    input_value: evidence.normalized_address || card.address_or_source_text,
+    address: evidence.normalized_address || card.address_or_source_text,
+    city: card.city || '',
+    state: card.state || '',
+    zip: card.zip || '',
+    county: card.county || '',
     source_url: card.canonical_source_url || card.source_url,
     source_type: card.lead_source_type,
     source: 'Deal Finder',
