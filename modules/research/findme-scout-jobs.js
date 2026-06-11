@@ -545,6 +545,22 @@ function foundBecause(signals, fallback) {
   return cleanText(fallback) || 'No requested acquisition criteria matched yet.';
 }
 
+function sourceBackedWholesalePhrase(record, card) {
+  const text = criterionEvidenceText(record, card);
+  const exact = cleanText(pick(record || {}, [
+    'matched_source_phrase',
+    'source_excerpt',
+    'description_excerpt',
+    'source_snippet',
+    'evidence_snippet'
+  ]) || card && (card.matched_source_phrase || card.source_excerpt || card.description_excerpt || card.source_snippet || card.evidence_snippet));
+  if (exact && /\b(as.?is|fixer|needs\s+(tlc|work|repair)|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b/i.test(exact)) {
+    return exact;
+  }
+  const sentenceMatch = cleanText(text).match(/(?:[^.!?]*\b(?:as.?is|fixer|needs\s+(?:tlc|work|repair)|investor special|investor opportunity|cash only|price (?:cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b[^.!?]*[.!?]?)/i);
+  return sentenceMatch ? cleanText(sentenceMatch[0]) : '';
+}
+
 function compStatusFor(record) {
   const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
   const candidate = Number(record && (record.candidate_comp_count || record.candidate_sold_comps_count) || 0) || 0;
@@ -598,6 +614,7 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
   const status = card.status;
   const visibleGate = visibleDealFinderGate(record, card, sourceUrl, signals);
   const bucket = acquisitionBucketFor(status, record, card, signals, sourceUrl);
+  const exactPhrase = sourceBackedWholesalePhrase(record, card);
   const sourceRepairReasons = []
     .concat(visibleGate.sourceOk ? [] : ['current property-specific listing/source URL'])
     .concat(visibleGate.addressOk ? [] : ['full usable property address'])
@@ -609,7 +626,11 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
     visible_in_deal_finder_main: visibleGate.ok,
     filtered_from_main_reason: visibleGate.ok ? '' : sourceRepairReasons.join(', '),
     wholesale_priority: wholesalePriorityFor(status, record, card, signals, sourceUrl),
-    found_because: foundBecause(signals, card.why_this_might_be_a_deal),
+    found_because: exactPhrase
+      ? `Found because source text says: ${exactPhrase}`
+      : (visibleGate.criteriaOk ? foundBecause(signals, card.why_this_might_be_a_deal) : 'Exact source phrase was not preserved on this historical record. Open Source to verify.'),
+    matched_source_phrase: exactPhrase,
+    source_excerpt: exactPhrase || card.source_excerpt || '',
     matched_criteria: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean),
     top_facts: topFactsFor(record, sourceType, signals),
     comp_status: compStatusFor(record),

@@ -417,35 +417,22 @@ function collectCompEvidence(lead, subjectAddress) {
 
 function mergeCompResearchState(job, state) {
   state = state || {};
-  const verifiedSoldComps = Array.isArray(state.verified_sold_comps) ? state.verified_sold_comps : [];
-  const candidateSoldComps = Array.isArray(state.candidate_sold_comps) ? state.candidate_sold_comps : [];
-  const marketSupport = Array.isArray(state.market_support) ? state.market_support : [];
-  const notUsable = Array.isArray(state.not_usable_comp_results) ? state.not_usable_comp_results : [];
-  const subjectSaleEvidence = Array.isArray(state.subject_sale_evidence)
-    ? state.subject_sale_evidence
-    : Array.isArray(job && job.subject_sale_evidence)
-      ? job.subject_sale_evidence
-      : [];
-  const providerArv = state.arv_range || null;
-  const providerMao = state.mao_range || null;
+  const canonical = compResearchProvider.canonicalizeCompResearchState(job, state);
   return Object.assign({}, job, {
     comp_research_status: state.provider_status,
     comp_research_provider: state.provider,
     comp_research_provider_label: state.provider_label || job.comp_research_provider_label,
-    comp_candidates: state.candidates,
-    verified_sold_comps: verifiedSoldComps,
-    subject_sale_evidence: subjectSaleEvidence,
-    candidate_sold_comps: candidateSoldComps,
-    market_support: marketSupport,
-    not_usable_comp_results: notUsable,
-    verified_comp_count: Math.max(
-      Array.isArray(job && job.comp_evidence) ? job.comp_evidence.length : 0,
-      state.verified_comp_count || 0
-    ),
-    subject_sale_evidence_count: state.subject_sale_evidence_count || subjectSaleEvidence.length,
-    candidate_comp_count: state.candidate_comp_count || candidateSoldComps.length,
-    market_support_count: state.market_support_count || marketSupport.length,
-    not_usable_comp_count: state.not_usable_comp_count || notUsable.length,
+    comp_candidates: canonical.candidates,
+    verified_sold_comps: canonical.verified_sold_comps,
+    subject_sale_evidence: canonical.subject_sale_evidence,
+    candidate_sold_comps: canonical.candidate_sold_comps,
+    market_support: canonical.market_support,
+    not_usable_comp_results: canonical.not_usable_comp_results,
+    verified_comp_count: canonical.verified_comp_count,
+    subject_sale_evidence_count: canonical.subject_sale_evidence_count,
+    candidate_comp_count: canonical.candidate_comp_count,
+    market_support_count: canonical.market_support_count,
+    not_usable_comp_count: canonical.not_usable_comp_count,
     comp_missing_evidence: state.missing_evidence,
     comp_next_action: state.next_action,
     comp_research_property_evidence: state.property_evidence || [],
@@ -461,9 +448,9 @@ function mergeCompResearchState(job, state) {
     comp_research_updated_at: state.updated_at,
     normalized_from_text: state.normalized_from_text === true,
     normalization_note: cleanText(state.normalization_note),
-    valuation_locked: providerArv ? false : job.valuation_locked,
-    arv_range: providerArv || job.arv_range || null,
-    mao_range: providerMao || job.mao_range || null
+    valuation_locked: canonical.valuation_locked,
+    arv_range: canonical.arv_range,
+    mao_range: canonical.mao_range
   });
 }
 
@@ -632,6 +619,7 @@ function normalizeResolvedCompResearchFailure(job, providerInfo, resolved, start
     provider_label: providerInfo && providerInfo.provider_label ? providerInfo.provider_label : cleanText(resolved.comp_research_provider_label) || 'Not configured',
     started_at: cleanText(startedAt || resolved.comp_research_started_at),
     error_category: category,
+    retain_existing: true,
     candidates: [],
     message: nextAction,
     missing_fields: ['Public research result'],
@@ -661,7 +649,22 @@ function persistCompResearchJobState(job, state) {
 
 function publicJob(job) {
   const sourcePack = sourcePackFromEvidence(job && job.source_evidence);
+  const canonical = compResearchProvider.canonicalizeCompResearchState(job, job || {});
   return Object.assign({}, job, {
+    comp_candidates: canonical.candidates,
+    verified_sold_comps: canonical.verified_sold_comps,
+    subject_sale_evidence: canonical.subject_sale_evidence,
+    candidate_sold_comps: canonical.candidate_sold_comps,
+    market_support: canonical.market_support,
+    not_usable_comp_results: canonical.not_usable_comp_results,
+    verified_comp_count: canonical.verified_comp_count,
+    subject_sale_evidence_count: canonical.subject_sale_evidence_count,
+    candidate_comp_count: canonical.candidate_comp_count,
+    market_support_count: canonical.market_support_count,
+    not_usable_comp_count: canonical.not_usable_comp_count,
+    valuation_locked: canonical.valuation_locked,
+    arv_range: canonical.arv_range,
+    mao_range: canonical.mao_range,
     future_adapters: Object.keys(FUTURE_ADAPTERS).reduce((acc, key) => {
       acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true };
       return acc;
@@ -1026,6 +1029,7 @@ async function runCompResearchForJob(jobIdValue, options) {
       provider: providerInfo.provider_id,
       provider_label: providerInfo.provider_label,
       error_category: category,
+      retain_existing: true,
       candidates: [],
       message: category === 'temporarily_unavailable' || category === 'quota_or_rate_limited'
         ? 'Gemini is temporarily unavailable/high demand. Try again later.'
@@ -1049,21 +1053,22 @@ function getCompCandidates(jobIdValue) {
     err.status = 404;
     throw err;
   }
+  const canonical = compResearchProvider.canonicalizeCompResearchState(job, job);
   return {
-    candidates: Array.isArray(job.comp_candidates) ? job.comp_candidates : [],
-    verified_sold_comps: Array.isArray(job.verified_sold_comps) ? job.verified_sold_comps : [],
-    subject_sale_evidence: Array.isArray(job.subject_sale_evidence) ? job.subject_sale_evidence : [],
-    candidate_sold_comps: Array.isArray(job.candidate_sold_comps) ? job.candidate_sold_comps : [],
-    market_support: Array.isArray(job.market_support) ? job.market_support : [],
-    not_usable_comp_results: Array.isArray(job.not_usable_comp_results) ? job.not_usable_comp_results : [],
-    verified_comp_count: Number(job.verified_comp_count || 0) || 0,
-    subject_sale_evidence_count: Number(job.subject_sale_evidence_count || 0) || 0,
-    candidate_comp_count: Number(job.candidate_comp_count || 0) || 0,
-    market_support_count: Number(job.market_support_count || 0) || 0,
-    not_usable_comp_count: Number(job.not_usable_comp_count || 0) || 0,
-    valuation_locked: job.valuation_locked !== false,
-    arv_range: job.arv_range || null,
-    mao_range: job.mao_range || null
+    candidates: canonical.candidates,
+    verified_sold_comps: canonical.verified_sold_comps,
+    subject_sale_evidence: canonical.subject_sale_evidence,
+    candidate_sold_comps: canonical.candidate_sold_comps,
+    market_support: canonical.market_support,
+    not_usable_comp_results: canonical.not_usable_comp_results,
+    verified_comp_count: canonical.verified_comp_count,
+    subject_sale_evidence_count: canonical.subject_sale_evidence_count,
+    candidate_comp_count: canonical.candidate_comp_count,
+    market_support_count: canonical.market_support_count,
+    not_usable_comp_count: canonical.not_usable_comp_count,
+    valuation_locked: canonical.valuation_locked,
+    arv_range: canonical.arv_range,
+    mao_range: canonical.mao_range
   };
 }
 

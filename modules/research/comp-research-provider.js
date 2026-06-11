@@ -562,6 +562,73 @@ function groupedCompCandidates(candidates) {
   return grouped;
 }
 
+function compRowIdentityKey(candidate) {
+  candidate = candidate || {};
+  const addressKey = addressConflictKey(candidate.comp_address || addressFromPropertyUrl(candidate.source_url));
+  const sourceKey = canonicalSourceUrlKey(candidate.source_url);
+  if (addressKey || sourceKey) return `${addressKey}|${sourceKey}`;
+  return cleanText(candidate.candidate_id) || crypto.createHash('sha1').update(JSON.stringify(candidate)).digest('hex');
+}
+
+function compGroupRank(candidate) {
+  const group = cleanText(candidate && candidate.comp_group).toLowerCase();
+  if (group === 'subject_sale_evidence') return 5;
+  if (group === 'verified_sold') return 4;
+  if (group === 'candidate_sold') return 3;
+  if (group === 'market_support') return 2;
+  return 1;
+}
+
+function collectCompRows(source) {
+  source = source || {};
+  return []
+    .concat(Array.isArray(source.candidates) ? source.candidates : [])
+    .concat(Array.isArray(source.comp_candidates) ? source.comp_candidates : [])
+    .concat(Array.isArray(source.verified_sold_comps) ? source.verified_sold_comps : [])
+    .concat(Array.isArray(source.subject_sale_evidence) ? source.subject_sale_evidence : [])
+    .concat(Array.isArray(source.candidate_sold_comps) ? source.candidate_sold_comps : [])
+    .concat(Array.isArray(source.market_support) ? source.market_support : [])
+    .concat(Array.isArray(source.not_usable_comp_results) ? source.not_usable_comp_results : []);
+}
+
+function canonicalizeCompResearchState(job, state) {
+  state = state || {};
+  const provider = cleanText(state.provider || job && job.comp_research_provider || 'unknown');
+  const rows = collectCompRows(state);
+  if (state.retain_existing === true) rows.push(...collectCompRows(job));
+  const byKey = new Map();
+  rows.forEach((row) => {
+    const normalized = normalizeCompCandidate(row, { id: cleanText(row && row.provider) || provider || 'unknown' });
+    const classified = classifyCompCandidate(normalized, job, new Set());
+    const key = compRowIdentityKey(classified);
+    const existing = byKey.get(key);
+    if (!existing || compGroupRank(classified) > compGroupRank(existing)) {
+      byKey.set(key, classified);
+    }
+  });
+  const candidates = Array.from(byKey.values());
+  const groups = groupedCompCandidates(candidates);
+  const verifiedCount = groups.verified_sold_comps.length;
+  const valuation = valuationFromVerifiedComps(job, groups.verified_sold_comps);
+  return {
+    candidates,
+    verified_sold_comps: groups.verified_sold_comps,
+    subject_sale_evidence: groups.subject_sale_evidence,
+    candidate_sold_comps: groups.candidate_sold_comps,
+    market_support: groups.market_support,
+    not_usable_comp_results: groups.not_usable_comp_results,
+    verified_comp_count: verifiedCount,
+    subject_sale_evidence_count: groups.subject_sale_evidence.length,
+    candidate_comp_count: groups.candidate_sold_comps.length,
+    market_support_count: groups.market_support.length,
+    not_usable_comp_count: groups.not_usable_comp_results.length,
+    valuation_locked: valuation.valuation_locked,
+    arv_range: valuation.arv_range,
+    mao_range: valuation.mao_range,
+    valuation_note: valuation.valuation_note
+  };
+}
+
 function median(values) {
   if (!values.length) return null;
   const sorted = values.slice().sort((a, b) => a - b);
@@ -740,26 +807,21 @@ function summarizeRouterResearchState(job, provider, result) {
 
 function summarizeCompResearchState(job, result) {
   result = result || {};
-  const seen = new Set();
-  const candidates = (Array.isArray(result.candidates) ? result.candidates : [])
-    .map((candidate) => normalizeCompCandidate(candidate, { id: result.provider || 'unknown' }))
-    .map((candidate) => classifyCompCandidate(candidate, job, seen));
   const status = PROVIDER_STATUSES.has(result.provider_status) ? result.provider_status : 'failed';
-  const groups = groupedCompCandidates(candidates);
-  const verifiedCount = verifiedCompCount(groups.verified_sold_comps);
+  const canonical = canonicalizeCompResearchState(job, result);
+  const verifiedCount = canonical.verified_comp_count;
   const missing = Array.isArray(result.missing_fields) ? result.missing_fields.slice() : [];
   if (verifiedCount < 3 && missing.indexOf('3 verified sold comps') === -1) missing.push('3 verified sold comps');
   if (verifiedCount > 0 && verifiedCount < 3 && missing.indexOf('Insufficient verified sold comps') === -1) {
     missing.push('Insufficient verified sold comps');
   }
-  if (!verifiedCount && groups.subject_sale_evidence.length && missing.indexOf('Subject property sale evidence excluded from verified comp count') === -1) {
+  if (!verifiedCount && canonical.subject_sale_evidence.length && missing.indexOf('Subject property sale evidence excluded from verified comp count') === -1) {
     missing.push('Subject property sale evidence excluded from verified comp count');
   }
-  const valuation = valuationFromVerifiedComps(job, groups.verified_sold_comps);
-  if (valuation.arv_range && !valuation.mao_range && missing.indexOf('Repair estimate for MAO') === -1) {
+  if (canonical.arv_range && !canonical.mao_range && missing.indexOf('Repair estimate for MAO') === -1) {
     missing.push('Repair estimate for MAO');
   }
-  let nextAction = cleanText(result.message) || valuation.valuation_note || 'Comp research needs review.';
+  let nextAction = cleanText(result.message) || canonical.valuation_note || 'Comp research needs review.';
   if (status === 'temporarily_unavailable' || status === 'provider_temporarily_unavailable' || status === 'quota_or_rate_limited') {
     nextAction = 'Gemini is temporarily unavailable/high demand. Try again later.';
   } else if (status === 'timed_out') {
@@ -771,37 +833,37 @@ function summarizeCompResearchState(job, result) {
   } else if (status === 'blocked_source_address_conflict') {
     nextAction = 'Source URL address conflicts with Analyzer address. Verify before comp research.';
   }
-  if (!verifiedCount && groups.subject_sale_evidence.length && !groups.candidate_sold_comps.length && !groups.market_support.length) {
+  if (!verifiedCount && canonical.subject_sale_evidence.length && !canonical.candidate_sold_comps.length && !canonical.market_support.length) {
     nextAction = 'Only subject property evidence found. More nearby sold comps are needed.';
-  } else if (!verifiedCount && groups.market_support.length && !groups.candidate_sold_comps.length) {
+  } else if (!verifiedCount && canonical.market_support.length && !canonical.candidate_sold_comps.length) {
     nextAction = 'Gemini found market support, but no verified sold comps yet.';
-  } else if (!verifiedCount && groups.subject_sale_evidence.length) {
+  } else if (!verifiedCount && canonical.subject_sale_evidence.length) {
     nextAction = 'Subject property evidence was excluded from comps. More nearby sold comps are needed.';
   }
   return {
     provider_status: status,
     provider: cleanText(result.provider || 'none'),
     provider_label: result.provider && result.provider !== 'none' ? providerLabel(result.provider) : 'Not configured',
-    candidates,
-    verified_sold_comps: groups.verified_sold_comps,
-    subject_sale_evidence: groups.subject_sale_evidence,
-    candidate_sold_comps: groups.candidate_sold_comps,
-    market_support: groups.market_support,
-    not_usable_comp_results: groups.not_usable_comp_results,
-    verified_comp_count: verifiedCount,
-    subject_sale_evidence_count: groups.subject_sale_evidence.length,
-    candidate_comp_count: groups.candidate_sold_comps.length,
-    market_support_count: groups.market_support.length,
-    not_usable_comp_count: groups.not_usable_comp_results.length,
+    candidates: canonical.candidates,
+    verified_sold_comps: canonical.verified_sold_comps,
+    subject_sale_evidence: canonical.subject_sale_evidence,
+    candidate_sold_comps: canonical.candidate_sold_comps,
+    market_support: canonical.market_support,
+    not_usable_comp_results: canonical.not_usable_comp_results,
+    verified_comp_count: canonical.verified_comp_count,
+    subject_sale_evidence_count: canonical.subject_sale_evidence_count,
+    candidate_comp_count: canonical.candidate_comp_count,
+    market_support_count: canonical.market_support_count,
+    not_usable_comp_count: canonical.not_usable_comp_count,
     missing_evidence: missing,
     next_action: nextAction,
     comp_search_strategy: cleanText(result.comp_search_strategy),
     missing_evidence_summary: cleanText(result.missing_evidence_summary),
     provider_next_action: cleanText(result.next_action),
-    valuation_locked: valuation.valuation_locked,
-    arv_range: valuation.arv_range,
-    mao_range: valuation.mao_range,
-    valuation_note: valuation.valuation_note,
+    valuation_locked: canonical.valuation_locked,
+    arv_range: canonical.arv_range,
+    mao_range: canonical.mao_range,
+    valuation_note: canonical.valuation_note,
     normalized_from_text: result.normalized_from_text === true,
     normalization_note: cleanText(result.normalization_note),
     property_evidence: Array.isArray(result.property_evidence) ? result.property_evidence : [],
@@ -824,6 +886,7 @@ module.exports = {
   normalizeCompCandidate,
   validateVerifiedCompCandidate,
   classifyCompCandidate,
+  canonicalizeCompResearchState,
   summarizeCompResearchState,
   addressConflictKey
 };
