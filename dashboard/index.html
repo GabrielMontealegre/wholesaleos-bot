@@ -1963,9 +1963,10 @@ function findMeSimpleBucket(card) {
   var bucket = String(card.lead_bucket || card.acquisition_bucket || '');
   var compText = String(card.comp_status || '');
   var status = String(card.status || '');
+  if (/Research|Repair|Reference/i.test(bucket)) return 'Research / Source Repair';
+  if (/Skip|Bad|Junk|Archive/i.test(bucket + ' ' + status)) return 'Bad / Skipped';
   if (/Has Comps|Comp-Supported/i.test(bucket) || /verified sold comp|candidate sold comp/i.test(compText)) return 'Has Comps';
   if (/Call Ready|Research Ready/i.test(status) || /Needs Comps|Criteria-Matched/i.test(bucket)) return 'Needs Comps';
-  if (/Skip|Bad|Junk|Archive/i.test(bucket + ' ' + status)) return 'Bad / Skipped';
   return 'Research / Source Repair';
 }
 
@@ -2013,8 +2014,36 @@ function findMeCardHasCurrentPropertySource(card) {
 
 function findMeCardHasCriteria(card) {
   card = card || {};
-  if (Array.isArray(card.matched_criteria) && card.matched_criteria.filter(Boolean).length) return true;
-  return !!String(card.found_because || card.why_this_might_be_a_deal || '').trim();
+  var text = [
+    card.signal_summary,
+    card.why_it_matters,
+    card.why_this_might_be_a_deal,
+    card.found_because,
+    card.source_excerpt,
+    card.source_snippet,
+    card.evidence_snippet
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (!text) return false;
+  if (/source evidence exists|verified sold comps are still needed|public source result|gemini returned a source url/i.test(text) &&
+      !/\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b/i.test(text)) return false;
+  return /\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|rehab|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|notice of default|code violation|tax delinquent)\b/i.test(text);
+}
+
+function findMeCardIsCurrentOpportunity(card) {
+  card = card || {};
+  var text = [
+    card.listing_status,
+    card.status,
+    card.why_this_might_be_a_deal,
+    card.found_because,
+    card.signal_summary,
+    card.why_it_matters,
+    Array.isArray(card.risk_flags) ? card.risk_flags.join(' ') : ''
+  ].filter(Boolean).join(' ').toLowerCase();
+  var statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
+  var soldOrClosed = /\b(sold|closed|off.?market|auction ended|sale completed)\b/i.test(statusText);
+  var currentSignal = /\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText);
+  return !(soldOrClosed && !currentSignal);
 }
 
 function findMeMainVisibleCards(cards) {
@@ -2026,6 +2055,7 @@ function findMeMainVisibleCards(cards) {
     if (!findMeCardHasFullAddress(card)) return false;
     if (!findMeCardHasCurrentPropertySource(card)) return false;
     if (!findMeCardHasCriteria(card)) return false;
+    if (!findMeCardIsCurrentOpportunity(card)) return false;
     var key = (findMeCardAddressText(card).toLowerCase().replace(/[^a-z0-9]+/g, ' ') + '|' + findMeCardSourceUrl(card).toLowerCase().split('?')[0]).trim();
     if (seen[key]) return false;
     seen[key] = true;
@@ -2036,10 +2066,13 @@ function findMeMainVisibleCards(cards) {
 function findMeJobWithDisplayCards(job, fallbackNote) {
   var cards = findMeMainVisibleCards(job && job.cards);
   if (!job || !cards.length) return null;
+  var sourceCount = Array.isArray(job.cards) ? job.cards.length : cards.length;
   var copy = Object.assign({}, job, {
     cards: cards,
     _display_note: fallbackNote || '',
-    _source_cards_count: Array.isArray(job.cards) ? job.cards.length : cards.length
+    _source_cards_count: sourceCount,
+    _current_acquisition_candidates_count: cards.length,
+    _research_reference_hidden_count: Math.max(0, sourceCount - cards.length)
   });
   return copy;
 }
@@ -2206,7 +2239,11 @@ function acquisitionCopyScoutBrief(jobId, cardId) {
 
 function findMeCounts(job) {
   var c = job && job.counts || {};
+  var current = Number(job && job._current_acquisition_candidates_count || 0) || 0;
+  var hidden = Number(job && job._research_reference_hidden_count || 0) || 0;
   return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+    (job && job._source_cards_count !== undefined ? findMePill(current + ' current acquisition candidates', current ? 'good' : 'neutral') : '') +
+    (job && job._source_cards_count !== undefined ? findMePill(hidden + ' research/reference records hidden from main buckets', hidden ? 'warn' : 'neutral') : '') +
     findMePill((c.call_ready || 0) + ' Call Ready', c.call_ready ? 'good' : 'neutral') +
     findMePill((c.research_ready || 0) + ' Research Ready', c.research_ready ? 'good' : 'neutral') +
     findMePill((c.needs_address_repair || 0) + ' Needs Address Repair', c.needs_address_repair ? 'warn' : 'neutral') +
