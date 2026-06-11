@@ -1961,11 +1961,10 @@ function findMeClearSelection() {
 function findMeSimpleBucket(card) {
   card = card || {};
   var bucket = String(card.lead_bucket || card.acquisition_bucket || '');
-  var compText = String(card.comp_status || '');
   var status = String(card.status || '');
   if (/Research|Repair|Reference/i.test(bucket)) return 'Research / Source Repair';
   if (/Skip|Bad|Junk|Archive/i.test(bucket + ' ' + status)) return 'Bad / Skipped';
-  if (/Has Comps|Comp-Supported/i.test(bucket) || /verified sold comp|candidate sold comp/i.test(compText)) return 'Has Comps';
+  if (/Has Comps|Comp-Supported/i.test(bucket)) return 'Has Comps';
   if (/Call Ready|Research Ready/i.test(status) || /Needs Comps|Criteria-Matched/i.test(bucket)) return 'Needs Comps';
   return 'Research / Source Repair';
 }
@@ -2019,6 +2018,8 @@ function findMeCardHasCriteria(card) {
     card.why_it_matters,
     card.why_this_might_be_a_deal,
     card.found_because,
+    card.matched_source_phrase,
+    card.description_excerpt,
     card.source_excerpt,
     card.source_snippet,
     card.evidence_snippet
@@ -2038,11 +2039,14 @@ function findMeCardIsCurrentOpportunity(card) {
     card.found_because,
     card.signal_summary,
     card.why_it_matters,
+    card.matched_source_phrase,
+    card.description_excerpt,
     Array.isArray(card.risk_flags) ? card.risk_flags.join(' ') : ''
   ].filter(Boolean).join(' ').toLowerCase();
   var statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
   var soldOrClosed = /\b(sold|closed|off.?market|auction ended|sale completed)\b/i.test(statusText);
   var currentSignal = /\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText);
+  if (/\b(auction|bank.?owned|reo)\b/i.test(statusText)) return false;
   return !(soldOrClosed && !currentSignal);
 }
 
@@ -2067,8 +2071,17 @@ function findMeJobWithDisplayCards(job, fallbackNote) {
   var cards = findMeMainVisibleCards(job && job.cards);
   if (!job || !cards.length) return null;
   var sourceCount = Array.isArray(job.cards) ? job.cards.length : cards.length;
+  var mainKeys = {};
+  cards.forEach(function(card) {
+    mainKeys[String(card.card_id || findMeCardAddressText(card) + '|' + findMeCardSourceUrl(card))] = true;
+  });
+  var hiddenCards = (Array.isArray(job.cards) ? job.cards : []).filter(function(card) {
+    var key = String(card.card_id || findMeCardAddressText(card) + '|' + findMeCardSourceUrl(card));
+    return !mainKeys[key];
+  });
   var copy = Object.assign({}, job, {
     cards: cards,
+    _research_reference_cards: hiddenCards,
     _display_note: fallbackNote || '',
     _source_cards_count: sourceCount,
     _current_acquisition_candidates_count: cards.length,
@@ -2095,13 +2108,14 @@ function findMeBucketColumn(title, cards, jobId, help) {
   '</div>';
 }
 
-function findMeResultsLayout(cards, jobId) {
+function findMeResultsLayout(cards, jobId, job) {
   cards = Array.isArray(cards) ? cards : [];
+  var referenceCards = job && Array.isArray(job._research_reference_cards) ? job._research_reference_cards : [];
   if (!cards.length) return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;text-align:center;color:#64748b;font-size:13px;font-weight:800">Run Deal Finder to search Dallas listing sources.</div>';
   var hasComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Has Comps'; });
   var needsComps = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Needs Comps'; });
-  var repair = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Research / Source Repair'; });
-  var skipped = cards.filter(function(card){ return findMeSimpleBucket(card) === 'Bad / Skipped'; });
+  var repair = referenceCards.filter(function(card){ return findMeSimpleBucket(card) === 'Research / Source Repair'; });
+  var skipped = referenceCards.filter(function(card){ return findMeSimpleBucket(card) === 'Bad / Skipped'; });
   var needsMessage = needsComps.length ? '<div style="border:1px solid #dbeafe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:10px 12px;font-size:12px;font-weight:900">These leads passed source/criteria gates but still need comps.</div>' : '';
   return needsMessage + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;align-items:start">' +
     findMeBucketColumn('Has Comps', hasComps, jobId, 'Source-backed leads with at least one verified or candidate sold comp source.') +
@@ -2342,7 +2356,7 @@ function renderFindMeScout() {
     displayNote +
     findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
-      findMeResultsLayout(cards, active && active.job_id) +
+      findMeResultsLayout(cards, active && active.job_id, active) +
     '</div>' +
   '</div>';
 }
