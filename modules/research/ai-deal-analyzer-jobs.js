@@ -6,6 +6,7 @@ const path = require('path');
 const db = require('../../db');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const compResearchProvider = require('./comp-research-provider');
+const leadEvidence = require('./lead-evidence');
 
 const JOB_STATUSES = new Set([
   'queued',
@@ -418,7 +419,7 @@ function collectCompEvidence(lead, subjectAddress) {
 function mergeCompResearchState(job, state) {
   state = state || {};
   const canonical = compResearchProvider.canonicalizeCompResearchState(job, state);
-  return Object.assign({}, job, {
+  const merged = Object.assign({}, job, {
     comp_research_status: state.provider_status,
     comp_research_provider: state.provider,
     comp_research_provider_label: state.provider_label || job.comp_research_provider_label,
@@ -452,6 +453,17 @@ function mergeCompResearchState(job, state) {
     arv_range: canonical.arv_range,
     mao_range: canonical.mao_range
   });
+  merged.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, merged.lead_evidence || {}, merged), {
+    analyzer_job_id: merged.job_id,
+    normalized_address: merged.normalized_address,
+    comp_status: canonical.verified_comp_count >= 3
+      ? '3+ verified sold comps present; ARV gate can open.'
+      : canonical.verified_comp_count
+        ? `${canonical.verified_comp_count} verified sold comp${canonical.verified_comp_count === 1 ? '' : 's'}; ARV locked until 3.`
+        : 'Needs Comps'
+  });
+  if (merged.scout_context) merged.scout_context.lead_evidence = merged.lead_evidence;
+  return merged;
 }
 
 function applyCompResearchState(job, options) {
@@ -732,6 +744,12 @@ function createJob(item) {
     ? cleanText(item.source_url || item.sourceUrl || item.source_proof_url || item.sourceProofUrl)
     : '';
   const created = nowIso();
+  const baseLeadEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, item, {
+    source_url: sourceUrl,
+    input_value: inputValue
+  }), {
+    analyzer_job_id: ''
+  });
   const job = {
     job_id: jobId(),
     created_at: created,
@@ -744,6 +762,7 @@ function createJob(item) {
     lead_ref: cleanText(item.lead_ref || item.leadRef || (lead && (lead.ref_id || lead.reference_id || lead.ref || lead.id))),
     source_url: sourceUrl,
     source_type: cleanText(item.source_type || item.sourceType || item.lead_source_type || item.leadSourceType || item.source || ''),
+    lead_evidence: baseLeadEvidence,
     scout_context: item.scout_context && typeof item.scout_context === 'object' ? {
       scout_job_id: cleanText(item.scout_context.scout_job_id),
       scout_card_id: cleanText(item.scout_context.scout_card_id),
@@ -778,7 +797,10 @@ function createJob(item) {
       scout_reason: cleanText(item.scout_context.scout_reason),
       distress_signals: Array.isArray(item.scout_context.distress_signals) ? item.scout_context.distress_signals.map(cleanText).filter(Boolean) : [],
       missing_evidence: Array.isArray(item.scout_context.missing_evidence) ? item.scout_context.missing_evidence.map(cleanText).filter(Boolean) : [],
-      call_angle: cleanText(item.scout_context.call_angle)
+      call_angle: cleanText(item.scout_context.call_angle),
+      lead_evidence: leadEvidence.normalizeLeadEvidence(item.scout_context.lead_evidence || baseLeadEvidence, {
+        analyzer_job_id: ''
+      })
     } : null,
     source_evidence: [],
     comp_evidence: [],
@@ -829,6 +851,15 @@ function createJob(item) {
       ? { status: 'partial', label: 'Needs Address Review', normalized_address: '', message: 'Add the property address to analyze this link.' }
       : addressQuality(inputValue);
   job.normalized_address = cleanText(quality && quality.normalized_address);
+  job.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, item, job.lead_evidence || {}, {
+    normalized_address: job.normalized_address || baseLeadEvidence.normalized_address,
+    source_url: sourceUrl || baseLeadEvidence.canonical_source_url,
+    scout_context: job.scout_context || {}
+  }), {
+    analyzer_job_id: job.job_id,
+    normalized_address: job.normalized_address || baseLeadEvidence.normalized_address
+  });
+  if (job.scout_context) job.scout_context.lead_evidence = job.lead_evidence;
   try {
     job.source_evidence = collectSourceEvidence(lead, job);
   } catch (_) {
@@ -928,6 +959,20 @@ function runJob(jobIdValue) {
       mao_range: valuation.mao_range,
       error: ''
     });
+    job.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, job.lead_evidence || {}, job, {
+      source_url: job.source_url,
+      normalized_address: normalized,
+      missing_evidence: missing
+    }), {
+      analyzer_job_id: job.job_id,
+      normalized_address: normalized,
+      comp_status: compEvidence.length >= 3
+        ? '3+ verified sold comps present; ARV gate can open.'
+        : compEvidence.length
+          ? `${compEvidence.length} verified sold comp${compEvidence.length === 1 ? '' : 's'}; ARV locked until 3.`
+          : 'Needs Comps'
+    });
+    if (job.scout_context) job.scout_context.lead_evidence = job.lead_evidence;
     job = applyCompResearchState(job);
     jobs[idx] = job;
     writeJobs(jobs);

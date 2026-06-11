@@ -9,6 +9,7 @@ const aiDealAnalyzerJobs = require('./ai-deal-analyzer-jobs');
 const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider');
 const manualReviewQueue = require('./manual-review-queue');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
+const leadEvidence = require('./lead-evidence');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -578,22 +579,27 @@ function contactStatusFor(record) {
 }
 
 function acquisitionBucketFor(status, record, card, signals, sourceUrl) {
-  const verified = Number(record && (record.verified_comp_count || record.verified_sold_comps_count) || 0) || 0;
-  const candidate = Number(record && (record.candidate_comp_count || record.candidate_sold_comps_count) || 0) || 0;
   const visibleGate = visibleDealFinderGate(record, card || {}, sourceUrl || card && card.source_url, signals || []);
-  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok && (verified > 0 || candidate > 0)) return 'Has Comps';
-  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok) return 'Needs Comps';
-  if ((status === 'Call Ready' || status === 'Research Ready') && !visibleGate.ok) return 'Research / Source Repair';
-  if (status === 'Needs Source Proof' || status === 'Needs Address Repair' || status === 'Support Signal Only') return 'Research / Source Repair';
+  const evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, record || {}, card || {}), {
+    normalized_address: card && (card.address_or_source_text || card.display_address),
+    canonical_source_url: sourceUrl || card && (card.canonical_source_url || card.source_url),
+    exact_source_phrase: sourceBackedWholesalePhrase(record, card),
+    matched_criterion: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean)[0] || ''
+  });
+  const group = leadEvidence.dealFinderGroup(evidence);
+  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok && group === 'Strong Leads') return 'Strong Leads';
+  if ((status === 'Call Ready' || status === 'Research Ready') && visibleGate.ok && group === 'Valid Leads - Needs Comps') return 'Valid Leads - Needs Comps';
+  if ((status === 'Call Ready' || status === 'Research Ready') && !visibleGate.ok) return 'Research / Reference';
+  if (status === 'Needs Source Proof' || status === 'Needs Address Repair' || status === 'Support Signal Only') return 'Research / Reference';
   return 'Skip / Bad Lead';
 }
 
 function wholesalePriorityFor(status, record, card, signals, sourceUrl) {
   const bucket = acquisitionBucketFor(status, record, card, signals, sourceUrl);
-  if (bucket === 'Has Comps') return 'A';
-  if (status === 'Call Ready') return 'B';
+  if (bucket === 'Strong Leads') return 'A';
+  if (bucket === 'Valid Leads - Needs Comps') return 'B';
   if (status === 'Research Ready') return 'C';
-  if (bucket === 'Research / Source Repair') return 'D';
+  if (bucket === 'Research / Reference') return 'D';
   return 'F';
 }
 
@@ -615,6 +621,13 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
   const visibleGate = visibleDealFinderGate(record, card, sourceUrl, signals);
   const bucket = acquisitionBucketFor(status, record, card, signals, sourceUrl);
   const exactPhrase = sourceBackedWholesalePhrase(record, card);
+  const evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, record || {}, card || {}), {
+    normalized_address: card.address_or_source_text || card.display_address,
+    canonical_source_url: sourceUrl || card.canonical_source_url || card.source_url,
+    exact_source_phrase: exactPhrase,
+    matched_criterion: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean)[0] || '',
+    comp_status: compStatusFor(record)
+  });
   const sourceRepairReasons = []
     .concat(visibleGate.sourceOk ? [] : ['current property-specific listing/source URL'])
     .concat(visibleGate.addressOk ? [] : ['full usable property address'])
@@ -634,7 +647,17 @@ function decorateAcquisitionCard(card, record, signals, sourceUrl, sourceType) {
     matched_criteria: (Array.isArray(signals) ? signals : []).map((signal) => signal.label).filter(Boolean),
     top_facts: topFactsFor(record, sourceType, signals),
     comp_status: compStatusFor(record),
-    contact_status: contactStatusFor(record),
+    contact_status: evidence.public_contact_route === 'Manual Lookup Needed' ? contactStatusFor(record) : evidence.public_contact_route,
+    public_contact_route: evidence.public_contact_route,
+    contact_verification_status: evidence.contact_verification_status,
+    listing_status: evidence.listing_status,
+    asking_price: evidence.asking_price,
+    beds: evidence.beds,
+    baths: evidence.baths,
+    sqft: evidence.sqft,
+    year_built: evidence.year_built,
+    exact_source_phrase: evidence.exact_source_phrase,
+    lead_evidence: evidence,
     source_domain: sourceDomain(sourceUrl),
     source_classification: card.source_classification || (isGenericSourceUrl(sourceUrl) ? 'generic_search_source' : isPropertySpecificSourceUrl(sourceUrl) ? 'exact_property_source' : ''),
     source_quality: card.source_quality || (isPropertySpecificSourceUrl(sourceUrl) ? 'Property-specific public source' : isGenericSourceUrl(sourceUrl) ? 'Generic/list source; needs property proof' : ''),
@@ -1008,6 +1031,10 @@ function findCard(job, cardId) {
 }
 
 function buildAnalyzerItem(job, card) {
+  const evidence = leadEvidence.normalizeLeadEvidence(card || {}, {
+    analyzer_job_id: '',
+    dossier_id: ''
+  });
   return {
     input_type: 'pasted_address',
     input_value: card.address_or_source_text,
@@ -1016,6 +1043,7 @@ function buildAnalyzerItem(job, card) {
     source_type: card.lead_source_type,
     source: 'Deal Finder',
     lead_ref: card.lead_id || card.candidate_id || card.card_id,
+    lead_evidence: evidence,
     scout_context: {
       scout_job_id: job.job_id,
       scout_card_id: card.card_id,
@@ -1050,7 +1078,8 @@ function buildAnalyzerItem(job, card) {
       scout_reason: card.why_this_might_be_a_deal || '',
       distress_signals: Array.isArray(card.distress_motivation_signals) ? card.distress_motivation_signals : [],
       missing_evidence: Array.isArray(card.missing_evidence) ? card.missing_evidence : [],
-      call_angle: card.call_angle || ''
+      call_angle: card.call_angle || '',
+      lead_evidence: evidence
     }
   };
 }
@@ -1100,6 +1129,9 @@ function sendCardToAnalyzer(jobId, cardId, options = {}) {
   card.pipeline_status = 'Sent to Analyzer';
   card.sent_to_analyzer_at = nowIso();
   card.analyzer_job_id = analyzerJobs && analyzerJobs[0] && analyzerJobs[0].job_id || '';
+  card.lead_evidence = leadEvidence.normalizeLeadEvidence(card, {
+    analyzer_job_id: card.analyzer_job_id
+  });
   job.updated_at = nowIso();
   job.counts = summarizeCards(job.cards);
   jobs[idx] = job;
