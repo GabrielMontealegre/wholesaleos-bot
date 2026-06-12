@@ -10,6 +10,7 @@ const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider'
 const manualReviewQueue = require('./manual-review-queue');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
 const leadEvidence = require('./lead-evidence');
+const propertyIdentity = require('./property-identity');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -868,6 +869,117 @@ function dedupeCards(cards) {
   return out;
 }
 
+function cardIdentityInput(card) {
+  card = card || {};
+  const evidence = card.lead_evidence || {};
+  return Object.assign({}, card, evidence, {
+    normalized_address: cleanText(evidence.normalized_address || card.display_address || card.address_or_source_text),
+    address: cleanText(evidence.normalized_address || card.display_address || card.address_or_source_text),
+    source_url: cleanText(card.canonical_source_url || card.source_url || card.open_source_url || evidence.canonical_source_url),
+    canonical_source_url: cleanText(card.canonical_source_url || evidence.canonical_source_url),
+    source_title: cleanText(card.source_title)
+  });
+}
+
+function cardReadScore(card) {
+  const evidence = card && card.lead_evidence || {};
+  let score = card && card.address_identity_status === 'canonical' ? 500 : 0;
+  if (card && card.property_specific_source) score += 120;
+  if (isPropertySpecificSourceUrl(card && (card.canonical_source_url || card.source_url || card.open_source_url))) score += 120;
+  if (cleanText(evidence.exact_source_phrase || card && card.exact_source_phrase || card && card.matched_source_phrase)) score += 80;
+  if (cleanText(evidence.public_contact_route || card && card.public_contact_route) && cleanText(evidence.public_contact_route || card && card.public_contact_route) !== 'Manual Lookup Needed') score += 40;
+  if (cleanText(evidence.analyzer_job_id || card && card.analyzer_job_id)) score += 30;
+  if (cleanText(evidence.dossier_id || card && card.dossier_id)) score += 30;
+  score += Number(card && card.scout_priority_score || 0) || 0;
+  return score;
+}
+
+function canonicalizeCardForRead(card, job) {
+  const sourceUrl = cleanText(card && (card.canonical_source_url || card.source_url || card.open_source_url || card.lead_evidence && card.lead_evidence.canonical_source_url));
+  const readAddress = propertyIdentity.canonicalAddressForRead(cardIdentityInput(card), {
+    source_url: sourceUrl,
+    source_title: cleanText(card && card.source_title),
+    city: cleanText(card && (card.city || job && job.city)),
+    state: cleanText(card && (card.state || job && job.state)),
+    zip: cleanText(card && (card.zip || job && job.zip))
+  });
+  const exactPhrase = cleanText(card && (card.exact_source_phrase || card.matched_source_phrase || card.lead_evidence && card.lead_evidence.exact_source_phrase));
+  const evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, card || {}, {
+    normalized_address: readAddress.normalized_address,
+    source_url: sourceUrl,
+    exact_source_phrase: exactPhrase
+  }), {
+    normalized_address: readAddress.normalized_address,
+    canonical_source_url: sourceUrl,
+    exact_source_phrase: exactPhrase,
+    public_contact_route: cleanText(card && (card.public_contact_route || card.lead_evidence && card.lead_evidence.public_contact_route)),
+    comp_status: cleanText(card && (card.comp_status || card.lead_evidence && card.lead_evidence.comp_status))
+  });
+  const missing = Array.from(new Set([]
+    .concat(Array.isArray(card && card.missing_evidence) ? card.missing_evidence : [])
+    .concat(Array.isArray(evidence.missing_evidence) ? evidence.missing_evidence : [])
+    .concat(readAddress.complete ? [] : [readAddress.address_warning])
+    .filter(Boolean)));
+  return Object.assign({}, card, {
+    address_or_source_text: readAddress.normalized_address,
+    display_address: readAddress.normalized_address,
+    normalized_address: readAddress.normalized_address,
+    city: readAddress.city || cleanText(card && card.city),
+    state: readAddress.state || cleanText(card && card.state),
+    zip: readAddress.zip || cleanText(card && card.zip),
+    address_identity_status: readAddress.address_status,
+    address_warning: readAddress.address_warning,
+    lead_evidence: evidence,
+    missing_evidence: missing,
+    preview_only: true,
+    should_ingest: false
+  });
+}
+
+function mergeCardForRead(primary, duplicate) {
+  const merged = Object.assign({}, duplicate, primary);
+  const primaryEvidence = primary.lead_evidence || {};
+  const duplicateEvidence = duplicate.lead_evidence || {};
+  merged.lead_evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, duplicateEvidence, primaryEvidence, merged), {
+    normalized_address: primary.lead_evidence && primary.lead_evidence.normalized_address || primary.display_address || primary.address_or_source_text,
+    canonical_source_url: cleanText(primaryEvidence.canonical_source_url || primary.canonical_source_url || primary.source_url || duplicateEvidence.canonical_source_url || duplicate.canonical_source_url || duplicate.source_url),
+    exact_source_phrase: cleanText(primaryEvidence.exact_source_phrase || duplicateEvidence.exact_source_phrase),
+    public_contact_route: cleanText(primaryEvidence.public_contact_route || duplicateEvidence.public_contact_route),
+    analyzer_job_id: cleanText(primaryEvidence.analyzer_job_id || duplicateEvidence.analyzer_job_id || primary.analyzer_job_id || duplicate.analyzer_job_id),
+    dossier_id: cleanText(primaryEvidence.dossier_id || duplicateEvidence.dossier_id || primary.dossier_id || duplicate.dossier_id),
+    comp_status: cleanText(primaryEvidence.comp_status || duplicateEvidence.comp_status)
+  });
+  merged.exact_source_phrase = cleanText(primary.exact_source_phrase || duplicate.exact_source_phrase || merged.lead_evidence.exact_source_phrase);
+  merged.matched_source_phrase = cleanText(primary.matched_source_phrase || duplicate.matched_source_phrase || merged.lead_evidence.exact_source_phrase);
+  merged.public_contact_route = cleanText(primary.public_contact_route || duplicate.public_contact_route || merged.lead_evidence.public_contact_route);
+  merged.analyzer_job_id = cleanText(primary.analyzer_job_id || duplicate.analyzer_job_id || merged.lead_evidence.analyzer_job_id);
+  merged.dossier_id = cleanText(primary.dossier_id || duplicate.dossier_id || merged.lead_evidence.dossier_id);
+  merged.legacy_duplicate_card_ids = Array.from(new Set([]
+    .concat(primary.legacy_duplicate_card_ids || [])
+    .concat(duplicate.legacy_duplicate_card_ids || [])
+    .concat(duplicate.card_id ? [duplicate.card_id] : [])
+    .filter(Boolean)));
+  return merged;
+}
+
+function canonicalizeCardsForRead(cards, job) {
+  const groups = new Map();
+  (Array.isArray(cards) ? cards : []).map((card) => canonicalizeCardForRead(card, job)).forEach((card) => {
+    const sourceKey = propertyIdentity.canonicalSourceUrlKey(card.canonical_source_url || card.source_url || card.open_source_url);
+    const identityKey = propertyIdentity.canonicalPropertyKey(cardIdentityInput(card));
+    const key = card.address_identity_status === 'canonical'
+      ? identityKey
+      : sourceKey || cleanText(card.card_id);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(card);
+  });
+  return Array.from(groups.values()).map((group) => {
+    const sorted = group.slice().sort((a, b) => cardReadScore(b) - cardReadScore(a) || cleanText(b.updated_at || b.created_at).localeCompare(cleanText(a.updated_at || a.created_at)));
+    return sorted.slice(1).reduce((primary, duplicate) => mergeCardForRead(primary, duplicate), sorted[0]);
+  });
+}
+
 function collectLeadCards(job) {
   const leads = db.getLeads ? db.getLeads() : [];
   return (Array.isArray(leads) ? leads : [])
@@ -1191,11 +1303,10 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
 }
 
 function publicJob(job) {
+  const cards = canonicalizeCardsForRead(job && job.cards, job);
   return Object.assign({}, job, {
-    cards: Array.isArray(job.cards) ? job.cards.map((card) => Object.assign({}, card, {
-      preview_only: true,
-      should_ingest: false
-    })) : [],
+    cards,
+    counts: summarizeCards(cards),
     preview_only: true,
     should_ingest: false
   });

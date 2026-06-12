@@ -661,10 +661,122 @@ function persistCompResearchJobState(job, state) {
   return publicJob(merged);
 }
 
-function publicJob(job) {
-  const sourcePack = sourcePackFromEvidence(job && job.source_evidence);
-  const canonical = compResearchProvider.canonicalizeCompResearchState(job, job || {});
+function sourceUrlForJob(job) {
+  return cleanText(
+    (job && job.lead_evidence && job.lead_evidence.canonical_source_url) ||
+    (job && job.source_url) ||
+    (job && job.scout_context && (job.scout_context.canonical_source_url || job.scout_context.source_url)) ||
+    ''
+  );
+}
+
+function analyzerIdentityInput(job) {
+  job = job || {};
+  const sourcePack = sourcePackFromEvidence(job.source_evidence);
+  return Object.assign({}, job, job.lead_evidence || {}, job.scout_context || {}, {
+    normalized_address: cleanText(job.normalized_address || job.lead_evidence && job.lead_evidence.normalized_address || job.input_value),
+    address: cleanText(job.normalized_address || job.input_value || job.lead_evidence && job.lead_evidence.normalized_address),
+    source_url: sourceUrlForJob(job),
+    canonical_source_url: sourceUrlForJob(job),
+    source_title: cleanText(job.source_title || job.scout_context && job.scout_context.source_title),
+    source_url_address_candidate: cleanText(sourcePack && sourcePack.source_url_address_candidate),
+    city: cleanText(sourcePack && sourcePack.city_candidate),
+    state: cleanText(sourcePack && sourcePack.state_candidate),
+    zip: cleanText(sourcePack && sourcePack.zip_candidate)
+  });
+}
+
+function canonicalizeSourceEvidenceForRead(sourceEvidence, normalizedAddress) {
+  return (Array.isArray(sourceEvidence) ? sourceEvidence : []).map((item) => {
+    if (!item || item.type !== 'source_evidence_pack' || !propertyIdentity.isCompleteAddress(normalizedAddress)) return item;
+    return Object.assign({}, item, {
+      address_candidate: normalizedAddress,
+      property_identity_status: item.property_identity_status === 'conflict' ? 'partial' : item.property_identity_status,
+      notes: Array.from(new Set([].concat(item.notes || [], ['Address repaired for readback from stronger source evidence.'])))
+    });
+  });
+}
+
+function canonicalizeAnalyzerJobForRead(job, meta) {
+  meta = meta || {};
+  const sourceUrl = sourceUrlForJob(job);
+  const readAddress = propertyIdentity.canonicalAddressForRead(analyzerIdentityInput(job), {
+    source_url: sourceUrl,
+    source_title: cleanText(job && job.scout_context && job.scout_context.source_title)
+  });
+  const normalizedAddress = readAddress.normalized_address;
+  const sourceEvidence = canonicalizeSourceEvidenceForRead(job && job.source_evidence, normalizedAddress);
+  const evidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, job && job.lead_evidence || {}, job || {}, {
+    normalized_address: normalizedAddress,
+    source_url: sourceUrl
+  }), {
+    analyzer_job_id: cleanText(job && job.job_id),
+    normalized_address: normalizedAddress,
+    canonical_source_url: sourceUrl,
+    exact_source_phrase: cleanText(job && job.lead_evidence && job.lead_evidence.exact_source_phrase),
+    public_contact_route: cleanText(job && job.lead_evidence && job.lead_evidence.public_contact_route),
+    comp_status: cleanText(job && job.lead_evidence && job.lead_evidence.comp_status)
+  });
+  const scoutContext = job && job.scout_context
+    ? Object.assign({}, job.scout_context, { lead_evidence: evidence })
+    : job && job.scout_context;
   return Object.assign({}, job, {
+    normalized_address: normalizedAddress,
+    address_identity_status: readAddress.address_status,
+    address_warning: readAddress.address_warning,
+    lead_evidence: evidence,
+    scout_context: scoutContext,
+    source_evidence: sourceEvidence,
+    canonical_record_status: meta.legacy_duplicate || job && job.legacy_duplicate ? 'legacy_duplicate' : 'canonical',
+    legacy_duplicate: meta.legacy_duplicate === true || job && job.legacy_duplicate === true,
+    canonical_job_id: cleanText(meta.canonical_job_id || job && job.canonical_job_id || job && job.job_id),
+    legacy_duplicate_job_ids: Array.isArray(meta.legacy_duplicate_job_ids)
+      ? meta.legacy_duplicate_job_ids
+      : Array.isArray(job && job.legacy_duplicate_job_ids) ? job.legacy_duplicate_job_ids : []
+  });
+}
+
+function analyzerReadScore(job) {
+  const evidence = job && job.lead_evidence || {};
+  let score = job && job.address_identity_status === 'canonical' ? 1000 : 0;
+  if (propertyIdentity.canonicalSourceUrlKey(sourceUrlForJob(job))) score += 180;
+  if (cleanText(evidence.exact_source_phrase)) score += 120;
+  if (cleanText(evidence.dossier_id)) score += 90;
+  if (cleanText(evidence.public_contact_route) && cleanText(evidence.public_contact_route) !== 'Manual Lookup Needed') score += 50;
+  if (job && job.status === 'needs_comps') score += 30;
+  if (job && job.status === 'failed') score -= 500;
+  return score;
+}
+
+function canonicalizeAnalyzerJobsForRead(jobs) {
+  const groups = new Map();
+  (Array.isArray(jobs) ? jobs : []).map((job) => canonicalizeAnalyzerJobForRead(job)).forEach((job) => {
+    const identityKey = propertyIdentity.canonicalPropertyKey(analyzerIdentityInput(job));
+    const sourceKey = propertyIdentity.canonicalSourceUrlKey(sourceUrlForJob(job));
+    const key = propertyIdentity.isCompleteAddress(job.normalized_address)
+      ? identityKey
+      : sourceKey || cleanText(job.job_id);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(job);
+  });
+  return Array.from(groups.values()).map((group) => {
+    const sorted = group.slice().sort((a, b) => analyzerReadScore(b) - analyzerReadScore(a) || cleanText(b.updated_at || b.created_at).localeCompare(cleanText(a.updated_at || a.created_at)));
+    const primary = sorted[0];
+    return Object.assign({}, primary, {
+      canonical_record_status: 'canonical',
+      legacy_duplicate: false,
+      canonical_job_id: primary.job_id,
+      legacy_duplicate_job_ids: sorted.slice(1).map((job) => job.job_id).filter(Boolean)
+    });
+  });
+}
+
+function publicJob(job) {
+  const readJob = canonicalizeAnalyzerJobForRead(job);
+  const sourcePack = sourcePackFromEvidence(readJob && readJob.source_evidence);
+  const canonical = compResearchProvider.canonicalizeCompResearchState(readJob, readJob || {});
+  return Object.assign({}, readJob, {
     comp_candidates: canonical.candidates,
     verified_sold_comps: canonical.verified_sold_comps,
     subject_sale_evidence: canonical.subject_sale_evidence,
@@ -683,8 +795,8 @@ function publicJob(job) {
       acc[key] = { enabled: FUTURE_ADAPTERS[key].enabled === true };
       return acc;
     }, {}),
-    normalized_from_text: job.normalized_from_text === true,
-    normalization_note: cleanText(job.normalization_note),
+    normalized_from_text: readJob.normalized_from_text === true,
+    normalization_note: cleanText(readJob.normalization_note),
     source_evidence_summary: sourcePack ? {
       source_status: cleanText(sourcePack.source_status),
       source_url_type: cleanText(sourcePack.source_url_type),
@@ -967,12 +1079,23 @@ function createJobs(body, options) {
 
 function listJobs(limit) {
   const max = Math.min(Math.max(parseInt(limit || 50, 10) || 50, 1), 100);
-  return readJobs().slice(0, max).map(publicJob);
+  return canonicalizeAnalyzerJobsForRead(readJobs()).slice(0, max).map(publicJob);
 }
 
 function getJob(jobIdValue) {
-  const job = readJobs().find((candidate) => candidate.job_id === jobIdValue);
-  return job ? publicJob(job) : null;
+  const jobs = readJobs();
+  const job = jobs.find((candidate) => candidate.job_id === jobIdValue);
+  if (!job) return null;
+  const groups = canonicalizeAnalyzerJobsForRead(jobs);
+  const canonical = groups.find((candidate) => {
+    if (candidate.job_id === job.job_id) return true;
+    return (candidate.legacy_duplicate_job_ids || []).includes(job.job_id);
+  });
+  const isLegacy = !!(canonical && canonical.job_id !== job.job_id);
+  return publicJob(canonicalizeAnalyzerJobForRead(job, {
+    legacy_duplicate: isLegacy,
+    canonical_job_id: canonical && canonical.job_id || job.job_id
+  }));
 }
 
 function runJob(jobIdValue) {
