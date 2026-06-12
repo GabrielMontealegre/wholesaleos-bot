@@ -324,6 +324,27 @@ function canonicalParts(input, overrides) {
   };
 }
 
+function isCompleteAddress(value) {
+  return parseAddress(value).complete === true;
+}
+
+function canonicalAddressForRead(input, overrides) {
+  const address = canonicalAddress(input, overrides);
+  const parts = canonicalParts(Object.assign({}, input || {}, { normalized_address: address }), overrides);
+  const complete = isCompleteAddress(address);
+  return {
+    normalized_address: address,
+    full_address: address,
+    street: parts.street,
+    city: parts.city,
+    state: parts.state,
+    zip: parts.zip,
+    complete,
+    address_status: complete ? 'canonical' : 'incomplete',
+    address_warning: complete ? '' : 'Address incomplete - source verification required.'
+  };
+}
+
 function normalizeKeyText(value) {
   return cleanText(value).toLowerCase()
     .replace(/[^a-z0-9\s#-]/g, ' ')
@@ -397,7 +418,9 @@ module.exports = {
   parseAddress,
   addressFromPropertyUrl,
   canonicalAddress,
+  canonicalAddressForRead,
   canonicalParts,
+  isCompleteAddress,
   canonicalPropertyKey,
   canonicalSourceUrlKey,
   sameProperty,
