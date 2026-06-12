@@ -172,6 +172,19 @@ function normalizeLeadEvidence(input, overrides) {
     analyzer_job_id: cleanText(overrides.analyzer_job_id || pick(input, ['lead_evidence.analyzer_job_id', 'analyzer_job_id', 'job_id'])),
     dossier_id: cleanText(overrides.dossier_id || pick(input, ['lead_evidence.dossier_id', 'dossier_id'])),
     buyer_match_status: cleanText(overrides.buyer_match_status || pick(input, ['lead_evidence.buyer_match_status', 'buyer_match_status'])) || 'Not matched',
+    discovery_batch_id: cleanText(overrides.discovery_batch_id || pick(input, ['lead_evidence.discovery_batch_id', 'discovery_batch_id'])),
+    discovery_request_id: cleanText(overrides.discovery_request_id || pick(input, ['lead_evidence.discovery_request_id', 'discovery_request_id'])),
+    first_discovered_at: cleanText(overrides.first_discovered_at || pick(input, ['lead_evidence.first_discovered_at', 'first_discovered_at', 'created_at'])),
+    last_discovered_at: cleanText(overrides.last_discovered_at || pick(input, ['lead_evidence.last_discovered_at', 'last_discovered_at', 'updated_at'])),
+    last_source_checked_at: cleanText(overrides.last_source_checked_at || pick(input, ['lead_evidence.last_source_checked_at', 'last_source_checked_at', 'source_checked_at'])),
+    times_seen: Number(overrides.times_seen || pick(input, ['lead_evidence.times_seen', 'times_seen']) || 0) || 0,
+    previously_seen: overrides.previously_seen === true || pick(input, ['lead_evidence.previously_seen', 'previously_seen']) === true,
+    material_change_type: cleanText(overrides.material_change_type || pick(input, ['lead_evidence.material_change_type', 'material_change_type'])),
+    material_change_details: cleanText(overrides.material_change_details || pick(input, ['lead_evidence.material_change_details', 'material_change_details'])),
+    freshness_status: cleanText(overrides.freshness_status || pick(input, ['lead_evidence.freshness_status', 'freshness_status'])),
+    rejection_reason: cleanText(overrides.rejection_reason || pick(input, ['lead_evidence.rejection_reason', 'rejection_reason'])),
+    provider_attempts: Number(overrides.provider_attempts || pick(input, ['lead_evidence.provider_attempts', 'provider_attempts']) || 0) || 0,
+    batch_status: cleanText(overrides.batch_status || pick(input, ['lead_evidence.batch_status', 'batch_status'])),
     missing_evidence: []
   };
   const missing = []

@@ -2178,6 +2178,9 @@ function renderFindMeScoutCard(card, jobId) {
       '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Comp status</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.comp_status || 'Comps missing; ARV/MAO locked.') + '</div></div>' +
       '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Contact route</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.public_contact_route || evidence.public_contact_route || card.contact_status || 'Manual Lookup Needed') + '</div></div>' +
       '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source domain</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(sourceDomain || 'Needs source proof') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Source checked</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(evidence.last_source_checked_at || evidence.source_checked_at || card.source_checked_at || 'Not checked') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Freshness</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.freshness_status || evidence.freshness_status || 'Unknown') + '</div></div>' +
+      '<div style="border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">Previous seen / change</div><div style="font-size:12px;color:#111827;font-weight:800;margin-top:3px">' + findMeSafeText(card.previously_seen ? ('Previously seen' + (card.material_change_details ? ' - ' + card.material_change_details : '')) : 'New to batch history') + '</div></div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">' +
       '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:8px 9px"><div style="font-size:10px;color:#166534;font-weight:900;text-transform:uppercase">Exact source phrase</div><div style="font-size:12px;color:#166534;font-weight:900;margin-top:3px;line-height:1.4">' + findMeSafeText(card.exact_source_phrase || card.matched_source_phrase || evidence.exact_source_phrase || 'Missing exact wholesale phrase') + '</div></div>' +
@@ -2304,6 +2307,56 @@ function findMeProviderSummary(active) {
   '</div>';
 }
 
+function findMeBatchSummary(job) {
+  if (!job || !job.fresh_batch) return '';
+  var result = job.batch_result || job.batch_audit || {};
+  return '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">' +
+      '<div><div style="font-size:12px;color:#166534;font-weight:900;text-transform:uppercase">Fresh Lead Batch</div><div style="font-size:12px;color:#166534;font-weight:800;margin-top:2px">' + findMeSafeText(job.discovery_batch_id || job.job_id || '') + '</div></div>' +
+      findMePill('Status: ' + (result.batch_status || job.batch_status || job.status || 'unknown'), /completed/i.test(result.batch_status || job.batch_status || '') ? 'good' : /partial|running|queued/i.test(result.batch_status || job.batch_status || '') ? 'warn' : /failed|cancelled/i.test(result.batch_status || job.batch_status || '') ? 'bad' : 'neutral') +
+    '</div>' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
+      findMePill('Requested: ' + (result.requested || job.requested_quantity || job.batch_size || 0), 'neutral') +
+      findMePill('Valid new: ' + (result.valid_new_leads || 0), result.valid_new_leads ? 'good' : 'warn') +
+      findMePill('Strong: ' + (result.strong_leads || 0), result.strong_leads ? 'good' : 'neutral') +
+      findMePill('Needs Comps: ' + (result.needs_comps || 0), result.needs_comps ? 'good' : 'neutral') +
+      findMePill('Research / Reference: ' + (result.research_reference || 0), result.research_reference ? 'warn' : 'neutral') +
+      findMePill('Duplicates rejected: ' + (result.duplicates_rejected || 0), result.duplicates_rejected ? 'warn' : 'neutral') +
+      findMePill('Previous rejected: ' + (result.previous_property_rejections || 0), result.previous_property_rejections ? 'warn' : 'neutral') +
+      findMePill('Sold/stale rejected: ' + (result.sold_stale_rejected || 0), result.sold_stale_rejected ? 'warn' : 'neutral') +
+      findMePill('Source blocked: ' + (result.source_blocked || 0), result.source_blocked ? 'warn' : 'neutral') +
+      findMePill('Provider attempts: ' + (result.provider_attempts || 0), result.provider_attempts ? 'good' : 'neutral') +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      (!/completed|cancelled/i.test(String(job.batch_status || job.status || '')) ? '<button type="button" onclick="findMeContinueBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #166534;background:#fff;color:#166534;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Continue Batch</button>' : '') +
+      (!/cancelled|completed/i.test(String(job.batch_status || job.status || '')) ? '<button type="button" onclick="findMeCancelBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Cancel Batch</button>' : '') +
+      '<button type="button" onclick="findMeCopyVisibleLinks()" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Copy Source Links</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function findMeBatchHistory(jobs) {
+  var list = (Array.isArray(jobs) ? jobs : []).filter(function(job){ return job && job.fresh_batch; }).slice(0, 10);
+  if (!list.length) return '';
+  return '<details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px"><summary style="font-size:13px;color:#334155;font-weight:900;cursor:pointer">Batch History (' + list.length + ')</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">' +
+    list.map(function(job) {
+      var result = job.batch_result || job.batch_audit || {};
+      return '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">' +
+        '<div><div style="font-size:12px;color:#111827;font-weight:900">' + findMeSafeText([job.city, job.county, job.state].filter(Boolean).join(', ') || job.location || job.market || 'Market') + '</div><div style="font-size:11px;color:#64748b;font-weight:800;margin-top:2px">' + findMeSafeText(job.discovery_batch_id || job.job_id || '') + '</div></div>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+          findMePill('Requested ' + (result.requested || job.requested_quantity || 0), 'neutral') +
+          findMePill('Valid ' + (result.valid_new_leads || 0), result.valid_new_leads ? 'good' : 'warn') +
+          findMePill(result.batch_status || job.batch_status || job.status || 'unknown', /completed/i.test(result.batch_status || job.batch_status || '') ? 'good' : /failed|cancelled/i.test(result.batch_status || job.batch_status || '') ? 'bad' : 'warn') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+          '<button type="button" onclick="findMeOpenBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Reopen</button>' +
+          (!/completed|cancelled/i.test(String(job.batch_status || job.status || '')) ? '<button type="button" onclick="findMeContinueBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #166534;background:#fff;color:#166534;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer">Continue</button>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('') +
+  '</div></details>';
+}
+
 function findMeBulkActionBar(active) {
   if (!active || !Array.isArray(active.cards)) return '';
   var selected = findMeSelectedCards();
@@ -2353,21 +2406,27 @@ function renderFindMeScout() {
       '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">State</div><select id="findme-state" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="TX" selected>Texas</option><option value="NC">North Carolina</option><option value="FL">Florida</option><option value="National">National</option></select></div>' +
       '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">County</div><input id="findme-county" value="Dallas County" placeholder="County" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
       '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">City / ZIP optional</div><input id="findme-city" value="Dallas" placeholder="City or ZIP" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"></div>' +
-      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Count</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option><option value="50">50</option></select></div>' +
+      '<div><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:5px">Quantity</div><select id="findme-batch" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;background:#fff;color:#111827"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select></div>' +
       '<div style="grid-column:1 / -1"><div style="font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:6px">Strategy</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px">' +
         strategies.map(function(item, idx) {
           var checked = idx === 0 || idx === 1 || idx === 2 || idx === 3 || idx === 4 ? ' checked' : '';
           return '<label style="display:flex;gap:7px;align-items:center;border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 9px;font-size:12px;color:#334155;font-weight:800"><input type="checkbox" data-findme-strategy="' + item[0] + '"' + checked + '> ' + findMeSafeText(item[1]) + '</label>';
         }).join('') +
       '</div></div>' +
-      '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Deals</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
+      '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="findme-include-previous" type="checkbox"> Include previous results</label>' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="findme-include-auction" type="checkbox"> Include auction/REO alternate strategy</label>' +
+        '<label style="font-size:12px;color:#334155;font-weight:900"><input id="findme-include-preforeclosure" type="checkbox" checked> Include current pre-foreclosure</label>' +
+      '</div>' +
+      '<div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" onclick="findMeCreateAndRunJob()" style="border:1px solid #111827;background:#111827;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Find Fresh Leads</button><button type="button" onclick="findMeLoadJobs(false)" style="border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:900;cursor:pointer">Refresh</button><span id="findme-scout-status" style="font-size:12px;color:#334155;font-weight:800"></span></div>' +
     '</div>' +
-    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Deal Finder Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default criteria') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'temporarily_unavailable' ? 'Live discovery temporarily busy' : active.provider_status === 'timed_out' ? 'Live discovery timed out' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'temporarily_unavailable' || active.provider_status === 'timed_out' ? 'warn' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeProviderSummary(active) + '</div>' : '') +
+    (active ? '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:900;color:#111827">Latest Deal Finder Run</div><div style="font-size:12px;color:#64748b;margin-top:2px">' + findMeSafeText((active.strategy_labels || []).join(', ') || 'Default criteria') + '</div></div>' + findMePill((active.provider_status === 'available' ? 'Live discovery checked' : active.provider_status === 'temporarily_unavailable' ? 'Live discovery temporarily busy' : active.provider_status === 'timed_out' ? 'Live discovery timed out' : active.provider_status === 'failed' ? 'Live discovery failed' : 'Live discovery not configured'), active.provider_status === 'available' ? 'good' : active.provider_status === 'temporarily_unavailable' || active.provider_status === 'timed_out' ? 'warn' : active.provider_status === 'failed' ? 'bad' : 'warn') + '</div>' + findMeCounts(active) + findMeBatchSummary(active) + findMeProviderSummary(active) + '</div>' : '') +
     displayNote +
     findMeBulkActionBar(active) +
     '<div id="findme-scout-results" style="display:flex;flex-direction:column;gap:10px">' +
       findMeResultsLayout(cards, active && active.job_id, active) +
     '</div>' +
+    findMeBatchHistory(FINDME_SCOUT_JOBS) +
   '</div>';
 }
 
@@ -2398,6 +2457,9 @@ async function findMeCreateAndRunJob() {
   var market = city || county || state || 'Dallas';
   var location = [city, county, state].filter(Boolean).join(', ');
   var batch = (document.getElementById('findme-batch') || {}).value || '10';
+  var includePrevious = !!(document.getElementById('findme-include-previous') || {}).checked;
+  var includeAuction = !!(document.getElementById('findme-include-auction') || {}).checked;
+  var includePreforeclosure = !!(document.getElementById('findme-include-preforeclosure') || {}).checked;
   var strategies = findMeCheckedStrategies();
   if (!strategies.length) {
     findMeSetStatus('Choose at least one strategy.', true);
@@ -2408,22 +2470,90 @@ async function findMeCreateAndRunJob() {
     var created = await findMeFetchJson('/api/findme-scout/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: market, location: location, state: state, county: county, city: city, batch_size: Number(batch), strategies: strategies })
+      body: JSON.stringify({
+        fresh_batch: true,
+        discovery_mode: 'fresh_batch',
+        market: market,
+        location: location,
+        state: state,
+        county: county,
+        city: city,
+        quantity: Number(batch),
+        batch_size: Number(batch),
+        strategies: strategies,
+        wholesale_criteria: strategies,
+        include_previous_results: includePrevious,
+        include_auction: includeAuction,
+        include_pre_foreclosure: includePreforeclosure,
+        exclude_reo: !includeAuction,
+        exclude_sold: true,
+        refresh_changed_properties: true,
+        max_source_age_hours: 72
+      })
     });
     var run = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(created.job.job_id) + '/run', { method: 'POST' });
     FINDME_SCOUT_ACTIVE_JOB = run.job;
     FINDME_SCOUT_SELECTED = {};
     FINDME_SCOUT_JOBS = [run.job].concat(FINDME_SCOUT_JOBS || []).slice(0, 20);
     if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
-    var readyCount = (run.job.cards || []).length;
+    var readyCount = run.job && run.job.batch_result ? Number(run.job.batch_result.valid_new_leads || 0) : (run.job.cards || []).length;
     var providerStatus = run.job && run.job.provider_status;
     if (!readyCount && (providerStatus === 'timed_out' || providerStatus === 'temporarily_unavailable')) {
       findMeSetStatus(run.job.provider_message || 'Gemini live discovery is temporarily busy. Showing saved leads/candidates only.', true);
     } else {
-      findMeSetStatus(readyCount + ' Deal Finder card' + (readyCount === 1 ? '' : 's') + ' ready.', false);
+      findMeSetStatus(readyCount + ' fresh valid lead' + (readyCount === 1 ? '' : 's') + ' ready. Research / Reference does not count toward request.', false);
     }
   } catch (e) {
     findMeSetStatus(e.message || 'Deal Finder could not find deals.', true);
+  }
+}
+
+function findMeOpenBatch(jobId) {
+  var job = (FINDME_SCOUT_JOBS || []).find(function(item){ return item.job_id === jobId; });
+  if (!job) return;
+  FINDME_SCOUT_ACTIVE_JOB = job;
+  FINDME_SCOUT_SELECTED = {};
+  if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+}
+
+async function findMeContinueBatch(jobId) {
+  try {
+    findMeSetStatus('Continuing batch...', false);
+    var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/continue', { method: 'POST' });
+    FINDME_SCOUT_ACTIVE_JOB = data.job;
+    FINDME_SCOUT_JOBS = [data.job].concat((FINDME_SCOUT_JOBS || []).filter(function(item){ return item.job_id !== data.job.job_id; })).slice(0, 20);
+    if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+    var result = data.job.batch_result || {};
+    findMeSetStatus((result.valid_new_leads || 0) + ' valid fresh leads in batch after continue.', false);
+  } catch (e) {
+    findMeSetStatus(e.message || 'Fresh Lead Batch could not continue.', true);
+  }
+}
+
+async function findMeCancelBatch(jobId) {
+  try {
+    var data = await findMeFetchJson('/api/findme-scout/jobs/' + encodeURIComponent(jobId) + '/cancel', { method: 'POST' });
+    FINDME_SCOUT_ACTIVE_JOB = data.job;
+    FINDME_SCOUT_JOBS = [data.job].concat((FINDME_SCOUT_JOBS || []).filter(function(item){ return item.job_id !== data.job.job_id; })).slice(0, 20);
+    if (APP.page === 'findme_scout') document.getElementById('content').innerHTML = renderFindMeScout();
+    findMeSetStatus('Fresh Lead Batch cancelled.', false);
+  } catch (e) {
+    findMeSetStatus(e.message || 'Fresh Lead Batch could not be cancelled.', true);
+  }
+}
+
+function findMeCopyVisibleLinks() {
+  var job = findMeCurrentDisplayJob();
+  var links = (job && Array.isArray(job.cards) ? job.cards : []).map(function(card){ return findMeCardSourceUrl(card); }).filter(Boolean);
+  var text = Array.from(new Set(links)).join('\n');
+  if (!text) {
+    findMeSetStatus('No visible source links to copy.', true);
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ findMeSetStatus('Visible source links copied.', false); }).catch(function(){ findMeSetStatus(text, false); });
+  } else {
+    findMeSetStatus(text, false);
   }
 }
 
