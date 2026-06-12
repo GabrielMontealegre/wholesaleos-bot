@@ -11,6 +11,7 @@ const manualReviewQueue = require('./manual-review-queue');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
 const leadEvidence = require('./lead-evidence');
 const propertyIdentity = require('./property-identity');
+const sourceEvidenceAdapter = require('./source-evidence-adapter');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -18,9 +19,21 @@ const STORE_FILE = path.resolve(
   process.env.FINDME_SCOUT_JOBS_PATH ||
   path.join(path.dirname(DB_FILE), 'findme-scout-jobs.json')
 );
+const DEAL_CALL_DOSSIERS_FILE = path.resolve(
+  process.env.DEAL_CALL_DOSSIERS_PATH ||
+  path.join(path.dirname(DB_FILE), 'deal-call-dossiers.json')
+);
 
 const MAX_JOBS = 100;
 const MAX_BATCH_SIZE = 50;
+const FRESH_BATCH_QUANTITIES = new Set([5, 10, 20, 30, 50]);
+const FRESH_BATCH_DEFAULT_BOUNDS = {
+  max_provider_calls: 3,
+  max_candidate_urls: 80,
+  max_source_verifications: 40,
+  provider_timeout_ms: 45000,
+  hard_timeout_ms: 180000
+};
 const STATUSES = new Set([
   'New',
   'Call Today',
@@ -291,37 +304,175 @@ function strategyLabel(strategy) {
   return STRATEGY_LABELS[strategy] || cleanText(strategy).replace(/_/g, ' ');
 }
 
+function boolValue(value, defaultValue) {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  if (value === true || value === false) return value;
+  const text = safeLower(value);
+  if (text === 'true' || text === '1' || text === 'yes' || text === 'on') return true;
+  if (text === 'false' || text === '0' || text === 'no' || text === 'off') return false;
+  return defaultValue;
+}
+
+function normalizeArrayInput(value) {
+  if (Array.isArray(value)) return value.map(cleanText).filter(Boolean);
+  return cleanText(value).split(',').map(cleanText).filter(Boolean);
+}
+
+function isFreshBatchRequest(body) {
+  body = body || {};
+  return body.fresh_batch === true ||
+    body.freshLeadBatch === true ||
+    body.fresh_lead_batch === true ||
+    body.discovery_mode === 'fresh_batch' ||
+    body.discoveryMode === 'fresh_batch' ||
+    body.quantity !== undefined ||
+    body.requested_quantity !== undefined;
+}
+
+function normalizeFreshBatchBounds(body) {
+  body = body || {};
+  return {
+    max_provider_calls: Math.min(Math.max(parseInt(body.max_provider_calls || body.maxProviderCalls || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls, 10) || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls, 0), FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls),
+    max_candidate_urls: Math.min(Math.max(parseInt(body.max_candidate_urls || body.maxCandidateUrls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls, 10) || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls, 1), FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls),
+    max_source_verifications: Math.min(Math.max(parseInt(body.max_source_verifications || body.maxSourceVerifications || FRESH_BATCH_DEFAULT_BOUNDS.max_source_verifications, 10) || FRESH_BATCH_DEFAULT_BOUNDS.max_source_verifications, 0), FRESH_BATCH_DEFAULT_BOUNDS.max_source_verifications),
+    provider_timeout_ms: Math.min(Math.max(parseInt(body.provider_timeout_ms || body.providerTimeoutMs || FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms, 10) || FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms, 50), FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms),
+    hard_timeout_ms: Math.min(Math.max(parseInt(body.hard_timeout_ms || body.hardTimeoutMs || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms, 10) || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms, 50), FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms)
+  };
+}
+
 function defaultJobInput(body) {
   body = body || {};
-  const batch = Number(body.batch_size || body.batchSize || 10);
-  const safeBatch = batch === 50 ? 50 : batch === 30 ? 30 : batch === 20 ? 20 : 10;
+  const freshBatch = isFreshBatchRequest(body);
+  const requested = Number(body.quantity || body.requested_quantity || body.requestedQuantity || body.batch_size || body.batchSize || 10);
+  const safeBatch = freshBatch
+    ? requested
+    : requested === 50 ? 50 : requested === 30 ? 30 : requested === 20 ? 20 : requested === 5 ? 5 : 10;
+  if (freshBatch && !FRESH_BATCH_QUANTITIES.has(safeBatch)) {
+    const err = new Error('Fresh Lead Batch quantity must be 5, 10, 20, 30, or 50.');
+    err.status = 400;
+    throw err;
+  }
   const state = cleanText(body.state || body.market_state || '');
   const county = cleanText(body.county || body.market_county || '');
-  const city = cleanText(body.city || body.market_city || '');
-  const zip = cleanText(body.zip || body.postal_code || '');
+  const cities = normalizeArrayInput(body.cities || body.city || body.market_city || '');
+  const zips = normalizeArrayInput(body.zips || body.zip || body.postal_code || '');
+  const city = cities[0] || '';
+  const zip = zips[0] || '';
   const locationParts = [city, county, state || cleanText(body.market), zip].filter(Boolean);
   const location = cleanText(body.location || locationParts.join(', ') || '');
+  const bounds = normalizeFreshBatchBounds(body);
   return {
+    fresh_batch: freshBatch,
     market: cleanText(body.market || state || city || 'Dallas') || 'Dallas',
     location,
     state,
     county,
     city,
     zip,
+    cities,
+    zips,
     include_research: body.include_research !== false,
     include_auction: body.include_auction === true || body.includeAuction === true,
-    max_provider_calls: Math.min(Math.max(parseInt(body.max_provider_calls || body.maxProviderCalls || 1, 10) || 1, 1), 3),
+    include_pre_foreclosure: boolValue(body.include_pre_foreclosure !== undefined ? body.include_pre_foreclosure : body.includePreForeclosure, true),
+    exclude_reo: boolValue(body.exclude_reo !== undefined ? body.exclude_reo : body.excludeReo, true),
+    exclude_sold: boolValue(body.exclude_sold !== undefined ? body.exclude_sold : body.excludeSold, true),
+    include_previous_results: boolValue(body.include_previous_results !== undefined ? body.include_previous_results : body.includePreviousResults, false),
+    refresh_changed_properties: boolValue(body.refresh_changed_properties !== undefined ? body.refresh_changed_properties : body.refreshChangedProperties, true),
+    max_source_age_hours: Math.min(Math.max(parseInt(body.max_source_age_hours || body.maxSourceAgeHours || 72, 10) || 72, 1), 168),
+    property_types: normalizeArrayInput(body.property_types || body.propertyTypes || ''),
+    source_preferences: normalizeArrayInput(body.source_preferences || body.sourcePreferences || ''),
+    price_min: cleanText(body.price_min || body.min_asking_price || body.minAskingPrice || ''),
+    price_max: cleanText(body.price_max || body.max_asking_price || body.maxAskingPrice || ''),
+    operator_request_id: cleanText(body.operator_request_id || body.operatorRequestId || makeId('opr')),
+    market_timezone: cleanText(body.market_timezone || body.marketTimezone || 'America/Chicago'),
+    max_provider_calls: freshBatch ? bounds.max_provider_calls : Math.min(Math.max(parseInt(body.max_provider_calls || body.maxProviderCalls || 1, 10) || 1, 1), 3),
+    max_candidate_urls: bounds.max_candidate_urls,
+    max_source_verifications: bounds.max_source_verifications,
+    provider_timeout_ms: bounds.provider_timeout_ms,
+    hard_timeout_ms: bounds.hard_timeout_ms,
     max_comp_attempts: Math.min(Math.max(parseInt(body.max_comp_attempts || body.maxCompAttempts || 0, 10) || 0, 0), 5),
-    strategies: normalizeStrategies(body.strategies || body.strategy || ['fixer', 'as_is', 'investor_special', 'cash_only', 'price_cut', 'long_dom', 'failed_listing', 'relisted', 'back_on_market', 'fsbo', 'pre_foreclosure']),
+    strategies: normalizeStrategies(body.wholesale_criteria || body.wholesaleCriteria || body.strategies || body.strategy || ['fixer', 'as_is', 'investor_special', 'cash_only', 'price_cut', 'long_dom', 'failed_listing', 'relisted', 'back_on_market', 'fsbo', 'pre_foreclosure']),
     batch_size: safeBatch
+  };
+}
+
+function freshBatchKey(input) {
+  if (!input || !input.fresh_batch) return '';
+  return [
+    cleanText(input.operator_request_id || 'default').toLowerCase(),
+    cleanText(input.state).toLowerCase(),
+    cleanText(input.county).toLowerCase(),
+    cleanText(input.city).toLowerCase(),
+    cleanText(input.zip).toLowerCase()
+  ].join('|');
+}
+
+function batchRequestFromInput(input) {
+  return {
+    state: input.state,
+    county: input.county,
+    cities: input.cities,
+    zips: input.zips,
+    quantity: input.batch_size,
+    property_types: input.property_types,
+    min_asking_price: input.price_min,
+    max_asking_price: input.price_max,
+    wholesale_criteria: input.strategies,
+    source_preferences: input.source_preferences,
+    max_source_age_hours: input.max_source_age_hours,
+    include_auction: input.include_auction,
+    include_pre_foreclosure: input.include_pre_foreclosure,
+    exclude_reo: input.exclude_reo,
+    exclude_sold: input.exclude_sold,
+    include_previous_results: input.include_previous_results,
+    refresh_changed_properties: input.refresh_changed_properties,
+    operator_request_id: input.operator_request_id,
+    market_timezone: input.market_timezone
+  };
+}
+
+function emptyBatchAudit(requested) {
+  return {
+    requested: Number(requested || 0) || 0,
+    valid_new_leads: 0,
+    strong_leads: 0,
+    needs_comps: 0,
+    research_reference: 0,
+    rejected: 0,
+    duplicates_rejected: 0,
+    previous_property_rejections: 0,
+    sold_stale_rejected: 0,
+    generic_incomplete_rejected: 0,
+    source_blocked: 0,
+    provider_attempts: 0,
+    provider_unavailable: '',
+    duration_ms: 0,
+    batch_status: 'queued',
+    warnings: []
   };
 }
 
 function createJob(body, options = {}) {
   const input = defaultJobInput(body);
   const created = nowIso();
+  const jobs = readJobs(options.storePath);
+  const activeBatchKey = freshBatchKey(input);
+  if (input.fresh_batch) {
+    const conflict = jobs.find((candidate) => candidate && candidate.fresh_batch === true && activeBatchKey && candidate.active_batch_key === activeBatchKey && /^(queued|running|continuing)$/i.test(cleanText(candidate.status)));
+    if (conflict) {
+      const err = new Error('A Fresh Lead Batch is already active for this operator and market. Continue or cancel the existing batch.');
+      err.status = 409;
+      err.existing_job_id = conflict.job_id;
+      throw err;
+    }
+  }
+  const discoveryBatchId = makeId('flb');
   const job = {
     job_id: makeId('fms'),
+    discovery_batch_id: discoveryBatchId,
+    discovery_request_id: input.operator_request_id,
+    fresh_batch: input.fresh_batch,
+    active_batch_key: activeBatchKey,
     created_at: created,
     updated_at: created,
     status: 'queued',
@@ -331,13 +482,44 @@ function createJob(body, options = {}) {
     county: input.county,
     city: input.city,
     zip: input.zip,
+    cities: input.cities,
+    zips: input.zips,
     include_research: input.include_research,
     include_auction: input.include_auction,
+    include_pre_foreclosure: input.include_pre_foreclosure,
+    exclude_reo: input.exclude_reo,
+    exclude_sold: input.exclude_sold,
+    include_previous_results: input.include_previous_results,
+    refresh_changed_properties: input.refresh_changed_properties,
+    max_source_age_hours: input.max_source_age_hours,
+    property_types: input.property_types,
+    source_preferences: input.source_preferences,
+    price_min: input.price_min,
+    price_max: input.price_max,
+    operator_request_id: input.operator_request_id,
+    market_timezone: input.market_timezone,
     max_provider_calls: input.max_provider_calls,
+    max_candidate_urls: input.max_candidate_urls,
+    max_source_verifications: input.max_source_verifications,
+    provider_timeout_ms: input.provider_timeout_ms,
+    hard_timeout_ms: input.hard_timeout_ms,
     max_comp_attempts: input.max_comp_attempts,
     strategies: input.strategies,
     strategy_labels: input.strategies.map(strategyLabel),
     batch_size: input.batch_size,
+    requested_quantity: input.batch_size,
+    batch_request: batchRequestFromInput(input),
+    batch_progress: {
+      started_at: '',
+      finished_at: '',
+      duration_ms: 0,
+      cancellation_requested: false,
+      provider_attempts_completed: [],
+      provider_attempts_failed: [],
+      provider_attempts_skipped: []
+    },
+    batch_status: input.fresh_batch ? 'queued' : '',
+    batch_audit: emptyBatchAudit(input.batch_size),
     cards: [],
     counts: emptyCounts(),
     provider_status: 'not_configured',
@@ -362,7 +544,6 @@ function createJob(body, options = {}) {
     safety: 'operator-created Deal Finder job only; no autonomous ingestion, no production lead mutation',
     error: ''
   };
-  const jobs = readJobs(options.storePath);
   writeStore([job].concat(jobs), options.storePath);
   return publicJob(job);
 }
@@ -413,6 +594,244 @@ function summarizeCards(cards) {
     if (card.pipeline_status === 'Sent to Analyzer') counts.sent_to_analyzer += 1;
   });
   return counts;
+}
+
+function parseDateMs(value) {
+  const text = cleanText(value);
+  if (!text) return 0;
+  const ms = Date.parse(text);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function freshnessStatusFor(evidence, maxAgeHours) {
+  const checkedAt = cleanText(evidence && (evidence.last_source_checked_at || evidence.source_checked_at));
+  const checkedMs = parseDateMs(checkedAt);
+  if (!checkedMs) return 'unknown';
+  const ageHours = Math.max(0, (Date.now() - checkedMs) / 3600000);
+  if (ageHours <= 24) return 'fresh';
+  if (ageHours <= (Number(maxAgeHours || 72) || 72)) return 'reusable';
+  return 'stale';
+}
+
+function sourceBlocked(card) {
+  const sourceUrl = cleanText(card && (card.canonical_source_url || card.source_url || card.open_source_url || card.lead_evidence && card.lead_evidence.canonical_source_url));
+  const text = `${recordText(card)} ${sourceUrl}`.toLowerCase();
+  if (!sourceUrl || isGenericSourceUrl(sourceUrl)) return true;
+  if (/\b(blocked|captcha|login required|paywall|robots|forbidden|access denied)\b/i.test(text)) return true;
+  return false;
+}
+
+function excludedByDefault(card, job) {
+  const text = recordText(card);
+  if (job && job.exclude_reo !== false && /\b(bank[- ]?owned|reo|real estate owned)\b/i.test(text)) return 'REO/bank-owned excluded';
+  if (job && job.include_auction !== true && /\b(auction\.com|realauction|hubzu|completed auction|auction ended|sale completed)\b/i.test(text)) return 'auction/completed sale excluded';
+  if (job && job.exclude_sold !== false) {
+    const statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
+    if (/\b(sold|closed|off[- ]?market|sale completed)\b/i.test(statusText) && !/\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText)) {
+      return 'sold/closed source excluded';
+    }
+  }
+  return '';
+}
+
+function freshCardKey(card) {
+  const identityKey = propertyIdentity.canonicalPropertyKey(cardIdentityInput(card));
+  const sourceKey = propertyIdentity.canonicalSourceUrlKey(card && (card.canonical_source_url || card.source_url || card.open_source_url || card.lead_evidence && card.lead_evidence.canonical_source_url));
+  return identityKey || sourceKey || cleanText(card && card.card_id);
+}
+
+function readDossierRows(filePath = DEAL_CALL_DOSSIERS_FILE) {
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed && parsed.dossiers) ? parsed.dossiers : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function addSeenRecord(index, record, reason) {
+  const identityKey = propertyIdentity.canonicalPropertyKey(record || {});
+  const sourceKey = propertyIdentity.canonicalSourceUrlKey(record && (record.canonical_source_url || record.source_url || record.open_source_url || record.source_url_original || record.lead_evidence && record.lead_evidence.canonical_source_url));
+  const item = {
+    reason,
+    address: cleanText(record && (record.normalized_address || record.address_or_source_text || record.display_address || record.address || record.property && record.property.full_address || record.lead_evidence && record.lead_evidence.normalized_address)),
+    source_url: cleanText(record && (record.canonical_source_url || record.source_url || record.open_source_url || record.lead_evidence && record.lead_evidence.canonical_source_url || record.property && (record.property.source_url || record.property.canonical_source_url))),
+    asking_price: cleanText(record && (record.asking_price || record.lead_evidence && record.lead_evidence.asking_price)),
+    listing_status: cleanText(record && (record.listing_status || record.status || record.lead_evidence && record.lead_evidence.listing_status)),
+    exact_source_phrase: cleanText(record && (record.exact_source_phrase || record.matched_source_phrase || record.lead_evidence && record.lead_evidence.exact_source_phrase)),
+    public_contact_route: cleanText(record && (record.public_contact_route || record.lead_evidence && record.lead_evidence.public_contact_route))
+  };
+  [identityKey, sourceKey].filter(Boolean).forEach((key) => {
+    if (!index.has(key)) index.set(key, []);
+    index.get(key).push(item);
+  });
+}
+
+function buildGlobalSeenIndex(currentJob, allJobs, options = {}) {
+  const index = new Map();
+  (Array.isArray(allJobs) ? allJobs : []).forEach((job) => {
+    if (!job || job.job_id === currentJob.job_id) return;
+    (Array.isArray(job.cards) ? job.cards : []).forEach((card) => {
+      const pipelineStatus = cleanText(card && card.pipeline_status);
+      const reason = /bad|dead|junk|archive/i.test(`${pipelineStatus} ${card && card.status || ''}`) ? 'previously rejected' : 'previously shown';
+      addSeenRecord(index, card, reason);
+    });
+  });
+  try {
+    const analyzerJobs = aiDealAnalyzerJobs.listJobs ? aiDealAnalyzerJobs.listJobs(250) : [];
+    (Array.isArray(analyzerJobs) ? analyzerJobs : []).forEach((job) => addSeenRecord(index, job, 'already in Analyzer'));
+  } catch (error) {}
+  readDossierRows(options.dossierStorePath).forEach((dossier) => {
+    const record = Object.assign({}, dossier.property || {}, dossier.lead_evidence || {}, {
+      normalized_address: dossier.lead_evidence && dossier.lead_evidence.normalized_address || dossier.property && dossier.property.full_address,
+      source_url: dossier.lead_evidence && dossier.lead_evidence.canonical_source_url || dossier.property && (dossier.property.source_url || dossier.property.canonical_source_url),
+      canonical_source_url: dossier.lead_evidence && dossier.lead_evidence.canonical_source_url
+    });
+    addSeenRecord(index, record, 'already in Daily Call Pipeline');
+  });
+  try {
+    const leads = db.getLeads ? db.getLeads() : [];
+    (Array.isArray(leads) ? leads : []).forEach((lead) => addSeenRecord(index, lead, 'already in saved leads'));
+  } catch (error) {}
+  return index;
+}
+
+function materialChangeFrom(prior, card, evidence) {
+  prior = prior || {};
+  const changes = [];
+  const price = cleanText(evidence && evidence.asking_price || card && card.asking_price);
+  const status = cleanText(evidence && evidence.listing_status || card && card.listing_status);
+  const phrase = cleanText(evidence && evidence.exact_source_phrase || card && (card.exact_source_phrase || card.matched_source_phrase));
+  const contact = cleanText(evidence && evidence.public_contact_route || card && card.public_contact_route);
+  if (price && prior.asking_price && price !== prior.asking_price) changes.push(`asking price changed from ${prior.asking_price} to ${price}`);
+  if (status && prior.listing_status && status !== prior.listing_status) changes.push(`status changed from ${prior.listing_status} to ${status}`);
+  if (phrase && prior.exact_source_phrase && phrase !== prior.exact_source_phrase) changes.push('new exact source-backed wholesale phrase');
+  if (contact && prior.public_contact_route && contact !== prior.public_contact_route) changes.push(`contact route changed from ${prior.public_contact_route} to ${contact}`);
+  return changes;
+}
+
+function qualityGateCard(card, job, context) {
+  const evidence = leadEvidence.normalizeLeadEvidence(card || {}, {
+    discovery_batch_id: job.discovery_batch_id || job.job_id,
+    discovery_request_id: job.discovery_request_id || job.operator_request_id,
+    first_discovered_at: cleanText(card && card.first_discovered_at || card && card.created_at || job.created_at),
+    last_discovered_at: nowIso(),
+    last_source_checked_at: cleanText(card && (card.last_source_checked_at || card.source_checked_at || card.updated_at || card.created_at)) || nowIso(),
+    provider_attempts: context.providerAttempts,
+    batch_status: job.batch_status || 'running'
+  });
+  const sourceUrl = evidence.canonical_source_url || cleanText(card && (card.canonical_source_url || card.source_url || card.open_source_url));
+  const sourceType = sourceEvidenceAdapter.classifySourceUrl(sourceUrl);
+  const fullAddress = propertyIdentity.isCompleteAddress(evidence.normalized_address);
+  const freshness = freshnessStatusFor(evidence, job.max_source_age_hours || 72);
+  const exclusion = excludedByDefault(card, job);
+  const blockers = [];
+  const pass = [];
+  const priorHits = context.seenIndex.get(freshCardKey(card)) || context.seenIndex.get(propertyIdentity.canonicalSourceUrlKey(sourceUrl)) || [];
+  const prior = priorHits[0] || null;
+  const changes = prior ? materialChangeFrom(prior, card, evidence) : [];
+  const previouslySeen = !!prior;
+  const allowPrevious = job.include_previous_results === true || changes.length > 0;
+
+  if (fullAddress) pass.push('complete canonical address'); else blockers.push('complete canonical address');
+  if (sourceType === 'exact_property_record' && isPropertySpecificSourceUrl(sourceUrl)) pass.push('exact property-detail source URL'); else blockers.push('exact property-detail source URL');
+  if (evidence.exact_source_phrase) pass.push('exact source-backed wholesale phrase'); else blockers.push('exact source-backed wholesale phrase');
+  if (leadEvidence.isCurrentOpportunity(evidence) && freshness !== 'stale' && !/^Manual Verification Needed$/i.test(evidence.listing_status)) pass.push('current/plausibly current listing evidence'); else blockers.push(freshness === 'stale' ? 'stale source evidence' : 'current listing status');
+  if (sourceBlocked(card)) blockers.push('source blocked or generic');
+  if (exclusion) blockers.push(exclusion);
+  if (previouslySeen && !allowPrevious) blockers.push(prior.reason || 'previously shown');
+
+  let batchGroup = 'Research / Reference';
+  let rejectionReason = '';
+  if (blockers.find((item) => /previously|duplicate|already/i.test(item))) {
+    batchGroup = 'Rejected';
+    rejectionReason = blockers.find((item) => /previously|duplicate|already/i.test(item));
+  } else if (blockers.find((item) => /sold|closed|REO|auction|generic|blocked|stale|complete canonical address|source URL|source-backed|current listing/i.test(item))) {
+    batchGroup = 'Research / Reference';
+  } else if (evidence.public_contact_route !== 'Manual Lookup Needed') {
+    batchGroup = 'Strong Leads';
+  } else {
+    batchGroup = 'Valid Leads - Needs Comps';
+  }
+
+  if (batchGroup !== 'Rejected' && context.currentSeen.has(freshCardKey(card))) {
+    batchGroup = 'Rejected';
+    rejectionReason = 'duplicate in current batch';
+    blockers.push(rejectionReason);
+  }
+  context.currentSeen.add(freshCardKey(card));
+
+  const status = batchGroup === 'Strong Leads' || batchGroup === 'Valid Leads - Needs Comps'
+    ? 'Research Ready'
+    : batchGroup === 'Rejected'
+      ? 'Junk/Archive'
+      : cleanText(card && card.status) || 'Needs Source Proof';
+  const finalEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, card || {}, evidence), {
+    discovery_batch_id: job.discovery_batch_id || job.job_id,
+    discovery_request_id: job.discovery_request_id || job.operator_request_id,
+    first_discovered_at: evidence.first_discovered_at,
+    last_discovered_at: evidence.last_discovered_at,
+    last_source_checked_at: evidence.last_source_checked_at,
+    times_seen: previouslySeen ? priorHits.length + 1 : 1,
+    previously_seen: previouslySeen,
+    material_change_type: changes.length ? 'source_evidence_changed' : '',
+    material_change_details: changes.join('; '),
+    freshness_status: freshness,
+    rejection_reason: rejectionReason || (batchGroup === 'Research / Reference' ? blockers.join(', ') : ''),
+    provider_attempts: context.providerAttempts,
+    batch_status: job.batch_status || 'running'
+  });
+
+  return Object.assign({}, card, {
+    status,
+    acquisition_bucket: batchGroup === 'Rejected' ? 'Bad / Skipped' : batchGroup,
+    lead_bucket: batchGroup === 'Rejected' ? 'Bad / Skipped' : batchGroup,
+    batch_group: batchGroup,
+    batch_pass_reasons: pass,
+    batch_blockers: Array.from(new Set(blockers.map(cleanText).filter(Boolean))),
+    batch_next_action: batchGroup === 'Rejected'
+      ? 'Do not use in this fresh batch.'
+      : batchGroup === 'Research / Reference'
+        ? 'Review source evidence manually before calling.'
+        : 'Review source, then send selected lead to Analyzer or Daily Call Pipeline.',
+    previously_seen: previouslySeen,
+    material_change_type: changes.length ? 'source_evidence_changed' : '',
+    material_change_details: changes.join('; '),
+    freshness_status: freshness,
+    rejection_reason: rejectionReason || '',
+    lead_evidence: finalEvidence,
+    source_checked_at: finalEvidence.source_checked_at,
+    last_source_checked_at: finalEvidence.last_source_checked_at,
+    can_send_to_analyzer: (batchGroup === 'Strong Leads' || batchGroup === 'Valid Leads - Needs Comps') && card.can_send_to_analyzer !== false,
+    preview_only: true,
+    should_ingest: false
+  });
+}
+
+function auditBatchCards(cards, job, providerSummary) {
+  const audit = emptyBatchAudit(job.requested_quantity || job.batch_size);
+  const list = Array.isArray(cards) ? cards : [];
+  audit.strong_leads = list.filter((card) => card.batch_group === 'Strong Leads').length;
+  audit.needs_comps = list.filter((card) => card.batch_group === 'Valid Leads - Needs Comps').length;
+  audit.research_reference = list.filter((card) => card.batch_group === 'Research / Reference').length;
+  audit.rejected = list.filter((card) => card.batch_group === 'Rejected').length;
+  audit.valid_new_leads = audit.strong_leads + audit.needs_comps;
+  audit.duplicates_rejected = list.filter((card) => /duplicate/i.test((card.batch_blockers || []).join(' ') || card.rejection_reason)).length;
+  audit.previous_property_rejections = list.filter((card) => /previously|already/i.test((card.batch_blockers || []).join(' ') || card.rejection_reason)).length;
+  audit.sold_stale_rejected = list.filter((card) => /sold|closed|stale/i.test((card.batch_blockers || []).join(' '))).length;
+  audit.generic_incomplete_rejected = list.filter((card) => /generic|complete canonical address|source URL|source-backed|current listing/i.test((card.batch_blockers || []).join(' '))).length;
+  audit.source_blocked = list.filter((card) => /blocked/i.test((card.batch_blockers || []).join(' '))).length;
+  audit.provider_attempts = Math.max(
+    Number(providerSummary && providerSummary.attempted ? 1 : 0) || 0,
+    (Array.isArray(job && job.batch_progress && job.batch_progress.provider_attempts_completed) ? job.batch_progress.provider_attempts_completed.length : 0) +
+      (Array.isArray(job && job.batch_progress && job.batch_progress.provider_attempts_failed) ? job.batch_progress.provider_attempts_failed.length : 0)
+  );
+  audit.provider_unavailable = providerSummary && /Temporarily unavailable|Timed out|Failed|Not configured/i.test(providerSummary.gemini_live_discovery || '') ? providerSummary.gemini_live_discovery : '';
+  audit.batch_status = job.batch_status || (audit.valid_new_leads >= audit.requested ? 'completed' : 'partial_success');
+  if (audit.valid_new_leads !== audit.strong_leads + audit.needs_comps) audit.warnings.push('valid count mismatch');
+  if (audit.valid_new_leads < audit.requested && audit.batch_status === 'completed') audit.batch_status = 'partial_success';
+  return audit;
 }
 
 function addressQualityFromText(address, sourceText) {
@@ -1018,6 +1437,16 @@ async function collectGeminiDiscoveryCards(job, options = {}) {
   };
 }
 
+function withTimeout(promise, timeoutMs, fallbackFactory) {
+  let timer = null;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallbackFactory()), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function providerSummaryFrom(result) {
   result = result || {};
   const status = result.status === 'available'
@@ -1061,24 +1490,114 @@ async function runJob(jobId, options = {}) {
     throw err;
   }
   let job = jobs[idx];
+  let providerSummary = providerSummaryFrom({ status: 'not_configured', message: 'Deal Finder used saved leads mode only.' });
   try {
-    const leadCards = collectLeadCards(job);
-    const candidateCards = collectCandidateCards(job);
-    const analyzerCards = collectAnalyzerCards(job);
-    const geminiDiscovery = await collectGeminiDiscoveryCards(job, options);
+    if (job.batch_progress && job.batch_progress.cancellation_requested === true) {
+      job = Object.assign({}, job, {
+        updated_at: nowIso(),
+        status: 'cancelled',
+        batch_status: 'cancelled',
+        batch_audit: Object.assign(emptyBatchAudit(job.requested_quantity || job.batch_size), job.batch_audit || {}, { batch_status: 'cancelled' })
+      });
+      jobs[idx] = job;
+      writeStore(jobs, options.storePath);
+      return publicJob(job);
+    }
+    const runStarted = Date.now();
+    const progress = Object.assign({
+      started_at: nowIso(),
+      finished_at: '',
+      duration_ms: 0,
+      cancellation_requested: false,
+      provider_attempts_completed: [],
+      provider_attempts_failed: [],
+      provider_attempts_skipped: []
+    }, job.batch_progress || {});
+    job = Object.assign({}, job, {
+      status: job.fresh_batch ? 'running' : job.status,
+      batch_status: job.fresh_batch ? 'running' : job.batch_status,
+      batch_progress: progress
+    });
+    const leadCards = collectLeadCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
+    const candidateCards = collectCandidateCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
+    const analyzerCards = collectAnalyzerCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
+    let geminiDiscovery = {
+      result: { status: 'not_configured', message: 'Gemini provider attempt skipped because budget was exhausted or provider already completed.' },
+      cards: []
+    };
+    const completedProviders = new Set(progress.provider_attempts_completed || []);
+    const failedProviders = new Set(progress.provider_attempts_failed || []);
+    const canAttemptGemini = !job.fresh_batch || (
+      Number(job.max_provider_calls || 0) > completedProviders.size + failedProviders.size &&
+      !completedProviders.has('Gemini') &&
+      !failedProviders.has('Gemini')
+    );
+    if (canAttemptGemini) {
+      const timeoutMs = Math.min(job.provider_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms, job.hard_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms);
+      geminiDiscovery = await withTimeout(
+        collectGeminiDiscoveryCards(job, Object.assign({}, options, {
+          timeout_ms: timeoutMs,
+          max_candidate_urls: job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls
+        })),
+        timeoutMs,
+        () => ({
+          result: {
+            status: 'timed_out',
+            attempted: true,
+            message: 'Gemini provider timed out before Fresh Lead Batch budget completed.',
+            warnings: ['Provider timeout reached. Partial results preserved.']
+          },
+          cards: []
+        })
+      );
+      if (geminiDiscovery.result && geminiDiscovery.result.attempted === true) {
+        if (geminiDiscovery.result.status === 'available') progress.provider_attempts_completed = Array.from(new Set([].concat(progress.provider_attempts_completed || [], ['Gemini'])));
+        else progress.provider_attempts_failed = Array.from(new Set([].concat(progress.provider_attempts_failed || [], ['Gemini'])));
+      }
+    } else {
+      progress.provider_attempts_skipped = Array.from(new Set([].concat(progress.provider_attempts_skipped || [], ['Gemini'])));
+    }
     const geminiCards = Array.isArray(geminiDiscovery.cards) ? geminiDiscovery.cards : [];
-    const providerSummary = providerSummaryFrom(geminiDiscovery.result);
-    const cards = dedupeCards(leadCards.concat(candidateCards, analyzerCards, geminiCards))
+    providerSummary = providerSummaryFrom(geminiDiscovery.result);
+    const existingBatchCards = job.fresh_batch && Array.isArray(job.cards) ? job.cards : [];
+    let cards = dedupeCards(existingBatchCards.concat(leadCards, candidateCards, analyzerCards, geminiCards))
       .sort((a, b) => cardRank(b) - cardRank(a))
-      .slice(0, job.batch_size || MAX_BATCH_SIZE);
+      .slice(0, job.fresh_batch ? (job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls) : (job.batch_size || MAX_BATCH_SIZE));
+    cards = canonicalizeCardsForRead(cards, job);
+    if (job.fresh_batch) {
+      const guardContext = {
+        seenIndex: buildGlobalSeenIndex(job, jobs, options),
+        currentSeen: new Set(),
+        providerAttempts: providerSummary.attempted ? 1 : 0
+      };
+      cards = cards.map((card) => qualityGateCard(card, job, guardContext))
+        .sort((a, b) => cardRank(b) - cardRank(a));
+    }
+    const validCards = cards.filter((card) => card.batch_group === 'Strong Leads' || card.batch_group === 'Valid Leads - Needs Comps');
+    const outputCards = job.fresh_batch
+      ? validCards.slice(0, job.requested_quantity || job.batch_size).concat(cards.filter((card) => card.batch_group !== 'Strong Leads' && card.batch_group !== 'Valid Leads - Needs Comps'))
+      : cards.slice(0, job.batch_size || MAX_BATCH_SIZE);
+    const batchAudit = job.fresh_batch ? auditBatchCards(outputCards, job, providerSummary) : emptyBatchAudit(job.batch_size);
+    const finishedAt = nowIso();
+    const providerUnavailable = /Temporarily unavailable|Timed out|Failed|Not configured/i.test(providerSummary.gemini_live_discovery || '');
+    const batchStatus = job.fresh_batch
+      ? (batchAudit.valid_new_leads >= batchAudit.requested ? 'completed' : providerUnavailable && !validCards.length ? 'provider_unavailable' : 'partial_success')
+      : '';
+    if (job.fresh_batch) batchAudit.batch_status = batchStatus;
     const manualReview = manualReviewQueue.addScoutBlockers(job, cards);
-    const eligibleCount = cards.filter((card) => card.status === 'Call Ready' || card.status === 'Research Ready').length;
+    const eligibleCount = outputCards.filter((card) => card.status === 'Call Ready' || card.status === 'Research Ready').length;
     const businessPass = eligibleCount > 0 || Number(manualReview.added || 0) > 0 || Number(manualReview.deduped || 0) > 0;
     job = Object.assign({}, job, {
       updated_at: nowIso(),
-    status: 'complete',
-      cards,
-      counts: summarizeCards(cards),
+      status: job.fresh_batch ? batchStatus : 'complete',
+      batch_status: batchStatus,
+      batch_progress: Object.assign({}, progress, {
+        finished_at: finishedAt,
+        duration_ms: Date.now() - runStarted
+      }),
+      cards: outputCards,
+      counts: summarizeCards(outputCards),
+      batch_audit: Object.assign({}, batchAudit, { duration_ms: Date.now() - runStarted }),
       source_summary: {
         existing_leads_checked: leadCards.length,
         dallas_preview_candidates_checked: candidateCards.length,
@@ -1099,7 +1618,7 @@ async function runJob(jobId, options = {}) {
         business_pass: businessPass,
         business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
       },
-    provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
+      provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
       provider_message: providerSummary.message || 'Deal Finder used saved leads mode only.',
       provider_summary: Object.assign({}, providerSummary, {
         manual_review_rows_added: manualReview.added,
@@ -1119,10 +1638,15 @@ async function runJob(jobId, options = {}) {
     job = Object.assign({}, job, {
       updated_at: nowIso(),
       status: 'failed',
+      batch_status: job.fresh_batch ? 'failed_cleanly' : job.batch_status,
       error: error && error.message ? error.message : 'Deal Finder job failed.',
       cards: [],
       counts: emptyCounts(),
-      provider_summary: Object.assign(providerSummaryFrom({ status: 'failed', message: 'Deal Finder job failed before provider discovery.' }), {
+      batch_audit: Object.assign(emptyBatchAudit(job.requested_quantity || job.batch_size), {
+        batch_status: 'failed_cleanly',
+        warnings: [error && error.message ? error.message : 'Deal Finder job failed.']
+      }),
+      provider_summary: Object.assign(providerSummary || providerSummaryFrom({ status: 'failed', message: 'Deal Finder job failed before provider discovery.' }), {
         warnings: [error && error.message ? error.message : 'Deal Finder job failed.']
       })
     });
@@ -1302,11 +1826,89 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
   };
 }
 
+function continueJob(jobId, options = {}) {
+  const jobs = readJobs(options.storePath);
+  const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
+  if (idx < 0) {
+    const err = new Error('Deal Finder job not found.');
+    err.status = 404;
+    throw err;
+  }
+  const job = jobs[idx];
+  if (!job.fresh_batch) {
+    const err = new Error('Only Fresh Lead Batch jobs can be continued.');
+    err.status = 400;
+    throw err;
+  }
+  if (/^(completed|cancelled)$/i.test(cleanText(job.batch_status || job.status))) return publicJob(job);
+  if (/^(running|continuing)$/i.test(cleanText(job.status))) {
+    const err = new Error('Fresh Lead Batch is already active. Continue did not create a duplicate job.');
+    err.status = 409;
+    throw err;
+  }
+  job.status = 'continuing';
+  job.batch_status = 'running';
+  job.batch_progress = Object.assign({}, job.batch_progress || {}, {
+    cancellation_requested: false,
+    continued_at: nowIso()
+  });
+  jobs[idx] = job;
+  writeStore(jobs, options.storePath);
+  return publicJob(job);
+}
+
+function cancelJob(jobId, options = {}) {
+  const jobs = readJobs(options.storePath);
+  const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
+  if (idx < 0) {
+    const err = new Error('Deal Finder job not found.');
+    err.status = 404;
+    throw err;
+  }
+  const job = jobs[idx];
+  job.status = 'cancelled';
+  job.batch_status = 'cancelled';
+  job.updated_at = nowIso();
+  job.batch_progress = Object.assign({}, job.batch_progress || {}, {
+    cancellation_requested: true,
+    finished_at: nowIso()
+  });
+  job.batch_audit = Object.assign(emptyBatchAudit(job.requested_quantity || job.batch_size), job.batch_audit || {}, {
+    batch_status: 'cancelled'
+  });
+  jobs[idx] = job;
+  writeStore(jobs, options.storePath);
+  return publicJob(job);
+}
+
 function publicJob(job) {
   const cards = canonicalizeCardsForRead(job && job.cards, job);
+  const batchAudit = job && job.fresh_batch
+    ? Object.assign(emptyBatchAudit(job.requested_quantity || job.batch_size), job.batch_audit || {}, {
+      requested: job.requested_quantity || job.batch_size || 0,
+      batch_status: job.batch_status || job.status
+    })
+    : job && job.batch_audit;
   return Object.assign({}, job, {
     cards,
     counts: summarizeCards(cards),
+    batch_audit: batchAudit,
+    batch_result: batchAudit ? {
+      requested: batchAudit.requested,
+      valid_new_leads: batchAudit.valid_new_leads,
+      strong_leads: batchAudit.strong_leads,
+      needs_comps: batchAudit.needs_comps,
+      research_reference: batchAudit.research_reference,
+      duplicates_rejected: batchAudit.duplicates_rejected,
+      previous_property_rejections: batchAudit.previous_property_rejections,
+      sold_stale_rejected: batchAudit.sold_stale_rejected,
+      generic_incomplete_rejected: batchAudit.generic_incomplete_rejected,
+      source_blocked: batchAudit.source_blocked,
+      provider_attempts: batchAudit.provider_attempts,
+      provider_unavailable: batchAudit.provider_unavailable,
+      duration_ms: batchAudit.duration_ms,
+      batch_status: batchAudit.batch_status
+    } : null,
     preview_only: true,
     should_ingest: false
   });
@@ -1320,6 +1922,8 @@ module.exports = {
   listJobs,
   getJob,
   runJob,
+  continueJob,
+  cancelJob,
   updateCard,
   sendCardToAnalyzer,
   sendCardsToAnalyzer,

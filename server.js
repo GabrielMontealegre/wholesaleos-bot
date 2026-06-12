@@ -1504,6 +1504,41 @@ app.post('/api/findme-scout/jobs/:jobId/run', async (req, res) => {
   }
 });
 
+app.post('/api/findme-scout/jobs/:jobId/continue', async (req, res) => {
+  try {
+    const prepared = findMeScoutJobs.continueJob(req.params.jobId, req.body || {});
+    const job = /^(completed|cancelled)$/i.test(String(prepared.batch_status || prepared.status || ''))
+      ? prepared
+      : await findMeScoutJobs.runJob(req.params.jobId, req.body || {});
+    return res.json({
+      ok: true,
+      job,
+      safety: 'operator-triggered Fresh Lead Batch continuation only; same batch ID reused, no autonomous ingestion'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to continue Fresh Lead Batch'
+    });
+  }
+});
+
+app.post('/api/findme-scout/jobs/:jobId/cancel', (req, res) => {
+  try {
+    const job = findMeScoutJobs.cancelJob(req.params.jobId, req.body || {});
+    return res.json({
+      ok: true,
+      job,
+      safety: 'operator-triggered Fresh Lead Batch cancellation only; no data deletion'
+    });
+  } catch (err) {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err && err.message ? err.message : 'Failed to cancel Fresh Lead Batch'
+    });
+  }
+});
+
 app.post('/api/findme-scout/jobs/:jobId/cards/:cardId/status', (req, res) => {
   try {
     const result = findMeScoutJobs.updateCard(req.params.jobId, req.params.cardId, req.body || {});
