@@ -77,6 +77,10 @@ function card(id, address, sourceUrl, phrase, route, status, extra) {
     source_title: address + ' | Public Listing',
     exact_source_phrase: phrase,
     matched_source_phrase: phrase,
+    exact_source_phrase_source_url: sourceUrl,
+    exact_source_phrase_source_type: 'stored_verified_evidence',
+    exact_source_phrase_checked_at: '2026-06-12T00:00:00.000Z',
+    exact_source_phrase_verbatim: !!phrase,
     public_contact_route: route,
     listing_status: status,
     status: 'Research Ready',
@@ -90,6 +94,10 @@ function card(id, address, sourceUrl, phrase, route, status, extra) {
       normalized_address: address,
       canonical_source_url: sourceUrl,
       exact_source_phrase: phrase,
+      exact_source_phrase_source_url: sourceUrl,
+      exact_source_phrase_source_type: 'stored_verified_evidence',
+      exact_source_phrase_checked_at: '2026-06-12T00:00:00.000Z',
+      exact_source_phrase_verbatim: !!phrase,
       public_contact_route: route,
       listing_status: status,
       comp_status: 'Needs Comps',
@@ -155,7 +163,7 @@ assert.throws(() => findMeScoutJobs.createJob({
   }), /already active/i);
 
   const run = await findMeScoutJobs.runJob(created.job_id);
-  assert.strictEqual(providerCalls, 1);
+  assert.ok(providerCalls >= 1 && providerCalls <= 3);
   assert.strictEqual(run.fresh_batch, true);
   assert.strictEqual(run.batch_result.batch_status, 'partial_success');
   assert.strictEqual(run.batch_result.requested, 10);
@@ -170,6 +178,9 @@ assert.throws(() => findMeScoutJobs.createJob({
   assert.ok(valid.length <= 10);
   assert.ok(valid.every((item) => item.lead_evidence && item.lead_evidence.canonical_source_url));
   assert.ok(valid.every((item) => item.lead_evidence && item.lead_evidence.exact_source_phrase));
+  assert.ok(valid.every((item) => item.lead_evidence && item.lead_evidence.exact_source_phrase_verbatim === true));
+  assert.ok(run.batch_progress.started_at);
+  assert.ok(run.batch_progress.provider_attempts.length >= 1);
   assert.ok(!valid.some((item) => /10527 Cayuga/i.test(JSON.stringify(item))));
   assert.ok(valid.some((item) => /Unit 224/i.test(item.address_or_source_text)));
   assert.ok(valid.some((item) => /Unit 225/i.test(item.address_or_source_text)));
@@ -186,8 +197,9 @@ assert.throws(() => findMeScoutJobs.createJob({
 
   const continued = findMeScoutJobs.continueJob(run.job_id);
   assert.strictEqual(continued.job_id, run.job_id);
+  const callsBeforeContinueRun = providerCalls;
   const afterContinue = await findMeScoutJobs.runJob(run.job_id);
-  assert.strictEqual(providerCalls, 1);
+  assert.strictEqual(providerCalls, callsBeforeContinueRun);
   assert.strictEqual(afterContinue.discovery_batch_id, run.discovery_batch_id);
   assert.ok(afterContinue.cards.length >= run.cards.length);
 

@@ -4,6 +4,8 @@ const crypto = require('crypto');
 
 const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
 const MAX_DISCOVERY_RESULTS = 50;
+const MAX_METADATA_BYTES = 250000;
+const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|investor special|investor opportunity|cash only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|rehab|back on (?:the )?market|relisted|price (?:cut|reduced|drop|reduction)|estate sale|fsbo|for sale by owner|hard money only|traditional financing unavailable)\b/i;
 const GEMINI_TRANSIENT_PATTERN = /\b(high demand|try again later|overloaded|rate limit|resource exhausted|unavailable|temporarily unavailable|busy)\b/i;
 const GEMINI_TIMEOUT_PATTERN = /\b(abort|aborted|aborterror|timed out|timeout|deadline exceeded|operation was aborted)\b/i;
 
@@ -288,6 +290,55 @@ function buildDiscoveryPrompt(job, requestedCount) {
   ].join('\n');
 }
 
+function buildEvidenceEnrichmentPrompt(job, candidates, requestedCount) {
+  const location = cleanText(job.location) || cleanText(job.market) || 'Dallas County, TX';
+  const limit = Math.max(1, Math.min(parseInt(requestedCount || 10, 10) || 10, 10));
+  const items = (Array.isArray(candidates) ? candidates : []).slice(0, limit).map((candidate, idx) => ({
+    index: idx + 1,
+    address: cleanText(candidate && (candidate.address_or_source_text || candidate.display_address || candidate.address || candidate.normalized_address)),
+    source_url: cleanText(candidate && (candidate.canonical_source_url || candidate.source_url || candidate.open_source_url)),
+    source_title: cleanText(candidate && candidate.source_title)
+  }));
+  return [
+    'You are enriching exact public source evidence for a real estate acquisition operator.',
+    `Market/location: ${location}.`,
+    'Use only the exact property-specific source URLs below. Do not search for unrelated properties.',
+    'Return source-cited evidence only. If unavailable, mark fields not verified.',
+    '',
+    JSON.stringify(items, null, 2),
+    '',
+    'Hard rules:',
+    '- Never infer an exact phrase from requested criteria.',
+    '- Never paraphrase an exact phrase and present it as verbatim evidence.',
+    '- exact_source_phrase must be copied from public listing/search evidence tied to the property.',
+    '- No owner/contact invention, no ARV, no MAO, no comps, no repairs estimate.',
+    '- Return each subject property once.',
+    '- Use property-specific sources only.',
+    '',
+    'Respond as JSON only with this shape:',
+    JSON.stringify({
+      candidates: [{
+        address: '',
+        source_url: '',
+        source_domain: '',
+        listing_status: '',
+        asking_price: '',
+        beds: '',
+        baths: '',
+        sqft: '',
+        year_built: '',
+        exact_source_phrase: '',
+        exact_source_phrase_verbatim: true,
+        matched_criterion: '',
+        public_contact_route: 'Manual Lookup Needed',
+        source_checked_at: '',
+        missing_evidence: [],
+        supporting_source_urls: []
+      }]
+    }, null, 2)
+  ].join('\n');
+}
+
 function extractGeminiText(response) {
   const parts = response && response.candidates && response.candidates[0] &&
     response.candidates[0].content && Array.isArray(response.candidates[0].content.parts)
@@ -313,10 +364,18 @@ function mergeSource(list, item) {
   if (!key) return;
   const existing = list.find((candidate) => candidate.key === key);
   const title = cleanText(item && (item.title || item.source_title || item.sourceTitle));
-  const evidence = cleanText(item && (item.evidence || item.text || item.snippet));
+  const evidence = cleanText(item && (item.evidence || item.text || item.snippet || item.segment_text || item.grounding_support_text));
+  const providerQuery = cleanText(item && (item.provider_query || item.query));
+  const timestamp = cleanText(item && (item.provider_timestamp || item.timestamp));
+  const chunkIndex = item && (item.grounding_chunk_index !== undefined ? item.grounding_chunk_index : item.chunk_index);
   if (existing) {
     if (!existing.title && title) existing.title = title;
-    if (!existing.evidence && evidence) existing.evidence = evidence;
+    if (evidence && !existing.evidence_segments.includes(evidence)) existing.evidence_segments.push(evidence);
+    existing.evidence = existing.evidence_segments.join(' ');
+    if (providerQuery && !existing.provider_queries.includes(providerQuery)) existing.provider_queries.push(providerQuery);
+    if (timestamp && !existing.provider_timestamps.includes(timestamp)) existing.provider_timestamps.push(timestamp);
+    if (chunkIndex !== undefined && chunkIndex !== null && !existing.grounding_chunk_indices.includes(chunkIndex)) existing.grounding_chunk_indices.push(chunkIndex);
+    existing.harvest_sources = Array.from(new Set([].concat(existing.harvest_sources || [], cleanText(item && item.harvest_source) || 'source_url')));
     return;
   }
   list.push({
@@ -324,7 +383,12 @@ function mergeSource(list, item) {
     url,
     title,
     evidence,
-    harvest_source: cleanText(item && item.harvest_source) || 'source_url'
+    evidence_segments: evidence ? [evidence] : [],
+    provider_queries: providerQuery ? [providerQuery] : [],
+    provider_timestamps: timestamp ? [timestamp] : [],
+    grounding_chunk_indices: chunkIndex !== undefined && chunkIndex !== null ? [chunkIndex] : [],
+    harvest_source: cleanText(item && item.harvest_source) || 'source_url',
+    harvest_sources: [cleanText(item && item.harvest_source) || 'source_url']
   });
 }
 
@@ -334,12 +398,13 @@ function extractGroundingSources(response) {
   candidates.forEach((candidate) => {
     const metadata = candidate && (candidate.groundingMetadata || candidate.grounding_metadata) || {};
     const chunks = Array.isArray(metadata.groundingChunks) ? metadata.groundingChunks : [];
-    chunks.forEach((chunk) => {
+    chunks.forEach((chunk, idx) => {
       const web = chunk && chunk.web || {};
       const retrieved = chunk && chunk.retrievedContext || chunk && chunk.retrieved_context || {};
       mergeSource(sources, {
         url: web.uri || retrieved.uri || '',
         title: web.title || retrieved.title || '',
+        grounding_chunk_index: idx,
         harvest_source: 'grounding_chunk'
       });
     });
@@ -351,7 +416,7 @@ function extractGroundingSources(response) {
       const indexes = Array.isArray(support && support.groundingChunkIndices) ? support.groundingChunkIndices
         : Array.isArray(support && support.grounding_chunk_indices) ? support.grounding_chunk_indices
           : [];
-      indexes.forEach((idx) => {
+      (indexes.length ? indexes : chunks.map((_, chunkIdx) => chunkIdx)).forEach((idx) => {
         const chunk = chunks[idx] || {};
         const web = chunk.web || {};
         const retrieved = chunk.retrievedContext || chunk.retrieved_context || {};
@@ -359,6 +424,7 @@ function extractGroundingSources(response) {
           url: web.uri || retrieved.uri || '',
           title: web.title || retrieved.title || '',
           evidence: segment.text || '',
+          grounding_chunk_index: idx,
           harvest_source: 'grounding_support'
         });
       });
@@ -504,7 +570,7 @@ function groundingPresent(response) {
 function extractJsonText(text) {
   text = String(text || '').trim();
   if (!text) return '';
-  if (/^```/i.test(text)) text = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  text = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
   const firstObject = text.indexOf('{');
   const lastObject = text.lastIndexOf('}');
   if (firstObject >= 0 && lastObject > firstObject) return text.slice(firstObject, lastObject + 1);
@@ -514,15 +580,53 @@ function extractJsonText(text) {
   return text;
 }
 
-function parseProviderCandidates(text, groundingUrls) {
+function repairJsonText(text) {
+  let json = extractJsonText(text);
+  if (!json) return { text: '', repaired: false };
+  const original = json;
+  json = json.replace(/,\s*([}\]])/g, '$1').trim();
+  const opens = (json.match(/{/g) || []).length;
+  const closes = (json.match(/}/g) || []).length;
+  const arrayOpens = (json.match(/\[/g) || []).length;
+  const arrayCloses = (json.match(/\]/g) || []).length;
+  if (opens > closes && !/"[^"]*$/.test(json)) json += '}'.repeat(Math.min(opens - closes, 3));
+  if (arrayOpens > arrayCloses && !/"[^"]*$/.test(json)) json += ']'.repeat(Math.min(arrayOpens - arrayCloses, 3));
+  return { text: json, repaired: json !== original };
+}
+
+function parseJsonWithRecovery(text) {
+  const direct = extractJsonText(text);
+  if (!direct) return { parsed: null, repaired: false, format: 'empty' };
   try {
-    const parsed = JSON.parse(extractJsonText(text));
-    if (Array.isArray(parsed)) return { candidates: parsed, warnings: [] };
-    return {
-      candidates: Array.isArray(parsed && parsed.candidates) ? parsed.candidates : [],
-      warnings: Array.isArray(parsed && parsed.warnings) ? parsed.warnings.map(cleanText).filter(Boolean) : []
-    };
+    return { parsed: JSON.parse(direct), repaired: false, format: /^\s*\[/.test(direct) ? 'json_array' : 'json_object' };
   } catch (error) {
+    const repaired = repairJsonText(text);
+    if (!repaired.text) return { parsed: null, repaired: false, format: 'unparseable' };
+    try {
+      return { parsed: JSON.parse(repaired.text), repaired: repaired.repaired, format: /^\s*\[/.test(repaired.text) ? 'json_array' : 'json_object' };
+    } catch (_) {
+      return { parsed: null, repaired: repaired.repaired, format: 'unparseable' };
+    }
+  }
+}
+
+function parseProviderCandidates(text, groundingUrls) {
+  const recovered = parseJsonWithRecovery(text);
+  if (recovered.parsed) {
+    const parsed = recovered.parsed;
+    const candidates = Array.isArray(parsed) ? parsed : Array.isArray(parsed && parsed.candidates) ? parsed.candidates : [];
+    return {
+      candidates,
+      warnings: Array.isArray(parsed && parsed.warnings) ? parsed.warnings.map(cleanText).filter(Boolean) : [],
+      provider_output_format: recovered.format,
+      provider_output_repaired: recovered.repaired === true,
+      url_only_candidate_count: 0
+    };
+  }
+  {
+    try {
+      JSON.parse(extractJsonText(text));
+    } catch (error) {}
     const urls = uniqueList((String(text || '').match(/https?:\/\/[^\s"'<>),]+/gi) || []).concat(groundingUrls || []));
     return {
       candidates: urls.map((url, idx) => ({
@@ -540,9 +644,50 @@ function parseProviderCandidates(text, groundingUrls) {
         suggested_next_action: 'Open the source and verify whether it is property-specific before outreach.',
         call_angle: 'Verify source evidence before calling.'
       })),
-      warnings: ['Gemini output could not be parsed as JSON; using source URLs only.']
+      warnings: ['Gemini output could not be parsed as JSON; using source URLs only.'],
+      provider_output_format: recovered.format,
+      provider_output_repaired: recovered.repaired === true,
+      url_only_candidate_count: urls.length
     };
   }
+}
+
+function wholesalePhraseFromText(value) {
+  const text = cleanText(value);
+  if (!WHOLESALE_PHRASE_RE.test(text)) return '';
+  const match = text.match(/[^.!?;|]*\b(?:as[- ]?is|as is sale|investor special|investor opportunity|cash only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|rehab|back on (?:the )?market|relisted|price (?:cut|reduced|drop|reduction)|estate sale|fsbo|for sale by owner|hard money only|traditional financing unavailable)\b[^.!?;|]*[.!?]?/i);
+  return cleanText(match && match[0] || text);
+}
+
+function exactPhraseEvidenceFrom(candidate) {
+  const sourceUrl = cleanText(candidate && (candidate.canonical_source_url || candidate.source_url || candidate.url));
+  const checkedAt = cleanText(candidate && (candidate.source_checked_at || candidate.provider_timestamp)) || new Date().toISOString();
+  const sources = [
+    { value: candidate && candidate.exact_source_phrase_verbatim === false ? '' : candidate && (candidate.exact_source_phrase || candidate.matched_source_phrase), type: cleanText(candidate && candidate.exact_source_phrase_source_type) || 'stored_verified_evidence' },
+    { value: candidate && candidate.grounding_support_text, type: 'grounding_support' },
+    { value: candidate && candidate.evidence_source_type === 'grounding_support' ? candidate.evidence_snippet : '', type: 'grounding_support' },
+    { value: candidate && candidate.source_snippet, type: 'source_snippet' },
+    { value: candidate && candidate.search_result_snippet, type: 'source_snippet' },
+    { value: candidate && candidate.evidence_snippet, type: cleanText(candidate && candidate.evidence_source_type) || 'source_snippet' },
+    { value: candidate && candidate.source_title, type: 'source_snippet' },
+    { value: candidate && candidate.page_metadata && candidate.page_metadata.meta_description, type: 'page_metadata' },
+    { value: candidate && candidate.page_metadata && candidate.page_metadata.og_description, type: 'page_metadata' },
+    { value: candidate && candidate.page_metadata && candidate.page_metadata.title, type: 'page_metadata' },
+    { value: candidate && candidate.provider_enrichment_phrase, type: 'provider_enrichment' }
+  ];
+  for (const source of sources) {
+    const phrase = wholesalePhraseFromText(source.value);
+    if (!phrase) continue;
+    return {
+      exact_source_phrase: phrase,
+      exact_source_phrase_source_url: sourceUrl,
+      exact_source_phrase_source_type: source.type,
+      exact_source_phrase_checked_at: checkedAt,
+      exact_source_phrase_verbatim: true
+    };
+  }
+  const summary = cleanText(candidate && (candidate.source_summary_phrase || candidate.summary || candidate.why_it_might_be_deal));
+  return summary ? { source_summary_phrase: summary, exact_source_phrase_verbatim: false } : {};
 }
 
 function inferSignalsFromSource(source, context) {
@@ -579,6 +724,13 @@ function candidateFromHarvestedSource(source, context) {
   const sourceType = classifySourceType(sourceUrl, classification);
   const identity = extractPropertyIdentityFromSourceUrl(sourceUrl, source.title, classification);
   const signals = inferSignalsFromSource(source, context);
+  const phraseEvidence = exactPhraseEvidenceFrom({
+    source_url: sourceUrl,
+    source_title: title,
+    source_snippet: cleanText(source.evidence),
+    grounding_support_text: cleanText(source.evidence),
+    source_checked_at: cleanText(source.provider_timestamps && source.provider_timestamps[0]) || new Date().toISOString()
+  });
   const generic = sourceClassificationIsGeneric(classification);
   const propertySpecific = sourceClassificationIsPropertySpecific(classification);
   if (classification === 'generic_homepage' || classification === 'broad_article_or_blog') return null;
@@ -598,6 +750,15 @@ function candidateFromHarvestedSource(source, context) {
     source_url_canonicalization_source: canonical.canonicalization_source || source.canonicalization_source || 'original',
     source_url_canonicalization_note: canonical.canonicalization_note || source.canonicalization_note || '',
     source_title: title,
+    source_snippet: cleanText(source.evidence),
+    grounding_support_text: cleanText(source.evidence),
+    exact_source_phrase: phraseEvidence.exact_source_phrase || '',
+    matched_source_phrase: phraseEvidence.exact_source_phrase || '',
+    exact_source_phrase_source_url: phraseEvidence.exact_source_phrase_source_url || '',
+    exact_source_phrase_source_type: phraseEvidence.exact_source_phrase_source_type || '',
+    exact_source_phrase_checked_at: phraseEvidence.exact_source_phrase_checked_at || '',
+    exact_source_phrase_verbatim: phraseEvidence.exact_source_phrase_verbatim === true,
+    source_summary_phrase: phraseEvidence.source_summary_phrase || '',
     source_type: sourceType,
     property_identity: identity,
     strategy_match: context && context.strategy_labels || [],
@@ -606,6 +767,10 @@ function candidateFromHarvestedSource(source, context) {
     auction_date_or_timing: '',
     listing_status: '',
     evidence_snippet: cleanText(source.evidence) || 'Gemini grounding returned this public source URL.',
+    evidence_source_type: (source.harvest_sources || []).includes('grounding_support') ? 'grounding_support' : 'source_snippet',
+    provider_query: cleanText(source.provider_queries && source.provider_queries[0] || context && context.provider_query),
+    provider_timestamp: cleanText(source.provider_timestamps && source.provider_timestamps[0]) || new Date().toISOString(),
+    grounding_chunk_indices: Array.isArray(source.grounding_chunk_indices) ? source.grounding_chunk_indices : [],
     why_it_might_be_deal: propertySpecific
       ? 'Gemini grounding returned a property-specific public source URL. Verify the visible address and source details before outreach.'
       : generic
@@ -644,7 +809,7 @@ function summarizeSourceHarvest(sources, cards) {
   const classifications = sources.map((source) => classifySourceUrl(canonicalizeSourceUrl(source.url).canonical_url || source.url, source.title, source.evidence));
   const cardList = Array.isArray(cards) ? cards : [];
   return {
-    grounding_urls_found: sources.filter((source) => source.harvest_source === 'grounding_chunk' || source.harvest_source === 'grounding_support').length,
+    grounding_urls_found: sources.filter((source) => source.harvest_source === 'grounding_chunk' || source.harvest_source === 'grounding_support' || (source.harvest_sources || []).includes('grounding_chunk')).length,
     urls_harvested: sources.length,
     property_specific_urls: classifications.filter(sourceClassificationIsPropertySpecific).length,
     generic_urls_filtered: classifications.filter((classification) => classification === 'generic_homepage' || classification === 'broad_article_or_blog').length,
@@ -1258,6 +1423,157 @@ function statusForCandidate(candidate, sourceUrl, sourceType, sourceGeneric, qua
   return 'Research Ready';
 }
 
+function decodeHtmlEntities(value) {
+  return cleanText(value)
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function htmlAttr(html, name) {
+  const re = new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, 'i');
+  const match = String(html || '').match(re);
+  return decodeHtmlEntities(match && match[1] || '');
+}
+
+function extractMetaContent(html, selector) {
+  const re = new RegExp(`<meta\\b[^>]*(?:name|property)\\s*=\\s*["']${selector}["'][^>]*>`, 'i');
+  const tag = String(html || '').match(re);
+  return tag ? htmlAttr(tag[0], 'content') : '';
+}
+
+function extractPublicJsonLd(html) {
+  const out = {};
+  const scripts = String(html || '').match(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/ig) || [];
+  scripts.slice(0, 6).forEach((script) => {
+    const body = script.replace(/^<script\b[^>]*>/i, '').replace(/<\/script>$/i, '').trim();
+    try {
+      const parsed = JSON.parse(body);
+      const nodes = Array.isArray(parsed) ? parsed : parsed && parsed['@graph'] ? parsed['@graph'] : [parsed];
+      (Array.isArray(nodes) ? nodes : []).forEach((node) => {
+        if (!node || typeof node !== 'object') return;
+        const address = node.address || {};
+        const offers = Array.isArray(node.offers) ? node.offers[0] : node.offers || {};
+        if (!out.address && typeof address === 'object') {
+          out.address = [address.streetAddress, address.addressLocality, [address.addressRegion, address.postalCode].filter(Boolean).join(' ')].map(cleanText).filter(Boolean).join(', ');
+        }
+        if (!out.price) out.price = cleanText(node.price || offers.price || offers.lowPrice);
+        if (!out.beds) out.beds = cleanText(node.numberOfBedrooms || node.bedrooms);
+        if (!out.baths) out.baths = cleanText(node.numberOfBathroomsTotal || node.numberOfBathrooms || node.bathrooms);
+        if (!out.sqft) out.sqft = cleanText(node.floorSize && (node.floorSize.value || node.floorSize) || node.livingArea && (node.livingArea.value || node.livingArea));
+        if (!out.property_type) out.property_type = cleanText(node['@type']);
+        if (!out.listing_status) out.listing_status = cleanText(offers.availability || node.availability || node.homeStatus);
+      });
+    } catch (_) {}
+  });
+  return out;
+}
+
+function extractPageMetadata(html) {
+  const title = decodeHtmlEntities((String(html || '').match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '');
+  const metaDescription = extractMetaContent(html, 'description');
+  const ogTitle = extractMetaContent(html, 'og:title');
+  const ogDescription = extractMetaContent(html, 'og:description');
+  const jsonLd = extractPublicJsonLd(html);
+  return {
+    title,
+    meta_description: metaDescription,
+    og_title: ogTitle,
+    og_description: ogDescription,
+    json_ld: jsonLd
+  };
+}
+
+async function fetchPublicPageMetadata(sourceUrl, options) {
+  const fetchImpl = options && options.fetchImpl || global.fetch;
+  const url = cleanText(sourceUrl);
+  const checkedAt = new Date().toISOString();
+  if (!isHttpUrl(url) || typeof fetchImpl !== 'function') {
+    return { source_refresh_blocked: true, source_refresh_error: 'fetch unavailable', source_checked_at: checkedAt };
+  }
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutMs = Math.min(Math.max(parseInt(options && (options.metadata_timeout_ms || options.metadataTimeoutMs) || 3500, 10) || 3500, 500), 5000);
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetchImpl(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: { Accept: 'text/html,application/xhtml+xml,application/ld+json,application/json;q=0.9,*/*;q=0.1' },
+      signal: controller ? controller.signal : undefined
+    });
+    const contentType = cleanText(response && response.headers && response.headers.get && response.headers.get('content-type')).toLowerCase();
+    if (!response || !response.ok || !/(html|json|text)/i.test(contentType || 'text/html')) {
+      return {
+        final_source_url: cleanText(response && response.url) || url,
+        http_status: response && response.status || 0,
+        source_refresh_blocked: true,
+        source_refresh_error: response ? `HTTP ${response.status}` : 'no response',
+        source_checked_at: checkedAt
+      };
+    }
+    const text = String(await response.text() || '').slice(0, MAX_METADATA_BYTES);
+    const metadata = extractPageMetadata(text);
+    return Object.assign({
+      final_source_url: cleanText(response.url) || url,
+      http_status: response.status,
+      source_refresh_blocked: false,
+      source_checked_at: checkedAt
+    }, metadata);
+  } catch (error) {
+    return {
+      final_source_url: url,
+      http_status: 0,
+      source_refresh_blocked: true,
+      source_refresh_error: cleanText(error && error.message),
+      source_checked_at: checkedAt
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function enrichCandidatesWithPublicMetadata(candidates, options) {
+  const max = Math.min(Math.max(parseInt(options && (options.max_source_verifications || options.maxSourceVerifications) || 10, 10) || 10, 0), 10);
+  let attempted = 0;
+  let enriched = 0;
+  let blocked = 0;
+  const out = [];
+  for (const candidate of (Array.isArray(candidates) ? candidates : [])) {
+    const url = cleanText(candidate && (candidate.canonical_source_url || candidate.source_url || candidate.url));
+    const needs = !cleanText(candidate && (candidate.exact_source_phrase || candidate.matched_source_phrase || candidate.evidence_snippet)) || !cleanText(candidate && candidate.listing_status);
+    if (attempted < max && needs && isPropertySpecificSourceUrl(url)) {
+      attempted += 1;
+      const page = await fetchPublicPageMetadata(url, options || {});
+      if (page.source_refresh_blocked) blocked += 1;
+      const phraseEvidence = exactPhraseEvidenceFrom({ source_url: url, page_metadata: page, source_checked_at: page.source_checked_at });
+      const jsonLd = page.json_ld || {};
+      const next = Object.assign({}, candidate, {
+        final_source_url: page.final_source_url || url,
+        canonical_source_url: page.final_source_url || candidate.canonical_source_url || url,
+        source_checked_at: page.source_checked_at,
+        source_refresh_blocked: page.source_refresh_blocked === true,
+        source_refresh_error: page.source_refresh_error || '',
+        page_metadata: page,
+        source_title: cleanText(candidate.source_title) || page.og_title || page.title || '',
+        source_snippet: cleanText(candidate.source_snippet) || page.meta_description || page.og_description || '',
+        listing_status: cleanText(candidate.listing_status || jsonLd.listing_status),
+        asking_price: cleanText(candidate.asking_price || jsonLd.price),
+        beds: cleanText(candidate.beds || jsonLd.beds),
+        baths: cleanText(candidate.baths || jsonLd.baths),
+        sqft: cleanText(candidate.sqft || jsonLd.sqft)
+      }, phraseEvidence);
+      if (phraseEvidence.exact_source_phrase || jsonLd.address || jsonLd.price) enriched += 1;
+      if (jsonLd.address && !cleanText(next.address || next.property_address || next.display_address)) next.address = jsonLd.address;
+      out.push(next);
+    } else {
+      out.push(candidate);
+    }
+  }
+  return { candidates: out, attempted, enriched, blocked };
+}
+
 function normalizeCandidate(candidate, context) {
   candidate = candidate || {};
   context = context || {};
@@ -1297,6 +1613,7 @@ function normalizeCandidate(candidate, context) {
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
   const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
+  const phraseEvidence = exactPhraseEvidenceFrom(Object.assign({}, candidate, { source_url: sourceUrl }));
   const proofText = cleanText(candidate.evidence_snippet || candidate.why_it_might_be_deal || candidate.summary || title);
   const quality = addressQuality(address, proofText);
   const score = scoreCandidate(Object.assign({}, candidate, { property_identity: mergedIdentity }), context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText, sourceClassification);
@@ -1364,6 +1681,15 @@ function normalizeCandidate(candidate, context) {
     source_url_canonicalized: canonicalInfo.canonicalized === true || (!!sourceUrlOriginal && sourceUrlOriginal !== sourceUrl),
     source_url_canonicalization_note: canonicalizationNoteText,
     source_title: sourceTitle,
+    source_snippet: cleanText(candidate.source_snippet || candidate.search_result_snippet),
+    grounding_support_text: cleanText(candidate.grounding_support_text || (candidate.evidence_source_type === 'grounding_support' ? candidate.evidence_snippet : '')),
+    exact_source_phrase: phraseEvidence.exact_source_phrase || '',
+    matched_source_phrase: phraseEvidence.exact_source_phrase || '',
+    exact_source_phrase_source_url: phraseEvidence.exact_source_phrase_source_url || '',
+    exact_source_phrase_source_type: phraseEvidence.exact_source_phrase_source_type || '',
+    exact_source_phrase_checked_at: phraseEvidence.exact_source_phrase_checked_at || '',
+    exact_source_phrase_verbatim: phraseEvidence.exact_source_phrase_verbatim === true,
+    source_summary_phrase: phraseEvidence.source_summary_phrase || '',
     source_type: sourceType,
     source_classification: sourceClassification,
     source_classification_label: sourceClassificationLabel(sourceClassification),
@@ -1385,6 +1711,11 @@ function normalizeCandidate(candidate, context) {
     quality_explanations: explanations,
     distress_motivation_signals: distressSignals,
     visible_price_or_bid: cleanText(candidate.visible_price_or_bid),
+    asking_price: cleanText(candidate.asking_price || candidate.visible_price_or_bid),
+    beds: cleanText(candidate.beds),
+    baths: cleanText(candidate.baths),
+    sqft: cleanText(candidate.sqft),
+    year_built: cleanText(candidate.year_built || candidate.year),
     auction_date_or_timing: cleanText(candidate.auction_date_or_timing),
     listing_status: cleanText(candidate.listing_status),
     missing_evidence: missing,
@@ -1488,7 +1819,10 @@ async function runGeminiScoutDiscovery(job, options = {}) {
     };
   }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent`;
-  const prompt = buildDiscoveryPrompt(job, requestedCount);
+  const purpose = cleanText(options.purpose || options.provider_purpose || 'discovery_primary');
+  const prompt = purpose === 'evidence_enrichment'
+    ? buildEvidenceEnrichmentPrompt(job, options.enrichment_candidates || [], requestedCount)
+    : buildDiscoveryPrompt(job, requestedCount);
   try {
     const response = await fetchGeminiJson(url, {
       contents: [{ parts: [{ text: prompt }] }],
@@ -1508,7 +1842,8 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       location: job && job.location,
       strategy_labels: strategyLabels(job && job.strategies),
       provider_grounding_present: groundingPresent(response),
-      provider_source_urls: groundingUrls
+      provider_source_urls: groundingUrls,
+      provider_query: purpose
     };
     const harvestedSources = harvestProviderSources(response, text, parsed.candidates);
     const resolvedSources = [];
@@ -1524,10 +1859,19 @@ async function runGeminiScoutDiscovery(job, options = {}) {
           evidence: candidate && (candidate.evidence_snippet || candidate.summary || candidate.why_it_might_be_deal),
           harvest_source: 'parsed_candidate'
         }, options);
+        const sourceUrl = source.canonical_url || source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl));
+        const matchedSource = resolvedSources.find((item) => sourceKey(item.url) === sourceKey(sourceUrl)) || {};
         return Object.assign({}, candidate, {
           source_url: source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
           source_url_original: source.original_url || cleanText(candidate && (candidate.source_url_original || candidate.original_source_url || candidate.source_url || candidate.url || candidate.sourceUrl)),
-          canonical_source_url: source.canonical_url || source.url || cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl)),
+          canonical_source_url: sourceUrl,
+          source_title: cleanText(candidate && (candidate.source_title || candidate.title)) || matchedSource.title || '',
+          source_snippet: cleanText(candidate && (candidate.source_snippet || candidate.search_result_snippet)) || matchedSource.evidence || '',
+          grounding_support_text: cleanText(candidate && candidate.grounding_support_text) || matchedSource.evidence || '',
+          evidence_snippet: cleanText(candidate && candidate.evidence_snippet) || matchedSource.evidence || '',
+          evidence_source_type: (matchedSource.harvest_sources || []).includes('grounding_support') ? 'grounding_support' : cleanText(candidate && candidate.evidence_source_type),
+          provider_query: cleanText(candidate && candidate.provider_query) || purpose,
+          provider_timestamp: cleanText(candidate && candidate.provider_timestamp) || new Date().toISOString(),
           source_url_resolved: source.resolved_from_grounding_redirect === true,
           source_url_resolve_error: source.resolve_error || '',
           source_url_canonicalized: source.canonicalized === true || (source.canonical_url && source.canonical_url !== cleanText(candidate && (candidate.source_url || candidate.url || candidate.sourceUrl))),
@@ -1546,7 +1890,9 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       : resolvedSources
         .map((source) => candidateFromHarvestedSource(source, context))
         .filter(Boolean);
-    const cards = resolvedParsedCandidates.concat(sourceCandidates)
+    const metadataInput = resolvedParsedCandidates.concat(sourceCandidates);
+    const metadataResult = await enrichCandidatesWithPublicMetadata(metadataInput, options);
+    const cards = metadataResult.candidates
       .map((candidate) => normalizeCandidate(candidate, context))
       .sort((a, b) => (Number(b.scout_priority_score || 0) - Number(a.scout_priority_score || 0)))
       .slice(0, requestedCount);
@@ -1570,6 +1916,26 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       property_specific_urls: harvestSummary.property_specific_urls,
       generic_urls_filtered: harvestSummary.generic_urls_filtered,
       cards_from_grounding_urls: harvestSummary.cards_from_grounding_urls,
+      provider_output_format: parsed.provider_output_format || '',
+      provider_output_repaired: parsed.provider_output_repaired === true,
+      evidence_sources_merged: resolvedSources.filter((source) => (source.evidence_segments || []).length > 1 || (source.harvest_sources || []).length > 1).length,
+      grounding_support_count: resolvedSources.filter((source) => (source.harvest_sources || []).includes('grounding_support') || cleanText(source.evidence)).length,
+      url_only_candidate_count: parsed.url_only_candidate_count || 0,
+      candidates_needing_enrichment: metadataInput.filter((candidate) => !cleanText(candidate.exact_source_phrase || candidate.matched_source_phrase || candidate.evidence_snippet)).length,
+      evidence_enrichment_attempts: metadataResult.attempted,
+      evidence_enriched_count: metadataResult.enriched,
+      source_refresh_blocked_count: metadataResult.blocked,
+      exact_phrases_verified: cards.filter((card) => card.exact_source_phrase && card.exact_source_phrase_verbatim === true).length,
+      provider_attempts: [{
+        purpose,
+        query_group: cleanText(options.query_group || purpose),
+        model: config.model,
+        status: 'available',
+        candidate_count: cards.length,
+        grounded_url_count: context.provider_source_urls.length,
+        evidence_enriched_count: metadataResult.enriched,
+        error_category: ''
+      }],
       research_ready_count: harvestSummary.research_ready_count,
       needs_source_proof_count: harvestSummary.needs_source_proof_count,
       needs_address_repair_count: harvestSummary.needs_address_repair_count,
@@ -1619,5 +1985,8 @@ module.exports = {
   extractAddressFromSourceText,
   harvestProviderSources,
   candidateFromHarvestedSource,
+  fetchPublicPageMetadata,
+  enrichCandidatesWithPublicMetadata,
+  buildEvidenceEnrichmentPrompt,
   classifyGeminiError
 };
