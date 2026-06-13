@@ -446,6 +446,13 @@ function emptyBatchAudit(requested) {
     source_blocked: 0,
     provider_attempts: 0,
     provider_unavailable: '',
+    discovery_urls_found: 0,
+    structured_candidates_parsed: 0,
+    url_only_candidates: 0,
+    evidence_enrichment_attempts: 0,
+    evidence_enriched_candidates: 0,
+    exact_phrases_verified: 0,
+    source_refresh_blocked: 0,
     duration_ms: 0,
     batch_status: 'queued',
     warnings: []
@@ -534,6 +541,17 @@ function createJob(body, options = {}) {
       property_specific_urls: 0,
       generic_urls_filtered: 0,
       cards_from_grounding_urls: 0,
+      provider_output_format: '',
+      provider_output_repaired: false,
+      evidence_sources_merged: 0,
+      grounding_support_count: 0,
+      url_only_candidate_count: 0,
+      candidates_needing_enrichment: 0,
+      evidence_enrichment_attempts: 0,
+      evidence_enriched_count: 0,
+      source_refresh_blocked_count: 0,
+      exact_phrases_verified: 0,
+      provider_attempts: [],
       research_ready_count: 0,
       needs_source_proof_count: 0,
       needs_address_repair_count: 0,
@@ -736,7 +754,7 @@ function qualityGateCard(card, job, context) {
 
   if (fullAddress) pass.push('complete canonical address'); else blockers.push('complete canonical address');
   if (sourceType === 'exact_property_record' && isPropertySpecificSourceUrl(sourceUrl)) pass.push('exact property-detail source URL'); else blockers.push('exact property-detail source URL');
-  if (evidence.exact_source_phrase) pass.push('exact source-backed wholesale phrase'); else blockers.push('exact source-backed wholesale phrase');
+  if (evidence.exact_source_phrase && evidence.exact_source_phrase_verbatim === true) pass.push('exact source-backed wholesale phrase'); else blockers.push('exact source-backed wholesale phrase');
   if (leadEvidence.isCurrentOpportunity(evidence) && freshness !== 'stale' && !/^Manual Verification Needed$/i.test(evidence.listing_status)) pass.push('current/plausibly current listing evidence'); else blockers.push(freshness === 'stale' ? 'stale source evidence' : 'current listing status');
   if (sourceBlocked(card)) blockers.push('source blocked or generic');
   if (exclusion) blockers.push(exclusion);
@@ -822,6 +840,13 @@ function auditBatchCards(cards, job, providerSummary) {
   audit.sold_stale_rejected = list.filter((card) => /sold|closed|stale/i.test((card.batch_blockers || []).join(' '))).length;
   audit.generic_incomplete_rejected = list.filter((card) => /generic|complete canonical address|source URL|source-backed|current listing/i.test((card.batch_blockers || []).join(' '))).length;
   audit.source_blocked = list.filter((card) => /blocked/i.test((card.batch_blockers || []).join(' '))).length;
+  audit.discovery_urls_found = Number(providerSummary && providerSummary.source_urls_found_count || 0) || 0;
+  audit.structured_candidates_parsed = Number(providerSummary && providerSummary.candidates_found || 0) || 0;
+  audit.url_only_candidates = Number(providerSummary && providerSummary.url_only_candidate_count || 0) || 0;
+  audit.evidence_enrichment_attempts = Number(providerSummary && providerSummary.evidence_enrichment_attempts || 0) || 0;
+  audit.evidence_enriched_candidates = Number(providerSummary && providerSummary.evidence_enriched_count || 0) || 0;
+  audit.exact_phrases_verified = Number(providerSummary && providerSummary.exact_phrases_verified || 0) || 0;
+  audit.source_refresh_blocked = Number(providerSummary && providerSummary.source_refresh_blocked_count || 0) || 0;
   audit.provider_attempts = Math.max(
     Number(providerSummary && providerSummary.attempted ? 1 : 0) || 0,
     (Array.isArray(job && job.batch_progress && job.batch_progress.provider_attempts_completed) ? job.batch_progress.provider_attempts_completed.length : 0) +
@@ -1472,6 +1497,17 @@ function providerSummaryFrom(result) {
     property_specific_urls: Number(result.property_specific_urls || 0) || 0,
     generic_urls_filtered: Number(result.generic_urls_filtered || 0) || 0,
     cards_from_grounding_urls: Number(result.cards_from_grounding_urls || 0) || 0,
+    provider_output_format: cleanText(result.provider_output_format),
+    provider_output_repaired: result.provider_output_repaired === true,
+    evidence_sources_merged: Number(result.evidence_sources_merged || 0) || 0,
+    grounding_support_count: Number(result.grounding_support_count || 0) || 0,
+    url_only_candidate_count: Number(result.url_only_candidate_count || 0) || 0,
+    candidates_needing_enrichment: Number(result.candidates_needing_enrichment || 0) || 0,
+    evidence_enrichment_attempts: Number(result.evidence_enrichment_attempts || 0) || 0,
+    evidence_enriched_count: Number(result.evidence_enriched_count || 0) || 0,
+    source_refresh_blocked_count: Number(result.source_refresh_blocked_count || 0) || 0,
+    exact_phrases_verified: Number(result.exact_phrases_verified || 0) || 0,
+    provider_attempts: Array.isArray(result.provider_attempts) ? result.provider_attempts : [],
     research_ready_count: Number(result.research_ready_count || 0) || 0,
     needs_source_proof_count: Number(result.needs_source_proof_count || 0) || 0,
     needs_address_repair_count: Number(result.needs_address_repair_count || 0) || 0,
@@ -1504,40 +1540,105 @@ async function runJob(jobId, options = {}) {
       return publicJob(job);
     }
     const runStarted = Date.now();
+    const startedAt = cleanText(job && job.batch_progress && job.batch_progress.started_at) || nowIso();
     const progress = Object.assign({
-      started_at: nowIso(),
+      started_at: startedAt,
       finished_at: '',
       duration_ms: 0,
       cancellation_requested: false,
       provider_attempts_completed: [],
       provider_attempts_failed: [],
-      provider_attempts_skipped: []
-    }, job.batch_progress || {});
+      provider_attempts_skipped: [],
+      provider_attempts: [],
+      current_stage: 'starting',
+      candidates_discovered: 0,
+      candidates_verified: 0,
+      valid_count: 0,
+      last_progress_at: startedAt
+    }, job.batch_progress || {}, {
+      started_at: startedAt,
+      finished_at: '',
+      duration_ms: 0,
+      current_stage: 'starting',
+      provider_attempts: Array.isArray(job && job.batch_progress && job.batch_progress.provider_attempts) ? job.batch_progress.provider_attempts : [],
+      last_progress_at: nowIso()
+    });
     job = Object.assign({}, job, {
+      started_at: startedAt,
       status: job.fresh_batch ? 'running' : job.status,
       batch_status: job.fresh_batch ? 'running' : job.batch_status,
       batch_progress: progress
     });
+    jobs[idx] = job;
+    writeStore(jobs, options.storePath);
     const leadCards = collectLeadCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
     const candidateCards = collectCandidateCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
     const analyzerCards = collectAnalyzerCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
-    let geminiDiscovery = {
-      result: { status: 'not_configured', message: 'Gemini provider attempt skipped because budget was exhausted or provider already completed.' },
-      cards: []
-    };
-    const completedProviders = new Set(progress.provider_attempts_completed || []);
-    const failedProviders = new Set(progress.provider_attempts_failed || []);
-    const canAttemptGemini = !job.fresh_batch || (
-      Number(job.max_provider_calls || 0) > completedProviders.size + failedProviders.size &&
-      !completedProviders.has('Gemini') &&
-      !failedProviders.has('Gemini')
-    );
-    if (canAttemptGemini) {
-      const timeoutMs = Math.min(job.provider_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms, job.hard_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms);
-      geminiDiscovery = await withTimeout(
+    const geminiCards = [];
+    const providerResults = [];
+    const maxProviderCalls = job.fresh_batch ? Number(job.max_provider_calls || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls) || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls : 1;
+    const stagePlans = job.fresh_batch
+      ? [
+        { purpose: 'discovery_primary', query_group: 'redfin_realtor_priority' },
+        { purpose: 'discovery_secondary', query_group: 'zillow_har_brokerage_fsbo' },
+        { purpose: 'evidence_enrichment', query_group: 'grouped_property_source_enrichment' }
+      ]
+      : [{ purpose: 'discovery_primary', query_group: 'default' }];
+    const completedStageKeys = new Set([].concat(progress.provider_attempts_completed || [], progress.provider_attempts_failed || []));
+    for (const stage of stagePlans) {
+      if (providerResults.length >= maxProviderCalls) break;
+      if (completedStageKeys.has(stage.purpose)) {
+        progress.provider_attempts_skipped = Array.from(new Set([].concat(progress.provider_attempts_skipped || [], [stage.purpose])));
+        continue;
+      }
+      if (progress.cancellation_requested === true) break;
+      const elapsed = Date.now() - runStarted;
+      if (elapsed >= (job.hard_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms)) break;
+      const currentCards = dedupeCards([].concat(leadCards, candidateCards, analyzerCards, geminiCards));
+      const currentClassified = job.fresh_batch ? canonicalizeCardsForRead(currentCards, job).map((card) => qualityGateCard(card, job, {
+        seenIndex: buildGlobalSeenIndex(job, jobs, options),
+        currentSeen: new Set(),
+        providerAttempts: providerResults.length
+      })) : currentCards;
+      const currentValidCount = currentClassified.filter((card) => card.batch_group === 'Strong Leads' || card.batch_group === 'Valid Leads - Needs Comps').length;
+      progress.valid_count = currentValidCount;
+      if (job.fresh_batch && currentValidCount >= (job.requested_quantity || job.batch_size || 0)) break;
+      if (stage.purpose === 'evidence_enrichment') {
+        const enrichable = currentClassified
+          .filter((card) => isPropertySpecificSourceUrl(card.canonical_source_url || card.source_url) && !(card.lead_evidence && card.lead_evidence.exact_source_phrase && card.lead_evidence.exact_source_phrase_verbatim === true))
+          .slice(0, 10);
+        if (!enrichable.length) {
+          progress.provider_attempts_skipped = Array.from(new Set([].concat(progress.provider_attempts_skipped || [], [stage.purpose])));
+          continue;
+        }
+        stage.enrichment_candidates = enrichable;
+      }
+      const attemptStarted = nowIso();
+      progress.current_stage = stage.purpose;
+      progress.last_progress_at = attemptStarted;
+      progress.provider_attempts = [].concat(progress.provider_attempts || [], [{
+        purpose: stage.purpose,
+        query_group: stage.query_group,
+        model: '',
+        started_at: attemptStarted,
+        finished_at: '',
+        status: 'running',
+        candidate_count: 0,
+        grounded_url_count: 0,
+        evidence_enriched_count: 0,
+        error_category: ''
+      }]);
+      job = Object.assign({}, job, { updated_at: nowIso(), batch_progress: progress });
+      jobs[idx] = job;
+      writeStore(jobs, options.storePath);
+      const timeoutMs = Math.min(job.provider_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.provider_timeout_ms, Math.max(1000, (job.hard_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms) - elapsed));
+      const geminiDiscovery = await withTimeout(
         collectGeminiDiscoveryCards(job, Object.assign({}, options, {
           timeout_ms: timeoutMs,
-          max_candidate_urls: job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls
+          max_candidate_urls: job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls,
+          purpose: stage.purpose,
+          query_group: stage.query_group,
+          enrichment_candidates: stage.enrichment_candidates || []
         })),
         timeoutMs,
         () => ({
@@ -1545,20 +1646,39 @@ async function runJob(jobId, options = {}) {
             status: 'timed_out',
             attempted: true,
             message: 'Gemini provider timed out before Fresh Lead Batch budget completed.',
-            warnings: ['Provider timeout reached. Partial results preserved.']
+            warnings: ['Provider timeout reached. Partial results preserved.'],
+            provider_attempts: [{
+              purpose: stage.purpose,
+              query_group: stage.query_group,
+              status: 'timed_out',
+              error_category: 'timed_out'
+            }]
           },
           cards: []
         })
       );
-      if (geminiDiscovery.result && geminiDiscovery.result.attempted === true) {
-        if (geminiDiscovery.result.status === 'available') progress.provider_attempts_completed = Array.from(new Set([].concat(progress.provider_attempts_completed || [], ['Gemini'])));
-        else progress.provider_attempts_failed = Array.from(new Set([].concat(progress.provider_attempts_failed || [], ['Gemini'])));
+      const result = geminiDiscovery.result || {};
+      providerResults.push(result);
+      geminiCards.push(...(Array.isArray(geminiDiscovery.cards) ? geminiDiscovery.cards : []));
+      const latestAttempt = progress.provider_attempts[progress.provider_attempts.length - 1] || {};
+      Object.assign(latestAttempt, {
+        model: cleanText(result.model),
+        finished_at: nowIso(),
+        status: result.status || 'not_configured',
+        candidate_count: Number(result.candidates_found || 0) || 0,
+        grounded_url_count: Number(result.source_urls_found_count || 0) || 0,
+        evidence_enriched_count: Number(result.evidence_enriched_count || 0) || 0,
+        error_category: result.status === 'available' ? '' : cleanText(result.status)
+      });
+      if (result.attempted === true) {
+        if (result.status === 'available') progress.provider_attempts_completed = Array.from(new Set([].concat(progress.provider_attempts_completed || [], [stage.purpose])));
+        else progress.provider_attempts_failed = Array.from(new Set([].concat(progress.provider_attempts_failed || [], [stage.purpose])));
       }
-    } else {
-      progress.provider_attempts_skipped = Array.from(new Set([].concat(progress.provider_attempts_skipped || [], ['Gemini'])));
+      progress.candidates_discovered = geminiCards.length;
+      progress.candidates_verified = geminiCards.length;
+      progress.last_progress_at = latestAttempt.finished_at;
     }
-    const geminiCards = Array.isArray(geminiDiscovery.cards) ? geminiDiscovery.cards : [];
-    providerSummary = providerSummaryFrom(geminiDiscovery.result);
+    providerSummary = aggregateProviderSummary(providerResults);
     const existingBatchCards = job.fresh_batch && Array.isArray(job.cards) ? job.cards : [];
     let cards = dedupeCards(existingBatchCards.concat(leadCards, candidateCards, analyzerCards, geminiCards))
       .sort((a, b) => cardRank(b) - cardRank(a))
@@ -1568,7 +1688,7 @@ async function runJob(jobId, options = {}) {
       const guardContext = {
         seenIndex: buildGlobalSeenIndex(job, jobs, options),
         currentSeen: new Set(),
-        providerAttempts: providerSummary.attempted ? 1 : 0
+        providerAttempts: providerResults.length
       };
       cards = cards.map((card) => qualityGateCard(card, job, guardContext))
         .sort((a, b) => cardRank(b) - cardRank(a));
@@ -1592,6 +1712,11 @@ async function runJob(jobId, options = {}) {
       status: job.fresh_batch ? batchStatus : 'complete',
       batch_status: batchStatus,
       batch_progress: Object.assign({}, progress, {
+        current_stage: batchStatus,
+        valid_count: batchAudit.valid_new_leads,
+        candidates_discovered: geminiCards.length,
+        candidates_verified: outputCards.length,
+        last_progress_at: finishedAt,
         finished_at: finishedAt,
         duration_ms: Date.now() - runStarted
       }),
@@ -1609,6 +1734,16 @@ async function runJob(jobId, options = {}) {
         property_specific_urls: providerSummary.property_specific_urls,
         generic_urls_filtered: providerSummary.generic_urls_filtered,
         cards_from_grounding_urls: providerSummary.cards_from_grounding_urls,
+        provider_output_format: providerSummary.provider_output_format,
+        provider_output_repaired: providerSummary.provider_output_repaired,
+        evidence_sources_merged: providerSummary.evidence_sources_merged,
+        grounding_support_count: providerSummary.grounding_support_count,
+        url_only_candidate_count: providerSummary.url_only_candidate_count,
+        candidates_needing_enrichment: providerSummary.candidates_needing_enrichment,
+        evidence_enrichment_attempts: providerSummary.evidence_enrichment_attempts,
+        evidence_enriched_count: providerSummary.evidence_enriched_count,
+        source_refresh_blocked_count: providerSummary.source_refresh_blocked_count,
+        exact_phrases_verified: providerSummary.exact_phrases_verified,
         research_ready_count: providerSummary.research_ready_count,
         needs_source_proof_count: providerSummary.needs_source_proof_count,
         needs_address_repair_count: providerSummary.needs_address_repair_count,
@@ -1618,7 +1753,7 @@ async function runJob(jobId, options = {}) {
         business_pass: businessPass,
         business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
       },
-      provider_status: geminiDiscovery.result && geminiDiscovery.result.status || 'not_configured',
+      provider_status: providerResults.length ? (providerResults[providerResults.length - 1].status || 'not_configured') : 'not_configured',
       provider_message: providerSummary.message || 'Deal Finder used saved leads mode only.',
       provider_summary: Object.assign({}, providerSummary, {
         manual_review_rows_added: manualReview.added,
@@ -1826,6 +1961,42 @@ function sendCardsToAnalyzer(jobId, cardIds, options = {}) {
   };
 }
 
+function aggregateProviderSummary(results) {
+  const list = (Array.isArray(results) ? results : []).filter(Boolean);
+  if (!list.length) return providerSummaryFrom({ status: 'not_configured', message: 'Deal Finder used saved leads mode only.' });
+  const summaries = list.map(providerSummaryFrom);
+  const anyAvailable = summaries.find((item) => item.gemini_live_discovery === 'Available');
+  const last = summaries[summaries.length - 1] || summaries[0];
+  const base = anyAvailable || last;
+  const sum = (key) => summaries.reduce((total, item) => total + (Number(item[key] || 0) || 0), 0);
+  return Object.assign({}, base, {
+    attempted: summaries.some((item) => item.attempted === true),
+    grounding_present: summaries.some((item) => item.grounding_present === true),
+    source_urls_found_count: sum('source_urls_found_count'),
+    candidates_found: sum('candidates_found'),
+    grounding_urls_found: sum('grounding_urls_found'),
+    urls_harvested: sum('urls_harvested'),
+    property_specific_urls: sum('property_specific_urls'),
+    generic_urls_filtered: sum('generic_urls_filtered'),
+    cards_from_grounding_urls: sum('cards_from_grounding_urls'),
+    evidence_sources_merged: sum('evidence_sources_merged'),
+    grounding_support_count: sum('grounding_support_count'),
+    url_only_candidate_count: sum('url_only_candidate_count'),
+    candidates_needing_enrichment: sum('candidates_needing_enrichment'),
+    evidence_enrichment_attempts: sum('evidence_enrichment_attempts'),
+    evidence_enriched_count: sum('evidence_enriched_count'),
+    source_refresh_blocked_count: sum('source_refresh_blocked_count'),
+    exact_phrases_verified: sum('exact_phrases_verified'),
+    research_ready_count: sum('research_ready_count'),
+    needs_source_proof_count: sum('needs_source_proof_count'),
+    needs_address_repair_count: sum('needs_address_repair_count'),
+    source_urls: Array.from(new Set([].concat(...summaries.map((item) => item.source_urls || [])))).slice(0, 20),
+    warnings: Array.from(new Set([].concat(...summaries.map((item) => item.warnings || [])))).slice(0, 10),
+    provider_attempts: [].concat(...summaries.map((item) => item.provider_attempts || [])),
+    message: cleanText((list[list.length - 1] && list[list.length - 1].message) || base.message)
+  });
+}
+
 function continueJob(jobId, options = {}) {
   const jobs = readJobs(options.storePath);
   const idx = jobs.findIndex((candidate) => candidate.job_id === jobId);
@@ -1906,6 +2077,13 @@ function publicJob(job) {
       source_blocked: batchAudit.source_blocked,
       provider_attempts: batchAudit.provider_attempts,
       provider_unavailable: batchAudit.provider_unavailable,
+      discovery_urls_found: batchAudit.discovery_urls_found,
+      structured_candidates_parsed: batchAudit.structured_candidates_parsed,
+      url_only_candidates: batchAudit.url_only_candidates,
+      evidence_enrichment_attempts: batchAudit.evidence_enrichment_attempts,
+      evidence_enriched_candidates: batchAudit.evidence_enriched_candidates,
+      exact_phrases_verified: batchAudit.exact_phrases_verified,
+      source_refresh_blocked: batchAudit.source_refresh_blocked,
       duration_ms: batchAudit.duration_ms,
       batch_status: batchAudit.batch_status
     } : null,

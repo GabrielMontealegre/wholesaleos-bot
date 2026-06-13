@@ -150,6 +150,10 @@ function normalizeLeadEvidence(input, overrides) {
   overrides = overrides || {};
   const sourceUrl = cleanText(overrides.canonical_source_url || sourceUrlFrom(input));
   const phrase = cleanText(overrides.exact_source_phrase || exactPhraseFrom(input));
+  const explicitNonVerbatim = overrides.exact_source_phrase_verbatim === false || pick(input, ['lead_evidence.exact_source_phrase_verbatim', 'exact_source_phrase_verbatim']) === false;
+  const explicitVerbatim = overrides.exact_source_phrase_verbatim === true ||
+    pick(input, ['lead_evidence.exact_source_phrase_verbatim', 'exact_source_phrase_verbatim']) === true ||
+    !!cleanText(overrides.exact_source_phrase || pick(input, ['lead_evidence.exact_source_phrase', 'exact_source_phrase', 'matched_source_phrase']));
   const sourceType = sourceUrl ? sourceEvidenceAdapter.classifySourceUrl(sourceUrl) : 'missing_source_url';
   const address = propertyIdentity.canonicalAddress(input, overrides);
   const contactRoute = cleanText(overrides.public_contact_route) || contactRouteFrom(input, sourceUrl, phrase);
@@ -165,6 +169,11 @@ function normalizeLeadEvidence(input, overrides) {
     sqft: cleanText(overrides.sqft || pick(input, ['lead_evidence.sqft', 'sqft', 'square_feet', 'living_area'])),
     year_built: cleanText(overrides.year_built || pick(input, ['lead_evidence.year_built', 'year_built', 'yearBuilt'])),
     exact_source_phrase: phrase,
+    exact_source_phrase_source_url: cleanText(overrides.exact_source_phrase_source_url || pick(input, ['lead_evidence.exact_source_phrase_source_url', 'exact_source_phrase_source_url'])) || sourceUrl,
+    exact_source_phrase_source_type: cleanText(overrides.exact_source_phrase_source_type || pick(input, ['lead_evidence.exact_source_phrase_source_type', 'exact_source_phrase_source_type'])) || (phrase && explicitVerbatim ? 'stored_verified_evidence' : ''),
+    exact_source_phrase_checked_at: cleanText(overrides.exact_source_phrase_checked_at || pick(input, ['lead_evidence.exact_source_phrase_checked_at', 'exact_source_phrase_checked_at'])) || cleanText(overrides.source_checked_at || pick(input, ['lead_evidence.source_checked_at', 'source_checked_at', 'updated_at', 'created_at'])) || new Date().toISOString(),
+    exact_source_phrase_verbatim: !!(phrase && !explicitNonVerbatim && explicitVerbatim),
+    source_summary_phrase: cleanText(overrides.source_summary_phrase || pick(input, ['lead_evidence.source_summary_phrase', 'source_summary_phrase'])),
     matched_criterion: cleanText(overrides.matched_criterion || matchedCriterionFrom(input, phrase)),
     public_contact_route: contactRoute,
     contact_verification_status: contactRoute === 'Manual Lookup Needed' ? 'Manual Verification Needed' : 'Public route from source; verify before dialing.',
@@ -193,6 +202,7 @@ function normalizeLeadEvidence(input, overrides) {
   if (!evidence.normalized_address) missing.push('full address');
   if (!evidence.canonical_source_url || sourceType !== 'exact_property_record') missing.push('exact property-detail source URL');
   if (!evidence.exact_source_phrase) missing.push('exact source-backed wholesale phrase');
+  if (evidence.exact_source_phrase && evidence.exact_source_phrase_verbatim !== true) missing.push('verbatim exact source phrase');
   if (!isCurrentOpportunity(evidence)) missing.push('current listing status');
   if (evidence.public_contact_route === 'Manual Lookup Needed') missing.push('public contact route');
   if (!evidence.asking_price) missing.push('asking price');
@@ -207,7 +217,7 @@ function normalizeLeadEvidence(input, overrides) {
 function dealFinderGroup(evidence) {
   evidence = normalizeLeadEvidence(evidence);
   const exactSource = evidence.canonical_source_url && sourceEvidenceAdapter.classifySourceUrl(evidence.canonical_source_url) === 'exact_property_record';
-  const valid = !!(evidence.normalized_address && exactSource && evidence.exact_source_phrase && isCurrentOpportunity(evidence));
+  const valid = !!(evidence.normalized_address && exactSource && evidence.exact_source_phrase && evidence.exact_source_phrase_verbatim === true && isCurrentOpportunity(evidence));
   if (!valid) return 'Research / Reference';
   if (evidence.public_contact_route !== 'Manual Lookup Needed') return 'Strong Leads';
   return 'Valid Leads - Needs Comps';
