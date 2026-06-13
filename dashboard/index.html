@@ -2289,12 +2289,23 @@ function findMeProviderSummary(active) {
   var cardsFromUrls = Number(summary.cards_from_grounding_urls || 0) || 0;
   var propertyUrls = Number(summary.property_specific_urls || 0) || 0;
   var filteredUrls = Number(summary.generic_urls_filtered || 0) || 0;
+  var searchStatus = summary.search_fallback_status || 'Not configured';
+  var searchConfigured = summary.search_provider_configured === true;
+  var searchResults = Number(summary.search_results_found || 0) || 0;
+  var snippetPhrases = Number(summary.snippet_phrases_verified || 0) || 0;
+  var weakSnippets = Number(summary.weak_snippets_count || 0) || 0;
   var warnings = Array.isArray(summary.warnings) ? summary.warnings.filter(Boolean) : [];
   var tone = geminiStatus === 'Available' ? 'good' : geminiStatus === 'Temporarily unavailable' || geminiStatus === 'Timed out' ? 'warn' : geminiStatus === 'Failed' ? 'bad' : 'warn';
+  var searchTone = searchStatus === 'Available' ? 'good' : searchStatus === 'No results' || searchStatus === 'Not configured' || searchStatus === 'Rate limited' || searchStatus === 'Timed out' ? 'warn' : /failed/i.test(searchStatus) ? 'bad' : 'neutral';
   return '<div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:7px">' +
     '<div style="display:flex;gap:7px;flex-wrap:wrap">' +
       findMePill('Saved Leads Mode: Available', 'good') +
       findMePill('Gemini Live Discovery: ' + geminiStatus, tone) +
+      findMePill('Search fallback: ' + searchStatus, searchTone) +
+      findMePill('Search provider: ' + (searchConfigured ? 'Configured' : 'Not configured'), searchConfigured ? 'good' : 'warn') +
+      findMePill('Search results: ' + searchResults, searchResults ? 'good' : 'neutral') +
+      findMePill('Snippet phrases: ' + snippetPhrases, snippetPhrases ? 'good' : 'warn') +
+      findMePill('Weak snippets: ' + weakSnippets, weakSnippets ? 'warn' : 'neutral') +
       findMePill('Source URLs found: ' + urls, urls ? 'good' : 'neutral') +
       findMePill('Live candidates found: ' + candidates, candidates ? 'good' : 'neutral') +
       findMePill('URLs harvested: ' + harvested, harvested ? 'good' : 'neutral') +
@@ -2310,6 +2321,9 @@ function findMeProviderSummary(active) {
 function findMeBatchSummary(job) {
   if (!job || !job.fresh_batch) return '';
   var result = job.batch_result || job.batch_audit || {};
+  var sourceSummary = job.source_summary || {};
+  var zeroCallable = result.zero_callable_explanation || sourceSummary.zero_callable_explanation || (job.provider_summary && job.provider_summary.zero_callable_explanation) || '';
+  var nextAction = result.zero_callable_next_action || sourceSummary.zero_callable_next_action || (job.provider_summary && job.provider_summary.zero_callable_next_action) || '';
   return '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">' +
       '<div><div style="font-size:12px;color:#166534;font-weight:900;text-transform:uppercase">Fresh Lead Batch</div><div style="font-size:12px;color:#166534;font-weight:800;margin-top:2px">' + findMeSafeText(job.discovery_batch_id || job.job_id || '') + '</div></div>' +
@@ -2327,6 +2341,9 @@ function findMeBatchSummary(job) {
       findMePill('Enrichment attempts: ' + (result.evidence_enrichment_attempts || 0), result.evidence_enrichment_attempts ? 'good' : 'neutral') +
       findMePill('Evidence enriched: ' + (result.evidence_enriched_candidates || 0), result.evidence_enriched_candidates ? 'good' : 'neutral') +
       findMePill('Exact phrases: ' + (result.exact_phrases_verified || 0), result.exact_phrases_verified ? 'good' : 'warn') +
+      findMePill('Search results: ' + (sourceSummary.search_results_found || result.search_results_found || 0), (sourceSummary.search_results_found || result.search_results_found) ? 'good' : 'neutral') +
+      findMePill('Snippet phrases: ' + (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified || 0), (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified) ? 'good' : 'warn') +
+      findMePill('Weak snippets: ' + (sourceSummary.weak_snippets_count || result.weak_snippets_count || 0), (sourceSummary.weak_snippets_count || result.weak_snippets_count) ? 'warn' : 'neutral') +
       findMePill('Source refresh blocked: ' + (result.source_refresh_blocked || 0), result.source_refresh_blocked ? 'warn' : 'neutral') +
       findMePill('Duplicates rejected: ' + (result.duplicates_rejected || 0), result.duplicates_rejected ? 'warn' : 'neutral') +
       findMePill('Previous rejected: ' + (result.previous_property_rejections || 0), result.previous_property_rejections ? 'warn' : 'neutral') +
@@ -2335,6 +2352,7 @@ function findMeBatchSummary(job) {
       findMePill('Provider attempts: ' + (result.provider_attempts || 0), result.provider_attempts ? 'good' : 'neutral') +
     '</div>' +
     (!Number(result.valid_new_leads || 0) && Number(result.discovery_urls_found || 0) ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">Property URLs were found, but no source-backed wholesale phrases were verified. No callable leads were created.</div>' : '') +
+    (zeroCallable ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">' + findMeSafeText(zeroCallable) + (nextAction ? '<div style="margin-top:3px;color:#78350f">' + findMeSafeText(nextAction) + '</div>' : '') + '</div>' : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       (!/completed|cancelled/i.test(String(job.batch_status || job.status || '')) ? '<button type="button" onclick="findMeContinueBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #166534;background:#fff;color:#166534;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Continue Batch</button>' : '') +
       (!/cancelled|completed/i.test(String(job.batch_status || job.status || '')) ? '<button type="button" onclick="findMeCancelBatch(\'' + findMeAttr(job.job_id || '') + '\')" style="border:1px solid #991b1b;background:#fff;color:#991b1b;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer">Cancel Batch</button>' : '') +
@@ -3158,7 +3176,7 @@ async function acquisitionRunRequest() {
         property_type: propertyType,
         include_research: true,
         include_auction: includeAuction,
-        max_provider_calls: 1,
+        max_provider_calls: 3,
         max_comp_attempts: 0,
         strategies: strategies
       })
@@ -3243,7 +3261,7 @@ async function dealCallFindBetterMarketCandidates() {
         batch_size: 20,
         include_research: options.includeResearch,
         include_auction: options.includeAuction,
-        max_provider_calls: 1,
+        max_provider_calls: 3,
         max_comp_attempts: 3,
         strategies: ['fixer', 'price_cut', 'long_dom', 'foreclosure_notice', 'pre_foreclosure'].concat(options.includeAuction ? ['auction_public'] : [])
       })
