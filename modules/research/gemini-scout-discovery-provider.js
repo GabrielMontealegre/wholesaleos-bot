@@ -2,6 +2,12 @@
 
 const crypto = require('crypto');
 
+const geminiQueryPlanner = require('./gemini-query-planner');
+const geminiStructuredOutputGuard = require('./gemini-structured-output-guard');
+const geminiEvidenceExtractor = require('./gemini-evidence-extractor');
+const geminiSelfAuditor = require('./gemini-self-auditor');
+const geminiFailureAuditor = require('./gemini-failure-auditor');
+
 const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
 const MAX_DISCOVERY_RESULTS = 50;
 const MAX_METADATA_BYTES = 250000;
@@ -158,6 +164,8 @@ function marketListingPath(job, site) {
 }
 
 function buildSearchQueryTemplates(job) {
+  const planned = geminiQueryPlanner.queriesForPrompt(job, { max_query_groups: job && job.max_gemini_query_groups || 16 });
+  if (planned.length) return planned;
   const terms = marketSearchTerms(job);
   const selected = new Set(Array.isArray(job && job.strategies) ? job.strategies : []);
   const texasMarket = isTexasMarket(job, terms);
@@ -572,10 +580,13 @@ function extractJsonText(text) {
   if (!text) return '';
   text = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
   const firstObject = text.indexOf('{');
-  const lastObject = text.lastIndexOf('}');
-  if (firstObject >= 0 && lastObject > firstObject) return text.slice(firstObject, lastObject + 1);
   const firstArray = text.indexOf('[');
+  const lastObject = text.lastIndexOf('}');
   const lastArray = text.lastIndexOf(']');
+  if (firstObject >= 0 && (firstArray < 0 || firstObject < firstArray)) {
+    const end = Math.max(lastObject, lastArray);
+    return end > firstObject ? text.slice(firstObject, end + 1) : text.slice(firstObject);
+  }
   if (firstArray >= 0 && lastArray > firstArray) return text.slice(firstArray, lastArray + 1);
   return text;
 }
@@ -589,8 +600,8 @@ function repairJsonText(text) {
   const closes = (json.match(/}/g) || []).length;
   const arrayOpens = (json.match(/\[/g) || []).length;
   const arrayCloses = (json.match(/\]/g) || []).length;
-  if (opens > closes && !/"[^"]*$/.test(json)) json += '}'.repeat(Math.min(opens - closes, 3));
-  if (arrayOpens > arrayCloses && !/"[^"]*$/.test(json)) json += ']'.repeat(Math.min(arrayOpens - arrayCloses, 3));
+  if (opens > closes) json += '}'.repeat(Math.min(opens - closes, 3));
+  if (arrayOpens > arrayCloses) json += ']'.repeat(Math.min(arrayOpens - arrayCloses, 3));
   return { text: json, repaired: json !== original };
 }
 
@@ -1613,7 +1624,15 @@ function normalizeCandidate(candidate, context) {
   const title = cleanText(candidate.candidate_title || candidate.source_title || candidate.title || address || 'Live public discovery result');
   const strategyTags = uniqueList(normalizeArray(candidate.strategy_match).concat(context.strategy_labels || []));
   const distressSignals = uniqueList(normalizeArray(candidate.distress_signals).concat(normalizeArray(candidate.strategy_match)));
-  const phraseEvidence = exactPhraseEvidenceFrom(Object.assign({}, candidate, { source_url: sourceUrl }));
+  const specialistEvidence = geminiEvidenceExtractor.extractGeminiEvidence(Object.assign({}, candidate, { source_url: sourceUrl, canonical_source_url: sourceUrl }), { source_url: sourceUrl });
+  const phraseEvidence = specialistEvidence.phrase_evidence && specialistEvidence.phrase_evidence.exact_source_phrase
+    ? specialistEvidence.phrase_evidence
+    : exactPhraseEvidenceFrom(Object.assign({}, candidate, {
+      source_url: sourceUrl,
+      exact_source_phrase: '',
+      matched_source_phrase: '',
+      exact_source_phrase_verbatim: false
+    }));
   const proofText = cleanText(candidate.evidence_snippet || candidate.why_it_might_be_deal || candidate.summary || title);
   const quality = addressQuality(address, proofText);
   const score = scoreCandidate(Object.assign({}, candidate, { property_identity: mergedIdentity }), context, sourceUrl, sourceType, sourceGeneric, quality, distressSignals, proofText, sourceClassification);
@@ -1717,11 +1736,13 @@ function normalizeCandidate(candidate, context) {
     sqft: cleanText(candidate.sqft),
     year_built: cleanText(candidate.year_built || candidate.year),
     auction_date_or_timing: cleanText(candidate.auction_date_or_timing),
-    listing_status: cleanText(candidate.listing_status),
+    listing_status: cleanText(specialistEvidence.listing_status || candidate.listing_status),
     missing_evidence: missing,
     risk_flags: riskFlags,
     confidence: normalizeConfidence(candidate.confidence, status),
     confidence_level: normalizeConfidence(candidate.confidence, status),
+    gemini_query_group: cleanText(candidate.provider_query || context.provider_query),
+    gemini_query_groups_used: Array.isArray(context.gemini_query_groups) ? context.gemini_query_groups.map((group) => group.id).filter(Boolean) : [],
     next_action: next,
     next_best_action: next,
     call_angle: cleanText(candidate.call_angle) || 'Verify source evidence and ask about timing and condition.',
@@ -1837,13 +1858,16 @@ async function runGeminiScoutDiscovery(job, options = {}) {
     const text = extractGeminiText(response);
     const groundingUrls = extractGroundingUrls(response);
     const parsed = parseProviderCandidates(text, groundingUrls);
+    const structuredGuard = geminiStructuredOutputGuard.guardGeminiOutput({ text, response, grounding_urls: groundingUrls });
+    const queryGroups = geminiQueryPlanner.planGeminiQueryGroups(job, { max_query_groups: job && job.max_gemini_query_groups || 16 });
     const context = {
       market: job && job.market,
       location: job && job.location,
       strategy_labels: strategyLabels(job && job.strategies),
       provider_grounding_present: groundingPresent(response),
       provider_source_urls: groundingUrls,
-      provider_query: purpose
+      provider_query: purpose,
+      gemini_query_groups: queryGroups
     };
     const harvestedSources = harvestProviderSources(response, text, parsed.candidates);
     const resolvedSources = [];
@@ -1894,9 +1918,16 @@ async function runGeminiScoutDiscovery(job, options = {}) {
     const metadataResult = await enrichCandidatesWithPublicMetadata(metadataInput, options);
     const cards = metadataResult.candidates
       .map((candidate) => normalizeCandidate(candidate, context))
+      .map((card) => Object.assign({}, card, { gemini_self_audit: geminiSelfAuditor.auditGeminiCandidate(card) }))
       .sort((a, b) => (Number(b.scout_priority_score || 0) - Number(a.scout_priority_score || 0)))
       .slice(0, requestedCount);
     const harvestSummary = summarizeSourceHarvest(resolvedSources, cards);
+    const failureAudit = geminiFailureAuditor.auditGeminiFailure({ cards, result: Object.assign({}, parsed, structuredGuard, {
+      grounding_urls_found: harvestSummary.grounding_urls_found,
+      url_only_candidate_count: parsed.url_only_candidate_count || structuredGuard.gemini_url_only_count || 0,
+      evidence_enrichment_attempts: metadataResult.attempted,
+      evidence_enriched_count: metadataResult.enriched
+    }) });
     return {
       attempted: true,
       status: 'available',
@@ -1918,6 +1949,19 @@ async function runGeminiScoutDiscovery(job, options = {}) {
       cards_from_grounding_urls: harvestSummary.cards_from_grounding_urls,
       provider_output_format: parsed.provider_output_format || '',
       provider_output_repaired: parsed.provider_output_repaired === true,
+      gemini_query_groups_used: queryGroups.map((group) => group.id),
+      gemini_query_group_count: queryGroups.length,
+      gemini_output_valid_json: structuredGuard.gemini_output_valid_json,
+      gemini_output_repaired: structuredGuard.gemini_output_repaired || parsed.provider_output_repaired === true,
+      gemini_grounding_urls_count: structuredGuard.gemini_grounding_urls_count,
+      gemini_grounding_support_count: structuredGuard.gemini_grounding_support_count,
+      gemini_candidates_recovered_count: structuredGuard.gemini_candidates_recovered_count || parsedCandidates.length,
+      gemini_url_only_count: structuredGuard.gemini_url_only_count || parsed.url_only_candidate_count || 0,
+      gemini_unusable_output_reason: structuredGuard.gemini_unusable_output_reason,
+      gemini_self_audit_rejected_count: cards.filter((card) => card.gemini_self_audit && card.gemini_self_audit.valid_for_gate === false).length,
+      gemini_failure_reason: failureAudit.gemini_failure_reason,
+      gemini_recommended_next_action: failureAudit.gemini_recommended_next_action,
+      gemini_failure_buckets: failureAudit.gemini_failure_buckets,
       evidence_sources_merged: resolvedSources.filter((source) => (source.evidence_segments || []).length > 1 || (source.harvest_sources || []).length > 1).length,
       grounding_support_count: resolvedSources.filter((source) => (source.harvest_sources || []).includes('grounding_support') || cleanText(source.evidence)).length,
       url_only_candidate_count: parsed.url_only_candidate_count || 0,
