@@ -560,9 +560,13 @@ function createJob(body, options = {}) {
       needs_address_repair_count: 0,
       manual_review_rows_added: 0,
       manual_review_queue_count: 0,
+      no_auto_ingestion_status: input.fresh_batch ? 'passed' : '',
+      batch_persisted_scope: input.fresh_batch ? 'batch_only' : '',
       warnings: []
     },
     safety: 'operator-created Deal Finder job only; no autonomous ingestion, no production lead mutation',
+    persist_scope: input.fresh_batch ? 'batch_only' : '',
+    no_auto_ingestion_status: input.fresh_batch ? 'passed' : '',
     error: ''
   };
   writeStore([job].concat(jobs), options.storePath);
@@ -1558,14 +1562,39 @@ function providerSummaryFrom(result) {
       ? 'Rate limited'
     : rawStatus === 'provider_no_results'
       ? 'No results'
+    : rawStatus === 'invalid_provider'
+      ? 'Invalid provider'
       : 'Not configured';
   const providerName = cleanText(result.provider) || (/^provider_/i.test(rawStatus) ? 'Search' : 'Gemini');
+  const envDiagnostics = result.env_diagnostics && typeof result.env_diagnostics === 'object' ? result.env_diagnostics : {};
+  const missingConfig = Array.isArray(result.missing_config) ? result.missing_config.map(cleanText).filter(Boolean) : Array.isArray(envDiagnostics.missing_config) ? envDiagnostics.missing_config.map(cleanText).filter(Boolean) : [];
+  const readiness = cleanText(result.readiness || envDiagnostics.readiness);
   return {
     saved_leads_mode: 'Available',
     gemini_live_discovery: providerName === 'Gemini' ? status : '',
     search_fallback_status: providerName === 'Gemini' ? '' : status,
     search_provider_status: rawStatus,
-    search_provider_configured: providerName !== 'Gemini' ? !/not_configured/i.test(rawStatus) : false,
+    search_provider_configured: providerName !== 'Gemini' ? result.configured === true || readiness === 'ready' : false,
+    search_provider_readiness: readiness,
+    search_provider_normalized: cleanText(envDiagnostics.search_provider_normalized || providerName),
+    search_provider_missing_config: missingConfig,
+    search_provider_next_action: cleanText(result.next_action || envDiagnostics.next_action),
+    search_provider_env: {
+      enable_search_provider_present: envDiagnostics.enable_search_provider_present === true,
+      enable_search_provider_enabled: envDiagnostics.enable_search_provider_enabled === true,
+      search_provider_present: envDiagnostics.search_provider_present === true,
+      search_provider_normalized: cleanText(envDiagnostics.search_provider_normalized),
+      serper_api_key_present: envDiagnostics.serper_api_key_present === true,
+      serper_api_key_length_bucket: cleanText(envDiagnostics.serper_api_key_length_bucket),
+      brave_search_api_key_present: envDiagnostics.brave_search_api_key_present === true,
+      google_cse_api_key_present: envDiagnostics.google_cse_api_key_present === true,
+      google_cse_cx_present: envDiagnostics.google_cse_cx_present === true,
+      timeout_ms: Number(envDiagnostics.timeout_ms || 0) || 0,
+      max_results: Number(envDiagnostics.max_results || 0) || 0,
+      readiness,
+      missing_config: missingConfig,
+      next_action: cleanText(result.next_action || envDiagnostics.next_action)
+    },
     provider: providerName,
     model: cleanText(result.model),
     attempted: result.attempted === true,
@@ -1610,6 +1639,23 @@ function providerSummaryFrom(result) {
     source_urls: Array.isArray(result.source_urls) ? result.source_urls.filter(isHttpUrl).slice(0, 20) : [],
     warnings: Array.isArray(result.warnings) ? result.warnings.map(cleanText).filter(Boolean).slice(0, 10) : [],
     message: cleanText(result.message)
+  };
+}
+
+function noAutoIngestionStatus(job, cards) {
+  const checked = Array.isArray(cards) ? cards.length : 0;
+  return {
+    added: 0,
+    deduped: 0,
+    checked,
+    queued: 0,
+    queue_count: 0,
+    rows: [],
+    status: 'passed',
+    persist_scope: 'batch_only',
+    message: job && job.fresh_batch
+      ? 'Fresh Lead Batch persisted only batch cards and diagnostics; manual review queue write skipped.'
+      : 'No automatic ingestion requested.'
   };
 }
 
@@ -1818,9 +1864,11 @@ async function runJob(jobId, options = {}) {
       ? (batchAudit.valid_new_leads >= batchAudit.requested ? 'completed' : providerUnavailable && !validCards.length ? 'provider_unavailable' : 'partial_success')
       : '';
     if (job.fresh_batch) batchAudit.batch_status = batchStatus;
-    const manualReview = manualReviewQueue.addScoutBlockers(job, cards);
+    const manualReview = job.fresh_batch
+      ? noAutoIngestionStatus(job, cards)
+      : manualReviewQueue.addScoutBlockers(job, cards);
     const eligibleCount = outputCards.filter((card) => card.status === 'Call Ready' || card.status === 'Research Ready').length;
-    const businessPass = eligibleCount > 0 || Number(manualReview.added || 0) > 0 || Number(manualReview.deduped || 0) > 0;
+    const businessPass = eligibleCount > 0;
     job = Object.assign({}, job, {
       updated_at: nowIso(),
       status: job.fresh_batch ? batchStatus : 'complete',
@@ -1873,6 +1921,11 @@ async function runJob(jobId, options = {}) {
         search_fallback_status: providerSummary.search_fallback_status,
         search_provider_status: providerSummary.search_provider_status,
         search_provider_configured: providerSummary.search_provider_configured === true,
+        search_provider_readiness: providerSummary.search_provider_readiness,
+        search_provider_normalized: providerSummary.search_provider_normalized,
+        search_provider_missing_config: providerSummary.search_provider_missing_config,
+        search_provider_next_action: providerSummary.search_provider_next_action,
+        search_provider_env: providerSummary.search_provider_env,
         search_results_found: providerSummary.search_results_found,
         snippet_phrases_verified: providerSummary.snippet_phrases_verified,
         weak_snippets_count: providerSummary.weak_snippets_count,
@@ -1885,8 +1938,11 @@ async function runJob(jobId, options = {}) {
         manual_review_rows_added: manualReview.added,
         manual_review_rows_deduped: manualReview.deduped,
         manual_review_queue_count: manualReview.queue_count,
+        no_auto_ingestion_status: manualReview.status || 'passed',
+        batch_persisted_scope: manualReview.persist_scope || 'batch_only',
+        no_auto_ingestion_message: manualReview.message || '',
         business_pass: businessPass,
-        business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
+        business_pass_label: businessPass ? 'Business PASS: usable candidates were produced.' : 'Business FAIL: no eligible candidates were produced; no downstream records were auto-created.'
       },
       provider_status: providerResults.length ? (providerResults[providerResults.length - 1].status || 'not_configured') : 'not_configured',
       provider_message: providerSummary.message || 'Deal Finder used saved leads mode only.',
@@ -1897,11 +1953,16 @@ async function runJob(jobId, options = {}) {
         manual_review_rows_added: manualReview.added,
         manual_review_rows_deduped: manualReview.deduped,
         manual_review_queue_count: manualReview.queue_count,
+        no_auto_ingestion_status: manualReview.status || 'passed',
+        batch_persisted_scope: manualReview.persist_scope || 'batch_only',
+        no_auto_ingestion_message: manualReview.message || '',
         business_pass: businessPass,
-        business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.'
+        business_pass_label: businessPass ? 'Business PASS: usable candidates were produced.' : 'Business FAIL: no eligible candidates were produced; no downstream records were auto-created.'
       }),
       business_pass: businessPass,
-      business_pass_label: businessPass ? 'Business PASS: usable candidates or blocker rows were produced.' : 'Business FAIL: no eligible candidates and no manual review rows were produced.',
+      business_pass_label: businessPass ? 'Business PASS: usable candidates were produced.' : 'Business FAIL: no eligible candidates were produced; no downstream records were auto-created.',
+      no_auto_ingestion_status: manualReview.status || 'passed',
+      persist_scope: manualReview.persist_scope || 'batch_only',
       error: ''
     });
     jobs[idx] = job;
@@ -2142,6 +2203,11 @@ function aggregateProviderSummary(results) {
     search_fallback_status: searchSummary ? searchSummary.search_fallback_status : '',
     search_provider_status: searchSummary ? searchSummary.search_provider_status : '',
     search_provider_configured: searchSummary ? searchSummary.search_provider_configured === true : false,
+    search_provider_readiness: searchSummary ? searchSummary.search_provider_readiness : '',
+    search_provider_normalized: searchSummary ? searchSummary.search_provider_normalized : '',
+    search_provider_missing_config: searchSummary ? searchSummary.search_provider_missing_config : [],
+    search_provider_next_action: searchSummary ? searchSummary.search_provider_next_action : '',
+    search_provider_env: searchSummary ? searchSummary.search_provider_env : {},
     search_results_found: sum('search_results_found'),
     snippet_phrases_verified: sum('snippet_phrases_verified'),
     weak_snippets_count: sum('weak_snippets_count'),
@@ -2248,10 +2314,14 @@ function publicJob(job) {
       zero_callable_next_action: batchAudit.zero_callable_next_action,
       source_refresh_blocked: batchAudit.source_refresh_blocked,
       duration_ms: batchAudit.duration_ms,
-      batch_status: batchAudit.batch_status
+      batch_status: batchAudit.batch_status,
+      no_auto_ingestion_status: job.no_auto_ingestion_status || job.source_summary && job.source_summary.no_auto_ingestion_status || job.provider_summary && job.provider_summary.no_auto_ingestion_status || '',
+      batch_persisted_scope: job.persist_scope || job.source_summary && job.source_summary.batch_persisted_scope || job.provider_summary && job.provider_summary.batch_persisted_scope || ''
     } : null,
     preview_only: true,
-    should_ingest: false
+    should_ingest: false,
+    persist_scope: job && job.persist_scope || (job && job.fresh_batch ? 'batch_only' : ''),
+    no_auto_ingestion_status: job && job.no_auto_ingestion_status || (job && job.fresh_batch ? 'passed' : '')
   });
 }
 
