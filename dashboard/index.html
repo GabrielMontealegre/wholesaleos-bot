@@ -2294,6 +2294,15 @@ function findMeProviderSummary(active) {
   var searchResults = Number(summary.search_results_found || 0) || 0;
   var snippetPhrases = Number(summary.snippet_phrases_verified || 0) || 0;
   var weakSnippets = Number(summary.weak_snippets_count || 0) || 0;
+  var geminiGroups = Array.isArray(summary.gemini_query_groups_used) ? summary.gemini_query_groups_used : [];
+  var geminiValidJson = summary.gemini_output_valid_json === true;
+  var geminiRepaired = summary.gemini_output_repaired === true || summary.provider_output_repaired === true;
+  var geminiGroundingUrls = Number(summary.gemini_grounding_urls_count || summary.grounding_urls_found || 0) || 0;
+  var geminiGroundingSupports = Number(summary.gemini_grounding_support_count || summary.grounding_support_count || 0) || 0;
+  var geminiRecovered = Number(summary.gemini_candidates_recovered_count || 0) || 0;
+  var geminiUrlOnly = Number(summary.gemini_url_only_count || summary.url_only_candidate_count || 0) || 0;
+  var geminiFailure = summary.gemini_failure_reason || '';
+  var geminiNext = summary.gemini_recommended_next_action || '';
   var warnings = Array.isArray(summary.warnings) ? summary.warnings.filter(Boolean) : [];
   var tone = geminiStatus === 'Available' ? 'good' : geminiStatus === 'Temporarily unavailable' || geminiStatus === 'Timed out' ? 'warn' : geminiStatus === 'Failed' ? 'bad' : 'warn';
   var searchTone = searchStatus === 'Available' ? 'good' : searchStatus === 'No results' || searchStatus === 'Not configured' || searchStatus === 'Rate limited' || searchStatus === 'Timed out' ? 'warn' : /failed/i.test(searchStatus) ? 'bad' : 'neutral';
@@ -2306,6 +2315,13 @@ function findMeProviderSummary(active) {
       findMePill('Search results: ' + searchResults, searchResults ? 'good' : 'neutral') +
       findMePill('Snippet phrases: ' + snippetPhrases, snippetPhrases ? 'good' : 'warn') +
       findMePill('Weak snippets: ' + weakSnippets, weakSnippets ? 'warn' : 'neutral') +
+      findMePill('Gemini query groups: ' + geminiGroups.length, geminiGroups.length ? 'good' : 'neutral') +
+      findMePill('Gemini JSON: ' + (geminiValidJson ? 'valid' : 'not valid'), geminiValidJson ? 'good' : 'warn') +
+      findMePill('Gemini repaired: ' + (geminiRepaired ? 'yes' : 'no'), geminiRepaired ? 'warn' : 'neutral') +
+      findMePill('Gemini grounding URLs: ' + geminiGroundingUrls, geminiGroundingUrls ? 'good' : 'neutral') +
+      findMePill('Gemini supports: ' + geminiGroundingSupports, geminiGroundingSupports ? 'good' : 'neutral') +
+      findMePill('Gemini recovered: ' + geminiRecovered, geminiRecovered ? 'good' : 'neutral') +
+      findMePill('Gemini URL-only: ' + geminiUrlOnly, geminiUrlOnly ? 'warn' : 'neutral') +
       findMePill('Source URLs found: ' + urls, urls ? 'good' : 'neutral') +
       findMePill('Live candidates found: ' + candidates, candidates ? 'good' : 'neutral') +
       findMePill('URLs harvested: ' + harvested, harvested ? 'good' : 'neutral') +
@@ -2314,6 +2330,8 @@ function findMeProviderSummary(active) {
       findMePill('Generic URLs filtered: ' + filteredUrls, filteredUrls ? 'warn' : 'neutral') +
     '</div>' +
     '<div style="font-size:12px;color:#1e3a8a;font-weight:900;line-height:1.45">Last provider result: ' + findMeSafeText(summary.message || active && active.provider_message || 'Saved Leads Mode is available. Gemini Live Discovery runs only when configured.') + '</div>' +
+    (geminiFailure ? '<div style="font-size:12px;color:#92400e;font-weight:900;line-height:1.45">Gemini failure reason: ' + findMeSafeText(geminiFailure) + (geminiNext ? '<div style="color:#78350f;margin-top:2px">Next action: ' + findMeSafeText(geminiNext) + '</div>' : '') + '</div>' : '') +
+    (geminiGroups.length ? '<div style="font-size:11px;color:#1e3a8a;font-weight:800;line-height:1.45">Query groups: ' + findMeSafeText(geminiGroups.slice(0, 8).join(', ')) + '</div>' : '') +
     (warnings.length ? '<div style="display:flex;gap:5px;flex-wrap:wrap">' + warnings.slice(0, 4).map(function(item){ return findMePill(item, 'warn'); }).join('') + '</div>' : '') +
   '</div>';
 }
@@ -2341,6 +2359,11 @@ function findMeBatchSummary(job) {
       findMePill('Enrichment attempts: ' + (result.evidence_enrichment_attempts || 0), result.evidence_enrichment_attempts ? 'good' : 'neutral') +
       findMePill('Evidence enriched: ' + (result.evidence_enriched_candidates || 0), result.evidence_enriched_candidates ? 'good' : 'neutral') +
       findMePill('Exact phrases: ' + (result.exact_phrases_verified || 0), result.exact_phrases_verified ? 'good' : 'warn') +
+      findMePill('Gemini JSON valid: ' + (sourceSummary.gemini_output_valid_json === true ? 'yes' : 'no'), sourceSummary.gemini_output_valid_json === true ? 'good' : 'warn') +
+      findMePill('Gemini repaired: ' + (sourceSummary.gemini_output_repaired === true ? 'yes' : 'no'), sourceSummary.gemini_output_repaired === true ? 'warn' : 'neutral') +
+      findMePill('Grounding URLs: ' + (sourceSummary.gemini_grounding_urls_count || result.grounding_urls_found || 0), (sourceSummary.gemini_grounding_urls_count || result.grounding_urls_found) ? 'good' : 'neutral') +
+      findMePill('Grounding supports: ' + (sourceSummary.gemini_grounding_support_count || 0), sourceSummary.gemini_grounding_support_count ? 'good' : 'neutral') +
+      findMePill('Recovered: ' + (sourceSummary.gemini_candidates_recovered_count || 0), sourceSummary.gemini_candidates_recovered_count ? 'good' : 'neutral') +
       findMePill('Search results: ' + (sourceSummary.search_results_found || result.search_results_found || 0), (sourceSummary.search_results_found || result.search_results_found) ? 'good' : 'neutral') +
       findMePill('Snippet phrases: ' + (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified || 0), (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified) ? 'good' : 'warn') +
       findMePill('Weak snippets: ' + (sourceSummary.weak_snippets_count || result.weak_snippets_count || 0), (sourceSummary.weak_snippets_count || result.weak_snippets_count) ? 'warn' : 'neutral') +
