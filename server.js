@@ -5758,57 +5758,18 @@ app.post('/api/leads/search-fresh-v2', async function(req, res) {
     var srcType   = body.source_type ? body.source_type.toString().toLowerCase() : null;
     var count     = Math.min(parseInt(body.count || 100), 500);
     var results   = { arcgis: 0, socrata: 0, socrataExtra: 0, socrata30: 0, dealEngine: 0 };
-    var errors    = [];
-
-    // Always run deal-engine for the state
-    if (state) {
-      try {
-        var de = require('./modules/deal-engine');
-        await de.dealEngine(state, count);
-        results.dealEngine = count;
-      } catch(e) { errors.push('dealEngine: ' + e.message); }
-    }
-
-    // ArcGIS sources (filter by state if given)
-    if (!srcType || srcType === 'arcgis' || srcType === 'code_violation') {
-      try {
-        var ag = require('./modules/sources/arcgis-runner');
-        var agR = await ag.runArcGISSources(Math.ceil(count/7));
-        results.arcgis = agR.inserted || 0;
-      } catch(e) { errors.push('arcgis: ' + e.message); }
-    }
-
-    // Socrata extra (20 cities)
-    if (!srcType || srcType === 'socrata' || srcType === 'code_violation') {
-      try {
-        var se = require('./modules/sources/socrata-extra');
-        var seR = await se.runExtraSocrataSources(Math.ceil(count/20));
-        results.socrataExtra = seR.inserted || 0;
-      } catch(e) { errors.push('socrata-extra: ' + e.message); }
-    }
-
-    // Socrata 30 new states
-    if (!srcType || srcType === 'socrata' || srcType === 'code_violation') {
-      try {
-        var s30 = require('./modules/sources/socrata-30');
-        var s30R = await s30.runSocrata30Sources(Math.ceil(count/30));
-        results.socrata30 = s30R.inserted || 0;
-      } catch(e) { errors.push('socrata-30: ' + e.message); }
-    }
-
-    // Courthouse automation (Playwright portals) if requested
-    if (srcType === 'courthouse' || srcType === 'tax_delinquent' || srcType === 'pre_foreclosure' || srcType === 'auction') {
-      try {
-        var ct = require('./courthouse-addon/courthouse-tab');
-        // Map source_type to courthouse lead type
-        var stateFilter = state ? [state] : null;
-        var ctR = await require('./courthouse-addon/courthouse-runner').runCourthouseAutomation({ states: stateFilter });
-        results.courthouse = ctR.summary.newLeads || 0;
-      } catch(e) { errors.push('courthouse: ' + e.message); }
-    }
-
-    var totalInserted = Object.values(results).reduce(function(a,b){ return a+(b||0); }, 0);
-    res.json({ ok: true, inserted: totalInserted, breakdown: results, errors: errors, filters: { state: state, county: county, source_type: srcType, count: count } });
+    res.json({
+      ok: true,
+      inserted: 0,
+      breakdown: results,
+      errors: [],
+      filters: { state: state, county: county, source_type: srcType, count: count },
+      should_ingest: false,
+      preview_only: true,
+      persist_scope: 'batch_only',
+      no_auto_ingestion_status: 'passed',
+      message: 'Legacy global lead pull is disabled for Fresh Lead safety. Use Deal Finder Fresh Lead Batch; no saved leads or downstream records were created.'
+    });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
   }

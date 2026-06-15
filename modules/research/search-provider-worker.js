@@ -6,6 +6,12 @@ const leadEvidence = require('./lead-evidence');
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_MAX_RESULTS = 10;
 const PROVIDERS = new Set(['serper', 'brave', 'google_cse', 'mock']);
+const PROVIDER_DISPLAY = {
+  serper: 'serper',
+  brave: 'brave',
+  google_cse: 'google',
+  mock: 'mock'
+};
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -25,22 +31,95 @@ function nowIso() {
 }
 
 function providerNameFrom(env) {
-  const raw = cleanText(env.SEARCH_PROVIDER || 'mock').toLowerCase().replace(/[-\s]+/g, '_');
+  const raw = cleanText(env.SEARCH_PROVIDER || '').toLowerCase().replace(/[-\s]+/g, '_');
   if (raw === 'google' || raw === 'google_programmable_search') return 'google_cse';
   return raw;
 }
 
+function keyLengthBucket(value) {
+  const length = cleanText(value).length;
+  if (!length) return 'missing';
+  return length >= 16 ? 'present_expected' : 'present_short';
+}
+
+function missingKeyForProvider(provider) {
+  if (provider === 'serper') return 'SERPER_API_KEY';
+  if (provider === 'brave') return 'BRAVE_SEARCH_API_KEY';
+  if (provider === 'google_cse') return 'GOOGLE_CSE_API_KEY';
+  return '';
+}
+
+function searchProviderEnvDiagnostics(env = process.env) {
+  const enableRaw = env.ENABLE_SEARCH_PROVIDER;
+  const providerRaw = env.SEARCH_PROVIDER;
+  const enabled = boolEnabled(enableRaw);
+  const provider = providerNameFrom(env);
+  const timeoutMs = positiveInt(env.SEARCH_PROVIDER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
+  const maxResults = Math.min(positiveInt(env.SEARCH_PROVIDER_MAX_RESULTS, DEFAULT_MAX_RESULTS), 20);
+  const missing = [];
+  let readiness = 'not_configured';
+  let nextAction = 'Set ENABLE_SEARCH_PROVIDER=true and SEARCH_PROVIDER to serper, brave, google, or mock.';
+  if (enableRaw !== undefined && enableRaw !== null && !enabled) {
+    readiness = 'disabled';
+    nextAction = 'Set ENABLE_SEARCH_PROVIDER=true to enable search fallback.';
+  } else if (enabled && !cleanText(providerRaw)) {
+    readiness = 'not_configured';
+    missing.push('SEARCH_PROVIDER');
+    nextAction = 'Set SEARCH_PROVIDER to serper, brave, google, or mock.';
+  } else if (enabled && !PROVIDERS.has(provider)) {
+    readiness = 'invalid_provider';
+    nextAction = 'Set SEARCH_PROVIDER to serper, brave, google, or mock.';
+  } else if (enabled) {
+    if (provider === 'serper' && !cleanText(env.SERPER_API_KEY)) missing.push('SERPER_API_KEY');
+    if (provider === 'brave' && !cleanText(env.BRAVE_SEARCH_API_KEY)) missing.push('BRAVE_SEARCH_API_KEY');
+    if (provider === 'google_cse') {
+      if (!cleanText(env.GOOGLE_CSE_API_KEY)) missing.push('GOOGLE_CSE_API_KEY');
+      if (!cleanText(env.GOOGLE_CSE_CX)) missing.push('GOOGLE_CSE_CX');
+    }
+    if (missing.includes('GOOGLE_CSE_CX')) {
+      readiness = 'missing_google_cx';
+      nextAction = 'Set GOOGLE_CSE_CX for Google Programmable Search.';
+    } else if (missing.length) {
+      readiness = 'missing_key';
+      nextAction = `Set ${missingKeyForProvider(provider) || missing[0]} for ${PROVIDER_DISPLAY[provider] || 'search provider'}.`;
+    } else {
+      readiness = 'ready';
+      nextAction = '';
+    }
+  }
+  return {
+    enable_search_provider_present: enableRaw !== undefined && enableRaw !== null && cleanText(enableRaw) !== '',
+    enable_search_provider_enabled: enabled,
+    search_provider_present: providerRaw !== undefined && providerRaw !== null && cleanText(providerRaw) !== '',
+    search_provider_normalized: PROVIDER_DISPLAY[provider] || 'unknown',
+    serper_api_key_present: !!cleanText(env.SERPER_API_KEY),
+    serper_api_key_length_bucket: keyLengthBucket(env.SERPER_API_KEY),
+    brave_search_api_key_present: !!cleanText(env.BRAVE_SEARCH_API_KEY),
+    google_cse_api_key_present: !!cleanText(env.GOOGLE_CSE_API_KEY),
+    google_cse_cx_present: !!cleanText(env.GOOGLE_CSE_CX),
+    timeout_ms: timeoutMs,
+    max_results: maxResults,
+    readiness,
+    missing_config: missing,
+    next_action: nextAction
+  };
+}
+
 function searchProviderConfig(env = process.env) {
+  const diagnostics = searchProviderEnvDiagnostics(env);
   const enabled = boolEnabled(env.ENABLE_SEARCH_PROVIDER);
   const provider = providerNameFrom(env);
   const timeoutMs = positiveInt(env.SEARCH_PROVIDER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const maxResults = Math.min(positiveInt(env.SEARCH_PROVIDER_MAX_RESULTS, DEFAULT_MAX_RESULTS), 20);
   const missing = [];
   if (!enabled) {
-    return { enabled: false, provider, configured: false, status: 'provider_not_configured', missing, timeout_ms: timeoutMs, max_results: maxResults };
+    return { enabled: false, provider: provider || 'unknown', display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
+  }
+  if (!cleanText(env.SEARCH_PROVIDER)) {
+    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
   }
   if (!PROVIDERS.has(provider)) {
-    return { enabled, provider, configured: false, status: 'provider_unavailable', missing, timeout_ms: timeoutMs, max_results: maxResults, warning: 'Search provider is unsupported.' };
+    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'invalid_provider', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, warning: 'Search provider is unsupported.', diagnostics };
   }
   if (provider === 'serper' && !cleanText(env.SERPER_API_KEY)) missing.push('SERPER_API_KEY');
   if (provider === 'brave' && !cleanText(env.BRAVE_SEARCH_API_KEY)) missing.push('BRAVE_SEARCH_API_KEY');
@@ -49,9 +128,9 @@ function searchProviderConfig(env = process.env) {
     if (!cleanText(env.GOOGLE_CSE_CX)) missing.push('GOOGLE_CSE_CX');
   }
   if (missing.length) {
-    return { enabled, provider, configured: false, status: 'provider_not_configured', missing, timeout_ms: timeoutMs, max_results: maxResults };
+    return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
   }
-  return { enabled, provider, configured: true, status: 'provider_configured', missing, timeout_ms: timeoutMs, max_results: maxResults };
+  return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: true, status: 'provider_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
 }
 
 function criteriaTerms(criteria) {
@@ -193,8 +272,14 @@ async function runSearchProvider(input = {}, options = {}) {
   const startedAt = nowIso();
   const query = cleanText(options.query) || buildSearchQueries(input)[0] || '';
   const base = {
-    provider: cfg.provider,
+    provider: cfg.display_provider || cfg.provider,
+    provider_adapter: cfg.provider,
     status: cfg.status,
+    configured: cfg.configured === true,
+    readiness: cfg.readiness || (cfg.configured ? 'ready' : 'not_configured'),
+    missing_config: Array.isArray(cfg.missing) ? cfg.missing : [],
+    next_action: cfg.diagnostics && cfg.diagnostics.next_action || '',
+    env_diagnostics: cfg.diagnostics || {},
     query,
     started_at: startedAt,
     finished_at: '',
@@ -215,7 +300,7 @@ async function runSearchProvider(input = {}, options = {}) {
   if (!cfg.configured) {
     base.finished_at = nowIso();
     base.warnings = cfg.warning ? [cfg.warning] : [];
-    base.message = cfg.status === 'provider_not_configured' ? 'Search provider not configured. Fresh batch continued without fallback.' : 'Search provider unavailable before request.';
+    base.message = cfg.status === 'provider_not_configured' ? 'Search provider not configured. Fresh batch continued without fallback.' : cfg.status === 'invalid_provider' ? 'Search provider is invalid. Fresh batch continued without fallback.' : 'Search provider unavailable before request.';
     base.provider_attempts = [attemptFrom(base, input, 'search_fallback')];
     return base;
   }
@@ -299,6 +384,7 @@ function attemptFrom(result, input, purpose) {
 }
 
 module.exports = {
+  searchProviderEnvDiagnostics,
   searchProviderConfig,
   buildSearchQueries,
   runSearchProvider

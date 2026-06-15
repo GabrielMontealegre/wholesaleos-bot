@@ -2291,6 +2291,9 @@ function findMeProviderSummary(active) {
   var filteredUrls = Number(summary.generic_urls_filtered || 0) || 0;
   var searchStatus = summary.search_fallback_status || 'Not configured';
   var searchConfigured = summary.search_provider_configured === true;
+  var searchReadiness = summary.search_provider_readiness || summary.search_provider_env && summary.search_provider_env.readiness || 'not_configured';
+  var searchProviderName = summary.search_provider_normalized || summary.search_provider_env && summary.search_provider_env.search_provider_normalized || summary.provider || 'unknown';
+  var missingConfig = Array.isArray(summary.search_provider_missing_config) ? summary.search_provider_missing_config : summary.search_provider_env && Array.isArray(summary.search_provider_env.missing_config) ? summary.search_provider_env.missing_config : [];
   var searchResults = Number(summary.search_results_found || 0) || 0;
   var snippetPhrases = Number(summary.snippet_phrases_verified || 0) || 0;
   var weakSnippets = Number(summary.weak_snippets_count || 0) || 0;
@@ -2311,7 +2314,10 @@ function findMeProviderSummary(active) {
       findMePill('Saved Leads Mode: Available', 'good') +
       findMePill('Gemini Live Discovery: ' + geminiStatus, tone) +
       findMePill('Search fallback: ' + searchStatus, searchTone) +
-      findMePill('Search provider: ' + (searchConfigured ? 'Configured' : 'Not configured'), searchConfigured ? 'good' : 'warn') +
+      findMePill('Search provider configured: ' + (searchConfigured ? 'yes' : 'no'), searchConfigured ? 'good' : 'warn') +
+      findMePill('Provider: ' + searchProviderName, searchConfigured ? 'good' : 'neutral') +
+      findMePill('Readiness: ' + searchReadiness, searchReadiness === 'ready' ? 'good' : searchReadiness === 'disabled' || searchReadiness === 'not_configured' || searchReadiness === 'missing_key' || searchReadiness === 'missing_google_cx' ? 'warn' : 'bad') +
+      (missingConfig.length ? findMePill('Missing config: ' + missingConfig.slice(0, 4).join(', '), 'warn') : '') +
       findMePill('Search results: ' + searchResults, searchResults ? 'good' : 'neutral') +
       findMePill('Snippet phrases: ' + snippetPhrases, snippetPhrases ? 'good' : 'warn') +
       findMePill('Weak snippets: ' + weakSnippets, weakSnippets ? 'warn' : 'neutral') +
@@ -2340,6 +2346,8 @@ function findMeBatchSummary(job) {
   if (!job || !job.fresh_batch) return '';
   var result = job.batch_result || job.batch_audit || {};
   var sourceSummary = job.source_summary || {};
+  var noAuto = sourceSummary.no_auto_ingestion_status || job.no_auto_ingestion_status || result.no_auto_ingestion_status || 'unknown';
+  var persistedScope = sourceSummary.batch_persisted_scope || job.persist_scope || result.batch_persisted_scope || 'batch_only';
   var zeroCallable = result.zero_callable_explanation || sourceSummary.zero_callable_explanation || (job.provider_summary && job.provider_summary.zero_callable_explanation) || '';
   var nextAction = result.zero_callable_next_action || sourceSummary.zero_callable_next_action || (job.provider_summary && job.provider_summary.zero_callable_next_action) || '';
   return '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px">' +
@@ -2373,6 +2381,8 @@ function findMeBatchSummary(job) {
       findMePill('Sold/stale rejected: ' + (result.sold_stale_rejected || 0), result.sold_stale_rejected ? 'warn' : 'neutral') +
       findMePill('Source blocked: ' + (result.source_blocked || 0), result.source_blocked ? 'warn' : 'neutral') +
       findMePill('Provider attempts: ' + (result.provider_attempts || 0), result.provider_attempts ? 'good' : 'neutral') +
+      findMePill('No-auto-ingestion: ' + noAuto, noAuto === 'passed' ? 'good' : noAuto === 'unknown' ? 'warn' : 'bad') +
+      findMePill('Batch persisted scope: ' + persistedScope, persistedScope === 'batch_only' ? 'good' : 'bad') +
     '</div>' +
     (!Number(result.valid_new_leads || 0) && Number(result.discovery_urls_found || 0) ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">Property URLs were found, but no source-backed wholesale phrases were verified. No callable leads were created.</div>' : '') +
     (zeroCallable ? '<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:8px;padding:8px 9px;font-size:12px;font-weight:900;line-height:1.45">' + findMeSafeText(zeroCallable) + (nextAction ? '<div style="margin-top:3px;color:#78350f">' + findMeSafeText(nextAction) + '</div>' : '') + '</div>' : '') +
@@ -27871,7 +27881,11 @@ window.runPullLeads=function(){
  .then(function(r){return r.json();})
  .then(function(d){
    btn.textContent="Pull Leads Now";btn.disabled=false;
-   if(d.ok){res.style.color="#10b981";res.textContent="Done! "+d.inserted+" new leads added. Refreshing...";setTimeout(function(){if(typeof loadLeads==="function")loadLeads();},1500);}
+   if(d.ok){
+     res.style.color="#10b981";
+     res.textContent=d.message||((d.inserted||0)+" records processed. No global ingestion status: "+(d.no_auto_ingestion_status||"unknown"));
+     if(d.should_ingest!==false&&Number(d.inserted||0)>0){setTimeout(function(){if(typeof loadLeads==="function")loadLeads();},1500);}
+   }
    else{res.style.color="#ef4444";res.textContent="Error: "+(d.error||"Unknown");}
  }).catch(function(e){btn.textContent="Pull Leads Now";btn.disabled=false;res.style.color="#ef4444";res.textContent="Error: "+e.message;});
 };
@@ -29079,10 +29093,9 @@ function wosRealPullState(stateCode, cardEl) {
   .then(function(d){
     if (cardEl) { cardEl.style.opacity="1"; cardEl.style.pointerEvents=""; }
     if (d.ok) {
-      if (statusDiv) statusDiv.textContent = d.inserted+" new leads added";
-      // Refresh leads
-      loadLeads && loadLeads();
-      alert(d.inserted+" real leads added for "+stateCode+" from code violations, tax liens, and pre-foreclosure data.");
+      if (statusDiv) statusDiv.textContent = d.message || "No global leads created";
+      if (d.should_ingest !== false && Number(d.inserted || 0) > 0) loadLeads && loadLeads();
+      alert(d.message || "No global leads were created for "+stateCode+".");
     } else {
       if (statusDiv) statusDiv.textContent = "Error";
       alert("Error: "+(d.error||"failed"));
