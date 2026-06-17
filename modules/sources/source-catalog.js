@@ -1,6 +1,7 @@
 'use strict';
 
 const dallasPriority = require('./dallas-source-priority-router');
+const sourceAdapterRegistry = require('./source-adapter-registry');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -58,7 +59,8 @@ const SECONDARY_DALLAS_SOURCES = [
 function normalizeCatalogSource(source) {
   const item = clone(source || {});
   item.source_family = cleanText(item.source_family || item.category_key || item.category || 'unknown');
-  item.adapter_id = cleanText(item.adapter_id || item.source_id);
+  item.adapter_id = cleanText(sourceAdapterRegistry.adapterIdForSourceId(item.source_id) || item.adapter_id || item.source_id);
+  item.adapter_family = cleanText(sourceAdapterRegistry.adapterFamilyForSourceId(item.source_id) || item.adapter_family || '');
   item.official_source = item.official_source === true || /\.gov\b|county|clerk|sheriff|tax|probate|opendata|socrata/i.test(`${item.source_url || ''} ${item.source_name || ''} ${item.source_type || ''}`);
   item.priority_score = Number(item.priority_score || 0) || 0;
   item.preview_only = true;
