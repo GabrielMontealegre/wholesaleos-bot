@@ -12,6 +12,7 @@ const PROVIDER_DISPLAY = {
   google_cse: 'google',
   mock: 'mock'
 };
+const SERPER_QUERY_MODES = new Set(['free', 'advanced']);
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -51,6 +52,11 @@ function missingKeyForProvider(provider) {
 
 function providerDisplayName(provider) {
   return PROVIDER_DISPLAY[provider] || 'unknown';
+}
+
+function serperQueryModeFrom(env) {
+  const mode = cleanText(env && env.SERPER_QUERY_MODE).toLowerCase();
+  return SERPER_QUERY_MODES.has(mode) ? mode : 'free';
 }
 
 function safeKeyState(value) {
@@ -132,6 +138,7 @@ function buildLiveSearchProviderReadiness(env) {
       timeout_ms: timeoutMs,
       max_results: maxResults
     },
+    serper_query_mode: serperQueryModeFrom(env),
     readiness,
     missing_config: missing,
     selected_provider_ready: readiness === 'ready'
@@ -192,6 +199,7 @@ function searchProviderEnvDiagnostics(env = process.env) {
     google_cse_cx_present: !!cleanText(env.GOOGLE_CSE_CX),
     timeout_ms: timeoutMs,
     max_results: maxResults,
+    serper_query_mode: serperQueryModeFrom(env),
     readiness,
     missing_config: missing,
     next_action: nextAction
@@ -204,15 +212,16 @@ function searchProviderConfig(env = process.env) {
   const provider = providerNameFrom(env);
   const timeoutMs = positiveInt(env.SEARCH_PROVIDER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const maxResults = Math.min(positiveInt(env.SEARCH_PROVIDER_MAX_RESULTS, DEFAULT_MAX_RESULTS), 20);
+  const serperQueryMode = serperQueryModeFrom(env);
   const missing = [];
   if (!enabled) {
-    return { enabled: false, provider: provider || 'unknown', display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
+    return { enabled: false, provider: provider || 'unknown', display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, serper_query_mode: serperQueryMode, diagnostics };
   }
   if (!cleanText(env.SEARCH_PROVIDER)) {
-    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
+    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, serper_query_mode: serperQueryMode, diagnostics };
   }
   if (!PROVIDERS.has(provider)) {
-    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'invalid_provider', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, warning: 'Search provider is unsupported.', diagnostics };
+    return { enabled, provider: 'unknown', display_provider: 'unknown', configured: false, status: 'invalid_provider', readiness: diagnostics.readiness, missing: diagnostics.missing_config, timeout_ms: timeoutMs, max_results: maxResults, serper_query_mode: serperQueryMode, warning: 'Search provider is unsupported.', diagnostics };
   }
   if (provider === 'serper' && !cleanText(env.SERPER_API_KEY)) missing.push('SERPER_API_KEY');
   if (provider === 'brave' && !cleanText(env.BRAVE_SEARCH_API_KEY)) missing.push('BRAVE_SEARCH_API_KEY');
@@ -221,9 +230,9 @@ function searchProviderConfig(env = process.env) {
     if (!cleanText(env.GOOGLE_CSE_CX)) missing.push('GOOGLE_CSE_CX');
   }
   if (missing.length) {
-    return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
+    return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: false, status: 'provider_not_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, serper_query_mode: serperQueryMode, diagnostics };
   }
-  return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: true, status: 'provider_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, diagnostics };
+  return { enabled, provider, display_provider: diagnostics.search_provider_normalized, configured: true, status: 'provider_configured', readiness: diagnostics.readiness, missing, timeout_ms: timeoutMs, max_results: maxResults, serper_query_mode: serperQueryMode, diagnostics };
 }
 
 function criteriaTerms(criteria) {
@@ -252,6 +261,86 @@ function buildSearchQueries(input) {
   }
   queries.push(`"${city}" "${state}" "${terms.slice(0, 6).join('" OR "')}" real estate listing ${exclusions.join(' ')}`);
   return queries.map(cleanText).filter(Boolean).slice(0, 6);
+}
+
+function sourceBrandFromQuery(query) {
+  const text = cleanText(query).toLowerCase();
+  const site = (text.match(/\bsite:([^\s)]+)/i) || [])[1] || text;
+  if (/redfin/i.test(site)) return 'Redfin';
+  if (/realtor/i.test(site)) return 'Realtor';
+  if (/zillow/i.test(site)) return 'Zillow';
+  if (/\bhar\b|har\.com/i.test(site)) return 'HAR';
+  if (/fsbo/i.test(site)) return 'FSBO';
+  return '';
+}
+
+function marketFromQuery(query, input = {}) {
+  const parts = [];
+  const city = cleanText(input.city || input.market_city || input.market);
+  const county = cleanText(input.county || input.market_county);
+  const state = cleanText(input.state || input.market_state);
+  if (city) parts.push(city);
+  else if (/\bdallas\b/i.test(query)) parts.push('Dallas');
+  else if (county) parts.push(county);
+  if (state) parts.push(state.toUpperCase() === 'TEXAS' ? 'TX' : state.toUpperCase());
+  else if (/\btx\b|\btexas\b/i.test(query)) parts.push('TX');
+  return parts.join(' ');
+}
+
+function criterionFromQuery(query) {
+  const text = cleanText(query);
+  const quoted = [];
+  text.replace(/"([^"]+)"/g, (_, phrase) => {
+    const cleaned = cleanText(phrase);
+    if (cleaned && !/^(dallas|tx|texas)$/i.test(cleaned)) quoted.push(cleaned);
+    return '';
+  });
+  const known = [
+    'investor special',
+    'cash only',
+    'as-is',
+    'as is',
+    'fixer',
+    'needs work',
+    'needs TLC',
+    'back on market',
+    'price reduction',
+    'price reduced',
+    'estate sale',
+    'FSBO',
+    'hard money only',
+    'traditional financing unavailable'
+  ];
+  const found = [];
+  for (const term of known) {
+    const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}\\b`, 'i');
+    if (re.test(text)) found.push(term);
+  }
+  return Array.from(new Set([].concat(quoted, found))).slice(0, 4).join(' ');
+}
+
+function sanitizeSerperFreeQuery(query, input = {}) {
+  const market = marketFromQuery(query, input);
+  const brand = sourceBrandFromQuery(query);
+  const criterion = criterionFromQuery(query);
+  const fallback = cleanText(query)
+    .replace(/\bsite:[^\s)]+/ig, ' ')
+    .replace(/(^|\s)[+-](?=\S)/g, '$1')
+    .replace(/["'()]/g, ' ')
+    .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+    .replace(/\s+/g, ' ');
+  const core = [market, brand, criterion || fallback, 'house for sale']
+    .map(cleanText)
+    .filter(Boolean)
+    .join(' ');
+  return cleanText(core)
+    .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+    .replace(/\bsite:[^\s]+/ig, ' ')
+    .replace(/(^|\s)[+-](?=\S)/g, '$1')
+    .replace(/["'()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 180)
+    .trim();
 }
 
 function safeWarning(message) {
@@ -322,6 +411,7 @@ function providerNextAction(status) {
   if (status === 'provider_rate_limited') return 'Wait for provider quota reset or reduce batch size.';
   if (status === 'provider_timed_out') return 'Increase SEARCH_PROVIDER_TIMEOUT_MS to 15000 or run a smaller batch.';
   if (status === 'provider_bad_response') return 'Check provider response format and adapter mapping.';
+  if (status === 'provider_query_not_allowed') return 'Use SERPER_QUERY_MODE=free or simplify the provider query.';
   if (status === 'provider_network_error') return 'Retry later after checking Railway outbound network health.';
   return '';
 }
@@ -337,20 +427,35 @@ function endpointForProvider(provider) {
 function providerDiagnostics(meta, response, payload, extra) {
   const httpStatus = Number(response && response.status || 0) || 0;
   const finishedMs = Date.now();
+  const shape = responseShape(meta.provider, payload);
+  const errorCategory = (extra && extra.error_category) || '';
+  const safeSummary = safeWarning((extra && extra.safe_error_summary) || safePayloadMessage(payload) || '');
   return {
     provider: meta.provider,
     method: meta.method,
     endpoint_host: meta.endpoint_host,
+    original_query: cleanText((extra && extra.original_query) || meta.original_query),
+    sanitized_query: cleanText((extra && extra.sanitized_query) || meta.sanitized_query),
+    query: cleanText((extra && extra.query) || meta.query),
+    query_mode: cleanText((extra && extra.query_mode) || meta.query_mode),
+    query_pattern_rejected: !!(extra && extra.query_pattern_rejected),
+    retry_used: !!(extra && extra.retry_used),
+    retry_reason: cleanText(extra && extra.retry_reason),
     timeout_ms: meta.timeout_ms,
     max_results: meta.max_results,
     request_started_at: meta.request_started_at,
     request_finished_at: nowIso(),
     duration_ms: Math.max(0, finishedMs - meta.started_ms),
     http_status: httpStatus || null,
-    response_shape: responseShape(meta.provider, payload),
-    safe_error_summary: safeWarning((extra && extra.safe_error_summary) || safePayloadMessage(payload) || ''),
-    error_category: (extra && extra.error_category) || '',
-    next_action: providerNextAction((extra && extra.error_category) || '')
+    final_http_status: httpStatus || null,
+    response_shape: shape,
+    safe_error_summary: safeSummary,
+    final_safe_error_summary: safeSummary,
+    error_category: errorCategory,
+    final_error_category: errorCategory,
+    result_count: shape.result_count || 0,
+    organic_count: shape.organic_count || 0,
+    next_action: providerNextAction(errorCategory)
   };
 }
 
@@ -419,11 +524,16 @@ async function fetchJson(fetchImpl, url, init, timeoutMs) {
 async function callProvider(provider, query, input, cfg, options) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || global.fetch;
-  function meta(method, endpoint) {
+  function meta(method, endpoint, extra) {
+    extra = extra || {};
     return {
       provider,
       method,
       endpoint_host: urlHost(endpoint),
+      original_query: extra.original_query || '',
+      sanitized_query: extra.sanitized_query || '',
+      query: extra.query || '',
+      query_mode: extra.query_mode || '',
       timeout_ms: cfg.timeout_ms,
       max_results: cfg.max_results,
       request_started_at: nowIso(),
@@ -452,13 +562,57 @@ async function callProvider(provider, query, input, cfg, options) {
   if (!fetchImpl) return { status: 'provider_unavailable', payload: null, warnings: ['Fetch API is unavailable for search provider.'], diagnostics: providerDiagnostics(meta('UNKNOWN', `${provider}://search`), null, null, { error_category: 'provider_unavailable', safe_error_summary: 'Fetch API unavailable.' }) };
   if (provider === 'serper') {
     const endpoint = 'https://google.serper.dev/search';
-    const metaInfo = meta('POST', endpoint);
+    const queryMode = cfg.serper_query_mode || 'free';
+    const sanitizedQuery = sanitizeSerperFreeQuery(query, input);
+    const requestQuery = queryMode === 'advanced' ? query : sanitizedQuery;
+    const metaInfo = meta('POST', endpoint, {
+      original_query: query,
+      sanitized_query: sanitizedQuery,
+      query: requestQuery,
+      query_mode: queryMode
+    });
     const called = await fetchJson(fetchImpl, endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_API_KEY },
-      body: JSON.stringify({ q: query, num: cfg.max_results })
+      body: JSON.stringify({ q: requestQuery, num: cfg.max_results })
     }, cfg.timeout_ms);
-    return withDiagnostics(metaInfo, called);
+    const first = withDiagnostics(metaInfo, called, {
+      original_query: query,
+      sanitized_query: sanitizedQuery,
+      query: requestQuery,
+      query_mode: queryMode
+    });
+    if (first.status === 'provider_query_not_allowed' && requestQuery !== sanitizedQuery) {
+      const retryMeta = meta('POST', endpoint, {
+        original_query: query,
+        sanitized_query: sanitizedQuery,
+        query: sanitizedQuery,
+        query_mode: queryMode
+      });
+      const retry = await fetchJson(fetchImpl, endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_API_KEY },
+        body: JSON.stringify({ q: sanitizedQuery, num: cfg.max_results })
+      }, cfg.timeout_ms);
+      const second = withDiagnostics(retryMeta, retry, {
+        original_query: query,
+        sanitized_query: sanitizedQuery,
+        query: sanitizedQuery,
+        query_mode: queryMode,
+        query_pattern_rejected: true,
+        retry_used: true,
+        retry_reason: 'query_pattern_not_allowed'
+      });
+      second.diagnostics.query_attempts = [first.diagnostics, second.diagnostics].map((attempt) => Object.assign({}, attempt, {
+        query_attempts: undefined
+      }));
+      second.diagnostics.query_pattern_rejected = true;
+      second.diagnostics.retry_used = true;
+      second.diagnostics.retry_reason = 'query_pattern_not_allowed';
+      return second;
+    }
+    first.diagnostics.query_pattern_rejected = first.status === 'provider_query_not_allowed';
+    return first;
   }
   if (provider === 'brave') {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${encodeURIComponent(String(cfg.max_results))}`;
@@ -481,6 +635,9 @@ function classifyHttpResult(provider, response, payload, parseError) {
   const statusCode = Number(response && response.status || 0) || 0;
   if (parseError) return { status: 'provider_bad_response', payload, warnings: ['Search provider returned malformed JSON.'] };
   if (statusCode === 401 || statusCode === 403) return { status: 'provider_auth_failed', payload, warnings: ['Search provider authentication failed. Check key permissions.'] };
+  if (provider === 'serper' && statusCode === 400 && /query pattern not allowed/i.test(safePayloadMessage(payload))) {
+    return { status: 'provider_query_not_allowed', payload, warnings: ['Search provider rejected the query pattern.'] };
+  }
   if (statusCode === 400) return { status: 'provider_bad_response', payload, warnings: ['Search provider rejected the request shape.'] };
   if (statusCode === 429) return { status: 'provider_rate_limited', payload, warnings: ['Search provider rate limit or quota reached.'] };
   if (statusCode >= 500) return { status: 'provider_unavailable', payload, warnings: ['Search provider returned a temporary server error.'] };
@@ -532,14 +689,15 @@ async function runSearchProvider(input = {}, options = {}) {
   }
   try {
     const called = await callProvider(cfg.provider, query, input, cfg, options);
+    const executedQuery = cleanText(called && called.diagnostics && called.diagnostics.query) || query;
     const rawResults = normalizeRawResults(cfg.provider, called.payload, {
-      query,
+      query: executedQuery,
       retrieved_at: nowIso()
     }).slice(0, cfg.max_results);
     const status = called.status === 'provider_available' && !rawResults.length ? 'provider_no_results' : called.status;
     const cards = snippetEvidence.normalizeSearchResults(rawResults, Object.assign({}, input, {
       provider: cfg.provider,
-      query
+      query: executedQuery
     }));
     const results = cards.map((card) => ({
       title: card.source_title,
@@ -638,9 +796,28 @@ function attemptFrom(result, input, purpose) {
     request_finished_at: diagnostics.request_finished_at || '',
     duration_ms: diagnostics.duration_ms || 0,
     http_status: diagnostics.http_status || null,
-    response_shape: diagnostics.response_shape || {},
-    safe_error_summary: diagnostics.safe_error_summary || '',
-    next_action: diagnostics.next_action || ''
+      response_shape: diagnostics.response_shape || {},
+      safe_error_summary: diagnostics.safe_error_summary || '',
+    next_action: diagnostics.next_action || '',
+    original_query: diagnostics.original_query || '',
+    sanitized_query: diagnostics.sanitized_query || '',
+    query_mode: diagnostics.query_mode || '',
+    query_pattern_rejected: diagnostics.query_pattern_rejected === true,
+    retry_used: diagnostics.retry_used === true,
+    retry_reason: diagnostics.retry_reason || '',
+    final_http_status: diagnostics.final_http_status || diagnostics.http_status || null,
+    final_error_category: diagnostics.final_error_category || diagnostics.error_category || '',
+    final_safe_error_summary: diagnostics.final_safe_error_summary || diagnostics.safe_error_summary || '',
+    organic_count: Number(diagnostics.organic_count || 0) || 0,
+    query_attempts: Array.isArray(diagnostics.query_attempts) ? diagnostics.query_attempts.map((attempt) => ({
+      query: attempt.query || '',
+      query_mode: attempt.query_mode || '',
+      http_status: attempt.http_status || null,
+      error_category: attempt.error_category || '',
+      safe_error_summary: attempt.safe_error_summary || '',
+      result_count: Number(attempt.result_count || 0) || 0,
+      organic_count: Number(attempt.organic_count || 0) || 0
+    })) : []
   };
 }
 
@@ -650,5 +827,6 @@ module.exports = {
   searchProviderEnvDiagnostics,
   searchProviderConfig,
   buildSearchQueries,
+  sanitizeSerperFreeQuery,
   runSearchProvider
 };
