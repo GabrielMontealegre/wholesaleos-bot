@@ -10,6 +10,7 @@ const geminiScoutDiscoveryProvider = require('./gemini-scout-discovery-provider'
 const searchProviderWorker = require('./search-provider-worker');
 const sourceQualityAuditor = require('./source-quality-auditor');
 const manualReviewQueue = require('./manual-review-queue');
+const sourceAcquisitionOrchestrator = require('./source-acquisition-orchestrator');
 const dallasOfficialSourceCapture = require('../sources/dallas-official-source-capture');
 const leadEvidence = require('./lead-evidence');
 const propertyIdentity = require('./property-identity');
@@ -384,6 +385,11 @@ function defaultJobInput(body) {
     max_source_age_hours: Math.min(Math.max(parseInt(body.max_source_age_hours || body.maxSourceAgeHours || 72, 10) || 72, 1), 168),
     property_types: normalizeArrayInput(body.property_types || body.propertyTypes || ''),
     source_preferences: normalizeArrayInput(body.source_preferences || body.sourcePreferences || ''),
+    source_acquisition_enabled: boolValue(body.source_acquisition_enabled !== undefined ? body.source_acquisition_enabled : body.sourceAcquisitionEnabled, true),
+    acquisition_core_enabled: boolValue(body.acquisition_core_enabled !== undefined ? body.acquisition_core_enabled : body.acquisitionCoreEnabled, true),
+    source_acquisition_mode: cleanText(body.source_acquisition_mode || body.sourceAcquisitionMode || ''),
+    source_families: normalizeArrayInput(body.source_families || body.sourceFamilies || ''),
+    mock_acquisition_candidates: Array.isArray(body.mock_acquisition_candidates) ? body.mock_acquisition_candidates : (Array.isArray(body.mockAcquisitionCandidates) ? body.mockAcquisitionCandidates : []),
     price_min: cleanText(body.price_min || body.min_asking_price || body.minAskingPrice || ''),
     price_max: cleanText(body.price_max || body.max_asking_price || body.maxAskingPrice || ''),
     operator_request_id: cleanText(body.operator_request_id || body.operatorRequestId || makeId('opr')),
@@ -422,6 +428,7 @@ function batchRequestFromInput(input) {
     max_asking_price: input.price_max,
     wholesale_criteria: input.strategies,
     source_preferences: input.source_preferences,
+    source_families: input.source_families,
     max_source_age_hours: input.max_source_age_hours,
     include_auction: input.include_auction,
     include_pre_foreclosure: input.include_pre_foreclosure,
@@ -504,6 +511,11 @@ function createJob(body, options = {}) {
     max_source_age_hours: input.max_source_age_hours,
     property_types: input.property_types,
     source_preferences: input.source_preferences,
+    source_acquisition_enabled: input.source_acquisition_enabled,
+    acquisition_core_enabled: input.acquisition_core_enabled,
+    source_acquisition_mode: input.source_acquisition_mode,
+    source_families: input.source_families,
+    mock_acquisition_candidates: input.mock_acquisition_candidates,
     price_min: input.price_min,
     price_max: input.price_max,
     operator_request_id: input.operator_request_id,
@@ -1785,6 +1797,11 @@ async function runJob(jobId, options = {}) {
     const leadCards = collectLeadCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
     const candidateCards = collectCandidateCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
     const analyzerCards = collectAnalyzerCards(job).slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
+    const acquisitionCoreResult = job.source_acquisition_enabled === false || job.acquisition_core_enabled === false
+      ? { status: 'disabled', cards: [], candidates: [], source_families: [], next_best_worker_counts: {}, confidence_buckets: {} }
+      : await sourceAcquisitionOrchestrator.runAcquisitionCore(job, options);
+    const acquisitionCards = (Array.isArray(acquisitionCoreResult.cards) ? acquisitionCoreResult.cards : [])
+      .slice(0, job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls);
     const geminiCards = [];
     const providerResults = [];
     const maxProviderCalls = job.fresh_batch ? Number(job.max_provider_calls || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls) || FRESH_BATCH_DEFAULT_BOUNDS.max_provider_calls : 1;
@@ -1806,7 +1823,7 @@ async function runJob(jobId, options = {}) {
       if (progress.cancellation_requested === true) break;
       const elapsed = Date.now() - runStarted;
       if (elapsed >= (job.hard_timeout_ms || FRESH_BATCH_DEFAULT_BOUNDS.hard_timeout_ms)) break;
-      const currentCards = dedupeCards([].concat(leadCards, candidateCards, analyzerCards, geminiCards));
+      const currentCards = dedupeCards([].concat(acquisitionCards, leadCards, candidateCards, analyzerCards, geminiCards));
       const currentClassified = job.fresh_batch ? canonicalizeCardsForRead(currentCards, job).map((card) => qualityGateCard(card, job, {
         seenIndex: buildGlobalSeenIndex(job, jobs, options),
         currentSeen: new Set(),
@@ -1908,7 +1925,7 @@ async function runJob(jobId, options = {}) {
     }
     providerSummary = aggregateProviderSummary(providerResults);
     const existingBatchCards = job.fresh_batch && Array.isArray(job.cards) ? job.cards : [];
-    let cards = dedupeCards(existingBatchCards.concat(leadCards, candidateCards, analyzerCards, geminiCards))
+    let cards = dedupeCards(existingBatchCards.concat(acquisitionCards, leadCards, candidateCards, analyzerCards, geminiCards))
       .sort((a, b) => cardRank(b) - cardRank(a))
       .slice(0, job.fresh_batch ? (job.max_candidate_urls || FRESH_BATCH_DEFAULT_BOUNDS.max_candidate_urls) : (job.batch_size || MAX_BATCH_SIZE));
     cards = canonicalizeCardsForRead(cards, job);
@@ -1955,6 +1972,13 @@ async function runJob(jobId, options = {}) {
       counts: summarizeCards(outputCards),
       batch_audit: Object.assign({}, batchAudit, qualityAudit, { duration_ms: Date.now() - runStarted }),
       source_summary: {
+        acquisition_core_status: acquisitionCoreResult.status || '',
+        acquisition_core_attempted: acquisitionCoreResult.attempted === true,
+        acquisition_core_candidates_found: Number(acquisitionCoreResult.candidates_found || 0) || 0,
+        acquisition_core_cards_checked: acquisitionCards.length,
+        acquisition_core_source_families: Array.isArray(acquisitionCoreResult.source_families) ? acquisitionCoreResult.source_families : [],
+        acquisition_core_next_best_worker_counts: acquisitionCoreResult.next_best_worker_counts || {},
+        acquisition_core_confidence_buckets: acquisitionCoreResult.confidence_buckets || {},
         existing_leads_checked: leadCards.length,
         dallas_preview_candidates_checked: candidateCards.length,
         analyzer_jobs_checked: analyzerCards.length,
