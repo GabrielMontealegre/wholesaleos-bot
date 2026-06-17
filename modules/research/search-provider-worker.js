@@ -258,14 +258,115 @@ function safeWarning(message) {
   return cleanText(message).replace(/[A-Za-z0-9_\-]{24,}/g, '[redacted]').slice(0, 240);
 }
 
-function normalizeRawResults(provider, payload) {
+function urlHost(value) {
+  try {
+    return new URL(cleanText(value)).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch (_) {
+    return '';
+  }
+}
+
+function payloadKeys(payload) {
+  return payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? Object.keys(payload).filter(Boolean).slice(0, 12)
+    : [];
+}
+
+function payloadResultCount(provider, payload) {
+  if (!payload) return 0;
+  if (provider === 'serper') return Array.isArray(payload.organic) ? payload.organic.length : 0;
+  if (provider === 'brave') return payload.web && Array.isArray(payload.web.results) ? payload.web.results.length : 0;
+  if (provider === 'google_cse') return Array.isArray(payload.items) ? payload.items.length : 0;
+  return Array.isArray(payload.results) ? payload.results.length : 0;
+}
+
+function responseShape(provider, payload) {
+  const shape = {
+    top_level_keys: payloadKeys(payload),
+    result_count: payloadResultCount(provider, payload)
+  };
+  if (provider === 'serper') {
+    shape.has_organic = Array.isArray(payload && payload.organic);
+    shape.organic_count = shape.has_organic ? payload.organic.length : 0;
+    shape.has_places = Array.isArray(payload && payload.places);
+    shape.places_count = shape.has_places ? payload.places.length : 0;
+  } else if (provider === 'brave') {
+    shape.has_web_results = !!(payload && payload.web && Array.isArray(payload.web.results));
+  } else if (provider === 'google_cse') {
+    shape.has_items = Array.isArray(payload && payload.items);
+  }
+  return shape;
+}
+
+function safePayloadMessage(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const fields = [
+    payload.message,
+    payload.error,
+    payload.errorMessage,
+    payload.error_message,
+    payload.status
+  ];
+  if (payload.error && typeof payload.error === 'object') {
+    fields.push(payload.error.message, payload.error.code, payload.error.status);
+  }
+  return fields.map((field) => {
+    if (typeof field === 'string') return safeWarning(field);
+    if (typeof field === 'number') return String(field);
+    return '';
+  }).filter(Boolean)[0] || '';
+}
+
+function providerNextAction(status) {
+  if (status === 'provider_auth_failed') return 'Verify provider API key permissions and billing status.';
+  if (status === 'provider_rate_limited') return 'Wait for provider quota reset or reduce batch size.';
+  if (status === 'provider_timed_out') return 'Increase SEARCH_PROVIDER_TIMEOUT_MS to 15000 or run a smaller batch.';
+  if (status === 'provider_bad_response') return 'Check provider response format and adapter mapping.';
+  if (status === 'provider_network_error') return 'Retry later after checking Railway outbound network health.';
+  return '';
+}
+
+function endpointForProvider(provider) {
+  if (provider === 'serper') return 'https://google.serper.dev/search';
+  if (provider === 'brave') return 'https://api.search.brave.com/res/v1/web/search';
+  if (provider === 'google_cse') return 'https://www.googleapis.com/customsearch/v1';
+  if (provider === 'mock') return 'mock://search';
+  return `${provider || 'unknown'}://search`;
+}
+
+function providerDiagnostics(meta, response, payload, extra) {
+  const httpStatus = Number(response && response.status || 0) || 0;
+  const finishedMs = Date.now();
+  return {
+    provider: meta.provider,
+    method: meta.method,
+    endpoint_host: meta.endpoint_host,
+    timeout_ms: meta.timeout_ms,
+    max_results: meta.max_results,
+    request_started_at: meta.request_started_at,
+    request_finished_at: nowIso(),
+    duration_ms: Math.max(0, finishedMs - meta.started_ms),
+    http_status: httpStatus || null,
+    response_shape: responseShape(meta.provider, payload),
+    safe_error_summary: safeWarning((extra && extra.safe_error_summary) || safePayloadMessage(payload) || ''),
+    error_category: (extra && extra.error_category) || '',
+    next_action: providerNextAction((extra && extra.error_category) || '')
+  };
+}
+
+function normalizeRawResults(provider, payload, context = {}) {
   if (!payload) return [];
   if (provider === 'serper') {
-    return [].concat(payload.organic || [], payload.places || []).map((item) => ({
+    return (Array.isArray(payload.organic) ? payload.organic : []).map((item, index) => ({
       title: item.title,
       snippet: item.snippet || item.description,
       url: item.link || item.url,
-      displayed_url: item.displayedLink || item.displayed_url
+      displayed_url: item.displayedLink || item.displayed_url,
+      source_domain: urlHost(item.link || item.url),
+      rank: Number(item.position || item.rank || index + 1) || index + 1,
+      provider: 'serper',
+      query: context.query || '',
+      retrieved_at: context.retrieved_at || nowIso()
     }));
   }
   if (provider === 'brave') {
@@ -295,12 +396,14 @@ async function fetchJson(fetchImpl, url, init, timeoutMs) {
     const response = await fetchImpl(url, Object.assign({}, init || {}, controller ? { signal: controller.signal } : {}));
     const text = await response.text();
     let payload = null;
+    let parse_error = false;
     try {
       payload = text ? JSON.parse(text) : null;
     } catch (_) {
+      parse_error = true;
       payload = null;
     }
-    return { response, payload };
+    return { response, payload, parse_error };
   } catch (error) {
     if (error && (error.name === 'AbortError' || /timeout|aborted/i.test(error.message))) {
       const err = new Error('Search provider timed out.');
@@ -316,8 +419,26 @@ async function fetchJson(fetchImpl, url, init, timeoutMs) {
 async function callProvider(provider, query, input, cfg, options) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || global.fetch;
+  function meta(method, endpoint) {
+    return {
+      provider,
+      method,
+      endpoint_host: urlHost(endpoint),
+      timeout_ms: cfg.timeout_ms,
+      max_results: cfg.max_results,
+      request_started_at: nowIso(),
+      started_ms: Date.now()
+    };
+  }
+  function withDiagnostics(metaInfo, called, extra) {
+    const classified = classifyHttpResult(provider, called.response, called.payload, called.parse_error);
+    classified.diagnostics = providerDiagnostics(metaInfo, called.response, called.payload, Object.assign({}, extra || {}, {
+      error_category: classified.status
+    }));
+    return classified;
+  }
   if (provider === 'mock') {
-    if (cleanText(options.mock_status)) return { status: cleanText(options.mock_status), payload: { results: [] }, warnings: options.mock_warning ? [safeWarning(options.mock_warning)] : [] };
+    if (cleanText(options.mock_status)) return { status: cleanText(options.mock_status), payload: { results: [] }, warnings: options.mock_warning ? [safeWarning(options.mock_warning)] : [], diagnostics: providerDiagnostics(meta('MOCK', 'mock://search'), null, { results: [] }, { error_category: cleanText(options.mock_status) }) };
     const mockResults = Array.isArray(options.mock_results)
       ? options.mock_results
       : Array.isArray(input.mock_results)
@@ -325,38 +446,50 @@ async function callProvider(provider, query, input, cfg, options) {
         : (() => {
           try { return JSON.parse(cleanText(env.SEARCH_PROVIDER_MOCK_RESULTS_JSON) || '[]'); } catch (_) { return []; }
         })();
-    return { status: mockResults.length ? 'provider_available' : 'provider_no_results', payload: { results: mockResults } };
+    const status = mockResults.length ? 'provider_available' : 'provider_no_results';
+    return { status, payload: { results: mockResults }, diagnostics: providerDiagnostics(meta('MOCK', 'mock://search'), null, { results: mockResults }, { error_category: status }) };
   }
-  if (!fetchImpl) return { status: 'provider_unavailable', payload: null, warnings: ['Fetch API is unavailable for search provider.'] };
+  if (!fetchImpl) return { status: 'provider_unavailable', payload: null, warnings: ['Fetch API is unavailable for search provider.'], diagnostics: providerDiagnostics(meta('UNKNOWN', `${provider}://search`), null, null, { error_category: 'provider_unavailable', safe_error_summary: 'Fetch API unavailable.' }) };
   if (provider === 'serper') {
-    const { response, payload } = await fetchJson(fetchImpl, 'https://google.serper.dev/search', {
+    const endpoint = 'https://google.serper.dev/search';
+    const metaInfo = meta('POST', endpoint);
+    const called = await fetchJson(fetchImpl, endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_API_KEY },
       body: JSON.stringify({ q: query, num: cfg.max_results })
     }, cfg.timeout_ms);
-    return classifyHttpResult(response, payload);
+    return withDiagnostics(metaInfo, called);
   }
   if (provider === 'brave') {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${encodeURIComponent(String(cfg.max_results))}`;
-    const { response, payload } = await fetchJson(fetchImpl, url, {
+    const metaInfo = meta('GET', url);
+    const called = await fetchJson(fetchImpl, url, {
       headers: { Accept: 'application/json', 'X-Subscription-Token': env.BRAVE_SEARCH_API_KEY }
     }, cfg.timeout_ms);
-    return classifyHttpResult(response, payload);
+    return withDiagnostics(metaInfo, called);
   }
   if (provider === 'google_cse') {
     const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&num=${encodeURIComponent(String(Math.min(cfg.max_results, 10)))}&key=${encodeURIComponent(env.GOOGLE_CSE_API_KEY)}&cx=${encodeURIComponent(env.GOOGLE_CSE_CX)}`;
-    const { response, payload } = await fetchJson(fetchImpl, url, {}, cfg.timeout_ms);
-    return classifyHttpResult(response, payload);
+    const metaInfo = meta('GET', url);
+    const called = await fetchJson(fetchImpl, url, {}, cfg.timeout_ms);
+    return withDiagnostics(metaInfo, called);
   }
-  return { status: 'provider_unavailable', payload: null, warnings: ['Search provider is unsupported.'] };
+  return { status: 'provider_unavailable', payload: null, warnings: ['Search provider is unsupported.'], diagnostics: providerDiagnostics(meta('UNKNOWN', `${provider}://search`), null, null, { error_category: 'provider_unavailable', safe_error_summary: 'Unsupported search provider.' }) };
 }
 
-function classifyHttpResult(response, payload) {
+function classifyHttpResult(provider, response, payload, parseError) {
   const statusCode = Number(response && response.status || 0) || 0;
-  if (statusCode === 401 || statusCode === 403 || statusCode === 400) return { status: 'provider_unavailable', payload, warnings: ['Search provider rejected the request. Check configuration.'] };
+  if (parseError) return { status: 'provider_bad_response', payload, warnings: ['Search provider returned malformed JSON.'] };
+  if (statusCode === 401 || statusCode === 403) return { status: 'provider_auth_failed', payload, warnings: ['Search provider authentication failed. Check key permissions.'] };
+  if (statusCode === 400) return { status: 'provider_bad_response', payload, warnings: ['Search provider rejected the request shape.'] };
   if (statusCode === 429) return { status: 'provider_rate_limited', payload, warnings: ['Search provider rate limit or quota reached.'] };
   if (statusCode >= 500) return { status: 'provider_unavailable', payload, warnings: ['Search provider returned a temporary server error.'] };
   if (!response || !response.ok) return { status: 'provider_unavailable', payload, warnings: ['Search provider request failed.'] };
+  if (provider === 'serper') {
+    if (Array.isArray(payload && payload.organic)) return { status: payload.organic.length ? 'provider_available' : 'provider_no_results', payload, warnings: [] };
+    if (Array.isArray(payload && payload.places) && payload.places.length) return { status: 'provider_bad_response', payload, warnings: ['Serper response had places results but no organic web results.'] };
+    return { status: 'provider_no_results', payload, warnings: [] };
+  }
   return { status: 'provider_available', payload, warnings: [] };
 }
 
@@ -399,7 +532,10 @@ async function runSearchProvider(input = {}, options = {}) {
   }
   try {
     const called = await callProvider(cfg.provider, query, input, cfg, options);
-    const rawResults = normalizeRawResults(cfg.provider, called.payload).slice(0, cfg.max_results);
+    const rawResults = normalizeRawResults(cfg.provider, called.payload, {
+      query,
+      retrieved_at: nowIso()
+    }).slice(0, cfg.max_results);
     const status = called.status === 'provider_available' && !rawResults.length ? 'provider_no_results' : called.status;
     const cards = snippetEvidence.normalizeSearchResults(rawResults, Object.assign({}, input, {
       provider: cfg.provider,
@@ -428,6 +564,8 @@ async function runSearchProvider(input = {}, options = {}) {
       cards,
       warnings: (called.warnings || []).map(safeWarning).filter(Boolean),
       error_category: status === 'provider_available' || status === 'provider_no_results' ? '' : status,
+      provider_execution_diagnostics: called.diagnostics || {},
+      next_action: providerNextAction(status) || base.next_action,
       source_urls_found_count: cards.filter((card) => card.source_url).length,
       candidates_found: cards.length,
       snippet_phrases_verified: cards.filter((card) => card.exact_source_phrase && card.exact_source_phrase_verbatim === true).length,
@@ -443,13 +581,31 @@ async function runSearchProvider(input = {}, options = {}) {
     out.provider_attempts = [attemptFrom(out, input, 'search_fallback')];
     return out;
   } catch (error) {
-    const status = error && error.code === 'provider_timed_out' ? 'provider_timed_out' : 'provider_unavailable';
+    const status = error && error.code === 'provider_timed_out' ? 'provider_timed_out' : 'provider_network_error';
+    const finishedAt = nowIso();
+    const diagnostics = {
+      provider: cfg.provider,
+      method: cfg.provider === 'serper' ? 'POST' : 'GET',
+      endpoint_host: urlHost(endpointForProvider(cfg.provider)),
+      timeout_ms: cfg.timeout_ms,
+      max_results: cfg.max_results,
+      request_started_at: startedAt,
+      request_finished_at: finishedAt,
+      duration_ms: 0,
+      http_status: null,
+      response_shape: responseShape(cfg.provider, null),
+      safe_error_summary: safeWarning(error && error.message || 'Search provider failed.'),
+      error_category: status,
+      next_action: providerNextAction(status)
+    };
     const out = Object.assign({}, base, {
       status,
-      finished_at: nowIso(),
-      warnings: [status === 'provider_timed_out' ? 'Search provider timed out.' : safeWarning(error && error.message || 'Search provider failed.')],
+      finished_at: finishedAt,
+      warnings: [status === 'provider_timed_out' ? 'Search provider timed out.' : safeWarning(error && error.message || 'Search provider network error.')],
       error_category: status,
-      message: status === 'provider_timed_out' ? 'Search fallback timed out.' : 'Search fallback unavailable.'
+      provider_execution_diagnostics: diagnostics,
+      next_action: diagnostics.next_action,
+      message: status === 'provider_timed_out' ? 'Search fallback timed out.' : 'Search fallback network error.'
     });
     out.provider_attempts = [attemptFrom(out, input, 'search_fallback')];
     return out;
@@ -457,6 +613,7 @@ async function runSearchProvider(input = {}, options = {}) {
 }
 
 function attemptFrom(result, input, purpose) {
+  const diagnostics = result.provider_execution_diagnostics || {};
   return {
     provider: result.provider,
     purpose,
@@ -472,7 +629,18 @@ function attemptFrom(result, input, purpose) {
     snippet_phrase_count: Number(result.snippet_phrases_verified || 0) || 0,
     evidence_enriched_count: 0,
     error_category: result.error_category || '',
-    warning_message: (result.warnings || []).map(safeWarning).filter(Boolean)[0] || ''
+    warning_message: (result.warnings || []).map(safeWarning).filter(Boolean)[0] || '',
+    method: diagnostics.method || '',
+    endpoint_host: diagnostics.endpoint_host || '',
+    timeout_ms: diagnostics.timeout_ms || null,
+    max_results: diagnostics.max_results || null,
+    request_started_at: diagnostics.request_started_at || '',
+    request_finished_at: diagnostics.request_finished_at || '',
+    duration_ms: diagnostics.duration_ms || 0,
+    http_status: diagnostics.http_status || null,
+    response_shape: diagnostics.response_shape || {},
+    safe_error_summary: diagnostics.safe_error_summary || '',
+    next_action: diagnostics.next_action || ''
   };
 }
 
