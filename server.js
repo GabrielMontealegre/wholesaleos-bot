@@ -16,6 +16,7 @@ const aiDealAnalyzerJobs = require('./modules/research/ai-deal-analyzer-jobs');
 const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
 const dealCallDossiers = require('./modules/research/deal-call-dossiers');
 const manualReviewQueue = require('./modules/research/manual-review-queue');
+const searchProviderWorker = require('./modules/research/search-provider-worker');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -206,6 +207,13 @@ app.get('/dashboard/', (req, res) => res.sendFile(path.join(__dirname, 'dashboar
 
 // Ã¢ÂÂÃ¢ÂÂ Health check Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/health', (_, res) => res.json({ ok: true, time: new Date().toISOString() }));
+app.get('/api/provider-readiness', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    ok: true,
+    search_provider_readiness: searchProviderWorker.getLiveSearchProviderReadiness()
+  });
+});
 app.get('/', (_, res) => res.json({
   status: 'Montsan REI Bot Ã¢ÂÂ Online',
   dashboard: '/dashboard/',
