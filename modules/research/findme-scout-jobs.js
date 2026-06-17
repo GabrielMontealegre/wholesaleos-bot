@@ -1624,6 +1624,21 @@ function providerSummaryFrom(result) {
       missing_config: missingConfig,
       next_action: cleanText(result.next_action || envDiagnostics.next_action)
     },
+    search_query_groups_used: Array.isArray(result.query_groups_used) ? result.query_groups_used.map(cleanText).filter(Boolean).slice(0, 20) : [],
+    search_query_group_count: Number(result.query_group_count || 0) || 0,
+    search_query_plan: Array.isArray(result.query_plan) ? result.query_plan.map((item) => Object.assign({}, item, {
+      provider: cleanText(item && item.provider),
+      provider_family: cleanText(item && item.provider_family),
+      purpose: cleanText(item && item.purpose),
+      query_group: cleanText(item && item.query_group),
+      attempt_key: cleanText(item && item.attempt_key),
+      expected_url_pattern: cleanText(item && item.expected_url_pattern),
+      query: cleanText(item && item.query),
+      status: cleanText(item && item.status)
+    })).slice(0, 20) : [],
+    search_provider_family: cleanText(result.provider_family || (envDiagnostics && envDiagnostics.provider_family)),
+    search_result_demotion_counts: Object.assign({ property_detail_url: 0, address_like_text: 0, broad_source: 0, generic_source: 0 }, result.result_demotion_counts || {}),
+    search_rejected_url_class_counts: Object.assign({}, result.rejected_url_class_counts || {}),
     provider: providerName,
     model: cleanText(result.model),
     attempted: result.attempted === true,
@@ -2213,6 +2228,13 @@ function aggregateProviderSummary(results) {
   const base = anyAvailable || last;
   const sum = (key) => summaries.reduce((total, item) => total + (Number(item[key] || 0) || 0), 0);
   const sumEvidenceConversion = (key) => summaries.reduce((total, item) => total + (Number(item.evidence_conversion_diagnostics && item.evidence_conversion_diagnostics[key] || 0) || 0), 0);
+  const sumSearchResultDemotions = (key) => summaries.reduce((total, item) => total + (Number(item.search_result_demotion_counts && item.search_result_demotion_counts[key] || 0) || 0), 0);
+  const sumRejectedUrlClassCounts = summaries.reduce((out, item) => {
+    for (const [key, value] of Object.entries(item.search_rejected_url_class_counts || {})) {
+      out[key] = (out[key] || 0) + (Number(value || 0) || 0);
+    }
+    return out;
+  }, {});
   return Object.assign({}, base, {
     attempted: summaries.some((item) => item.attempted === true),
     grounding_present: summaries.some((item) => item.grounding_present === true),
@@ -2252,6 +2274,17 @@ function aggregateProviderSummary(results) {
     search_provider_missing_config: searchSummary ? searchSummary.search_provider_missing_config : [],
     search_provider_next_action: searchSummary ? searchSummary.search_provider_next_action : '',
     search_provider_env: searchSummary ? searchSummary.search_provider_env : {},
+    search_query_groups_used: Array.from(new Set([].concat(...summaries.map((item) => item.search_query_groups_used || [])))).slice(0, 20),
+    search_query_group_count: sum('search_query_group_count'),
+    search_query_plan: [].concat(...summaries.map((item) => item.search_query_plan || [])).slice(0, 20),
+    search_provider_family: cleanText((summaries.find((item) => item.search_provider_family) || {}).search_provider_family),
+    search_result_demotion_counts: {
+      property_detail_url: sumSearchResultDemotions('property_detail_url'),
+      address_like_text: sumSearchResultDemotions('address_like_text'),
+      broad_source: sumSearchResultDemotions('broad_source'),
+      generic_source: sumSearchResultDemotions('generic_source')
+    },
+    search_rejected_url_class_counts: sumRejectedUrlClassCounts,
     search_results_found: sum('search_results_found'),
     snippet_phrases_verified: sum('snippet_phrases_verified'),
     weak_snippets_count: sum('weak_snippets_count'),

@@ -217,6 +217,11 @@ geminiProvider.runGeminiScoutDiscovery = async function mockWeakGemini(job, opti
   assert.ok(attempts.some((attempt) => attempt.provider && /mock|search/i.test(attempt.provider) && attempt.purpose === 'search_fallback'));
   assert.ok(attempts.some((attempt) => attempt.purpose === 'evidence_enrichment'));
   assert.strictEqual(new Set(attempts.map((attempt) => attempt.attempt_key || `${attempt.provider}|${attempt.purpose}|${attempt.query_group}`)).size, attempts.length);
+  assert.ok(Array.isArray(run.provider_summary.search_query_groups_used));
+  assert.ok(run.provider_summary.search_query_groups_used.length >= 1);
+  assert.ok(Array.isArray(run.provider_summary.search_query_plan));
+  assert.ok(run.provider_summary.search_query_plan[0] && /redfin|realtor|zillow|har/i.test(run.provider_summary.search_query_plan[0].provider_family));
+  assert.ok(run.provider_summary.search_result_demotion_counts.property_detail_url >= 0);
   assert.ok(run.provider_summary.search_results_found >= 3);
   assert.ok(run.provider_summary.snippet_phrases_verified >= 2);
   assert.ok(run.batch_result.search_results_found >= 3);

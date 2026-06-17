@@ -139,6 +139,94 @@ function isPropertySpecificSearchUrl(sourceUrl, title, snippet) {
   return false;
 }
 
+function isBroadSourceResult(result) {
+  const sourceUrl = cleanText(result && (result.url || result.link || result.source_url));
+  const title = cleanText(result && result.title);
+  const snippet = cleanText(result && (result.snippet || result.description));
+  const displayedUrl = cleanText(result && (result.displayed_url || result.displayedLink));
+  const text = `${title} ${snippet} ${displayedUrl} ${sourceUrl}`.toLowerCase();
+  const classification = cleanText(result && result.source_classification) || geminiProvider.classifySourceUrl(sourceUrl, title, snippet);
+  if (geminiProvider.sourceClassificationIsGeneric && geminiProvider.sourceClassificationIsGeneric(classification)) return true;
+  if (/(facebook|instagram|tiktok|youtube|linkedin|pinterest|x\.com|twitter|reddit)\./i.test(sourceUrl)) return true;
+  if (/\b(blog|article|news|learn|resource|guides?)\b/i.test(text)) return true;
+  if (/\b(search|results|search-results|realestateandhomes-search|homes-for-sale|city|county|category)\b/i.test(text)) return true;
+  if (/\b(cash[- ]?buyer|cashbuyer|we buy houses|we buy cash|buy houses|buying houses|investor network|wholesale)\b/i.test(text)) return true;
+  return false;
+}
+
+function resultRankScore(result) {
+  const sourceUrl = cleanText(result && (result.url || result.link || result.source_url));
+  const title = cleanText(result && result.title);
+  const snippet = cleanText(result && (result.snippet || result.description));
+  const classification = cleanText(result && result.source_classification) || geminiProvider.classifySourceUrl(sourceUrl, title, snippet);
+  const propertySpecific = isPropertySpecificSearchUrl(sourceUrl, title, snippet);
+  const broad = isBroadSourceResult(result);
+  const addressMatch = !!cleanText(result && (result.address || result.possible_address || result.property_address || result.display_address));
+  let score = 120;
+  if (propertySpecific && /listing_property_page|exact_property_page|auction_property_page|official_property_notice/i.test(classification)) score = 0;
+  else if (propertySpecific) score = 10;
+  else if (addressMatch) score = 30;
+  else if (broad) score = 1000;
+  return {
+    score,
+    classification,
+    propertySpecific,
+    broad,
+    quality_bucket: score <= 10 ? 'property_detail_url' : score <= 30 ? 'address_like_text' : 'broad_source',
+    demotion_reason: score <= 10 ? '' : broad ? 'generic_source' : 'broad_source'
+  };
+}
+
+function rankSearchProviderResults(results) {
+  return (Array.isArray(results) ? results : [])
+    .map((result, index) => {
+      const rankInfo = resultRankScore(result);
+      return Object.assign({}, result, {
+        original_rank: Number(result && (result.rank || result.position)) || index + 1,
+        result_rank_score: rankInfo.score,
+        search_result_quality_bucket: rankInfo.quality_bucket,
+        search_result_demotion_reason: rankInfo.demotion_reason,
+        search_result_classification: rankInfo.classification,
+        search_result_property_specific: rankInfo.propertySpecific === true,
+        search_result_broad: rankInfo.broad === true
+      });
+    })
+    .sort((a, b) => {
+      const scoreDiff = Number(a.result_rank_score || 0) - Number(b.result_rank_score || 0);
+      if (scoreDiff) return scoreDiff;
+      const rankDiff = Number(a.original_rank || 0) - Number(b.original_rank || 0);
+      if (rankDiff) return rankDiff;
+      return cleanText(a.title).localeCompare(cleanText(b.title));
+    })
+    .map((result, index) => Object.assign({}, result, { result_rank: index + 1 }));
+}
+
+function summarizeSearchResultDemotions(cards) {
+  const out = {
+    property_detail_url: 0,
+    address_like_text: 0,
+    broad_source: 0,
+    generic_source: 0
+  };
+  for (const card of Array.isArray(cards) ? cards : []) {
+    const bucket = cleanText(card && card.search_result_quality_bucket) || 'broad_source';
+    if (Object.prototype.hasOwnProperty.call(out, bucket)) out[bucket] += 1;
+    else out.broad_source += 1;
+    if (cleanText(card && card.search_result_demotion_reason) === 'generic_source') out.generic_source += 1;
+  }
+  return out;
+}
+
+function summarizeRejectedUrlClasses(cards) {
+  const out = {};
+  for (const card of Array.isArray(cards) ? cards : []) {
+    if (card && card.search_result_property_specific === true) continue;
+    const classification = cleanText(card && card.search_result_classification) || 'unknown_source';
+    out[classification] = (out[classification] || 0) + 1;
+  }
+  return out;
+}
+
 function isCurrentStatus(status) {
   const text = cleanText(status);
   return !!text && !/^Manual Verification Needed$/i.test(text) && !CLOSED_RE.test(text);
@@ -267,6 +355,13 @@ function normalizeSearchResult(result, context) {
     search_provider: cleanText(context.provider || result.provider || 'search_provider'),
     provider_query: cleanText(context.query || result.query),
     provider_result_rank: Number(result.rank || context.rank || 0) || 0,
+    original_rank: Number(result.original_rank || result.rank || context.rank || 0) || 0,
+    result_rank_score: Number(result.result_rank_score || 0) || 0,
+    search_result_quality_bucket: cleanText(result.search_result_quality_bucket) || 'broad_source',
+    search_result_demotion_reason: cleanText(result.search_result_demotion_reason),
+    search_result_classification: cleanText(result.search_result_classification || sourceClassification),
+    search_result_property_specific: result.search_result_property_specific === true || propertySpecific,
+    search_result_broad: result.search_result_broad === true || isBroadSourceResult(result),
     retrieved_at: retrievedAt,
     display_address: address || title || sourceUrl,
     address_or_source_text: address || title || sourceUrl,
@@ -327,7 +422,7 @@ function normalizeSearchResult(result, context) {
 }
 
 function normalizeSearchResults(results, context) {
-  return (Array.isArray(results) ? results : []).map((result, index) => normalizeSearchResult(Object.assign({ rank: index + 1 }, result), context));
+  return rankSearchProviderResults(results).map((result, index) => normalizeSearchResult(Object.assign({ rank: index + 1 }, result), context));
 }
 
 module.exports = {
@@ -337,5 +432,9 @@ module.exports = {
   normalizeSearchResults,
   listingStatusFromSnippet,
   summarizeEvidenceConversion,
-  isPropertySpecificSearchUrl
+  isPropertySpecificSearchUrl,
+  isBroadSourceResult,
+  rankSearchProviderResults,
+  summarizeSearchResultDemotions,
+  summarizeRejectedUrlClasses
 };

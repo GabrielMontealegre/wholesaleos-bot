@@ -26,6 +26,7 @@ fs.writeFileSync(process.env.DEAL_CALL_DOSSIERS_PATH, JSON.stringify({ version: 
 const snippetEvidence = require('../modules/research/search-snippet-evidence');
 const geminiProvider = require('../modules/research/gemini-scout-discovery-provider');
 const findMeScoutJobs = require('../modules/research/findme-scout-jobs');
+const leadEvidence = require('../modules/research/lead-evidence');
 
 function normalize(result) {
   return snippetEvidence.normalizeSearchResult(result, {
@@ -76,6 +77,25 @@ const queryOnly = normalize({
 });
 assert.strictEqual(queryOnly.exact_source_phrase_candidate, '');
 assert.strictEqual(queryOnly.exact_source_phrase, '');
+assert.strictEqual(leadEvidence.dealFinderGroup(queryOnly.lead_evidence), 'Research / Reference');
+
+const detailNoPhrase = normalize({
+  title: '1222 Atlas Dr Dallas TX | Redfin',
+  snippet: 'Active listing in Dallas. Great location.',
+  url: 'https://www.redfin.com/TX/Dallas/1222-Atlas-Dr-75208/home/1222'
+});
+assert.strictEqual(detailNoPhrase.property_specific_source, true);
+assert.strictEqual(detailNoPhrase.exact_source_phrase, '');
+assert.strictEqual(leadEvidence.dealFinderGroup(detailNoPhrase.lead_evidence), 'Research / Reference');
+
+const social = normalize({
+  title: 'Dallas cash buyer group',
+  snippet: 'We buy houses in Dallas. Investor special deals.',
+  url: 'https://www.facebook.com/groups/dallascashbuyers'
+});
+assert.strictEqual(social.property_specific_source, false);
+assert.strictEqual(leadEvidence.dealFinderGroup(social.lead_evidence), 'Research / Reference');
+assert.ok(social.evidence_conversion_reason_codes.includes('generic_url_rejected') || social.evidence_conversion_reason_codes.includes('missing_property_url'));
 
 const generic = normalize({
   title: 'Dallas homes for sale',
