@@ -49,6 +49,99 @@ function missingKeyForProvider(provider) {
   return '';
 }
 
+function providerDisplayName(provider) {
+  return PROVIDER_DISPLAY[provider] || 'unknown';
+}
+
+function safeKeyState(value) {
+  const bucket = keyLengthBucket(value);
+  return {
+    present: bucket !== 'missing',
+    length_bucket: bucket
+  };
+}
+
+function buildLiveSearchProviderReadiness(env) {
+  env = env || {};
+  const enableRaw = env.ENABLE_SEARCH_PROVIDER;
+  const providerRaw = env.SEARCH_PROVIDER;
+  const enablePresent = enableRaw !== undefined && enableRaw !== null && cleanText(enableRaw) !== '';
+  const providerPresent = providerRaw !== undefined && providerRaw !== null && cleanText(providerRaw) !== '';
+  const enabled = boolEnabled(enableRaw);
+  const provider = providerNameFrom(env);
+  const providerNormalized = providerDisplayName(provider);
+  const timeoutMs = positiveInt(env.SEARCH_PROVIDER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
+  const maxResults = Math.min(positiveInt(env.SEARCH_PROVIDER_MAX_RESULTS, DEFAULT_MAX_RESULTS), 20);
+  const missing = [];
+  let readiness = 'not_configured';
+  if (!enablePresent) {
+    missing.push('ENABLE_SEARCH_PROVIDER');
+  } else if (!enabled) {
+    readiness = 'disabled';
+  } else if (!providerPresent) {
+    missing.push('SEARCH_PROVIDER');
+  } else if (!PROVIDERS.has(provider)) {
+    readiness = 'invalid_provider';
+    missing.push('SEARCH_PROVIDER');
+  } else if (provider === 'serper') {
+    if (keyLengthBucket(env.SERPER_API_KEY) === 'present_expected') readiness = 'ready';
+    else {
+      readiness = 'missing_key';
+      missing.push('SERPER_API_KEY');
+    }
+  } else if (provider === 'brave') {
+    if (keyLengthBucket(env.BRAVE_SEARCH_API_KEY) === 'present_expected') readiness = 'ready';
+    else {
+      readiness = 'missing_key';
+      missing.push('BRAVE_SEARCH_API_KEY');
+    }
+  } else if (provider === 'google_cse') {
+    const googleKeyReady = keyLengthBucket(env.GOOGLE_CSE_API_KEY) === 'present_expected';
+    const googleCxReady = keyLengthBucket(env.GOOGLE_CSE_CX) === 'present_expected';
+    if (!googleKeyReady) {
+      readiness = 'missing_key';
+      missing.push('GOOGLE_CSE_API_KEY');
+    } else if (!googleCxReady) {
+      readiness = 'missing_google_cx';
+      missing.push('GOOGLE_CSE_CX');
+    } else {
+      readiness = 'ready';
+    }
+  } else if (provider === 'mock') {
+    readiness = cleanText(env.NODE_ENV) === 'production' ? 'invalid_provider' : 'ready';
+    if (readiness === 'invalid_provider') missing.push('SEARCH_PROVIDER');
+  }
+  return {
+    checked_at: nowIso(),
+    enable_search_provider: {
+      present: enablePresent,
+      enabled,
+      normalized: enabled ? 'true' : 'false'
+    },
+    search_provider: {
+      present: providerPresent,
+      normalized: providerNormalized
+    },
+    keys: {
+      serper: safeKeyState(env.SERPER_API_KEY),
+      brave: safeKeyState(env.BRAVE_SEARCH_API_KEY),
+      google_cse_api_key: safeKeyState(env.GOOGLE_CSE_API_KEY),
+      google_cse_cx: safeKeyState(env.GOOGLE_CSE_CX)
+    },
+    effective: {
+      timeout_ms: timeoutMs,
+      max_results: maxResults
+    },
+    readiness,
+    missing_config: missing,
+    selected_provider_ready: readiness === 'ready'
+  };
+}
+
+function getLiveSearchProviderReadiness() {
+  return buildLiveSearchProviderReadiness(process.env);
+}
+
 function searchProviderEnvDiagnostics(env = process.env) {
   const enableRaw = env.ENABLE_SEARCH_PROVIDER;
   const providerRaw = env.SEARCH_PROVIDER;
@@ -384,6 +477,8 @@ function attemptFrom(result, input, purpose) {
 }
 
 module.exports = {
+  getLiveSearchProviderReadiness,
+  buildLiveSearchProviderReadiness,
   searchProviderEnvDiagnostics,
   searchProviderConfig,
   buildSearchQueries,
