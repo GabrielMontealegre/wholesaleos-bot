@@ -13,6 +13,13 @@ const PROVIDER_DISPLAY = {
   mock: 'mock'
 };
 const SERPER_QUERY_MODES = new Set(['free', 'advanced']);
+const PROPERTY_DETAIL_SITE_FAMILIES = [
+  { provider_family: 'redfin', site: 'redfin.com', expected_url_pattern: 'redfin.com/.../home/<id>', query_hint: 'redfin home' },
+  { provider_family: 'realtor', site: 'realtor.com', expected_url_pattern: 'realtor.com/realestateandhomes-detail/', query_hint: 'realestateandhomes-detail' },
+  { provider_family: 'zillow', site: 'zillow.com', expected_url_pattern: 'zillow.com/homedetails/', query_hint: 'homedetails' },
+  { provider_family: 'har', site: 'har.com', expected_url_pattern: 'har.com/homedetail/', query_hint: 'homedetail' }
+];
+const MAX_QUERY_GROUPS = 6;
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -248,19 +255,82 @@ function sourceSites(sourcePreferences) {
   return ['redfin.com', 'realtor.com', 'zillow.com', 'har.com'];
 }
 
-function buildSearchQueries(input) {
+function chunkTerms(terms, size) {
+  const list = Array.isArray(terms) ? terms.map(cleanText).filter(Boolean) : [];
+  const step = Math.max(1, Number(size) || 1);
+  const chunks = [];
+  for (let idx = 0; idx < list.length; idx += step) chunks.push(list.slice(idx, idx + step));
+  return chunks.length ? chunks : [[]];
+}
+
+function marketClause(input) {
+  const city = cleanText(input && (input.city || input.market)) || 'Dallas';
+  const state = cleanText(input && input.state) || 'TX';
+  const normalizedState = state.toUpperCase() === 'TEXAS' ? 'TX' : state.toUpperCase();
+  return [city, normalizedState].filter(Boolean).map((part) => `"${part}"`).join(' ');
+}
+
+function buildQueryText(site, marketText, terms, exclusions) {
+  const termList = Array.isArray(terms) ? terms.map(cleanText).filter(Boolean) : [];
+  const termClause = termList.length ? `(${termList.map((term) => `"${term}"`).join(' OR ')})` : '';
+  return cleanText([
+    `site:${site}`,
+    marketText,
+    termClause,
+    exclusions.join(' ')
+  ].filter(Boolean).join(' ')).slice(0, 220);
+}
+
+function propertyDetailFamilies(sourcePreferences) {
+  const prefs = new Set(sourceSites(sourcePreferences).map((site) => cleanText(site).toLowerCase()));
+  return PROPERTY_DETAIL_SITE_FAMILIES.filter((family) => prefs.has(family.site.toLowerCase()));
+}
+
+function buildPropertyDetailSearchQueries(input) {
   input = input || {};
-  const city = cleanText(input.city) || cleanText(input.market) || 'Dallas';
-  const state = cleanText(input.state) || 'TX';
+  const exclusions = ['-sold', '-closed', '-reo', '-bank-owned', '-auction', '-blog', '-article', '-news', '-category', '-search', '-results', '-social', '-cash-buyer'];
   const terms = criteriaTerms(input.criteria);
-  const sites = sourceSites(input.source_preferences);
-  const exclusions = ['-sold', '-closed', '-reo', '-bank-owned', '-auction ended'];
+  const marketText = marketClause(input);
+  const families = propertyDetailFamilies(input.source_preferences);
+  const termGroups = chunkTerms(terms, 2);
   const queries = [];
-  for (const site of sites) {
-    queries.push(`site:${site} "${city}" "${state}" (${terms.slice(0, 5).join(' OR ')}) ${exclusions.join(' ')}`);
-  }
-  queries.push(`"${city}" "${state}" "${terms.slice(0, 6).join('" OR "')}" real estate listing ${exclusions.join(' ')}`);
-  return queries.map(cleanText).filter(Boolean).slice(0, 6);
+  families.forEach((family, familyIndex) => {
+    const termGroup = termGroups[familyIndex % termGroups.length] || termGroups[0] || [];
+    queries.push({
+      query: buildQueryText(family.site, marketText, termGroup.length ? termGroup : terms.slice(0, 2), exclusions),
+      provider_family: family.provider_family,
+      purpose: 'property_detail_first',
+      priority: familyIndex + 1,
+      expected_url_pattern: family.expected_url_pattern,
+      query_group: `${family.provider_family}_property_detail`
+    });
+  });
+  const broadFallbackTerms = termGroups.flat().length ? termGroups.flat() : terms.slice(0, 4);
+  queries.push({
+    query: cleanText([
+      marketText,
+      `(${broadFallbackTerms.map((term) => `"${term}"`).join(' OR ')})`,
+      'real estate',
+      exclusions.join(' ')
+    ].filter(Boolean).join(' ')).slice(0, 220),
+    provider_family: 'broad_market',
+    purpose: 'broad_market_refinement',
+    priority: queries.length + 1,
+    expected_url_pattern: 'property detail url only; avoid search/category/blog pages',
+    query_group: 'broad_market_refinement'
+  });
+  return queries
+    .map((item, index) => Object.assign({}, item, { priority: Number(item.priority || index + 1) || index + 1 }))
+    .filter((item, index, list) => cleanText(item.query) && list.findIndex((entry) => cleanText(entry.query) === cleanText(item.query)) === index)
+    .slice(0, MAX_QUERY_GROUPS);
+}
+
+function buildSearchQueries(input) {
+  return buildProviderQueryGroups(input).map((item) => item.query);
+}
+
+function buildProviderQueryGroups(input) {
+  return buildPropertyDetailSearchQueries(input);
 }
 
 function sourceBrandFromQuery(query) {
@@ -438,6 +508,10 @@ function providerDiagnostics(meta, response, payload, extra) {
     sanitized_query: cleanText((extra && extra.sanitized_query) || meta.sanitized_query),
     query: cleanText((extra && extra.query) || meta.query),
     query_mode: cleanText((extra && extra.query_mode) || meta.query_mode),
+    provider_family: cleanText((extra && extra.provider_family) || meta.provider_family),
+    query_group: cleanText((extra && extra.query_group) || meta.query_group),
+    attempt_key: cleanText((extra && extra.attempt_key) || meta.attempt_key),
+    expected_url_pattern: cleanText((extra && extra.expected_url_pattern) || meta.expected_url_pattern),
     query_pattern_rejected: !!(extra && extra.query_pattern_rejected),
     retry_used: !!(extra && extra.retry_used),
     retry_reason: cleanText(extra && extra.retry_reason),
@@ -534,6 +608,10 @@ async function callProvider(provider, query, input, cfg, options) {
       sanitized_query: extra.sanitized_query || '',
       query: extra.query || '',
       query_mode: extra.query_mode || '',
+      provider_family: extra.provider_family || '',
+      query_group: extra.query_group || '',
+      attempt_key: extra.attempt_key || '',
+      expected_url_pattern: extra.expected_url_pattern || '',
       timeout_ms: cfg.timeout_ms,
       max_results: cfg.max_results,
       request_started_at: nowIso(),
@@ -569,7 +647,11 @@ async function callProvider(provider, query, input, cfg, options) {
       original_query: query,
       sanitized_query: sanitizedQuery,
       query: requestQuery,
-      query_mode: queryMode
+      query_mode: queryMode,
+      provider_family: cleanText(options.provider_family) || cleanText(options.query_group) || '',
+      query_group: cleanText(options.query_group) || '',
+      attempt_key: cleanText(options.attempt_key) || '',
+      expected_url_pattern: cleanText(options.expected_url_pattern) || ''
     });
     const called = await fetchJson(fetchImpl, endpoint, {
       method: 'POST',
@@ -587,7 +669,11 @@ async function callProvider(provider, query, input, cfg, options) {
         original_query: query,
         sanitized_query: sanitizedQuery,
         query: sanitizedQuery,
-        query_mode: queryMode
+        query_mode: queryMode,
+        provider_family: cleanText(options.provider_family) || cleanText(options.query_group) || '',
+        query_group: cleanText(options.query_group) || '',
+        attempt_key: cleanText(options.attempt_key) || '',
+        expected_url_pattern: cleanText(options.expected_url_pattern) || ''
       });
       const retry = await fetchJson(fetchImpl, endpoint, {
         method: 'POST',
@@ -653,7 +739,22 @@ function classifyHttpResult(provider, response, payload, parseError) {
 async function runSearchProvider(input = {}, options = {}) {
   const cfg = searchProviderConfig(options.env || process.env);
   const startedAt = nowIso();
-  const query = cleanText(options.query) || buildSearchQueries(input)[0] || '';
+  const explicitQuery = cleanText(options.query);
+  const queryPlan = Array.isArray(options.query_groups) && options.query_groups.length
+    ? options.query_groups
+    : explicitQuery
+      ? [{
+        query: explicitQuery,
+        provider_family: cleanText(options.provider_family) || cfg.provider || 'explicit',
+        purpose: cleanText(options.purpose) || 'explicit_query',
+        priority: 1,
+        expected_url_pattern: cleanText(options.expected_url_pattern) || '',
+        query_group: cleanText(options.query_group) || 'explicit_query'
+      }]
+      : cfg.provider === 'mock'
+        ? buildProviderQueryGroups(input).slice(0, 1)
+        : buildProviderQueryGroups(input);
+  const query = cleanText(queryPlan[0] && queryPlan[0].query) || '';
   const base = {
     provider: cfg.display_provider || cfg.provider,
     provider_adapter: cfg.provider,
@@ -678,55 +779,167 @@ async function runSearchProvider(input = {}, options = {}) {
     snippet_phrases_verified: 0,
     weak_snippets_count: 0,
     search_results_found: 0,
-    provider_attempts: []
+    provider_attempts: [],
+    query_groups_used: [],
+    query_group_count: 0,
+    query_plan: [],
+    provider_families_used: [],
+    result_demotion_counts: {
+      property_detail_url: 0,
+      address_like_text: 0,
+      broad_source: 0,
+      generic_source: 0
+    },
+    rejected_url_class_counts: {}
   };
   if (!cfg.configured) {
     base.finished_at = nowIso();
     base.warnings = cfg.warning ? [cfg.warning] : [];
     base.message = cfg.status === 'provider_not_configured' ? 'Search provider not configured. Fresh batch continued without fallback.' : cfg.status === 'invalid_provider' ? 'Search provider is invalid. Fresh batch continued without fallback.' : 'Search provider unavailable before request.';
-    base.provider_attempts = [attemptFrom(base, input, 'search_fallback')];
+    base.provider_attempts = [attemptFrom(base, input, 'search_fallback', queryPlan[0] || {})];
     return base;
   }
   try {
-    const called = await callProvider(cfg.provider, query, input, cfg, options);
-    const executedQuery = cleanText(called && called.diagnostics && called.diagnostics.query) || query;
-    const rawResults = normalizeRawResults(cfg.provider, called.payload, {
-      query: executedQuery,
-      retrieved_at: nowIso()
-    }).slice(0, cfg.max_results);
-    const status = called.status === 'provider_available' && !rawResults.length ? 'provider_no_results' : called.status;
-    const cards = snippetEvidence.normalizeSearchResults(rawResults, Object.assign({}, input, {
-      provider: cfg.provider,
-      query: executedQuery
-    }));
+    const totalResultCap = Math.max(1, positiveInt(options.max_results, cfg.max_results));
+    const queryAttempts = [];
+    const allCards = [];
+    const allResults = [];
+    const warnings = [];
+    const demotionCounts = {
+      property_detail_url: 0,
+      address_like_text: 0,
+      broad_source: 0,
+      generic_source: 0
+    };
+    const rejectedUrlClassCounts = {};
+    let finalStatus = 'provider_no_results';
+    let finalDiagnostics = null;
+    let finalExecutedQuery = query;
+    for (const planItem of queryPlan.slice(0, MAX_QUERY_GROUPS)) {
+      if (allCards.length >= totalResultCap) break;
+      const remaining = Math.max(1, totalResultCap - allCards.length);
+      const attemptedCfg = Object.assign({}, cfg, { max_results: remaining });
+      const attemptOptions = Object.assign({}, options, {
+        purpose: planItem.purpose,
+        query_group: planItem.query_group,
+        provider_family: planItem.provider_family,
+        expected_url_pattern: planItem.expected_url_pattern,
+        attempt_key: `${cfg.provider}|${planItem.purpose}|${planItem.query_group}|${cleanText(input && (input.market || input.city || input.county || input.state || 'market')).toLowerCase()}`,
+        query: planItem.query
+      });
+      const called = await callProvider(cfg.provider, planItem.query, input, attemptedCfg, attemptOptions);
+      const executedQuery = cleanText(called && called.diagnostics && called.diagnostics.query) || planItem.query;
+      finalExecutedQuery = executedQuery || finalExecutedQuery;
+      const rankedResults = snippetEvidence.rankSearchProviderResults(normalizeRawResults(cfg.provider, called.payload, {
+        query: executedQuery,
+        retrieved_at: nowIso()
+      })).slice(0, remaining);
+      const status = called.status === 'provider_available' && !rankedResults.length ? 'provider_no_results' : called.status;
+      if (status === 'provider_available' && rankedResults.length) finalStatus = 'provider_available';
+      else if (finalStatus !== 'provider_available') finalStatus = status;
+      finalDiagnostics = called.diagnostics || finalDiagnostics;
+      const cards = snippetEvidence.normalizeSearchResults(rankedResults, Object.assign({}, input, {
+        provider: cfg.provider,
+        query: executedQuery,
+        query_group: planItem.query_group,
+        provider_family: planItem.provider_family
+      }));
+      const evidenceConversionDiagnostics = snippetEvidence.summarizeEvidenceConversion(cards);
+      const demoted = snippetEvidence.summarizeSearchResultDemotions(cards);
+      const rejected = snippetEvidence.summarizeRejectedUrlClasses(cards);
+      Object.keys(demotionCounts).forEach((key) => {
+        demotionCounts[key] += Number(demoted[key] || 0) || 0;
+      });
+      Object.keys(rejected).forEach((key) => {
+        rejectedUrlClassCounts[key] = (rejectedUrlClassCounts[key] || 0) + (Number(rejected[key] || 0) || 0);
+      });
+      const resultRows = cards.map((card) => ({
+        title: card.source_title,
+        snippet: card.source_snippet,
+        url: card.source_url,
+        displayed_url: card.displayed_url,
+        source_domain: card.source_domain,
+        rank: card.provider_result_rank,
+        retrieved_at: card.retrieved_at,
+        possible_address: card.address || card.display_address,
+        possible_exact_phrase: card.exact_source_phrase_candidate || card.possible_exact_phrase || card.exact_source_phrase,
+        phrase_provenance: card.phrase_provenance || card.exact_source_phrase_source_type,
+        exact_source_phrase_candidate: card.exact_source_phrase_candidate || '',
+        exact_source_phrase_verbatim_candidate: card.exact_source_phrase_verbatim_candidate === true,
+        confidence: card.confidence,
+        missing_evidence: card.missing_evidence,
+        evidence_conversion_reason_codes: card.evidence_conversion_reason_codes || [],
+        search_result_quality_bucket: card.search_result_quality_bucket,
+        search_result_demotion_reason: card.search_result_demotion_reason,
+        search_result_classification: card.search_result_classification
+      }));
+      for (const card of cards) {
+        if (!card || !card.source_url) continue;
+        const key = cleanText(card.canonical_source_url || card.source_url || card.candidate_id || card.card_id);
+        if (!key || allCards.some((existing) => cleanText(existing.canonical_source_url || existing.source_url || existing.candidate_id || existing.card_id) === key)) continue;
+        allCards.push(card);
+      }
+      for (const row of resultRows) {
+        const key = cleanText(row.url || row.displayed_url || row.title || row.snippet);
+        if (!key || allResults.some((existing) => cleanText(existing.url || existing.displayed_url || existing.title || existing.snippet) === key)) continue;
+        allResults.push(row);
+      }
+      queryAttempts.push({
+        provider: cfg.display_provider || cfg.provider,
+        provider_family: planItem.provider_family,
+        purpose: planItem.purpose,
+        query_group: planItem.query_group,
+        attempt_key: `${cfg.provider}|${planItem.purpose}|${planItem.query_group}|${cleanText(input && (input.market || input.city || input.county || input.state || 'market')).toLowerCase()}`,
+        expected_url_pattern: planItem.expected_url_pattern,
+        query: executedQuery,
+        status,
+        result_count: cards.length,
+        candidate_count: cards.length,
+        grounded_url_count: cards.filter((card) => card.source_url).length,
+        snippet_phrase_count: evidenceConversionDiagnostics.snippet_phrases_found,
+        demotion_counts: demoted,
+        rejected_url_class_counts: rejected
+      });
+      warnings.push(...(called.warnings || []).map(safeWarning).filter(Boolean));
+      if (allCards.length >= totalResultCap) break;
+    }
+    const cards = allCards.slice(0, totalResultCap);
+    const results = allResults.slice(0, totalResultCap);
     const evidenceConversionDiagnostics = snippetEvidence.summarizeEvidenceConversion(cards);
-    const results = cards.map((card) => ({
-      title: card.source_title,
-      snippet: card.source_snippet,
-      url: card.source_url,
-      displayed_url: card.displayed_url,
-      source_domain: card.source_domain,
-      rank: card.provider_result_rank,
-      retrieved_at: card.retrieved_at,
-      possible_address: card.address || card.display_address,
-      possible_exact_phrase: card.exact_source_phrase_candidate || card.possible_exact_phrase || card.exact_source_phrase,
-      phrase_provenance: card.phrase_provenance || card.exact_source_phrase_source_type,
-      exact_source_phrase_candidate: card.exact_source_phrase_candidate || '',
-      exact_source_phrase_verbatim_candidate: card.exact_source_phrase_verbatim_candidate === true,
-      confidence: card.confidence,
-      missing_evidence: card.missing_evidence,
-      evidence_conversion_reason_codes: card.evidence_conversion_reason_codes || []
-    }));
+    const status = cards.length
+      ? (finalStatus === 'provider_available' ? 'provider_available' : finalStatus)
+      : finalStatus || 'provider_no_results';
     const finishedAt = nowIso();
     const out = Object.assign({}, base, {
       status,
       finished_at: finishedAt,
+      query: finalExecutedQuery || query,
       result_count: results.length,
       results,
       cards,
-      warnings: (called.warnings || []).map(safeWarning).filter(Boolean),
+      warnings: Array.from(new Set(warnings)).slice(0, 10),
       error_category: status === 'provider_available' || status === 'provider_no_results' ? '' : status,
-      provider_execution_diagnostics: called.diagnostics || {},
+      provider_execution_diagnostics: Object.assign({}, finalDiagnostics || {}, {
+        query_plan: queryAttempts.map((attempt) => ({
+          provider: attempt.provider,
+          provider_family: attempt.provider_family,
+          purpose: attempt.purpose,
+          query_group: attempt.query_group,
+          attempt_key: attempt.attempt_key,
+          expected_url_pattern: attempt.expected_url_pattern,
+          query: attempt.query,
+          status: attempt.status,
+          result_count: attempt.result_count,
+          candidate_count: attempt.candidate_count,
+          grounded_url_count: attempt.grounded_url_count,
+          snippet_phrase_count: attempt.snippet_phrase_count
+        })),
+        query_groups_used: queryAttempts.map((attempt) => attempt.query_group).filter(Boolean),
+        provider_families_used: queryAttempts.map((attempt) => attempt.provider_family).filter(Boolean),
+        query_group_count: queryAttempts.length,
+        result_demotion_counts: demotionCounts,
+        rejected_url_class_counts: rejectedUrlClassCounts
+      }),
       next_action: providerNextAction(status) || base.next_action,
       source_urls_found_count: cards.filter((card) => card.source_url).length,
       candidates_found: cards.length,
@@ -736,13 +949,32 @@ async function runSearchProvider(input = {}, options = {}) {
       evidence_conversion_diagnostics: evidenceConversionDiagnostics,
       search_results_found: results.length,
       source_urls: cards.map((card) => card.source_url).filter(Boolean).slice(0, 20),
+      query_groups_used: queryAttempts.map((attempt) => attempt.query_group).filter(Boolean),
+      query_group_count: queryAttempts.length,
+      query_plan: queryAttempts.map((attempt) => ({
+        provider: attempt.provider,
+        provider_family: attempt.provider_family,
+        purpose: attempt.purpose,
+        query_group: attempt.query_group,
+        attempt_key: attempt.attempt_key,
+        expected_url_pattern: attempt.expected_url_pattern,
+        query: attempt.query,
+        status: attempt.status,
+        result_count: attempt.result_count,
+        candidate_count: attempt.candidate_count,
+        grounded_url_count: attempt.grounded_url_count,
+        snippet_phrase_count: attempt.snippet_phrase_count
+      })),
+      provider_families_used: queryAttempts.map((attempt) => attempt.provider_family).filter(Boolean),
+      result_demotion_counts: demotionCounts,
+      rejected_url_class_counts: rejectedUrlClassCounts,
       message: status === 'provider_available'
-        ? `Search fallback returned ${results.length} result${results.length === 1 ? '' : 's'}.`
+        ? `Search fallback returned ${results.length} result${results.length === 1 ? '' : 's'} across ${queryAttempts.length} query group${queryAttempts.length === 1 ? '' : 's'}.`
         : status === 'provider_no_results'
           ? 'Search fallback returned no public results.'
           : 'Search fallback did not return usable results.'
     });
-    out.provider_attempts = [attemptFrom(out, input, 'search_fallback')];
+    out.provider_attempts = queryAttempts.length ? queryAttempts : [attemptFrom(out, input, 'search_fallback', queryPlan[0] || {})];
     return out;
   } catch (error) {
     const status = error && error.code === 'provider_timed_out' ? 'provider_timed_out' : 'provider_network_error';
@@ -771,17 +1003,22 @@ async function runSearchProvider(input = {}, options = {}) {
       next_action: diagnostics.next_action,
       message: status === 'provider_timed_out' ? 'Search fallback timed out.' : 'Search fallback network error.'
     });
-    out.provider_attempts = [attemptFrom(out, input, 'search_fallback')];
+    out.provider_attempts = [attemptFrom(out, input, 'search_fallback', queryPlan[0] || {})];
     return out;
   }
 }
 
-function attemptFrom(result, input, purpose) {
+function attemptFrom(result, input, purpose, planItem) {
   const diagnostics = result.provider_execution_diagnostics || {};
+  const queryGroup = cleanText((planItem && planItem.query_group) || input && input.query_group) || 'search_provider_fallback';
+  const providerFamily = cleanText((planItem && planItem.provider_family) || diagnostics.provider_family || result.provider) || '';
+  const market = cleanText(input && (input.market || input.location || input.city || input.county || input.state)) || 'market';
   return {
     provider: result.provider,
+    provider_family: providerFamily,
     purpose,
-    query_group: cleanText(input && input.query_group) || 'search_provider_fallback',
+    query_group: queryGroup,
+    attempt_key: `${cleanText(result.provider || 'search')}|${cleanText(purpose || 'search_fallback')}|${queryGroup}|${market}`.toLowerCase(),
     query: result.query,
     model: result.provider,
     started_at: result.started_at,
@@ -802,12 +1039,14 @@ function attemptFrom(result, input, purpose) {
     request_finished_at: diagnostics.request_finished_at || '',
     duration_ms: diagnostics.duration_ms || 0,
     http_status: diagnostics.http_status || null,
-      response_shape: diagnostics.response_shape || {},
-      safe_error_summary: diagnostics.safe_error_summary || '',
+    response_shape: diagnostics.response_shape || {},
+    safe_error_summary: diagnostics.safe_error_summary || '',
     next_action: diagnostics.next_action || '',
     original_query: diagnostics.original_query || '',
     sanitized_query: diagnostics.sanitized_query || '',
     query_mode: diagnostics.query_mode || '',
+    provider_family: diagnostics.provider_family || providerFamily,
+    expected_url_pattern: cleanText((planItem && planItem.expected_url_pattern) || diagnostics.expected_url_pattern),
     query_pattern_rejected: diagnostics.query_pattern_rejected === true,
     retry_used: diagnostics.retry_used === true,
     retry_reason: diagnostics.retry_reason || '',
@@ -833,6 +1072,8 @@ module.exports = {
   searchProviderEnvDiagnostics,
   searchProviderConfig,
   buildSearchQueries,
+  buildPropertyDetailSearchQueries,
+  buildProviderQueryGroups,
   sanitizeSerperFreeQuery,
   runSearchProvider
 };
