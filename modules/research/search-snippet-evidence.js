@@ -7,9 +7,55 @@ const leadEvidence = require('./lead-evidence');
 const propertyIdentity = require('./property-identity');
 
 const WHOLESALE_PHRASE_RE = leadEvidence.WHOLESALE_PHRASE_RE;
-const CURRENT_RE = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|pending|contingent)\b/i;
+const CURRENT_RE = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|auction date|foreclosure sale)\b/i;
 const CLOSED_RE = /\b(sold|closed|off[- ]?market|auction ended|sale completed)\b/i;
 const LISTING_CONTEXT_RE = /\b(listing|listed|property|home|house|for sale|redfin|realtor|zillow|har)\b/i;
+
+const PHRASE_FAMILIES = [
+  { family: 'as_is', patterns: [/\b(as[- ]?is|as is sale|sold as[- ]?is)\b/i] },
+  { family: 'cash_only', patterns: [/\b(cash only|cash offers only)\b/i] },
+  { family: 'investor_special', patterns: [/\b(investor special|investor opportunity|handyman special)\b/i] },
+  { family: 'fixer_upper', patterns: [/\b(fixer[- ]?upper|fixer)\b/i] },
+  { family: 'needs_tlc', patterns: [/\bneeds\s+tlc\b/i] },
+  { family: 'needs_work', patterns: [/\bneeds\s+(?:work|repairs?)\b/i] },
+  { family: 'handyman_special', patterns: [/\bhandyman special\b/i] },
+  { family: 'distressed', patterns: [/\bdistressed\b/i] },
+  { family: 'foreclosure', patterns: [/\bforeclosure\b/i, /\bpre[- ]?foreclosure\b/i] },
+  { family: 'auction', patterns: [/\bauction\b/i] },
+  { family: 'price_reduced', patterns: [/\bprice (?:reduced|cut|drop|reduction)\b/i] },
+  { family: 'motivated_seller', patterns: [/\bmotivated seller\b/i] },
+  { family: 'estate_sale', patterns: [/\bestate sale\b/i] },
+  { family: 'probate', patterns: [/\bprobate\b/i] },
+  { family: 'vacant', patterns: [/\bvacant\b/i] },
+  { family: 'fire_damage', patterns: [/\bfire damage\b/i] },
+  { family: 'foundation_issue', patterns: [/\bfoundation issue\b/i] },
+  { family: 'tenant_occupied', patterns: [/\btenant occupied\b/i] },
+  { family: 'no_repairs', patterns: [/\bno repairs\b/i] },
+  { family: 'bring_all_offers', patterns: [/\bbring all offers\b/i] }
+];
+const STATUS_PROMOTABLE_FAMILIES = [
+  { family: 'active', label: 'active', patterns: [/\bactive\b/i] },
+  { family: 'for_sale', label: 'for sale', patterns: [/\bfor sale\b/i, /\bhouses? for sale\b/i, /\bhomes? for sale\b/i] },
+  { family: 'listed', label: 'listed', patterns: [/\blisted\b/i] },
+  { family: 'available', label: 'available', patterns: [/\bavailable\b/i] },
+  { family: 'new_listing', label: 'new listing', patterns: [/\bnew listing\b/i] },
+  { family: 'price_cut', label: 'price cut', patterns: [/\bprice cut\b/i] },
+  { family: 'price_reduced', label: 'price reduced', patterns: [/\bprice reduced\b/i] },
+  { family: 'auction_date', label: 'auction date', patterns: [/\bauction date\b/i] },
+  { family: 'foreclosure_sale', label: 'foreclosure sale', patterns: [/\bforeclosure sale\b/i] },
+  { family: 'back_on_market', label: 'back on market', patterns: [/\bback on (?:the )?market\b/i] },
+  { family: 'relisted', label: 'relisted', patterns: [/\brelisted\b/i] }
+];
+const STATUS_NON_PROMOTABLE_FAMILIES = [
+  { family: 'coming_soon', label: 'coming soon', patterns: [/\bcoming soon\b/i], rejected_reason: 'coming soon is not promotable callable evidence' },
+  { family: 'pending', label: 'pending', patterns: [/\bpending\b/i], rejected_reason: 'pending is not promotable callable evidence' },
+  { family: 'contingent', label: 'contingent', patterns: [/\bcontingent\b/i], rejected_reason: 'contingent is not promotable callable evidence' },
+  { family: 'under_contract', label: 'under contract', patterns: [/\bunder contract\b/i], rejected_reason: 'under contract is not promotable callable evidence' },
+  { family: 'sold', label: 'sold', patterns: [/\bsold\b/i], rejected_reason: 'sold is not promotable callable evidence' },
+  { family: 'closed', label: 'closed', patterns: [/\bclosed\b/i], rejected_reason: 'closed is not promotable callable evidence' },
+  { family: 'off_market', label: 'off market', patterns: [/\boff[- ]?market\b/i], rejected_reason: 'off market is not promotable callable evidence' },
+  { family: 'historical', label: 'historical', patterns: [/\bhistorical\b/i], rejected_reason: 'historical is not promotable callable evidence' }
+];
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -27,26 +73,175 @@ function hashId(prefix, value) {
   return `${prefix}_${crypto.createHash('sha1').update(String(value || '')).digest('hex').slice(0, 16)}`;
 }
 
-function phraseFromVisibleText(title, snippet) {
-  const fields = [
-    { type: 'search_title', text: cleanText(title) },
-    { type: 'search_snippet', text: cleanText(snippet) }
-  ];
-  for (const field of fields) {
-    const match = field.text.match(WHOLESALE_PHRASE_RE);
-    if (match) {
-      const sentence = field.text.match(new RegExp(`[^.!?]*\\b${match[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[^.!?]*[.!?]?`, 'i'));
+function visibleCandidateFields(title, snippet, metadata) {
+  metadata = metadata && typeof metadata === 'object' ? metadata : {};
+  const page = metadata.page_metadata && typeof metadata.page_metadata === 'object' ? metadata.page_metadata : {};
+  return [
+    { type: 'title', text: cleanText(title) },
+    { type: 'snippet', text: cleanText(snippet) },
+    { type: 'source_title', text: cleanText(metadata.source_title) },
+    { type: 'source_snippet', text: cleanText(metadata.source_snippet) },
+    { type: 'search_result_snippet', text: cleanText(metadata.search_result_snippet) },
+    { type: 'evidence_snippet', text: cleanText(metadata.evidence_snippet) },
+    { type: 'displayed_url', text: cleanText(metadata.displayed_url || metadata.displayedLink) },
+    { type: 'displayed_domain', text: cleanText(metadata.displayed_domain) },
+    { type: 'source_domain', text: cleanText(metadata.source_domain) },
+    { type: 'listing_status', text: cleanText(metadata.listing_status) },
+    { type: 'status', text: cleanText(metadata.status) },
+    { type: 'source_status', text: cleanText(metadata.source_status) },
+    { type: 'page_title', text: cleanText(page.title) },
+    { type: 'page_description', text: cleanText(page.meta_description || page.og_description) }
+  ].filter((field) => field.text);
+}
+
+function sentenceContainingMatch(text, matchText) {
+  const source = cleanText(text);
+  const match = cleanText(matchText);
+  if (!source || !match) return '';
+  const escaped = match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sentence = source.match(new RegExp(`[^.!?;|]*\\b${escaped}\\b[^.!?;|]*[.!?;|]?`, 'i'));
+  return cleanText(sentence && sentence[0] || match);
+}
+
+function matchCandidateFamily(text, families, options) {
+  const value = cleanText(text);
+  if (!value) return null;
+  const captureSentence = options && options.captureSentence === true;
+  for (const family of Array.isArray(families) ? families : []) {
+    for (const pattern of family.patterns || []) {
+      const match = value.match(pattern);
+      if (!match) continue;
+      const raw = cleanText(match[0]);
       return {
-        exact_source_phrase: cleanText(sentence ? sentence[0] : match[0]),
-        exact_source_phrase_source_type: field.type,
-        exact_source_phrase_verbatim: true
+        family: family.family,
+        text: captureSentence ? sentenceContainingMatch(value, raw) : (family.label || raw),
+        visible: true,
+        promoted: family.promoted !== false,
+        rejected_reason: cleanText(family.rejected_reason || ''),
+        provenance_match: raw
+      };
+    }
+  }
+  return null;
+}
+
+function extractVisiblePhraseCandidate(title, snippet, metadata) {
+  for (const field of visibleCandidateFields(title, snippet, metadata)) {
+    const match = matchCandidateFamily(field.text, PHRASE_FAMILIES, { captureSentence: true });
+    if (match) {
+      return {
+        text: cleanText(match.text),
+        family: cleanText(match.family),
+        provenance: field.type,
+        visible: true,
+        promoted: true,
+        rejected_reason: '',
+        provenance_match: cleanText(match.provenance_match)
       };
     }
   }
   return {
-    exact_source_phrase: '',
-    exact_source_phrase_source_type: '',
-    exact_source_phrase_verbatim: false
+    text: '',
+    family: '',
+    provenance: '',
+    visible: false,
+    promoted: false,
+    rejected_reason: 'no_visible_exact_phrase',
+    provenance_match: ''
+  };
+}
+
+function extractVisibleStatusCandidate(title, snippet, metadata) {
+  for (const field of visibleCandidateFields(title, snippet, metadata)) {
+    const promotable = matchCandidateFamily(field.text, STATUS_PROMOTABLE_FAMILIES, { captureSentence: false });
+    if (promotable) {
+      return {
+        text: cleanText(promotable.text),
+        family: cleanText(promotable.family),
+        provenance: field.type,
+        visible: true,
+        promoted: true,
+        rejected_reason: '',
+        provenance_match: cleanText(promotable.provenance_match)
+      };
+    }
+    const blocked = matchCandidateFamily(field.text, STATUS_NON_PROMOTABLE_FAMILIES, { captureSentence: false });
+    if (blocked) {
+      return {
+        text: cleanText(blocked.text),
+        family: cleanText(blocked.family),
+        provenance: field.type,
+        visible: true,
+        promoted: false,
+        rejected_reason: cleanText(blocked.rejected_reason || `${blocked.family} is not promotable callable evidence`),
+        provenance_match: cleanText(blocked.provenance_match)
+      };
+    }
+  }
+  return {
+    text: '',
+    family: '',
+    provenance: '',
+    visible: false,
+    promoted: false,
+    rejected_reason: 'no_visible_status',
+    provenance_match: ''
+  };
+}
+
+function evaluateVisibleEvidenceForPromotion(input) {
+  input = input || {};
+  const phraseCandidate = input.phraseCandidate || {};
+  const statusCandidate = input.statusCandidate || {};
+  const fullAddress = input.fullAddress === true;
+  const propertySpecific = input.propertySpecific === true;
+  const sourceClassification = cleanText(input.sourceClassification);
+  const phraseSeen = phraseCandidate.visible === true;
+  const statusSeen = statusCandidate.visible === true;
+  const phrasePromotable = phraseSeen && phraseCandidate.promoted === true && !!cleanText(phraseCandidate.text);
+  const statusPromotable = statusSeen && statusCandidate.promoted === true && !!cleanText(statusCandidate.text);
+  const promoted = !!(fullAddress && propertySpecific && phrasePromotable && statusPromotable);
+  const reasons = [];
+
+  if (phraseSeen) reasons.push('phrase_candidate_seen');
+  if (statusSeen) reasons.push('status_candidate_seen');
+  if (phraseSeen && !phrasePromotable) reasons.push('phrase_candidate_rejected_reason');
+  if (statusSeen && !statusPromotable) reasons.push('status_candidate_rejected_reason');
+  if (propertySpecific && !phrasePromotable) reasons.push('property_url_but_missing_phrase');
+  if (propertySpecific && !statusPromotable) reasons.push('property_url_but_missing_status');
+  if (!propertySpecific) reasons.push('missing_property_url');
+  if (!fullAddress) reasons.push('missing_address');
+  if (sourceClassification && /exact_property_page|listing_property_page|auction_property_page|official_property_notice/i.test(sourceClassification) && !promoted) {
+    reasons.push('exact_property_page_rejected_reason');
+  }
+  if (phraseSeen && !promoted) reasons.push('source_phrase_dropped');
+  if (!statusSeen && propertySpecific) reasons.push('property_url_but_missing_status');
+  if (!phraseSeen && propertySpecific) reasons.push('property_url_but_missing_phrase');
+
+  return {
+    promoted,
+    exact_source_phrase: promoted ? cleanText(phraseCandidate.text) : '',
+    exact_source_phrase_source_type: promoted ? cleanText(phraseCandidate.provenance) : '',
+    exact_source_phrase_verbatim: promoted,
+    listing_status: statusSeen ? cleanText(statusCandidate.text) : 'Manual Verification Needed',
+    current_status_promoted: statusPromotable,
+    phrase_candidate_seen: phraseSeen,
+    phrase_candidate_rejected_reason: phraseSeen && !phrasePromotable ? cleanText(phraseCandidate.rejected_reason || 'phrase candidate not promotable') : '',
+    status_candidate_seen: statusSeen,
+    status_candidate_rejected_reason: statusSeen && !statusPromotable ? cleanText(statusCandidate.rejected_reason || 'status candidate not promotable') : '',
+    property_url_but_missing_phrase: propertySpecific && !phrasePromotable,
+    property_url_but_missing_status: propertySpecific && !statusPromotable,
+    exact_property_page_rejected_reason: propertySpecific && !promoted ? reasons.join(', ') : '',
+    reason_codes: Array.from(new Set(reasons.filter(Boolean)))
+  };
+}
+
+function phraseFromVisibleText(title, snippet) {
+  const candidate = extractVisiblePhraseCandidate(title, snippet, {});
+  return {
+    exact_source_phrase: candidate.visible ? candidate.text : '',
+    exact_source_phrase_source_type: candidate.visible ? candidate.provenance : '',
+    exact_source_phrase_verbatim: candidate.visible === true
   };
 }
 
@@ -234,17 +429,26 @@ function isCurrentStatus(status) {
 
 function conversionTrace(input) {
   const phraseFound = !!cleanText(input.possiblePhrase);
+  const phraseCandidateSeen = input.phrase_candidate_seen === true;
+  const statusCandidateSeen = input.status_candidate_seen === true;
   const propertySpecific = input.propertySpecific === true;
   const fullAddress = input.fullAddress === true;
   const currentStatus = input.currentStatus === true;
   const promoted = input.promoted === true;
   const reasons = [];
   if (phraseFound && !promoted) reasons.push('phrase_extracted_but_not_verified');
+  if (phraseCandidateSeen) reasons.push('phrase_candidate_seen');
+  if (statusCandidateSeen) reasons.push('status_candidate_seen');
+  if (cleanText(input.phrase_candidate_rejected_reason)) reasons.push('phrase_candidate_rejected_reason');
+  if (cleanText(input.status_candidate_rejected_reason)) reasons.push('status_candidate_rejected_reason');
   if (phraseFound && propertySpecific && !fullAddress) reasons.push('phrase_verified_but_missing_address');
   if (phraseFound && propertySpecific && fullAddress && !currentStatus) reasons.push('phrase_verified_but_missing_status');
   if (propertySpecific && !currentStatus) reasons.push('property_url_but_missing_status');
   if (!propertySpecific) reasons.push('missing_property_url');
   if (!propertySpecific && input.hasUrl) reasons.push('generic_url_rejected');
+  if (propertySpecific && !promoted && !cleanText(input.phrase_candidate_rejected_reason) && !cleanText(input.status_candidate_rejected_reason)) {
+    reasons.push('exact_property_page_rejected_reason');
+  }
   if (!fullAddress) reasons.push('missing_address');
   if (!currentStatus) reasons.push('missing_status');
   if (phraseFound && !promoted) reasons.push('source_phrase_dropped');
@@ -256,11 +460,18 @@ function conversionTrace(input) {
     possible_phrase_extracted: phraseFound,
     possible_phrase_text: cleanText(input.possiblePhrase),
     phrase_provenance: cleanText(input.phraseProvenance),
+    phrase_candidate_seen: phraseCandidateSeen,
+    phrase_candidate_rejected_reason: cleanText(input.phrase_candidate_rejected_reason),
+    status_candidate_seen: statusCandidateSeen,
+    status_candidate_rejected_reason: cleanText(input.status_candidate_rejected_reason),
     exact_source_phrase_assigned: promoted,
     exact_source_phrase_verbatim: promoted,
     full_address_found: fullAddress,
     property_specific_url: propertySpecific,
     current_status_found: currentStatus,
+    property_url_but_missing_phrase: !!input.property_url_but_missing_phrase,
+    property_url_but_missing_status: !!input.property_url_but_missing_status,
+    exact_property_page_rejected_reason: cleanText(input.exact_property_page_rejected_reason),
     contact_route_found: !!cleanText(input.publicContactRoute),
     final_bucket: promoted && fullAddress && propertySpecific && currentStatus ? 'Valid Leads - Needs Comps' : 'Research / Reference',
     rejection_reason: reasons.join(', '),
@@ -273,12 +484,18 @@ function emptyEvidenceConversionDiagnostics() {
     phrase_extracted_but_not_verified: 0,
     phrase_verified_but_missing_address: 0,
     phrase_verified_but_missing_status: 0,
+    property_url_but_missing_phrase: 0,
     property_url_but_missing_status: 0,
     generic_url_rejected: 0,
     missing_address: 0,
     missing_status: 0,
     missing_property_url: 0,
     source_phrase_dropped: 0,
+    phrase_candidate_seen: 0,
+    phrase_candidate_rejected_reason: 0,
+    status_candidate_seen: 0,
+    status_candidate_rejected_reason: 0,
+    exact_property_page_rejected_reason: 0,
     snippet_phrases_found: 0,
     exact_phrases_promoted: 0
   };
@@ -290,7 +507,15 @@ function summarizeEvidenceConversion(cards) {
     const trace = card && card.evidence_conversion_trace || {};
     if (trace.possible_phrase_extracted) out.snippet_phrases_found += 1;
     if (trace.exact_source_phrase_assigned) out.exact_phrases_promoted += 1;
+    if (trace.phrase_candidate_seen === true) out.phrase_candidate_seen += 1;
+    if (cleanText(trace.phrase_candidate_rejected_reason)) out.phrase_candidate_rejected_reason += 1;
+    if (trace.status_candidate_seen === true) out.status_candidate_seen += 1;
+    if (cleanText(trace.status_candidate_rejected_reason)) out.status_candidate_rejected_reason += 1;
+    if (trace.property_url_but_missing_phrase === true) out.property_url_but_missing_phrase += 1;
+    if (trace.property_url_but_missing_status === true) out.property_url_but_missing_status += 1;
+    if (cleanText(trace.exact_property_page_rejected_reason)) out.exact_property_page_rejected_reason += 1;
     for (const reason of Array.isArray(trace.reason_codes) ? trace.reason_codes : []) {
+      if (/^(phrase_candidate_seen|phrase_candidate_rejected_reason|status_candidate_seen|status_candidate_rejected_reason|property_url_but_missing_phrase|property_url_but_missing_status|exact_property_page_rejected_reason)$/.test(reason)) continue;
       if (Object.prototype.hasOwnProperty.call(out, reason)) out[reason] += 1;
     }
   }
@@ -321,25 +546,51 @@ function normalizeSearchResult(result, context) {
   const domain = cleanText(result.source_domain || result.displayed_url && sourceDomain(result.displayed_url) || sourceDomain(sourceUrl));
   const sourceClassification = geminiProvider.classifySourceUrl(sourceUrl, title, snippet);
   const propertySpecific = isPropertySpecificSearchUrl(sourceUrl, title, snippet);
-  const phrase = phraseFromVisibleText(title, snippet);
+  const visibleMetadata = Object.assign({}, result, {
+    source_title: title,
+    source_snippet: snippet,
+    search_result_snippet: snippet,
+    evidence_snippet: snippet || title,
+    displayed_domain: domain,
+    source_domain: domain,
+    displayed_url: cleanText(result.displayed_url || result.displayedLink),
+    source_classification: sourceClassification
+  });
+  const phrase = extractVisiblePhraseCandidate(title, snippet, visibleMetadata);
+  const statusCandidate = extractVisibleStatusCandidate(title, snippet, visibleMetadata);
   const addressInfo = resultAddressInfo(result, context, sourceUrl, title, snippet);
   const address = cleanText(addressInfo.address);
   const fullAddress = addressInfo.full === true;
-  const status = cleanText(result.listing_status) || listingStatusFromSnippet(title, snippet, { propertySpecific });
-  const currentStatus = isCurrentStatus(status);
-  const promotedPhrase = phrase.exact_source_phrase && propertySpecific && fullAddress && currentStatus ? phrase.exact_source_phrase : '';
+  const promotion = evaluateVisibleEvidenceForPromotion({
+    phraseCandidate: phrase,
+    statusCandidate,
+    fullAddress,
+    propertySpecific,
+    sourceClassification
+  });
+  const promotedPhrase = promotion.exact_source_phrase;
+  const status = cleanText(promotion.listing_status || statusCandidate.text || result.listing_status || 'Manual Verification Needed');
+  const currentStatus = promotion.current_status_promoted === true;
   const trace = conversionTrace({
     sourceUrl,
     title,
     snippet,
-    possiblePhrase: phrase.exact_source_phrase,
-    phraseProvenance: phrase.exact_source_phrase_source_type,
+    possiblePhrase: phrase.text,
+    phraseProvenance: phrase.provenance,
+    phrase_candidate_seen: promotion.phrase_candidate_seen,
+    phrase_candidate_rejected_reason: promotion.phrase_candidate_rejected_reason,
+    status_candidate_seen: promotion.status_candidate_seen,
+    status_candidate_rejected_reason: promotion.status_candidate_rejected_reason,
+    property_url_but_missing_phrase: promotion.property_url_but_missing_phrase,
+    property_url_but_missing_status: promotion.property_url_but_missing_status,
+    exact_property_page_rejected_reason: promotion.exact_property_page_rejected_reason,
     promoted: !!promotedPhrase,
     propertySpecific,
     fullAddress,
     currentStatus,
     hasUrl: !!sourceUrl,
-    publicContactRoute: result.public_contact_route
+    publicContactRoute: result.public_contact_route,
+    sourceClassification
   });
   const missing = []
     .concat(Array.isArray(result.missing_evidence) ? result.missing_evidence : [])
@@ -385,10 +636,22 @@ function normalizeSearchResult(result, context) {
     exact_source_phrase_source_type: promotedPhrase ? phrase.exact_source_phrase_source_type : '',
     exact_source_phrase_checked_at: promotedPhrase ? retrievedAt : '',
     exact_source_phrase_verbatim: !!promotedPhrase,
-    possible_exact_phrase: phrase.exact_source_phrase,
-    phrase_provenance: phrase.exact_source_phrase ? phrase.exact_source_phrase_source_type : '',
-    exact_source_phrase_candidate: phrase.exact_source_phrase,
-    exact_source_phrase_verbatim_candidate: phrase.exact_source_phrase_verbatim === true,
+    possible_exact_phrase: phrase.text,
+    phrase_provenance: phrase.provenance,
+    exact_source_phrase_candidate: phrase.text,
+    exact_source_phrase_verbatim_candidate: phrase.visible === true,
+    phrase_candidate_seen: phrase.visible === true,
+    phrase_candidate_text: phrase.text,
+    phrase_candidate_family: phrase.family,
+    phrase_candidate_provenance: phrase.provenance,
+    phrase_candidate_promoted: phrase.promoted === true,
+    phrase_candidate_rejected_reason: phrase.rejected_reason,
+    status_candidate_seen: statusCandidate.visible === true,
+    status_candidate_text: statusCandidate.text,
+    status_candidate_family: statusCandidate.family,
+    status_candidate_provenance: statusCandidate.provenance,
+    status_candidate_promoted: statusCandidate.promoted === true,
+    status_candidate_rejected_reason: statusCandidate.rejected_reason,
     source_type: geminiProvider.classifySourceType(sourceUrl),
     source_classification: sourceClassification,
     property_specific_source: propertySpecific,
@@ -412,7 +675,7 @@ function normalizeSearchResult(result, context) {
   candidate.lead_evidence = leadEvidence.normalizeLeadEvidence(withoutUnpromotedPhraseFallback(candidate), {
     exact_source_phrase: promotedPhrase,
     exact_source_phrase_verbatim: !!promotedPhrase,
-    exact_source_phrase_source_type: promotedPhrase ? phrase.exact_source_phrase_source_type : '',
+    exact_source_phrase_source_type: promotedPhrase ? phrase.provenance : '',
     exact_source_phrase_source_url: promotedPhrase ? sourceUrl : '',
     exact_source_phrase_checked_at: promotedPhrase ? retrievedAt : '',
     listing_status: candidate.listing_status,
@@ -428,6 +691,9 @@ function normalizeSearchResults(results, context) {
 module.exports = {
   WHOLESALE_PHRASE_RE,
   phraseFromVisibleText,
+  extractVisiblePhraseCandidate,
+  extractVisibleStatusCandidate,
+  evaluateVisibleEvidenceForPromotion,
   normalizeSearchResult,
   normalizeSearchResults,
   listingStatusFromSnippet,

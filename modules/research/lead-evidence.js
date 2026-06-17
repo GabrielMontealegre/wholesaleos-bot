@@ -3,9 +3,9 @@
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const propertyIdentity = require('./property-identity');
 
-const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|investor special|investor opportunity|cash only|fixer|needs\s+(?:tlc|work|repair)|rehab|back on (?:the )?market|relisted|price (?:cut|reduced|drop|reduction)|estate sale|fsbo|for sale by owner|hard money only|traditional financing unavailable|pre[- ]?foreclosure)\b/i;
+const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable)\b/i;
 const CLOSED_RE = /\b(sold|closed|off[- ]?market|auction ended|sale completed)\b/i;
-const CURRENT_RE = /\b(active|for sale|listed|available|pending|contingent|back on market|relisted|price reduced|price cut)\b/i;
+const CURRENT_RE = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|auction date|foreclosure sale)\b/i;
 const EXCLUDED_RE = /\b(bank[- ]?owned|reo|real estate owned|completed auction|auction ended|sale completed)\b/i;
 
 function cleanText(value) {
@@ -76,7 +76,7 @@ function exactPhraseFrom(input) {
     Array.isArray(input && input.distress_motivation_signals) ? input.distress_motivation_signals.join(' ') : '',
     input && input.scout_context && Array.isArray(input.scout_context.distress_signals) ? input.scout_context.distress_signals.join(' ') : ''
   ].map(cleanText).filter(Boolean).join(' ');
-  const match = text.match(/[^.!?]*\b(?:as[- ]?is|as is sale|investor special|investor opportunity|cash only|fixer|needs\s+(?:tlc|work|repair)|rehab|back on (?:the )?market|relisted|price (?:cut|reduced|drop|reduction)|estate sale|fsbo|for sale by owner|hard money only|traditional financing unavailable|pre[- ]?foreclosure)\b[^.!?]*[.!?]?/i);
+  const match = text.match(/[^.!?]*\b(?:as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs?)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable)\b[^.!?]*[.!?]?/i);
   return match ? cleanText(match[0]) : '';
 }
 

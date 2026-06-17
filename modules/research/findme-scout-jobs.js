@@ -181,17 +181,17 @@ function hasSourceBackedWholesaleCriterion(record, card, signals) {
   const text = criterionEvidenceText(record, card);
   if (!text) return false;
   if (/source evidence exists|verified sold comps are still needed|public source result|gemini returned a source url/i.test(text) &&
-      !/\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b/i.test(text)) {
+      !leadEvidence.WHOLESALE_PHRASE_RE.test(text)) {
     return false;
   }
-  return /\b(as.?is|as is sale|fixer|needs\s+(tlc|work|repair)|rehab|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|notice of default|code violation|tax delinquent)\b/i.test(text);
+  return leadEvidence.WHOLESALE_PHRASE_RE.test(text);
 }
 
 function isCurrentAcquisitionOpportunity(record, card) {
   const text = [recordText(record), criterionEvidenceText(record, card)].join(' ');
   const statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
   const hasSoldOrClosed = /\b(sold|closed|off.?market|auction ended|sale completed)\b/i.test(statusText);
-  const hasCurrentSignal = /\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText);
+  const hasCurrentSignal = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on(?: the)? market|relisted|price reduced|price cut|price drop|price reduction|new listing|auction date|foreclosure sale)\b/i.test(statusText);
   if (hasSoldOrClosed && !hasCurrentSignal) return false;
   return true;
 }
@@ -652,7 +652,7 @@ function excludedByDefault(card, job) {
   if (job && job.include_auction !== true && /\b(auction\.com|realauction|hubzu|completed auction|auction ended|sale completed)\b/i.test(text)) return 'auction/completed sale excluded';
   if (job && job.exclude_sold !== false) {
     const statusText = text.replace(/\b(verified sold comps?|candidate sold comps?|sold comps?)\b/ig, ' ');
-    if (/\b(sold|closed|off[- ]?market|sale completed)\b/i.test(statusText) && !/\b(active|for sale|listed|pending|contingent|back on market|relisted|price reduced|price cut)\b/i.test(statusText)) {
+    if (/\b(sold|closed|off[- ]?market|sale completed)\b/i.test(statusText) && !/\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on(?: the)? market|relisted|price reduced|price cut|price drop|price reduction|new listing|auction date|foreclosure sale)\b/i.test(statusText)) {
       return 'sold/closed source excluded';
     }
   }
@@ -873,12 +873,18 @@ function auditBatchCards(cards, job, providerSummary) {
     phrase_extracted_but_not_verified: 0,
     phrase_verified_but_missing_address: 0,
     phrase_verified_but_missing_status: 0,
+    property_url_but_missing_phrase: 0,
     property_url_but_missing_status: 0,
     generic_url_rejected: 0,
     missing_address: 0,
     missing_status: 0,
     missing_property_url: 0,
     source_phrase_dropped: 0,
+    phrase_candidate_seen: 0,
+    phrase_candidate_rejected_reason: 0,
+    status_candidate_seen: 0,
+    status_candidate_rejected_reason: 0,
+    exact_property_page_rejected_reason: 0,
     snippet_phrases_found: 0,
     exact_phrases_promoted: 0
   }, providerSummary && providerSummary.evidence_conversion_diagnostics || {});
@@ -1060,11 +1066,11 @@ function sourceBackedWholesalePhrase(record, card) {
     'source_snippet',
     'evidence_snippet'
   ]) || card && (card.matched_source_phrase || card.source_excerpt || card.description_excerpt || card.source_snippet || card.evidence_snippet));
-  if (exact && /\b(as.?is|fixer|needs\s+(tlc|work|repair)|investor special|investor opportunity|cash only|price (cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b/i.test(exact)) {
+  if (exact && leadEvidence.WHOLESALE_PHRASE_RE.test(exact)) {
     return exact;
   }
-  const sentenceMatch = cleanText(text).match(/(?:[^.!?]*\b(?:as.?is|fixer|needs\s+(?:tlc|work|repair)|investor special|investor opportunity|cash only|price (?:cut|reduced|drop|reduction)|long dom|days on market|back on market|relisted|fsbo|for sale by owner|pre.?foreclos|code violation|tax delinquent)\b[^.!?]*[.!?]?)/i);
-  return sentenceMatch ? cleanText(sentenceMatch[0]) : '';
+  const sentenceMatch = cleanText(text).split(/(?<=[.!?;|])\s+/).find((segment) => leadEvidence.WHOLESALE_PHRASE_RE.test(segment));
+  return sentenceMatch ? cleanText(sentenceMatch) : (cleanText(text).match(leadEvidence.WHOLESALE_PHRASE_RE)?.[0] || '');
 }
 
 function compStatusFor(record) {
@@ -1115,7 +1121,7 @@ function topFactsFor(record, sourceType, signals) {
     if (signal && signal.label) facts.push(`Criteria: ${signal.label}`);
   });
   const text = recordText(record);
-  if (/\b(as.?is|fixer|needs tlc|cash only|investor special)\b/i.test(text)) facts.push('Visible as-is/fixer language.');
+  if (leadEvidence.WHOLESALE_PHRASE_RE.test(text)) facts.push('Visible source-backed distress language.');
   if (/\b(price cut|price reduced|price drop|reduction)\b/i.test(text)) facts.push('Visible price-reduction language.');
   if (/\b(auction|reo|bank.?owned)\b/i.test(text)) facts.push('Auction/REO candidate only.');
   return facts.slice(0, 5);
@@ -1680,12 +1686,18 @@ function providerSummaryFrom(result) {
       phrase_extracted_but_not_verified: Number(evidenceConversion.phrase_extracted_but_not_verified || 0) || 0,
       phrase_verified_but_missing_address: Number(evidenceConversion.phrase_verified_but_missing_address || 0) || 0,
       phrase_verified_but_missing_status: Number(evidenceConversion.phrase_verified_but_missing_status || 0) || 0,
+      property_url_but_missing_phrase: Number(evidenceConversion.property_url_but_missing_phrase || 0) || 0,
       property_url_but_missing_status: Number(evidenceConversion.property_url_but_missing_status || 0) || 0,
       generic_url_rejected: Number(evidenceConversion.generic_url_rejected || 0) || 0,
       missing_address: Number(evidenceConversion.missing_address || 0) || 0,
       missing_status: Number(evidenceConversion.missing_status || 0) || 0,
       missing_property_url: Number(evidenceConversion.missing_property_url || 0) || 0,
       source_phrase_dropped: Number(evidenceConversion.source_phrase_dropped || 0) || 0,
+      phrase_candidate_seen: Number(evidenceConversion.phrase_candidate_seen || 0) || 0,
+      phrase_candidate_rejected_reason: Number(evidenceConversion.phrase_candidate_rejected_reason || 0) || 0,
+      status_candidate_seen: Number(evidenceConversion.status_candidate_seen || 0) || 0,
+      status_candidate_rejected_reason: Number(evidenceConversion.status_candidate_rejected_reason || 0) || 0,
+      exact_property_page_rejected_reason: Number(evidenceConversion.exact_property_page_rejected_reason || 0) || 0,
       snippet_phrases_found: Number(evidenceConversion.snippet_phrases_found || 0) || 0,
       exact_phrases_promoted: Number(evidenceConversion.exact_phrases_promoted || 0) || 0
     },
