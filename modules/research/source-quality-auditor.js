@@ -24,6 +24,7 @@ function auditBatch(input) {
   const cards = Array.isArray(input.cards) ? input.cards : [];
   const batchAudit = input.batchAudit || {};
   const providerSummary = input.providerSummary || {};
+  const conversion = providerSummary.evidence_conversion_diagnostics || batchAudit.evidence_conversion_diagnostics || {};
   const buckets = {
     no_exact_phrase: countCards(cards, (card) => !cleanText(card && (card.exact_source_phrase || card.matched_source_phrase || card.lead_evidence && card.lead_evidence.exact_source_phrase))),
     source_blocked: countCards(cards, (card) => /blocked/i.test(cardText(card))),
@@ -33,6 +34,9 @@ function auditBatch(input) {
     missing_address: countCards(cards, (card) => /complete canonical address|full address|usable property address/i.test(cardText(card))),
     sold_or_stale: countCards(cards, (card) => /sold|closed|stale/i.test(cardText(card))),
     weak_snippets: Number(providerSummary.weak_snippets_count || 0) || 0,
+    source_phrase_dropped: Number(conversion.source_phrase_dropped || 0) || 0,
+    phrase_verified_but_missing_address: Number(conversion.phrase_verified_but_missing_address || 0) || 0,
+    phrase_verified_but_missing_status: Number(conversion.phrase_verified_but_missing_status || 0) || 0,
     enrichment_failed: Number(providerSummary.evidence_enrichment_attempts || 0) && !Number(providerSummary.evidence_enriched_count || 0) ? Number(providerSummary.evidence_enrichment_attempts || 0) : 0,
     provider_not_configured: /not configured/i.test(`${providerSummary.search_fallback_status || ''} ${providerSummary.search_provider_status || ''}`) ? 1 : 0,
     provider_unavailable: /unavailable|failed/i.test(`${providerSummary.search_fallback_status || ''} ${providerSummary.search_provider_status || ''}`) ? 1 : 0,

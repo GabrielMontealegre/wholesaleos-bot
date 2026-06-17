@@ -699,6 +699,7 @@ async function runSearchProvider(input = {}, options = {}) {
       provider: cfg.provider,
       query: executedQuery
     }));
+    const evidenceConversionDiagnostics = snippetEvidence.summarizeEvidenceConversion(cards);
     const results = cards.map((card) => ({
       title: card.source_title,
       snippet: card.source_snippet,
@@ -708,10 +709,13 @@ async function runSearchProvider(input = {}, options = {}) {
       rank: card.provider_result_rank,
       retrieved_at: card.retrieved_at,
       possible_address: card.address || card.display_address,
-      possible_exact_phrase: card.exact_source_phrase,
-      phrase_provenance: card.exact_source_phrase_source_type,
+      possible_exact_phrase: card.exact_source_phrase_candidate || card.possible_exact_phrase || card.exact_source_phrase,
+      phrase_provenance: card.phrase_provenance || card.exact_source_phrase_source_type,
+      exact_source_phrase_candidate: card.exact_source_phrase_candidate || '',
+      exact_source_phrase_verbatim_candidate: card.exact_source_phrase_verbatim_candidate === true,
       confidence: card.confidence,
-      missing_evidence: card.missing_evidence
+      missing_evidence: card.missing_evidence,
+      evidence_conversion_reason_codes: card.evidence_conversion_reason_codes || []
     }));
     const finishedAt = nowIso();
     const out = Object.assign({}, base, {
@@ -726,8 +730,10 @@ async function runSearchProvider(input = {}, options = {}) {
       next_action: providerNextAction(status) || base.next_action,
       source_urls_found_count: cards.filter((card) => card.source_url).length,
       candidates_found: cards.length,
-      snippet_phrases_verified: cards.filter((card) => card.exact_source_phrase && card.exact_source_phrase_verbatim === true).length,
+      snippet_phrases_verified: evidenceConversionDiagnostics.snippet_phrases_found,
+      exact_phrases_verified: evidenceConversionDiagnostics.exact_phrases_promoted,
       weak_snippets_count: cards.filter((card) => !card.exact_source_phrase || card.property_specific_source !== true).length,
+      evidence_conversion_diagnostics: evidenceConversionDiagnostics,
       search_results_found: results.length,
       source_urls: cards.map((card) => card.source_url).filter(Boolean).slice(0, 20),
       message: status === 'provider_available'

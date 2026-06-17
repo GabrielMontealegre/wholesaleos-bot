@@ -4,10 +4,12 @@ const crypto = require('crypto');
 
 const geminiProvider = require('./gemini-scout-discovery-provider');
 const leadEvidence = require('./lead-evidence');
+const propertyIdentity = require('./property-identity');
 
 const WHOLESALE_PHRASE_RE = leadEvidence.WHOLESALE_PHRASE_RE;
-const CURRENT_RE = /\b(active|for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|pending|contingent)\b/i;
+const CURRENT_RE = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|pending|contingent)\b/i;
 const CLOSED_RE = /\b(sold|closed|off[- ]?market|auction ended|sale completed)\b/i;
+const LISTING_CONTEXT_RE = /\b(listing|listed|property|home|house|for sale|redfin|realtor|zillow|har)\b/i;
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -48,24 +50,176 @@ function phraseFromVisibleText(title, snippet) {
   };
 }
 
-function listingStatusFromSnippet(title, snippet) {
+function listingStatusFromSnippet(title, snippet, options) {
+  options = options || {};
   const text = `${cleanText(title)} ${cleanText(snippet)}`;
   if (CLOSED_RE.test(text) && !CURRENT_RE.test(text)) return 'Sold/closed or historical';
-  if (CURRENT_RE.test(text) || WHOLESALE_PHRASE_RE.test(text)) return 'Current or plausibly current';
+  if (CURRENT_RE.test(text)) return 'plausibly_current_from_search_snippet';
+  if (options.propertySpecific === true && LISTING_CONTEXT_RE.test(text) && /\b(cash only|investor special)\b/i.test(text)) {
+    return 'plausibly_current_from_search_snippet';
+  }
   return 'Manual Verification Needed';
 }
 
-function resultAddress(result, context) {
+function resultAddressInfo(result, context, sourceUrl, title, snippet) {
   const direct = cleanText(result && (result.possible_address || result.address || result.property_address));
-  if (direct) return direct;
+  const displayed = cleanText(result && result.displayed_url);
+  const directCanonical = direct ? propertyIdentity.canonicalAddress(Object.assign({}, result || {}, {
+    address_or_source_text: direct,
+    source_url: sourceUrl,
+    source_title: title,
+    source_snippet: snippet
+  }, context || {})) : '';
+  if (directCanonical) {
+    return {
+      address: directCanonical,
+      full: propertyIdentity.isCompleteAddress(directCanonical),
+      basis: 'search_result_address'
+    };
+  }
+  const urlCanonical = propertyIdentity.canonicalAddress(Object.assign({}, result || {}, context || {}, {
+    source_url: sourceUrl,
+    canonical_source_url: sourceUrl,
+    source_title: title
+  }));
+  if (urlCanonical && propertyIdentity.isCompleteAddress(urlCanonical)) {
+    return {
+      address: urlCanonical,
+      full: true,
+      basis: 'property_url'
+    };
+  }
   const identity = geminiProvider.extractAddressFromSourceText(
-    result && result.title,
-    result && result.snippet,
-    result && result.url,
+    title,
+    snippet,
+    displayed,
+    sourceUrl,
     context && context.city,
     context && context.state
   );
-  return cleanText(identity && identity.normalized_address);
+  const textAddress = cleanText(identity && identity.normalized_address);
+  if (textAddress) {
+    const canonical = propertyIdentity.canonicalAddress(Object.assign({}, result || {}, context || {}, {
+      address_or_source_text: textAddress,
+      source_url: sourceUrl,
+      source_title: title
+    }));
+    return {
+      address: canonical || textAddress,
+      full: propertyIdentity.isCompleteAddress(canonical || textAddress),
+      basis: 'visible_text'
+    };
+  }
+  return {
+    address: '',
+    full: false,
+    basis: ''
+  };
+}
+
+function isPropertySpecificSearchUrl(sourceUrl, title, snippet) {
+  if (!isHttpUrl(sourceUrl)) return false;
+  const classification = geminiProvider.classifySourceUrl(sourceUrl, title, snippet);
+  if (geminiProvider.sourceClassificationIsGeneric && geminiProvider.sourceClassificationIsGeneric(classification)) return false;
+  if (geminiProvider.isPropertySpecificSourceUrl(sourceUrl)) return true;
+  try {
+    const parsed = new URL(cleanText(sourceUrl));
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const pathText = decodeURIComponent(parsed.pathname || '');
+    if (/\b\d{2,7}\b/.test(pathText) &&
+        /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(pathText) &&
+        /\b(listing|details?|property|homes?|house|real-estate|realestate)\b/i.test(pathText) &&
+        !/\b(search|query|results|lookup|find|city|county|category|blog|article|archive)\b/i.test(pathText) &&
+        !/google\./i.test(host)) {
+      return true;
+    }
+  } catch (error) {
+    return false;
+  }
+  return false;
+}
+
+function isCurrentStatus(status) {
+  const text = cleanText(status);
+  return !!text && !/^Manual Verification Needed$/i.test(text) && !CLOSED_RE.test(text);
+}
+
+function conversionTrace(input) {
+  const phraseFound = !!cleanText(input.possiblePhrase);
+  const propertySpecific = input.propertySpecific === true;
+  const fullAddress = input.fullAddress === true;
+  const currentStatus = input.currentStatus === true;
+  const promoted = input.promoted === true;
+  const reasons = [];
+  if (phraseFound && !promoted) reasons.push('phrase_extracted_but_not_verified');
+  if (phraseFound && propertySpecific && !fullAddress) reasons.push('phrase_verified_but_missing_address');
+  if (phraseFound && propertySpecific && fullAddress && !currentStatus) reasons.push('phrase_verified_but_missing_status');
+  if (propertySpecific && !currentStatus) reasons.push('property_url_but_missing_status');
+  if (!propertySpecific) reasons.push('missing_property_url');
+  if (!propertySpecific && input.hasUrl) reasons.push('generic_url_rejected');
+  if (!fullAddress) reasons.push('missing_address');
+  if (!currentStatus) reasons.push('missing_status');
+  if (phraseFound && !promoted) reasons.push('source_phrase_dropped');
+  return {
+    candidate_url: cleanText(input.sourceUrl),
+    source_domain: sourceDomain(input.sourceUrl),
+    title_present: !!cleanText(input.title),
+    snippet_present: !!cleanText(input.snippet),
+    possible_phrase_extracted: phraseFound,
+    possible_phrase_text: cleanText(input.possiblePhrase),
+    phrase_provenance: cleanText(input.phraseProvenance),
+    exact_source_phrase_assigned: promoted,
+    exact_source_phrase_verbatim: promoted,
+    full_address_found: fullAddress,
+    property_specific_url: propertySpecific,
+    current_status_found: currentStatus,
+    contact_route_found: !!cleanText(input.publicContactRoute),
+    final_bucket: promoted && fullAddress && propertySpecific && currentStatus ? 'Valid Leads - Needs Comps' : 'Research / Reference',
+    rejection_reason: reasons.join(', '),
+    reason_codes: Array.from(new Set(reasons))
+  };
+}
+
+function emptyEvidenceConversionDiagnostics() {
+  return {
+    phrase_extracted_but_not_verified: 0,
+    phrase_verified_but_missing_address: 0,
+    phrase_verified_but_missing_status: 0,
+    property_url_but_missing_status: 0,
+    generic_url_rejected: 0,
+    missing_address: 0,
+    missing_status: 0,
+    missing_property_url: 0,
+    source_phrase_dropped: 0,
+    snippet_phrases_found: 0,
+    exact_phrases_promoted: 0
+  };
+}
+
+function summarizeEvidenceConversion(cards) {
+  const out = emptyEvidenceConversionDiagnostics();
+  for (const card of Array.isArray(cards) ? cards : []) {
+    const trace = card && card.evidence_conversion_trace || {};
+    if (trace.possible_phrase_extracted) out.snippet_phrases_found += 1;
+    if (trace.exact_source_phrase_assigned) out.exact_phrases_promoted += 1;
+    for (const reason of Array.isArray(trace.reason_codes) ? trace.reason_codes : []) {
+      if (Object.prototype.hasOwnProperty.call(out, reason)) out[reason] += 1;
+    }
+  }
+  return out;
+}
+
+function withoutUnpromotedPhraseFallback(card) {
+  if (!card || card.suppress_exact_phrase_fallback !== true) return card;
+  return Object.assign({}, card, {
+    exact_source_phrase: '',
+    matched_source_phrase: '',
+    source_excerpt: '',
+    description_excerpt: '',
+    source_snippet: '',
+    search_result_snippet: '',
+    evidence_snippet: ''
+  });
 }
 
 function normalizeSearchResult(result, context) {
@@ -78,15 +232,33 @@ function normalizeSearchResult(result, context) {
   const snippet = cleanText(result.snippet || result.description);
   const domain = cleanText(result.source_domain || result.displayed_url && sourceDomain(result.displayed_url) || sourceDomain(sourceUrl));
   const sourceClassification = geminiProvider.classifySourceUrl(sourceUrl, title, snippet);
-  const propertySpecific = geminiProvider.isPropertySpecificSourceUrl(sourceUrl);
+  const propertySpecific = isPropertySpecificSearchUrl(sourceUrl, title, snippet);
   const phrase = phraseFromVisibleText(title, snippet);
-  const address = resultAddress(result, context);
+  const addressInfo = resultAddressInfo(result, context, sourceUrl, title, snippet);
+  const address = cleanText(addressInfo.address);
+  const fullAddress = addressInfo.full === true;
+  const status = cleanText(result.listing_status) || listingStatusFromSnippet(title, snippet, { propertySpecific });
+  const currentStatus = isCurrentStatus(status);
+  const promotedPhrase = phrase.exact_source_phrase && propertySpecific && fullAddress && currentStatus ? phrase.exact_source_phrase : '';
+  const trace = conversionTrace({
+    sourceUrl,
+    title,
+    snippet,
+    possiblePhrase: phrase.exact_source_phrase,
+    phraseProvenance: phrase.exact_source_phrase_source_type,
+    promoted: !!promotedPhrase,
+    propertySpecific,
+    fullAddress,
+    currentStatus,
+    hasUrl: !!sourceUrl,
+    publicContactRoute: result.public_contact_route
+  });
   const missing = []
     .concat(Array.isArray(result.missing_evidence) ? result.missing_evidence : [])
     .concat(!propertySpecific ? ['property-specific source URL'] : [])
-    .concat(!address ? ['complete canonical address'] : [])
-    .concat(!phrase.exact_source_phrase ? ['exact source-backed wholesale phrase'] : []);
-  const status = listingStatusFromSnippet(title, snippet);
+    .concat(!fullAddress ? ['complete canonical address'] : [])
+    .concat(!promotedPhrase ? ['exact source-backed wholesale phrase'] : [])
+    .concat(!currentStatus ? ['current listing status'] : []);
   const candidate = {
     card_id: hashId('fmc', `search|${sourceUrl}|${title}|${address}`),
     candidate_id: hashId('spf', `${sourceUrl}|${title}|${address}`),
@@ -112,18 +284,21 @@ function normalizeSearchResult(result, context) {
     source_snippet: snippet,
     search_result_snippet: snippet,
     evidence_snippet: snippet || title,
-    exact_source_phrase: phrase.exact_source_phrase,
-    matched_source_phrase: phrase.exact_source_phrase,
-    exact_source_phrase_source_url: phrase.exact_source_phrase ? sourceUrl : '',
-    exact_source_phrase_source_type: phrase.exact_source_phrase_source_type,
-    exact_source_phrase_checked_at: phrase.exact_source_phrase ? retrievedAt : '',
-    exact_source_phrase_verbatim: phrase.exact_source_phrase_verbatim,
+    exact_source_phrase: promotedPhrase,
+    matched_source_phrase: promotedPhrase,
+    exact_source_phrase_source_url: promotedPhrase ? sourceUrl : '',
+    exact_source_phrase_source_type: promotedPhrase ? phrase.exact_source_phrase_source_type : '',
+    exact_source_phrase_checked_at: promotedPhrase ? retrievedAt : '',
+    exact_source_phrase_verbatim: !!promotedPhrase,
     possible_exact_phrase: phrase.exact_source_phrase,
     phrase_provenance: phrase.exact_source_phrase ? phrase.exact_source_phrase_source_type : '',
+    exact_source_phrase_candidate: phrase.exact_source_phrase,
+    exact_source_phrase_verbatim_candidate: phrase.exact_source_phrase_verbatim === true,
     source_type: geminiProvider.classifySourceType(sourceUrl),
     source_classification: sourceClassification,
     property_specific_source: propertySpecific,
-    listing_status: cleanText(result.listing_status) || status,
+    listing_status: status,
+    address_recovery_basis: addressInfo.basis,
     public_contact_route: cleanText(result.public_contact_route),
     asking_price: cleanText(result.asking_price || result.price),
     beds: cleanText(result.beds),
@@ -131,16 +306,20 @@ function normalizeSearchResult(result, context) {
     sqft: cleanText(result.sqft),
     missing_evidence: Array.from(new Set(missing.map(cleanText).filter(Boolean))),
     risk_flags: propertySpecific ? [] : ['generic search result'],
-    confidence: phrase.exact_source_phrase && propertySpecific ? 'medium' : 'low',
-    can_send_to_analyzer: propertySpecific && !!phrase.exact_source_phrase,
+    confidence: promotedPhrase && propertySpecific ? 'medium' : 'low',
+    can_send_to_analyzer: propertySpecific && !!promotedPhrase,
+    suppress_exact_phrase_fallback: !promotedPhrase,
+    evidence_conversion_trace: trace,
+    evidence_conversion_reason_codes: trace.reason_codes,
     preview_only: true,
     should_ingest: false
   };
-  candidate.lead_evidence = leadEvidence.normalizeLeadEvidence(candidate, {
-    exact_source_phrase_verbatim: phrase.exact_source_phrase_verbatim === true,
-    exact_source_phrase_source_type: phrase.exact_source_phrase_source_type,
-    exact_source_phrase_source_url: phrase.exact_source_phrase ? sourceUrl : '',
-    exact_source_phrase_checked_at: phrase.exact_source_phrase ? retrievedAt : '',
+  candidate.lead_evidence = leadEvidence.normalizeLeadEvidence(withoutUnpromotedPhraseFallback(candidate), {
+    exact_source_phrase: promotedPhrase,
+    exact_source_phrase_verbatim: !!promotedPhrase,
+    exact_source_phrase_source_type: promotedPhrase ? phrase.exact_source_phrase_source_type : '',
+    exact_source_phrase_source_url: promotedPhrase ? sourceUrl : '',
+    exact_source_phrase_checked_at: promotedPhrase ? retrievedAt : '',
     listing_status: candidate.listing_status,
     source_checked_at: retrievedAt
   });
@@ -156,5 +335,7 @@ module.exports = {
   phraseFromVisibleText,
   normalizeSearchResult,
   normalizeSearchResults,
-  listingStatusFromSnippet
+  listingStatusFromSnippet,
+  summarizeEvidenceConversion,
+  isPropertySpecificSearchUrl
 };

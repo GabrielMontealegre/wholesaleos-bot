@@ -736,8 +736,21 @@ function materialChangeFrom(prior, card, evidence) {
   return changes;
 }
 
+function withoutUnpromotedPhraseFallback(card) {
+  if (!card || card.suppress_exact_phrase_fallback !== true) return card;
+  return Object.assign({}, card, {
+    exact_source_phrase: '',
+    matched_source_phrase: '',
+    source_excerpt: '',
+    description_excerpt: '',
+    source_snippet: '',
+    search_result_snippet: '',
+    evidence_snippet: ''
+  });
+}
+
 function qualityGateCard(card, job, context) {
-  const evidence = leadEvidence.normalizeLeadEvidence(card || {}, {
+  const evidence = leadEvidence.normalizeLeadEvidence(withoutUnpromotedPhraseFallback(card || {}), {
     discovery_batch_id: job.discovery_batch_id || job.job_id,
     discovery_request_id: job.discovery_request_id || job.operator_request_id,
     first_discovered_at: cleanText(card && card.first_discovered_at || card && card.created_at || job.created_at),
@@ -792,7 +805,7 @@ function qualityGateCard(card, job, context) {
     : batchGroup === 'Rejected'
       ? 'Junk/Archive'
       : cleanText(card && card.status) || 'Needs Source Proof';
-  const finalEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, card || {}, evidence), {
+  const finalEvidence = leadEvidence.normalizeLeadEvidence(Object.assign({}, withoutUnpromotedPhraseFallback(card || {}), evidence), {
     discovery_batch_id: job.discovery_batch_id || job.job_id,
     discovery_request_id: job.discovery_request_id || job.operator_request_id,
     first_discovered_at: evidence.first_discovered_at,
@@ -856,6 +869,19 @@ function auditBatchCards(cards, job, providerSummary) {
   audit.search_results_found = Number(providerSummary && providerSummary.search_results_found || 0) || 0;
   audit.snippet_phrases_verified = Number(providerSummary && providerSummary.snippet_phrases_verified || 0) || 0;
   audit.weak_snippets_count = Number(providerSummary && providerSummary.weak_snippets_count || 0) || 0;
+  audit.evidence_conversion_diagnostics = Object.assign({
+    phrase_extracted_but_not_verified: 0,
+    phrase_verified_but_missing_address: 0,
+    phrase_verified_but_missing_status: 0,
+    property_url_but_missing_status: 0,
+    generic_url_rejected: 0,
+    missing_address: 0,
+    missing_status: 0,
+    missing_property_url: 0,
+    source_phrase_dropped: 0,
+    snippet_phrases_found: 0,
+    exact_phrases_promoted: 0
+  }, providerSummary && providerSummary.evidence_conversion_diagnostics || {});
   audit.source_refresh_blocked = Number(providerSummary && providerSummary.source_refresh_blocked_count || 0) || 0;
   audit.provider_attempts = Math.max(
     Number(providerSummary && providerSummary.attempted ? 1 : 0) || 0,
@@ -1569,6 +1595,9 @@ function providerSummaryFrom(result) {
   const envDiagnostics = result.env_diagnostics && typeof result.env_diagnostics === 'object' ? result.env_diagnostics : {};
   const missingConfig = Array.isArray(result.missing_config) ? result.missing_config.map(cleanText).filter(Boolean) : Array.isArray(envDiagnostics.missing_config) ? envDiagnostics.missing_config.map(cleanText).filter(Boolean) : [];
   const readiness = cleanText(result.readiness || envDiagnostics.readiness);
+  const evidenceConversion = result.evidence_conversion_diagnostics && typeof result.evidence_conversion_diagnostics === 'object'
+    ? result.evidence_conversion_diagnostics
+    : {};
   return {
     saved_leads_mode: 'Available',
     gemini_live_discovery: providerName === 'Gemini' ? status : '',
@@ -1632,6 +1661,19 @@ function providerSummaryFrom(result) {
     search_results_found: Number(result.search_results_found || result.result_count || 0) || 0,
     snippet_phrases_verified: Number(result.snippet_phrases_verified || 0) || 0,
     weak_snippets_count: Number(result.weak_snippets_count || 0) || 0,
+    evidence_conversion_diagnostics: {
+      phrase_extracted_but_not_verified: Number(evidenceConversion.phrase_extracted_but_not_verified || 0) || 0,
+      phrase_verified_but_missing_address: Number(evidenceConversion.phrase_verified_but_missing_address || 0) || 0,
+      phrase_verified_but_missing_status: Number(evidenceConversion.phrase_verified_but_missing_status || 0) || 0,
+      property_url_but_missing_status: Number(evidenceConversion.property_url_but_missing_status || 0) || 0,
+      generic_url_rejected: Number(evidenceConversion.generic_url_rejected || 0) || 0,
+      missing_address: Number(evidenceConversion.missing_address || 0) || 0,
+      missing_status: Number(evidenceConversion.missing_status || 0) || 0,
+      missing_property_url: Number(evidenceConversion.missing_property_url || 0) || 0,
+      source_phrase_dropped: Number(evidenceConversion.source_phrase_dropped || 0) || 0,
+      snippet_phrases_found: Number(evidenceConversion.snippet_phrases_found || 0) || 0,
+      exact_phrases_promoted: Number(evidenceConversion.exact_phrases_promoted || 0) || 0
+    },
     provider_attempts: Array.isArray(result.provider_attempts) ? result.provider_attempts : [],
     research_ready_count: Number(result.research_ready_count || 0) || 0,
     needs_source_proof_count: Number(result.needs_source_proof_count || 0) || 0,
@@ -1929,6 +1971,7 @@ async function runJob(jobId, options = {}) {
         search_results_found: providerSummary.search_results_found,
         snippet_phrases_verified: providerSummary.snippet_phrases_verified,
         weak_snippets_count: providerSummary.weak_snippets_count,
+        evidence_conversion_diagnostics: providerSummary.evidence_conversion_diagnostics,
         zero_callable_explanation: qualityAudit.zero_callable_explanation,
         zero_callable_next_action: qualityAudit.zero_callable_next_action,
         quality_buckets: qualityAudit.quality_buckets,
@@ -2169,6 +2212,7 @@ function aggregateProviderSummary(results) {
   const last = summaries[summaries.length - 1] || summaries[0];
   const base = anyAvailable || last;
   const sum = (key) => summaries.reduce((total, item) => total + (Number(item[key] || 0) || 0), 0);
+  const sumEvidenceConversion = (key) => summaries.reduce((total, item) => total + (Number(item.evidence_conversion_diagnostics && item.evidence_conversion_diagnostics[key] || 0) || 0), 0);
   return Object.assign({}, base, {
     attempted: summaries.some((item) => item.attempted === true),
     grounding_present: summaries.some((item) => item.grounding_present === true),
@@ -2211,6 +2255,19 @@ function aggregateProviderSummary(results) {
     search_results_found: sum('search_results_found'),
     snippet_phrases_verified: sum('snippet_phrases_verified'),
     weak_snippets_count: sum('weak_snippets_count'),
+    evidence_conversion_diagnostics: {
+      phrase_extracted_but_not_verified: sumEvidenceConversion('phrase_extracted_but_not_verified'),
+      phrase_verified_but_missing_address: sumEvidenceConversion('phrase_verified_but_missing_address'),
+      phrase_verified_but_missing_status: sumEvidenceConversion('phrase_verified_but_missing_status'),
+      property_url_but_missing_status: sumEvidenceConversion('property_url_but_missing_status'),
+      generic_url_rejected: sumEvidenceConversion('generic_url_rejected'),
+      missing_address: sumEvidenceConversion('missing_address'),
+      missing_status: sumEvidenceConversion('missing_status'),
+      missing_property_url: sumEvidenceConversion('missing_property_url'),
+      source_phrase_dropped: sumEvidenceConversion('source_phrase_dropped'),
+      snippet_phrases_found: sumEvidenceConversion('snippet_phrases_found'),
+      exact_phrases_promoted: sumEvidenceConversion('exact_phrases_promoted')
+    },
     research_ready_count: sum('research_ready_count'),
     needs_source_proof_count: sum('needs_source_proof_count'),
     needs_address_repair_count: sum('needs_address_repair_count'),
@@ -2310,6 +2367,7 @@ function publicJob(job) {
       search_results_found: batchAudit.search_results_found,
       snippet_phrases_verified: batchAudit.snippet_phrases_verified,
       weak_snippets_count: batchAudit.weak_snippets_count,
+      evidence_conversion_diagnostics: batchAudit.evidence_conversion_diagnostics,
       zero_callable_explanation: batchAudit.zero_callable_explanation,
       zero_callable_next_action: batchAudit.zero_callable_next_action,
       source_refresh_blocked: batchAudit.source_refresh_blocked,

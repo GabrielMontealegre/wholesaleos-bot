@@ -74,6 +74,12 @@ function classifySourceUrl(sourceUrl) {
   if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(path)) return 'exact_property_record';
   if (/har\.com$/i.test(host) && /\/homedetail\//i.test(path)) return 'exact_property_record';
   if (/auction\.com$/i.test(host) && /\/details\//i.test(path)) return 'exact_property_record';
+  if (/\b\d{2,7}\b/.test(probe) &&
+      /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(probe) &&
+      /\b(listing|details?|property|homes?|house|real-estate|realestate)\b/i.test(probe) &&
+      !/\b(search|query|results|lookup|find|city|county|category|blog|article|archive)\b/i.test(probe)) {
+    return 'exact_property_record';
+  }
   if (/\b(parcel|apn|account|propertyid|property_id|case|cause|doc|record|detail|details)\b/.test(probe) &&
       /[?/&=]|\d{4,}|[a-z]{2,}\d{2,}/i.test(probe)) return 'exact_property_record';
   if (/\b(search|query|results|lookup|find|property-search|property_search)\b/.test(probe)) return 'county_search_page';
