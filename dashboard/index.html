@@ -2350,6 +2350,7 @@ function findMeBatchSummary(job) {
   var persistedScope = sourceSummary.batch_persisted_scope || job.persist_scope || result.batch_persisted_scope || 'batch_only';
   var zeroCallable = result.zero_callable_explanation || sourceSummary.zero_callable_explanation || (job.provider_summary && job.provider_summary.zero_callable_explanation) || '';
   var nextAction = result.zero_callable_next_action || sourceSummary.zero_callable_next_action || (job.provider_summary && job.provider_summary.zero_callable_next_action) || '';
+  var conversion = sourceSummary.evidence_conversion_diagnostics || result.evidence_conversion_diagnostics || {};
   return '<div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px">' +
     '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">' +
       '<div><div style="font-size:12px;color:#166534;font-weight:900;text-transform:uppercase">Fresh Lead Batch</div><div style="font-size:12px;color:#166534;font-weight:800;margin-top:2px">' + findMeSafeText(job.discovery_batch_id || job.job_id || '') + '</div></div>' +
@@ -2374,6 +2375,12 @@ function findMeBatchSummary(job) {
       findMePill('Recovered: ' + (sourceSummary.gemini_candidates_recovered_count || 0), sourceSummary.gemini_candidates_recovered_count ? 'good' : 'neutral') +
       findMePill('Search results: ' + (sourceSummary.search_results_found || result.search_results_found || 0), (sourceSummary.search_results_found || result.search_results_found) ? 'good' : 'neutral') +
       findMePill('Snippet phrases: ' + (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified || 0), (sourceSummary.snippet_phrases_verified || result.snippet_phrases_verified) ? 'good' : 'warn') +
+      findMePill('Exact promoted: ' + (conversion.exact_phrases_promoted || result.exact_phrases_verified || 0), (conversion.exact_phrases_promoted || result.exact_phrases_verified) ? 'good' : 'warn') +
+      findMePill('Phrase dropped: ' + (conversion.source_phrase_dropped || 0), conversion.source_phrase_dropped ? 'warn' : 'neutral') +
+      findMePill('Address missing: ' + (conversion.missing_address || 0), conversion.missing_address ? 'warn' : 'neutral') +
+      findMePill('Status missing: ' + (conversion.missing_status || 0), conversion.missing_status ? 'warn' : 'neutral') +
+      findMePill('Property URL missing: ' + (conversion.missing_property_url || 0), conversion.missing_property_url ? 'warn' : 'neutral') +
+      findMePill('Generic URL rejected: ' + (conversion.generic_url_rejected || 0), conversion.generic_url_rejected ? 'warn' : 'neutral') +
       findMePill('Weak snippets: ' + (sourceSummary.weak_snippets_count || result.weak_snippets_count || 0), (sourceSummary.weak_snippets_count || result.weak_snippets_count) ? 'warn' : 'neutral') +
       findMePill('Source refresh blocked: ' + (result.source_refresh_blocked || 0), result.source_refresh_blocked ? 'warn' : 'neutral') +
       findMePill('Duplicates rejected: ' + (result.duplicates_rejected || 0), result.duplicates_rejected ? 'warn' : 'neutral') +
