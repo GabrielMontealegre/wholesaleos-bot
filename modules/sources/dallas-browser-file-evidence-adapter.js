@@ -10,7 +10,8 @@ const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const SAFE_HOSTS = new Set([
   'www.dallascounty.org',
   'dallascounty.org',
-  'dallas.texas.sheriffsaleauctions.com'
+  'dallas.texas.sheriffsaleauctions.com',
+  'dallas.tx.publicsearch.us'
 ]);
 
 const STREET_RE = /\b\d{1,6}\s+[A-Za-z0-9.'# -]{2,80}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway)\b(?:[\s,]*(?:dallas|tx|texas|\d{5})){0,6}/i;
