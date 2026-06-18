@@ -271,6 +271,7 @@ const countyPageHtml = `
   assert.deepStrictEqual(storedDb.leads, []);
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
+  assert.strictEqual(fs.existsSync(tmpDir), false);
   console.log('dallas foreclosure publicsearch input tests passed');
 })().catch((error) => {
   console.error(error);
