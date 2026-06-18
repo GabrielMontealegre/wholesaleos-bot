@@ -1,6 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 
@@ -15,6 +17,16 @@ const SAFE_HOSTS = new Set([
   'dallascounty.org',
   'dallas.texas.sheriffsaleauctions.com',
   'dallas.tx.publicsearch.us'
+]);
+const SAFE_LOCAL_FILE_EXTENSIONS = new Set([
+  '.pdf',
+  '.txt',
+  '.text',
+  '.html',
+  '.htm',
+  '.csv',
+  '.xls',
+  '.xlsx'
 ]);
 
 const BLOCKED_PAGE_RE = /\b(captcha|human verification|verify you are human|access denied|forbidden|login required|sign in|register to bid|create an account)\b/i;
@@ -65,6 +77,17 @@ function isSafeDallasOfficialFileUrl(url) {
   }
 }
 
+function classifyLocalFilePath(filePath) {
+  const ext = path.extname(cleanText(filePath)).toLowerCase();
+  if (ext === '.pdf') return 'pdf_file';
+  if (ext === '.csv') return 'csv_file';
+  if (ext === '.xlsx') return 'xlsx_file';
+  if (ext === '.xls') return 'xls_file';
+  if (ext === '.txt' || ext === '.text') return 'text_file';
+  if (ext === '.html' || ext === '.htm') return 'html_page';
+  return 'unknown';
+}
+
 function classifyFileLink(input) {
   const url = cleanText(typeof input === 'string' ? input : input && input.url);
   const label = cleanText(input && input.label);
@@ -74,9 +97,50 @@ function classifyFileLink(input) {
   if (/\.csv(?:$|[?#])|text\/csv/.test(value)) return 'csv_file';
   if (/\.xlsx(?:$|[?#])|spreadsheetml|officedocument\.spreadsheetml/.test(value)) return 'xlsx_file';
   if (/\.xls(?:$|[?#])|application\/vnd\.ms-excel/.test(value)) return 'xls_file';
+  if (/\.txt(?:$|[?#])|text\/plain/.test(value)) return 'text_file';
   if (/text\/html|\.html?(?:$|[?#])/.test(value)) return 'html_page';
   if (/\b(document|notice|foreclosure|sheriff|tax|sale|auction|resale|file|pdf)\b/.test(value)) return 'document_link';
   return 'unknown';
+}
+
+async function inspectLocalFile(filePath) {
+  const resolvedPath = path.resolve(cleanText(filePath));
+  let stats;
+  try {
+    stats = await fs.promises.lstat(resolvedPath);
+  } catch (error) {
+    return { blocked_reason: 'file_not_found' };
+  }
+  if (!stats.isFile() || stats.isSymbolicLink()) {
+    return { blocked_reason: 'file_not_regular' };
+  }
+  if (stats.size <= 0) {
+    return { blocked_reason: 'file_not_regular' };
+  }
+  if (stats.size > MAX_FILE_BYTES) {
+    return { blocked_reason: 'file_too_large' };
+  }
+  if (!SAFE_LOCAL_FILE_EXTENSIONS.has(path.extname(resolvedPath).toLowerCase())) {
+    return { blocked_reason: 'unsupported_file_type' };
+  }
+  let buffer;
+  try {
+    buffer = await fs.promises.readFile(resolvedPath);
+  } catch (error) {
+    return { blocked_reason: 'file_not_regular', error: error.message || 'read_failed' };
+  }
+  if (!buffer || !buffer.length) {
+    return { blocked_reason: 'file_not_regular' };
+  }
+  return {
+    ok: true,
+    file_path: resolvedPath,
+    file_basename: path.basename(resolvedPath),
+    file_type: classifyLocalFilePath(resolvedPath),
+    file_bytes: buffer.length,
+    file_sha256: crypto.createHash('sha256').update(buffer).digest('hex'),
+    buffer
+  };
 }
 
 function countDetectedByType(links) {
@@ -113,6 +177,17 @@ async function fetchBufferWithTimeout(url, options = {}) {
     });
     const contentType = cleanText(response.headers && response.headers.get ? response.headers.get('content-type') : '');
     const contentLength = Number(response.headers && response.headers.get ? response.headers.get('content-length') : 0);
+    const finalUrl = cleanText(response.url || url);
+    if (finalUrl) {
+      try {
+        const finalHost = new URL(finalUrl).hostname.toLowerCase();
+        if (!SAFE_HOSTS.has(finalHost)) {
+          return { ok: false, status: response.status, content_type: contentType, blocked_reason: 'redirect_host_not_allowed' };
+        }
+      } catch (error) {
+        return { ok: false, status: response.status, content_type: contentType, blocked_reason: 'redirect_host_not_allowed' };
+      }
+    }
     if (contentLength > MAX_FILE_BYTES) {
       return { ok: false, status: response.status, content_type: contentType, blocked_reason: 'file_too_large_for_preview_parser' };
     }
@@ -127,13 +202,104 @@ async function fetchBufferWithTimeout(url, options = {}) {
   }
 }
 
+async function parseLocalFileInput(filePath, source, options = {}) {
+  const attempt = {
+    url: '',
+    label: path.basename(cleanText(filePath)),
+    link_type: classifyLocalFilePath(filePath),
+    status: 'not_attempted',
+    rows_checked: 0,
+    text_blocks_checked: 0,
+    candidates_found: 0,
+    blocked_reason: '',
+    input_mode: 'local_file',
+    file_basename: '',
+    file_type: '',
+    file_bytes: 0,
+    file_sha256: ''
+  };
+
+  const inspected = await inspectLocalFile(filePath);
+  if (!inspected.ok) {
+    attempt.status = 'blocked';
+    attempt.blocked_reason = inspected.blocked_reason || 'file_not_regular';
+    return { attempt, candidates: [], file_meta: {} };
+  }
+
+  attempt.file_basename = inspected.file_basename;
+  attempt.file_type = inspected.file_type;
+  attempt.file_bytes = inspected.file_bytes;
+  attempt.file_sha256 = inspected.file_sha256;
+  attempt.link_type = inspected.file_type;
+
+  let blocks = [];
+  let blocked = null;
+  if (inspected.file_type === 'pdf_file') {
+    const parsed = await textFromPdfBuffer(inspected.buffer);
+    if (parsed && typeof parsed === 'object' && parsed.blocked_reason) blocked = parsed;
+    else blocks = textBlocksFromPlainText(parsed);
+  } else if (inspected.file_type === 'csv_file') {
+    blocks = rowsFromCsvText(inspected.buffer.toString('utf8'));
+  } else if (inspected.file_type === 'xlsx_file' || inspected.file_type === 'xls_file') {
+    const parsed = rowsFromXlsxBuffer(inspected.buffer);
+    if (parsed && typeof parsed === 'object' && parsed.blocked_reason) blocked = parsed;
+    else blocks = parsed;
+  } else if (inspected.file_type === 'html_page') {
+    const text = textFromHtml(inspected.buffer.toString('utf8'));
+    if (BLOCKED_PAGE_RE.test(text)) {
+      blocked = { blocked_reason: 'source_requires_login_or_human_review' };
+    } else {
+      blocks = textBlocksFromPlainText(text);
+    }
+  } else if (inspected.file_type === 'text_file') {
+    blocks = textBlocksFromPlainText(inspected.buffer.toString('utf8'));
+  } else {
+    blocked = { blocked_reason: 'unsupported_file_type' };
+  }
+
+  if (blocked) {
+    attempt.status = 'blocked';
+    attempt.blocked_reason = blocked.blocked_reason || 'needs_file_adapter';
+    if (blocked.error) attempt.error = blocked.error;
+    return { attempt, candidates: [], file_meta: {
+      basename: inspected.file_basename,
+      file_type: inspected.file_type,
+      file_bytes: inspected.file_bytes,
+      file_sha256: inspected.file_sha256
+    } };
+  }
+
+  attempt.status = 'parsed';
+  attempt.rows_checked = Math.min(blocks.length, MAX_ROWS_CHECKED);
+  attempt.text_blocks_checked = Math.min(blocks.length, MAX_TEXT_BLOCKS);
+  const candidates = candidatesFromBlocks(blocks, {
+    source_url: cleanText(source.source_url || ''),
+    source_proof_url: cleanText(source.source_url || ''),
+    source_reference: cleanText(source.source_reference || 'local file preview'),
+    source_file_type: inspected.file_type,
+    max_candidates: options.max_candidates || MAX_CANDIDATES
+  });
+  attempt.candidates_found = candidates.length;
+  if (!candidates.length) attempt.blocked_reason = 'no_property_rows_found';
+  return {
+    attempt,
+    candidates,
+    file_meta: {
+      basename: inspected.file_basename,
+      file_type: inspected.file_type,
+      file_bytes: inspected.file_bytes,
+      file_sha256: inspected.file_sha256
+    }
+  };
+}
+
 async function textFromPdfBuffer(buffer) {
   try {
     const pdfParse = require('pdf-parse');
     const parsed = await pdfParse(buffer);
     return cleanText(parsed && parsed.text);
   } catch (error) {
-    return { blocked_reason: 'needs_file_adapter', error: error.message || 'pdf_parse_failed' };
+    return { blocked_reason: 'pdf_parse_failed', error: error.message || 'pdf_parse_failed' };
   }
 }
 
@@ -204,7 +370,7 @@ function rowsFromXlsxBuffer(buffer) {
     }
     return blocks.slice(0, MAX_TEXT_BLOCKS);
   } catch (error) {
-    return { blocked_reason: 'needs_file_adapter', error: error.message || 'xlsx_parse_failed' };
+    return { blocked_reason: 'xlsx_parse_failed', error: error.message || 'xlsx_parse_failed' };
   }
 }
 
@@ -351,6 +517,8 @@ async function parseOfficialFileLink(link, source, options = {}) {
     const parsed = rowsFromXlsxBuffer(fetched.buffer);
     if (parsed && typeof parsed === 'object' && parsed.blocked_reason) blocked = parsed;
     else blocks = parsed;
+  } else if (actualType === 'text_file') {
+    blocks = textBlocksFromPlainText(fetched.buffer.toString('utf8'));
   } else if (actualType === 'html_page' || actualType === 'document_link') {
     const text = textFromHtml(fetched.buffer.toString('utf8'));
     if (BLOCKED_PAGE_RE.test(text)) {
@@ -404,20 +572,38 @@ async function runDallasRealFileParser(options = {}) {
   const source = options.source || {};
   const maxCandidates = Math.max(1, Math.min(Number(options.max_candidates || MAX_CANDIDATES) || MAX_CANDIDATES, MAX_CANDIDATES));
   const maxFiles = Math.max(1, Math.min(Number(options.max_files || MAX_FILE_LINKS) || MAX_FILE_LINKS, MAX_FILE_LINKS));
-  const links = normalizeLinks(options);
-  const detectedCounts = countDetectedByType(links);
+  const inputFile = cleanText(options.input_file || options.source_input_file || '');
+  const links = inputFile ? [] : normalizeLinks(options);
+  const detectedCounts = inputFile
+    ? { files_detected: 1, pdf_files_detected: 0, csv_files_detected: 0, xlsx_files_detected: 0 }
+    : countDetectedByType(links);
   const attempts = [];
   let candidates = [];
 
-  for (const link of links.slice(0, maxFiles)) {
-    if (candidates.length >= maxCandidates) break;
-    const result = await parseOfficialFileLink(link, source, {
+  if (inputFile) {
+    const result = await parseLocalFileInput(inputFile, source, {
       timeout_ms: options.timeout_ms || 10000,
-      fetch_impl: options.fetch_impl,
-      max_candidates: maxCandidates - candidates.length
+      max_candidates: maxCandidates
     });
     attempts.push(result.attempt);
     candidates = candidates.concat(result.candidates);
+    if (result.file_meta) {
+      detectedCounts.files_detected = 1;
+      if (result.file_meta.file_type === 'pdf_file') detectedCounts.pdf_files_detected = 1;
+      if (result.file_meta.file_type === 'csv_file') detectedCounts.csv_files_detected = 1;
+      if (result.file_meta.file_type === 'xlsx_file' || result.file_meta.file_type === 'xls_file') detectedCounts.xlsx_files_detected = 1;
+    }
+  } else {
+    for (const link of links.slice(0, maxFiles)) {
+      if (candidates.length >= maxCandidates) break;
+      const result = await parseOfficialFileLink(link, source, {
+        timeout_ms: options.timeout_ms || 10000,
+        fetch_impl: options.fetch_impl,
+        max_candidates: maxCandidates - candidates.length
+      });
+      attempts.push(result.attempt);
+      candidates = candidates.concat(result.candidates);
+    }
   }
 
   const blockedReasons = attempts.map((attempt) => attempt.blocked_reason).filter(Boolean);
@@ -446,6 +632,13 @@ async function runDallasRealFileParser(options = {}) {
     files_blocked: blockedCount,
     file_text_blocks_checked: textBlocksChecked,
     file_rows_checked: rowsChecked,
+    input_mode: inputFile ? 'local_file' : 'document_url',
+    input_file: inputFile ? {
+      basename: attempts[0] && attempts[0].file_basename || path.basename(inputFile),
+      file_type: attempts[0] && attempts[0].file_type || classifyLocalFilePath(inputFile),
+      file_bytes: attempts[0] && attempts[0].file_bytes || 0,
+      file_sha256: attempts[0] && attempts[0].file_sha256 || ''
+    } : null,
     candidates,
     candidates_extracted: candidates.length,
     attempts,
