@@ -13,7 +13,8 @@ const MAX_CANDIDATES = 10;
 const SAFE_HOSTS = new Set([
   'www.dallascounty.org',
   'dallascounty.org',
-  'dallas.texas.sheriffsaleauctions.com'
+  'dallas.texas.sheriffsaleauctions.com',
+  'dallas.tx.publicsearch.us'
 ]);
 
 const BLOCKED_PAGE_RE = /\b(captcha|human verification|verify you are human|access denied|forbidden|login required|sign in|register to bid|create an account)\b/i;

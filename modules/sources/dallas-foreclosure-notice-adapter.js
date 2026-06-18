@@ -12,6 +12,7 @@ const MAX_ROWS = 25;
 const MAX_FILES = 6;
 const MAX_TEXT_BLOCKS = 500;
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
+const PUBLIC_SEARCH_HINT_RE = /\bpublic search|publicsearch\.us|official public record search|non-certified\b/i;
 
 const SAFE_HOSTS = new Set([
   'www.dallascounty.org',
@@ -81,6 +82,33 @@ function normalizeDate(value) {
   const text = cleanText(value);
   const match = text.match(/\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b/i);
   return match ? cleanText(match[0]) : '';
+}
+
+function parseDateValue(value) {
+  const text = cleanText(value);
+  if (!text) return null;
+  const parsed = Date.parse(text);
+  if (Number.isFinite(parsed)) return new Date(parsed);
+  const short = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
+  if (short) {
+    const month = Number(short[1]);
+    const day = Number(short[2]);
+    let year = Number(short[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const parsedShort = new Date(Date.UTC(year, month - 1, day));
+    if (!Number.isNaN(parsedShort.getTime())) return parsedShort;
+  }
+  return null;
+}
+
+function isStaleSaleDate(value, referenceDate = new Date()) {
+  const parsed = parseDateValue(value);
+  if (!parsed) return false;
+  const sale = new Date(parsed);
+  const ref = new Date(referenceDate);
+  sale.setHours(0, 0, 0, 0);
+  ref.setHours(0, 0, 0, 0);
+  return sale.getTime() < ref.getTime();
 }
 
 function fieldValue(text, labelPattern) {
@@ -159,12 +187,16 @@ function candidateFromBlock(block, context = {}) {
   const debtAmount = parseMoney(fieldValue(text, 'debt|amount due|amount owed|unpaid balance'));
   const zip = (address.match(/\b75[23]\d{2}\b/) || text.match(/\b75[23]\d{2}\b/) || [])[0] || '';
   const proofUrl = cleanText(context.source_proof_url || context.source_url || SOURCE_URL);
+  const staleSaleDate = isStaleSaleDate(saleDate, context.captured_at || nowIso());
   const missing = [];
   if (addressQuality !== 'valid') missing.push('complete Dallas property address');
   if (!saleDate) missing.push('sale date');
+  if (staleSaleDate) missing.push('stale sale date');
   if (!proofUrl) missing.push('source proof URL');
   if (!instrument && !caseNumber && !parcel) missing.push('instrument, case, or parcel reference');
-  const workflowStatus = addressQuality === 'valid' && saleDate && proofUrl ? 'Research Ready' : 'Source Repair Needed';
+  const workflowStatus = addressQuality === 'valid' && saleDate && proofUrl
+    ? (staleSaleDate ? 'Historical' : 'Research Ready')
+    : 'Source Repair Needed';
 
   return {
     id: `DAL-FC-${safeId(`${proofUrl}|${address}|${saleDate}|${instrument}|${caseNumber}|${parcel}`)}`,
@@ -201,6 +233,8 @@ function candidateFromBlock(block, context = {}) {
     missing_evidence: missing,
     next_action: workflowStatus === 'Research Ready'
       ? 'Review foreclosure notice proof, then send to AI Deal Analyzer for comps.'
+      : workflowStatus === 'Historical'
+        ? 'Stale foreclosure notice. Keep only as historical reference unless a current notice is found.'
       : 'Repair foreclosure notice address/timing from official proof before comps.',
     preview_only: true,
     should_ingest: false
@@ -212,6 +246,7 @@ function dedupeCandidates(candidates) {
   function rank(candidate) {
     if (candidate.workflow_status === 'Research Ready') return 3;
     if (candidate.workflow_status === 'Source Repair Needed') return 2;
+    if (candidate.workflow_status === 'Historical') return 1;
     if (candidate.workflow_status === 'Invalid/Junk') return 1;
     return 0;
   }
@@ -253,8 +288,14 @@ function isForeclosureEvidenceLink(link) {
 function discoverForeclosureEvidenceLinksFromHtml(html, baseUrl) {
   const links = browserFileEvidenceAdapter.discoverEvidenceLinksFromHtml(html, baseUrl)
     .filter((link) => isSafeDallasForeclosureUrl(link.url) && isForeclosureEvidenceLink(link));
-  if (!links.some((link) => String(link.url).toLowerCase() === PUBLIC_SEARCH_URL.toLowerCase())) {
-    links.push({ url: PUBLIC_SEARCH_URL, label: 'Dallas County official public records search', link_type: 'document_link' });
+  const hasPublicSearchHint = PUBLIC_SEARCH_HINT_RE.test(cleanText(textFromHtml(html)));
+  if (hasPublicSearchHint && !links.some((link) => String(link.url).toLowerCase() === PUBLIC_SEARCH_URL.toLowerCase())) {
+    links.push({
+      url: PUBLIC_SEARCH_URL,
+      label: 'Dallas County official public records search',
+      link_type: 'portal_preview_only',
+      portal_preview_only: true
+    });
   }
   return links.slice(0, MAX_FILES);
 }
@@ -385,11 +426,13 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
   const links = Array.isArray(options.evidence_links) && options.evidence_links.length
     ? options.evidence_links.filter((link) => isSafeDallasForeclosureUrl(link.url || link) && isForeclosureEvidenceLink(link)).slice(0, maxFiles)
     : discoverForeclosureEvidenceLinksFromHtml(page.text, sourceUrl).slice(0, maxFiles);
+  const publicSearchPointerFound = links.some((link) => link && (link.portal_preview_only === true || String(link.url).toLowerCase() === PUBLIC_SEARCH_URL.toLowerCase()));
+  const documentLinks = links.filter((link) => !(link && link.portal_preview_only === true));
 
   let fileResult = null;
   let fileCandidates = [];
-  if (links.length && pageCandidates.length < maxRows) {
-    fileResult = await parseLinksWithRealFileParser(source, links, {
+  if (documentLinks.length && pageCandidates.length < maxRows) {
+    fileResult = await parseLinksWithRealFileParser(source, documentLinks, {
       max_rows: maxRows - pageCandidates.length,
       max_files: maxFiles,
       timeout_ms: options.timeout_ms || options.timeout,
@@ -419,12 +462,25 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
   const blockedReason = !candidates.length
     ? (fileResult && fileResult.blocked_reason) || (links.length ? 'needs_file_adapter_or_notice_specific_review' : 'no_foreclosure_notice_rows_found')
     : '';
+  const parsedAttempts = fileResult && Array.isArray(fileResult.attempts) ? fileResult.attempts : [];
+  const documentUrlsFound = links.map((link) => cleanText(link && link.url ? link.url : link)).filter(Boolean);
+  const documentUrlsParsed = parsedAttempts.filter((attempt) => attempt.status === 'parsed').map((attempt) => cleanText(attempt.url)).filter(Boolean);
+  const documentUrlsSkipped = parsedAttempts.filter((attempt) => attempt.status !== 'parsed').map((attempt) => ({ url: cleanText(attempt.url), reason: cleanText(attempt.blocked_reason || attempt.status) })).filter((item) => item.url);
+  const staleSaleDateCount = candidates.filter((candidate) => isStaleSaleDate(candidate.sale_date)).length;
   return Object.assign({}, counts, {
     ok: true,
     status: candidates.length ? 'candidates_found' : 'needs_manual_review',
     blocked_reason: blockedReason,
     source_url: sourceUrl,
+    source_url_checked: sourceUrl,
+    publicsearch_pointer_found: publicSearchPointerFound,
+    publicsearch_preview_mode: publicSearchPointerFound ? 'portal_preview_only' : '',
     evidence_links_found: links.length,
+    discovered_links: links,
+    document_urls_found: documentUrlsFound,
+    document_urls_parsed: documentUrlsParsed,
+    document_urls_skipped: documentUrlsSkipped,
+    stale_sale_date_count: staleSaleDateCount,
     files_detected: fileResult ? Number(fileResult.files_detected || 0) : 0,
     files_parsed: fileResult ? Number(fileResult.files_parsed || 0) : 0,
     files_blocked: fileResult ? Number(fileResult.files_blocked || 0) : 0,
@@ -441,5 +497,7 @@ module.exports = {
   isSafeDallasForeclosureUrl,
   discoverForeclosureEvidenceLinksFromHtml,
   extractForeclosureNoticeCandidatesFromText,
-  runDallasForeclosureNoticeAdapter
+  runDallasForeclosureNoticeAdapter,
+  isStaleSaleDate,
+  parseDateValue
 };
