@@ -167,21 +167,28 @@ function extractCurrentStatus(text, rawCandidate) {
   ].filter(Boolean).join(' '));
   if (!candidateText) return 'Manual Verification Needed';
   if (/\b(sold|closed|off[- ]?market|historical)\b/i.test(candidateText)) return 'Historical';
+  if (cleanText(rawCandidate && (rawCandidate.sale_date || rawCandidate.event_date || rawCandidate.auction_date))) {
+    return 'Current or plausibly current';
+  }
+  if (/\b(sale date|auction date|date of sale|trustee sale date|foreclosure sale date)\b/i.test(candidateText)) {
+    return 'Current or plausibly current';
+  }
+  if (/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/.test(candidateText)) {
+    return 'Current or plausibly current';
+  }
   if (/\b(active|listed|for sale|new listing|available|foreclosure sale|auction date|back on(?: the)? market|price reduced|price cut)\b/i.test(candidateText)) {
     return 'Current or plausibly current';
   }
   if (/\b(notice of sale|trustee sale|foreclosure notice|pre[- ]?foreclosure)\b/i.test(candidateText)) {
     return 'Current or plausibly current';
   }
-  return rawCandidate && rawCandidate.workflow_status === 'Source Repair Needed'
-    ? 'Manual Verification Needed'
-    : 'Current or plausibly current';
+  return 'Manual Verification Needed';
 }
 
 function candidateFromRaw(rawCandidate, context, sourceMeta) {
   const raw = rawCandidate || {};
   const proofText = cleanText(raw.source_proof_text || raw.source_reference || raw.raw_text);
-  const phrase = extractWholesalePhrase([proofText, raw.motivation_phrase, raw.workflow_status, raw.event_type].filter(Boolean).join(' '));
+  const phrase = extractWholesalePhrase(proofText);
   const officialSourceUrl = cleanText(context.source_url || SOURCE_URL);
   const sourceUrl = cleanText(raw.source_proof_url || raw.source_document_url || context.source_document_url || officialSourceUrl || SOURCE_URL);
   const documentUrl = cleanText(raw.source_document_url || context.source_document_url || sourceUrl);
@@ -204,7 +211,7 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
     source_row_reference: cleanText(raw.source_row_reference || raw.case_number || raw.parcel_or_account),
     owner_name_candidate: cleanText(raw.owner_name || raw.borrower_name),
     motivation_type: SOURCE_FAMILY,
-    motivation_phrase: phrase || cleanText(raw.motivation_phrase || raw.event_type || 'Foreclosure notice'),
+    motivation_phrase: phrase,
     motivation_evidence_text: proofText || cleanText(raw.source_reference),
     current_status: currentStatus,
     status_evidence_text: cleanText([raw.sale_date, raw.workflow_status, proofText].filter(Boolean).join(' | ')),
@@ -351,6 +358,7 @@ function summarizePreviewArtifacts(input = {}) {
   const documentUrlsSkipped = Array.isArray(input.document_urls_skipped) ? input.document_urls_skipped : [];
   const staleRejected = rejected.filter((item) => item && item.reason === 'stale_sale_date');
   const snippets = uniqueCleanList(candidates.map((candidate) => candidate.source_proof_text || candidate.motivation_evidence_text || candidate.motivation_phrase), 10);
+  const inputFileMeta = input.input_file_meta || null;
   return {
     source_url_checked: cleanText(input.source_url_checked || ''),
     source_document_url_checked: cleanText(input.source_document_url_checked || ''),
@@ -370,6 +378,12 @@ function summarizePreviewArtifacts(input = {}) {
     parsed_addresses: uniqueCleanList(candidates.map((candidate) => candidate.normalized_address || candidate.property_address), 10),
     parsed_owners: uniqueCleanList(candidates.map((candidate) => candidate.owner_name_candidate), 10),
     parsed_sale_dates: uniqueCleanList(candidates.map((candidate) => candidate.sale_date || candidate.event_date), 10),
+    input_file_meta: inputFileMeta ? {
+      basename: cleanText(inputFileMeta.basename),
+      file_type: cleanText(inputFileMeta.file_type),
+      file_bytes: Number(inputFileMeta.file_bytes || 0) || 0,
+      file_sha256: cleanText(inputFileMeta.file_sha256)
+    } : null,
     preview_only: true,
     should_ingest: false,
     no_global_mutation: true
@@ -421,29 +435,47 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
 }
 
 async function parseManualDocumentCandidates(options, source, context, rawCandidates) {
+  const sourceInputFile = cleanText(options.input_file || source.input_file || '');
   const sourceDocumentUrl = cleanText(options.source_document_url || source.source_document_url || '');
   const sourceUrl = cleanText(options.source_url || source.source_url || SOURCE_URL);
   const remaining = Math.max(0, Number(context && context.max_rows || LIVE_PREVIEW_MAX_ROWS) - (Array.isArray(rawCandidates) ? rawCandidates.length : 0));
-  if (!sourceDocumentUrl || sourceDocumentUrl === sourceUrl || !remaining) {
+  if (sourceDocumentUrl && isPublicSearchPortalUrl(sourceDocumentUrl)) {
+    return {
+      candidates: [],
+      cards: [],
+      attempts: [{
+        url: sourceDocumentUrl,
+        label: 'PublicSearch portal shell',
+        link_type: 'portal_preview_only',
+        status: 'blocked',
+        blocked_reason: 'portal_preview_only'
+      }],
+      blocked_reason: 'portal_preview_only',
+      input_file_meta: null
+    };
+  }
+  if ((!sourceInputFile && (!sourceDocumentUrl || sourceDocumentUrl === sourceUrl)) || !remaining) {
     return { candidates: [], cards: [], attempts: [], blocked_reason: '' };
   }
-  const manualLinks = uniqueCleanList([sourceDocumentUrl], LIVE_PREVIEW_MAX_FILES).map((url) => ({ url, label: 'Gabriel-provided direct document URL', link_type: 'document_link' }));
-  const manualResult = await realFileParser.runDallasRealFileParser({
+  const parserOptions = {
     source,
-    source_url: sourceDocumentUrl,
-    evidence_links: manualLinks,
+    source_url: sourceInputFile ? sourceUrl : sourceDocumentUrl,
     max_candidates: remaining,
     max_files: LIVE_PREVIEW_MAX_FILES,
     timeout_ms: options.timeout_ms || options.timeout || 10000,
     captured_at: context.captured_at || nowIso(),
     fetch_impl: options.fetch_impl
-  });
+  };
+  if (sourceInputFile) parserOptions.input_file = sourceInputFile;
+  else parserOptions.evidence_links = uniqueCleanList([sourceDocumentUrl], LIVE_PREVIEW_MAX_FILES).map((url) => ({ url, label: 'Gabriel-provided direct document URL', link_type: 'document_link' }));
+  const manualResult = await realFileParser.runDallasRealFileParser(parserOptions);
   const parserCandidates = Array.isArray(manualResult.candidates) ? manualResult.candidates : [];
   return {
     candidates: parserCandidates,
     cards: [],
     attempts: Array.isArray(manualResult.attempts) ? manualResult.attempts : [],
-    blocked_reason: cleanText(manualResult.blocked_reason || '')
+    blocked_reason: cleanText(manualResult.blocked_reason || ''),
+    input_file_meta: manualResult.input_file || manualResult.input_file_meta || null
   };
 }
 
@@ -462,24 +494,121 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
   const maxRows = boundedInt(options.max_rows || options.max_candidates || options.maxRows, MAX_ROWS, MAX_ROWS);
   const maxFiles = boundedInt(options.max_files || options.maxFiles, MAX_FILES, MAX_FILES);
   const records = normalizeSourceRecords(options.records);
+  const inputFile = cleanText(options.input_file || source.input_file || '');
   const sourceText = cleanText(options.source_text || '');
   const sourceHtml = cleanText(options.source_html || '');
   const explicitLinks = Array.isArray(options.evidence_links) ? options.evidence_links.slice(0, maxFiles) : [];
   const htmlLinks = sourceHtml
     ? foreclosureNoticeAdapter.discoverForeclosureEvidenceLinksFromHtml(sourceHtml, sourceUrl).slice(0, maxFiles)
     : [];
-  const sourceLinks = Array.from(new Set([]
+  const sourceLinkValues = []
     .concat(explicitLinks)
     .concat(htmlLinks)
     .concat(sourceDocumentUrl ? [sourceDocumentUrl] : [])
     .concat(sourceUrl ? [sourceUrl] : [])
     .map(cleanText)
-    .filter(Boolean))).slice(0, maxFiles);
+    .filter(Boolean);
+  const sourceLinks = Array.from(new Set(sourceLinkValues)).slice(0, maxFiles);
   const combinedText = buildCombinedSourceText(sourceText, sourceHtml, records);
-  const cacheKey = sourceHash([sourceUrl, sourceDocumentUrl, combinedText, JSON.stringify(records)].join('|'));
+  const cacheKey = sourceHash([sourceUrl, sourceDocumentUrl, inputFile, combinedText, JSON.stringify(records)].join('|'));
   const cache = options.cache && typeof options.cache.get === 'function' && typeof options.cache.set === 'function' ? options.cache : null;
   if (cache && cache.has(cacheKey)) {
     return cache.get(cacheKey);
+  }
+
+  if (inputFile) {
+    const filePreview = await parseManualDocumentCandidates(Object.assign({}, options, { input_file: inputFile }), source, {
+      max_rows: LIVE_PREVIEW_MAX_ROWS,
+      captured_at: capturedAt,
+      reference_date: capturedAt
+    }, []);
+    const fileCandidates = Array.isArray(filePreview.candidates) ? filePreview.candidates : [];
+    const combinedRawCandidates = [];
+    const seenRaw = new Set();
+    const addRaw = (candidate) => {
+      const key = cleanText([
+        candidate && candidate.source_proof_url,
+        candidate && (candidate.property_address || candidate.address),
+        candidate && candidate.case_number,
+        candidate && (candidate.parcel_id || candidate.parcel_or_account)
+      ].filter(Boolean).join('|')).toLowerCase() || cleanText(candidate && candidate.id).toLowerCase();
+      if (!key || seenRaw.has(key)) return;
+      seenRaw.add(key);
+      combinedRawCandidates.push(candidate);
+    };
+    fileCandidates.forEach(addRaw);
+    const built = buildCandidatesFromRaw(combinedRawCandidates, records, {
+      acquisition_run_id: options.acquisition_run_id || options.discovery_batch_id || options.job_id || cacheKey,
+      captured_at: capturedAt,
+      source_url: sourceUrl,
+      source_document_url: sourceDocumentUrl || sourceUrl,
+      max_rows: LIVE_PREVIEW_MAX_ROWS,
+      reference_date: capturedAt
+    }, source);
+    const livePreview = summarizePreviewArtifacts({
+      source_url_checked: sourceUrl,
+      source_document_url_checked: sourceDocumentUrl,
+      publicsearch_pointer_found: !!(filePreview && filePreview.blocked_reason === 'portal_preview_only') || /publicsearch\.us/i.test(sourceUrl) || /publicsearch\.us/i.test(sourceDocumentUrl),
+      source_links: [],
+      input_file_meta: filePreview.input_file_meta || null,
+      document_urls_parsed: filePreview.input_file_meta ? [filePreview.input_file_meta.basename] : [],
+      document_urls_skipped: Array.isArray(filePreview.attempts) ? filePreview.attempts.filter((attempt) => attempt.status !== 'parsed').map((attempt) => ({ url: attempt.file_basename || attempt.url, reason: attempt.blocked_reason || attempt.status })) : [],
+      rejected_candidates: built.rejected,
+      candidates: built.candidates,
+      blocked_rejected_reasons: Object.assign({}, filePreview && filePreview.blocked_reason ? { [filePreview.blocked_reason]: 1 } : {}, built.rejected.reduce((out, item) => {
+        out[item.reason] = (out[item.reason] || 0) + 1;
+        return out;
+      }, {}))
+    });
+    const diagnostics = {
+      source_hash: cacheKey,
+      source_url_classification: sourceEvidenceAdapter.classifySourceUrl(sourceUrl),
+      source_document_url_classification: sourceDocumentUrl ? sourceEvidenceAdapter.classifySourceUrl(sourceDocumentUrl) : 'missing_source_url',
+      evidence_links_found: Array.isArray(filePreview && filePreview.attempts) ? filePreview.attempts.length : 0,
+      record_count: records.length,
+      raw_block_count: Array.isArray(combinedRawCandidates) ? combinedRawCandidates.length : 0,
+      candidates_found: built.candidates.length,
+      source_repair_needed: built.rejected.length,
+      phrase_candidate_seen: 0,
+      status_candidate_seen: 0,
+      exact_phrases_promoted: 0,
+      property_url_but_missing_phrase: 0,
+      property_url_but_missing_status: 0,
+      exact_property_page_rejected_reason: {},
+      phrase_candidate_rejected_reason: {},
+      status_candidate_rejected_reason: {},
+      blocked_reasons: Object.assign({}, filePreview && filePreview.blocked_reason ? { [filePreview.blocked_reason]: 1 } : {}, built.rejected.reduce((out, item) => {
+        out[item.reason] = (out[item.reason] || 0) + 1;
+        return out;
+      }, {})),
+      input_mode: 'local_file',
+      input_file_meta: filePreview.input_file_meta || null,
+      live_source_preview: livePreview
+    };
+    const result = {
+      source_id: SOURCE_ID,
+      source_name: SOURCE_NAME,
+      source_family: SOURCE_FAMILY,
+      source_url: sourceUrl,
+      source_document_url: sourceDocumentUrl,
+      status: built.candidates.length ? 'available' : 'needs_manual_review',
+      attempted: true,
+      message: built.candidates.length
+        ? `Dallas foreclosure preview found ${built.candidates.length} property candidate(s) from local notice input.`
+        : 'Dallas foreclosure preview did not find a callable candidate from local notice input.',
+      preview_only: true,
+      should_ingest: false,
+      candidates: built.candidates,
+      cards: built.cards,
+      candidate_count: built.candidates.length,
+      source_preview: livePreview,
+      diagnostics,
+      evidence_links_found: diagnostics.evidence_links_found,
+      blocked_reason: built.candidates.length ? '' : (filePreview && filePreview.blocked_reason) || 'no_callable_foreclosure_candidates_from_supplied_evidence',
+      warnings: built.candidates.length ? [] : ['No foreclosure property candidate met the current evidence gate.']
+    };
+    if (cache) cache.set(cacheKey, result);
+    return result;
   }
 
   if (!combinedText) {

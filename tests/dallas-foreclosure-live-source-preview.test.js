@@ -21,6 +21,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
 
 const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
 const foreclosureAcquisitionAdapter = require('../modules/sources/dallas-foreclosure-acquisition-adapter');
+const previewScript = require('../scripts/preview-dallas-foreclosure-source');
 
 function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 200) {
   const buffer = Buffer.from(String(body || ''), 'utf8');
@@ -130,6 +131,7 @@ function runPreview(options = {}) {
     source_document_url: options.source_document_url || '',
     source_text: options.source_text || '',
     source_html: options.source_html || '',
+    input_file: options.input_file || '',
     source_acquisition_mode: options.source_acquisition_mode || 'live_preview'
   };
   return sourceAcquisitionOrchestrator.runAcquisitionCore(job, {
@@ -137,7 +139,8 @@ function runPreview(options = {}) {
     source_url: job.source_url,
     source_document_url: job.source_document_url,
     source_text: job.source_text,
-    source_html: job.source_html
+    source_html: job.source_html,
+    input_file: job.input_file
   });
 }
 
@@ -210,6 +213,27 @@ function runPreview(options = {}) {
   const brokenPreview = broken.adapter_results[0].diagnostics.live_source_preview;
   assert.ok(brokenPreview.document_urls_skipped.some((item) => /needs_file_adapter|pdf_parse_failed|unsupported/i.test(item.reason)));
   assert.strictEqual(broken.should_ingest, false);
+
+  assert.strictEqual(
+    previewScript.normalizePreviewInputs(['node', 'script', '--source-document-url', urls.publicSearchDoc]).inputMode,
+    'direct_document_url'
+  );
+
+  const noticeTxt = path.join(tmpDir, 'publicsearch-notice.txt');
+  fs.writeFileSync(noticeTxt, 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7427 Birch Ave, Dallas, TX 75228 | Borrower: File Input Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12348 | Parcel: 444555666 | Cash only. Investor special.');
+  const filePreview = await runPreview({
+    input_file: noticeTxt
+  });
+  assert.strictEqual(filePreview.preview_only, true);
+  assert.strictEqual(filePreview.should_ingest, false);
+  assert.ok(filePreview.adapter_results[0].diagnostics.input_mode === 'local_file' || filePreview.input_mode === 'local_file');
+  assert.ok(filePreview.adapter_results[0].diagnostics.input_file_meta);
+  assert.strictEqual(filePreview.adapter_results[0].diagnostics.input_file_meta.basename, 'publicsearch-notice.txt');
+  assert.ok(filePreview.adapter_results[0].diagnostics.input_file_meta.file_sha256);
+  assert.ok(filePreview.adapter_results[0].diagnostics.live_source_preview.input_file_meta);
+  assert.strictEqual(filePreview.adapter_results[0].diagnostics.live_source_preview.input_file_meta.basename, 'publicsearch-notice.txt');
+  assert.ok(filePreview.candidates_found >= 1);
+  assert.ok(Array.isArray(filePreview.cards) && filePreview.cards.length >= 1);
 
   const storedDb = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
   assert.deepStrictEqual(storedDb.leads, []);
