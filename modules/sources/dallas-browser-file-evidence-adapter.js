@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const propertyIdentity = require('../research/property-identity');
 
 const MAX_EVIDENCE_LINKS = 10;
 const MAX_ATTEMPTS = 5;
@@ -15,6 +16,7 @@ const SAFE_HOSTS = new Set([
 ]);
 
 const STREET_RE = /\b\d{1,6}\s+[A-Za-z0-9.'# -]{2,80}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway)\b(?:[\s,]*(?:dallas|tx|texas|\d{5})){0,6}/i;
+const COMPLETE_ADDRESS_RE = /^(.+?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway))\s+([A-Za-z][A-Za-z .'-]*?)\s+(TX|Texas|[A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
 const JUNK_RE = /\b(public information request|phone directory|contact us|page not found|error 404|privacy policy|terms of use|site map|login|sign in)\b/i;
 const BLOCKED_RE = /\b(captcha|human verification|verify you are human|access denied|forbidden|login required|sign in|register to bid|create an account)\b/i;
 const DALLAS_OFFICIAL_OFFICE_ADDRESS_RE = /\b(500\s+elm\s+street|133\s+n\.?\s+riverfront\s+boulevard|1201\s+elm\s+street)\b/i;
@@ -127,9 +129,25 @@ function discoverEvidenceLinksFromHtml(html, baseUrl) {
 }
 
 function normalizeAddress(value) {
-  const match = cleanText(value).match(STREET_RE);
+  const text = cleanText(value);
+  const fullMatch = text.match(COMPLETE_ADDRESS_RE);
+  if (fullMatch) return `${cleanText(fullMatch[1])}, ${cleanText(fullMatch[2])}, ${cleanText(fullMatch[3])} ${cleanText(fullMatch[4])}`;
+  const match = text.match(STREET_RE);
   if (!match) return '';
-  return cleanText(match[0]).replace(/\s+,/g, ',');
+  const raw = cleanText(match[0]).replace(/\s+,/g, ',');
+  const deduped = raw.replace(/,\s*[A-Za-z .'-]+,\s*(?:TX|Texas|[A-Z]{2})\s+\d{5}(?:-\d{4})?$/i, '');
+  const candidate = deduped || raw;
+  const parsed = propertyIdentity.parseAddress(candidate);
+  if (parsed && parsed.complete && parsed.full_address) return cleanText(parsed.full_address);
+  const complete = candidate.match(COMPLETE_ADDRESS_RE);
+  if (complete) return `${cleanText(complete[1])}, ${cleanText(complete[2])}, ${cleanText(complete[3])} ${cleanText(complete[4])}`;
+  const zipMatch = text.match(/\b75[23]\d{2}\b/);
+  if (zipMatch && !/\b\d{5}(?:-\d{4})?\b/.test(candidate)) {
+    if (/\bTX\b$/i.test(candidate) || /\bTexas\b$/i.test(candidate) || /\b[A-Z]{2}\b$/i.test(candidate)) {
+      return `${candidate} ${zipMatch[0]}`;
+    }
+  }
+  return candidate;
 }
 
 function candidateFromBlock(block, context) {
@@ -173,10 +191,7 @@ function candidateFromBlock(block, context) {
   return {
     id: `DAL-FILE-${safeId(`${sourceUrl}|${address}|${caseNumber}|${parcel}|${saleDate}`)}`,
     address,
-    city: hasDallas ? 'Dallas' : '',
-    state: 'TX',
     county: 'Dallas',
-    zip,
     parcel,
     apn: parcel,
     case_number: caseNumber,
@@ -186,6 +201,9 @@ function candidateFromBlock(block, context) {
     opening_bid: openingBid,
     tax_amount: taxAmount,
     judgment_amount: judgmentAmount,
+    source_text: text,
+    source_excerpt: text.slice(0, 500),
+    source_page_text: text,
     source_reference: context.source_reference || 'official evidence text',
     source_url: context.source_url,
     source_record_url: sourceUrl,

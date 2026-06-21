@@ -435,7 +435,9 @@ function candidatesFromBlocks(blocks, context) {
     const text = cleanText(block);
     if (!text || JUNK_ROW_RE.test(text)) continue;
     const match = text.match(PARTIAL_ADDRESS_RE);
-    const partialAddress = cleanText(match && match[1]).replace(/\b(?:case|cause|sale|auction|parcel|owner|tax|opening|minimum)\b.*$/i, '').trim();
+    const partialAddress = cleanText(match && match[1])
+      .replace(/\b(?:borrower|sale date|case|cause|sale|auction|parcel|owner|tax|opening|minimum|foreclosure sale notice|notice of substitute trustee sale)\b.*$/i, '')
+      .trim();
     if (!partialAddress || partialAddress.length < 4 || /\b(contact|phone|directory|request)\b/i.test(partialAddress)) continue;
     const key = `${context.source_proof_url}|${partialAddress}`.toLowerCase();
     if (seen.has(key)) continue;
@@ -445,6 +447,9 @@ function candidatesFromBlocks(blocks, context) {
       address: partialAddress,
       county: 'Dallas',
       state: 'TX',
+      source_text: text,
+      source_excerpt: text.slice(0, 500),
+      source_page_text: text,
       source_url: context.source_url,
       source_record_url: context.source_proof_url,
       source_reference: context.source_reference || 'official Dallas file text',

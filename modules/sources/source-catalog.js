@@ -62,6 +62,7 @@ function normalizeCatalogSource(source) {
   item.adapter_id = cleanText(sourceAdapterRegistry.adapterIdForSourceId(item.source_id) || item.adapter_id || item.source_id);
   item.adapter_family = cleanText(sourceAdapterRegistry.adapterFamilyForSourceId(item.source_id) || item.adapter_family || '');
   item.official_source = item.official_source === true || /\.gov\b|county|clerk|sheriff|tax|probate|opendata|socrata/i.test(`${item.source_url || ''} ${item.source_name || ''} ${item.source_type || ''}`);
+  item.document_hunter_ready = item.document_hunter_ready === true || item.source_family === 'preforeclosure_trustee_notice';
   item.priority_score = Number(item.priority_score || 0) || 0;
   item.preview_only = true;
   item.should_ingest = false;
