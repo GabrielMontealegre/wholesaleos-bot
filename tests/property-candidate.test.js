@@ -59,6 +59,21 @@ const noContact = propertyCandidate.normalizePropertyCandidate({
 assert.strictEqual(noContact.next_best_worker, scorer.NEXT_BEST_WORKERS.SKIP_TRACE);
 assert.ok(noContact.official_source);
 
+const unprovenPhraseAndStatus = propertyCandidate.normalizePropertyCandidate({
+  source_id: 'tx_dallas_fsbo_contact_first',
+  source_family: 'fsbo',
+  source_url: 'https://www.realtor.com/realestateandhomes-detail/126-Main-St_Dallas_TX_75208_M12645',
+  source_classification: 'exact_property_record',
+  address: '126 Main St, Dallas, TX 75208',
+  motivation_phrase: 'For sale by owner',
+  source_proof_text: 'Public property page without visible motivation or current status.',
+  source_text: 'Public property page without visible motivation or current status.',
+  contact_route: 'Manual Lookup Needed'
+});
+assert.strictEqual(unprovenPhraseAndStatus.lead_evidence.exact_source_phrase_verbatim, false);
+assert.strictEqual(unprovenPhraseAndStatus.current_status, '');
+assert.strictEqual(unprovenPhraseAndStatus.status_evidence_text, '');
+
 const weakIdentity = propertyCandidate.normalizePropertyCandidate({
   source_id: 'tx_dallas_tax_resale',
   source_family: 'tax_resale',

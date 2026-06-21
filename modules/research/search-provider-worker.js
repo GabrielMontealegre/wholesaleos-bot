@@ -49,7 +49,38 @@ const SOURCE_DOCUMENT_DISCOVERY_BLUEPRINTS = [
     terms: ['foreclosure notice', 'document']
   }
 ];
+const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
+  {
+    provider_family: 'fsbo',
+    site: 'fsbo.com',
+    query_group: 'dallas_fsbo_direct_listing',
+    expected_url_pattern: 'fsbo.com property listing detail page',
+    terms: ['for sale by owner', 'owner contact']
+  },
+  {
+    provider_family: 'forsalebyowner',
+    site: 'forsalebyowner.com',
+    query_group: 'dallas_for_sale_by_owner_direct_listing',
+    expected_url_pattern: 'forsalebyowner.com property listing detail page',
+    terms: ['for sale by owner', 'owner contact']
+  },
+  {
+    provider_family: 'zillow_fsbo',
+    site: 'zillow.com',
+    query_group: 'dallas_zillow_fsbo_property',
+    expected_url_pattern: 'zillow.com/homedetails/ owner listing',
+    terms: ['for sale by owner', 'owner listed']
+  },
+  {
+    provider_family: 'public_listing_contact',
+    site: 'realtor.com',
+    query_group: 'dallas_public_listing_contact',
+    expected_url_pattern: 'realtor.com/realestateandhomes-detail/ with visible public contact route',
+    terms: ['for sale by owner', 'contact seller']
+  }
+];
 const MAX_QUERY_GROUPS = 6;
+const MAX_CONTACT_QUERY_GROUPS = 4;
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -333,6 +364,32 @@ function isDocumentDiscoveryInput(input) {
   return /source_document_discovery|document_hunter/.test(text);
 }
 
+function isContactFirstInput(input) {
+  const text = cleanText([
+    input && input.search_mode,
+    input && input.discovery_mode,
+    input && input.purpose,
+    input && input.query_group
+  ].filter(Boolean).join(' ')).toLowerCase();
+  return /contact_first|fsbo_contact|call_ready_packet/.test(text);
+}
+
+function buildContactFirstSearchQueries(input) {
+  input = input || {};
+  const marketText = marketClause(input);
+  const exclusions = ['-sold', '-closed', '-pending', '-auction', '-reo', '-bank-owned', '-blog', '-article', '-news', '-category', '-search', '-results', '-social', '-cash-buyer'];
+  return CONTACT_FIRST_SEARCH_BLUEPRINTS.map((family, index) => ({
+    query: buildQueryText(family.site, marketText, family.terms, exclusions),
+    provider_family: family.provider_family,
+    purpose: 'contact_first_acquisition',
+    priority: index + 1,
+    expected_url_pattern: family.expected_url_pattern,
+    query_group: family.query_group
+  }))
+    .filter((item, index, list) => cleanText(item.query) && list.findIndex((entry) => cleanText(entry.query) === cleanText(item.query)) === index)
+    .slice(0, MAX_CONTACT_QUERY_GROUPS);
+}
+
 function buildSourceDocumentDiscoveryQueryGroups(input) {
   input = input || {};
   const marketText = marketClause(input);
@@ -400,6 +457,10 @@ function buildProviderQueryGroups(input) {
     const documentQueries = buildSourceDocumentDiscoveryQueryGroups(input);
     if (documentQueries.length) return documentQueries;
   }
+  if (isContactFirstInput(input)) {
+    const contactQueries = buildContactFirstSearchQueries(input);
+    if (contactQueries.length) return contactQueries;
+  }
   return buildPropertyDetailSearchQueries(input);
 }
 
@@ -411,6 +472,7 @@ function sourceBrandFromQuery(query) {
   if (/zillow/i.test(site)) return 'Zillow';
   if (/\bhar\b|har\.com/i.test(site)) return 'HAR';
   if (/fsbo/i.test(site)) return 'FSBO';
+  if (/forsalebyowner/i.test(site)) return 'ForSaleByOwner';
   return '';
 }
 
@@ -448,6 +510,9 @@ function criterionFromQuery(query) {
     'price reduced',
     'estate sale',
     'FSBO',
+    'for sale by owner',
+    'owner contact',
+    'contact seller',
     'hard money only',
     'traditional financing unavailable'
   ];
@@ -942,7 +1007,9 @@ async function runSearchProvider(input = {}, options = {}) {
         retrieved_at: card.retrieved_at,
         possible_address: card.address || card.display_address,
         possible_exact_phrase: card.exact_source_phrase_candidate || card.possible_exact_phrase || card.exact_source_phrase,
-        phrase_provenance: card.phrase_provenance || card.exact_source_phrase_source_type,
+        phrase_provenance: card.phrase_provenance === 'snippet'
+          ? 'search_snippet'
+          : card.phrase_provenance || card.exact_source_phrase_source_type,
         exact_source_phrase_candidate: card.exact_source_phrase_candidate || '',
         exact_source_phrase_verbatim_candidate: card.exact_source_phrase_verbatim_candidate === true,
         confidence: card.confidence,
@@ -977,7 +1044,31 @@ async function runSearchProvider(input = {}, options = {}) {
         grounded_url_count: cards.filter((card) => card.source_url).length,
         snippet_phrase_count: evidenceConversionDiagnostics.snippet_phrases_found,
         demotion_counts: demoted,
-        rejected_url_class_counts: rejected
+        rejected_url_class_counts: rejected,
+        method: called.diagnostics && called.diagnostics.method || '',
+        endpoint_host: called.diagnostics && called.diagnostics.endpoint_host || '',
+        timeout_ms: called.diagnostics && called.diagnostics.timeout_ms || null,
+        max_results: called.diagnostics && called.diagnostics.max_results || null,
+        request_started_at: called.diagnostics && called.diagnostics.request_started_at || '',
+        request_finished_at: called.diagnostics && called.diagnostics.request_finished_at || '',
+        duration_ms: called.diagnostics && called.diagnostics.duration_ms || 0,
+        http_status: called.diagnostics && called.diagnostics.http_status || null,
+        response_shape: called.diagnostics && called.diagnostics.response_shape || {},
+        safe_error_summary: called.diagnostics && called.diagnostics.safe_error_summary || '',
+        next_action: called.diagnostics && called.diagnostics.next_action || '',
+        original_query: called.diagnostics && called.diagnostics.original_query || '',
+        sanitized_query: called.diagnostics && called.diagnostics.sanitized_query || '',
+        query_mode: called.diagnostics && called.diagnostics.query_mode || '',
+        query_pattern_rejected: called.diagnostics && called.diagnostics.query_pattern_rejected === true,
+        retry_used: called.diagnostics && called.diagnostics.retry_used === true,
+        retry_reason: called.diagnostics && called.diagnostics.retry_reason || '',
+        final_http_status: called.diagnostics && called.diagnostics.final_http_status || null,
+        final_error_category: called.diagnostics && called.diagnostics.final_error_category || '',
+        final_safe_error_summary: called.diagnostics && called.diagnostics.final_safe_error_summary || '',
+        organic_count: Number(called.diagnostics && called.diagnostics.organic_count || 0) || 0,
+        query_attempts: Array.isArray(called.diagnostics && called.diagnostics.query_attempts)
+          ? called.diagnostics.query_attempts
+          : []
       });
       warnings.push(...(called.warnings || []).map(safeWarning).filter(Boolean));
       if (allCards.length >= totalResultCap) break;
@@ -1152,6 +1243,7 @@ module.exports = {
   searchProviderConfig,
   buildSearchQueries,
   buildPropertyDetailSearchQueries,
+  buildContactFirstSearchQueries,
   buildSourceDocumentDiscoveryQueryGroups,
   buildProviderQueryGroups,
   sanitizeSerperFreeQuery,

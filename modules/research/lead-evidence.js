@@ -3,7 +3,7 @@
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const propertyIdentity = require('./property-identity');
 
-const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable)\b/i;
+const WHOLESALE_PHRASE_RE = /\b(as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable|fsbo|for sale by owner)\b/i;
 const CLOSED_RE = /\b(sold|closed|off[- ]?market|auction ended|sale completed)\b/i;
 const CURRENT_RE = /\b(active|for sale|house for sale|home for sale|homes for sale|listed|available|back on (?:the )?market|relisted|price (?:reduced|cut|drop|reduction)|new listing|auction date|foreclosure sale)\b/i;
 const EXCLUDED_RE = /\b(bank[- ]?owned|reo|real estate owned|completed auction|auction ended|sale completed)\b/i;
@@ -125,7 +125,7 @@ function compStatusFrom(input) {
 
 function contactRouteFrom(input, sourceUrl, phrase) {
   const direct = cleanText(pick(input, ['lead_evidence.public_contact_route', 'public_contact_route', 'contact_route']));
-  if (/^(Listing Agent|Public Contact Form|FSBO Public Contact|Manual Lookup Needed)$/i.test(direct)) return direct;
+  if (/^(Direct Phone|Direct Email|Public Reply|Listing Agent|Public Contact Form|FSBO Public Contact|Manual Lookup Needed)$/i.test(direct)) return direct;
   const contactText = [
     pick(input, ['listing_agent', 'agent_name', 'contact_name']),
     pick(input, ['phone', 'contact_phone', 'agent_phone', 'email', 'contact_email', 'agent_email'])

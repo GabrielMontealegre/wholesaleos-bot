@@ -82,16 +82,18 @@ function sourceMatchesRequestedFamily(source, requestedFamilies) {
 function selectAcquisitionSources(job, catalog) {
   const requestedIds = asArray(job.source_ids || job.sourceIds || []).map(cleanText).filter(Boolean);
   const requestedFamilies = asArray(job.source_families || job.sourceFamilies || []).map(cleanText).filter(Boolean);
+  const explicitlyRequested = requestedIds.length > 0 || requestedFamilies.length > 0;
   const registeredIds = new Set(sourceAdapterRegistry.listRegisteredSourceIds());
   let selected = (Array.isArray(catalog) ? catalog : []).filter((source) => {
     if (!registeredIds.has(source.source_id)) return false;
+    if (!explicitlyRequested && source.auto_select === false) return false;
     if (requestedIds.length && !requestedIds.includes(source.source_id)) return false;
     return sourceMatchesRequestedFamily(source, requestedFamilies);
   });
-  if (!selected.length) {
+  if (!selected.length && !explicitlyRequested) {
     selected = (Array.isArray(catalog) ? catalog : []).filter((source) => registeredIds.has(source.source_id));
   }
-  if (!selected.length) {
+  if (!selected.length && !explicitlyRequested) {
     selected = (Array.isArray(catalog) ? catalog : []).filter((source) => /dallas county clerk foreclosure notices/i.test(source.source_name || source.source_id));
   }
   return selected.slice(0, 5);
@@ -99,12 +101,16 @@ function selectAcquisitionSources(job, catalog) {
 
 function normalizeAdapterResult(result) {
   const candidateList = asArray(result && result.candidates);
+  const packetList = asArray(result && result.packets);
   return {
     source_id: cleanText(result && result.source_id),
     source_name: cleanText(result && result.source_name),
     status: cleanText(result && result.status),
     attempted: result && result.attempted === true,
     candidate_count: candidateList.length,
+    packet_count: packetList.length,
+    call_ready_count: packetList.filter((packet) => cleanText(packet && packet.packet_status) === 'CALL_READY').length,
+    outreach_ready_count: packetList.filter((packet) => cleanText(packet && packet.packet_status) === 'OUTREACH_READY').length,
     blocked_reason: cleanText(result && result.blocked_reason),
     message: cleanText(result && result.message),
     evidence_links_found: Number(result && result.evidence_links_found || result && result.diagnostics && result.diagnostics.evidence_links_found || 0) || 0,
@@ -132,6 +138,7 @@ async function runAcquisitionCore(job, options = {}) {
   let sourceFamiliesAttempted = [];
   let rawCandidates = [];
   let cards = [];
+  let packets = [];
 
   if (shouldRunMock) {
     const mocked = mockAdapter(job, options);
@@ -144,7 +151,7 @@ async function runAcquisitionCore(job, options = {}) {
     sourceFamiliesAttempted = Array.from(new Set(selectedSources.map((source) => source.source_family).filter(Boolean)));
     for (const source of selectedSources) {
       const adapter = sourceAdapterRegistry.adapterForSourceId(source.source_id);
-      if (!adapter || !adapter.adapter || typeof adapter.adapter.runDallasForeclosureAcquisitionAdapter !== 'function') {
+      if (!adapter || typeof adapter.run !== 'function') {
         adapterResults.push(normalizeAdapterResult({
           source_id: source.source_id,
           source_name: source.source_name,
@@ -155,7 +162,7 @@ async function runAcquisitionCore(job, options = {}) {
         }));
         continue;
       }
-      const result = await adapter.adapter.runDallasForeclosureAcquisitionAdapter(Object.assign({}, options, {
+      const result = await sourceAdapterRegistry.discoverSource(source.source_id, Object.assign({}, options, {
         source,
         source_id: source.source_id,
         source_family: source.source_family,
@@ -172,6 +179,7 @@ async function runAcquisitionCore(job, options = {}) {
       const candidates = asArray(result && result.candidates).map((candidate) => propertyCandidate.normalizePropertyCandidate(candidate, context));
       rawCandidates.push(...candidates);
       cards.push(...(asArray(result && result.cards).length ? result.cards : candidates.map((candidate) => propertyCandidate.candidateToFindMeCard(candidate, context))));
+      packets.push(...asArray(result && result.packets));
     }
   }
 
@@ -198,6 +206,7 @@ async function runAcquisitionCore(job, options = {}) {
     adapter_results: adapterResults,
     candidate_count: candidates.length,
     card_count: normalizedCards.length,
+    packet_count: packets.length,
     mock_mode: shouldRunMock,
     source_catalog_count: catalog.length
   };
@@ -217,6 +226,8 @@ async function runAcquisitionCore(job, options = {}) {
     candidates_found: candidates.length,
     cards: normalizedCards,
     candidates,
+    call_ready_packets: packets,
+    call_ready_packet_count: packets.length,
     next_best_worker_counts: workerCounts(candidates),
     confidence_buckets: confidenceBuckets(candidates),
     diagnostics,

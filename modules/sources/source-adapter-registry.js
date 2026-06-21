@@ -1,6 +1,7 @@
 'use strict';
 
 const dallasForeclosureAcquisitionAdapter = require('./dallas-foreclosure-acquisition-adapter');
+const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acquisition-adapter');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -13,7 +14,17 @@ const ADAPTERS = {
     adapter_id: 'dallas_foreclosure_acquisition_adapter',
     adapter_family: 'pdf_list_adapter',
     source_name: 'Dallas County Clerk Foreclosure Notices',
-    adapter: dallasForeclosureAcquisitionAdapter
+    adapter: dallasForeclosureAcquisitionAdapter,
+    run: dallasForeclosureAcquisitionAdapter.runDallasForeclosureAcquisitionAdapter
+  },
+  tx_dallas_fsbo_contact_first: {
+    source_id: 'tx_dallas_fsbo_contact_first',
+    source_family: 'fsbo',
+    adapter_id: 'dallas_fsbo_contact_acquisition_adapter',
+    adapter_family: 'public_contact_listing_adapter',
+    source_name: 'Dallas FSBO / owner-contact listing sources',
+    adapter: dallasFsboContactAcquisitionAdapter,
+    run: dallasFsboContactAcquisitionAdapter.runDallasFsboContactAcquisitionAdapter
   }
 };
 
@@ -41,7 +52,7 @@ function listRegisteredAdapters() {
 
 async function discoverSource(sourceId, input = {}) {
   const adapter = adapterForSourceId(sourceId);
-  if (!adapter || !adapter.adapter || typeof adapter.adapter.runDallasForeclosureAcquisitionAdapter !== 'function') {
+  if (!adapter || typeof adapter.run !== 'function') {
     return {
       source_id: cleanText(sourceId),
       status: 'not_configured',
@@ -54,7 +65,7 @@ async function discoverSource(sourceId, input = {}) {
       }
     };
   }
-  return adapter.adapter.runDallasForeclosureAcquisitionAdapter(Object.assign({}, input, {
+  return adapter.run(Object.assign({}, input, {
     source_id: adapter.source_id,
     source_family: adapter.source_family,
     source_name: adapter.source_name

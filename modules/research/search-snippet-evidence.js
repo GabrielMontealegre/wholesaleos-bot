@@ -31,7 +31,8 @@ const PHRASE_FAMILIES = [
   { family: 'foundation_issue', patterns: [/\bfoundation issue\b/i] },
   { family: 'tenant_occupied', patterns: [/\btenant occupied\b/i] },
   { family: 'no_repairs', patterns: [/\bno repairs\b/i] },
-  { family: 'bring_all_offers', patterns: [/\bbring all offers\b/i] }
+  { family: 'bring_all_offers', patterns: [/\bbring all offers\b/i] },
+  { family: 'fsbo', patterns: [/\b(fsbo|for sale by owner)\b/i] }
 ];
 const STATUS_PROMOTABLE_FAMILIES = [
   { family: 'active', label: 'active', patterns: [/\bactive\b/i] },
