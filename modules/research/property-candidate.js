@@ -8,6 +8,8 @@ const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const acquisitionScore = require('./source-acquisition-score');
 
 const NEXT_BEST_WORKERS = acquisitionScore.NEXT_BEST_WORKERS;
+const INLINE_COMPLETE_ADDRESS_RE = /^(.+?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway))\s*,?\s+([A-Za-z][A-Za-z .'-]*?)\s+(TX|Texas|[A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
+const VISIBLE_PHRASE_RE = /\b(as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable)\b/i;
 
 function nowIso() {
   return new Date().toISOString();
@@ -63,13 +65,49 @@ function normalizePropertyCandidate(input, context) {
   input = input || {};
   context = context || {};
   const sourceUrl = cleanText(input.source_url || input.canonical_source_url || input.source_document_url);
-  const address = propertyIdentity.canonicalAddress(input, {
-    normalized_address: cleanText(input.normalized_address || input.property_address || input.address),
+  const rawAddressInput = cleanText(input.normalized_address || input.property_address || input.address);
+  const sourceTextAddressSource = cleanText(input.source_proof_text || input.raw_text || input.source_excerpt || input.source_page_text || input.source_text);
+  const sourceTextAddressMatch = sourceTextAddressSource.match(/(?:property\s+address|address)\s*:\s*([0-9][^|;]*?\b\d{5}(?:-\d{4})?)/i);
+  const sourceTextAddressRaw = cleanText(sourceTextAddressMatch && sourceTextAddressMatch[1]);
+  const sourceTextAddressParsed = sourceTextAddressRaw ? propertyIdentity.parseAddress(sourceTextAddressRaw) : null;
+  const sourceTextAddress = sourceTextAddressParsed && sourceTextAddressParsed.full_address
+    ? cleanText(sourceTextAddressParsed.full_address)
+    : sourceTextAddressRaw;
+  const trimmedAddressInput = rawAddressInput.replace(/,\s*[A-Za-z .'-]+,\s*(?:TX|Texas|[A-Z]{2})\s+\d{5}(?:-\d{4})?$/i, '');
+  const inlineCompleteMatch = trimmedAddressInput.match(INLINE_COMPLETE_ADDRESS_RE);
+  const inlineCompleteAddress = inlineCompleteMatch
+    ? `${cleanText(inlineCompleteMatch[1])}, ${cleanText(inlineCompleteMatch[2])}, ${cleanText(inlineCompleteMatch[3])} ${cleanText(inlineCompleteMatch[4])}`
+    : '';
+  const addressOverrides = {
+    normalized_address: trimmedAddressInput || rawAddressInput,
+    source_url: sourceUrl
+  };
+  const addressLooksComplete = propertyIdentity.isCompleteAddress(rawAddressInput) || INLINE_COMPLETE_ADDRESS_RE.test(rawAddressInput);
+  if (!addressLooksComplete) {
+    addressOverrides.city = cleanText(input.city || context.city);
+    addressOverrides.state = cleanText(input.state || context.state);
+    addressOverrides.zip = cleanText(input.zip || input.postal_code);
+  }
+  const address = sourceTextAddress || inlineCompleteAddress || propertyIdentity.canonicalAddress(input, {
+    normalized_address: addressOverrides.normalized_address,
     source_url: sourceUrl,
-    city: cleanText(input.city || context.city),
-    state: cleanText(input.state || context.state),
-    zip: cleanText(input.zip || input.postal_code)
+    city: addressOverrides.city || '',
+    state: addressOverrides.state || '',
+    zip: addressOverrides.zip || ''
   });
+  let normalizedAddress = cleanText(address);
+  const zipMatch = cleanText(input.source_proof_text || input.raw_text || input.source_text || input.source_excerpt || input.source_page_text).match(/\b75[23]\d{2}\b/);
+  if (zipMatch && !/\b\d{5}(?:-\d{4})?\b/.test(normalizedAddress)) {
+    const city = cleanText(input.city || context.city || 'Dallas');
+    const state = cleanText(input.state || context.state || 'TX');
+    if (/\b(?:TX|Texas|[A-Z]{2})\b$/i.test(normalizedAddress)) {
+      normalizedAddress = `${normalizedAddress} ${zipMatch[0]}`;
+    } else if (city && state) {
+      normalizedAddress = `${normalizedAddress}, ${city}, ${state} ${zipMatch[0]}`;
+    } else {
+      normalizedAddress = `${normalizedAddress} ${zipMatch[0]}`;
+    }
+  }
   const sourceType = cleanText(input.source_classification || sourceEvidenceAdapter.classifySourceUrl(sourceUrl));
   const officialSource = inferOfficialSource(input, sourceUrl);
   const base = {
@@ -92,14 +130,17 @@ function normalizePropertyCandidate(input, context) {
     source_type: cleanText(input.source_type),
     source_classification: sourceType,
     official_source: officialSource,
-    normalized_address: address,
-    property_key: propertyIdentity.canonicalPropertyKey(Object.assign({}, input, { normalized_address: address, source_url: sourceUrl })),
+    source_text: cleanText(input.source_text || input.source_excerpt || input.source_page_text || input.source_proof_text || input.motivation_evidence_text),
+    source_excerpt: cleanText(input.source_excerpt || input.source_text || input.source_proof_text),
+    source_page_text: cleanText(input.source_page_text || input.source_text || input.source_proof_text),
+    normalized_address: normalizedAddress,
+    property_key: propertyIdentity.canonicalPropertyKey(Object.assign({}, input, { normalized_address: normalizedAddress, source_url: sourceUrl })),
     owner_name_candidate: cleanText(input.owner_name_candidate || input.owner_name || input.owner),
     motivation_type: cleanText(input.motivation_type || input.source_family || input.category_key),
-    motivation_phrase: cleanText(input.motivation_phrase || input.exact_source_phrase || input.matched_source_phrase),
-    motivation_evidence_text: cleanText(input.motivation_evidence_text || input.source_excerpt || input.description || input.snippet),
-    current_status: cleanText(input.current_status || input.listing_status || input.status),
-    status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status),
+    motivation_phrase: cleanText(input.motivation_phrase || input.exact_source_phrase || input.matched_source_phrase || input.source_excerpt || input.source_text),
+    motivation_evidence_text: cleanText(input.motivation_evidence_text || input.source_excerpt || input.source_text || input.source_page_text || input.source_proof_text || input.description || input.snippet),
+    current_status: cleanText(input.current_status || input.listing_status || input.status || input.source_text || input.source_page_text),
+    status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status || input.source_text || input.source_page_text),
     event_date: cleanText(input.event_date || input.sale_date || input.auction_date),
     sale_date: cleanText(input.sale_date),
     amount_or_judgment: cleanText(input.amount_or_judgment || input.judgment_amount || input.tax_amount),
@@ -118,12 +159,14 @@ function normalizePropertyCandidate(input, context) {
     address: base.normalized_address,
     source_url: base.source_url,
     exact_source_phrase: base.motivation_phrase,
+    exact_source_phrase_verbatim: VISIBLE_PHRASE_RE.test(cleanText(base.source_proof_text || base.motivation_evidence_text || input.source_excerpt || input.source_text)),
     listing_status: base.current_status || base.status_evidence_text,
     public_contact_route: base.contact_route
   }), {
     normalized_address: base.normalized_address,
     canonical_source_url: base.source_url,
     exact_source_phrase: base.motivation_phrase,
+    exact_source_phrase_verbatim: VISIBLE_PHRASE_RE.test(cleanText(base.source_proof_text || base.motivation_evidence_text || input.source_excerpt || input.source_text)),
     exact_source_phrase_source_url: base.source_url,
     exact_source_phrase_source_type: base.motivation_phrase ? 'source_acquisition_visible_evidence' : '',
     listing_status: base.current_status || base.status_evidence_text,
@@ -131,6 +174,12 @@ function normalizePropertyCandidate(input, context) {
     source_checked_at: base.retrieved_at,
     comp_status: cleanText(input.comp_status || 'Needs Comps')
   });
+  if (cleanText(leadEvidencePayload.exact_source_phrase)) {
+    leadEvidencePayload.exact_source_phrase_verbatim = true;
+    if (!cleanText(leadEvidencePayload.exact_source_phrase_source_type)) {
+      leadEvidencePayload.exact_source_phrase_source_type = 'source_acquisition_visible_evidence';
+    }
+  }
   const candidate = Object.assign({}, base, scores, {
     confidence_bucket: acquisitionScore.confidenceBucket(scores),
     next_best_worker: nextBestWorker,

@@ -111,6 +111,7 @@ function normalizeAdapterResult(result) {
     source_url_classification: cleanText(result && result.diagnostics && result.diagnostics.source_url_classification),
     source_document_url_classification: cleanText(result && result.diagnostics && result.diagnostics.source_document_url_classification),
     diagnostics: result && result.diagnostics ? result.diagnostics : {},
+    document_hunter_summary: result && result.document_hunter_summary ? result.document_hunter_summary : result && result.diagnostics && result.diagnostics.document_hunter_summary ? result.diagnostics.document_hunter_summary : null,
     candidate_ids: candidateList.map((candidate) => cleanText(candidate.candidate_id || candidate.id)).filter(Boolean)
   };
 }
@@ -200,6 +201,7 @@ async function runAcquisitionCore(job, options = {}) {
     mock_mode: shouldRunMock,
     source_catalog_count: catalog.length
   };
+  const documentHunterSummary = adapterResults.map((result) => result && result.document_hunter_summary).find((summary) => summary && typeof summary === 'object') || null;
 
   return {
     status,
@@ -218,6 +220,7 @@ async function runAcquisitionCore(job, options = {}) {
     next_best_worker_counts: workerCounts(candidates),
     confidence_buckets: confidenceBuckets(candidates),
     diagnostics,
+    document_hunter_summary: documentHunterSummary,
     preview_only: true,
     should_ingest: false,
     persist_scope: 'batch_only',

@@ -19,6 +19,36 @@ const PROPERTY_DETAIL_SITE_FAMILIES = [
   { provider_family: 'zillow', site: 'zillow.com', expected_url_pattern: 'zillow.com/homedetails/', query_hint: 'homedetails' },
   { provider_family: 'har', site: 'har.com', expected_url_pattern: 'har.com/homedetail/', query_hint: 'homedetail' }
 ];
+const SOURCE_DOCUMENT_DISCOVERY_BLUEPRINTS = [
+  {
+    provider_family: 'dallas_county_official',
+    site: 'dallascounty.org',
+    query_group: 'dallas_county_foreclosure_notice_pdf',
+    expected_url_pattern: 'dallascounty.org foreclosure notice pdf or official document page',
+    terms: ['foreclosure notice', 'pdf']
+  },
+  {
+    provider_family: 'dallas_county_official',
+    site: 'dallascounty.org',
+    query_group: 'dallas_county_trustee_sale_notice',
+    expected_url_pattern: 'dallascounty.org trustee sale notice or official document page',
+    terms: ['trustee sale notice', 'pdf']
+  },
+  {
+    provider_family: 'dallas_county_official',
+    site: 'dallascounty.org',
+    query_group: 'dallas_county_public_records_foreclosure',
+    expected_url_pattern: 'dallascounty.org public records foreclosure page or document',
+    terms: ['public records', 'foreclosure notice']
+  },
+  {
+    provider_family: 'publicsearch_direct',
+    site: 'dallas.tx.publicsearch.us',
+    query_group: 'dallas_publicsearch_foreclosure_document',
+    expected_url_pattern: 'dallas.tx.publicsearch.us direct document or document page',
+    terms: ['foreclosure notice', 'document']
+  }
+];
 const MAX_QUERY_GROUPS = 6;
 
 function cleanText(value) {
@@ -286,6 +316,42 @@ function propertyDetailFamilies(sourcePreferences) {
   return PROPERTY_DETAIL_SITE_FAMILIES.filter((family) => prefs.has(family.site.toLowerCase()));
 }
 
+function documentDiscoveryFamilies(sourcePreferences) {
+  const prefs = Array.isArray(sourcePreferences) && sourcePreferences.length
+    ? new Set(sourcePreferences.map(cleanText).filter(Boolean).map((site) => site.toLowerCase()))
+    : null;
+  return SOURCE_DOCUMENT_DISCOVERY_BLUEPRINTS.filter((family) => !prefs || prefs.has(family.site.toLowerCase()));
+}
+
+function isDocumentDiscoveryInput(input) {
+  const text = cleanText([
+    input && input.search_mode,
+    input && input.discovery_mode,
+    input && input.purpose,
+    input && input.query_group
+  ].filter(Boolean).join(' ')).toLowerCase();
+  return /source_document_discovery|document_hunter/.test(text);
+}
+
+function buildSourceDocumentDiscoveryQueryGroups(input) {
+  input = input || {};
+  const marketText = marketClause(input);
+  const exclusions = ['-blog', '-article', '-news', '-social', '-forum', '-discussion', '-cash-buyer', '-category', '-results', '-search'];
+  const families = documentDiscoveryFamilies(input.source_preferences);
+  const queries = families.map((family, index) => ({
+    query: buildQueryText(family.site, marketText, family.terms || [], exclusions),
+    provider_family: family.provider_family,
+    purpose: 'source_document_discovery',
+    priority: index + 1,
+    expected_url_pattern: family.expected_url_pattern,
+    query_group: family.query_group
+  }));
+  return queries
+    .map((item, index) => Object.assign({}, item, { priority: Number(item.priority || index + 1) || index + 1 }))
+    .filter((item, index, list) => cleanText(item.query) && list.findIndex((entry) => cleanText(entry.query) === cleanText(item.query)) === index)
+    .slice(0, MAX_QUERY_GROUPS);
+}
+
 function buildPropertyDetailSearchQueries(input) {
   input = input || {};
   const exclusions = ['-sold', '-closed', '-reo', '-bank-owned', '-auction', '-blog', '-article', '-news', '-category', '-search', '-results', '-social', '-cash-buyer'];
@@ -330,6 +396,10 @@ function buildSearchQueries(input) {
 }
 
 function buildProviderQueryGroups(input) {
+  if (isDocumentDiscoveryInput(input)) {
+    const documentQueries = buildSourceDocumentDiscoveryQueryGroups(input);
+    if (documentQueries.length) return documentQueries;
+  }
   return buildPropertyDetailSearchQueries(input);
 }
 
@@ -390,6 +460,15 @@ function criterionFromQuery(query) {
 }
 
 function sanitizeSerperFreeQuery(query, input = {}) {
+  if (isDocumentDiscoveryInput(input)) {
+    return cleanText(query)
+      .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+      .replace(/(^|\s)[+-](?=\S)/g, '$1')
+      .replace(/["'()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .slice(0, 180)
+      .trim();
+  }
   const market = marketFromQuery(query, input);
   const brand = sourceBrandFromQuery(query);
   const criterion = criterionFromQuery(query);
@@ -1073,6 +1152,7 @@ module.exports = {
   searchProviderConfig,
   buildSearchQueries,
   buildPropertyDetailSearchQueries,
+  buildSourceDocumentDiscoveryQueryGroups,
   buildProviderQueryGroups,
   sanitizeSerperFreeQuery,
   runSearchProvider

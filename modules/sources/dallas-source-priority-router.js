@@ -30,10 +30,11 @@ const DALLAS_SOURCE_PLAN = [
     extraction_method_needed: 'Foreclosure notice PDF/public-search adapter',
     risk_legal_status: 'Public record, verify notice and property identity before outreach.',
     current_status: 'Best next source to build; current capture stack has not extracted property rows from this path yet.',
-    next_build_recommendation: 'Build Dallas foreclosure notice PDF/public-search adapter v1.',
+    next_build_recommendation: 'Build Dallas foreclosure document hunter v1.',
     use_policy: 'lead_source',
     legal_sensitivity: 'medium',
-    likely_call_ready: true
+    likely_call_ready: true,
+    document_hunter_ready: true
   },
   {
     source_id: 'tx_dallas_sheriff_tax_sales',
