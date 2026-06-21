@@ -19,10 +19,11 @@ const SECONDARY_DALLAS_SOURCES = [
     priority_score: 86,
     official_source: false,
     source_type: 'public listing source',
-    adapter_id: 'fsbo_listing_source',
-    readiness: 'Needs adapter',
+    adapter_id: 'dallas_fsbo_contact_acquisition_adapter',
+    readiness: 'Preview adapter ready',
     use_policy: 'lead_source',
     likely_call_ready: true,
+    auto_select: false,
     preview_only: true,
     should_ingest: false
   },

@@ -9,7 +9,7 @@ const acquisitionScore = require('./source-acquisition-score');
 
 const NEXT_BEST_WORKERS = acquisitionScore.NEXT_BEST_WORKERS;
 const INLINE_COMPLETE_ADDRESS_RE = /^(.+?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway))\s*,?\s+([A-Za-z][A-Za-z .'-]*?)\s+(TX|Texas|[A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
-const VISIBLE_PHRASE_RE = /\b(as[- ]?is|as is sale|sold as[- ]?is|investor special|investor opportunity|cash only|cash offers only|fixer[- ]?upper|fixer|needs\s+(?:tlc|work|repair|repairs)|handyman special|distressed|pre[- ]?foreclosure|foreclosure|auction|price (?:cut|reduced|drop|reduction)|motivated seller|estate sale|probate|vacant|fire damage|foundation issue|tenant occupied|no repairs|bring all offers|rehab|back on (?:the )?market|relisted|hard money only|traditional financing unavailable)\b/i;
+const VISIBLE_PHRASE_RE = leadEvidence.WHOLESALE_PHRASE_RE;
 
 function nowIso() {
   return new Date().toISOString();
@@ -133,14 +133,15 @@ function normalizePropertyCandidate(input, context) {
     source_text: cleanText(input.source_text || input.source_excerpt || input.source_page_text || input.source_proof_text || input.motivation_evidence_text),
     source_excerpt: cleanText(input.source_excerpt || input.source_text || input.source_proof_text),
     source_page_text: cleanText(input.source_page_text || input.source_text || input.source_proof_text),
+    source_proof_text: cleanText(input.source_proof_text || input.source_excerpt || input.source_text || input.source_page_text),
     normalized_address: normalizedAddress,
     property_key: propertyIdentity.canonicalPropertyKey(Object.assign({}, input, { normalized_address: normalizedAddress, source_url: sourceUrl })),
     owner_name_candidate: cleanText(input.owner_name_candidate || input.owner_name || input.owner),
     motivation_type: cleanText(input.motivation_type || input.source_family || input.category_key),
     motivation_phrase: cleanText(input.motivation_phrase || input.exact_source_phrase || input.matched_source_phrase || input.source_excerpt || input.source_text),
     motivation_evidence_text: cleanText(input.motivation_evidence_text || input.source_excerpt || input.source_text || input.source_page_text || input.source_proof_text || input.description || input.snippet),
-    current_status: cleanText(input.current_status || input.listing_status || input.status || input.source_text || input.source_page_text),
-    status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status || input.source_text || input.source_page_text),
+    current_status: cleanText(input.current_status || input.listing_status || input.status),
+    status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status),
     event_date: cleanText(input.event_date || input.sale_date || input.auction_date),
     sale_date: cleanText(input.sale_date),
     amount_or_judgment: cleanText(input.amount_or_judgment || input.judgment_amount || input.tax_amount),
@@ -149,6 +150,15 @@ function normalizePropertyCandidate(input, context) {
     contact_name: cleanText(input.contact_name || input.agent_name || input.listing_agent),
     contact_phone: cleanText(input.contact_phone || input.phone),
     contact_email: cleanText(input.contact_email || input.email),
+    contact_source_url: cleanText(input.contact_source_url || input.source_url || input.canonical_source_url),
+    contact_evidence_text: cleanText(input.contact_evidence_text || input.contact_source_text),
+    contact_verification_status: cleanText(input.contact_verification_status),
+    contact_verified: input.contact_verified === true,
+    asking_price: cleanText(input.asking_price || input.list_price || input.price),
+    beds: cleanText(input.beds || input.bedrooms),
+    baths: cleanText(input.baths || input.bathrooms),
+    sqft: cleanText(input.sqft || input.square_feet),
+    year_built: cleanText(input.year_built || input.yearBuilt),
     retrieved_at: cleanText(input.retrieved_at || input.source_checked_at) || nowIso(),
     preview_only: true,
     should_ingest: false
@@ -174,11 +184,10 @@ function normalizePropertyCandidate(input, context) {
     source_checked_at: base.retrieved_at,
     comp_status: cleanText(input.comp_status || 'Needs Comps')
   });
-  if (cleanText(leadEvidencePayload.exact_source_phrase)) {
-    leadEvidencePayload.exact_source_phrase_verbatim = true;
-    if (!cleanText(leadEvidencePayload.exact_source_phrase_source_type)) {
-      leadEvidencePayload.exact_source_phrase_source_type = 'source_acquisition_visible_evidence';
-    }
+  if (cleanText(leadEvidencePayload.exact_source_phrase) &&
+      leadEvidencePayload.exact_source_phrase_verbatim === true &&
+      !cleanText(leadEvidencePayload.exact_source_phrase_source_type)) {
+    leadEvidencePayload.exact_source_phrase_source_type = 'source_acquisition_visible_evidence';
   }
   const candidate = Object.assign({}, base, scores, {
     confidence_bucket: acquisitionScore.confidenceBucket(scores),
@@ -228,10 +237,21 @@ function candidateToFindMeCard(candidate, context) {
     exact_source_phrase_source_url: phrase ? sourceUrl : '',
     exact_source_phrase_source_type: phrase ? 'source_acquisition_visible_evidence' : '',
     exact_source_phrase_checked_at: candidate.retrieved_at,
-    exact_source_phrase_verbatim: !!phrase,
+    exact_source_phrase_verbatim: !!(phrase && candidate.lead_evidence && candidate.lead_evidence.exact_source_phrase_verbatim === true),
     listing_status: candidate.current_status || candidate.status_evidence_text,
     public_contact_route: candidate.contact_route,
-    contact_verification_status: candidate.contact_confidence >= 50 ? 'Public route from source; verify before dialing.' : 'Manual Verification Needed',
+    contact_name: candidate.contact_name,
+    contact_phone: candidate.contact_phone,
+    contact_email: candidate.contact_email,
+    contact_source_url: candidate.contact_source_url,
+    contact_evidence_text: candidate.contact_evidence_text,
+    contact_verification_status: candidate.contact_verification_status || (candidate.contact_verified ? 'verified_visible_source' : 'Manual Verification Needed'),
+    contact_verified: candidate.contact_verified === true,
+    asking_price: candidate.asking_price,
+    beds: candidate.beds,
+    baths: candidate.baths,
+    sqft: candidate.sqft,
+    year_built: candidate.year_built,
     distress_motivation_signals: [candidate.motivation_type, candidate.motivation_phrase].map(cleanText).filter(Boolean),
     why_this_might_be_a_deal: candidate.motivation_evidence_text || candidate.motivation_phrase || 'Source candidate needs motivation review.',
     missing_evidence: candidate.missing_evidence,
