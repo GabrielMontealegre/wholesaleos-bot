@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
-const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
-
-const CAPS = Object.freeze({
-  max_queries: 4,
-  max_results: 10,
-  max_page_fetches: 4,
-  timeout_ms: 5000,
-  retries: 0
-});
+const previewService = require('../modules/research/call-ready-preview-service');
+const CAPS = Object.freeze(Object.assign({}, previewService.PREVIEW_CAPS, { timeout_ms: 5000 }));
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim();
@@ -24,47 +17,28 @@ function readArg(argv, name, fallback = '') {
 }
 
 function buildPreviewJob(argv = process.argv) {
-  return {
-    job_id: 'call_ready_deal_packet_preview',
-    discovery_batch_id: 'call_ready_deal_packet_preview',
+  return previewService.buildCallReadyPreviewJob({
     city: cleanText(readArg(argv, 'city', 'Dallas')) || 'Dallas',
-    county: cleanText(readArg(argv, 'county', 'Dallas')) || 'Dallas',
-    state: cleanText(readArg(argv, 'state', 'TX')) || 'TX',
-    source_ids: ['tx_dallas_fsbo_contact_first'],
-    source_families: ['fsbo'],
-    source_acquisition_enabled: true,
-    acquisition_core_enabled: true,
-    source_acquisition_mode: 'contact_first_preview',
-    preview_only: true,
-    should_ingest: false
-  };
+    county: cleanText(readArg(argv, 'county', 'Dallas County')) || 'Dallas County',
+    state: cleanText(readArg(argv, 'state', 'TX')) || 'TX'
+  });
 }
 
 async function runPreview(argv = process.argv, options = {}) {
   const job = buildPreviewJob(argv);
-  const result = await sourceAcquisitionOrchestrator.runAcquisitionCore(job, {
-    env: options.env || process.env,
-    search_fetch_impl: options.search_fetch_impl,
-    page_fetch_impl: options.page_fetch_impl,
-    mock_search_results: options.mock_search_results,
-    max_results: CAPS.max_results,
-    max_page_fetches: CAPS.max_page_fetches,
-    timeout_ms: CAPS.timeout_ms
-  });
-  return {
+  const result = await previewService.runCallReadyPreview(job, options);
+  return Object.assign({
     mode: 'local_preview_only',
-    market: `${job.city}, ${job.state}`,
+    market: `${job.city}, ${job.state}`
+  }, result, {
     caps: CAPS,
-    acquisition_status: result.status,
-    source_ids_attempted: result.source_ids_attempted,
-    candidates_found: result.candidates_found,
     packet_count: result.call_ready_packet_count,
     packets: result.call_ready_packets,
-    adapter_results: result.adapter_results,
+    acquisition_status: result.status,
     preview_only: result.preview_only === true,
     should_ingest: result.should_ingest === true,
     no_global_mutation: true
-  };
+  });
 }
 
 async function main(argv = process.argv) {

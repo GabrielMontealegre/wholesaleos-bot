@@ -17,6 +17,7 @@ const findMeScoutJobs = require('./modules/research/findme-scout-jobs');
 const dealCallDossiers = require('./modules/research/deal-call-dossiers');
 const manualReviewQueue = require('./modules/research/manual-review-queue');
 const searchProviderWorker = require('./modules/research/search-provider-worker');
+const callReadyPreviewService = require('./modules/research/call-ready-preview-service');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -1906,6 +1907,44 @@ app.post('/api/source-preview/dallas/ingest-approved', (req, res) => {
     res.status(status).json(result);
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, dry_run: true, should_ingest: false });
+  }
+});
+
+app.post('/api/preview/call-ready-deal-packets', requireAdmin, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const preview = await callReadyPreviewService.runCallReadyPreview({
+      city: String(body.city || 'Dallas').trim() || 'Dallas',
+      county: String(body.county || 'Dallas County').trim() || 'Dallas County',
+      state: String(body.state || 'TX').trim() || 'TX'
+    }, {
+      env: process.env
+    });
+    res.json({
+      ok: true,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true,
+      packets: Array.isArray(preview.packets) ? preview.packets : [],
+      diagnostics: Object.assign({}, preview.diagnostics || {}, {
+        acquisition_status: preview.acquisition_status || preview.status || '',
+        source_ids_attempted: Array.isArray(preview.source_ids_attempted) ? preview.source_ids_attempted : [],
+        candidates_found: Number(preview.candidates_found || 0) || 0,
+        packet_count: Number(preview.packet_count || 0) || 0,
+        search_provider_readiness: preview.search_provider_readiness || searchProviderWorker.getLiveSearchProviderReadiness(),
+        preview_only: true,
+        should_ingest: false,
+        no_global_mutation: true
+      })
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      error: e.message,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    });
   }
 });
 
