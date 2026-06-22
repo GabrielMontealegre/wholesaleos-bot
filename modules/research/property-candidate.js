@@ -73,7 +73,9 @@ function normalizePropertyCandidate(input, context) {
   const sourceTextAddress = sourceTextAddressParsed && sourceTextAddressParsed.full_address
     ? cleanText(sourceTextAddressParsed.full_address)
     : sourceTextAddressRaw;
-  const trimmedAddressInput = rawAddressInput.replace(/,\s*[A-Za-z .'-]+,\s*(?:TX|Texas|[A-Z]{2})\s+\d{5}(?:-\d{4})?$/i, '');
+  const trimmedAddressInput = propertyIdentity.isCompleteAddress(rawAddressInput)
+    ? rawAddressInput
+    : rawAddressInput.replace(/,\s*[A-Za-z .'-]+,\s*(?:TX|Texas|[A-Z]{2})\s+\d{5}(?:-\d{4})?$/i, '');
   const inlineCompleteMatch = trimmedAddressInput.match(INLINE_COMPLETE_ADDRESS_RE);
   const inlineCompleteAddress = inlineCompleteMatch
     ? `${cleanText(inlineCompleteMatch[1])}, ${cleanText(inlineCompleteMatch[2])}, ${cleanText(inlineCompleteMatch[3])} ${cleanText(inlineCompleteMatch[4])}`

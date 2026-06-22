@@ -55,6 +55,7 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
     site: 'fsbo.com',
     query_group: 'dallas_fsbo_direct_listing',
     expected_url_pattern: 'fsbo.com property listing detail page',
+    query_hint: 'listing',
     terms: ['for sale by owner', 'owner contact']
   },
   {
@@ -62,6 +63,7 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
     site: 'forsalebyowner.com',
     query_group: 'dallas_for_sale_by_owner_direct_listing',
     expected_url_pattern: 'forsalebyowner.com property listing detail page',
+    query_hint: 'property',
     terms: ['for sale by owner', 'owner contact']
   },
   {
@@ -69,6 +71,7 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
     site: 'zillow.com',
     query_group: 'dallas_zillow_fsbo_property',
     expected_url_pattern: 'zillow.com/homedetails/ owner listing',
+    query_hint: 'homedetails',
     terms: ['for sale by owner', 'owner listed']
   },
   {
@@ -76,11 +79,13 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
     site: 'realtor.com',
     query_group: 'dallas_public_listing_contact',
     expected_url_pattern: 'realtor.com/realestateandhomes-detail/ with visible public contact route',
+    query_hint: 'realestateandhomes-detail',
     terms: ['for sale by owner', 'contact seller']
   }
 ];
 const MAX_QUERY_GROUPS = 6;
 const MAX_CONTACT_QUERY_GROUPS = 4;
+const MAX_CONTACT_GROUP_RESULTS = 3;
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -342,6 +347,19 @@ function buildQueryText(site, marketText, terms, exclusions) {
   ].filter(Boolean).join(' ')).slice(0, 220);
 }
 
+function contactFirstIntentFromQuery(query) {
+  const text = cleanText(query).toLowerCase();
+  const intents = [];
+  if (/homedetails?/i.test(text)) intents.push('homedetails');
+  if (/realestateandhomes-detail/i.test(text)) intents.push('realestateandhomes-detail');
+  if (/for\s+sale\s+by\s+owner|fsbo/i.test(text)) intents.push('for sale by owner');
+  if (/owner\s+contact/i.test(text)) intents.push('owner contact');
+  if (/contact\s+seller/i.test(text)) intents.push('contact seller');
+  if (/owner\s+listed/i.test(text)) intents.push('owner listed');
+  if (/listing/i.test(text)) intents.push('listing');
+  return Array.from(new Set(intents)).join(' ');
+}
+
 function propertyDetailFamilies(sourcePreferences) {
   const prefs = new Set(sourceSites(sourcePreferences).map((site) => cleanText(site).toLowerCase()));
   return PROPERTY_DETAIL_SITE_FAMILIES.filter((family) => prefs.has(family.site.toLowerCase()));
@@ -377,14 +395,19 @@ function isContactFirstInput(input) {
 function buildContactFirstSearchQueries(input) {
   input = input || {};
   const marketText = marketClause(input);
-  const exclusions = ['-sold', '-closed', '-pending', '-auction', '-reo', '-bank-owned', '-blog', '-article', '-news', '-category', '-search', '-results', '-social', '-cash-buyer'];
   return CONTACT_FIRST_SEARCH_BLUEPRINTS.map((family, index) => ({
-    query: buildQueryText(family.site, marketText, family.terms, exclusions),
+    query: cleanText([
+      `site:${family.site}`,
+      family.query_hint || '',
+      marketText,
+      family.terms.join(' ')
+    ].filter(Boolean).join(' ')).slice(0, 220),
     provider_family: family.provider_family,
     purpose: 'contact_first_acquisition',
     priority: index + 1,
     expected_url_pattern: family.expected_url_pattern,
-    query_group: family.query_group
+    query_group: family.query_group,
+    max_results: MAX_CONTACT_GROUP_RESULTS
   }))
     .filter((item, index, list) => cleanText(item.query) && list.findIndex((entry) => cleanText(entry.query) === cleanText(item.query)) === index)
     .slice(0, MAX_CONTACT_QUERY_GROUPS);
@@ -528,6 +551,29 @@ function sanitizeSerperFreeQuery(query, input = {}) {
   if (isDocumentDiscoveryInput(input)) {
     return cleanText(query)
       .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+      .replace(/(^|\s)[+-](?=\S)/g, '$1')
+      .replace(/["'()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .slice(0, 180)
+      .trim();
+  }
+  if (isContactFirstInput(input)) {
+    const market = marketFromQuery(query, input);
+    const brand = sourceBrandFromQuery(query);
+    const intent = contactFirstIntentFromQuery(query);
+    const fallback = cleanText(query)
+      .replace(/\bsite:[^\s)]+/ig, ' ')
+      .replace(/(^|\s)[+-](?=\S)/g, '$1')
+      .replace(/["'()]/g, ' ')
+      .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+      .replace(/\s+/g, ' ');
+    const core = [market, brand, intent || fallback]
+      .map(cleanText)
+      .filter(Boolean)
+      .join(' ');
+    return cleanText(core)
+      .replace(/\b(AND|OR|NOT)\b/ig, ' ')
+      .replace(/\bsite:[^\s]+/ig, ' ')
       .replace(/(^|\s)[+-](?=\S)/g, '$1')
       .replace(/["'()]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -685,6 +731,10 @@ function normalizeRawResults(provider, payload, context = {}) {
       snippet: item.snippet || item.description,
       url: item.link || item.url,
       displayed_url: item.displayedLink || item.displayed_url,
+      address: item.address || item.possible_address || item.property_address || '',
+      possible_address: item.possible_address || item.address || item.property_address || '',
+      property_address: item.property_address || item.possible_address || item.address || '',
+      display_address: item.display_address || item.displayed_address || item.possible_address || item.address || item.property_address || '',
       source_domain: urlHost(item.link || item.url),
       rank: Number(item.position || item.rank || index + 1) || index + 1,
       provider: 'serper',
@@ -961,7 +1011,8 @@ async function runSearchProvider(input = {}, options = {}) {
     let finalExecutedQuery = query;
     for (const planItem of queryPlan.slice(0, MAX_QUERY_GROUPS)) {
       if (allCards.length >= totalResultCap) break;
-      const remaining = Math.max(1, totalResultCap - allCards.length);
+      const groupCap = positiveInt(planItem.max_results, totalResultCap);
+      const remaining = Math.max(1, Math.min(totalResultCap - allCards.length, groupCap));
       const attemptedCfg = Object.assign({}, cfg, { max_results: remaining });
       const attemptOptions = Object.assign({}, options, {
         purpose: planItem.purpose,
@@ -991,6 +1042,8 @@ async function runSearchProvider(input = {}, options = {}) {
       const evidenceConversionDiagnostics = snippetEvidence.summarizeEvidenceConversion(cards);
       const demoted = snippetEvidence.summarizeSearchResultDemotions(cards);
       const rejected = snippetEvidence.summarizeRejectedUrlClasses(cards);
+      const propertySpecificResultCount = cards.filter((card) => card.search_result_property_specific === true).length;
+      const genericResultCount = Math.max(0, cards.length - propertySpecificResultCount);
       Object.keys(demotionCounts).forEach((key) => {
         demotionCounts[key] += Number(demoted[key] || 0) || 0;
       });
@@ -1041,6 +1094,8 @@ async function runSearchProvider(input = {}, options = {}) {
         status,
         result_count: cards.length,
         candidate_count: cards.length,
+        property_specific_result_count: propertySpecificResultCount,
+        generic_result_count: genericResultCount,
         grounded_url_count: cards.filter((card) => card.source_url).length,
         snippet_phrase_count: evidenceConversionDiagnostics.snippet_phrases_found,
         demotion_counts: demoted,
@@ -1101,6 +1156,8 @@ async function runSearchProvider(input = {}, options = {}) {
           status: attempt.status,
           result_count: attempt.result_count,
           candidate_count: attempt.candidate_count,
+          property_specific_result_count: attempt.property_specific_result_count,
+          generic_result_count: attempt.generic_result_count,
           grounded_url_count: attempt.grounded_url_count,
           snippet_phrase_count: attempt.snippet_phrase_count
         })),
@@ -1132,6 +1189,8 @@ async function runSearchProvider(input = {}, options = {}) {
         status: attempt.status,
         result_count: attempt.result_count,
         candidate_count: attempt.candidate_count,
+        property_specific_result_count: attempt.property_specific_result_count,
+        generic_result_count: attempt.generic_result_count,
         grounded_url_count: attempt.grounded_url_count,
         snippet_phrase_count: attempt.snippet_phrase_count
       })),
