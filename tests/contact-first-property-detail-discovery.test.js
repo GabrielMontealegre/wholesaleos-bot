@@ -63,8 +63,12 @@ function mockPage(body, url) {
       state: 'TX'
     });
     assert.strictEqual(queryGroups.length, 4);
-    assert.ok(queryGroups.every((group) => group.max_results === 3));
+    assert.strictEqual(queryGroups[0].max_results, 3);
+    assert.strictEqual(queryGroups[1].max_results, 3);
+    assert.strictEqual(queryGroups[2].max_results, 10);
+    assert.strictEqual(queryGroups[3].max_results, 3);
     assert.ok(/zillow/i.test(queryGroups[2].query));
+    assert.ok(/zillow\.com\/homedetails|zpid/i.test(queryGroups[2].query));
     assert.ok(/realestateandhomes-detail/i.test(queryGroups[3].query));
 
     const sanitized = searchWorker.sanitizeSerperFreeQuery(queryGroups[2].query, {
@@ -73,7 +77,7 @@ function mockPage(body, url) {
       county: 'Dallas',
       state: 'TX'
     });
-    assert.ok(/zillow|homedetails|for sale by owner|owner listed/i.test(sanitized));
+    assert.ok(/zillow|homedetails|zillow\.com\/homedetails|zpid|for sale by owner|owner listed/i.test(sanitized));
     assert.ok(!/house for sale/i.test(sanitized));
 
     const zillowDetail = 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123_zpid/';
@@ -182,9 +186,11 @@ function mockPage(body, url) {
 
     assert.deepStrictEqual(searchResult.query_groups_used, queryGroups.map((group) => group.query_group));
     assert.strictEqual(searchResult.provider_attempts.length, 4);
-    assert.deepStrictEqual(requests.map((item) => item.num), [3, 3, 3, 3]);
+    assert.deepStrictEqual(requests.map((item) => item.num), [3, 3, 10, 3]);
     assert.ok(searchResult.provider_attempts[0].generic_result_count >= 1);
     assert.ok(searchResult.provider_attempts.slice(1).some((attempt) => attempt.property_specific_result_count >= 1));
+    assert.ok(Array.isArray(searchResult.provider_attempts[2].result_diagnostics));
+    assert.ok(searchResult.provider_attempts[2].result_diagnostics.some((item) => item.property_specific === true));
     assert.ok(searchResult.cards.some((card) => card.search_result_property_specific === true));
 
     const adapterResult = await fsboAdapter.runDallasFsboContactAcquisitionAdapter({
@@ -226,6 +232,10 @@ function mockPage(body, url) {
     assert.ok(adapterResult.diagnostics.page_fetch_skipped_count >= 1);
     assert.ok(adapterResult.diagnostics.page_fetch_skips.some((item) => item.reason === 'max_page_fetches_reached'));
     assert.ok(adapterResult.diagnostics.accepted_results.every((item) => item.reason === 'property_specific_and_allowed'));
+    assert.ok(Array.isArray(adapterResult.diagnostics.search_provider_result_diagnostics));
+    assert.ok(adapterResult.diagnostics.search_provider_result_diagnostics.some((attempt) => {
+      return Array.isArray(attempt.result_diagnostics) && attempt.result_diagnostics.some((result) => result.page_fetch_attempted === true);
+    }));
     assert.ok(adapterResult.candidates.length >= 3);
     assert.ok(adapterResult.packets.some((packet) => packet.packet_status === 'CALL_READY'));
     assert.ok(adapterResult.packets.some((packet) => packet.packet_status === 'OUTREACH_READY'));

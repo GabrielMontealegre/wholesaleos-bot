@@ -322,7 +322,7 @@ function isPropertySpecificSearchUrl(sourceUrl, title, snippet) {
     const parsed = new URL(cleanText(sourceUrl));
     const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
     const pathText = decodeURIComponent(parsed.pathname || '');
-    if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(pathText)) return true;
+    if (/zillow\.com$/i.test(host) && (/\/homedetails\//i.test(pathText) || /\bzpid\b/i.test(pathText))) return true;
     if (/realtor\.com$/i.test(host) && /\/realestateandhomes-detail\//i.test(pathText)) return true;
     if (/fsbo\.com$/i.test(host) && /\/(listing|property|detail|details|home)\//i.test(pathText) && !/\b(search|results|category|blog|article)\b/i.test(pathText)) return true;
     if (/forsalebyowner\.com$/i.test(host) && /\/(listing|property|detail|details|home)\//i.test(pathText) && !/\b(search|results|category|blog|article)\b/i.test(pathText)) return true;

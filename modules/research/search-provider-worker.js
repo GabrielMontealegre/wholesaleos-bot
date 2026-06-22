@@ -71,7 +71,7 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
     site: 'zillow.com',
     query_group: 'dallas_zillow_fsbo_property',
     expected_url_pattern: 'zillow.com/homedetails/ owner listing',
-    query_hint: 'homedetails',
+    query_hint: 'zillow.com/homedetails zpid homedetails',
     terms: ['for sale by owner', 'owner listed']
   },
   {
@@ -86,6 +86,7 @@ const CONTACT_FIRST_SEARCH_BLUEPRINTS = [
 const MAX_QUERY_GROUPS = 6;
 const MAX_CONTACT_QUERY_GROUPS = 4;
 const MAX_CONTACT_GROUP_RESULTS = 3;
+const MAX_CONTACT_DETAIL_GROUP_RESULTS = 10;
 
 function cleanText(value) {
   return leadEvidence.cleanText(value);
@@ -350,6 +351,8 @@ function buildQueryText(site, marketText, terms, exclusions) {
 function contactFirstIntentFromQuery(query) {
   const text = cleanText(query).toLowerCase();
   const intents = [];
+  if (/zillow\.com\/homedetails/i.test(text)) intents.push('zillow.com/homedetails');
+  if (/\bzpid\b/i.test(text)) intents.push('zpid');
   if (/homedetails?/i.test(text)) intents.push('homedetails');
   if (/realestateandhomes-detail/i.test(text)) intents.push('realestateandhomes-detail');
   if (/for\s+sale\s+by\s+owner|fsbo/i.test(text)) intents.push('for sale by owner');
@@ -407,7 +410,7 @@ function buildContactFirstSearchQueries(input) {
     priority: index + 1,
     expected_url_pattern: family.expected_url_pattern,
     query_group: family.query_group,
-    max_results: MAX_CONTACT_GROUP_RESULTS
+    max_results: family.provider_family === 'zillow_fsbo' ? MAX_CONTACT_DETAIL_GROUP_RESULTS : MAX_CONTACT_GROUP_RESULTS
   }))
     .filter((item, index, list) => cleanText(item.query) && list.findIndex((entry) => cleanText(entry.query) === cleanText(item.query)) === index)
     .slice(0, MAX_CONTACT_QUERY_GROUPS);
@@ -998,6 +1001,7 @@ async function runSearchProvider(input = {}, options = {}) {
     const queryAttempts = [];
     const allCards = [];
     const allResults = [];
+    const retainedPropertySpecificCards = [];
     const warnings = [];
     const demotionCounts = {
       property_detail_url: 0,
@@ -1006,13 +1010,16 @@ async function runSearchProvider(input = {}, options = {}) {
       generic_source: 0
     };
     const rejectedUrlClassCounts = {};
+    const preferPropertySpecificRetention = queryPlan.some((item) => /contact_first_acquisition|call_ready_packet/i.test(cleanText(item && item.purpose)));
     let finalStatus = 'provider_no_results';
     let finalDiagnostics = null;
     let finalExecutedQuery = query;
     for (const planItem of queryPlan.slice(0, MAX_QUERY_GROUPS)) {
-      if (allCards.length >= totalResultCap) break;
+      if (preferPropertySpecificRetention ? retainedPropertySpecificCards.length >= totalResultCap : allCards.length >= totalResultCap) break;
       const groupCap = positiveInt(planItem.max_results, totalResultCap);
-      const remaining = Math.max(1, Math.min(totalResultCap - allCards.length, groupCap));
+      const remaining = preferPropertySpecificRetention
+        ? Math.max(1, Math.min(totalResultCap, groupCap))
+        : Math.max(1, Math.min(totalResultCap - allCards.length, groupCap));
       const attemptedCfg = Object.assign({}, cfg, { max_results: remaining });
       const attemptOptions = Object.assign({}, options, {
         purpose: planItem.purpose,
@@ -1072,11 +1079,25 @@ async function runSearchProvider(input = {}, options = {}) {
         search_result_demotion_reason: card.search_result_demotion_reason,
         search_result_classification: card.search_result_classification
       }));
+      const resultDiagnostics = cards.map((card) => ({
+        rank: Number(card.result_rank || card.provider_result_rank || card.original_rank || card.rank || 0) || 0,
+        url: cleanText(card.source_url),
+        title: cleanText(card.source_title),
+        snippet: cleanText(card.source_snippet),
+        displayed_url: cleanText(card.displayed_url),
+        classification: cleanText(card.search_result_classification),
+        property_specific: card.search_result_property_specific === true,
+        accepted_reason: card.search_result_property_specific === true ? 'property_specific_and_allowed' : 'generic_or_non_property_source',
+        page_fetch_attempted: false
+      }));
       for (const card of cards) {
         if (!card || !card.source_url) continue;
         const key = cleanText(card.canonical_source_url || card.source_url || card.candidate_id || card.card_id);
         if (!key || allCards.some((existing) => cleanText(existing.canonical_source_url || existing.source_url || existing.candidate_id || existing.card_id) === key)) continue;
         allCards.push(card);
+      }
+      if (preferPropertySpecificRetention) {
+        retainedPropertySpecificCards.push(...cards.filter((card) => card && card.search_result_property_specific === true));
       }
       for (const row of resultRows) {
         const key = cleanText(row.url || row.displayed_url || row.title || row.snippet);
@@ -1121,15 +1142,20 @@ async function runSearchProvider(input = {}, options = {}) {
         final_error_category: called.diagnostics && called.diagnostics.final_error_category || '',
         final_safe_error_summary: called.diagnostics && called.diagnostics.final_safe_error_summary || '',
         organic_count: Number(called.diagnostics && called.diagnostics.organic_count || 0) || 0,
+        result_diagnostics: resultDiagnostics,
         query_attempts: Array.isArray(called.diagnostics && called.diagnostics.query_attempts)
           ? called.diagnostics.query_attempts
           : []
       });
       warnings.push(...(called.warnings || []).map(safeWarning).filter(Boolean));
-      if (allCards.length >= totalResultCap) break;
+      if (preferPropertySpecificRetention ? retainedPropertySpecificCards.length >= totalResultCap : allCards.length >= totalResultCap) break;
     }
-    const cards = allCards.slice(0, totalResultCap);
-    const results = allResults.slice(0, totalResultCap);
+    const cards = preferPropertySpecificRetention
+      ? snippetEvidence.rankSearchProviderResults(allCards).slice(0, totalResultCap)
+      : allCards.slice(0, totalResultCap);
+    const results = preferPropertySpecificRetention
+      ? snippetEvidence.rankSearchProviderResults(allResults).slice(0, totalResultCap)
+      : allResults.slice(0, totalResultCap);
     const evidenceConversionDiagnostics = snippetEvidence.summarizeEvidenceConversion(cards);
     const status = cards.length
       ? (finalStatus === 'provider_available' ? 'provider_available' : finalStatus)
@@ -1159,7 +1185,8 @@ async function runSearchProvider(input = {}, options = {}) {
           property_specific_result_count: attempt.property_specific_result_count,
           generic_result_count: attempt.generic_result_count,
           grounded_url_count: attempt.grounded_url_count,
-          snippet_phrase_count: attempt.snippet_phrase_count
+          snippet_phrase_count: attempt.snippet_phrase_count,
+          result_diagnostics: Array.isArray(attempt.result_diagnostics) ? attempt.result_diagnostics : []
         })),
         query_groups_used: queryAttempts.map((attempt) => attempt.query_group).filter(Boolean),
         provider_families_used: queryAttempts.map((attempt) => attempt.provider_family).filter(Boolean),
