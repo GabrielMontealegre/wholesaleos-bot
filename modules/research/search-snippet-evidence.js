@@ -322,6 +322,10 @@ function isPropertySpecificSearchUrl(sourceUrl, title, snippet) {
     const parsed = new URL(cleanText(sourceUrl));
     const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
     const pathText = decodeURIComponent(parsed.pathname || '');
+    if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(pathText)) return true;
+    if (/realtor\.com$/i.test(host) && /\/realestateandhomes-detail\//i.test(pathText)) return true;
+    if (/fsbo\.com$/i.test(host) && /\/(listing|property|detail|details|home)\//i.test(pathText) && !/\b(search|results|category|blog|article)\b/i.test(pathText)) return true;
+    if (/forsalebyowner\.com$/i.test(host) && /\/(listing|property|detail|details|home)\//i.test(pathText) && !/\b(search|results|category|blog|article)\b/i.test(pathText)) return true;
     if (/\b\d{2,7}\b/.test(pathText) &&
         /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(pathText) &&
         /\b(listing|details?|property|homes?|house|real-estate|realestate)\b/i.test(pathText) &&

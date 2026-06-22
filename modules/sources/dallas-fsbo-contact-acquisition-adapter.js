@@ -259,14 +259,22 @@ function candidateFromSearchCard(card, pageEvidence, context = {}) {
     source_snippet: snippet,
     source_domain: sourceHost(sourceUrl)
   });
-  const normalizedAddress = propertyIdentity.canonicalAddress(Object.assign({}, card, {
-    normalized_address: card.display_address || card.address || card.address_or_source_text,
+  const rawAddress = cleanText(card.display_address || card.address || card.possible_address || card.address_or_source_text);
+  const canonicalAddress = propertyIdentity.canonicalAddress(Object.assign({}, card, {
+    normalized_address: card.display_address || card.address || card.possible_address || card.address_or_source_text,
+    address: card.address || card.possible_address,
+    property_address: card.property_address || card.possible_address,
+    display_address: card.display_address || card.possible_address,
+    possible_address: card.possible_address || card.address,
     source_url: sourceUrl,
     source_title: title,
     source_snippet: snippet,
     city: context.city || 'Dallas',
     state: context.state || 'TX'
   }));
+  const normalizedAddress = propertyIdentity.isCompleteAddress(canonicalAddress) && cleanText(canonicalAddress)
+    ? canonicalAddress
+    : (propertyIdentity.isCompleteAddress(rawAddress) ? rawAddress : canonicalAddress);
   const contact = extractVisibleContactEvidence({
     source_url: sourceUrl,
     title,
@@ -362,13 +370,16 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
     mock_results: options.mock_search_results,
     max_results: maxResults
   });
-  const sourceCards = Array.isArray(searchResult.cards) ? searchResult.cards.slice(0, maxResults) : [];
+  const reviewedCards = Array.isArray(searchResult.cards) ? searchResult.cards.slice(0, maxResults) : [];
+  const executedAttempts = Array.isArray(searchResult.provider_attempts) ? searchResult.provider_attempts : [];
+  const sourceCards = [];
   const candidates = [];
   const rejected = [];
   const pageFetches = [];
+  const pageFetchSkips = [];
   let pageFetchCount = 0;
 
-  for (const card of sourceCards) {
+  for (const card of reviewedCards) {
     const sourceUrl = cleanText(card && (card.canonical_source_url || card.source_url));
     const propertySpecific = searchSnippetEvidence.isPropertySpecificSearchUrl(sourceUrl, card && card.source_title, card && card.source_snippet);
     if (!propertySpecific || !isAllowedContactSourceUrl(sourceUrl)) {
@@ -378,6 +389,7 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
       });
       continue;
     }
+    sourceCards.push(card);
     let pageEvidence = {
       status: 'not_fetched',
       source_url: sourceUrl,
@@ -395,6 +407,11 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
         http_status: pageEvidence.http_status || null,
         contact_verified: pageEvidence.contact_verified === true
       });
+    } else {
+      pageFetchSkips.push({
+        source_url: sourceUrl,
+        reason: 'max_page_fetches_reached'
+      });
     }
     const candidate = candidateFromSearchCard(card, pageEvidence, context);
     if (!propertyIdentity.isCompleteAddress(candidate.normalized_address)) {
@@ -409,21 +426,30 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
     status_verified_visible: !!candidate.current_status && !!candidate.status_evidence_text
   }), { context }));
   const diagnostics = {
-    query_groups_used: queryGroups.map((group) => group.query_group),
-    query_group_count: queryGroups.length,
+    query_groups_planned: queryGroups.map((group) => group.query_group),
+    query_groups_used: executedAttempts.map((attempt) => attempt.query_group).filter(Boolean),
+    query_group_count: executedAttempts.length,
     provider: searchResult.provider,
     provider_status: searchResult.status,
     provider_readiness: searchResult.readiness,
     provider_result_count: Number(searchResult.result_count || 0) || 0,
-    source_results_reviewed: sourceCards.length,
+    source_results_reviewed: reviewedCards.length,
+    property_specific_results_reviewed: sourceCards.length,
     page_fetch_cap: maxPageFetches,
     page_fetches_used: pageFetchCount,
     page_fetches: pageFetches,
+    page_fetch_skips: pageFetchSkips,
+    page_fetch_skipped_count: pageFetchSkips.length,
     rejected_results: rejected,
     rejected_reason_counts: rejected.reduce((out, item) => {
       out[item.reason] = (out[item.reason] || 0) + 1;
       return out;
     }, {}),
+    accepted_results: sourceCards.map((card) => ({
+      source_url: cleanText(card && card.source_url),
+      reason: 'property_specific_and_allowed',
+      page_fetch_status: pageFetches.find((item) => cleanText(item.source_url) === cleanText(card && card.source_url))?.status || 'not_fetched'
+    })),
     packet_status_counts: statusCounts(packets),
     call_ready_count: packets.filter((packet) => packet.packet_status === callReadyDealPacket.PACKET_STATUSES.CALL_READY).length,
     outreach_ready_count: packets.filter((packet) => packet.packet_status === callReadyDealPacket.PACKET_STATUSES.OUTREACH_READY).length,
