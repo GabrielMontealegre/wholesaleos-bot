@@ -421,6 +421,28 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
     candidates.push(candidate);
   }
 
+  const pageFetchAttemptedUrls = new Set(pageFetches.map((item) => cleanText(item && item.source_url)).filter(Boolean));
+  const searchProviderResultDiagnostics = Array.isArray(searchResult.provider_attempts)
+    ? searchResult.provider_attempts.map((attempt) => ({
+      provider: cleanText(attempt && attempt.provider),
+      provider_family: cleanText(attempt && attempt.provider_family),
+      query_group: cleanText(attempt && attempt.query_group),
+      original_query: cleanText(attempt && attempt.original_query),
+      executed_query: cleanText(attempt && attempt.query),
+      result_diagnostics: Array.isArray(attempt && attempt.result_diagnostics)
+        ? attempt.result_diagnostics.map((result) => ({
+          rank: Number(result && result.rank || 0) || 0,
+          url: cleanText(result && result.url),
+          title: cleanText(result && result.title),
+          snippet: cleanText(result && result.snippet),
+          classification: cleanText(result && result.classification),
+          property_specific: result && result.property_specific === true,
+          accepted_reason: cleanText(result && result.accepted_reason),
+          page_fetch_attempted: pageFetchAttemptedUrls.has(cleanText(result && result.url))
+        }))
+        : []
+    }))
+    : [];
   const cards = candidates.map((candidate) => propertyCandidate.candidateToFindMeCard(candidate, context));
   const packets = candidates.map((candidate) => callReadyDealPacket.buildCallReadyDealPacket(Object.assign({}, candidate, {
     status_verified_visible: !!candidate.current_status && !!candidate.status_evidence_text
@@ -445,10 +467,17 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
       out[item.reason] = (out[item.reason] || 0) + 1;
       return out;
     }, {}),
+    search_provider_result_diagnostics: searchProviderResultDiagnostics,
     accepted_results: sourceCards.map((card) => ({
       source_url: cleanText(card && card.source_url),
       reason: 'property_specific_and_allowed',
-      page_fetch_status: pageFetches.find((item) => cleanText(item.source_url) === cleanText(card && card.source_url))?.status || 'not_fetched'
+      page_fetch_status: pageFetches.find((item) => cleanText(item.source_url) === cleanText(card && card.source_url))?.status || 'not_fetched',
+      page_fetch_attempted: pageFetchAttemptedUrls.has(cleanText(card && card.source_url))
+    })),
+    rejected_results_diagnostics: rejected.map((item) => ({
+      source_url: cleanText(item.source_url),
+      reason: cleanText(item.reason),
+      page_fetch_attempted: pageFetchAttemptedUrls.has(cleanText(item.source_url))
     })),
     packet_status_counts: statusCounts(packets),
     call_ready_count: packets.filter((packet) => packet.packet_status === callReadyDealPacket.PACKET_STATUSES.CALL_READY).length,
