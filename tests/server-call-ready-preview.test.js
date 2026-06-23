@@ -24,6 +24,7 @@ fs.writeFileSync(process.env.AI_DEAL_ANALYZER_JOBS_PATH, JSON.stringify({ versio
 fs.writeFileSync(process.env.DEAL_CALL_DOSSIERS_PATH, JSON.stringify({ version: 1, dossiers: [] }, null, 2));
 
 const callReadyPreviewService = require('../modules/research/call-ready-preview-service');
+const craigslistAdapter = require('../modules/sources/dallas-craigslist-owner-acquisition-adapter');
 const searchProviderWorker = require('../modules/research/search-provider-worker');
 
 function mockResponse(body, url) {
@@ -40,16 +41,6 @@ function mockResponse(body, url) {
     },
     async text() {
       return body;
-    }
-  };
-}
-
-function serperResponse(payload) {
-  return {
-    ok: true,
-    status: 200,
-    async text() {
-      return JSON.stringify(payload);
     }
   };
 }
@@ -86,17 +77,24 @@ function serperResponse(payload) {
     const ready = callReadyPreviewService.buildCallReadyPreviewCaps(readyEnv);
     assert.strictEqual(ready.timeout_ms, 8000);
 
-    const searchPayload = {
-      organic: [
-        {
-          title: '123 Main St, Dallas, TX 75208 - For sale by owner',
-          snippet: 'Active FSBO. Cash only. Call owner at (214) 555-0123.',
-          link: 'https://www.realtor.com/realestateandhomes-detail/123-Main-St_Dallas_TX_75208_M12345',
-          displayedLink: 'realtor.com',
-          position: 1
-        }
-      ]
-    };
+    const craigslistUrl = 'https://dallas.craigslist.org/dal/reo/d/dallas-motivated-owner-fixer/7919000001.html';
+    const searchHtml = `<html><body><a href="${craigslistUrl}">Dallas owner property</a></body></html>`;
+    const postHtml = `<html>
+      <head>
+        <title>Motivated owner fixer - craigslist</title>
+        <script type="application/ld+json">{
+          "streetAddress":"123 Main St",
+          "addressLocality":"Dallas",
+          "addressRegion":"TX",
+          "postalCode":"75208",
+          "datePosted":"2026-06-21T10:00:00-05:00"
+        }</script>
+      </head>
+      <body>
+        <time datetime="2026-06-21T10:00:00-05:00"></time>
+        <section id="postingbody">For sale by owner. Cash only. Call owner at (214) 555-0123.</section>
+      </body>
+    </html>`;
 
     const preview = await callReadyPreviewService.runCallReadyPreview({
       city: 'Dallas',
@@ -108,11 +106,9 @@ function serperResponse(payload) {
       retries: 99
     }, {
       env: readyEnv,
-      search_fetch_impl: async () => serperResponse(searchPayload),
       page_fetch_impl: async (url) => {
-        if (url === 'https://www.realtor.com/realestateandhomes-detail/123-Main-St_Dallas_TX_75208_M12345') {
-          return mockResponse('<html><body>Active for sale by owner. Call owner at <a href="tel:2145550123">(214) 555-0123</a>. Cash only.</body></html>', url);
-        }
+        if (craigslistAdapter.isCraigslistOwnerSearchUrl(url)) return mockResponse(searchHtml, url);
+        if (url === craigslistUrl) return mockResponse(postHtml, url);
         throw new Error(`Unexpected page fetch: ${url}`);
       }
     });
@@ -145,8 +141,10 @@ function serperResponse(payload) {
       state: 'TX'
     }, {
       env: {},
-      search_fetch_impl: async () => serperResponse({ organic: [] }),
-      page_fetch_impl: async () => mockResponse('<html></html>', 'https://example.com')
+      page_fetch_impl: async (url) => {
+        if (craigslistAdapter.isCraigslistOwnerSearchUrl(url)) return mockResponse('<html></html>', url);
+        throw new Error(`Unexpected missing-config fetch: ${url}`);
+      }
     });
     const missingResult = await missing;
     assert.strictEqual(missingResult.search_provider_readiness.readiness, 'not_configured');

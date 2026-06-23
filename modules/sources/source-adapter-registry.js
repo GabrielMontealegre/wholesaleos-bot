@@ -2,6 +2,7 @@
 
 const dallasForeclosureAcquisitionAdapter = require('./dallas-foreclosure-acquisition-adapter');
 const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acquisition-adapter');
+const dallasCraigslistOwnerAcquisitionAdapter = require('./dallas-craigslist-owner-acquisition-adapter');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -25,6 +26,15 @@ const ADAPTERS = {
     source_name: 'Dallas FSBO / owner-contact listing sources',
     adapter: dallasFsboContactAcquisitionAdapter,
     run: dallasFsboContactAcquisitionAdapter.runDallasFsboContactAcquisitionAdapter
+  },
+  tx_dallas_craigslist_owner_posts: {
+    source_id: 'tx_dallas_craigslist_owner_posts',
+    source_family: 'craigslist_owner_fsbo',
+    adapter_id: 'dallas_craigslist_owner_acquisition_adapter',
+    adapter_family: 'public_owner_post_adapter',
+    source_name: 'Dallas Craigslist owner real-estate posts',
+    adapter: dallasCraigslistOwnerAcquisitionAdapter,
+    run: dallasCraigslistOwnerAcquisitionAdapter.runDallasCraigslistOwnerAcquisitionAdapter
   }
 };
 

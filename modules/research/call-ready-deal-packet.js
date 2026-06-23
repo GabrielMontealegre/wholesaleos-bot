@@ -73,6 +73,7 @@ function sourceBackedContact(input) {
   return {
     route_type: routeType,
     route_label: route || (phoneVerified ? 'Direct Phone' : emailVerified ? 'Direct Email' : formVerified ? 'Public Contact Form' : 'Manual Lookup Needed'),
+    role: cleanText(input.contact_role),
     name: cleanText(input.contact_name || input.owner_name_candidate),
     phone: phoneVerified ? phone : '',
     email: emailVerified ? email : '',
@@ -99,10 +100,30 @@ function packetQuestions(script) {
     .slice(0, 5);
 }
 
+function emptyCallScript() {
+  return {
+    why_calling: '',
+    opening: '',
+    motivation_questions: [],
+    condition_questions: [],
+    timeline_questions: [],
+    price_questions: [],
+    source_confirmation_questions: [],
+    role_specific_questions: []
+  };
+}
+
 function propertySpecificSource(input, sourceUrl) {
   const classification = cleanText(input.source_classification || input.source_type);
   const classifiedUrl = sourceEvidenceAdapter.classifySourceUrl(sourceUrl);
   if (classifiedUrl === 'exact_property_record') return true;
+  try {
+    const parsed = new URL(cleanText(sourceUrl));
+    if ((parsed.hostname === 'craigslist.org' || parsed.hostname.endsWith('.craigslist.org')) &&
+        /^\/(?:[^/]+\/)?reo\/d\/[^/]+\/\d{7,12}\.html$/i.test(parsed.pathname)) {
+      return true;
+    }
+  } catch (_) {}
   if (input.official_source === true && /official_property_notice|official_source_record|property_specific/i.test(classification)) return true;
   return searchSnippetEvidence.isPropertySpecificSearchUrl(
     sourceUrl,
@@ -146,7 +167,7 @@ function buildCallReadyDealPacket(input, options = {}) {
     cleanText(evidence.exact_source_phrase_source_url || sourceUrl)
   );
   const statusReady = !!(
-    input.status_verified_visible === true &&
+    (input.status_verified_visible === true || candidate.status_verified_visible === true) &&
     cleanText(candidate.current_status || candidate.status_evidence_text) &&
     leadEvidence.isCurrentOpportunity(evidence)
   );
@@ -157,22 +178,32 @@ function buildCallReadyDealPacket(input, options = {}) {
   const repairAmount = numberValue(input.repair_estimate || input.repairs || input.manual_repair_estimate);
   const maoReady = arvReady && repairAmount > 0 && !!compState.mao_range;
 
-  const dealCallDossiers = require('./deal-call-dossiers');
-  const dossier = dealCallDossiers.buildDossier({
+  const identityReady = propertyIdentity.isCompleteAddress(candidate.normalized_address);
+  let dossier = {
+    dossier_id: '',
     address: candidate.normalized_address,
-    source_url: sourceUrl,
-    source_title: candidate.source_name || candidate.normalized_address,
-    source_page_text: candidate.source_proof_text || candidate.source_text || candidate.source_excerpt,
-    exact_source_phrase: cleanText(evidence.exact_source_phrase),
-    listing_status: candidate.current_status || candidate.status_evidence_text,
-    asking_price: candidate.asking_price,
-    beds: candidate.beds,
-    baths: candidate.baths,
-    sqft: candidate.sqft,
-    year_built: candidate.year_built,
-    public_contact_route: contact.route_label,
-    lead_evidence: evidence
-  });
+    call_script: emptyCallScript(),
+    preview_only: true,
+    should_ingest: false
+  };
+  if (identityReady) {
+    const dealCallDossiers = require('./deal-call-dossiers');
+    dossier = dealCallDossiers.buildDossier({
+      address: candidate.normalized_address,
+      source_url: sourceUrl,
+      source_title: candidate.source_name || candidate.normalized_address,
+      source_page_text: candidate.source_proof_text || candidate.source_text || candidate.source_excerpt,
+      exact_source_phrase: cleanText(evidence.exact_source_phrase),
+      listing_status: candidate.current_status || candidate.status_evidence_text,
+      asking_price: candidate.asking_price,
+      beds: candidate.beds,
+      baths: candidate.baths,
+      sqft: candidate.sqft,
+      year_built: candidate.year_built,
+      public_contact_route: contact.route_label,
+      lead_evidence: evidence
+    });
+  }
 
   let packetStatus = PACKET_STATUSES.BLOCKED;
   if (sourceReady && motivationReady && statusReady && contact.call_allowed) packetStatus = PACKET_STATUSES.CALL_READY;
@@ -199,6 +230,7 @@ function buildCallReadyDealPacket(input, options = {}) {
     .concat(!arvReady ? ['3 verified different sold comps'] : [])
     .concat(!repairAmount ? ['repair evidence or manual repair estimate'] : []));
   const riskFlags = uniqueText([]
+    .concat(candidate.risk_flags || [])
     .concat(!sourceReady ? ['SOURCE_PROOF_INCOMPLETE'] : [])
     .concat(!motivationReady ? ['MOTIVATION_NOT_VERBATIM'] : [])
     .concat(!statusReady ? ['CURRENT_STATUS_NOT_VERIFIED'] : [])

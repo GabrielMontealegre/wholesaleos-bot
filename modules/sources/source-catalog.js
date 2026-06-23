@@ -13,6 +13,21 @@ function clone(value) {
 
 const SECONDARY_DALLAS_SOURCES = [
   {
+    source_id: 'tx_dallas_craigslist_owner_posts',
+    source_name: 'Dallas Craigslist owner real-estate posts',
+    source_family: 'craigslist_owner_fsbo',
+    priority_score: 90,
+    official_source: false,
+    source_type: 'public individual owner post',
+    adapter_id: 'dallas_craigslist_owner_acquisition_adapter',
+    readiness: 'Preview adapter ready',
+    use_policy: 'contact_first_lead_source',
+    likely_call_ready: true,
+    auto_select: false,
+    preview_only: true,
+    should_ingest: false
+  },
+  {
     source_id: 'tx_dallas_fsbo_contact_first',
     source_name: 'Dallas FSBO / owner-contact listing sources',
     source_family: 'fsbo',
