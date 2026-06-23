@@ -74,6 +74,10 @@ function classifySourceUrl(sourceUrl) {
   if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(path)) return 'exact_property_record';
   if (/har\.com$/i.test(host) && /\/homedetail\//i.test(path)) return 'exact_property_record';
   if (/auction\.com$/i.test(host) && /\/details\//i.test(path)) return 'exact_property_record';
+  if ((host === 'craigslist.org' || host.endsWith('.craigslist.org')) &&
+      /^\/(?:[^/]+\/)?reo\/d\/[^/]+\/\d{7,12}\.html$/i.test(path)) {
+    return 'exact_property_record';
+  }
   if (/\b\d{2,7}\b/.test(probe) &&
       /\b(st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b/i.test(probe) &&
       /\b(listing|details?|property|homes?|house|real-estate|realestate)\b/i.test(probe) &&

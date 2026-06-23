@@ -117,13 +117,6 @@ function propertySpecificSource(input, sourceUrl) {
   const classification = cleanText(input.source_classification || input.source_type);
   const classifiedUrl = sourceEvidenceAdapter.classifySourceUrl(sourceUrl);
   if (classifiedUrl === 'exact_property_record') return true;
-  try {
-    const parsed = new URL(cleanText(sourceUrl));
-    if ((parsed.hostname === 'craigslist.org' || parsed.hostname.endsWith('.craigslist.org')) &&
-        /^\/(?:[^/]+\/)?reo\/d\/[^/]+\/\d{7,12}\.html$/i.test(parsed.pathname)) {
-      return true;
-    }
-  } catch (_) {}
   if (input.official_source === true && /official_property_notice|official_source_record|property_specific/i.test(classification)) return true;
   return searchSnippetEvidence.isPropertySpecificSearchUrl(
     sourceUrl,
@@ -156,11 +149,9 @@ function buildCallReadyDealPacket(input, options = {}) {
   const sourceUrl = cleanText(candidate.source_url);
   const evidence = candidate.lead_evidence || {};
   const sourceClassification = cleanText(candidate.source_classification || sourceEvidenceAdapter.classifySourceUrl(sourceUrl));
-  const sourceReady = !!(
-    sourceUrl &&
-    propertyIdentity.isCompleteAddress(candidate.normalized_address) &&
-    propertySpecificSource(candidate, sourceUrl)
-  );
+  const propertySpecific = !!(sourceUrl && propertySpecificSource(candidate, sourceUrl));
+  const identityReady = propertyIdentity.isCompleteAddress(candidate.normalized_address);
+  const sourceReady = propertySpecific && identityReady;
   const motivationReady = !!(
     cleanText(evidence.exact_source_phrase) &&
     evidence.exact_source_phrase_verbatim === true &&
@@ -178,7 +169,6 @@ function buildCallReadyDealPacket(input, options = {}) {
   const repairAmount = numberValue(input.repair_estimate || input.repairs || input.manual_repair_estimate);
   const maoReady = arvReady && repairAmount > 0 && !!compState.mao_range;
 
-  const identityReady = propertyIdentity.isCompleteAddress(candidate.normalized_address);
   let dossier = {
     dossier_id: '',
     address: candidate.normalized_address,
@@ -223,7 +213,8 @@ function buildCallReadyDealPacket(input, options = {}) {
 
   const missingEvidence = uniqueText([]
     .concat(candidate.missing_evidence || [])
-    .concat(!sourceReady ? ['property-specific source proof'] : [])
+    .concat(!propertySpecific ? ['property-specific source proof'] : [])
+    .concat(!identityReady ? ['complete canonical address'] : [])
     .concat(!motivationReady ? ['verbatim source-backed motivation'] : [])
     .concat(!statusReady ? ['visible current status evidence'] : [])
     .concat(!contact.outreach_allowed ? ['verified public contact route'] : [])
@@ -231,7 +222,8 @@ function buildCallReadyDealPacket(input, options = {}) {
     .concat(!repairAmount ? ['repair evidence or manual repair estimate'] : []));
   const riskFlags = uniqueText([]
     .concat(candidate.risk_flags || [])
-    .concat(!sourceReady ? ['SOURCE_PROOF_INCOMPLETE'] : [])
+    .concat(!propertySpecific ? ['SOURCE_PROOF_INCOMPLETE'] : [])
+    .concat(!identityReady ? ['PROPERTY_IDENTITY_INCOMPLETE'] : [])
     .concat(!motivationReady ? ['MOTIVATION_NOT_VERBATIM'] : [])
     .concat(!statusReady ? ['CURRENT_STATUS_NOT_VERIFIED'] : [])
     .concat(!contact.call_allowed && contact.outreach_allowed ? ['OUTREACH_ROUTE_ONLY_NO_PHONE'] : [])
@@ -269,7 +261,9 @@ function buildCallReadyDealPacket(input, options = {}) {
       source_url: sourceUrl,
       source_type: candidate.source_type || candidate.source_family,
       source_checked_at: candidate.retrieved_at,
-      property_specific: sourceReady,
+      property_specific: propertySpecific,
+      identity_ready: identityReady,
+      source_ready: sourceReady,
       evidence_text: candidate.source_proof_text || candidate.source_excerpt || candidate.source_text
     },
     motivation_evidence: {

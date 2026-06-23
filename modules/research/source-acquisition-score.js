@@ -30,7 +30,7 @@ function isHttpUrl(value) {
 
 function sourceConfidenceFor(input) {
   const sourceUrl = cleanText(input.source_url || input.canonical_source_url || input.source_document_url);
-  const sourceType = cleanText(input.source_type || input.source_classification);
+  const sourceType = cleanText(input.source_classification || input.source_type);
   const official = bool(input.official_source);
   if (!sourceUrl) return official ? 45 : 20;
   if (/exact_property_record|official_property_notice|official_source_record|property_specific/i.test(sourceType)) return official ? 95 : 88;
