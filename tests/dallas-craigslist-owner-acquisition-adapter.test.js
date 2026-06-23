@@ -24,6 +24,7 @@ fs.writeFileSync(process.env.AI_DEAL_ANALYZER_JOBS_PATH, JSON.stringify({ versio
 fs.writeFileSync(process.env.DEAL_CALL_DOSSIERS_PATH, JSON.stringify({ version: 1, dossiers: [] }, null, 2));
 
 const adapter = require('../modules/sources/dallas-craigslist-owner-acquisition-adapter');
+const sourceEvidenceAdapter = require('../modules/research/source-evidence-adapter');
 const sourceAdapterRegistry = require('../modules/sources/source-adapter-registry');
 const sourceCatalog = require('../modules/sources/source-catalog');
 const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
@@ -99,6 +100,7 @@ function snapshotFiles() {
     assert.ok(queries.every((item) => adapter.isCraigslistOwnerSearchUrl(item.source_url)));
 
     assert.strictEqual(adapter.isCraigslistOwnerPostUrl(PHONE_URL), true);
+    assert.strictEqual(sourceEvidenceAdapter.classifySourceUrl(PHONE_URL), 'exact_property_record');
     assert.strictEqual(adapter.isCraigslistOwnerPostUrl('https://dallas.craigslist.org/search/rea?purveyor=owner'), false);
     assert.strictEqual(adapter.isCraigslistOwnerPostUrl('https://dallas.craigslist.org/dal/apa/d/dallas-rental/7918000999.html'), false);
     assert.strictEqual(adapter.isCraigslistOwnerPostUrl('https://dallas.craigslist.org/dal/rew/d/dallas-wanted/7918000998.html'), false);
@@ -121,6 +123,38 @@ function snapshotFiles() {
     const extracted = adapter.extractCraigslistPostUrls(searchHtml, queries[0].source_url);
     assert.strictEqual(extracted.length, 8);
     assert.ok(extracted.every((url) => adapter.isCraigslistOwnerPostUrl(url)));
+
+    const rankedSearchHtml = `<html><body>
+      <li><a href="${INCOMPLETE_URL}">Needs rehab near Dallas</a></li>
+      <li><a href="${REPLY_URL}">As-is property at 124 Main St, Dallas, TX 75208</a></li>
+    </body></html>`;
+    const ranked = adapter.extractCraigslistPostUrlRecords(rankedSearchHtml, queries[0].source_url);
+    assert.strictEqual(ranked[0].source_url, REPLY_URL);
+    assert.strictEqual(ranked[0].address_signal, '124 Main St, Dallas, TX 75208');
+    assert.strictEqual(ranked[0].address_signal_visible, true);
+
+    const metadataAddress = adapter.extractCompleteAddress(
+      '<meta property="og:description" content="Fixer at 128 Main St, Dallas, TX 75208">',
+      '',
+      ''
+    );
+    assert.strictEqual(metadataAddress.address, '128 Main St, Dallas, TX 75208');
+    assert.strictEqual(metadataAddress.basis, 'page_metadata');
+
+    const nestedJsonLdAddress = adapter.extractCompleteAddress(
+      '<script type="application/ld+json">{"@type":"RealEstateListing","address":{"streetAddress":"129 Main St","addressLocality":"Dallas","addressRegion":"TX","postalCode":"75208"}}</script>',
+      '',
+      ''
+    );
+    assert.strictEqual(nestedJsonLdAddress.address, '129 Main St, Dallas, TX 75208');
+    assert.strictEqual(nestedJsonLdAddress.basis, 'structured_page_metadata');
+
+    const incompleteVisibleAddress = adapter.extractCompleteAddress(
+      '<meta property="og:description" content="Main St, Fort Worth, TX 76102">',
+      'Fort Worth fixer',
+      'Near Main St'
+    );
+    assert.strictEqual(incompleteVisibleAddress.address, '');
 
     const unprovenPhone = adapter.extractCraigslistContactEvidence({
       source_url: PHONE_URL,
@@ -245,6 +279,7 @@ function snapshotFiles() {
     assert.ok(replyCandidate);
     assert.ok(incompleteCandidate);
     assert.strictEqual(phoneCandidate.normalized_address, '123 Main St, Dallas, TX 75208');
+    assert.strictEqual(phoneCandidate.source_confidence, 88);
     assert.strictEqual(phoneCandidate.contact_phone, '(214) 555-0123');
     assert.strictEqual(phoneCandidate.contact_role, 'Self-described owner poster');
     assert.ok(phoneCandidate.risk_flags.includes('POSTER_ROLE_UNVERIFIED'));
@@ -263,6 +298,11 @@ function snapshotFiles() {
     assert.strictEqual(replyPacket.packet_status, 'OUTREACH_READY');
     assert.strictEqual(replyPacket.contact.route_type, 'PUBLIC_REPLY');
     assert.strictEqual(incompletePacket.packet_status, 'RESEARCH_ONLY');
+    assert.strictEqual(incompletePacket.source_evidence.property_specific, true);
+    assert.strictEqual(incompletePacket.source_evidence.identity_ready, false);
+    assert.strictEqual(incompletePacket.source_evidence.source_ready, false);
+    assert.ok(incompletePacket.risk_flags.includes('PROPERTY_IDENTITY_INCOMPLETE'));
+    assert.ok(!incompletePacket.risk_flags.includes('SOURCE_PROOF_INCOMPLETE'));
     assert.strictEqual(phonePacket.arv.range, null);
     assert.strictEqual(phonePacket.mao.range, null);
     assert.strictEqual(phonePacket.offer_recommendation.maximum_contract_price_range, null);
@@ -273,6 +313,12 @@ function snapshotFiles() {
     assert.strictEqual(result.diagnostics.rejected_reason_counts.duplicate_phone, 1);
     assert.strictEqual(result.diagnostics.rejected_reason_counts.duplicate_body_hash, 1);
     assert.strictEqual(result.diagnostics.rejected_reason_counts.wrong_market_address, 1);
+    assert.strictEqual(result.diagnostics.property_specific_url_count, 3);
+    assert.strictEqual(result.diagnostics.identity_ready_count, 2);
+    assert.strictEqual(result.diagnostics.source_ready_count, 2);
+    assert.strictEqual(result.diagnostics.missing_complete_address, 1);
+    assert.strictEqual(result.diagnostics.incomplete_address_candidates.length, 1);
+    assert.strictEqual(result.diagnostics.incomplete_address_candidates[0].source_url, INCOMPLETE_URL);
 
     let rateLimitFetches = 0;
     const rateLimited = await adapter.runDallasCraigslistOwnerAcquisitionAdapter({

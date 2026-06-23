@@ -71,6 +71,23 @@ function stripHtml(value) {
     .replace(/<[^>]+>/g, ' '));
 }
 
+function attributeValue(tag, name) {
+  const match = String(tag || '').match(new RegExp(`\\b${name}\\s*=\\s*(?:["']([^"']*)["']|([^\\s>]+))`, 'i'));
+  return decodeHtml(match && (match[1] || match[2]));
+}
+
+function metadataTextFromHtml(html) {
+  const values = [];
+  const tags = String(html || '').match(/<meta\b[^>]*>/gi) || [];
+  for (const tag of tags) {
+    const key = cleanText(attributeValue(tag, 'property') || attributeValue(tag, 'name') || attributeValue(tag, 'itemprop')).toLowerCase();
+    if (!/^(?:og:)?(?:title|description|address|streetaddress)$|^twitter:(?:title|description)$/.test(key)) continue;
+    const content = attributeValue(tag, 'content');
+    if (content) values.push(content);
+  }
+  return uniqueText(values).join(' | ');
+}
+
 function resolveUrl(value, baseUrl) {
   try {
     return new URL(decodeHtml(value), baseUrl).toString();
@@ -143,20 +160,57 @@ function buildCraigslistOwnerSearchQueries(input = {}) {
   });
 }
 
-function extractCraigslistPostUrls(html, searchUrl) {
-  const urls = [];
-  const seen = new Set();
+function resultBlockAround(source, index, fallback) {
+  const liStart = source.lastIndexOf('<li', index);
+  const liEnd = source.indexOf('</li>', index);
+  if (liStart >= 0 && liEnd > index && liEnd - liStart <= 12000) return source.slice(liStart, liEnd + 5);
+  const divStart = source.lastIndexOf('<div', index);
+  const divEnd = source.indexOf('</div>', index);
+  if (divStart >= 0 && divEnd > index && divEnd - divStart <= 6000) return source.slice(divStart, divEnd + 6);
+  return fallback;
+}
+
+function addressSignalFromSearchResult(value) {
+  const visible = stripHtml(value);
+  const match = visible.match(COMPLETE_ADDRESS_RE);
+  const address = cleanText(match && match[0]);
+  return propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
+}
+
+function extractCraigslistPostUrlRecords(html, searchUrl) {
+  const records = [];
+  const byPostId = new Map();
   const source = String(html || '');
-  const hrefRe = /\bhref\s*=\s*["']([^"']+)["']/gi;
+  const anchorRe = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
-  while ((match = hrefRe.exec(source)) !== null && urls.length < MAX_DISCOVERED_URLS) {
+  while ((match = anchorRe.exec(source)) !== null && records.length < MAX_DISCOVERED_URLS) {
     const url = resolveUrl(match[1], searchUrl);
     const postId = craigslistPostId(url);
-    if (!postId || seen.has(postId)) continue;
-    seen.add(postId);
-    urls.push(url);
+    if (!postId) continue;
+    const resultBlock = resultBlockAround(source, match.index, match[0]);
+    const addressSignal = addressSignalFromSearchResult(resultBlock);
+    const record = {
+      source_url: url,
+      post_id: postId,
+      address_signal: addressSignal,
+      address_signal_visible: !!addressSignal,
+      discovery_index: records.length
+    };
+    const existing = byPostId.get(postId);
+    if (!existing) {
+      byPostId.set(postId, record);
+      records.push(record);
+    } else if (!existing.address_signal_visible && record.address_signal_visible) {
+      Object.assign(existing, record, { discovery_index: existing.discovery_index });
+    }
   }
-  return urls;
+  return records.sort((a, b) =>
+    Number(b.address_signal_visible) - Number(a.address_signal_visible) ||
+    a.discovery_index - b.discovery_index);
+}
+
+function extractCraigslistPostUrls(html, searchUrl) {
+  return extractCraigslistPostUrlRecords(html, searchUrl).map((record) => record.source_url);
 }
 
 function pageTitle(html) {
@@ -170,8 +224,46 @@ function postingBody(html) {
   return stripHtml(section && section[1] || source).replace(/^QR Code Link to This Post\s*/i, '');
 }
 
+function addressFromStructuredObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+  const street = cleanText(value.streetAddress);
+  const city = cleanText(value.addressLocality);
+  const state = cleanText(value.addressRegion);
+  const zip = cleanText(value.postalCode);
+  if (!street || !city || !state || !zip) return '';
+  const address = `${street}, ${city}, ${state} ${zip}`;
+  return propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
+}
+
+function findStructuredAddress(value) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const address = findStructuredAddress(item);
+      if (address) return address;
+    }
+    return '';
+  }
+  if (!value || typeof value !== 'object') return '';
+  const direct = addressFromStructuredObject(value);
+  if (direct) return direct;
+  for (const child of Object.values(value)) {
+    const address = findStructuredAddress(child);
+    if (address) return address;
+  }
+  return '';
+}
+
 function structuredAddressFromHtml(html) {
   const source = String(html || '');
+  const scripts = source.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+  for (const script of scripts) {
+    const body = cleanText((script.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i) || [])[1]);
+    if (!body) continue;
+    try {
+      const address = findStructuredAddress(JSON.parse(body));
+      if (address) return address;
+    } catch (_) {}
+  }
   const field = (name) => {
     const match = source.match(new RegExp(`"${name}"\\s*:\\s*"([^"]+)"`, 'i'));
     return decodeHtml(match && match[1]);
@@ -189,14 +281,19 @@ function extractCompleteAddress(html, title, body) {
   const structured = structuredAddressFromHtml(html);
   if (structured) return { address: structured, evidence: structured, basis: 'structured_page_metadata' };
   const mapAddress = stripHtml((String(html || '').match(/<[^>]+class=["'][^"']*\bmapaddress\b[^"']*["'][^>]*>([\s\S]*?)<\//i) || [])[1] || '');
-  const visible = cleanText([mapAddress, title, body].filter(Boolean).join(' | '));
+  const metadataText = metadataTextFromHtml(html);
+  const visible = cleanText([mapAddress, metadataText, title, body].filter(Boolean).join(' | '));
   const match = visible.match(COMPLETE_ADDRESS_RE);
   const address = cleanText(match && match[0]);
   if (!propertyIdentity.isCompleteAddress(address)) return { address: '', evidence: '', basis: '' };
   return {
     address: propertyIdentity.canonicalAddress(address),
     evidence: address,
-    basis: mapAddress && mapAddress.includes(address) ? 'map_address' : 'visible_page_text'
+    basis: mapAddress && mapAddress.includes(address)
+      ? 'map_address'
+      : metadataText && metadataText.includes(address)
+        ? 'page_metadata'
+        : 'visible_page_text'
   };
 }
 
@@ -556,7 +653,7 @@ async function runDallasCraigslistOwnerAcquisitionAdapter(options = {}) {
   const fetchImpl = options.page_fetch_impl || options.pageFetchImpl || options.fetch_impl || options.fetchImpl;
   const queryGroups = buildCraigslistOwnerSearchQueries(context).slice(0, maxSearchPages);
   const searchPages = [];
-  const discoveredUrls = [];
+  const discoveredRecords = [];
   const discoveredIds = new Set();
   const rejected = [];
   let stoppedBySource = false;
@@ -579,15 +676,22 @@ async function runDallasCraigslistOwnerAcquisitionAdapter(options = {}) {
       break;
     }
     if (page.status !== 'fetched') continue;
-    for (const postUrl of extractCraigslistPostUrls(page.html, page.final_source_url || group.source_url)) {
-      if (discoveredUrls.length >= maxDiscoveredUrls) break;
-      const postId = craigslistPostId(postUrl);
+    for (const record of extractCraigslistPostUrlRecords(page.html, page.final_source_url || group.source_url)) {
+      if (discoveredRecords.length >= maxDiscoveredUrls) break;
+      const postId = record.post_id;
       if (!postId || discoveredIds.has(postId)) continue;
       discoveredIds.add(postId);
-      discoveredUrls.push(postUrl);
+      discoveredRecords.push(Object.assign({}, record, {
+        query_group: group.query_group,
+        discovery_index: discoveredRecords.length
+      }));
     }
-    if (discoveredUrls.length >= maxDiscoveredUrls) break;
+    if (discoveredRecords.length >= maxDiscoveredUrls) break;
   }
+  discoveredRecords.sort((a, b) =>
+    Number(b.address_signal_visible) - Number(a.address_signal_visible) ||
+    a.discovery_index - b.discovery_index);
+  const discoveredUrls = discoveredRecords.map((record) => record.source_url);
 
   const candidates = [];
   const postFetches = [];
@@ -646,6 +750,13 @@ async function runDallasCraigslistOwnerAcquisitionAdapter(options = {}) {
 
   const cards = candidates.map((candidate) => propertyCandidate.candidateToFindMeCard(candidate, context));
   const packets = candidates.map((candidate) => callReadyDealPacket.buildCallReadyDealPacket(candidate, { context }));
+  const incompleteAddressCandidates = packets
+    .filter((packet) => !(packet.source_evidence && packet.source_evidence.identity_ready))
+    .map((packet) => ({
+      source_url: cleanText(packet.property && packet.property.source_url),
+      craigslist_post_id: craigslistPostId(packet.property && packet.property.source_url),
+      normalized_address: cleanText(packet.property && packet.property.normalized_address)
+    }));
   const packetStatusCounts = packets.reduce((out, packet) => {
     const status = cleanText(packet && packet.packet_status) || 'UNKNOWN';
     out[status] = (out[status] || 0) + 1;
@@ -663,6 +774,7 @@ async function runDallasCraigslistOwnerAcquisitionAdapter(options = {}) {
     discovered_url_cap: maxDiscoveredUrls,
     discovered_url_hard_cap: MAX_DISCOVERED_URLS,
     discovered_url_count: discoveredUrls.length,
+    address_signal_url_count: discoveredRecords.filter((record) => record.address_signal_visible).length,
     post_fetch_cap: maxPostFetches,
     post_fetch_hard_cap: MAX_POST_FETCHES,
     post_fetches_used: postFetches.length,
@@ -674,6 +786,11 @@ async function runDallasCraigslistOwnerAcquisitionAdapter(options = {}) {
     post_fetches: postFetches,
     rejected_results: rejected,
     rejected_reason_counts: reasonCounts(rejected),
+    property_specific_url_count: packets.filter((packet) => packet.source_evidence && packet.source_evidence.property_specific).length,
+    identity_ready_count: packets.filter((packet) => packet.source_evidence && packet.source_evidence.identity_ready).length,
+    source_ready_count: packets.filter((packet) => packet.source_evidence && packet.source_evidence.source_ready).length,
+    missing_complete_address: incompleteAddressCandidates.length,
+    incomplete_address_candidates: incompleteAddressCandidates,
     packet_status_counts: packetStatusCounts,
     call_ready_count: Number(packetStatusCounts.CALL_READY || 0) || 0,
     outreach_ready_count: Number(packetStatusCounts.OUTREACH_READY || 0) || 0,
@@ -713,6 +830,7 @@ module.exports = {
   isCraigslistOwnerSearchUrl,
   isCraigslistOwnerPostUrl,
   craigslistPostId,
+  extractCraigslistPostUrlRecords,
   extractCraigslistPostUrls,
   extractCompleteAddress,
   extractCraigslistContactEvidence,

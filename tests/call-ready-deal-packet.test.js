@@ -109,6 +109,44 @@ assert.strictEqual(emailOutreach.contact.call_allowed, false);
 assert.strictEqual(emailOutreach.contact.outreach_allowed, true);
 assert.ok(emailOutreach.lock_states.includes(callReadyPacket.LOCK_STATES.CALL_LOCKED_NO_CONTACT));
 
+const craigslistUrl = 'https://dallas.craigslist.org/dal/reo/d/dallas-as-is-owner-property/7918000002.html';
+const craigslistOutreach = callReadyPacket.buildCallReadyDealPacket(baseCandidate({
+  source_id: 'tx_dallas_craigslist_owner_posts',
+  source_family: 'craigslist_owner_fsbo',
+  source_name: 'Dallas Craigslist owner real-estate posts',
+  source_url: craigslistUrl,
+  source_classification: 'exact_property_record',
+  contact_route: 'Public Reply',
+  contact_phone: '',
+  contact_email: '',
+  contact_source_url: 'https://dallas.craigslist.org/reply/dal/reo/7918000002/__SERVICE_ID__',
+  contact_evidence_text: 'Public reply link visible on Craigslist property post.'
+}));
+assert.strictEqual(craigslistOutreach.packet_status, callReadyPacket.PACKET_STATUSES.OUTREACH_READY);
+assert.strictEqual(craigslistOutreach.source_evidence.property_specific, true);
+assert.strictEqual(craigslistOutreach.source_evidence.identity_ready, true);
+assert.strictEqual(craigslistOutreach.source_evidence.source_ready, true);
+
+const craigslistIncompleteIdentity = callReadyPacket.buildCallReadyDealPacket(baseCandidate({
+  source_id: 'tx_dallas_craigslist_owner_posts',
+  source_family: 'craigslist_owner_fsbo',
+  source_name: 'Dallas Craigslist owner real-estate posts',
+  source_url: craigslistUrl,
+  source_classification: 'exact_property_record',
+  normalized_address: '',
+  contact_route: 'Public Reply',
+  contact_phone: '',
+  contact_email: '',
+  contact_source_url: 'https://dallas.craigslist.org/reply/dal/reo/7918000002/__SERVICE_ID__',
+  contact_evidence_text: 'Public reply link visible on Craigslist property post.'
+}));
+assert.strictEqual(craigslistIncompleteIdentity.packet_status, callReadyPacket.PACKET_STATUSES.RESEARCH_ONLY);
+assert.strictEqual(craigslistIncompleteIdentity.source_evidence.property_specific, true);
+assert.strictEqual(craigslistIncompleteIdentity.source_evidence.identity_ready, false);
+assert.strictEqual(craigslistIncompleteIdentity.source_evidence.source_ready, false);
+assert.ok(craigslistIncompleteIdentity.risk_flags.includes('PROPERTY_IDENTITY_INCOMPLETE'));
+assert.ok(!craigslistIncompleteIdentity.risk_flags.includes('SOURCE_PROOF_INCOMPLETE'));
+
 const subjectComp = {
   comp_address: '123 Main St, Dallas, TX 75208',
   sold_status: 'sold',
@@ -154,6 +192,8 @@ const genericSource = callReadyPacket.buildCallReadyDealPacket(baseCandidate({
 }));
 assert.strictEqual(genericSource.packet_status, callReadyPacket.PACKET_STATUSES.RESEARCH_ONLY);
 assert.strictEqual(genericSource.source_evidence.property_specific, false);
+assert.strictEqual(genericSource.source_evidence.identity_ready, true);
+assert.strictEqual(genericSource.source_evidence.source_ready, false);
 assert.strictEqual(genericSource.offer_recommendation.maximum_contract_price_range, null);
 
 assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, []);
