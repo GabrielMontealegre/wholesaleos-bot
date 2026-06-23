@@ -1,6 +1,7 @@
 'use strict';
 
 const callReadyDealPacket = require('./call-ready-deal-packet');
+const canonicalOpportunityKernel = require('./canonical-opportunity-kernel');
 const opportunityExecutionSpine = require('./opportunity-execution-spine');
 const propertyCandidate = require('./property-candidate');
 const propertyIdentity = require('./property-identity');
@@ -275,6 +276,7 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
   const fetchImpl = options.fetch_impl || options.fetchImpl || global.fetch;
   const packets = [];
   const opportunities = [];
+  const canonicalOpportunities = [];
   const itemResults = [];
   const rejectedItems = [];
   let pageFetches = 0;
@@ -370,8 +372,13 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       input
     );
     const opportunity = opportunityExecutionSpine.buildOpportunityExecutionState(packet);
+    const canonicalOpportunity = canonicalOpportunityKernel.buildCanonicalOpportunity({
+      packet,
+      execution_state: opportunity
+    }, { market });
     packets.push(packet);
     opportunities.push(opportunity);
+    canonicalOpportunities.push(canonicalOpportunity);
     itemResults.push({
       index,
       source_url: sourceUrl,
@@ -383,6 +390,9 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       packet_status: packet.packet_status,
       opportunity_id: opportunity.opportunity_id,
       opportunity_stage: opportunity.stage,
+      canonical_opportunity_id: canonicalOpportunity.opportunity_id,
+      canonical_stage: canonicalOpportunity.money_path.current_stage,
+      canonical_next_action: canonicalOpportunity.money_path.next_best_action,
       next_action: opportunity.execution.next_action,
       preview_only: true,
       should_ingest: false,
@@ -400,6 +410,8 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
     packets,
     opportunity_count: opportunities.length,
     opportunities,
+    canonical_opportunity_count: canonicalOpportunities.length,
+    canonical_opportunities: canonicalOpportunities,
     item_results: itemResults,
     rejected_items: rejectedItems,
     diagnostics: {
@@ -410,6 +422,11 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       }, {}),
       opportunity_stage_counts: opportunities.reduce((counts, opportunity) => {
         const stage = cleanText(opportunity.stage) || 'UNKNOWN';
+        counts[stage] = Number(counts[stage] || 0) + 1;
+        return counts;
+      }, {}),
+      canonical_stage_counts: canonicalOpportunities.reduce((counts, opportunity) => {
+        const stage = cleanText(opportunity.money_path && opportunity.money_path.current_stage) || 'UNKNOWN';
         counts[stage] = Number(counts[stage] || 0) + 1;
         return counts;
       }, {}),
