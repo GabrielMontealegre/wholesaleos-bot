@@ -1,6 +1,7 @@
 'use strict';
 
 const callReadyDealPacket = require('./call-ready-deal-packet');
+const opportunityExecutionSpine = require('./opportunity-execution-spine');
 const propertyCandidate = require('./property-candidate');
 const propertyIdentity = require('./property-identity');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
@@ -273,6 +274,7 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
   const market = marketFrom(input);
   const fetchImpl = options.fetch_impl || options.fetchImpl || global.fetch;
   const packets = [];
+  const opportunities = [];
   const itemResults = [];
   const rejectedItems = [];
   let pageFetches = 0;
@@ -367,7 +369,9 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       item,
       input
     );
+    const opportunity = opportunityExecutionSpine.buildOpportunityExecutionState(packet);
     packets.push(packet);
+    opportunities.push(opportunity);
     itemResults.push({
       index,
       source_url: sourceUrl,
@@ -377,6 +381,9 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       normalized_address: packet.property.normalized_address,
       packet_id: packet.packet_id,
       packet_status: packet.packet_status,
+      opportunity_id: opportunity.opportunity_id,
+      opportunity_stage: opportunity.stage,
+      next_action: opportunity.execution.next_action,
       preview_only: true,
       should_ingest: false,
       no_global_mutation: true
@@ -391,12 +398,19 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
     page_fetches: pageFetches,
     packet_count: packets.length,
     packets,
+    opportunity_count: opportunities.length,
+    opportunities,
     item_results: itemResults,
     rejected_items: rejectedItems,
     diagnostics: {
       packet_status_counts: packets.reduce((counts, packet) => {
         const status = cleanText(packet.packet_status) || 'UNKNOWN';
         counts[status] = Number(counts[status] || 0) + 1;
+        return counts;
+      }, {}),
+      opportunity_stage_counts: opportunities.reduce((counts, opportunity) => {
+        const stage = cleanText(opportunity.stage) || 'UNKNOWN';
+        counts[stage] = Number(counts[stage] || 0) + 1;
         return counts;
       }, {}),
       rejection_reasons: uniqueText(rejectedItems.map((item) => item.reason)),
