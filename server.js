@@ -18,6 +18,7 @@ const dealCallDossiers = require('./modules/research/deal-call-dossiers');
 const manualReviewQueue = require('./modules/research/manual-review-queue');
 const searchProviderWorker = require('./modules/research/search-provider-worker');
 const callReadyPreviewService = require('./modules/research/call-ready-preview-service');
+const selectedDealPacketService = require('./modules/research/selected-deal-packet-service');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -1941,6 +1942,27 @@ app.post('/api/preview/call-ready-deal-packets', requireAdmin, async (req, res) 
     res.status(500).json({
       ok: false,
       error: e.message,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    });
+  }
+});
+
+app.post('/api/preview/selected-deal-packet', requireAdmin, async (req, res) => {
+  try {
+    const preview = await selectedDealPacketService.runSelectedDealPacketPreview(req.body || {});
+    res.json(Object.assign({}, preview, {
+      ok: true,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    }));
+  } catch (e) {
+    res.status(Number(e && e.status_code || 500) || 500).json({
+      ok: false,
+      error: e.message,
+      code: e.code || 'selected_deal_packet_preview_failed',
       preview_only: true,
       should_ingest: false,
       no_global_mutation: true

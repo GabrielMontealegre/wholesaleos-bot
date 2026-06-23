@@ -167,7 +167,14 @@ function buildCallReadyDealPacket(input, options = {}) {
   const verifiedCompCount = Number(compState.verified_comp_count || 0) || 0;
   const arvReady = verifiedCompCount >= 3 && !!compState.arv_range;
   const repairAmount = numberValue(input.repair_estimate || input.repairs || input.manual_repair_estimate);
+  const desiredAssignmentFee = numberValue(input.desired_assignment_fee);
   const maoReady = arvReady && repairAmount > 0 && !!compState.mao_range;
+
+  let packetStatus = PACKET_STATUSES.BLOCKED;
+  if (sourceReady && motivationReady && statusReady && contact.call_allowed) packetStatus = PACKET_STATUSES.CALL_READY;
+  else if (sourceReady && motivationReady && statusReady && contact.outreach_allowed) packetStatus = PACKET_STATUSES.OUTREACH_READY;
+  else if (sourceReady && motivationReady && statusReady) packetStatus = PACKET_STATUSES.CONTACT_LOOKUP;
+  else if (sourceUrl || candidate.normalized_address) packetStatus = PACKET_STATUSES.RESEARCH_ONLY;
 
   let dossier = {
     dossier_id: '',
@@ -176,7 +183,7 @@ function buildCallReadyDealPacket(input, options = {}) {
     preview_only: true,
     should_ingest: false
   };
-  if (identityReady) {
+  if (identityReady && (packetStatus === PACKET_STATUSES.CALL_READY || packetStatus === PACKET_STATUSES.OUTREACH_READY)) {
     const dealCallDossiers = require('./deal-call-dossiers');
     dossier = dealCallDossiers.buildDossier({
       address: candidate.normalized_address,
@@ -194,12 +201,11 @@ function buildCallReadyDealPacket(input, options = {}) {
       lead_evidence: evidence
     });
   }
-
-  let packetStatus = PACKET_STATUSES.BLOCKED;
-  if (sourceReady && motivationReady && statusReady && contact.call_allowed) packetStatus = PACKET_STATUSES.CALL_READY;
-  else if (sourceReady && motivationReady && statusReady && contact.outreach_allowed) packetStatus = PACKET_STATUSES.OUTREACH_READY;
-  else if (sourceReady && motivationReady && statusReady) packetStatus = PACKET_STATUSES.CONTACT_LOOKUP;
-  else if (sourceUrl || candidate.normalized_address) packetStatus = PACKET_STATUSES.RESEARCH_ONLY;
+  const contractPriceRange = maoReady ? {
+    low: Math.max(0, Number(compState.mao_range.low || 0) - desiredAssignmentFee),
+    high: Math.max(0, Number(compState.mao_range.high || 0) - desiredAssignmentFee),
+    desired_assignment_fee: desiredAssignmentFee || 0
+  } : null;
 
   const locks = [];
   if (!arvReady) locks.push(LOCK_STATES.ARV_LOCKED_NO_VERIFIED_COMPS);
@@ -252,6 +258,8 @@ function buildCallReadyDealPacket(input, options = {}) {
     property: {
       property_key: candidate.property_key,
       normalized_address: candidate.normalized_address,
+      address_evidence_text: cleanText(input.address_evidence_text),
+      address_evidence_source: cleanText(input.address_evidence_source),
       source_url: sourceUrl,
       source_domain: candidate.source_domain,
       source_classification: sourceClassification,
@@ -310,18 +318,22 @@ function buildCallReadyDealPacket(input, options = {}) {
     },
     mao: {
       status: maoReady ? 'DRAFT_MAO_AVAILABLE' : !arvReady ? LOCK_STATES.MAO_LOCKED_NO_ARV : LOCK_STATES.MAO_LOCKED_NO_REPAIR_EVIDENCE,
-      range: maoReady ? compState.mao_range : null,
-      basis: maoReady ? cleanText(compState.mao_range.basis) : '',
+      range: contractPriceRange,
+      basis: maoReady
+        ? cleanText(`${compState.mao_range.basis}${desiredAssignmentFee ? '_minus_explicit_assignment_fee' : ''}`)
+        : '',
       missing_evidence: maoReady ? [] : !arvReady ? ['preliminary ARV'] : ['repair evidence or manual repair estimate']
     },
     offer_recommendation: {
       status: contact.outreach_allowed && maoReady ? 'REVIEW_REQUIRED' : !contact.outreach_allowed ? LOCK_STATES.OFFER_LOCKED_NO_CONTACT : LOCK_STATES.OFFER_LOCKED_NO_MAO,
       maximum_contract_price_range: contact.outreach_allowed && maoReady ? {
-        low: compState.mao_range.low,
-        high: compState.mao_range.high
+        low: contractPriceRange.low,
+        high: contractPriceRange.high
       } : null,
-      basis: contact.outreach_allowed && maoReady ? 'Canonical draft MAO; operator review required before offer.' : '',
-      assumptions: []
+      basis: contact.outreach_allowed && maoReady
+        ? `Canonical draft MAO${desiredAssignmentFee ? ' less explicit desired assignment fee' : ''}; operator review required before offer.`
+        : '',
+      assumptions: desiredAssignmentFee ? [`Desired assignment fee explicitly supplied: ${desiredAssignmentFee}.`] : []
     },
     confidence_scores: {
       source: candidate.source_confidence,
