@@ -27,6 +27,7 @@ const searchProviderWorker = require('../modules/research/search-provider-worker
 const sourceAdapterRegistry = require('../modules/sources/source-adapter-registry');
 const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
 const fsboAdapter = require('../modules/sources/dallas-fsbo-contact-acquisition-adapter');
+const craigslistAdapter = require('../modules/sources/dallas-craigslist-owner-acquisition-adapter');
 const previewScript = require('../scripts/preview-call-ready-deal-packets');
 
 function mockPage(body, url) {
@@ -176,16 +177,32 @@ function mockPage(body, url) {
     timeout_ms: 5000,
     retries: 0
   });
+  const craigslistUrl = 'https://dallas.craigslist.org/dal/reo/d/dallas-owner-fixer/7919000002.html';
   const preview = await previewScript.runPreview(['node', 'preview-call-ready-deal-packets.js'], {
     env: {
       ENABLE_SEARCH_PROVIDER: 'true',
       SEARCH_PROVIDER: 'mock',
       SEARCH_PROVIDER_MAX_RESULTS: '10'
     },
-    mock_search_results: mockResults,
     page_fetch_impl: async (url) => {
-      if (url === phoneUrl) return mockPage('<html><body>Active for sale by owner. Call owner at (214) 555-0123.</body></html>', url);
-      if (url === emailUrl) return mockPage('<html><body>Active for sale by owner. Email seller@example.com.</body></html>', url);
+      if (craigslistAdapter.isCraigslistOwnerSearchUrl(url)) {
+        return mockPage(`<html><body><a href="${craigslistUrl}">owner post</a></body></html>`, url);
+      }
+      if (url === craigslistUrl) {
+        return mockPage(`<html>
+          <head><script type="application/ld+json">{
+            "streetAddress":"125 Main St",
+            "addressLocality":"Dallas",
+            "addressRegion":"TX",
+            "postalCode":"75208",
+            "datePosted":"2026-06-21T10:00:00-05:00"
+          }</script></head>
+          <body>
+            <time datetime="2026-06-21T10:00:00-05:00"></time>
+            <section id="postingbody">For sale by owner. Cash only. Call owner at (214) 555-0124.</section>
+          </body>
+        </html>`, url);
+      }
       throw new Error(`Unexpected preview fetch: ${url}`);
     }
   });
@@ -193,7 +210,7 @@ function mockPage(body, url) {
   assert.strictEqual(preview.preview_only, true);
   assert.strictEqual(preview.should_ingest, false);
   assert.strictEqual(preview.no_global_mutation, true);
-  assert.strictEqual(preview.packet_count, 2);
+  assert.strictEqual(preview.packet_count, 1);
 
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, []);
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DEAL_CALL_DOSSIERS_PATH, 'utf8')).dossiers, []);

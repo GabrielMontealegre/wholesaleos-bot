@@ -39,6 +39,10 @@ function bool(value) {
   return value === true || /^(true|1|yes)$/i.test(cleanText(value));
 }
 
+function textList(value) {
+  return Array.from(new Set((Array.isArray(value) ? value : []).map(cleanText).filter(Boolean)));
+}
+
 function inferOfficialSource(input, sourceUrl) {
   if (bool(input.official_source)) return true;
   const text = [
@@ -149,6 +153,7 @@ function normalizePropertyCandidate(input, context) {
     amount_or_judgment: cleanText(input.amount_or_judgment || input.judgment_amount || input.tax_amount),
     parcel_or_account: cleanText(input.parcel_or_account || input.parcel_id || input.apn || input.account_number),
     contact_route: cleanText(input.contact_route || input.public_contact_route) || 'Manual Lookup Needed',
+    contact_role: cleanText(input.contact_role),
     contact_name: cleanText(input.contact_name || input.agent_name || input.listing_agent),
     contact_phone: cleanText(input.contact_phone || input.phone),
     contact_email: cleanText(input.contact_email || input.email),
@@ -156,6 +161,8 @@ function normalizePropertyCandidate(input, context) {
     contact_evidence_text: cleanText(input.contact_evidence_text || input.contact_source_text),
     contact_verification_status: cleanText(input.contact_verification_status),
     contact_verified: input.contact_verified === true,
+    status_verified_visible: input.status_verified_visible === true,
+    risk_flags: textList(input.risk_flags),
     asking_price: cleanText(input.asking_price || input.list_price || input.price),
     beds: cleanText(input.beds || input.bedrooms),
     baths: cleanText(input.baths || input.bathrooms),
@@ -242,6 +249,7 @@ function candidateToFindMeCard(candidate, context) {
     exact_source_phrase_verbatim: !!(phrase && candidate.lead_evidence && candidate.lead_evidence.exact_source_phrase_verbatim === true),
     listing_status: candidate.current_status || candidate.status_evidence_text,
     public_contact_route: candidate.contact_route,
+    contact_role: candidate.contact_role,
     contact_name: candidate.contact_name,
     contact_phone: candidate.contact_phone,
     contact_email: candidate.contact_email,
@@ -249,6 +257,7 @@ function candidateToFindMeCard(candidate, context) {
     contact_evidence_text: candidate.contact_evidence_text,
     contact_verification_status: candidate.contact_verification_status || (candidate.contact_verified ? 'verified_visible_source' : 'Manual Verification Needed'),
     contact_verified: candidate.contact_verified === true,
+    risk_flags: candidate.risk_flags,
     asking_price: candidate.asking_price,
     beds: candidate.beds,
     baths: candidate.baths,

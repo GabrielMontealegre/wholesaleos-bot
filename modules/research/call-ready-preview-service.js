@@ -26,11 +26,11 @@ function buildCallReadyPreviewJob(input = {}) {
     city: cleanText(input.city) || 'Dallas',
     county: cleanText(input.county) || 'Dallas County',
     state: cleanText(input.state) || 'TX',
-    source_ids: ['tx_dallas_fsbo_contact_first'],
-    source_families: ['fsbo'],
+    source_ids: ['tx_dallas_craigslist_owner_posts'],
+    source_families: ['craigslist_owner_fsbo'],
     source_acquisition_enabled: true,
     acquisition_core_enabled: true,
-    source_acquisition_mode: 'contact_first_preview',
+    source_acquisition_mode: 'craigslist_owner_preview',
     preview_only: true,
     should_ingest: false
   };
