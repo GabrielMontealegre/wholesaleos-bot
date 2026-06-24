@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 
 const opportunityExecutionSpine = require('./opportunity-execution-spine');
+const opportunityWorkOrders = require('./opportunity-work-orders');
 
 const KERNEL_LOCKS = Object.freeze({
   ARV_LOCKED_NO_VERIFIED_COMPS: 'ARV_LOCKED_NO_VERIFIED_COMPS',
@@ -390,8 +391,11 @@ function buildCanonicalOpportunity(input = {}, options = {}) {
     sourceUrls[0],
     packet.packet_id
   ].join('|'));
+  const legacyTaskQueue = Array.isArray(executionState.execution && executionState.execution.tasks)
+    ? executionState.execution.tasks
+    : [];
 
-  return {
+  const canonicalOpportunity = {
     opportunity_id: opportunityId,
     opportunity_version: 1,
     identity: {
@@ -419,9 +423,7 @@ function buildCanonicalOpportunity(input = {}, options = {}) {
       next_best_action: action.action,
       next_best_action_label: action.label,
       next_best_action_reason: action.reason,
-      task_queue: Array.isArray(executionState.execution && executionState.execution.tasks)
-        ? executionState.execution.tasks
-        : []
+      task_queue: legacyTaskQueue
     },
     operator_view: buildOperatorView(packet, readiness, sourceIsReady, statusIsReady, action, missing, stage),
     audit: {
@@ -439,6 +441,43 @@ function buildCanonicalOpportunity(input = {}, options = {}) {
     should_ingest: false,
     no_global_mutation: true
   };
+  const workOrderState = opportunityWorkOrders.buildOpportunityWorkOrders(canonicalOpportunity);
+  canonicalOpportunity.readiness_outcome = workOrderState.readiness_outcome;
+  canonicalOpportunity.work_orders = workOrderState.work_orders;
+  canonicalOpportunity.work_order_summary = {
+    next_3_tasks: workOrderState.next_3_tasks,
+    what_gabriel_can_do_now: workOrderState.what_gabriel_can_do_now,
+    what_system_can_do_later: workOrderState.what_system_can_do_later,
+    what_requires_paid_data: workOrderState.what_requires_paid_data,
+    why_numbers_are_locked: workOrderState.why_numbers_are_locked,
+    seller_question_to_unlock_numbers: workOrderState.seller_question_to_unlock_numbers,
+    low_evidence_reasons: workOrderState.low_evidence_reasons,
+    preview_only: true,
+    should_ingest: false,
+    no_global_mutation: true
+  };
+  canonicalOpportunity.money_path = Object.assign({}, canonicalOpportunity.money_path, {
+    readiness_outcome: workOrderState.readiness_outcome,
+    task_queue: workOrderState.work_orders,
+    legacy_execution_tasks: legacyTaskQueue
+  });
+  canonicalOpportunity.operator_view = Object.assign({}, canonicalOpportunity.operator_view, {
+    top_outcome: workOrderState.readiness_outcome,
+    next_3_tasks: workOrderState.next_3_tasks.map((item) => ({
+      type: item.type,
+      label: item.user_visible_label,
+      owner: item.owner,
+      can_run_now: item.can_run_now,
+      reason: item.reason
+    })),
+    what_gabriel_can_do_now: workOrderState.what_gabriel_can_do_now,
+    what_system_can_do_later: workOrderState.what_system_can_do_later,
+    what_requires_paid_data: workOrderState.what_requires_paid_data,
+    why_numbers_are_locked: workOrderState.why_numbers_are_locked,
+    seller_question_to_unlock_numbers: workOrderState.seller_question_to_unlock_numbers,
+    work_order_count: workOrderState.work_orders.length
+  });
+  return canonicalOpportunity;
 }
 
 module.exports = {
