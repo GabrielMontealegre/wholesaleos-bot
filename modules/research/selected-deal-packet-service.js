@@ -2,6 +2,7 @@
 
 const callReadyDealPacket = require('./call-ready-deal-packet');
 const canonicalOpportunityKernel = require('./canonical-opportunity-kernel');
+const executableWorkOrders = require('./executable-work-orders');
 const opportunityExecutionSpine = require('./opportunity-execution-spine');
 const propertyCandidate = require('./property-candidate');
 const propertyIdentity = require('./property-identity');
@@ -57,6 +58,14 @@ function selectedItems(input) {
     throw new SelectedDealPacketInputError(`Maximum ${SELECTED_DEAL_PACKET_CAPS.max_items} selected properties allowed.`, 'max_items_exceeded');
   }
   return items.map((item) => item && typeof item === 'object' ? item : {});
+}
+
+function shouldExecuteWorkOrders(input, options, itemCount) {
+  if (input && input.execute_work_orders === false) return false;
+  if (options && options.execute_work_orders === false) return false;
+  if (input && input.execute_work_orders === true) return true;
+  if (options && options.execute_work_orders === true) return true;
+  return itemCount === 1;
 }
 
 function completeAddress(value) {
@@ -273,10 +282,19 @@ function packetWithOperatorInputs(packet, item, input) {
 async function runSelectedDealPacketPreview(input = {}, options = {}) {
   const items = selectedItems(input);
   const market = marketFrom(input);
+  const executeWorkOrders = shouldExecuteWorkOrders(input, options, items.length);
+  if (executeWorkOrders && items.length > executableWorkOrders.EXECUTABLE_WORK_ORDER_CAPS.max_items) {
+    throw new SelectedDealPacketInputError(
+      `Executable work orders V1 supports ${executableWorkOrders.EXECUTABLE_WORK_ORDER_CAPS.max_items} selected property per preview.`,
+      'max_executable_items_exceeded'
+    );
+  }
   const fetchImpl = options.fetch_impl || options.fetchImpl || global.fetch;
   const packets = [];
   const opportunities = [];
   const canonicalOpportunities = [];
+  const canonicalOpportunitiesBeforeExecution = [];
+  const executableResults = [];
   const itemResults = [];
   const rejectedItems = [];
   let pageFetches = 0;
@@ -366,16 +384,40 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       address_evidence_text: addressEvidence.evidence_text,
       address_evidence_source: addressEvidence.evidence_source
     });
-    const packet = packetWithOperatorInputs(
+    let packet = packetWithOperatorInputs(
       callReadyDealPacket.buildCallReadyDealPacket(packetInputFor(candidate, item, input)),
       item,
       input
     );
-    const opportunity = opportunityExecutionSpine.buildOpportunityExecutionState(packet);
-    const canonicalOpportunity = canonicalOpportunityKernel.buildCanonicalOpportunity({
+    let opportunity = opportunityExecutionSpine.buildOpportunityExecutionState(packet);
+    let canonicalOpportunity = canonicalOpportunityKernel.buildCanonicalOpportunity({
       packet,
       execution_state: opportunity
     }, { market });
+    let executionResult = null;
+    if (executeWorkOrders) {
+      executionResult = await executableWorkOrders.executeOpportunityWorkOrders({
+        input,
+        item,
+        market,
+        packet,
+        canonical_opportunity: canonicalOpportunity
+      }, {
+        env: options.env || process.env,
+        fetch_impl: fetchImpl,
+        fetchImpl,
+        source_mock_results: options.source_mock_results,
+        comp_mock_results: options.comp_mock_results
+      });
+      canonicalOpportunitiesBeforeExecution.push(executionResult.canonical_opportunity_before_execution);
+      packet = packetWithOperatorInputs(executionResult.packet_after_execution || packet, item, input);
+      opportunity = opportunityExecutionSpine.buildOpportunityExecutionState(packet);
+      canonicalOpportunity = executionResult.canonical_opportunity_after_execution || canonicalOpportunityKernel.buildCanonicalOpportunity({
+        packet,
+        execution_state: opportunity
+      }, { market });
+      executableResults.push(executionResult);
+    }
     packets.push(packet);
     opportunities.push(opportunity);
     canonicalOpportunities.push(canonicalOpportunity);
@@ -393,6 +435,7 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
       canonical_opportunity_id: canonicalOpportunity.opportunity_id,
       canonical_stage: canonicalOpportunity.money_path.current_stage,
       canonical_next_action: canonicalOpportunity.money_path.next_best_action,
+      executable_work_orders_ran: !!executionResult,
       next_action: opportunity.execution.next_action,
       preview_only: true,
       should_ingest: false,
@@ -410,8 +453,21 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
     packets,
     opportunity_count: opportunities.length,
     opportunities,
+    canonical_opportunities_before_execution: canonicalOpportunitiesBeforeExecution,
     canonical_opportunity_count: canonicalOpportunities.length,
     canonical_opportunities: canonicalOpportunities,
+    executed_work_orders: executableResults.flatMap((result) => result.executed_work_orders || []),
+    evidence_found: executableResults.flatMap((result) => result.evidence_found || []),
+    comps_found: executableResults.map((result) => result.comps_found).filter(Boolean),
+    contacts_found: executableResults.flatMap((result) => result.contacts_found || []),
+    source_pages_checked: executableResults.flatMap((result) => result.source_pages_checked || []),
+    canonical_opportunity_before_execution: executableResults[0] && executableResults[0].canonical_opportunity_before_execution || null,
+    canonical_opportunity_after_execution: executableResults[0] && executableResults[0].canonical_opportunity_after_execution || null,
+    updated_work_orders: executableResults[0] && executableResults[0].updated_work_orders || [],
+    remaining_locks: executableResults[0] && executableResults[0].remaining_locks || [],
+    what_gabriel_can_do_now: executableResults[0] && executableResults[0].what_gabriel_can_do_now || [],
+    what_system_still_needs: executableResults[0] && executableResults[0].what_system_still_needs || [],
+    what_requires_paid_data: executableResults[0] && executableResults[0].what_requires_paid_data || [],
     item_results: itemResults,
     rejected_items: rejectedItems,
     diagnostics: {
@@ -430,6 +486,10 @@ async function runSelectedDealPacketPreview(input = {}, options = {}) {
         counts[stage] = Number(counts[stage] || 0) + 1;
         return counts;
       }, {}),
+      executable_work_orders_enabled: executeWorkOrders,
+      executable_work_orders_ran: executableResults.length > 0,
+      executable_work_order_caps: executableWorkOrders.EXECUTABLE_WORK_ORDER_CAPS,
+      executable_work_order_diagnostics: executableResults.map((result) => result.diagnostics || {}),
       rejection_reasons: uniqueText(rejectedItems.map((item) => item.reason)),
       legacy_comp_agent_invoked: false,
       legacy_skip_trace_agent_invoked: false,
