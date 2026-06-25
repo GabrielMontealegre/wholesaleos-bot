@@ -76,14 +76,6 @@ const auctionDeal = {
   possible_comps: [comp(101, 220000), comp(102, 230000), comp(103, 240000)]
 };
 
-const genericZillow = {
-  headline: 'Generic Zillow search result',
-  normalized_address: '789 Pine St, Dallas, TX 75208',
-  source_url: 'https://www.zillow.com/dallas-tx/',
-  motivation_evidence_text: 'cash only',
-  status_evidence_text: 'active'
-};
-
 const redfinDeal = {
   headline: 'Redfin detail page',
   source_url: 'https://www.redfin.com/TX/Dallas/222-Cedar-St-75208/home/123456',
@@ -92,27 +84,97 @@ const redfinDeal = {
   possible_comps: [comp(201, 210000)]
 };
 
-const brokenDeal = {
-  headline: 'Broken public source',
-  normalized_address: '333 Broken St, Dallas, TX 75208',
-  source_url: 'https://www.realtor.com/realestateandhomes-detail/333-Broken-St_Dallas_TX_75208_M333',
-  motivation_evidence_text: 'fixer',
-  status_evidence_text: 'active'
+const facebookFullAddress = {
+  headline: 'Investor special - 400 Yeager St',
+  source_url: 'https://www.facebook.com/groups/394054101914791/posts/1650291306291058/',
+  motivation_evidence_text: 'Investor special',
+  status_evidence_text: 'Manual Verification Needed',
+  source_snippet: 'Investor special at 400 Yeager St, Smithville, TX 78957. Needs TLC.'
 };
+
+const repairDeal = {
+  headline: 'Needs TLC - 789 Pine St',
+  normalized_address: '789 Pine St, Dallas, TX 75208',
+  source_url: 'https://www.facebook.com/groups/reihub/posts/10153972465452037/',
+  motivation_evidence_text: 'Needs TLC',
+  status_evidence_text: 'for sale'
+};
+
+const rejectedRecords = [
+  {
+    headline: 'Anyone ever sold a home as is?',
+    source_url: 'https://www.reddit.com/r/RealEstate/comments/c7fwlw/anyone_ever_sold_a_home_as_is_what_does_that_mean/',
+    motivation_evidence_text: 'as is',
+    status_evidence_text: 'sold'
+  },
+  {
+    headline: 'HAR.com: Texas Real Estate',
+    source_url: 'https://www.har.com/',
+    motivation_evidence_text: 'homes for sale',
+    status_evidence_text: 'for sale'
+  },
+  {
+    headline: 'For Sale by Owner in Texas',
+    source_url: 'https://www.redfin.com/state/Texas/for-sale-by-owner',
+    motivation_evidence_text: 'for sale by owner',
+    status_evidence_text: 'for sale'
+  },
+  {
+    headline: 'Generic Zillow category',
+    source_url: 'https://www.zillow.com/dallas-tx/',
+    motivation_evidence_text: 'cash only',
+    status_evidence_text: 'active'
+  },
+  {
+    headline: 'Facebook group without address',
+    source_url: 'https://www.facebook.com/groups/reihub/posts/10153972465452037/',
+    motivation_evidence_text: 'investor special',
+    status_evidence_text: 'Manual Verification Needed'
+  }
+];
 
 (async () => {
   try {
     const fetchHits = [];
     async function fetchImpl(url) {
       fetchHits.push(url);
-      if (/333-Broken/.test(url)) return response(404);
       return response(200);
     }
 
+    const blank = dealBoard.dealFromRecord({
+      headline: 'Blank address source',
+      source_url: 'https://www.har.com/',
+      motivation_evidence_text: 'for sale'
+    }, { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, caps: {} });
+    assert.strictEqual(blank.maps_url, null);
+
     const result = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
-      source_records: [genericZillow, auctionDeal, redfinDeal, officialDeal, brokenDeal]
-    }, { fetch_impl: fetchImpl });
+      source_records: [
+        ...rejectedRecords,
+        facebookFullAddress,
+        repairDeal,
+        auctionDeal,
+        redfinDeal,
+        officialDeal
+      ],
+      enable_provider_search: true,
+      mock_repair_results_by_query_group: {
+        repair_zillow_property_link: [
+          {
+            title: '789 Pine St Dallas TX 75208 | Zillow',
+            snippet: 'Zillow home details for 789 Pine St, Dallas, TX 75208.',
+            url: 'https://www.zillow.com/homedetails/789-Pine-St_Dallas_TX_75208/123456_zpid/'
+          }
+        ]
+      }
+    }, {
+      env: {
+        ENABLE_SEARCH_PROVIDER: 'true',
+        SEARCH_PROVIDER: 'mock'
+      },
+      fetch_impl: fetchImpl
+    });
 
     assert.strictEqual(result.ok, true);
     assert.strictEqual(result.preview_only, true);
@@ -120,12 +182,15 @@ const brokenDeal = {
     assert.strictEqual(result.no_global_mutation, true);
     assert.strictEqual(result.recommended_dashboard_section_name, 'Best Public Deals');
     assert.ok(Array.isArray(result.free_public_deals));
-    assert.ok(result.free_public_deals.length >= 5);
     assert.strictEqual(result.deal_board_count, result.free_public_deals.length);
-    assert.ok(result.top_deals.length > 0);
+    assert.ok(result.free_public_deals.length < 9, 'generic rows should be filtered from board rows');
+    assert.ok(result.top_deals.every((deal) => deal.usable_for_gabriel === true));
+    assert.ok(result.top_deals.every((deal) => deal.quality_bucket !== 'REJECTED_GENERIC'));
 
     const official = result.free_public_deals.find((deal) => deal.normalized_address === '123 Main St, Dallas, TX 75208');
     assert.ok(official);
+    assert.strictEqual(official.quality_bucket, 'INSPECT_NOW');
+    assert.strictEqual(official.usable_for_gabriel, true);
     assert.strictEqual(official.source_family, 'official_foreclosure');
     assert.strictEqual(official.motivation_type, 'foreclosure');
     assert.ok(official.source_document_url.endsWith('.pdf'));
@@ -136,31 +201,48 @@ const brokenDeal = {
     const auction = result.free_public_deals.find((deal) => deal.auction_url);
     assert.ok(auction);
     assert.strictEqual(auction.normalized_address, '456 Elm St, Dallas, TX 75208');
+    assert.strictEqual(auction.quality_bucket, 'INSPECT_NOW');
     assert.strictEqual(auction.comp_status, 'verified_sold_comps_ready');
     assert.strictEqual(auction.ARV_lock_state, 'ARV_UNLOCKED_VERIFIED_COMPS');
     assert.strictEqual(auction.verified_sold_comp_count, 3);
 
-    const generic = result.free_public_deals.find((deal) => deal.headline === 'Generic Zillow search result');
-    assert.ok(generic);
-    assert.strictEqual(generic.zillow_url, '');
-    assert.ok(generic.rejected_property_links.some((item) => item.reason === 'generic_zillow_link_rejected'));
-
     const redfin = result.free_public_deals.find((deal) => deal.redfin_url);
     assert.ok(redfin);
     assert.strictEqual(redfin.normalized_address, '222 Cedar St, Dallas, TX 75208');
+    assert.strictEqual(redfin.quality_bucket, 'INSPECT_NOW');
     assert.strictEqual(redfin.comp_status, 'partial_verified_sold_comps');
     assert.strictEqual(redfin.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
     assert.ok(redfin.missing_fields.includes('3 verified sold comps'));
 
-    const broken = result.free_public_deals.find((deal) => deal.normalized_address === '333 Broken St, Dallas, TX 75208');
-    assert.ok(broken);
-    assert.strictEqual(broken.source_url_status, 'broken');
-    assert.ok(result.broken_link_count >= 1);
+    const facebookAccepted = result.free_public_deals.find((deal) => deal.normalized_address === '400 Yeager St, Smithville, TX 78957');
+    assert.ok(facebookAccepted);
+    assert.strictEqual(facebookAccepted.usable_for_gabriel, true);
+    assert.strictEqual(facebookAccepted.quality_bucket, 'NEEDS_IDENTITY');
+    assert.ok(facebookAccepted.maps_url.includes('400%20Yeager%20St'));
+
+    const repaired = result.free_public_deals.find((deal) => deal.normalized_address === '789 Pine St, Dallas, TX 75208');
+    assert.ok(repaired);
+    assert.ok(repaired.zillow_url.includes('/homedetails/'));
+    assert.strictEqual(repaired.quality_bucket, 'INSPECT_NOW');
+
+    assert.ok(!result.free_public_deals.some((deal) => /reddit/i.test(deal.source_url)));
+    assert.ok(!result.free_public_deals.some((deal) => deal.source_url === 'https://www.har.com/'));
+    assert.ok(!result.free_public_deals.some((deal) => deal.source_url === 'https://www.redfin.com/state/Texas/for-sale-by-owner'));
+    assert.ok(!result.free_public_deals.some((deal) => deal.source_url === 'https://www.zillow.com/dallas-tx/'));
+    assert.ok(!result.free_public_deals.some((deal) => deal.headline === 'Facebook group without address'));
 
     assert.ok(result.property_specific_link_count >= 3);
+    assert.ok(result.usable_deal_count >= 5);
+    assert.ok(result.inspect_now_count >= 4);
+    assert.ok(result.needs_identity_count >= 1);
+    assert.ok(result.rejected_generic_count >= rejectedRecords.length);
     assert.strictEqual(result.source_counts.official_foreclosure, 1);
     assert.strictEqual(result.motivation_counts.foreclosure, 1);
-    assert.ok(result.operator_summary.includes('preview-only public deals'));
+    assert.ok(result.operator_summary.includes('usable preview-only public deals'));
+    assert.ok(result.diagnostics.quality.rejected_generic_samples.length >= 1);
+    assert.ok(result.diagnostics.identity_repair_attempted_count >= 1);
+    assert.ok(result.diagnostics.property_link_repair_success_count >= 1);
+    assert.ok(result.diagnostics.rows_without_maps_due_to_missing_address >= rejectedRecords.length);
 
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
@@ -172,7 +254,7 @@ const brokenDeal = {
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + 5);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);
@@ -194,4 +276,3 @@ const brokenDeal = {
   console.error(error);
   process.exit(1);
 });
-
