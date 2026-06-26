@@ -89,7 +89,7 @@ const facebookFullAddress = {
   source_url: 'https://www.facebook.com/groups/394054101914791/posts/1650291306291058/',
   motivation_evidence_text: 'Investor special',
   status_evidence_text: 'Manual Verification Needed',
-  source_snippet: 'Investor special at 400 Yeager St, Smithville, TX 78957. Needs TLC.'
+  source_snippet: 'Investor special at 400 Yeager St, Dallas, TX 75208. Needs TLC.'
 };
 
 const repairDeal = {
@@ -130,6 +130,20 @@ const rejectedRecords = [
     source_url: 'https://www.facebook.com/groups/reihub/posts/10153972465452037/',
     motivation_evidence_text: 'investor special',
     status_evidence_text: 'Manual Verification Needed'
+  },
+  {
+    headline: 'Redfin Wylie investment category with bad prefix',
+    source_url: 'https://www.redfin.com/city/30854/TX/Wylie/amenity/investment',
+    source_snippet: 'Investment homes including 189 Sq Ft 215 Hillside Dr, Wylie, TX 75098.',
+    motivation_evidence_text: 'investment',
+    status_evidence_text: 'for sale'
+  },
+  {
+    headline: 'Malformed sqft-prefixed address',
+    raw_address_text: '189 Sq Ft Dallas TX 75208',
+    source_url: 'https://www.redfin.com/city/30794/TX/Dallas/amenity/investment',
+    motivation_evidence_text: 'investment',
+    status_evidence_text: 'for sale'
   }
 ];
 
@@ -214,7 +228,7 @@ const rejectedRecords = [
     assert.strictEqual(redfin.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
     assert.ok(redfin.missing_fields.includes('3 verified sold comps'));
 
-    const facebookAccepted = result.free_public_deals.find((deal) => deal.normalized_address === '400 Yeager St, Smithville, TX 78957');
+    const facebookAccepted = result.free_public_deals.find((deal) => deal.normalized_address === '400 Yeager St, Dallas, TX 75208');
     assert.ok(facebookAccepted);
     assert.strictEqual(facebookAccepted.usable_for_gabriel, true);
     assert.strictEqual(facebookAccepted.quality_bucket, 'NEEDS_IDENTITY');
@@ -230,6 +244,8 @@ const rejectedRecords = [
     assert.ok(!result.free_public_deals.some((deal) => deal.source_url === 'https://www.redfin.com/state/Texas/for-sale-by-owner'));
     assert.ok(!result.free_public_deals.some((deal) => deal.source_url === 'https://www.zillow.com/dallas-tx/'));
     assert.ok(!result.free_public_deals.some((deal) => deal.headline === 'Facebook group without address'));
+    assert.ok(!result.free_public_deals.some((deal) => /Wylie/.test(deal.headline)));
+    assert.ok(result.diagnostics.bad_address_rejected_count >= 1);
 
     assert.ok(result.property_specific_link_count >= 3);
     assert.ok(result.usable_deal_count >= 5);
@@ -242,7 +258,42 @@ const rejectedRecords = [
     assert.ok(result.diagnostics.quality.rejected_generic_samples.length >= 1);
     assert.ok(result.diagnostics.identity_repair_attempted_count >= 1);
     assert.ok(result.diagnostics.property_link_repair_success_count >= 1);
-    assert.ok(result.diagnostics.rows_without_maps_due_to_missing_address >= rejectedRecords.length);
+    assert.ok(result.diagnostics.rows_without_maps_due_to_missing_address >= 5);
+    assert.strictEqual(result.diagnostics.serper_primary_rows_count, 0);
+
+    const sourceFirst = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_records: [{
+        headline: 'Adapter trustee sale - 321 Source St',
+        normalized_address: '321 Source St, Dallas, TX 75208',
+        source_family: 'official_foreclosure',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        source_document_url: 'https://www.dallascounty.org/Assets/uploads/docs/county-clerk/foreclosures/321-source-st.pdf',
+        motivation_type: 'foreclosure',
+        motivation_evidence_text: 'Notice of Substitute Trustee Sale',
+        status_evidence_text: 'Sale date July 7, 2026'
+      }],
+      enable_provider_search: true,
+      enable_provider_primary_rows: true,
+      mock_results_by_query_group: {
+        official_foreclosure_trustee_notices: [{
+          title: 'Reddit as-is discussion',
+          snippet: 'Discussion about as-is homes.',
+          url: 'https://www.reddit.com/r/RealEstate/comments/example/as_is_discussion/'
+        }]
+      }
+    }, {
+      env: {
+        ENABLE_SEARCH_PROVIDER: 'true',
+        SEARCH_PROVIDER: 'mock'
+      },
+      fetch_impl: fetchImpl
+    });
+    assert.strictEqual(sourceFirst.diagnostics.source_adapter_records_count, 1);
+    assert.strictEqual(sourceFirst.free_public_deals[0].normalized_address, '321 Source St, Dallas, TX 75208');
+    assert.ok(!sourceFirst.free_public_deals.some((deal) => /reddit/i.test(deal.source_url)));
+    assert.strictEqual(sourceFirst.diagnostics.serper_primary_rows_count, 0);
 
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({

@@ -71,6 +71,7 @@ async function runFreePublicDealBoardServerPreview(input = {}, options = {}) {
   const result = await freePublicDealBoard.runFreePublicDealBoardPreview(previewInput, {
     env,
     enable_provider_search: true,
+    mock_source_adapter_records: options.mock_source_adapter_records,
     fetch_impl: options.fetch_impl || options.fetchImpl || global.fetch,
     fetchImpl: options.fetchImpl || options.fetch_impl || global.fetch
   });
