@@ -150,6 +150,16 @@ function htmlResponse(body, url, status) {
       }
     }, {
       env: readyEnv,
+      mock_source_adapter_records: [{
+        headline: 'Source-backed auction candidate - 456 Elm St',
+        normalized_address: '456 Elm St, Dallas, TX 75208',
+        source_family: 'official_foreclosure',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        motivation_type: 'foreclosure',
+        motivation_evidence_text: 'Notice of Substitute Trustee Sale',
+        status_evidence_text: 'Sale date June 15, 2026'
+      }],
       fetch_impl: async (url, init) => {
         if (/google\.serper\.dev/.test(String(url))) {
           providerCalls += 1;
@@ -182,6 +192,8 @@ function htmlResponse(body, url, status) {
     assert.ok(preview.free_public_deals.length >= 1);
     assert.ok(preview.free_public_deals.some((deal) => deal.auction_url === auctionUrl));
     assert.ok(preview.property_specific_link_count >= 1);
+    assert.strictEqual(preview.diagnostics.source_adapter_records_count, 1);
+    assert.strictEqual(preview.diagnostics.serper_primary_rows_count, 0);
     assert.ok(Array.isArray(preview.top_deals));
     assert.ok(!JSON.stringify(preview).includes(secret), 'preview response must not expose provider secret');
 
@@ -190,14 +202,24 @@ function htmlResponse(body, url, status) {
       limit: 25
     }, {
       env: {},
+      mock_source_adapter_records: [{
+        headline: 'Source-backed auction candidate - 456 Elm St',
+        normalized_address: '456 Elm St, Dallas, TX 75208',
+        source_family: 'official_foreclosure',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        motivation_type: 'foreclosure',
+        motivation_evidence_text: 'Notice of Substitute Trustee Sale',
+        status_evidence_text: 'Sale date June 15, 2026'
+      }],
       fetch_impl: async () => {
-        throw new Error('missing provider should not fetch');
+        return htmlResponse('<html></html>', 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php', 200);
       }
     });
     assert.strictEqual(missingPreview.search_provider_readiness.readiness, 'not_configured');
-    assert.strictEqual(missingPreview.free_public_deals.length, 0);
-    assert.ok(missingPreview.provider_attempts.length > 0);
-    assert.ok(missingPreview.provider_attempts.every((attempt) => attempt.status === 'provider_not_configured'));
+    assert.strictEqual(missingPreview.free_public_deals.length, 1);
+    assert.ok(missingPreview.diagnostics.identity_repair.property_link_repair_attempts.length > 0);
+    assert.ok(missingPreview.diagnostics.identity_repair.property_link_repair_attempts.every((attempt) => attempt.status === 'provider_not_configured'));
     assert.strictEqual(missingPreview.preview_only, true);
     assert.strictEqual(missingPreview.should_ingest, false);
     assert.strictEqual(missingPreview.no_global_mutation, true);

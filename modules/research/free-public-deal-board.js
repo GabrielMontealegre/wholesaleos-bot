@@ -6,6 +6,7 @@ const compResearchProvider = require('./comp-research-provider');
 const propertyIdentity = require('./property-identity');
 const searchProviderWorker = require('./search-provider-worker');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
+const sourceAcquisitionOrchestrator = require('./source-acquisition-orchestrator');
 const sourceCatalog = require('../sources/source-catalog');
 
 const DEFAULT_CAPS = Object.freeze({
@@ -46,6 +47,8 @@ const STATUS_PATTERNS = [
   /\b(sale date|auction date|trustee sale|foreclosure sale)\b/i,
   /\b(price cut|price reduced)\b/i
 ];
+
+const BAD_ADDRESS_PREFIX_RE = /^(?:[$][\d,.kKmM]+\s*)?(?:(?:\d+(?:,\d{3})?|\d+(?:\.\d+)?)\s*(?:sq\.?\s*ft|square\s+feet|sqft|beds?|bedrooms?|baths?|bathrooms?|acres?|acre|lot\s+size)\b[\s,|:/-]*)+/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -177,8 +180,27 @@ function textBundle(record) {
 function completeAddressFromText(value) {
   const text = cleanText(value);
   const match = text.match(/\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,80}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?\s*,\s*[A-Za-z][A-Za-z .'-]{1,40}\s*,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/i);
-  const address = cleanText(match && match[0]);
+  const address = sanitizeAddressCandidate(cleanText(match && match[0])).address;
   return propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
+}
+
+function sanitizeAddressCandidate(value) {
+  const original = cleanText(value);
+  if (!original) return { address: '', rejected_reason: '' };
+  const stripped = cleanText(original.replace(BAD_ADDRESS_PREFIX_RE, ''));
+  if (stripped !== original) {
+    if (propertyIdentity.isCompleteAddress(stripped)) {
+      return { address: propertyIdentity.canonicalAddress(stripped), rejected_reason: '' };
+    }
+    return { address: '', rejected_reason: 'bad_address_metadata_prefix' };
+  }
+  if (/^\s*(?:[$]|\d+(?:,\d{3})?\s*(?:sq\.?\s*ft|square\s+feet|sqft|beds?|bedrooms?|baths?|bathrooms?|acres?|acre|lot\s+size)\b)/i.test(original)) {
+    return { address: '', rejected_reason: 'bad_address_metadata_prefix' };
+  }
+  return {
+    address: propertyIdentity.isCompleteAddress(original) ? propertyIdentity.canonicalAddress(original) : original,
+    rejected_reason: ''
+  };
 }
 
 function addressFromAuctionUrl(sourceUrl) {
@@ -207,7 +229,7 @@ function addressFromAuctionUrl(sourceUrl) {
   }
 }
 
-function addressFromRecord(record) {
+function addressResolutionFromRecord(record) {
   const explicit = cleanText(record && (
     record.normalized_address ||
     record.property_address ||
@@ -215,17 +237,31 @@ function addressFromRecord(record) {
     record.raw_address_text ||
     record.display_address
   ));
-  if (propertyIdentity.isCompleteAddress(explicit)) return propertyIdentity.canonicalAddress(explicit);
+  const sanitizedExplicit = sanitizeAddressCandidate(explicit);
+  if (propertyIdentity.isCompleteAddress(sanitizedExplicit.address)) {
+    return { address: propertyIdentity.canonicalAddress(sanitizedExplicit.address), bad_address_rejected: false, bad_address_rejected_reason: '' };
+  }
+  if (sanitizedExplicit.rejected_reason) {
+    return { address: '', bad_address_rejected: true, bad_address_rejected_reason: sanitizedExplicit.rejected_reason };
+  }
 
   const sourceUrl = cleanText(record && (record.source_url || record.url || record.zillow_url || record.redfin_url || record.realtor_url || record.auction_url));
   const title = cleanText(record && (record.title || record.source_title || record.headline));
   const fromUrl = propertyIdentity.addressFromPropertyUrl(sourceUrl, title);
-  if (fromUrl && fromUrl.complete) return fromUrl.full_address;
+  if (fromUrl && fromUrl.complete) return { address: fromUrl.full_address, bad_address_rejected: false, bad_address_rejected_reason: '' };
 
   const fromAuction = addressFromAuctionUrl(sourceUrl);
-  if (fromAuction) return fromAuction;
+  if (fromAuction) return { address: fromAuction, bad_address_rejected: false, bad_address_rejected_reason: '' };
 
-  return completeAddressFromText(textBundle(record));
+  const text = textBundle(record);
+  const fromText = completeAddressFromText(text);
+  if (fromText) return { address: fromText, bad_address_rejected: false, bad_address_rejected_reason: '' };
+  if (BAD_ADDRESS_PREFIX_RE.test(text)) return { address: '', bad_address_rejected: true, bad_address_rejected_reason: 'bad_address_metadata_prefix' };
+  return { address: '', bad_address_rejected: false, bad_address_rejected_reason: '' };
+}
+
+function addressFromRecord(record) {
+  return addressResolutionFromRecord(record).address;
 }
 
 function parseAddressParts(address, market) {
@@ -278,6 +314,21 @@ function isGenericPropertyPortalUrl(value) {
     return false;
   }
   return !propertySpecificUrl(url);
+}
+
+function isHardRejectedPrimarySource(value) {
+  const url = cleanText(value);
+  if (!isHttpUrl(url)) return false;
+  const host = hostOf(url);
+  const path = (() => {
+    try { return new URL(url).pathname.toLowerCase(); } catch (_) { return ''; }
+  })();
+  if (isSocialOrForumUrl(url)) return true;
+  if (/^(?:har\.com)$/i.test(host) && (path === '/' || path === '')) return true;
+  if (PROPERTY_HOSTS.redfin.test(host) && /\/(?:state|city)\/|\/amenity\//i.test(path)) return true;
+  if (PROPERTY_HOSTS.zillow.test(host) && !/\/homedetails\//i.test(path)) return true;
+  if (PROPERTY_HOSTS.realtor.test(host) && !/\/realestateandhomes-detail\//i.test(path)) return true;
+  return false;
 }
 
 function sourceFamily(record) {
@@ -454,6 +505,16 @@ function hasOfficialProof(deal) {
   ));
 }
 
+function isOutOfMarket(deal, market) {
+  if (!deal || !deal.normalized_address) return false;
+  const targetState = cleanText(market && market.state).toUpperCase();
+  const targetCity = cleanText(market && market.city).toLowerCase();
+  const state = cleanText(deal.state).toUpperCase();
+  const city = cleanText(deal.city).toLowerCase();
+  if (targetState && state && state !== targetState) return true;
+  return !!(targetCity && city && city !== targetCity);
+}
+
 function qualityForDeal(deal) {
   const completeAddress = !!cleanText(deal && deal.normalized_address);
   const propertySpecific = hasPropertySpecificLink(deal);
@@ -462,7 +523,29 @@ function qualityForDeal(deal) {
   const sourceUrl = cleanText(deal && deal.source_url);
   const socialOrForum = isSocialOrForumUrl(sourceUrl);
   const genericPropertyPortal = isGenericPropertyPortalUrl(sourceUrl);
+  const hardRejectedPrimary = isHardRejectedPrimarySource(sourceUrl);
 
+  if (deal && deal.bad_address_rejected) {
+    return {
+      quality_bucket: QUALITY_BUCKETS.REJECTED_GENERIC,
+      usable_for_gabriel: false,
+      rejected_reason: deal.bad_address_rejected_reason || 'bad_address_metadata_prefix'
+    };
+  }
+  if (deal && deal.out_of_market === true && !officialProof) {
+    return {
+      quality_bucket: QUALITY_BUCKETS.REJECTED_GENERIC,
+      usable_for_gabriel: false,
+      rejected_reason: 'out_of_market_without_source_proof'
+    };
+  }
+  if (hardRejectedPrimary && !propertySpecific && !officialProof && (!completeAddress || !socialOrForum)) {
+    return {
+      quality_bucket: QUALITY_BUCKETS.REJECTED_GENERIC,
+      usable_for_gabriel: false,
+      rejected_reason: socialOrForum ? 'social_or_forum_missing_complete_address' : 'generic_property_page_missing_identity'
+    };
+  }
   if (!completeAddress && socialOrForum) {
     return {
       quality_bucket: QUALITY_BUCKETS.REJECTED_GENERIC,
@@ -538,6 +621,9 @@ function rankDeal(deal) {
   if (deal.quality_bucket === QUALITY_BUCKETS.INSPECT_NOW) rank += 50;
   if (deal.quality_bucket === QUALITY_BUCKETS.SOURCE_PROOF_ONLY) rank += 30;
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_IDENTITY) rank += 10;
+  if (deal.record_origin === 'source_adapter') rank += 40;
+  if (deal.record_origin === 'serper_primary') rank -= 40;
+  if (deal.out_of_market === true) rank -= 70;
   if (/official|foreclosure|tax|sheriff/i.test(deal.source_family)) rank += 25;
   if (deal.normalized_address) rank += 20;
   if (deal.sale_date_or_event_date || deal.status_evidence_text) rank += 10;
@@ -562,7 +648,8 @@ function finalizeDeal(deal) {
 
 function dealFromRecord(record, context) {
   const market = context.market;
-  const address = addressFromRecord(record);
+  const addressResolution = addressResolutionFromRecord(record);
+  const address = addressResolution.address;
   const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
   const family = sourceFamily(record);
   const motivation = motivationFromRecord(record);
@@ -625,6 +712,10 @@ function dealFromRecord(record, context) {
     source_document_url_status: 'not_checked',
     link_validation: []
   };
+  deal.record_origin = cleanText(record && record.record_origin);
+  deal.bad_address_rejected = addressResolution.bad_address_rejected === true;
+  deal.bad_address_rejected_reason = cleanText(addressResolution.bad_address_rejected_reason);
+  deal.out_of_market = isOutOfMarket(deal, market);
   return finalizeDeal(deal);
 }
 
@@ -639,12 +730,116 @@ function recordFromCard(card, query) {
     status_evidence_text: cleanText(card && (card.current_status || card.listing_status || card.status_candidate_text)),
     source_family: cleanText(query && query.provider_family),
     source_name: cleanText(query && query.query_group),
+    record_origin: 'serper_primary',
     why_this_might_be_a_deal: cleanText(card && (card.source_snippet || card.snippet))
   };
 }
 
+function hasExplicitInputRecords(input = {}) {
+  return Array.isArray(input.source_records) && input.source_records.length > 0 ||
+    Array.isArray(input.records) && input.records.length > 0 ||
+    Array.isArray(input.deals) && input.deals.length > 0;
+}
+
+function candidateRecord(candidate, source) {
+  candidate = candidate || {};
+  source = source || {};
+  return {
+    headline: cleanText(candidate.normalized_address || candidate.property_address || candidate.source_row_reference || source.source_name || 'Source adapter candidate'),
+    normalized_address: cleanText(candidate.normalized_address || candidate.property_address),
+    raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
+    source_family: cleanText(candidate.source_family || source.source_family),
+    source_name: cleanText(candidate.source_name || source.source_name),
+    source_url: cleanText(candidate.source_url || source.source_url),
+    source_document_url: cleanText(candidate.source_document_url),
+    motivation_type: cleanText(candidate.motivation_type || candidate.source_family || source.source_family),
+    motivation_evidence_text: cleanText(candidate.motivation_evidence_text || candidate.source_proof_text || candidate.source_excerpt || candidate.motivation_phrase),
+    status_evidence_text: cleanText(candidate.status_evidence_text || candidate.current_status),
+    sale_date_or_event_date: cleanText(candidate.event_date || candidate.sale_date || candidate.auction_date),
+    owner_name_if_visible: cleanText(candidate.owner_name_candidate || candidate.owner_name),
+    contact_route_if_visible: cleanText(candidate.contact_route || candidate.public_contact_route || candidate.contact_phone || candidate.contact_email),
+    source_row_reference: cleanText(candidate.source_row_reference || candidate.parcel_or_account),
+    record_origin: 'source_adapter'
+  };
+}
+
+function cardRecord(card, source) {
+  const record = recordFromCard(card, {
+    provider_family: cleanText(card && (card.source_family || card.lead_source_type)) || cleanText(source && source.source_family),
+    query_group: cleanText(card && card.source_name) || cleanText(source && source.source_name)
+  });
+  record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
+  record.contact_route_if_visible = cleanText(card && (card.public_contact_route || card.contact_phone || card.contact_email));
+  record.record_origin = 'source_adapter';
+  return record;
+}
+
+async function collectSourceAdapterRecords(input, options, context) {
+  if (input.enable_source_adapters === false || options.enable_source_adapters === false || hasExplicitInputRecords(input)) {
+    return { records: [], diagnostics: { source_adapter_records_count: 0, source_adapter_candidate_count: 0, source_adapter_card_count: 0, source_adapter_results: [] } };
+  }
+  const mocked = Array.isArray(input.mock_source_adapter_records)
+    ? input.mock_source_adapter_records
+    : Array.isArray(options.mock_source_adapter_records)
+      ? options.mock_source_adapter_records
+      : null;
+  if (mocked) {
+    return {
+      records: mocked.map((record) => Object.assign({ record_origin: 'source_adapter' }, record)),
+      diagnostics: {
+        source_adapter_records_count: mocked.length,
+        source_adapter_candidate_count: mocked.length,
+        source_adapter_card_count: 0,
+        source_adapter_results: [{ source_id: 'mock_source_adapter_records', status: 'available', candidate_count: mocked.length }]
+      }
+    };
+  }
+  try {
+    const acquisition = await sourceAcquisitionOrchestrator.runAcquisitionCore({
+      market: context.market,
+      city: context.market.city,
+      county: context.market.county,
+      state: context.market.state,
+      source_ids: input.source_ids || input.sourceIds,
+      source_families: input.source_families || input.sourceFamilies,
+      discovery_batch_id: input.discovery_batch_id || 'free_public_deal_board_preview'
+    }, {
+      env: options.env || process.env,
+      fetch_impl: options.fetch_impl || options.fetchImpl,
+      fetchImpl: options.fetchImpl || options.fetch_impl,
+      max_rows: context.caps.output_deals,
+      max_candidates: context.caps.output_deals
+    });
+    const candidateRecords = (Array.isArray(acquisition.candidates) ? acquisition.candidates : []).map((candidate) => candidateRecord(candidate, {}));
+    const cardRecords = (Array.isArray(acquisition.cards) ? acquisition.cards : []).map((card) => cardRecord(card, {}));
+    const records = candidateRecords.concat(cardRecords);
+    return {
+      records,
+      diagnostics: {
+        source_adapter_records_count: records.length,
+        source_adapter_candidate_count: candidateRecords.length,
+        source_adapter_card_count: cardRecords.length,
+        source_adapter_results: Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [],
+        source_ids_attempted: Array.isArray(acquisition.source_ids_attempted) ? acquisition.source_ids_attempted : [],
+        source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : []
+      }
+    };
+  } catch (error) {
+    return {
+      records: [],
+      diagnostics: {
+        source_adapter_records_count: 0,
+        source_adapter_candidate_count: 0,
+        source_adapter_card_count: 0,
+        source_adapter_results: [],
+        source_adapter_error: cleanText(error && error.message)
+      }
+    };
+  }
+}
+
 async function collectProviderRecords(input, options, context) {
-  if (input.enable_provider_search !== true && options.enable_provider_search !== true) {
+  if (input.enable_provider_primary_rows !== true && options.enable_provider_primary_rows !== true) {
     return { records: [], query_groups: [], provider_attempts: [] };
   }
   const queries = buildFreePublicDealBoardQueries(input).slice(0, context.caps.property_link_searches);
@@ -876,6 +1071,10 @@ function qualityDiagnostics(allDeals, usableDeals) {
     inspect_now_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.INSPECT_NOW).length,
     source_proof_only_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.SOURCE_PROOF_ONLY).length,
     needs_identity_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.NEEDS_IDENTITY).length,
+    bad_address_rejected_count: allDeals.filter((deal) => deal.bad_address_rejected === true || deal.rejected_reason === 'bad_address_metadata_prefix').length,
+    out_of_market_count: allDeals.filter((deal) => deal.out_of_market === true).length,
+    official_source_rows_count: usableDeals.filter((deal) => hasOfficialProof(deal) || /official|foreclosure|tax|sheriff/i.test(deal.source_family)).length,
+    serper_primary_rows_count: allDeals.filter((deal) => deal.record_origin === 'serper_primary' && deal.usable_for_gabriel === true).length,
     rows_without_maps_due_to_missing_address: allDeals.filter((deal) => !deal.normalized_address && !deal.maps_url).length,
     rejected_generic_samples: rejected.slice(0, 10).map((deal) => ({
       headline: deal.headline,
@@ -905,6 +1104,10 @@ function dashboardSummary(deals, linkDiagnostics, context, quality) {
     inspect_now_count: Number(quality && quality.inspect_now_count || 0) || 0,
     source_proof_only_count: Number(quality && quality.source_proof_only_count || 0) || 0,
     needs_identity_count: Number(quality && quality.needs_identity_count || 0) || 0,
+    bad_address_rejected_count: Number(quality && quality.bad_address_rejected_count || 0) || 0,
+    out_of_market_count: Number(quality && quality.out_of_market_count || 0) || 0,
+    official_source_rows_count: Number(quality && quality.official_source_rows_count || 0) || 0,
+    serper_primary_rows_count: Number(quality && quality.serper_primary_rows_count || 0) || 0,
     operator_summary: deals.length
       ? `${deals.length} usable preview-only public deals found for ${context.market.city}; ${Number(quality && quality.rejected_generic_count || 0) || 0} generic rows rejected. Start with ${deals[0].best_link_to_click_first || 'source proof'}.`
       : `No usable preview-only public deals found for ${context.market.city}; ${Number(quality && quality.rejected_generic_count || 0) || 0} generic rows rejected.`,
@@ -926,8 +1129,9 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const market = marketFrom(input);
   const caps = capsFrom(input);
   const context = { market, caps };
+  const sourceAdapter = await collectSourceAdapterRecords(input, options, context);
   const provider = await collectProviderRecords(input, options, context);
-  const rawRecords = normalizeInputRecords(input, provider.records).slice(0, caps.output_deals * 4);
+  const rawRecords = normalizeInputRecords(input, sourceAdapter.records.concat(provider.records)).slice(0, caps.output_deals * 4);
   const map = new Map();
   for (const record of rawRecords) {
     const deal = dealFromRecord(record, context);
@@ -946,6 +1150,14 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const linkDiagnostics = await validateDealLinks(deals, options, context);
   const quality = qualityDiagnostics(allDeals, deals);
   const dashboard = dashboardSummary(deals, linkDiagnostics, context, quality);
+  const boardBlockerSummary = deals.length
+    ? ''
+    : cleanText([
+      quality.rejected_generic_count ? `${quality.rejected_generic_count} generic rows rejected` : '',
+      quality.bad_address_rejected_count ? `${quality.bad_address_rejected_count} bad addresses rejected` : '',
+      quality.out_of_market_count ? `${quality.out_of_market_count} out-of-market rows blocked` : '',
+      sourceAdapter.diagnostics.source_adapter_records_count ? '' : 'no source adapter records'
+    ].filter(Boolean).join('; '));
   return Object.assign({
     ok: true,
     preview_only: true,
@@ -956,7 +1168,14 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     sources_considered: catalogSummary(market),
     query_groups_used: provider.query_groups,
     provider_attempts: provider.provider_attempts,
-    free_public_deals: deals
+    free_public_deals: deals,
+    source_adapter_records_count: sourceAdapter.diagnostics.source_adapter_records_count,
+    serper_enrichment_attempts: repairDiagnostics.identity_repair_attempted_count,
+    property_link_repair_success_count: repairDiagnostics.property_link_repair_success_count,
+    bad_address_rejected_count: quality.bad_address_rejected_count,
+    out_of_market_count: quality.out_of_market_count,
+    official_source_rows_count: quality.official_source_rows_count,
+    board_blocker_summary: boardBlockerSummary
   }, dashboard, {
     diagnostics: {
       link_validation: linkDiagnostics,
@@ -969,9 +1188,17 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       inspect_now_count: quality.inspect_now_count,
       source_proof_only_count: quality.source_proof_only_count,
       needs_identity_count: quality.needs_identity_count,
+      source_adapter_records_count: sourceAdapter.diagnostics.source_adapter_records_count,
+      serper_primary_rows_count: quality.serper_primary_rows_count,
+      serper_enrichment_attempts: repairDiagnostics.identity_repair_attempted_count,
       identity_repair_attempted_count: repairDiagnostics.identity_repair_attempted_count,
       property_link_repair_success_count: repairDiagnostics.property_link_repair_success_count,
+      bad_address_rejected_count: quality.bad_address_rejected_count,
+      out_of_market_count: quality.out_of_market_count,
+      official_source_rows_count: quality.official_source_rows_count,
       rows_without_maps_due_to_missing_address: quality.rows_without_maps_due_to_missing_address,
+      source_adapter: sourceAdapter.diagnostics,
+      board_blocker_summary: boardBlockerSummary,
       caps,
       legacy_comp_agent_invoked: false,
       legacy_skip_trace_agent_invoked: false,
