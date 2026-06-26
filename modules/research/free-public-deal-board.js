@@ -774,9 +774,65 @@ function cardRecord(card, source) {
   return record;
 }
 
+function sourceProofRecordsFromAdapterResult(result) {
+  result = result || {};
+  const summary = result.document_hunter_summary ||
+    result.source_preview ||
+    result.diagnostics && (result.diagnostics.document_hunter_summary || result.diagnostics.live_source_preview) ||
+    {};
+  const sourceNameText = cleanText(result.source_name || summary.source_name || 'Official public source');
+  const sourceFamilyText = cleanText(result.source_family || summary.source_family || 'official_public_source');
+  const sourceUrl = cleanText(summary.source_url_checked || result.source_url || summary.source_url || '');
+  const rawUrls = []
+    .concat(Array.isArray(summary.document_urls_parsed) ? summary.document_urls_parsed : [])
+    .concat(Array.isArray(summary.document_urls_found) ? summary.document_urls_found : [])
+    .concat(Array.isArray(result.document_urls_parsed) ? result.document_urls_parsed : [])
+    .concat(Array.isArray(result.document_urls_found) ? result.document_urls_found : []);
+  if (!rawUrls.length && isOfficialPublicSourceUrl(sourceUrl)) rawUrls.push(sourceUrl);
+
+  return uniqueText(rawUrls.map((item) => cleanText(item && item.url ? item.url : item)))
+    .filter((url) => isHttpUrl(url) && isOfficialPublicSourceUrl(url))
+    .slice(0, 5)
+    .map((url, index) => {
+      const classification = sourceUrlType(url);
+      const documentUrl = classification === 'pdf_document' || classification === 'exact_property_record' ? url : '';
+      return {
+        headline: `${sourceNameText} source proof ${index + 1}`,
+        source_family: sourceFamilyText,
+        source_name: sourceNameText,
+        source_url: documentUrl ? sourceUrl : url,
+        source_document_url: documentUrl,
+        motivation_type: sourceFamilyText,
+        motivation_evidence_text: `${sourceNameText} official source proof discovered.`,
+        status_evidence_text: '',
+        why_this_might_be_a_deal: 'Official source evidence is available, but property identity still needs extraction.',
+        source_row_reference: url,
+        record_origin: 'source_adapter'
+      };
+    });
+}
+
 async function collectSourceAdapterRecords(input, options, context) {
   if (input.enable_source_adapters === false || options.enable_source_adapters === false || hasExplicitInputRecords(input)) {
     return { records: [], diagnostics: { source_adapter_records_count: 0, source_adapter_candidate_count: 0, source_adapter_card_count: 0, source_adapter_results: [] } };
+  }
+  const mockedResults = Array.isArray(input.mock_source_adapter_results)
+    ? input.mock_source_adapter_results
+    : Array.isArray(options.mock_source_adapter_results)
+      ? options.mock_source_adapter_results
+      : null;
+  if (mockedResults) {
+    const proofRecords = mockedResults.flatMap(sourceProofRecordsFromAdapterResult);
+    return {
+      records: proofRecords,
+      diagnostics: {
+        source_adapter_records_count: proofRecords.length,
+        source_adapter_candidate_count: 0,
+        source_adapter_card_count: 0,
+        source_adapter_proof_record_count: proofRecords.length,
+        source_adapter_results: mockedResults
+      }
+    };
   }
   const mocked = Array.isArray(input.mock_source_adapter_records)
     ? input.mock_source_adapter_records
@@ -812,13 +868,15 @@ async function collectSourceAdapterRecords(input, options, context) {
     });
     const candidateRecords = (Array.isArray(acquisition.candidates) ? acquisition.candidates : []).map((candidate) => candidateRecord(candidate, {}));
     const cardRecords = (Array.isArray(acquisition.cards) ? acquisition.cards : []).map((card) => cardRecord(card, {}));
-    const records = candidateRecords.concat(cardRecords);
+    const proofRecords = (Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : []).flatMap(sourceProofRecordsFromAdapterResult);
+    const records = candidateRecords.concat(cardRecords, proofRecords);
     return {
       records,
       diagnostics: {
         source_adapter_records_count: records.length,
         source_adapter_candidate_count: candidateRecords.length,
         source_adapter_card_count: cardRecords.length,
+        source_adapter_proof_record_count: proofRecords.length,
         source_adapter_results: Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [],
         source_ids_attempted: Array.isArray(acquisition.source_ids_attempted) ? acquisition.source_ids_attempted : [],
         source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : []
