@@ -295,6 +295,38 @@ const rejectedRecords = [
     assert.ok(!sourceFirst.free_public_deals.some((deal) => /reddit/i.test(deal.source_url)));
     assert.strictEqual(sourceFirst.diagnostics.serper_primary_rows_count, 0);
 
+    const sourceProofOnly = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_dallas_county_clerk_foreclosure_notices',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        status: 'needs_manual_review',
+        candidate_count: 0,
+        document_hunter_summary: {
+          source_url_checked: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+          document_urls_found: [
+            'https://www.dallascounty.org/Assets/uploads/docs/county-clerk/foreclosures/sample-notice.pdf',
+            'https://dallas.tx.publicsearch.us/'
+          ],
+          document_urls_parsed: [
+            'https://www.dallascounty.org/Assets/uploads/docs/county-clerk/foreclosures/sample-notice.pdf'
+          ],
+          candidate_count: 0
+        }
+      }]
+    }, { fetch_impl: fetchImpl });
+    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter_records_count, 2);
+    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter.source_adapter_proof_record_count, 2);
+    assert.strictEqual(sourceProofOnly.free_public_deals.length, 2);
+    assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY'));
+    assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.usable_for_gabriel === true));
+    assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.maps_url === null));
+    assert.ok(sourceProofOnly.free_public_deals[0].best_link_to_click_first.includes('dallascounty.org'));
+    assert.ok(sourceProofOnly.free_public_deals[0].missing_fields.includes('complete property address'));
+    assert.strictEqual(sourceProofOnly.board_blocker_summary, '');
+
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
         headline: `Deal ${index}`,
