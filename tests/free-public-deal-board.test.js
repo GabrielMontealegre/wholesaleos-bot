@@ -327,6 +327,74 @@ const rejectedRecords = [
     assert.ok(sourceProofOnly.free_public_deals[0].missing_fields.includes('complete property address'));
     assert.strictEqual(sourceProofOnly.board_blocker_summary, '');
 
+    const foreclosureEvidenceRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_dallas_county_clerk_foreclosure_notices',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        status: 'needs_manual_review',
+        candidate_count: 0,
+        evidence_links_found: 2,
+        discovered_links: [
+          {
+            url: 'https://www.dallascounty.org/Assets/uploads/docs/county-clerk/foreclosures/555-proof-st-notice.pdf',
+            label: 'Notice of Substitute Trustee Sale - Property Address: 555 Proof St, Dallas, TX 75208 - Sale Date: July 2, 2026',
+            link_type: 'document_link',
+            classification: 'pdf_document'
+          },
+          {
+            url: 'https://dallas.tx.publicsearch.us/',
+            label: 'Dallas County PublicSearch foreclosure record portal',
+            link_type: 'county_notice_page',
+            classification: 'generic_portal'
+          }
+        ],
+        document_hunter_summary: {
+          source_url_checked: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+          discovered_url_count: 2,
+          direct_document_url_count: 1,
+          document_urls_found_count: 1,
+          candidate_count: 0,
+          evidence_links_found: 2
+        }
+      }]
+    });
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_evidence_links_count, 2);
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_document_links_count, 1);
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_rows_from_evidence_count, 2);
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_rows_with_address_count, 1);
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_rows_with_sale_date_count, 1);
+    assert.strictEqual(foreclosureEvidenceRows.foreclosure_parser_zero_candidate_count, 1);
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals.length, 2);
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].normalized_address, '555 Proof St, Dallas, TX 75208');
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].sale_date_or_event_date, 'July 2, 2026');
+    assert.ok(foreclosureEvidenceRows.free_public_deals[0].source_document_url.endsWith('555-proof-st-notice.pdf'));
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].best_link_to_click_first, foreclosureEvidenceRows.free_public_deals[0].source_document_url);
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].contact_route_if_visible, '');
+    assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].verified_sold_comp_count, 0);
+    assert.ok(foreclosureEvidenceRows.free_public_deals.some((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY' && !deal.normalized_address));
+
+    const landingFallback = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_dallas_county_clerk_foreclosure_notices',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        status: 'needs_manual_review',
+        candidate_count: 0,
+        document_hunter_summary: {
+          source_url_checked: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+          candidate_count: 0
+        }
+      }]
+    });
+    assert.strictEqual(landingFallback.free_public_deals.length, 1);
+    assert.strictEqual(landingFallback.free_public_deals[0].source_document_url, '');
+    assert.strictEqual(landingFallback.free_public_deals[0].best_link_to_click_first, 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php');
+
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
         headline: `Deal ${index}`,

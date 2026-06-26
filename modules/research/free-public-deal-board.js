@@ -295,6 +295,113 @@ function isOfficialPublicSourceUrl(value) {
     /(?:^|\.)dallascad\.org$/i.test(host);
 }
 
+function sourceProofDateFromText(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+  const context = /\b(?:sale|auction|trustee|foreclosure|notice)\b/i.test(text);
+  const contextual = text.match(/\b(?:sale date|date of sale|auction date|trustee sale date|foreclosure sale date)\b\s*[:\-]?\s*([A-Z][a-z]+\.?\s+\d{1,2},\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/i);
+  if (contextual) return cleanText(contextual[1]);
+  if (!context) return '';
+  const nearby = text.match(/\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},\s+\d{4}\b/i);
+  return cleanText(nearby && nearby[0]);
+}
+
+function proofLinkText(item) {
+  if (!item || typeof item !== 'object') return '';
+  return cleanText([
+    item.label,
+    item.title,
+    item.source_title,
+    item.snippet,
+    item.source_snippet,
+    item.description,
+    item.text
+  ].filter(Boolean).join(' | '));
+}
+
+function proofLinkUrl(item) {
+  return cleanText(item && typeof item === 'object' && item.url ? item.url : item);
+}
+
+function proofLinkClassification(item, url) {
+  return cleanText(item && typeof item === 'object' && (item.classification || item.source_classification || item.url_classification)) || sourceUrlType(url);
+}
+
+function proofLinkType(item, classification) {
+  return cleanText(item && typeof item === 'object' && (item.link_type || item.type)) ||
+    (classification === 'pdf_document' ? 'document_link' : classification === 'exact_property_record' ? 'property_record_link' : 'evidence_link');
+}
+
+function isDocumentLikeProofLink(url, item) {
+  const classification = proofLinkClassification(item, url);
+  const linkType = proofLinkType(item, classification);
+  return classification === 'pdf_document' ||
+    classification === 'exact_property_record' ||
+    /\b(?:document|pdf|notice|property_record)\b/i.test(linkType) ||
+    /\.pdf(?:[?#].*)?$/i.test(cleanText(url));
+}
+
+function pushProofItems(out, items, sourceKey) {
+  for (const item of Array.isArray(items) ? items : []) {
+    const url = proofLinkUrl(item);
+    if (!url) continue;
+    out.push({
+      url,
+      text: proofLinkText(item),
+      classification: proofLinkClassification(item, url),
+      link_type: proofLinkType(item, proofLinkClassification(item, url)),
+      source_key: sourceKey
+    });
+  }
+}
+
+function pushProofScalar(out, value, sourceKey, text) {
+  const url = cleanText(value);
+  if (!url) return;
+  out.push({
+    url,
+    text: cleanText(text),
+    classification: sourceUrlType(url),
+    link_type: isDocumentLikeProofLink(url, null) ? 'document_link' : 'evidence_link',
+    source_key: sourceKey
+  });
+}
+
+function nestedObject(root, path) {
+  let current = root || {};
+  for (const part of path) {
+    if (!current || typeof current !== 'object') return {};
+    current = current[part];
+  }
+  return current && typeof current === 'object' ? current : {};
+}
+
+function collectProofItemsFromAdapterResult(result) {
+  result = result || {};
+  const diagnostics = result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
+  const containers = [
+    result,
+    result.source_preview,
+    result.document_hunter_summary,
+    diagnostics.live_source_preview,
+    diagnostics.source_preview,
+    diagnostics.document_hunter_summary,
+    nestedObject(diagnostics, ['live_source_preview', 'document_hunter_summary'])
+  ].filter((item) => item && typeof item === 'object');
+  const items = [];
+  for (const container of containers) {
+    pushProofItems(items, container.document_urls_parsed, 'document_urls_parsed');
+    pushProofItems(items, container.document_urls_found, 'document_urls_found');
+    pushProofItems(items, container.discovered_links, 'discovered_links');
+    pushProofItems(items, container.source_links, 'source_links');
+    pushProofItems(items, container.evidence_links, 'evidence_links');
+    pushProofItems(items, container.document_links, 'document_links');
+    pushProofScalar(items, container.source_document_url_checked, 'source_document_url_checked', container.source_document_url_label || container.source_document_url_title);
+    pushProofScalar(items, container.source_document_url, 'source_document_url', container.source_document_url_label || container.source_document_url_title);
+  }
+  return items;
+}
+
 function isSocialOrForumUrl(value) {
   const host = hostOf(value);
   return /(?:^|\.)facebook\.com$/i.test(host) ||
@@ -569,7 +676,7 @@ function qualityForDeal(deal) {
         : 'missing_property_identity'
     };
   }
-  if (completeAddress && (propertySpecific || officialProof)) {
+  if (completeAddress && (propertySpecific || officialProof) && (deal.status_evidence_text || deal.sale_date_or_event_date)) {
     return {
       quality_bucket: QUALITY_BUCKETS.INSPECT_NOW,
       usable_for_gabriel: true,
@@ -776,40 +883,94 @@ function cardRecord(card, source) {
 
 function sourceProofRecordsFromAdapterResult(result) {
   result = result || {};
-  const summary = result.document_hunter_summary ||
-    result.source_preview ||
-    result.diagnostics && (result.diagnostics.document_hunter_summary || result.diagnostics.live_source_preview) ||
+  const diagnostics = result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
+  const summary = result.source_preview ||
+    diagnostics.live_source_preview ||
+    result.document_hunter_summary ||
+    diagnostics.document_hunter_summary ||
     {};
   const sourceNameText = cleanText(result.source_name || summary.source_name || 'Official public source');
   const sourceFamilyText = cleanText(result.source_family || summary.source_family || 'official_public_source');
   const sourceUrl = cleanText(summary.source_url_checked || result.source_url || summary.source_url || '');
-  const rawUrls = []
-    .concat(Array.isArray(summary.document_urls_parsed) ? summary.document_urls_parsed : [])
-    .concat(Array.isArray(summary.document_urls_found) ? summary.document_urls_found : [])
-    .concat(Array.isArray(result.document_urls_parsed) ? result.document_urls_parsed : [])
-    .concat(Array.isArray(result.document_urls_found) ? result.document_urls_found : []);
-  if (!rawUrls.length && isOfficialPublicSourceUrl(sourceUrl)) rawUrls.push(sourceUrl);
+  const proofItems = collectProofItemsFromAdapterResult(result);
+  if (!proofItems.length && isOfficialPublicSourceUrl(sourceUrl)) {
+    proofItems.push({
+      url: sourceUrl,
+      text: cleanText(summary.source_title || summary.source_snippet || result.message),
+      classification: sourceUrlType(sourceUrl),
+      link_type: 'source_page',
+      source_key: 'source_url_fallback'
+    });
+  }
 
-  return uniqueText(rawUrls.map((item) => cleanText(item && item.url ? item.url : item)))
-    .filter((url) => isHttpUrl(url) && isOfficialPublicSourceUrl(url))
-    .slice(0, 5)
-    .map((url, index) => {
-      const classification = sourceUrlType(url);
-      const documentUrl = classification === 'pdf_document' || classification === 'exact_property_record' ? url : '';
+  const uniqueItems = [];
+  const seen = new Set();
+  for (const item of proofItems) {
+    const url = cleanText(item && item.url);
+    if (!isHttpUrl(url) || !isOfficialPublicSourceUrl(url)) continue;
+    const key = url.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueItems.push(Object.assign({}, item, { url }));
+  }
+
+  return uniqueItems
+    .slice(0, 20)
+    .map((item, index) => {
+      const url = item.url;
+      const text = cleanText(item.text);
+      const address = completeAddressFromText(text);
+      const eventDate = sourceProofDateFromText(text);
+      const documentUrl = isDocumentLikeProofLink(url, item) ? url : '';
+      const headlineParts = [sourceNameText, address || eventDate || `source proof ${index + 1}`].filter(Boolean);
       return {
-        headline: `${sourceNameText} source proof ${index + 1}`,
+        headline: headlineParts.join(' - '),
+        normalized_address: address,
+        raw_address_text: address,
         source_family: sourceFamilyText,
         source_name: sourceNameText,
         source_url: documentUrl ? sourceUrl : url,
         source_document_url: documentUrl,
         motivation_type: sourceFamilyText,
-        motivation_evidence_text: `${sourceNameText} official source proof discovered.`,
-        status_evidence_text: '',
-        why_this_might_be_a_deal: 'Official source evidence is available, but property identity still needs extraction.',
+        motivation_evidence_text: text || `${sourceNameText} official source proof discovered.`,
+        status_evidence_text: eventDate ? `Sale date ${eventDate}` : '',
+        sale_date_or_event_date: eventDate,
+        why_this_might_be_a_deal: text || 'Official source evidence is available, but property identity still needs extraction.',
         source_row_reference: url,
-        record_origin: 'source_adapter'
+        record_origin: 'source_adapter',
+        foreclosure_source_proof_record: /foreclosure|trustee|dallas county clerk/i.test(`${sourceNameText} ${sourceFamilyText}`)
       };
     });
+}
+
+function isForeclosureAdapterResult(result) {
+  return /foreclosure|trustee|dallas county clerk/i.test(cleanText([
+    result && result.source_id,
+    result && result.source_name,
+    result && result.source_family,
+    result && result.message
+  ].filter(Boolean).join(' ')));
+}
+
+function foreclosureProofDiagnostics(results, proofRecords) {
+  const foreclosureResults = (Array.isArray(results) ? results : []).filter(isForeclosureAdapterResult);
+  const foreclosureRows = (Array.isArray(proofRecords) ? proofRecords : []).filter((record) => record && (
+    record.foreclosure_source_proof_record === true ||
+    /foreclosure|trustee|dallas county clerk/i.test(`${record.source_name || ''} ${record.source_family || ''}`)
+  ));
+  return {
+    foreclosure_evidence_links_count: foreclosureRows.length,
+    foreclosure_document_links_count: foreclosureRows.filter((record) => !!cleanText(record.source_document_url)).length,
+    foreclosure_rows_from_evidence_count: foreclosureRows.length,
+    foreclosure_rows_with_address_count: foreclosureRows.filter((record) => !!cleanText(record.normalized_address || record.raw_address_text)).length,
+    foreclosure_rows_with_sale_date_count: foreclosureRows.filter((record) => !!cleanText(record.sale_date_or_event_date || record.status_evidence_text)).length,
+    foreclosure_parser_zero_candidate_count: foreclosureResults.filter((result) => {
+      const count = Number(result && result.candidate_count || 0) || 0;
+      const hasEvidence = Number(result && result.evidence_links_found || result && result.diagnostics && result.diagnostics.evidence_links_found || 0) > 0 ||
+        collectProofItemsFromAdapterResult(result).some((item) => isOfficialPublicSourceUrl(item && item.url));
+      return count === 0 && hasEvidence;
+    }).length
+  };
 }
 
 async function collectSourceAdapterRecords(input, options, context) {
@@ -823,6 +984,7 @@ async function collectSourceAdapterRecords(input, options, context) {
       : null;
   if (mockedResults) {
     const proofRecords = mockedResults.flatMap(sourceProofRecordsFromAdapterResult);
+    const foreclosureDiagnostics = foreclosureProofDiagnostics(mockedResults, proofRecords);
     return {
       records: proofRecords,
       diagnostics: {
@@ -830,7 +992,8 @@ async function collectSourceAdapterRecords(input, options, context) {
         source_adapter_candidate_count: 0,
         source_adapter_card_count: 0,
         source_adapter_proof_record_count: proofRecords.length,
-        source_adapter_results: mockedResults
+        source_adapter_results: mockedResults,
+        ...foreclosureDiagnostics
       }
     };
   }
@@ -870,6 +1033,7 @@ async function collectSourceAdapterRecords(input, options, context) {
     const cardRecords = (Array.isArray(acquisition.cards) ? acquisition.cards : []).map((card) => cardRecord(card, {}));
     const proofRecords = (Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : []).flatMap(sourceProofRecordsFromAdapterResult);
     const records = candidateRecords.concat(cardRecords, proofRecords);
+    const foreclosureDiagnostics = foreclosureProofDiagnostics(acquisition.adapter_results, proofRecords);
     return {
       records,
       diagnostics: {
@@ -879,7 +1043,8 @@ async function collectSourceAdapterRecords(input, options, context) {
         source_adapter_proof_record_count: proofRecords.length,
         source_adapter_results: Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [],
         source_ids_attempted: Array.isArray(acquisition.source_ids_attempted) ? acquisition.source_ids_attempted : [],
-        source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : []
+        source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : [],
+        ...foreclosureDiagnostics
       }
     };
   } catch (error) {
@@ -1228,6 +1393,12 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     provider_attempts: provider.provider_attempts,
     free_public_deals: deals,
     source_adapter_records_count: sourceAdapter.diagnostics.source_adapter_records_count,
+    foreclosure_evidence_links_count: sourceAdapter.diagnostics.foreclosure_evidence_links_count || 0,
+    foreclosure_document_links_count: sourceAdapter.diagnostics.foreclosure_document_links_count || 0,
+    foreclosure_rows_from_evidence_count: sourceAdapter.diagnostics.foreclosure_rows_from_evidence_count || 0,
+    foreclosure_rows_with_address_count: sourceAdapter.diagnostics.foreclosure_rows_with_address_count || 0,
+    foreclosure_rows_with_sale_date_count: sourceAdapter.diagnostics.foreclosure_rows_with_sale_date_count || 0,
+    foreclosure_parser_zero_candidate_count: sourceAdapter.diagnostics.foreclosure_parser_zero_candidate_count || 0,
     serper_enrichment_attempts: repairDiagnostics.identity_repair_attempted_count,
     property_link_repair_success_count: repairDiagnostics.property_link_repair_success_count,
     bad_address_rejected_count: quality.bad_address_rejected_count,
@@ -1255,6 +1426,12 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       out_of_market_count: quality.out_of_market_count,
       official_source_rows_count: quality.official_source_rows_count,
       rows_without_maps_due_to_missing_address: quality.rows_without_maps_due_to_missing_address,
+      foreclosure_evidence_links_count: sourceAdapter.diagnostics.foreclosure_evidence_links_count || 0,
+      foreclosure_document_links_count: sourceAdapter.diagnostics.foreclosure_document_links_count || 0,
+      foreclosure_rows_from_evidence_count: sourceAdapter.diagnostics.foreclosure_rows_from_evidence_count || 0,
+      foreclosure_rows_with_address_count: sourceAdapter.diagnostics.foreclosure_rows_with_address_count || 0,
+      foreclosure_rows_with_sale_date_count: sourceAdapter.diagnostics.foreclosure_rows_with_sale_date_count || 0,
+      foreclosure_parser_zero_candidate_count: sourceAdapter.diagnostics.foreclosure_parser_zero_candidate_count || 0,
       source_adapter: sourceAdapter.diagnostics,
       board_blocker_summary: boardBlockerSummary,
       caps,
