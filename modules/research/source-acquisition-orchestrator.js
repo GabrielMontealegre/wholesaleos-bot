@@ -118,6 +118,11 @@ function normalizeAdapterResult(result) {
     source_document_url_classification: cleanText(result && result.diagnostics && result.diagnostics.source_document_url_classification),
     diagnostics: result && result.diagnostics ? result.diagnostics : {},
     document_hunter_summary: result && result.document_hunter_summary ? result.document_hunter_summary : result && result.diagnostics && result.diagnostics.document_hunter_summary ? result.diagnostics.document_hunter_summary : null,
+    discovered_links: asArray(result && result.discovered_links),
+    document_urls_found: asArray(result && result.document_urls_found),
+    document_urls_parsed: asArray(result && result.document_urls_parsed),
+    document_urls_skipped: asArray(result && result.document_urls_skipped),
+    source_preview: result && result.source_preview ? result.source_preview : result && result.diagnostics && result.diagnostics.live_source_preview ? result.diagnostics.live_source_preview : null,
     candidate_ids: candidateList.map((candidate) => cleanText(candidate.candidate_id || candidate.id)).filter(Boolean)
   };
 }
