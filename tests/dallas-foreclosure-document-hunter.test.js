@@ -196,6 +196,16 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.ok(/\/March\/Addison_4\.pdf$/.test(rankedNoticeLinks[2].url));
   assert.ok(/InspectionFlyer\.pdf$/.test(rankedNoticeLinks[3].url));
 
+  const navNoiseHtml = `
+    <html><body>
+      ${Array.from({ length: 14 }, (_, i) => `<a href="https://www.dallascounty.org/about-us/notice-page-${i}/">County notice info page ${i}</a>`).join('\n')}
+      <a href="/department/countyclerk/media/foreclosure/May/Dallas_1.pdf">Dallas</a>
+    </body></html>
+  `;
+  const discoveredThroughNoise = foreclosureNoticeAdapter.discoverForeclosureEvidenceLinksFromHtml(navNoiseHtml, 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php');
+  assert.ok(discoveredThroughNoise.some((link) => /\/May\/Dallas_1\.pdf$/.test(link.url)), 'foreclosure PDF must be discovered even when nav links come first');
+  assert.ok(/\/May\/Dallas_1\.pdf$/.test(discoveredThroughNoise[0].url), 'foreclosure PDF must rank ahead of nav pages');
+
   const hunterResult = await documentHunter.runDallasForeclosureDocumentHunter({
     source_url: countyPageUrl,
     source_document_url: '',

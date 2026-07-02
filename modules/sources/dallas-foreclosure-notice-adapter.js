@@ -316,7 +316,7 @@ function rankForeclosureNoticeLinks(links, options = {}) {
 }
 
 function discoverForeclosureEvidenceLinksFromHtml(html, baseUrl) {
-  const links = browserFileEvidenceAdapter.discoverEvidenceLinksFromHtml(html, baseUrl)
+  const links = browserFileEvidenceAdapter.discoverEvidenceLinksFromHtml(html, baseUrl, { max_links: 150 })
     .filter((link) => isSafeDallasForeclosureUrl(link.url) && isForeclosureEvidenceLink(link));
   const hasPublicSearchHint = PUBLIC_SEARCH_HINT_RE.test(cleanText(textFromHtml(html)));
   if (hasPublicSearchHint && !links.some((link) => String(link.url).toLowerCase() === PUBLIC_SEARCH_URL.toLowerCase())) {
