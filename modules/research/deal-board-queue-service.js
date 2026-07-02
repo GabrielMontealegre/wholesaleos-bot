@@ -162,6 +162,11 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const key = marketKey(market);
   const bucket = store.markets[key] || { market, rows: [], batches: [] };
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
+  const PRESERVE_FIELDS = [
+    'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
+    'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
+    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url'
+  ];
   let newRows = 0;
   let refreshedRows = 0;
   for (const deal of deals) {
@@ -171,6 +176,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
       const refreshed = projectRowForQueue(deal, dedupeKey, runAt);
       refreshed.first_seen_at = existing.first_seen_at;
       refreshed.times_seen = (Number(existing.times_seen) || 1) + 1;
+      // Never lose evidence a previous sighting already carried.
+      for (const field of PRESERVE_FIELDS) {
+        if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
+      }
       byKey.set(dedupeKey, refreshed);
       refreshedRows += 1;
     } else {
