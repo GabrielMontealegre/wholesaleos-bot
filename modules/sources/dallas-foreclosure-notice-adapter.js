@@ -285,6 +285,36 @@ function isForeclosureEvidenceLink(link) {
   return /\b(foreclosure|trustee|notice|sale|recording|publicsearch|pdf)\b/.test(text);
 }
 
+const NOTICE_MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const NOTICE_FOLDER_MONTH_RE = /\/foreclosure\/(january|february|march|april|may|june|july|august|september|october|november|december)\//i;
+const NON_NOTICE_FILE_RE = /\b(flyer|inspection|brochure|instructions?|faq|calendar|fees?|schedule|form|map|directory)\b/i;
+
+function noticeLinkMonthRecency(url, now) {
+  const match = String(url || '').match(NOTICE_FOLDER_MONTH_RE);
+  if (!match) return 0;
+  const monthIndex = NOTICE_MONTH_NAMES.indexOf(match[1].toLowerCase());
+  const currentMonth = (now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date()).getMonth();
+  return 12 - ((currentMonth - monthIndex + 12) % 12);
+}
+
+function rankForeclosureNoticeLinks(links, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  return (Array.isArray(links) ? links : [])
+    .map((link, index) => {
+      const url = cleanText(link && link.url ? link.url : link);
+      const label = cleanText(link && link.label);
+      let score = 0;
+      if (/\/foreclosure\//i.test(url)) score += 20;
+      score += noticeLinkMonthRecency(url, now) * 2;
+      if (/_\d+[^/]*\.pdf$/i.test(url)) score += 2;
+      if (NON_NOTICE_FILE_RE.test(`${url} ${label}`)) score -= 40;
+      if (link && link.portal_preview_only === true) score += 1;
+      return { link, score, index };
+    })
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((item) => item.link);
+}
+
 function discoverForeclosureEvidenceLinksFromHtml(html, baseUrl) {
   const links = browserFileEvidenceAdapter.discoverEvidenceLinksFromHtml(html, baseUrl)
     .filter((link) => isSafeDallasForeclosureUrl(link.url) && isForeclosureEvidenceLink(link));
@@ -297,7 +327,7 @@ function discoverForeclosureEvidenceLinksFromHtml(html, baseUrl) {
       portal_preview_only: true
     });
   }
-  return links.slice(0, MAX_FILES);
+  return rankForeclosureNoticeLinks(links).slice(0, MAX_FILES);
 }
 
 async function fetchText(url, options = {}) {
@@ -358,9 +388,16 @@ function recastParserCandidate(candidate, context) {
     candidate.case_number,
     candidate.sale_date || candidate.auction_date
   ].filter(Boolean).join(' | ');
-  return candidateFromBlock(sourceText, Object.assign({}, context, { source_proof_url: sourceProofUrl })) || Object.assign({}, candidate, {
+  const documentUrl = cleanText(candidate.source_document_url || sourceProofUrl);
+  const recast = candidateFromBlock(sourceText, Object.assign({}, context, { source_proof_url: sourceProofUrl }));
+  if (recast) {
+    recast.source_document_url = documentUrl;
+    return recast;
+  }
+  return Object.assign({}, candidate, {
     id: candidate.id || `DAL-FC-${safeId(`${sourceProofUrl}|${candidate.address}|${candidate.sale_date}`)}`,
     event_type: candidate.event_type || 'foreclosure_notice',
+    source_document_url: documentUrl,
     workflow_status: candidate.sale_date || candidate.auction_date ? candidate.workflow_status : 'Source Repair Needed',
     preview_only: true,
     should_ingest: false
@@ -424,7 +461,7 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
   counts.foreclosure_notice_rows_checked += extractProofBlocks(pageText).length;
 
   const links = Array.isArray(options.evidence_links) && options.evidence_links.length
-    ? options.evidence_links.filter((link) => isSafeDallasForeclosureUrl(link.url || link) && isForeclosureEvidenceLink(link)).slice(0, maxFiles)
+    ? rankForeclosureNoticeLinks(options.evidence_links.filter((link) => isSafeDallasForeclosureUrl(link.url || link) && isForeclosureEvidenceLink(link))).slice(0, maxFiles)
     : discoverForeclosureEvidenceLinksFromHtml(page.text, sourceUrl).slice(0, maxFiles);
   const publicSearchPointerFound = links.some((link) => link && (link.portal_preview_only === true || String(link.url).toLowerCase() === PUBLIC_SEARCH_URL.toLowerCase()));
   const documentLinks = links.filter((link) => !(link && link.portal_preview_only === true));
@@ -485,6 +522,12 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
     files_parsed: fileResult ? Number(fileResult.files_parsed || 0) : 0,
     files_blocked: fileResult ? Number(fileResult.files_blocked || 0) : 0,
     file_rows_checked: fileResult ? Number(fileResult.file_rows_checked || 0) : 0,
+    pdf_notice_documents_fetched: fileResult ? Number(fileResult.pdf_notice_documents_fetched || 0) || 0 : 0,
+    pdf_notice_documents_parsed: fileResult ? Number(fileResult.pdf_notice_documents_parsed || 0) || 0 : 0,
+    pdf_notice_rows_extracted: fileResult ? Number(fileResult.pdf_notice_rows_extracted || 0) || 0 : 0,
+    pdf_notice_rows_with_address: fileResult ? Number(fileResult.pdf_notice_rows_with_address || 0) || 0 : 0,
+    pdf_notice_rows_with_sale_date: fileResult ? Number(fileResult.pdf_notice_rows_with_sale_date || 0) || 0 : 0,
+    pdf_notice_parse_failures: fileResult ? Number(fileResult.pdf_notice_parse_failures || 0) || 0 : 0,
     candidates,
     preview_only: true,
     should_ingest: false
@@ -497,6 +540,7 @@ module.exports = {
   isSafeDallasForeclosureUrl,
   discoverForeclosureEvidenceLinksFromHtml,
   extractForeclosureNoticeCandidatesFromText,
+  rankForeclosureNoticeLinks,
   runDallasForeclosureNoticeAdapter,
   isStaleSaleDate,
   parseDateValue

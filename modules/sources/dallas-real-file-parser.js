@@ -33,8 +33,9 @@ const SAFE_LOCAL_FILE_EXTENSIONS = new Set([
 const BLOCKED_PAGE_RE = /\b(captcha|human verification|verify you are human|access denied|forbidden|login required|sign in|register to bid|create an account)\b/i;
 const JUNK_ROW_RE = /\b(contact us|phone directory|public information request|privacy policy|terms of use|site map|newsletter|department directory)\b/i;
 const PARTIAL_ADDRESS_RE = /\b(?:property\s+address|address)\s*[:#-]\s*([^|;\n]{2,100})/i;
-const DALLAS_NOTICE_RE = /\b(?:notice\s+of\s+(?:substitute\s+)?trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale)\b/i;
-const STREET_ADDRESS_RE = /\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?(?:\s*,?\s+(?:Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park))?(?:\s*,?\s+(?:TX|Texas))?(?:\s*,?\s+\d{5}(?:-\d{4})?)?/ig;
+const DALLAS_NOTICE_RE = /\b(?:notice\s+of\s+.{0,14}trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale)\b/i;
+const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|suite\s+\d{1,5})\b/i;
+const STREET_ADDRESS_RE = /\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?(?:\s*,?\s+(?:Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park|Glenn Heights|Addison|Coppell|Hutchins|Cockrell Hill))?(?:\s*,?\s+(?:TX|Texas))?(?:\s*,?\s+\d{5}(?:-\d{4})?)?/ig;
 const DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
 const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
 const PARCEL_RE = /\b(?:parcel|account|acct|apn|property\s+id)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
@@ -53,7 +54,7 @@ function canonicalDallasAddress(value) {
     .replace(/\s+,/g, ',')
     .replace(/\b(Texas)\b/i, 'TX')
     .replace(/\s{2,}/g, ' ');
-  text = text.replace(/\b((?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?)\s+(Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park)\s*,?\s+(TX)\s+(\d{5}(?:-\d{4})?)\b/i, '$1, $2, $3 $4');
+  text = text.replace(/\b((?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?)\.?\s+(Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park|Glenn Heights|Addison|Coppell|Hutchins|Cockrell Hill)\s*,?\s+(TX)\s+(\d{5}(?:-\d{4})?)\b/i, '$1, $2, $3 $4');
   if (!text) return '';
   const parsed = propertyIdentity.parseAddress(text);
   if (parsed && parsed.complete && parsed.full_address) return cleanText(parsed.full_address);
@@ -72,33 +73,36 @@ function saleDateFromNoticeText(text) {
   const labeled = source.match(/\b(?:sale\s+date|date\s+of\s+sale|trustee\s+sale\s+date|foreclosure\s+sale\s+date|auction\s+date)\b\s*[:#-]?\s*([^|;\n]{4,80})/i);
   const labeledDate = cleanText(labeled && labeled[1]).match(DATE_RE);
   if (labeledDate) return cleanText(labeledDate[0]);
-  if (!DALLAS_NOTICE_RE.test(source) && !/\b(?:sale|auction|foreclosure)\b/i.test(source)) return '';
-  const anyDate = source.match(DATE_RE);
-  return cleanText(anyDate && anyDate[0]);
+  const saleSection = source.match(/date,?\s+time,?\s+and\s+place\s+of\s+sale\.?\s*(?:date\s*[:#-]?\s*)?([^|;]{4,120})/i);
+  const saleSectionDate = cleanText(saleSection && saleSection[1]).match(DATE_RE);
+  if (saleSectionDate) return cleanText(saleSectionDate[0]);
+  return '';
 }
 
 function noticeWindowForAddress(text, addressIndex) {
   const source = String(text || '');
   const before = source.slice(0, Math.max(0, addressIndex));
   const after = source.slice(addressIndex);
-  const markerRe = /notice\s+of\s+(?:substitute\s+)?trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale/ig;
+  const markerRe = /notice\s+of\s+.{0,14}trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale/ig;
   let start = Math.max(0, addressIndex - 1400);
   let match;
   while ((match = markerRe.exec(before))) start = Math.max(start, match.index);
   markerRe.lastIndex = 0;
-  const next = markerRe.exec(after.slice(80));
-  const end = next ? addressIndex + 80 + next.index : Math.min(source.length, addressIndex + 1800);
+  const next = markerRe.exec(after.slice(300));
+  const end = next ? addressIndex + 300 + next.index : Math.min(source.length, addressIndex + 1800);
   return cleanText(source.slice(start, end));
 }
 
 function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
   const source = String(text || '').replace(/\r/g, '\n');
-  if (!DALLAS_NOTICE_RE.test(source) && !/\b(?:property\s+address|date\s+of\s+sale|sale\s+date)\b/i.test(source)) return [];
+  if (!DALLAS_NOTICE_RE.test(source) && !/\b(?:property\s+address|date\s+of\s+sale|sale\s+date|date,?\s+time,?\s+and\s+place\s+of\s+sale)\b/i.test(source)) return [];
   const rows = [];
   const seen = new Set();
   STREET_ADDRESS_RE.lastIndex = 0;
   let match;
   while ((match = STREET_ADDRESS_RE.exec(source))) {
+    const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
+    if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
     const address = canonicalDallasAddress(match[0]);
     if (!address) continue;
     if (/\b(500\s+elm\s+street|133\s+n\.?\s+riverfront\s+boulevard|1201\s+elm\s+street)\b/i.test(address)) continue;
@@ -107,9 +111,14 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
     const key = `${context.source_proof_url}|${address}|${saleDate}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    const ownerName = labeledValue(windowText, OWNER_RE);
-    const caseNumber = labeledValue(windowText, CASE_RE);
-    const parcel = labeledValue(windowText, PARCEL_RE);
+    const ownerCandidate = labeledValue(windowText, OWNER_RE);
+    const ownerName = /^[A-Za-z]/.test(ownerCandidate) && !/\b(?:mortgagee|mortgage\s+electronic|registration\s+systems|mers|bank|servicer|beneficiary|nominee|n\.?\s?a\.?|llc|l\.?l\.?p\.?|obligations?)\b/i.test(ownerCandidate)
+      ? ownerCandidate
+      : '';
+    const caseCandidate = labeledValue(windowText, CASE_RE);
+    const caseNumber = /\d/.test(caseCandidate) ? caseCandidate : '';
+    const parcelCandidate = labeledValue(windowText, PARCEL_RE);
+    const parcel = /\d/.test(parcelCandidate) ? parcelCandidate : '';
     const proofText = [
       `Property Address: ${address}`,
       saleDate ? `Sale Date: ${saleDate}` : '',
