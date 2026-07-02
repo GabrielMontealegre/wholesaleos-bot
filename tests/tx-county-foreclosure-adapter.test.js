@@ -127,6 +127,55 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(/77 Lakeview Dr/i.test(viaSearch.candidates[0].normalized_address || viaSearch.candidates[0].property_address));
   assert.ok(!viaSearch.document_urls_found.some((url) => /random\.example/.test(url)));
 
+  // 4b) Archive month pages are followed and their documents parsed (Rockwall pattern);
+  //     CivicPlus "Sign In" nav text must NOT trip the block heuristic.
+  const archiveMain = `
+    <html><body>
+      <nav>Sign In | Website Sign In</nav>
+      <a href="/Archive.aspx?AMID=83">Foreclosure Notices October</a>
+    </body></html>`;
+  const archiveMonth = `
+    <html><body>
+      <a href="/Archive.aspx?ADID=5000">Foreclosure Notice - 305 Lakeshore Dr</a>
+    </body></html>`;
+  const viaArchive = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_rockwall_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    mock_search_results: [],
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/792\/Foreclosure-Notices/.test(u)) return makeResponse(archiveMain);
+      if (/Archive\.aspx\?AMID=83/.test(u)) return makeResponse(archiveMonth);
+      if (/Archive\.aspx\?ADID=5000/.test(u)) return makeResponse(
+        'NOTICE OF SUBSTITUTE TRUSTEE SALE\nProperty Address:\n305 Lakeshore Dr\nRockwall, TX 75087\nSale Date: 08/04/2026', 'application/pdf');
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(viaArchive.status, 'available', 'Sign In nav must not block; archive docs must parse');
+  assert.strictEqual(viaArchive.county, 'Rockwall');
+  assert.strictEqual(viaArchive.candidates.length, 1);
+  assert.ok(/305 Lakeshore Dr/i.test(viaArchive.candidates[0].normalized_address || viaArchive.candidates[0].property_address));
+
+  // 4c) Oversized PDFs are skipped by declared content-length, honestly reported (Kaufman pattern).
+  const oversized = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_kaufman_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    mock_search_results: [],
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/Foreclosures-2025/.test(u)) return makeResponse('<html><body><a href="/DocumentCenter/View/8074">October Foreclosure Postings</a></body></html>');
+      if (/DocumentCenter\/View\/8074/.test(u)) {
+        const response = makeResponse('big', 'application/pdf');
+        response.headers = { get: (name) => (/content-type/i.test(name) ? 'application/pdf' : /content-length/i.test(name) ? String(45 * 1024 * 1024) : '') };
+        return response;
+      }
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(oversized.candidates.length, 0);
+  assert.ok(oversized.document_urls_skipped.some((item) => /pdf_too_large/.test(item.reason)), 'oversized docs must be skipped with an honest reason');
+  assert.ok(oversized.document_urls_found.length === 1, 'oversized doc still listed as source proof');
+
   // 5) Catalog + registry wiring: DFW counties present for DFW markets, absent elsewhere.
   const dallasCatalog = sourceCatalog.buildSourceCatalog({ city: 'Dallas', county: 'Dallas', state: 'TX' });
   for (const profile of profiles.PROFILES) {

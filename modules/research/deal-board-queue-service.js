@@ -28,14 +28,13 @@ const MAX_BATCH_LIMIT = 25;
 
 // Queue lanes: every registered free adapter, requested EXPLICITLY so the
 // orchestrator also runs contact-first lanes that are auto_select:false.
+// County foreclosure lanes come straight from the profile registry.
+const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
-  'tx_dallas_fsbo_contact_first',
-  'tx_tarrant_county_foreclosure_notices',
-  'tx_collin_county_foreclosure_notices',
-  'tx_denton_county_foreclosure_notices'
-]);
+  'tx_dallas_fsbo_contact_first'
+].concat(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id)));
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();

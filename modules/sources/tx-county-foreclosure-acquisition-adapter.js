@@ -21,9 +21,16 @@ const countyProfiles = require('./tx-county-foreclosure-source-profiles');
 const MAX_DOCS_PER_COUNTY = 5;
 const MAX_ROWS = 25;
 const MAX_LINKS = 20;
+const MAX_ARCHIVE_PAGES = 2;
 const MAX_PDF_BYTES = 6 * 1024 * 1024;
-const BLOCKED_PAGE_RE = /\b(captcha|verify you are human|human verification|access denied|forbidden|login required|sign in|create an account|incapsula|request unsuccessful)\b/i;
-const DOC_KEYWORD_RE = /\b(foreclos|trustee|notice|sale|auction|sheriff|tax)\b/i;
+// CivicPlus county sites carry "Sign In" navigation on every public page -
+// only treat explicit gate language as blocked, never bare nav text.
+const BLOCKED_PAGE_RE = /\b(captcha|verify you are human|human verification|access denied|login required|sign in to (?:view|continue|access)|must (?:log|sign) in|create an account to|incapsula|request unsuccessful|subscription required|paywall)\b/i;
+const DOC_KEYWORD_RE = /\b(foreclos|trustee|notice|sale|auction|sheriff|tax)/i;
+// Direct document URLs: plain PDFs plus CivicPlus DocumentCenter/Archive/
+// ShowDocument patterns (they serve PDFs without a .pdf extension).
+const DOC_URL_RE = /\.pdf(?:$|[?#])|\/DocumentCenter\/View\/\d+|Archive\.aspx\?[^"']*ADID=\d+|ShowDocument\?id=\d+/i;
+const ARCHIVE_PAGE_RE = /Archive\.aspx\?[^"']*AMID=\d+/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -67,13 +74,21 @@ async function fetchBounded(url, options, expectPdf) {
     if (response.status === 403 || response.status === 429) return { status: 'blocked', blocked_reason: `http_${response.status}` };
     if (!response.ok) return { status: 'failed', blocked_reason: `http_${response.status}` };
     const contentType = cleanText(response.headers && response.headers.get && response.headers.get('content-type')).toLowerCase();
+    const declaredLength = Number(response.headers && response.headers.get && response.headers.get('content-length')) || 0;
     if (contentType.includes('pdf') || /\.pdf(?:$|[?#])/i.test(url)) {
+      if (declaredLength > MAX_PDF_BYTES) return { status: 'skipped', blocked_reason: `pdf_too_large_${Math.round(declaredLength / 1048576)}mb` };
       try {
         const pdfParse = require('pdf-parse');
         const buffer = Buffer.from(await response.arrayBuffer());
         if (buffer.length > MAX_PDF_BYTES) return { status: 'skipped', blocked_reason: 'pdf_too_large' };
         const parsed = await pdfParse(buffer);
-        return { status: 'parsed', kind: 'pdf', text: String(parsed && parsed.text || '') };
+        const text = String(parsed && parsed.text || '');
+        if (cleanText(text).length < 100) {
+          // Image-only scan: the document is real evidence but unreadable
+          // without OCR - report it, do not guess.
+          return { status: 'skipped', blocked_reason: 'pdf_scanned_no_text_layer' };
+        }
+        return { status: 'parsed', kind: 'pdf', text };
       } catch (error) {
         return { status: 'failed', blocked_reason: 'pdf_parse_failed' };
       }
@@ -100,14 +115,20 @@ function discoverOfficialLinks(html, baseUrl, profile) {
     try { url = new URL(href, baseUrl).toString(); } catch (error) { continue; }
     if (!isOfficialHost(url, profile)) continue;
     const label = cleanText(String(match[2]).replace(/<[^>]+>/g, ' ')).slice(0, 120);
-    if (!DOC_KEYWORD_RE.test(`${url} ${label}`)) continue;
+    const isDoc = DOC_URL_RE.test(url);
+    const isArchive = ARCHIVE_PAGE_RE.test(url);
+    // Document/archive-pattern URLs on an official county foreclosure page
+    // are documents by construction - their labels are often bare dates.
+    if (!isDoc && !isArchive && !DOC_KEYWORD_RE.test(`${url} ${label}`)) continue;
     const key = url.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    const isPdf = /\.pdf(?:$|[?#])/i.test(url);
-    links.push({ url, label, link_type: isPdf ? 'pdf_file' : 'official_page' });
+    const keywordHit = DOC_KEYWORD_RE.test(`${url} ${label}`) ? 1 : 0;
+    links.push({ url, label, link_type: isDoc ? 'pdf_file' : isArchive ? 'archive_page' : 'official_page', keyword_hit: keywordHit });
   }
-  return links.sort((a, b) => (b.link_type === 'pdf_file' ? 1 : 0) - (a.link_type === 'pdf_file' ? 1 : 0)).slice(0, MAX_LINKS);
+  return links
+    .sort((a, b) => ((b.link_type === 'pdf_file' ? 2 : 0) + (b.keyword_hit || 0)) - ((a.link_type === 'pdf_file' ? 2 : 0) + (a.keyword_hit || 0)))
+    .slice(0, MAX_LINKS);
 }
 
 async function searchOfficialDocuments(profile, options) {
@@ -161,18 +182,36 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
   const blockedNotes = [];
   let rawRows = [];
 
+  const archivePages = [];
   const page = await fetchBounded(profile.source_url, options, false);
   if (page.status === 'parsed') {
     for (const link of discoverOfficialLinks(page.text, profile.source_url, profile)) {
       discoveredLinks.push(link);
       if (link.link_type === 'pdf_file') documentUrlsFound.push(link.url);
+      if (link.link_type === 'archive_page') archivePages.push(link.url);
     }
   } else {
     blockedNotes.push({ source: 'official_page', url: profile.source_url, reason: page.blocked_reason || page.status });
   }
 
+  // CivicPlus archive month pages (Archive.aspx?AMID=...) hold the actual
+  // document list on some counties - follow a bounded number of them.
+  for (const extraPage of (profile.extra_document_pages || []).concat(archivePages).slice(0, MAX_ARCHIVE_PAGES)) {
+    const archive = await fetchBounded(extraPage, options, false);
+    if (archive.status !== 'parsed') {
+      blockedNotes.push({ source: 'archive_page', url: extraPage, reason: archive.blocked_reason || archive.status });
+      continue;
+    }
+    for (const link of discoverOfficialLinks(archive.text, extraPage, profile)) {
+      if (link.link_type === 'pdf_file' && !documentUrlsFound.includes(link.url)) {
+        documentUrlsFound.push(link.url);
+        discoveredLinks.push(link);
+      }
+    }
+  }
+
   for (const url of await searchOfficialDocuments(profile, options)) {
-    if (/\.pdf(?:$|[?#])/i.test(url) && !documentUrlsFound.includes(url)) {
+    if (DOC_URL_RE.test(url) && !documentUrlsFound.includes(url)) {
       documentUrlsFound.push(url);
       discoveredLinks.push({ url, label: 'Official document found by public search', link_type: 'pdf_file' });
     }
