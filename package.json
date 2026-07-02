@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "postinstall": "npx playwright install --with-deps chromium || npx playwright install chromium || true"
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.64.0",

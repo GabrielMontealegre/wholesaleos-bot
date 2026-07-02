@@ -6,6 +6,7 @@ const callPrepProjection = require('./call-prep-projection');
 const compResearchProvider = require('./comp-research-provider');
 const freePublicCompHunter = require('./free-public-comp-hunter');
 const freePublicContactHunter = require('./free-public-contact-hunter');
+const publicRecordBrowserLookup = require('./public-record-browser-lookup');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
 const propertyIdentity = require('./property-identity');
 const searchProviderWorker = require('./search-provider-worker');
@@ -1477,6 +1478,82 @@ async function applyFreePublicHunters(deals, input, options, context) {
   return diagnostics;
 }
 
+async function applyOfficialBrowserLookup(deals, input, options, context) {
+  const disabled = !(input.enable_official_browser_lookup === true || options.enable_official_browser_lookup === true);
+  const addressDeals = deals.filter((deal) => cleanText(deal.normalized_address));
+  const diagnostics = {
+    official_browser_lookup_enabled: !disabled,
+    official_lookup_rows: 0,
+    official_lookup_ready_count: 0,
+    mailing_ready_count: 0,
+    owner_clue_only_count: 0,
+    official_lookup_blocked_count: 0,
+    official_lookup_not_found_count: 0,
+    browser_runtime_available: false
+  };
+  if (disabled || !addressDeals.length) return diagnostics;
+  const lookupImpl = typeof options.public_record_browser_lookup_impl === 'function'
+    ? options.public_record_browser_lookup_impl
+    : publicRecordBrowserLookup.runPublicRecordBrowserLookup;
+  const lookupOut = await lookupImpl({
+    rows: addressDeals,
+    caps: input.official_lookup_caps || options.official_lookup_caps
+  }, {
+    county_profile: options.county_profile || countyFreeLookupProfiles.profileForMarket(context.market),
+    playwright_impl: options.playwright_impl
+  });
+  diagnostics.official_lookup_rows = Number(lookupOut && lookupOut.rows_hunted || 0) || 0;
+  diagnostics.browser_runtime_available = !!(lookupOut && lookupOut.browser_runtime_available);
+  const seenStatusByAddress = new Set();
+  for (const deal of addressDeals) {
+    const key = cleanText(deal.normalized_address).toLowerCase();
+    const lookup = lookupOut && lookupOut.results && lookupOut.results.get(key);
+    if (!lookup) continue;
+    deal.official_lookup_status = lookup.official_lookup_status;
+    deal.official_property_record_url = lookup.official_property_record_url;
+    deal.owner_record = lookup.owner_record;
+    deal.mailing_route = lookup.mailing_route || deal.mailing_route || null;
+    deal.property_facts = lookup.property_facts;
+    deal.appraisal_clues = lookup.appraisal_clues;
+    deal.browser_sources_checked = lookup.browser_sources_checked;
+    deal.browser_blocked_sources = lookup.browser_blocked_sources;
+    deal.next_official_lookup_action = lookup.next_official_lookup_action;
+    if (lookup.owner_record && cleanText(lookup.owner_record.owner_name)) {
+      deal.owner_or_entity_clues = (deal.owner_or_entity_clues || []).concat([{
+        clue_kind: 'appraisal_owner_of_record',
+        value: lookup.owner_record.owner_name,
+        source_url: lookup.owner_record.source_url,
+        evidence_text: lookup.owner_record.evidence_text,
+        confidence: lookup.owner_record.confidence,
+        risk_flags: lookup.owner_record.risk_flags
+      }]).slice(0, 6);
+      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = lookup.owner_record.owner_name;
+    }
+    deal.call_prep = callPrepProjection.buildCallPrep(deal);
+    deal.call_readiness = deal.call_prep.call_readiness;
+    deal.MAO_lock_state = deal.call_prep.MAO_lock_state;
+    deal.why_still_locked = cleanText([
+      deal.call_prep.ARV_lock_state === 'ARV_LOCKED_NO_VERIFIED_COMPS' ? deal.call_prep.ARV_lock_reason : '',
+      deal.call_prep.MAO_lock_state !== 'MAO_READY_TO_CALCULATE' ? deal.call_prep.MAO_lock_reason : '',
+      deal.appraisal_clues && deal.appraisal_clues.length ? 'County appraised value is a clue only - it is not ARV and not a sold comp.' : ''
+    ].filter(Boolean).join(' '));
+    Object.assign(deal.call_prep, {
+      official_lookup_status: deal.official_lookup_status,
+      next_official_lookup_action: deal.next_official_lookup_action,
+      why_still_locked: deal.why_still_locked
+    });
+    if (!seenStatusByAddress.has(key)) {
+      seenStatusByAddress.add(key);
+      if (deal.official_lookup_status === 'OFFICIAL_LOOKUP_READY') diagnostics.official_lookup_ready_count += 1;
+      if (deal.official_lookup_status === 'MAILING_READY') diagnostics.mailing_ready_count += 1;
+      if (deal.official_lookup_status === 'OWNER_CLUE_ONLY') diagnostics.owner_clue_only_count += 1;
+      if (deal.official_lookup_status === 'OFFICIAL_LOOKUP_BLOCKED') diagnostics.official_lookup_blocked_count += 1;
+      if (deal.official_lookup_status === 'OFFICIAL_LOOKUP_NOT_FOUND') diagnostics.official_lookup_not_found_count += 1;
+    }
+  }
+  return diagnostics;
+}
+
 async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const market = marketFrom(input);
   const caps = capsFrom(input);
@@ -1500,6 +1577,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     .filter((deal) => deal.usable_for_gabriel === true && deal.quality_bucket !== QUALITY_BUCKETS.REJECTED_GENERIC)
     .slice(0, caps.output_deals);
   const freeHunterDiagnostics = await applyFreePublicHunters(deals, input, options, context);
+  const officialLookupDiagnostics = await applyOfficialBrowserLookup(deals, input, options, context);
   const linkDiagnostics = await validateDealLinks(deals, options, context);
   const quality = qualityDiagnostics(allDeals, deals);
   const dashboard = dashboardSummary(deals, linkDiagnostics, context, quality);
@@ -1541,6 +1619,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     out_of_market_count: quality.out_of_market_count,
     official_source_rows_count: quality.official_source_rows_count,
     ...freeHunterDiagnostics,
+    ...officialLookupDiagnostics,
     board_blocker_summary: boardBlockerSummary
   }, dashboard, {
     diagnostics: {
@@ -1549,6 +1628,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       output_deal_count: deals.length,
       quality,
       free_hunters: freeHunterDiagnostics,
+      official_lookup: officialLookupDiagnostics,
       identity_repair: repairDiagnostics,
       rejected_generic_count: quality.rejected_generic_count,
       usable_deal_count: quality.usable_deal_count,
