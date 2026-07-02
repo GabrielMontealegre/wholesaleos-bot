@@ -105,6 +105,16 @@ function mockDeal(overrides) {
   assert.strictEqual(run2.counts.total_rows, 2);
   const barnabus = run2.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
   assert.ok(barnabus.times_seen >= 2);
+
+  // Evidence fields survive a refresh from a weaker duplicate sighting.
+  const weakerPreview = async () => ({
+    free_public_deals: [mockDeal({ source_document_url: '', best_link_to_click_first: '', owner_record: null, appraisal_clues: [] })],
+    rejected_generic_count: 0
+  });
+  const run2b = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 }, { preview_impl: weakerPreview });
+  const barnabusAfterWeak = run2b.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
+  assert.ok(/May\/Dallas_1\.pdf/.test(barnabusAfterWeak.source_document_url), 'document url must survive weaker refresh');
+  assert.strictEqual(barnabusAfterWeak.owner_clue, 'KILLER CAPITAL CONSULTANTS LLC [entity]', 'owner clue must survive weaker refresh');
   assert.strictEqual(barnabus.owner_clue, 'KILLER CAPITAL CONSULTANTS LLC [entity]');
   assert.strictEqual(barnabus.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
   assert.strictEqual(barnabus.MAO_lock_state, 'MAO_LOCKED_NO_ARV');
