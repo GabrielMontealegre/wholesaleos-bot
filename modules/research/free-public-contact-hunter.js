@@ -21,8 +21,12 @@ const DEFAULT_CAPS = Object.freeze({
   total_budget_ms: 45000
 });
 
-const PHONE_RE = /\(?\b\d{3}\)?[ .-]\d{3}[ .-]\d{4}\b|\b1-8\d{2}-\d{3}-\d{4}\b/g;
+// Phones must use consistent separators (or the (ddd) form) so we do not
+// grab random digit runs from minified pages; emails at telemetry/CDN
+// domains or with tracking-hash local parts are never contact routes.
+const PHONE_RE = /\(\d{3}\)\s?\d{3}[ .-]\d{4}\b|\b\d{3}([.-])\d{3}\1\d{4}\b|\b1-\d{3}-\d{3}-\d{4}\b/g;
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+const JUNK_EMAIL_RE = /@(?:[a-z0-9.-]*\b(?:sentry|ingest|wixpress|cloudfront|amazonaws|googleapis|doubleclick|newrelic|segment|bugsnag|datadoghq)\b[a-z0-9.-]*|example\.(?:com|org|net)|schema\.org|sentry\.io)$|^[a-f0-9]{20,}@/i;
 const BLOCKED_PAGE_RE = /\b(captcha|verify you are human|human verification|access denied|forbidden|login required|sign in to view|create an account|subscription required|paywall)\b/i;
 const NON_OWNER_CONTEXT_RE = /\b(trustee|substitute trustee|attorney|law firm|servicer|mortgagee|reinstatement|pay ?off|sale information|auction|xome|servicelink|for information|clerk|county|appraisal)\b/i;
 const LISTING_CONTEXT_RE = /\b(listing agent|listed by|realtor|broker|agent|contact agent|for sale by owner|fsbo|contact seller|reply to)\b/i;
@@ -87,6 +91,7 @@ function mineContactRoutesFromText(text, sourceUrl, sourceLabel) {
   while ((match = EMAIL_RE.exec(source))) {
     const value = cleanText(match[0]);
     if (/\.(png|jpg|gif|css|js)$/i.test(value)) continue;
+    if (JUNK_EMAIL_RE.test(value)) continue;
     const key = `email|${value.toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
