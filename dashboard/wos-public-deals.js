@@ -67,6 +67,7 @@
     var batch = data.batch;
     var parts = [
       chip('Rows', c.total_rows || 0),
+      chip('Today', c.today_rows || 0, '#ddd6fe'),
       chip('Addresses', c.address_rows || 0),
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
       chip('OUTREACH_READY', c.outreach_ready || 0, '#bfdbfe'),
@@ -78,7 +79,25 @@
     var meta = batch
       ? 'Last batch ' + esc(String(batch.run_at).replace('T', ' ').slice(0, 16)) + ' - ' + esc(batch.new_rows) + ' new, ' + esc(batch.refreshed_rows) + ' refreshed, ' + esc(batch.rejected_generic_count || 0) + ' generic rejected' + (batch.board_blocker_summary ? ' - blocker: ' + esc(batch.board_blocker_summary) : '')
       : 'No batch yet - click Refresh batch to pull free public deals.';
-    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>';
+    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + coverageTable(batch);
+  }
+
+  function coverageTable(batch) {
+    var coverage = batch && batch.source_coverage;
+    if (!coverage || !coverage.length) return '';
+    var rows = coverage.map(function (item) {
+      var ok = item.candidate_count > 0;
+      return '<tr>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.source_name || item.source_id) + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.status || 'unknown') + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;text-align:right;' + (ok ? 'color:#065f46;font-weight:600;' : '') + '">' + esc(item.candidate_count) + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#991b1b;">' + esc(item.blocked_reason || '') + '</td>' +
+        '</tr>';
+    }).join('');
+    return '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:12px;color:#2563eb;">Source coverage (' + coverage.length + ' lanes)</summary>' +
+      '<table style="font-size:11px;border-collapse:collapse;margin-top:4px;"><tr>' +
+      '<th style="text-align:left;padding:2px 8px;">Source</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:right;padding:2px 8px;">Rows</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th></tr>' +
+      rows + '</table></details>';
   }
 
   function render(container, data, note) {
@@ -117,7 +136,7 @@
       })
       .then(function () {
         button.disabled = false;
-        button.textContent = 'Refresh batch (free, capped)';
+        button.textContent = 'Run next free batch';
       });
   }
 
@@ -128,13 +147,27 @@
     section.id = 'wos-public-deals';
     section.style.cssText = 'margin:12px;padding:14px 16px;border:1px solid #d1d5db;border-radius:12px;background:#f9fafb;font-family:inherit;';
     section.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
       '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - preview snapshot, not saved leads</span></h2>' +
-      '<button id="wos-public-deals-run" style="padding:7px 14px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:13px;cursor:pointer;">Refresh batch (free, capped)</button>' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px;cursor:pointer;">' +
+      '<input type="checkbox" id="wos-public-deals-auto"> Auto-refresh every 20 min</label>' +
+      '<button id="wos-public-deals-run" style="padding:7px 14px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:13px;cursor:pointer;">Run next free batch</button>' +
+      '</div>' +
       '</div><div class="wos-public-deals-body" style="max-height:520px;overflow:auto;">Loading public deals...</div>';
     host.insertBefore(section, host.firstChild);
-    document.getElementById('wos-public-deals-run').addEventListener('click', function () {
-      runBatch(section, this);
+    var runButton = document.getElementById('wos-public-deals-run');
+    runButton.addEventListener('click', function () { runBatch(section, this); });
+    var autoTimer = null;
+    document.getElementById('wos-public-deals-auto').addEventListener('change', function () {
+      if (this.checked) {
+        autoTimer = setInterval(function () {
+          if (!runButton.disabled) runBatch(section, runButton);
+        }, 20 * 60 * 1000);
+      } else if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
     });
     fetchLatest(section);
   }

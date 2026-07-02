@@ -58,6 +58,7 @@ function buildFreePublicDealBoardPreviewInput(input = {}, options = {}) {
     market: marketFrom(input),
     limit: caps.output_deals,
     caps,
+    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : undefined,
     enable_provider_search: true,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     free_hunter_caps: input.free_hunter_caps,

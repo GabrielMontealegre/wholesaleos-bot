@@ -26,6 +26,14 @@ const MAX_BATCHES_PER_MARKET = 60;
 const MIN_BATCH_LIMIT = 5;
 const MAX_BATCH_LIMIT = 25;
 
+// Queue lanes: every registered free adapter, requested EXPLICITLY so the
+// orchestrator also runs contact-first lanes that are auto_select:false.
+const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
+  'tx_dallas_county_clerk_foreclosure_notices',
+  'tx_dallas_craigslist_owner_posts',
+  'tx_dallas_fsbo_contact_first'
+]);
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -139,9 +147,25 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
   };
 }
 
+function sourceCoverageFromPreview(preview) {
+  const adapterResults = preview && preview.diagnostics && preview.diagnostics.source_adapter &&
+    Array.isArray(preview.diagnostics.source_adapter.source_adapter_results)
+    ? preview.diagnostics.source_adapter.source_adapter_results
+    : [];
+  return adapterResults.map((result) => ({
+    source_id: cleanText(result && result.source_id),
+    source_name: cleanText(result && result.source_name),
+    status: cleanText(result && result.status),
+    candidate_count: Number(result && result.candidate_count || 0) || 0,
+    blocked_reason: cleanText(result && result.blocked_reason)
+  })).filter((item) => item.source_id);
+}
+
 function queueCounts(rows) {
+  const today = nowIso().slice(0, 10);
   return {
     total_rows: rows.length,
+    today_rows: rows.filter((row) => String(row.first_seen_at).slice(0, 10) === today || String(row.last_seen_at).slice(0, 10) === today).length,
     address_rows: rows.filter((row) => row.normalized_address).length,
     call_ready: rows.filter((row) => row.contact_status === 'CALL_READY').length,
     outreach_ready: rows.filter((row) => row.contact_status === 'OUTREACH_READY').length,
@@ -162,6 +186,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const preview = await previewImpl({
     market,
     limit,
+    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : DEFAULT_QUEUE_SOURCE_IDS.slice(),
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     enable_free_public_hunters: input.enable_free_public_hunters !== false
   }, { env: options.env || process.env });
@@ -214,7 +239,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     rejected_generic_count: Number(preview && preview.rejected_generic_count || 0) || 0,
     browser_runtime_available: !!(preview && preview.browser_runtime_available),
     official_lookup_blocked_count: Number(preview && preview.official_lookup_blocked_count || 0) || 0,
-    board_blocker_summary: cleanText(preview && preview.board_blocker_summary)
+    board_blocker_summary: cleanText(preview && preview.board_blocker_summary),
+    source_coverage: sourceCoverageFromPreview(preview)
   };
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
   bucket.market = market;
@@ -265,6 +291,7 @@ function latestDealBoardSnapshot(input = {}) {
 module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
+  DEFAULT_QUEUE_SOURCE_IDS,
   snapshotFilePath,
   dedupeKeyForDeal,
   queueCounts,

@@ -75,12 +75,25 @@ function mockDeal(overrides) {
       rejected_generic_count: 4,
       browser_runtime_available: false,
       official_lookup_blocked_count: 1,
-      board_blocker_summary: ''
+      board_blocker_summary: '',
+      diagnostics: {
+        source_adapter: {
+          source_adapter_results: [
+            { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '' },
+            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' }
+          ]
+        }
+      }
     };
   };
 
   const run1 = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 99 }, { preview_impl: previewImpl });
   assert.strictEqual(previewCalls[0].limit, 25, 'limit must clamp to max 25');
+  assert.deepStrictEqual(previewCalls[0].source_ids, [
+    'tx_dallas_county_clerk_foreclosure_notices',
+    'tx_dallas_craigslist_owner_posts',
+    'tx_dallas_fsbo_contact_first'
+  ], 'queue must explicitly request all registered free lanes');
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
@@ -89,6 +102,16 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.counts.inspect_now, 1);
   assert.strictEqual(run1.counts.needs_comps, 1);
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file must exist');
+  assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
+  assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
+  assert.strictEqual(run1.batch.source_coverage[0].candidate_count, 2);
+  assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
+
+  // Volume caps: foreclosure adapter parses more PDFs per preview now.
+  const foreclosureAdapter = require('../modules/sources/dallas-foreclosure-acquisition-adapter');
+  assert.ok(foreclosureAdapter.LIVE_PREVIEW_MAX_FILES >= 5, 'PDF parse cap must be raised to at least 5');
+  assert.ok(foreclosureAdapter.LIVE_PREVIEW_MAX_FILES <= 6, 'PDF parse cap must stay bounded');
+  assert.ok(foreclosureAdapter.LIVE_PREVIEW_MAX_ROWS >= 25, 'row cap must allow a full batch');
   const stored = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
   assert.strictEqual(stored.store_kind, 'deal_board_snapshots_not_saved_leads');
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, [], 'no saved-lead mutation');
@@ -153,6 +176,11 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('seller_questions'));
   assert.ok(uiSource.includes(queueServiceRoute('/latest')) && uiSource.includes(queueServiceRoute('/run')));
   assert.ok(uiSource.includes('not saved leads'));
+  assert.ok(uiSource.includes('Source coverage'), 'dashboard must render the source coverage table');
+  assert.ok(uiSource.includes('blocked_reason'), 'coverage table must show blocked reasons');
+  assert.ok(uiSource.includes('today_rows'), 'dashboard must show daily rows');
+  assert.ok(/type="checkbox" id="wos-public-deals-auto"(?![^>]*checked)/.test(uiSource), 'auto-refresh must exist and default OFF');
+  assert.ok(uiSource.includes('20 * 60 * 1000'), 'auto-refresh interval must be 20 minutes');
 
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;
