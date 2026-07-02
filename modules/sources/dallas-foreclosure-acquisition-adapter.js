@@ -16,8 +16,8 @@ const SOURCE_NAME = 'Dallas County Clerk Foreclosure Notices';
 const SOURCE_FAMILY = 'preforeclosure_trustee_notice';
 const MAX_ROWS = 25;
 const MAX_FILES = 6;
-const LIVE_PREVIEW_MAX_ROWS = 10;
-const LIVE_PREVIEW_MAX_FILES = 2;
+const LIVE_PREVIEW_MAX_ROWS = 25;
+const LIVE_PREVIEW_MAX_FILES = 5;
 const PUBLIC_SEARCH_URL = 'https://dallas.tx.publicsearch.us/';
 
 function nowIso() {
@@ -881,5 +881,7 @@ module.exports = {
   SOURCE_URL,
   SOURCE_NAME,
   SOURCE_FAMILY,
+  LIVE_PREVIEW_MAX_ROWS,
+  LIVE_PREVIEW_MAX_FILES,
   runDallasForeclosureAcquisitionAdapter
 };
