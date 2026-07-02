@@ -279,10 +279,13 @@ async function runDallasForeclosureDocumentHunter(options = {}) {
       rank_score: 3
     }]
     : [];
+  const officialParsedUrls = new Set((allowOfficialPreviewArtifacts && Array.isArray(officialPreview.document_urls_parsed) ? officialPreview.document_urls_parsed : [])
+    .map((url) => cleanText(url).toLowerCase()).filter(Boolean));
   const docLinks = uniqueCleanList([].concat(
     allowDiscoveryLinks ? directDiscoveryLinks.map((item) => item.url) : [],
     explicitDirectDoc.map((item) => item.url)
   ), MAX_DIRECT_DOCUMENT_URLS)
+    .filter((url) => !officialParsedUrls.has(cleanText(url).toLowerCase()))
     .map((url) => ({ url, label: 'Automated source document hunter', link_type: 'document_link' }));
   const parserResult = docLinks.length
     ? await realFileParser.runDallasRealFileParser({
@@ -392,12 +395,12 @@ async function runDallasForeclosureDocumentHunter(options = {}) {
     document_urls_parsed_count: sourcePreview.document_urls_parsed_count,
     document_urls_skipped_count: sourcePreview.document_urls_skipped_count,
     candidate_count: combinedCandidates.length,
-    pdf_notice_documents_fetched: Number(parserResult.pdf_notice_documents_fetched || 0) || 0,
-    pdf_notice_documents_parsed: Number(parserResult.pdf_notice_documents_parsed || 0) || 0,
-    pdf_notice_rows_extracted: Number(parserResult.pdf_notice_rows_extracted || 0) || 0,
-    pdf_notice_rows_with_address: Number(parserResult.pdf_notice_rows_with_address || 0) || 0,
-    pdf_notice_rows_with_sale_date: Number(parserResult.pdf_notice_rows_with_sale_date || 0) || 0,
-    pdf_notice_parse_failures: Number(parserResult.pdf_notice_parse_failures || 0) || 0,
+    pdf_notice_documents_fetched: (Number(parserResult.pdf_notice_documents_fetched || 0) || 0) + (Number(officialPreview.pdf_notice_documents_fetched || 0) || 0),
+    pdf_notice_documents_parsed: (Number(parserResult.pdf_notice_documents_parsed || 0) || 0) + (Number(officialPreview.pdf_notice_documents_parsed || 0) || 0),
+    pdf_notice_rows_extracted: (Number(parserResult.pdf_notice_rows_extracted || 0) || 0) + (Number(officialPreview.pdf_notice_rows_extracted || 0) || 0),
+    pdf_notice_rows_with_address: (Number(parserResult.pdf_notice_rows_with_address || 0) || 0) + (Number(officialPreview.pdf_notice_rows_with_address || 0) || 0),
+    pdf_notice_rows_with_sale_date: (Number(parserResult.pdf_notice_rows_with_sale_date || 0) || 0) + (Number(officialPreview.pdf_notice_rows_with_sale_date || 0) || 0),
+    pdf_notice_parse_failures: (Number(parserResult.pdf_notice_parse_failures || 0) || 0) + (Number(officialPreview.pdf_notice_parse_failures || 0) || 0),
     evidence_links_found: combinedDiscoveredLinks.length,
     phrase_candidate_seen: countByPredicate(combinedCandidates, (candidate) => !!cleanText(candidate.motivation_phrase || candidate.motivation_evidence_text)),
     status_candidate_seen: countByPredicate(combinedCandidates, (candidate) => !!cleanText(candidate.current_status || candidate.status_evidence_text)),

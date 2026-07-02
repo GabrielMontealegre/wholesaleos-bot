@@ -184,6 +184,18 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.ok(foreclosureSource);
   assert.strictEqual(foreclosureSource.document_hunter_ready, true);
 
+  const foreclosureNoticeAdapter = require('../modules/sources/dallas-foreclosure-notice-adapter');
+  const rankedNoticeLinks = foreclosureNoticeAdapter.rankForeclosureNoticeLinks([
+    { url: 'https://www.dallascounty.org/Assets/uploads/docs/sheriff/68-A_InspectionFlyer.pdf', label: 'Inspection flyer' },
+    { url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Addison_4.pdf' },
+    { url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/April/Dallas_2.pdf' },
+    { url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf' }
+  ], { now: new Date('2026-07-01T12:00:00Z') });
+  assert.ok(/\/May\/Dallas_1\.pdf$/.test(rankedNoticeLinks[0].url));
+  assert.ok(/\/April\/Dallas_2\.pdf$/.test(rankedNoticeLinks[1].url));
+  assert.ok(/\/March\/Addison_4\.pdf$/.test(rankedNoticeLinks[2].url));
+  assert.ok(/InspectionFlyer\.pdf$/.test(rankedNoticeLinks[3].url));
+
   const hunterResult = await documentHunter.runDallasForeclosureDocumentHunter({
     source_url: countyPageUrl,
     source_document_url: '',
