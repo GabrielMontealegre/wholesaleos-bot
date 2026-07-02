@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 
+const callPrepProjection = require('./call-prep-projection');
 const compResearchProvider = require('./comp-research-provider');
 const propertyIdentity = require('./property-identity');
 const searchProviderWorker = require('./search-provider-worker');
@@ -595,7 +596,7 @@ function confidenceScore(deal) {
   if (deal.source_family && /official|foreclosure|tax|sheriff/i.test(deal.source_family)) score += 18;
   if (deal.motivation_evidence_text) score += 16;
   if (deal.status_evidence_text || deal.sale_date_or_event_date) score += 12;
-  if (deal.contact_route_if_visible) score += 6;
+  if (callPrepProjection.visibleContactRoute(deal)) score += 6;
   if (deal.zillow_url || deal.redfin_url || deal.realtor_url || deal.auction_url) score += 4;
   return Math.max(0, Math.min(100, score));
 }
@@ -703,7 +704,7 @@ function missingFields(deal) {
     .concat(!(deal.source_url || deal.source_document_url) ? ['source proof URL'] : [])
     .concat(!deal.motivation_evidence_text ? ['motivation evidence'] : [])
     .concat(!(deal.status_evidence_text || deal.sale_date_or_event_date) ? ['current status or event date evidence'] : [])
-    .concat(!deal.contact_route_if_visible ? ['visible contact route'] : [])
+    .concat(!callPrepProjection.visibleContactRoute(deal) ? ['visible contact route'] : [])
     .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []);
 }
 
@@ -711,7 +712,7 @@ function nextBestAction(deal) {
   if (!deal.normalized_address) return 'VERIFY_PROPERTY_IDENTITY';
   if (!(deal.source_url || deal.source_document_url)) return 'VERIFY_SOURCE_PROOF';
   if (!deal.motivation_evidence_text) return 'VERIFY_MOTIVATION_SOURCE';
-  if (!deal.contact_route_if_visible) return 'FIND_CONTACT_ROUTE';
+  if (!callPrepProjection.visibleContactRoute(deal)) return 'FIND_CONTACT_ROUTE';
   if (deal.comp_status !== 'verified_sold_comps_ready') return 'RUN_COMP_RESEARCH';
   return 'REVIEW_DEAL_PACKET';
 }
@@ -734,7 +735,7 @@ function rankDeal(deal) {
   if (/official|foreclosure|tax|sheriff/i.test(deal.source_family)) rank += 25;
   if (deal.normalized_address) rank += 20;
   if (deal.sale_date_or_event_date || deal.status_evidence_text) rank += 10;
-  if (deal.contact_route_if_visible) rank += 8;
+  if (callPrepProjection.visibleContactRoute(deal)) rank += 8;
   if (deal.auction_url || deal.zillow_url || deal.redfin_url || deal.realtor_url) rank += 5;
   return rank;
 }
@@ -749,6 +750,9 @@ function finalizeDeal(deal) {
   deal.next_best_action = nextBestAction(deal);
   deal.why_not_ready = whyNotReady(deal);
   deal.best_link_to_click_first = firstClickLink(deal);
+  deal.call_prep = callPrepProjection.buildCallPrep(deal);
+  deal.call_readiness = deal.call_prep.call_readiness;
+  deal.MAO_lock_state = deal.call_prep.MAO_lock_state;
   deal.rank_score = rankDeal(deal);
   return deal;
 }
@@ -1361,6 +1365,8 @@ function dashboardSummary(deals, linkDiagnostics, context, quality) {
     out_of_market_count: Number(quality && quality.out_of_market_count || 0) || 0,
     official_source_rows_count: Number(quality && quality.official_source_rows_count || 0) || 0,
     serper_primary_rows_count: Number(quality && quality.serper_primary_rows_count || 0) || 0,
+    call_ready_count: deals.filter((deal) => deal.call_readiness === 'CALL_READY').length,
+    needs_contact_route_count: deals.filter((deal) => deal.call_readiness === 'NEEDS_CONTACT_ROUTE').length,
     operator_summary: deals.length
       ? `${deals.length} usable preview-only public deals found for ${context.market.city}; ${Number(quality && quality.rejected_generic_count || 0) || 0} generic rows rejected. Start with ${deals[0].best_link_to_click_first || 'source proof'}.`
       : `No usable preview-only public deals found for ${context.market.city}; ${Number(quality && quality.rejected_generic_count || 0) || 0} generic rows rejected.`,
