@@ -111,7 +111,17 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       return /^manual/i.test(visible) ? '' : visible;
     })(),
     comp_status: cleanText(deal.free_comp_status || deal.comp_status),
+    screenshot_comp_status: cleanText(deal.screenshot_comp_status),
+    next_comp_action: cleanText(deal.next_comp_action),
     verified_sold_comp_count: Number(deal.verified_sold_comp_count || 0) || 0,
+    verified_comps: Array.isArray(deal.verified_sold_comps) ? deal.verified_sold_comps.slice(0, 3).map((comp) => ({
+      comp_address: cleanText(comp.comp_address || comp.address),
+      sold_price: Number(comp.sold_price) || 0,
+      sold_date: cleanText(comp.sold_date),
+      source_url: cleanText(comp.source_url)
+    })) : [],
+    arv_lock_reason: cleanText(deal.arv_lock_reason || (deal.call_prep && deal.call_prep.ARV_lock_reason)),
+    mao_lock_reason: cleanText(deal.mao_lock_reason || (deal.call_prep && deal.call_prep.MAO_lock_reason)),
     appraisal_clue: cleanText(((deal.appraisal_clues || [])[0] || {}).value),
     ARV_lock_state: cleanText(deal.call_prep && deal.call_prep.ARV_lock_state || deal.ARV_lock_state),
     MAO_lock_state: cleanText(deal.MAO_lock_state || (deal.call_prep && deal.call_prep.MAO_lock_state)),
@@ -179,6 +189,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
       // Never lose evidence a previous sighting already carried.
       for (const field of PRESERVE_FIELDS) {
         if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
+      }
+      if ((!refreshed.verified_comps || !refreshed.verified_comps.length) && Array.isArray(existing.verified_comps) && existing.verified_comps.length) {
+        refreshed.verified_comps = existing.verified_comps;
+        refreshed.verified_sold_comp_count = Number(existing.verified_sold_comp_count) || existing.verified_comps.length;
       }
       byKey.set(dedupeKey, refreshed);
       refreshedRows += 1;

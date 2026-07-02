@@ -63,6 +63,8 @@ function buildFreePublicDealBoardPreviewInput(input = {}, options = {}) {
     free_hunter_caps: input.free_hunter_caps,
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     official_lookup_caps: input.official_lookup_caps,
+    enable_screenshot_comp_evidence: input.enable_screenshot_comp_evidence !== false,
+    screenshot_comp_caps: input.screenshot_comp_caps,
     preview_only: true,
     should_ingest: false,
     no_global_mutation: true
