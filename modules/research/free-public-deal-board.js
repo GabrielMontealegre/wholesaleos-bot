@@ -4,6 +4,9 @@ const crypto = require('crypto');
 
 const callPrepProjection = require('./call-prep-projection');
 const compResearchProvider = require('./comp-research-provider');
+const freePublicCompHunter = require('./free-public-comp-hunter');
+const freePublicContactHunter = require('./free-public-contact-hunter');
+const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
 const propertyIdentity = require('./property-identity');
 const searchProviderWorker = require('./search-provider-worker');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
@@ -1384,6 +1387,96 @@ function catalogSummary(market) {
   }));
 }
 
+async function applyFreePublicHunters(deals, input, options, context) {
+  // Opt-in: unit/board tests stay hermetic; the server preview service enables it.
+  const disabled = !(input.enable_free_public_hunters === true || options.enable_free_public_hunters === true);
+  const addressDeals = deals.filter((deal) => cleanText(deal.normalized_address));
+  const diagnostics = {
+    free_hunters_enabled: !disabled,
+    free_contact_rows_hunted: 0,
+    free_comp_rows_hunted: 0,
+    free_call_ready_count: 0,
+    free_outreach_ready_count: 0,
+    free_mail_ready_count: 0,
+    free_contact_exhausted_count: 0,
+    free_comp_ready_count: 0,
+    free_comp_partial_count: 0,
+    free_blocked_source_count: 0
+  };
+  if (disabled || !addressDeals.length) return diagnostics;
+  const contactHunter = typeof options.free_contact_hunter_impl === 'function' ? options.free_contact_hunter_impl : freePublicContactHunter.runFreePublicContactHunter;
+  const compHunter = typeof options.free_comp_hunter_impl === 'function' ? options.free_comp_hunter_impl : freePublicCompHunter.runFreePublicCompHunter;
+  const hunterOptions = {
+    fetch_impl: options.fetch_impl,
+    env: options.env,
+    county_profile: options.county_profile || countyFreeLookupProfiles.profileForMarket(context.market),
+    mock_search_results: options.mock_free_search_results
+  };
+  const caps = input.free_hunter_caps || options.free_hunter_caps;
+  const contactOut = await contactHunter({ rows: addressDeals, caps }, hunterOptions);
+  const compOut = await compHunter({ rows: addressDeals, caps }, hunterOptions);
+  diagnostics.free_contact_rows_hunted = Number(contactOut && contactOut.rows_hunted || 0) || 0;
+  diagnostics.free_comp_rows_hunted = Number(compOut && compOut.rows_hunted || 0) || 0;
+  const seenStatusByAddress = new Map();
+  for (const deal of addressDeals) {
+    const key = cleanText(deal.normalized_address).toLowerCase();
+    const contact = contactOut && contactOut.results && contactOut.results.get(key);
+    const comp = compOut && compOut.results && compOut.results.get(key);
+    if (contact) {
+      deal.free_contact_status = contact.free_contact_status;
+      deal.free_contact_routes = contact.free_contact_routes;
+      deal.owner_or_entity_clues = contact.owner_or_entity_clues;
+      deal.mailing_route = contact.mailing_route;
+      deal.free_searches_run = contact.free_searches_run;
+      deal.blocked_sources = contact.blocked_sources;
+      deal.next_free_action = contact.next_free_action;
+      deal.why_call_ready_or_blocked = contact.why_call_ready_or_blocked;
+      const routes = Array.isArray(contact.free_contact_routes) ? contact.free_contact_routes : [];
+      const phoneRoute = routes.find((route) => route.route_kind === 'phone');
+      const outreachRoute = routes.find((route) => route.route_kind === 'email' || route.route_kind === 'form' || route.route_kind === 'reply_link');
+      if (!callPrepProjection.visibleContactRoute(deal)) {
+        if (phoneRoute) deal.contact_route_if_visible = `${phoneRoute.value} (${phoneRoute.route_type})`;
+        else if (outreachRoute) deal.contact_route_if_visible = `${outreachRoute.value} (${outreachRoute.route_type})`;
+      }
+    }
+    if (comp) {
+      deal.free_comp_status = comp.free_comp_status;
+      deal.comp_candidates = comp.comp_candidates;
+      deal.free_searches_run = (deal.free_searches_run || []).concat(comp.free_searches_run || []);
+      deal.blocked_sources = (deal.blocked_sources || []).concat(comp.blocked_sources || []);
+      if (Array.isArray(comp.verified_comps) && comp.verified_comps.length) {
+        deal.verified_sold_comps = comp.verified_comps;
+        deal.verified_sold_comp_count = comp.verified_comps.length;
+        deal.comp_status = comp.verified_comps.length >= 3 ? 'verified_sold_comps_ready' : 'partial_verified_sold_comps';
+        deal.ARV_lock_state = comp.verified_comps.length >= 3 ? 'ARV_UNLOCKED_VERIFIED_COMPS' : 'ARV_LOCKED_NO_VERIFIED_COMPS';
+      }
+    }
+    deal.call_prep = callPrepProjection.buildCallPrep(deal);
+    deal.call_readiness = deal.call_prep.call_readiness;
+    deal.MAO_lock_state = deal.call_prep.MAO_lock_state;
+    deal.missing_fields = missingFields(deal);
+    deal.next_best_action = nextBestAction(deal);
+    deal.why_not_ready = whyNotReady(deal);
+    Object.assign(deal.call_prep, {
+      free_contact_status: deal.free_contact_status || 'CONTACT_SEARCH_NOT_RUN',
+      free_comp_status: deal.free_comp_status || 'COMP_SEARCH_NOT_RUN',
+      next_free_action: deal.next_free_action || '',
+      why_call_ready_or_blocked: deal.why_call_ready_or_blocked || ''
+    });
+    diagnostics.free_blocked_source_count += (deal.blocked_sources || []).length;
+    if (!seenStatusByAddress.has(key)) {
+      seenStatusByAddress.set(key, true);
+      if (deal.free_contact_status === 'CALL_READY') diagnostics.free_call_ready_count += 1;
+      if (deal.free_contact_status === 'OUTREACH_READY') diagnostics.free_outreach_ready_count += 1;
+      if (deal.free_contact_status === 'MAIL_READY') diagnostics.free_mail_ready_count += 1;
+      if (deal.free_contact_status === 'CONTACT_SEARCH_EXHAUSTED_FREE') diagnostics.free_contact_exhausted_count += 1;
+      if (deal.free_comp_status === 'COMP_READY') diagnostics.free_comp_ready_count += 1;
+      if (deal.free_comp_status === 'COMP_PARTIAL') diagnostics.free_comp_partial_count += 1;
+    }
+  }
+  return diagnostics;
+}
+
 async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const market = marketFrom(input);
   const caps = capsFrom(input);
@@ -1406,6 +1499,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const deals = allDeals
     .filter((deal) => deal.usable_for_gabriel === true && deal.quality_bucket !== QUALITY_BUCKETS.REJECTED_GENERIC)
     .slice(0, caps.output_deals);
+  const freeHunterDiagnostics = await applyFreePublicHunters(deals, input, options, context);
   const linkDiagnostics = await validateDealLinks(deals, options, context);
   const quality = qualityDiagnostics(allDeals, deals);
   const dashboard = dashboardSummary(deals, linkDiagnostics, context, quality);
@@ -1446,6 +1540,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     bad_address_rejected_count: quality.bad_address_rejected_count,
     out_of_market_count: quality.out_of_market_count,
     official_source_rows_count: quality.official_source_rows_count,
+    ...freeHunterDiagnostics,
     board_blocker_summary: boardBlockerSummary
   }, dashboard, {
     diagnostics: {
@@ -1453,6 +1548,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       input_record_count: rawRecords.length,
       output_deal_count: deals.length,
       quality,
+      free_hunters: freeHunterDiagnostics,
       identity_repair: repairDiagnostics,
       rejected_generic_count: quality.rejected_generic_count,
       usable_deal_count: quality.usable_deal_count,
