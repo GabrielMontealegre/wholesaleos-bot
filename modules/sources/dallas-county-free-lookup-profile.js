@@ -87,10 +87,88 @@ async function dallasAppraisalLookup(addressParts, options = {}) {
   }
 }
 
+const BROWSER_BLOCKED_TEXT_RE = /captcha|verify you are human|access denied|login required|forbidden/i;
+
+// Real-browser DCAD lookup for the public-record-browser-lookup core.
+// The address-search results grid publicly shows owner of record, appraised
+// value, and property type. The account detail page currently returns 403 to
+// automated access - it is attempted once and reported as blocked, never
+// bypassed, so the mailing address stays empty until DCAD allows it.
+async function dallasBrowserAppraisalSearch(page, parts, options = {}) {
+  if (!cleanText(parts && parts.street_number) || !cleanText(parts && parts.street_name)) {
+    return { status: 'skipped', blocked_reason: 'address_parts_incomplete', source_url: APPRAISAL_SEARCH_URL };
+  }
+  await page.goto(APPRAISAL_SEARCH_URL, { waitUntil: 'domcontentloaded' });
+  const searchPageText = cleanText(await page.textContent('body'));
+  if (BROWSER_BLOCKED_TEXT_RE.test(searchPageText)) {
+    return { status: 'blocked', blocked_reason: 'search_page_blocked', source_url: APPRAISAL_SEARCH_URL };
+  }
+  await page.fill('#txtAddrNum', parts.street_number);
+  await page.fill('#txtStName', parts.street_name);
+  await Promise.all([
+    page.waitForLoadState('domcontentloaded'),
+    page.click('#cmdSubmit')
+  ]);
+  const gridRows = await page.$$eval('a[href*="AcctDetail"]', (anchors) => anchors.map((anchor) => {
+    const row = anchor.closest('tr');
+    return {
+      href: anchor.getAttribute('href') || '',
+      link_text: (anchor.innerText || '').replace(/\s+/g, ' ').trim(),
+      cells: row ? Array.from(row.cells || []).map((cell) => (cell.innerText || '').replace(/\s+/g, ' ').trim()) : []
+    };
+  }));
+  if (!gridRows.length) {
+    const resultText = cleanText(await page.textContent('body'));
+    if (BROWSER_BLOCKED_TEXT_RE.test(resultText)) {
+      return { status: 'blocked', blocked_reason: 'results_page_blocked', source_url: page.url() };
+    }
+    return { status: 'no_visible_owner', blocked_reason: '', source_url: page.url() };
+  }
+  const best = gridRows.find((row) => row.link_text.toUpperCase().startsWith(`${parts.street_number} `)) || gridRows[0];
+  const owner = cleanText(best.cells[3]);
+  const appraisedValue = cleanText(best.cells[4]);
+  const propertyType = cleanText(best.cells[5]);
+  const recordUrl = new URL(best.href, APPRAISAL_SEARCH_URL).toString();
+  const linkSuffix = cleanText(best.link_text.split(' ').pop()).toUpperCase();
+  const addressSuffixMismatch = !!linkSuffix && !cleanText(parts.full_address).toUpperCase().includes(` ${linkSuffix}`);
+
+  // One honest attempt at the detail page for the mailing address.
+  let mailingAddress = '';
+  const blockedSources = [];
+  try {
+    const detailResponse = await page.goto(recordUrl, { waitUntil: 'domcontentloaded' });
+    const detailStatus = detailResponse ? detailResponse.status() : 0;
+    const detailText = cleanText(await page.textContent('body'));
+    if (detailStatus === 403 || detailStatus === 429 || BROWSER_BLOCKED_TEXT_RE.test(detailText)) {
+      blockedSources.push({ source: 'dcad_account_detail_page', url: recordUrl, reason: `detail_page_blocked_http_${detailStatus || 'wall'}` });
+    } else {
+      const mailingMatch = detailText.match(/mailing\s+address\s*:?\s*(.{8,140}?)(?:\s{2,}|legal\s+desc|property\s+site|owner|$)/i);
+      mailingAddress = cleanText(mailingMatch && mailingMatch[1]);
+    }
+  } catch (error) {
+    blockedSources.push({ source: 'dcad_account_detail_page', url: recordUrl, reason: `detail_page_failed:${cleanText(error && error.message).slice(0, 50)}` });
+  }
+
+  if (!owner) return { status: 'no_visible_owner', blocked_reason: '', source_url: page.url(), blocked_sources: blockedSources };
+  return {
+    status: 'owner_found',
+    owner_name: owner,
+    mailing_address: mailingAddress,
+    appraised_value: appraisedValue,
+    property_type: propertyType,
+    record_url: recordUrl,
+    account_reference: (best.href.match(/ID=([A-Za-z0-9]+)/) || [])[1] || '',
+    evidence_text: `DCAD address search result row: ${best.cells.filter(Boolean).join(' | ')}`,
+    address_suffix_mismatch: addressSuffixMismatch,
+    blocked_sources: blockedSources
+  };
+}
+
 module.exports = {
   county: 'Dallas',
   state: 'TX',
   appraisal_source_name: 'Dallas Central Appraisal District address search',
   appraisal_source_url: APPRAISAL_SEARCH_URL,
-  appraisalLookup: dallasAppraisalLookup
+  appraisalLookup: dallasAppraisalLookup,
+  browserAppraisalSearch: dallasBrowserAppraisalSearch
 };

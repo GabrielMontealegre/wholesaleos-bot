@@ -61,6 +61,8 @@ function buildFreePublicDealBoardPreviewInput(input = {}, options = {}) {
     enable_provider_search: true,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     free_hunter_caps: input.free_hunter_caps,
+    enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
+    official_lookup_caps: input.official_lookup_caps,
     preview_only: true,
     should_ingest: false,
     no_global_mutation: true
