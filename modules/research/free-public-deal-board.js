@@ -973,6 +973,29 @@ function foreclosureProofDiagnostics(results, proofRecords) {
   };
 }
 
+function pdfNoticeDiagnostics(results) {
+  const totals = {
+    pdf_notice_documents_fetched: 0,
+    pdf_notice_documents_parsed: 0,
+    pdf_notice_rows_extracted: 0,
+    pdf_notice_rows_with_address: 0,
+    pdf_notice_rows_with_sale_date: 0,
+    pdf_notice_parse_failures: 0
+  };
+  for (const result of Array.isArray(results) ? results : []) {
+    const diagnostics = result && result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
+    const summary = result && result.document_hunter_summary ||
+      diagnostics.document_hunter_summary ||
+      result && result.source_preview ||
+      diagnostics.live_source_preview ||
+      {};
+    for (const key of Object.keys(totals)) {
+      totals[key] += Number((result && result[key]) || (summary && summary[key]) || 0) || 0;
+    }
+  }
+  return totals;
+}
+
 async function collectSourceAdapterRecords(input, options, context) {
   if (input.enable_source_adapters === false || options.enable_source_adapters === false || hasExplicitInputRecords(input)) {
     return { records: [], diagnostics: { source_adapter_records_count: 0, source_adapter_candidate_count: 0, source_adapter_card_count: 0, source_adapter_results: [] } };
@@ -983,17 +1006,22 @@ async function collectSourceAdapterRecords(input, options, context) {
       ? options.mock_source_adapter_results
       : null;
   if (mockedResults) {
+    const candidateRecords = mockedResults.flatMap((result) => (Array.isArray(result && result.candidates) ? result.candidates : []).map((candidate) => candidateRecord(candidate, result)));
+    const cardRecords = mockedResults.flatMap((result) => (Array.isArray(result && result.cards) ? result.cards : []).map((card) => cardRecord(card, result)));
     const proofRecords = mockedResults.flatMap(sourceProofRecordsFromAdapterResult);
+    const records = candidateRecords.concat(cardRecords, proofRecords);
     const foreclosureDiagnostics = foreclosureProofDiagnostics(mockedResults, proofRecords);
+    const pdfDiagnostics = pdfNoticeDiagnostics(mockedResults);
     return {
-      records: proofRecords,
+      records,
       diagnostics: {
-        source_adapter_records_count: proofRecords.length,
-        source_adapter_candidate_count: 0,
-        source_adapter_card_count: 0,
+        source_adapter_records_count: records.length,
+        source_adapter_candidate_count: candidateRecords.length,
+        source_adapter_card_count: cardRecords.length,
         source_adapter_proof_record_count: proofRecords.length,
         source_adapter_results: mockedResults,
-        ...foreclosureDiagnostics
+        ...foreclosureDiagnostics,
+        ...pdfDiagnostics
       }
     };
   }
@@ -1034,6 +1062,7 @@ async function collectSourceAdapterRecords(input, options, context) {
     const proofRecords = (Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : []).flatMap(sourceProofRecordsFromAdapterResult);
     const records = candidateRecords.concat(cardRecords, proofRecords);
     const foreclosureDiagnostics = foreclosureProofDiagnostics(acquisition.adapter_results, proofRecords);
+    const pdfDiagnostics = pdfNoticeDiagnostics(acquisition.adapter_results);
     return {
       records,
       diagnostics: {
@@ -1044,7 +1073,8 @@ async function collectSourceAdapterRecords(input, options, context) {
         source_adapter_results: Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [],
         source_ids_attempted: Array.isArray(acquisition.source_ids_attempted) ? acquisition.source_ids_attempted : [],
         source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : [],
-        ...foreclosureDiagnostics
+        ...foreclosureDiagnostics,
+        ...pdfDiagnostics
       }
     };
   } catch (error) {
@@ -1399,6 +1429,12 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     foreclosure_rows_with_address_count: sourceAdapter.diagnostics.foreclosure_rows_with_address_count || 0,
     foreclosure_rows_with_sale_date_count: sourceAdapter.diagnostics.foreclosure_rows_with_sale_date_count || 0,
     foreclosure_parser_zero_candidate_count: sourceAdapter.diagnostics.foreclosure_parser_zero_candidate_count || 0,
+    pdf_notice_documents_fetched: sourceAdapter.diagnostics.pdf_notice_documents_fetched || 0,
+    pdf_notice_documents_parsed: sourceAdapter.diagnostics.pdf_notice_documents_parsed || 0,
+    pdf_notice_rows_extracted: sourceAdapter.diagnostics.pdf_notice_rows_extracted || 0,
+    pdf_notice_rows_with_address: sourceAdapter.diagnostics.pdf_notice_rows_with_address || 0,
+    pdf_notice_rows_with_sale_date: sourceAdapter.diagnostics.pdf_notice_rows_with_sale_date || 0,
+    pdf_notice_parse_failures: sourceAdapter.diagnostics.pdf_notice_parse_failures || 0,
     serper_enrichment_attempts: repairDiagnostics.identity_repair_attempted_count,
     property_link_repair_success_count: repairDiagnostics.property_link_repair_success_count,
     bad_address_rejected_count: quality.bad_address_rejected_count,
@@ -1432,6 +1468,12 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       foreclosure_rows_with_address_count: sourceAdapter.diagnostics.foreclosure_rows_with_address_count || 0,
       foreclosure_rows_with_sale_date_count: sourceAdapter.diagnostics.foreclosure_rows_with_sale_date_count || 0,
       foreclosure_parser_zero_candidate_count: sourceAdapter.diagnostics.foreclosure_parser_zero_candidate_count || 0,
+      pdf_notice_documents_fetched: sourceAdapter.diagnostics.pdf_notice_documents_fetched || 0,
+      pdf_notice_documents_parsed: sourceAdapter.diagnostics.pdf_notice_documents_parsed || 0,
+      pdf_notice_rows_extracted: sourceAdapter.diagnostics.pdf_notice_rows_extracted || 0,
+      pdf_notice_rows_with_address: sourceAdapter.diagnostics.pdf_notice_rows_with_address || 0,
+      pdf_notice_rows_with_sale_date: sourceAdapter.diagnostics.pdf_notice_rows_with_sale_date || 0,
+      pdf_notice_parse_failures: sourceAdapter.diagnostics.pdf_notice_parse_failures || 0,
       source_adapter: sourceAdapter.diagnostics,
       board_blocker_summary: boardBlockerSummary,
       caps,

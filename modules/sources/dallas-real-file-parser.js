@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
+const propertyIdentity = require('../research/property-identity');
 
 const MAX_FILE_LINKS = 8;
 const MAX_FILE_BYTES = 6 * 1024 * 1024;
@@ -32,6 +33,12 @@ const SAFE_LOCAL_FILE_EXTENSIONS = new Set([
 const BLOCKED_PAGE_RE = /\b(captcha|human verification|verify you are human|access denied|forbidden|login required|sign in|register to bid|create an account)\b/i;
 const JUNK_ROW_RE = /\b(contact us|phone directory|public information request|privacy policy|terms of use|site map|newsletter|department directory)\b/i;
 const PARTIAL_ADDRESS_RE = /\b(?:property\s+address|address)\s*[:#-]\s*([^|;\n]{2,100})/i;
+const DALLAS_NOTICE_RE = /\b(?:notice\s+of\s+(?:substitute\s+)?trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale)\b/i;
+const STREET_ADDRESS_RE = /\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?(?:\s*,?\s+(?:Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park))?(?:\s*,?\s+(?:TX|Texas))?(?:\s*,?\s+\d{5}(?:-\d{4})?)?/ig;
+const DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
+const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
+const PARCEL_RE = /\b(?:parcel|account|acct|apn|property\s+id)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
+const OWNER_RE = /\b(?:borrower|mortgagor|grantor|debtor|owner)\s*(?:name)?\s*[:#-]?\s*([^|;\n]{2,100})/i;
 
 function nowIso() {
   return new Date().toISOString();
@@ -39,6 +46,136 @@ function nowIso() {
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+}
+
+function canonicalDallasAddress(value) {
+  let text = cleanText(value)
+    .replace(/\s+,/g, ',')
+    .replace(/\b(Texas)\b/i, 'TX')
+    .replace(/\s{2,}/g, ' ');
+  text = text.replace(/\b((?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?)\s+(Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park)\s*,?\s+(TX)\s+(\d{5}(?:-\d{4})?)\b/i, '$1, $2, $3 $4');
+  if (!text) return '';
+  const parsed = propertyIdentity.parseAddress(text);
+  if (parsed && parsed.complete && parsed.full_address) return cleanText(parsed.full_address);
+  return propertyIdentity.isCompleteAddress(text) ? propertyIdentity.canonicalAddress(text) : '';
+}
+
+function labeledValue(text, pattern) {
+  const match = String(text || '').replace(/\r/g, '\n').match(pattern);
+  return cleanText(match && match[1])
+    .replace(/\b(?:property\s+address|address|sale|date|case|cause|parcel|account|substitute|trustee)\b.*$/i, '')
+    .trim();
+}
+
+function saleDateFromNoticeText(text) {
+  const source = cleanText(text);
+  const labeled = source.match(/\b(?:sale\s+date|date\s+of\s+sale|trustee\s+sale\s+date|foreclosure\s+sale\s+date|auction\s+date)\b\s*[:#-]?\s*([^|;\n]{4,80})/i);
+  const labeledDate = cleanText(labeled && labeled[1]).match(DATE_RE);
+  if (labeledDate) return cleanText(labeledDate[0]);
+  if (!DALLAS_NOTICE_RE.test(source) && !/\b(?:sale|auction|foreclosure)\b/i.test(source)) return '';
+  const anyDate = source.match(DATE_RE);
+  return cleanText(anyDate && anyDate[0]);
+}
+
+function noticeWindowForAddress(text, addressIndex) {
+  const source = String(text || '');
+  const before = source.slice(0, Math.max(0, addressIndex));
+  const after = source.slice(addressIndex);
+  const markerRe = /notice\s+of\s+(?:substitute\s+)?trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale/ig;
+  let start = Math.max(0, addressIndex - 1400);
+  let match;
+  while ((match = markerRe.exec(before))) start = Math.max(start, match.index);
+  markerRe.lastIndex = 0;
+  const next = markerRe.exec(after.slice(80));
+  const end = next ? addressIndex + 80 + next.index : Math.min(source.length, addressIndex + 1800);
+  return cleanText(source.slice(start, end));
+}
+
+function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
+  const source = String(text || '').replace(/\r/g, '\n');
+  if (!DALLAS_NOTICE_RE.test(source) && !/\b(?:property\s+address|date\s+of\s+sale|sale\s+date)\b/i.test(source)) return [];
+  const rows = [];
+  const seen = new Set();
+  STREET_ADDRESS_RE.lastIndex = 0;
+  let match;
+  while ((match = STREET_ADDRESS_RE.exec(source))) {
+    const address = canonicalDallasAddress(match[0]);
+    if (!address) continue;
+    if (/\b(500\s+elm\s+street|133\s+n\.?\s+riverfront\s+boulevard|1201\s+elm\s+street)\b/i.test(address)) continue;
+    const windowText = noticeWindowForAddress(source, match.index);
+    const saleDate = saleDateFromNoticeText(windowText);
+    const key = `${context.source_proof_url}|${address}|${saleDate}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const ownerName = labeledValue(windowText, OWNER_RE);
+    const caseNumber = labeledValue(windowText, CASE_RE);
+    const parcel = labeledValue(windowText, PARCEL_RE);
+    const proofText = [
+      `Property Address: ${address}`,
+      saleDate ? `Sale Date: ${saleDate}` : '',
+      ownerName ? `Borrower: ${ownerName}` : '',
+      windowText
+    ].filter(Boolean).join(' | ');
+    const missing = [];
+    if (!saleDate) missing.push('sale or auction date');
+    if (!caseNumber && !parcel) missing.push('parcel or case number');
+    rows.push({
+      id: `DAL-PDF-NOTICE-${safeId(key)}`,
+      address,
+      property_address: address,
+      county: 'Dallas',
+      state: 'TX',
+      owner_name: ownerName,
+      borrower_name: ownerName,
+      case_number: caseNumber,
+      parcel,
+      parcel_id: parcel,
+      apn: parcel,
+      sale_date: saleDate,
+      auction_date: saleDate,
+      event_type: 'Notice of Substitute Trustee Sale',
+      source_text: proofText,
+      source_excerpt: proofText.slice(0, 500),
+      source_page_text: proofText,
+      source_url: cleanText(context.source_url),
+      source_document_url: cleanText(context.source_proof_url),
+      source_record_url: cleanText(context.source_proof_url),
+      source_proof_url: cleanText(context.source_proof_url),
+      source_reference: cleanText(context.source_reference || 'official Dallas foreclosure PDF notice'),
+      source_proof_text: proofText.slice(0, 800),
+      raw_text: proofText.slice(0, 1200),
+      missing_evidence: missing,
+      extraction_method: 'dallas_foreclosure_pdf_notice_parser',
+      extraction_confidence: saleDate ? 'Medium' : 'Low',
+      source_file_type: context.source_file_type,
+      preview_only: true,
+      should_ingest: false
+    });
+    if (rows.length >= (context.max_candidates || MAX_CANDIDATES)) break;
+  }
+  return rows;
+}
+
+function applyPdfNoticeAttemptDiagnostics(attempt, candidates) {
+  const isPdf = cleanText(attempt && (attempt.link_type || attempt.file_type)) === 'pdf_file';
+  const rows = Array.isArray(candidates) ? candidates : [];
+  attempt.pdf_notice_document_fetched = isPdf && (!attempt.http_status || (attempt.http_status >= 200 && attempt.http_status < 300)) ? 1 : 0;
+  attempt.pdf_notice_document_parsed = isPdf && attempt.status === 'parsed' ? 1 : 0;
+  attempt.pdf_notice_rows_extracted = isPdf ? rows.length : 0;
+  attempt.pdf_notice_rows_with_address = isPdf ? rows.filter((candidate) => !!cleanText(candidate && (candidate.address || candidate.property_address))).length : 0;
+  attempt.pdf_notice_rows_with_sale_date = isPdf ? rows.filter((candidate) => !!cleanText(candidate && (candidate.sale_date || candidate.event_date || candidate.auction_date))).length : 0;
+  attempt.pdf_notice_parse_failure = isPdf && (attempt.status === 'failed' || attempt.status === 'blocked' || /pdf_parse_failed/i.test(cleanText(attempt.blocked_reason))) ? 1 : 0;
+}
+
+function aggregatePdfNoticeDiagnostics(attempts) {
+  return {
+    pdf_notice_documents_fetched: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_document_fetched || 0), 0),
+    pdf_notice_documents_parsed: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_document_parsed || 0), 0),
+    pdf_notice_rows_extracted: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_rows_extracted || 0), 0),
+    pdf_notice_rows_with_address: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_rows_with_address || 0), 0),
+    pdf_notice_rows_with_sale_date: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_rows_with_sale_date || 0), 0),
+    pdf_notice_parse_failures: (Array.isArray(attempts) ? attempts : []).reduce((sum, attempt) => sum + Number(attempt.pdf_notice_parse_failure || 0), 0)
+  };
 }
 
 function safeId(value) {
@@ -261,6 +398,7 @@ async function parseLocalFileInput(filePath, source, options = {}) {
     attempt.status = 'blocked';
     attempt.blocked_reason = blocked.blocked_reason || 'needs_file_adapter';
     if (blocked.error) attempt.error = blocked.error;
+    applyPdfNoticeAttemptDiagnostics(attempt, []);
     return { attempt, candidates: [], file_meta: {
       basename: inspected.file_basename,
       file_type: inspected.file_type,
@@ -281,6 +419,7 @@ async function parseLocalFileInput(filePath, source, options = {}) {
   });
   attempt.candidates_found = candidates.length;
   if (!candidates.length) attempt.blocked_reason = 'no_property_rows_found';
+  applyPdfNoticeAttemptDiagnostics(attempt, candidates);
   return {
     attempt,
     candidates,
@@ -412,6 +551,9 @@ function textBlocksFromPlainText(text) {
 
 function candidatesFromBlocks(blocks, context) {
   const joined = (Array.isArray(blocks) ? blocks : []).join('\n');
+  const noticeCandidates = extractDallasForeclosureNoticeRowsFromText(joined, context);
+  if (noticeCandidates.length) return noticeCandidates;
+
   const candidates = browserFileEvidenceAdapter.extractCandidateRowsFromText(joined, {
     source_url: context.source_url,
     source_proof_url: context.source_proof_url,
@@ -421,6 +563,8 @@ function candidatesFromBlocks(blocks, context) {
     id: candidate.id || `DAL-REAL-FILE-${safeId(`${context.source_proof_url}|${candidate.address}|${candidate.case_number}|${candidate.parcel}|${candidate.sale_date}`)}`,
     extraction_method: 'dallas_real_file_parser',
     source_file_type: context.source_file_type,
+    source_document_url: cleanText(candidate.source_document_url || context.source_proof_url),
+    source_proof_url: cleanText(candidate.source_proof_url || candidate.source_record_url || context.source_proof_url),
     case_number: cleanText(candidate.case_number).replace(/^(?:no|number)\s*:\s*/i, ''),
     parcel: cleanText(candidate.parcel).replace(/^(?:no|number|id)\s*:\s*/i, ''),
     apn: cleanText(candidate.apn).replace(/^(?:no|number|id)\s*:\s*/i, ''),
@@ -539,6 +683,7 @@ async function parseOfficialFileLink(link, source, options = {}) {
     attempt.status = 'blocked';
     attempt.blocked_reason = blocked.blocked_reason || 'needs_file_adapter';
     if (blocked.error) attempt.error = blocked.error;
+    applyPdfNoticeAttemptDiagnostics(attempt, []);
     return { attempt, candidates: [] };
   }
 
@@ -554,6 +699,7 @@ async function parseOfficialFileLink(link, source, options = {}) {
   });
   attempt.candidates_found = candidates.length;
   if (!candidates.length) attempt.blocked_reason = 'no_property_rows_found';
+  applyPdfNoticeAttemptDiagnostics(attempt, candidates);
   return { attempt, candidates };
 }
 
@@ -616,6 +762,7 @@ async function runDallasRealFileParser(options = {}) {
   const blockedCount = attempts.filter((attempt) => attempt.status === 'blocked' || attempt.status === 'failed').length;
   const rowsChecked = attempts.reduce((sum, attempt) => sum + Number(attempt.rows_checked || 0), 0);
   const textBlocksChecked = attempts.reduce((sum, attempt) => sum + Number(attempt.text_blocks_checked || 0), 0);
+  const pdfNoticeDiagnostics = aggregatePdfNoticeDiagnostics(attempts);
   const status = candidates.length
     ? 'candidates_found'
     : blockedReasons.includes('needs_file_adapter')
@@ -647,6 +794,7 @@ async function runDallasRealFileParser(options = {}) {
     candidates,
     candidates_extracted: candidates.length,
     attempts,
+    ...pdfNoticeDiagnostics,
     blocked_reason: candidates.length ? '' : (blockedReasons[0] || status),
     captured_at: options.captured_at || nowIso(),
     preview_only: true,
