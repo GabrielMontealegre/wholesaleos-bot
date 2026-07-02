@@ -3,6 +3,7 @@
 const dallasForeclosureAcquisitionAdapter = require('./dallas-foreclosure-acquisition-adapter');
 const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acquisition-adapter');
 const dallasCraigslistOwnerAcquisitionAdapter = require('./dallas-craigslist-owner-acquisition-adapter');
+const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
@@ -35,6 +36,33 @@ const ADAPTERS = {
     source_name: 'Dallas Craigslist owner real-estate posts',
     adapter: dallasCraigslistOwnerAcquisitionAdapter,
     run: dallasCraigslistOwnerAcquisitionAdapter.runDallasCraigslistOwnerAcquisitionAdapter
+  },
+  tx_tarrant_county_foreclosure_notices: {
+    source_id: 'tx_tarrant_county_foreclosure_notices',
+    source_family: 'preforeclosure_trustee_notice',
+    adapter_id: 'tx_county_foreclosure_acquisition_adapter',
+    adapter_family: 'pdf_list_adapter',
+    source_name: 'Tarrant County Clerk Foreclosure Notices',
+    adapter: txCountyForeclosureAcquisitionAdapter,
+    run: txCountyForeclosureAcquisitionAdapter.runTxCountyForeclosureAcquisitionAdapter
+  },
+  tx_collin_county_foreclosure_notices: {
+    source_id: 'tx_collin_county_foreclosure_notices',
+    source_family: 'preforeclosure_trustee_notice',
+    adapter_id: 'tx_county_foreclosure_acquisition_adapter',
+    adapter_family: 'pdf_list_adapter',
+    source_name: 'Collin County Foreclosure Notices',
+    adapter: txCountyForeclosureAcquisitionAdapter,
+    run: txCountyForeclosureAcquisitionAdapter.runTxCountyForeclosureAcquisitionAdapter
+  },
+  tx_denton_county_foreclosure_notices: {
+    source_id: 'tx_denton_county_foreclosure_notices',
+    source_family: 'preforeclosure_trustee_notice',
+    adapter_id: 'tx_county_foreclosure_acquisition_adapter',
+    adapter_family: 'pdf_list_adapter',
+    source_name: 'Denton County Foreclosure Sale Notices',
+    adapter: txCountyForeclosureAcquisitionAdapter,
+    run: txCountyForeclosureAcquisitionAdapter.runTxCountyForeclosureAcquisitionAdapter
   }
 };
 

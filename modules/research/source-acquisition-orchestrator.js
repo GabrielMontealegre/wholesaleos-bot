@@ -96,7 +96,7 @@ function selectAcquisitionSources(job, catalog) {
   if (!selected.length && !explicitlyRequested) {
     selected = (Array.isArray(catalog) ? catalog : []).filter((source) => /dallas county clerk foreclosure notices/i.test(source.source_name || source.source_id));
   }
-  return selected.slice(0, 5);
+  return selected.slice(0, 8);
 }
 
 function normalizeAdapterResult(result) {
@@ -105,6 +105,7 @@ function normalizeAdapterResult(result) {
   return {
     source_id: cleanText(result && result.source_id),
     source_name: cleanText(result && result.source_name),
+    county: cleanText(result && result.county),
     status: cleanText(result && result.status),
     attempted: result && result.attempted === true,
     candidate_count: candidateList.length,

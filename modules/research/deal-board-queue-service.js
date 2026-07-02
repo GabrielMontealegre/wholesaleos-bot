@@ -31,7 +31,10 @@ const MAX_BATCH_LIMIT = 25;
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
-  'tx_dallas_fsbo_contact_first'
+  'tx_dallas_fsbo_contact_first',
+  'tx_tarrant_county_foreclosure_notices',
+  'tx_collin_county_foreclosure_notices',
+  'tx_denton_county_foreclosure_notices'
 ]);
 
 function cleanText(value) {
@@ -95,6 +98,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     headline: cleanText(deal.headline),
     normalized_address: cleanText(deal.normalized_address),
     city: cleanText(deal.city),
+    county: cleanText(deal.county),
     state: cleanText(deal.state),
     quality_bucket: cleanText(deal.quality_bucket),
     source_family: cleanText(deal.source_family),
@@ -155,6 +159,7 @@ function sourceCoverageFromPreview(preview) {
   return adapterResults.map((result) => ({
     source_id: cleanText(result && result.source_id),
     source_name: cleanText(result && result.source_name),
+    county: cleanText(result && result.county || (result && result.diagnostics && result.diagnostics.county)),
     status: cleanText(result && result.status),
     candidate_count: Number(result && result.candidate_count || 0) || 0,
     blocked_reason: cleanText(result && result.blocked_reason)
