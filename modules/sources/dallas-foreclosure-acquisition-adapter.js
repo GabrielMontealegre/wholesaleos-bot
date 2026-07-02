@@ -538,11 +538,11 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     const seenRaw = new Set();
     const addRaw = (candidate) => {
       const key = cleanText([
-        candidate && candidate.source_proof_url,
-        candidate && (candidate.property_address || candidate.address),
-        candidate && candidate.case_number,
+        candidate && (candidate.source_proof_url || candidate.source_document_url || candidate.source_record_url || candidate.source_url),
+        candidate && (candidate.property_address || candidate.address || candidate.normalized_address),
+        candidate && (candidate.case_number || candidate.source_row_reference),
         candidate && (candidate.parcel_id || candidate.parcel_or_account)
-      ].filter(Boolean).join('|')).toLowerCase() || cleanText(candidate && candidate.id).toLowerCase();
+      ].filter(Boolean).join('|')).toLowerCase() || cleanText(candidate && (candidate.id || candidate.candidate_id)).toLowerCase();
       if (!key || seenRaw.has(key)) return;
       seenRaw.add(key);
       combinedRawCandidates.push(candidate);
@@ -706,11 +706,11 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     const seenRaw = new Set();
     const addRaw = (candidate) => {
       const key = cleanText([
-        candidate && candidate.source_proof_url,
-        candidate && (candidate.property_address || candidate.address),
-        candidate && candidate.case_number,
-        candidate && candidate.parcel_id || candidate && candidate.parcel_or_account
-      ].filter(Boolean).join('|')).toLowerCase() || cleanText(candidate && candidate.id).toLowerCase();
+        candidate && (candidate.source_proof_url || candidate.source_document_url || candidate.source_record_url || candidate.source_url),
+        candidate && (candidate.property_address || candidate.address || candidate.normalized_address),
+        candidate && (candidate.case_number || candidate.source_row_reference),
+        candidate && (candidate.parcel_id || candidate.parcel_or_account)
+      ].filter(Boolean).join('|')).toLowerCase() || cleanText(candidate && (candidate.id || candidate.candidate_id)).toLowerCase();
       if (!key || seenRaw.has(key)) return;
       seenRaw.add(key);
       combinedRawCandidates.push(candidate);
