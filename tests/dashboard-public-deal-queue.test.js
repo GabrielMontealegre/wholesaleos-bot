@@ -92,8 +92,11 @@ function mockDeal(overrides) {
   assert.deepStrictEqual(previewCalls[0].source_ids, [
     'tx_dallas_county_clerk_foreclosure_notices',
     'tx_dallas_craigslist_owner_posts',
-    'tx_dallas_fsbo_contact_first'
-  ], 'queue must explicitly request all registered free lanes');
+    'tx_dallas_fsbo_contact_first',
+    'tx_tarrant_county_foreclosure_notices',
+    'tx_collin_county_foreclosure_notices',
+    'tx_denton_county_foreclosure_notices'
+  ], 'queue must explicitly request all registered free lanes including DFW counties');
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);

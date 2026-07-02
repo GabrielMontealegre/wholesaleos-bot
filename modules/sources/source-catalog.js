@@ -72,6 +72,53 @@ const SECONDARY_DALLAS_SOURCES = [
   }
 ];
 
+// DFW regional county foreclosure lanes (config lives in
+// tx-county-foreclosure-source-profiles; adapter is generic).
+const DFW_COUNTY_SOURCES = [
+  {
+    source_id: 'tx_tarrant_county_foreclosure_notices',
+    source_name: 'Tarrant County Clerk Foreclosure Notices',
+    source_family: 'preforeclosure_trustee_notice',
+    county: 'Tarrant',
+    priority_score: 88,
+    official_source: true,
+    source_type: 'official county clerk foreclosure postings',
+    source_url: 'https://www.tarrantcountytx.gov/en/county-clerk/real-estate-records/foreclosures.html',
+    readiness: 'Preview adapter ready',
+    use_policy: 'official_source_first',
+    preview_only: true,
+    should_ingest: false
+  },
+  {
+    source_id: 'tx_collin_county_foreclosure_notices',
+    source_name: 'Collin County Foreclosure Notices',
+    source_family: 'preforeclosure_trustee_notice',
+    county: 'Collin',
+    priority_score: 87,
+    official_source: true,
+    source_type: 'official county foreclosure postings',
+    source_url: 'https://www.collincountytx.gov/government/sales-and-auctions',
+    readiness: 'Preview adapter ready',
+    use_policy: 'official_source_first',
+    preview_only: true,
+    should_ingest: false
+  },
+  {
+    source_id: 'tx_denton_county_foreclosure_notices',
+    source_name: 'Denton County Foreclosure Sale Notices',
+    source_family: 'preforeclosure_trustee_notice',
+    county: 'Denton',
+    priority_score: 86,
+    official_source: true,
+    source_type: 'official county foreclosure postings',
+    source_url: 'https://www.dentoncounty.gov/293/Foreclosure-Information',
+    readiness: 'Preview adapter ready',
+    use_policy: 'official_source_first',
+    preview_only: true,
+    should_ingest: false
+  }
+];
+
 function normalizeCatalogSource(source) {
   const item = clone(source || {});
   item.source_family = cleanText(item.source_family || item.category_key || item.category || 'unknown');
@@ -91,8 +138,10 @@ function buildSourceCatalog(input = {}) {
   const base = /dallas/i.test(county) && state === 'TX'
     ? dallasPriority.buildDallasSourcePriorityPlan({}).sources
     : [];
+  const dfwMarket = state === 'TX' && /dallas|tarrant|collin|denton|fort worth/i.test(`${county} ${cleanText(input.city || '')}`);
   return base
     .concat(/dallas/i.test(county) && state === 'TX' ? SECONDARY_DALLAS_SOURCES : [])
+    .concat(dfwMarket ? DFW_COUNTY_SOURCES : [])
     .map(normalizeCatalogSource)
     .sort((a, b) => b.priority_score - a.priority_score || a.source_name.localeCompare(b.source_name));
 }
@@ -105,5 +154,6 @@ function sourceById(sourceId, input = {}) {
 module.exports = {
   buildSourceCatalog,
   sourceById,
-  SECONDARY_DALLAS_SOURCES
+  SECONDARY_DALLAS_SOURCES,
+  DFW_COUNTY_SOURCES
 };
