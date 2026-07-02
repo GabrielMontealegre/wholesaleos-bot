@@ -100,8 +100,10 @@ function isSafeDallasEvidenceUrl(url) {
   }
 }
 
-function discoverEvidenceLinksFromHtml(html, baseUrl) {
-  const links = [];
+function discoverEvidenceLinksFromHtml(html, baseUrl, options = {}) {
+  const maxLinks = Math.max(1, Math.min(Number(options.max_links) || MAX_EVIDENCE_LINKS, 200));
+  const fileLinks = [];
+  const pageLinks = [];
   const seen = new Set();
   const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
@@ -122,10 +124,10 @@ function discoverEvidenceLinksFromHtml(html, baseUrl) {
     const key = url.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    links.push({ url, label, link_type: type });
-    if (links.length >= MAX_EVIDENCE_LINKS) break;
+    (type === 'html_page' || type === 'unknown' ? pageLinks : fileLinks).push({ url, label, link_type: type });
+    if (fileLinks.length >= maxLinks) break;
   }
-  return links;
+  return fileLinks.concat(pageLinks).slice(0, maxLinks);
 }
 
 function normalizeAddress(value) {
