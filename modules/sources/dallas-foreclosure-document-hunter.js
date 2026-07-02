@@ -184,8 +184,8 @@ function normalizeCandidateList(candidates, context) {
   const seen = new Map();
   for (const raw of Array.isArray(candidates) ? candidates : []) {
     const candidate = propertyCandidate.normalizePropertyCandidate(raw, context);
-    const key = cleanText([
-      candidate.normalized_address || candidate.property_address,
+    const addressKey = cleanText(candidate.normalized_address || candidate.property_address).toLowerCase();
+    const key = addressKey || cleanText([
       candidate.source_url || candidate.source_document_url,
       candidate.source_row_reference || candidate.parcel_or_account
     ].filter(Boolean).join('|')).toLowerCase() || candidate.candidate_id;
@@ -195,8 +195,8 @@ function normalizeCandidateList(candidates, context) {
       seen.set(key, candidate);
       continue;
     }
-    const existingRank = Number(existing.identity_confidence || 0) + Number(existing.source_confidence || 0) + Number(existing.motivation_confidence || 0) + Number(existing.contact_confidence || 0);
-    const currentRank = Number(candidate.identity_confidence || 0) + Number(candidate.source_confidence || 0) + Number(candidate.motivation_confidence || 0) + Number(candidate.contact_confidence || 0);
+    const existingRank = Number(existing.identity_confidence || 0) + Number(existing.source_confidence || 0) + Number(existing.motivation_confidence || 0) + Number(existing.contact_confidence || 0) + (cleanText(existing.source_document_url) ? 25 : 0);
+    const currentRank = Number(candidate.identity_confidence || 0) + Number(candidate.source_confidence || 0) + Number(candidate.motivation_confidence || 0) + Number(candidate.contact_confidence || 0) + (cleanText(candidate.source_document_url) ? 25 : 0);
     if (currentRank >= existingRank) seen.set(key, candidate);
   }
   return Array.from(seen.values());
@@ -392,6 +392,12 @@ async function runDallasForeclosureDocumentHunter(options = {}) {
     document_urls_parsed_count: sourcePreview.document_urls_parsed_count,
     document_urls_skipped_count: sourcePreview.document_urls_skipped_count,
     candidate_count: combinedCandidates.length,
+    pdf_notice_documents_fetched: Number(parserResult.pdf_notice_documents_fetched || 0) || 0,
+    pdf_notice_documents_parsed: Number(parserResult.pdf_notice_documents_parsed || 0) || 0,
+    pdf_notice_rows_extracted: Number(parserResult.pdf_notice_rows_extracted || 0) || 0,
+    pdf_notice_rows_with_address: Number(parserResult.pdf_notice_rows_with_address || 0) || 0,
+    pdf_notice_rows_with_sale_date: Number(parserResult.pdf_notice_rows_with_sale_date || 0) || 0,
+    pdf_notice_parse_failures: Number(parserResult.pdf_notice_parse_failures || 0) || 0,
     evidence_links_found: combinedDiscoveredLinks.length,
     phrase_candidate_seen: countByPredicate(combinedCandidates, (candidate) => !!cleanText(candidate.motivation_phrase || candidate.motivation_evidence_text)),
     status_candidate_seen: countByPredicate(combinedCandidates, (candidate) => !!cleanText(candidate.current_status || candidate.status_evidence_text)),
@@ -439,6 +445,12 @@ async function runDallasForeclosureDocumentHunter(options = {}) {
     document_urls_found: sourcePreview.document_urls_found,
     document_urls_parsed: documentUrlsParsed,
     document_urls_skipped: documentUrlsSkipped,
+    pdf_notice_documents_fetched: documentHunterSummary.pdf_notice_documents_fetched,
+    pdf_notice_documents_parsed: documentHunterSummary.pdf_notice_documents_parsed,
+    pdf_notice_rows_extracted: documentHunterSummary.pdf_notice_rows_extracted,
+    pdf_notice_rows_with_address: documentHunterSummary.pdf_notice_rows_with_address,
+    pdf_notice_rows_with_sale_date: documentHunterSummary.pdf_notice_rows_with_sale_date,
+    pdf_notice_parse_failures: documentHunterSummary.pdf_notice_parse_failures,
     source_preview: sourcePreview,
     document_hunter_summary: documentHunterSummary,
     candidates: combinedCandidates,

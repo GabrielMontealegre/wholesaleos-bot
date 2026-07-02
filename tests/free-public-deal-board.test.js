@@ -376,6 +376,67 @@ const rejectedRecords = [
     assert.strictEqual(foreclosureEvidenceRows.free_public_deals[0].verified_sold_comp_count, 0);
     assert.ok(foreclosureEvidenceRows.free_public_deals.some((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY' && !deal.normalized_address));
 
+    const pdfNoticeRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_dallas_county_clerk_foreclosure_notices',
+        source_name: 'Dallas County Clerk Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+        status: 'available',
+        candidate_count: 2,
+        candidates: [{
+          normalized_address: '9100 Hunter Rd, Dallas, TX 75228',
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Dallas County Clerk Foreclosure Notices',
+          source_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Dallas_1.pdf',
+          source_document_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Dallas_1.pdf',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 9100 Hunter Rd Dallas, TX 75228',
+          status_evidence_text: 'Sale Date: 07/02/2026',
+          sale_date: '07/02/2026',
+          owner_name_candidate: 'Hunter Buyer'
+        }, {
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Dallas County Clerk Foreclosure Notices',
+          source_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Dallas_1.pdf',
+          source_document_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Dallas_1.pdf',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+          status_evidence_text: 'Sale Date: 07/02/2026',
+          sale_date: '07/02/2026'
+        }],
+        document_hunter_summary: {
+          candidate_count: 2,
+          pdf_notice_documents_fetched: 1,
+          pdf_notice_documents_parsed: 1,
+          pdf_notice_rows_extracted: 2,
+          pdf_notice_rows_with_address: 1,
+          pdf_notice_rows_with_sale_date: 2,
+          pdf_notice_parse_failures: 0
+        }
+      }]
+    }, { fetch_impl: fetchImpl });
+    assert.strictEqual(pdfNoticeRows.pdf_notice_documents_fetched, 1);
+    assert.strictEqual(pdfNoticeRows.pdf_notice_documents_parsed, 1);
+    assert.strictEqual(pdfNoticeRows.pdf_notice_rows_extracted, 2);
+    assert.strictEqual(pdfNoticeRows.pdf_notice_rows_with_address, 1);
+    assert.strictEqual(pdfNoticeRows.pdf_notice_rows_with_sale_date, 2);
+    assert.strictEqual(pdfNoticeRows.pdf_notice_parse_failures, 0);
+    assert.strictEqual(pdfNoticeRows.diagnostics.source_adapter.source_adapter_candidate_count, 2);
+    const inspectNowPdfRow = pdfNoticeRows.free_public_deals.find((deal) => deal.normalized_address === '9100 Hunter Rd, Dallas, TX 75228');
+    assert.ok(inspectNowPdfRow);
+    assert.strictEqual(inspectNowPdfRow.quality_bucket, 'INSPECT_NOW');
+    assert.strictEqual(inspectNowPdfRow.source_document_url, 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/March/Dallas_1.pdf');
+    assert.strictEqual(inspectNowPdfRow.best_link_to_click_first, inspectNowPdfRow.source_document_url);
+    assert.strictEqual(inspectNowPdfRow.owner_name_if_visible, 'Hunter Buyer');
+    const incompletePdfRow = pdfNoticeRows.free_public_deals.find((deal) => !deal.normalized_address);
+    assert.ok(incompletePdfRow);
+    assert.strictEqual(incompletePdfRow.quality_bucket, 'SOURCE_PROOF_ONLY');
+    assert.strictEqual(incompletePdfRow.maps_url, null);
+    assert.strictEqual(incompletePdfRow.contact_route_if_visible, '');
+    assert.strictEqual(incompletePdfRow.verified_sold_comp_count, 0);
+
     const landingFallback = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
       mock_source_adapter_results: [{
@@ -405,7 +466,7 @@ const rejectedRecords = [
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + 8);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);

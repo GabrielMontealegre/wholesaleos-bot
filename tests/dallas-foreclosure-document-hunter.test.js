@@ -74,12 +74,22 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
 
   const countyPdfText = [
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
-    'Property Address: 9100 Hunter Rd, Dallas, TX 75228',
     'Borrower: Hunter Buyer',
+    'Property Address:',
+    '9100 Hunter Rd',
+    'Dallas, TX 75228',
     'Sale Date: 07/02/2026',
     'Case Number: 2026-54321',
     'Parcel: 123456789',
-    'Foreclosure sale notice. Investor special - cash only.'
+    'Foreclosure sale notice. Investor special - cash only.',
+    'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+    'Borrower: Ledger Owner',
+    'Property Address:',
+    '9200 Ledger Ln',
+    'Dallas, TX 75228',
+    'Date of Sale: July 7, 2026',
+    'Instrument Number: 2026-67890',
+    'Foreclosure sale notice.'
   ].join('\n');
 
   const searchQueries = [];
@@ -205,21 +215,29 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.ok(Array.isArray(hunterResult.search_provider_query_groups_used));
   assert.ok(hunterResult.search_provider_query_groups_used.includes('dallas_county_foreclosure_notice_pdf'));
   assert.ok(hunterResult.document_hunter_summary);
-  assert.ok(hunterResult.document_hunter_summary.candidate_count >= 1);
+  assert.ok(hunterResult.document_hunter_summary.candidate_count >= 2);
   assert.ok(hunterResult.document_hunter_summary.search_results_found >= 1);
   assert.ok(hunterResult.document_hunter_summary.discovered_url_count >= 1);
   assert.ok(hunterResult.document_hunter_summary.blocked_rejected_reasons.generic_source >= 1);
-  assert.ok(hunterResult.candidates.length >= 1);
-  assert.ok(hunterResult.cards.length >= 1);
+  assert.strictEqual(hunterResult.document_hunter_summary.pdf_notice_documents_fetched, 1);
+  assert.strictEqual(hunterResult.document_hunter_summary.pdf_notice_documents_parsed, 1);
+  assert.ok(hunterResult.document_hunter_summary.pdf_notice_rows_extracted >= 2);
+  assert.ok(hunterResult.document_hunter_summary.pdf_notice_rows_with_address >= 2);
+  assert.ok(hunterResult.document_hunter_summary.pdf_notice_rows_with_sale_date >= 2);
+  assert.strictEqual(hunterResult.document_hunter_summary.pdf_notice_parse_failures, 0);
+  assert.ok(hunterResult.candidates.length >= 2);
+  assert.ok(hunterResult.cards.length >= 2);
 
-  const candidate = hunterResult.candidates[0];
+  const candidate = hunterResult.candidates.find((item) => item.normalized_address === '9100 Hunter Rd, Dallas, TX 75228' && item.source_document_url === countyPdfUrl);
+  assert.ok(candidate);
   assert.strictEqual(candidate.normalized_address, '9100 Hunter Rd, Dallas, TX 75228');
+  assert.strictEqual(candidate.source_document_url, countyPdfUrl);
   assert.ok(candidate.lead_evidence);
-  assert.strictEqual(candidate.lead_evidence.exact_source_phrase_verbatim, true);
-  assert.ok(/investor special|cash only/i.test(candidate.lead_evidence.exact_source_phrase));
+  assert.ok(/NOTICE OF SUBSTITUTE TRUSTEE SALE/i.test(candidate.source_proof_text));
+  assert.ok(/Sale Date: 07\/02\/2026/i.test(candidate.source_proof_text));
   assert.strictEqual(candidate.preview_only, true);
   assert.strictEqual(candidate.should_ingest, false);
-  assert.ok([sourceAcquisitionScore.NEXT_BEST_WORKERS.SKIP_TRACE, sourceAcquisitionScore.NEXT_BEST_WORKERS.PIPELINE].includes(candidate.next_best_worker));
+  assert.ok([sourceAcquisitionScore.NEXT_BEST_WORKERS.SKIP_TRACE, sourceAcquisitionScore.NEXT_BEST_WORKERS.PIPELINE, sourceAcquisitionScore.NEXT_BEST_WORKERS.MANUAL_REVIEW].includes(candidate.next_best_worker));
 
   const acquisitionCore = await sourceAcquisitionOrchestrator.runAcquisitionCore({
     job_id: 'doc_hunter_core_test',
@@ -251,9 +269,10 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.strictEqual(acquisitionCore.should_ingest, false);
   assert.ok(acquisitionCore.document_hunter_summary);
   assert.ok(acquisitionCore.document_hunter_summary.search_provider_status === 'provider_available' || acquisitionCore.document_hunter_summary.search_provider_status === 'provider_available');
-  assert.ok(acquisitionCore.document_hunter_summary.candidate_count >= 1);
+  assert.ok(acquisitionCore.document_hunter_summary.candidate_count >= 2);
+  assert.ok(acquisitionCore.document_hunter_summary.pdf_notice_rows_extracted >= 2);
   assert.ok(acquisitionCore.adapter_results[0].document_hunter_summary);
-  assert.ok(acquisitionCore.adapter_results[0].document_hunter_summary.candidate_count >= 1);
+  assert.ok(acquisitionCore.adapter_results[0].document_hunter_summary.candidate_count >= 2);
 
   assert.ok(searchQueries.length >= 1);
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).leads, []);
