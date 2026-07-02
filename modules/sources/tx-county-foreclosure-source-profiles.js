@@ -31,6 +31,67 @@ const PROFILES = [
     blocked_note: 'apps2.collincountytx.gov/ForeclosureNotices is behind an Incapsula bot wall (open manually).'
   },
   {
+    source_id: 'tx_ellis_county_foreclosure_notices',
+    source_name: 'Ellis County Clerk Foreclosure Archive',
+    county: 'Ellis',
+    state: 'TX',
+    source_url: 'https://co.ellis.tx.us/Archive.aspx?AMID=60',
+    human_portal_url: 'https://co.ellis.tx.us/Archive.aspx?AMID=60',
+    official_hosts: ['co.ellis.tx.us', 'elliscountytx.gov'],
+    city_names: ['Waxahachie', 'Ennis', 'Midlothian', 'Red Oak', 'Ferris', 'Palmer', 'Italy', 'Maypearl', 'Ovilla', 'Milford', 'Bardwell', 'Alma', 'Garrett'],
+    search_hints: ['site:co.ellis.tx.us foreclosure', 'Ellis County Texas notice of trustee sale filetype:pdf'],
+    blocked_note: 'Open CivicPlus archive; current notice documents are image scans without a text layer - open the direct links (OCR is the future automation lever).'
+  },
+  {
+    source_id: 'tx_kaufman_county_foreclosure_notices',
+    source_name: 'Kaufman County Foreclosure Postings',
+    county: 'Kaufman',
+    state: 'TX',
+    source_url: 'https://www.kaufmancounty.net/628/Foreclosures-2025',
+    human_portal_url: 'https://www.kaufmancounty.net/383/Foreclosures',
+    official_hosts: ['kaufmancounty.net'],
+    city_names: ['Kaufman', 'Terrell', 'Forney', 'Crandall', 'Kemp', 'Mabank', 'Scurry', 'Combine', 'Talty', 'Oak Grove', 'Post Oak Bend'],
+    search_hints: ['site:kaufmancounty.net foreclosure DocumentCenter', 'Kaufman County Texas notice of foreclosure sale filetype:pdf'],
+    blocked_note: 'Open DocumentCenter, but monthly compilations are 10-45MB scans - too large for automated parsing; open the document links directly.'
+  },
+  {
+    source_id: 'tx_parker_county_foreclosure_notices',
+    source_name: 'Parker County Foreclosure Postings',
+    county: 'Parker',
+    state: 'TX',
+    source_url: 'https://www.parkercountytx.gov/371/Foreclosures',
+    human_portal_url: 'https://www.parkercountytx.gov/371/Foreclosures',
+    official_hosts: ['parkercountytx.gov', 'parkercountytx.com'],
+    city_names: ['Weatherford', 'Aledo', 'Springtown', 'Hudson Oaks', 'Willow Park', 'Azle', 'Reno', 'Peaster', 'Millsap', 'Poolville', 'Cool', 'Annetta'],
+    search_hints: ['site:parkercountytx.gov foreclosure notice of trustee sale', 'Parker County Texas notice of trustee sale filetype:pdf'],
+    blocked_note: 'Foreclosures page exposes administrative PDFs only; notice documents are not directly posted - public search may surface them.'
+  },
+  {
+    source_id: 'tx_rockwall_county_foreclosure_notices',
+    source_name: 'Rockwall County Foreclosure Notices',
+    county: 'Rockwall',
+    state: 'TX',
+    source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+    human_portal_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+    official_hosts: ['rockwallcountytexas.com'],
+    city_names: ['Rockwall', 'Royse City', 'Heath', 'Fate', 'McLendon-Chisholm', 'Rowlett', 'Wylie', 'Mobile City'],
+    extra_document_pages: ['https://www.rockwallcountytexas.com/Archive.aspx?AMID=83'],
+    search_hints: ['site:rockwallcountytexas.com foreclosure notices archive', 'Rockwall County Texas notice of trustee sale filetype:pdf'],
+    blocked_note: 'Open CivicPlus monthly archives with per-notice documents; current scans lack a text layer - open the direct links (OCR is the future automation lever).'
+  },
+  {
+    source_id: 'tx_johnson_county_foreclosure_notices',
+    source_name: 'Johnson County Clerk Foreclosure Sales',
+    county: 'Johnson',
+    state: 'TX',
+    source_url: 'https://www.johnsoncountytx.org/government/county-clerk/land-records-vitals/foreclosure-sales',
+    human_portal_url: 'https://johnson.tx.publicsearch.us/',
+    official_hosts: ['johnsoncountytx.org'],
+    city_names: ['Cleburne', 'Burleson', 'Joshua', 'Alvarado', 'Keene', 'Godley', 'Grandview', 'Venus', 'Rio Vista', 'Crowley', 'Mansfield'],
+    search_hints: ['site:johnsoncountytx.org ShowDocument notice of trustee sale', 'Johnson County Texas notice of trustee sale filetype:pdf'],
+    blocked_note: 'Page renders document list client-side; direct ShowDocument PDFs are open and reachable via public search.'
+  },
+  {
     source_id: 'tx_denton_county_foreclosure_notices',
     source_name: 'Denton County Foreclosure Sale Notices',
     county: 'Denton',

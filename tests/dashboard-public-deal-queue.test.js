@@ -89,14 +89,18 @@ function mockDeal(overrides) {
 
   const run1 = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 99 }, { preview_impl: previewImpl });
   assert.strictEqual(previewCalls[0].limit, 25, 'limit must clamp to max 25');
+  const countyProfiles = require('../modules/sources/tx-county-foreclosure-source-profiles');
   assert.deepStrictEqual(previewCalls[0].source_ids, [
     'tx_dallas_county_clerk_foreclosure_notices',
     'tx_dallas_craigslist_owner_posts',
-    'tx_dallas_fsbo_contact_first',
-    'tx_tarrant_county_foreclosure_notices',
-    'tx_collin_county_foreclosure_notices',
-    'tx_denton_county_foreclosure_notices'
-  ], 'queue must explicitly request all registered free lanes including DFW counties');
+    'tx_dallas_fsbo_contact_first'
+  ].concat(countyProfiles.PROFILES.map((profile) => profile.source_id)),
+  'queue must explicitly request all registered free lanes including every county profile');
+  assert.ok(previewCalls[0].source_ids.includes('tx_ellis_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_kaufman_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_parker_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_rockwall_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_johnson_county_foreclosure_notices'));
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
