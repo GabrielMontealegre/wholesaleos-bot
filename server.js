@@ -20,6 +20,7 @@ const searchProviderWorker = require('./modules/research/search-provider-worker'
 const callReadyPreviewService = require('./modules/research/call-ready-preview-service');
 const selectedDealPacketService = require('./modules/research/selected-deal-packet-service');
 const freePublicDealBoardPreviewService = require('./modules/research/free-public-deal-board-preview-service');
+const dealBoardQueueService = require('./modules/research/deal-board-queue-service');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -1988,6 +1989,39 @@ app.post('/api/preview/free-public-deal-board', requireAdmin, async (req, res) =
       ok: false,
       error: e.message,
       code: e.code || 'free_public_deal_board_preview_failed',
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    });
+  }
+});
+
+// Dashboard Deal Queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
+app.get('/api/dashboard/free-public-deal-board/latest', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(dealBoardQueueService.latestDealBoardSnapshot({
+      market: {
+        city: req.query.city || 'Dallas',
+        county: req.query.county || 'Dallas',
+        state: req.query.state || 'TX'
+      }
+    }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, code: 'deal_board_snapshot_read_failed' });
+  }
+});
+
+app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const result = await dealBoardQueueService.runDealBoardBatch(req.body || {}, { env: process.env });
+    res.json(result);
+  } catch (e) {
+    res.status(Number(e && e.status_code || 500) || 500).json({
+      ok: false,
+      error: e.message,
+      code: e.code || 'deal_board_batch_failed',
       preview_only: true,
       should_ingest: false,
       no_global_mutation: true
