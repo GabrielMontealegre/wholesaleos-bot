@@ -143,6 +143,7 @@ function htmlResponse(body, url, status) {
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
       limit: 500,
       enable_official_browser_lookup: false,
+      enable_screenshot_comp_evidence: false,
       caps: {
         property_link_searches: 500,
         property_pages_fetched: 500,
@@ -201,7 +202,8 @@ function htmlResponse(body, url, status) {
     const missingPreview = await previewService.runFreePublicDealBoardServerPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
       limit: 25,
-      enable_official_browser_lookup: false
+      enable_official_browser_lookup: false,
+      enable_screenshot_comp_evidence: false
     }, {
       env: {},
       mock_source_adapter_records: [{

@@ -7,6 +7,7 @@ const compResearchProvider = require('./comp-research-provider');
 const freePublicCompHunter = require('./free-public-comp-hunter');
 const freePublicContactHunter = require('./free-public-contact-hunter');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
+const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
 const propertyIdentity = require('./property-identity');
 const searchProviderWorker = require('./search-provider-worker');
@@ -1554,6 +1555,73 @@ async function applyOfficialBrowserLookup(deals, input, options, context) {
   return diagnostics;
 }
 
+async function applyScreenshotCompEvidence(deals, input, options, context) {
+  const disabled = !(input.enable_screenshot_comp_evidence === true || options.enable_screenshot_comp_evidence === true);
+  const addressDeals = deals.filter((deal) => cleanText(deal.normalized_address));
+  const diagnostics = {
+    screenshot_comp_enabled: !disabled,
+    screenshot_comp_rows: 0,
+    comp_ready_count: 0,
+    comp_partial_count: 0,
+    comp_candidates_only_count: 0,
+    comp_blocked_count: 0,
+    comp_not_found_count: 0,
+    arv_unlocked_count: 0
+  };
+  if (disabled || !addressDeals.length) return diagnostics;
+  const evidenceImpl = typeof options.screenshot_comp_evidence_impl === 'function'
+    ? options.screenshot_comp_evidence_impl
+    : screenshotCompEvidence.runScreenshotCompEvidence;
+  const evidenceOut = await evidenceImpl({
+    rows: addressDeals,
+    caps: input.screenshot_comp_caps || options.screenshot_comp_caps
+  }, {
+    playwright_impl: options.playwright_impl,
+    extractor_impl: options.screenshot_extractor_impl,
+    screenshot_dir: options.screenshot_dir
+  });
+  diagnostics.screenshot_comp_rows = Number(evidenceOut && evidenceOut.rows_processed || 0) || 0;
+  const seenStatus = new Set();
+  for (const deal of addressDeals) {
+    const key = cleanText(deal.normalized_address).toLowerCase();
+    const evidence = evidenceOut && evidenceOut.results && evidenceOut.results.get(key);
+    if (!evidence) continue;
+    deal.screenshot_comp_status = evidence.screenshot_comp_status;
+    deal.screenshot_comp_candidates = evidence.screenshot_comp_candidates;
+    deal.comp_evidence_links = evidence.comp_evidence_links;
+    deal.next_comp_action = evidence.next_comp_action;
+    deal.blocked_sources = (deal.blocked_sources || []).concat(evidence.blocked_sources || []);
+    if (Array.isArray(evidence.verified_comps) && evidence.verified_comps.length > (Number(deal.verified_sold_comp_count) || 0)) {
+      deal.verified_sold_comps = evidence.verified_comps;
+      deal.verified_sold_comp_count = evidence.verified_comps.length;
+      deal.comp_status = evidence.verified_comps.length >= 3 ? 'verified_sold_comps_ready' : 'partial_verified_sold_comps';
+    }
+    deal.call_prep = callPrepProjection.buildCallPrep(deal);
+    deal.call_readiness = deal.call_prep.call_readiness;
+    deal.MAO_lock_state = deal.call_prep.MAO_lock_state;
+    deal.ARV_lock_state = deal.call_prep.ARV_lock_state;
+    deal.arv_lock_reason = deal.call_prep.ARV_lock_reason;
+    deal.mao_lock_reason = deal.call_prep.MAO_lock_reason;
+    deal.missing_fields = missingFields(deal);
+    deal.next_best_action = nextBestAction(deal);
+    deal.why_not_ready = whyNotReady(deal);
+    Object.assign(deal.call_prep, {
+      screenshot_comp_status: deal.screenshot_comp_status,
+      next_comp_action: deal.next_comp_action
+    });
+    if (!seenStatus.has(key)) {
+      seenStatus.add(key);
+      if (evidence.screenshot_comp_status === 'COMP_READY') diagnostics.comp_ready_count += 1;
+      if (evidence.screenshot_comp_status === 'COMP_PARTIAL') diagnostics.comp_partial_count += 1;
+      if (evidence.screenshot_comp_status === 'COMP_CANDIDATES_ONLY') diagnostics.comp_candidates_only_count += 1;
+      if (evidence.screenshot_comp_status === 'COMP_BLOCKED_PUBLIC_SOURCE') diagnostics.comp_blocked_count += 1;
+      if (evidence.screenshot_comp_status === 'COMP_NOT_FOUND') diagnostics.comp_not_found_count += 1;
+      if (deal.ARV_lock_state === 'ARV_UNLOCKED_VERIFIED_COMPS') diagnostics.arv_unlocked_count += 1;
+    }
+  }
+  return diagnostics;
+}
+
 async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const market = marketFrom(input);
   const caps = capsFrom(input);
@@ -1578,6 +1646,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     .slice(0, caps.output_deals);
   const freeHunterDiagnostics = await applyFreePublicHunters(deals, input, options, context);
   const officialLookupDiagnostics = await applyOfficialBrowserLookup(deals, input, options, context);
+  const screenshotCompDiagnostics = await applyScreenshotCompEvidence(deals, input, options, context);
   const linkDiagnostics = await validateDealLinks(deals, options, context);
   const quality = qualityDiagnostics(allDeals, deals);
   const dashboard = dashboardSummary(deals, linkDiagnostics, context, quality);
@@ -1620,6 +1689,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     official_source_rows_count: quality.official_source_rows_count,
     ...freeHunterDiagnostics,
     ...officialLookupDiagnostics,
+    ...screenshotCompDiagnostics,
     board_blocker_summary: boardBlockerSummary
   }, dashboard, {
     diagnostics: {
@@ -1629,6 +1699,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       quality,
       free_hunters: freeHunterDiagnostics,
       official_lookup: officialLookupDiagnostics,
+      screenshot_comp: screenshotCompDiagnostics,
       identity_repair: repairDiagnostics,
       rejected_generic_count: quality.rejected_generic_count,
       usable_deal_count: quality.usable_deal_count,
