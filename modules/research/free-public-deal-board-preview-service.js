@@ -59,6 +59,8 @@ function buildFreePublicDealBoardPreviewInput(input = {}, options = {}) {
     limit: caps.output_deals,
     caps,
     enable_provider_search: true,
+    enable_free_public_hunters: input.enable_free_public_hunters !== false,
+    free_hunter_caps: input.free_hunter_caps,
     preview_only: true,
     should_ingest: false,
     no_global_mutation: true
