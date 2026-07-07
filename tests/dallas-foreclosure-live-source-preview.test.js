@@ -1,5 +1,8 @@
 'use strict';
 
+// Fixture sale dates must stay in the future - hardcoded dates rot as the calendar advances.
+const FUTURE_SALE_DATE = (() => { const d = new Date(Date.now() + 60 * 24 * 3600 * 1000); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })();
+
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -79,7 +82,7 @@ const fixtures = {
     NOTICE OF SUBSTITUTE TRUSTEE SALE
     Property Address: 7421 Birch Ave, Dallas, TX 75228
     Borrower: Jane Doe
-    Sale Date: 07/02/2026
+    Sale Date: ${FUTURE_SALE_DATE}
     Case Number: 2026-12345
     Parcel: 123456789
     Foreclosure sale notice. Investor special - cash only.
@@ -88,7 +91,7 @@ const fixtures = {
     NOTICE OF SUBSTITUTE TRUSTEE SALE
     Property Address: 7423 Birch Ave, Dallas, TX 75228
     Borrower: John Smith
-    Sale Date: 07/02/2026
+    Sale Date: ${FUTURE_SALE_DATE}
     Case Number: 2026-12346
     Parcel: 987654321
     Foreclosure sale notice. As-is fixer upper.
@@ -220,7 +223,7 @@ function runPreview(options = {}) {
   );
 
   const noticeTxt = path.join(tmpDir, 'publicsearch-notice.txt');
-  fs.writeFileSync(noticeTxt, 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7427 Birch Ave, Dallas, TX 75228 | Borrower: File Input Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12348 | Parcel: 444555666 | Cash only. Investor special.');
+  fs.writeFileSync(noticeTxt, 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7427 Birch Ave, Dallas, TX 75228 | Borrower: File Input Buyer | Sale Date: ' + FUTURE_SALE_DATE + ' | Case Number: 2026-12348 | Parcel: 444555666 | Cash only. Investor special.');
   const filePreview = await runPreview({
     input_file: noticeTxt
   });

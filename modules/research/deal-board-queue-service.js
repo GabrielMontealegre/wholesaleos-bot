@@ -150,6 +150,30 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
   };
 }
 
+function ocrSummaryFromPreview(preview) {
+  const adapterResults = preview && preview.diagnostics && preview.diagnostics.source_adapter &&
+    Array.isArray(preview.diagnostics.source_adapter.source_adapter_results)
+    ? preview.diagnostics.source_adapter.source_adapter_results
+    : [];
+  const totals = {
+    ocr_documents_attempted: 0,
+    ocr_documents_succeeded: 0,
+    ocr_rows_extracted: 0,
+    ocr_rows_with_address: 0,
+    ocr_rows_with_sale_date: 0,
+    ocr_skipped_oversize: 0,
+    ocr_failures: 0
+  };
+  let any = false;
+  for (const result of adapterResults) {
+    const ocr = result && (result.ocr || (result.diagnostics && result.diagnostics.ocr));
+    if (!ocr) continue;
+    any = true;
+    for (const key of Object.keys(totals)) totals[key] += Number(ocr[key] || 0) || 0;
+  }
+  return any ? totals : null;
+}
+
 function sourceCoverageFromPreview(preview) {
   const adapterResults = preview && preview.diagnostics && preview.diagnostics.source_adapter &&
     Array.isArray(preview.diagnostics.source_adapter.source_adapter_results)
@@ -244,7 +268,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     browser_runtime_available: !!(preview && preview.browser_runtime_available),
     official_lookup_blocked_count: Number(preview && preview.official_lookup_blocked_count || 0) || 0,
     board_blocker_summary: cleanText(preview && preview.board_blocker_summary),
-    source_coverage: sourceCoverageFromPreview(preview)
+    source_coverage: sourceCoverageFromPreview(preview),
+    ocr: ocrSummaryFromPreview(preview)
   };
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
   bucket.market = market;
@@ -292,13 +317,114 @@ function latestDealBoardSnapshot(input = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Background batch jobs.
+// The 11-lane batch (plus OCR) outlives Railway's HTTP edge timeout, so the
+// run endpoint starts a job and returns immediately; the dashboard polls.
+// Job state is a preview-run ledger only - never lead data.
+
+const JOB_TTL_MS = 60 * 60 * 1000;
+const jobs = new Map();
+
+function jobsFilePath() {
+  return path.resolve(
+    process.env.DEAL_BOARD_JOBS_PATH ||
+    path.join(path.dirname(path.resolve(process.env.DB_PATH || './data/db.json')), 'deal-board-jobs.json')
+  );
+}
+
+function persistJobs() {
+  try {
+    const file = jobsFilePath();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({
+      store_kind: 'deal_board_batch_jobs_not_saved_leads',
+      updated_at: nowIso(),
+      jobs: Array.from(jobs.values())
+    }, null, 2));
+  } catch (error) { /* job ledger is best-effort */ }
+}
+
+function pruneJobs() {
+  const cutoff = Date.now() - JOB_TTL_MS;
+  for (const [id, job] of jobs) {
+    if (job.status !== 'running' && new Date(job.started_at).getTime() < cutoff) jobs.delete(id);
+  }
+}
+
+function activeJobForMarket(key) {
+  for (const job of jobs.values()) {
+    if (job.market_key === key && job.status === 'running') return job;
+  }
+  return null;
+}
+
+function publicJob(job) {
+  return job ? Object.assign({}, job) : null;
+}
+
+function startDealBoardBatchJob(input = {}, options = {}) {
+  pruneJobs();
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const key = marketKey(market);
+  const existing = activeJobForMarket(key);
+  if (existing) {
+    return { ok: true, already_running: true, job: publicJob(existing), preview_only: true };
+  }
+  const job = {
+    job_id: `dbj_${crypto.createHash('sha1').update(`${key}|${Date.now()}|${Math.random()}`).digest('hex').slice(0, 12)}`,
+    market,
+    market_key: key,
+    status: 'running',
+    stage: 'running_free_public_batch',
+    started_at: nowIso(),
+    finished_at: null,
+    error: '',
+    result_summary: null,
+    preview_only: true,
+    not_a_saved_lead: true
+  };
+  jobs.set(job.job_id, job);
+  persistJobs();
+  const runImpl = typeof options.run_impl === 'function' ? options.run_impl : runDealBoardBatch;
+  Promise.resolve()
+    .then(() => runImpl(input, options))
+    .then((result) => {
+      job.status = 'done';
+      job.stage = 'done';
+      job.finished_at = nowIso();
+      job.result_summary = {
+        batch: result && result.batch || null,
+        counts: result && result.counts || null
+      };
+      persistJobs();
+    })
+    .catch((error) => {
+      job.status = 'failed';
+      job.stage = 'failed';
+      job.finished_at = nowIso();
+      job.error = cleanText(error && error.message).slice(0, 200) || 'batch_failed';
+      persistJobs();
+    });
+  return { ok: true, already_running: false, job: publicJob(job), preview_only: true };
+}
+
+function getDealBoardJob(jobId) {
+  pruneJobs();
+  const job = jobs.get(cleanText(jobId));
+  return job ? { ok: true, job: publicJob(job) } : { ok: false, error: 'job_not_found' };
+}
+
 module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
   snapshotFilePath,
+  jobsFilePath,
   dedupeKeyForDeal,
   queueCounts,
   runDealBoardBatch,
-  latestDealBoardSnapshot
+  latestDealBoardSnapshot,
+  startDealBoardBatchJob,
+  getDealBoardJob
 };

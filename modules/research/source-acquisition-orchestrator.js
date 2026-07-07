@@ -106,6 +106,7 @@ function normalizeAdapterResult(result) {
     source_id: cleanText(result && result.source_id),
     source_name: cleanText(result && result.source_name),
     county: cleanText(result && result.county),
+    ocr: result && (result.ocr || (result.diagnostics && result.diagnostics.ocr)) || null,
     status: cleanText(result && result.status),
     attempted: result && result.attempted === true,
     candidate_count: candidateList.length,

@@ -80,7 +80,16 @@
     var meta = batch
       ? 'Last batch ' + esc(String(batch.run_at).replace('T', ' ').slice(0, 16)) + ' - ' + esc(batch.new_rows) + ' new, ' + esc(batch.refreshed_rows) + ' refreshed, ' + esc(batch.rejected_generic_count || 0) + ' generic rejected' + (batch.board_blocker_summary ? ' - blocker: ' + esc(batch.board_blocker_summary) : '')
       : 'No batch yet - click Refresh batch to pull free public deals.';
-    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + coverageTable(batch);
+    var ocrLine = '';
+    if (batch && batch.ocr) {
+      ocrLine = '<div style="font-size:11px;color:#4b5563;margin-bottom:6px;">OCR: ' +
+        esc(batch.ocr.ocr_documents_attempted) + ' scanned docs attempted, ' +
+        esc(batch.ocr.ocr_documents_succeeded) + ' read, ' +
+        esc(batch.ocr.ocr_rows_with_address) + ' address rows (review recommended), ' +
+        esc(batch.ocr.ocr_skipped_oversize) + ' oversize skipped, ' +
+        esc(batch.ocr.ocr_failures) + ' failed.</div>';
+    }
+    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + ocrLine + coverageTable(batch);
   }
 
   function coverageTable(batch) {
@@ -126,20 +135,53 @@
 
   function runBatch(container, button) {
     button.disabled = true;
-    button.textContent = 'Running free batch (30-90s)...';
+    button.textContent = 'Starting background batch...';
+    var pollCount = 0;
+    function finish(note) {
+      button.disabled = false;
+      button.textContent = 'Run next free batch';
+      if (note) fetchLatestWithNote(container, note);
+      else fetchLatest(container);
+    }
+    function fail(message) {
+      container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Batch failed: ' + esc(message) + '</div>';
+      button.disabled = false;
+      button.textContent = 'Run next free batch';
+    }
+    function poll(jobId) {
+      pollCount += 1;
+      if (pollCount > 100) return finish('Batch still running in the background - refresh later.');
+      fetch(API_RUN.replace('/run', '/job/') + jobId, { headers: headers() })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var job = data && data.job;
+          if (!job) return fail((data && data.error) || 'job lost');
+          if (job.status === 'running') {
+            button.textContent = 'Batch running (' + esc(job.stage || 'working') + ')... ' + pollCount * 6 + 's';
+            setTimeout(function () { poll(jobId); }, 6000);
+            return;
+          }
+          if (job.status === 'failed') return fail(job.error || 'batch failed');
+          var summary = job.result_summary && job.result_summary.batch;
+          finish('Batch complete - ' + (summary ? summary.new_rows + ' new rows' : 'done') + '.');
+        })
+        .catch(function (err) { fail(err.message); });
+    }
     fetch(API_RUN, { method: 'POST', headers: headers(), body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 }) })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (!data || data.ok === false) throw new Error((data && data.error) || 'batch failed');
-        render(container, data, 'Batch complete - ' + (data.batch ? data.batch.new_rows + ' new rows' : 'done') + '.');
+        if (!data || data.ok === false || !data.job) throw new Error((data && data.error) || 'could not start batch');
+        button.textContent = data.already_running ? 'Joining running batch...' : 'Batch running in background...';
+        poll(data.job.job_id);
       })
-      .catch(function (err) {
-        container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Batch failed: ' + esc(err.message) + '</div>';
-      })
-      .then(function () {
-        button.disabled = false;
-        button.textContent = 'Run next free batch';
-      });
+      .catch(function (err) { fail(err.message); });
+  }
+
+  function fetchLatestWithNote(container, note) {
+    fetch(API_LATEST, { headers: headers() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { render(container, data || {}, note); })
+      .catch(function () { fetchLatest(container); });
   }
 
   function mount() {
