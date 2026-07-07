@@ -1,5 +1,8 @@
 'use strict';
 
+// Fixture sale dates must stay in the future - hardcoded dates rot as the calendar advances.
+const FUTURE_SALE_DATE = (() => { const d = new Date(Date.now() + 60 * 24 * 3600 * 1000); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })();
+
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -106,22 +109,22 @@ const countyPageHtml = `
 
   const files = {
     txt: createTempFile(tmpDir, 'notice.txt', [
-      'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7421 Birch Ave, Dallas, TX 75228 | Borrower: Text Input Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12345 | Parcel: 123456789 | Cash only. Investor special.'
+      'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7421 Birch Ave, Dallas, TX 75228 | Borrower: Text Input Buyer | Sale Date: ' + FUTURE_SALE_DATE + ' | Case Number: 2026-12345 | Parcel: 123456789 | Cash only. Investor special.'
     ].join('\n')),
     html: createTempFile(tmpDir, 'notice.html', `
       <html><body>
         <table>
           <tr>
-            <td>NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7423 Birch Ave, Dallas, TX 75228 | Borrower: HTML Input Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12346 | Parcel: 987654321 | As-is fixer upper.</td>
+            <td>NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7423 Birch Ave, Dallas, TX 75228 | Borrower: HTML Input Buyer | Sale Date: ${FUTURE_SALE_DATE} | Case Number: 2026-12346 | Parcel: 987654321 | As-is fixer upper.</td>
           </tr>
         </table>
       </body></html>
     `),
     csv: createTempFile(tmpDir, 'notice.csv', [
       'Property Address,Borrower,Sale Date,Case Number,Parcel,Notes',
-      '"7425 Birch Ave, Dallas, TX 75228",CSV Input Buyer,07/02/2026,2026-12347,111222333,"Hard money only, bring all offers."'
+      '"7425 Birch Ave, Dallas, TX 75228",CSV Input Buyer,' + FUTURE_SALE_DATE + ',2026-12347,111222333,"Hard money only, bring all offers."'
     ].join('\n')),
-    pdf: createTempFile(tmpDir, 'notice.pdf', 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7427 Birch Ave, Dallas, TX 75228 | Borrower: PDF Input Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12348 | Parcel: 444555666 | Fixer upper. Cash only.'),
+    pdf: createTempFile(tmpDir, 'notice.pdf', 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7427 Birch Ave, Dallas, TX 75228 | Borrower: PDF Input Buyer | Sale Date: ' + FUTURE_SALE_DATE + ' | Case Number: 2026-12348 | Parcel: 444555666 | Fixer upper. Cash only.'),
     brokenPdf: createTempFile(tmpDir, 'broken.pdf', 'BROKEN_PDF')
   };
 
@@ -145,7 +148,7 @@ const countyPageHtml = `
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
     'Property Address: 7431 Birch Ave, Dallas, TX 75228',
     'Borrower: Stdin Buyer',
-    'Sale Date: 07/02/2026',
+    'Sale Date: ' + FUTURE_SALE_DATE + '',
     'Case Number: 2026-12350',
     'Parcel: 222333444',
     'Cash only.'
@@ -173,7 +176,7 @@ const countyPageHtml = `
 
   const phraseMissing = await runCore({
     input_file: createTempFile(tmpDir, 'phrase-missing.txt', [
-      'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7433 Birch Ave, Dallas, TX 75228 | Borrower: Missing Phrase Buyer | Sale Date: 07/02/2026 | Case Number: 2026-12351 | Parcel: 555666777'
+      'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7433 Birch Ave, Dallas, TX 75228 | Borrower: Missing Phrase Buyer | Sale Date: ' + FUTURE_SALE_DATE + ' | Case Number: 2026-12351 | Parcel: 555666777'
     ].join('\n'))
   });
   assert.ok(phraseMissing.candidates[0].lead_evidence.missing_evidence.includes('exact source-backed wholesale phrase'));
@@ -199,7 +202,7 @@ const countyPageHtml = `
           'NOTICE OF SUBSTITUTE TRUSTEE SALE',
           'Property Address: 7441 Birch Ave, Dallas, TX 75228',
           'Borrower: Direct Doc Buyer',
-          'Sale Date: 07/02/2026',
+          'Sale Date: ' + FUTURE_SALE_DATE + '',
           'Case Number: 2026-12353',
           'Parcel: 333444555',
           'Cash only.'

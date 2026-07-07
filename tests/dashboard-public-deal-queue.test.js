@@ -166,10 +166,76 @@ function mockDeal(overrides) {
   assert.strictEqual(empty.counts.total_rows, 0);
   assert.deepStrictEqual(empty.rows, []);
 
+  // 3b) Background jobs: run returns immediately, one active job per market,
+  //     status transitions to done and latest reflects the batch afterward.
+  process.env.DEAL_BOARD_JOBS_PATH = path.join(tmpDir, 'deal-board-jobs.json');
+  let resolveSlowRun;
+  const slowRun = new Promise((resolve) => { resolveSlowRun = resolve; });
+  const started = queueService.startDealBoardBatchJob(
+    { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 },
+    { run_impl: async (input, options) => { await slowRun; return queueService.runDealBoardBatch(input, { preview_impl: previewImpl }); } }
+  );
+  assert.strictEqual(started.ok, true);
+  assert.strictEqual(started.already_running, false);
+  assert.strictEqual(started.job.status, 'running');
+  assert.ok(started.job.job_id.startsWith('dbj_'));
+  assert.strictEqual(started.job.not_a_saved_lead, true);
+
+  const duplicate = queueService.startDealBoardBatchJob({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' } }, {});
+  assert.strictEqual(duplicate.already_running, true, 'only one active job per market');
+  assert.strictEqual(duplicate.job.job_id, started.job.job_id);
+
+  const otherMarket = queueService.startDealBoardBatchJob(
+    { market: { city: 'Austin', county: 'Travis', state: 'TX' } },
+    { run_impl: async () => ({ batch: { new_rows: 0 }, counts: queueService.queueCounts([]) }) }
+  );
+  assert.strictEqual(otherMarket.already_running, false, 'other markets can run in parallel');
+
+  const runningStatus = queueService.getDealBoardJob(started.job.job_id);
+  assert.strictEqual(runningStatus.job.status, 'running');
+  resolveSlowRun();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const doneStatus = queueService.getDealBoardJob(started.job.job_id);
+  assert.strictEqual(doneStatus.job.status, 'done');
+  assert.ok(doneStatus.job.result_summary.batch);
+  assert.ok(doneStatus.job.result_summary.counts.total_rows >= 2);
+  assert.strictEqual(queueService.getDealBoardJob('dbj_nope').ok, false);
+  assert.ok(fs.existsSync(process.env.DEAL_BOARD_JOBS_PATH), 'job ledger persisted');
+  assert.strictEqual(JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_JOBS_PATH, 'utf8')).store_kind, 'deal_board_batch_jobs_not_saved_leads');
+
+  // failed job path
+  const failing = queueService.startDealBoardBatchJob(
+    { market: { city: 'Waco', county: 'McLennan', state: 'TX' } },
+    { run_impl: async () => { throw new Error('lane exploded'); } }
+  );
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const failedStatus = queueService.getDealBoardJob(failing.job.job_id);
+  assert.strictEqual(failedStatus.job.status, 'failed');
+  assert.ok(/lane exploded/.test(failedStatus.job.error));
+
+  // OCR summary aggregation from adapter results into the batch.
+  const ocrPreview = async () => ({
+    free_public_deals: [],
+    rejected_generic_count: 0,
+    diagnostics: {
+      source_adapter: {
+        source_adapter_results: [
+          { source_id: 'tx_rockwall_county_foreclosure_notices', source_name: 'Rockwall', county: 'Rockwall', status: 'available', candidate_count: 1, blocked_reason: '', ocr: { ocr_documents_attempted: 2, ocr_documents_succeeded: 1, ocr_rows_extracted: 1, ocr_rows_with_address: 1, ocr_rows_with_sale_date: 1, ocr_skipped_oversize: 1, ocr_failures: 0 } }
+        ]
+      }
+    }
+  });
+  const ocrBatch = await queueService.runDealBoardBatch({ market: { city: 'Plano', county: 'Collin', state: 'TX' }, limit: 25 }, { preview_impl: ocrPreview });
+  assert.ok(ocrBatch.batch.ocr);
+  assert.strictEqual(ocrBatch.batch.ocr.ocr_documents_attempted, 2);
+  assert.strictEqual(ocrBatch.batch.ocr.ocr_rows_with_address, 1);
+
   // 4) Server routes exist and are admin-protected; no legacy agents involved.
   const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/latest',\s*requireAdmin/.test(serverSource));
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/run',\s*requireAdmin/.test(serverSource));
+  assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/job\/:id',\s*requireAdmin/.test(serverSource), 'job status route must be admin-protected');
+  assert.ok(/startDealBoardBatchJob/.test(serverSource), 'run route must start a background job');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
 
@@ -188,6 +254,9 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('today_rows'), 'dashboard must show daily rows');
   assert.ok(/type="checkbox" id="wos-public-deals-auto"(?![^>]*checked)/.test(uiSource), 'auto-refresh must exist and default OFF');
   assert.ok(uiSource.includes('20 * 60 * 1000'), 'auto-refresh interval must be 20 minutes');
+  assert.ok(uiSource.includes("/job/"), 'dashboard must poll the background job endpoint');
+  assert.ok(uiSource.includes('Batch running'), 'dashboard must show running progress');
+  assert.ok(uiSource.includes('ocr_documents_attempted'), 'dashboard must show OCR diagnostics');
 
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;

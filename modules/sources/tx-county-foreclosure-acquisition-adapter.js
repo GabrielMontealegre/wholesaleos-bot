@@ -84,9 +84,9 @@ async function fetchBounded(url, options, expectPdf) {
         const parsed = await pdfParse(buffer);
         const text = String(parsed && parsed.text || '');
         if (cleanText(text).length < 100) {
-          // Image-only scan: the document is real evidence but unreadable
-          // without OCR - report it, do not guess.
-          return { status: 'skipped', blocked_reason: 'pdf_scanned_no_text_layer' };
+          // Image-only scan: real evidence but unreadable without OCR.
+          // Hand the buffer back so the bounded OCR lane can try.
+          return { status: 'skipped', blocked_reason: 'pdf_scanned_no_text_layer', buffer };
         }
         return { status: 'parsed', kind: 'pdf', text };
       } catch (error) {
@@ -217,6 +217,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     }
   }
 
+  const scannedDocs = [];
   for (const url of documentUrlsFound.slice(0, MAX_DOCS_PER_COUNTY)) {
     const doc = await fetchBounded(url, options, true);
     if (doc.status === 'parsed' && doc.kind === 'pdf') {
@@ -234,8 +235,39 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     } else {
       documentUrlsSkipped.push({ url, reason: doc.blocked_reason || doc.status });
       if (doc.status === 'blocked') blockedNotes.push({ source: 'official_document', url, reason: doc.blocked_reason });
+      if (doc.blocked_reason === 'pdf_scanned_no_text_layer' && doc.buffer) {
+        scannedDocs.push({ url, buffer: doc.buffer, profile, source_url: profile.source_url });
+      }
     }
     if (rawRows.length >= MAX_ROWS) break;
+  }
+
+  // Bounded OCR lane for open official scans (profile can opt out).
+  let ocrDiagnostics = null;
+  if (scannedDocs.length && options.enable_ocr !== false && profile.allow_ocr !== false) {
+    try {
+      const ocrImpl = typeof options.ocr_extraction_impl === 'function'
+        ? options.ocr_extraction_impl
+        : require('../research/ocr-notice-extraction').runOcrNoticeExtraction;
+      const ocrOut = await ocrImpl({
+        documents: scannedDocs,
+        caps: options.ocr_caps
+      }, {
+        playwright_impl: options.playwright_impl,
+        render_impl: options.ocr_render_impl,
+        ocr_impl: options.ocr_impl
+      });
+      ocrDiagnostics = ocrOut.diagnostics;
+      for (const row of ocrOut.rows || []) {
+        if (rawRows.length >= MAX_ROWS) break;
+        rawRows.push(row);
+      }
+      for (const attempt of ocrOut.attempts || []) {
+        if (attempt.status === 'ocr_done') documentUrlsParsed.push(`${attempt.url} (ocr)`);
+      }
+    } catch (error) {
+      ocrDiagnostics = { ocr_failures: scannedDocs.length, ocr_error: cleanText(error && error.message).slice(0, 80) };
+    }
   }
 
   const context = { acquisition_run_id: runId, city: '', state: profile.state };
@@ -275,6 +307,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     document_urls_parsed: documentUrlsParsed,
     document_urls_skipped: documentUrlsSkipped,
     blocked_notes: blockedNotes,
+    ocr: ocrDiagnostics,
     diagnostics: {
       county: profile.county,
       official_page_status: page.status,
@@ -282,6 +315,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       document_urls_parsed_count: documentUrlsParsed.length,
       rows_extracted: rawRows.length,
       blocked_notes: blockedNotes,
+      ocr: ocrDiagnostics,
       portal_note: profile.blocked_note
     },
     preview_only: true,

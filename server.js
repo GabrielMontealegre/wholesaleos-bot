@@ -2012,11 +2012,12 @@ app.get('/api/dashboard/free-public-deal-board/latest', requireAdmin, (req, res)
   }
 });
 
-app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, async (req, res) => {
+// Starts a background batch job and returns immediately (the full batch
+// outlives the HTTP edge timeout). Poll the job endpoint, then read latest.
+app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
-    const result = await dealBoardQueueService.runDealBoardBatch(req.body || {}, { env: process.env });
-    res.json(result);
+    res.json(dealBoardQueueService.startDealBoardBatchJob(req.body || {}, { env: process.env }));
   } catch (e) {
     res.status(Number(e && e.status_code || 500) || 500).json({
       ok: false,
@@ -2026,6 +2027,16 @@ app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, async (req, 
       should_ingest: false,
       no_global_mutation: true
     });
+  }
+});
+
+app.get('/api/dashboard/free-public-deal-board/job/:id', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const result = dealBoardQueueService.getDealBoardJob(req.params.id);
+    res.status(result.ok ? 200 : 404).json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, code: 'deal_board_job_read_failed' });
   }
 });
 
