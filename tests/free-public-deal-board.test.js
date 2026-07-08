@@ -450,6 +450,55 @@ const rejectedRecords = [
     assert.strictEqual(incompletePdfRow.contact_route_if_visible, '');
     assert.strictEqual(incompletePdfRow.verified_sold_comp_count, 0);
 
+    // OCR partial address (street + city + TX, zip unreadable) from an
+    // official document becomes an actionable NEEDS_ZIP_REVIEW row with the
+    // real source county - never INSPECT_NOW, never a fake precise map pin.
+    const zipReviewRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_rockwall_county_foreclosure_notices',
+        source_name: 'Rockwall County Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        status: 'available',
+        candidate_count: 2,
+        candidates: [{
+          property_address: '4016 Poplar Point Dr Rockwall, TX',
+          county: 'Rockwall',
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Rockwall County Foreclosure Notices',
+          source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+          source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7689',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF TRUSTEE SALE | Property Address: 4016 Poplar Point Dr Rockwall, TX (OCR)',
+          risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED']
+        }, {
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Rockwall County Foreclosure Notices',
+          source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+          source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7688',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF TRUSTEE SALE (no readable address)'
+        }]
+      }]
+    }, { fetch_impl: fetchImpl });
+    const zipReviewRow = zipReviewRows.free_public_deals.find((deal) => deal.quality_bucket === 'NEEDS_ZIP_REVIEW');
+    assert.ok(zipReviewRow, 'partial street+city+TX from official doc must surface as NEEDS_ZIP_REVIEW');
+    assert.strictEqual(zipReviewRow.partial_address, '4016 Poplar Point Dr Rockwall, TX');
+    assert.strictEqual(zipReviewRow.normalized_address, '', 'partial identity must not fake a complete address');
+    assert.strictEqual(zipReviewRow.maps_url, null, 'no precise map pin without a zip');
+    assert.ok(/query=4016/.test(zipReviewRow.maps_search_url_review_needed), 'review-labeled maps search link present');
+    assert.strictEqual(zipReviewRow.county, 'Rockwall', 'row must carry the source county, not the market county');
+    assert.strictEqual(zipReviewRow.next_best_action, 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT');
+    assert.ok(zipReviewRow.missing_fields.some((item) => /zip/i.test(item)));
+    assert.ok(zipReviewRow.risk_flags.includes('ZIP_MISSING_REVIEW_REQUIRED'));
+    assert.ok(zipReviewRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
+    assert.strictEqual(zipReviewRow.usable_for_gabriel, true);
+    assert.ok(zipReviewRows.needs_zip_review_count >= 1);
+    const noAddressRow = zipReviewRows.free_public_deals.find((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY' && !deal.partial_address);
+    assert.ok(noAddressRow, 'rows with no readable street stay source-proof');
+    assert.ok(zipReviewRow.rank_score > noAddressRow.rank_score, 'zip-review rows outrank plain proof rows');
+
     const landingFallback = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
       mock_source_adapter_results: [{
@@ -479,7 +528,7 @@ const rejectedRecords = [
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + 8);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + 4 + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);
