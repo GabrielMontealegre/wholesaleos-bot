@@ -141,6 +141,11 @@ function normalizePropertyCandidate(input, context) {
     source_page_text: cleanText(input.source_page_text || input.source_text || input.source_proof_text),
     source_proof_text: cleanText(input.source_proof_text || input.source_excerpt || input.source_text || input.source_page_text),
     normalized_address: normalizedAddress,
+    // Preserve the source-visible address and county verbatim so partial
+    // (zip-less) identities and county labels survive normalization.
+    property_address: cleanText(input.property_address || input.address),
+    raw_address_text: cleanText(input.raw_address_text || input.property_address || input.address),
+    county: cleanText(input.county),
     property_key: propertyIdentity.canonicalPropertyKey(Object.assign({}, input, { normalized_address: normalizedAddress, source_url: sourceUrl })),
     owner_name_candidate: cleanText(input.owner_name_candidate || input.owner_name || input.owner),
     motivation_type: cleanText(input.motivation_type || input.source_family || input.category_key),
