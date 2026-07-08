@@ -146,6 +146,8 @@ function normalizePropertyCandidate(input, context) {
     property_address: cleanText(input.property_address || input.address),
     raw_address_text: cleanText(input.raw_address_text || input.property_address || input.address),
     county: cleanText(input.county),
+    city: cleanText(input.city),
+    state: cleanText(input.state),
     property_key: propertyIdentity.canonicalPropertyKey(Object.assign({}, input, { normalized_address: normalizedAddress, source_url: sourceUrl })),
     owner_name_candidate: cleanText(input.owner_name_candidate || input.owner_name || input.owner),
     motivation_type: cleanText(input.motivation_type || input.source_family || input.category_key),

@@ -72,13 +72,19 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
     </html>
   `;
 
+  // Sale dates are computed relative to today so the fixture never rots into
+  // the stale-sale-date gate as real time passes.
+  const futureSale = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const futureSaleSlash = `${String(futureSale.getMonth() + 1).padStart(2, '0')}/${String(futureSale.getDate()).padStart(2, '0')}/${futureSale.getFullYear()}`;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const futureSaleLong = `${MONTHS[futureSale.getMonth()]} ${futureSale.getDate()}, ${futureSale.getFullYear()}`;
   const countyPdfText = [
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
     'Borrower: Hunter Buyer',
     'Property Address:',
     '9100 Hunter Rd',
     'Dallas, TX 75228',
-    'Sale Date: 07/02/2026',
+    `Sale Date: ${futureSaleSlash}`,
     'Case Number: 2026-54321',
     'Parcel: 123456789',
     'Foreclosure sale notice. Investor special - cash only.',
@@ -87,7 +93,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
     'Property Address:',
     '9200 Ledger Ln',
     'Dallas, TX 75228',
-    'Date of Sale: July 7, 2026',
+    `Date of Sale: ${futureSaleLong}`,
     'Instrument Number: 2026-67890',
     'Foreclosure sale notice.'
   ].join('\n');
@@ -256,7 +262,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.strictEqual(candidate.source_document_url, countyPdfUrl);
   assert.ok(candidate.lead_evidence);
   assert.ok(/NOTICE OF SUBSTITUTE TRUSTEE SALE/i.test(candidate.source_proof_text));
-  assert.ok(/Sale Date: 07\/02\/2026/i.test(candidate.source_proof_text));
+  assert.ok(candidate.source_proof_text.includes(`Sale Date: ${futureSaleSlash}`));
   assert.strictEqual(candidate.preview_only, true);
   assert.strictEqual(candidate.should_ingest, false);
   assert.ok([sourceAcquisitionScore.NEXT_BEST_WORKERS.SKIP_TRACE, sourceAcquisitionScore.NEXT_BEST_WORKERS.PIPELINE, sourceAcquisitionScore.NEXT_BEST_WORKERS.MANUAL_REVIEW].includes(candidate.next_best_worker));

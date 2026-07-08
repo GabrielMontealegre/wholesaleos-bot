@@ -43,12 +43,22 @@ const QUALITY_BUCKETS = Object.freeze({
 // Street + city + TX visible but no 5-digit zip: reviewable partial identity.
 const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas)\b/i;
 
+// Street + trailing city word(s) with no TX token - acceptable only when the
+// source row itself says the state is TX (the county notice extractors set
+// it from the county profile, so this is source data, not a guess).
+const PARTIAL_ADDRESS_CITY_ONLY_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{2,40}$/i;
+
 function partialAddressFromRecord(record, resolvedAddress) {
   if (cleanText(resolvedAddress)) return '';
   const raw = cleanText(record && (record.raw_address_text || record.property_address || record.address));
   if (!raw || /\d{5}/.test(raw)) return '';
   const match = raw.match(PARTIAL_ADDRESS_RE);
-  return match ? cleanText(match[0]).replace(/\s+,/g, ',') : '';
+  if (match) return cleanText(match[0]).replace(/\s+,/g, ',');
+  if (cleanText(record && record.state).toUpperCase() === 'TX') {
+    const cityOnly = raw.match(PARTIAL_ADDRESS_CITY_ONLY_RE);
+    if (cityOnly) return `${cleanText(cityOnly[0]).replace(/\s+,/g, ',')}, TX`;
+  }
+  return '';
 }
 
 const MOTIVATION_PATTERNS = [
@@ -784,6 +794,11 @@ function finalizeDeal(deal) {
       'OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED',
       'ZIP_MISSING_REVIEW_REQUIRED'
     ])));
+    // Show the clean source-visible partial, never a canonicalizer-mangled headline.
+    deal.headline = deal.partial_address;
+    if (!deal.maps_search_url_review_needed) {
+      deal.maps_search_url_review_needed = mapsUrl(deal.partial_address, {}) || null;
+    }
   }
   deal.confidence_score = confidenceScore(deal);
   deal.missing_fields = missingFields(deal);
@@ -904,6 +919,7 @@ function candidateRecord(candidate, source) {
     headline: cleanText(candidate.normalized_address || candidate.property_address || candidate.source_row_reference || source.source_name || 'Source adapter candidate'),
     normalized_address: cleanText(candidate.normalized_address || candidate.property_address),
     county: cleanText(candidate.county || source.county),
+    state: cleanText(candidate.state || source.state),
     raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
     source_family: cleanText(candidate.source_family || source.source_family),
     source_name: cleanText(candidate.source_name || source.source_name),
