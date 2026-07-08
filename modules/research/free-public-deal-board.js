@@ -34,10 +34,22 @@ const PROPERTY_HOSTS = Object.freeze({
 
 const QUALITY_BUCKETS = Object.freeze({
   INSPECT_NOW: 'INSPECT_NOW',
+  NEEDS_ZIP_REVIEW: 'NEEDS_ZIP_REVIEW',
   SOURCE_PROOF_ONLY: 'SOURCE_PROOF_ONLY',
   NEEDS_IDENTITY: 'NEEDS_IDENTITY',
   REJECTED_GENERIC: 'REJECTED_GENERIC'
 });
+
+// Street + city + TX visible but no 5-digit zip: reviewable partial identity.
+const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40},?\s+(?:TX|Texas)\b/i;
+
+function partialAddressFromRecord(record, resolvedAddress) {
+  if (cleanText(resolvedAddress)) return '';
+  const raw = cleanText(record && (record.raw_address_text || record.property_address || record.address));
+  if (!raw || /\d{5}/.test(raw)) return '';
+  const match = raw.match(PARTIAL_ADDRESS_RE);
+  return match ? cleanText(match[0]).replace(/\s+,/g, ',') : '';
+}
 
 const MOTIVATION_PATTERNS = [
   { type: 'foreclosure', pattern: /\b(foreclosure|trustee sale|substitute trustee|notice of sale)\b/i },
@@ -689,6 +701,15 @@ function qualityForDeal(deal) {
       rejected_reason: ''
     };
   }
+  // Visible street + city/TX from an official document, only the zip
+  // unreadable: actionable review row, never promoted to INSPECT_NOW.
+  if (!completeAddress && cleanText(deal.partial_address) && officialProof && cleanText(deal.source_document_url)) {
+    return {
+      quality_bucket: QUALITY_BUCKETS.NEEDS_ZIP_REVIEW,
+      usable_for_gabriel: true,
+      rejected_reason: ''
+    };
+  }
   if (officialProof || propertySpecific) {
     return {
       quality_bucket: QUALITY_BUCKETS.SOURCE_PROOF_ONLY,
@@ -704,6 +725,12 @@ function qualityForDeal(deal) {
 }
 
 function missingFields(deal) {
+  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
+    return ['zip (verify from the source document)']
+      .concat(!(deal.status_evidence_text || deal.sale_date_or_event_date) ? ['current status or event date evidence'] : [])
+      .concat(!callPrepProjection.visibleContactRoute(deal) ? ['visible contact route'] : [])
+      .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []);
+  }
   return []
     .concat(!deal.normalized_address ? ['complete property address'] : [])
     .concat(!(deal.source_url || deal.source_document_url) ? ['source proof URL'] : [])
@@ -714,6 +741,7 @@ function missingFields(deal) {
 }
 
 function nextBestAction(deal) {
+  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) return 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
   if (!deal.normalized_address) return 'VERIFY_PROPERTY_IDENTITY';
   if (!(deal.source_url || deal.source_document_url)) return 'VERIFY_SOURCE_PROOF';
   if (!deal.motivation_evidence_text) return 'VERIFY_MOTIVATION_SOURCE';
@@ -732,6 +760,7 @@ function rankDeal(deal) {
   let rank = confidenceScore(deal);
   if (deal.quality_bucket === QUALITY_BUCKETS.REJECTED_GENERIC) rank -= 1000;
   if (deal.quality_bucket === QUALITY_BUCKETS.INSPECT_NOW) rank += 50;
+  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) rank += 40;
   if (deal.quality_bucket === QUALITY_BUCKETS.SOURCE_PROOF_ONLY) rank += 30;
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_IDENTITY) rank += 10;
   if (deal.record_origin === 'source_adapter') rank += 40;
@@ -750,6 +779,12 @@ function finalizeDeal(deal) {
   deal.quality_bucket = quality.quality_bucket;
   deal.usable_for_gabriel = quality.usable_for_gabriel;
   deal.rejected_reason = quality.rejected_reason;
+  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
+    deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], [
+      'OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED',
+      'ZIP_MISSING_REVIEW_REQUIRED'
+    ])));
+  }
   deal.confidence_score = confidenceScore(deal);
   deal.missing_fields = missingFields(deal);
   deal.next_best_action = nextBestAction(deal);
@@ -767,6 +802,7 @@ function dealFromRecord(record, context) {
   const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
   const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
+  const partialAddress = partialAddressFromRecord(record, parts.normalized_address);
   const family = sourceFamily(record);
   const motivation = motivationFromRecord(record);
   const sourceUrl = cleanText(record && (record.source_url || record.url));
@@ -782,9 +818,10 @@ function dealFromRecord(record, context) {
     ].join('|')),
     headline: cleanText(record && record.headline) || cleanText([parts.normalized_address || 'Public distressed opportunity', motivation.motivation_type].filter(Boolean).join(' - ')),
     normalized_address: parts.normalized_address,
+    partial_address: partialAddress,
     raw_address_text: parts.raw_address_text,
     city: parts.city,
-    county: parts.county,
+    county: cleanText(record && record.county) || parts.county,
     state: parts.state,
     zip: parts.zip,
     source_family: family,
@@ -795,7 +832,10 @@ function dealFromRecord(record, context) {
     redfin_url: links.redfin_url,
     realtor_url: links.realtor_url,
     auction_url: links.auction_url,
-    maps_url: mapsUrl(parts.normalized_address || parts.raw_address_text, market) || null,
+    // Maps only for a complete address; partial identities get a clearly
+    // review-labeled SEARCH link instead - never a fake precise pin.
+    maps_url: parts.normalized_address ? mapsUrl(parts.normalized_address, market) || null : null,
+    maps_search_url_review_needed: !parts.normalized_address && partialAddress ? mapsUrl(partialAddress, market) || null : null,
     motivation_type: motivation.motivation_type,
     motivation_evidence_text: motivation.motivation_evidence_text,
     status_evidence_text: statusEvidenceFromRecord(record),
@@ -863,6 +903,7 @@ function candidateRecord(candidate, source) {
   return {
     headline: cleanText(candidate.normalized_address || candidate.property_address || candidate.source_row_reference || source.source_name || 'Source adapter candidate'),
     normalized_address: cleanText(candidate.normalized_address || candidate.property_address),
+    county: cleanText(candidate.county || source.county),
     raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
     source_family: cleanText(candidate.source_family || source.source_family),
     source_name: cleanText(candidate.source_name || source.source_name),
@@ -1331,6 +1372,7 @@ function qualityDiagnostics(allDeals, usableDeals) {
     usable_deal_count: usableDeals.length,
     rejected_generic_count: rejected.length,
     inspect_now_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.INSPECT_NOW).length,
+    needs_zip_review_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW).length,
     source_proof_only_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.SOURCE_PROOF_ONLY).length,
     needs_identity_count: usableDeals.filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.NEEDS_IDENTITY).length,
     bad_address_rejected_count: allDeals.filter((deal) => deal.bad_address_rejected === true || deal.rejected_reason === 'bad_address_metadata_prefix').length,
@@ -1364,6 +1406,7 @@ function dashboardSummary(deals, linkDiagnostics, context, quality) {
     rejected_generic_count: Number(quality && quality.rejected_generic_count || 0) || 0,
     usable_deal_count: Number(quality && quality.usable_deal_count || 0) || 0,
     inspect_now_count: Number(quality && quality.inspect_now_count || 0) || 0,
+    needs_zip_review_count: Number(quality && quality.needs_zip_review_count || 0) || 0,
     source_proof_only_count: Number(quality && quality.source_proof_only_count || 0) || 0,
     needs_identity_count: Number(quality && quality.needs_identity_count || 0) || 0,
     bad_address_rejected_count: Number(quality && quality.bad_address_rejected_count || 0) || 0,

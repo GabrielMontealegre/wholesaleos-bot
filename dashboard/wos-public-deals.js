@@ -32,11 +32,16 @@
   }
 
   function rowCard(row) {
-    var title = row.normalized_address || row.headline || 'Source proof row';
+    var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
+    var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
     var lines = [];
     lines.push('<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + esc(title) +
+      (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
       ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span></div>');
+    if (zipReview && row.maps_search_url_review_needed) {
+      lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
+    }
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
     var links = link('Source proof', row.source_document_url || row.source_url) + link('Best click', row.best_link_to_click_first) +
       link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
@@ -73,6 +78,7 @@
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
       chip('OUTREACH_READY', c.outreach_ready || 0, '#bfdbfe'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
+      chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('Needs contact', c.needs_contact || 0),
       chip('Needs comps', c.needs_comps || 0),
       chip('Owner clues', c.owner_clues || 0)
@@ -125,8 +131,8 @@
 
   function render(container, data, note) {
     var rows = Array.isArray(data.rows) ? data.rows : [];
-    var addressRows = rows.filter(function (r) { return r.normalized_address; });
-    var proofRows = rows.filter(function (r) { return !r.normalized_address; });
+    var addressRows = rows.filter(function (r) { return r.normalized_address || r.quality_bucket === 'NEEDS_ZIP_REVIEW'; });
+    var proofRows = rows.filter(function (r) { return !r.normalized_address && r.quality_bucket !== 'NEEDS_ZIP_REVIEW'; });
     container.querySelector('.wos-public-deals-body').innerHTML =
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       summaryBar(data) +
