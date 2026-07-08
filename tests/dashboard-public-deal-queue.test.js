@@ -230,12 +230,42 @@ function mockDeal(overrides) {
   assert.strictEqual(ocrBatch.batch.ocr.ocr_documents_attempted, 2);
   assert.strictEqual(ocrBatch.batch.ocr.ocr_rows_with_address, 1);
 
+  // 3c) Daily auto-run: default off, clamped interval, persisted state,
+  //     tick respects daily cap and the one-active-job rule.
+  process.env.DEAL_BOARD_AUTO_RUN_PATH = path.join(tmpDir, 'deal-board-auto-run.json');
+  const initialAuto = queueService.getAutoRunStatus({ city: 'Dallas', county: 'Dallas', state: 'TX' });
+  assert.strictEqual(initialAuto.enabled, false, 'auto-run defaults OFF');
+  assert.strictEqual(initialAuto.not_a_saved_lead, true);
+
+  const enabled = queueService.setAutoRun({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: true, interval_minutes: 5 }, {});
+  assert.strictEqual(enabled.auto_run.enabled, true);
+  assert.strictEqual(enabled.auto_run.interval_minutes, queueService.MIN_AUTO_RUN_INTERVAL_MINUTES, 'interval clamps to the 20-minute floor');
+  assert.ok(enabled.auto_run.next_run_at, 'next run ETA visible');
+  assert.strictEqual(enabled.auto_run.daily_cap, queueService.DAILY_AUTO_RUN_CAP);
+  assert.ok(fs.existsSync(process.env.DEAL_BOARD_AUTO_RUN_PATH), 'schedule persisted');
+  assert.strictEqual(JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_AUTO_RUN_PATH, 'utf8')).store_kind, 'deal_board_auto_run_schedule_not_saved_leads');
+
+  const disabled = queueService.setAutoRun({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: false }, {});
+  assert.strictEqual(disabled.auto_run.enabled, false);
+  assert.strictEqual(disabled.auto_run.next_run_at, null);
+
+  // latest exposes auto_run + daily progress.
+  const latestWithDaily = queueService.latestDealBoardSnapshot({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' } });
+  assert.ok(latestWithDaily.auto_run, 'latest must expose auto-run state');
+  assert.strictEqual(latestWithDaily.auto_run.enabled, false);
+  assert.ok(latestWithDaily.daily, 'latest must expose daily progress');
+  assert.ok(latestWithDaily.daily.batches_today >= 1);
+  assert.ok(latestWithDaily.daily.address_rows_today >= 1);
+  assert.strictEqual(typeof latestWithDaily.daily.ocr_address_rows_today, 'number');
+
   // 4) Server routes exist and are admin-protected; no legacy agents involved.
   const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/latest',\s*requireAdmin/.test(serverSource));
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/run',\s*requireAdmin/.test(serverSource));
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/job\/:id',\s*requireAdmin/.test(serverSource), 'job status route must be admin-protected');
   assert.ok(/startDealBoardBatchJob/.test(serverSource), 'run route must start a background job');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/auto-run',\s*requireAdmin/.test(serverSource), 'auto-run route must be admin-protected');
+  assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
 
@@ -257,6 +287,11 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes("/job/"), 'dashboard must poll the background job endpoint');
   assert.ok(uiSource.includes('Batch running'), 'dashboard must show running progress');
   assert.ok(uiSource.includes('ocr_documents_attempted'), 'dashboard must show OCR diagnostics');
+  assert.ok(uiSource.includes('/auto-run'), 'dashboard toggle must drive the server-side schedule');
+  assert.ok(uiSource.includes('address_rows_today'), 'dashboard must show daily progress');
+  assert.ok(uiSource.includes('next_run_at'), 'dashboard must show next run ETA');
+  assert.ok(uiSource.includes('last_error'), 'dashboard must surface the last auto-run error');
+  assert.ok(uiSource.includes('ocr_text_quality_score'), 'dashboard must show OCR quality score');
 
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;

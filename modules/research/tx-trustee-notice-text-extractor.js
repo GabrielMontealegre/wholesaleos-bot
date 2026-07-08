@@ -10,7 +10,7 @@ const GATE_RE = /\b(?:property\s+address|date\s+of\s+sale|sale\s+date|date,?\s+t
 const DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
 const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
 const OWNER_RE = /\b(?:borrower|mortgagor|grantor|debtor|owner)\s*(?:name)?\s*[:#-]?\s*([^|;\n]{2,100})/i;
-const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|suite\s+\d{1,5})\b/i;
+const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|(?:mortgage\s+)?servicer\s+address|mortgagee\s+address|beneficiary\s+address|trustee\s+address|suite\s+\d{1,5}|place\s*of\s*sale|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/i;
 const STREET_SUFFIX = "(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)";
 
 function cleanText(value) {
@@ -73,6 +73,8 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
   const source = String(text || '').replace(/\r/g, '\n');
   if (!NOTICE_RE.test(source) && !GATE_RE.test(source)) return [];
   const county = cleanText(profile.county) || 'Unknown';
+  const excludedRe = profile.excluded_addresses_re ||
+    (cleanText(profile.excluded_address_pattern) ? new RegExp(profile.excluded_address_pattern, 'i') : null);
   const rows = [];
   const seen = new Set();
   const addressRe = streetAddressRe(profile.city_names);
@@ -81,8 +83,13 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
     const address = cleanText(match[0]).replace(/\s+,/g, ',');
-    if (!/\d{5}/.test(address) && !/,\s*(?:TX|Texas)/i.test(address)) continue;
-    if (profile.excluded_addresses_re && profile.excluded_addresses_re.test(address)) continue;
+    // Require a zip, or at least a known city from the county profile -
+    // "123 Somewhere Rd, TX" alone is too weak to present as a property.
+    const hasZip = /\d{5}/.test(address);
+    const hasKnownCity = (Array.isArray(profile.city_names) ? profile.city_names : [])
+      .some((city) => city && new RegExp(`\\b${String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(address));
+    if (!hasZip && !hasKnownCity) continue;
+    if (excludedRe && excludedRe.test(address)) continue;
     const windowText = noticeWindow(source, match.index);
     const saleDate = saleDateFromWindow(windowText);
     const key = `${cleanText(context.source_proof_url)}|${address.toLowerCase()}|${saleDate}`;

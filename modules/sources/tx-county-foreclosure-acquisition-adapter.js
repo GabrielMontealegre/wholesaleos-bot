@@ -226,6 +226,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
         county: profile.county,
         state: profile.state,
         city_names: profile.city_names,
+        excluded_address_pattern: profile.excluded_address_pattern,
         max_rows: MAX_ROWS
       }, {
         source_url: profile.source_url,

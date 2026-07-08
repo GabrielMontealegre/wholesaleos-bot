@@ -86,10 +86,22 @@
         esc(batch.ocr.ocr_documents_attempted) + ' scanned docs attempted, ' +
         esc(batch.ocr.ocr_documents_succeeded) + ' read, ' +
         esc(batch.ocr.ocr_rows_with_address) + ' address rows (review recommended), ' +
+        (batch.ocr.ocr_retry_documents ? esc(batch.ocr.ocr_retry_documents) + ' retried at higher scale, ' : '') +
+        'quality ' + esc(batch.ocr.ocr_text_quality_score || 0) + '/100, ' +
         esc(batch.ocr.ocr_skipped_oversize) + ' oversize skipped, ' +
         esc(batch.ocr.ocr_failures) + ' failed.</div>';
     }
-    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + ocrLine + coverageTable(batch);
+    var dailyLine = '';
+    if (data.daily) {
+      var autoRun = data.auto_run || {};
+      dailyLine = '<div style="font-size:11px;color:#4b5563;margin-bottom:6px;">Today: ' +
+        esc(data.daily.batches_today) + ' batches, ' +
+        esc(data.daily.address_rows_today) + ' new address rows, ' +
+        esc(data.daily.ocr_address_rows_today) + ' via OCR. Auto-run: ' +
+        (autoRun.enabled ? 'ON every ' + esc(autoRun.interval_minutes) + ' min (' + esc(autoRun.runs_today || 0) + '/' + esc(autoRun.daily_cap || 24) + ' today' + (autoRun.next_run_at ? ', next ' + esc(String(autoRun.next_run_at).replace('T', ' ').slice(0, 16)) : '') + ')' : 'off') +
+        (autoRun.last_error ? ' - last error: ' + esc(autoRun.last_error) : '') + '</div>';
+    }
+    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + dailyLine + ocrLine + coverageTable(batch);
   }
 
   function coverageTable(batch) {
@@ -202,18 +214,33 @@
     host.insertBefore(section, host.firstChild);
     var runButton = document.getElementById('wos-public-deals-run');
     runButton.addEventListener('click', function () { runBatch(section, this); });
-    var autoTimer = null;
-    document.getElementById('wos-public-deals-auto').addEventListener('change', function () {
-      if (this.checked) {
-        autoTimer = setInterval(function () {
-          if (!runButton.disabled) runBatch(section, runButton);
-        }, 20 * 60 * 1000);
-      } else if (autoTimer) {
-        clearInterval(autoTimer);
-        autoTimer = null;
-      }
+    // Server-side scheduler (survives closing the tab); default OFF,
+    // capped daily; 20 * 60 * 1000 ms minimum interval enforced server-side.
+    var autoBox = document.getElementById('wos-public-deals-auto');
+    autoBox.addEventListener('change', function () {
+      var box = this;
+      fetch(API_RUN.replace('/run', '/auto-run'), {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: box.checked, interval_minutes: 20 })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!data || data.ok === false) throw new Error((data && data.error) || 'auto-run update failed');
+          fetchLatestWithNote(section, 'Auto-run ' + (data.auto_run && data.auto_run.enabled ? 'enabled (every ' + data.auto_run.interval_minutes + ' min, capped daily).' : 'disabled.'));
+        })
+        .catch(function (err) {
+          box.checked = !box.checked;
+          fetchLatestWithNote(section, 'Auto-run change failed: ' + err.message);
+        });
     });
-    fetchLatest(section);
+    fetch(API_LATEST, { headers: headers() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.auto_run && data.auto_run.enabled) autoBox.checked = true;
+        render(section, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
+      })
+      .catch(function () { fetchLatest(section); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);

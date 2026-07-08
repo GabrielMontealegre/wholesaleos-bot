@@ -52,8 +52,9 @@ function doc(url, bytes) {
   assert.strictEqual(row.sale_date, '08/04/2026');
   assert.strictEqual(row.county, 'Rockwall');
   assert.strictEqual(row.owner_name, 'SAM SCANNED');
-  assert.strictEqual(row.extraction_confidence, 'Low');
-  assert.ok(row.risk_flags.includes(ocrExtraction.OCR_RISK_FLAG));
+  assert.strictEqual(row.extraction_confidence, 'Medium', 'clean address+date at high OCR confidence scores medium');
+  assert.strictEqual(row.ocr_confidence_level, 'medium');
+  assert.ok(row.risk_flags.includes(ocrExtraction.OCR_RISK_FLAG), 'review flag stays regardless of confidence');
   assert.ok(row.missing_evidence.some((item) => /human review/i.test(item)));
   assert.ok(/OCR of scanned official document/.test(row.source_reference));
   assert.strictEqual(cleanRun.preview_only, true);
@@ -93,6 +94,75 @@ function doc(url, bytes) {
   assert.strictEqual(mixedRun.diagnostics.ocr_skipped_oversize, 1);
   assert.strictEqual(mixedRun.diagnostics.ocr_failures, 1);
   assert.ok(mixedRun.diagnostics.ocr_documents_attempted <= 5);
+
+  // 4b) Retry pass runs at higher scale + preprocessing ONLY when pass 1 finds
+  //     nothing, and cleaned text (garbled labels/zip) then parses honestly.
+  const GARBLED_BUT_REPAIRABLE = [
+    'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+    'Property Adres:',
+    '77 Fate Meadow Ln',
+    'Fate, T X 75O87',
+    'Sale Date: 09/01/2026'
+  ].join('\n');
+  const passesSeen = [];
+  const retryRun = await ocrExtraction.runOcrNoticeExtraction({
+    documents: [doc('https://www.rockwallcountytexas.com/Archive.aspx?ADID=7700')]
+  }, {
+    render_impl: async (buffer, passCaps) => {
+      passesSeen.push({ scale: passCaps.render_scale, preprocess: passCaps.preprocess === true });
+      return [Buffer.from('png')];
+    },
+    ocr_impl: (() => {
+      let calls = 0;
+      return async () => {
+        calls += 1;
+        // Pass 1 returns unusable noise; pass 2 returns repairable garble.
+        if (calls === 1) return { text: 'zzzz nothing here', confidence: 30 };
+        return { text: GARBLED_BUT_REPAIRABLE, confidence: 82 };
+      };
+    })()
+  });
+  assert.strictEqual(passesSeen.length, 2, 'exactly two passes when the first finds nothing');
+  assert.ok(passesSeen[0].scale < passesSeen[1].scale, 'retry must render at higher scale');
+  assert.strictEqual(passesSeen[0].preprocess, false);
+  assert.strictEqual(passesSeen[1].preprocess, true, 'retry must preprocess');
+  assert.strictEqual(retryRun.diagnostics.ocr_retry_documents, 1);
+  assert.strictEqual(retryRun.diagnostics.ocr_retry_rows_extracted, 1);
+  assert.strictEqual(retryRun.rows.length, 1);
+  assert.ok(/77 Fate Meadow Ln/.test(retryRun.rows[0].address));
+  assert.ok(/75087/.test(retryRun.rows[0].address), 'zip O->0 repaired deterministically');
+  assert.strictEqual(retryRun.rows[0].sale_date, '09/01/2026');
+  assert.strictEqual(retryRun.rows[0].ocr_pass, 2);
+  assert.strictEqual(retryRun.rows[0].ocr_confidence_level, 'medium');
+  assert.strictEqual(retryRun.diagnostics.ocr_text_quality_score, 82);
+
+  // 4c) No retry when the first pass already finds rows.
+  const noRetrySeen = [];
+  await ocrExtraction.runOcrNoticeExtraction({
+    documents: [doc('https://www.rockwallcountytexas.com/Archive.aspx?ADID=7701')]
+  }, {
+    render_impl: async (buffer, passCaps) => { noRetrySeen.push(passCaps.render_scale); return [Buffer.from('png')]; },
+    ocr_impl: async () => ({ text: CLEAN_NOTICE_OCR_TEXT, confidence: 88 })
+  });
+  assert.strictEqual(noRetrySeen.length, 1, 'no retry when pass 1 succeeds');
+
+  // 4d) Cleanup never invents: an unrepairable zip stays garbled and yields nothing.
+  assert.strictEqual(ocrExtraction.cleanupOcrText('Fate, T X 75O87'), 'Fate, TX 75087');
+  assert.strictEqual(ocrExtraction.cleanupOcrText('ROCKWALL T0322'), 'ROCKWALL T0322', 'repair rejected when result is not a TX zip');
+  assert.strictEqual(ocrExtraction.cleanupOcrText('Property Adar:'), 'Property Address:');
+
+  // 4e) Rows below the hard confidence floor are rejected and counted.
+  const lowConfRun = await ocrExtraction.runOcrNoticeExtraction({
+    documents: [doc('https://www.rockwallcountytexas.com/Archive.aspx?ADID=7702')]
+  }, {
+    render_impl: async () => [Buffer.from('png')],
+    ocr_impl: async () => ({ text: CLEAN_NOTICE_OCR_TEXT, confidence: 30 })
+  });
+  assert.strictEqual(lowConfRun.rows.length, 0, 'sub-floor confidence rows must not surface');
+  assert.strictEqual(lowConfRun.diagnostics.ocr_rows_rejected_low_confidence, 1);
+
+  // 4f) Parse-failure diagnostics populate.
+  assert.strictEqual(garbledRun.diagnostics.ocr_address_parse_failures, 1);
 
   // 5) Adapter wiring: scanned no-text-layer doc goes to the OCR lane and rows merge in.
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-ocr-'));

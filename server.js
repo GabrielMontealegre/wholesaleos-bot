@@ -2040,6 +2040,19 @@ app.get('/api/dashboard/free-public-deal-board/job/:id', requireAdmin, (req, res
   }
 });
 
+// Daily auto-run schedule for capped background batches (default OFF).
+app.post('/api/dashboard/free-public-deal-board/auto-run', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(dealBoardQueueService.setAutoRun(req.body || {}, { env: process.env }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, code: 'deal_board_auto_run_failed' });
+  }
+});
+
+// Restore an enabled auto-run schedule after deploys/restarts.
+try { dealBoardQueueService.loadAutoRunFromDisk({ env: process.env }); } catch (e) { /* best effort */ }
+
 // Admin-only: protect sensitive routes
 app.use(['/api/buyboxes', '/api/settings', '/api/integrations'], (req, res, next) => {
   try {

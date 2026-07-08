@@ -75,6 +75,7 @@ const PROFILES = [
     human_portal_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
     official_hosts: ['rockwallcountytexas.com'],
     city_names: ['Rockwall', 'Royse City', 'Heath', 'Fate', 'McLendon-Chisholm', 'Rowlett', 'Wylie', 'Mobile City'],
+    excluded_address_pattern: 'yellow\\s?i?jacket',
     extra_document_pages: ['https://www.rockwallcountytexas.com/Archive.aspx?AMID=83'],
     search_hints: ['site:rockwallcountytexas.com foreclosure notices archive', 'Rockwall County Texas notice of trustee sale filetype:pdf'],
     blocked_note: 'Open CivicPlus monthly archives with per-notice documents; current scans lack a text layer - open the direct links (OCR is the future automation lever).'
