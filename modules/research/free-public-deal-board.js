@@ -41,7 +41,7 @@ const QUALITY_BUCKETS = Object.freeze({
 });
 
 // Street + city + TX visible but no 5-digit zip: reviewable partial identity.
-const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40},?\s+(?:TX|Texas)\b/i;
+const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas)\b/i;
 
 function partialAddressFromRecord(record, resolvedAddress) {
   if (cleanText(resolvedAddress)) return '';
