@@ -301,9 +301,13 @@ function latestDealBoardSnapshot(input = {}) {
       has_snapshot: false,
       counts: queueCounts([]),
       batch: null,
+      daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
+      auto_run: getAutoRunStatus(market),
       rows: []
     };
   }
+  const today = nowIso().slice(0, 10);
+  const batchesToday = (bucket.batches || []).filter((item) => String(item.run_at).slice(0, 10) === today);
   return {
     ok: true,
     preview_only: true,
@@ -312,7 +316,13 @@ function latestDealBoardSnapshot(input = {}) {
     has_snapshot: true,
     counts: queueCounts(bucket.rows),
     batch: (bucket.batches || [])[0] || null,
-    batches_today: (bucket.batches || []).filter((item) => String(item.run_at).slice(0, 10) === nowIso().slice(0, 10)).length,
+    batches_today: batchesToday.length,
+    daily: {
+      batches_today: batchesToday.length,
+      address_rows_today: bucket.rows.filter((row) => row.normalized_address && String(row.first_seen_at).slice(0, 10) === today).length,
+      ocr_address_rows_today: batchesToday.reduce((sum, item) => sum + Number(item.ocr && item.ocr.ocr_rows_with_address || 0), 0)
+    },
+    auto_run: getAutoRunStatus(market),
     rows: bucket.rows.slice(0, 100)
   };
 }
@@ -415,6 +425,138 @@ function getDealBoardJob(jobId) {
   return job ? { ok: true, job: publicJob(job) } : { ok: false, error: 'job_not_found' };
 }
 
+// ---------------------------------------------------------------------------
+// Daily auto-run: capped, per-market, server-side scheduler for the same
+// preview-only background batches. Default OFF; state persists in the job
+// ledger file so a deploy restores an enabled schedule.
+
+const MIN_AUTO_RUN_INTERVAL_MINUTES = 20;
+const DAILY_AUTO_RUN_CAP = 24;
+const autoRunState = new Map();
+const autoRunTimers = new Map();
+
+function autoRunFilePath() {
+  return path.resolve(
+    process.env.DEAL_BOARD_AUTO_RUN_PATH ||
+    path.join(path.dirname(path.resolve(process.env.DB_PATH || './data/db.json')), 'deal-board-auto-run.json')
+  );
+}
+
+function persistAutoRun() {
+  try {
+    const file = autoRunFilePath();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({
+      store_kind: 'deal_board_auto_run_schedule_not_saved_leads',
+      updated_at: nowIso(),
+      markets: Array.from(autoRunState.values())
+    }, null, 2));
+  } catch (error) { /* schedule persistence is best-effort */ }
+}
+
+function loadAutoRunFromDisk(options) {
+  try {
+    const data = JSON.parse(fs.readFileSync(autoRunFilePath(), 'utf8'));
+    for (const entry of Array.isArray(data && data.markets) ? data.markets : []) {
+      if (!entry || !entry.market_key) continue;
+      autoRunState.set(entry.market_key, entry);
+      if (entry.enabled) scheduleAutoRunTimer(entry, options || {});
+    }
+  } catch (error) { /* no schedule yet */ }
+}
+
+function autoRunEntry(market) {
+  const key = marketKey(market);
+  if (!autoRunState.has(key)) {
+    autoRunState.set(key, {
+      market,
+      market_key: key,
+      enabled: false,
+      interval_minutes: MIN_AUTO_RUN_INTERVAL_MINUTES,
+      daily_cap: DAILY_AUTO_RUN_CAP,
+      day: nowIso().slice(0, 10),
+      runs_today: 0,
+      last_run_at: null,
+      next_run_at: null,
+      last_error: '',
+      preview_only: true,
+      not_a_saved_lead: true
+    });
+  }
+  const entry = autoRunState.get(key);
+  const today = nowIso().slice(0, 10);
+  if (entry.day !== today) {
+    entry.day = today;
+    entry.runs_today = 0;
+  }
+  return entry;
+}
+
+function clearAutoRunTimer(key) {
+  const timer = autoRunTimers.get(key);
+  if (timer) clearInterval(timer);
+  autoRunTimers.delete(key);
+}
+
+function autoRunTick(entry, options) {
+  const today = nowIso().slice(0, 10);
+  if (entry.day !== today) {
+    entry.day = today;
+    entry.runs_today = 0;
+  }
+  if (!entry.enabled) return;
+  if (entry.runs_today >= entry.daily_cap) {
+    entry.last_error = '';
+    entry.next_run_at = `${today}T23:59:59Z (daily cap ${entry.daily_cap} reached)`;
+    persistAutoRun();
+    return;
+  }
+  const startResult = startDealBoardBatchJob({ market: entry.market, limit: MAX_BATCH_LIMIT }, options || {});
+  if (startResult.already_running) {
+    entry.last_error = '';
+  } else {
+    entry.runs_today += 1;
+    entry.last_run_at = nowIso();
+  }
+  entry.next_run_at = new Date(Date.now() + entry.interval_minutes * 60000).toISOString();
+  persistAutoRun();
+}
+
+function scheduleAutoRunTimer(entry, options) {
+  clearAutoRunTimer(entry.market_key);
+  const timer = setInterval(() => {
+    try {
+      autoRunTick(entry, options);
+    } catch (error) {
+      entry.last_error = cleanText(error && error.message).slice(0, 120);
+      persistAutoRun();
+    }
+  }, Math.max(entry.interval_minutes, MIN_AUTO_RUN_INTERVAL_MINUTES) * 60000);
+  if (typeof timer.unref === 'function') timer.unref();
+  autoRunTimers.set(entry.market_key, timer);
+  entry.next_run_at = new Date(Date.now() + entry.interval_minutes * 60000).toISOString();
+}
+
+function setAutoRun(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const entry = autoRunEntry(market);
+  entry.enabled = input.enabled === true;
+  entry.interval_minutes = Math.max(MIN_AUTO_RUN_INTERVAL_MINUTES, Math.min(Number(input.interval_minutes) || MIN_AUTO_RUN_INTERVAL_MINUTES, 240));
+  if (entry.enabled) {
+    scheduleAutoRunTimer(entry, options);
+  } else {
+    clearAutoRunTimer(entry.market_key);
+    entry.next_run_at = null;
+  }
+  persistAutoRun();
+  return { ok: true, auto_run: Object.assign({}, entry), preview_only: true };
+}
+
+function getAutoRunStatus(market) {
+  const entry = autoRunEntry(Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, market || {}));
+  return Object.assign({}, entry);
+}
+
 module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
@@ -426,5 +568,10 @@ module.exports = {
   runDealBoardBatch,
   latestDealBoardSnapshot,
   startDealBoardBatchJob,
-  getDealBoardJob
+  getDealBoardJob,
+  setAutoRun,
+  getAutoRunStatus,
+  loadAutoRunFromDisk,
+  MIN_AUTO_RUN_INTERVAL_MINUTES,
+  DAILY_AUTO_RUN_CAP
 };
