@@ -473,6 +473,26 @@ const rejectedRecords = [
           motivation_evidence_text: 'NOTICE OF TRUSTEE SALE | Property Address: 4016 Poplar Point Dr Rockwall, TX (OCR)',
           risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED']
         }, {
+          property_address: '116 Comanc He Dr Greenville, TX 75402',
+          county: 'Hunt',
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Hunt County Foreclosure EasyDocs',
+          source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+          source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-08-04-foreclosure-01.pdf',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 116 Comanc He Dr Greenville, TX 75402 (OCR)',
+          risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED']
+        }, {
+          property_address: '116 Greenville, TX 75402',
+          county: 'Hunt',
+          source_family: 'preforeclosure_trustee_notice',
+          source_name: 'Hunt County Foreclosure EasyDocs',
+          source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+          source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-08-04-foreclosure-02.pdf',
+          motivation_type: 'preforeclosure_trustee_notice',
+          motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE | 116 Greenville, TX 75402 (OCR)',
+          risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED']
+        }, {
           source_family: 'preforeclosure_trustee_notice',
           source_name: 'Rockwall County Foreclosure Notices',
           source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
@@ -482,7 +502,7 @@ const rejectedRecords = [
         }]
       }]
     }, { fetch_impl: fetchImpl });
-    const zipReviewRow = zipReviewRows.free_public_deals.find((deal) => deal.quality_bucket === 'NEEDS_ZIP_REVIEW');
+    const zipReviewRow = zipReviewRows.free_public_deals.find((deal) => deal.quality_bucket === 'NEEDS_ZIP_REVIEW' && /4016 Poplar Point/i.test(deal.partial_address || deal.raw_address_text || ''));
     assert.ok(zipReviewRow, 'partial street+city+TX from official doc must surface as NEEDS_ZIP_REVIEW');
     assert.strictEqual(zipReviewRow.partial_address, '4016 Poplar Point Dr Rockwall, TX');
     assert.strictEqual(zipReviewRow.normalized_address, '', 'partial identity must not fake a complete address');
@@ -495,6 +515,22 @@ const rejectedRecords = [
     assert.ok(zipReviewRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
     assert.strictEqual(zipReviewRow.usable_for_gabriel, true);
     assert.ok(zipReviewRows.needs_zip_review_count >= 1);
+    const ocrReviewRow = zipReviewRows.free_public_deals.find((deal) => /116 Comanc He Dr Greenville/i.test(deal.partial_address));
+    assert.ok(ocrReviewRow, 'OCR-mangled but real address shape must surface as a review row');
+    assert.strictEqual(ocrReviewRow.quality_bucket, 'NEEDS_ZIP_REVIEW');
+    assert.strictEqual(ocrReviewRow.normalized_address, '', 'OCR street spelling must never be guessed into a canonical address');
+    assert.strictEqual(ocrReviewRow.partial_address, '116 Comanc He Dr Greenville, TX 75402');
+    assert.strictEqual(ocrReviewRow.maps_url, null, 'no precise map pin for OCR review rows');
+    assert.ok(/query=116/.test(ocrReviewRow.maps_search_url_review_needed), 'OCR review row gets a review search link only');
+    assert.strictEqual(ocrReviewRow.next_best_action, 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT');
+    assert.ok(ocrReviewRow.missing_fields.some((item) => /verified street spelling/i.test(item)));
+    assert.ok(ocrReviewRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
+    assert.ok(!ocrReviewRow.risk_flags.includes('ZIP_FROM_US_CENSUS_GEOCODER'));
+    assert.ok(!ocrReviewRow.risk_flags.includes('ZIP_MISSING_REVIEW_REQUIRED'), 'zip is visible, so zip-missing flag should not be set');
+    const junkOcrRow = zipReviewRows.free_public_deals.find((deal) => /116 Greenville, TX 75402/.test(deal.partial_address || deal.raw_address_text || ''));
+    assert.ok(junkOcrRow, 'junk OCR text should still surface as a proof row');
+    assert.strictEqual(junkOcrRow.quality_bucket, 'SOURCE_PROOF_ONLY');
+    assert.strictEqual(junkOcrRow.next_best_action, 'VERIFY_PROPERTY_IDENTITY');
     const noAddressRow = zipReviewRows.free_public_deals.find((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY' && !deal.partial_address);
     assert.ok(noAddressRow, 'rows with no readable street stay source-proof');
     assert.ok(zipReviewRow.rank_score > noAddressRow.rank_score, 'zip-review rows outrank plain proof rows');
@@ -565,16 +601,18 @@ const rejectedRecords = [
     }, { fetch_impl: fetchImpl, census_zip_resolver_impl: censusResolver });
     assert.strictEqual(censusRows.census_zip_enabled, true);
     assert.strictEqual(censusRows.census_zip_lookups, 3);
-    assert.strictEqual(censusRows.census_zip_resolved_full_address, 1);
-    assert.strictEqual(censusRows.census_zip_suggested_review, 1);
+    assert.strictEqual(censusRows.census_zip_resolved_full_address, 0);
+    assert.strictEqual(censusRows.census_zip_suggested_review, 2);
     assert.strictEqual(censusRows.census_zip_unresolved, 1);
-    const promotedRow = censusRows.free_public_deals.find((deal) => deal.normalized_address === '4016 Poplar Point Dr, Rockwall, TX 75032');
-    assert.ok(promotedRow, 'census-resolved partial with sale-date evidence must gain the full address');
-    assert.strictEqual(promotedRow.quality_bucket, 'INSPECT_NOW');
-    assert.ok(promotedRow.risk_flags.includes('ZIP_FROM_US_CENSUS_GEOCODER'), 'zip provenance must be recorded');
-    assert.ok(promotedRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'), 'OCR review flag must survive promotion');
-    assert.ok(!promotedRow.risk_flags.includes('ZIP_MISSING_REVIEW_REQUIRED'), 'zip is no longer missing after federal match');
-    assert.ok(/query=4016/.test(promotedRow.maps_url || ''), 'promoted row gets a real maps link');
+    const reviewRow = censusRows.free_public_deals.find((deal) => /4016 Poplar Point Dr Rockwall/.test(deal.partial_address));
+    assert.ok(reviewRow, 'census-resolved OCR review row must stay visible');
+    assert.strictEqual(reviewRow.quality_bucket, 'NEEDS_ZIP_REVIEW');
+    assert.strictEqual(reviewRow.normalized_address, '', 'suggestion must not fake a complete address');
+    assert.strictEqual(reviewRow.census_zip_suggestion, '75032');
+    assert.ok(reviewRow.risk_flags.includes('ZIP_SUGGESTED_BY_US_CENSUS_GEOCODER'));
+    assert.ok(reviewRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
+    assert.strictEqual(reviewRow.next_best_action, 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT');
+    assert.ok(!reviewRow.risk_flags.includes('ZIP_FROM_US_CENSUS_GEOCODER'));
     const suggestedRow = censusRows.free_public_deals.find((deal) => deal.partial_address === '3609 Kings Dr Ennis, TX');
     assert.ok(suggestedRow, 'census-resolved partial without evidence must stay on the board');
     assert.strictEqual(suggestedRow.quality_bucket, 'NEEDS_ZIP_REVIEW', 'no evidence -> stays in review bucket');

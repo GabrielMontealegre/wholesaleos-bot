@@ -41,8 +41,17 @@ const QUALITY_BUCKETS = Object.freeze({
   REJECTED_GENERIC: 'REJECTED_GENERIC'
 });
 
+const STREET_TYPE_RE = '(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)';
+
 // Street + city + TX visible but no 5-digit zip: reviewable partial identity.
 const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas)\b/i;
+
+// OCR review rows with a noisy street name but a visible street-type + city
+// + TX/zip should stay reviewable. Never autocorrect the street name.
+const OCR_REVIEWABLE_ADDRESS_RE = new RegExp(
+  `^\\d{1,7}\\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,100}?\\b${STREET_TYPE_RE}\\b\\.?\\s+[A-Za-z][A-Za-z .'-]{1,40}(?:\\s+[A-Za-z][A-Za-z .'-]{1,40})*(?:,?\\s*(?:TX|Texas)(?:\\s+\\d{5}(?:-\\d{4})?)?|\\s+\\d{5}(?:-\\d{4})?)$`,
+  'i'
+);
 
 // Street + trailing city word(s) with no TX token - acceptable only when the
 // source row itself says the state is TX (the county notice extractors set
@@ -60,6 +69,31 @@ function partialAddressFromRecord(record, resolvedAddress) {
     if (cityOnly) return `${cleanText(cityOnly[0]).replace(/\s+,/g, ',')}, TX`;
   }
   return '';
+}
+
+function ocrReviewAddressFromRecord(record, resolvedAddress) {
+  if (cleanText(resolvedAddress)) return '';
+  const flags = Array.isArray(record && record.risk_flags) ? record.risk_flags : [];
+  if (!flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED')) return '';
+  const raw = cleanText(record && (
+    record.raw_address_text ||
+    record.property_address ||
+    record.address ||
+    record.display_address ||
+    record.source_proof_text ||
+    record.source_snippet ||
+    record.motivation_evidence_text
+  ));
+  if (!raw) return '';
+  const match = raw.match(OCR_REVIEWABLE_ADDRESS_RE);
+  if (!match) return '';
+  const reviewText = cleanText(match[0]).replace(/\s+,/g, ',');
+  return /\b\d{5}\b(?!\d)/.test(reviewText) ? reviewText : '';
+}
+
+function ocrReviewZipFromText(text) {
+  const match = cleanText(text).match(/\b(\d{5})\b(?!\d)/);
+  return match ? match[1] : '';
 }
 
 const MOTIVATION_PATTERNS = [
@@ -737,7 +771,10 @@ function qualityForDeal(deal) {
 
 function missingFields(deal) {
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
-    return ['zip (verify from the source document)']
+    const reviewMissing = deal.ocr_address_review
+      ? ['verified street spelling (check source document)']
+      : ['zip (verify from the source document)'];
+    return reviewMissing
       .concat(!(deal.status_evidence_text || deal.sale_date_or_event_date) ? ['current status or event date evidence'] : [])
       .concat(!callPrepProjection.visibleContactRoute(deal) ? ['visible contact route'] : [])
       .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []);
@@ -752,7 +789,9 @@ function missingFields(deal) {
 }
 
 function nextBestAction(deal) {
-  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) return 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
+  if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
+    return deal.ocr_address_review ? 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT' : 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
+  }
   if (!deal.normalized_address) return 'VERIFY_PROPERTY_IDENTITY';
   if (!(deal.source_url || deal.source_document_url)) return 'VERIFY_SOURCE_PROOF';
   if (!deal.motivation_evidence_text) return 'VERIFY_MOTIVATION_SOURCE';
@@ -791,10 +830,9 @@ function finalizeDeal(deal) {
   deal.usable_for_gabriel = quality.usable_for_gabriel;
   deal.rejected_reason = quality.rejected_reason;
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
-    deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], [
-      'OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED',
-      'ZIP_MISSING_REVIEW_REQUIRED'
-    ])));
+    const reviewFlags = ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'];
+    if (!cleanText(deal.zip)) reviewFlags.push('ZIP_MISSING_REVIEW_REQUIRED');
+    deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], reviewFlags)));
     // Show the clean source-visible partial, never a canonicalizer-mangled headline.
     deal.headline = deal.partial_address;
     if (!deal.maps_search_url_review_needed) {
@@ -818,7 +856,9 @@ function dealFromRecord(record, context) {
   const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
   const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
-  const partialAddress = partialAddressFromRecord(record, parts.normalized_address);
+  const ocrReviewAddress = ocrReviewAddressFromRecord(record, parts.normalized_address);
+  const ocrReviewZip = ocrReviewAddress ? ocrReviewZipFromText(ocrReviewAddress) : '';
+  const partialAddress = ocrReviewAddress || partialAddressFromRecord(record, parts.normalized_address);
   const family = sourceFamily(record);
   const motivation = motivationFromRecord(record);
   const sourceUrl = cleanText(record && (record.source_url || record.url));
@@ -839,7 +879,7 @@ function dealFromRecord(record, context) {
     city: parts.city,
     county: cleanText(record && record.county) || parts.county,
     state: parts.state,
-    zip: parts.zip,
+    zip: parts.zip || ocrReviewZip,
     source_family: family,
     source_name: sourceName(record, family),
     source_url: sourceUrl,
@@ -891,7 +931,8 @@ function dealFromRecord(record, context) {
     rejected_reason: '',
     source_url_status: 'not_checked',
     source_document_url_status: 'not_checked',
-    link_validation: []
+    link_validation: [],
+    ocr_address_review: !!ocrReviewAddress
   };
   deal.record_origin = cleanText(record && record.record_origin);
   deal.bad_address_rejected = addressResolution.bad_address_rejected === true;
@@ -1506,24 +1547,26 @@ async function applyCensusZipResolution(deals, input, options, context) {
     deal.census_zip_suggestion = outcome.zip;
     deal.census_matched_address = outcome.matched_address;
     const hasEventEvidence = !!(deal.status_evidence_text || deal.sale_date_or_event_date);
-    if (hasEventEvidence) {
-      deal.normalized_address = outcome.normalized_address;
-      deal.city = outcome.city || deal.city;
-      deal.state = outcome.state || deal.state;
-      deal.headline = outcome.normalized_address;
-      deal.risk_flags = (deal.risk_flags || [])
-        .filter((flag) => flag !== 'ZIP_MISSING_REVIEW_REQUIRED')
-        .concat('ZIP_FROM_US_CENSUS_GEOCODER');
-      deal.risk_flags = Array.from(new Set(deal.risk_flags));
-      if (!cleanText(deal.maps_url)) deal.maps_url = mapsUrl(outcome.normalized_address, context.market) || null;
-      finalizeDeal(deal);
-      diagnostics.census_zip_resolved_full_address += 1;
-    } else {
-      // No sale-date/status evidence yet: keep the honest review bucket, but
-      // hand Gabriel the suggested zip to confirm against the document.
+    const reviewOnly = deal.ocr_address_review === true || (Array.isArray(deal.risk_flags) && deal.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
+    if (reviewOnly || !hasEventEvidence) {
+      // OCR-review rows and evidence-light rows stay review rows; Census only
+      // provides a suggestion, never an automatic promotion.
       deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], ['ZIP_SUGGESTED_BY_US_CENSUS_GEOCODER'])));
+      deal.census_zip_status = 'suggested';
       diagnostics.census_zip_suggested_review += 1;
+      continue;
     }
+    deal.normalized_address = outcome.normalized_address;
+    deal.city = outcome.city || deal.city;
+    deal.state = outcome.state || deal.state;
+    deal.headline = outcome.normalized_address;
+    deal.risk_flags = (deal.risk_flags || [])
+      .filter((flag) => flag !== 'ZIP_MISSING_REVIEW_REQUIRED')
+      .concat('ZIP_FROM_US_CENSUS_GEOCODER');
+    deal.risk_flags = Array.from(new Set(deal.risk_flags));
+    if (!cleanText(deal.maps_url)) deal.maps_url = mapsUrl(outcome.normalized_address, context.market) || null;
+    finalizeDeal(deal);
+    diagnostics.census_zip_resolved_full_address += 1;
   }
   return diagnostics;
 }
