@@ -40,6 +40,34 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function startOfDayMs(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function parseLinkDate(value) {
+  const text = cleanText(value);
+  let match = /\b(20\d{2})[-_/](\d{1,2})[-_/](\d{1,2})\b/.exec(text);
+  if (match) {
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return Number.isFinite(date.getTime()) ? date : null;
+  }
+  match = /\b(\d{1,2})[-_/](\d{1,2})[-_/](20\d{2})\b/.exec(text);
+  if (match) {
+    const date = new Date(Number(match[3]), Number(match[1]) - 1, Number(match[2]));
+    return Number.isFinite(date.getTime()) ? date : null;
+  }
+  return null;
+}
+
+function datePriority(value) {
+  const date = parseLinkDate(value);
+  if (!date) return 0;
+  const today = startOfDayMs(new Date());
+  const diffDays = Math.round((startOfDayMs(date) - today) / 86400000);
+  if (diffDays >= 0) return 100000 - diffDays;
+  return -10000 + diffDays;
+}
+
 function hashId(prefix, value) {
   return `${prefix}_${crypto.createHash('sha1').update(cleanText(value)).digest('hex').slice(0, 16)}`;
 }
@@ -161,10 +189,16 @@ function discoverOfficialLinks(html, baseUrl, profile) {
     if (seen.has(key)) continue;
     seen.add(key);
     const keywordHit = DOC_KEYWORD_RE.test(`${url} ${label}`) ? 1 : 0;
-    links.push({ url, label, link_type: isDoc ? 'pdf_file' : isArchive ? 'archive_page' : 'official_page', keyword_hit: keywordHit });
+    links.push({
+      url,
+      label,
+      link_type: isDoc ? 'pdf_file' : isArchive ? 'archive_page' : 'official_page',
+      keyword_hit: keywordHit,
+      date_priority: datePriority(`${url} ${label}`)
+    });
   }
   return links
-    .sort((a, b) => ((b.link_type === 'pdf_file' ? 2 : 0) + (b.keyword_hit || 0)) - ((a.link_type === 'pdf_file' ? 2 : 0) + (a.keyword_hit || 0)))
+    .sort((a, b) => (b.date_priority || 0) - (a.date_priority || 0) || ((b.link_type === 'pdf_file' ? 2 : 0) + (b.keyword_hit || 0)) - ((a.link_type === 'pdf_file' ? 2 : 0) + (a.keyword_hit || 0)))
     .slice(0, MAX_LINKS);
 }
 

@@ -29,6 +29,16 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   };
 }
 
+function isoDay(offsetDays) {
+  const date = new Date(Date.now() + offsetDays * 86400000);
+  return date.toISOString().slice(0, 10);
+}
+
+function usDateFromIso(value) {
+  const parts = String(value).split('-');
+  return `${parts[1]}/${parts[2]}/${parts[0]}`;
+}
+
 const TARRANT_NOTICE_TEXT = [
   'NOTICE OF SUBSTITUTE TRUSTEE SALE',
   'Deed of Trust executed by PAT SAMPLE, grantor',
@@ -129,6 +139,42 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(viaEasyDocs.document_urls_found.some((url) => /showdoc\.asp/.test(url)), 'wrapper URL must be discovered');
   assert.ok(viaEasyDocs.document_urls_parsed.some((url) => /LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(url)), 'embedded PDF URL must be parsed');
   assert.ok(/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(viaEasyDocs.candidates[0].source_document_url || ''), 'candidate proof must use the direct embedded PDF');
+
+  // 2c) EasyDocs yearly lists are often oldest-first; date ranking must spend
+  //     the 5-document cap on current/future notice files, not stale January files.
+  const oldDay = isoDay(-120);
+  const futureDay = isoDay(35);
+  const oldLinks = Array.from({ length: 5 }, (_, index) => {
+    const n = String(index + 1).padStart(2, '0');
+    return `<a href="showdoc.asp?year=${oldDay.slice(0, 4)}&docName=${oldDay}-foreclosure-${n}.pdf">${oldDay} foreclosure ${n}</a>`;
+  }).join('\n');
+  const rankedPage = `<html><body>${oldLinks}<a href="showdoc.asp?year=${futureDay.slice(0, 4)}&docName=${futureDay}-foreclosure-99.pdf">${futureDay} foreclosure 99</a></body></html>`;
+  const viaRankedEasyDocs = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rankedPage);
+      if (u.includes(`${futureDay}-foreclosure-99.pdf`) && /showdoc\.asp/.test(u)) {
+        return makeResponse(`<object type="application/pdf" data="LinkedDir/${futureDay.slice(0, 4)}/${futureDay}-foreclosure-99.pdf"></object>`);
+      }
+      if (u.includes(`${futureDay}-foreclosure-99.pdf`) && /LinkedDir/.test(u)) {
+        return makeResponse([
+          'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+          'Property Address:',
+          '4555 Traders Rd',
+          'Greenville, TX 75402',
+          `Sale Date: ${usDateFromIso(futureDay)}`
+        ].join('\n'), 'application/pdf');
+      }
+      if (/showdoc\.asp/.test(u)) return makeResponse('<object type="application/pdf" data="LinkedDir/old/stale.pdf"></object>');
+      if (/LinkedDir\/old\/stale\.pdf/.test(u)) return makeResponse('NOTICE OF SUBSTITUTE TRUSTEE SALE\nProperty Address:\n1 Old Rd\nGreenville, TX 75401\nSale Date: 01/01/2026', 'application/pdf');
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(viaRankedEasyDocs.status, 'available');
+  assert.ok(viaRankedEasyDocs.document_urls_parsed[0].includes(`${futureDay}-foreclosure-99.pdf`), 'future dated EasyDocs notice must be parsed first');
+  assert.ok(viaRankedEasyDocs.candidates.some((candidate) => /4555 Traders Rd/i.test(candidate.normalized_address || candidate.property_address)));
 
   // 3) Blocked portal/bot wall reported, never bypassed; source-proof links still exposed.
   const blocked = await adapter.runTxCountyForeclosureAcquisitionAdapter({
