@@ -192,7 +192,16 @@ function sourceCoverageFromPreview(preview) {
     county: cleanText(result && result.county || (result && result.diagnostics && result.diagnostics.county)),
     status: cleanText(result && result.status),
     candidate_count: Number(result && result.candidate_count || 0) || 0,
-    blocked_reason: cleanText(result && result.blocked_reason)
+    blocked_reason: cleanText(result && result.blocked_reason),
+    listing_radar_accepted_count: Number(result && result.diagnostics && result.diagnostics.listing_radar_accepted_count || 0) || 0,
+    listing_radar_rejected_count: Number(result && result.diagnostics && result.diagnostics.listing_radar_rejected_count || 0) || 0,
+    rejected_reason_counts: result && result.diagnostics && result.diagnostics.rejected_reason_counts || {},
+    rejected_url_samples: Array.isArray(result && result.diagnostics && result.diagnostics.rejected_url_samples)
+      ? result.diagnostics.rejected_url_samples.slice(0, 5).map((item) => ({
+        source_url: cleanText(item && item.source_url),
+        reason: cleanText(item && item.reason)
+      }))
+      : []
   })).filter((item) => item.source_id);
 }
 

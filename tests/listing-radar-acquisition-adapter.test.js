@@ -27,6 +27,7 @@ function htmlResponse(status, html, finalUrl) {
   try {
     const acceptedUrls = [
       'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/',
+      'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/?utm_source=search',
       'https://www.redfin.com/TX/Dallas/123-Main-St-75208/home/123456',
       'https://www.realtor.com/realestateandhomes-detail/123-Main-St_Dallas_TX_75208_M12345',
       'https://www.auction.com/details/123-Main-St-Dallas-TX-75208-123456',
@@ -38,6 +39,8 @@ function htmlResponse(status, html, finalUrl) {
 
     const rejectedUrls = [
       'https://www.zillow.com/dallas-tx/',
+      'https://www.zillow.com/b/dallas-tx-building/abc123/',
+      'https://www.zillow.com/homes/for_sale/Dallas-TX/',
       'https://www.redfin.com/state/Texas/for-sale-by-owner',
       'https://www.realtor.com/realestateandhomes-search/Dallas_TX',
       'https://www.auction.com/residential/tx/dallas-county/',
@@ -57,8 +60,18 @@ function htmlResponse(status, html, finalUrl) {
     assert.strictEqual(malformedAddress.normalized_address, '');
 
     const groups = radar.buildListingRadarQueryGroups({ city: 'Dallas', state: 'TX' });
-    assert.ok(groups.length <= 6);
+    assert.strictEqual(groups.length, 6);
     assert.ok(groups.every((group) => group.max_results <= 2));
+    assert.ok(groups.every((group) => /"Dallas, TX"|site:redfin\.com\/TX\/Dallas/.test(group.query)), 'queries must target quoted market or Redfin city path');
+    assert.ok(groups.every((group) => !/auction\.com|realauction\.com/i.test(group.query)), 'auction groups should not burn query slots');
+    assert.ok(groups.some((group) => group.query === 'site:zillow.com/homedetails "Dallas, TX" fixer'));
+    assert.ok(groups.some((group) => group.query === 'site:zillow.com/homedetails "Dallas, TX" "price cut"'));
+    assert.ok(groups.some((group) => group.query === 'site:redfin.com/TX/Dallas "fixer"'));
+    assert.ok(groups.some((group) => group.query === 'site:realtor.com/realestateandhomes-detail "Dallas, TX" foreclosure'));
+    for (const group of groups) {
+      const query = group.query.replace(/"Dallas, TX"/g, '').replace(/site:\S+/g, '').trim();
+      assert.ok(!/fixer.+cash only|cash only.+as-is|foreclosure.+price cut|fixer.+needs TLC|auction.+cash only/i.test(query), `query must use one distress term/phrase: ${group.query}`);
+    }
 
     const successPage = await radar.fetchListingPageEvidence(
       'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/',
@@ -87,6 +100,13 @@ function htmlResponse(status, html, finalUrl) {
       state: 'TX',
       max_results: 10,
       max_page_fetches: 2,
+      query_groups: [{
+        query_group: 'listing_radar_test_all_results',
+        provider_family: 'public_listing_radar',
+        purpose: 'listing_radar',
+        query: 'mock listing radar',
+        max_results: 10
+      }],
       env: {
         NODE_ENV: 'test',
         ENABLE_SEARCH_PROVIDER: 'true',
@@ -107,6 +127,36 @@ function htmlResponse(status, html, finalUrl) {
           title: 'Dallas homes for sale',
           snippet: 'Generic search page.',
           url: 'https://www.zillow.com/dallas-tx/'
+        },
+        {
+          title: 'Zillow building',
+          snippet: 'Generic building page.',
+          url: 'https://www.zillow.com/b/dallas-tx-building/abc123/'
+        },
+        {
+          title: 'Redfin Texas',
+          snippet: 'Generic Redfin state page.',
+          url: 'https://www.redfin.com/state/Texas/for-sale-by-owner'
+        },
+        {
+          title: 'Realtor search',
+          snippet: 'Generic search.',
+          url: 'https://www.realtor.com/realestateandhomes-search/Dallas_TX'
+        },
+        {
+          title: 'Auction search',
+          snippet: 'Generic auction search.',
+          url: 'https://www.auction.com/residential/tx/dallas-county/'
+        },
+        {
+          title: 'Example page',
+          snippet: 'Unsupported host.',
+          url: 'https://example.com/property/123-main'
+        },
+        {
+          title: 'Login',
+          snippet: 'Login page.',
+          url: 'https://www.zillow.com/user/acct/login/'
         }
       ],
       page_fetch_impl: async (url) => {
@@ -123,6 +173,11 @@ function htmlResponse(status, html, finalUrl) {
     assert.strictEqual(run.diagnostics.listing_radar_page_fetches_used, 2, 'page fetch cap must be enforced');
     assert.ok(run.candidates.length >= 1, 'accepted property-specific URLs become candidates');
     assert.ok(!run.candidates.some((candidate) => /\/dallas-tx\/?$/i.test(candidate.source_url)), 'generic category URL must not survive as a candidate');
+    assert.strictEqual(run.diagnostics.listing_radar_accepted_count, 2);
+    assert.ok(run.diagnostics.listing_radar_rejected_count >= 6);
+    assert.strictEqual(run.diagnostics.rejected_url_samples.length, 5, 'rejected samples must be capped at 5');
+    assert.ok(run.diagnostics.rejected_url_samples.every((sample) => sample.source_url.length <= 120));
+    assert.ok(run.diagnostics.rejected_reason_counts.generic_zillow_url >= 2);
     const main = run.candidates.find((candidate) => candidate.normalized_address === '123 Main St, Dallas, TX 75208');
     assert.ok(main);
     assert.strictEqual(main.address_provenance, 'ADDRESS_FROM_LISTING_URL_SLUG');
