@@ -93,7 +93,8 @@ function mockDeal(overrides) {
   assert.deepStrictEqual(previewCalls[0].source_ids, [
     'tx_dallas_county_clerk_foreclosure_notices',
     'tx_dallas_craigslist_owner_posts',
-    'tx_dallas_fsbo_contact_first'
+    'tx_dallas_fsbo_contact_first',
+    'tx_dallas_listing_radar'
   ].concat(countyProfiles.PROFILES.map((profile) => profile.source_id)),
   'queue must explicitly request all registered free lanes including every county profile');
   assert.ok(previewCalls[0].source_ids.includes('tx_ellis_county_foreclosure_notices'));

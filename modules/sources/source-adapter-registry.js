@@ -3,6 +3,7 @@
 const dallasForeclosureAcquisitionAdapter = require('./dallas-foreclosure-acquisition-adapter');
 const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acquisition-adapter');
 const dallasCraigslistOwnerAcquisitionAdapter = require('./dallas-craigslist-owner-acquisition-adapter');
+const listingRadarAcquisitionAdapter = require('./listing-radar-acquisition-adapter');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
 
@@ -37,6 +38,15 @@ const ADAPTERS = {
     source_name: 'Dallas Craigslist owner real-estate posts',
     adapter: dallasCraigslistOwnerAcquisitionAdapter,
     run: dallasCraigslistOwnerAcquisitionAdapter.runDallasCraigslistOwnerAcquisitionAdapter
+  },
+  tx_dallas_listing_radar: {
+    source_id: 'tx_dallas_listing_radar',
+    source_family: 'public_listing_radar',
+    adapter_id: 'listing_radar_acquisition_adapter',
+    adapter_family: 'property_listing_search_adapter',
+    source_name: 'Dallas Listing Radar',
+    adapter: listingRadarAcquisitionAdapter,
+    run: listingRadarAcquisitionAdapter.runListingRadarAcquisitionAdapter
   }
 };
 

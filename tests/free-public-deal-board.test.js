@@ -629,6 +629,54 @@ const rejectedRecords = [
     assert.strictEqual(landingFallback.free_public_deals[0].source_document_url, '');
     assert.strictEqual(landingFallback.free_public_deals[0].best_link_to_click_first, 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php');
 
+    const listingRadarRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_dallas_listing_radar',
+        source_name: 'Dallas Listing Radar',
+        source_family: 'public_listing_radar',
+        status: 'available',
+        candidates: [
+          {
+            normalized_address: '123 Main St, Dallas, TX 75208',
+            raw_address_text: '123 Main St, Dallas, TX 75208',
+            source_url: 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/',
+            source_classification: 'exact_property_record',
+            motivation_type: 'public_listing_distress_signal',
+            motivation_evidence_text: 'Cash only fixer listed on Zillow.',
+            status_evidence_text: 'For sale. Price cut visible on listing.',
+            address_provenance: 'ADDRESS_FROM_LISTING_URL_SLUG',
+            listing_radar_status: 'LISTING_SOURCE_CHECKED',
+            asking_price: '$199,000'
+          },
+          {
+            normalized_address: '321 Pine St, Dallas, TX 75208',
+            raw_address_text: '321 Pine St, Dallas, TX 75208',
+            source_url: 'https://www.zillow.com/homedetails/321-Pine-St-Dallas-TX-75208/999_zpid/',
+            source_classification: 'exact_property_record',
+            motivation_type: 'public_listing_distress_signal',
+            motivation_evidence_text: 'Property-specific public listing URL found.',
+            listing_radar_status: 'BLOCKED_PUBLIC_SOURCE',
+            blocked_sources: [{ source: 'public_listing_page', url: 'https://www.zillow.com/homedetails/321-Pine-St-Dallas-TX-75208/999_zpid/', reason: 'http_403' }],
+            risk_flags: ['BLOCKED_PUBLIC_SOURCE']
+          }
+        ]
+      }]
+    }, { fetch_impl: fetchImpl });
+    const radarInspect = listingRadarRows.free_public_deals.find((deal) => deal.normalized_address === '123 Main St, Dallas, TX 75208');
+    assert.ok(radarInspect, 'listing radar complete-address row should survive board gates');
+    assert.strictEqual(radarInspect.quality_bucket, 'INSPECT_NOW');
+    assert.strictEqual(radarInspect.zillow_url, 'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/');
+    assert.strictEqual(radarInspect.address_provenance, 'ADDRESS_FROM_LISTING_URL_SLUG');
+    assert.strictEqual(radarInspect.listing_radar_status, 'LISTING_SOURCE_CHECKED');
+    assert.strictEqual(radarInspect.contact_route_if_visible, '');
+    assert.ok(radarInspect.missing_fields.includes('visible contact route'));
+    const radarBlocked = listingRadarRows.free_public_deals.find((deal) => deal.normalized_address === '321 Pine St, Dallas, TX 75208');
+    assert.ok(radarBlocked, 'blocked property-specific listing should remain visible as a source-proof row');
+    assert.strictEqual(radarBlocked.quality_bucket, 'SOURCE_PROOF_ONLY');
+    assert.strictEqual(radarBlocked.listing_radar_status, 'BLOCKED_PUBLIC_SOURCE');
+    assert.strictEqual(radarBlocked.blocked_sources[0].reason, 'http_403');
+
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
         headline: `Deal ${index}`,
@@ -639,7 +687,7 @@ const rejectedRecords = [
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + censusRows.free_public_deals.length * 2 + censusOffRows.free_public_deals.length * 2 + 4 + 8);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + censusRows.free_public_deals.length * 2 + censusOffRows.free_public_deals.length * 2 + listingRadarRows.free_public_deals.length + 4 + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);

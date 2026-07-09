@@ -43,6 +43,21 @@ const SECONDARY_DALLAS_SOURCES = [
     should_ingest: false
   },
   {
+    source_id: 'tx_dallas_listing_radar',
+    source_name: 'Dallas Listing Radar',
+    source_family: 'public_listing_radar',
+    priority_score: 82,
+    official_source: false,
+    source_type: 'property-specific public listing search',
+    adapter_id: 'listing_radar_acquisition_adapter',
+    readiness: 'Preview adapter ready',
+    use_policy: 'property_listing_link_discovery',
+    likely_call_ready: false,
+    auto_select: false,
+    preview_only: true,
+    should_ingest: false
+  },
+  {
     source_id: 'tx_dallas_public_listing_sources',
     source_name: 'Dallas public listing sources',
     source_family: 'public_listing',
