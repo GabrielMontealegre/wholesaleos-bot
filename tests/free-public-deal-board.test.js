@@ -499,6 +499,117 @@ const rejectedRecords = [
     assert.ok(noAddressRow, 'rows with no readable street stay source-proof');
     assert.ok(zipReviewRow.rank_score > noAddressRow.rank_score, 'zip-review rows outrank plain proof rows');
 
+    // US Census geocoder zip resolution: a partial with sale-date evidence and
+    // a confirmed federal address-range match becomes a full INSPECT_NOW row;
+    // a partial without evidence keeps the review bucket but shows the
+    // suggested zip; an unresolved partial is untouched. Never a guessed zip.
+    const futureSaleDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const censusResolver = async (partial) => {
+      const street = String(partial.street_or_partial || '');
+      if (street.startsWith('4016 Poplar Point')) {
+        return {
+          resolved: true, zip: '75032', matched_address: '4016 POPLAR POINT DR, ROCKWALL, TX, 75032',
+          normalized_address: '4016 Poplar Point Dr, Rockwall, TX 75032', city: 'Rockwall', state: 'TX',
+          source: 'us_census_geocoder'
+        };
+      }
+      if (street.startsWith('3609 Kings')) {
+        return {
+          resolved: true, zip: '75119', matched_address: '3609 KINGS DR, ENNIS, TX, 75119',
+          normalized_address: '3609 Kings Dr, Ennis, TX 75119', city: 'Ennis', state: 'TX',
+          source: 'us_census_geocoder'
+        };
+      }
+      return { resolved: false, reason: 'no_census_match' };
+    };
+    const censusCandidateBase = {
+      source_family: 'preforeclosure_trustee_notice',
+      source_name: 'Rockwall County Foreclosure Notices',
+      source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+      motivation_type: 'preforeclosure_trustee_notice',
+      risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED']
+    };
+    const censusRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      enable_census_zip_resolution: true,
+      mock_source_adapter_results: [{
+        source_id: 'tx_rockwall_county_foreclosure_notices',
+        source_name: 'Rockwall County Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        status: 'available',
+        candidate_count: 3,
+        candidates: [
+          Object.assign({}, censusCandidateBase, {
+            property_address: '4016 Poplar Point Dr Rockwall, TX',
+            county: 'Rockwall',
+            source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7689',
+            sale_date_or_event_date: futureSaleDate,
+            motivation_evidence_text: `NOTICE OF TRUSTEE SALE ${futureSaleDate} | 4016 Poplar Point Dr Rockwall, TX (OCR)`
+          }),
+          Object.assign({}, censusCandidateBase, {
+            property_address: '3609 Kings Dr Ennis, TX',
+            county: 'Ellis',
+            source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7690',
+            // No sale-date and no status-pattern words: promotion must not happen.
+            motivation_evidence_text: 'County posting reference 7690 | 3609 Kings Dr Ennis, TX (OCR)'
+          }),
+          Object.assign({}, censusCandidateBase, {
+            property_address: '121 Stallion St Waxahachie, TX',
+            county: 'Ellis',
+            source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7691',
+            motivation_evidence_text: 'County posting reference 7691 | 121 Stallion St Waxahachie, TX (OCR)'
+          })
+        ]
+      }]
+    }, { fetch_impl: fetchImpl, census_zip_resolver_impl: censusResolver });
+    assert.strictEqual(censusRows.census_zip_enabled, true);
+    assert.strictEqual(censusRows.census_zip_lookups, 3);
+    assert.strictEqual(censusRows.census_zip_resolved_full_address, 1);
+    assert.strictEqual(censusRows.census_zip_suggested_review, 1);
+    assert.strictEqual(censusRows.census_zip_unresolved, 1);
+    const promotedRow = censusRows.free_public_deals.find((deal) => deal.normalized_address === '4016 Poplar Point Dr, Rockwall, TX 75032');
+    assert.ok(promotedRow, 'census-resolved partial with sale-date evidence must gain the full address');
+    assert.strictEqual(promotedRow.quality_bucket, 'INSPECT_NOW');
+    assert.ok(promotedRow.risk_flags.includes('ZIP_FROM_US_CENSUS_GEOCODER'), 'zip provenance must be recorded');
+    assert.ok(promotedRow.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'), 'OCR review flag must survive promotion');
+    assert.ok(!promotedRow.risk_flags.includes('ZIP_MISSING_REVIEW_REQUIRED'), 'zip is no longer missing after federal match');
+    assert.ok(/query=4016/.test(promotedRow.maps_url || ''), 'promoted row gets a real maps link');
+    const suggestedRow = censusRows.free_public_deals.find((deal) => deal.partial_address === '3609 Kings Dr Ennis, TX');
+    assert.ok(suggestedRow, 'census-resolved partial without evidence must stay on the board');
+    assert.strictEqual(suggestedRow.quality_bucket, 'NEEDS_ZIP_REVIEW', 'no evidence -> stays in review bucket');
+    assert.strictEqual(suggestedRow.normalized_address, '', 'suggestion must not fake a complete address');
+    assert.strictEqual(suggestedRow.census_zip_suggestion, '75119');
+    assert.ok(suggestedRow.risk_flags.includes('ZIP_SUGGESTED_BY_US_CENSUS_GEOCODER'));
+    assert.strictEqual(suggestedRow.next_best_action, 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT');
+    const untouchedRow = censusRows.free_public_deals.find((deal) => deal.partial_address === '121 Stallion St Waxahachie, TX');
+    assert.ok(untouchedRow, 'unresolved partial must stay on the board');
+    assert.strictEqual(untouchedRow.quality_bucket, 'NEEDS_ZIP_REVIEW');
+    assert.ok(!untouchedRow.census_zip_suggestion, 'no suggestion invented when census has no match');
+    assert.strictEqual(untouchedRow.census_zip_status, 'no_census_match');
+
+    // Default off: the same input without the flag never calls the resolver.
+    const censusOffRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_rockwall_county_foreclosure_notices',
+        source_name: 'Rockwall County Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        status: 'available',
+        candidate_count: 1,
+        candidates: [Object.assign({}, censusCandidateBase, {
+          property_address: '4016 Poplar Point Dr Rockwall, TX',
+          county: 'Rockwall',
+          source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=7689',
+          sale_date_or_event_date: futureSaleDate,
+          motivation_evidence_text: 'NOTICE OF TRUSTEE SALE | 4016 Poplar Point Dr Rockwall, TX (OCR)'
+        })]
+      }]
+    }, { fetch_impl: fetchImpl, census_zip_resolver_impl: async () => { throw new Error('must not be called'); } });
+    assert.strictEqual(censusOffRows.census_zip_enabled, false);
+    assert.strictEqual(censusOffRows.census_zip_lookups, 0);
+
     const landingFallback = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
       mock_source_adapter_results: [{
@@ -528,7 +639,7 @@ const rejectedRecords = [
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + 4 + 8);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + censusRows.free_public_deals.length * 2 + censusOffRows.free_public_deals.length * 2 + 4 + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);

@@ -98,6 +98,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     normalized_address: cleanText(deal.normalized_address),
     partial_address: cleanText(deal.partial_address),
     maps_search_url_review_needed: cleanText(deal.maps_search_url_review_needed) || null,
+    census_zip_suggestion: cleanText(deal.census_zip_suggestion) || null,
+    census_matched_address: cleanText(deal.census_matched_address) || null,
     risk_flags: Array.isArray(deal.risk_flags) ? deal.risk_flags.slice(0, 6) : [],
     city: cleanText(deal.city),
     county: cleanText(deal.county),
@@ -220,7 +222,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     limit,
     source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : DEFAULT_QUEUE_SOURCE_IDS.slice(),
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
-    enable_free_public_hunters: input.enable_free_public_hunters !== false
+    enable_free_public_hunters: input.enable_free_public_hunters !== false,
+    enable_census_zip_resolution: input.enable_census_zip_resolution !== false
   }, { env: options.env || process.env });
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];

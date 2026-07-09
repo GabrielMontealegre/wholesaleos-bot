@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 
 const callPrepProjection = require('./call-prep-projection');
+const censusZipResolution = require('./census-zip-resolution');
 const compResearchProvider = require('./comp-research-provider');
 const freePublicCompHunter = require('./free-public-comp-hunter');
 const freePublicContactHunter = require('./free-public-contact-hunter');
@@ -1448,6 +1449,67 @@ function catalogSummary(market) {
   }));
 }
 
+async function applyCensusZipResolution(deals, input, options, context) {
+  // Opt-in like the hunters: unit tests stay hermetic; the queue service enables it.
+  const enabled = input.enable_census_zip_resolution === true || options.enable_census_zip_resolution === true;
+  const diagnostics = {
+    census_zip_enabled: enabled,
+    census_zip_lookups: 0,
+    census_zip_resolved_full_address: 0,
+    census_zip_suggested_review: 0,
+    census_zip_unresolved: 0
+  };
+  if (!enabled) return diagnostics;
+  const resolver = typeof options.census_zip_resolver_impl === 'function'
+    ? options.census_zip_resolver_impl
+    : censusZipResolution.resolveZipFromCensus;
+  const targets = deals
+    .filter((deal) => deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW && cleanText(deal.partial_address))
+    .slice(0, censusZipResolution.DEFAULT_MAX_LOOKUPS_PER_BATCH);
+  for (const deal of targets) {
+    diagnostics.census_zip_lookups += 1;
+    let outcome = null;
+    try {
+      outcome = await resolver(
+        { street_or_partial: deal.partial_address, city: deal.city, state: deal.state || 'TX' },
+        { fetchImpl: options.fetch_impl }
+      );
+    } catch (error) {
+      outcome = { resolved: false, reason: `census_resolver_error_${cleanText(error.message).slice(0, 40)}` };
+    }
+    if (!outcome || outcome.resolved !== true) {
+      diagnostics.census_zip_unresolved += 1;
+      deal.census_zip_status = cleanText(outcome && outcome.reason) || 'unresolved';
+      continue;
+    }
+    // The zip comes from the federal TIGER address-range database, with the
+    // street number, city, and state cross-checked against the document text.
+    deal.census_zip_status = 'resolved';
+    deal.census_zip_suggestion = outcome.zip;
+    deal.census_matched_address = outcome.matched_address;
+    const hasEventEvidence = !!(deal.status_evidence_text || deal.sale_date_or_event_date);
+    if (hasEventEvidence) {
+      deal.normalized_address = outcome.normalized_address;
+      deal.city = outcome.city || deal.city;
+      deal.state = outcome.state || deal.state;
+      deal.headline = outcome.normalized_address;
+      deal.risk_flags = (deal.risk_flags || [])
+        .filter((flag) => flag !== 'ZIP_MISSING_REVIEW_REQUIRED')
+        .concat('ZIP_FROM_US_CENSUS_GEOCODER');
+      deal.risk_flags = Array.from(new Set(deal.risk_flags));
+      if (!cleanText(deal.maps_url)) deal.maps_url = mapsUrl(outcome.normalized_address, context.market) || null;
+      finalizeDeal(deal);
+      diagnostics.census_zip_resolved_full_address += 1;
+    } else {
+      // No sale-date/status evidence yet: keep the honest review bucket, but
+      // hand Gabriel the suggested zip to confirm against the document.
+      deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], ['ZIP_SUGGESTED_BY_US_CENSUS_GEOCODER'])));
+      diagnostics.census_zip_suggested_review += 1;
+    }
+  }
+  return diagnostics;
+}
+
 async function applyFreePublicHunters(deals, input, options, context) {
   // Opt-in: unit/board tests stay hermetic; the server preview service enables it.
   const disabled = !(input.enable_free_public_hunters === true || options.enable_free_public_hunters === true);
@@ -1703,6 +1765,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const deals = allDeals
     .filter((deal) => deal.usable_for_gabriel === true && deal.quality_bucket !== QUALITY_BUCKETS.REJECTED_GENERIC)
     .slice(0, caps.output_deals);
+  const censusZipDiagnostics = await applyCensusZipResolution(deals, input, options, context);
   const freeHunterDiagnostics = await applyFreePublicHunters(deals, input, options, context);
   const officialLookupDiagnostics = await applyOfficialBrowserLookup(deals, input, options, context);
   const screenshotCompDiagnostics = await applyScreenshotCompEvidence(deals, input, options, context);
@@ -1746,6 +1809,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     bad_address_rejected_count: quality.bad_address_rejected_count,
     out_of_market_count: quality.out_of_market_count,
     official_source_rows_count: quality.official_source_rows_count,
+    ...censusZipDiagnostics,
     ...freeHunterDiagnostics,
     ...officialLookupDiagnostics,
     ...screenshotCompDiagnostics,
@@ -1756,6 +1820,7 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       input_record_count: rawRecords.length,
       output_deal_count: deals.length,
       quality,
+      census_zip: censusZipDiagnostics,
       free_hunters: freeHunterDiagnostics,
       official_lookup: officialLookupDiagnostics,
       screenshot_comp: screenshotCompDiagnostics,
