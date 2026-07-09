@@ -293,6 +293,18 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('last_error'), 'dashboard must surface the last auto-run error');
   assert.ok(uiSource.includes('ocr_text_quality_score'), 'dashboard must show OCR quality score');
 
+  // 6) The three operator panels exist: Daily Deal Machine, ZIP Review, Top Deals.
+  assert.ok(uiSource.includes('Daily Deal Machine'), 'dashboard must render the Daily Deal Machine panel');
+  assert.ok(uiSource.includes('ZIP Review'), 'dashboard must render the ZIP Review panel');
+  assert.ok(uiSource.includes('Top Deals'), 'dashboard must render the Top Deals panel');
+  assert.ok(uiSource.includes('VERIFY_ZIP_FROM_SOURCE_DOCUMENT'), 'ZIP Review panel must show the verify-from-document action');
+  assert.ok(uiSource.includes('Never guess or fake a zip'), 'ZIP Review panel must carry the no-fake-zip warning');
+  assert.ok(uiSource.includes('maps_search_url_review_needed'), 'ZIP Review panel must use the review-labeled maps search link');
+  assert.ok(uiSource.includes('Source blockers'), 'Daily Deal Machine must list source blockers');
+  assert.ok(uiSource.includes('batches_today'), 'Daily Deal Machine must show batches today');
+  assert.ok(uiSource.includes('ocr_address_rows_today'), 'Daily Deal Machine must show OCR rows today');
+  assert.ok(uiSource.includes('CALL_READY first'), 'Top Deals must order CALL_READY rows first');
+
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;
   }

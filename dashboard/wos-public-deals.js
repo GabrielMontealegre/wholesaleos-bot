@@ -68,27 +68,56 @@
     return '<div class="wos-public-deal-row" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
   }
 
-  function summaryBar(data) {
+  function panelBox(title, subtitle, bodyHtml, accent) {
+    return '<div style="border:1px solid ' + (accent || '#d1d5db') + ';border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff;">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:2px;">' + title + '</div>' +
+      (subtitle ? '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + subtitle + '</div>' : '') +
+      bodyHtml + '</div>';
+  }
+
+  function isActionableRow(row) {
+    return row.quality_bucket === 'INSPECT_NOW' || row.quality_bucket === 'NEEDS_ZIP_REVIEW' ||
+      row.contact_status === 'CALL_READY' || row.contact_status === 'OUTREACH_READY';
+  }
+
+  function minutesUntil(iso) {
+    if (!iso) return null;
+    var diff = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+    return isNaN(diff) ? null : diff;
+  }
+
+  function dailyMachinePanel(data, rows) {
     var c = data.counts || {};
     var batch = data.batch;
-    var parts = [
-      chip('Rows', c.total_rows || 0),
-      chip('Today', c.today_rows || 0, '#ddd6fe'),
-      chip('Addresses', c.address_rows || 0),
+    var daily = data.daily || {};
+    var autoRun = data.auto_run || {};
+    var today = new Date().toISOString().slice(0, 10);
+    var actionableToday = rows.filter(function (r) {
+      return isActionableRow(r) && String(r.first_seen_at || '').slice(0, 10) === today;
+    }).length;
+    var eta = minutesUntil(autoRun.next_run_at);
+    var statusChip = autoRun.enabled
+      ? chip('AUTO-RUN', 'ON every ' + (autoRun.interval_minutes || 20) + ' min', '#bbf7d0') +
+        (eta != null ? chip('Next run', eta <= 0 ? 'due now' : 'in ~' + eta + ' min', '#bfdbfe') : '') +
+        chip('Runs today', (autoRun.runs_today || 0) + '/' + (autoRun.daily_cap || 24))
+      : chip('AUTO-RUN', 'OFF - flip the switch above to collect deals all day', '#fecaca');
+    var statChips = [
+      chip('Batches today', daily.batches_today || 0),
+      chip('New rows today', c.today_rows || 0, '#ddd6fe'),
+      chip('Address rows today', daily.address_rows_today || 0, '#ddd6fe'),
+      chip('Actionable today', actionableToday, '#fde68a'),
+      chip('OCR rows today', daily.ocr_address_rows_today || 0),
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
-      chip('OUTREACH_READY', c.outreach_ready || 0, '#bfdbfe'),
-      chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
-      chip('Needs contact', c.needs_contact || 0),
-      chip('Needs comps', c.needs_comps || 0),
-      chip('Owner clues', c.owner_clues || 0)
-    ];
+      chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
+      chip('Rows total', c.total_rows || 0)
+    ].join('');
     var meta = batch
-      ? 'Last batch ' + esc(String(batch.run_at).replace('T', ' ').slice(0, 16)) + ' - ' + esc(batch.new_rows) + ' new, ' + esc(batch.refreshed_rows) + ' refreshed, ' + esc(batch.rejected_generic_count || 0) + ' generic rejected' + (batch.board_blocker_summary ? ' - blocker: ' + esc(batch.board_blocker_summary) : '')
-      : 'No batch yet - click Refresh batch to pull free public deals.';
+      ? '<div style="font-size:12px;color:#4b5563;margin-top:6px;">Last batch ' + esc(String(batch.run_at).replace('T', ' ').slice(0, 16)) + ' - ' + esc(batch.new_rows) + ' new, ' + esc(batch.refreshed_rows) + ' refreshed, ' + esc(batch.rejected_generic_count || 0) + ' generic rejected' + (batch.board_blocker_summary ? ' - blocker: ' + esc(batch.board_blocker_summary) : '') + '</div>'
+      : '<div style="font-size:12px;color:#4b5563;margin-top:6px;">No batch yet - click "Run next free batch" or turn auto-run on.</div>';
     var ocrLine = '';
     if (batch && batch.ocr) {
-      ocrLine = '<div style="font-size:11px;color:#4b5563;margin-bottom:6px;">OCR: ' +
+      ocrLine = '<div style="font-size:11px;color:#4b5563;margin-top:4px;">OCR: ' +
         esc(batch.ocr.ocr_documents_attempted) + ' scanned docs attempted, ' +
         esc(batch.ocr.ocr_documents_succeeded) + ' read, ' +
         esc(batch.ocr.ocr_rows_with_address) + ' address rows (review recommended), ' +
@@ -97,17 +126,43 @@
         esc(batch.ocr.ocr_skipped_oversize) + ' oversize skipped, ' +
         esc(batch.ocr.ocr_failures) + ' failed.</div>';
     }
-    var dailyLine = '';
-    if (data.daily) {
-      var autoRun = data.auto_run || {};
-      dailyLine = '<div style="font-size:11px;color:#4b5563;margin-bottom:6px;">Today: ' +
-        esc(data.daily.batches_today) + ' batches, ' +
-        esc(data.daily.address_rows_today) + ' new address rows, ' +
-        esc(data.daily.ocr_address_rows_today) + ' via OCR. Auto-run: ' +
-        (autoRun.enabled ? 'ON every ' + esc(autoRun.interval_minutes) + ' min (' + esc(autoRun.runs_today || 0) + '/' + esc(autoRun.daily_cap || 24) + ' today' + (autoRun.next_run_at ? ', next ' + esc(String(autoRun.next_run_at).replace('T', ' ').slice(0, 16)) : '') + ')' : 'off') +
-        (autoRun.last_error ? ' - last error: ' + esc(autoRun.last_error) : '') + '</div>';
+    var errLine = autoRun.last_error
+      ? '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Last auto-run error: ' + esc(autoRun.last_error) + '</div>' : '';
+    var blockers = '';
+    var coverage = batch && batch.source_coverage;
+    if (coverage && coverage.length) {
+      var blocked = coverage.filter(function (item) { return item.blocked_reason; });
+      if (blocked.length) {
+        blockers = '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Source blockers: ' +
+          blocked.map(function (item) { return esc((item.county || item.source_id) + ' (' + item.blocked_reason + ')'); }).join(', ') + '</div>';
+      }
     }
-    return '<div style="margin-bottom:6px;">' + parts.join('') + '</div><div style="font-size:12px;color:#4b5563;margin-bottom:8px;">' + meta + '</div>' + dailyLine + ocrLine + coverageTable(batch);
+    return panelBox('Daily Deal Machine',
+      'Free public sources only - snapshot cache, not saved leads.',
+      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + errLine + blockers + coverageTable(batch),
+      autoRun.enabled ? '#86efac' : '#fca5a5');
+  }
+
+  function zipReviewCard(row) {
+    return '<div style="border:1px solid #fed7aa;border-radius:10px;padding:8px 12px;margin-bottom:6px;background:#fff;">' +
+      '<div style="font-weight:700;font-size:13px;">' + esc(row.partial_address || row.headline || '') +
+      ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING</span>' +
+      (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') + '</div>' +
+      '<div style="font-size:12px;margin-top:3px;">' +
+      link('Open official document (find the zip here)', row.source_document_url || row.source_url) +
+      link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>' +
+      '<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT') + '</b></div>' +
+      '</div>';
+  }
+
+  function zipReviewPanel(rows) {
+    var zipRows = rows.filter(function (r) { return r.quality_bucket === 'NEEDS_ZIP_REVIEW'; });
+    var body = zipRows.length
+      ? zipRows.map(zipReviewCard).join('')
+      : '<div style="font-size:12px;color:#6b7280;">No zip-review rows right now. New ones appear when OCR reads a street + city but the zip is unreadable.</div>';
+    return panelBox('ZIP Review <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">' + zipRows.length + '</span>',
+      'Real addresses from official documents with an unreadable zip. Open the document, read the zip yourself, then search. Never guess or fake a zip.',
+      body, '#fdba74');
   }
 
   function coverageTable(batch) {
@@ -129,17 +184,34 @@
       rows + '</table></details>';
   }
 
+  function topDealsPanel(rows) {
+    var topRows = rows.filter(function (r) { return isActionableRow(r) || r.normalized_address; });
+    var proofRows = rows.filter(function (r) { return topRows.indexOf(r) === -1; });
+    var callReadyFirst = topRows.slice().sort(function (a, b) {
+      function rank(r) {
+        if (r.contact_status === 'CALL_READY') return 0;
+        if (r.quality_bucket === 'INSPECT_NOW') return 1;
+        if (r.quality_bucket === 'NEEDS_ZIP_REVIEW') return 2;
+        return 3;
+      }
+      return rank(a) - rank(b);
+    });
+    var body = (callReadyFirst.length
+      ? callReadyFirst.map(rowCard).join('')
+      : '<div style="font-size:12px;color:#6b7280;">No actionable rows yet. Run a batch or wait for the next auto-run.</div>') +
+      (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '');
+    return panelBox('Top Deals <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + callReadyFirst.length + '</span>',
+      'CALL_READY first, then INSPECT_NOW, then ZIP review. Every link goes to the real public source.',
+      body, '#fcd34d');
+  }
+
   function render(container, data, note) {
     var rows = Array.isArray(data.rows) ? data.rows : [];
-    var addressRows = rows.filter(function (r) { return r.normalized_address || r.quality_bucket === 'NEEDS_ZIP_REVIEW'; });
-    var proofRows = rows.filter(function (r) { return !r.normalized_address && r.quality_bucket !== 'NEEDS_ZIP_REVIEW'; });
     container.querySelector('.wos-public-deals-body').innerHTML =
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
-      summaryBar(data) +
-      (rows.length
-        ? addressRows.map(rowCard).join('') +
-          (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '')
-        : '<div style="font-size:13px;color:#6b7280;">No public deal rows yet. Run a batch.</div>');
+      dailyMachinePanel(data, rows) +
+      zipReviewPanel(rows) +
+      topDealsPanel(rows);
   }
 
   function fetchLatest(container) {
