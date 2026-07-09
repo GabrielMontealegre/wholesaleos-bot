@@ -94,6 +94,42 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(happy.discovered_links.some((link) => link.link_type === 'portal_preview_only'), 'human portal link must be listed');
   assert.strictEqual(happy.cards.length, 2);
 
+  // 2b) EasyDocs counties expose showdoc.asp wrappers whose HTML embeds the
+  //     real PDF; the generic adapter must follow that public PDF object.
+  const huntPage = `
+    <html><body>
+      <a href="showdoc.asp?year=2026&docName=2026-07-07-foreclosure-01.pdf">07/07/2026 foreclosure notice</a>
+    </body></html>`;
+  const huntWrapper = `
+    <html><body>
+      <object type="application/pdf" data="LinkedDir/2026/2026-07-07-foreclosure-01.pdf"></object>
+    </body></html>`;
+  const huntNotice = [
+    'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+    'Property Address:',
+    '1201 Washington St',
+    'Greenville, TX 75401',
+    'Date of Sale: August 4, 2026'
+  ].join('\n');
+  const viaEasyDocs = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(huntPage);
+      if (/showdoc\.asp\?year=2026&docName=2026-07-07-foreclosure-01\.pdf/.test(u)) return makeResponse(huntWrapper);
+      if (/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(u)) return makeResponse(huntNotice, 'application/pdf');
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(viaEasyDocs.status, 'available');
+  assert.strictEqual(viaEasyDocs.county, 'Hunt');
+  assert.strictEqual(viaEasyDocs.candidates.length, 1);
+  assert.ok(/1201 Washington St/i.test(viaEasyDocs.candidates[0].normalized_address || viaEasyDocs.candidates[0].property_address));
+  assert.ok(viaEasyDocs.document_urls_found.some((url) => /showdoc\.asp/.test(url)), 'wrapper URL must be discovered');
+  assert.ok(viaEasyDocs.document_urls_parsed.some((url) => /LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(url)), 'embedded PDF URL must be parsed');
+  assert.ok(/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(viaEasyDocs.candidates[0].source_document_url || ''), 'candidate proof must use the direct embedded PDF');
+
   // 3) Blocked portal/bot wall reported, never bypassed; source-proof links still exposed.
   const blocked = await adapter.runTxCountyForeclosureAcquisitionAdapter({
     source_id: 'tx_collin_county_foreclosure_notices',
@@ -182,6 +218,7 @@ const TARRANT_NOTICE_TEXT = [
     assert.ok(dallasCatalog.some((source) => source.source_id === profile.source_id), `${profile.source_id} must be in the DFW catalog`);
     assert.ok(registry.listRegisteredSourceIds().includes(profile.source_id), `${profile.source_id} must be registered`);
   }
+  assert.ok(profiles.profileForSourceId('tx_navarro_county_foreclosure_notices'), 'Navarro EasyDocs profile must be configured');
   const elsewhereCatalog = sourceCatalog.buildSourceCatalog({ city: 'Houston', county: 'Harris', state: 'TX' });
   assert.ok(!elsewhereCatalog.some((source) => /tarrant|collin|denton/.test(source.source_id)), 'DFW lanes only for DFW markets');
 

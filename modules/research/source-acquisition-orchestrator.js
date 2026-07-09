@@ -63,6 +63,8 @@ function normalizeSourceFamily(value) {
   return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+const MAX_SELECTED_SOURCES = 20;
+
 function sourceMatchesRequestedFamily(source, requestedFamilies) {
   if (!Array.isArray(requestedFamilies) || !requestedFamilies.length) return true;
   const haystack = [
@@ -96,7 +98,7 @@ function selectAcquisitionSources(job, catalog) {
   if (!selected.length && !explicitlyRequested) {
     selected = (Array.isArray(catalog) ? catalog : []).filter((source) => /dallas county clerk foreclosure notices/i.test(source.source_name || source.source_id));
   }
-  return selected.slice(0, 12);
+  return selected.slice(0, MAX_SELECTED_SOURCES);
 }
 
 function normalizeAdapterResult(result) {

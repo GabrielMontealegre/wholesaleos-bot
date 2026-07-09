@@ -7,6 +7,66 @@
 
 const PROFILES = [
   {
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    source_name: 'Hunt County Foreclosure EasyDocs',
+    county: 'Hunt',
+    state: 'TX',
+    source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+    human_portal_url: 'https://apps.huntcounty.net/foreclosures/',
+    official_hosts: ['apps.huntcounty.net'],
+    city_names: ['Greenville', 'Commerce', 'Quinlan', 'Caddo Mills', 'Royse City', 'Wolfe City', 'Celeste', 'Lone Oak', 'Campbell', 'West Tawakoni', 'Hawk Cove', 'Neylandville'],
+    search_hints: [],
+    blocked_note: 'Open Hunt County EasyDocs yearly foreclosure list; showdoc.asp pages wrap direct PDFs in public HTML object tags.'
+  },
+  {
+    source_id: 'tx_navarro_county_foreclosure_notices',
+    source_name: 'Navarro County Foreclosure EasyDocs',
+    county: 'Navarro',
+    state: 'TX',
+    source_url: 'http://navarro.easydocs.us/foreclosures/listDocs-new.asp?year=2026',
+    human_portal_url: 'http://navarro.easydocs.us/foreclosures/',
+    official_hosts: ['navarro.easydocs.us'],
+    city_names: ['Corsicana', 'Kerens', 'Blooming Grove', 'Dawson', 'Frost', 'Rice', 'Richland', 'Angus', 'Barry', 'Emhouse', 'Eureka', 'Goodlow', 'Mildred', 'Mustang', 'Navarro', 'Oak Valley', 'Powell', 'Retreat'],
+    search_hints: [],
+    blocked_note: 'Open Navarro EasyDocs yearly foreclosure list; showdoc.asp pages wrap direct PDFs in public HTML object tags.'
+  },
+  {
+    source_id: 'tx_hill_county_foreclosure_notices',
+    source_name: 'Hill County Foreclosure Public Notices',
+    county: 'Hill',
+    state: 'TX',
+    source_url: 'https://www.co.hill.tx.us/page/hill.Public.Notices.Foreclosures',
+    human_portal_url: 'https://www.co.hill.tx.us/page/hill.Public.Notices.Foreclosures',
+    official_hosts: ['co.hill.tx.us'],
+    city_names: ['Hillsboro', 'Whitney', 'Itasca', 'Hubbard', 'Malone', 'Mount Calm', 'Bynum', 'Covington', 'Aquilla', 'Abbott', 'Penelope', 'Mertens', 'Carl\'s Corner'],
+    search_hints: [],
+    blocked_note: 'Official foreclosure page returned 403 from the server environment during verification; open manually or retry from a residential IP.'
+  },
+  {
+    source_id: 'tx_van_zandt_county_foreclosure_notices',
+    source_name: 'Van Zandt County Public Notices',
+    county: 'Van Zandt',
+    state: 'TX',
+    source_url: 'https://www.vanzandtcounty.org/page/vanzandt.Public.Notices',
+    human_portal_url: 'https://www.vanzandtcounty.org/page/vanzandt.Public.Notices',
+    official_hosts: ['vanzandtcounty.org'],
+    city_names: ['Canton', 'Wills Point', 'Grand Saline', 'Van', 'Edgewood', 'Fruitvale', 'Edom', 'Ben Wheeler', 'Martins Mill'],
+    search_hints: [],
+    blocked_note: 'Public notices page is open, but no direct current foreclosure document pattern was verified in the first pass.'
+  },
+  {
+    source_id: 'tx_bell_county_foreclosure_notices',
+    source_name: 'Bell County Clerk Foreclosures',
+    county: 'Bell',
+    state: 'TX',
+    source_url: 'https://www.bellcountytx.com/county_government/county_clerk/foreclosures.php',
+    human_portal_url: 'https://www.bellcountytx.com/county_government/county_clerk/foreclosures.php',
+    official_hosts: ['bellcountytx.com'],
+    city_names: ['Belton', 'Temple', 'Killeen', 'Harker Heights', 'Nolanville', 'Salado', 'Troy', 'Little River-Academy', 'Morgan\'s Point Resort', 'Rogers', 'Holland'],
+    search_hints: [],
+    blocked_note: 'Official foreclosure page returned 403 from the server environment during verification; open manually or retry from a residential IP.'
+  },
+  {
     source_id: 'tx_tarrant_county_foreclosure_notices',
     source_name: 'Tarrant County Clerk Foreclosure Notices',
     county: 'Tarrant',
