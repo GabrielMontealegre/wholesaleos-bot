@@ -58,6 +58,20 @@ function censusPayload(matches) {
   assert.strictEqual(cityMismatch.resolved, false);
   assert.strictEqual(cityMismatch.reason, 'census_city_mismatch');
 
+  // 3b) Stale market-city label on the row must not block a match when the
+  // document partial itself names the city the Census echoed back.
+  const staleCityLabel = await censusZip.resolveZipFromCensus(
+    { street_or_partial: '121 Stallion St. Waxahachie, TX', city: 'Dallas', state: 'TX' },
+    {
+      fetchImpl: fakeFetch(censusPayload([{
+        matchedAddress: '121 STALLION ST, WAXAHACHIE, TX, 75165',
+        addressComponents: { zip: '75165', streetName: 'STALLION', suffixType: 'ST', city: 'WAXAHACHIE', state: 'TX' }
+      }]))
+    }
+  );
+  assert.strictEqual(staleCityLabel.resolved, true, 'city visible in the document partial must win over a stale row label');
+  assert.strictEqual(staleCityLabel.zip, '75165');
+
   // 4) State disagreement is rejected.
   const stateMismatch = await censusZip.resolveZipFromCensus(
     { street_or_partial: '100 Main St', city: 'Dallas', state: 'TX' },
