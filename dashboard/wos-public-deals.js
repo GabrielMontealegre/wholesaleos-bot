@@ -151,6 +151,10 @@
       '<div style="font-size:12px;margin-top:3px;">' +
       link('Open official document (find the zip here)', row.source_document_url || row.source_url) +
       link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>' +
+      (row.census_zip_suggestion
+        ? '<div style="font-size:12px;margin-top:3px;color:#065f46;">US Census geocoder suggests zip <b>' + esc(row.census_zip_suggestion) + '</b>' +
+          (row.census_matched_address ? ' (' + esc(row.census_matched_address) + ')' : '') + ' - confirm it in the document.</div>'
+        : '') +
       '<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT') + '</b></div>' +
       '</div>';
   }
