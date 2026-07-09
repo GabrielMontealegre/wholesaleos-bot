@@ -29,8 +29,8 @@ const BLOCKED_PAGE_RE = /\b(captcha|verify you are human|human verification|acce
 const DOC_KEYWORD_RE = /\b(foreclos|trustee|notice|sale|auction|sheriff|tax)/i;
 // Direct document URLs: plain PDFs plus CivicPlus DocumentCenter/Archive/
 // ShowDocument patterns (they serve PDFs without a .pdf extension).
-const DOC_URL_RE = /\.pdf(?:$|[?#])|\/DocumentCenter\/View\/\d+|Archive\.aspx\?[^"']*ADID=\d+|ShowDocument\?id=\d+/i;
-const ARCHIVE_PAGE_RE = /Archive\.aspx\?[^"']*AMID=\d+/i;
+const DOC_URL_RE = /\.pdf(?:$|[?#])|\/DocumentCenter\/View\/\d+|Archive\.aspx\?[^"']*ADID=\d+|ShowDocument\?id=\d+|showdoc\.asp\?[^"']*docName=[^"']+\.pdf/i;
+const ARCHIVE_PAGE_RE = /Archive\.aspx\?[^"']*AMID=\d+|listDocs-new\.asp\?[^"']*year=\d{4}/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -57,7 +57,33 @@ function isOfficialHost(url, profile) {
   return !!host && (profile.official_hosts || []).some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
 }
 
-async function fetchBounded(url, options, expectPdf) {
+function urlPathLooksPdf(url) {
+  try {
+    return /\.pdf$/i.test(new URL(cleanText(url)).pathname);
+  } catch (error) {
+    return /\.pdf(?:$|[?#])/i.test(cleanText(url));
+  }
+}
+
+function embeddedPdfUrlFromHtml(html, baseUrl) {
+  const source = String(html || '');
+  const patterns = [
+    /<(?:object|embed|iframe)\b[^>]*(?:data|src)=["']([^"']+\.pdf(?:[^"']*)?)["'][^>]*>/i,
+    /<a\b[^>]*href=["']([^"']+\.pdf(?:[^"']*)?)["'][^>]*>/i
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(source);
+    if (!match || !cleanText(match[1])) continue;
+    try {
+      return new URL(cleanText(match[1]), baseUrl).toString();
+    } catch (error) {
+      return '';
+    }
+  }
+  return '';
+}
+
+async function fetchBounded(url, options, expectPdf, depth = 0) {
   const fetchImpl = options.fetch_impl || global.fetch || require('node-fetch');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeout_ms || 10000);
@@ -75,7 +101,7 @@ async function fetchBounded(url, options, expectPdf) {
     if (!response.ok) return { status: 'failed', blocked_reason: `http_${response.status}` };
     const contentType = cleanText(response.headers && response.headers.get && response.headers.get('content-type')).toLowerCase();
     const declaredLength = Number(response.headers && response.headers.get && response.headers.get('content-length')) || 0;
-    if (contentType.includes('pdf') || /\.pdf(?:$|[?#])/i.test(url)) {
+    if (contentType.includes('pdf') || urlPathLooksPdf(url)) {
       if (declaredLength > MAX_PDF_BYTES) return { status: 'skipped', blocked_reason: `pdf_too_large_${Math.round(declaredLength / 1048576)}mb` };
       try {
         const pdfParse = require('pdf-parse');
@@ -95,6 +121,17 @@ async function fetchBounded(url, options, expectPdf) {
     }
     const text = await response.text();
     if (BLOCKED_PAGE_RE.test(text)) return { status: 'blocked', blocked_reason: 'captcha_or_bot_wall' };
+    if (expectPdf && depth < 1) {
+      const embeddedPdfUrl = embeddedPdfUrlFromHtml(text, url);
+      if (embeddedPdfUrl) {
+        const embedded = await fetchBounded(embeddedPdfUrl, options, true, depth + 1);
+        if (embedded && (embedded.status === 'parsed' || embedded.status === 'skipped')) {
+          embedded.final_pdf_url = embeddedPdfUrl;
+          embedded.wrapper_url = url;
+        }
+        return embedded;
+      }
+    }
     return { status: 'parsed', kind: 'html', text };
   } catch (error) {
     return { status: 'failed', blocked_reason: cleanText(error && error.message).slice(0, 60) || 'fetch_failed' };
@@ -132,6 +169,7 @@ function discoverOfficialLinks(html, baseUrl, profile) {
 }
 
 async function searchOfficialDocuments(profile, options) {
+  if (!Array.isArray(profile.search_hints) || !profile.search_hints.length) return [];
   if (Array.isArray(options.mock_search_results)) {
     return options.mock_search_results
       .map((item) => cleanText(item && (item.url || item.source_url)))
@@ -220,8 +258,13 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
   const scannedDocs = [];
   for (const url of documentUrlsFound.slice(0, MAX_DOCS_PER_COUNTY)) {
     const doc = await fetchBounded(url, options, true);
+    const proofUrl = cleanText(doc.final_pdf_url) || url;
+    if (doc.final_pdf_url && !isOfficialHost(proofUrl, profile)) {
+      documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: 'embedded_pdf_official_host_mismatch' });
+      continue;
+    }
     if (doc.status === 'parsed' && doc.kind === 'pdf') {
-      documentUrlsParsed.push(url);
+      documentUrlsParsed.push(proofUrl);
       rawRows = rawRows.concat(txTrusteeNoticeExtractor.extractTrusteeNoticeRows(doc.text, {
         county: profile.county,
         state: profile.state,
@@ -230,14 +273,14 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
         max_rows: MAX_ROWS
       }, {
         source_url: profile.source_url,
-        source_proof_url: url,
+        source_proof_url: proofUrl,
         source_reference: `official ${profile.county} County foreclosure notice document`
       }));
     } else {
-      documentUrlsSkipped.push({ url, reason: doc.blocked_reason || doc.status });
-      if (doc.status === 'blocked') blockedNotes.push({ source: 'official_document', url, reason: doc.blocked_reason });
+      documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: doc.blocked_reason || doc.status });
+      if (doc.status === 'blocked') blockedNotes.push({ source: 'official_document', url: proofUrl, reason: doc.blocked_reason });
       if (doc.blocked_reason === 'pdf_scanned_no_text_layer' && doc.buffer) {
-        scannedDocs.push({ url, buffer: doc.buffer, profile, source_url: profile.source_url });
+        scannedDocs.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), buffer: doc.buffer, profile, source_url: profile.source_url });
       }
     }
     if (rawRows.length >= MAX_ROWS) break;

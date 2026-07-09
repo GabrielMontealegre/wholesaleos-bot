@@ -80,23 +80,7 @@ function mockDeal(overrides) {
         source_adapter: {
           source_adapter_results: [
             { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '' },
-            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' },
-            {
-              source_id: 'tx_dallas_listing_radar',
-              source_name: 'Dallas Listing Radar',
-              status: 'provider_available',
-              candidate_count: 0,
-              blocked_reason: 'no_property_specific_listing_urls',
-              diagnostics: {
-                listing_radar_accepted_count: 0,
-                listing_radar_rejected_count: 7,
-                rejected_reason_counts: { generic_zillow_url: 4, generic_redfin_url: 3 },
-                rejected_url_samples: [
-                  { source_url: 'https://www.zillow.com/dallas-tx/', reason: 'generic_zillow_url' },
-                  { source_url: 'https://www.redfin.com/state/Texas/for-sale-by-owner', reason: 'generic_redfin_url' }
-                ]
-              }
-            }
+            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' }
           ]
         }
       }
@@ -109,10 +93,15 @@ function mockDeal(overrides) {
   assert.deepStrictEqual(previewCalls[0].source_ids, [
     'tx_dallas_county_clerk_foreclosure_notices',
     'tx_dallas_craigslist_owner_posts',
-    'tx_dallas_fsbo_contact_first',
-    'tx_dallas_listing_radar'
+    'tx_dallas_fsbo_contact_first'
   ].concat(countyProfiles.PROFILES.map((profile) => profile.source_id)),
-  'queue must explicitly request all registered free lanes including every county profile');
+  'queue must explicitly request all default free lanes including every county profile');
+  assert.ok(!previewCalls[0].source_ids.includes('tx_dallas_listing_radar'), 'Listing Radar is kept registered but mothballed from the default daily queue');
+  assert.ok(previewCalls[0].source_ids.includes('tx_hunt_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_navarro_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_hill_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_van_zandt_county_foreclosure_notices'));
+  assert.ok(previewCalls[0].source_ids.includes('tx_bell_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_ellis_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_kaufman_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_parker_county_foreclosure_notices'));
@@ -127,14 +116,9 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.counts.needs_comps, 1);
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file must exist');
   assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
-  assert.strictEqual(run1.batch.source_coverage.length, 3, 'batch must carry per-source coverage');
+  assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
   assert.strictEqual(run1.batch.source_coverage[0].candidate_count, 2);
   assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
-  const radarCoverage = run1.batch.source_coverage.find((item) => item.source_id === 'tx_dallas_listing_radar');
-  assert.ok(radarCoverage, 'listing radar coverage must survive into queue batch');
-  assert.strictEqual(radarCoverage.listing_radar_rejected_count, 7);
-  assert.strictEqual(radarCoverage.rejected_url_samples.length, 2);
-  assert.strictEqual(radarCoverage.rejected_reason_counts.generic_zillow_url, 4);
 
   // Volume caps: foreclosure adapter parses more PDFs per preview now.
   const foreclosureAdapter = require('../modules/sources/dallas-foreclosure-acquisition-adapter');

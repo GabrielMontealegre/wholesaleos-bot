@@ -18,7 +18,7 @@ tesseract.js, pdf-parse, cheerio, axios, csv-parse.
 | `crawlee` 3.17 (Apache-2.0) | Apache-2.0 | Playwright crawling framework (queues, retries, fingerprints) | Med: fingerprint/stealth features edge toward anti-bot evasion; huge dep tree | High | REJECT — bespoke lanes suffice; stealth features conflict with safety rules |
 | `pdfjs-dist` (fresh version) | Apache-2.0 | Newer PDF renderer than pdf-parse's bundled v2.0.550 | Low | Medium (swap render path) | LATER — current renderer works; revisit only if OCR quality plateaus |
 | tesseract.js tuning (existing dep) | Apache-2.0 | `tessedit_char_whitelist`, page-seg modes for notice layouts | None (config only) | Zero | WORTH A SPIKE next OCR sprint |
-| Serper (existing provider) | Commercial (free tier in caps) | Property-specific listing discovery (Zillow /homedetails/, Redfin /home/, Realtor detail URLs) | Low within caps | Zero | KEEP — the future "Listing Radar" lane feeds from this; note Zillow/Redfin page OPENS still 403 (rows would be link-only, BLOCKED_PUBLIC_SOURCE) |
+| Serper (existing provider) | Commercial (free tier in caps) | Property-specific listing discovery (Zillow /homedetails/, Redfin /home/, Realtor detail URLs) | Low within caps | Zero | MOTHBALL FROM DEFAULT QUEUE — live proof showed generic category/filter pages, so keep the adapter for diagnostics only until it reliably returns property-specific URLs |
 | Foreclosure.com / Auction.com scraping | — | Auction detail radar | HIGH: login/paywall-gated beyond teasers | — | REJECT (violates no-paywall rule beyond public teaser pages) |
 | Chrome MCP / computer-use (Claude session tools) | — | Assisted manual browsing of blocked portals (Tarrant publicsearch, Denton captcha) during a Claude session | Low (human present) | Zero | NOTE ONLY — session tooling, not repo code; can't run unattended |
 
@@ -44,7 +44,7 @@ independently confirms the OCR street actually exists in that city. No match
 ## Ranked next adds (after this sprint)
 
 1. **Census zip resolution** — built this sprint (see below).
-2. Serper-fed Listing Radar lane (property-specific URLs only, link-only rows
-   marked BLOCKED_PUBLIC_SOURCE when pages 403) — volume, but low actionability.
+2. Verified open county PDF profiles — Hunt/Navarro-style EasyDocs lanes beat
+   Listing Radar because they expose official notice documents with source proof.
 3. tesseract.js parameter tuning spike (free OCR yield).
 4. `parse-address` adoption if/when address regexes hit their ceiling.
