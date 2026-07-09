@@ -74,6 +74,7 @@ function classifySourceUrl(sourceUrl) {
   if (/zillow\.com$/i.test(host) && /\/homedetails\//i.test(path)) return 'exact_property_record';
   if (/har\.com$/i.test(host) && /\/homedetail\//i.test(path)) return 'exact_property_record';
   if (/auction\.com$/i.test(host) && /\/details\//i.test(path)) return 'exact_property_record';
+  if (/realauction\.com$/i.test(host) && /(?:zmethod=details|\/details\/|auctiondetails)/i.test(probe)) return 'exact_property_record';
   if ((host === 'craigslist.org' || host.endsWith('.craigslist.org')) &&
       /^\/(?:[^/]+\/)?reo\/d\/[^/]+\/\d{7,12}\.html$/i.test(path)) {
     return 'exact_property_record';
@@ -450,6 +451,7 @@ function buildSourceEvidencePack(job, lead) {
 module.exports = {
   classifySourceUrl,
   classifySourceRecordType: classifySourceUrl,
+  extractPropertyIdentityFromSourceUrl,
   buildSourceEvidencePack,
   resolvePropertyIdentityFromExistingFields,
   classifyPropertyIdentityStatus,

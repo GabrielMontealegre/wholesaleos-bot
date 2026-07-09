@@ -14,7 +14,7 @@ Daily routine: see [GABRIEL_DAILY_DEAL_WORKFLOW.md](GABRIEL_DAILY_DEAL_WORKFLOW.
 County posts foreclosure notice PDFs (public, free)
         │
         ▼
-Source lanes (11): Dallas clerk + Craigslist + FSBO + 8 county profiles
+Source lanes (12): Dallas clerk + Craigslist + FSBO + Listing Radar + 8 county profiles
   modules/sources/tx-county-foreclosure-source-profiles.js  (config, 1 entry per county)
         │
         ▼
@@ -96,6 +96,7 @@ questions. Proof-only rows collapsed underneath.
 | Parker County | only admin PDFs posted | wait for notices |
 | DCAD owner lookup | blocks datacenter IPs | `node scripts/export-free-public-deal-board.js` locally |
 | Zillow/Redfin sold comps | 403/429 bot traffic + TX non-disclosure | MLS or paid data |
+| Zillow/Redfin/Realtor/Auction listing radar | public detail pages often block automation | board keeps property-specific links as SOURCE_PROOF_ONLY or INSPECT_NOW when the URL/status/address is source-backed |
 | Owner phone numbers | not in free public records | paid skip-trace decision |
 
 ## 6. Exact daily workflow
@@ -117,7 +118,9 @@ adds rows all day without him.
 - Not 50–60 rows/day. Current ceiling is ~free county supply: notices post
   in monthly waves (biggest right after the 1st-Tuesday sale cycle). Between
   waves, batches refresh but add little. Scaling needs more counties (config
-  entries) and more source families.
+  entries) and more source families. Listing Radar now adds property-specific
+  Zillow/Redfin/Realtor/Auction links when Serper finds them, but blocked pages
+  stay honest link-only rows until manually opened.
 - Not a phone-number machine. Free public data yields ~1–2 visible phones;
   more requires a paid skip-trace decision Gabriel has to make.
 - Not a comps machine. TX hides sold prices; ARV/MAO stay locked until he

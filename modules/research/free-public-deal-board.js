@@ -30,7 +30,7 @@ const PROPERTY_HOSTS = Object.freeze({
   zillow: /(?:^|\.)zillow\.com$/i,
   redfin: /(?:^|\.)redfin\.com$/i,
   realtor: /(?:^|\.)realtor\.com$/i,
-  auction: /(?:^|\.)auction\.com$/i
+  auction: /(?:^|\.)(?:auction|realauction)\.com$/i
 });
 
 const QUALITY_BUCKETS = Object.freeze({
@@ -473,7 +473,7 @@ function sourceFamily(record) {
   const url = cleanText(record && (record.source_url || record.url || ''));
   const host = hostOf(url);
   if (/craigslist/.test(host)) return 'craigslist_owner';
-  if (/auction\.com/.test(host)) return 'auction';
+  if (/(?:^|\.)auction\.com|(?:^|\.)realauction\.com/.test(host)) return 'auction';
   if (/zillow/.test(host)) return 'zillow';
   if (/redfin/.test(host)) return 'redfin';
   if (/realtor/.test(host)) return 'realtor';
@@ -877,6 +877,15 @@ function dealFromRecord(record, context) {
     should_ingest: false,
     no_global_mutation: true,
     rejected_property_links: links.rejected_property_links,
+    address_provenance: cleanText(record && record.address_provenance),
+    listing_radar_status: cleanText(record && record.listing_radar_status),
+    asking_price: cleanText(record && record.asking_price),
+    beds: record && record.beds != null ? record.beds : null,
+    baths: record && record.baths != null ? record.baths : null,
+    sqft: record && record.sqft != null ? record.sqft : null,
+    listing_agent_if_visible: cleanText(record && record.listing_agent_if_visible),
+    blocked_sources: Array.isArray(record && record.blocked_sources) ? record.blocked_sources.slice(0, 6) : [],
+    risk_flags: Array.isArray(record && record.risk_flags) ? record.risk_flags.slice(0, 8) : [],
     quality_bucket: '',
     usable_for_gabriel: false,
     rejected_reason: '',
@@ -933,6 +942,15 @@ function candidateRecord(candidate, source) {
     owner_name_if_visible: cleanText(candidate.owner_name_candidate || candidate.owner_name),
     contact_route_if_visible: cleanText(candidate.contact_route || candidate.public_contact_route || candidate.contact_phone || candidate.contact_email),
     source_row_reference: cleanText(candidate.source_row_reference || candidate.parcel_or_account),
+    address_provenance: cleanText(candidate.address_provenance),
+    listing_radar_status: cleanText(candidate.listing_radar_status),
+    asking_price: cleanText(candidate.asking_price),
+    beds: candidate.beds,
+    baths: candidate.baths,
+    sqft: candidate.sqft,
+    listing_agent_if_visible: cleanText(candidate.listing_agent_if_visible || candidate.agent_name || candidate.contact_name),
+    blocked_sources: Array.isArray(candidate.blocked_sources) ? candidate.blocked_sources.slice(0, 6) : [],
+    risk_flags: Array.isArray(candidate.risk_flags) ? candidate.risk_flags.slice(0, 8) : [],
     record_origin: 'source_adapter'
   };
 }

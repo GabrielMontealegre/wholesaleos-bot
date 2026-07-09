@@ -33,7 +33,8 @@ const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclos
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
-  'tx_dallas_fsbo_contact_first'
+  'tx_dallas_fsbo_contact_first',
+  'tx_dallas_listing_radar'
 ].concat(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id)));
 
 function cleanText(value) {
