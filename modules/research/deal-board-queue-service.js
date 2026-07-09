@@ -100,6 +100,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     maps_search_url_review_needed: cleanText(deal.maps_search_url_review_needed) || null,
     census_zip_suggestion: cleanText(deal.census_zip_suggestion) || null,
     census_matched_address: cleanText(deal.census_matched_address) || null,
+    census_zip_status: cleanText(deal.census_zip_status) || null,
     risk_flags: Array.isArray(deal.risk_flags) ? deal.risk_flags.slice(0, 6) : [],
     city: cleanText(deal.city),
     county: cleanText(deal.county),

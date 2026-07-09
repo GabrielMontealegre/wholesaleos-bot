@@ -76,8 +76,15 @@ async function resolveZipFromCensus(partial, options = {}) {
   if (inputNumber !== matchedNumber) return { resolved: false, reason: 'census_street_number_mismatch' };
   const matchedState = cleanText(components.state).toUpperCase();
   if (matchedState && state && matchedState !== state.toUpperCase()) return { resolved: false, reason: 'census_state_mismatch' };
+  // The document text is the source of truth for the city: queue rows can
+  // carry the market city as a stale label, so accept when the matched city
+  // is visible in the partial itself OR equals the explicit city param.
   const matchedCity = cleanText(components.city).toUpperCase();
-  if (city && matchedCity && matchedCity !== city.toUpperCase()) return { resolved: false, reason: 'census_city_mismatch' };
+  if (matchedCity) {
+    const cityInPartial = street.toUpperCase().includes(matchedCity);
+    const cityMatchesParam = !!city && matchedCity === city.toUpperCase();
+    if (!cityInPartial && !cityMatchesParam) return { resolved: false, reason: 'census_city_mismatch' };
+  }
 
   const prettyCity = titleCaseAddressPart(components.city || city);
   const prettyStreet = titleCaseAddressPart([
