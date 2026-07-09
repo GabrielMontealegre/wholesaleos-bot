@@ -80,7 +80,23 @@ function mockDeal(overrides) {
         source_adapter: {
           source_adapter_results: [
             { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '' },
-            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' }
+            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' },
+            {
+              source_id: 'tx_dallas_listing_radar',
+              source_name: 'Dallas Listing Radar',
+              status: 'provider_available',
+              candidate_count: 0,
+              blocked_reason: 'no_property_specific_listing_urls',
+              diagnostics: {
+                listing_radar_accepted_count: 0,
+                listing_radar_rejected_count: 7,
+                rejected_reason_counts: { generic_zillow_url: 4, generic_redfin_url: 3 },
+                rejected_url_samples: [
+                  { source_url: 'https://www.zillow.com/dallas-tx/', reason: 'generic_zillow_url' },
+                  { source_url: 'https://www.redfin.com/state/Texas/for-sale-by-owner', reason: 'generic_redfin_url' }
+                ]
+              }
+            }
           ]
         }
       }
@@ -111,9 +127,14 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.counts.needs_comps, 1);
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file must exist');
   assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
-  assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
+  assert.strictEqual(run1.batch.source_coverage.length, 3, 'batch must carry per-source coverage');
   assert.strictEqual(run1.batch.source_coverage[0].candidate_count, 2);
   assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
+  const radarCoverage = run1.batch.source_coverage.find((item) => item.source_id === 'tx_dallas_listing_radar');
+  assert.ok(radarCoverage, 'listing radar coverage must survive into queue batch');
+  assert.strictEqual(radarCoverage.listing_radar_rejected_count, 7);
+  assert.strictEqual(radarCoverage.rejected_url_samples.length, 2);
+  assert.strictEqual(radarCoverage.rejected_reason_counts.generic_zillow_url, 4);
 
   // Volume caps: foreclosure adapter parses more PDFs per preview now.
   const foreclosureAdapter = require('../modules/sources/dallas-foreclosure-acquisition-adapter');
@@ -282,6 +303,8 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('not saved leads'));
   assert.ok(uiSource.includes('Source coverage'), 'dashboard must render the source coverage table');
   assert.ok(uiSource.includes('blocked_reason'), 'coverage table must show blocked reasons');
+  assert.ok(uiSource.includes('Rejected sample'), 'coverage table must show rejected URL samples');
+  assert.ok(uiSource.includes('rejected_url_samples'), 'coverage table must read rejected URL samples');
   assert.ok(uiSource.includes('today_rows'), 'dashboard must show daily rows');
   assert.ok(/type="checkbox" id="wos-public-deals-auto"(?![^>]*checked)/.test(uiSource), 'auto-refresh must exist and default OFF');
   assert.ok(uiSource.includes('20 * 60 * 1000'), 'auto-refresh interval must be 20 minutes');

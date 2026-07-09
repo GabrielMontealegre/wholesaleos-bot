@@ -228,60 +228,84 @@ function isAcceptedListingUrl(sourceUrl) {
   return classifyListingUrl(sourceUrl).accepted === true;
 }
 
+function redfinCityPath(city) {
+  return titleCase(cleanText(city) || 'Dallas').replace(/\s+/g, '-');
+}
+
+function quoteQueryPhrase(value) {
+  return `"${cleanText(value).replace(/"/g, '')}"`;
+}
+
 function buildListingRadarQueryGroups(input = {}) {
   const city = cleanText(input.city) || 'Dallas';
   const state = cleanText(input.state || 'TX').toUpperCase();
-  const market = `${city} ${state}`;
+  const market = quoteQueryPhrase(`${city}, ${state}`);
+  const redfinCity = redfinCityPath(city);
   return [
     {
-      query_group: 'listing_radar_zillow_distress',
+      query_group: 'listing_radar_zillow_fixer',
       provider_family: SOURCE_FAMILY,
       purpose: 'listing_radar',
-      query: `site:zillow.com/homedetails ${market} fixer cash only as-is`,
+      query: `site:zillow.com/homedetails ${market} fixer`,
       expected_url_pattern: 'zillow.com/homedetails',
       max_results: 2
     },
     {
-      query_group: 'listing_radar_zillow_foreclosure_price_cut',
+      query_group: 'listing_radar_zillow_price_cut',
       provider_family: SOURCE_FAMILY,
       purpose: 'listing_radar',
-      query: `site:zillow.com/homedetails ${market} foreclosure price cut`,
+      query: `site:zillow.com/homedetails ${market} "price cut"`,
       expected_url_pattern: 'zillow.com/homedetails',
       max_results: 2
     },
     {
-      query_group: 'listing_radar_redfin_distress',
+      query_group: 'listing_radar_zillow_foreclosure',
       provider_family: SOURCE_FAMILY,
       purpose: 'listing_radar',
-      query: `site:redfin.com/TX/${city} ${market} fixer needs TLC price cut`,
+      query: `site:zillow.com/homedetails ${market} foreclosure`,
+      expected_url_pattern: 'zillow.com/homedetails',
+      max_results: 2
+    },
+    {
+      query_group: 'listing_radar_redfin_fixer',
+      provider_family: SOURCE_FAMILY,
+      purpose: 'listing_radar',
+      query: `site:redfin.com/TX/${redfinCity} "fixer"`,
       expected_url_pattern: 'redfin.com/*/home/',
       max_results: 2
     },
     {
-      query_group: 'listing_radar_realtor_distress',
+      query_group: 'listing_radar_redfin_price_cut',
       provider_family: SOURCE_FAMILY,
       purpose: 'listing_radar',
-      query: `site:realtor.com/realestateandhomes-detail ${market} foreclosure auction cash only`,
+      query: `site:redfin.com/TX/${redfinCity} "price cut"`,
+      expected_url_pattern: 'redfin.com/*/home/',
+      max_results: 2
+    },
+    {
+      query_group: 'listing_radar_realtor_foreclosure',
+      provider_family: SOURCE_FAMILY,
+      purpose: 'listing_radar',
+      query: `site:realtor.com/realestateandhomes-detail ${market} foreclosure`,
       expected_url_pattern: 'realtor.com/realestateandhomes-detail',
-      max_results: 2
-    },
-    {
-      query_group: 'listing_radar_auction_detail',
-      provider_family: SOURCE_FAMILY,
-      purpose: 'listing_radar',
-      query: `site:auction.com/details ${market} foreclosure auction property`,
-      expected_url_pattern: 'auction.com/details',
-      max_results: 2
-    },
-    {
-      query_group: 'listing_radar_realauction_detail',
-      provider_family: SOURCE_FAMILY,
-      purpose: 'listing_radar',
-      query: `site:realauction.com ${market} foreclosure auction details`,
-      expected_url_pattern: 'realauction.com details',
       max_results: 2
     }
   ];
+}
+
+function truncateUrlForDiagnostics(value) {
+  const url = cleanText(value);
+  return url.length > 120 ? `${url.slice(0, 117)}...` : url;
+}
+
+function rejectedUrlSamples(rejected) {
+  return (Array.isArray(rejected) ? rejected : [])
+    .filter((item) => cleanText(item && item.source_url))
+    .slice(0, 5)
+    .map((item) => ({
+      source_url: truncateUrlForDiagnostics(item.source_url),
+      reason: cleanText(item.reason)
+    }));
 }
 
 function evidenceWindow(text, matchText) {
@@ -557,11 +581,16 @@ async function runListingRadarAcquisitionAdapter(options = {}) {
     source_results_reviewed: reviewedCards.length,
     property_specific_results_reviewed: accepted.length,
     listing_radar_accepted_count: accepted.length,
+    listing_radar_rejected_count: rejected.length,
     listing_radar_blocked_count: blockedCount,
     listing_radar_page_fetch_cap: maxPageFetches,
     listing_radar_page_fetches_used: pageFetchCount,
     page_fetches: pageFetches,
-    rejected_results: rejected,
+    rejected_results: rejected.map((item) => ({
+      source_url: truncateUrlForDiagnostics(item.source_url),
+      reason: cleanText(item.reason)
+    })),
+    rejected_url_samples: rejectedUrlSamples(rejected),
     rejected_reason_counts: rejected.reduce((out, item) => {
       out[item.reason] = (out[item.reason] || 0) + 1;
       return out;
