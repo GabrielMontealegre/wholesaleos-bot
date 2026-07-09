@@ -205,9 +205,19 @@
       body, '#fcd34d');
   }
 
+  var lastData = null;
+  var lastNote = '';
+
   function render(container, data, note) {
+    lastData = data;
+    lastNote = note || '';
+    // The dashboard app rewrites #content.innerHTML on every page render,
+    // which can replace our section - always target the live one.
+    container = document.getElementById('wos-public-deals') || container;
+    var body = container.querySelector('.wos-public-deals-body');
+    if (!body) return;
     var rows = Array.isArray(data.rows) ? data.rows : [];
-    container.querySelector('.wos-public-deals-body').innerHTML =
+    body.innerHTML =
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       dailyMachinePanel(data, rows) +
       zipReviewPanel(rows) +
@@ -312,6 +322,12 @@
           fetchLatestWithNote(section, 'Auto-run change failed: ' + err.message);
         });
     });
+    if (lastData) {
+      // Re-mount after the app wiped us: render the cached snapshot instantly.
+      if (lastData.auto_run && lastData.auto_run.enabled) autoBox.checked = true;
+      render(section, lastData, lastNote);
+      return;
+    }
     fetch(API_LATEST, { headers: headers() })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -321,6 +337,23 @@
       .catch(function () { fetchLatest(section); });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
-  else mount();
+  function keepMounted() {
+    // The app does `content.innerHTML = ...` on every page render, destroying
+    // anything mounted inside - watch for that and re-mount from cache.
+    var observer = new MutationObserver(function () {
+      if (!document.getElementById('wos-public-deals')) mount();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    setInterval(function () {
+      if (!document.getElementById('wos-public-deals')) mount();
+    }, 3000);
+  }
+
+  function boot() {
+    mount();
+    keepMounted();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

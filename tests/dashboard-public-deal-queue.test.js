@@ -305,6 +305,11 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('ocr_address_rows_today'), 'Daily Deal Machine must show OCR rows today');
   assert.ok(uiSource.includes('CALL_READY first'), 'Top Deals must order CALL_READY rows first');
 
+  // 7) The section must survive the app's content.innerHTML rewrites.
+  assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');
+  assert.ok(uiSource.includes('keepMounted'), 'section must keep itself mounted');
+  assert.ok(/lastData/.test(uiSource), 'section must re-render from the cached snapshot after a wipe');
+
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;
   }
