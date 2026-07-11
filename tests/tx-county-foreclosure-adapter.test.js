@@ -45,6 +45,13 @@ function usDateFromIso(value) {
   return `${parts[1]}/${parts[2]}/${parts[0]}`;
 }
 
+function postingMonth(offset) {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + offset);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
 const TARRANT_NOTICE_TEXT = [
   'NOTICE OF SUBSTITUTE TRUSTEE SALE',
   'Deed of Trust executed by PAT SAMPLE, grantor',
@@ -251,6 +258,24 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(rotationFour.diagnostics.docs_discovered, 10);
   assert.strictEqual(rotationFour.diagnostics.docs_processed, 5);
   assert.ok(rotationFour.document_urls_parsed.some((url) => url.includes('2026-08-22-foreclosure-10.pdf')));
+
+  // 2e) Ledger retention keeps current + previous posting month only. The
+  // rotation runs above already exercise the write path after every batch.
+  const currentPostingMonth = postingMonth(0);
+  const previousPostingMonth = postingMonth(-1);
+  const expiredPostingMonth = postingMonth(-2);
+  const ledgerForRetention = {
+    version: 1,
+    documents: {
+      [`${expiredPostingMonth}|https://county.example/expired.pdf`]: { posting_month: expiredPostingMonth },
+      [`${previousPostingMonth}|https://county.example/previous.pdf`]: { posting_month: previousPostingMonth },
+      [`${currentPostingMonth}|https://county.example/current.pdf`]: { posting_month: currentPostingMonth }
+    }
+  };
+  adapter.pruneDocumentLedger(ledgerForRetention, new Date());
+  assert.ok(!ledgerForRetention.documents[`${expiredPostingMonth}|https://county.example/expired.pdf`], 'entries older than the previous month must be pruned');
+  assert.ok(ledgerForRetention.documents[`${previousPostingMonth}|https://county.example/previous.pdf`], 'previous month must remain');
+  assert.ok(ledgerForRetention.documents[`${currentPostingMonth}|https://county.example/current.pdf`], 'current month must remain');
 
   // 3) Blocked portal/bot wall reported, never bypassed; source-proof links still exposed.
   const blocked = await adapter.runTxCountyForeclosureAcquisitionAdapter({

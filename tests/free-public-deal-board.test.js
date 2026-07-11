@@ -317,15 +317,45 @@ const rejectedRecords = [
         }
       }]
     }, { fetch_impl: fetchImpl });
-    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter_records_count, 2);
-    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter.source_adapter_proof_record_count, 2);
-    assert.strictEqual(sourceProofOnly.free_public_deals.length, 2);
+    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter_records_count, 1);
+    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter.source_adapter_proof_record_count, 1);
+    assert.strictEqual(sourceProofOnly.suppressed_nav_chrome_count, 1);
+    assert.strictEqual(sourceProofOnly.diagnostics.source_adapter.suppressed_nav_chrome_count, 1);
+    assert.ok(sourceProofOnly.suppressed_nav_chrome_samples.some((item) => /publicsearch\.us/i.test(item.source_url)));
+    assert.strictEqual(sourceProofOnly.free_public_deals.length, 1);
     assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY'));
     assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.usable_for_gabriel === true));
     assert.ok(sourceProofOnly.free_public_deals.every((deal) => deal.maps_url === null));
     assert.ok(sourceProofOnly.free_public_deals[0].best_link_to_click_first.includes('dallascounty.org'));
     assert.ok(sourceProofOnly.free_public_deals[0].missing_fields.includes('complete property address'));
     assert.strictEqual(sourceProofOnly.board_blocker_summary, '');
+
+    const navChromeSuppression = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Denton', county: 'Denton', state: 'TX' },
+      mock_source_adapter_results: [{
+        source_id: 'tx_denton_county_foreclosure_notices',
+        source_name: 'Denton County Foreclosure Notices',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://www.dentoncounty.gov/foreclosure-notices',
+        status: 'needs_manual_review',
+        candidate_count: 0,
+        discovered_links: [
+          { url: 'https://www.dentoncounty.gov/copyright', label: 'Foreclosure copyright notice' },
+          { url: 'https://www.dentoncounty.gov/tax-assessor', label: 'Trustee sale tax assessor page' },
+          { url: 'https://search.dentoncounty.gov/search/', label: 'Foreclosure notice search portal' },
+          { url: 'https://www.dentoncounty.gov/foreclosure-notices', label: 'Notice of Substitute Trustee Sale' },
+          { url: 'https://www.dentoncounty.gov/Documents/foreclosure-notice.pdf', label: 'Official document without an address' }
+        ]
+      }]
+    });
+    assert.strictEqual(navChromeSuppression.suppressed_nav_chrome_count, 3);
+    assert.strictEqual(navChromeSuppression.diagnostics.source_adapter.suppressed_nav_chrome_count, 3);
+    assert.strictEqual(navChromeSuppression.diagnostics.source_adapter.suppressed_nav_chrome_by_source_id.tx_denton_county_foreclosure_notices, 3);
+    assert.strictEqual(navChromeSuppression.suppressed_nav_chrome_samples.length, 3);
+    assert.ok(navChromeSuppression.free_public_deals.every((deal) => !/(?:copyright|tax-assessor|search\.dentoncounty\.gov)/i.test(deal.source_url)));
+    assert.ok(navChromeSuppression.free_public_deals.some((deal) => deal.source_url === 'https://www.dentoncounty.gov/foreclosure-notices'));
+    assert.ok(navChromeSuppression.free_public_deals.some((deal) => deal.source_document_url.endsWith('/foreclosure-notice.pdf')));
+    assert.ok(navChromeSuppression.free_public_deals.every((deal) => deal.quality_bucket === 'SOURCE_PROOF_ONLY'));
 
     const foreclosureEvidenceRows = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
@@ -663,9 +693,9 @@ const rejectedRecords = [
         }
       }]
     });
-    assert.strictEqual(landingFallback.free_public_deals.length, 1);
-    assert.strictEqual(landingFallback.free_public_deals[0].source_document_url, '');
-    assert.strictEqual(landingFallback.free_public_deals[0].best_link_to_click_first, 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php');
+    assert.strictEqual(landingFallback.free_public_deals.length, 0);
+    assert.strictEqual(landingFallback.suppressed_nav_chrome_count, 1);
+    assert.strictEqual(landingFallback.suppressed_nav_chrome_samples[0].reason, 'missing_foreclosure_keyword_evidence');
 
     const listingRadarRows = await dealBoard.runFreePublicDealBoardPreview({
       market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
