@@ -1,6 +1,9 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const Module = require('module');
 
 const originalLoad = Module._load;
@@ -17,6 +20,9 @@ const adapter = require('../modules/sources/tx-county-foreclosure-acquisition-ad
 const profiles = require('../modules/sources/tx-county-foreclosure-source-profiles');
 const sourceCatalog = require('../modules/sources/source-catalog');
 const registry = require('../modules/sources/source-adapter-registry');
+
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-tx-county-ledger-'));
+process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = path.join(tmpDir, 'deal-board-doc-ledger.json');
 
 function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 200) {
   const buffer = Buffer.from(String(body || ''), 'utf8');
@@ -175,6 +181,76 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(viaRankedEasyDocs.status, 'available');
   assert.ok(viaRankedEasyDocs.document_urls_parsed[0].includes(`${futureDay}-foreclosure-99.pdf`), 'future dated EasyDocs notice must be parsed first');
   assert.ok(viaRankedEasyDocs.candidates.some((candidate) => /4555 Traders Rd/i.test(candidate.normalized_address || candidate.property_address)));
+
+  // 2d) Document ledger rotates through the month's docs instead of rereading
+  //     the same first five forever; a new month reopens the lane.
+  const rotationMonthA = '2026-07';
+  const rotationMonthB = '2026-08';
+  const rotationPage = (monthTag) => {
+    const year = monthTag.slice(0, 4);
+    return `<html><body>${Array.from({ length: 10 }, (_, index) => {
+      const n = String(index + 1).padStart(2, '0');
+      const day = String(32 - (index + 1)).padStart(2, '0');
+      return `<a href="https://apps.huntcounty.net/foreclosures/LinkedDir/${year}/${monthTag}-${day}-foreclosure-${n}.pdf">${monthTag} foreclosure ${n}</a>`;
+    }).join('\n')}</body></html>`;
+  };
+  const rotationPdf = (monthTag, index) => [
+    'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+    'Property Address:',
+    `${100 + index} Rotation Rd`,
+    `Greenville, TX ${75400 + index}`,
+    `Date of Sale: ${monthTag}-${String(32 - index).padStart(2, '0')}`
+  ].join('\n');
+  const rotationFetchFor = (monthTag) => async (url) => {
+    const u = String(url);
+    if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rotationPage(monthTag));
+    const monthMatch = /LinkedDir\/(\d{4})\/(\d{4}-\d{2})-(\d{2})-foreclosure-(\d{2})\.pdf/.exec(u);
+    if (monthMatch) return makeResponse(rotationPdf(monthMatch[2], Number(monthMatch[4])), 'application/pdf');
+    throw new Error(`unexpected:${u}`);
+  };
+  const rotationOne = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor(rotationMonthA)
+  });
+  assert.strictEqual(rotationOne.status, 'available');
+  assert.strictEqual(rotationOne.candidate_count, 5, 'first batch must only read five unprocessed docs');
+  assert.strictEqual(rotationOne.diagnostics.docs_discovered, 10);
+  assert.strictEqual(rotationOne.diagnostics.docs_processed, 5);
+  assert.strictEqual(rotationOne.diagnostics.docs_ledger_skipped, 0);
+  assert.ok(rotationOne.document_urls_parsed.some((url) => url.includes('2026-07-22-foreclosure-10.pdf')));
+  assert.ok(rotationOne.candidates.every((candidate) => candidate.preview_only === true));
+
+  const rotationTwo = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor(rotationMonthA)
+  });
+  assert.strictEqual(rotationTwo.status, 'available');
+  assert.strictEqual(rotationTwo.candidate_count, 5, 'second batch must advance to the next five docs');
+  assert.strictEqual(rotationTwo.diagnostics.docs_discovered, 10);
+  assert.strictEqual(rotationTwo.diagnostics.docs_processed, 5);
+  assert.strictEqual(rotationTwo.diagnostics.docs_ledger_skipped, 5);
+  assert.ok(rotationTwo.document_urls_parsed.some((url) => url.includes('2026-07-27-foreclosure-05.pdf')));
+
+  const rotationThree = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor(rotationMonthA)
+  });
+  assert.strictEqual(rotationThree.candidate_count, 0, 'exhausted month must not reprocess already-read docs');
+  assert.strictEqual(rotationThree.diagnostics.docs_processed, 0);
+  assert.strictEqual(rotationThree.diagnostics.docs_ledger_skipped, 10);
+
+  const rotationFour = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor(rotationMonthB)
+  });
+  assert.strictEqual(rotationFour.candidate_count, 5, 'new month must reopen the lane');
+  assert.strictEqual(rotationFour.diagnostics.docs_discovered, 10);
+  assert.strictEqual(rotationFour.diagnostics.docs_processed, 5);
+  assert.ok(rotationFour.document_urls_parsed.some((url) => url.includes('2026-08-22-foreclosure-10.pdf')));
 
   // 3) Blocked portal/bot wall reported, never bypassed; source-proof links still exposed.
   const blocked = await adapter.runTxCountyForeclosureAcquisitionAdapter({

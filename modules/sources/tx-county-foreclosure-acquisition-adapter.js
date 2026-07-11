@@ -12,6 +12,7 @@
 // Preview-only: no ingestion, no saved leads, no global mutation.
 
 const crypto = require('crypto');
+const path = require('path');
 
 const propertyCandidate = require('../research/property-candidate');
 const searchProviderWorker = require('../research/search-provider-worker');
@@ -23,6 +24,7 @@ const MAX_ROWS = 25;
 const MAX_LINKS = 20;
 const MAX_ARCHIVE_PAGES = 2;
 const MAX_PDF_BYTES = 6 * 1024 * 1024;
+const DOC_LEDGER_FILE_NAME = 'deal-board-doc-ledger.json';
 // CivicPlus county sites carry "Sign In" navigation on every public page -
 // only treat explicit gate language as blocked, never bare nav text.
 const BLOCKED_PAGE_RE = /\b(captcha|verify you are human|human verification|access denied|login required|sign in to (?:view|continue|access)|must (?:log|sign) in|create an account to|incapsula|request unsuccessful|subscription required|paywall)\b/i;
@@ -109,6 +111,118 @@ function embeddedPdfUrlFromHtml(html, baseUrl) {
     }
   }
   return '';
+}
+
+function snapshotLedgerDir() {
+  const snapshotPath = cleanText(process.env.DEAL_BOARD_SNAPSHOTS_PATH) ||
+    path.join(path.dirname(path.resolve(process.env.DB_PATH || './data/db.json')), 'deal-board-snapshots.json');
+  return path.dirname(path.resolve(snapshotPath));
+}
+
+function documentLedgerFilePath() {
+  return path.resolve(
+    cleanText(process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH) ||
+    path.join(snapshotLedgerDir(), DOC_LEDGER_FILE_NAME)
+  );
+}
+
+function readDocumentLedger() {
+  const file = documentLedgerFilePath();
+  try {
+    const data = JSON.parse(require('fs').readFileSync(file, 'utf8'));
+    if (data && typeof data === 'object' && data.documents && typeof data.documents === 'object') return data;
+  } catch (error) { /* first run or unreadable - start fresh */ }
+  return { version: 1, store_kind: 'deal_board_document_ledger_not_saved_leads', updated_at: null, documents: {} };
+}
+
+function writeDocumentLedger(store) {
+  const file = documentLedgerFilePath();
+  require('fs').mkdirSync(path.dirname(file), { recursive: true });
+  store.updated_at = nowIso();
+  const tempFile = `${file}.${process.pid}.${Date.now()}.tmp`;
+  require('fs').writeFileSync(tempFile, JSON.stringify(store, null, 2));
+  try {
+    require('fs').renameSync(tempFile, file);
+  } catch (error) {
+    try { require('fs').rmSync(file, { force: true }); } catch (removeError) { /* ignore */ }
+    require('fs').renameSync(tempFile, file);
+  }
+}
+
+function monthNumberFromName(name) {
+  const value = cleanText(name).toLowerCase();
+  const names = {
+    jan: 1, january: 1,
+    feb: 2, february: 2,
+    mar: 3, march: 3,
+    apr: 4, april: 4,
+    may: 5,
+    jun: 6, june: 6,
+    jul: 7, july: 7,
+    aug: 8, august: 8,
+    sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10,
+    nov: 11, november: 11,
+    dec: 12, december: 12
+  };
+  for (const key of Object.keys(names)) {
+    if (value.startsWith(key)) return names[key];
+  }
+  return 0;
+}
+
+function postingMonthFromText(text, fallbackDate = new Date()) {
+  const source = cleanText(text);
+  let match = /\b(20\d{2})[-_/](\d{1,2})[-_/](\d{1,2})\b/.exec(source);
+  if (match) return `${match[1]}-${String(Number(match[2])).padStart(2, '0')}`;
+  match = /\b(20\d{2})[-_/](\d{1,2})\b/.exec(source);
+  if (match) return `${match[1]}-${String(Number(match[2])).padStart(2, '0')}`;
+  const monthMatch = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.exec(source);
+  if (monthMatch) {
+    const month = monthNumberFromName(monthMatch[1]);
+    const yearMatch = /\b(20\d{2})\b/.exec(source);
+    const year = yearMatch ? Number(yearMatch[1]) : fallbackDate.getFullYear();
+    if (month) return `${year}-${String(month).padStart(2, '0')}`;
+  }
+  const year = fallbackDate.getFullYear();
+  const month = fallbackDate.getMonth() + 1;
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function documentLedgerKey(documentUrl, postingMonth) {
+  return `${cleanText(postingMonth).slice(0, 7)}|${cleanText(documentUrl).toLowerCase()}`;
+}
+
+function documentLedgerEntry(store, documentUrl, postingMonth) {
+  if (!store || !store.documents) return null;
+  return store.documents[documentLedgerKey(documentUrl, postingMonth)] || null;
+}
+
+function documentAlreadyRead(store, documentUrl, postingMonth) {
+  const entry = documentLedgerEntry(store, documentUrl, postingMonth);
+  return !!(entry && (entry.last_status === 'done' || entry.last_status === 'hard_failed'));
+}
+
+function recordDocumentLedgerAttempt(store, documentUrl, postingMonth, status) {
+  if (!store || !documentUrl || !postingMonth) return store;
+  const key = documentLedgerKey(documentUrl, postingMonth);
+  const normalizedStatus = String(status || '').toLowerCase() === 'done' ? 'done' : 'hard_failed';
+  const previous = store.documents && store.documents[key] ? store.documents[key] : {
+    document_url: cleanText(documentUrl),
+    posting_month: cleanText(postingMonth).slice(0, 7),
+    first_attempt_at: nowIso()
+  };
+  const attempts = Array.isArray(previous.attempts) ? previous.attempts.slice(0, 9) : [];
+  attempts.push({ status: normalizedStatus, timestamp: nowIso() });
+  store.documents = store.documents || {};
+  store.documents[key] = Object.assign({}, previous, {
+    document_url: cleanText(documentUrl),
+    posting_month: cleanText(postingMonth).slice(0, 7),
+    last_status: normalizedStatus,
+    last_attempt_at: nowIso(),
+    attempts
+  });
+  return store;
 }
 
 async function fetchBounded(url, options, expectPdf, depth = 0) {
@@ -252,6 +366,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
   const documentUrlsParsed = [];
   const documentUrlsSkipped = [];
   const blockedNotes = [];
+  const documentLinkMeta = new Map();
   let rawRows = [];
 
   const archivePages = [];
@@ -261,6 +376,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       discoveredLinks.push(link);
       if (link.link_type === 'pdf_file') documentUrlsFound.push(link.url);
       if (link.link_type === 'archive_page') archivePages.push(link.url);
+      if (link.link_type === 'pdf_file' && link.url) documentLinkMeta.set(link.url, link);
     }
   } else {
     blockedNotes.push({ source: 'official_page', url: profile.source_url, reason: page.blocked_reason || page.status });
@@ -278,6 +394,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       if (link.link_type === 'pdf_file' && !documentUrlsFound.includes(link.url)) {
         documentUrlsFound.push(link.url);
         discoveredLinks.push(link);
+        if (link.url) documentLinkMeta.set(link.url, link);
       }
     }
   }
@@ -286,15 +403,30 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     if (DOC_URL_RE.test(url) && !documentUrlsFound.includes(url)) {
       documentUrlsFound.push(url);
       discoveredLinks.push({ url, label: 'Official document found by public search', link_type: 'pdf_file' });
+      documentLinkMeta.set(url, { url, label: 'Official document found by public search', link_type: 'pdf_file' });
     }
   }
 
+  const documentLedger = readDocumentLedger();
+  const documentDocsDiscovered = documentUrlsFound.length;
+  const documentSelection = documentUrlsFound
+    .map((url) => {
+      const meta = documentLinkMeta.get(url) || {};
+      const label = cleanText(meta.label);
+      const postingMonth = postingMonthFromText(`${url} ${label} ${profile.source_name} ${profile.county}`, new Date());
+      return { url, label, postingMonth, meta };
+    })
+    .filter((item) => !documentAlreadyRead(documentLedger, item.url, item.postingMonth));
+  const selectedDocumentUrls = documentSelection.slice(0, MAX_DOCS_PER_COUNTY);
+  const documentUrlsLedgerSkipped = documentDocsDiscovered - documentSelection.length;
   const scannedDocs = [];
-  for (const url of documentUrlsFound.slice(0, MAX_DOCS_PER_COUNTY)) {
+  for (const selected of selectedDocumentUrls) {
+    const url = selected.url;
     const doc = await fetchBounded(url, options, true);
     const proofUrl = cleanText(doc.final_pdf_url) || url;
     if (doc.final_pdf_url && !isOfficialHost(proofUrl, profile)) {
       documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: 'embedded_pdf_official_host_mismatch' });
+      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'hard_failed');
       continue;
     }
     if (doc.status === 'parsed' && doc.kind === 'pdf') {
@@ -310,12 +442,14 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
         source_proof_url: proofUrl,
         source_reference: `official ${profile.county} County foreclosure notice document`
       }));
+      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'done');
     } else {
       documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: doc.blocked_reason || doc.status });
       if (doc.status === 'blocked') blockedNotes.push({ source: 'official_document', url: proofUrl, reason: doc.blocked_reason });
       if (doc.blocked_reason === 'pdf_scanned_no_text_layer' && doc.buffer) {
-        scannedDocs.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), buffer: doc.buffer, profile, source_url: profile.source_url });
+        scannedDocs.push({ url: proofUrl, document_url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), buffer: doc.buffer, profile, source_url: profile.source_url, posting_month: selected.postingMonth });
       }
+      recordDocumentLedgerAttempt(documentLedger, proofUrl, selected.postingMonth, doc.status === 'parsed' || doc.status === 'skipped' ? 'done' : 'hard_failed');
     }
     if (rawRows.length >= MAX_ROWS) break;
   }
@@ -343,10 +477,26 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       for (const attempt of ocrOut.attempts || []) {
         if (attempt.status === 'ocr_done') documentUrlsParsed.push(`${attempt.url} (ocr)`);
       }
+      for (const doc of scannedDocs) {
+        const ocrAttempt = (ocrOut.attempts || []).find((attempt) => cleanText(attempt.url) === cleanText(doc.url));
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), ocrAttempt && ocrAttempt.status === 'ocr_done' ? 'done' : 'hard_failed');
+      }
     } catch (error) {
       ocrDiagnostics = { ocr_failures: scannedDocs.length, ocr_error: cleanText(error && error.message).slice(0, 80) };
+      for (const doc of scannedDocs) {
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed');
+      }
     }
   }
+  if (scannedDocs.length && (!ocrDiagnostics || !ocrDiagnostics.ocr_failures)) {
+    // No OCR run, or OCR succeeded but a doc never got matched explicitly.
+    for (const doc of scannedDocs) {
+      if (!documentAlreadyRead(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()))) {
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed');
+      }
+    }
+  }
+  writeDocumentLedger(documentLedger);
 
   const context = { acquisition_run_id: runId, city: '', state: profile.state };
   const candidates = rawRows.slice(0, MAX_ROWS).map((row) => propertyCandidate.normalizePropertyCandidate(Object.assign({}, row, {
@@ -391,6 +541,12 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       official_page_status: page.status,
       document_urls_found_count: documentUrlsFound.length,
       document_urls_parsed_count: documentUrlsParsed.length,
+      document_urls_discovered_count: documentDocsDiscovered,
+      document_urls_processed_count: selectedDocumentUrls.length,
+      document_urls_ledger_skipped_count: documentUrlsLedgerSkipped,
+      docs_discovered: documentDocsDiscovered,
+      docs_processed: selectedDocumentUrls.length,
+      docs_ledger_skipped: documentUrlsLedgerSkipped,
       rows_extracted: rawRows.length,
       blocked_notes: blockedNotes,
       ocr: ocrDiagnostics,

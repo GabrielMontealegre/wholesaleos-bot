@@ -13,6 +13,9 @@ Module._load = function patchedLoad(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-ocr-ledger-'));
+process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = path.join(tmpDir, 'deal-board-doc-ledger.json');
+
 const ocrExtraction = require('../modules/research/ocr-notice-extraction');
 const countyAdapter = require('../modules/sources/tx-county-foreclosure-acquisition-adapter');
 
@@ -225,6 +228,8 @@ function doc(url, bytes) {
   assert.strictEqual(adapterRun.status, 'available');
 
   // 6) OCR lane can be disabled and profiles can opt out.
+  const disabledLedgerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-ocr-ledger-off-'));
+  process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = path.join(disabledLedgerDir, 'deal-board-doc-ledger.json');
   const disabledRun = await countyAdapter.runTxCountyForeclosureAcquisitionAdapter({
     source_id: 'tx_rockwall_county_foreclosure_notices',
     env: { ENABLE_SEARCH_PROVIDER: 'false' },
