@@ -182,18 +182,21 @@
     var rows = coverage.map(function (item) {
       var ok = item.candidate_count > 0;
       var sample = sampleText(item);
+      var docsLabel = item.docs_discovered || item.docs_processed
+        ? '<div style="font-size:10px;color:#6b7280;margin-top:2px;">docs read ' + esc(item.docs_processed || 0) + '/' + esc(item.docs_discovered || 0) + '</div>'
+        : '';
       return '<tr>' +
         '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.county || '') + '</td>' +
         '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.source_name || item.source_id) + '</td>' +
         '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.status || 'unknown') + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;text-align:right;' + (ok ? 'color:#065f46;font-weight:600;' : '') + '">' + esc(item.candidate_count) + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;text-align:right;' + (ok ? 'color:#065f46;font-weight:600;' : '') + '">' + esc(item.candidate_count) + docsLabel + '</td>' +
         '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#991b1b;">' + esc(item.blocked_reason || '') + '</td>' +
         '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;max-width:360px;">' + esc(sample) + '</td>' +
         '</tr>';
     }).join('');
     return '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:12px;color:#2563eb;">Source coverage (' + coverage.length + ' lanes)</summary>' +
       '<table style="font-size:11px;border-collapse:collapse;margin-top:4px;"><tr>' +
-      '<th style="text-align:left;padding:2px 8px;">County</th><th style="text-align:left;padding:2px 8px;">Source</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:right;padding:2px 8px;">Rows</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th><th style="text-align:left;padding:2px 8px;">Rejected sample</th></tr>' +
+      '<th style="text-align:left;padding:2px 8px;">County</th><th style="text-align:left;padding:2px 8px;">Source</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:right;padding:2px 8px;">Rows / docs</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th><th style="text-align:left;padding:2px 8px;">Rejected sample</th></tr>' +
       rows + '</table></details>';
   }
 

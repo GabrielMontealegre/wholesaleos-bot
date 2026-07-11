@@ -2,3 +2,7 @@ node_modules/
 exports/
 tests/.tmp/
 .cache/
+deal-board-snapshots.json
+deal-board-doc-ledger.json
+deal-board-jobs.json
+deal-board-auto-run.json

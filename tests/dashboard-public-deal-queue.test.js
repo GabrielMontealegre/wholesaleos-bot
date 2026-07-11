@@ -79,8 +79,8 @@ function mockDeal(overrides) {
       diagnostics: {
         source_adapter: {
           source_adapter_results: [
-            { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '' },
-            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found' }
+            { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '', diagnostics: { docs_discovered: 10, docs_processed: 5 } },
+            { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found', diagnostics: { docs_discovered: 0, docs_processed: 0 } }
           ]
         }
       }
@@ -118,6 +118,8 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
   assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
   assert.strictEqual(run1.batch.source_coverage[0].candidate_count, 2);
+  assert.strictEqual(run1.batch.source_coverage[0].docs_discovered, 10);
+  assert.strictEqual(run1.batch.source_coverage[0].docs_processed, 5);
   assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
 
   // Volume caps: foreclosure adapter parses more PDFs per preview now.
@@ -286,6 +288,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes(queueServiceRoute('/latest')) && uiSource.includes(queueServiceRoute('/run')));
   assert.ok(uiSource.includes('not saved leads'));
   assert.ok(uiSource.includes('Source coverage'), 'dashboard must render the source coverage table');
+  assert.ok(uiSource.includes('docs read'), 'coverage table must show docs read counts');
   assert.ok(uiSource.includes('blocked_reason'), 'coverage table must show blocked reasons');
   assert.ok(uiSource.includes('Rejected sample'), 'coverage table must show rejected URL samples');
   assert.ok(uiSource.includes('rejected_url_samples'), 'coverage table must read rejected URL samples');
