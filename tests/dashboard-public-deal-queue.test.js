@@ -78,6 +78,9 @@ function mockDeal(overrides) {
       board_blocker_summary: '',
       diagnostics: {
         source_adapter: {
+          suppressed_nav_chrome_by_source_id: {
+            tx_dallas_county_clerk_foreclosure_notices: 3
+          },
           source_adapter_results: [
             { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '', diagnostics: { docs_discovered: 10, docs_processed: 5 } },
             { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found', diagnostics: { docs_discovered: 0, docs_processed: 0 } }
@@ -120,6 +123,7 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.batch.source_coverage[0].candidate_count, 2);
   assert.strictEqual(run1.batch.source_coverage[0].docs_discovered, 10);
   assert.strictEqual(run1.batch.source_coverage[0].docs_processed, 5);
+  assert.strictEqual(run1.batch.source_coverage[0].suppressed_nav_chrome_count, 3);
   assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
 
   // Volume caps: foreclosure adapter parses more PDFs per preview now.

@@ -42,6 +42,9 @@ const QUALITY_BUCKETS = Object.freeze({
 });
 
 const STREET_TYPE_RE = '(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)';
+const FORECLOSURE_PROOF_KEYWORD_RE = /foreclos|trustee|notice of sale/i;
+const NAV_CHROME_PATH_RE = /(?:copyright|privacy|sitemap|accessibility|login|signin|contact|faq|directory|tax-assessor|tax_assessor)/i;
+const NAV_CHROME_HOST_RE = /^(?:taxweb|search|publicsearch)\./i;
 
 // Street + city + TX visible but no 5-digit zip: reviewable partial identity.
 const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas)\b/i;
@@ -1008,6 +1011,7 @@ function cardRecord(card, source) {
 }
 
 function sourceProofRecordsFromAdapterResult(result) {
+  const suppression = arguments[1] || null;
   result = result || {};
   const diagnostics = result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
   const summary = result.source_preview ||
@@ -1048,6 +1052,11 @@ function sourceProofRecordsFromAdapterResult(result) {
       const address = completeAddressFromText(text);
       const eventDate = sourceProofDateFromText(text);
       const documentUrl = isDocumentLikeProofLink(url, item) ? url : '';
+      const suppressionReason = sourceProofSuppressionReason(url, text, address, documentUrl);
+      if (suppressionReason) {
+        recordSourceProofSuppression(suppression, result, url, suppressionReason);
+        return null;
+      }
       const headlineParts = [sourceNameText, address || eventDate || `source proof ${index + 1}`].filter(Boolean);
       return {
         headline: headlineParts.join(' - '),
@@ -1066,7 +1075,40 @@ function sourceProofRecordsFromAdapterResult(result) {
         record_origin: 'source_adapter',
         foreclosure_source_proof_record: /foreclosure|trustee|dallas county clerk/i.test(`${sourceNameText} ${sourceFamilyText}`)
       };
-    });
+    })
+    .filter(Boolean);
+}
+
+function sourceProofSuppressionReason(sourceUrl, text, address, sourceDocumentUrl) {
+  if (cleanText(address) || cleanText(sourceDocumentUrl)) return '';
+  const url = cleanText(sourceUrl);
+  const host = hostOf(url);
+  let pathname = '';
+  try { pathname = new URL(url).pathname.toLowerCase(); } catch (_) { /* non-URL is ignored earlier */ }
+  if (NAV_CHROME_HOST_RE.test(host)) return 'nav_chrome_host';
+  if (NAV_CHROME_PATH_RE.test(pathname)) return 'nav_chrome_path';
+  if (/^\/search\/?$/i.test(pathname) || /^\/home\/index\/?$/i.test(pathname)) return 'nav_chrome_portal_root';
+  if (!FORECLOSURE_PROOF_KEYWORD_RE.test(cleanText(text))) return 'missing_foreclosure_keyword_evidence';
+  return '';
+}
+
+function createSourceProofSuppressionDiagnostics() {
+  return {
+    suppressed_nav_chrome_count: 0,
+    suppressed_nav_chrome_samples: [],
+    suppressed_nav_chrome_by_source_id: {}
+  };
+}
+
+function recordSourceProofSuppression(diagnostics, result, sourceUrl, reason) {
+  if (!diagnostics) return;
+  const sourceId = cleanText(result && result.source_id) || cleanText(result && result.source_name) || 'unknown_source';
+  diagnostics.suppressed_nav_chrome_count += 1;
+  const bySource = diagnostics.suppressed_nav_chrome_by_source_id;
+  bySource[sourceId] = Number(bySource[sourceId] || 0) + 1;
+  if (diagnostics.suppressed_nav_chrome_samples.length < 5) {
+    diagnostics.suppressed_nav_chrome_samples.push({ source_url: cleanText(sourceUrl), reason, source_id: sourceId });
+  }
 }
 
 function isForeclosureAdapterResult(result) {
@@ -1134,7 +1176,8 @@ async function collectSourceAdapterRecords(input, options, context) {
   if (mockedResults) {
     const candidateRecords = mockedResults.flatMap((result) => (Array.isArray(result && result.candidates) ? result.candidates : []).map((candidate) => candidateRecord(candidate, result)));
     const cardRecords = mockedResults.flatMap((result) => (Array.isArray(result && result.cards) ? result.cards : []).map((card) => cardRecord(card, result)));
-    const proofRecords = mockedResults.flatMap(sourceProofRecordsFromAdapterResult);
+    const proofSuppression = createSourceProofSuppressionDiagnostics();
+    const proofRecords = mockedResults.flatMap((result) => sourceProofRecordsFromAdapterResult(result, proofSuppression));
     const records = candidateRecords.concat(cardRecords, proofRecords);
     const foreclosureDiagnostics = foreclosureProofDiagnostics(mockedResults, proofRecords);
     const pdfDiagnostics = pdfNoticeDiagnostics(mockedResults);
@@ -1146,6 +1189,7 @@ async function collectSourceAdapterRecords(input, options, context) {
         source_adapter_card_count: cardRecords.length,
         source_adapter_proof_record_count: proofRecords.length,
         source_adapter_results: mockedResults,
+        ...proofSuppression,
         ...foreclosureDiagnostics,
         ...pdfDiagnostics
       }
@@ -1185,7 +1229,9 @@ async function collectSourceAdapterRecords(input, options, context) {
     });
     const candidateRecords = (Array.isArray(acquisition.candidates) ? acquisition.candidates : []).map((candidate) => candidateRecord(candidate, {}));
     const cardRecords = (Array.isArray(acquisition.cards) ? acquisition.cards : []).map((card) => cardRecord(card, {}));
-    const proofRecords = (Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : []).flatMap(sourceProofRecordsFromAdapterResult);
+    const proofSuppression = createSourceProofSuppressionDiagnostics();
+    const proofRecords = (Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [])
+      .flatMap((result) => sourceProofRecordsFromAdapterResult(result, proofSuppression));
     const records = candidateRecords.concat(cardRecords, proofRecords);
     const foreclosureDiagnostics = foreclosureProofDiagnostics(acquisition.adapter_results, proofRecords);
     const pdfDiagnostics = pdfNoticeDiagnostics(acquisition.adapter_results);
@@ -1197,6 +1243,7 @@ async function collectSourceAdapterRecords(input, options, context) {
         source_adapter_card_count: cardRecords.length,
         source_adapter_proof_record_count: proofRecords.length,
         source_adapter_results: Array.isArray(acquisition.adapter_results) ? acquisition.adapter_results : [],
+        ...proofSuppression,
         source_ids_attempted: Array.isArray(acquisition.source_ids_attempted) ? acquisition.source_ids_attempted : [],
         source_families_attempted: Array.isArray(acquisition.source_families_attempted) ? acquisition.source_families_attempted : [],
         ...foreclosureDiagnostics,
@@ -1870,6 +1917,8 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
     bad_address_rejected_count: quality.bad_address_rejected_count,
     out_of_market_count: quality.out_of_market_count,
     official_source_rows_count: quality.official_source_rows_count,
+    suppressed_nav_chrome_count: sourceAdapter.diagnostics.suppressed_nav_chrome_count || 0,
+    suppressed_nav_chrome_samples: sourceAdapter.diagnostics.suppressed_nav_chrome_samples || [],
     ...censusZipDiagnostics,
     ...freeHunterDiagnostics,
     ...officialLookupDiagnostics,
@@ -1892,6 +1941,8 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
       source_proof_only_count: quality.source_proof_only_count,
       needs_identity_count: quality.needs_identity_count,
       source_adapter_records_count: sourceAdapter.diagnostics.source_adapter_records_count,
+      suppressed_nav_chrome_count: sourceAdapter.diagnostics.suppressed_nav_chrome_count || 0,
+      suppressed_nav_chrome_samples: sourceAdapter.diagnostics.suppressed_nav_chrome_samples || [],
       serper_primary_rows_count: quality.serper_primary_rows_count,
       serper_enrichment_attempts: repairDiagnostics.identity_repair_attempted_count,
       identity_repair_attempted_count: repairDiagnostics.identity_repair_attempted_count,

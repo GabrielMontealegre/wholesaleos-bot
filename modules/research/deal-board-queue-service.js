@@ -181,9 +181,9 @@ function ocrSummaryFromPreview(preview) {
 }
 
 function sourceCoverageFromPreview(preview) {
-  const adapterResults = preview && preview.diagnostics && preview.diagnostics.source_adapter &&
-    Array.isArray(preview.diagnostics.source_adapter.source_adapter_results)
-    ? preview.diagnostics.source_adapter.source_adapter_results
+  const sourceAdapterDiagnostics = preview && preview.diagnostics && preview.diagnostics.source_adapter || {};
+  const adapterResults = Array.isArray(sourceAdapterDiagnostics.source_adapter_results)
+    ? sourceAdapterDiagnostics.source_adapter_results
     : [];
   return adapterResults.map((result) => ({
     source_id: cleanText(result && result.source_id),
@@ -194,6 +194,8 @@ function sourceCoverageFromPreview(preview) {
     docs_discovered: Number(result && result.diagnostics && (result.diagnostics.docs_discovered || result.diagnostics.document_urls_found_count) || 0) || 0,
     docs_processed: Number(result && result.diagnostics && (result.diagnostics.docs_processed || result.diagnostics.document_urls_processed_count) || 0) || 0,
     docs_ledger_skipped: Number(result && result.diagnostics && result.diagnostics.docs_ledger_skipped || 0) || 0,
+    suppressed_nav_chrome_count: Number(result && result.diagnostics && result.diagnostics.suppressed_nav_chrome_count ||
+      sourceAdapterDiagnostics.suppressed_nav_chrome_by_source_id && sourceAdapterDiagnostics.suppressed_nav_chrome_by_source_id[cleanText(result && result.source_id)] || 0) || 0,
     blocked_reason: cleanText(result && result.blocked_reason),
     listing_radar_accepted_count: Number(result && result.diagnostics && result.diagnostics.listing_radar_accepted_count || 0) || 0,
     listing_radar_rejected_count: Number(result && result.diagnostics && result.diagnostics.listing_radar_rejected_count || 0) || 0,

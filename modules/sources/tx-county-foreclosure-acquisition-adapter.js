@@ -135,9 +135,27 @@ function readDocumentLedger() {
   return { version: 1, store_kind: 'deal_board_document_ledger_not_saved_leads', updated_at: null, documents: {} };
 }
 
-function writeDocumentLedger(store) {
+function retainedLedgerMonthFloor(now = new Date()) {
+  const previous = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function pruneDocumentLedger(store, now = new Date()) {
+  const floor = retainedLedgerMonthFloor(now);
+  const documents = store && store.documents && typeof store.documents === 'object' ? store.documents : {};
+  for (const key of Object.keys(documents)) {
+    const entry = documents[key] || {};
+    const postingMonth = cleanText(entry.posting_month || key.split('|')[0]).slice(0, 7);
+    if (/^20\d{2}-\d{2}$/.test(postingMonth) && postingMonth < floor) delete documents[key];
+  }
+  if (store) store.documents = documents;
+  return store;
+}
+
+function writeDocumentLedger(store, now = new Date()) {
   const file = documentLedgerFilePath();
   require('fs').mkdirSync(path.dirname(file), { recursive: true });
+  pruneDocumentLedger(store, now);
   store.updated_at = nowIso();
   const tempFile = `${file}.${process.pid}.${Date.now()}.tmp`;
   require('fs').writeFileSync(tempFile, JSON.stringify(store, null, 2));
@@ -561,5 +579,6 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
 
 module.exports = {
   MAX_DOCS_PER_COUNTY,
+  pruneDocumentLedger,
   runTxCountyForeclosureAcquisitionAdapter
 };
