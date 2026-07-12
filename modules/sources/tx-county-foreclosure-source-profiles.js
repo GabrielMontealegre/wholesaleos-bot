@@ -31,6 +31,19 @@ const PROFILES = [
     blocked_note: 'Open Navarro EasyDocs yearly foreclosure list; showdoc.asp pages wrap direct PDFs in public HTML object tags.'
   },
   {
+    source_id: 'tx_rains_county_foreclosure_notices',
+    source_name: 'Rains County Foreclosure EasyDocs',
+    county: 'Rains',
+    state: 'TX',
+    source_url: 'http://rains.easydocs.us/foreclosures/listDocs-new.asp?year=2026',
+    human_portal_url: 'http://rains.easydocs.us/foreclosures/',
+    official_hosts: ['rains.easydocs.us'],
+    city_names: ['Emory', 'East Tawakoni', 'Point'],
+    excluded_address_pattern: 'rains\\s+county\\s+(?:courthouse|annex)',
+    search_hints: [],
+    blocked_note: 'Open Rains County EasyDocs yearly foreclosure list; showdoc.asp pages wrap public notice PDFs in HTML object tags.'
+  },
+  {
     source_id: 'tx_hill_county_foreclosure_notices',
     source_name: 'Hill County Foreclosure Public Notices',
     county: 'Hill',
