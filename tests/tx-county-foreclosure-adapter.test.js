@@ -153,6 +153,38 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(viaEasyDocs.document_urls_parsed.some((url) => /LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(url)), 'embedded PDF URL must be parsed');
   assert.ok(/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(viaEasyDocs.candidates[0].source_document_url || ''), 'candidate proof must use the direct embedded PDF');
 
+  // 2b1) Rains is a separately verified open EasyDocs county. Its fixture
+  // uses a relative sale date so the public-notice acceptance test cannot rot.
+  const rainsNoticeDay = isoDay(28);
+  const rainsYear = rainsNoticeDay.slice(0, 4);
+  const rainsPage = `<html><body><a href="showdoc.asp?year=${rainsYear}&docName=${rainsNoticeDay}-foreclosures.pdf">Attachments</a></body></html>`;
+  const viaRainsEasyDocs = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_rains_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rainsPage);
+      if (u.includes(`${rainsNoticeDay}-foreclosures.pdf`) && /showdoc\.asp/.test(u)) {
+        return makeResponse(`<object type="application/pdf" data="LinkedDir/${rainsYear}/${rainsNoticeDay}-foreclosures.pdf"></object>`);
+      }
+      if (u.includes(`${rainsNoticeDay}-foreclosures.pdf`) && /LinkedDir/.test(u)) {
+        return makeResponse([
+          'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+          'Property Address:',
+          '301 Ravine St',
+          'Emory, TX 75440',
+          `Sale Date: ${usDateFromIso(rainsNoticeDay)}`
+        ].join('\n'), 'application/pdf');
+      }
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(viaRainsEasyDocs.status, 'available');
+  assert.strictEqual(viaRainsEasyDocs.county, 'Rains');
+  assert.strictEqual(viaRainsEasyDocs.candidates.length, 1);
+  assert.ok(/301 Ravine St/i.test(viaRainsEasyDocs.candidates[0].normalized_address || viaRainsEasyDocs.candidates[0].property_address));
+  assert.ok(viaRainsEasyDocs.document_urls_found.some((url) => /showdoc\.asp/.test(url)));
+
   // 2c) EasyDocs yearly lists are often oldest-first; date ranking must spend
   //     the 5-document cap on current/future notice files, not stale January files.
   const oldDay = isoDay(-120);
@@ -366,6 +398,7 @@ const TARRANT_NOTICE_TEXT = [
     assert.ok(registry.listRegisteredSourceIds().includes(profile.source_id), `${profile.source_id} must be registered`);
   }
   assert.ok(profiles.profileForSourceId('tx_navarro_county_foreclosure_notices'), 'Navarro EasyDocs profile must be configured');
+  assert.ok(profiles.profileForSourceId('tx_rains_county_foreclosure_notices'), 'Rains EasyDocs profile must be configured');
   const elsewhereCatalog = sourceCatalog.buildSourceCatalog({ city: 'Houston', county: 'Harris', state: 'TX' });
   assert.ok(!elsewhereCatalog.some((source) => /tarrant|collin|denton/.test(source.source_id)), 'DFW lanes only for DFW markets');
 

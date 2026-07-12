@@ -209,6 +209,18 @@ function sourceCoverageFromPreview(preview) {
   })).filter((item) => item.source_id);
 }
 
+function suppressedNavChromeSamplesFromPreview(preview) {
+  const sourceAdapterDiagnostics = preview && preview.diagnostics && preview.diagnostics.source_adapter || {};
+  const samples = Array.isArray(sourceAdapterDiagnostics.suppressed_nav_chrome_samples)
+    ? sourceAdapterDiagnostics.suppressed_nav_chrome_samples
+    : [];
+  return samples.slice(0, 5).map((sample) => ({
+    source_url: cleanText(sample && sample.source_url).slice(0, 120),
+    reason: cleanText(sample && sample.reason),
+    source_id: cleanText(sample && sample.source_id)
+  })).filter((sample) => sample.source_url);
+}
+
 function queueCounts(rows) {
   const today = nowIso().slice(0, 10);
   return {
@@ -291,6 +303,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     official_lookup_blocked_count: Number(preview && preview.official_lookup_blocked_count || 0) || 0,
     board_blocker_summary: cleanText(preview && preview.board_blocker_summary),
     source_coverage: sourceCoverageFromPreview(preview),
+    suppressed_nav_chrome_samples: suppressedNavChromeSamplesFromPreview(preview),
     ocr: ocrSummaryFromPreview(preview)
   };
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);

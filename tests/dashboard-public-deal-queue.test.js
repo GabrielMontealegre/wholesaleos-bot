@@ -81,6 +81,11 @@ function mockDeal(overrides) {
           suppressed_nav_chrome_by_source_id: {
             tx_dallas_county_clerk_foreclosure_notices: 3
           },
+          suppressed_nav_chrome_samples: Array.from({ length: 6 }, (_, index) => ({
+            source_url: `https://publicsearch.example.test/search/${index}/${'x'.repeat(140)}`,
+            reason: 'bare_search_portal_root',
+            source_id: 'tx_dallas_county_clerk_foreclosure_notices'
+          })),
           source_adapter_results: [
             { source_id: 'tx_dallas_county_clerk_foreclosure_notices', source_name: 'Dallas County Clerk Foreclosure Notices', status: 'available', candidate_count: 2, blocked_reason: '', diagnostics: { docs_discovered: 10, docs_processed: 5 } },
             { source_id: 'tx_dallas_craigslist_owner_posts', source_name: 'Dallas Craigslist owner posts', status: 'needs_manual_review', candidate_count: 0, blocked_reason: 'no_recent_owner_posts_found', diagnostics: { docs_discovered: 0, docs_processed: 0 } }
@@ -125,6 +130,9 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.batch.source_coverage[0].docs_processed, 5);
   assert.strictEqual(run1.batch.source_coverage[0].suppressed_nav_chrome_count, 3);
   assert.strictEqual(run1.batch.source_coverage[1].blocked_reason, 'no_recent_owner_posts_found');
+  assert.strictEqual(run1.batch.suppressed_nav_chrome_samples.length, 5, 'stored suppression samples must stay bounded');
+  assert.ok(run1.batch.suppressed_nav_chrome_samples.every((sample) => sample.source_url.length <= 120));
+  assert.ok(run1.batch.suppressed_nav_chrome_samples.every((sample) => sample.reason === 'bare_search_portal_root'));
 
   // Volume caps: foreclosure adapter parses more PDFs per preview now.
   const foreclosureAdapter = require('../modules/sources/dallas-foreclosure-acquisition-adapter');
@@ -133,6 +141,7 @@ function mockDeal(overrides) {
   assert.ok(foreclosureAdapter.LIVE_PREVIEW_MAX_ROWS >= 25, 'row cap must allow a full batch');
   const stored = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
   assert.strictEqual(stored.store_kind, 'deal_board_snapshots_not_saved_leads');
+  assert.strictEqual(stored.markets['dallas|dallas|tx'].batches[0].suppressed_nav_chrome_samples.length, 5, 'stored batch must retain bounded suppression samples');
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, [], 'no saved-lead mutation');
   assert.ok(run1.rows.every((row) => row.not_a_saved_lead === true && row.preview_only === true));
 
