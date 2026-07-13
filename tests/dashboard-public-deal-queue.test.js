@@ -194,7 +194,15 @@ function mockDeal(overrides) {
   const slowRun = new Promise((resolve) => { resolveSlowRun = resolve; });
   const started = queueService.startDealBoardBatchJob(
     { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 },
-    { run_impl: async (input, options) => { await slowRun; return queueService.runDealBoardBatch(input, { preview_impl: previewImpl }); } }
+    {
+      run_impl: async (input, options) => {
+        await slowRun;
+        return queueService.runDealBoardBatch(input, {
+          preview_impl: previewImpl,
+          census_zip_resolver_impl: async () => ({ resolved: false, reason: 'test_no_network' })
+        });
+      }
+    }
   );
   assert.strictEqual(started.ok, true);
   assert.strictEqual(started.already_running, false);
@@ -278,6 +286,145 @@ function mockDeal(overrides) {
   assert.ok(latestWithDaily.daily.batches_today >= 1);
   assert.ok(latestWithDaily.daily.address_rows_today >= 1);
   assert.strictEqual(typeof latestWithDaily.daily.ocr_address_rows_today, 'number');
+
+  // 3d) Snapshot integrity repair applies to persisted rows, not just new
+  // preview output. Reads return a repaired copy; the next batch persists it.
+  const integritySnapshotPath = path.join(tmpDir, 'snapshot-integrity.json');
+  process.env.DEAL_BOARD_SNAPSHOTS_PATH = integritySnapshotPath;
+  const integrityMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
+  const seenAt = '2026-07-12T08:00:00.000Z';
+  function storedRow(overrides) {
+    return Object.assign({
+      queue_key: `stored|${Math.random().toString(16).slice(2)}`,
+      headline: '100 Example St, Dallas, TX 75201',
+      normalized_address: '100 Example St, Dallas, TX 75201',
+      partial_address: '',
+      maps_url: 'https://maps.example.test/pin',
+      maps_search_url_review_needed: null,
+      city: 'Dallas',
+      county: 'Dallas',
+      state: 'TX',
+      quality_bucket: 'INSPECT_NOW',
+      source_url: 'https://unknown.example.test/notices',
+      source_document_url: 'https://unknown.example.test/notices/example.pdf',
+      contact_status: 'CALL_READY',
+      call_readiness: 'CALL_READY',
+      next_best_action: 'CALL_SELLER',
+      missing_fields: [],
+      risk_flags: [],
+      first_seen_at: seenAt,
+      last_seen_at: seenAt,
+      times_seen: 1,
+      preview_only: true,
+      not_a_saved_lead: true
+    }, overrides || {});
+  }
+  const yellowA = storedRow({
+    queue_key: 'stored|yellow-a',
+    headline: '1111 Yellow Jacket Ln, Rockwall, TX 75032',
+    normalized_address: '1111 Yellow Jacket Ln, Rockwall, TX 75032',
+    county: 'Dallas',
+    source_document_url: 'https://www.rockwallcountytexas.com/DocumentCenter/View/101',
+    first_seen_at: '2026-07-01T08:00:00.000Z',
+    owner_clue: 'Richer evidence'
+  });
+  const yellowB = storedRow({
+    queue_key: 'stored|yellow-b',
+    headline: '1111 Yellow Jacket Ln, Rockwall, TX 75032',
+    normalized_address: '1111 Yellow Jacket Ln, Rockwall, TX 75032',
+    county: 'Dallas',
+    source_document_url: 'https://www.rockwallcountytexas.com/DocumentCenter/View/102',
+    first_seen_at: '2026-07-02T08:00:00.000Z'
+  });
+  const prefixRow = storedRow({
+    queue_key: 'stored|prefix',
+    headline: '05825 320 Leopold Trl, Greenville, TX 75402',
+    normalized_address: '05825 320 Leopold Trl, Greenville, TX 75402',
+    city: 'Greenville',
+    county: 'Hunt',
+    source_document_url: 'https://apps.huntcounty.net/foreclosures/showdoc.asp?id=1'
+  });
+  const storedIntegrity = {
+    version: 1,
+    store_kind: 'deal_board_snapshots_not_saved_leads',
+    updated_at: seenAt,
+    markets: {
+      'dallas|dallas|tx': {
+        market: integrityMarket,
+        rows: [
+          prefixRow,
+          yellowA,
+          yellowB,
+          storedRow({ queue_key: 'stored|rockwall', normalized_address: '309 Mohan Dr, Royse City, TX 75189', headline: '309 Mohan Dr, Royse City, TX 75189', county: 'Dallas', city: 'Royse City', source_document_url: 'https://www.rockwallcountytexas.com/DocumentCenter/View/103' }),
+          storedRow({ queue_key: 'stored|hunt', normalized_address: '116 Comanche Dr, Greenville, TX 75402', headline: '116 Comanche Dr, Greenville, TX 75402', county: 'Dallas', city: 'Greenville', source_document_url: 'https://apps.huntcounty.net/foreclosures/showdoc.asp?id=2' }),
+          storedRow({ queue_key: 'stored|unproven', normalized_address: '400 Example St, Dallas, TX 75201', headline: '400 Example St, Dallas, TX 75201', county: 'Dallas', source_document_url: '', source_url: 'https://unverified.example.test/property/400' }),
+          storedRow({ queue_key: 'stored|six', normalized_address: '500 Example St, Dallas, TX 75201', headline: '500 Example St, Dallas, TX 75201' }),
+          storedRow({ queue_key: 'stored|seven', normalized_address: '600 Example St, Dallas, TX 75201', headline: '600 Example St, Dallas, TX 75201' })
+        ],
+        batches: []
+      }
+    }
+  };
+  fs.writeFileSync(integritySnapshotPath, JSON.stringify(storedIntegrity, null, 2));
+  const diskBeforeRead = fs.readFileSync(integritySnapshotPath, 'utf8');
+  const repairedRead = queueService.latestDealBoardSnapshot({ market: integrityMarket });
+  const readPrefix = repairedRead.rows.find((row) => row.queue_key === 'stored|prefix');
+  assert.strictEqual(readPrefix.normalized_address, '');
+  assert.strictEqual(readPrefix.partial_address, '05825 320 Leopold Trl, Greenville, TX 75402');
+  assert.strictEqual(readPrefix.headline, '05825 320 Leopold Trl, Greenville, TX 75402');
+  assert.strictEqual(readPrefix.maps_url, null);
+  assert.ok(readPrefix.maps_search_url_review_needed);
+  assert.strictEqual(readPrefix.quality_bucket, 'NEEDS_ZIP_REVIEW');
+  assert.strictEqual(readPrefix.contact_status, 'ADDRESS_VERIFICATION_REQUIRED');
+  assert.strictEqual(readPrefix.call_readiness, 'NEEDS_PROPERTY_IDENTITY');
+  assert.ok(readPrefix.risk_flags.includes('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT'));
+  assert.strictEqual(repairedRead.rows.find((row) => row.queue_key === 'stored|rockwall').county, 'Rockwall');
+  assert.strictEqual(repairedRead.rows.find((row) => row.queue_key === 'stored|hunt').county, 'Hunt');
+  assert.strictEqual(repairedRead.rows.find((row) => row.queue_key === 'stored|unproven').county, 'Dallas', 'no official host proof must not change county');
+  assert.strictEqual(fs.readFileSync(integritySnapshotPath, 'utf8'), diskBeforeRead, 'read path must not write the snapshot');
+
+  let censusCalls = 0;
+  const censusResolver = async (input) => {
+    censusCalls += 1;
+    const street = input.street_or_partial;
+    if (street.includes('Yellow Jacket')) return { resolved: true, matched_address: '1111 Yellow Jacket Ln, Rockwall, TX 75032' };
+    return { resolved: true, matched_address: `Census ${street}` };
+  };
+  const emptyPreview = async () => ({ free_public_deals: [], rejected_generic_count: 0 });
+  const repairedBatch = await queueService.runDealBoardBatch(
+    { market: integrityMarket, limit: 25 },
+    { preview_impl: emptyPreview, census_zip_resolver_impl: censusResolver }
+  );
+  assert.strictEqual(censusCalls, 5, 'stored Census backfill must cap lookups at five per batch');
+  assert.strictEqual(repairedBatch.rows.length, 7, 'only exact Census duplicates may collapse');
+  const persistedPrefix = repairedBatch.rows.find((row) => row.queue_key === 'stored|prefix');
+  assert.strictEqual(persistedPrefix.normalized_address, '');
+  assert.strictEqual(persistedPrefix.maps_url, null);
+  assert.strictEqual(persistedPrefix.next_best_action, 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT');
+  assert.ok(persistedPrefix.missing_fields.includes('verified street number and spelling (check source document)'));
+  const mergedYellow = repairedBatch.rows.find((row) => row.census_matched_address === '1111 Yellow Jacket Ln, Rockwall, TX 75032');
+  assert.ok(mergedYellow);
+  assert.strictEqual(mergedYellow.merged_duplicate_count, 1);
+  assert.strictEqual(mergedYellow.first_seen_at, '2026-07-01T08:00:00.000Z');
+  assert.strictEqual(mergedYellow.source_document_urls.length, 2);
+  assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|rockwall').county, 'Rockwall');
+  assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|hunt').county, 'Hunt');
+
+  const flagsAfterFirstBatch = persistedPrefix.risk_flags.slice();
+  const idempotentBatch = await queueService.runDealBoardBatch(
+    { market: integrityMarket, limit: 25 },
+    { preview_impl: emptyPreview, census_zip_resolver_impl: censusResolver }
+  );
+  const idempotentPrefix = idempotentBatch.rows.find((row) => row.queue_key === 'stored|prefix');
+  assert.deepStrictEqual(idempotentPrefix.risk_flags, flagsAfterFirstBatch, 'second repair must not duplicate flags');
+  assert.strictEqual(idempotentBatch.rows.length, repairedBatch.rows.length, 'second repair must keep row count stable');
+
+  const unresolvedRows = [storedRow({ normalized_address: '700 Example St, Dallas, TX 75201', census_matched_address: null })];
+  const unresolvedCalls = await queueService.backfillCensusKeysForStoredRows(unresolvedRows, {
+    census_zip_resolver_impl: async () => ({ resolved: false, reason: 'no_census_match' })
+  });
+  assert.strictEqual(unresolvedCalls, 1);
+  assert.strictEqual(unresolvedRows[0].census_matched_address, null, 'unresolved Census rows must remain separate');
 
   // 4) Server routes exist and are admin-protected; no legacy agents involved.
   const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
