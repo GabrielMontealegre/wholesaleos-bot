@@ -565,6 +565,102 @@ const rejectedRecords = [
     assert.ok(noAddressRow, 'rows with no readable street stay source-proof');
     assert.ok(zipReviewRow.rank_score > noAddressRow.rank_score, 'zip-review rows outrank plain proof rows');
 
+    // A leading instrument-number-like prefix is quarantined, never repaired.
+    // The raw OCR text stays visible only through the review workflow.
+    const prefixQuarantineRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      source_records: [{
+        normalized_address: '05825 320 Leopold Trl Greenville, TX 75402',
+        raw_address_text: '05825 320 Leopold Trl Greenville, TX 75402',
+        county: 'Hunt',
+        source_family: 'preforeclosure_trustee_notice',
+        source_name: 'Hunt County Foreclosure EasyDocs',
+        source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+        source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/notice-1.pdf',
+        motivation_type: 'preforeclosure_trustee_notice',
+        motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE',
+        status_evidence_text: 'Sale Date: 08/04/2026',
+        contact_route_if_visible: '(888) 313-1969'
+      }, {
+        normalized_address: '320 Leopold Trl, Greenville, TX 75402',
+        county: 'Hunt',
+        source_family: 'preforeclosure_trustee_notice',
+        source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+        source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/notice-2.pdf',
+        motivation_type: 'preforeclosure_trustee_notice',
+        status_evidence_text: 'Sale Date: 08/04/2026'
+      }]
+    }, { fetch_impl: fetchImpl });
+    const quarantinedPrefix = prefixQuarantineRows.free_public_deals.find((deal) => deal.address_prefix_suspected === true);
+    assert.ok(quarantinedPrefix, 'two-number prefix must be quarantined');
+    assert.strictEqual(quarantinedPrefix.normalized_address, '', 'no digits may be stripped into a canonical address');
+    assert.strictEqual(quarantinedPrefix.partial_address, '05825 320 Leopold Trl Greenville, TX 75402', 'raw prefix text must remain verbatim');
+    assert.strictEqual(quarantinedPrefix.quality_bucket, 'NEEDS_ZIP_REVIEW');
+    assert.strictEqual(quarantinedPrefix.call_readiness, 'NEEDS_PROPERTY_IDENTITY');
+    assert.strictEqual(quarantinedPrefix.maps_url, null);
+    assert.ok(/query=05825/.test(quarantinedPrefix.maps_search_url_review_needed));
+    assert.strictEqual(quarantinedPrefix.next_best_action, 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT');
+    assert.ok(quarantinedPrefix.risk_flags.includes('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT'));
+    assert.ok(quarantinedPrefix.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
+    assert.ok(quarantinedPrefix.missing_fields.some((item) => /verified street number/i.test(item)));
+    const untouchedNormalAddress = prefixQuarantineRows.free_public_deals.find((deal) => deal.normalized_address === '320 Leopold Trl, Greenville, TX 75402');
+    assert.ok(untouchedNormalAddress, 'normal address must remain available');
+    assert.strictEqual(untouchedNormalAddress.quality_bucket, 'INSPECT_NOW');
+    assert.strictEqual(untouchedNormalAddress.address_prefix_suspected, false);
+
+    // Only byte-identical Census matched addresses merge. The richer row keeps
+    // its proof while both document URLs remain visible for audit.
+    const censusDuplicateRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      source_records: [{
+        normalized_address: '1111 Yellowjacket Ln, Rockwall, TX 75087',
+        census_matched_address: '1111 E YELLOW JACKET LN, ROCKWALL, TX, 75087',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1001',
+        source_family: 'preforeclosure_trustee_notice',
+        motivation_type: 'preforeclosure_trustee_notice',
+        motivation_evidence_text: 'NOTICE OF TRUSTEE SALE',
+        status_evidence_text: 'Sale Date: 08/04/2026'
+      }, {
+        normalized_address: '1111 East Yellow Jacket Ln, Rockwall, TX 75087',
+        census_matched_address: '1111 E YELLOW JACKET LN, ROCKWALL, TX, 75087',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1002',
+        source_family: 'preforeclosure_trustee_notice',
+        motivation_type: 'preforeclosure_trustee_notice',
+        motivation_evidence_text: 'NOTICE OF TRUSTEE SALE',
+        status_evidence_text: 'Sale Date: 08/04/2026',
+        contact_route_if_visible: '(888) 313-1969'
+      }]
+    }, { fetch_impl: fetchImpl });
+    assert.strictEqual(censusDuplicateRows.free_public_deals.length, 1, 'Census-exact duplicates must collapse to one row');
+    const mergedCensusRow = censusDuplicateRows.free_public_deals[0];
+    assert.strictEqual(mergedCensusRow.merged_duplicate_count, 1);
+    assert.deepStrictEqual(mergedCensusRow.source_document_urls, [
+      'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1002',
+      'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1001'
+    ]);
+
+    const noCensusDuplicateRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+      source_records: [{
+        normalized_address: '1111 Yellowjacket Ln, Rockwall, TX 75087',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1003',
+        source_family: 'preforeclosure_trustee_notice',
+        motivation_evidence_text: 'NOTICE OF TRUSTEE SALE',
+        status_evidence_text: 'Sale Date: 08/04/2026'
+      }, {
+        normalized_address: '1111 East Yellow Jacket Ln, Rockwall, TX 75087',
+        source_url: 'https://www.rockwallcountytexas.com/792/Foreclosure-Notices',
+        source_document_url: 'https://www.rockwallcountytexas.com/Archive.aspx?ADID=1004',
+        source_family: 'preforeclosure_trustee_notice',
+        motivation_evidence_text: 'NOTICE OF TRUSTEE SALE',
+        status_evidence_text: 'Sale Date: 08/04/2026'
+      }]
+    }, { fetch_impl: fetchImpl });
+    assert.strictEqual(noCensusDuplicateRows.free_public_deals.length, 2, 'rows without Census matches must not merge');
+
     // US Census geocoder zip resolution: a partial with sale-date evidence and
     // a confirmed federal address-range match becomes a full INSPECT_NOW row;
     // a partial without evidence keeps the review bucket but shows the
@@ -755,7 +851,7 @@ const rejectedRecords = [
       }))
     }, { fetch_impl: fetchImpl });
     assert.strictEqual(capped.free_public_deals.length, 25);
-    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + censusRows.free_public_deals.length * 2 + censusOffRows.free_public_deals.length * 2 + listingRadarRows.free_public_deals.length + 4 + 8);
+    assert.ok(fetchHits.length <= 12 + 8 + 4 + result.free_public_deals.length + pdfNoticeRows.free_public_deals.length + zipReviewRows.free_public_deals.length * 2 + prefixQuarantineRows.free_public_deals.length * 2 + censusDuplicateRows.free_public_deals.length * 2 + noCensusDuplicateRows.free_public_deals.length * 2 + censusRows.free_public_deals.length * 2 + censusOffRows.free_public_deals.length * 2 + listingRadarRows.free_public_deals.length + 4 + 8);
 
     assert.strictEqual(result.diagnostics.legacy_comp_agent_invoked, false);
     assert.strictEqual(result.diagnostics.legacy_skip_trace_agent_invoked, false);
