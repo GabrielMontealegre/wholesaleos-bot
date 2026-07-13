@@ -110,6 +110,7 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(happy.status, 'available');
   assert.strictEqual(happy.county, 'Tarrant');
   assert.strictEqual(happy.candidates.length, 2);
+  assert.ok(happy.candidates.every((candidate) => candidate.county === 'Tarrant'), 'profile county must survive candidate normalization');
   assert.ok(happy.candidates.every((candidate) => candidate.preview_only === true && candidate.should_ingest === false));
   assert.ok(happy.candidates.some((candidate) => /4501 Ridgmar Blvd/i.test(candidate.normalized_address || candidate.property_address)));
   assert.ok(happy.document_urls_parsed.length === 1);

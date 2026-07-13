@@ -518,6 +518,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
 
   const context = { acquisition_run_id: runId, city: '', state: profile.state };
   const candidates = rawRows.slice(0, MAX_ROWS).map((row) => propertyCandidate.normalizePropertyCandidate(Object.assign({}, row, {
+    county: profile.county,
     source_id: profile.source_id,
     source_name: profile.source_name,
     source_family: 'preforeclosure_trustee_notice',

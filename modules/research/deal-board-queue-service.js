@@ -81,7 +81,49 @@ function rowPhone(deal) {
   return route ? cleanText(route.value).replace(/\D/g, '') : '';
 }
 
+const PRESERVE_EVIDENCE_FIELDS = [
+  'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
+  'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
+  'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url'
+];
+
+function censusMatchedAddressKey(deal) {
+  const value = deal && deal.census_matched_address;
+  return typeof value === 'string' && value.trim() ? value : '';
+}
+
+function sourceDocumentUrlsForDeal(deal) {
+  return Array.from(new Set([].concat(
+    cleanText(deal && deal.source_document_url),
+    Array.isArray(deal && deal.source_document_urls) ? deal.source_document_urls.map(cleanText) : []
+  ).filter(Boolean))).slice(0, 3);
+}
+
+function queueEvidenceScore(row) {
+  return PRESERVE_EVIDENCE_FIELDS.filter((field) => cleanText(row && row[field])).length +
+    sourceDocumentUrlsForDeal(row).length +
+    (Array.isArray(row && row.verified_comps) ? row.verified_comps.length : 0);
+}
+
+function mergeQueueDuplicateRows(existing, incoming, isDuplicate) {
+  const richer = queueEvidenceScore(incoming) > queueEvidenceScore(existing) ? incoming : existing;
+  const weaker = richer === incoming ? existing : incoming;
+  const documents = Array.from(new Set(sourceDocumentUrlsForDeal(richer).concat(sourceDocumentUrlsForDeal(weaker)))).slice(0, 3);
+  const merged = Object.assign({}, richer, {
+    source_document_url: documents[0] || cleanText(richer.source_document_url),
+    source_document_urls: documents,
+    merged_duplicate_count: Math.max(Number(existing.merged_duplicate_count) || 0, Number(incoming.merged_duplicate_count) || 0) + (isDuplicate ? 1 : 0),
+    risk_flags: Array.from(new Set([].concat(richer.risk_flags || [], weaker.risk_flags || []))).slice(0, 8)
+  });
+  for (const field of PRESERVE_EVIDENCE_FIELDS) {
+    if (!cleanText(merged[field]) && cleanText(weaker[field])) merged[field] = weaker[field];
+  }
+  return merged;
+}
+
 function dedupeKeyForDeal(deal) {
+  const censusAddress = censusMatchedAddressKey(deal);
+  if (censusAddress) return `census|${censusAddress}`;
   const address = cleanText(deal.normalized_address).toLowerCase();
   if (address) return `addr|${address}`;
   const doc = cleanText(deal.source_document_url).toLowerCase();
@@ -109,6 +151,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     source_family: cleanText(deal.source_family),
     source_url: cleanText(deal.source_url),
     source_document_url: cleanText(deal.source_document_url),
+    source_document_urls: sourceDocumentUrlsForDeal(deal),
     best_link_to_click_first: cleanText(deal.best_link_to_click_first),
     maps_url: cleanText(deal.maps_url) || null,
     zillow_url: cleanText(deal.zillow_url) || null,
@@ -120,7 +163,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       ? `${cleanText(deal.owner_record.owner_name)}${deal.owner_record.is_entity ? ' [entity]' : ''}`
       : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value),
     official_lookup_status: cleanText(deal.official_lookup_status),
-    contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
+    contact_status: deal.address_prefix_suspected === true
+      ? 'ADDRESS_VERIFICATION_REQUIRED'
+      : cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
     best_contact: (() => {
       const route = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : []).find((item) => item && cleanText(item.value));
       if (route) return `${cleanText(route.value)} (${cleanText(route.route_type)})`;
@@ -143,6 +188,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     ARV_lock_state: cleanText(deal.call_prep && deal.call_prep.ARV_lock_state || deal.ARV_lock_state),
     MAO_lock_state: cleanText(deal.MAO_lock_state || (deal.call_prep && deal.call_prep.MAO_lock_state)),
     call_readiness: cleanText(deal.call_readiness),
+    address_prefix_suspected: deal.address_prefix_suspected === true,
+    merged_duplicate_count: Number(deal.merged_duplicate_count || 0) || 0,
     next_best_action: cleanText(deal.next_best_action),
     missing_fields: Array.isArray(deal.missing_fields) ? deal.missing_fields.slice(0, 8) : [],
     seller_questions: deal.call_prep && Array.isArray(deal.call_prep.seller_questions) ? deal.call_prep.seller_questions.slice(0, 8) : [],
@@ -258,12 +305,24 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const store = readStore();
   const key = marketKey(market);
   const bucket = store.markets[key] || { market, rows: [], batches: [] };
-  const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
-  const PRESERVE_FIELDS = [
-    'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
-    'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
-    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url'
-  ];
+  const byKey = new Map();
+  for (const row of bucket.rows || []) {
+    const rowKey = dedupeKeyForDeal(row);
+    const existing = byKey.get(rowKey);
+    if (!existing) {
+      byKey.set(rowKey, Object.assign({}, row, {
+        queue_key: rowKey,
+        source_document_urls: sourceDocumentUrlsForDeal(row)
+      }));
+      continue;
+    }
+    const merged = mergeQueueDuplicateRows(existing, row, true);
+    merged.queue_key = rowKey;
+    merged.first_seen_at = existing.first_seen_at || row.first_seen_at;
+    merged.last_seen_at = existing.last_seen_at || row.last_seen_at;
+    merged.times_seen = (Number(existing.times_seen) || 1) + (Number(row.times_seen) || 1);
+    byKey.set(rowKey, merged);
+  }
   let newRows = 0;
   let refreshedRows = 0;
   for (const deal of deals) {
@@ -274,14 +333,22 @@ async function runDealBoardBatch(input = {}, options = {}) {
       refreshed.first_seen_at = existing.first_seen_at;
       refreshed.times_seen = (Number(existing.times_seen) || 1) + 1;
       // Never lose evidence a previous sighting already carried.
-      for (const field of PRESERVE_FIELDS) {
+      for (const field of PRESERVE_EVIDENCE_FIELDS) {
         if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
       }
       if ((!refreshed.verified_comps || !refreshed.verified_comps.length) && Array.isArray(existing.verified_comps) && existing.verified_comps.length) {
         refreshed.verified_comps = existing.verified_comps;
         refreshed.verified_sold_comp_count = Number(existing.verified_sold_comp_count) || existing.verified_comps.length;
       }
-      byKey.set(dedupeKey, refreshed);
+      const existingDocuments = sourceDocumentUrlsForDeal(existing);
+      const refreshedDocuments = sourceDocumentUrlsForDeal(refreshed);
+      const hasDistinctDocument = refreshedDocuments.some((url) => !existingDocuments.includes(url));
+      const merged = mergeQueueDuplicateRows(existing, refreshed, censusMatchedAddressKey(existing) === censusMatchedAddressKey(refreshed) && hasDistinctDocument);
+      merged.queue_key = dedupeKey;
+      merged.first_seen_at = existing.first_seen_at;
+      merged.last_seen_at = runAt;
+      merged.times_seen = refreshed.times_seen;
+      byKey.set(dedupeKey, merged);
       refreshedRows += 1;
     } else {
       byKey.set(dedupeKey, projectRowForQueue(deal, dedupeKey, runAt));
