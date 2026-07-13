@@ -55,7 +55,6 @@ const OCR_REVIEWABLE_ADDRESS_RE = new RegExp(
   `^\\d{1,7}\\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,100}?\\b${STREET_TYPE_RE}\\b\\.?\\s+[A-Za-z][A-Za-z .'-]{1,40}(?:\\s+[A-Za-z][A-Za-z .'-]{1,40})*(?:,?\\s*(?:TX|Texas)(?:\\s+\\d{5}(?:-\\d{4})?)?|\\s+\\d{5}(?:-\\d{4})?)$`,
   'i'
 );
-const SUSPECTED_ADDRESS_PREFIX_RE = /^\d{3,}\s+\d{1,5}\s+(?=[A-Za-z])/;
 
 // Street + trailing city word(s) with no TX token - acceptable only when the
 // source row itself says the state is TX (the county notice extractors set
@@ -98,22 +97,6 @@ function ocrReviewAddressFromRecord(record, resolvedAddress) {
 function ocrReviewZipFromText(text) {
   const match = cleanText(text).match(/\b(\d{5})\b(?!\d)/);
   return match ? match[1] : '';
-}
-
-function rawAddressTextFromRecord(record) {
-  const value = record && (
-    record.normalized_address ||
-    record.property_address ||
-    record.address ||
-    record.raw_address_text ||
-    record.display_address
-  );
-  return String(value == null ? '' : value).trim();
-}
-
-function suspectedAddressPrefixFromRecord(record) {
-  const raw = rawAddressTextFromRecord(record);
-  return SUSPECTED_ADDRESS_PREFIX_RE.test(raw) ? raw : '';
 }
 
 const MOTIVATION_PATTERNS = [
@@ -347,13 +330,13 @@ function addressFromRecord(record) {
   return addressResolutionFromRecord(record).address;
 }
 
-function parseAddressParts(address, market, record) {
+function parseAddressParts(address, market) {
   const parsed = propertyIdentity.parseAddress(address);
   return {
     normalized_address: parsed.complete ? parsed.full_address : '',
     raw_address_text: cleanText(address),
     city: cleanText(parsed.city) || market.city,
-    county: cleanText(record && record.county) || market.county,
+    county: market.county,
     state: cleanText(parsed.state) || market.state,
     zip: cleanText(parsed.zip)
   };
@@ -759,13 +742,6 @@ function qualityForDeal(deal) {
         : 'missing_property_identity'
     };
   }
-  if (deal && deal.address_prefix_suspected === true && (officialProof || propertySpecific)) {
-    return {
-      quality_bucket: QUALITY_BUCKETS.NEEDS_ZIP_REVIEW,
-      usable_for_gabriel: true,
-      rejected_reason: ''
-    };
-  }
   if (completeAddress && (propertySpecific || officialProof) && (deal.status_evidence_text || deal.sale_date_or_event_date)) {
     return {
       quality_bucket: QUALITY_BUCKETS.INSPECT_NOW,
@@ -798,9 +774,7 @@ function qualityForDeal(deal) {
 
 function missingFields(deal) {
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
-    const reviewMissing = deal.address_prefix_suspected
-      ? ['verified street number and spelling (check source document)']
-      : deal.ocr_address_review
+    const reviewMissing = deal.ocr_address_review
       ? ['verified street spelling (check source document)']
       : ['zip (verify from the source document)'];
     return reviewMissing
@@ -819,9 +793,7 @@ function missingFields(deal) {
 
 function nextBestAction(deal) {
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
-    return deal.address_prefix_suspected || deal.ocr_address_review
-      ? 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT'
-      : 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
+    return deal.ocr_address_review ? 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT' : 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
   }
   if (!deal.normalized_address) return 'VERIFY_PROPERTY_IDENTITY';
   if (!(deal.source_url || deal.source_document_url)) return 'VERIFY_SOURCE_PROOF';
@@ -862,7 +834,6 @@ function finalizeDeal(deal) {
   deal.rejected_reason = quality.rejected_reason;
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
     const reviewFlags = ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'];
-    if (deal.address_prefix_suspected) reviewFlags.push('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT');
     if (!cleanText(deal.zip)) reviewFlags.push('ZIP_MISSING_REVIEW_REQUIRED');
     deal.risk_flags = Array.from(new Set([].concat(deal.risk_flags || [], reviewFlags)));
     // Show the clean source-visible partial, never a canonicalizer-mangled headline.
@@ -885,18 +856,12 @@ function finalizeDeal(deal) {
 
 function dealFromRecord(record, context) {
   const market = context.market;
-  const suspectedAddressPrefix = suspectedAddressPrefixFromRecord(record);
-  const addressResolution = suspectedAddressPrefix
-    ? { address: '', bad_address_rejected: false, bad_address_rejected_reason: '' }
-    : addressResolutionFromRecord(record);
+  const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
-  const parsedParts = parseAddressParts(address || rawAddressTextFromRecord(record), market, record);
-  const parts = suspectedAddressPrefix
-    ? Object.assign({}, parsedParts, { normalized_address: '', raw_address_text: suspectedAddressPrefix })
-    : parsedParts;
+  const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
   const ocrReviewAddress = ocrReviewAddressFromRecord(record, parts.normalized_address);
   const ocrReviewZip = ocrReviewAddress ? ocrReviewZipFromText(ocrReviewAddress) : '';
-  const partialAddress = suspectedAddressPrefix || ocrReviewAddress || partialAddressFromRecord(record, parts.normalized_address);
+  const partialAddress = ocrReviewAddress || partialAddressFromRecord(record, parts.normalized_address);
   const family = sourceFamily(record);
   const motivation = motivationFromRecord(record);
   const sourceUrl = cleanText(record && (record.source_url || record.url));
@@ -918,9 +883,6 @@ function dealFromRecord(record, context) {
     county: cleanText(record && record.county) || parts.county,
     state: parts.state,
     zip: parts.zip || ocrReviewZip,
-    census_matched_address: cleanText(record && record.census_matched_address) || null,
-    census_zip_suggestion: cleanText(record && record.census_zip_suggestion) || null,
-    census_zip_status: cleanText(record && record.census_zip_status) || null,
     source_family: family,
     source_name: sourceName(record, family),
     source_url: sourceUrl,
@@ -973,69 +935,13 @@ function dealFromRecord(record, context) {
     source_url_status: 'not_checked',
     source_document_url_status: 'not_checked',
     link_validation: [],
-    ocr_address_review: !!(suspectedAddressPrefix || ocrReviewAddress),
-    address_prefix_suspected: !!suspectedAddressPrefix
+    ocr_address_review: !!ocrReviewAddress
   };
   deal.record_origin = cleanText(record && record.record_origin);
   deal.bad_address_rejected = addressResolution.bad_address_rejected === true;
   deal.bad_address_rejected_reason = cleanText(addressResolution.bad_address_rejected_reason);
   deal.out_of_market = isOutOfMarket(deal, market);
   return finalizeDeal(deal);
-}
-
-function censusMatchedAddressKey(deal) {
-  const value = deal && deal.census_matched_address;
-  return typeof value === 'string' && value.trim() ? value : '';
-}
-
-function documentUrlsForDeal(deal) {
-  return uniqueText([].concat(
-    deal && deal.source_document_url,
-    Array.isArray(deal && deal.source_document_urls) ? deal.source_document_urls : []
-  ));
-}
-
-function evidenceRichness(deal) {
-  return [
-    cleanText(deal && deal.source_document_url),
-    cleanText(deal && deal.source_url),
-    cleanText(deal && deal.status_evidence_text),
-    cleanText(deal && deal.motivation_evidence_text),
-    cleanText(deal && deal.contact_route_if_visible),
-    cleanText(deal && deal.owner_name_if_visible),
-    cleanText(deal && deal.normalized_address)
-  ].filter(Boolean).length + documentUrlsForDeal(deal).length;
-}
-
-function collapseCensusExactDuplicates(deals) {
-  const byCensusAddress = new Map();
-  const uniqueDeals = [];
-  for (const deal of deals) {
-    const censusKey = censusMatchedAddressKey(deal);
-    if (!censusKey) {
-      uniqueDeals.push(deal);
-      continue;
-    }
-    const existing = byCensusAddress.get(censusKey);
-    if (!existing) {
-      byCensusAddress.set(censusKey, deal);
-      uniqueDeals.push(deal);
-      continue;
-    }
-    const richer = evidenceRichness(deal) > evidenceRichness(existing) ? deal : existing;
-    const weaker = richer === deal ? existing : deal;
-    const documents = uniqueText(documentUrlsForDeal(richer).concat(documentUrlsForDeal(weaker))).slice(0, 3);
-    const merged = Object.assign(richer, {
-      source_document_url: documents[0] || cleanText(richer.source_document_url),
-      source_document_urls: documents,
-      merged_duplicate_count: (Number(existing.merged_duplicate_count) || 0) + (Number(deal.merged_duplicate_count) || 0) + 1,
-      risk_flags: uniqueText([].concat(richer.risk_flags || [], weaker.risk_flags || []))
-    });
-    const index = uniqueDeals.indexOf(existing);
-    if (index >= 0) uniqueDeals[index] = merged;
-    byCensusAddress.set(censusKey, merged);
-  }
-  return uniqueDeals;
 }
 
 function recordFromCard(card, query) {
@@ -1964,11 +1870,10 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const allDeals = candidates
     .map(finalizeDeal)
     .sort((a, b) => b.rank_score - a.rank_score || b.confidence_score - a.confidence_score || a.headline.localeCompare(b.headline));
-  let deals = allDeals
+  const deals = allDeals
     .filter((deal) => deal.usable_for_gabriel === true && deal.quality_bucket !== QUALITY_BUCKETS.REJECTED_GENERIC)
     .slice(0, caps.output_deals);
   const censusZipDiagnostics = await applyCensusZipResolution(deals, input, options, context);
-  deals = collapseCensusExactDuplicates(deals);
   const freeHunterDiagnostics = await applyFreePublicHunters(deals, input, options, context);
   const officialLookupDiagnostics = await applyOfficialBrowserLookup(deals, input, options, context);
   const screenshotCompDiagnostics = await applyScreenshotCompEvidence(deals, input, options, context);

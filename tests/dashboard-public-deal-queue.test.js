@@ -177,32 +177,6 @@ function mockDeal(overrides) {
   const keyB = queueService.dedupeKeyForDeal({ headline: 'proof B', source_url: 'https://b.gov', motivation_evidence_text: 'notice B' });
   assert.notStrictEqual(keyA, keyB);
 
-  // Census-exact rows collapse in the persisted queue and retain both notice
-  // documents; non-Census rows remain under their ordinary address/proof keys.
-  const censusQueuePreview = async () => ({
-    free_public_deals: [
-      mockDeal({
-        normalized_address: '1111 Yellowjacket Ln, Rockwall, TX 75087',
-        census_matched_address: '1111 E YELLOW JACKET LN, ROCKWALL, TX, 75087',
-        source_document_url: 'https://example.test/notices/one.pdf'
-      }),
-      mockDeal({
-        normalized_address: '1111 East Yellow Jacket Ln, Rockwall, TX 75087',
-        census_matched_address: '1111 E YELLOW JACKET LN, ROCKWALL, TX, 75087',
-        source_document_url: 'https://example.test/notices/two.pdf',
-        owner_record: { owner_name: 'Richer Evidence', is_entity: false }
-      })
-    ],
-    rejected_generic_count: 0
-  });
-  const censusQueueBatch = await queueService.runDealBoardBatch({ market: { city: 'Waco', county: 'McLennan', state: 'TX' }, limit: 25 }, { preview_impl: censusQueuePreview });
-  assert.strictEqual(censusQueueBatch.rows.length, 1, 'queue must collapse Census-exact duplicates');
-  assert.strictEqual(censusQueueBatch.rows[0].merged_duplicate_count, 1);
-  assert.deepStrictEqual(censusQueueBatch.rows[0].source_document_urls, [
-    'https://example.test/notices/one.pdf',
-    'https://example.test/notices/two.pdf'
-  ]);
-
   // 3) latest returns the accumulated snapshot; unknown market is empty and honest.
   const latest = queueService.latestDealBoardSnapshot({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' } });
   assert.strictEqual(latest.has_snapshot, true);
