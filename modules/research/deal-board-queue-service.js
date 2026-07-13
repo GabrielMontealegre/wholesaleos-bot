@@ -14,6 +14,8 @@ const fs = require('fs');
 const path = require('path');
 
 const freePublicDealBoardPreviewService = require('./free-public-deal-board-preview-service');
+const censusZipResolution = require('./census-zip-resolution');
+const propertyIdentity = require('./property-identity');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const SNAPSHOT_FILE = path.resolve(
@@ -25,6 +27,7 @@ const MAX_ROWS_PER_MARKET = 500;
 const MAX_BATCHES_PER_MARKET = 60;
 const MIN_BATCH_LIMIT = 5;
 const MAX_BATCH_LIMIT = 25;
+const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 
 // Queue lanes: every registered free adapter, requested EXPLICITLY so the
 // orchestrator also runs contact-first lanes that are auto_select:false.
@@ -38,6 +41,186 @@ const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+}
+
+function cloneSnapshotRow(row) {
+  const copy = Object.assign({}, row || {});
+  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions']) {
+    if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
+  }
+  return copy;
+}
+
+function prependUnique(values, additions, limit) {
+  const seen = new Set();
+  return [].concat(additions || [], values || [])
+    .map(cleanText)
+    .filter((value) => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    })
+    .slice(0, limit);
+}
+
+function mapsSearchUrlForReview(value) {
+  const query = cleanText(value);
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
+}
+
+function suspectedPrefixText(row) {
+  const normalized = cleanText(row && row.normalized_address);
+  const partial = cleanText(row && row.partial_address);
+  const headline = cleanText(row && row.headline);
+  return [normalized, partial, headline].find((value) => /^\d{3,}\s+\d{1,5}\s/.test(value)) || '';
+}
+
+// Snapshot rows can outlive parser fixes. Preserve the visible OCR text, but
+// remove unsafe call/map readiness until the source document is checked.
+function quarantineSuspectedPrefixRow(row) {
+  const original = suspectedPrefixText(row);
+  if (!original) return false;
+  row.partial_address = original;
+  row.headline = original;
+  row.normalized_address = '';
+  row.maps_url = null;
+  row.maps_search_url_review_needed = cleanText(row.maps_search_url_review_needed) || mapsSearchUrlForReview(original);
+  row.quality_bucket = 'NEEDS_ZIP_REVIEW';
+  row.risk_flags = prependUnique(row.risk_flags, [
+    'ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT',
+    'OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'
+  ], 6);
+  row.next_best_action = 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT';
+  row.contact_status = 'ADDRESS_VERIFICATION_REQUIRED';
+  row.call_readiness = 'NEEDS_PROPERTY_IDENTITY';
+  row.missing_fields = prependUnique(row.missing_fields, [
+    'verified street number and spelling (check source document)'
+  ], 8);
+  return true;
+}
+
+function officialCountyHosts() {
+  const profiles = Array.isArray(txCountyForeclosureSourceProfiles.PROFILES)
+    ? txCountyForeclosureSourceProfiles.PROFILES
+    : [];
+  return profiles.flatMap((profile) => (Array.isArray(profile.official_hosts) ? profile.official_hosts : [])
+    .map((host) => ({ county: cleanText(profile.county), host: cleanText(host).toLowerCase() }))
+    .filter((entry) => entry.county && entry.host));
+}
+
+const OFFICIAL_COUNTY_HOSTS = Object.freeze(officialCountyHosts());
+
+function hostFromUrl(value) {
+  try {
+    return new URL(cleanText(value)).hostname.toLowerCase();
+  } catch (error) {
+    return '';
+  }
+}
+
+function repairCountyFromSourceHost(row) {
+  const host = hostFromUrl(cleanText(row && row.source_document_url) || cleanText(row && row.source_url));
+  if (!host) return false;
+  const counties = Array.from(new Set(OFFICIAL_COUNTY_HOSTS
+    .filter((entry) => host === entry.host || host.endsWith(`.${entry.host}`))
+    .map((entry) => entry.county)));
+  if (counties.length !== 1 || counties[0] === cleanText(row.county)) return false;
+  row.county = counties[0];
+  return true;
+}
+
+function repairStoredSnapshotRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    quarantineSuspectedPrefixRow(row);
+    repairCountyFromSourceHost(row);
+    return row;
+  });
+}
+
+function rowEvidenceScore(row) {
+  return [
+    'source_document_url', 'source_url', 'best_link_to_click_first', 'maps_url',
+    'official_property_record_url', 'owner_clue', 'best_contact', 'appraisal_clue',
+    'zillow_url', 'redfin_url', 'realtor_url', 'auction_url'
+  ].reduce((score, field) => score + (cleanText(row && row[field]) ? 1 : 0), 0) +
+    (Array.isArray(row && row.source_document_urls) ? row.source_document_urls.length : 0);
+}
+
+function documentUrlsForRow(row) {
+  return prependUnique(row && row.source_document_urls, [row && row.source_document_url], 3);
+}
+
+function earliestTimestamp(left, right) {
+  const a = cleanText(left);
+  const b = cleanText(right);
+  if (!a) return b;
+  if (!b) return a;
+  return a <= b ? a : b;
+}
+
+async function backfillCensusKeysForStoredRows(rows, options = {}) {
+  const resolver = typeof options.census_zip_resolver_impl === 'function'
+    ? options.census_zip_resolver_impl
+    : censusZipResolution.resolveZipFromCensus;
+  const requestedLookups = Number(options.max_census_backfill_lookups);
+  const maxLookups = Math.max(0, Math.min(
+    Number.isFinite(requestedLookups) ? requestedLookups : MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
+    MAX_STORED_CENSUS_BACKFILLS_PER_BATCH
+  ));
+  let lookups = 0;
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (lookups >= maxLookups || cleanText(row.census_matched_address) || !propertyIdentity.isCompleteAddress(cleanText(row.normalized_address))) continue;
+    lookups += 1;
+    try {
+      const outcome = await resolver({
+        street_or_partial: cleanText(row.normalized_address),
+        city: cleanText(row.city),
+        state: cleanText(row.state) || 'TX'
+      }, { fetchImpl: options.fetch_impl });
+      if (outcome && outcome.resolved && cleanText(outcome.matched_address)) {
+        row.census_matched_address = cleanText(outcome.matched_address);
+        row.census_zip_status = 'backfilled_for_dedupe';
+      }
+    } catch (error) { /* keep unresolved snapshot rows separate */ }
+  }
+  return lookups;
+}
+
+function collapseStoredCensusExactDuplicates(rows) {
+  const byCensusAddress = new Map();
+  const output = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const matchedAddress = typeof row.census_matched_address === 'string' ? row.census_matched_address : '';
+    if (!matchedAddress) {
+      output.push(row);
+      continue;
+    }
+    const existing = byCensusAddress.get(matchedAddress);
+    if (!existing) {
+      byCensusAddress.set(matchedAddress, row);
+      output.push(row);
+      continue;
+    }
+    const richer = rowEvidenceScore(row) > rowEvidenceScore(existing) ? row : existing;
+    const other = richer === row ? existing : row;
+    const index = output.indexOf(existing);
+    if (richer !== existing && index >= 0) output[index] = richer;
+    byCensusAddress.set(matchedAddress, richer);
+    richer.source_document_urls = prependUnique(
+      documentUrlsForRow(other),
+      documentUrlsForRow(richer),
+      3
+    );
+    richer.source_document_url = cleanText(richer.source_document_url) || cleanText(other.source_document_url) || null;
+    richer.first_seen_at = earliestTimestamp(existing.first_seen_at, row.first_seen_at);
+    richer.last_seen_at = cleanText(existing.last_seen_at) >= cleanText(row.last_seen_at)
+      ? existing.last_seen_at
+      : row.last_seen_at;
+    richer.times_seen = (Number(existing.times_seen) || 1) + (Number(row.times_seen) || 1);
+    richer.merged_duplicate_count = (Number(existing.merged_duplicate_count) || 0) +
+      (Number(row.merged_duplicate_count) || 0) + 1;
+  }
+  return output;
 }
 
 function nowIso() {
@@ -109,6 +292,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     source_family: cleanText(deal.source_family),
     source_url: cleanText(deal.source_url),
     source_document_url: cleanText(deal.source_document_url),
+    source_document_urls: Array.isArray(deal.source_document_urls)
+      ? prependUnique(deal.source_document_urls, [deal.source_document_url], 3)
+      : prependUnique([], [deal.source_document_url], 3),
     best_link_to_click_first: cleanText(deal.best_link_to_click_first),
     maps_url: cleanText(deal.maps_url) || null,
     zillow_url: cleanText(deal.zillow_url) || null,
@@ -259,10 +445,11 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const key = marketKey(market);
   const bucket = store.markets[key] || { market, rows: [], batches: [] };
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
+  const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
-    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url'
+    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -288,7 +475,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
       newRows += 1;
     }
   }
-  bucket.rows = Array.from(byKey.values())
+  bucket.rows = repairStoredSnapshotRows(Array.from(byKey.values()));
+  await backfillCensusKeysForStoredRows(
+    bucket.rows.filter((row) => storedQueueKeys.has(row.queue_key)),
+    options
+  );
+  bucket.rows = collapseStoredCensusExactDuplicates(bucket.rows)
     .sort((a, b) => (b.normalized_address ? 1 : 0) - (a.normalized_address ? 1 : 0) || String(b.last_seen_at).localeCompare(String(a.last_seen_at)))
     .slice(0, MAX_ROWS_PER_MARKET);
   const counts = queueCounts(bucket.rows);
@@ -343,22 +535,25 @@ function latestDealBoardSnapshot(input = {}) {
   }
   const today = nowIso().slice(0, 10);
   const batchesToday = (bucket.batches || []).filter((item) => String(item.run_at).slice(0, 10) === today);
+  // Read-time repairs are deliberately applied to a copy: the dashboard gets
+  // safer rows immediately after deploy without turning a read into a write.
+  const rows = repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow));
   return {
     ok: true,
     preview_only: true,
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
     has_snapshot: true,
-    counts: queueCounts(bucket.rows),
+    counts: queueCounts(rows),
     batch: (bucket.batches || [])[0] || null,
     batches_today: batchesToday.length,
     daily: {
       batches_today: batchesToday.length,
-      address_rows_today: bucket.rows.filter((row) => row.normalized_address && String(row.first_seen_at).slice(0, 10) === today).length,
+      address_rows_today: rows.filter((row) => row.normalized_address && String(row.first_seen_at).slice(0, 10) === today).length,
       ocr_address_rows_today: batchesToday.reduce((sum, item) => sum + Number(item.ocr && item.ocr.ocr_rows_with_address || 0), 0)
     },
     auto_run: getAutoRunStatus(market),
-    rows: bucket.rows.slice(0, 100)
+    rows: rows.slice(0, 100)
   };
 }
 
@@ -596,9 +791,14 @@ module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
+  MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
   snapshotFilePath,
   jobsFilePath,
   dedupeKeyForDeal,
+  quarantineSuspectedPrefixRow,
+  repairCountyFromSourceHost,
+  backfillCensusKeysForStoredRows,
+  collapseStoredCensusExactDuplicates,
   queueCounts,
   runDealBoardBatch,
   latestDealBoardSnapshot,
