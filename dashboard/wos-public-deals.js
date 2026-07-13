@@ -5,6 +5,9 @@
 (function () {
   var API_LATEST = '/api/dashboard/free-public-deal-board/latest';
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
+  var lastData = null;
+  var lastNote = '';
+  var fetchInFlight = false;
 
   function headers() {
     return { 'Content-Type': 'application/json', 'x-user-id': window._uid || 'admin' };
@@ -51,6 +54,10 @@
     if (info.passed) return ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fecaca;color:#991b1b;">Sale date passed - verify status</span>';
     var label = row.sale_date_or_event_date || info.iso;
     return ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e3a8a;">Sale: ' + esc(label) + ' (in ' + esc(info.days) + ' days)</span>';
+  }
+
+  function currentPage() {
+    return (window.APP && window.APP.page) || '';
   }
 
   function rowCard(row) {
@@ -106,6 +113,25 @@
     if (!iso) return null;
     var diff = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
     return isNaN(diff) ? null : diff;
+  }
+
+  function upcomingSaleRow(rows) {
+    var upcoming = rows.map(function (row) {
+      return { row: row, info: saleDateInfo(row) };
+    }).filter(function (item) {
+      return item.info.iso && !item.info.passed;
+    }).sort(function (a, b) {
+      if (a.info.iso !== b.info.iso) return a.info.iso.localeCompare(b.info.iso);
+      return String(a.row.normalized_address || a.row.partial_address || a.row.headline || '')
+        .localeCompare(String(b.row.normalized_address || b.row.partial_address || b.row.headline || ''));
+    });
+    return upcoming.length ? upcoming[0] : null;
+  }
+
+  function topUrgentAddresses(rows) {
+    return sortTopDealsRows(rows).filter(function (row) {
+      return row.normalized_address || row.partial_address || row.headline;
+    }).slice(0, 3);
   }
 
   function dailyMachinePanel(data, rows) {
@@ -191,35 +217,46 @@
       body, '#fdba74');
   }
 
-  function coverageTable(batch) {
-    var coverage = batch && batch.source_coverage;
-    if (!coverage || !coverage.length) return '';
-    function sampleText(item) {
-      var samples = item && item.rejected_url_samples;
-      if (!samples || !samples.length) return '';
-      return samples.slice(0, 2).map(function (sample) {
-        return (sample.reason || 'rejected') + ': ' + (sample.source_url || '');
-      }).join(' | ');
-    }
-    var rows = coverage.map(function (item) {
-      var ok = item.candidate_count > 0;
-      var sample = sampleText(item);
-      var docsLabel = item.docs_discovered || item.docs_processed
-        ? '<div style="font-size:10px;color:#6b7280;margin-top:2px;">docs read ' + esc(item.docs_processed || 0) + '/' + esc(item.docs_discovered || 0) + '</div>'
-        : '';
-      return '<tr>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.county || '') + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.source_name || item.source_id) + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.status || 'unknown') + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;text-align:right;' + (ok ? 'color:#065f46;font-weight:600;' : '') + '">' + esc(item.candidate_count) + docsLabel + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#991b1b;">' + esc(item.blocked_reason || '') + '</td>' +
-        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;max-width:360px;">' + esc(sample) + '</td>' +
-        '</tr>';
-    }).join('');
-    return '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:12px;color:#2563eb;">Source coverage (' + coverage.length + ' lanes)</summary>' +
-      '<table style="font-size:11px;border-collapse:collapse;margin-top:4px;"><tr>' +
-      '<th style="text-align:left;padding:2px 8px;">County</th><th style="text-align:left;padding:2px 8px;">Source</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:right;padding:2px 8px;">Rows / docs</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th><th style="text-align:left;padding:2px 8px;">Rejected sample</th></tr>' +
-      rows + '</table></details>';
+  function dealDeskCard(data, rows) {
+    var c = data.counts || {};
+    var daily = data.daily || {};
+    var autoRun = data.auto_run || {};
+    var today = new Date().toISOString().slice(0, 10);
+    var actionableToday = rows.filter(function (r) {
+      return isActionableRow(r) && String(r.first_seen_at || '').slice(0, 10) === today;
+    }).length;
+    var soonest = upcomingSaleRow(rows);
+    var urgent = topUrgentAddresses(rows);
+    var summary = [
+      chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
+      chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
+      chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
+      chip('New today', c.today_rows || 0, '#ddd6fe')
+    ].join('');
+    var nextAuction = soonest
+      ? '<div style="font-size:12px;color:#374151;margin-top:6px;">Next auction: <b>' + esc(soonest.row.normalized_address || soonest.row.partial_address || soonest.row.headline || 'source row') + '</b> - ' +
+        esc(soonest.row.sale_date_or_event_date || soonest.info.iso) + ' (in ' + esc(soonest.info.days) + ' days)</div>'
+      : '';
+    var urgentText = urgent.length
+      ? '<div style="font-size:12px;color:#374151;margin-top:6px;">Top urgent: ' + urgent.map(function (row) {
+        return '<span style="display:inline-block;margin-right:8px;"><b>' + esc(row.normalized_address || row.partial_address || row.headline || 'source row') + '</b></span>';
+      }).join('') + '</div>'
+      : '<div style="font-size:12px;color:#6b7280;margin-top:6px;">No urgent rows yet. Run a free batch.</div>';
+    var finder = (typeof navigate === 'function')
+      ? '<button type="button" onclick="navigate(\'findme_scout\', this)" style="padding:7px 12px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:12px;cursor:pointer;">Open Deal Finder</button>'
+      : '<a href="#" style="color:#2563eb;text-decoration:underline;font-size:12px;">Open Deal Finder</a>';
+    return panelBox('Today\'s Deal Desk',
+      'Dashboard summary for what is urgent now.',
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        (autoRun.enabled ? chip('AUTO-RUN', 'ON every ' + (autoRun.interval_minutes || 20) + ' min', '#bbf7d0') : chip('AUTO-RUN', 'OFF', '#fecaca')) +
+        chip('Batches today', daily.batches_today || 0) +
+        chip('Actionable today', actionableToday, '#fde68a') +
+      '</div>' +
+      '<div style="margin-top:4px;">' + summary + '</div>' +
+      nextAuction +
+      urgentText +
+      '<div style="margin-top:8px;">' + finder + '</div>',
+      autoRun.enabled ? '#86efac' : '#fca5a5');
   }
 
   function sortTopDealsRows(rows) {
@@ -257,18 +294,50 @@
       body, '#fcd34d');
   }
 
-  var lastData = null;
-  var lastNote = '';
+  function coverageTable(batch) {
+    var coverage = batch && batch.source_coverage;
+    if (!coverage || !coverage.length) return '';
+    function sampleText(item) {
+      var samples = item && item.rejected_url_samples;
+      if (!samples || !samples.length) return '';
+      return samples.slice(0, 2).map(function (sample) {
+        return (sample.reason || 'rejected') + ': ' + (sample.source_url || '');
+      }).join(' | ');
+    }
+    var rows = coverage.map(function (item) {
+      var ok = item.candidate_count > 0;
+      var sample = sampleText(item);
+      var docsLabel = item.docs_discovered || item.docs_processed
+        ? '<div style="font-size:10px;color:#6b7280;margin-top:2px;">docs read ' + esc(item.docs_processed || 0) + '/' + esc(item.docs_discovered || 0) + '</div>'
+        : '';
+      return '<tr>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.county || '') + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.source_name || item.source_id) + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;">' + esc(item.status || 'unknown') + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;text-align:right;' + (ok ? 'color:#065f46;font-weight:600;' : '') + '">' + esc(item.candidate_count) + docsLabel + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#991b1b;">' + esc(item.blocked_reason || '') + '</td>' +
+        '<td style="padding:2px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;max-width:360px;">' + esc(sample) + '</td>' +
+        '</tr>';
+    }).join('');
+    return '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:12px;color:#2563eb;">Source coverage (' + coverage.length + ' lanes)</summary>' +
+      '<table style="font-size:11px;border-collapse:collapse;margin-top:4px;"><tr>' +
+      '<th style="text-align:left;padding:2px 8px;">County</th><th style="text-align:left;padding:2px 8px;">Source</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:right;padding:2px 8px;">Rows / docs</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th><th style="text-align:left;padding:2px 8px;">Rejected sample</th></tr>' +
+      rows + '</table></details>';
+  }
 
   function render(container, data, note) {
     lastData = data;
     lastNote = note || '';
-    // The dashboard app rewrites #content.innerHTML on every page render,
-    // which can replace our section - always target the live one.
-    container = document.getElementById('wos-public-deals') || container;
     var body = container.querySelector('.wos-public-deals-body');
     if (!body) return;
     var rows = Array.isArray(data.rows) ? data.rows : [];
+    var page = currentPage();
+    if (page === 'dashboard') {
+      body.innerHTML =
+        (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
+        dealDeskCard(data, rows);
+      return;
+    }
     body.innerHTML =
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       dailyMachinePanel(data, rows) +
@@ -283,6 +352,13 @@
       .catch(function (err) {
         container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Could not load public deals: ' + esc(err.message) + '</div>';
       });
+  }
+
+  function fetchLatestWithNote(container, note) {
+    fetch(API_LATEST, { headers: headers() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { render(container, data || {}, note); })
+      .catch(function () { fetchLatest(container); });
   }
 
   function runBatch(container, button) {
@@ -329,80 +405,119 @@
       .catch(function (err) { fail(err.message); });
   }
 
-  function fetchLatestWithNote(container, note) {
-    fetch(API_LATEST, { headers: headers() })
-      .then(function (res) { return res.json(); })
-      .then(function (data) { render(container, data || {}, note); })
-      .catch(function () { fetchLatest(container); });
+  function ensureSection(page) {
+    var host = document.getElementById('content') || document.getElementById('app') || document.body;
+    var section = document.getElementById('wos-public-deals');
+    var needsRebuild = !section || section.dataset.wosTarget !== page;
+    if (!section) {
+      section = document.createElement('section');
+      section.id = 'wos-public-deals';
+      section.style.cssText = 'margin:12px;padding:14px 16px;border:1px solid #d1d5db;border-radius:12px;background:#f9fafb;font-family:inherit;';
+    }
+    if (section.parentNode !== host || host.firstChild !== section) {
+      host.insertBefore(section, host.firstChild);
+    }
+    if (needsRebuild && page === 'dashboard') {
+      section.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
+        '<h2 style="margin:0;font-size:17px;">Today\'s Deal Desk <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - snapshot cache, not saved leads</span></h2>' +
+        '</div><div class="wos-public-deals-body" style="max-height:240px;overflow:auto;">Loading public deals...</div>';
+    } else if (needsRebuild) {
+      section.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
+        '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - preview snapshot, not saved leads</span></h2>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px;cursor:pointer;">' +
+        '<input type="checkbox" id="wos-public-deals-auto"> Auto-refresh every 20 min</label>' +
+        '<button id="wos-public-deals-run" style="padding:7px 14px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:13px;cursor:pointer;">Run next free batch</button>' +
+        '</div>' +
+        '</div><div class="wos-public-deals-body" style="max-height:520px;overflow:auto;">Loading public deals...</div>';
+    }
+    section.dataset.wosTarget = page;
+    return section;
   }
 
-  function mount() {
-    if (document.getElementById('wos-public-deals')) return;
-    var host = document.getElementById('content') || document.getElementById('app') || document.body;
-    var section = document.createElement('section');
-    section.id = 'wos-public-deals';
-    section.style.cssText = 'margin:12px;padding:14px 16px;border:1px solid #d1d5db;border-radius:12px;background:#f9fafb;font-family:inherit;';
-    section.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
-      '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - preview snapshot, not saved leads</span></h2>' +
-      '<div style="display:flex;align-items:center;gap:10px;">' +
-      '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px;cursor:pointer;">' +
-      '<input type="checkbox" id="wos-public-deals-auto"> Auto-refresh every 20 min</label>' +
-      '<button id="wos-public-deals-run" style="padding:7px 14px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:13px;cursor:pointer;">Run next free batch</button>' +
-      '</div>' +
-      '</div><div class="wos-public-deals-body" style="max-height:520px;overflow:auto;">Loading public deals...</div>';
-    host.insertBefore(section, host.firstChild);
-    var runButton = document.getElementById('wos-public-deals-run');
-    runButton.addEventListener('click', function () { runBatch(section, this); });
-    // Server-side scheduler (survives closing the tab); default OFF,
-    // capped daily; 20 * 60 * 1000 ms minimum interval enforced server-side.
+  function removeSection() {
+    var section = document.getElementById('wos-public-deals');
+    if (section && section.parentNode) section.parentNode.removeChild(section);
+  }
+
+  function mountForCurrentPage() {
+    var page = currentPage();
+    if (page !== 'dashboard' && page !== 'findme_scout') {
+      removeSection();
+      return;
+    }
+
+    var existing = document.getElementById('wos-public-deals');
+    if (existing && existing.dataset.wosTarget === page) return;
+
+    var section = ensureSection(page);
     var autoBox = document.getElementById('wos-public-deals-auto');
-    autoBox.addEventListener('change', function () {
-      var box = this;
-      fetch(API_RUN.replace('/run', '/auto-run'), {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: box.checked, interval_minutes: 20 })
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (!data || data.ok === false) throw new Error((data && data.error) || 'auto-run update failed');
-          fetchLatestWithNote(section, 'Auto-run ' + (data.auto_run && data.auto_run.enabled ? 'enabled (every ' + data.auto_run.interval_minutes + ' min, capped daily).' : 'disabled.'));
-        })
-        .catch(function (err) {
-          box.checked = !box.checked;
-          fetchLatestWithNote(section, 'Auto-run change failed: ' + err.message);
+    var runButton = document.getElementById('wos-public-deals-run');
+
+    if (page === 'findme_scout') {
+      if (runButton && !runButton._wosBound) {
+        runButton._wosBound = true;
+        runButton.addEventListener('click', function () { runBatch(section, this); });
+      }
+      if (autoBox && !autoBox._wosBound) {
+        autoBox._wosBound = true;
+        autoBox.addEventListener('change', function () {
+          var box = this;
+          fetch(API_RUN.replace('/run', '/auto-run'), {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: box.checked, interval_minutes: 20 })
+          })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (!data || data.ok === false) throw new Error((data && data.error) || 'auto-run update failed');
+              fetchLatestWithNote(section, 'Auto-run ' + (data.auto_run && data.auto_run.enabled ? 'enabled (every ' + data.auto_run.interval_minutes + ' min, capped daily).' : 'disabled.'));
+            })
+            .catch(function (err) {
+              box.checked = !box.checked;
+              fetchLatestWithNote(section, 'Auto-run change failed: ' + err.message);
+            });
         });
-    });
+      }
+    } else {
+      if (runButton) runButton.remove();
+      if (autoBox) autoBox.remove();
+    }
+
     if (lastData) {
-      // Re-mount after the app wiped us: render the cached snapshot instantly.
-      if (lastData.auto_run && lastData.auto_run.enabled) autoBox.checked = true;
+      if (page === 'findme_scout' && lastData.auto_run && lastData.auto_run.enabled && autoBox) autoBox.checked = true;
       render(section, lastData, lastNote);
       return;
     }
+
+    if (fetchInFlight) return;
+    fetchInFlight = true;
     fetch(API_LATEST, { headers: headers() })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data && data.auto_run && data.auto_run.enabled) autoBox.checked = true;
+        if (page === 'findme_scout' && data && data.auto_run && data.auto_run.enabled && autoBox) autoBox.checked = true;
         render(section, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
       })
-      .catch(function () { fetchLatest(section); });
+      .catch(function () { fetchLatest(section); })
+      .finally(function () { fetchInFlight = false; });
   }
 
   function keepMounted() {
     // The app does `content.innerHTML = ...` on every page render, destroying
     // anything mounted inside - watch for that and re-mount from cache.
     var observer = new MutationObserver(function () {
-      if (!document.getElementById('wos-public-deals')) mount();
+      mountForCurrentPage();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     setInterval(function () {
-      if (!document.getElementById('wos-public-deals')) mount();
+      mountForCurrentPage();
     }, 3000);
   }
 
   function boot() {
-    mount();
+    mountForCurrentPage();
     keepMounted();
   }
 

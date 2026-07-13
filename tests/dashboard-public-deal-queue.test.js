@@ -511,9 +511,12 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js'), 'dashboard must load the public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=7'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
+  assert.ok(uiSource.includes("Today\\'s Deal Desk"));
+  assert.ok(uiSource.includes('Open Deal Finder'));
+  assert.ok(uiSource.includes('Next auction'));
   assert.ok(uiSource.includes('ARV_lock_state') && uiSource.includes('MAO_lock_state'));
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('seller_questions'));
@@ -526,7 +529,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('rejected_url_samples'), 'coverage table must read rejected URL samples');
   assert.ok(uiSource.includes('today_rows'), 'dashboard must show daily rows');
   assert.ok(/type="checkbox" id="wos-public-deals-auto"(?![^>]*checked)/.test(uiSource), 'auto-refresh must exist and default OFF');
-  assert.ok(uiSource.includes('20 * 60 * 1000'), 'auto-refresh interval must be 20 minutes');
+  assert.ok(uiSource.includes('Auto-refresh every 20 min'), 'auto-refresh interval must be 20 minutes');
   assert.ok(uiSource.includes("/job/"), 'dashboard must poll the background job endpoint');
   assert.ok(uiSource.includes('Batch running'), 'dashboard must show running progress');
   assert.ok(uiSource.includes('ocr_documents_attempted'), 'dashboard must show OCR diagnostics');
@@ -550,6 +553,14 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('sale_date_iso'), 'dashboard must consume the normalized sale-date key');
   assert.ok(uiSource.includes('Sale date passed - verify status'), 'dashboard must render passed-sale verification badge');
   assert.ok(uiSource.includes('sortTopDealsRows'), 'dashboard must use the urgency comparator');
+  assert.ok(uiSource.includes("window.APP && window.APP.page"), 'addon must read the active page');
+  assert.ok(uiSource.includes("page === 'dashboard'"), 'addon must have a dashboard branch');
+  assert.ok(uiSource.includes("page === 'findme_scout'"), 'addon must have a Deal Finder branch');
+  assert.ok(uiSource.includes('removeSection'), 'addon must remove itself on non-target pages');
+  assert.ok(uiSource.includes('dataset.wosTarget'), 'addon must stamp the mounted target on the section');
+  assert.ok(uiSource.includes('fetchInFlight'), 'addon must guard the initial snapshot fetch');
+  assert.ok(uiSource.includes('mountForCurrentPage'), 'addon must refresh from the current page state');
+  assert.ok(uiSource.includes('mount nothing') || uiSource.includes('remove #wos-public-deals') || uiSource.includes('removeSection();'), 'addon must include a mount-nothing fallback');
   const uiContext = {
     window: {},
     document: { readyState: 'loading', addEventListener: () => {} },
@@ -571,6 +582,8 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');
   assert.ok(uiSource.includes('keepMounted'), 'section must keep itself mounted');
   assert.ok(/lastData/.test(uiSource), 'section must re-render from the cached snapshot after a wipe');
+  assert.ok(uiSource.includes('fetch(API_LATEST'), 'addon must fetch only when the cache is empty');
+  assert.ok(uiSource.includes("Today\\'s Deal Desk") && uiSource.includes('Dashboard summary for what is urgent now.'), 'dashboard summary card must be present');
 
   function queueServiceRoute(suffix) {
     return '/api/dashboard/free-public-deal-board' + suffix;
