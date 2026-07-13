@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const Module = require('module');
+const vm = require('vm');
 
 const originalLoad = Module._load;
 Module._load = function patchedLoad(request, parent, isMain) {
@@ -426,6 +427,77 @@ function mockDeal(overrides) {
   assert.strictEqual(unresolvedCalls, 1);
   assert.strictEqual(unresolvedRows[0].census_matched_address, null, 'unresolved Census rows must remain separate');
 
+  // 3e) Sale-date urgency is source-backed only: known date formats sort,
+  // while any other source text remains visible but cannot become a deadline.
+  function relativeDateIso(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+  function usDate(iso) {
+    return `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`;
+  }
+  const yesterday = relativeDateIso(-1);
+  const inThreeDays = relativeDateIso(3);
+  const saleSnapshotPath = path.join(tmpDir, 'sale-date-urgency.json');
+  process.env.DEAL_BOARD_SNAPSHOTS_PATH = saleSnapshotPath;
+  const saleMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
+  const pastSaleRow = storedRow({
+    queue_key: 'stored|passed-sale',
+    headline: '500 Past Sale St, Dallas, TX 75201',
+    normalized_address: '500 Past Sale St, Dallas, TX 75201',
+    sale_date_or_event_date: yesterday,
+    sale_date_iso: null,
+    next_best_action: 'CALL_SELLER'
+  });
+  fs.writeFileSync(saleSnapshotPath, JSON.stringify({
+    version: 1,
+    store_kind: 'deal_board_snapshots_not_saved_leads',
+    updated_at: seenAt,
+    markets: { 'dallas|dallas|tx': { market: saleMarket, rows: [pastSaleRow], batches: [] } }
+  }, null, 2));
+  const saleDiskBeforeRead = fs.readFileSync(saleSnapshotPath, 'utf8');
+  const saleRead = queueService.latestDealBoardSnapshot({ market: saleMarket });
+  assert.strictEqual(saleRead.rows[0].sale_date_iso, yesterday);
+  assert.ok(saleRead.rows[0].risk_flags.includes('SALE_DATE_PASSED_VERIFY_STATUS'));
+  assert.strictEqual(saleRead.rows[0].next_best_action, 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT');
+  assert.strictEqual(fs.readFileSync(saleSnapshotPath, 'utf8'), saleDiskBeforeRead, 'read-time sale repair must not write the snapshot');
+  assert.strictEqual(queueService.parseSaleDateIso(inThreeDays), inThreeDays);
+  assert.strictEqual(queueService.parseSaleDateIso(usDate(inThreeDays)), inThreeDays);
+  assert.strictEqual(queueService.parseSaleDateIso('sale on the first Tuesday'), null);
+
+  const salePreview = async () => ({
+    free_public_deals: [
+      mockDeal({ headline: '101 ISO Sale St, Dallas, TX 75201', normalized_address: '101 ISO Sale St, Dallas, TX 75201', sale_date_or_event_date: inThreeDays }),
+      mockDeal({ headline: '102 US Sale St, Dallas, TX 75201', normalized_address: '102 US Sale St, Dallas, TX 75201', sale_date_or_event_date: usDate(inThreeDays) }),
+      mockDeal({ headline: '103 Text Sale St, Dallas, TX 75201', normalized_address: '103 Text Sale St, Dallas, TX 75201', sale_date_or_event_date: 'first Tuesday in August' })
+    ],
+    rejected_generic_count: 0
+  });
+  const saleBatch = await queueService.runDealBoardBatch(
+    { market: saleMarket, limit: 25 },
+    { preview_impl: salePreview, census_zip_resolver_impl: async () => ({ resolved: false, reason: 'test_no_network' }) }
+  );
+  const isoSale = saleBatch.rows.find((row) => row.normalized_address === '101 ISO Sale St, Dallas, TX 75201');
+  const usSale = saleBatch.rows.find((row) => row.normalized_address === '102 US Sale St, Dallas, TX 75201');
+  const textSale = saleBatch.rows.find((row) => row.normalized_address === '103 Text Sale St, Dallas, TX 75201');
+  assert.strictEqual(isoSale.sale_date_or_event_date, inThreeDays);
+  assert.strictEqual(isoSale.sale_date_iso, inThreeDays);
+  assert.strictEqual(usSale.sale_date_or_event_date, usDate(inThreeDays));
+  assert.strictEqual(usSale.sale_date_iso, inThreeDays);
+  assert.strictEqual(textSale.sale_date_or_event_date, 'first Tuesday in August');
+  assert.strictEqual(textSale.sale_date_iso, null);
+  const persistedPastSale = saleBatch.rows.find((row) => row.queue_key === 'stored|passed-sale');
+  assert.ok(persistedPastSale.risk_flags.includes('SALE_DATE_PASSED_VERIFY_STATUS'));
+  assert.strictEqual(persistedPastSale.next_best_action, 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT');
+  const stableSaleBatch = await queueService.runDealBoardBatch(
+    { market: saleMarket, limit: 25 },
+    { preview_impl: async () => ({ free_public_deals: [], rejected_generic_count: 0 }), census_zip_resolver_impl: async () => ({ resolved: false, reason: 'test_no_network' }) }
+  );
+  const stablePastSale = stableSaleBatch.rows.find((row) => row.queue_key === 'stored|passed-sale');
+  assert.strictEqual(stablePastSale.risk_flags.filter((flag) => flag === 'SALE_DATE_PASSED_VERIFY_STATUS').length, 1, 'passed-date flags must not duplicate');
+  assert.strictEqual(stableSaleBatch.rows.length, saleBatch.rows.length, 'second batch must not change sale-date row count');
+
   // 4) Server routes exist and are admin-protected; no legacy agents involved.
   const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/latest',\s*requireAdmin/.test(serverSource));
@@ -475,6 +547,25 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('batches_today'), 'Daily Deal Machine must show batches today');
   assert.ok(uiSource.includes('ocr_address_rows_today'), 'Daily Deal Machine must show OCR rows today');
   assert.ok(uiSource.includes('CALL_READY first'), 'Top Deals must order CALL_READY rows first');
+  assert.ok(uiSource.includes('sale_date_iso'), 'dashboard must consume the normalized sale-date key');
+  assert.ok(uiSource.includes('Sale date passed - verify status'), 'dashboard must render passed-sale verification badge');
+  assert.ok(uiSource.includes('sortTopDealsRows'), 'dashboard must use the urgency comparator');
+  const uiContext = {
+    window: {},
+    document: { readyState: 'loading', addEventListener: () => {} },
+    MutationObserver: function MutationObserver() {},
+    setInterval: () => {},
+    setTimeout: () => {},
+    fetch: () => Promise.resolve({ json: () => Promise.resolve({}) })
+  };
+  vm.runInNewContext(uiSource, uiContext);
+  const orderedRows = uiContext.window.__wosPublicDealsTestHooks.sortTopDealsRows([
+    { headline: 'dateless', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: '' },
+    { headline: 'passed', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: yesterday },
+    { headline: 'upcoming', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: inThreeDays },
+    { headline: 'call-ready', quality_bucket: 'INSPECT_NOW', contact_status: 'CALL_READY', sale_date_iso: '' }
+  ]);
+  assert.deepStrictEqual(orderedRows.map((row) => row.headline), ['call-ready', 'upcoming', 'dateless', 'passed']);
 
   // 7) The section must survive the app's content.innerHTML rewrites.
   assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');

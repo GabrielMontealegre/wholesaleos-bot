@@ -31,6 +31,28 @@
     return '#e5e7eb';
   }
 
+  function localDateIso() {
+    var today = new Date();
+    return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  }
+
+  function saleDateInfo(row) {
+    var iso = String(row && row.sale_date_iso || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return { iso: '', passed: false, days: null };
+    var today = localDateIso();
+    var days = Math.round((Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) -
+      Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)))) / 86400000);
+    return { iso: iso, passed: iso < today, days: days };
+  }
+
+  function saleDateBadge(row) {
+    var info = saleDateInfo(row);
+    if (!info.iso) return '';
+    if (info.passed) return ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fecaca;color:#991b1b;">Sale date passed - verify status</span>';
+    var label = row.sale_date_or_event_date || info.iso;
+    return ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e3a8a;">Sale: ' + esc(label) + ' (in ' + esc(info.days) + ' days)</span>';
+  }
+
   function rowCard(row) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -38,7 +60,7 @@
     lines.push('<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + esc(title) +
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
-      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span></div>');
+      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span>' + saleDateBadge(row) + '</div>');
     if (zipReview && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     }
@@ -200,24 +222,38 @@
       rows + '</table></details>';
   }
 
+  function sortTopDealsRows(rows) {
+    return rows.slice().sort(function (a, b) {
+      var aSale = saleDateInfo(a);
+      var bSale = saleDateInfo(b);
+      function rank(row, sale) {
+        if (sale.passed) return 4;
+        if (row.contact_status === 'CALL_READY') return 0;
+        if (sale.iso) return 1;
+        // ZIP-review rows retain their dedicated review tier and panel.
+        if (row.quality_bucket === 'NEEDS_ZIP_REVIEW') return 2;
+        return 3;
+      }
+      var aRank = rank(a, aSale);
+      var bRank = rank(b, bSale);
+      if (aRank !== bRank) return aRank - bRank;
+      if (aRank === 1 && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
+      return String(a.normalized_address || a.partial_address || a.headline || '').localeCompare(
+        String(b.normalized_address || b.partial_address || b.headline || '')
+      );
+    });
+  }
+
   function topDealsPanel(rows) {
     var topRows = rows.filter(function (r) { return isActionableRow(r) || r.normalized_address; });
     var proofRows = rows.filter(function (r) { return topRows.indexOf(r) === -1; });
-    var callReadyFirst = topRows.slice().sort(function (a, b) {
-      function rank(r) {
-        if (r.contact_status === 'CALL_READY') return 0;
-        if (r.quality_bucket === 'INSPECT_NOW') return 1;
-        if (r.quality_bucket === 'NEEDS_ZIP_REVIEW') return 2;
-        return 3;
-      }
-      return rank(a) - rank(b);
-    });
+    var callReadyFirst = sortTopDealsRows(topRows);
     var body = (callReadyFirst.length
       ? callReadyFirst.map(rowCard).join('')
       : '<div style="font-size:12px;color:#6b7280;">No actionable rows yet. Run a batch or wait for the next auto-run.</div>') +
       (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '');
     return panelBox('Top Deals <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + callReadyFirst.length + '</span>',
-      'CALL_READY first, then INSPECT_NOW, then ZIP review. Every link goes to the real public source.',
+      'CALL_READY first, then upcoming sale dates, then dateless rows; passed sale dates stay last. Every link goes to the real public source.',
       body, '#fcd34d');
   }
 
@@ -369,6 +405,8 @@
     mount();
     keepMounted();
   }
+
+  window.__wosPublicDealsTestHooks = { sortTopDealsRows: sortTopDealsRows };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

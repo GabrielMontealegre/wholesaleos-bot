@@ -68,6 +68,39 @@ function mapsSearchUrlForReview(value) {
   return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
 }
 
+function validDateIso(year, month, day) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Notice dates are evidence, not estimates. Only two unambiguous formats can
+// influence urgency; every other source string remains visible but unsorted.
+function parseSaleDateIso(value) {
+  const text = cleanText(value);
+  let match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return validDateIso(Number(match[1]), Number(match[2]), Number(match[3]));
+  match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) return validDateIso(Number(match[3]), Number(match[1]), Number(match[2]));
+  return null;
+}
+
+function currentDateIso() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
+function repairSaleDateUrgency(row, todayIso = currentDateIso()) {
+  const verbatim = cleanText(row && row.sale_date_or_event_date);
+  const iso = parseSaleDateIso(verbatim || cleanText(row && row.sale_date_iso));
+  row.sale_date_or_event_date = verbatim || null;
+  row.sale_date_iso = iso;
+  if (!iso || iso >= todayIso) return false;
+  row.risk_flags = prependUnique(row.risk_flags, ['SALE_DATE_PASSED_VERIFY_STATUS'], 6);
+  row.next_best_action = 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT';
+  return true;
+}
+
 function suspectedPrefixText(row) {
   const normalized = cleanText(row && row.normalized_address);
   const partial = cleanText(row && row.partial_address);
@@ -133,6 +166,7 @@ function repairStoredSnapshotRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((row) => {
     quarantineSuspectedPrefixRow(row);
     repairCountyFromSourceHost(row);
+    repairSaleDateUrgency(row);
     return row;
   });
 }
@@ -284,6 +318,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     census_zip_suggestion: cleanText(deal.census_zip_suggestion) || null,
     census_matched_address: cleanText(deal.census_matched_address) || null,
     census_zip_status: cleanText(deal.census_zip_status) || null,
+    sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
+    sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
     risk_flags: Array.isArray(deal.risk_flags) ? deal.risk_flags.slice(0, 6) : [],
     city: cleanText(deal.city),
     county: cleanText(deal.county),
@@ -449,7 +485,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const PRESERVE_FIELDS = [
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
-    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls'
+    'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
+    'sale_date_or_event_date', 'sale_date_iso'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -795,6 +832,8 @@ module.exports = {
   snapshotFilePath,
   jobsFilePath,
   dedupeKeyForDeal,
+  parseSaleDateIso,
+  repairSaleDateUrgency,
   quarantineSuspectedPrefixRow,
   repairCountyFromSourceHost,
   backfillCensusKeysForStoredRows,
