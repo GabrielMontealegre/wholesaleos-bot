@@ -129,9 +129,41 @@
   }
 
   function topUrgentAddresses(rows) {
-    return sortTopDealsRows(rows).filter(function (row) {
-      return row.normalized_address || row.partial_address || row.headline;
+    return rows.filter(function (row) {
+      var riskFlags = Array.isArray(row.risk_flags) ? row.risk_flags : [];
+      var excluded = row.contact_status === 'ADDRESS_VERIFICATION_REQUIRED' ||
+        riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT') !== -1 ||
+        riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS') !== -1;
+      var sale = saleDateInfo(row);
+      var eligible = row.contact_status === 'CALL_READY' ||
+        (sale.iso && !sale.passed) ||
+        row.quality_bucket === 'INSPECT_NOW' ||
+        row.quality_bucket === 'NEEDS_ZIP_REVIEW';
+      return !excluded && eligible && Boolean(row.normalized_address || row.partial_address);
+    }).sort(function (a, b) {
+      var aSale = saleDateInfo(a);
+      var bSale = saleDateInfo(b);
+      function rank(row, sale) {
+        if (row.contact_status === 'CALL_READY') return 0;
+        if (sale.iso && !sale.passed) return 1;
+        if (row.quality_bucket === 'INSPECT_NOW') return 2;
+        return 3;
+      }
+      var aRank = rank(a, aSale);
+      var bRank = rank(b, bSale);
+      if (aRank !== bRank) return aRank - bRank;
+      if (aRank === 1 && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
+      return String(a.normalized_address || a.partial_address).localeCompare(
+        String(b.normalized_address || b.partial_address)
+      );
     }).slice(0, 3);
+  }
+
+  function urgentContextLabel(row) {
+    if (row.contact_status === 'CALL_READY') return 'CALL_READY';
+    var sale = saleDateInfo(row);
+    if (sale.iso && !sale.passed) return 'Sale in ' + sale.days + ' days';
+    return row.quality_bucket || 'REVIEW';
   }
 
   function dailyMachinePanel(data, rows) {
@@ -227,6 +259,7 @@
     }).length;
     var soonest = upcomingSaleRow(rows);
     var urgent = topUrgentAddresses(rows);
+    var actionableNow = Number(c.call_ready || 0) + Number(c.inspect_now || 0) + Number(c.needs_zip_review || 0);
     var summary = [
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
@@ -239,9 +272,10 @@
       : '';
     var urgentText = urgent.length
       ? '<div style="font-size:12px;color:#374151;margin-top:6px;">Top urgent: ' + urgent.map(function (row) {
-        return '<span style="display:inline-block;margin-right:8px;"><b>' + esc(row.normalized_address || row.partial_address || row.headline || 'source row') + '</b></span>';
+        return '<span style="display:inline-block;margin-right:8px;"><b>' + esc(row.normalized_address || row.partial_address) + '</b> ' +
+          '<span style="display:inline-block;padding:1px 6px;border-radius:8px;background:#e5e7eb;font-size:10px;font-weight:700;">' + esc(urgentContextLabel(row)) + '</span></span>';
       }).join('') + '</div>'
-      : '<div style="font-size:12px;color:#6b7280;margin-top:6px;">No urgent rows yet. Run a free batch.</div>';
+      : '<div style="font-size:12px;color:#6b7280;margin-top:6px;">No clean actionable rows yet. Review Deal Finder or wait for the next batch.</div>';
     var finder = (typeof navigate === 'function')
       ? '<button type="button" onclick="navigate(\'findme_scout\', this)" style="padding:7px 12px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:12px;cursor:pointer;">Open Deal Finder</button>'
       : '<a href="#" style="color:#2563eb;text-decoration:underline;font-size:12px;">Open Deal Finder</a>';
@@ -250,6 +284,7 @@
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         (autoRun.enabled ? chip('AUTO-RUN', 'ON every ' + (autoRun.interval_minutes || 20) + ' min', '#bbf7d0') : chip('AUTO-RUN', 'OFF', '#fecaca')) +
         chip('Batches today', daily.batches_today || 0) +
+        chip('Actionable now', actionableNow, '#bbf7d0') +
         chip('Actionable today', actionableToday, '#fde68a') +
       '</div>' +
       '<div style="margin-top:4px;">' + summary + '</div>' +
@@ -521,7 +556,11 @@
     keepMounted();
   }
 
-  window.__wosPublicDealsTestHooks = { sortTopDealsRows: sortTopDealsRows };
+  window.__wosPublicDealsTestHooks = {
+    sortTopDealsRows: sortTopDealsRows,
+    topUrgentAddresses: topUrgentAddresses,
+    urgentContextLabel: urgentContextLabel
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
