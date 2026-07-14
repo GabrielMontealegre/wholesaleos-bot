@@ -116,6 +116,11 @@ function mockDeal(overrides) {
   assert.ok(previewCalls[0].source_ids.includes('tx_parker_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_rockwall_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_johnson_county_foreclosure_notices'));
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }),
+    [],
+    'non-TX markets must not run Dallas/TX lanes until verified state profiles exist'
+  );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);

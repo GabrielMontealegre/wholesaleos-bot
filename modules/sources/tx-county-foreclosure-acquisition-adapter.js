@@ -119,15 +119,36 @@ function snapshotLedgerDir() {
   return path.dirname(path.resolve(snapshotPath));
 }
 
-function documentLedgerFilePath() {
-  return path.resolve(
-    cleanText(process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH) ||
-    path.join(snapshotLedgerDir(), DOC_LEDGER_FILE_NAME)
-  );
+function slugForLedger(value) {
+  return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 }
 
-function readDocumentLedger() {
-  const file = documentLedgerFilePath();
+function marketKeyForLedger(options = {}, profile = {}) {
+  const explicit = cleanText(options.market_key || options.marketKey);
+  if (explicit) return explicit;
+  const market = options.market && typeof options.market === 'object' ? options.market : {};
+  const city = cleanText(market.city || options.city || 'unknown').toLowerCase() || 'unknown';
+  const county = cleanText(market.county || options.county || profile.county).toLowerCase();
+  const state = cleanText(market.state || options.state || profile.state).toLowerCase();
+  return [city, county, state].join('|');
+}
+
+function scopedLedgerFilePath(baseFile, marketKey) {
+  const slug = slugForLedger(marketKey);
+  if (!slug) return baseFile;
+  const parsed = path.parse(baseFile);
+  return path.join(parsed.dir, `${parsed.name}-${slug}${parsed.ext || '.json'}`);
+}
+
+function documentLedgerFilePath(options = {}, profile = {}) {
+  const explicitPath = cleanText(process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH);
+  const baseFile = path.resolve(explicitPath || path.join(snapshotLedgerDir(), DOC_LEDGER_FILE_NAME));
+  const marketKey = marketKeyForLedger(options, profile);
+  return scopedLedgerFilePath(baseFile, marketKey);
+}
+
+function readDocumentLedger(options = {}, profile = {}) {
+  const file = documentLedgerFilePath(options, profile);
   try {
     const data = JSON.parse(require('fs').readFileSync(file, 'utf8'));
     if (data && typeof data === 'object' && data.documents && typeof data.documents === 'object') return data;
@@ -152,8 +173,8 @@ function pruneDocumentLedger(store, now = new Date()) {
   return store;
 }
 
-function writeDocumentLedger(store, now = new Date()) {
-  const file = documentLedgerFilePath();
+function writeDocumentLedger(store, now = new Date(), options = {}, profile = {}) {
+  const file = documentLedgerFilePath(options, profile);
   require('fs').mkdirSync(path.dirname(file), { recursive: true });
   pruneDocumentLedger(store, now);
   store.updated_at = nowIso();
@@ -425,7 +446,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     }
   }
 
-  const documentLedger = readDocumentLedger();
+  const documentLedger = readDocumentLedger(options, profile);
   const documentDocsDiscovered = documentUrlsFound.length;
   const documentSelection = documentUrlsFound
     .map((url) => {
@@ -514,7 +535,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       }
     }
   }
-  writeDocumentLedger(documentLedger);
+  writeDocumentLedger(documentLedger, new Date(), options, profile);
 
   const context = { acquisition_run_id: runId, city: '', state: profile.state };
   const candidates = rawRows.slice(0, MAX_ROWS).map((row) => propertyCandidate.normalizePropertyCandidate(Object.assign({}, row, {
@@ -579,6 +600,8 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
 
 module.exports = {
   MAX_DOCS_PER_COUNTY,
+  documentLedgerFilePath,
+  marketKeyForLedger,
   pruneDocumentLedger,
   runTxCountyForeclosureAcquisitionAdapter
 };

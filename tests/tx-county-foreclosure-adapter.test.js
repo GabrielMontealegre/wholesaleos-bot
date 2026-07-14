@@ -291,6 +291,31 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(rotationFour.diagnostics.docs_processed, 5);
   assert.ok(rotationFour.document_urls_parsed.some((url) => url.includes('2026-08-22-foreclosure-10.pdf')));
 
+  // 2d.1) Multi-market hardening: the same official lane can run for two
+  //       different markets without sharing ledger state or skipping docs.
+  const concurrentMarketOne = adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    market_key: 'dallas|dallas|tx',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor('2026-09')
+  });
+  const concurrentMarketTwo = adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_hunt_county_foreclosure_notices',
+    market_key: 'cleveland|cuyahoga|oh',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: rotationFetchFor('2026-09')
+  });
+  const [marketOneResult, marketTwoResult] = await Promise.all([concurrentMarketOne, concurrentMarketTwo]);
+  assert.strictEqual(marketOneResult.candidate_count, 5, 'market one must read its own first five docs');
+  assert.strictEqual(marketTwoResult.candidate_count, 5, 'market two must not inherit market one ledger skips');
+  assert.strictEqual(marketOneResult.diagnostics.docs_ledger_skipped, 0);
+  assert.strictEqual(marketTwoResult.diagnostics.docs_ledger_skipped, 0);
+  const marketOneLedger = adapter.documentLedgerFilePath({ market_key: 'dallas|dallas|tx' });
+  const marketTwoLedger = adapter.documentLedgerFilePath({ market_key: 'cleveland|cuyahoga|oh' });
+  assert.notStrictEqual(marketOneLedger, marketTwoLedger, 'ledger file path must be isolated by market');
+  assert.ok(fs.existsSync(marketOneLedger), 'market one ledger written');
+  assert.ok(fs.existsSync(marketTwoLedger), 'market two ledger written');
+
   // 2e) Ledger retention keeps current + previous posting month only. The
   // rotation runs above already exercise the write path after every batch.
   const currentPostingMonth = postingMonth(0);

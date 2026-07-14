@@ -33,11 +33,13 @@ const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
 const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
-const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
+const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
-].concat(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id)));
+]);
+const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -292,6 +294,20 @@ function marketKey(market) {
   ].join('|');
 }
 
+function isDallasMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'TX' &&
+    /dallas/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
+function defaultQueueSourceIdsForMarket(market) {
+  const state = cleanText(market && market.state).toUpperCase() || 'TX';
+  if (state !== 'TX') return [];
+  const ids = [];
+  if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
+  ids.push(...TX_COUNTY_FORECLOSURE_SOURCE_IDS);
+  return Array.from(new Set(ids));
+}
+
 function rowPhone(deal) {
   const route = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
     .find((item) => item && item.route_kind === 'phone');
@@ -469,7 +485,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const preview = await previewImpl({
     market,
     limit,
-    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : DEFAULT_QUEUE_SOURCE_IDS.slice(),
+    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : defaultQueueSourceIdsForMarket(market),
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     enable_census_zip_resolution: input.enable_census_zip_resolution !== false
@@ -828,6 +844,7 @@ module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
+  defaultQueueSourceIdsForMarket,
   MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
   snapshotFilePath,
   jobsFilePath,
