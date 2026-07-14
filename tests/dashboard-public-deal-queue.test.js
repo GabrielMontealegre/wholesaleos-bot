@@ -511,7 +511,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=7'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=8'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -560,6 +560,14 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('dataset.wosTarget'), 'addon must stamp the mounted target on the section');
   assert.ok(uiSource.includes('fetchInFlight'), 'addon must guard the initial snapshot fetch');
   assert.ok(uiSource.includes('mountForCurrentPage'), 'addon must refresh from the current page state');
+  assert.ok(uiSource.includes("contact_status === 'ADDRESS_VERIFICATION_REQUIRED'"), 'Dashboard top urgent must exclude address-verification rows');
+  assert.ok(uiSource.includes("riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT')"), 'Dashboard top urgent must exclude prefix-suspected rows');
+  assert.ok(uiSource.includes("riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS')"), 'Dashboard top urgent must exclude passed-sale rows');
+  assert.ok(uiSource.includes("chip('Actionable now'"), 'Dashboard card must show current actionable inventory before today-only activity');
+  assert.ok(uiSource.includes("return 'CALL_READY'"), 'Dashboard urgent rows must label call-ready context');
+  assert.ok(uiSource.includes("return 'Sale in '"), 'Dashboard urgent rows must label sale urgency context');
+  assert.ok(uiSource.includes("return row.quality_bucket || 'REVIEW'"), 'Dashboard urgent rows must label their bucket context');
+  assert.ok(uiSource.includes('}).slice(0, 3)'), 'Dashboard top urgent must take up to three clean rows without padding');
   assert.ok(uiSource.includes('mount nothing') || uiSource.includes('remove #wos-public-deals') || uiSource.includes('removeSection();'), 'addon must include a mount-nothing fallback');
   const uiContext = {
     window: {},
@@ -577,6 +585,41 @@ function mockDeal(overrides) {
     { headline: 'call-ready', quality_bucket: 'INSPECT_NOW', contact_status: 'CALL_READY', sale_date_iso: '' }
   ]);
   assert.deepStrictEqual(orderedRows.map((row) => row.headline), ['call-ready', 'upcoming', 'dateless', 'passed']);
+  const cleanUrgentRows = uiContext.window.__wosPublicDealsTestHooks.topUrgentAddresses([
+    {
+      partial_address: '02971 424 Cookston Ln, Royse City, TX 75189',
+      quality_bucket: 'NEEDS_ZIP_REVIEW',
+      contact_status: 'ADDRESS_VERIFICATION_REQUIRED',
+      risk_flags: ['ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT']
+    },
+    {
+      normalized_address: '100 Call Ready St, Dallas, TX 75201',
+      quality_bucket: 'INSPECT_NOW',
+      contact_status: 'CALL_READY',
+      risk_flags: []
+    },
+    {
+      normalized_address: '200 Auction St, Dallas, TX 75202',
+      quality_bucket: 'INSPECT_NOW',
+      contact_status: '',
+      sale_date_iso: inThreeDays,
+      risk_flags: []
+    },
+    {
+      partial_address: '300 Review St, Dallas, TX',
+      quality_bucket: 'NEEDS_ZIP_REVIEW',
+      contact_status: '',
+      risk_flags: []
+    }
+  ]);
+  assert.deepStrictEqual(
+    cleanUrgentRows.map((row) => row.normalized_address || row.partial_address),
+    ['100 Call Ready St, Dallas, TX 75201', '200 Auction St, Dallas, TX 75202', '300 Review St, Dallas, TX']
+  );
+  assert.ok(!cleanUrgentRows.some((row) => /02971 424 Cookston/.test(row.partial_address || '')), 'quarantined prefix row must never appear in Dashboard top urgent');
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[0]), 'CALL_READY');
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[1]), 'Sale in 3 days');
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[2]), 'NEEDS_ZIP_REVIEW');
 
   // 7) The section must survive the app's content.innerHTML rewrites.
   assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');
