@@ -482,20 +482,53 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const previewImpl = typeof options.preview_impl === 'function'
     ? options.preview_impl
     : freePublicDealBoardPreviewService.runFreePublicDealBoardServerPreview;
+  const explicitSourceIds = Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : null;
+  const defaultSourceIds = explicitSourceIds ? explicitSourceIds : defaultQueueSourceIdsForMarket(market);
+  const runAt = nowIso();
+  const store = readStore();
+  const key = marketKey(market);
+  const bucket = store.markets[key] || { market, rows: [], batches: [] };
+  if (!explicitSourceIds && defaultSourceIds.length === 0) {
+    const batch = {
+      run_at: runAt,
+      limit,
+      batch_rows: 0,
+      new_rows: 0,
+      refreshed_rows: 0,
+      rejected_generic_count: 0,
+      browser_runtime_available: false,
+      official_lookup_blocked_count: 0,
+      board_blocker_summary: 'no_verified_source_lanes_for_this_market',
+      source_coverage: [],
+      suppressed_nav_chrome_samples: [],
+      ocr: null
+    };
+    bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
+    bucket.market = market;
+    store.markets[key] = bucket;
+    writeStore(store);
+    return {
+      ok: true,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true,
+      snapshot_kind: 'deal_board_snapshot_not_saved_leads',
+      market,
+      batch,
+      counts: queueCounts([]),
+      rows: bucket.rows.slice(0, 100)
+    };
+  }
   const preview = await previewImpl({
     market,
     limit,
-    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : defaultQueueSourceIdsForMarket(market),
+    source_ids: defaultSourceIds,
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     enable_census_zip_resolution: input.enable_census_zip_resolution !== false
   }, { env: options.env || process.env });
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
-  const runAt = nowIso();
-  const store = readStore();
-  const key = marketKey(market);
-  const bucket = store.markets[key] || { market, rows: [], batches: [] };
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
