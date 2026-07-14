@@ -1,6 +1,7 @@
 'use strict';
 
 const dallasPriority = require('./dallas-source-priority-router');
+const miDetroitLandBankSourceProfiles = require('./mi-detroit-land-bank-source-profiles');
 const sourceAdapterRegistry = require('./source-adapter-registry');
 
 function cleanText(value) {
@@ -106,6 +107,21 @@ const DFW_COUNTY_SOURCES = txCountyForeclosureSourceProfiles.PROFILES.map((profi
   should_ingest: false
 }));
 
+const DETROIT_LAND_BANK_SOURCES = miDetroitLandBankSourceProfiles.PROFILES.map((profile, index) => ({
+  source_id: profile.source_id,
+  source_name: profile.source_name,
+  source_family: profile.source_family,
+  county: profile.county,
+  priority_score: 95 - index,
+  official_source: true,
+  source_type: 'public land bank property inventory',
+  source_url: profile.source_url,
+  readiness: 'Preview adapter ready',
+  use_policy: 'official_source_first',
+  preview_only: true,
+  should_ingest: false
+}));
+
 function normalizeCatalogSource(source) {
   const item = clone(source || {});
   item.source_family = cleanText(item.source_family || item.category_key || item.category || 'unknown');
@@ -122,13 +138,16 @@ function normalizeCatalogSource(source) {
 function buildSourceCatalog(input = {}) {
   const state = cleanText(input.state || 'TX').toUpperCase();
   const county = cleanText(input.county || input.market_county || 'Dallas');
+  const city = cleanText(input.city || '');
   const base = /dallas/i.test(county) && state === 'TX'
     ? dallasPriority.buildDallasSourcePriorityPlan({}).sources
     : [];
   const dfwMarket = state === 'TX' && /dallas|tarrant|collin|denton|fort worth/i.test(`${county} ${cleanText(input.city || '')}`);
+  const detroitMarket = state === 'MI' && /detroit|wayne/i.test(`${city} ${county}`);
   return base
     .concat(/dallas/i.test(county) && state === 'TX' ? SECONDARY_DALLAS_SOURCES : [])
     .concat(dfwMarket ? DFW_COUNTY_SOURCES : [])
+    .concat(detroitMarket ? DETROIT_LAND_BANK_SOURCES : [])
     .map(normalizeCatalogSource)
     .sort((a, b) => b.priority_score - a.priority_score || a.source_name.localeCompare(b.source_name));
 }
@@ -142,5 +161,6 @@ module.exports = {
   buildSourceCatalog,
   sourceById,
   SECONDARY_DALLAS_SOURCES,
-  DFW_COUNTY_SOURCES
+  DFW_COUNTY_SOURCES,
+  DETROIT_LAND_BANK_SOURCES
 };

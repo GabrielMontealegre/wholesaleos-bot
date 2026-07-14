@@ -602,6 +602,10 @@ module.exports = {
   MAX_DOCS_PER_COUNTY,
   documentLedgerFilePath,
   marketKeyForLedger,
+  readDocumentLedger,
+  writeDocumentLedger,
+  documentAlreadyRead,
+  recordDocumentLedgerAttempt,
   pruneDocumentLedger,
   runTxCountyForeclosureAcquisitionAdapter
 };
