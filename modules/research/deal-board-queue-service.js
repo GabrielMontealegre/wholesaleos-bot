@@ -33,11 +33,13 @@ const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
 const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
-const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze([
+const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
-].concat(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id)));
+]);
+const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -292,6 +294,20 @@ function marketKey(market) {
   ].join('|');
 }
 
+function isDallasMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'TX' &&
+    /dallas/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
+function defaultQueueSourceIdsForMarket(market) {
+  const state = cleanText(market && market.state).toUpperCase() || 'TX';
+  if (state !== 'TX') return [];
+  const ids = [];
+  if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
+  ids.push(...TX_COUNTY_FORECLOSURE_SOURCE_IDS);
+  return Array.from(new Set(ids));
+}
+
 function rowPhone(deal) {
   const route = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
     .find((item) => item && item.route_kind === 'phone');
@@ -466,20 +482,53 @@ async function runDealBoardBatch(input = {}, options = {}) {
   const previewImpl = typeof options.preview_impl === 'function'
     ? options.preview_impl
     : freePublicDealBoardPreviewService.runFreePublicDealBoardServerPreview;
+  const explicitSourceIds = Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : null;
+  const defaultSourceIds = explicitSourceIds ? explicitSourceIds : defaultQueueSourceIdsForMarket(market);
+  const runAt = nowIso();
+  const store = readStore();
+  const key = marketKey(market);
+  const bucket = store.markets[key] || { market, rows: [], batches: [] };
+  if (!explicitSourceIds && defaultSourceIds.length === 0) {
+    const batch = {
+      run_at: runAt,
+      limit,
+      batch_rows: 0,
+      new_rows: 0,
+      refreshed_rows: 0,
+      rejected_generic_count: 0,
+      browser_runtime_available: false,
+      official_lookup_blocked_count: 0,
+      board_blocker_summary: 'no_verified_source_lanes_for_this_market',
+      source_coverage: [],
+      suppressed_nav_chrome_samples: [],
+      ocr: null
+    };
+    bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
+    bucket.market = market;
+    store.markets[key] = bucket;
+    writeStore(store);
+    return {
+      ok: true,
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true,
+      snapshot_kind: 'deal_board_snapshot_not_saved_leads',
+      market,
+      batch,
+      counts: queueCounts([]),
+      rows: bucket.rows.slice(0, 100)
+    };
+  }
   const preview = await previewImpl({
     market,
     limit,
-    source_ids: Array.isArray(input.source_ids) && input.source_ids.length ? input.source_ids : DEFAULT_QUEUE_SOURCE_IDS.slice(),
+    source_ids: defaultSourceIds,
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     enable_census_zip_resolution: input.enable_census_zip_resolution !== false
   }, { env: options.env || process.env });
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
-  const runAt = nowIso();
-  const store = readStore();
-  const key = marketKey(market);
-  const bucket = store.markets[key] || { market, rows: [], batches: [] };
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
@@ -828,6 +877,7 @@ module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
+  defaultQueueSourceIdsForMarket,
   MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
   snapshotFilePath,
   jobsFilePath,

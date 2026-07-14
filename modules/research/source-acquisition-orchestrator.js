@@ -65,6 +65,14 @@ function normalizeSourceFamily(value) {
 
 const MAX_SELECTED_SOURCES = 20;
 
+function marketKey(market) {
+  return [
+    cleanText(market && market.city).toLowerCase() || 'unknown',
+    cleanText(market && market.county).toLowerCase(),
+    cleanText(market && market.state).toLowerCase()
+  ].join('|');
+}
+
 function sourceMatchesRequestedFamily(source, requestedFamilies) {
   if (!Array.isArray(requestedFamilies) || !requestedFamilies.length) return true;
   const haystack = [
@@ -179,6 +187,9 @@ async function runAcquisitionCore(job, options = {}) {
         source_url: options.source_url || source.source_url,
         source_document_url: options.source_document_url || source.source_document_url || '',
         acquisition_run_id: job.discovery_batch_id || job.job_id,
+        market: job.market,
+        market_key: marketKey(job.market || job),
+        county: job.county,
         city: job.city,
         state: job.state,
         zip: job.zip,

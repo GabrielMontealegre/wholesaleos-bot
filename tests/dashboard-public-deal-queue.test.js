@@ -116,6 +116,11 @@ function mockDeal(overrides) {
   assert.ok(previewCalls[0].source_ids.includes('tx_parker_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_rockwall_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_johnson_county_foreclosure_notices'));
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }),
+    [],
+    'non-TX markets must not run Dallas/TX lanes until verified state profiles exist'
+  );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
@@ -146,9 +151,46 @@ function mockDeal(overrides) {
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, [], 'no saved-lead mutation');
   assert.ok(run1.rows.every((row) => row.not_a_saved_lead === true && row.preview_only === true));
 
+  // Non-TX markets with no verified lanes should short-circuit before any preview work.
+  const clevelandPreviewCalls = [];
+  const clevelandRun = await queueService.runDealBoardBatch(
+    { market: { city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }, limit: 25 },
+    {
+      preview_impl: async (input) => {
+        clevelandPreviewCalls.push(input);
+        return { free_public_deals: [], rejected_generic_count: 0, diagnostics: {} };
+      }
+    }
+  );
+  assert.strictEqual(clevelandPreviewCalls.length, 0, 'no-preview market must not call the preview service');
+  assert.strictEqual(clevelandRun.batch.batch_rows, 0);
+  assert.strictEqual(clevelandRun.batch.new_rows, 0);
+  assert.strictEqual(clevelandRun.batch.refreshed_rows, 0);
+  assert.strictEqual(clevelandRun.batch.board_blocker_summary, 'no_verified_source_lanes_for_this_market');
+  assert.deepStrictEqual(clevelandRun.batch.source_coverage, []);
+  assert.strictEqual(clevelandRun.batch.ocr, null);
+  assert.strictEqual(clevelandRun.counts.total_rows, 0);
+  assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file still persisted for empty market');
+  const storedAfterCleveland = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
+  assert.ok(storedAfterCleveland.markets['cleveland|cuyahoga|oh'], 'empty market bucket must still be recorded');
+  assert.strictEqual(storedAfterCleveland.markets['cleveland|cuyahoga|oh'].batches[0].board_blocker_summary, 'no_verified_source_lanes_for_this_market');
+
   // limit clamps up to the minimum too
   await queueService.runDealBoardBatch({ limit: 1 }, { preview_impl: previewImpl });
   assert.strictEqual(previewCalls[1].limit, 5, 'limit must clamp to min 5');
+
+  const overrideCalls = [];
+  await queueService.runDealBoardBatch(
+    { market: { city: 'Cleveland', county: 'Cuyahoga', state: 'OH' }, limit: 25, source_ids: ['tx_dallas_county_clerk_foreclosure_notices'] },
+    {
+      preview_impl: async (input) => {
+        overrideCalls.push(input);
+        return { free_public_deals: [], rejected_generic_count: 0, diagnostics: {} };
+      }
+    }
+  );
+  assert.strictEqual(overrideCalls.length, 1, 'explicit source_ids must still reach preview');
+  assert.deepStrictEqual(overrideCalls[0].source_ids, ['tx_dallas_county_clerk_foreclosure_notices']);
 
   // 2) Dedupe: re-running with the same deals adds zero new rows and bumps times_seen.
   const run2 = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 }, { preview_impl: previewImpl });
