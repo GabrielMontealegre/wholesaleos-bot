@@ -1,0 +1,48 @@
+{
+  "artifact_kind": "listing_radar_local_evidence_probe",
+  "checked_at": "2026-07-14T09:04:03.951Z",
+  "market": {
+    "city": "Dallas",
+    "county": "Dallas",
+    "state": "TX"
+  },
+  "probe_executed": true,
+  "decision": "gate_failed_keep_listing_radar_mothballed",
+  "provider": "serper",
+  "provider_status": "provider_bad_response",
+  "provider_readiness": "ready",
+  "serper_query_mode": "free",
+  "query_groups_planned": [
+    "listing_radar_zillow_fixer",
+    "listing_radar_zillow_price_cut",
+    "listing_radar_zillow_foreclosure",
+    "listing_radar_redfin_fixer",
+    "listing_radar_redfin_price_cut",
+    "listing_radar_realtor_foreclosure"
+  ],
+  "query_groups_used": [
+    "listing_radar_zillow_fixer",
+    "listing_radar_zillow_price_cut",
+    "listing_radar_zillow_foreclosure",
+    "listing_radar_redfin_fixer",
+    "listing_radar_redfin_price_cut",
+    "listing_radar_realtor_foreclosure"
+  ],
+  "query_group_count": 6,
+  "source_results_reviewed": 0,
+  "listing_radar_accepted_count": 0,
+  "listing_radar_rejected_count": 0,
+  "listing_radar_blocked_count": 0,
+  "accepted_urls": [],
+  "rejected_samples": [],
+  "page_fetches": [],
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "notes": [
+    "The existing adapter was invoked exactly once with its six bounded query groups and real local Serper credentials.",
+    "Serper readiness was ready, but the provider returned provider_bad_response and no result cards were reviewed.",
+    "The acceptance gate requires at least three property-specific URLs; zero were accepted, so the Radar remains mothballed.",
+    "No Railway environment, production endpoint, preview batch, login, CAPTCHA, paywall, or bypass was used."
+  ]
+}
