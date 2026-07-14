@@ -33,12 +33,14 @@ const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
 const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
+const miDetroitLandBankSourceProfiles = require('../sources/mi-detroit-land-bank-source-profiles');
 const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
 ]);
 const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
@@ -299,8 +301,14 @@ function isDallasMarket(market) {
     /dallas/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
 }
 
+function isDetroitMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'MI' &&
+    /detroit|wayne/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
 function defaultQueueSourceIdsForMarket(market) {
   const state = cleanText(market && market.state).toUpperCase() || 'TX';
+  if (isDetroitMarket(market)) return MI_DETROIT_SOURCE_IDS.slice();
   if (state !== 'TX') return [];
   const ids = [];
   if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
@@ -336,6 +344,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     census_zip_status: cleanText(deal.census_zip_status) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
+    listing_date_if_visible: cleanText(deal.listing_date_if_visible) || null,
+    offer_deadline_if_visible: cleanText(deal.offer_deadline_if_visible) || null,
+    auction_closing_at_if_visible: cleanText(deal.auction_closing_at_if_visible) || null,
     risk_flags: Array.isArray(deal.risk_flags) ? deal.risk_flags.slice(0, 6) : [],
     city: cleanText(deal.city),
     county: cleanText(deal.county),
@@ -378,6 +389,11 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     arv_lock_reason: cleanText(deal.arv_lock_reason || (deal.call_prep && deal.call_prep.ARV_lock_reason)),
     mao_lock_reason: cleanText(deal.mao_lock_reason || (deal.call_prep && deal.call_prep.MAO_lock_reason)),
     appraisal_clue: cleanText(((deal.appraisal_clues || [])[0] || {}).value),
+    listed_price: cleanText(deal.listed_price),
+    listed_price_evidence_text: cleanText(deal.listed_price_evidence_text),
+    program: cleanText(deal.program),
+    property_kind_if_visible: cleanText(deal.property_kind_if_visible),
+    vacant_lot_if_visible: deal.vacant_lot_if_visible === true ? true : deal.vacant_lot_if_visible === false ? false : null,
     ARV_lock_state: cleanText(deal.call_prep && deal.call_prep.ARV_lock_state || deal.ARV_lock_state),
     MAO_lock_state: cleanText(deal.MAO_lock_state || (deal.call_prep && deal.call_prep.MAO_lock_state)),
     call_readiness: cleanText(deal.call_readiness),
@@ -535,7 +551,9 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
-    'sale_date_or_event_date', 'sale_date_iso'
+    'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
+    'auction_closing_at_if_visible', 'listed_price', 'listed_price_evidence_text', 'program',
+    'property_kind_if_visible', 'vacant_lot_if_visible'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -877,6 +895,7 @@ module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
+  MI_DETROIT_SOURCE_IDS,
   defaultQueueSourceIdsForMarket,
   MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
   snapshotFilePath,

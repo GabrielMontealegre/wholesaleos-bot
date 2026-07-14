@@ -121,6 +121,11 @@ function mockDeal(overrides) {
     [],
     'non-TX markets must not run Dallas/TX lanes until verified state profiles exist'
   );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Detroit', county: 'Wayne', state: 'MI' }),
+    ['mi_wayne_detroit_land_bank_listings'],
+    'Detroit must run only its verified land-bank lane'
+  );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
@@ -174,6 +179,53 @@ function mockDeal(overrides) {
   const storedAfterCleveland = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
   assert.ok(storedAfterCleveland.markets['cleveland|cuyahoga|oh'], 'empty market bucket must still be recorded');
   assert.strictEqual(storedAfterCleveland.markets['cleveland|cuyahoga|oh'].batches[0].board_blocker_summary, 'no_verified_source_lanes_for_this_market');
+
+  // Detroit/Wayne has one verified lane and visible source price remains
+  // explicitly separate from ARV/MAO through the snapshot projection.
+  const detroitPreviewCalls = [];
+  const detroitRun = await queueService.runDealBoardBatch(
+    { market: { city: 'Detroit', county: 'Wayne', state: 'MI' }, limit: 25 },
+    {
+      preview_impl: async (input) => {
+        detroitPreviewCalls.push(input);
+        return {
+          free_public_deals: [mockDeal({
+            headline: '13905 Sussex, Detroit, MI 48227',
+            normalized_address: '13905 Sussex, Detroit, MI 48227',
+            city: 'Detroit', county: 'Wayne', state: 'MI',
+            source_family: 'land_bank_public_sale',
+            source_url: 'https://buildingdetroit.org/properties/',
+            source_document_url: 'https://buildingdetroit.org/properties/13905-sussex',
+            sale_date_or_event_date: '2026-07-16 00:15:05',
+            listing_date_if_visible: '2026-07-13',
+            offer_deadline_if_visible: '2026-07-15',
+            auction_closing_at_if_visible: '2026-07-16 00:15:05',
+            listed_price: '$1,000.00',
+            listed_price_evidence_text: 'Displayed listing price: $1,000.00',
+            program: 'Own It Now',
+            property_kind_if_visible: 'structure',
+            vacant_lot_if_visible: false,
+            free_contact_status: '', free_contact_routes: [], owner_record: null,
+            call_readiness: '', next_best_action: 'VERIFY_PROPERTY_SOURCE'
+          })],
+          rejected_generic_count: 0,
+          diagnostics: { source_adapter: { source_adapter_results: [] } }
+        };
+      }
+    }
+  );
+  assert.deepStrictEqual(detroitPreviewCalls[0].source_ids, ['mi_wayne_detroit_land_bank_listings']);
+  assert.strictEqual(detroitRun.rows[0].listed_price, '$1,000.00');
+  assert.strictEqual(detroitRun.rows[0].listed_price_evidence_text, 'Displayed listing price: $1,000.00');
+  assert.strictEqual(detroitRun.rows[0].program, 'Own It Now');
+  assert.strictEqual(detroitRun.rows[0].sale_date_or_event_date, '2026-07-16 00:15:05');
+  assert.strictEqual(detroitRun.rows[0].listing_date_if_visible, '2026-07-13');
+  assert.strictEqual(detroitRun.rows[0].offer_deadline_if_visible, '2026-07-15');
+  assert.strictEqual(detroitRun.rows[0].auction_closing_at_if_visible, '2026-07-16 00:15:05');
+  assert.strictEqual(detroitRun.rows[0].property_kind_if_visible, 'structure');
+  assert.strictEqual(detroitRun.rows[0].vacant_lot_if_visible, false);
+  assert.strictEqual(detroitRun.rows[0].ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
+  assert.strictEqual(detroitRun.rows[0].MAO_lock_state, 'MAO_LOCKED_NO_ARV');
 
   // limit clamps up to the minimum too
   await queueService.runDealBoardBatch({ limit: 1 }, { preview_impl: previewImpl });
@@ -553,7 +605,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=8'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=9'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -561,6 +613,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Next auction'));
   assert.ok(uiSource.includes('ARV_lock_state') && uiSource.includes('MAO_lock_state'));
   assert.ok(uiSource.includes('next_best_action'));
+  assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
   assert.ok(uiSource.includes('seller_questions'));
   assert.ok(uiSource.includes(queueServiceRoute('/latest')) && uiSource.includes(queueServiceRoute('/run')));
   assert.ok(uiSource.includes('not saved leads'));

@@ -145,6 +145,7 @@ function normalizePropertyCandidate(input, context) {
     // (zip-less) identities and county labels survive normalization.
     property_address: cleanText(input.property_address || input.address),
     raw_address_text: cleanText(input.raw_address_text || input.property_address || input.address),
+    source_structured_address_verified: input.source_structured_address_verified === true,
     county: cleanText(input.county),
     city: cleanText(input.city),
     state: cleanText(input.state),
@@ -157,6 +158,9 @@ function normalizePropertyCandidate(input, context) {
     status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status),
     event_date: cleanText(input.event_date || input.sale_date || input.auction_date),
     sale_date: cleanText(input.sale_date),
+    listing_date_if_visible: cleanText(input.listing_date_if_visible),
+    offer_deadline_if_visible: cleanText(input.offer_deadline_if_visible),
+    auction_closing_at_if_visible: cleanText(input.auction_closing_at_if_visible),
     amount_or_judgment: cleanText(input.amount_or_judgment || input.judgment_amount || input.tax_amount),
     parcel_or_account: cleanText(input.parcel_or_account || input.parcel_id || input.apn || input.account_number),
     contact_route: cleanText(input.contact_route || input.public_contact_route) || 'Manual Lookup Needed',
@@ -171,13 +175,19 @@ function normalizePropertyCandidate(input, context) {
     status_verified_visible: input.status_verified_visible === true,
     risk_flags: textList(input.risk_flags),
     asking_price: cleanText(input.asking_price || input.list_price || input.price),
+    listed_price: cleanText(input.listed_price),
+    listed_price_evidence_text: cleanText(input.listed_price_evidence_text),
+    program: cleanText(input.program),
+    property_kind_if_visible: cleanText(input.property_kind_if_visible),
+    vacant_lot_if_visible: input.vacant_lot_if_visible === true ? true : input.vacant_lot_if_visible === false ? false : null,
     beds: cleanText(input.beds || input.bedrooms),
     baths: cleanText(input.baths || input.bathrooms),
     sqft: cleanText(input.sqft || input.square_feet),
     year_built: cleanText(input.year_built || input.yearBuilt),
     retrieved_at: cleanText(input.retrieved_at || input.source_checked_at) || nowIso(),
     preview_only: true,
-    should_ingest: false
+    should_ingest: false,
+    not_a_saved_lead: true
   };
   const scores = acquisitionScore.scoreCandidate(Object.assign({}, input, base));
   const nextBestWorker = acquisitionScore.routeNextBestWorker(Object.assign({}, input, base), scores);
@@ -266,6 +276,16 @@ function candidateToFindMeCard(candidate, context) {
     contact_verified: candidate.contact_verified === true,
     risk_flags: candidate.risk_flags,
     asking_price: candidate.asking_price,
+    listed_price: candidate.listed_price,
+    listed_price_evidence_text: candidate.listed_price_evidence_text,
+    program: candidate.program,
+    property_kind_if_visible: candidate.property_kind_if_visible,
+    vacant_lot_if_visible: candidate.vacant_lot_if_visible,
+    sale_date_or_event_date: candidate.event_date,
+    listing_date_if_visible: candidate.listing_date_if_visible,
+    offer_deadline_if_visible: candidate.offer_deadline_if_visible,
+    auction_closing_at_if_visible: candidate.auction_closing_at_if_visible,
+    source_structured_address_verified: candidate.source_structured_address_verified === true,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
@@ -292,6 +312,7 @@ function candidateToFindMeCard(candidate, context) {
     lead_evidence: candidate.lead_evidence,
     preview_only: true,
     should_ingest: false,
+    not_a_saved_lead: true,
     property_candidate: candidate
   };
 }

@@ -94,6 +94,9 @@ questions. Proof-only rows collapsed underneath.
 | Johnson County | 403s Railway's IP | works from home IP (local export script) |
 | Kaufman County | 10–45MB scan compilations | size-skipped honestly |
 | Parker County | only admin PDFs posted | wait for notices |
+| Cuyahoga County, OH | county_network_unreachable_from_automated_vantages_recheck_monthly | recheck the verified county sources monthly; never substitute another market's lanes |
+| Wayne County, MI government | waynecountymi.gov denies automated access | use only separately verified public Wayne/Detroit sources |
+| Wayne County Treasurer tax auction | seasonal future lane; lists generally post September-October | keep disabled until the official seasonal inventory is visibly posted |
 | DCAD owner lookup | blocks datacenter IPs | `node scripts/export-free-public-deal-board.js` locally |
 | Zillow/Redfin sold comps | 403/429 bot traffic + TX non-disclosure | MLS or paid data |
 | Zillow/Redfin/Realtor/Auction listing radar | current Serper results are mostly generic category/filter pages, not deal rows | adapter kept for manual diagnostics, but removed from the default daily queue until it reliably returns property-specific URLs |

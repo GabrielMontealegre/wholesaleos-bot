@@ -76,6 +76,9 @@
       link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
     if (row.best_contact) lines.push('<div style="font-size:12px;">Contact route: <b>' + esc(row.best_contact) + '</b></div>');
+    if (row.listed_price) lines.push('<div style="font-size:12px;">Source listed price: <b>' + esc(row.listed_price) + '</b>' +
+      (row.program ? ' <span style="color:#6b7280;">(' + esc(row.program) + ')</span>' : '') +
+      ' <span style="color:#991b1b;">not ARV or MAO</span></div>');
     lines.push('<div style="font-size:11px;color:#374151;margin-top:3px;">Comps: ' + esc(row.screenshot_comp_status || row.comp_status || 'not run') +
       (row.verified_sold_comp_count ? ' (' + esc(row.verified_sold_comp_count) + ' verified)' : '') +
       ' | ARV: ' + esc(row.ARV_lock_state || 'unknown') + ' | MAO: ' + esc(row.MAO_lock_state || 'unknown') +

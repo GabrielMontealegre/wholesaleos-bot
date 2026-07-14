@@ -304,6 +304,15 @@ function addressResolutionFromRecord(record) {
     record.display_address
   ));
   const sanitizedExplicit = sanitizeAddressCandidate(explicit);
+  if (record && record.source_structured_address_verified === true &&
+      /^\d{1,7}\s+[^,]{2,100},\s*[A-Za-z][A-Za-z .'-]{1,40},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?$/i.test(sanitizedExplicit.address)) {
+    return {
+      address: sanitizedExplicit.address,
+      source_structured_address_verified: true,
+      bad_address_rejected: false,
+      bad_address_rejected_reason: ''
+    };
+  }
   if (propertyIdentity.isCompleteAddress(sanitizedExplicit.address)) {
     return { address: propertyIdentity.canonicalAddress(sanitizedExplicit.address), bad_address_rejected: false, bad_address_rejected_reason: '' };
   }
@@ -859,6 +868,14 @@ function dealFromRecord(record, context) {
   const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
   const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
+  if (addressResolution.source_structured_address_verified === true) {
+    parts.normalized_address = addressResolution.address;
+    parts.raw_address_text = addressResolution.address;
+    parts.city = cleanText(record && record.city) || parts.city;
+    parts.county = cleanText(record && record.county) || parts.county;
+    parts.state = cleanText(record && record.state) || parts.state;
+    parts.zip = cleanText(record && record.zip) || parts.zip;
+  }
   const ocrReviewAddress = ocrReviewAddressFromRecord(record, parts.normalized_address);
   const ocrReviewZip = ocrReviewAddress ? ocrReviewZipFromText(ocrReviewAddress) : '';
   const partialAddress = ocrReviewAddress || partialAddressFromRecord(record, parts.normalized_address);
@@ -899,6 +916,9 @@ function dealFromRecord(record, context) {
     motivation_evidence_text: motivation.motivation_evidence_text,
     status_evidence_text: statusEvidenceFromRecord(record),
     sale_date_or_event_date: eventDateFromRecord(record),
+    listing_date_if_visible: cleanText(record && record.listing_date_if_visible),
+    offer_deadline_if_visible: cleanText(record && record.offer_deadline_if_visible),
+    auction_closing_at_if_visible: cleanText(record && record.auction_closing_at_if_visible),
     owner_name_if_visible: cleanText(record && (record.owner_name_if_visible || record.owner_name_candidate || record.owner_name)),
     contact_route_if_visible: cleanText(record && (record.contact_route_if_visible || record.contact_route || record.reply_url || record.phone || record.email)),
     confidence_score: 0,
@@ -923,6 +943,12 @@ function dealFromRecord(record, context) {
     address_provenance: cleanText(record && record.address_provenance),
     listing_radar_status: cleanText(record && record.listing_radar_status),
     asking_price: cleanText(record && record.asking_price),
+    listed_price: cleanText(record && record.listed_price),
+    listed_price_evidence_text: cleanText(record && record.listed_price_evidence_text),
+    program: cleanText(record && record.program),
+    property_kind_if_visible: cleanText(record && record.property_kind_if_visible),
+    vacant_lot_if_visible: record && record.vacant_lot_if_visible === true ? true : record && record.vacant_lot_if_visible === false ? false : null,
+    source_structured_address_verified: record && record.source_structured_address_verified === true,
     beds: record && record.beds != null ? record.beds : null,
     baths: record && record.baths != null ? record.baths : null,
     sqft: record && record.sqft != null ? record.sqft : null,
@@ -972,8 +998,10 @@ function candidateRecord(candidate, source) {
   return {
     headline: cleanText(candidate.normalized_address || candidate.property_address || candidate.source_row_reference || source.source_name || 'Source adapter candidate'),
     normalized_address: cleanText(candidate.normalized_address || candidate.property_address),
+    city: cleanText(candidate.city),
     county: cleanText(candidate.county || source.county),
     state: cleanText(candidate.state || source.state),
+    zip: cleanText(candidate.zip),
     raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
     source_family: cleanText(candidate.source_family || source.source_family),
     source_name: cleanText(candidate.source_name || source.source_name),
@@ -983,12 +1011,21 @@ function candidateRecord(candidate, source) {
     motivation_evidence_text: cleanText(candidate.motivation_evidence_text || candidate.source_proof_text || candidate.source_excerpt || candidate.motivation_phrase),
     status_evidence_text: cleanText(candidate.status_evidence_text || candidate.current_status),
     sale_date_or_event_date: cleanText(candidate.event_date || candidate.sale_date || candidate.auction_date),
+    listing_date_if_visible: cleanText(candidate.listing_date_if_visible),
+    offer_deadline_if_visible: cleanText(candidate.offer_deadline_if_visible),
+    auction_closing_at_if_visible: cleanText(candidate.auction_closing_at_if_visible),
     owner_name_if_visible: cleanText(candidate.owner_name_candidate || candidate.owner_name),
     contact_route_if_visible: cleanText(candidate.contact_route || candidate.public_contact_route || candidate.contact_phone || candidate.contact_email),
     source_row_reference: cleanText(candidate.source_row_reference || candidate.parcel_or_account),
     address_provenance: cleanText(candidate.address_provenance),
     listing_radar_status: cleanText(candidate.listing_radar_status),
     asking_price: cleanText(candidate.asking_price),
+    listed_price: cleanText(candidate.listed_price),
+    listed_price_evidence_text: cleanText(candidate.listed_price_evidence_text),
+    program: cleanText(candidate.program),
+    property_kind_if_visible: cleanText(candidate.property_kind_if_visible),
+    vacant_lot_if_visible: candidate.vacant_lot_if_visible === true ? true : candidate.vacant_lot_if_visible === false ? false : null,
+    source_structured_address_verified: candidate.source_structured_address_verified === true,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,

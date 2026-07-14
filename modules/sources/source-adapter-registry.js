@@ -4,6 +4,8 @@ const dallasForeclosureAcquisitionAdapter = require('./dallas-foreclosure-acquis
 const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acquisition-adapter');
 const dallasCraigslistOwnerAcquisitionAdapter = require('./dallas-craigslist-owner-acquisition-adapter');
 const listingRadarAcquisitionAdapter = require('./listing-radar-acquisition-adapter');
+const miLandBankAcquisitionAdapter = require('./mi-land-bank-acquisition-adapter');
+const miDetroitLandBankSourceProfiles = require('./mi-detroit-land-bank-source-profiles');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
 
@@ -61,6 +63,18 @@ for (const profile of txCountyForeclosureSourceProfiles.PROFILES) {
     source_name: profile.source_name,
     adapter: txCountyForeclosureAcquisitionAdapter,
     run: txCountyForeclosureAcquisitionAdapter.runTxCountyForeclosureAcquisitionAdapter
+  };
+}
+
+for (const profile of miDetroitLandBankSourceProfiles.PROFILES) {
+  ADAPTERS[profile.source_id] = {
+    source_id: profile.source_id,
+    source_family: profile.source_family,
+    adapter_id: 'mi_land_bank_acquisition_adapter',
+    adapter_family: 'public_json_inventory_adapter',
+    source_name: profile.source_name,
+    adapter: miLandBankAcquisitionAdapter,
+    run: miLandBankAcquisitionAdapter.runMiLandBankAcquisitionAdapter
   };
 }
 
