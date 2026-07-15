@@ -1,0 +1,138 @@
+{
+  "captured_at": "2026-07-15T02:58:10.194Z",
+  "result": [
+    {
+      "name": "jccal-birmingham",
+      "url": "https://www.jccal.org/1018/2025-Tax-Delinquent-Parcels---Birmingham",
+      "status": 429,
+      "final_url": "https://www.jccal.org/1018/2025-Tax-Delinquent-Parcels---Birmingham",
+      "title": "Just a moment...",
+      "text_length": 259,
+      "table_rows": 0,
+      "links": 2,
+      "has_tax_lien_columns": false,
+      "address_like_count": 0,
+      "challenge": true,
+      "sample": "www.jccal.org Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Ray ID: a1b5803adff3479e Performance and Security by Cloudflare Privacy",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/jccal-birmingham.png"
+    },
+    {
+      "name": "jccal-bessemer",
+      "url": "https://www.jccal.org/1019/2025-Tax-Delinquent-Parcels---Bessemer-D",
+      "status": 429,
+      "final_url": "https://www.jccal.org/1019/2025-Tax-Delinquent-Parcels---Bessemer-D",
+      "title": "Just a moment...",
+      "text_length": 259,
+      "table_rows": 0,
+      "links": 2,
+      "has_tax_lien_columns": false,
+      "address_like_count": 0,
+      "challenge": true,
+      "sample": "www.jccal.org Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Ray ID: a1b5805bb90d4edc Performance and Security by Cloudflare Privacy",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/jccal-bessemer.png"
+    },
+    {
+      "name": "jccal-taxlien-birmingham",
+      "url": "https://taxlien.jccal.org/taxlien/embed?division=Birmingham&year=2025",
+      "status": 403,
+      "final_url": "https://taxlien.jccal.org/taxlien/embed?division=Birmingham&year=2025",
+      "title": "",
+      "text_length": 0,
+      "table_rows": 0,
+      "links": 0,
+      "has_tax_lien_columns": false,
+      "address_like_count": 0,
+      "challenge": false,
+      "sample": "",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/jccal-taxlien-birmingham.png"
+    },
+    {
+      "name": "jccal-taxlien-bessemer",
+      "url": "https://taxlien.jccal.org/taxlien/embed?division=Bessemer&year=2025",
+      "status": 403,
+      "final_url": "https://taxlien.jccal.org/taxlien/embed?division=Bessemer&year=2025",
+      "title": "",
+      "text_length": 0,
+      "table_rows": 0,
+      "links": 0,
+      "has_tax_lien_columns": false,
+      "address_like_count": 0,
+      "challenge": false,
+      "sample": "",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/jccal-taxlien-bessemer.png"
+    },
+    {
+      "name": "alabama-public-notices",
+      "url": "https://www.alabamapublicnotices.com/",
+      "status": 200,
+      "final_url": "https://www.alabamapublicnotices.com/(S(bi4itqjxkjwf5snuwmlpx2d0))/default.aspx",
+      "title": "Alabama Public Notice | Alabama Press Association",
+      "text_length": 4975,
+      "table_rows": 1,
+      "links": 28,
+      "has_tax_lien_columns": false,
+      "address_like_count": 0,
+      "challenge": false,
+      "sample": "About Public Notices | Help Smart Search Sign-in For more Public Notices visit: usalegalnotice.com SEARCH PUBLIC NOTICES: SEARCH NOTICES FROM 8/25/2024 - TODAY. SWITCH TO ARCHIVE SEARCH TO FIND NOTICES BEFORE THIS DATE. Popular Searches Voter Lists Bids Delinquent Taxes Elections Foreclosures Lien Sales Notice to Contractors Ordinances Probate Notice to Creditors Probate Sale of Property Public Hearings Public Sale of Personal Property Request for Proposals Seizures Unclaimed Property SEARCH: All Words Any Words Exact Phrase EXCLUDE: FILTERED BY: COUNTY Any CITY Any PUBLICATION Any DATE RANGE ",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/alabama-public-notices.png"
+    },
+    {
+      "name": "birmingham-land-bank-programs",
+      "url": "https://birminghamlandbank.org/programs/",
+      "status": 200,
+      "final_url": "https://birminghamlandbank.org/programs/",
+      "title": "Programs - Birmingham Land Bank Authority",
+      "text_length": 2411,
+      "table_rows": 0,
+      "links": 54,
+      "has_tax_lien_columns": false,
+      "address_like_count": 1,
+      "challenge": true,
+      "sample": "Skip to content LOGIN FIND A PROPERTY REPORT A PROPERTY Our Story Our Programs Compliance Get Involved Resources Contact Us PROGRAMS LOT LEASE PROGRAM CLEAR TITLE PROGRAM REHAB READY/SHOVEL READY PROGRAM ACCELERATED OWNERSHIP Every year properties that are tax delinquent are auctioned off at the Jefferson County Tax sale. Those that go unsold are deemed sold to the state of Alabama Department of Revenue. Back taxes, municipal liens, and other assessments pile up on these properties making their acquisition and the time required much more expensive than their actual or assessed value. Propertie",
+      "json_responses": [],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/birmingham-land-bank-programs.png"
+    },
+    {
+      "name": "al-revenue-land-sales",
+      "url": "https://www.revenue.alabama.gov/property-tax/tax-delinquent-property-and-land-sales/",
+      "status": 200,
+      "final_url": "https://www.revenue.alabama.gov/property-tax/tax-delinquent-property-and-land-sales/",
+      "title": "Tax Delinquent Property and Land Sales - Alabama Department of Revenue",
+      "text_length": 2498,
+      "table_rows": 0,
+      "links": 313,
+      "has_tax_lien_columns": false,
+      "address_like_count": 1,
+      "challenge": false,
+      "sample": "Press Alt+1 for screen-reader mode, Alt+0 to cancel Accessibility Screen-Reader Guide, Feedback, and Issue Reporting | New window Skip to content An official website of the Alabama State government. Here's how you know English News About Help Center Careers Where’s My Refund MyAlabamaTaxes MyDMV Forms Rules Tax Types Make A Payment Services Tax Delinquent Property and Land Sales Homepage > Tax Delinquent Property and Land Sales Search ... All Divisions Search About You may request a price quote for state-held tax delinquent property by submitting an electronic application. Once your price quot",
+      "json_responses": [
+        {
+          "url": "https://cdn.acsbapp.com/config/revenue.alabama.gov/config.json",
+          "status": 200,
+          "content_type": "application/json"
+        },
+        {
+          "url": "https://cdn.chatbot.com/widget/61f183f116829a00077477b3/settings.json",
+          "status": 200,
+          "content_type": "application/json"
+        },
+        {
+          "url": "https://bam.nr-data.net/1/NRJS-08559bc3636950329fe?a=1019369999&v=1.318.0&to=NgdbNhRVV0tTAkNaCg9NeAESXVZWHQhZVwAZ&rst=2643&ck=0&s=46cb0c2b2c0c40d5&ref=https://www.revenue.alabama.gov/property-tax/tax-delinquent-property-and-land-sales/&ptid=0e508bf3217b01a9&af=err,spa,xhr,stn,ins&ap=4149&be=215&fe=2266&dc=1608&at=GkBYQFxPREU%3D&fsh=1&perf=%7B%22timing%22:%7B%22of%22:1784084284002,%22n%22:0,%22f%22:0,%22dn%22:83,%22dne%22:83,%22c%22:83,%22s%22:122,%22ce%22:165,%22rq%22:166,%22rp%22:216,%22rpe%22:268,%22di%22:1802,%22ds%22:1820,%22de%22:1823,%22dc%22:2477,%22l%22:2477,%22le%22:2481%7D,%22navigation%22:%7B%7D%7D&fp=911&fcp=911",
+          "status": 200,
+          "content_type": "application/json"
+        },
+        {
+          "url": "https://bam.nr-data.net/ins/1/NRJS-08559bc3636950329fe?a=1019369999&v=1.318.0&to=NgdbNhRVV0tTAkNaCg9NeAESXVZWHQhZVwAZ&rst=3077&ck=0&s=46cb0c2b2c0c40d5&ref=https://www.revenue.alabama.gov/property-tax/tax-delinquent-property-and-land-sales/&ptid=0e508bf3217b01a9&ht=1&at=GkBYQFxPREU%3D",
+          "status": 204,
+          "content_type": "application/json; charset=utf-8"
+        }
+      ],
+      "screenshot": "C:/Users/criss/Desktop/Github-Codex folder/wholesaleos-bot/exports/cycle3-jefferson-al-gate/al-revenue-land-sales.png"
+    }
+  ]
+}
