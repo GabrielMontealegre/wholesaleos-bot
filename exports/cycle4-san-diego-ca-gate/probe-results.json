@@ -1,0 +1,63 @@
+{
+  "generated_at": "2026-07-23T09:40:15.105Z",
+  "source_id": "ca_san_diego_tax_default_power_to_sell",
+  "source_url": "https://www.sdttc.com/content/ttc/en/tax-collection/property-tax-sales.html",
+  "document_url": "https://www.sdttc.com/content/dam/ttc/docs/taxcollection/Notice-of-Impending-Power-to-Sell-Tax-Defaulted-Property-June-5-12-19-2026.pdf",
+  "public_access": "open_text_layer_pdf_no_login_captcha_or_paywall",
+  "pages_reported": 6,
+  "pages_parsed": 6,
+  "row_count": 1034,
+  "sample_rows": [
+    {
+      "page_number": 1,
+      "apn": "108-292-05-00",
+      "owner_name": "WENDT AUSTIN A",
+      "street_address": "00000 YUCCA RD",
+      "city": "",
+      "amount_to_redeem": "$26,526.00",
+      "normalized_address_status": "apn_only_zero_street_number"
+    },
+    {
+      "page_number": 1,
+      "apn": "231-022-37-00",
+      "owner_name": "TREJO CARMEN et al",
+      "street_address": "02313 WASHINGTON AVE EAST",
+      "city": "",
+      "amount_to_redeem": "$11,177.60",
+      "normalized_address_status": "source_city_missing_review_required"
+    },
+    {
+      "page_number": 1,
+      "apn": "174-260-17-00",
+      "owner_name": "HANKINS MARTI D",
+      "street_address": "00000 TIERRA DEL CIELO",
+      "city": "",
+      "amount_to_redeem": "$5,699.65",
+      "normalized_address_status": "apn_only_zero_street_number"
+    },
+    {
+      "page_number": 1,
+      "apn": "187-540-52-27",
+      "owner_name": "KENNEDY DARLA",
+      "street_address": "01299#27DEER SPRINGS RD",
+      "city": "",
+      "amount_to_redeem": "$21,925.52",
+      "normalized_address_status": "source_city_missing_review_required"
+    },
+    {
+      "page_number": 1,
+      "apn": "396-042-50-26",
+      "owner_name": "SCHOTT DEBORAH et al",
+      "street_address": "15420#95OLDE HIGHWAY 80 (T)",
+      "city": "",
+      "amount_to_redeem": "$10,653.10",
+      "normalized_address_status": "source_city_missing_review_required"
+    }
+  ],
+  "safety": {
+    "secrets_included": false,
+    "production_batch_run": false,
+    "railway_touched": false,
+    "db_mutation": false
+  }
+}

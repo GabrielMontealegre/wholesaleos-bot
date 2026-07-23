@@ -34,6 +34,7 @@ const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 // County foreclosure lanes come straight from the profile registry.
 const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
 const miDetroitLandBankSourceProfiles = require('../sources/mi-detroit-land-bank-source-profiles');
+const caSanDiegoTaxDefaultSourceProfiles = require('../sources/ca-san-diego-tax-default-source-profiles');
 const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
@@ -41,6 +42,7 @@ const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
 ]);
 const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
@@ -306,9 +308,15 @@ function isDetroitMarket(market) {
     /detroit|wayne/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
 }
 
+function isSanDiegoMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'CA' &&
+    /san\s*diego/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
 function defaultQueueSourceIdsForMarket(market) {
   const state = cleanText(market && market.state).toUpperCase() || 'TX';
   if (isDetroitMarket(market)) return MI_DETROIT_SOURCE_IDS.slice();
+  if (isSanDiegoMarket(market)) return CA_SAN_DIEGO_SOURCE_IDS.slice();
   if (state !== 'TX') return [];
   const ids = [];
   if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
@@ -355,6 +363,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     source_family: cleanText(deal.source_family),
     source_url: cleanText(deal.source_url),
     source_document_url: cleanText(deal.source_document_url),
+    source_row_reference: cleanText(deal.source_row_reference),
     source_document_urls: Array.isArray(deal.source_document_urls)
       ? prependUnique(deal.source_document_urls, [deal.source_document_url], 3)
       : prependUnique([], [deal.source_document_url], 3),
@@ -367,7 +376,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     official_property_record_url: cleanText(deal.official_property_record_url) || null,
     owner_clue: deal.owner_record && cleanText(deal.owner_record.owner_name)
       ? `${cleanText(deal.owner_record.owner_name)}${deal.owner_record.is_entity ? ' [entity]' : ''}`
-      : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value),
+      : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value) || cleanText(deal.owner_name_if_visible),
     official_lookup_status: cleanText(deal.official_lookup_status),
     contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
     best_contact: (() => {
@@ -391,6 +400,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     appraisal_clue: cleanText(((deal.appraisal_clues || [])[0] || {}).value),
     listed_price: cleanText(deal.listed_price),
     listed_price_evidence_text: cleanText(deal.listed_price_evidence_text),
+    delinquent_redemption_amount: cleanText(deal.delinquent_redemption_amount),
+    delinquent_redemption_amount_evidence_text: cleanText(deal.delinquent_redemption_amount_evidence_text),
     program: cleanText(deal.program),
     property_kind_if_visible: cleanText(deal.property_kind_if_visible),
     vacant_lot_if_visible: deal.vacant_lot_if_visible === true ? true : deal.vacant_lot_if_visible === false ? false : null,
@@ -552,7 +563,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
-    'auction_closing_at_if_visible', 'listed_price', 'listed_price_evidence_text', 'program',
+    'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
+    'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible'
   ];
   let newRows = 0;

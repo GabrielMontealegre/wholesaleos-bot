@@ -223,13 +223,15 @@ const TARRANT_NOTICE_TEXT = [
 
   // 2d) Document ledger rotates through the month's docs instead of rereading
   //     the same first five forever; a new month reopens the lane.
-  const rotationMonthA = '2026-07';
-  const rotationMonthB = '2026-08';
+  const rotationMonthA = postingMonth(1);
+  const rotationMonthB = postingMonth(2);
+  const rotationDayForIndex = (index) => String(20 - index).padStart(2, '0');
+  const rotationDocName = (monthTag, index) => `${monthTag}-${rotationDayForIndex(index)}-foreclosure-${String(index).padStart(2, '0')}.pdf`;
   const rotationPage = (monthTag) => {
     const year = monthTag.slice(0, 4);
     return `<html><body>${Array.from({ length: 10 }, (_, index) => {
       const n = String(index + 1).padStart(2, '0');
-      const day = String(32 - (index + 1)).padStart(2, '0');
+      const day = rotationDayForIndex(index + 1);
       return `<a href="https://apps.huntcounty.net/foreclosures/LinkedDir/${year}/${monthTag}-${day}-foreclosure-${n}.pdf">${monthTag} foreclosure ${n}</a>`;
     }).join('\n')}</body></html>`;
   };
@@ -238,7 +240,7 @@ const TARRANT_NOTICE_TEXT = [
     'Property Address:',
     `${100 + index} Rotation Rd`,
     `Greenville, TX ${75400 + index}`,
-    `Date of Sale: ${monthTag}-${String(32 - index).padStart(2, '0')}`
+    `Date of Sale: ${monthTag}-${rotationDayForIndex(index)}`
   ].join('\n');
   const rotationFetchFor = (monthTag) => async (url) => {
     const u = String(url);
@@ -257,7 +259,7 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(rotationOne.diagnostics.docs_discovered, 10);
   assert.strictEqual(rotationOne.diagnostics.docs_processed, 5);
   assert.strictEqual(rotationOne.diagnostics.docs_ledger_skipped, 0);
-  assert.ok(rotationOne.document_urls_parsed.some((url) => url.includes('2026-07-22-foreclosure-10.pdf')));
+  assert.ok(rotationOne.document_urls_parsed.some((url) => url.includes(rotationDocName(rotationMonthA, 10))));
   assert.ok(rotationOne.candidates.every((candidate) => candidate.preview_only === true));
 
   const rotationTwo = await adapter.runTxCountyForeclosureAcquisitionAdapter({
@@ -270,7 +272,7 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(rotationTwo.diagnostics.docs_discovered, 10);
   assert.strictEqual(rotationTwo.diagnostics.docs_processed, 5);
   assert.strictEqual(rotationTwo.diagnostics.docs_ledger_skipped, 5);
-  assert.ok(rotationTwo.document_urls_parsed.some((url) => url.includes('2026-07-27-foreclosure-05.pdf')));
+  assert.ok(rotationTwo.document_urls_parsed.some((url) => url.includes(rotationDocName(rotationMonthA, 5))));
 
   const rotationThree = await adapter.runTxCountyForeclosureAcquisitionAdapter({
     source_id: 'tx_hunt_county_foreclosure_notices',
@@ -289,7 +291,7 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(rotationFour.candidate_count, 5, 'new month must reopen the lane');
   assert.strictEqual(rotationFour.diagnostics.docs_discovered, 10);
   assert.strictEqual(rotationFour.diagnostics.docs_processed, 5);
-  assert.ok(rotationFour.document_urls_parsed.some((url) => url.includes('2026-08-22-foreclosure-10.pdf')));
+  assert.ok(rotationFour.document_urls_parsed.some((url) => url.includes(rotationDocName(rotationMonthB, 10))));
 
   // 2d.1) Multi-market hardening: the same official lane can run for two
   //       different markets without sharing ledger state or skipping docs.
