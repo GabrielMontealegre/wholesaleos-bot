@@ -97,6 +97,7 @@ questions. Proof-only rows collapsed underneath.
 | Cuyahoga County, OH | county_network_unreachable_from_automated_vantages_recheck_monthly | recheck the verified county sources monthly; never substitute another market's lanes |
 | Wayne County, MI government | waynecountymi.gov denies automated access | use only separately verified public Wayne/Detroit sources |
 | Wayne County Treasurer tax auction | seasonal future lane; lists generally post September-October | keep disabled until the official seasonal inventory is visibly posted |
+| Jefferson County, AL | county tax-lien pages are Cloudflare/403 from automated browser and taxlien.jccal.org embed returns 403; AlabamaPublicNotices.com is readable but Jefferson detail rows were not verified as open | recheck official tax-lien/APN sources monthly; do not add an AL lane until property rows are reachable without login/CAPTCHA/paywall |
 | DCAD owner lookup | blocks datacenter IPs | `node scripts/export-free-public-deal-board.js` locally |
 | Zillow/Redfin sold comps | 403/429 bot traffic + TX non-disclosure | MLS or paid data |
 | Zillow/Redfin/Realtor/Auction listing radar | current Serper results are mostly generic category/filter pages, not deal rows | adapter kept for manual diagnostics, but removed from the default daily queue until it reliably returns property-specific URLs |
