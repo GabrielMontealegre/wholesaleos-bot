@@ -8,6 +8,8 @@ const miLandBankAcquisitionAdapter = require('./mi-land-bank-acquisition-adapter
 const miDetroitLandBankSourceProfiles = require('./mi-detroit-land-bank-source-profiles');
 const caTaxDefaultNoticeAcquisitionAdapter = require('./ca-tax-default-notice-acquisition-adapter');
 const caSanDiegoTaxDefaultSourceProfiles = require('./ca-san-diego-tax-default-source-profiles');
+const caLosAngelesTaxDefaultAcquisitionAdapter = require('./ca-los-angeles-tax-default-acquisition-adapter');
+const caLosAngelesTaxDefaultSourceProfiles = require('./ca-los-angeles-tax-default-source-profiles');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
 
@@ -89,6 +91,18 @@ for (const profile of caSanDiegoTaxDefaultSourceProfiles.PROFILES) {
     source_name: profile.source_name,
     adapter: caTaxDefaultNoticeAcquisitionAdapter,
     run: caTaxDefaultNoticeAcquisitionAdapter.runCaTaxDefaultNoticeAcquisitionAdapter
+  };
+}
+
+for (const profile of caLosAngelesTaxDefaultSourceProfiles.PROFILES) {
+  ADAPTERS[profile.source_id] = {
+    source_id: profile.source_id,
+    source_family: profile.source_family,
+    adapter_id: 'ca_los_angeles_tax_default_acquisition_adapter',
+    adapter_family: 'pdf_auction_book_adapter',
+    source_name: profile.source_name,
+    adapter: caLosAngelesTaxDefaultAcquisitionAdapter,
+    run: caLosAngelesTaxDefaultAcquisitionAdapter.runCaLosAngelesTaxDefaultAcquisitionAdapter
   };
 }
 

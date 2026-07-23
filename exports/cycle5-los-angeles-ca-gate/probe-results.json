@@ -1,0 +1,110 @@
+{
+  "probe_date": "2026-07-23",
+  "market": {
+    "county": "Los Angeles",
+    "state": "CA"
+  },
+  "decision": "open",
+  "probe_results": [
+    {
+      "source": "Auction book PDF",
+      "url": "https://ttc.lacounty.gov/wp-content/uploads/2026/03/2026A-Auction-Book.pdf",
+      "http": 200,
+      "status": "open",
+      "property_rows": 1034,
+      "notes": "text-layer PDF with APN, owner text, street address, and minimum bid evidence"
+    },
+    {
+      "source": "Schedule of upcoming auctions",
+      "url": "https://ttc.lacounty.gov/schedule-of-upcoming-auctions/",
+      "http": 200,
+      "status": "open landing",
+      "property_rows": 0,
+      "notes": "official timing and contact page"
+    },
+    {
+      "source": "Auction general information",
+      "url": "https://ttc.lacounty.gov/auction-general-information/",
+      "http": 200,
+      "status": "open",
+      "property_rows": 0,
+      "notes": "official TTC auction guidance page"
+    },
+    {
+      "source": "Notice of auction or sale",
+      "url": "https://ttc.lacounty.gov/notice-of-auction-or-sale/",
+      "http": 200,
+      "status": "open",
+      "property_rows": 0,
+      "notes": "official notice landing page"
+    }
+  ],
+  "row_shape": {
+    "fields": [
+      "ITEM",
+      "AIN",
+      "MIN BID",
+      "IMP",
+      "NSB#",
+      "LEGAL DESCRIPTION",
+      "LOCATION",
+      "PROPERTY ADDRESS"
+    ]
+  },
+  "sample_rows": [
+    {
+      "apn": "2006-010-026",
+      "owner_or_owner_clue": "",
+      "street_address": "",
+      "city": "County of Los Angeles",
+      "state": "CA",
+      "zip": "",
+      "minimum_bid": "$3,083",
+      "notes": "APN-only / vacant lot source-proof row"
+    },
+    {
+      "apn": "2020-019-012",
+      "owner_or_owner_clue": "",
+      "street_address": "8210 Bobbyboyar Ave",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "91304-3507",
+      "minimum_bid": "$14,276",
+      "notes": "complete street address row"
+    },
+    {
+      "apn": "2023-013-005",
+      "owner_or_owner_clue": "",
+      "street_address": "22138 Runnymede St",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "91303-1112",
+      "minimum_bid": "$40,183",
+      "notes": "complete street address row"
+    },
+    {
+      "apn": "2048-013-089",
+      "owner_or_owner_clue": "",
+      "street_address": "28915 Thousand Oaks Blvd",
+      "city": "Agoura Hills",
+      "state": "CA",
+      "zip": "91301-2108",
+      "minimum_bid": "$38,911",
+      "notes": "complete street address row"
+    },
+    {
+      "apn": "2130-027-025",
+      "owner_or_owner_clue": "",
+      "street_address": "19350 Sherman Way Unit 112",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "91335-3764",
+      "minimum_bid": "$17,125",
+      "notes": "complete street address row"
+    }
+  ],
+  "artifacts": {
+    "survey_note": "docs/cycles/cycle-5-los-angeles-ca.md",
+    "market_note": "docs/cycles/los-angeles-ca.md"
+  }
+}

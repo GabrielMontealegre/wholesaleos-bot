@@ -131,6 +131,11 @@ function mockDeal(overrides) {
     ['ca_san_diego_tax_default_power_to_sell'],
     'San Diego must run only its verified tax-default lane'
   );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Los Angeles', county: 'Los Angeles', state: 'CA' }),
+    ['ca_los_angeles_tax_default_auction_book'],
+    'Los Angeles must run only its verified auction-book lane'
+  );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
