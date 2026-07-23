@@ -126,6 +126,11 @@ function mockDeal(overrides) {
     ['mi_wayne_detroit_land_bank_listings'],
     'Detroit must run only its verified land-bank lane'
   );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'San Diego', county: 'San Diego', state: 'CA' }),
+    ['ca_san_diego_tax_default_power_to_sell'],
+    'San Diego must run only its verified tax-default lane'
+  );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
   assert.strictEqual(run1.batch.new_rows, 2);
@@ -226,6 +231,47 @@ function mockDeal(overrides) {
   assert.strictEqual(detroitRun.rows[0].vacant_lot_if_visible, false);
   assert.strictEqual(detroitRun.rows[0].ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
   assert.strictEqual(detroitRun.rows[0].MAO_lock_state, 'MAO_LOCKED_NO_ARV');
+
+  const sanDiegoPreviewCalls = [];
+  const sanDiegoRun = await queueService.runDealBoardBatch(
+    { market: { city: 'San Diego', county: 'San Diego', state: 'CA' }, limit: 25 },
+    {
+      preview_impl: async (input) => {
+        sanDiegoPreviewCalls.push(input);
+        return {
+          free_public_deals: [mockDeal({
+            headline: '01639 HILLCREST LN, Fallbrook, CA',
+            normalized_address: '',
+            partial_address: '01639 HILLCREST LN, Fallbrook, CA',
+            maps_url: null,
+            maps_search_url_review_needed: 'https://maps.example/review',
+            city: 'Fallbrook', county: 'San Diego', state: 'CA',
+            quality_bucket: 'NEEDS_ZIP_REVIEW',
+            source_family: 'tax_default_power_to_sell',
+            source_url: 'https://www.sdttc.com/content/ttc/en/tax-collection/property-tax-sales.html',
+            source_document_url: 'https://www.sdttc.com/content/dam/ttc/docs/taxcollection/Notice-of-Impending-Power-to-Sell-Tax-Defaulted-Property-June-5-12-19-2026.pdf',
+            source_row_reference: '105-093-26-00',
+            delinquent_redemption_amount: '$3,716.72',
+            delinquent_redemption_amount_evidence_text: 'Delinquent redemption amount shown by San Diego TTC notice: $3,716.72',
+            owner_record: null,
+            owner_or_entity_clues: [{ value: 'FIGUEROA RICARDO M et al' }],
+            risk_flags: ['REDEMPTION_AMOUNT_NOT_PRICE_OR_ARV'],
+            ARV_lock_state: 'ARV_LOCKED_NO_VERIFIED_COMPS',
+            MAO_lock_state: 'MAO_LOCKED_NO_ARV',
+            free_contact_status: '', free_contact_routes: [],
+            call_readiness: '', next_best_action: 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT'
+          })],
+          rejected_generic_count: 0,
+          diagnostics: { source_adapter: { source_adapter_results: [] } }
+        };
+      }
+    }
+  );
+  assert.deepStrictEqual(sanDiegoPreviewCalls[0].source_ids, ['ca_san_diego_tax_default_power_to_sell']);
+  assert.strictEqual(sanDiegoRun.rows[0].source_row_reference, '105-093-26-00');
+  assert.strictEqual(sanDiegoRun.rows[0].delinquent_redemption_amount, '$3,716.72');
+  assert.strictEqual(sanDiegoRun.rows[0].owner_clue, 'FIGUEROA RICARDO M et al');
+  assert.ok(sanDiegoRun.rows[0].risk_flags.includes('REDEMPTION_AMOUNT_NOT_PRICE_OR_ARV'));
 
   // limit clamps up to the minimum too
   await queueService.runDealBoardBatch({ limit: 1 }, { preview_impl: previewImpl });

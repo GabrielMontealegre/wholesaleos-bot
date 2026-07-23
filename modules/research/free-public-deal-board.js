@@ -46,8 +46,8 @@ const FORECLOSURE_PROOF_KEYWORD_RE = /foreclos|trustee|notice of sale/i;
 const NAV_CHROME_PATH_RE = /(?:copyright|privacy|sitemap|accessibility|login|signin|contact|faq|directory|tax-assessor|tax_assessor)/i;
 const NAV_CHROME_HOST_RE = /^(?:taxweb|search|publicsearch)\./i;
 
-// Street + city + TX visible but no 5-digit zip: reviewable partial identity.
-const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas)\b/i;
+// Street + city + source state visible but no verified zip: reviewable partial identity.
+const PARTIAL_ADDRESS_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{1,40}?,?\s+(?:TX|Texas|CA|California)\b/i;
 
 // OCR review rows with a noisy street name but a visible street-type + city
 // + TX/zip should stay reviewable. Never autocorrect the street name.
@@ -56,20 +56,20 @@ const OCR_REVIEWABLE_ADDRESS_RE = new RegExp(
   'i'
 );
 
-// Street + trailing city word(s) with no TX token - acceptable only when the
-// source row itself says the state is TX (the county notice extractors set
-// it from the county profile, so this is source data, not a guess).
+// Street + trailing city word(s) with no state token - acceptable only when
+// the source row itself says the state (profile/parser source data, not a guess).
 const PARTIAL_ADDRESS_CITY_ONLY_RE = /^\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?,?\s+[A-Za-z][A-Za-z .'-]{2,40}$/i;
 
 function partialAddressFromRecord(record, resolvedAddress) {
   if (cleanText(resolvedAddress)) return '';
   const raw = cleanText(record && (record.raw_address_text || record.property_address || record.address));
-  if (!raw || /\d{5}/.test(raw)) return '';
+  if (!raw) return '';
   const match = raw.match(PARTIAL_ADDRESS_RE);
   if (match) return cleanText(match[0]).replace(/\s+,/g, ',');
-  if (cleanText(record && record.state).toUpperCase() === 'TX') {
+  const state = cleanText(record && record.state).toUpperCase();
+  if (/^[A-Z]{2}$/.test(state)) {
     const cityOnly = raw.match(PARTIAL_ADDRESS_CITY_ONLY_RE);
-    if (cityOnly) return `${cleanText(cityOnly[0]).replace(/\s+,/g, ',')}, TX`;
+    if (cityOnly) return `${cleanText(cityOnly[0]).replace(/\s+,/g, ',')}, ${state}`;
   }
   return '';
 }
@@ -904,6 +904,7 @@ function dealFromRecord(record, context) {
     source_name: sourceName(record, family),
     source_url: sourceUrl,
     source_document_url: sourceDocumentUrl,
+    source_row_reference: cleanText(record && record.source_row_reference),
     zillow_url: links.zillow_url,
     redfin_url: links.redfin_url,
     realtor_url: links.realtor_url,
@@ -945,6 +946,8 @@ function dealFromRecord(record, context) {
     asking_price: cleanText(record && record.asking_price),
     listed_price: cleanText(record && record.listed_price),
     listed_price_evidence_text: cleanText(record && record.listed_price_evidence_text),
+    delinquent_redemption_amount: cleanText(record && record.delinquent_redemption_amount),
+    delinquent_redemption_amount_evidence_text: cleanText(record && record.delinquent_redemption_amount_evidence_text),
     program: cleanText(record && record.program),
     property_kind_if_visible: cleanText(record && record.property_kind_if_visible),
     vacant_lot_if_visible: record && record.vacant_lot_if_visible === true ? true : record && record.vacant_lot_if_visible === false ? false : null,
@@ -1022,6 +1025,8 @@ function candidateRecord(candidate, source) {
     asking_price: cleanText(candidate.asking_price),
     listed_price: cleanText(candidate.listed_price),
     listed_price_evidence_text: cleanText(candidate.listed_price_evidence_text),
+    delinquent_redemption_amount: cleanText(candidate.delinquent_redemption_amount),
+    delinquent_redemption_amount_evidence_text: cleanText(candidate.delinquent_redemption_amount_evidence_text),
     program: cleanText(candidate.program),
     property_kind_if_visible: cleanText(candidate.property_kind_if_visible),
     vacant_lot_if_visible: candidate.vacant_lot_if_visible === true ? true : candidate.vacant_lot_if_visible === false ? false : null,
@@ -1898,7 +1903,8 @@ async function runFreePublicDealBoardPreview(input = {}, options = {}) {
   const map = new Map();
   for (const record of rawRecords) {
     const deal = dealFromRecord(record, context);
-    const key = cleanText([deal.normalized_address, deal.source_url, deal.source_document_url].filter(Boolean).join('|')).toLowerCase() || deal.deal_id;
+    const identityKey = cleanText(deal.normalized_address || deal.partial_address || deal.source_row_reference);
+    const key = cleanText([identityKey, deal.source_url, deal.source_document_url].filter(Boolean).join('|')).toLowerCase() || deal.deal_id;
     const existing = map.get(key);
     if (!existing || deal.rank_score > existing.rank_score) map.set(key, deal);
   }
