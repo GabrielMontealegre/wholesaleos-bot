@@ -11,7 +11,9 @@ const MAX_ROWS = 25;
 const MAX_PAGES_PER_BATCH = 5;
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 
-const PAGE_ROW_START_RE = /^\s*\d+\s+\d{4}-\d{3}-\d{3}\s+\$[\d,]+(?:\.\d{2})?/i;
+const ITEM_AIN_RE = /\b\d{1,5}\s+\d{4}-\d{3}-\d{3}\b/g;
+const ITEM_AIN_PREFIX_RE = /^\s*(\d{1,5})\s+(\d{4}-\d{3}-\d{3})\s*/i;
+const MINIMUM_BID_RE = /^(\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?)(.*)$/;
 const COMPLETE_ADDRESS_RE = /\b(\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{0,120}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:unit|no|#)\s*[A-Za-z0-9-]+)?)\s+([A-Z][A-Za-z .'-]{1,60})\s+CA\s+(\d{5}(?:-\d{4})?)\b/i;
 const PARTIAL_ADDRESS_RE = /\b(\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{0,120}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:unit|no|#)\s*[A-Za-z0-9-]+)?)\b/i;
 const CITY_HEADER_RE = /\bCITY[-\s]+([A-Z][A-Z .'-]{1,60}?)(?=\s+(?:VACANT LOT|COUNTY OF LOS ANGELES|\d{1,7}\s|$))/i;
@@ -131,24 +133,58 @@ async function fetchNoticePdf(profile, options = {}) {
 
 function startOfPageBlocks(pageText) {
   const lines = String(pageText || '').replace(/\r/g, '\n').split(/\n/).map(cleanText).filter(Boolean);
-  const blocks = [];
-  let current = '';
-  for (const line of lines) {
-    if (PAGE_ROW_START_RE.test(line)) {
-      if (current) blocks.push(current);
-      current = line;
-      continue;
-    }
-    if (!current) continue;
-    current = `${current} ${line}`;
-  }
-  if (current) blocks.push(current);
-  return blocks;
+  const text = lines.join(' ');
+  const starts = [];
+  let match;
+  ITEM_AIN_RE.lastIndex = 0;
+  while ((match = ITEM_AIN_RE.exec(text))) starts.push(match.index);
+  return starts.map((start, index) => cleanText(text.slice(start, starts[index + 1] || text.length))).filter(Boolean);
 }
 
 function visibleMoney(value) {
   const text = cleanText(value).replace(/\s+/g, '');
   return /^\$\d[\d,]*(?:\.\d{2})?$/.test(text) ? text : '';
+}
+
+function splitAuctionRowColumns(block) {
+  const source = cleanText(block);
+  const header = source.match(ITEM_AIN_PREFIX_RE);
+  if (!header) return null;
+  const columns = {
+    item_number: cleanText(header[1]),
+    apn: cleanText(header[2]),
+    minimum_bid: '',
+    nsb_number: '',
+    improvement_flag: '',
+    bid_parse_status: 'missing',
+    row_text: cleanText(source.slice(header[0].length))
+  };
+  const moneyMatch = columns.row_text.match(MINIMUM_BID_RE);
+  if (!moneyMatch) return columns;
+  let tail = String(moneyMatch[2] || '').trimStart();
+  columns.minimum_bid = cleanText(moneyMatch[1]);
+  columns.bid_parse_status = 'parsed';
+  if (/^[,.]/.test(tail)) {
+    columns.minimum_bid = '';
+    columns.bid_parse_status = 'ambiguous';
+    return columns;
+  }
+  if (/^[YN]\b/i.test(tail) || /^[YN]\d/i.test(tail)) {
+    columns.improvement_flag = tail.charAt(0).toUpperCase();
+    tail = tail.slice(1).trimStart();
+  }
+  const nsbMatch = tail.match(/^(\d{3,})(?:\b|\s|[A-Za-z])/);
+  if (/^\d/.test(tail)) {
+    if (!nsbMatch) {
+      columns.minimum_bid = '';
+      columns.bid_parse_status = 'ambiguous';
+      return columns;
+    }
+    columns.nsb_number = cleanText(nsbMatch[1]);
+    tail = tail.slice(nsbMatch[1].length).trimStart();
+  }
+  columns.row_text = cleanText(tail || columns.row_text);
+  return columns;
 }
 
 function extractAddressFromBlock(block) {
@@ -177,26 +213,36 @@ function extractCityFromBlock(block) {
 function parseAuctionBookRowsFromText(text, profile = profileForSourceId(SOURCE_ID)) {
   return startOfPageBlocks(text).map((block) => {
     const source = cleanText(block);
-    const startMatch = source.match(/^\s*(\d+)\s+(\d{4}-\d{3}-\d{3})\s+\$([\d,]+(?:\.\d{2})?)/i);
-    if (!startMatch) return null;
-    const apn = cleanText(startMatch[2]);
-    const amount = visibleMoney(`$${cleanText(startMatch[3])}`) || `$${cleanText(startMatch[3])}`;
+    const columns = splitAuctionRowColumns(source);
+    if (!columns) return null;
+    const apn = cleanText(columns.apn);
+    const amount = visibleMoney(columns.minimum_bid);
     const address = extractAddressFromBlock(source);
     const city = extractCityFromBlock(source);
-    const completeAddress = propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
-    const propertyKind = VACANT_LOT_RE.test(source) ? 'vacant_lot' : '';
+    const addressEligible = cleanText(columns.bid_parse_status) !== 'ambiguous';
+    const completeAddress = addressEligible && propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
+    const rowText = cleanText(columns.row_text || source);
+    const improvementFlag = cleanText(columns.improvement_flag);
+    const vacantFromOwnRowText = VACANT_LOT_RE.test(rowText);
+    const vacantLot = improvementFlag === 'N' ? true : improvementFlag === 'Y' ? false : vacantFromOwnRowText ? true : null;
+    const propertyKind = vacantLot === true ? 'vacant_lot' : improvementFlag === 'Y' ? 'improved' : '';
     const sourceText = cleanText(source);
     return {
+      item_number: cleanText(columns.item_number),
       apn,
       owner_name: '',
       street_address: completeAddress || '',
       city: cleanText((completeAddress ? propertyIdentity.parseAddress(completeAddress).city : '') || city),
-      amount_to_redeem: amount,
+      minimum_bid: amount,
+      minimum_bid_evidence_text: amount ? `Minimum bid shown in Los Angeles County auction book: ${amount}` : '',
+      nsb_number: cleanText(columns.nsb_number),
+      improvement_flag: improvementFlag,
+      bid_parse_status: cleanText(columns.bid_parse_status),
       source_text: sourceText,
       source_proof_text: sourceText,
       raw_text: sourceText,
       property_kind_if_visible: propertyKind,
-      vacant_lot_if_visible: propertyKind === 'vacant_lot',
+      vacant_lot_if_visible: vacantLot,
       is_complete_address: !!completeAddress,
       property_address: completeAddress || '',
       raw_address_text: completeAddress || address || sourceText,
@@ -210,16 +256,18 @@ function candidateFromAuctionRow(row, profile, context = {}) {
   const ownerName = cleanText(row && row.owner_name);
   const completeAddress = cleanText(row && row.property_address);
   const rawAddress = cleanText(row && row.raw_address_text);
-  const amount = visibleMoney(row && row.amount_to_redeem);
+  const amount = visibleMoney(row && row.minimum_bid);
   const city = cleanText(row && row.city);
   const sourceText = cleanText(row && row.source_text);
   const evidence = [
     'Los Angeles County 2026A tax-defaulted auction book',
     apn ? `APN: ${apn}` : '',
+    cleanText(row && row.nsb_number) ? `NSB#: ${cleanText(row && row.nsb_number)}` : '',
+    cleanText(row && row.improvement_flag) ? `IMP: ${cleanText(row && row.improvement_flag)}` : '',
     ownerName ? `Owner clue: ${ownerName}` : '',
     completeAddress ? `Property address: ${completeAddress}` : '',
     !completeAddress && rawAddress ? `Source text: ${rawAddress}` : '',
-    amount ? `Displayed minimum bid: ${amount}` : ''
+    amount ? `Minimum bid: ${amount}` : ''
   ].filter(Boolean).join(' | ');
   const rawAddressText = completeAddress || rawAddress;
   const normalizedAddress = completeAddress || '';
@@ -249,12 +297,14 @@ function candidateFromAuctionRow(row, profile, context = {}) {
     source_proof_text: sourceText ? sourceText.slice(0, 1200) : evidence,
     current_status: 'Los Angeles County tax-defaulted auction book',
     status_evidence_text: 'Los Angeles County Treasurer and Tax Collector 2026A resolution list online auction sale.',
-    listed_price: amount,
-    listed_price_evidence_text: amount ? `Displayed minimum bid shown in auction book: ${amount}` : '',
-    risk_flags: amount ? ['LISTED_PRICE_NOT_ARV_OR_MAO'] : [],
+    minimum_bid: amount,
+    minimum_bid_evidence_text: amount ? `Minimum bid shown in Los Angeles County auction book: ${amount}` : '',
+    nsb_number: cleanText(row && row.nsb_number),
+    improvement_flag: cleanText(row && row.improvement_flag),
+    risk_flags: amount ? ['MINIMUM_BID_NOT_ARV_OR_MAO'] : [],
     program: '2026A Online Auction',
     property_kind_if_visible: cleanText(row && row.property_kind_if_visible),
-    vacant_lot_if_visible: row && row.vacant_lot_if_visible === true,
+    vacant_lot_if_visible: row && row.vacant_lot_if_visible === true ? true : row && row.vacant_lot_if_visible === false ? false : null,
     retrieved_at: cleanText(context.captured_at) || nowIso(),
     preview_only: true,
     should_ingest: false,
@@ -272,12 +322,14 @@ function candidateFromAuctionRow(row, profile, context = {}) {
   candidate.state = profile.state;
   candidate.parcel_or_account = apn;
   candidate.source_row_reference = apn;
-  candidate.listed_price = amount;
-  candidate.listed_price_evidence_text = amount ? `Displayed minimum bid shown in auction book: ${amount}` : '';
+  candidate.minimum_bid = amount;
+  candidate.minimum_bid_evidence_text = amount ? `Minimum bid shown in Los Angeles County auction book: ${amount}` : '';
+  candidate.nsb_number = cleanText(row && row.nsb_number);
+  candidate.improvement_flag = cleanText(row && row.improvement_flag);
   candidate.program = '2026A Online Auction';
   candidate.property_kind_if_visible = cleanText(row && row.property_kind_if_visible);
-  candidate.vacant_lot_if_visible = row && row.vacant_lot_if_visible === true ? true : null;
-  candidate.risk_flags = Array.from(new Set([].concat(candidate.risk_flags || [], amount ? ['LISTED_PRICE_NOT_ARV_OR_MAO'] : [])));
+  candidate.vacant_lot_if_visible = row && row.vacant_lot_if_visible === true ? true : row && row.vacant_lot_if_visible === false ? false : null;
+  candidate.risk_flags = Array.from(new Set([].concat(candidate.risk_flags || [], amount ? ['MINIMUM_BID_NOT_ARV_OR_MAO'] : [])));
   candidate.preview_only = true;
   candidate.should_ingest = false;
   candidate.not_a_saved_lead = true;

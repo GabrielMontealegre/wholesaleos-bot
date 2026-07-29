@@ -948,6 +948,10 @@ function dealFromRecord(record, context) {
     listed_price_evidence_text: cleanText(record && record.listed_price_evidence_text),
     delinquent_redemption_amount: cleanText(record && record.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(record && record.delinquent_redemption_amount_evidence_text),
+    minimum_bid: cleanText(record && record.minimum_bid),
+    minimum_bid_evidence_text: cleanText(record && record.minimum_bid_evidence_text),
+    nsb_number: cleanText(record && record.nsb_number),
+    improvement_flag: cleanText(record && record.improvement_flag),
     program: cleanText(record && record.program),
     property_kind_if_visible: cleanText(record && record.property_kind_if_visible),
     vacant_lot_if_visible: record && record.vacant_lot_if_visible === true ? true : record && record.vacant_lot_if_visible === false ? false : null,
@@ -1027,6 +1031,10 @@ function candidateRecord(candidate, source) {
     listed_price_evidence_text: cleanText(candidate.listed_price_evidence_text),
     delinquent_redemption_amount: cleanText(candidate.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(candidate.delinquent_redemption_amount_evidence_text),
+    minimum_bid: cleanText(candidate.minimum_bid),
+    minimum_bid_evidence_text: cleanText(candidate.minimum_bid_evidence_text),
+    nsb_number: cleanText(candidate.nsb_number),
+    improvement_flag: cleanText(candidate.improvement_flag),
     program: cleanText(candidate.program),
     property_kind_if_visible: cleanText(candidate.property_kind_if_visible),
     vacant_lot_if_visible: candidate.vacant_lot_if_visible === true ? true : candidate.vacant_lot_if_visible === false ? false : null,
@@ -1048,6 +1056,10 @@ function cardRecord(card, source) {
   });
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
   record.contact_route_if_visible = cleanText(card && (card.public_contact_route || card.contact_phone || card.contact_email));
+  record.minimum_bid = cleanText(card && card.minimum_bid);
+  record.minimum_bid_evidence_text = cleanText(card && card.minimum_bid_evidence_text);
+  record.nsb_number = cleanText(card && card.nsb_number);
+  record.improvement_flag = cleanText(card && card.improvement_flag);
   record.record_origin = 'source_adapter';
   return record;
 }

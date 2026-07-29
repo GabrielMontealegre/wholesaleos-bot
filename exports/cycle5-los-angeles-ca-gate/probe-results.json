@@ -11,8 +11,8 @@
       "url": "https://ttc.lacounty.gov/wp-content/uploads/2026/03/2026A-Auction-Book.pdf",
       "http": 200,
       "status": "open",
-      "property_rows": 1034,
-      "notes": "text-layer PDF with APN, owner text, street address, and minimum bid evidence"
+      "property_rows": 2321,
+      "notes": "text-layer PDF with ITEM, AIN, MIN BID, IMP, NSB#, legal description, location, and property-address text. The auction book has no owner column."
     },
     {
       "source": "Schedule of upcoming auctions",
@@ -49,12 +49,58 @@
       "LEGAL DESCRIPTION",
       "LOCATION",
       "PROPERTY ADDRESS"
-    ]
+    ],
+    "total_ain_rows_by_regex": 2321,
+    "rows_extracted_after_column_fix": 2321,
+    "rows_with_complete_address": 745,
+    "rows_apn_only_or_review_only": 1576,
+    "rows_with_minimum_bid": 2321,
+    "swallowed_nsb_bid_count": 0,
+    "vacant_flag_mismatch_count": 0,
+    "owner_column_present": false
   },
   "sample_rows": [
     {
+      "item_number": "101",
+      "apn": "2176-028-018",
+      "street_address": "",
+      "city": "",
+      "state": "CA",
+      "zip": "",
+      "minimum_bid": "$1,771",
+      "nsb_number": "539",
+      "improvement_flag": "",
+      "vacant_lot_if_visible": true,
+      "notes": "APN-only vacant-lot/source-proof row; no owner column in source"
+    },
+    {
+      "item_number": "116",
+      "apn": "2210-021-013",
+      "street_address": "14715 Arminta St",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "91402-5903",
+      "minimum_bid": "$379,650",
+      "nsb_number": "539",
+      "improvement_flag": "Y",
+      "vacant_lot_if_visible": false,
+      "notes": "IMP Y row; not a vacant lot"
+    },
+    {
+      "item_number": "157",
+      "apn": "2317-018-044",
+      "street_address": "7356 Hinds Ave",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "91605-3703",
+      "minimum_bid": "$152,743",
+      "nsb_number": "539",
+      "improvement_flag": "",
+      "vacant_lot_if_visible": null,
+      "notes": "Source text prints '$152,743539'; parser splits minimum bid from NSB#"
+    },
+    {
       "apn": "2006-010-026",
-      "owner_or_owner_clue": "",
       "street_address": "",
       "city": "County of Los Angeles",
       "state": "CA",
@@ -64,7 +110,6 @@
     },
     {
       "apn": "2020-019-012",
-      "owner_or_owner_clue": "",
       "street_address": "8210 Bobbyboyar Ave",
       "city": "Los Angeles",
       "state": "CA",
@@ -74,32 +119,11 @@
     },
     {
       "apn": "2023-013-005",
-      "owner_or_owner_clue": "",
       "street_address": "22138 Runnymede St",
       "city": "Los Angeles",
       "state": "CA",
       "zip": "91303-1112",
       "minimum_bid": "$40,183",
-      "notes": "complete street address row"
-    },
-    {
-      "apn": "2048-013-089",
-      "owner_or_owner_clue": "",
-      "street_address": "28915 Thousand Oaks Blvd",
-      "city": "Agoura Hills",
-      "state": "CA",
-      "zip": "91301-2108",
-      "minimum_bid": "$38,911",
-      "notes": "complete street address row"
-    },
-    {
-      "apn": "2130-027-025",
-      "owner_or_owner_clue": "",
-      "street_address": "19350 Sherman Way Unit 112",
-      "city": "Los Angeles",
-      "state": "CA",
-      "zip": "91335-3764",
-      "minimum_bid": "$17,125",
       "notes": "complete street address row"
     }
   ],

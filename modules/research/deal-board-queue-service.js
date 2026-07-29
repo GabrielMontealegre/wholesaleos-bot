@@ -410,6 +410,10 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     listed_price_evidence_text: cleanText(deal.listed_price_evidence_text),
     delinquent_redemption_amount: cleanText(deal.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(deal.delinquent_redemption_amount_evidence_text),
+    minimum_bid: cleanText(deal.minimum_bid),
+    minimum_bid_evidence_text: cleanText(deal.minimum_bid_evidence_text),
+    nsb_number: cleanText(deal.nsb_number),
+    improvement_flag: cleanText(deal.improvement_flag),
     program: cleanText(deal.program),
     property_kind_if_visible: cleanText(deal.property_kind_if_visible),
     vacant_lot_if_visible: deal.vacant_lot_if_visible === true ? true : deal.vacant_lot_if_visible === false ? false : null,
@@ -572,7 +576,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
-    'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text', 'program',
+    'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
+    'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible'
   ];
   let newRows = 0;

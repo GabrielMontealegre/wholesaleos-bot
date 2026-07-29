@@ -30,6 +30,10 @@ const FIXTURE_PAGE = [
   '1 2006-010-026 $3,083 539 LICENSED SURVEYOR\'S MAP AS PER BK 25 PG 28 OF L S LOT 26 BLK O COUNTY OF LOS ANGELES VACANT LOT',
   '6 2020-019-012 $14,276 Y 539 TRACT NO 26315 LOT 16 CITY-LOS ANGELES 8210 BOBBYBOYAR AVE LOS ANGELES CA 91304-3507',
   '8 2023-013-005 $40,183 Y 537 TRACT # 8197 LOT 53 CITY-LOS ANGELES 22138 RUNNYMEDE ST LOS ANGELES CA 91303-1112',
+  '116 2210-021-013 $379,650Y539 TRACT NO 1200 LOT 7 CITY-VAN NUYS 14715 ARMINTA ST VAN NUYS CA 91402-5901',
+  '157 2317-018-044 $152,743539 TRACT NO 9432 LOT 11 CITY-LOS ANGELES 12345 AUCTION BID ST LOS ANGELES CA 90001-1234',
+  '158 2317-018-045 $12,34Y539 TRACT NO 9432 LOT 12 CITY-LOS ANGELES 1000 BAD BID ST LOS ANGELES CA 90001-1234',
+  '159 2317-018-046 $20,000Y539 TRACT NO 9432 LOT 13 CITY-LOS ANGELES VAC/VIC AVE J LOS ANGELES CA 90001',
   '17 2048-013-089 $38,911 Y 537 *TR=35020 CONDOMINIUM*UNIT 190 CITY-AGOURA HILL 28915 THOUSAND OAKS BLVD AGOURA HILLS CA 91301-2108',
   '18 2049-016-027 $235,258 Y 537 LOT COM AT MOST W COR OF LOT 6 L A C A MAP NO 69 TH N 33 10\'04" E 317.98 FT TH N 62 08\'54" E 61.93 FT TH N 33 10\'04" E 40.42 FT TO MOST S COR OF LOT 9 SD TR TH W TO MOST N COR OF LAND DESC AS PAR 1 IN OR 43018-266 TO LEO B GORCEY TH SE ON NE LINE OF SD LAND 323.65 FT TO BEG PART OF LOT 8 L A CO ASSESSOR MAP NO 69 AND PART OF LOT 43 RECORD OF SURVEY AS PER BK 65 P 28 OF R S COUNTY OF LOS ANGELES 23760 OAKFIELD RD HIDDEN HILLS CA 91302-2412'
 ].join('\n');
@@ -63,26 +67,57 @@ function fakePdfParse(pageTexts) {
   assert.strictEqual(profile.state, 'CA');
 
   const parsed = adapter.parseAuctionBookRowsFromText(FIXTURE_PAGE, profile);
-  assert.strictEqual(parsed.length, 5);
+  assert.strictEqual(parsed.length, 9);
   assert.strictEqual(parsed[0].apn, '2006-010-026');
   assert.strictEqual(parsed[0].property_address, '');
   assert.strictEqual(parsed[0].city, '');
   assert.ok(parsed[0].source_text.includes('VACANT LOT'));
+  assert.strictEqual(parsed[0].minimum_bid, '$3,083');
+  assert.strictEqual(parsed[0].nsb_number, '539');
+  assert.strictEqual(parsed[0].vacant_lot_if_visible, true);
   assert.strictEqual(parsed[1].property_address, '8210 Bobbyboyar Ave, Los Angeles, CA 91304');
+  assert.strictEqual(parsed[1].minimum_bid, '$14,276');
+  assert.strictEqual(parsed[1].improvement_flag, 'Y');
+  assert.strictEqual(parsed[1].nsb_number, '539');
+  assert.strictEqual(parsed[1].vacant_lot_if_visible, false);
   assert.strictEqual(parsed[2].property_address, '22138 Runnymede St, Los Angeles, CA 91303');
-  assert.strictEqual(parsed[3].property_address, '28915 Thousand Oaks Blvd, Agoura Hills, CA 91301');
-  assert.strictEqual(parsed[4].property_address, '');
-  assert.strictEqual(parsed[4].apn, '2049-016-027');
+  assert.strictEqual(parsed[3].minimum_bid, '$379,650');
+  assert.strictEqual(parsed[3].improvement_flag, 'Y');
+  assert.strictEqual(parsed[3].nsb_number, '539');
+  assert.strictEqual(parsed[3].vacant_lot_if_visible, false);
+  assert.strictEqual(parsed[3].property_address, '14715 Arminta St, Van Nuys, CA 91402');
+  assert.strictEqual(parsed[4].minimum_bid, '$152,743');
+  assert.strictEqual(parsed[4].nsb_number, '539');
+  assert.notStrictEqual(parsed[4].minimum_bid, '$152,743539');
+  assert.strictEqual(parsed[5].minimum_bid, '');
+  assert.strictEqual(parsed[5].bid_parse_status, 'ambiguous');
+  assert.strictEqual(parsed[5].property_address, '');
+  assert.ok(parsed[5].raw_address_text.includes('1000 Bad Bid St'));
+  assert.strictEqual(parsed[6].property_address, '');
+  assert.ok(/VAC\/VIC/i.test(parsed[6].raw_address_text));
+  assert.strictEqual(parsed[7].property_address, '28915 Thousand Oaks Blvd, Agoura Hills, CA 91301');
+  assert.strictEqual(parsed[8].property_address, '');
+  assert.strictEqual(parsed[8].apn, '2049-016-027');
 
   const addressCandidate = adapter.candidateFromAuctionRow(parsed[1], profile, { captured_at: '2026-07-23T12:00:00.000Z' });
   assert.strictEqual(addressCandidate.normalized_address, '8210 Bobbyboyar Ave, Los Angeles, CA 91304');
   assert.strictEqual(addressCandidate.property_address, '8210 Bobbyboyar Ave, Los Angeles, CA 91304');
-  assert.strictEqual(addressCandidate.listed_price, '$14,276');
-  assert.strictEqual(addressCandidate.listed_price_evidence_text, 'Displayed minimum bid shown in auction book: $14,276');
-  assert.ok(addressCandidate.risk_flags.includes('LISTED_PRICE_NOT_ARV_OR_MAO'));
+  assert.strictEqual(addressCandidate.listed_price, '');
+  assert.strictEqual(addressCandidate.minimum_bid, '$14,276');
+  assert.strictEqual(addressCandidate.minimum_bid_evidence_text, 'Minimum bid shown in Los Angeles County auction book: $14,276');
+  assert.ok(addressCandidate.risk_flags.includes('MINIMUM_BID_NOT_ARV_OR_MAO'));
   assert.strictEqual(addressCandidate.preview_only, true);
   assert.strictEqual(addressCandidate.should_ingest, false);
   assert.strictEqual(addressCandidate.not_a_saved_lead, true);
+  assert.strictEqual(addressCandidate.vacant_lot_if_visible, false);
+
+  const stuckBidCandidate = adapter.candidateFromAuctionRow(parsed[4], profile, { captured_at: '2026-07-23T12:00:00.000Z' });
+  assert.strictEqual(stuckBidCandidate.minimum_bid, '$152,743');
+  assert.strictEqual(stuckBidCandidate.nsb_number, '539');
+
+  const ambiguousBidCandidate = adapter.candidateFromAuctionRow(parsed[5], profile, { captured_at: '2026-07-23T12:00:00.000Z' });
+  assert.strictEqual(ambiguousBidCandidate.minimum_bid, '');
+  assert.ok(!ambiguousBidCandidate.risk_flags.includes('MINIMUM_BID_NOT_ARV_OR_MAO'));
 
   const apnOnlyCandidate = adapter.candidateFromAuctionRow(parsed[0], profile, { captured_at: '2026-07-23T12:00:00.000Z' });
   assert.strictEqual(apnOnlyCandidate.normalized_address, '');
@@ -114,7 +149,10 @@ function fakePdfParse(pageTexts) {
   const addressRow = board.free_public_deals.find((deal) => deal.source_row_reference === '2020-019-012');
   assert.ok(addressRow);
   assert.strictEqual(addressRow.quality_bucket, 'INSPECT_NOW');
-  assert.strictEqual(addressRow.listed_price, '$14,276');
+  assert.strictEqual(addressRow.listed_price, '');
+  assert.strictEqual(addressRow.minimum_bid, '$14,276');
+  assert.strictEqual(addressRow.minimum_bid_evidence_text, 'Minimum bid shown in Los Angeles County auction book: $14,276');
+  assert.ok(addressRow.risk_flags.includes('MINIMUM_BID_NOT_ARV_OR_MAO'));
   assert.strictEqual(addressRow.program, '2026A Online Auction');
   assert.strictEqual(addressRow.source_document_url, profile.document_url);
   assert.strictEqual(addressRow.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
@@ -126,8 +164,9 @@ function fakePdfParse(pageTexts) {
   }, { preview_impl: async () => board });
   assert.strictEqual(queued.rows.length, 2);
   assert.strictEqual(queued.rows[0].source_document_url, profile.document_url);
-  assert.strictEqual(queued.rows[0].listed_price, '$14,276');
-  assert.strictEqual(queued.rows[0].listed_price_evidence_text, 'Displayed minimum bid shown in auction book: $14,276');
+  assert.strictEqual(queued.rows[0].listed_price, '');
+  assert.strictEqual(queued.rows[0].minimum_bid, '$14,276');
+  assert.strictEqual(queued.rows[0].minimum_bid_evidence_text, 'Minimum bid shown in Los Angeles County auction book: $14,276');
   assert.strictEqual(queued.rows[0].program, '2026A Online Auction');
   assert.strictEqual(queued.rows[0].preview_only, true);
   assert.strictEqual(queued.rows[0].not_a_saved_lead, true);
