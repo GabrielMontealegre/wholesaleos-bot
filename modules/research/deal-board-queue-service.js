@@ -41,11 +41,25 @@ const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
 ]);
-const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
+function txProfileMarketGroup(profile) {
+  return cleanText(profile && profile.market_group || 'dallas').toLowerCase();
+}
+
+function txSourceIdsForGroup(group) {
+  const targetGroup = cleanText(group || 'dallas').toLowerCase();
+  return txCountyForeclosureSourceProfiles.PROFILES
+    .filter((profile) => txProfileMarketGroup(profile) === targetGroup)
+    .map((profile) => profile.source_id);
+}
+
+const DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('dallas'));
+const HOUSTON_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('houston'));
+const SAN_ANTONIO_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('san_antonio'));
+const AUSTIN_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('austin'));
 const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
-const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
+const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -305,6 +319,21 @@ function isDallasMarket(market) {
     /dallas/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
 }
 
+function isHoustonMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'TX' &&
+    /houston|harris|fort\s*bend/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
+function isSanAntonioMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'TX' &&
+    /san\s*antonio|bexar/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
+function isAustinMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'TX' &&
+    /austin|travis|williamson/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
 function isDetroitMarket(market) {
   return cleanText(market && market.state).toUpperCase() === 'MI' &&
     /detroit|wayne/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
@@ -326,10 +355,11 @@ function defaultQueueSourceIdsForMarket(market) {
   if (isSanDiegoMarket(market)) return CA_SAN_DIEGO_SOURCE_IDS.slice();
   if (isLosAngelesMarket(market)) return CA_LOS_ANGELES_SOURCE_IDS.slice();
   if (state !== 'TX') return [];
-  const ids = [];
-  if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
-  ids.push(...TX_COUNTY_FORECLOSURE_SOURCE_IDS);
-  return Array.from(new Set(ids));
+  if (isDallasMarket(market)) return DEFAULT_QUEUE_SOURCE_IDS.slice();
+  if (isHoustonMarket(market)) return HOUSTON_TX_COUNTY_FORECLOSURE_SOURCE_IDS.slice();
+  if (isSanAntonioMarket(market)) return SAN_ANTONIO_TX_COUNTY_FORECLOSURE_SOURCE_IDS.slice();
+  if (isAustinMarket(market)) return AUSTIN_TX_COUNTY_FORECLOSURE_SOURCE_IDS.slice();
+  return [];
 }
 
 function rowPhone(deal) {
@@ -920,6 +950,10 @@ module.exports = {
   MAX_BATCH_LIMIT,
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
+  DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS,
+  HOUSTON_TX_COUNTY_FORECLOSURE_SOURCE_IDS,
+  SAN_ANTONIO_TX_COUNTY_FORECLOSURE_SOURCE_IDS,
+  AUSTIN_TX_COUNTY_FORECLOSURE_SOURCE_IDS,
   MI_DETROIT_SOURCE_IDS,
   CA_LOS_ANGELES_SOURCE_IDS,
   defaultQueueSourceIdsForMarket,

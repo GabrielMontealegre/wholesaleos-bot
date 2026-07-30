@@ -33,6 +33,7 @@ fs.writeFileSync(process.env.AI_DEAL_ANALYZER_JOBS_PATH, JSON.stringify(initialS
 fs.writeFileSync(process.env.DEAL_CALL_DOSSIERS_PATH, JSON.stringify(initialStores.dossiers, null, 2));
 
 const dealBoard = require('../modules/research/free-public-deal-board');
+const currentYear = String(new Date().getFullYear());
 
 function response(status) {
   return {
@@ -507,7 +508,7 @@ const rejectedRecords = [
           county: 'Hunt',
           source_family: 'preforeclosure_trustee_notice',
           source_name: 'Hunt County Foreclosure EasyDocs',
-          source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+          source_url: `https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=${currentYear}`,
           source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-08-04-foreclosure-01.pdf',
           motivation_type: 'preforeclosure_trustee_notice',
           motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 116 Comanc He Dr Greenville, TX 75402 (OCR)',
@@ -517,7 +518,7 @@ const rejectedRecords = [
           county: 'Hunt',
           source_family: 'preforeclosure_trustee_notice',
           source_name: 'Hunt County Foreclosure EasyDocs',
-          source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+          source_url: `https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=${currentYear}`,
           source_document_url: 'https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-08-04-foreclosure-02.pdf',
           motivation_type: 'preforeclosure_trustee_notice',
           motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE | 116 Greenville, TX 75402 (OCR)',

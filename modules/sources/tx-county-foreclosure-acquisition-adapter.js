@@ -409,8 +409,22 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
   let rawRows = [];
 
   const archivePages = [];
-  const page = await fetchBounded(profile.source_url, options, false);
-  if (page.status === 'parsed') {
+  const sourceUrlIsDocument = DOC_URL_RE.test(profile.source_url);
+  const page = sourceUrlIsDocument
+    ? { status: 'direct_document_source' }
+    : await fetchBounded(profile.source_url, options, false);
+  if (sourceUrlIsDocument) {
+    documentUrlsFound.push(profile.source_url);
+    const directSourceMeta = {
+      url: profile.source_url,
+      label: `${profile.source_name} direct official document`,
+      link_type: 'pdf_file',
+      keyword_hit: 1,
+      date_priority: datePriority(`${profile.source_url} ${profile.source_name}`)
+    };
+    discoveredLinks.push(directSourceMeta);
+    documentLinkMeta.set(profile.source_url, directSourceMeta);
+  } else if (page.status === 'parsed') {
     for (const link of discoverOfficialLinks(page.text, profile.source_url, profile)) {
       discoveredLinks.push(link);
       if (link.link_type === 'pdf_file') documentUrlsFound.push(link.url);

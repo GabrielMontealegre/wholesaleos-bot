@@ -11,6 +11,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-3-jefferson-al]] - Jefferson County AL survey, blocked for now.
 - [[cycle-4-san-diego-ca]] - San Diego County CA tax-defaulted power-to-sell notice, verified open (build pending).
 - [[cycle-5-los-angeles-ca]] - Los Angeles County CA tax-defaulted auction book, verified open (build pending).
+- [[cycle-6-tx-volume-wave]] - Texas metro volume wave: Bexar/San Antonio and Fort Bend/Houston fit existing TX source families; Austin deferred.
 
 ## Market Notes
 

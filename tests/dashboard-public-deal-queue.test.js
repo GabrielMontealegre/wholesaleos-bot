@@ -99,13 +99,18 @@ function mockDeal(overrides) {
   const run1 = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 99 }, { preview_impl: previewImpl });
   assert.strictEqual(previewCalls[0].limit, 25, 'limit must clamp to max 25');
   const countyProfiles = require('../modules/sources/tx-county-foreclosure-source-profiles');
+  const dallasCountySourceIds = countyProfiles.PROFILES
+    .filter((profile) => !profile.market_group || profile.market_group === 'dallas')
+    .map((profile) => profile.source_id);
   assert.deepStrictEqual(previewCalls[0].source_ids, [
     'tx_dallas_county_clerk_foreclosure_notices',
     'tx_dallas_craigslist_owner_posts',
     'tx_dallas_fsbo_contact_first'
-  ].concat(countyProfiles.PROFILES.map((profile) => profile.source_id)),
-  'queue must explicitly request all default free lanes including every county profile');
+  ].concat(dallasCountySourceIds),
+  'queue must explicitly request all default Dallas free lanes without non-Dallas TX metros');
   assert.ok(!previewCalls[0].source_ids.includes('tx_dallas_listing_radar'), 'Listing Radar is kept registered but mothballed from the default daily queue');
+  assert.ok(!previewCalls[0].source_ids.includes('tx_bexar_county_foreclosure_notices'), 'Bexar must not run in Dallas batches');
+  assert.ok(!previewCalls[0].source_ids.includes('tx_fort_bend_county_foreclosure_notices'), 'Fort Bend must not run in Dallas batches');
   assert.ok(previewCalls[0].source_ids.includes('tx_hunt_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_navarro_county_foreclosure_notices'));
   assert.ok(previewCalls[0].source_ids.includes('tx_hill_county_foreclosure_notices'));
@@ -135,6 +140,26 @@ function mockDeal(overrides) {
     queueService.defaultQueueSourceIdsForMarket({ city: 'Los Angeles', county: 'Los Angeles', state: 'CA' }),
     ['ca_los_angeles_tax_default_auction_book'],
     'Los Angeles must run only its verified auction-book lane'
+  );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Houston', county: 'Harris', state: 'TX' }),
+    ['tx_fort_bend_county_foreclosure_notices'],
+    'Houston must run only verified Houston-area TX lanes'
+  );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'San Antonio', county: 'Bexar', state: 'TX' }),
+    ['tx_bexar_county_foreclosure_notices'],
+    'San Antonio must run only the Bexar lane'
+  );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Austin', county: 'Travis', state: 'TX' }),
+    [],
+    'Austin must short-circuit until a verified config-fit lane exists'
+  );
+  assert.deepStrictEqual(
+    queueService.defaultQueueSourceIdsForMarket({ city: 'Lubbock', county: 'Lubbock', state: 'TX' }),
+    [],
+    'laneless TX markets must short-circuit instead of inheriting Dallas lanes'
   );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
@@ -189,6 +214,20 @@ function mockDeal(overrides) {
   const storedAfterCleveland = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
   assert.ok(storedAfterCleveland.markets['cleveland|cuyahoga|oh'], 'empty market bucket must still be recorded');
   assert.strictEqual(storedAfterCleveland.markets['cleveland|cuyahoga|oh'].batches[0].board_blocker_summary, 'no_verified_source_lanes_for_this_market');
+
+  const lubbockPreviewCalls = [];
+  const lubbockRun = await queueService.runDealBoardBatch(
+    { market: { city: 'Lubbock', county: 'Lubbock', state: 'TX' }, limit: 25 },
+    {
+      preview_impl: async (input) => {
+        lubbockPreviewCalls.push(input);
+        return { free_public_deals: [], rejected_generic_count: 0, diagnostics: {} };
+      }
+    }
+  );
+  assert.strictEqual(lubbockPreviewCalls.length, 0, 'laneless TX markets must not call preview or auto-select Dallas lanes');
+  assert.strictEqual(lubbockRun.batch.board_blocker_summary, 'no_verified_source_lanes_for_this_market');
+  assert.deepStrictEqual(lubbockRun.batch.source_coverage, []);
 
   // Detroit/Wayne has one verified lane and visible source price remains
   // explicitly separate from ARV/MAO through the snapshot projection.
@@ -400,7 +439,7 @@ function mockDeal(overrides) {
       }
     }
   });
-  const ocrBatch = await queueService.runDealBoardBatch({ market: { city: 'Plano', county: 'Collin', state: 'TX' }, limit: 25 }, { preview_impl: ocrPreview });
+  const ocrBatch = await queueService.runDealBoardBatch({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 }, { preview_impl: ocrPreview });
   assert.ok(ocrBatch.batch.ocr);
   assert.strictEqual(ocrBatch.batch.ocr.ocr_documents_attempted, 2);
   assert.strictEqual(ocrBatch.batch.ocr.ocr_rows_with_address, 1);

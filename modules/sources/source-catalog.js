@@ -93,7 +93,15 @@ const SECONDARY_DALLAS_SOURCES = [
 // registry (tx-county-foreclosure-source-profiles) - adding a county there
 // automatically adds it here and to the adapter registry.
 const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
-const DFW_COUNTY_SOURCES = txCountyForeclosureSourceProfiles.PROFILES.map((profile, index) => ({
+function txProfileMarketGroup(profile) {
+  return cleanText(profile && profile.market_group || 'dallas').toLowerCase();
+}
+
+function buildTxCountySourcesForGroup(group) {
+  const targetGroup = cleanText(group || 'dallas').toLowerCase();
+  return txCountyForeclosureSourceProfiles.PROFILES
+    .filter((profile) => txProfileMarketGroup(profile) === targetGroup)
+    .map((profile, index) => ({
   source_id: profile.source_id,
   source_name: profile.source_name,
   source_family: 'preforeclosure_trustee_notice',
@@ -106,7 +114,13 @@ const DFW_COUNTY_SOURCES = txCountyForeclosureSourceProfiles.PROFILES.map((profi
   use_policy: 'official_source_first',
   preview_only: true,
   should_ingest: false
-}));
+    }));
+}
+
+const DFW_COUNTY_SOURCES = buildTxCountySourcesForGroup('dallas');
+const HOUSTON_COUNTY_SOURCES = buildTxCountySourcesForGroup('houston');
+const SAN_ANTONIO_COUNTY_SOURCES = buildTxCountySourcesForGroup('san_antonio');
+const AUSTIN_COUNTY_SOURCES = buildTxCountySourcesForGroup('austin');
 const caLosAngelesTaxDefaultSourceProfiles = require('./ca-los-angeles-tax-default-source-profiles');
 const LOS_ANGELES_TAX_DEFAULT_SOURCES = caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile, index) => ({
   source_id: profile.source_id,
@@ -176,12 +190,18 @@ function buildSourceCatalog(input = {}) {
     ? dallasPriority.buildDallasSourcePriorityPlan({}).sources
     : [];
   const dfwMarket = state === 'TX' && /dallas|tarrant|collin|denton|fort worth/i.test(`${county} ${cleanText(input.city || '')}`);
+  const houstonMarket = state === 'TX' && /houston|harris|fort\s*bend/i.test(`${county} ${city}`);
+  const sanAntonioMarket = state === 'TX' && /san\s*antonio|bexar/i.test(`${county} ${city}`);
+  const austinMarket = state === 'TX' && /austin|travis|williamson/i.test(`${county} ${city}`);
   const detroitMarket = state === 'MI' && /detroit|wayne/i.test(`${city} ${county}`);
   const sanDiegoMarket = state === 'CA' && /san\s*diego/i.test(`${city} ${county}`);
   const losAngelesMarket = state === 'CA' && /los\s*angeles/i.test(`${city} ${county}`);
   return base
     .concat(/dallas/i.test(county) && state === 'TX' ? SECONDARY_DALLAS_SOURCES : [])
     .concat(dfwMarket ? DFW_COUNTY_SOURCES : [])
+    .concat(houstonMarket ? HOUSTON_COUNTY_SOURCES : [])
+    .concat(sanAntonioMarket ? SAN_ANTONIO_COUNTY_SOURCES : [])
+    .concat(austinMarket ? AUSTIN_COUNTY_SOURCES : [])
     .concat(detroitMarket ? DETROIT_LAND_BANK_SOURCES : [])
     .concat(sanDiegoMarket ? CA_SAN_DIEGO_TAX_DEFAULT_SOURCES : [])
     .concat(losAngelesMarket ? LOS_ANGELES_TAX_DEFAULT_SOURCES : [])
@@ -199,6 +219,9 @@ module.exports = {
   sourceById,
   SECONDARY_DALLAS_SOURCES,
   DFW_COUNTY_SOURCES,
+  HOUSTON_COUNTY_SOURCES,
+  SAN_ANTONIO_COUNTY_SOURCES,
+  AUSTIN_COUNTY_SOURCES,
   DETROIT_LAND_BANK_SOURCES,
   CA_SAN_DIEGO_TAX_DEFAULT_SOURCES,
   LOS_ANGELES_TAX_DEFAULT_SOURCES

@@ -1,0 +1,136 @@
+{
+  "cycle": "cycle-6-tx-volume-wave",
+  "captured_at": "2026-07-29T00:00:00.000Z",
+  "base_main_sha": "0b214cfbaffea70bc67ad95d8c9558cf8b152f79",
+  "rules": {
+    "free_public_only": true,
+    "no_login_captcha_paywall_bypass": true,
+    "build_only_existing_adapter_family": true,
+    "production_or_preview_run": false
+  },
+  "probes": [
+    {
+      "county": "Harris",
+      "market_route": "Houston/Harris",
+      "url": "https://www.cclerk.hctx.net/applications/websearch/FRCL_R.aspx",
+      "http_status": 200,
+      "gated_or_open": "open_search_application",
+      "property_rows_visible": false,
+      "notice_documents_visible": false,
+      "doc_url_pattern": null,
+      "decision": "defer",
+      "reason": "Static fetch reached the official search application but found no config-fit direct notice documents; only application chrome links were visible."
+    },
+    {
+      "county": "Bexar",
+      "market_route": "San Antonio/Bexar",
+      "url": "https://maps.bexar.org/foreclosures/",
+      "http_status": "web-open",
+      "gated_or_open": "open",
+      "property_rows_visible": true,
+      "notice_documents_visible": true,
+      "doc_url_pattern": "DocumentCenter/View/505 direct PDF via foreclosure-notices link",
+      "decision": "build",
+      "reason": "Official public map page links a full current-month foreclosure-notice PDF."
+    },
+    {
+      "county": "Bexar",
+      "market_route": "San Antonio/Bexar",
+      "url": "https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures",
+      "http_status": 200,
+      "content_type": "application/pdf",
+      "bytes": 1226938,
+      "gated_or_open": "open",
+      "property_rows_visible": true,
+      "notice_documents_visible": true,
+      "doc_url_pattern": "DocumentCenter/View/505",
+      "sample_rows": [
+        "20260800237 MORTGAGE 13123 LAGUNA DEL REY DR ATASCOSA 78002",
+        "20260800012 MORTGAGE 1803 BURNET ST SAN ANTONIO 78202",
+        "20260800346 MORTGAGE OLD PEARSALL RD SAN ANTONIO 78242"
+      ],
+      "decision": "build",
+      "reason": "Text-layer PDF rows expose document number, type, source-visible street, city/town, and zip."
+    },
+    {
+      "county": "Travis",
+      "market_route": "Austin/Travis",
+      "url": "https://countyclerk.traviscountytx.gov/departments/recording/meetings/",
+      "http_status": 200,
+      "gated_or_open": "open_portal_link",
+      "property_rows_visible": false,
+      "notice_documents_visible": false,
+      "doc_url_pattern": null,
+      "decision": "defer",
+      "reason": "Official page points to search foreclosure notices and records portals; no direct config-fit notice PDFs were visible."
+    },
+    {
+      "county": "Montgomery",
+      "market_route": "Houston area/Montgomery",
+      "url": "https://www.mctx.org/index_clerk/public_records/foreclosures/index.php",
+      "http_status": 200,
+      "gated_or_open": "open_portal_link",
+      "property_rows_visible": false,
+      "notice_documents_visible": false,
+      "doc_url_pattern": null,
+      "decision": "defer",
+      "reason": "Official page says digital notices are on the records search website; no direct config-fit documents were visible."
+    },
+    {
+      "county": "Fort Bend",
+      "market_route": "Houston area/Fort Bend",
+      "url": "https://www.fortbendcountytx.gov/government/departments/county-clerk/search-for-foreclosures",
+      "http_status": 200,
+      "gated_or_open": "open",
+      "property_rows_visible": false,
+      "notice_documents_visible": true,
+      "doc_url_pattern": "static monthly PDF links",
+      "sample_documents": [
+        {
+          "url": "https://www.fortbendcountytx.gov/sites/default/files/document-central/document-central/county-clerk-documents/home-page-county-clerk/research-foreclosures/August-2026.pdf",
+          "content_type": "application/pdf",
+          "content_length": 24767791
+        },
+        {
+          "url": "https://www.fortbendcountytx.gov/sites/default/files/document-central/document-central/county-clerk-documents/home-page-county-clerk/research-foreclosures/July-2026.pdf",
+          "content_type": "application/pdf",
+          "content_length": 26399476
+        }
+      ],
+      "decision": "build_source_proof_only",
+      "reason": "Official page exposes open current PDFs, but they are oversized image scans under the existing safe parsing cap."
+    },
+    {
+      "county": "Williamson",
+      "market_route": "Austin/Williamson",
+      "url": "https://www.wilcotx.gov/308/Foreclosure-Trustee-Sales",
+      "http_status": 200,
+      "gated_or_open": "open_portal_link",
+      "property_rows_visible": false,
+      "notice_documents_visible": false,
+      "doc_url_pattern": null,
+      "decision": "defer",
+      "reason": "Official page links Posted Legal Notices/Search Records but no direct foreclosure notice documents were visible."
+    },
+    {
+      "county": "Williamson",
+      "market_route": "Austin/Williamson",
+      "url": "https://www.wilcotx.gov/1466/Posted-Legal-Notices",
+      "http_status": 200,
+      "gated_or_open": "open",
+      "property_rows_visible": false,
+      "notice_documents_visible": false,
+      "doc_url_pattern": null,
+      "decision": "defer",
+      "reason": "Posted Legal Notices page reached; no config-fit foreclosure document links found."
+    }
+  ],
+  "lanes_added": [
+    "tx_bexar_county_foreclosure_notices",
+    "tx_fort_bend_county_foreclosure_notices"
+  ],
+  "markets_added": [
+    "San Antonio/Bexar TX",
+    "Houston/Harris/Fort Bend TX"
+  ]
+}
