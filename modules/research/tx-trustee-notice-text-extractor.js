@@ -90,6 +90,10 @@ function knownCityAtEnd(value, cityNames) {
   return { city: '', street: source };
 }
 
+function tabularNoticeParserSignature() {
+  return 'tabular-notice-v2';
+}
+
 function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
   if (!TABULAR_NOTICE_HEADER_RE.test(source)) return [];
   const county = cleanText(profile.county) || 'Unknown';
@@ -247,5 +251,6 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
 module.exports = {
   extractTrusteeNoticeRows,
   extractTabularForeclosureListRows,
-  saleDateFromWindow
+  saleDateFromWindow,
+  tabularNoticeParserSignature
 };
