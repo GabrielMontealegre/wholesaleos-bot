@@ -241,7 +241,7 @@ function documentLedgerEntry(store, documentUrl, postingMonth, parserSignature =
   const entry = store.documents[documentLedgerKey(documentUrl, postingMonth)] || null;
   if (!entry) return null;
   const storedSignature = cleanText(entry.parser_signature);
-  if (storedSignature && storedSignature !== cleanText(parserSignature)) return null;
+  if (storedSignature !== cleanText(parserSignature)) return null;
   return entry;
 }
 

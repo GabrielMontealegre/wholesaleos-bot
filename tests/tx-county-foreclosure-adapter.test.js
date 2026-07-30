@@ -458,51 +458,72 @@ const TARRANT_NOTICE_TEXT = [
     '20260800346',
     'MORTGAGELAGUNA MADRE ST ATASCOSA78002'
   ].join('\n');
-  const bexarLiveStyleLedgerPath = path.join(tmpDir, 'deal-board-doc-ledger-bexar-live-style.json');
   const bexarLiveStyleLedgerKey = `${postingMonth(0)}|https://www.bexar.org/documentcenter/view/505/current-county-clerk-foreclosures`;
-  fs.writeFileSync(bexarLiveStyleLedgerPath, JSON.stringify({
-    version: 1,
-    store_kind: 'deal_board_document_ledger_not_saved_leads',
-    updated_at: '2026-07-29T00:00:00.000Z',
-    documents: {
-      [bexarLiveStyleLedgerKey]: {
-        document_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
-        posting_month: postingMonth(0),
-        first_attempt_at: '2026-07-29T00:00:00.000Z',
-        last_attempt_at: '2026-07-29T00:00:00.000Z',
-        last_status: 'done',
-        parser_signature: 'legacy-parser-signature',
-        attempts: [{ status: 'done', timestamp: '2026-07-29T00:00:00.000Z' }]
+  const bexarLegacyLedgerEntry = {
+    document_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
+    posting_month: postingMonth(0),
+    first_attempt_at: '2026-07-29T00:00:00.000Z',
+    last_attempt_at: '2026-07-29T00:00:00.000Z',
+    last_status: 'done',
+    parser_signature: 'legacy-parser-signature',
+    attempts: [{ status: 'done', timestamp: '2026-07-29T00:00:00.000Z' }]
+  };
+  async function runBexarLiveStyleWithSeededLedger(ledgerName, seedEntry) {
+    const baseLedgerPath = path.join(tmpDir, ledgerName);
+    const ledgerMarketKey = `bexar-live-style-${ledgerName}`;
+    const originalLedgerPath = process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH;
+    process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = baseLedgerPath;
+    const ledgerPath = adapter.documentLedgerFilePath({ market_key: ledgerMarketKey });
+    fs.writeFileSync(ledgerPath, JSON.stringify({
+      version: 1,
+      store_kind: 'deal_board_document_ledger_not_saved_leads',
+      updated_at: '2026-07-29T00:00:00.000Z',
+      documents: {
+        [bexarLiveStyleLedgerKey]: seedEntry
       }
+    }, null, 2));
+    try {
+      const first = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+        source_id: 'tx_bexar_county_foreclosure_notices',
+        market_key: ledgerMarketKey,
+        env: { ENABLE_SEARCH_PROVIDER: 'false' },
+        fetch_impl: async (url) => {
+          if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarLiveStyleText, 'application/pdf');
+          throw new Error(`unexpected:${url}`);
+        }
+      });
+      const repeat = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+        source_id: 'tx_bexar_county_foreclosure_notices',
+        market_key: ledgerMarketKey,
+        env: { ENABLE_SEARCH_PROVIDER: 'false' },
+        fetch_impl: async (url) => {
+          if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarLiveStyleText, 'application/pdf');
+          throw new Error(`unexpected:${url}`);
+        }
+      });
+      return { first, repeat, ledger: JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) };
+    } finally {
+      process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = originalLedgerPath;
     }
-  }, null, 2));
-  const originalLedgerPath = process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH;
-  process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = bexarLiveStyleLedgerPath;
-  const bexarLiveStyle = await adapter.runTxCountyForeclosureAcquisitionAdapter({
-    source_id: 'tx_bexar_county_foreclosure_notices',
-    env: { ENABLE_SEARCH_PROVIDER: 'false' },
-    fetch_impl: async (url) => {
-      if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarLiveStyleText, 'application/pdf');
-      throw new Error(`unexpected:${url}`);
-    }
-  });
-  process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = originalLedgerPath;
-  assert.strictEqual(bexarLiveStyle.status, 'available');
-  assert.strictEqual(bexarLiveStyle.candidates.length, 3);
-  assert.ok(bexarLiveStyle.candidates.some((candidate) => candidate.source_row_reference === '20260800237' && /13123 Laguna Del Rey Dr, Atascosa, TX 78002/i.test(candidate.normalized_address)));
-  assert.ok(bexarLiveStyle.candidates.some((candidate) => candidate.source_row_reference === '20260800012' && /1803 Burnet St, San Antonio, TX 78202/i.test(candidate.normalized_address)));
-  assert.ok(bexarLiveStyle.candidates.some((candidate) => candidate.source_row_reference === '20260800346' && !candidate.normalized_address && candidate.missing_evidence.includes('street number')));
-  const bexarLiveStyleRepeat = await adapter.runTxCountyForeclosureAcquisitionAdapter({
-    source_id: 'tx_bexar_county_foreclosure_notices',
-    env: { ENABLE_SEARCH_PROVIDER: 'false' },
-    fetch_impl: async (url) => {
-      if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarLiveStyleText, 'application/pdf');
-      throw new Error(`unexpected:${url}`);
-    }
-  });
-  assert.strictEqual(bexarLiveStyleRepeat.status, 'needs_manual_review');
-  assert.strictEqual(bexarLiveStyleRepeat.candidate_count, 0);
-  assert.strictEqual(bexarLiveStyleRepeat.diagnostics.docs_ledger_skipped, 1);
+  }
+  const bexarMissingSignatureEntry = Object.assign({}, bexarLegacyLedgerEntry);
+  delete bexarMissingSignatureEntry.parser_signature;
+  const bexarSeededLedgerRuns = [
+    await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-legacy-signature.json', bexarLegacyLedgerEntry),
+    await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-missing-signature.json', bexarMissingSignatureEntry)
+  ];
+  for (const { first, repeat, ledger } of bexarSeededLedgerRuns) {
+    assert.strictEqual(first.status, 'available');
+    assert.strictEqual(first.candidates.length, 3);
+    assert.strictEqual(first.diagnostics.docs_ledger_skipped, 0, 'stale or missing parser signatures must force one re-read');
+    assert.ok(first.candidates.some((candidate) => candidate.source_row_reference === '20260800237' && /13123 Laguna Del Rey Dr, Atascosa, TX 78002/i.test(candidate.normalized_address)));
+    assert.ok(first.candidates.some((candidate) => candidate.source_row_reference === '20260800012' && /1803 Burnet St, San Antonio, TX 78202/i.test(candidate.normalized_address)));
+    assert.ok(first.candidates.some((candidate) => candidate.source_row_reference === '20260800346' && !candidate.normalized_address && candidate.missing_evidence.includes('street number')));
+    assert.strictEqual(repeat.status, 'needs_manual_review');
+    assert.strictEqual(repeat.candidate_count, 0);
+    assert.strictEqual(repeat.diagnostics.docs_ledger_skipped, 1);
+    assert.strictEqual(ledger.documents[bexarLiveStyleLedgerKey].parser_signature, extractor.tabularNoticeParserSignature());
+  }
 
   const fortBendPage = `
     <html><body>
