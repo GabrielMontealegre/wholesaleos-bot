@@ -6,6 +6,9 @@ exports/cycle3-jefferson-al-gate/*
 !exports/cycle4-san-diego-ca-gate/
 exports/cycle4-san-diego-ca-gate/*
 !exports/cycle4-san-diego-ca-gate/*.json
+!exports/cycle5-los-angeles-ca-gate/
+exports/cycle5-los-angeles-ca-gate/*
+!exports/cycle5-los-angeles-ca-gate/*.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

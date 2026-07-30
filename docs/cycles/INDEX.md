@@ -10,6 +10,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-2-detroit]] - Detroit Land Bank public inventory lane.
 - [[cycle-3-jefferson-al]] - Jefferson County AL survey, blocked for now.
 - [[cycle-4-san-diego-ca]] - San Diego County CA tax-defaulted power-to-sell notice, verified open (build pending).
+- [[cycle-5-los-angeles-ca]] - Los Angeles County CA tax-defaulted auction book, verified open (build pending).
 
 ## Market Notes
 

@@ -35,6 +35,7 @@ const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
 const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
 const miDetroitLandBankSourceProfiles = require('../sources/mi-detroit-land-bank-source-profiles');
 const caSanDiegoTaxDefaultSourceProfiles = require('../sources/ca-san-diego-tax-default-source-profiles');
+const caLosAngelesTaxDefaultSourceProfiles = require('../sources/ca-los-angeles-tax-default-source-profiles');
 const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
@@ -43,6 +44,7 @@ const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
 const TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txCountyForeclosureSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 
 function cleanText(value) {
@@ -313,10 +315,16 @@ function isSanDiegoMarket(market) {
     /san\s*diego/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
 }
 
+function isLosAngelesMarket(market) {
+  return cleanText(market && market.state).toUpperCase() === 'CA' &&
+    /los\s*angeles/i.test(`${cleanText(market && market.city)} ${cleanText(market && market.county)}`);
+}
+
 function defaultQueueSourceIdsForMarket(market) {
   const state = cleanText(market && market.state).toUpperCase() || 'TX';
   if (isDetroitMarket(market)) return MI_DETROIT_SOURCE_IDS.slice();
   if (isSanDiegoMarket(market)) return CA_SAN_DIEGO_SOURCE_IDS.slice();
+  if (isLosAngelesMarket(market)) return CA_LOS_ANGELES_SOURCE_IDS.slice();
   if (state !== 'TX') return [];
   const ids = [];
   if (isDallasMarket(market)) ids.push(...DALLAS_QUEUE_SOURCE_IDS);
@@ -402,6 +410,10 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     listed_price_evidence_text: cleanText(deal.listed_price_evidence_text),
     delinquent_redemption_amount: cleanText(deal.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(deal.delinquent_redemption_amount_evidence_text),
+    minimum_bid: cleanText(deal.minimum_bid),
+    minimum_bid_evidence_text: cleanText(deal.minimum_bid_evidence_text),
+    nsb_number: cleanText(deal.nsb_number),
+    improvement_flag: cleanText(deal.improvement_flag),
     program: cleanText(deal.program),
     property_kind_if_visible: cleanText(deal.property_kind_if_visible),
     vacant_lot_if_visible: deal.vacant_lot_if_visible === true ? true : deal.vacant_lot_if_visible === false ? false : null,
@@ -564,7 +576,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
-    'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text', 'program',
+    'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
+    'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible'
   ];
   let newRows = 0;
@@ -908,6 +921,7 @@ module.exports = {
   MIN_BATCH_LIMIT,
   DEFAULT_QUEUE_SOURCE_IDS,
   MI_DETROIT_SOURCE_IDS,
+  CA_LOS_ANGELES_SOURCE_IDS,
   defaultQueueSourceIdsForMarket,
   MAX_STORED_CENSUS_BACKFILLS_PER_BATCH,
   snapshotFilePath,
