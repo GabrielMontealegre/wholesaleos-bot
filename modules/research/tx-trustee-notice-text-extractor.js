@@ -12,6 +12,8 @@ const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|numbe
 const OWNER_RE = /\b(?:borrower|mortgagor|grantor|debtor|owner)\s*(?:name)?\s*[:#-]?\s*([^|;\n]{2,100})/i;
 const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|(?:mortgage\s+)?servicer\s+address|mortgagee\s+address|beneficiary\s+address|trustee\s+address|suite\s+\d{1,5}|place\s*of\s*sale|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/i;
 const STREET_SUFFIX = "(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)";
+const TABULAR_NOTICE_HEADER_RE = /\bDOCUMENT\s+NUMBER\s+TYPE\s+ADDRESS\s+CITY\/TOWN\s+ZIP\b/i;
+const TABULAR_NOTICE_ROW_RE = /^\s*([A-Z0-9-]{5,24})\s+(MORTGAGE|TAX)\s+(.+?)\s+(\d{5})(?:\s|$)/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -68,10 +70,93 @@ function ownerFromWindow(windowText) {
   return '';
 }
 
+function knownCityAtEnd(value, cityNames) {
+  const source = cleanText(value);
+  const cities = (Array.isArray(cityNames) ? cityNames : [])
+    .map(cleanText)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  for (const city of cities) {
+    const re = new RegExp(`\\b${String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (re.test(source)) {
+      return {
+        city,
+        street: cleanText(source.replace(re, ''))
+      };
+    }
+  }
+  return { city: '', street: source };
+}
+
+function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
+  if (!TABULAR_NOTICE_HEADER_RE.test(source)) return [];
+  const county = cleanText(profile.county) || 'Unknown';
+  const excludedRe = profile.excluded_addresses_re ||
+    (cleanText(profile.excluded_address_pattern) ? new RegExp(profile.excluded_address_pattern, 'i') : null);
+  const rows = [];
+  const seen = new Set();
+  for (const line of String(source || '').replace(/\r/g, '\n').split('\n')) {
+    const match = line.match(TABULAR_NOTICE_ROW_RE);
+    if (!match) continue;
+    const documentNumber = cleanText(match[1]);
+    const foreclosureType = cleanText(match[2]).toUpperCase();
+    const addressAndCity = cleanText(match[3]);
+    const zip = cleanText(match[4]);
+    const citySplit = knownCityAtEnd(addressAndCity, profile.city_names);
+    const city = citySplit.city;
+    const street = citySplit.street;
+    if (!city || !street) continue;
+    if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(line)) continue;
+    const hasStreetNumber = /^\d{1,7}\b/.test(street);
+    const address = hasStreetNumber ? cleanText(`${street}, ${city}, TX ${zip}`) : '';
+    const partialAddress = hasStreetNumber ? '' : cleanText(`${street}, ${city}, TX ${zip}`);
+    if (excludedRe && excludedRe.test(address || partialAddress)) continue;
+    const key = `${cleanText(context.source_proof_url)}|${documentNumber}|${address || partialAddress}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const proofText = [
+      `Document Number: ${documentNumber}`,
+      `Type: ${foreclosureType}`,
+      hasStreetNumber ? `Address: ${address}` : `Source address text: ${partialAddress}`,
+      `ZIP: ${zip}`
+    ].filter(Boolean).join(' | ');
+    rows.push({
+      address,
+      property_address: address,
+      partial_address: partialAddress,
+      county,
+      city,
+      state: cleanText(profile.state) || 'TX',
+      owner_name: '',
+      case_number: documentNumber,
+      source_row_reference: documentNumber,
+      sale_date: '',
+      auction_date: '',
+      event_type: `${foreclosureType} Foreclosure List Row`,
+      source_text: proofText,
+      source_proof_text: proofText.slice(0, 800),
+      raw_text: cleanText(line).slice(0, 1200),
+      source_url: cleanText(context.source_url),
+      source_document_url: cleanText(context.source_proof_url),
+      source_proof_url: cleanText(context.source_proof_url),
+      source_reference: cleanText(context.source_reference || `official ${county} County foreclosure notice document`),
+      missing_evidence: [].concat(hasStreetNumber ? [] : ['street number'], ['sale or auction date']),
+      extraction_method: 'tx_tabular_foreclosure_list_text_extractor',
+      extraction_confidence: hasStreetNumber ? 'Medium' : 'Low',
+      preview_only: true,
+      should_ingest: false
+    });
+    if (rows.length >= (profile.max_rows || 10)) break;
+  }
+  return rows;
+}
+
 // profile: { county, state, city_names[], excluded_addresses_re, max_rows }
 function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
   const source = String(text || '').replace(/\r/g, '\n');
-  if (!NOTICE_RE.test(source) && !GATE_RE.test(source)) return [];
+  const tabularRows = extractTabularForeclosureListRows(source, profile, context);
+  if (tabularRows.length >= (profile.max_rows || 10)) return tabularRows.slice(0, profile.max_rows || 10);
+  if (!NOTICE_RE.test(source) && !GATE_RE.test(source)) return tabularRows;
   const county = cleanText(profile.county) || 'Unknown';
   const excludedRe = profile.excluded_addresses_re ||
     (cleanText(profile.excluded_address_pattern) ? new RegExp(profile.excluded_address_pattern, 'i') : null);
@@ -126,10 +211,11 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
     });
     if (rows.length >= (profile.max_rows || 10)) break;
   }
-  return rows;
+  return tabularRows.concat(rows).slice(0, profile.max_rows || 10);
 }
 
 module.exports = {
   extractTrusteeNoticeRows,
+  extractTabularForeclosureListRows,
   saleDateFromWindow
 };

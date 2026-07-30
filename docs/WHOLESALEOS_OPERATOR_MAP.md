@@ -98,6 +98,11 @@ questions. Proof-only rows collapsed underneath.
 | Wayne County, MI government | waynecountymi.gov denies automated access | use only separately verified public Wayne/Detroit sources |
 | Wayne County Treasurer tax auction | seasonal future lane; lists generally post September-October | keep disabled until the official seasonal inventory is visibly posted |
 | Jefferson County, AL | county tax-lien pages are Cloudflare/403 from automated browser and taxlien.jccal.org embed returns 403; AlabamaPublicNotices.com is readable but Jefferson detail rows were not verified as open | recheck official tax-lien/APN sources monthly; do not add an AL lane until property rows are reachable without login/CAPTCHA/paywall |
+| Harris County, TX | official foreclosure page is a search application; no direct config-fit notice documents visible to static fetch | defer to a future search-app adapter; do not run Dallas lanes for Houston |
+| Travis County, TX | official page points to foreclosure notice/search portals, not direct notice PDFs | defer to a future portal/search pattern; Austin short-circuits until verified |
+| Montgomery County, TX | official page says notices are on the records search website; no direct config-fit documents visible | defer to a future records-search pattern |
+| Williamson County, TX | foreclosure/legal-notice pages reached, but no direct foreclosure notice documents verified | defer until direct documents or a supported index is found |
+| Fort Bend County, TX | current monthly foreclosure PDFs are public but 24-26MB image scans, over the current safe parsing cap | Houston-area lane shows source proof; property-row extraction needs future large-scan/OCR work |
 | DCAD owner lookup | blocks datacenter IPs | `node scripts/export-free-public-deal-board.js` locally |
 | Zillow/Redfin sold comps | 403/429 bot traffic + TX non-disclosure | MLS or paid data |
 | Zillow/Redfin/Realtor/Auction listing radar | current Serper results are mostly generic category/filter pages, not deal rows | adapter kept for manual diagnostics, but removed from the default daily queue until it reliably returns property-specific URLs |

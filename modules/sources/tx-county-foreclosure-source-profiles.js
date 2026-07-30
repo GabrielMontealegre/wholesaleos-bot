@@ -5,13 +5,15 @@
 // blocked_note documents what the county gates so rows and coverage can say
 // it honestly instead of pretending the lane is empty.
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 const PROFILES = [
   {
     source_id: 'tx_hunt_county_foreclosure_notices',
     source_name: 'Hunt County Foreclosure EasyDocs',
     county: 'Hunt',
     state: 'TX',
-    source_url: 'https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=2026',
+    source_url: `https://apps.huntcounty.net/foreclosures/listDocs-new.asp?year=${CURRENT_YEAR}`,
     human_portal_url: 'https://apps.huntcounty.net/foreclosures/',
     official_hosts: ['apps.huntcounty.net'],
     city_names: ['Greenville', 'Commerce', 'Quinlan', 'Caddo Mills', 'Royse City', 'Wolfe City', 'Celeste', 'Lone Oak', 'Campbell', 'West Tawakoni', 'Hawk Cove', 'Neylandville'],
@@ -23,7 +25,7 @@ const PROFILES = [
     source_name: 'Navarro County Foreclosure EasyDocs',
     county: 'Navarro',
     state: 'TX',
-    source_url: 'http://navarro.easydocs.us/foreclosures/listDocs-new.asp?year=2026',
+    source_url: `http://navarro.easydocs.us/foreclosures/listDocs-new.asp?year=${CURRENT_YEAR}`,
     human_portal_url: 'http://navarro.easydocs.us/foreclosures/',
     official_hosts: ['navarro.easydocs.us'],
     city_names: ['Corsicana', 'Kerens', 'Blooming Grove', 'Dawson', 'Frost', 'Rice', 'Richland', 'Angus', 'Barry', 'Emhouse', 'Eureka', 'Goodlow', 'Mildred', 'Mustang', 'Navarro', 'Oak Valley', 'Powell', 'Retreat'],
@@ -35,7 +37,7 @@ const PROFILES = [
     source_name: 'Rains County Foreclosure EasyDocs',
     county: 'Rains',
     state: 'TX',
-    source_url: 'http://rains.easydocs.us/foreclosures/listDocs-new.asp?year=2026',
+    source_url: `http://rains.easydocs.us/foreclosures/listDocs-new.asp?year=${CURRENT_YEAR}`,
     human_portal_url: 'http://rains.easydocs.us/foreclosures/',
     official_hosts: ['rains.easydocs.us'],
     city_names: ['Emory', 'East Tawakoni', 'Point'],
@@ -152,6 +154,32 @@ const PROFILES = [
     extra_document_pages: ['https://www.rockwallcountytexas.com/Archive.aspx?AMID=83'],
     search_hints: ['site:rockwallcountytexas.com foreclosure notices archive', 'Rockwall County Texas notice of trustee sale filetype:pdf'],
     blocked_note: 'Open CivicPlus monthly archives with per-notice documents; current scans lack a text layer - open the direct links (OCR is the future automation lever).'
+  },
+  {
+    source_id: 'tx_fort_bend_county_foreclosure_notices',
+    source_name: 'Fort Bend County Clerk Foreclosure Lists',
+    county: 'Fort Bend',
+    state: 'TX',
+    market_group: 'houston',
+    source_url: 'https://www.fortbendcountytx.gov/government/departments/county-clerk/search-for-foreclosures',
+    human_portal_url: 'https://www.fortbendcountytx.gov/government/departments/county-clerk/search-for-foreclosures',
+    official_hosts: ['fortbendcountytx.gov', 'fbctxdocs.fortbendcountytx.gov'],
+    city_names: ['Richmond', 'Rosenberg', 'Sugar Land', 'Missouri City', 'Katy', 'Fulshear', 'Stafford', 'Needville', 'Arcola', 'Beasley', 'Meadows Place', 'Simonton', 'Orchard', 'Thompsons', 'Fairchilds', 'Houston', 'Rosharon', 'Fresno'],
+    search_hints: [],
+    blocked_note: 'Open Fort Bend County foreclosure list page exposes current monthly public PDFs, but current PDFs are oversized image scans under the safe server parsing cap; open document links manually or add a future OCR/large-scan lane.'
+  },
+  {
+    source_id: 'tx_bexar_county_foreclosure_notices',
+    source_name: 'Bexar County Clerk Current Foreclosures',
+    county: 'Bexar',
+    state: 'TX',
+    market_group: 'san_antonio',
+    source_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
+    human_portal_url: 'https://maps.bexar.org/foreclosures/',
+    official_hosts: ['bexar.org', 'maps.bexar.org'],
+    city_names: ['San Antonio', 'Atascosa', 'Boerne', 'Helotes', 'Somerset', 'Von Ormy', 'Adkins', 'Converse', 'Elmendorf', 'Universal City', 'Saint Hedwig', 'Schertz', 'Kirby', 'Live Oak', 'Selma', 'Leon Valley', 'Alamo Heights', 'Balcones Heights', 'Castle Hills', 'Windcrest', 'Terrell Hills', 'Olmos Park', 'China Grove'],
+    search_hints: [],
+    blocked_note: 'Open Bexar County Foreclosure Map links a current text-layer PDF list with document number, type, source-visible street, city/town, and zip fields.'
   },
   {
     source_id: 'tx_johnson_county_foreclosure_notices',

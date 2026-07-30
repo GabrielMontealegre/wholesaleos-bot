@@ -52,6 +52,8 @@ function postingMonth(offset) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+const currentYear = String(new Date().getFullYear());
+
 const TARRANT_NOTICE_TEXT = [
   'NOTICE OF SUBSTITUTE TRUSTEE SALE',
   'Deed of Trust executed by PAT SAMPLE, grantor',
@@ -119,13 +121,14 @@ const TARRANT_NOTICE_TEXT = [
 
   // 2b) EasyDocs counties expose showdoc.asp wrappers whose HTML embeds the
   //     real PDF; the generic adapter must follow that public PDF object.
+  const huntNoticeDay = `${currentYear}-07-07`;
   const huntPage = `
     <html><body>
-      <a href="showdoc.asp?year=2026&docName=2026-07-07-foreclosure-01.pdf">07/07/2026 foreclosure notice</a>
+      <a href="showdoc.asp?year=${currentYear}&docName=${huntNoticeDay}-foreclosure-01.pdf">07/07/${currentYear} foreclosure notice</a>
     </body></html>`;
   const huntWrapper = `
     <html><body>
-      <object type="application/pdf" data="LinkedDir/2026/2026-07-07-foreclosure-01.pdf"></object>
+      <object type="application/pdf" data="LinkedDir/${currentYear}/${huntNoticeDay}-foreclosure-01.pdf"></object>
     </body></html>`;
   const huntNotice = [
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
@@ -139,9 +142,9 @@ const TARRANT_NOTICE_TEXT = [
     env: { ENABLE_SEARCH_PROVIDER: 'false' },
     fetch_impl: async (url) => {
       const u = String(url);
-      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(huntPage);
-      if (/showdoc\.asp\?year=2026&docName=2026-07-07-foreclosure-01\.pdf/.test(u)) return makeResponse(huntWrapper);
-      if (/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(u)) return makeResponse(huntNotice, 'application/pdf');
+      if (new RegExp(`listDocs-new\\.asp\\?year=${currentYear}`).test(u)) return makeResponse(huntPage);
+      if (new RegExp(`showdoc\\.asp\\?year=${currentYear}&docName=${huntNoticeDay}-foreclosure-01\\.pdf`).test(u)) return makeResponse(huntWrapper);
+      if (new RegExp(`LinkedDir\\/${currentYear}\\/${huntNoticeDay}-foreclosure-01\\.pdf`).test(u)) return makeResponse(huntNotice, 'application/pdf');
       throw new Error(`unexpected:${u}`);
     }
   });
@@ -150,8 +153,8 @@ const TARRANT_NOTICE_TEXT = [
   assert.strictEqual(viaEasyDocs.candidates.length, 1);
   assert.ok(/1201 Washington St/i.test(viaEasyDocs.candidates[0].normalized_address || viaEasyDocs.candidates[0].property_address));
   assert.ok(viaEasyDocs.document_urls_found.some((url) => /showdoc\.asp/.test(url)), 'wrapper URL must be discovered');
-  assert.ok(viaEasyDocs.document_urls_parsed.some((url) => /LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(url)), 'embedded PDF URL must be parsed');
-  assert.ok(/LinkedDir\/2026\/2026-07-07-foreclosure-01\.pdf/.test(viaEasyDocs.candidates[0].source_document_url || ''), 'candidate proof must use the direct embedded PDF');
+  assert.ok(viaEasyDocs.document_urls_parsed.some((url) => new RegExp(`LinkedDir\\/${currentYear}\\/${huntNoticeDay}-foreclosure-01\\.pdf`).test(url)), 'embedded PDF URL must be parsed');
+  assert.ok(new RegExp(`LinkedDir\\/${currentYear}\\/${huntNoticeDay}-foreclosure-01\\.pdf`).test(viaEasyDocs.candidates[0].source_document_url || ''), 'candidate proof must use the direct embedded PDF');
 
   // 2b1) Rains is a separately verified open EasyDocs county. Its fixture
   // uses a relative sale date so the public-notice acceptance test cannot rot.
@@ -163,7 +166,7 @@ const TARRANT_NOTICE_TEXT = [
     env: { ENABLE_SEARCH_PROVIDER: 'false' },
     fetch_impl: async (url) => {
       const u = String(url);
-      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rainsPage);
+      if (new RegExp(`listDocs-new\\.asp\\?year=${currentYear}`).test(u)) return makeResponse(rainsPage);
       if (u.includes(`${rainsNoticeDay}-foreclosures.pdf`) && /showdoc\.asp/.test(u)) {
         return makeResponse(`<object type="application/pdf" data="LinkedDir/${rainsYear}/${rainsNoticeDay}-foreclosures.pdf"></object>`);
       }
@@ -199,7 +202,7 @@ const TARRANT_NOTICE_TEXT = [
     env: { ENABLE_SEARCH_PROVIDER: 'false' },
     fetch_impl: async (url) => {
       const u = String(url);
-      if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rankedPage);
+      if (new RegExp(`listDocs-new\\.asp\\?year=${currentYear}`).test(u)) return makeResponse(rankedPage);
       if (u.includes(`${futureDay}-foreclosure-99.pdf`) && /showdoc\.asp/.test(u)) {
         return makeResponse(`<object type="application/pdf" data="LinkedDir/${futureDay.slice(0, 4)}/${futureDay}-foreclosure-99.pdf"></object>`);
       }
@@ -244,7 +247,7 @@ const TARRANT_NOTICE_TEXT = [
   ].join('\n');
   const rotationFetchFor = (monthTag) => async (url) => {
     const u = String(url);
-    if (/listDocs-new\.asp\?year=2026/.test(u)) return makeResponse(rotationPage(monthTag));
+    if (new RegExp(`listDocs-new\\.asp\\?year=${currentYear}`).test(u)) return makeResponse(rotationPage(monthTag));
     const monthMatch = /LinkedDir\/(\d{4})\/(\d{4}-\d{2})-(\d{2})-foreclosure-(\d{2})\.pdf/.exec(u);
     if (monthMatch) return makeResponse(rotationPdf(monthMatch[2], Number(monthMatch[4])), 'application/pdf');
     throw new Error(`unexpected:${u}`);
@@ -418,16 +421,82 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(oversized.document_urls_skipped.some((item) => /pdf_too_large/.test(item.reason)), 'oversized docs must be skipped with an honest reason');
   assert.ok(oversized.document_urls_found.length === 1, 'oversized doc still listed as source proof');
 
-  // 5) Catalog + registry wiring: DFW counties present for DFW markets, absent elsewhere.
+  // 5) Cycle 6 verified-open sources: Bexar direct DocumentCenter PDF parses
+  //    tabular foreclosure rows without fabricating sale dates; Fort Bend's
+  //    current public PDFs are found but oversized scans stay honest proof.
+  const bexarListText = [
+    'DOCUMENT',
+    'NUMBER TYPE ADDRESS CITY/TOWN ZIP',
+    '20260800237 MORTGAGE 13123 LAGUNA DEL REY DR ATASCOSA 78002',
+    '20260800012 MORTGAGE 1803 BURNET ST SAN ANTONIO 78202',
+    '20260800346 MORTGAGE OLD PEARSALL RD SAN ANTONIO 78242'
+  ].join('\n');
+  const bexar = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_bexar_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarListText, 'application/pdf');
+      throw new Error(`unexpected:${url}`);
+    }
+  });
+  assert.strictEqual(bexar.status, 'available');
+  assert.strictEqual(bexar.county, 'Bexar');
+  assert.strictEqual(bexar.candidates.length, 3);
+  assert.strictEqual(bexar.document_urls_found.length, 1);
+  assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800012' && /1803 Burnet St, San Antonio, TX 78202/i.test(candidate.normalized_address)));
+  assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800346' && !candidate.normalized_address && candidate.missing_evidence.includes('street number')), 'street-only Bexar rows must not become fake complete addresses');
+  assert.ok(bexar.candidates.every((candidate) => candidate.preview_only === true && candidate.should_ingest === false && candidate.not_a_saved_lead === true));
+
+  const fortBendPage = `
+    <html><body>
+      <a href="/sites/default/files/document-central/document-central/county-clerk-documents/home-page-county-clerk/research-foreclosures/July-${currentYear}.pdf">July ${currentYear}</a>
+      <a href="/sites/default/files/document-central/document-central/county-clerk-documents/home-page-county-clerk/research-foreclosures/August-${currentYear}.pdf">August ${currentYear}</a>
+    </body></html>`;
+  const fortBend = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_fort_bend_county_foreclosure_notices',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      const u = String(url);
+      if (/search-for-foreclosures/.test(u)) return makeResponse(fortBendPage);
+      if (/research-foreclosures\/(?:July|August)-/.test(u)) {
+        const response = makeResponse('scan', 'application/pdf');
+        response.headers = { get: (name) => (/content-type/i.test(name) ? 'application/pdf' : /content-length/i.test(name) ? String(24 * 1024 * 1024) : '') };
+        return response;
+      }
+      throw new Error(`unexpected:${u}`);
+    }
+  });
+  assert.strictEqual(fortBend.county, 'Fort Bend');
+  assert.strictEqual(fortBend.candidates.length, 0);
+  assert.strictEqual(fortBend.document_urls_found.length, 2);
+  assert.ok(fortBend.document_urls_skipped.every((item) => /pdf_too_large/.test(item.reason)), 'Fort Bend oversized scans must be skipped honestly');
+
+  // 6) Catalog + registry wiring: Dallas county profile group stays Dallas-only;
+  //    new TX metros select only their own verified lanes.
   const dallasCatalog = sourceCatalog.buildSourceCatalog({ city: 'Dallas', county: 'Dallas', state: 'TX' });
+  const dallasProfileIds = profiles.PROFILES
+    .filter((profile) => !profile.market_group || profile.market_group === 'dallas')
+    .map((profile) => profile.source_id);
   for (const profile of profiles.PROFILES) {
-    assert.ok(dallasCatalog.some((source) => source.source_id === profile.source_id), `${profile.source_id} must be in the DFW catalog`);
     assert.ok(registry.listRegisteredSourceIds().includes(profile.source_id), `${profile.source_id} must be registered`);
   }
+  for (const sourceId of dallasProfileIds) {
+    assert.ok(dallasCatalog.some((source) => source.source_id === sourceId), `${sourceId} must be in the Dallas catalog`);
+  }
+  assert.ok(!dallasCatalog.some((source) => source.source_id === 'tx_bexar_county_foreclosure_notices'), 'Bexar must not be a Dallas lane');
+  assert.ok(!dallasCatalog.some((source) => source.source_id === 'tx_fort_bend_county_foreclosure_notices'), 'Fort Bend must not be a Dallas lane');
   assert.ok(profiles.profileForSourceId('tx_navarro_county_foreclosure_notices'), 'Navarro EasyDocs profile must be configured');
   assert.ok(profiles.profileForSourceId('tx_rains_county_foreclosure_notices'), 'Rains EasyDocs profile must be configured');
-  const elsewhereCatalog = sourceCatalog.buildSourceCatalog({ city: 'Houston', county: 'Harris', state: 'TX' });
-  assert.ok(!elsewhereCatalog.some((source) => /tarrant|collin|denton/.test(source.source_id)), 'DFW lanes only for DFW markets');
+  assert.ok(profiles.profileForSourceId('tx_hunt_county_foreclosure_notices').source_url.includes(`year=${currentYear}`), 'Hunt EasyDocs URL must track the current year');
+  assert.ok(profiles.profileForSourceId('tx_navarro_county_foreclosure_notices').source_url.includes(`year=${currentYear}`), 'Navarro EasyDocs URL must track the current year');
+  assert.ok(profiles.profileForSourceId('tx_rains_county_foreclosure_notices').source_url.includes(`year=${currentYear}`), 'Rains EasyDocs URL must track the current year');
+  const houstonCatalog = sourceCatalog.buildSourceCatalog({ city: 'Houston', county: 'Harris', state: 'TX' });
+  assert.ok(houstonCatalog.some((source) => source.source_id === 'tx_fort_bend_county_foreclosure_notices'), 'Houston-area market must expose Fort Bend lane');
+  assert.ok(!houstonCatalog.some((source) => /tarrant|collin|denton|bexar/.test(source.source_id)), 'Houston market must not inherit Dallas or San Antonio lanes');
+  const sanAntonioCatalog = sourceCatalog.buildSourceCatalog({ city: 'San Antonio', county: 'Bexar', state: 'TX' });
+  assert.deepStrictEqual(sanAntonioCatalog.filter((source) => source.source_family === 'preforeclosure_trustee_notice').map((source) => source.source_id), ['tx_bexar_county_foreclosure_notices']);
+  const austinCatalog = sourceCatalog.buildSourceCatalog({ city: 'Austin', county: 'Travis', state: 'TX' });
+  assert.ok(!austinCatalog.some((source) => source.source_family === 'preforeclosure_trustee_notice'), 'Austin market must stay laneless until a verified config-fit source exists');
 
   console.log('tx county foreclosure adapter tests passed');
 })().catch((error) => {

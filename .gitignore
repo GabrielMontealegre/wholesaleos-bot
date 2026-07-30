@@ -9,6 +9,9 @@ exports/cycle4-san-diego-ca-gate/*
 !exports/cycle5-los-angeles-ca-gate/
 exports/cycle5-los-angeles-ca-gate/*
 !exports/cycle5-los-angeles-ca-gate/*.json
+!exports/cycle6-tx-volume-wave-gate/
+exports/cycle6-tx-volume-wave-gate/*
+!exports/cycle6-tx-volume-wave-gate/*.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json
