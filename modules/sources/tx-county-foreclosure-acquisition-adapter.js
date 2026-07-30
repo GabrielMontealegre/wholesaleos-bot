@@ -74,6 +74,10 @@ function hashId(prefix, value) {
   return `${prefix}_${crypto.createHash('sha1').update(cleanText(value)).digest('hex').slice(0, 16)}`;
 }
 
+function documentParserSignature() {
+  return cleanText(txTrusteeNoticeExtractor.tabularNoticeParserSignature && txTrusteeNoticeExtractor.tabularNoticeParserSignature()) || 'tabular-notice-v1';
+}
+
 function hostOf(url) {
   try {
     return new URL(cleanText(url)).hostname.replace(/^www\./i, '').toLowerCase();
@@ -232,17 +236,21 @@ function documentLedgerKey(documentUrl, postingMonth) {
   return `${cleanText(postingMonth).slice(0, 7)}|${cleanText(documentUrl).toLowerCase()}`;
 }
 
-function documentLedgerEntry(store, documentUrl, postingMonth) {
+function documentLedgerEntry(store, documentUrl, postingMonth, parserSignature = documentParserSignature()) {
   if (!store || !store.documents) return null;
-  return store.documents[documentLedgerKey(documentUrl, postingMonth)] || null;
+  const entry = store.documents[documentLedgerKey(documentUrl, postingMonth)] || null;
+  if (!entry) return null;
+  const storedSignature = cleanText(entry.parser_signature);
+  if (storedSignature && storedSignature !== cleanText(parserSignature)) return null;
+  return entry;
 }
 
-function documentAlreadyRead(store, documentUrl, postingMonth) {
-  const entry = documentLedgerEntry(store, documentUrl, postingMonth);
+function documentAlreadyRead(store, documentUrl, postingMonth, parserSignature = documentParserSignature()) {
+  const entry = documentLedgerEntry(store, documentUrl, postingMonth, parserSignature);
   return !!(entry && (entry.last_status === 'done' || entry.last_status === 'hard_failed'));
 }
 
-function recordDocumentLedgerAttempt(store, documentUrl, postingMonth, status) {
+function recordDocumentLedgerAttempt(store, documentUrl, postingMonth, status, parserSignature = documentParserSignature()) {
   if (!store || !documentUrl || !postingMonth) return store;
   const key = documentLedgerKey(documentUrl, postingMonth);
   const normalizedStatus = String(status || '').toLowerCase() === 'done' ? 'done' : 'hard_failed';
@@ -257,6 +265,7 @@ function recordDocumentLedgerAttempt(store, documentUrl, postingMonth, status) {
   store.documents[key] = Object.assign({}, previous, {
     document_url: cleanText(documentUrl),
     posting_month: cleanText(postingMonth).slice(0, 7),
+    parser_signature: cleanText(parserSignature),
     last_status: normalizedStatus,
     last_attempt_at: nowIso(),
     attempts
@@ -460,6 +469,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     }
   }
 
+  const parserSignature = documentParserSignature();
   const documentLedger = readDocumentLedger(options, profile);
   const documentDocsDiscovered = documentUrlsFound.length;
   const documentSelection = documentUrlsFound
@@ -469,7 +479,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       const postingMonth = postingMonthFromText(`${url} ${label} ${profile.source_name} ${profile.county}`, new Date());
       return { url, label, postingMonth, meta };
     })
-    .filter((item) => !documentAlreadyRead(documentLedger, item.url, item.postingMonth));
+    .filter((item) => !documentAlreadyRead(documentLedger, item.url, item.postingMonth, parserSignature));
   const selectedDocumentUrls = documentSelection.slice(0, MAX_DOCS_PER_COUNTY);
   const documentUrlsLedgerSkipped = documentDocsDiscovered - documentSelection.length;
   const scannedDocs = [];
@@ -479,7 +489,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     const proofUrl = cleanText(doc.final_pdf_url) || url;
     if (doc.final_pdf_url && !isOfficialHost(proofUrl, profile)) {
       documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: 'embedded_pdf_official_host_mismatch' });
-      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'hard_failed');
+      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'hard_failed', parserSignature);
       continue;
     }
     if (doc.status === 'parsed' && doc.kind === 'pdf') {
@@ -495,14 +505,14 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
         source_proof_url: proofUrl,
         source_reference: `official ${profile.county} County foreclosure notice document`
       }));
-      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'done');
+      recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'done', parserSignature);
     } else {
       documentUrlsSkipped.push({ url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), reason: doc.blocked_reason || doc.status });
       if (doc.status === 'blocked') blockedNotes.push({ source: 'official_document', url: proofUrl, reason: doc.blocked_reason });
       if (doc.blocked_reason === 'pdf_scanned_no_text_layer' && doc.buffer) {
         scannedDocs.push({ url: proofUrl, document_url: proofUrl, wrapper_url: cleanText(doc.wrapper_url), buffer: doc.buffer, profile, source_url: profile.source_url, posting_month: selected.postingMonth });
       }
-      recordDocumentLedgerAttempt(documentLedger, proofUrl, selected.postingMonth, doc.status === 'parsed' || doc.status === 'skipped' ? 'done' : 'hard_failed');
+      recordDocumentLedgerAttempt(documentLedger, proofUrl, selected.postingMonth, doc.status === 'parsed' || doc.status === 'skipped' ? 'done' : 'hard_failed', parserSignature);
     }
     if (rawRows.length >= MAX_ROWS) break;
   }
@@ -532,20 +542,20 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       }
       for (const doc of scannedDocs) {
         const ocrAttempt = (ocrOut.attempts || []).find((attempt) => cleanText(attempt.url) === cleanText(doc.url));
-        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), ocrAttempt && ocrAttempt.status === 'ocr_done' ? 'done' : 'hard_failed');
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), ocrAttempt && ocrAttempt.status === 'ocr_done' ? 'done' : 'hard_failed', parserSignature);
       }
     } catch (error) {
       ocrDiagnostics = { ocr_failures: scannedDocs.length, ocr_error: cleanText(error && error.message).slice(0, 80) };
       for (const doc of scannedDocs) {
-        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed');
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed', parserSignature);
       }
     }
   }
   if (scannedDocs.length && (!ocrDiagnostics || !ocrDiagnostics.ocr_failures)) {
     // No OCR run, or OCR succeeded but a doc never got matched explicitly.
     for (const doc of scannedDocs) {
-      if (!documentAlreadyRead(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()))) {
-        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed');
+      if (!documentAlreadyRead(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), parserSignature)) {
+        recordDocumentLedgerAttempt(documentLedger, doc.document_url || doc.url, doc.posting_month || postingMonthFromText(`${doc.url} ${doc.wrapper_url} ${doc.source_url}`, new Date()), 'hard_failed', parserSignature);
       }
     }
   }
