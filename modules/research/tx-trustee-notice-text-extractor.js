@@ -12,8 +12,10 @@ const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|numbe
 const OWNER_RE = /\b(?:borrower|mortgagor|grantor|debtor|owner)\s*(?:name)?\s*[:#-]?\s*([^|;\n]{2,100})/i;
 const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|(?:mortgage\s+)?servicer\s+address|mortgagee\s+address|beneficiary\s+address|trustee\s+address|suite\s+\d{1,5}|place\s*of\s*sale|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/i;
 const STREET_SUFFIX = "(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)";
-const TABULAR_NOTICE_HEADER_RE = /\bDOCUMENT\s+NUMBER\s+TYPE\s+ADDRESS\s+CITY\/TOWN\s+ZIP\b/i;
+const TABULAR_NOTICE_HEADER_RE = /\bDOCUMENT\s*NUMBER\s*TYPE\s*ADDRESS\s*CITY\/TOWN\s*ZIP\b/i;
 const TABULAR_NOTICE_ROW_RE = /^\s*([A-Z0-9-]{5,24})\s+(MORTGAGE|TAX)\s+(.+?)\s+(\d{5})(?:\s|$)/i;
+const TABULAR_NOTICE_DOC_NUMBER_ONLY_RE = /^\s*([A-Z0-9-]{5,24})\s*$/i;
+const TABULAR_NOTICE_COMPACT_ROW_RE = /^\s*(MORTGAGE|TAX)(.+)$/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -95,13 +97,41 @@ function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
     (cleanText(profile.excluded_address_pattern) ? new RegExp(profile.excluded_address_pattern, 'i') : null);
   const rows = [];
   const seen = new Set();
-  for (const line of String(source || '').replace(/\r/g, '\n').split('\n')) {
-    const match = line.match(TABULAR_NOTICE_ROW_RE);
-    if (!match) continue;
-    const documentNumber = cleanText(match[1]);
-    const foreclosureType = cleanText(match[2]).toUpperCase();
-    const addressAndCity = cleanText(match[3]);
-    const zip = cleanText(match[4]);
+  const lines = String(source || '').replace(/\r/g, '\n').split('\n');
+  let pendingDocumentNumber = '';
+  for (const rawLine of lines) {
+    const line = cleanText(rawLine);
+    if (!line) continue;
+    const docNumberOnly = line.match(TABULAR_NOTICE_DOC_NUMBER_ONLY_RE);
+    if (docNumberOnly) {
+      pendingDocumentNumber = cleanText(docNumberOnly[1]);
+      continue;
+    }
+    let documentNumber = '';
+    let foreclosureType = '';
+    let addressAndCity = '';
+    let zip = '';
+    const compactMatch = line.match(TABULAR_NOTICE_ROW_RE);
+    if (compactMatch) {
+      documentNumber = cleanText(compactMatch[1]);
+      foreclosureType = cleanText(compactMatch[2]).toUpperCase();
+      addressAndCity = cleanText(compactMatch[3]);
+      zip = cleanText(compactMatch[4]);
+    } else if (pendingDocumentNumber) {
+      const rowMatch = line.match(TABULAR_NOTICE_COMPACT_ROW_RE);
+      if (!rowMatch) continue;
+      documentNumber = pendingDocumentNumber;
+      pendingDocumentNumber = '';
+      foreclosureType = cleanText(rowMatch[1]).toUpperCase();
+      const rest = cleanText(rowMatch[2]);
+      const zipMatch = rest.match(/(\d{5})(?:-\d{4})?\s*$/);
+      if (!zipMatch) continue;
+      zip = cleanText(zipMatch[1]);
+      addressAndCity = cleanText(rest.slice(0, zipMatch.index));
+    } else {
+      continue;
+    }
+    if (!documentNumber || !foreclosureType || !addressAndCity || !zip) continue;
     const citySplit = knownCityAtEnd(addressAndCity, profile.city_names);
     const city = citySplit.city;
     const street = citySplit.street;
