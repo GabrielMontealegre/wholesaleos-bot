@@ -76,6 +76,13 @@
       link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
     if (row.best_contact) lines.push('<div style="font-size:12px;">Contact route: <b>' + esc(row.best_contact) + '</b></div>');
+    if (row.foreclosure_type || row.source_row_reference || row.filing_period) {
+      lines.push('<div style="font-size:12px;color:#374151;">' +
+        (row.foreclosure_type ? 'Type: <b>' + esc(row.foreclosure_type) + '</b> ' : '') +
+        (row.source_row_reference ? 'Doc #<b>' + esc(row.source_row_reference) + '</b> ' : '') +
+        (row.filing_period ? 'Filing period <b>' + esc(row.filing_period) + '</b> <span style="color:#991b1b;">(not a sale date)</span>' : '') +
+        '</div>');
+    }
     if (row.listed_price) lines.push('<div style="font-size:12px;">Source listed price: <b>' + esc(row.listed_price) + '</b>' +
       (row.program ? ' <span style="color:#6b7280;">(' + esc(row.program) + ')</span>' : '') +
       ' <span style="color:#991b1b;">not ARV or MAO</span></div>');

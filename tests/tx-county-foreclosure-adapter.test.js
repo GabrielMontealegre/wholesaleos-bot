@@ -23,6 +23,9 @@ const registry = require('../modules/sources/source-adapter-registry');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-tx-county-ledger-'));
 process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = path.join(tmpDir, 'deal-board-doc-ledger.json');
+process.env.DEAL_BOARD_SNAPSHOTS_PATH = path.join(tmpDir, 'deal-board-snapshots.json');
+const dealBoard = require('../modules/research/free-public-deal-board');
+const queueService = require('../modules/research/deal-board-queue-service');
 
 function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 200) {
   const buffer = Buffer.from(String(body || ''), 'utf8');
@@ -446,6 +449,106 @@ const TARRANT_NOTICE_TEXT = [
   assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800012' && /1803 Burnet St, San Antonio, TX 78202/i.test(candidate.normalized_address)));
   assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800346' && !candidate.normalized_address && candidate.missing_evidence.includes('street number')), 'street-only Bexar rows must not become fake complete addresses');
   assert.ok(bexar.candidates.every((candidate) => candidate.preview_only === true && candidate.should_ingest === false && candidate.not_a_saved_lead === true));
+  const bexarAddressCandidate = bexar.candidates.find((candidate) => candidate.source_row_reference === '20260800237');
+  assert.strictEqual(bexarAddressCandidate.current_status, 'On Bexar County Clerk current foreclosure list');
+  assert.strictEqual(bexarAddressCandidate.status_evidence_text, 'Listed on the Bexar County Clerk current foreclosure list (document 20260800237, type MORTGAGE)');
+  assert.strictEqual(bexarAddressCandidate.foreclosure_type, 'MORTGAGE');
+  assert.strictEqual(bexarAddressCandidate.filing_period, '2026-08');
+  assert.strictEqual(bexarAddressCandidate.filing_period_evidence_text, 'Filing period from county document number prefix - NOT a sale date');
+  assert.strictEqual(bexarAddressCandidate.sale_date, '');
+  assert.strictEqual(bexarAddressCandidate.event_date, '');
+  assert.ok(bexarAddressCandidate.risk_flags.includes('NO_SALE_DATE_IN_SOURCE'));
+  const malformedDocRows = extractor.extractTabularForeclosureListRows([
+    'DOCUMENT',
+    'NUMBER TYPE ADDRESS CITY/TOWN ZIP',
+    'ABCDEF00237 MORTGAGE 13123 LAGUNA DEL REY DR ATASCOSA 78002'
+  ].join('\n'), {
+    county: 'Bexar',
+    state: 'TX',
+    city_names: profiles.profileForSourceId('tx_bexar_county_foreclosure_notices').city_names
+  }, {
+    source_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
+    source_proof_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures'
+  });
+  assert.strictEqual(malformedDocRows.length, 1);
+  assert.strictEqual(malformedDocRows[0].filing_period, '', 'malformed document numbers must not emit a filing period');
+  assert.strictEqual(malformedDocRows[0].sale_date, '', 'filing period must never become a sale date');
+
+  const bexarBoard = await dealBoard.runFreePublicDealBoardPreview({
+    market: { city: 'San Antonio', county: 'Bexar', state: 'TX' },
+    mock_source_adapter_results: [bexar]
+  }, { fetch_impl: async () => makeResponse('', 'text/plain', 404) });
+  const bexarInspect = bexarBoard.free_public_deals.find((deal) => deal.source_row_reference === '20260800237');
+  assert.ok(bexarInspect, 'Bexar address row must survive board');
+  assert.strictEqual(bexarInspect.quality_bucket, 'INSPECT_NOW');
+  assert.strictEqual(bexarInspect.status_evidence_text, 'Listed on the Bexar County Clerk current foreclosure list (document 20260800237, type MORTGAGE)');
+  assert.strictEqual(bexarInspect.foreclosure_type, 'MORTGAGE');
+  assert.strictEqual(bexarInspect.filing_period, '2026-08');
+  assert.strictEqual(bexarInspect.sale_date_or_event_date, '', 'filing period must not populate sale_date_or_event_date');
+  assert.ok(bexarInspect.risk_flags.includes('NO_SALE_DATE_IN_SOURCE'));
+  assert.deepStrictEqual(bexarInspect.missing_fields, [
+    'sale or auction date (not published in this county list)',
+    'visible contact route',
+    '3 verified sold comps'
+  ]);
+  assert.strictEqual(bexarInspect.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
+  assert.strictEqual(bexarInspect.MAO_lock_state, 'MAO_LOCKED_NO_ARV');
+  const bexarReview = bexarBoard.free_public_deals.find((deal) => deal.source_row_reference === '20260800346');
+  assert.ok(bexarReview);
+  assert.strictEqual(bexarReview.normalized_address, '');
+  assert.notStrictEqual(bexarReview.quality_bucket, 'INSPECT_NOW');
+  assert.ok(bexarReview.missing_fields.includes('street number'), 'street-only rows must keep the missing street-number warning');
+  assert.deepStrictEqual(bexarReview.missing_fields, [
+    'complete property address',
+    'sale or auction date (not published in this county list)',
+    'visible contact route',
+    '3 verified sold comps',
+    'street number'
+  ]);
+
+  const queuedBexar = await queueService.runDealBoardBatch(
+    { market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }, limit: 25 },
+    {
+      preview_impl: async () => bexarBoard
+    }
+  );
+  const queuedBexarInspect = queuedBexar.rows.find((row) => row.source_row_reference === '20260800237');
+  assert.ok(queuedBexarInspect, 'Bexar row must survive queue projection');
+  assert.strictEqual(queuedBexarInspect.quality_bucket, 'INSPECT_NOW');
+  assert.strictEqual(queuedBexarInspect.foreclosure_type, 'MORTGAGE');
+  assert.strictEqual(queuedBexarInspect.filing_period, '2026-08');
+  assert.strictEqual(queuedBexarInspect.filing_period_evidence_text, 'Filing period from county document number prefix - NOT a sale date');
+  assert.strictEqual(queuedBexarInspect.sale_date_or_event_date, null);
+  assert.strictEqual(queuedBexarInspect.sale_date_iso, null);
+  assert.ok(queuedBexarInspect.risk_flags.includes('NO_SALE_DATE_IN_SOURCE'));
+  assert.deepStrictEqual(queuedBexarInspect.missing_fields, [
+    'sale or auction date (not published in this county list)',
+    'visible contact route',
+    '3 verified sold comps'
+  ]);
+  assert.ok(!profiles.profileForSourceId('tx_bexar_county_foreclosure_notices').max_rows, 'Bexar volume cap is deferred to a dedicated board-cap cycle');
+  const bexarBulkText = ['DOCUMENT', 'NUMBER TYPE ADDRESS CITY/TOWN ZIP']
+    .concat(Array.from({ length: 30 }, (_, index) => {
+      const doc = `202608${String(index + 1).padStart(5, '0')}`;
+      return `${doc} MORTGAGE ${10000 + index} TEST TRAIL SAN ANTONIO 78202`;
+    }))
+    .join('\n');
+  const bexarBulk = await adapter.runTxCountyForeclosureAcquisitionAdapter({
+    source_id: 'tx_bexar_county_foreclosure_notices',
+    market_key: 'bexar-bulk-row-cap-test',
+    env: { ENABLE_SEARCH_PROVIDER: 'false' },
+    fetch_impl: async (url) => {
+      if (/DocumentCenter\/View\/505\/Current-County-Clerk-Foreclosures/.test(String(url))) return makeResponse(bexarBulkText, 'application/pdf');
+      throw new Error(`unexpected:${url}`);
+    }
+  });
+  assert.strictEqual(bexarBulk.candidate_count, 25, 'Bexar stays on the normal 25-row cap until a dedicated board-cap cycle raises it end-to-end');
+  const bexarBulkBoard = await dealBoard.runFreePublicDealBoardPreview({
+    market: { city: 'San Antonio', county: 'Bexar', state: 'TX' },
+    mock_source_adapter_results: [bexarBulk]
+  }, { fetch_impl: async () => makeResponse('', 'text/plain', 404) });
+  assert.strictEqual(bexarBulkBoard.free_public_deals.length, 25, 'board-visible Bexar deals remain capped at 25 after reverting the inert profile cap');
+  assert.ok(!profiles.profileForSourceId('tx_hunt_county_foreclosure_notices').max_rows, 'other TX lanes must keep the default row cap');
 
   const bexarLiveStyleText = [
     'DOCUMENT',

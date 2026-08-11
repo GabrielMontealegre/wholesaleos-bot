@@ -782,22 +782,43 @@ function qualityForDeal(deal) {
 }
 
 function missingFields(deal) {
+  const saleDateNotPublished = Array.isArray(deal && deal.risk_flags) && deal.risk_flags.includes('NO_SALE_DATE_IN_SOURCE');
+  const noSaleDateMissing = saleDateNotPublished ? ['sale or auction date (not published in this county list)'] : [];
+  const sourceMissing = allowedSourceMissingFields(deal);
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
     const reviewMissing = deal.ocr_address_review
       ? ['verified street spelling (check source document)']
       : ['zip (verify from the source document)'];
-    return reviewMissing
+    return uniqueText(reviewMissing
+      .concat(noSaleDateMissing)
+      .concat(sourceMissing)
       .concat(!(deal.status_evidence_text || deal.sale_date_or_event_date) ? ['current status or event date evidence'] : [])
       .concat(!callPrepProjection.visibleContactRoute(deal) ? ['visible contact route'] : [])
-      .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []);
+      .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []));
   }
-  return []
+  return uniqueText([]
     .concat(!deal.normalized_address ? ['complete property address'] : [])
     .concat(!(deal.source_url || deal.source_document_url) ? ['source proof URL'] : [])
     .concat(!deal.motivation_evidence_text ? ['motivation evidence'] : [])
+    .concat(noSaleDateMissing)
     .concat(!(deal.status_evidence_text || deal.sale_date_or_event_date) ? ['current status or event date evidence'] : [])
     .concat(!callPrepProjection.visibleContactRoute(deal) ? ['visible contact route'] : [])
-    .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : []);
+    .concat(deal.comp_status !== 'verified_sold_comps_ready' ? ['3 verified sold comps'] : [])
+    .concat(sourceMissing));
+}
+
+function allowedSourceMissingFields(deal) {
+  const sourceId = cleanText(deal && deal.source_id);
+  const county = cleanText(deal && deal.county).toLowerCase();
+  if (sourceId !== 'tx_bexar_county_foreclosure_notices' && county !== 'bexar') return [];
+  const allowed = new Set([
+    'street number',
+    'sale or auction date (not published in this county list)'
+  ]);
+  const sourceMissing = Array.isArray(deal && deal.source_missing_evidence)
+    ? deal.source_missing_evidence
+    : [];
+  return uniqueText(sourceMissing.filter((item) => allowed.has(cleanText(item))));
 }
 
 function nextBestAction(deal) {
@@ -917,12 +938,18 @@ function dealFromRecord(record, context) {
     motivation_evidence_text: motivation.motivation_evidence_text,
     status_evidence_text: statusEvidenceFromRecord(record),
     sale_date_or_event_date: eventDateFromRecord(record),
+    foreclosure_type: cleanText(record && record.foreclosure_type),
+    filing_period: cleanText(record && record.filing_period),
+    filing_period_evidence_text: cleanText(record && record.filing_period_evidence_text),
     listing_date_if_visible: cleanText(record && record.listing_date_if_visible),
     offer_deadline_if_visible: cleanText(record && record.offer_deadline_if_visible),
     auction_closing_at_if_visible: cleanText(record && record.auction_closing_at_if_visible),
     owner_name_if_visible: cleanText(record && (record.owner_name_if_visible || record.owner_name_candidate || record.owner_name)),
     contact_route_if_visible: cleanText(record && (record.contact_route_if_visible || record.contact_route || record.reply_url || record.phone || record.email)),
     confidence_score: 0,
+    source_missing_evidence: Array.isArray(record && record.missing_evidence)
+      ? record.missing_evidence.map(cleanText).filter(Boolean).slice(0, 8)
+      : [],
     missing_fields: [],
     next_best_action: '',
     why_this_might_be_a_deal: cleanText(record && record.why_this_might_be_a_deal) || cleanText([
@@ -1026,6 +1053,9 @@ function candidateRecord(candidate, source) {
     source_row_reference: cleanText(candidate.source_row_reference || candidate.parcel_or_account),
     address_provenance: cleanText(candidate.address_provenance),
     listing_radar_status: cleanText(candidate.listing_radar_status),
+    foreclosure_type: cleanText(candidate.foreclosure_type),
+    filing_period: cleanText(candidate.filing_period),
+    filing_period_evidence_text: cleanText(candidate.filing_period_evidence_text),
     asking_price: cleanText(candidate.asking_price),
     listed_price: cleanText(candidate.listed_price),
     listed_price_evidence_text: cleanText(candidate.listed_price_evidence_text),
@@ -1045,6 +1075,7 @@ function candidateRecord(candidate, source) {
     listing_agent_if_visible: cleanText(candidate.listing_agent_if_visible || candidate.agent_name || candidate.contact_name),
     blocked_sources: Array.isArray(candidate.blocked_sources) ? candidate.blocked_sources.slice(0, 6) : [],
     risk_flags: Array.isArray(candidate.risk_flags) ? candidate.risk_flags.slice(0, 8) : [],
+    missing_evidence: Array.isArray(candidate.missing_evidence) ? candidate.missing_evidence.slice(0, 8) : [],
     record_origin: 'source_adapter'
   };
 }
@@ -1055,11 +1086,17 @@ function cardRecord(card, source) {
     query_group: cleanText(card && card.source_name) || cleanText(source && source.source_name)
   });
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
+  record.source_row_reference = cleanText(card && card.source_row_reference);
   record.contact_route_if_visible = cleanText(card && (card.public_contact_route || card.contact_phone || card.contact_email));
   record.minimum_bid = cleanText(card && card.minimum_bid);
   record.minimum_bid_evidence_text = cleanText(card && card.minimum_bid_evidence_text);
   record.nsb_number = cleanText(card && card.nsb_number);
   record.improvement_flag = cleanText(card && card.improvement_flag);
+  record.foreclosure_type = cleanText(card && card.foreclosure_type);
+  record.filing_period = cleanText(card && card.filing_period);
+  record.filing_period_evidence_text = cleanText(card && card.filing_period_evidence_text);
+  record.risk_flags = Array.isArray(card && card.risk_flags) ? card.risk_flags.slice(0, 8) : [];
+  record.missing_evidence = Array.isArray(card && card.missing_evidence) ? card.missing_evidence.slice(0, 8) : [];
   record.record_origin = 'source_adapter';
   return record;
 }

@@ -94,6 +94,15 @@ function tabularNoticeParserSignature() {
   return 'tabular-notice-v2';
 }
 
+function filingPeriodFromDocumentNumber(documentNumber) {
+  const match = cleanText(documentNumber).match(/^(\d{4})(\d{2})/);
+  if (!match) return '';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (year < 2000 || year > 2100 || month < 1 || month > 12) return '';
+  return `${match[1]}-${match[2]}`;
+}
+
 function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
   if (!TABULAR_NOTICE_HEADER_RE.test(source)) return [];
   const county = cleanText(profile.county) || 'Unknown';
@@ -154,6 +163,8 @@ function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
       hasStreetNumber ? `Address: ${address}` : `Source address text: ${partialAddress}`,
       `ZIP: ${zip}`
     ].filter(Boolean).join(' | ');
+    const statusEvidenceText = `Listed on the ${county} County Clerk current foreclosure list (document ${documentNumber}, type ${foreclosureType})`;
+    const filingPeriod = filingPeriodFromDocumentNumber(documentNumber);
     rows.push({
       address,
       property_address: address,
@@ -166,6 +177,11 @@ function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
       source_row_reference: documentNumber,
       sale_date: '',
       auction_date: '',
+      current_status: `On ${county} County Clerk current foreclosure list`,
+      status_evidence_text: statusEvidenceText,
+      foreclosure_type: foreclosureType,
+      filing_period: filingPeriod,
+      filing_period_evidence_text: filingPeriod ? 'Filing period from county document number prefix - NOT a sale date' : '',
       event_type: `${foreclosureType} Foreclosure List Row`,
       source_text: proofText,
       source_proof_text: proofText.slice(0, 800),
@@ -174,7 +190,8 @@ function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
       source_document_url: cleanText(context.source_proof_url),
       source_proof_url: cleanText(context.source_proof_url),
       source_reference: cleanText(context.source_reference || `official ${county} County foreclosure notice document`),
-      missing_evidence: [].concat(hasStreetNumber ? [] : ['street number'], ['sale or auction date']),
+      missing_evidence: [].concat(hasStreetNumber ? [] : ['street number'], ['sale or auction date (not published in this county list)']),
+      risk_flags: ['NO_SALE_DATE_IN_SOURCE'],
       extraction_method: 'tx_tabular_foreclosure_list_text_extractor',
       extraction_confidence: hasStreetNumber ? 'Medium' : 'Low',
       preview_only: true,
