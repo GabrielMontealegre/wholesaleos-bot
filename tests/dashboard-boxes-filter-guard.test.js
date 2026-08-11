@@ -7,6 +7,20 @@ const vm = require('vm');
 
 const dashboardPath = path.resolve(__dirname, '..', 'dashboard', 'index.html');
 const html = fs.readFileSync(dashboardPath, 'utf8');
+assert.ok(html.includes('function commandBuyBoxesArray()'), 'dashboard should centralize buy-box array normalization');
+assert.ok(html.includes('Array.isArray(APP.buyboxes) ? APP.buyboxes : []'), 'buy-box helper should reject non-array payloads');
+assert.ok(html.includes('APP.buyboxes=Array.isArray(buyboxPayload)?buyboxPayload:[];'), 'API response should be normalized at the data boundary');
+assert.ok(!html.includes('(APP.buyboxes || []).filter'), 'dashboard consumers must not call filter on an unknown buy-box shape');
+
+const helperStart = html.indexOf('function commandBuyBoxesArray()');
+const helperEnd = html.indexOf('\n}', helperStart) + 2;
+const helperContext = { APP: { buyboxes: [] } };
+vm.createContext(helperContext);
+vm.runInContext(html.slice(helperStart, helperEnd), helperContext);
+assert.deepStrictEqual(Array.from(helperContext.commandBuyBoxesArray()), [], 'array helper should return the current array');
+helperContext.APP.buyboxes = { box_1: { active: true } };
+assert.deepStrictEqual(Array.from(helperContext.commandBuyBoxesArray()), [], 'array helper should reject object payloads');
+
 const start = html.indexOf('function renderCommandBuyers');
 const end = html.indexOf('renderBuyers = renderCommandBuyers;', start);
 assert.ok(start >= 0 && end > start, 'renderCommandBuyers block should be found');
