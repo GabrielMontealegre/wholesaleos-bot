@@ -746,6 +746,34 @@ const rejectedRecords = [
     assert.strictEqual(radarBlocked.listing_radar_status, 'BLOCKED_PUBLIC_SOURCE');
     assert.strictEqual(radarBlocked.blocked_sources[0].reason, 'http_403');
 
+    const countyScopedMarketRows = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'San Antonio', county: 'Bexar', state: 'TX' },
+      mock_source_adapter_records: [
+        {
+          normalized_address: '9015 Whimsey Ridge, Boerne, TX 78015',
+          city: 'Boerne', county: 'Bexar', state: 'TX',
+          source_structured_address_verified: true,
+          source_url: 'https://www.bexar.org/foreclosures',
+          source_document_url: 'https://www.bexar.org/notices/current.pdf',
+          motivation_evidence_text: 'Official Bexar foreclosure list row.',
+          status_evidence_text: 'Listed on the current Bexar foreclosure list.'
+        },
+        {
+          normalized_address: '100 Main St, New Braunfels, TX 78130',
+          city: 'New Braunfels', county: 'Comal', state: 'TX',
+          source_structured_address_verified: true,
+          source_url: 'https://www.co.comal.tx.us/foreclosures',
+          source_document_url: 'https://www.co.comal.tx.us/notices/current.pdf',
+          motivation_evidence_text: 'Official Comal foreclosure list row.',
+          status_evidence_text: 'Listed on the current Comal foreclosure list.'
+        }
+      ]
+    });
+    const sameCountySuburb = countyScopedMarketRows.free_public_deals.find((deal) => deal.county === 'Bexar');
+    const differentCounty = countyScopedMarketRows.free_public_deals.find((deal) => deal.county === 'Comal');
+    assert.strictEqual(sameCountySuburb.out_of_market, false, 'same-county suburbs belong to a county-scoped market');
+    assert.strictEqual(differentCounty.out_of_market, true, 'a different county must remain outside the county-scoped market');
+
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
         headline: `Deal ${index}`,

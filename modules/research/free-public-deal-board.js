@@ -690,10 +690,13 @@ function hasOfficialProof(deal) {
 function isOutOfMarket(deal, market) {
   if (!deal || !deal.normalized_address) return false;
   const targetState = cleanText(market && market.state).toUpperCase();
+  const targetCounty = cleanText(market && market.county).toLowerCase();
   const targetCity = cleanText(market && market.city).toLowerCase();
   const state = cleanText(deal.state).toUpperCase();
+  const county = cleanText(deal.county).toLowerCase();
   const city = cleanText(deal.city).toLowerCase();
   if (targetState && state && state !== targetState) return true;
+  if (targetCounty && county) return county !== targetCounty;
   return !!(targetCity && city && city !== targetCity);
 }
 

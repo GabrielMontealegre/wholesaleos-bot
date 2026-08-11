@@ -432,6 +432,7 @@ const TARRANT_NOTICE_TEXT = [
     'NUMBER TYPE ADDRESS CITY/TOWN ZIP',
     '20260800237 MORTGAGE 13123 LAGUNA DEL REY DR ATASCOSA 78002',
     '20260800012 MORTGAGE 1803 BURNET ST SAN ANTONIO 78202',
+    '20260900072 MORTGAGE 9015 WHIMSEY RIDGE BOERNE 78015',
     '20260800346 MORTGAGE OLD PEARSALL RD SAN ANTONIO 78242'
   ].join('\n');
   const bexar = await adapter.runTxCountyForeclosureAcquisitionAdapter({
@@ -444,9 +445,10 @@ const TARRANT_NOTICE_TEXT = [
   });
   assert.strictEqual(bexar.status, 'available');
   assert.strictEqual(bexar.county, 'Bexar');
-  assert.strictEqual(bexar.candidates.length, 3);
+  assert.strictEqual(bexar.candidates.length, 4);
   assert.strictEqual(bexar.document_urls_found.length, 1);
   assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800012' && /1803 Burnet St, San Antonio, TX 78202/i.test(candidate.normalized_address)));
+  assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260900072' && candidate.source_structured_address_verified === true), 'explicit Bexar address/city/zip columns must be marked as source-structured');
   assert.ok(bexar.candidates.some((candidate) => candidate.source_row_reference === '20260800346' && !candidate.normalized_address && candidate.missing_evidence.includes('street number')), 'street-only Bexar rows must not become fake complete addresses');
   assert.ok(bexar.candidates.every((candidate) => candidate.preview_only === true && candidate.should_ingest === false && candidate.not_a_saved_lead === true));
   const bexarAddressCandidate = bexar.candidates.find((candidate) => candidate.source_row_reference === '20260800237');
@@ -493,6 +495,11 @@ const TARRANT_NOTICE_TEXT = [
   ]);
   assert.strictEqual(bexarInspect.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
   assert.strictEqual(bexarInspect.MAO_lock_state, 'MAO_LOCKED_NO_ARV');
+  const bexarUncommonSuffix = bexarBoard.free_public_deals.find((deal) => deal.source_row_reference === '20260900072');
+  assert.ok(bexarUncommonSuffix, 'source-structured Bexar addresses with uncommon street endings must survive board validation');
+  assert.strictEqual(bexarUncommonSuffix.normalized_address, '9015 WHIMSEY RIDGE, Boerne, TX 78015');
+  assert.strictEqual(bexarUncommonSuffix.quality_bucket, 'INSPECT_NOW');
+  assert.strictEqual(bexarUncommonSuffix.out_of_market, false, 'a source-proven Bexar County suburb must remain in the Bexar market');
   const bexarReview = bexarBoard.free_public_deals.find((deal) => deal.source_row_reference === '20260800346');
   assert.ok(bexarReview);
   assert.strictEqual(bexarReview.normalized_address, '');
@@ -629,7 +636,7 @@ const TARRANT_NOTICE_TEXT = [
     assert.strictEqual(repeat.status, 'needs_manual_review');
     assert.strictEqual(repeat.candidate_count, 0);
     assert.strictEqual(repeat.diagnostics.docs_ledger_skipped, 1);
-    assert.strictEqual(ledger.documents[bexarLiveStyleLedgerKey].parser_signature, `${extractor.tabularNoticeParserSignature()}|bexar-structured-address-v1`);
+    assert.strictEqual(ledger.documents[bexarLiveStyleLedgerKey].parser_signature, `${extractor.tabularNoticeParserSignature()}|bexar-structured-address-v2`);
   }
 
   const fortBendPage = `
