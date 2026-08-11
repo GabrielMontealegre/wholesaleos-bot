@@ -3152,7 +3152,7 @@ function acquisitionRequestDefaults(text) {
 
 function acquisitionWorkspacePanel(compact) {
   var verifiedBuyers = (APP.buyers || []).filter(commandIsVerifiedBuyer).length;
-  var activeBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); }).length;
+  var activeBuyBoxes = commandBuyBoxesArray().filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); }).length;
   var options = typeof dealCallBatchOptions === 'function' ? dealCallBatchOptions() : { marketLabel: 'Dallas County, TX' };
   var counts = typeof dealCallCountForSummary === 'function' ? dealCallCountForSummary(options) : { wholesaleSafe: 0, manualReview: 0, compReady: 0 };
   return '<div style="background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px">' +
@@ -3396,6 +3396,10 @@ function commandText(value) {
   return String(value == null ? '' : value).trim();
 }
 
+function commandBuyBoxesArray() {
+  return Array.isArray(APP.buyboxes) ? APP.buyboxes : [];
+}
+
 function commandDossierHaystack(dossier) {
   dossier = dossier || {};
   var property = dossier.property || {};
@@ -3495,7 +3499,7 @@ function commandBuyerMatchesForDossier(dossier) {
 function commandBuyBoxMatchesForDossier(dossier) {
   var loc = commandDossierLocation(dossier);
   var hay = commandDossierHaystack(dossier).toLowerCase();
-  return (APP.buyboxes || []).filter(function(box){ return box && box.active !== false; }).map(function(box) {
+  return commandBuyBoxesArray().filter(function(box){ return box && box.active !== false; }).map(function(box) {
     var score = 0, reasons = [], missing = [];
     if (!box.state || String(box.state).toLowerCase() === String(loc.state || 'TX').toLowerCase()) { score += 25; reasons.push('state fit'); }
     if (box.county && hay.indexOf(String(box.county).toLowerCase()) > -1) { score += 20; reasons.push('county fit'); }
@@ -21179,7 +21183,7 @@ function renderDashboard() {
 renderDashboard = function() {
   var leads=APP.leads||[], buyers=APP.buyers||[];
   if (!DEAL_CALL_DOSSIERS_LOADED) setTimeout(function(){ dealCallLoadDossiers(true); }, 0);
-  if (!(APP.buyboxes || []).length && !APP._commandBuyBoxesLoading) {
+  if (!commandBuyBoxesArray().length && !APP._commandBuyBoxesLoading) {
     APP._commandBuyBoxesLoading = true;
     loadMatchingData().finally(function(){ APP._commandBuyBoxesLoading = false; });
   }
@@ -21187,8 +21191,8 @@ renderDashboard = function() {
   var dossiers = commandVisibleDossiers();
   var counts = commandDossierCounts(dossiers);
   var verifiedBuyers = buyers.filter(commandIsVerifiedBuyer);
-  var activeBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); });
-  var templateBuyBoxes = (APP.buyboxes || []).filter(function(box){ return box && box.active !== false && commandIsTemplateBuyBox(box); });
+  var activeBuyBoxes = commandBuyBoxesArray().filter(function(box){ return box && box.active !== false && !commandIsTemplateBuyBox(box); });
+  var templateBuyBoxes = commandBuyBoxesArray().filter(function(box){ return box && box.active !== false && commandIsTemplateBuyBox(box); });
   var upc=fus.filter(function(f){return f.status==='pending';}).sort(function(a,b){return new Date(a.date)-new Date(b.date);}).slice(0,8);
   var evHtml=upc.length?upc.map(function(f){
     var d=new Date(f.date),da=Math.round((d-now)/86400000);
@@ -21256,7 +21260,8 @@ function loadMatchingData() {
   ]).then(function(res){
     APP.buyers=res[0].buyers||res[0]||[];
     var ls=res[1].leads||res[1]||[];
-    APP.buyboxes=res[2].buyboxes||res[2]||[];
+    var buyboxPayload = res[2] && Object.prototype.hasOwnProperty.call(res[2], 'buyboxes') ? res[2].buyboxes : res[2];
+    APP.buyboxes=Array.isArray(buyboxPayload)?buyboxPayload:[];
     APP.buyboxRecommendations=res[3].recommendations||res[3]||[];
     APP._leadsTotalAll=Number((res[1]&&(res[1].totalAll||res[1].totalFiltered))||ls.length||0);
     APP._leadIntakeStatus = res[1] && res[1].intake_status ? res[1].intake_status : APP._leadIntakeStatus;
