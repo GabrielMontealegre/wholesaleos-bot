@@ -1716,6 +1716,22 @@ async function applyCensusZipResolution(deals, input, options, context) {
   return diagnostics;
 }
 
+function recordEnrichmentSkipRollup(row, lane, reasonCode, nowIso) {
+  if (!row || typeof row !== 'object') return;
+  const laneKey = cleanText(lane) || 'unknown';
+  const existing = row.enrichment_skip_rollups && typeof row.enrichment_skip_rollups === 'object'
+    ? row.enrichment_skip_rollups
+    : {};
+  const previous = existing[laneKey] && typeof existing[laneKey] === 'object' ? existing[laneKey] : {};
+  row.enrichment_skip_rollups = Object.assign({}, existing, {
+    [laneKey]: {
+      last_skipped_at: cleanText(nowIso),
+      skipped_count: (Number(previous.skipped_count) || 0) + 1,
+      last_skip_reason: cleanText(reasonCode)
+    }
+  });
+}
+
 async function applyFreePublicHunters(deals, input, options, context) {
   // Opt-in: unit/board tests stay hermetic; the server preview service enables it.
   const disabled = !(input.enable_free_public_hunters === true || options.enable_free_public_hunters === true);
@@ -1728,6 +1744,7 @@ async function applyFreePublicHunters(deals, input, options, context) {
     const existing = existingByAddress.get(cleanText(deal.normalized_address).toLowerCase());
     if (!existing) continue;
     if (existing.enrichment_ledger) deal.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, deal);
+    if (existing.enrichment_skip_rollups) deal.enrichment_skip_rollups = Object.assign({}, existing.enrichment_skip_rollups);
     deal.first_seen_at = existing.first_seen_at || deal.first_seen_at;
     deal.last_seen_at = existing.last_seen_at || deal.last_seen_at;
   }
@@ -1780,32 +1797,27 @@ async function applyFreePublicHunters(deals, input, options, context) {
   for (const skip of contactSelection.skipped) {
     const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
     if (!row) continue;
-    enrichmentLedger.appendAttempt(row, {
-      lane: 'public_search',
-      attempted_at: now,
-      outcome: 'SKIPPED_BUDGET',
-      reason_code: skip.skip_reason,
-      reason_text: `Contact route search skipped this batch: ${skip.skip_reason}.`,
-      source_url: cleanText(row.source_document_url || row.source_url),
-      cost_usd: 0,
-      next_eligible_at: now
-    });
+    recordEnrichmentSkipRollup(row, 'public_search', skip.skip_reason, now);
   }
   for (const skip of compSelection.skipped) {
     const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
     if (!row) continue;
     const policySkip = skip.skip_reason === 'lane_disabled_by_market_policy';
-    enrichmentLedger.appendAttempt(row, {
-      lane: 'sold_comp',
-      attempted_at: now,
-      outcome: policySkip ? 'SKIPPED_POLICY' : 'SKIPPED_BUDGET',
-      reason_code: policySkip ? compPolicy.arv_lock_reason_when_disabled : skip.skip_reason,
-      reason_text: policySkip ? compPolicy.work_order : `Sold-comp search skipped this batch: ${skip.skip_reason}.`,
-      source_url: cleanText(row.source_document_url || row.source_url),
-      cost_usd: 0,
-      next_eligible_at: policySkip ? 'PERMANENT_UNTIL_POLICY_CHANGE' : now
-    });
-    if (policySkip) diagnostics.tx_comp_policy_skipped_count += 1;
+    if (policySkip) {
+      enrichmentLedger.appendAttempt(row, {
+        lane: 'sold_comp',
+        attempted_at: now,
+        outcome: 'SKIPPED_POLICY',
+        reason_code: compPolicy.arv_lock_reason_when_disabled,
+        reason_text: compPolicy.work_order,
+        source_url: cleanText(row.source_document_url || row.source_url),
+        cost_usd: 0,
+        next_eligible_at: 'PERMANENT_UNTIL_POLICY_CHANGE'
+      });
+      diagnostics.tx_comp_policy_skipped_count += 1;
+    } else {
+      recordEnrichmentSkipRollup(row, 'sold_comp', skip.skip_reason, now);
+    }
   }
   const contactOut = await contactHunter({ rows: contactSelection.selected, caps, preselected_rows: true }, hunterOptions);
   const compOut = compPolicy.comp_lane_enabled
@@ -1856,7 +1868,7 @@ async function applyFreePublicHunters(deals, input, options, context) {
       deal.free_comp_status = 'SKIPPED_POLICY';
       deal.arv_lock_reason = compPolicy.arv_lock_reason_when_disabled;
       deal.next_comp_action = compPolicy.work_order;
-      deal.ARV_lock_state = compPolicy.arv_lock_reason_when_disabled;
+      deal.ARV_lock_state = 'ARV_LOCKED_NO_VERIFIED_COMPS';
     }
     deal.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(deal, now);
     deal.enrichment_ledger_summary = enrichmentLedger.ledgerSummary(deal);

@@ -24,14 +24,19 @@ function contactStatus(deal) {
 
 function arvLock(deal) {
   const verified = Number(deal && deal.verified_sold_comp_count || 0) || 0;
+  const explicitReason = cleanText(deal && deal.arv_lock_reason);
+  const explicitState = cleanText(deal && deal.ARV_lock_state);
+  const validState = /^ARV_(?:LOCKED|UNLOCKED)_/i.test(explicitState) ? explicitState : '';
   if (verified >= 3) {
-    return { state: 'ARV_UNLOCKED_VERIFIED_COMPS', reason: `${verified} verified sold comps with source URLs.` };
+    const unlockedState = /^ARV_UNLOCKED_/i.test(validState) ? validState : 'ARV_UNLOCKED_VERIFIED_COMPS';
+    return { state: unlockedState, reason: explicitReason || `${verified} verified sold comps with source URLs.` };
   }
+  const lockedState = /^ARV_LOCKED_/i.test(validState) ? validState : 'ARV_LOCKED_NO_VERIFIED_COMPS';
   return {
-    state: 'ARV_LOCKED_NO_VERIFIED_COMPS',
-    reason: verified > 0
+    state: lockedState,
+    reason: explicitReason || (verified > 0
       ? `Only ${verified} verified sold comp${verified === 1 ? '' : 's'}; 3 are required to unlock ARV.`
-      : 'No verified sold comps yet; 3 sold comps with full address, sold price, sold date, and source URL are required.'
+      : 'No verified sold comps yet; 3 sold comps with full address, sold price, sold date, and source URL are required.')
   };
 }
 

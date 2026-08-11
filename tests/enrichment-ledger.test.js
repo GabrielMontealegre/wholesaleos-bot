@@ -58,6 +58,40 @@ const ledger = require('../modules/research/enrichment-ledger');
     next_eligible_at: ''
   });
   assert.strictEqual(ledger.isLaneEligible(policy, 'sold_comp', '2027-01-01T00:00:00Z'), false);
+  ledger.appendAttempt(policy, {
+    lane: 'sold_comp',
+    attempted_at: '2026-08-11T00:01:00Z',
+    outcome: 'SKIPPED_POLICY',
+    reason_code: 'TX_NON_DISCLOSURE',
+    reason_text: 'Policy.',
+    source_url: '',
+    cost_usd: 0,
+    next_eligible_at: ''
+  });
+  assert.strictEqual(policy.enrichment_ledger.attempts.length, 1, 'same policy value is recorded once per lane');
+
+  const foundWithSkipNoise = {};
+  ledger.appendAttempt(foundWithSkipNoise, {
+    lane: 'public_search',
+    attempted_at: '2026-08-11T00:00:00Z',
+    outcome: 'FOUND',
+    reason_code: 'OWNER_ROUTE_FOUND',
+    reason_text: 'Found route.',
+    source_url: 'https://example.test/owner',
+    cost_usd: 0,
+    next_eligible_at: ''
+  });
+  ledger.appendAttempt(foundWithSkipNoise, {
+    lane: 'public_search',
+    attempted_at: '2026-08-11T00:01:00Z',
+    outcome: 'SKIPPED_BUDGET',
+    reason_code: 'batch_limit_not_selected',
+    reason_text: 'Not selected this batch.',
+    source_url: '',
+    cost_usd: 0,
+    next_eligible_at: '2026-08-11T00:01:00Z'
+  });
+  assert.strictEqual(ledger.isLaneEligible(foundWithSkipNoise, 'public_search', '2026-08-11T00:02:00Z'), false, 'skip noise must not erase FOUND cooldown');
 
   const capped = {};
   for (let i = 0; i < 25; i += 1) {
@@ -75,5 +109,11 @@ const ledger = require('../modules/research/enrichment-ledger');
   assert.strictEqual(capped.enrichment_ledger.attempts.length, 20);
   assert.strictEqual(capped.enrichment_ledger.dropped_count, 5);
   assert.strictEqual(ledger.ledgerSummary(capped).attempt_count, 20);
+
+  const merged = ledger.mergeLedgers(
+    { enrichment_ledger: { attempts: capped.enrichment_ledger.attempts.slice(), dropped_count: 5 } },
+    { enrichment_ledger: { attempts: capped.enrichment_ledger.attempts.slice(), dropped_count: 5 } }
+  );
+  assert.strictEqual(merged.dropped_count, 5, 'shared ledger history should not double-count drops');
   console.log('enrichment ledger tests passed');
 })();

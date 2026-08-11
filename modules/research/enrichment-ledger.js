@@ -76,6 +76,16 @@ function appendAttempt(row, attempt) {
   }));
   const ledger = Object.assign({ attempts: [], dropped_count: 0 }, rowLedger(row));
   ledger.attempts = Array.isArray(ledger.attempts) ? ledger.attempts.slice() : [];
+  if (normalized.outcome === 'SKIPPED_POLICY') {
+    const existingPolicy = ledger.attempts.find((item) =>
+      cleanText(item && item.lane) === normalized.lane &&
+      cleanText(item && item.outcome) === 'SKIPPED_POLICY' &&
+      cleanText(item && item.reason_code) === normalized.reason_code);
+    if (existingPolicy) {
+      row.enrichment_ledger = ledger;
+      return ledger;
+    }
+  }
   ledger.attempts.push(normalized);
   if (ledger.attempts.length > MAX_ATTEMPTS_PER_ROW) {
     const dropCount = ledger.attempts.length - MAX_ATTEMPTS_PER_ROW;
@@ -97,9 +107,15 @@ function latestAttempt(row, lane) {
 }
 
 function isLaneEligible(row, lane, nowIso) {
-  const latest = latestAttempt(row, lane);
+  const laneAttempts = attemptsForLane(row, lane);
+  if (laneAttempts.some((attempt) =>
+    cleanText(attempt && attempt.outcome) === 'SKIPPED_POLICY' ||
+    cleanText(attempt && attempt.next_eligible_at) === 'PERMANENT_UNTIL_POLICY_CHANGE')) return false;
+  const latest = laneAttempts
+    .filter((attempt) => !cleanText(attempt && attempt.outcome).startsWith('SKIPPED_'))
+    .slice()
+    .sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0] || null;
   if (!latest) return true;
-  if (latest.outcome === 'SKIPPED_POLICY' || latest.next_eligible_at === 'PERMANENT_UNTIL_POLICY_CHANGE') return false;
   const nowMs = Date.parse(nowIso);
   const nextMs = Date.parse(latest.next_eligible_at);
   if (!Number.isFinite(nextMs) || !Number.isFinite(nowMs)) return true;
@@ -146,7 +162,11 @@ function mergeLedgers(left, right) {
     seen.add(key);
     appendAttempt(row, attempt);
   }
-  row.enrichment_ledger.dropped_count += (Number(rowLedger(left).dropped_count) || 0) + (Number(rowLedger(right).dropped_count) || 0);
+  row.enrichment_ledger.dropped_count = Math.max(
+    Number(row.enrichment_ledger.dropped_count) || 0,
+    Number(rowLedger(left).dropped_count) || 0,
+    Number(rowLedger(right).dropped_count) || 0
+  );
   return row.enrichment_ledger;
 }
 

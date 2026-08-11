@@ -74,6 +74,7 @@ function cloneSnapshotRow(row) {
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
   if (copy.lifecycle_status) copy.lifecycle_status = Object.assign({}, copy.lifecycle_status);
+  if (copy.enrichment_skip_rollups) copy.enrichment_skip_rollups = JSON.parse(JSON.stringify(copy.enrichment_skip_rollups));
   return copy;
 }
 
@@ -475,6 +476,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     blocked_sources: [].concat(deal.blocked_sources || [], deal.browser_blocked_sources || [])
       .map((item) => ({ source: cleanText(item && item.source), reason: cleanText(item && item.reason) })).slice(0, 6),
     enrichment_ledger: deal.enrichment_ledger || { attempts: [], dropped_count: 0 },
+    enrichment_skip_rollups: deal.enrichment_skip_rollups || {},
     lifecycle_status: deal.lifecycle_status || leadLifecycleStatus.computeLifecycleStatus(deal, seenAt),
     enrichment_ledger_summary: enrichmentLedger.ledgerSummary(deal),
     first_seen_at: seenAt,
@@ -640,7 +642,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible', 'free_contact_status',
     'free_contact_routes', 'blocked_sources', 'free_searches_run', 'why_call_ready_or_blocked',
-    'enrichment_ledger', 'lifecycle_status'
+    'enrichment_ledger', 'enrichment_skip_rollups'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -669,6 +671,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
           if (!Array.isArray(refreshed[field]) || !refreshed[field].length) refreshed[field] = existing[field].slice();
         } else if (field === 'enrichment_ledger') {
           refreshed.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, refreshed);
+        } else if (field === 'enrichment_skip_rollups') {
+          refreshed.enrichment_skip_rollups = Object.assign({}, existing.enrichment_skip_rollups || {}, refreshed.enrichment_skip_rollups || {});
         } else if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
       }
       if ((!refreshed.verified_comps || !refreshed.verified_comps.length) && Array.isArray(existing.verified_comps) && existing.verified_comps.length) {
