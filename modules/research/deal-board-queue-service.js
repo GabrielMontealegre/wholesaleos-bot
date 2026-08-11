@@ -393,7 +393,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     listing_date_if_visible: cleanText(deal.listing_date_if_visible) || null,
     offer_deadline_if_visible: cleanText(deal.offer_deadline_if_visible) || null,
     auction_closing_at_if_visible: cleanText(deal.auction_closing_at_if_visible) || null,
-    risk_flags: Array.isArray(deal.risk_flags) ? deal.risk_flags.slice(0, 6) : [],
+    risk_flags: prependUnique(deal.risk_flags, Array.isArray(deal.risk_flags) && deal.risk_flags.includes('NO_SALE_DATE_IN_SOURCE') ? ['NO_SALE_DATE_IN_SOURCE'] : [], 6),
     city: cleanText(deal.city),
     county: cleanText(deal.county),
     state: cleanText(deal.state),
@@ -402,6 +402,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     source_url: cleanText(deal.source_url),
     source_document_url: cleanText(deal.source_document_url),
     source_row_reference: cleanText(deal.source_row_reference),
+    foreclosure_type: cleanText(deal.foreclosure_type),
+    filing_period: cleanText(deal.filing_period),
+    filing_period_evidence_text: cleanText(deal.filing_period_evidence_text),
     source_document_urls: Array.isArray(deal.source_document_urls)
       ? prependUnique(deal.source_document_urls, [deal.source_document_url], 3)
       : prependUnique([], [deal.source_document_url], 3),
@@ -606,6 +609,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
+    'foreclosure_type', 'filing_period', 'filing_period_evidence_text',
     'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible'

@@ -568,7 +568,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     source_family: 'preforeclosure_trustee_notice',
     motivation_type: 'preforeclosure_trustee_notice',
     motivation_evidence_text: row.source_proof_text,
-    status_evidence_text: row.sale_date ? `Sale Date: ${row.sale_date}` : ''
+    status_evidence_text: row.status_evidence_text || (row.sale_date ? `Sale Date: ${row.sale_date}` : '')
   }), context));
   const cards = candidates.map((candidate) => propertyCandidate.candidateToFindMeCard(candidate, {
     acquisition_run_id: runId,

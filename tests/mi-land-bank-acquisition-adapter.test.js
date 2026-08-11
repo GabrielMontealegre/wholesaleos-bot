@@ -23,6 +23,7 @@ const sourceCatalog = require('../modules/sources/source-catalog');
 const freePublicDealBoard = require('../modules/research/free-public-deal-board');
 const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
 const queueService = require('../modules/research/deal-board-queue-service');
+const documentLedger = require('../modules/sources/tx-county-foreclosure-acquisition-adapter');
 
 function jsonResponse(payload, status = 200) {
   return {
@@ -138,6 +139,10 @@ function fixtureFetch(totalPages, calls) {
   assert.strictEqual(board.free_public_deals[0].auction_closing_at_if_visible, '2026-07-16 00:15:05');
   assert.strictEqual(board.free_public_deals[0].property_kind_if_visible, 'structure');
   assert.strictEqual(board.free_public_deals[0].ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
+  assert.deepStrictEqual(board.free_public_deals[0].missing_fields, [
+    'visible contact route',
+    '3 verified sold comps'
+  ], 'Detroit missing fields must stay board-language only and match main output');
   const queued = await queueService.runDealBoardBatch({
     market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
     limit: 25
@@ -169,9 +174,8 @@ function fixtureFetch(totalPages, calls) {
   const unrelatedCountyDocumentUrl = 'https://example.gov/foreclosure/notice-1.pdf';
   const mixedLedger = { documents: {} };
   const ledgerMonth = '2026-07';
-  const doneEntry = (documentUrl) => ({ document_url: documentUrl, posting_month: ledgerMonth, last_status: 'done' });
-  mixedLedger.documents[`${ledgerMonth}|${pageOneLedgerUrl.toLowerCase()}`] = doneEntry(pageOneLedgerUrl);
-  mixedLedger.documents[`${ledgerMonth}|${unrelatedCountyDocumentUrl}`] = doneEntry(unrelatedCountyDocumentUrl);
+  documentLedger.recordDocumentLedgerAttempt(mixedLedger, pageOneLedgerUrl, ledgerMonth, 'done');
+  documentLedger.recordDocumentLedgerAttempt(mixedLedger, unrelatedCountyDocumentUrl, ledgerMonth, 'done');
   assert.strictEqual(adapter.resetCompletedInventoryCycle(mixedLedger, profile, 1, ledgerMonth), 1);
   assert.ok(mixedLedger.documents[`${ledgerMonth}|${unrelatedCountyDocumentUrl}`], 'inventory reset must not remove county document ledger entries');
 

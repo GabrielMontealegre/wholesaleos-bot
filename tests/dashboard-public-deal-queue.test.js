@@ -695,7 +695,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=9'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=10'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -704,6 +704,9 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('ARV_lock_state') && uiSource.includes('MAO_lock_state'));
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
+  assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
+  assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
+  assert.ok(uiSource.includes('(not a sale date)'), 'dashboard must label filing period as not a sale date');
   assert.ok(uiSource.includes('seller_questions'));
   assert.ok(uiSource.includes(queueServiceRoute('/latest')) && uiSource.includes(queueServiceRoute('/run')));
   assert.ok(uiSource.includes('not saved leads'));
