@@ -83,6 +83,9 @@
         (row.filing_period ? 'Filing period <b>' + esc(row.filing_period) + '</b> <span style="color:#991b1b;">(not a sale date)</span>' : '') +
         '</div>');
     }
+    if (row.status_evidence_text) {
+      lines.push('<div style="font-size:12px;color:#374151;">Status evidence: <b>' + esc(row.status_evidence_text) + '</b></div>');
+    }
     if (row.listed_price) lines.push('<div style="font-size:12px;">Source listed price: <b>' + esc(row.listed_price) + '</b>' +
       (row.program ? ' <span style="color:#6b7280;">(' + esc(row.program) + ')</span>' : '') +
       ' <span style="color:#991b1b;">not ARV or MAO</span></div>');

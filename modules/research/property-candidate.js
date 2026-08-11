@@ -9,6 +9,7 @@ const acquisitionScore = require('./source-acquisition-score');
 
 const NEXT_BEST_WORKERS = acquisitionScore.NEXT_BEST_WORKERS;
 const INLINE_COMPLETE_ADDRESS_RE = /^(.+?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway))\s*,?\s+([A-Za-z][A-Za-z .'-]*?)\s+(TX|Texas|[A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
+const SOURCE_STRUCTURED_COMPLETE_ADDRESS_RE = /^\d{1,7}\s+[^,]{2,100},\s*[A-Za-z][A-Za-z .'-]{1,40},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?$/i;
 const VISIBLE_PHRASE_RE = leadEvidence.WHOLESALE_PHRASE_RE;
 
 function nowIso() {
@@ -69,7 +70,12 @@ function normalizePropertyCandidate(input, context) {
   input = input || {};
   context = context || {};
   const sourceUrl = cleanText(input.source_url || input.canonical_source_url || input.source_document_url);
-  const rawAddressInput = cleanText(input.normalized_address || input.property_address || input.address);
+  const structuredAddressInput = input.source_structured_address_verified === true
+    ? [input.property_address, input.raw_address_text, input.normalized_address, input.address]
+      .map(cleanText)
+      .find((value) => SOURCE_STRUCTURED_COMPLETE_ADDRESS_RE.test(value)) || ''
+    : '';
+  const rawAddressInput = structuredAddressInput || cleanText(input.normalized_address || input.property_address || input.address);
   const sourceTextAddressSource = cleanText(input.source_proof_text || input.raw_text || input.source_excerpt || input.source_page_text || input.source_text);
   const sourceTextAddressMatch = sourceTextAddressSource.match(/(?:property\s+address|address)\s*:\s*([0-9][^|;]*?\b\d{5}(?:-\d{4})?)/i);
   const sourceTextAddressRaw = cleanText(sourceTextAddressMatch && sourceTextAddressMatch[1]);
@@ -94,7 +100,7 @@ function normalizePropertyCandidate(input, context) {
     addressOverrides.state = cleanText(input.state || context.state);
     addressOverrides.zip = cleanText(input.zip || input.postal_code);
   }
-  const address = sourceTextAddress || inlineCompleteAddress || propertyIdentity.canonicalAddress(input, {
+  const address = structuredAddressInput || sourceTextAddress || inlineCompleteAddress || propertyIdentity.canonicalAddress(input, {
     normalized_address: addressOverrides.normalized_address,
     source_url: sourceUrl,
     city: addressOverrides.city || '',

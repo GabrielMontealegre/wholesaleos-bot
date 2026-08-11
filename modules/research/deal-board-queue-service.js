@@ -378,6 +378,12 @@ function dedupeKeyForDeal(deal) {
   return `proof|${crypto.createHash('sha1').update([doc, src, phone, body].join('|')).digest('hex').slice(0, 20)}`;
 }
 
+function sourceIdentityKey(row) {
+  const reference = cleanText(row && row.source_row_reference).toLowerCase();
+  const documentUrl = cleanText(row && (row.source_document_url || row.source_url)).toLowerCase();
+  return reference && documentUrl ? `${documentUrl}|${reference}` : '';
+}
+
 function projectRowForQueue(deal, dedupeKey, seenAt) {
   return {
     queue_key: dedupeKey,
@@ -390,6 +396,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     census_zip_status: cleanText(deal.census_zip_status) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
+    status_evidence_text: cleanText(deal.status_evidence_text) || null,
     listing_date_if_visible: cleanText(deal.listing_date_if_visible) || null,
     offer_deadline_if_visible: cleanText(deal.offer_deadline_if_visible) || null,
     auction_closing_at_if_visible: cleanText(deal.auction_closing_at_if_visible) || null,
@@ -602,12 +609,17 @@ async function runDealBoardBatch(input = {}, options = {}) {
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
+  const sourceIdentityRows = new Map();
+  for (const row of byKey.values()) {
+    const sourceIdentity = sourceIdentityKey(row);
+    if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, row);
+  }
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
-    'sale_date_or_event_date', 'sale_date_iso', 'listing_date_if_visible', 'offer_deadline_if_visible',
+    'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',
     'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
@@ -618,6 +630,18 @@ async function runDealBoardBatch(input = {}, options = {}) {
   let refreshedRows = 0;
   for (const deal of deals) {
     const dedupeKey = dedupeKeyForDeal(deal);
+    const sourceIdentity = sourceIdentityKey(deal);
+    const sourceIdentityRow = sourceIdentity ? sourceIdentityRows.get(sourceIdentity) : null;
+    if (sourceIdentityRow && sourceIdentityRow.queue_key !== dedupeKey) {
+      if (cleanText(deal.normalized_address) && !cleanText(sourceIdentityRow.normalized_address)) {
+        byKey.delete(sourceIdentityRow.queue_key);
+        sourceIdentityRows.delete(sourceIdentity);
+      } else if (!cleanText(deal.normalized_address) && cleanText(sourceIdentityRow.normalized_address)) {
+        sourceIdentityRow.last_seen_at = runAt;
+        sourceIdentityRow.times_seen = (Number(sourceIdentityRow.times_seen) || 1) + 1;
+        continue;
+      }
+    }
     const existing = byKey.get(dedupeKey);
     if (existing) {
       const refreshed = projectRowForQueue(deal, dedupeKey, runAt);
@@ -632,9 +656,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
         refreshed.verified_sold_comp_count = Number(existing.verified_sold_comp_count) || existing.verified_comps.length;
       }
       byKey.set(dedupeKey, refreshed);
+      if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, refreshed);
       refreshedRows += 1;
     } else {
-      byKey.set(dedupeKey, projectRowForQueue(deal, dedupeKey, runAt));
+      const projected = projectRowForQueue(deal, dedupeKey, runAt);
+      byKey.set(dedupeKey, projected);
+      if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, projected);
       newRows += 1;
     }
   }

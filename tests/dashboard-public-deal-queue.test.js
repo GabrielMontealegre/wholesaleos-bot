@@ -317,6 +317,59 @@ function mockDeal(overrides) {
   assert.strictEqual(sanDiegoRun.rows[0].owner_clue, 'FIGUEROA RICARDO M et al');
   assert.ok(sanDiegoRun.rows[0].risk_flags.includes('REDEMPTION_AMOUNT_NOT_PRICE_OR_ARV'));
 
+  const bexarSourceUrl = 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures';
+  const bexarReference = '20260900015';
+  const bexarProofPreview = async () => ({
+    free_public_deals: [mockDeal({
+      headline: `Bexar foreclosure document ${bexarReference}`,
+      normalized_address: '',
+      city: 'San Antonio', county: 'Bexar', state: 'TX',
+      quality_bucket: 'SOURCE_PROOF_ONLY',
+      source_url: bexarSourceUrl,
+      source_document_url: bexarSourceUrl,
+      source_row_reference: bexarReference,
+      status_evidence_text: '',
+      free_contact_status: '', free_contact_routes: [], owner_record: null,
+      call_readiness: '', next_best_action: 'VERIFY_PROPERTY_IDENTITY'
+    })],
+    rejected_generic_count: 0,
+    diagnostics: { source_adapter: { source_adapter_results: [] } }
+  });
+  await queueService.runDealBoardBatch(
+    { market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }, limit: 25 },
+    { preview_impl: bexarProofPreview }
+  );
+  const bexarStatusEvidence = 'Listed on the Bexar County Clerk current foreclosure list (document 20260900015, type MORTGAGE)';
+  const bexarAddressPreview = async () => ({
+    free_public_deals: [mockDeal({
+      headline: '15603 Garam Trl, Von Ormy, TX 78073',
+      normalized_address: '15603 Garam Trl, Von Ormy, TX 78073',
+      city: 'Von Ormy', county: 'Bexar', state: 'TX',
+      quality_bucket: 'INSPECT_NOW',
+      source_url: bexarSourceUrl,
+      source_document_url: bexarSourceUrl,
+      source_row_reference: bexarReference,
+      status_evidence_text: bexarStatusEvidence,
+      foreclosure_type: 'MORTGAGE',
+      filing_period: '2026-09',
+      risk_flags: ['NO_SALE_DATE_IN_SOURCE'],
+      free_contact_status: '', free_contact_routes: [], owner_record: null,
+      call_readiness: '', next_best_action: 'FIND_CONTACT_ROUTE'
+    })],
+    rejected_generic_count: 0,
+    diagnostics: { source_adapter: { source_adapter_results: [] } }
+  });
+  const bexarUpgraded = await queueService.runDealBoardBatch(
+    { market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }, limit: 25 },
+    { preview_impl: bexarAddressPreview }
+  );
+  const bexarRows = bexarUpgraded.rows.filter((row) => row.source_row_reference === bexarReference);
+  assert.strictEqual(bexarRows.length, 1, 'verified address row must replace its stale proof-only snapshot row');
+  assert.strictEqual(bexarRows[0].normalized_address, '15603 Garam Trl, Von Ormy, TX 78073');
+  assert.strictEqual(bexarRows[0].quality_bucket, 'INSPECT_NOW');
+  assert.strictEqual(bexarRows[0].status_evidence_text, bexarStatusEvidence);
+  assert.strictEqual(bexarUpgraded.counts.inspect_now, 1);
+
   // limit clamps up to the minimum too
   await queueService.runDealBoardBatch({ limit: 1 }, { preview_impl: previewImpl });
   assert.strictEqual(previewCalls[1].limit, 5, 'limit must clamp to min 5');
@@ -695,7 +748,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=10'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=11'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -705,6 +758,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
+  assert.ok(uiSource.includes('Status evidence: <b>') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
   assert.ok(uiSource.includes('(not a sale date)'), 'dashboard must label filing period as not a sale date');
   assert.ok(uiSource.includes('seller_questions'));
