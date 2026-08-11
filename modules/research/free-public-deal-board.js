@@ -5,12 +5,16 @@ const crypto = require('crypto');
 const callPrepProjection = require('./call-prep-projection');
 const censusZipResolution = require('./census-zip-resolution');
 const compResearchProvider = require('./comp-research-provider');
+const businessEntityOwnerResolution = require('./business-entity-owner-resolution');
+const disclosureStateCompResolution = require('./disclosure-state-comp-resolution');
 const freePublicCompHunter = require('./free-public-comp-hunter');
 const freePublicContactHunter = require('./free-public-contact-hunter');
 const enrichmentLedger = require('./enrichment-ledger');
 const enrichmentScheduler = require('./enrichment-scheduler');
+const fieldProvenance = require('./field-provenance');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const marketCompPolicy = require('./market-comp-policy');
+const publicParcelOwnerLookup = require('./public-parcel-owner-lookup');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
@@ -648,6 +652,15 @@ function validateCompRecords(record, normalizedAddress) {
   const verified = [];
   const rejected = [];
   for (const raw of rawComps) {
+    if (!fieldProvenance.compHasProvenance(raw)) {
+      rejected.push({
+        comp_address: cleanText(raw && (raw.comp_address || raw.address)),
+        source_url: cleanText(raw && raw.source_url),
+        missing_fields: ['source_kind', 'source_url', 'evidence_text'],
+        verification_status: 'missing_comp_provenance'
+      });
+      continue;
+    }
     const normalized = compResearchProvider.normalizeCompCandidate(raw, { id: 'free_public_deal_board' });
     const classified = compResearchProvider.classifyCompCandidate(normalized, job, seen);
     if (classified.verification_status === 'verified_sold_comp' || classified.verification_status === 'verified') verified.push(classified);
@@ -844,6 +857,28 @@ function whyNotReady(deal) {
   const missing = deal.missing_fields || [];
   if (!missing.length) return '';
   return `Missing ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ', more' : ''}.`;
+}
+
+function firstProvenContactRoute(deal) {
+  const routes = Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [];
+  return routes.find((route) => route && cleanText(route.value) && fieldProvenance.routeHasProvenance(route)) || null;
+}
+
+function rowStateForDeal(deal) {
+  const phoneRoute = (Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [])
+    .find((route) => route && route.route_kind === 'phone' && cleanText(route.value) && fieldProvenance.routeHasProvenance(route));
+  const outreachRoute = (Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [])
+    .find((route) => route && /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && cleanText(route.value) && fieldProvenance.routeHasProvenance(route));
+  const mailingRoute = deal && deal.mailing_route && cleanText(deal.mailing_route.value) && fieldProvenance.routeHasProvenance(deal.mailing_route)
+    ? deal.mailing_route
+    : null;
+  if (phoneRoute) return { row_state: 'CALL_READY', row_state_reason: 'Source-linked public phone route is visible; verify before dialing.' };
+  if (outreachRoute) return { row_state: 'OUTREACH_READY', row_state_reason: 'Source-linked public email/form/reply route is visible; verify before outreach.' };
+  if (mailingRoute) return { row_state: 'MAIL_READY', row_state_reason: 'Owner-of-record mailing address is visible on an official public record.' };
+  if (!cleanText(deal && deal.normalized_address)) return { row_state: 'LOCKED', row_state_reason: 'Property identity is incomplete.' };
+  if (!firstProvenContactRoute(deal) && !mailingRoute) return { row_state: 'NEEDS_SKIP_TRACE', row_state_reason: 'No source-linked free phone, email, form, or mailing route is ready yet.' };
+  if ((Number(deal && deal.verified_sold_comp_count) || 0) < 3) return { row_state: 'NEEDS_COMPS', row_state_reason: 'Need 3 verified sold comps before ARV/MAO can unlock.' };
+  return { row_state: 'LOCKED', row_state_reason: 'Deal has evidence but still needs operator review before an offer.' };
 }
 
 function rankDeal(deal) {
@@ -1761,18 +1796,32 @@ async function applyFreePublicHunters(deals, input, options, context) {
     free_blocked_source_count: 0,
     enrichment_selected_contact_count: 0,
     enrichment_selected_comp_count: 0,
+    enrichment_selected_owner_count: 0,
+    enrichment_selected_entity_count: 0,
     enrichment_skipped_contact_count: 0,
     enrichment_skipped_comp_count: 0,
-    tx_comp_policy_skipped_count: 0
+    enrichment_skipped_owner_count: 0,
+    enrichment_skipped_entity_count: 0,
+    tx_comp_policy_skipped_count: 0,
+    public_parcel_owner_rows_hunted: 0,
+    public_parcel_owner_found_count: 0,
+    public_parcel_mail_ready_count: 0,
+    business_entity_rows_hunted: 0,
+    business_entity_agent_found_count: 0,
+    disclosure_comp_rows_hunted: 0,
+    disclosure_comp_ready_count: 0
   };
   if (disabled || !addressDeals.length) return diagnostics;
   const contactHunter = typeof options.free_contact_hunter_impl === 'function' ? options.free_contact_hunter_impl : freePublicContactHunter.runFreePublicContactHunter;
-  const compHunter = typeof options.free_comp_hunter_impl === 'function' ? options.free_comp_hunter_impl : freePublicCompHunter.runFreePublicCompHunter;
+  const ownerHunter = typeof options.public_parcel_owner_lookup_impl === 'function' ? options.public_parcel_owner_lookup_impl : publicParcelOwnerLookup.runPublicParcelOwnerLookup;
+  const entityHunter = typeof options.business_entity_owner_resolution_impl === 'function' ? options.business_entity_owner_resolution_impl : businessEntityOwnerResolution.runBusinessEntityOwnerResolution;
   const hunterOptions = {
     fetch_impl: options.fetch_impl,
     env: options.env,
     county_profile: options.county_profile || countyFreeLookupProfiles.profileForMarket(context.market),
-    mock_search_results: options.mock_free_search_results
+    mock_search_results: options.mock_free_search_results,
+    mock_comp_features: options.mock_disclosure_comp_features,
+    mock_registry_text: options.mock_business_registry_text
   };
   const caps = input.free_hunter_caps || options.free_hunter_caps;
   const maxRows = Math.max(1, Math.min(Number(caps && caps.max_rows) || freePublicContactHunter.DEFAULT_CAPS.max_rows, freePublicContactHunter.DEFAULT_CAPS.max_rows));
@@ -1790,10 +1839,18 @@ async function applyFreePublicHunters(deals, input, options, context) {
     now_iso: now,
     market_policy: compPolicy
   });
+  const ownerSelection = enrichmentScheduler.selectRowsForEnrichment(addressDeals, {
+    lane: 'county_appraisal',
+    limit: maxRows,
+    now_iso: now,
+    market_policy: {}
+  });
   diagnostics.enrichment_selected_contact_count = contactSelection.selected.length;
   diagnostics.enrichment_selected_comp_count = compSelection.selected.length;
+  diagnostics.enrichment_selected_owner_count = ownerSelection.selected.length;
   diagnostics.enrichment_skipped_contact_count = contactSelection.skipped.length;
   diagnostics.enrichment_skipped_comp_count = compSelection.skipped.length;
+  diagnostics.enrichment_skipped_owner_count = ownerSelection.skipped.length;
   for (const skip of contactSelection.skipped) {
     const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
     if (!row) continue;
@@ -1819,13 +1876,82 @@ async function applyFreePublicHunters(deals, input, options, context) {
       recordEnrichmentSkipRollup(row, 'sold_comp', skip.skip_reason, now);
     }
   }
+  for (const skip of ownerSelection.skipped) {
+    const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
+    if (!row) continue;
+    recordEnrichmentSkipRollup(row, 'county_appraisal', skip.skip_reason, now);
+  }
+  const ownerOut = await ownerHunter({
+    rows: ownerSelection.selected,
+    caps,
+    preselected_rows: true,
+    market: context.market
+  }, Object.assign({}, hunterOptions, { market: context.market }));
+  for (const deal of addressDeals) {
+    const key = cleanText(deal.normalized_address).toLowerCase();
+    const owner = ownerOut && ownerOut.results && ownerOut.results.get(key);
+    if (!owner || owner.status !== 'owner_found') continue;
+    deal.owner_record = owner.owner_record || {
+      owner_name: cleanText(owner.owner_name),
+      mailing_address: cleanText(owner.mailing_address),
+      parcel_id: cleanText(owner.parcel_id),
+      is_entity: owner.is_entity === true,
+      verification_status: cleanText(owner.verification_status),
+      source_kind: 'official_public_record',
+      source_url: cleanText(owner.source_url),
+      evidence_text: cleanText(owner.evidence_text)
+    };
+    deal.mailing_route = owner.mailing_route || deal.mailing_route || null;
+    if (deal.owner_record && cleanText(deal.owner_record.owner_name)) {
+      deal.owner_or_entity_clues = (deal.owner_or_entity_clues || []).concat([{
+        clue_kind: 'appraisal_owner_of_record',
+        value: cleanText(deal.owner_record.owner_name),
+        source_kind: 'official_public_record',
+        source_url: cleanText(deal.owner_record.source_url),
+        evidence_text: cleanText(deal.owner_record.evidence_text),
+        confidence: 'High',
+        risk_flags: ['owner_of_record_may_differ_from_occupant']
+      }]).slice(0, 6);
+      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = cleanText(deal.owner_record.owner_name);
+    }
+    diagnostics.public_parcel_owner_found_count += 1;
+    if (deal.mailing_route && cleanText(deal.mailing_route.value)) diagnostics.public_parcel_mail_ready_count += 1;
+  }
   const contactOut = await contactHunter({ rows: contactSelection.selected, caps, preselected_rows: true }, hunterOptions);
+  const compHunter = typeof options.free_comp_hunter_impl === 'function'
+    ? options.free_comp_hunter_impl
+    : compPolicy.comp_lane_source === 'disclosure_state_public_parcel_sales'
+      ? (typeof options.disclosure_comp_resolution_impl === 'function' ? options.disclosure_comp_resolution_impl : disclosureStateCompResolution.runDisclosureStateCompResolution)
+      : freePublicCompHunter.runFreePublicCompHunter;
   const compOut = compPolicy.comp_lane_enabled
-    ? await compHunter({ rows: compSelection.selected, caps, preselected_rows: true }, hunterOptions)
+    ? await compHunter({ rows: compSelection.selected, caps, preselected_rows: true, market: context.market }, Object.assign({}, hunterOptions, { market: context.market }))
     : { rows_hunted: 0, results: new Map(), attempt_records: [] };
+  const entityRows = addressDeals.filter((deal) => deal.owner_record && deal.owner_record.is_entity);
+  const entitySelection = enrichmentScheduler.selectRowsForEnrichment(entityRows, {
+    lane: 'business_entity_registry',
+    limit: maxRows,
+    now_iso: now,
+    market_policy: {}
+  });
+  diagnostics.enrichment_selected_entity_count = entitySelection.selected.length;
+  diagnostics.enrichment_skipped_entity_count = entitySelection.skipped.length;
+  for (const skip of entitySelection.skipped) {
+    const row = entityRows.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
+    if (!row) continue;
+    recordEnrichmentSkipRollup(row, 'business_entity_registry', skip.skip_reason, now);
+  }
+  const entityOut = await entityHunter({
+    rows: entitySelection.selected,
+    caps,
+    preselected_rows: true,
+    market: context.market
+  }, Object.assign({}, hunterOptions, { market: context.market }));
+  diagnostics.public_parcel_owner_rows_hunted = Number(ownerOut && ownerOut.rows_hunted || 0) || 0;
+  diagnostics.business_entity_rows_hunted = Number(entityOut && entityOut.rows_hunted || 0) || 0;
   diagnostics.free_contact_rows_hunted = Number(contactOut && contactOut.rows_hunted || 0) || 0;
   diagnostics.free_comp_rows_hunted = Number(compOut && compOut.rows_hunted || 0) || 0;
-  for (const attempt of [].concat(contactOut.attempt_records || [], compOut.attempt_records || [])) {
+  diagnostics.disclosure_comp_rows_hunted = compPolicy.comp_lane_source === 'disclosure_state_public_parcel_sales' ? diagnostics.free_comp_rows_hunted : 0;
+  for (const attempt of [].concat(ownerOut.attempt_records || [], contactOut.attempt_records || [], entityOut.attempt_records || [], compOut.attempt_records || [])) {
     const row = addressDeals.find((deal) => cleanText(deal.normalized_address).toLowerCase() === cleanText(attempt.row_key));
     if (!row) continue;
     enrichmentLedger.appendAttempt(row, attempt);
@@ -1835,11 +1961,17 @@ async function applyFreePublicHunters(deals, input, options, context) {
     const key = cleanText(deal.normalized_address).toLowerCase();
     const contact = contactOut && contactOut.results && contactOut.results.get(key);
     const comp = compOut && compOut.results && compOut.results.get(key);
+    const owner = ownerOut && ownerOut.results && ownerOut.results.get(key);
+    const entity = entityOut && entityOut.results && entityOut.results.get(key);
+    if (owner && owner.status === 'owner_found') {
+      deal.owner_record = deal.owner_record || owner.owner_record;
+      deal.mailing_route = deal.mailing_route || owner.mailing_route || null;
+    }
     if (contact) {
       deal.free_contact_status = contact.free_contact_status;
       deal.free_contact_routes = contact.free_contact_routes;
       deal.owner_or_entity_clues = contact.owner_or_entity_clues;
-      deal.mailing_route = contact.mailing_route;
+      deal.mailing_route = contact.mailing_route || deal.mailing_route || null;
       deal.free_searches_run = contact.free_searches_run;
       deal.blocked_sources = contact.blocked_sources;
       deal.next_free_action = contact.next_free_action;
@@ -1852,17 +1984,73 @@ async function applyFreePublicHunters(deals, input, options, context) {
         else if (outreachRoute) deal.contact_route_if_visible = `${outreachRoute.value} (${outreachRoute.route_type})`;
       }
     }
+    const provenPhoneRoute = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
+      .find((route) => route.route_kind === 'phone' && fieldProvenance.routeHasProvenance(route));
+    const provenOutreachRoute = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
+      .find((route) => /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route));
+    if (deal.free_contact_status === 'CALL_READY' && !provenPhoneRoute) {
+      deal.free_contact_status = provenOutreachRoute ? 'OUTREACH_READY' : 'CONTACT_SEARCH_EXHAUSTED_FREE';
+      deal.why_call_ready_or_blocked = 'A visible contact route existed, but it was missing source provenance; verify the source before using it.';
+      if (!provenOutreachRoute) deal.contact_route_if_visible = '';
+    }
+    if (deal.free_contact_status === 'OUTREACH_READY' && !provenOutreachRoute) {
+      deal.free_contact_status = 'CONTACT_SEARCH_EXHAUSTED_FREE';
+      deal.why_call_ready_or_blocked = 'A visible outreach route existed, but it was missing source provenance; verify the source before using it.';
+      deal.contact_route_if_visible = '';
+    }
+    if ((!deal.free_contact_status || deal.free_contact_status === 'CONTACT_SEARCH_EXHAUSTED_FREE' || deal.free_contact_status === 'CONTACT_SEARCH_NOT_RUN') &&
+        deal.mailing_route && cleanText(deal.mailing_route.value)) {
+      deal.free_contact_status = 'MAIL_READY';
+      deal.next_free_action = 'SEND_LETTER_TO_OWNER_MAILING_ADDRESS';
+      deal.why_call_ready_or_blocked = 'Owner mailing route visible on an official public record; no public phone/email found.';
+    }
+    if (entity) {
+      deal.business_entity_resolution = {
+        status: cleanText(entity.status),
+        entity_name: cleanText(entity.entity_name),
+        entity_status: cleanText(entity.entity_status),
+        registered_agent_name: cleanText(entity.registered_agent_name),
+        registered_agent_address: cleanText(entity.registered_agent_address),
+        source_kind: cleanText(entity.source_kind || 'official_public_record'),
+        source_url: cleanText(entity.source_url),
+        evidence_text: cleanText(entity.evidence_text),
+        blocked_reason: cleanText(entity.blocked_reason)
+      };
+      deal.entity_contacts = Array.isArray(entity.entity_contacts) ? entity.entity_contacts.slice(0, 4) : [];
+      if (deal.entity_contacts.length) {
+        deal.free_contact_routes = (deal.free_contact_routes || []).concat(deal.entity_contacts).slice(0, 12);
+        if (deal.entity_contacts.some((route) => route.route_kind === 'phone')) {
+          const route = deal.entity_contacts.find((item) => item.route_kind === 'phone');
+          deal.free_contact_status = 'CALL_READY';
+          deal.contact_route_if_visible = `${route.value} (${route.route_type})`;
+          deal.next_free_action = 'CALL_VISIBLE_ROUTE_AND_ASK_FOR_OWNER_PATH';
+          deal.why_call_ready_or_blocked = 'Business registry published a phone route; it may be a registered agent, not the seller.';
+        } else if (!deal.free_contact_status || deal.free_contact_status === 'CONTACT_SEARCH_EXHAUSTED_FREE' || deal.free_contact_status === 'CONTACT_SEARCH_NOT_RUN') {
+          deal.free_contact_status = 'OUTREACH_READY';
+          deal.next_free_action = 'CONTACT_REGISTERED_AGENT_OR_SEND_ENTITY_NOTICE';
+          deal.why_call_ready_or_blocked = 'Business registry published a registered-agent route; it is not confirmed as the seller.';
+        }
+        diagnostics.business_entity_agent_found_count += 1;
+      }
+    }
     if (comp) {
       deal.free_comp_status = comp.free_comp_status;
       deal.comp_candidates = comp.comp_candidates;
       deal.free_searches_run = (deal.free_searches_run || []).concat(comp.free_searches_run || []);
       deal.blocked_sources = (deal.blocked_sources || []).concat(comp.blocked_sources || []);
-      if (Array.isArray(comp.verified_comps) && comp.verified_comps.length) {
-        deal.verified_sold_comps = comp.verified_comps;
-        deal.verified_sold_comp_count = comp.verified_comps.length;
-        deal.comp_status = comp.verified_comps.length >= 3 ? 'verified_sold_comps_ready' : 'partial_verified_sold_comps';
-        deal.ARV_lock_state = comp.verified_comps.length >= 3 ? 'ARV_UNLOCKED_VERIFIED_COMPS' : 'ARV_LOCKED_NO_VERIFIED_COMPS';
+      const provenComps = Array.isArray(comp.verified_comps)
+        ? comp.verified_comps.filter((candidate) => fieldProvenance.compHasProvenance(candidate))
+        : [];
+      if (deal.free_comp_status === 'COMP_READY' && provenComps.length < 3) {
+        deal.free_comp_status = provenComps.length ? 'COMP_PARTIAL' : 'COMP_SEARCH_EXHAUSTED_FREE';
       }
+      if (provenComps.length) {
+        deal.verified_sold_comps = provenComps;
+        deal.verified_sold_comp_count = provenComps.length;
+        deal.comp_status = provenComps.length >= 3 ? 'verified_sold_comps_ready' : 'partial_verified_sold_comps';
+        deal.ARV_lock_state = provenComps.length >= 3 ? 'ARV_UNLOCKED_VERIFIED_COMPS' : 'ARV_LOCKED_NO_VERIFIED_COMPS';
+      }
+      if (provenComps.length >= 3) diagnostics.disclosure_comp_ready_count += 1;
     }
     if (!compPolicy.comp_lane_enabled) {
       deal.free_comp_status = 'SKIPPED_POLICY';
@@ -1871,6 +2059,9 @@ async function applyFreePublicHunters(deals, input, options, context) {
       deal.ARV_lock_state = 'ARV_LOCKED_NO_VERIFIED_COMPS';
     }
     deal.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(deal, now);
+    const rowState = rowStateForDeal(deal);
+    deal.row_state = rowState.row_state;
+    deal.row_state_reason = rowState.row_state_reason;
     deal.enrichment_ledger_summary = enrichmentLedger.ledgerSummary(deal);
     deal.call_prep = callPrepProjection.buildCallPrep(deal);
     deal.call_readiness = deal.call_prep.call_readiness;
@@ -1884,6 +2075,8 @@ async function applyFreePublicHunters(deals, input, options, context) {
       next_free_action: deal.next_free_action || '',
       why_call_ready_or_blocked: deal.why_call_ready_or_blocked || '',
       lifecycle_status: deal.lifecycle_status,
+      row_state: deal.row_state,
+      row_state_reason: deal.row_state_reason,
       enrichment_ledger_summary: deal.enrichment_ledger_summary
     });
     diagnostics.free_blocked_source_count += (deal.blocked_sources || []).length;

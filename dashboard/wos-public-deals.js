@@ -69,7 +69,17 @@
   function statusColor(status) {
     if (status === 'CALL_READY') return '#bbf7d0';
     if (status === 'OUTREACH_READY') return '#bfdbfe';
+    if (status === 'MAIL_READY') return '#ccfbf1';
     if (/BLOCKED/.test(status || '')) return '#fecaca';
+    return '#e5e7eb';
+  }
+
+  function rowStateColor(status) {
+    if (status === 'CALL_READY') return '#bbf7d0';
+    if (status === 'OUTREACH_READY') return '#bfdbfe';
+    if (status === 'MAIL_READY') return '#ccfbf1';
+    if (status === 'NEEDS_SKIP_TRACE') return '#fed7aa';
+    if (status === 'NEEDS_COMPS') return '#fde68a';
     return '#e5e7eb';
   }
 
@@ -141,7 +151,28 @@
     if (zipReview && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     }
+    if (row.row_state) {
+      lines.push('<div style="font-size:12px;">Row state: <b style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state) + '</b>' +
+        (row.row_state_reason ? ' <span style="color:#6b7280;">' + esc(row.row_state_reason) + '</span>' : '') + '</div>');
+    }
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
+    if (row.owner_record && row.owner_record.owner_name) {
+      lines.push('<div style="font-size:12px;">Owner of record: <b>' + esc(row.owner_record.owner_name) + '</b>' +
+        (row.owner_record.is_entity ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#ddd6fe;">ENTITY</span>' : '') +
+        (row.owner_record.parcel_id ? ' <span style="color:#6b7280;">Parcel/APN ' + esc(row.owner_record.parcel_id) + '</span>' : '') +
+        ' ' + link('owner proof', row.owner_record.source_url) + '</div>');
+    }
+    if (row.mailing_route && row.mailing_route.value) {
+      lines.push('<div style="font-size:12px;">Mailing route: <b>' + esc(row.mailing_route.value) + '</b> ' +
+        '<span style="color:#991b1b;">mail only - owner of record may differ from occupant</span> ' +
+        link('mail proof', row.mailing_route.source_url) + '</div>');
+    }
+    if (row.business_entity_resolution && (row.business_entity_resolution.status || row.business_entity_resolution.registered_agent_name)) {
+      lines.push('<div style="font-size:12px;">Entity lookup: <b>' + esc(row.business_entity_resolution.status || 'review') + '</b>' +
+        (row.business_entity_resolution.registered_agent_name ? ' Agent: <b>' + esc(row.business_entity_resolution.registered_agent_name) + '</b>' : '') +
+        (row.business_entity_resolution.registered_agent_address ? ' - ' + esc(row.business_entity_resolution.registered_agent_address) : '') +
+        ' <span style="color:#991b1b;">registered agent is not the seller</span> ' + link('entity proof', row.business_entity_resolution.source_url) + '</div>');
+    }
     var links = link('Source proof', row.source_document_url || row.source_url) + link('Best click', row.best_link_to_click_first) +
       link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
@@ -166,7 +197,7 @@
     if (row.arv_lock_reason) lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;">ARV reason: ' + esc(row.arv_lock_reason) + '</div>');
     if (safeArray(row.verified_comps).length) {
       lines.push('<div style="font-size:11px;color:#065f46;margin-top:2px;">Verified comps: ' +
-        safeArray(row.verified_comps).map(function (c) { return esc(c.comp_address) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('src', c.source_url); }).join(' | ') + '</div>');
+        safeArray(row.verified_comps).map(function (c) { return esc(c.comp_address) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('public record', c.source_url); }).join(' | ') + '</div>');
     }
     if (row.next_comp_action) lines.push('<div style="font-size:11px;color:#374151;">Comp action: ' + esc(row.next_comp_action) + '</div>');
     lines.push('<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'review') + '</b>' +
@@ -191,7 +222,7 @@
 
   function isActionableRow(row) {
     return row.quality_bucket === 'INSPECT_NOW' || row.quality_bucket === 'NEEDS_ZIP_REVIEW' ||
-      row.contact_status === 'CALL_READY' || row.contact_status === 'OUTREACH_READY';
+      row.contact_status === 'CALL_READY' || row.contact_status === 'OUTREACH_READY' || row.contact_status === 'MAIL_READY' || row.row_state === 'MAIL_READY';
   }
 
   function minutesUntil(iso) {
@@ -221,6 +252,7 @@
         riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS') !== -1;
       var sale = saleDateInfo(row);
       var eligible = row.contact_status === 'CALL_READY' ||
+        row.row_state === 'MAIL_READY' ||
         (sale.iso && !sale.passed) ||
         row.quality_bucket === 'INSPECT_NOW' ||
         row.quality_bucket === 'NEEDS_ZIP_REVIEW';
@@ -230,14 +262,15 @@
       var bSale = saleDateInfo(b);
       function rank(row, sale) {
         if (row.contact_status === 'CALL_READY') return 0;
-        if (sale.iso && !sale.passed) return 1;
-        if (row.quality_bucket === 'INSPECT_NOW') return 2;
-        return 3;
+        if (row.row_state === 'MAIL_READY') return 1;
+        if (sale.iso && !sale.passed) return 2;
+        if (row.quality_bucket === 'INSPECT_NOW') return 3;
+        return 4;
       }
       var aRank = rank(a, aSale);
       var bRank = rank(b, bSale);
       if (aRank !== bRank) return aRank - bRank;
-      if (aRank === 1 && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
+      if (aRank === 2 && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
       return String(a.normalized_address || a.partial_address).localeCompare(
         String(b.normalized_address || b.partial_address)
       );
@@ -246,6 +279,7 @@
 
   function urgentContextLabel(row) {
     if (row.contact_status === 'CALL_READY') return 'CALL_READY';
+    if (row.row_state === 'MAIL_READY') return 'MAIL_READY';
     var sale = saleDateInfo(row);
     if (sale.iso && !sale.passed) return 'Sale in ' + sale.days + ' days';
     return row.quality_bucket || 'REVIEW';
@@ -273,6 +307,8 @@
       chip('Actionable today', actionableToday, '#fde68a'),
       chip('OCR rows today', daily.ocr_address_rows_today || 0),
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
+      chip('MAIL_READY', c.mail_ready || 0, '#ccfbf1'),
+      chip('Needs skip trace', c.needs_skip_trace || 0, '#fed7aa'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('Quarantined', c.quarantined || 0, '#fecaca'),
@@ -348,6 +384,7 @@
     var actionableNow = Number(c.call_ready || 0) + Number(c.inspect_now || 0) + Number(c.needs_zip_review || 0);
     var summary = [
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
+      chip('MAIL_READY', c.mail_ready || 0, '#ccfbf1'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('New today', c.today_rows || 0, '#ddd6fe')
@@ -387,9 +424,10 @@
       function rank(row, sale) {
         if (sale.passed) return 4;
         if (row.contact_status === 'CALL_READY') return 0;
-        if (sale.iso) return 1;
+        if (row.row_state === 'MAIL_READY') return 1;
+        if (sale.iso) return 2;
         // ZIP-review rows retain their dedicated review tier and panel.
-        if (row.quality_bucket === 'NEEDS_ZIP_REVIEW') return 2;
+        if (row.quality_bucket === 'NEEDS_ZIP_REVIEW') return 3;
         return 3;
       }
       var aRank = rank(a, aSale);

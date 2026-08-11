@@ -5,6 +5,7 @@ const MAX_ATTEMPTS_PER_ROW = 20;
 const LANES = Object.freeze([
   'row_source_document',
   'county_appraisal',
+  'business_entity_registry',
   'public_search',
   'official_browser_lookup',
   'sold_comp',

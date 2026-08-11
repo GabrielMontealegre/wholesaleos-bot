@@ -18,6 +18,7 @@ const censusZipResolution = require('./census-zip-resolution');
 const propertyIdentity = require('./property-identity');
 const enrichmentLedger = require('./enrichment-ledger');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
+const fieldProvenance = require('./field-provenance');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const SNAPSHOT_FILE = path.resolve(
@@ -69,8 +70,11 @@ function cleanText(value) {
 
 function cloneSnapshotRow(row) {
   const copy = Object.assign({}, row || {});
-  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions', 'free_contact_routes', 'blocked_sources', 'free_searches_run']) {
+  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions', 'free_contact_routes', 'entity_contacts', 'blocked_sources', 'free_searches_run']) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
+  }
+  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution']) {
+    if (copy[key] && typeof copy[key] === 'object') copy[key] = JSON.parse(JSON.stringify(copy[key]));
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
   if (copy.lifecycle_status) copy.lifecycle_status = Object.assign({}, copy.lifecycle_status);
@@ -195,6 +199,9 @@ function repairStoredSnapshotRows(rows) {
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
     row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
+    const state = rowStateForDeal(row);
+    row.row_state = state.row_state;
+    row.row_state_reason = state.row_state_reason;
     return row;
   });
 }
@@ -384,6 +391,19 @@ function dedupeKeyForDeal(deal) {
   return `proof|${crypto.createHash('sha1').update([doc, src, phone, body].join('|')).digest('hex').slice(0, 20)}`;
 }
 
+function rowStateForDeal(deal) {
+  const routes = Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [];
+  const phone = routes.find((route) => route && route.route_kind === 'phone' && fieldProvenance.routeHasProvenance(route));
+  const outreach = routes.find((route) => route && /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route));
+  const mailing = deal && deal.mailing_route && fieldProvenance.routeHasProvenance(deal.mailing_route) ? deal.mailing_route : null;
+  if (phone) return { row_state: 'CALL_READY', row_state_reason: 'Source-linked public phone route is visible; verify before dialing.' };
+  if (outreach) return { row_state: 'OUTREACH_READY', row_state_reason: 'Source-linked public email/form/reply route is visible; verify before outreach.' };
+  if (mailing) return { row_state: 'MAIL_READY', row_state_reason: 'Owner-of-record mailing address is visible on an official public record.' };
+  if (!cleanText(deal && deal.normalized_address)) return { row_state: 'LOCKED', row_state_reason: 'Property identity is incomplete.' };
+  if ((Number(deal && deal.verified_sold_comp_count) || 0) < 3) return { row_state: 'NEEDS_COMPS', row_state_reason: 'Need 3 verified sold comps before ARV/MAO can unlock.' };
+  return { row_state: 'NEEDS_SKIP_TRACE', row_state_reason: 'No source-linked free contact or mailing route is ready yet.' };
+}
+
 function sourceIdentityKey(row) {
   const reference = cleanText(row && row.source_row_reference).toLowerCase();
   const documentUrl = cleanText(row && (row.source_document_url || row.source_url)).toLowerCase();
@@ -391,6 +411,7 @@ function sourceIdentityKey(row) {
 }
 
 function projectRowForQueue(deal, dedupeKey, seenAt) {
+  const rowState = rowStateForDeal(deal);
   return {
     queue_key: dedupeKey,
     headline: cleanText(deal.headline),
@@ -431,6 +452,43 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     owner_clue: deal.owner_record && cleanText(deal.owner_record.owner_name)
       ? `${cleanText(deal.owner_record.owner_name)}${deal.owner_record.is_entity ? ' [entity]' : ''}`
       : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value) || cleanText(deal.owner_name_if_visible),
+    owner_record: deal.owner_record && typeof deal.owner_record === 'object' ? {
+      owner_name: cleanText(deal.owner_record.owner_name),
+      mailing_address: cleanText(deal.owner_record.mailing_address),
+      parcel_id: cleanText(deal.owner_record.parcel_id),
+      situs_address: cleanText(deal.owner_record.situs_address),
+      is_entity: deal.owner_record.is_entity === true,
+      verification_status: cleanText(deal.owner_record.verification_status),
+      source_kind: cleanText(deal.owner_record.source_kind),
+      source_url: cleanText(deal.owner_record.source_url),
+      evidence_text: cleanText(deal.owner_record.evidence_text)
+    } : null,
+    mailing_route: deal.mailing_route && typeof deal.mailing_route === 'object' ? {
+      route_kind: cleanText(deal.mailing_route.route_kind),
+      route_type: cleanText(deal.mailing_route.route_type),
+      value: cleanText(deal.mailing_route.value),
+      source_kind: cleanText(deal.mailing_route.source_kind),
+      source_url: cleanText(deal.mailing_route.source_url),
+      evidence_text: cleanText(deal.mailing_route.evidence_text),
+      confidence: cleanText(deal.mailing_route.confidence),
+      risk_flags: Array.isArray(deal.mailing_route.risk_flags) ? deal.mailing_route.risk_flags.map(cleanText).filter(Boolean).slice(0, 6) : []
+    } : null,
+    business_entity_resolution: deal.business_entity_resolution && typeof deal.business_entity_resolution === 'object'
+      ? Object.assign({}, deal.business_entity_resolution)
+      : null,
+    entity_contacts: Array.isArray(deal.entity_contacts) ? deal.entity_contacts.slice(0, 4).map((route) => ({
+      route_kind: cleanText(route && route.route_kind),
+      route_type: cleanText(route && route.route_type),
+      value: cleanText(route && route.value),
+      name: cleanText(route && route.name),
+      source_kind: cleanText(route && route.source_kind),
+      source_url: cleanText(route && route.source_url),
+      evidence_text: cleanText(route && route.evidence_text),
+      confidence: cleanText(route && route.confidence),
+      risk_flags: Array.isArray(route && route.risk_flags) ? route.risk_flags.map(cleanText).filter(Boolean).slice(0, 6) : []
+    })) : [],
+    row_state: rowState.row_state,
+    row_state_reason: rowState.row_state_reason,
     official_lookup_status: cleanText(deal.official_lookup_status),
     contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
     free_contact_status: cleanText(deal.free_contact_status),
@@ -440,6 +498,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     best_contact: (() => {
       const route = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : []).find((item) => item && cleanText(item.value));
       if (route) return `${cleanText(route.value)} (${cleanText(route.route_type)})`;
+      if (deal.mailing_route && cleanText(deal.mailing_route.value)) return `${cleanText(deal.mailing_route.value)} (owner mailing address)`;
       const visible = cleanText(deal.contact_route_if_visible);
       return /^manual/i.test(visible) ? '' : visible;
     })(),
@@ -451,7 +510,11 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       comp_address: cleanText(comp.comp_address || comp.address),
       sold_price: Number(comp.sold_price) || 0,
       sold_date: cleanText(comp.sold_date),
-      source_url: cleanText(comp.source_url)
+      source_kind: cleanText(comp.source_kind),
+      source_url: cleanText(comp.source_url),
+      evidence_text: cleanText(comp.evidence_text),
+      parcel_id: cleanText(comp.parcel_id),
+      land_use: cleanText(comp.land_use)
     })) : [],
     arv_lock_reason: cleanText(deal.arv_lock_reason || (deal.call_prep && deal.call_prep.ARV_lock_reason)),
     mao_lock_reason: cleanText(deal.mao_lock_reason || (deal.call_prep && deal.call_prep.MAO_lock_reason)),
@@ -554,12 +617,21 @@ function suppressedNavChromeSamplesFromPreview(preview) {
 
 function queueCounts(rows) {
   const today = nowIso().slice(0, 10);
+  const states = {};
+  for (const row of rows) {
+    const state = cleanText(row && row.row_state) || 'UNKNOWN';
+    states[state] = (Number(states[state]) || 0) + 1;
+  }
   return {
     total_rows: rows.length,
     today_rows: rows.filter((row) => String(row.first_seen_at).slice(0, 10) === today || String(row.last_seen_at).slice(0, 10) === today).length,
     address_rows: rows.filter((row) => row.normalized_address).length,
     call_ready: rows.filter((row) => row.contact_status === 'CALL_READY').length,
     outreach_ready: rows.filter((row) => row.contact_status === 'OUTREACH_READY').length,
+    mail_ready: rows.filter((row) => row.row_state === 'MAIL_READY' || row.contact_status === 'MAIL_READY').length,
+    needs_skip_trace: rows.filter((row) => row.row_state === 'NEEDS_SKIP_TRACE').length,
+    locked: rows.filter((row) => row.row_state === 'LOCKED').length,
+    row_states: states,
     inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW').length,
     needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW').length,
     needs_contact: rows.filter((row) => row.normalized_address && row.contact_status !== 'CALL_READY' && row.contact_status !== 'OUTREACH_READY').length,
@@ -635,6 +707,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
+    'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',

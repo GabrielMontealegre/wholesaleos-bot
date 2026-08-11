@@ -190,6 +190,7 @@ async function huntCompsForRow(row, options, caps, budget, cache) {
         sold_status: facts.sold_status,
         sold_price: facts.sold_price,
         sold_date: facts.sold_date,
+        source_kind: 'public_web_page',
         source_url: facts.source_url,
         evidence_text: facts.evidence_text
       };

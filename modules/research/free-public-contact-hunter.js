@@ -57,6 +57,14 @@ function riskFlagsForRoute(routeType) {
   return flags;
 }
 
+function sourceKindForLabel(sourceLabel) {
+  const label = cleanText(sourceLabel);
+  if (/document|pdf|notice/i.test(label)) return 'public_source_document';
+  if (/snippet|search/i.test(label)) return 'search_snippet';
+  if (/county|appraisal|official/i.test(label)) return 'official_public_record';
+  return 'public_web_page';
+}
+
 function contextWindow(text, index, length) {
   const source = String(text || '');
   return cleanText(source.slice(Math.max(0, index - 120), index + length + 120));
@@ -79,6 +87,7 @@ function mineContactRoutesFromText(text, sourceUrl, sourceLabel) {
       route_kind: 'phone',
       value,
       route_type: routeType,
+      source_kind: sourceKindForLabel(sourceLabel),
       source_url: cleanText(sourceUrl),
       source_label: cleanText(sourceLabel),
       evidence_text: context.slice(0, 260),
@@ -101,6 +110,7 @@ function mineContactRoutesFromText(text, sourceUrl, sourceLabel) {
       route_kind: 'email',
       value,
       route_type: routeType,
+      source_kind: sourceKindForLabel(sourceLabel),
       source_url: cleanText(sourceUrl),
       source_label: cleanText(sourceLabel),
       evidence_text: context.slice(0, 260),
@@ -279,6 +289,7 @@ async function huntContactForRow(row, options, caps, budget, cache) {
         mailingRoute = {
           route_kind: 'mailing_address',
           value: cleanText(lookup.mailing_address),
+          source_kind: 'official_public_record',
           source_url: cleanText(lookup.source_url),
           evidence_text: 'Owner mailing address on county appraisal record.',
           confidence: 'High',
