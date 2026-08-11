@@ -107,6 +107,8 @@ questions. Proof-only rows collapsed underneath.
 | Zillow/Redfin sold comps | 403/429 bot traffic + TX non-disclosure | MLS or paid data |
 | Zillow/Redfin/Realtor/Auction listing radar | current Serper results are mostly generic category/filter pages, not deal rows | adapter kept for manual diagnostics, but removed from the default daily queue until it reliably returns property-specific URLs |
 | Owner phone numbers | not in free public records | paid skip-trace decision |
+| TX sold comps / ARV / MAO | Texas is a non-disclosure state; free Zillow/Redfin/Realtor sold-page hunting is disabled for TX markets to avoid wasting search budget | run comps through MLS access or approve paid comp data; rows show `ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED` |
+| Bexar owner lookup / BCAD | free BCAD lookup profile is attempted from the contact hunter; blocked or shape-changed pages are reported per row | use visible owner clues if returned; otherwise row ledger shows the blocked reason and the next eligible retry |
 
 ## 6. Exact daily workflow
 

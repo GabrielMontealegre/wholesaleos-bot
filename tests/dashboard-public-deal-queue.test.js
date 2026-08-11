@@ -748,7 +748,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=12'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=13'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -811,6 +811,9 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes("riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT')"), 'Dashboard top urgent must exclude prefix-suspected rows');
   assert.ok(uiSource.includes("riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS')"), 'Dashboard top urgent must exclude passed-sale rows');
   assert.ok(uiSource.includes("chip('Actionable now'"), 'Dashboard card must show current actionable inventory before today-only activity');
+  assert.ok(uiSource.includes('lifecycleChip'), 'row cards must surface lifecycle status');
+  assert.ok(uiSource.includes('ledgerList'), 'row cards must surface enrichment ledger attempts');
+  assert.ok(uiSource.includes('Quarantined - verify before calling'), 'Dashboard must keep quarantined rows separate');
   assert.ok(uiSource.includes("return 'CALL_READY'"), 'Dashboard urgent rows must label call-ready context');
   assert.ok(uiSource.includes("return 'Sale in '"), 'Dashboard urgent rows must label sale urgency context');
   assert.ok(uiSource.includes("return row.quality_bucket || 'REVIEW'"), 'Dashboard urgent rows must label their bucket context');

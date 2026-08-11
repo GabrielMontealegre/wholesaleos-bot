@@ -5,6 +5,8 @@
 // Questions are questions for the seller, never asserted facts.
 
 const PLACEHOLDER_CONTACT_RE = /^(?:manual\s+lookup\s+needed|manual\s+verification\s+needed|unknown|n\/?a|none)$/i;
+const enrichmentLedger = require('./enrichment-ledger');
+const paidFallbackRegistry = require('./paid-provider-fallback-registry');
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -94,6 +96,9 @@ function buildCallPrep(deal) {
     MAO_lock_reason: mao.reason,
     seller_questions: sellerQuestions(deal),
     missing_for_call: missingForCall(deal),
+    lifecycle_status: deal && deal.lifecycle_status || null,
+    enrichment_ledger_summary: enrichmentLedger.ledgerSummary(deal || {}),
+    paid_fallback_options: paidFallbackRegistry.availableFallbacksForRow(deal || {}),
     preview_only: true
   };
 }

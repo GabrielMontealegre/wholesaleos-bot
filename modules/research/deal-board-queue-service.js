@@ -16,6 +16,8 @@ const path = require('path');
 const freePublicDealBoardPreviewService = require('./free-public-deal-board-preview-service');
 const censusZipResolution = require('./census-zip-resolution');
 const propertyIdentity = require('./property-identity');
+const enrichmentLedger = require('./enrichment-ledger');
+const leadLifecycleStatus = require('./lead-lifecycle-status');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const SNAPSHOT_FILE = path.resolve(
@@ -67,9 +69,11 @@ function cleanText(value) {
 
 function cloneSnapshotRow(row) {
   const copy = Object.assign({}, row || {});
-  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions']) {
+  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions', 'free_contact_routes', 'blocked_sources', 'free_searches_run']) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
+  if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
+  if (copy.lifecycle_status) copy.lifecycle_status = Object.assign({}, copy.lifecycle_status);
   return copy;
 }
 
@@ -189,6 +193,7 @@ function repairStoredSnapshotRows(rows) {
     quarantineSuspectedPrefixRow(row);
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
+    row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
     return row;
   });
 }
@@ -427,6 +432,10 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value) || cleanText(deal.owner_name_if_visible),
     official_lookup_status: cleanText(deal.official_lookup_status),
     contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
+    free_contact_status: cleanText(deal.free_contact_status),
+    free_contact_routes: Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes.slice(0, 10) : [],
+    free_searches_run: Array.isArray(deal.free_searches_run) ? deal.free_searches_run.slice(0, 12) : [],
+    why_call_ready_or_blocked: cleanText(deal.why_call_ready_or_blocked),
     best_contact: (() => {
       const route = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : []).find((item) => item && cleanText(item.value));
       if (route) return `${cleanText(route.value)} (${cleanText(route.route_type)})`;
@@ -465,6 +474,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     seller_questions: deal.call_prep && Array.isArray(deal.call_prep.seller_questions) ? deal.call_prep.seller_questions.slice(0, 8) : [],
     blocked_sources: [].concat(deal.blocked_sources || [], deal.browser_blocked_sources || [])
       .map((item) => ({ source: cleanText(item && item.source), reason: cleanText(item && item.reason) })).slice(0, 6),
+    enrichment_ledger: deal.enrichment_ledger || { attempts: [], dropped_count: 0 },
+    lifecycle_status: deal.lifecycle_status || leadLifecycleStatus.computeLifecycleStatus(deal, seenAt),
+    enrichment_ledger_summary: enrichmentLedger.ledgerSummary(deal),
     first_seen_at: seenAt,
     last_seen_at: seenAt,
     times_seen: 1,
@@ -551,7 +563,8 @@ function queueCounts(rows) {
     needs_contact: rows.filter((row) => row.normalized_address && row.contact_status !== 'CALL_READY' && row.contact_status !== 'OUTREACH_READY').length,
     needs_comps: rows.filter((row) => row.normalized_address && row.verified_sold_comp_count < 3).length,
     source_proof_only: rows.filter((row) => row.quality_bucket === 'SOURCE_PROOF_ONLY').length,
-    owner_clues: rows.filter((row) => row.owner_clue).length
+    owner_clues: rows.filter((row) => row.owner_clue).length,
+    quarantined: rows.filter((row) => row.lifecycle_status && row.lifecycle_status.quarantined === true).length
   };
 }
 
@@ -602,6 +615,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     market,
     limit,
     source_ids: defaultSourceIds,
+    existing_queue_rows: bucket.rows.map(cloneSnapshotRow),
     enable_official_browser_lookup: input.enable_official_browser_lookup !== false,
     enable_free_public_hunters: input.enable_free_public_hunters !== false,
     enable_census_zip_resolution: input.enable_census_zip_resolution !== false
@@ -624,7 +638,9 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',
     'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
-    'property_kind_if_visible', 'vacant_lot_if_visible'
+    'property_kind_if_visible', 'vacant_lot_if_visible', 'free_contact_status',
+    'free_contact_routes', 'blocked_sources', 'free_searches_run', 'why_call_ready_or_blocked',
+    'enrichment_ledger', 'lifecycle_status'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -649,7 +665,11 @@ async function runDealBoardBatch(input = {}, options = {}) {
       refreshed.times_seen = (Number(existing.times_seen) || 1) + 1;
       // Never lose evidence a previous sighting already carried.
       for (const field of PRESERVE_FIELDS) {
-        if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
+        if (Array.isArray(existing[field])) {
+          if (!Array.isArray(refreshed[field]) || !refreshed[field].length) refreshed[field] = existing[field].slice();
+        } else if (field === 'enrichment_ledger') {
+          refreshed.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, refreshed);
+        } else if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
       }
       if ((!refreshed.verified_comps || !refreshed.verified_comps.length) && Array.isArray(existing.verified_comps) && existing.verified_comps.length) {
         refreshed.verified_comps = existing.verified_comps;

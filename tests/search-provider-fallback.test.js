@@ -183,6 +183,8 @@ geminiProvider.runGeminiScoutDiscovery = async function mockWeakGemini(job, opti
     city: 'Dallas',
     quantity: 10,
     include_previous_results: false,
+    source_acquisition_enabled: false,
+    acquisition_core_enabled: false,
     include_auction: false,
     exclude_reo: true,
     exclude_sold: true,

@@ -147,7 +147,7 @@ const exporter = require('../scripts/export-free-public-deal-board');
 
   // Repo exports dir is git-ignored (no committed artifacts).
   const gitignore = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8');
-  assert.ok(/^exports\/$/m.test(gitignore));
+  assert.ok(/^exports\/\*$/m.test(gitignore) || /^exports\/$/m.test(gitignore));
 
   console.log('export free public deal board tests passed');
 })().catch((error) => {

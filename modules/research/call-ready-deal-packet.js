@@ -8,6 +8,8 @@ const propertyCandidate = require('./property-candidate');
 const propertyIdentity = require('./property-identity');
 const searchSnippetEvidence = require('./search-snippet-evidence');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
+const enrichmentLedger = require('./enrichment-ledger');
+const paidFallbackRegistry = require('./paid-provider-fallback-registry');
 
 const PACKET_STATUSES = Object.freeze({
   CALL_READY: 'CALL_READY',
@@ -349,6 +351,11 @@ function buildCallReadyDealPacket(input, options = {}) {
     missing_evidence: missingEvidence,
     next_best_worker: nextBestWorker,
     post_contact_worker: arvReady ? 'NONE' : 'COMP_HUNTER',
+    enrichment_workflow: {
+      lifecycle_status: candidate.lifecycle_status || input.lifecycle_status || null,
+      ledger_summary: enrichmentLedger.ledgerSummary(candidate),
+      paid_fallback_options: paidFallbackRegistry.availableFallbacksForRow(candidate)
+    },
     dossier_preview: dossier,
     preview_only: true,
     should_ingest: false,

@@ -155,15 +155,15 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
 
   // 7) Board wiring: mock hunter impls, statuses land on rows and call_prep, no mutations.
   const boardResult = await dealBoard.runFreePublicDealBoardPreview({
-    market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
+    market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
     enable_free_public_hunters: true,
     source_records: [{
-      headline: '3723 Barnabus Rd, Dallas, TX 75241',
-      address: '3723 Barnabus Rd, Dallas, TX 75241',
-      source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+      headline: '13905 Sussex St, Detroit, MI 48227',
+      address: '13905 Sussex St, Detroit, MI 48227',
+      source_url: 'https://buildingdetroit.org/properties/13905-sussex',
       source_document_url: noticePdfUrl,
-      source_family: 'preforeclosure_trustee_notice',
-      motivation_type: 'preforeclosure_trustee_notice',
+      source_family: 'land_bank_public_sale',
+      motivation_type: 'land_bank_public_sale',
       motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE'
     }]
   }, {
@@ -194,7 +194,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       }]])
     })
   });
-  const boardRow = boardResult.free_public_deals.find((deal) => deal.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
+  const boardRow = boardResult.free_public_deals.find((deal) => deal.normalized_address === '13905 Sussex St, Detroit, MI 48227');
   assert.ok(boardRow);
   assert.strictEqual(boardRow.free_contact_status, 'CALL_READY');
   assert.strictEqual(boardRow.call_readiness, 'CALL_READY');
