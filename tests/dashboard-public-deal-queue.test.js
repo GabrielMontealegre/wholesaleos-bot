@@ -748,11 +748,16 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=11'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=12'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
   assert.ok(uiSource.includes('Open Deal Finder'));
+  assert.ok(uiSource.includes('wos-public-deals-market'), 'dashboard must expose the supported-market selector');
+  assert.ok(uiSource.includes('San Antonio / Bexar, TX') && uiSource.includes('Detroit / Wayne, MI') && uiSource.includes('San Diego County, CA') && uiSource.includes('Los Angeles County, CA'), 'market selector must expose each producing non-Dallas market');
+  assert.ok(uiSource.includes('latestUrl()'), 'snapshot reads must include the selected market query');
+  assert.ok(uiSource.includes('market: selectedMarket()'), 'auto-run updates must use the selected market');
+  assert.ok(uiSource.includes('market: batchMarket'), 'manual batches must use the selected market captured at start');
   assert.ok(uiSource.includes('Next auction'));
   assert.ok(uiSource.includes('ARV_lock_state') && uiSource.includes('MAO_lock_state'));
   assert.ok(uiSource.includes('next_best_action'));
@@ -820,6 +825,10 @@ function mockDeal(overrides) {
     fetch: () => Promise.resolve({ json: () => Promise.resolve({}) })
   };
   vm.runInNewContext(uiSource, uiContext);
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().key, 'dallas', 'public-deals market defaults to Dallas');
+  uiContext.window.__wosPublicDealsTestHooks.storeSelectedMarket('san_antonio');
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().county, 'Bexar');
+  assert.ok(/city=San%20Antonio&county=Bexar&state=TX/.test(uiContext.window.__wosPublicDealsTestHooks.latestUrl()), 'latest snapshot URL must target the selected market');
   const orderedRows = uiContext.window.__wosPublicDealsTestHooks.sortTopDealsRows([
     { headline: 'dateless', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: '' },
     { headline: 'passed', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: yesterday },
@@ -867,7 +876,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');
   assert.ok(uiSource.includes('keepMounted'), 'section must keep itself mounted');
   assert.ok(/lastData/.test(uiSource), 'section must re-render from the cached snapshot after a wipe');
-  assert.ok(uiSource.includes('fetch(API_LATEST'), 'addon must fetch only when the cache is empty');
+  assert.ok(uiSource.includes('fetch(latestUrl()'), 'addon must fetch the selected market only when the cache is empty');
   assert.ok(uiSource.includes("Today\\'s Deal Desk") && uiSource.includes('Dashboard summary for what is urgent now.'), 'dashboard summary card must be present');
 
   function queueServiceRoute(suffix) {

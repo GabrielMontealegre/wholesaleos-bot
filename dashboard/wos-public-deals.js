@@ -8,6 +8,45 @@
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
+  var dataByMarket = {};
+  var MARKET_PRESETS = [
+    { key: 'dallas', label: 'Dallas County, TX', city: 'Dallas', county: 'Dallas', state: 'TX' },
+    { key: 'san_antonio', label: 'San Antonio / Bexar, TX', city: 'San Antonio', county: 'Bexar', state: 'TX' },
+    { key: 'detroit', label: 'Detroit / Wayne, MI', city: 'Detroit', county: 'Wayne', state: 'MI' },
+    { key: 'san_diego', label: 'San Diego County, CA', city: 'San Diego', county: 'San Diego', state: 'CA' },
+    { key: 'los_angeles', label: 'Los Angeles County, CA', city: 'Los Angeles', county: 'Los Angeles', state: 'CA' },
+    { key: 'houston', label: 'Houston / Harris, TX (proof lane)', city: 'Houston', county: 'Harris', state: 'TX' }
+  ];
+  var selectedMarketKey = readStoredMarketKey();
+
+  function readStoredMarketKey() {
+    try {
+      var stored = window.localStorage && window.localStorage.getItem('wos_public_deals_market');
+      if (MARKET_PRESETS.some(function (market) { return market.key === stored; })) return stored;
+    } catch (_) { /* local storage unavailable */ }
+    return 'dallas';
+  }
+
+  function selectedMarket() {
+    return MARKET_PRESETS.find(function (market) { return market.key === selectedMarketKey; }) || MARKET_PRESETS[0];
+  }
+
+  function selectedMarketLabel() {
+    return selectedMarket().label;
+  }
+
+  function latestUrl() {
+    var market = selectedMarket();
+    return API_LATEST + '?city=' + encodeURIComponent(market.city) +
+      '&county=' + encodeURIComponent(market.county) + '&state=' + encodeURIComponent(market.state);
+  }
+
+  function storeSelectedMarket(key) {
+    selectedMarketKey = MARKET_PRESETS.some(function (market) { return market.key === key; }) ? key : 'dallas';
+    try {
+      if (window.localStorage) window.localStorage.setItem('wos_public_deals_market', selectedMarketKey);
+    } catch (_) { /* local storage unavailable */ }
+  }
 
   function headers() {
     return { 'Content-Type': 'application/json', 'x-user-id': window._uid || 'admin' };
@@ -58,6 +97,14 @@
 
   function currentPage() {
     return (window.APP && window.APP.page) || '';
+  }
+
+  function marketSelectHtml() {
+    return '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;">Market ' +
+      '<select id="wos-public-deals-market" style="border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;background:#fff;color:#111827;font-size:12px;">' +
+      MARKET_PRESETS.map(function (market) {
+        return '<option value="' + esc(market.key) + '"' + (market.key === selectedMarketKey ? ' selected' : '') + '>' + esc(market.label) + '</option>';
+      }).join('') + '</select></label>';
   }
 
   function rowCard(row) {
@@ -231,7 +278,7 @@
       }
     }
     return panelBox('Daily Deal Machine',
-      'Free public sources only - snapshot cache, not saved leads.',
+      selectedMarketLabel() + ' - free public sources only - snapshot cache, not saved leads.',
       '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + errLine + blockers + coverageTable(batch),
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
@@ -293,7 +340,7 @@
       ? '<button type="button" onclick="navigate(\'findme_scout\', this)" style="padding:7px 12px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:12px;cursor:pointer;">Open Deal Finder</button>'
       : '<a href="#" style="color:#2563eb;text-decoration:underline;font-size:12px;">Open Deal Finder</a>';
     return panelBox('Today\'s Deal Desk',
-      'Dashboard summary for what is urgent now.',
+      selectedMarketLabel() + ' - Dashboard summary for what is urgent now.',
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         (autoRun.enabled ? chip('AUTO-RUN', 'ON every ' + (autoRun.interval_minutes || 20) + ' min', '#bbf7d0') : chip('AUTO-RUN', 'OFF', '#fecaca')) +
         chip('Batches today', daily.batches_today || 0) +
@@ -376,6 +423,7 @@
   function render(container, data, note) {
     lastData = data;
     lastNote = note || '';
+    dataByMarket[selectedMarketKey] = { data: data, note: lastNote };
     var body = container.querySelector('.wos-public-deals-body');
     if (!body) return;
     var rows = Array.isArray(data.rows) ? data.rows : [];
@@ -394,32 +442,45 @@
   }
 
   function fetchLatest(container) {
-    fetch(API_LATEST, { headers: headers() })
+    var requestMarketKey = selectedMarketKey;
+    fetch(latestUrl(), { headers: headers() })
       .then(function (res) { return res.json(); })
-      .then(function (data) { render(container, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.'); })
+      .then(function (data) {
+        if (requestMarketKey !== selectedMarketKey) return;
+        render(container, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
+      })
       .catch(function (err) {
+        if (requestMarketKey !== selectedMarketKey) return;
         container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Could not load public deals: ' + esc(err.message) + '</div>';
       });
   }
 
   function fetchLatestWithNote(container, note) {
-    fetch(API_LATEST, { headers: headers() })
+    var requestMarketKey = selectedMarketKey;
+    fetch(latestUrl(), { headers: headers() })
       .then(function (res) { return res.json(); })
-      .then(function (data) { render(container, data || {}, note); })
+      .then(function (data) {
+        if (requestMarketKey !== selectedMarketKey) return;
+        render(container, data || {}, note);
+      })
       .catch(function () { fetchLatest(container); });
   }
 
   function runBatch(container, button) {
+    var batchMarketKey = selectedMarketKey;
+    var batchMarket = selectedMarket();
     button.disabled = true;
     button.textContent = 'Starting background batch...';
     var pollCount = 0;
     function finish(note) {
       button.disabled = false;
       button.textContent = 'Run next free batch';
+      if (batchMarketKey !== selectedMarketKey) return;
       if (note) fetchLatestWithNote(container, note);
       else fetchLatest(container);
     }
     function fail(message) {
+      if (batchMarketKey !== selectedMarketKey) return;
       container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Batch failed: ' + esc(message) + '</div>';
       button.disabled = false;
       button.textContent = 'Run next free batch';
@@ -443,7 +504,7 @@
         })
         .catch(function (err) { fail(err.message); });
     }
-    fetch(API_RUN, { method: 'POST', headers: headers(), body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 }) })
+    fetch(API_RUN, { method: 'POST', headers: headers(), body: JSON.stringify({ market: batchMarket, limit: 25 }) })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (!data || data.ok === false || !data.job) throw new Error((data && data.error) || 'could not start batch');
@@ -469,12 +530,14 @@
       section.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
         '<h2 style="margin:0;font-size:17px;">Today\'s Deal Desk <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - snapshot cache, not saved leads</span></h2>' +
+        marketSelectHtml() +
         '</div><div class="wos-public-deals-body" style="max-height:240px;overflow:auto;">Loading public deals...</div>';
     } else if (needsRebuild) {
       section.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
         '<h2 style="margin:0;font-size:17px;">Best Public Deals <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - preview snapshot, not saved leads</span></h2>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
+        marketSelectHtml() +
         '<label style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px;cursor:pointer;">' +
         '<input type="checkbox" id="wos-public-deals-auto"> Auto-refresh every 20 min</label>' +
         '<button id="wos-public-deals-run" style="padding:7px 14px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:13px;cursor:pointer;">Run next free batch</button>' +
@@ -503,6 +566,24 @@
     var section = ensureSection(page);
     var autoBox = document.getElementById('wos-public-deals-auto');
     var runButton = document.getElementById('wos-public-deals-run');
+    var marketSelect = document.getElementById('wos-public-deals-market');
+
+    if (marketSelect && !marketSelect._wosBound) {
+      marketSelect._wosBound = true;
+      marketSelect.addEventListener('change', function () {
+        storeSelectedMarket(this.value);
+        var cached = dataByMarket[selectedMarketKey];
+        lastData = cached ? cached.data : null;
+        lastNote = cached ? cached.note : '';
+        if (autoBox) autoBox.checked = !!(lastData && lastData.auto_run && lastData.auto_run.enabled);
+        if (lastData) render(section, lastData, lastNote);
+        else {
+          var body = section.querySelector('.wos-public-deals-body');
+          if (body) body.innerHTML = '<div style="font-size:12px;color:#6b7280;">Loading ' + esc(selectedMarketLabel()) + ' public deals...</div>';
+          fetchLatest(section);
+        }
+      });
+    }
 
     if (page === 'findme_scout') {
       if (runButton && !runButton._wosBound) {
@@ -516,7 +597,7 @@
           fetch(API_RUN.replace('/run', '/auto-run'), {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, enabled: box.checked, interval_minutes: 20 })
+            body: JSON.stringify({ market: selectedMarket(), enabled: box.checked, interval_minutes: 20 })
           })
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -535,17 +616,19 @@
     }
 
     if (lastData) {
-      if (page === 'findme_scout' && lastData.auto_run && lastData.auto_run.enabled && autoBox) autoBox.checked = true;
+      if (page === 'findme_scout' && autoBox) autoBox.checked = !!(lastData.auto_run && lastData.auto_run.enabled);
       render(section, lastData, lastNote);
       return;
     }
 
     if (fetchInFlight) return;
     fetchInFlight = true;
-    fetch(API_LATEST, { headers: headers() })
+    var requestMarketKey = selectedMarketKey;
+    fetch(latestUrl(), { headers: headers() })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (page === 'findme_scout' && data && data.auto_run && data.auto_run.enabled && autoBox) autoBox.checked = true;
+        if (requestMarketKey !== selectedMarketKey) return;
+        if (page === 'findme_scout' && autoBox) autoBox.checked = !!(data && data.auto_run && data.auto_run.enabled);
         render(section, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
       })
       .catch(function () { fetchLatest(section); })
@@ -572,7 +655,10 @@
   window.__wosPublicDealsTestHooks = {
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
-    urgentContextLabel: urgentContextLabel
+    urgentContextLabel: urgentContextLabel,
+    selectedMarket: selectedMarket,
+    storeSelectedMarket: storeSelectedMarket,
+    latestUrl: latestUrl
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
