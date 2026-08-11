@@ -33,8 +33,8 @@ function mockDeal(overrides) {
     best_link_to_click_first: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf',
     maps_url: 'https://maps.example/q',
     free_contact_status: 'CALL_READY',
-    free_contact_routes: [{ route_kind: 'phone', value: '(888) 313-1969', route_type: 'trustee_servicer_or_official' }],
-    owner_record: { owner_name: 'KILLER CAPITAL CONSULTANTS LLC', is_entity: true },
+    free_contact_routes: [{ route_kind: 'phone', value: '(888) 313-1969', route_type: 'trustee_servicer_or_official', source_kind: 'public_source_document', source_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf', evidence_text: 'For Sale Information: (888) 313-1969' }],
+    owner_record: { owner_name: 'KILLER CAPITAL CONSULTANTS LLC', is_entity: true, source_kind: 'official_public_record', source_url: 'https://dcad.org/record', evidence_text: 'Owner: KILLER CAPITAL CONSULTANTS LLC' },
     official_lookup_status: 'OWNER_CLUE_ONLY',
     appraisal_clues: [{ value: '$153,440' }],
     verified_sold_comp_count: 0,
@@ -748,7 +748,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=14'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=15'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -760,6 +760,11 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('market: batchMarket'), 'manual batches must use the selected market captured at start');
   assert.ok(uiSource.includes('Next auction'));
   assert.ok(uiSource.includes('ARV_lock_state') && uiSource.includes('MAO_lock_state'));
+  assert.ok(uiSource.includes('Owner of record') && uiSource.includes('owner_record'), 'dashboard must render official owner record proof');
+  assert.ok(uiSource.includes('Mailing route') && uiSource.includes('mailing_route'), 'dashboard must render MAIL_READY owner mailing routes');
+  assert.ok(uiSource.includes('Entity lookup') && uiSource.includes('registered agent is not the seller'), 'dashboard must label registered agents honestly');
+  assert.ok(uiSource.includes('row_state') && uiSource.includes('MAIL_READY'), 'dashboard must render row state and mail-ready counts');
+  assert.ok(uiSource.includes('Needs skip trace'), 'dashboard must show skip-trace need counts');
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');

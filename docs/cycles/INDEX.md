@@ -13,6 +13,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-5-los-angeles-ca]] - Los Angeles County CA tax-defaulted auction book, verified open (build pending).
 - [[cycle-6-tx-volume-wave]] - Texas metro volume wave: Bexar/San Antonio and Fort Bend/Houston fit existing TX source families; Austin deferred.
 - [[cycle-7-enrichment-ledger]] - enrichment ledger, lifecycle status, and hunter rotation so existing rows get worked before more raw volume.
+- [[cycle-8-free-identity-and-comps]] - free public owner/mailing routes, entity resolution, and disclosure-state comp unlock.
 
 ## Market Notes
 

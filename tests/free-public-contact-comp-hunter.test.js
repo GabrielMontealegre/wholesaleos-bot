@@ -220,7 +220,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       rows_hunted: rows.length,
       results: new Map([[rows[0].normalized_address.toLowerCase(), {
         free_contact_status: 'CALL_READY',
-        free_contact_routes: [{ route_kind: 'phone', value: '(888) 313-1969', route_type: 'trustee_servicer_or_official', source_url: noticePdfUrl, evidence_text: 'For Sale Information: (888) 313-1969', confidence: 'Medium', risk_flags: ['not_confirmed_owner_contact'] }],
+        free_contact_routes: [{ route_kind: 'phone', value: '(888) 313-1969', route_type: 'trustee_servicer_or_official', source_kind: 'public_source_document', source_url: noticePdfUrl, evidence_text: 'For Sale Information: (888) 313-1969', confidence: 'Medium', risk_flags: ['not_confirmed_owner_contact'] }],
         owner_or_entity_clues: [{ clue_kind: 'borrower_name_in_notice', value: 'ROY EXAMPLE', source_url: noticePdfUrl, evidence_text: 'grantor ROY EXAMPLE', confidence: 'Medium', risk_flags: [] }],
         mailing_route: null,
         free_searches_run: [{ source: 'row_source_document', target: noticePdfUrl }],
@@ -234,7 +234,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       rows_hunted: rows.length,
       results: new Map([[rows[0].normalized_address.toLowerCase(), {
         free_comp_status: 'COMP_PARTIAL',
-        verified_comps: [{ comp_address: '3720 Barnabus Rd, Dallas, TX 75241', sold_status: 'sold', sold_price: 245000, sold_date: '05/10/2026', source_url: 'https://www.zillow.com/homedetails/comp-a_zpid/' }],
+        verified_comps: [{ comp_address: '3720 Barnabus Rd, Dallas, TX 75241', sold_status: 'sold', sold_price: 245000, sold_date: '05/10/2026', source_kind: 'public_web_page', source_url: 'https://www.zillow.com/homedetails/comp-a_zpid/', evidence_text: 'Sold 05/10/2026 for $245,000' }],
         comp_candidates: [],
         free_searches_run: [{ source: 'public_search', target: 'sold comps' }],
         blocked_sources: [],
@@ -259,6 +259,115 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.strictEqual(boardResult.free_comp_partial_count, 1);
   assert.strictEqual(boardResult.preview_only, true);
   assert.strictEqual(boardResult.should_ingest, false);
+
+  // 8b) Cycle 8 wiring: official parcel owner + entity route + disclosure-state comps.
+  const cycle8Result = await dealBoard.runFreePublicDealBoardPreview({
+    market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
+    enable_free_public_hunters: true,
+    source_records: [{
+      headline: '13905 Sussex St, Detroit, MI 48227',
+      address: '13905 Sussex St, Detroit, MI 48227',
+      source_url: 'https://buildingdetroit.org/properties/13905-sussex',
+      source_family: 'land_bank_public_sale',
+      motivation_type: 'land_bank_public_sale',
+      motivation_evidence_text: 'Public land bank sale row',
+      status_evidence_text: 'Active public listing'
+    }]
+  }, {
+    fetch_impl: async () => makeResponse('<html>ok</html>'),
+    free_contact_hunter_impl: async ({ rows }) => ({
+      rows_hunted: rows.length,
+      results: new Map([[rows[0].normalized_address.toLowerCase(), {
+        free_contact_status: 'CONTACT_SEARCH_EXHAUSTED_FREE',
+        free_contact_routes: [],
+        owner_or_entity_clues: [],
+        mailing_route: null,
+        free_searches_run: [],
+        blocked_sources: [],
+        next_free_action: 'DECIDE_PAID_SKIP_TRACE',
+        why_call_ready_or_blocked: 'No public phone found.',
+        preview_only: true
+      }]]),
+      attempt_records: []
+    }),
+    public_parcel_owner_lookup_impl: async ({ rows }) => ({
+      rows_hunted: rows.length,
+      results: new Map([[rows[0].normalized_address.toLowerCase(), {
+        status: 'owner_found',
+        owner_record: {
+          owner_name: 'Example Holdings LLC',
+          mailing_address: 'PO BOX 10 DETROIT MI 48201',
+          parcel_id: 'W-123',
+          is_entity: true,
+          source_kind: 'official_public_record',
+          source_url: 'https://services2.arcgis.com/parcel/query',
+          evidence_text: 'Owner: Example Holdings LLC | Mailing: PO BOX 10 DETROIT MI 48201'
+        },
+        mailing_route: {
+          route_kind: 'mailing_address',
+          route_type: 'owner_mailing_address',
+          value: 'PO BOX 10 DETROIT MI 48201',
+          source_kind: 'official_public_record',
+          source_url: 'https://services2.arcgis.com/parcel/query',
+          evidence_text: 'Owner mailing address on public parcel record.',
+          confidence: 'High',
+          risk_flags: ['mail_only_route']
+        }
+      }]]),
+      attempt_records: [{ row_key: rows[0].normalized_address.toLowerCase(), lane: 'county_appraisal', attempted_at: new Date().toISOString(), outcome: 'FOUND', reason_code: 'OFFICIAL_OWNER_RECORD_FOUND', reason_text: 'Owner found.', source_url: 'https://services2.arcgis.com/parcel/query', cost_usd: 0 }]
+    }),
+    business_entity_owner_resolution_impl: async ({ rows }) => ({
+      rows_hunted: rows.length,
+      results: new Map([[rows[0].normalized_address.toLowerCase(), {
+        status: 'agent_found',
+        entity_name: 'Example Holdings LLC',
+        entity_status: 'Active',
+        registered_agent_name: 'Jane Agent',
+        registered_agent_address: '44 Agent Way Detroit MI 48201',
+        source_kind: 'official_public_record',
+        source_url: 'https://cofs.lara.state.mi.us/entity/example',
+        evidence_text: 'Registered Agent: Jane Agent',
+        entity_contacts: [{
+          route_kind: 'phone',
+          route_type: 'registered_agent_or_filing_phone_not_owner',
+          value: '(313) 555-1212',
+          source_kind: 'official_public_record',
+          source_url: 'https://cofs.lara.state.mi.us/entity/example',
+          evidence_text: 'Phone: (313) 555-1212',
+          confidence: 'Low',
+          risk_flags: ['registered_agent_not_owner', 'verify_before_dialing']
+        }]
+      }]]),
+      attempt_records: [{ row_key: rows[0].normalized_address.toLowerCase(), lane: 'business_entity_registry', attempted_at: new Date().toISOString(), outcome: 'FOUND', reason_code: 'REGISTERED_AGENT_RECORD_FOUND', reason_text: 'Agent found.', source_url: 'https://cofs.lara.state.mi.us/entity/example', cost_usd: 0 }]
+    }),
+    disclosure_comp_resolution_impl: async ({ rows }) => ({
+      rows_hunted: rows.length,
+      results: new Map([[rows[0].normalized_address.toLowerCase(), {
+        free_comp_status: 'COMP_READY',
+        verified_comps: [
+          { comp_address: '14001 Sussex St, Detroit, MI 48227', sold_status: 'sold', sold_price: 210000, sold_date: '2026-01-15', source_kind: 'official_public_record', source_url: 'https://services2.arcgis.com/sales/query?1', evidence_text: 'Recorded sale price: $210000' },
+          { comp_address: '14011 Sussex St, Detroit, MI 48227', sold_status: 'sold', sold_price: 220000, sold_date: '2026-03-15', source_kind: 'official_public_record', source_url: 'https://services2.arcgis.com/sales/query?2', evidence_text: 'Recorded sale price: $220000' },
+          { comp_address: '14021 Sussex St, Detroit, MI 48227', sold_status: 'sold', sold_price: 230000, sold_date: '2026-04-15', source_kind: 'official_public_record', source_url: 'https://services2.arcgis.com/sales/query?3', evidence_text: 'Recorded sale price: $230000' }
+        ],
+        comp_candidates: [],
+        free_searches_run: [{ source: 'disclosure_state_public_sales_api', target: 'https://services2.arcgis.com/sales/query' }],
+        blocked_sources: [],
+        preview_only: true
+      }]]),
+      attempt_records: [{ row_key: rows[0].normalized_address.toLowerCase(), lane: 'sold_comp', attempted_at: new Date().toISOString(), outcome: 'FOUND', reason_code: 'COMP_READY', reason_text: '3 comps found.', source_url: 'https://services2.arcgis.com/sales/query', cost_usd: 0 }]
+    })
+  });
+  const cycle8Row = cycle8Result.free_public_deals.find((deal) => deal.normalized_address === '13905 Sussex St, Detroit, MI 48227');
+  assert.ok(cycle8Row);
+  assert.strictEqual(cycle8Row.owner_record.owner_name, 'Example Holdings LLC');
+  assert.strictEqual(cycle8Row.mailing_route.source_kind, 'official_public_record');
+  assert.strictEqual(cycle8Row.business_entity_resolution.registered_agent_name, 'Jane Agent');
+  assert.strictEqual(cycle8Row.row_state, 'CALL_READY');
+  assert.strictEqual(cycle8Row.free_contact_status, 'CALL_READY');
+  assert.strictEqual(cycle8Row.free_comp_status, 'COMP_READY');
+  assert.strictEqual(cycle8Row.ARV_lock_state, 'ARV_UNLOCKED_VERIFIED_COMPS');
+  assert.strictEqual(cycle8Row.verified_sold_comp_count, 3);
+  assert.ok(cycle8Row.verified_sold_comps.every((comp) => comp.source_kind === 'official_public_record'));
 
   // 9) Hunters stay off unless explicitly enabled.
   const offResult = await dealBoard.runFreePublicDealBoardPreview({

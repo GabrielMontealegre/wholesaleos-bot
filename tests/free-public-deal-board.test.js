@@ -50,7 +50,9 @@ function comp(number, price, date = '2026-05-20') {
     sold_status: 'sold',
     sold_price: price,
     sold_date: date,
+    source_kind: 'public_web_page',
     source_url: `https://www.realtor.com/realestateandhomes-detail/${number}-Oak-St_Dallas_TX_75208_M${number}`,
+    evidence_text: `Sold ${date} for $${price}`,
     distance_miles: '0.8'
   };
 }

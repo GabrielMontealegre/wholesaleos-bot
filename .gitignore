@@ -12,9 +12,13 @@ exports/cycle5-los-angeles-ca-gate/*
 !exports/cycle6-tx-volume-wave-gate/
 exports/cycle6-tx-volume-wave-gate/*
 !exports/cycle6-tx-volume-wave-gate/*.json
+!exports/public-parcel-api-discovery/
+exports/public-parcel-api-discovery/*
+!exports/public-parcel-api-discovery/*.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json
 deal-board-doc-ledger.json
+data/deal-board-doc-ledger-*.json
 deal-board-jobs.json
 deal-board-auto-run.json
