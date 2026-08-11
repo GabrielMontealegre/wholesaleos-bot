@@ -74,8 +74,11 @@ function hashId(prefix, value) {
   return `${prefix}_${crypto.createHash('sha1').update(cleanText(value)).digest('hex').slice(0, 16)}`;
 }
 
-function documentParserSignature() {
-  return cleanText(txTrusteeNoticeExtractor.tabularNoticeParserSignature && txTrusteeNoticeExtractor.tabularNoticeParserSignature()) || 'tabular-notice-v1';
+function documentParserSignature(profile) {
+  const base = cleanText(txTrusteeNoticeExtractor.tabularNoticeParserSignature && txTrusteeNoticeExtractor.tabularNoticeParserSignature()) || 'tabular-notice-v1';
+  return cleanText(profile && profile.source_id) === 'tx_bexar_county_foreclosure_notices'
+    ? `${base}|bexar-structured-address-v1`
+    : base;
 }
 
 function hostOf(url) {
@@ -469,7 +472,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     }
   }
 
-  const parserSignature = documentParserSignature();
+  const parserSignature = documentParserSignature(profile);
   const documentLedger = readDocumentLedger(options, profile);
   const documentDocsDiscovered = documentUrlsFound.length;
   const documentSelection = documentUrlsFound

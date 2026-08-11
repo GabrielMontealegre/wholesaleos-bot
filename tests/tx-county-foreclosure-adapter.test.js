@@ -611,9 +611,13 @@ const TARRANT_NOTICE_TEXT = [
   }
   const bexarMissingSignatureEntry = Object.assign({}, bexarLegacyLedgerEntry);
   delete bexarMissingSignatureEntry.parser_signature;
+  const bexarPreAddressFixEntry = Object.assign({}, bexarLegacyLedgerEntry, {
+    parser_signature: extractor.tabularNoticeParserSignature()
+  });
   const bexarSeededLedgerRuns = [
     await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-legacy-signature.json', bexarLegacyLedgerEntry),
-    await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-missing-signature.json', bexarMissingSignatureEntry)
+    await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-missing-signature.json', bexarMissingSignatureEntry),
+    await runBexarLiveStyleWithSeededLedger('deal-board-doc-ledger-bexar-pre-address-fix-signature.json', bexarPreAddressFixEntry)
   ];
   for (const { first, repeat, ledger } of bexarSeededLedgerRuns) {
     assert.strictEqual(first.status, 'available');
@@ -625,7 +629,7 @@ const TARRANT_NOTICE_TEXT = [
     assert.strictEqual(repeat.status, 'needs_manual_review');
     assert.strictEqual(repeat.candidate_count, 0);
     assert.strictEqual(repeat.diagnostics.docs_ledger_skipped, 1);
-    assert.strictEqual(ledger.documents[bexarLiveStyleLedgerKey].parser_signature, extractor.tabularNoticeParserSignature());
+    assert.strictEqual(ledger.documents[bexarLiveStyleLedgerKey].parser_signature, `${extractor.tabularNoticeParserSignature()}|bexar-structured-address-v1`);
   }
 
   const fortBendPage = `
