@@ -77,7 +77,7 @@ function hashId(prefix, value) {
 function documentParserSignature(profile) {
   const base = cleanText(txTrusteeNoticeExtractor.tabularNoticeParserSignature && txTrusteeNoticeExtractor.tabularNoticeParserSignature()) || 'tabular-notice-v1';
   return cleanText(profile && profile.source_id) === 'tx_bexar_county_foreclosure_notices'
-    ? `${base}|bexar-structured-address-v1`
+    ? `${base}|bexar-structured-address-v2`
     : base;
 }
 

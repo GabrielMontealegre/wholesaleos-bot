@@ -169,6 +169,7 @@ function extractTabularForeclosureListRows(source, profile = {}, context = {}) {
       address,
       property_address: address,
       partial_address: partialAddress,
+      source_structured_address_verified: hasStreetNumber,
       county,
       city,
       state: cleanText(profile.state) || 'TX',
