@@ -458,6 +458,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       parcel_id: cleanText(deal.owner_record.parcel_id),
       situs_address: cleanText(deal.owner_record.situs_address),
       is_entity: deal.owner_record.is_entity === true,
+      verification_status: cleanText(deal.owner_record.verification_status),
       source_kind: cleanText(deal.owner_record.source_kind),
       source_url: cleanText(deal.owner_record.source_url),
       evidence_text: cleanText(deal.owner_record.evidence_text)

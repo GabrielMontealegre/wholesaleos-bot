@@ -14,12 +14,15 @@ const scheduler = require('../modules/research/enrichment-scheduler');
   const selected = scheduler.selectRowsForEnrichment(rows, { lane: 'sold_comp', limit: 6, now_iso: '2026-08-11T00:00:00Z', market_policy: tx });
   assert.strictEqual(selected.selected.length, 0, 'TX comp lane should run zero queries and zero fetches');
   assert.strictEqual(selected.skipped[0].skip_reason, 'lane_disabled_by_market_policy');
-  for (const state of ['CA', 'MI', 'OH']) {
-    const disclosure = policy.compPolicyForMarket({ state });
-    assert.strictEqual(disclosure.comp_lane_enabled, true);
-    assert.strictEqual(disclosure.comp_lane_source, 'disclosure_state_public_parcel_sales');
-    assert.strictEqual(disclosure.work_order, 'RUN_DISCLOSURE_STATE_PUBLIC_COMP_RESOLUTION');
-  }
+  const detroit = policy.compPolicyForMarket({ city: 'Detroit', county: 'Wayne', state: 'MI' });
+  assert.strictEqual(detroit.comp_lane_enabled, true);
+  assert.strictEqual(detroit.comp_lane_source, 'disclosure_state_public_parcel_sales');
+  assert.strictEqual(detroit.work_order, 'RUN_DISCLOSURE_STATE_PUBLIC_COMP_RESOLUTION');
+  const caPending = policy.compPolicyForMarket({ city: 'San Diego', county: 'San Diego', state: 'CA' });
+  assert.strictEqual(caPending.comp_lane_enabled, false);
+  assert.strictEqual(caPending.comp_lane_source, 'comp_lane_pending_source');
+  assert.strictEqual(caPending.arv_lock_reason_when_disabled, 'COMP_LANE_PENDING_PUBLIC_SALES_SOURCE');
+  assert.strictEqual(caPending.work_order, 'VERIFY_PUBLIC_RECORDED_SALES_SOURCE_BEFORE_RUNNING_COMPS');
   assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).comp_lane_enabled, false);
   assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).arv_lock_reason_when_disabled, 'COMP_POLICY_UNKNOWN_FOR_MARKET');
   console.log('market comp policy tests passed');

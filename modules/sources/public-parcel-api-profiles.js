@@ -25,7 +25,8 @@ const PROFILES = Object.freeze([
       assessed_value: 'TotVal'
     },
     disclosure_state: false,
-    verified_at: '2026-08-11',
+    verified_at: null,
+    verification_status: 'unverified_field_map_guess_discovery_timed_out',
     record_count: null,
     notes: 'Public ArcGIS parcel candidate for Bexar owner and mailing route; TX sold prices are not disclosure data.'
   },

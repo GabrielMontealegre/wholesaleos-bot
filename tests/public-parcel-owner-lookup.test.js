@@ -75,6 +75,34 @@ function response(body, status = 200) {
   });
   assert.strictEqual(blocked.status, 'blocked');
 
+  const arcgisError = await ownerLookup.lookupOwnerForRow(row, {
+    profiles: [profile],
+    fetch_impl: async () => response({ error: { code: 400, message: 'Invalid field' } })
+  });
+  assert.strictEqual(arcgisError.status, 'failed');
+  assert.match(arcgisError.blocked_reason, /^arcgis_error_400: Invalid field/);
+  const arcgisErrorRun = await ownerLookup.runPublicParcelOwnerLookup({
+    rows: [row],
+    market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }
+  }, {
+    profiles: [profile],
+    fetch_impl: async () => response({ error: { code: 400, message: 'Invalid field' } })
+  });
+  assert.strictEqual(arcgisErrorRun.attempt_records[0].outcome, 'FAILED');
+  assert.match(arcgisErrorRun.attempt_records[0].reason_code, /^ARCGIS_ERROR_400/);
+
+  const unverifiedFound = await ownerLookup.lookupOwnerForRow(row, {
+    profiles: [Object.assign({}, profile, { verification_status: 'unverified_field_map_guess_discovery_timed_out' })],
+    fetch_impl: async () => response({ features: [{ attributes: {
+      OWNER: 'KILLER CAPITAL CONSULTANTS LLC',
+      MAIL1: 'PO BOX 100',
+      APN: '12345'
+    } }] })
+  });
+  assert.strictEqual(unverifiedFound.status, 'owner_found');
+  assert.strictEqual(unverifiedFound.owner_record.verification_status, 'unverified_field_map_guess_discovery_timed_out');
+  assert.match(unverifiedFound.evidence_text, /Profile caveat: unverified_field_map_guess_discovery_timed_out/);
+
   const run = await ownerLookup.runPublicParcelOwnerLookup({
     rows: [row],
     market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }
@@ -86,6 +114,15 @@ function response(body, status = 200) {
   assert.strictEqual(run.attempt_records[0].lane, 'county_appraisal');
   assert.strictEqual(run.attempt_records[0].outcome, 'FOUND');
   assert.strictEqual(run.preview_only, true);
+
+  const unverifiedRun = await ownerLookup.runPublicParcelOwnerLookup({
+    rows: [row],
+    market: { city: 'San Antonio', county: 'Bexar', state: 'TX' }
+  }, {
+    profiles: [Object.assign({}, profile, { verification_status: 'unverified_field_map_guess_discovery_timed_out' })],
+    fetch_impl: async () => response({ features: [{ attributes: { OWNER: 'Jane Owner', MAIL1: '100 Mail St', APN: 'ABC' } }] })
+  });
+  assert.match(unverifiedRun.attempt_records[0].reason_text, /Profile caveat: unverified_field_map_guess_discovery_timed_out/);
 
   console.log('public parcel owner lookup tests passed');
 })().catch((error) => {

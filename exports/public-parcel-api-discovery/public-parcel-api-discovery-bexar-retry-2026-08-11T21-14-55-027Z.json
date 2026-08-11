@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-08-11T21:14:55.027Z",
+  "preview_only": true,
+  "no_global_mutation": true,
+  "targets_checked": 1,
+  "results": [
+    {
+      "market": "Bexar TX retry",
+      "service_url": "https://maps.bexar.org/arcgis/rest/services/Parcels/MapServer",
+      "layer": 0,
+      "status": "failed",
+      "blocked_reason": "request to https://maps.bexar.org/arcgis/rest/services/Parcels/MapServer/0?f=jso",
+      "data": null
+    }
+  ]
+}

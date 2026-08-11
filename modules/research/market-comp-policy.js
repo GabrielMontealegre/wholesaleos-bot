@@ -1,5 +1,7 @@
 'use strict';
 
+const parcelProfiles = require('../sources/public-parcel-api-profiles');
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -15,6 +17,16 @@ function compPolicyForMarket(market) {
     };
   }
   if (state === 'CA' || state === 'MI' || state === 'OH') {
+    const hasPublicSalesProfile = parcelProfiles.compProfilesForMarket(market).length > 0;
+    if (!hasPublicSalesProfile) {
+      return {
+        disclosure_state: true,
+        comp_lane_enabled: false,
+        arv_lock_reason_when_disabled: 'COMP_LANE_PENDING_PUBLIC_SALES_SOURCE',
+        comp_lane_source: 'comp_lane_pending_source',
+        work_order: 'VERIFY_PUBLIC_RECORDED_SALES_SOURCE_BEFORE_RUNNING_COMPS'
+      };
+    }
     return {
       disclosure_state: true,
       comp_lane_enabled: true,

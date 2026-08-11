@@ -1896,6 +1896,7 @@ async function applyFreePublicHunters(deals, input, options, context) {
       mailing_address: cleanText(owner.mailing_address),
       parcel_id: cleanText(owner.parcel_id),
       is_entity: owner.is_entity === true,
+      verification_status: cleanText(owner.verification_status),
       source_kind: 'official_public_record',
       source_url: cleanText(owner.source_url),
       evidence_text: cleanText(owner.evidence_text)

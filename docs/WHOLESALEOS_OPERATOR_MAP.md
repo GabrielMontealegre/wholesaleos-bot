@@ -114,7 +114,7 @@ questions. Proof-only rows collapsed underneath.
 | Owner phone numbers | not in free public records | paid skip-trace decision |
 | TX sold comps / ARV / MAO | Texas is a non-disclosure state; free Zillow/Redfin/Realtor sold-page hunting is disabled for TX markets to avoid wasting search budget | run comps through MLS access or approve paid comp data; rows show `ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED` |
 | Bexar owner lookup / BCAD | free BCAD lookup profile is attempted from the contact hunter; blocked or shape-changed pages are reported per row | use visible owner clues if returned; otherwise row ledger shows the blocked reason and the next eligible retry |
-| Bexar ArcGIS parcel API | public API discovery timed out on 2026-08-11 | treat as blocked/failed unless a later public probe responds; do not bypass |
+| Bexar ArcGIS parcel API | public API discovery failed on 2026-08-11 and a 30-second retry also failed; field map remains unverified | treat as blocked/failed unless a later public probe responds; any guessed-profile result carries an unverified caveat; do not bypass |
 | San Diego owner/mailing lookup | public county ArcGIS layer exposes APN, owner, mailing, and situs fields | use official owner and mailing route as MAIL_READY evidence; assessed values are not ARV |
 | Detroit public sales comps | public ArcGIS layer exposes parcel id, address, sale date, and sale price | use only as disclosure-state sold-comp evidence with provenance; no TX comp inference |
 

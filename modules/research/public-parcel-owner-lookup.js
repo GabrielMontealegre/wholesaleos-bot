@@ -102,7 +102,13 @@ async function fetchJson(url, options = {}, caps = DEFAULT_CAPS) {
     if (!response.ok) return { status: 'failed', blocked_reason: `http_${response.status}`, data: null };
     const text = await response.text();
     if (BLOCKED_TEXT_RE.test(text)) return { status: 'blocked', blocked_reason: 'captcha_or_login_wall', data: null };
-    return { status: 'ok', data: JSON.parse(text) };
+    const data = JSON.parse(text);
+    if (data && data.error) {
+      const code = cleanText(data.error.code);
+      const message = cleanText(data.error.message);
+      return { status: 'failed', blocked_reason: `arcgis_error_${code || 'unknown'}: ${message || 'ArcGIS error response'}`, data: null };
+    }
+    return { status: 'ok', data };
   } catch (error) {
     return { status: 'failed', blocked_reason: cleanText(error && error.message).slice(0, 100) || 'fetch_failed', data: null };
   } finally {
@@ -117,15 +123,20 @@ function recordFromAttributes(attrs, profile, sourceUrl) {
   const parcelId = combinedAttrsValue(attrs, map.parcel_id);
   const situsAddress = combinedAttrsValue(attrs, map.situs_address);
   const assessedValue = combinedAttrsValue(attrs, map.assessed_value);
+  const caveat = cleanText(profile.verification_status).startsWith('unverified_')
+    ? `Profile caveat: ${cleanText(profile.verification_status)}`
+    : '';
   return {
     owner_name: ownerName,
     mailing_address: mailingAddress,
     parcel_id: parcelId,
     situs_address: situsAddress,
     is_entity: isEntityName(ownerName),
+    verification_status: cleanText(profile.verification_status),
     source_kind: 'official_public_record',
     source_url: sourceUrl,
     evidence_text: cleanText([
+      caveat,
       ownerName ? `Owner: ${ownerName}` : '',
       mailingAddress ? `Mailing: ${mailingAddress}` : '',
       parcelId ? `Parcel: ${parcelId}` : '',
@@ -161,6 +172,7 @@ async function lookupOwnerForRow(row, options = {}) {
         mailing_address: record.mailing_address,
         parcel_id: record.parcel_id,
         is_entity: record.is_entity,
+        verification_status: cleanText(profile.verification_status),
         source_url: record.source_url,
         evidence_text: record.evidence_text,
         owner_record: record,
@@ -195,7 +207,12 @@ function attemptForRow(row, result, nowIso) {
     attempted_at: nowIso,
     outcome: found ? 'FOUND' : blocked ? (status === 'blocked' ? 'BLOCKED' : 'FAILED') : 'NOT_FOUND',
     reason_code: found ? 'OFFICIAL_OWNER_RECORD_FOUND' : blocked ? cleanText(result.blocked_reason || status).toUpperCase() : (status || 'NO_PUBLIC_PARCEL_MATCH').toUpperCase(),
-    reason_text: found ? 'Owner-of-record and/or mailing route found in official public parcel API.' : cleanText(result && (result.evidence_text || result.blocked_reason)) || 'No official public parcel owner record matched this row.',
+    reason_text: found
+      ? cleanText([
+        'Owner-of-record and/or mailing route found in official public parcel API.',
+        cleanText(result && result.verification_status).startsWith('unverified_') ? `Profile caveat: ${cleanText(result.verification_status)}` : ''
+      ].filter(Boolean).join(' '))
+      : cleanText(result && (result.evidence_text || result.blocked_reason)) || 'No official public parcel owner record matched this row.',
     source_url: cleanText(result && result.source_url) || cleanText(row && (row.source_document_url || row.source_url)),
     cost_usd: 0,
     next_eligible_at: ''

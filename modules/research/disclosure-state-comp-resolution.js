@@ -10,6 +10,7 @@ const DEFAULT_CAPS = Object.freeze({
   max_results_per_row: 8,
   timeout_ms: 8000
 });
+const DEFAULT_MIN_MARKET_SALE_PRICE = 5000;
 
 const BLOCKED_TEXT_RE = /\b(captcha|verify you are human|access denied|forbidden|login required|sign in|subscription required|paywall)\b/i;
 const NON_ARMS_LENGTH_RE = /\b(quitclaim|inter[-\s]?family|family transfer|gift deed|nominal|non[-\s]?arms|foreclosure deed|sheriff|tax deed)\b/i;
@@ -53,6 +54,24 @@ function normalizeArcgisDate(value) {
   return cleanText(value);
 }
 
+function isoDate(value) {
+  const text = normalizeArcgisDate(value);
+  const match = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return match ? match[0] : '';
+}
+
+function addMonthsIso(iso, months) {
+  const base = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return '';
+  base.setUTCMonth(base.getUTCMonth() + months);
+  return base.toISOString().slice(0, 10);
+}
+
+function todayIso(options = {}) {
+  const explicit = isoDate(options.now_iso || options.nowIso || options.today_iso || options.todayIso);
+  return explicit || new Date().toISOString().slice(0, 10);
+}
+
 function addressKey(value) {
   return cleanText(value).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -62,22 +81,48 @@ function subjectParcel(row) {
 }
 
 function subjectZip(row) {
-  return (cleanText(row && row.normalized_address).match(/\b\d{5}\b/) || [])[0] || cleanText(row && row.zip);
+  const matches = cleanText(row && row.normalized_address).match(/\b\d{5}\b/g) || [];
+  return matches.length ? matches[matches.length - 1] : cleanText(row && row.zip);
 }
 
-function compFromAttributes(attrs, profile, queryUrl) {
+function rowLandUse(row) {
+  return cleanText(row && (row.land_use || row.property_kind_if_visible || row.property_class_description));
+}
+
+function landUseTokens(value) {
+  return cleanText(value).toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 4 && !['property', 'class', 'description', 'building', 'parcel'].includes(token));
+}
+
+function similarityBasis(candidate, row) {
+  const rowUse = landUseTokens(rowLandUse(row));
+  const compUse = landUseTokens(candidate.land_use);
+  const sharedUse = rowUse.find((token) => compUse.includes(token));
+  if (sharedUse) return `land_use:${sharedUse}`;
+  return '';
+}
+
+function compFromAttributes(attrs, profile, queryUrl, context = {}) {
   const map = profile.field_map || {};
   const address = attrsValue(attrs, map.situs_address);
   const price = numberValue(attrsValue(attrs, map.sale_price));
-  const soldDate = normalizeArcgisDate(attrsValue(attrs, map.sale_date));
+  const soldDate = isoDate(attrsValue(attrs, map.sale_date)) || normalizeArcgisDate(attrsValue(attrs, map.sale_date));
   const parcelId = attrsValue(attrs, map.parcel_id);
   const landUse = attrsValue(attrs, map.land_use);
+  const basis = similarityBasis({ land_use: landUse }, context.row);
+  const windowText = context.recent_cutoff_iso
+    ? `Comp window: ${context.recent_cutoff_iso} to ${context.today_iso}`
+    : '';
   const evidence = cleanText([
     address ? `Address: ${address}` : '',
     price ? `Recorded sale price: $${price}` : '',
     soldDate ? `Sale date: ${soldDate}` : '',
     parcelId ? `Parcel: ${parcelId}` : '',
-    landUse ? `Use: ${landUse}` : ''
+    landUse ? `Use: ${landUse}` : '',
+    basis ? `Similarity: ${basis}` : '',
+    windowText
   ].filter(Boolean).join(' | '));
   return {
     comp_address: address,
@@ -86,6 +131,8 @@ function compFromAttributes(attrs, profile, queryUrl) {
     sold_date: soldDate,
     parcel_id: parcelId,
     land_use: landUse,
+    similarity_basis: basis,
+    comp_window: windowText,
     source_kind: 'official_public_record',
     source_url: queryUrl,
     evidence_text: evidence
@@ -109,7 +156,13 @@ async function fetchJson(url, options = {}, caps = DEFAULT_CAPS) {
     if (!response.ok) return { status: 'failed', blocked_reason: `http_${response.status}`, data: null };
     const text = await response.text();
     if (BLOCKED_TEXT_RE.test(text)) return { status: 'blocked', blocked_reason: 'captcha_or_login_wall', data: null };
-    return { status: 'ok', data: JSON.parse(text) };
+    const data = JSON.parse(text);
+    if (data && data.error) {
+      const code = cleanText(data.error.code);
+      const message = cleanText(data.error.message);
+      return { status: 'failed', blocked_reason: `arcgis_error_${code || 'unknown'}: ${message || 'ArcGIS error response'}`, data: null };
+    }
+    return { status: 'ok', data };
   } catch (error) {
     return { status: 'failed', blocked_reason: cleanText(error && error.message).slice(0, 100) || 'fetch_failed', data: null };
   } finally {
@@ -117,24 +170,39 @@ async function fetchJson(url, options = {}, caps = DEFAULT_CAPS) {
   }
 }
 
-function whereForRow(row, profile) {
+function whereForRow(row, profile, options = {}) {
   const map = profile.field_map || {};
   const clauses = [];
   const zip = subjectZip(row);
   if (zip && cleanText(map.zip)) clauses.push(`${map.zip} = '${zip.replace(/'/g, "''")}'`);
-  const landUse = cleanText(row && (row.land_use || row.property_kind_if_visible));
+  const landUse = rowLandUse(row);
   if (landUse && cleanText(map.land_use)) clauses.push(`UPPER(${map.land_use}) LIKE '%${landUse.toUpperCase().replace(/'/g, "''")}%'`);
   const priceField = cleanText(map.sale_price);
   const dateField = cleanText(map.sale_date);
-  if (priceField) clauses.push(`${priceField} > 1`);
-  if (dateField) clauses.push(`${dateField} IS NOT NULL`);
+  const floor = Number(profile.min_market_sale_price || options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
+  const today = todayIso(options);
+  const recentCutoff = addMonthsIso(today, -12);
+  if (priceField) clauses.push(`${priceField} >= ${floor}`);
+  if (dateField) {
+    clauses.push(`${dateField} IS NOT NULL`);
+    if (recentCutoff) clauses.push(`${dateField} >= DATE '${recentCutoff}'`);
+  }
   return clauses.length ? clauses.join(' AND ') : '1=1';
 }
 
-function rejectReason(candidate, row) {
+function rejectReason(candidate, row, options = {}) {
   if (subjectParcel(row) && cleanText(candidate.parcel_id).toLowerCase() === subjectParcel(row)) return 'subject_parcel_not_a_comp';
   if (addressKey(candidate.comp_address) && addressKey(candidate.comp_address) === addressKey(row && row.normalized_address)) return 'subject_address_not_a_comp';
-  if (!(Number(candidate.sold_price) > 1)) return 'nominal_sale_price';
+  const floor = Number(options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
+  if (!(Number(candidate.sold_price) >= floor)) return 'nominal_or_non_market_sale_price';
+  const today = todayIso(options);
+  const recentCutoff = addMonthsIso(today, -12);
+  const staleCutoff = addMonthsIso(today, -24);
+  const soldDate = isoDate(candidate.sold_date);
+  if (!soldDate) return 'missing_sold_date';
+  if (staleCutoff && soldDate < staleCutoff) return 'sale_outside_comp_window';
+  if (recentCutoff && soldDate < recentCutoff) return 'stale_comp';
+  if (!cleanText(candidate.similarity_basis)) return 'missing_similarity_basis';
   if (NON_ARMS_LENGTH_RE.test(candidate.evidence_text)) return 'non_arms_length_transfer_visible';
   if (!fieldProvenance.compHasProvenance(candidate)) return 'missing_comp_provenance';
   const validation = compResearchProvider.validateVerifiedCompCandidate(candidate);
@@ -149,19 +217,34 @@ async function resolveCompsForRow(row, options = {}) {
   for (const profile of profiles) {
     if (profile.api_kind !== 'arcgis') continue;
     const urlBase = layerUrl(profile);
-    const queryUrl = `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile))}&outFields=*&returnGeometry=false&resultRecordCount=${caps.max_results_per_row}`;
-    const features = Array.isArray(mock)
-      ? mock.map((attributes) => ({ attributes }))
-      : await (async () => {
-        const fetched = await fetchJson(queryUrl, options, caps);
-        if (fetched.status !== 'ok') throw Object.assign(new Error(fetched.blocked_reason || fetched.status), { lookup_status: fetched.status, blocked_reason: fetched.blocked_reason, source_url: queryUrl });
-        return Array.isArray(fetched.data && fetched.data.features) ? fetched.data.features : [];
-      })();
+    const context = {
+      row,
+      today_iso: todayIso(options),
+      recent_cutoff_iso: addMonthsIso(todayIso(options), -12),
+      min_market_sale_price: Number(profile.min_market_sale_price || options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE
+    };
+    const queryUrl = `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile, context))}&outFields=*&returnGeometry=false&resultRecordCount=${caps.max_results_per_row}`;
+    let features;
+    if (Array.isArray(mock)) {
+      features = mock.map((attributes) => ({ attributes }));
+    } else {
+      const fetched = await fetchJson(queryUrl, options, caps);
+      if (fetched.status !== 'ok') {
+        return {
+          status: fetched.status,
+          blocked_reason: fetched.blocked_reason || fetched.status,
+          verified_comps: [],
+          rejected_comp_candidates: [],
+          source_url: queryUrl
+        };
+      }
+      features = Array.isArray(fetched.data && fetched.data.features) ? fetched.data.features : [];
+    }
     const verified = [];
     const rejected = [];
     for (const feature of features) {
-      const candidate = compFromAttributes(feature.attributes || {}, profile, queryUrl);
-      const rejection = rejectReason(candidate, row);
+      const candidate = compFromAttributes(feature.attributes || {}, profile, queryUrl, context);
+      const rejection = rejectReason(candidate, row, context);
       if (rejection) rejected.push(Object.assign({}, candidate, { rejected_reason: rejection }));
       else verified.push(candidate);
       if (verified.length >= 3) break;

@@ -16,11 +16,14 @@ and real sold-comp unlock in disclosure states where public sales are visible.
 Evidence artifact:
 [[../../exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T20-18-58-090Z.json]]
 
+Bexar retry artifact:
+[[../../exports/public-parcel-api-discovery/public-parcel-api-discovery-bexar-retry-2026-08-11T21-14-55-027Z.json]]
+
 ## Public API Discovery
 
 | Market | Source | Result | Decision |
 |---|---|---|---|
-| Bexar TX | `maps.bexar.org` ArcGIS parcels | Timeout from the local public API discovery run. | Keep owner lookup honest: report blocked/failed when the endpoint does not answer. TX comps remain locked because Texas is non-disclosure. |
+| Bexar TX | `maps.bexar.org` ArcGIS parcels | Failed from the local public API discovery run and failed again on a 30-second retry. | Keep profile marked unverified; any result from the guessed field map must carry a caveat. TX comps remain locked because Texas is non-disclosure. |
 | San Diego CA | SD county ArcGIS GeocoderMerged layer | Open. Exposes APN, owner name fields, owner mailing address fields, situs fields, document date, assessed values. | Use as official owner-of-record and mailing-route source for San Diego rows. Assessed values are not ARV. |
 | Wayne MI / Detroit | Detroit ArcGIS property sales layer | Open. Exposes parcel id, address, sale date, sale price, sale verification, property class, and zip. | Use as a disclosure-state public comp source for Detroit rows. |
 
