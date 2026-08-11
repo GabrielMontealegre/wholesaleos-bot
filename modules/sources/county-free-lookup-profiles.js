@@ -4,8 +4,9 @@
 // Add one profile per county; the hunter core stays county-agnostic.
 
 const dallasProfile = require('./dallas-county-free-lookup-profile');
+const bexarProfile = require('./tx-bexar-county-free-lookup-profile');
 
-const PROFILES = [dallasProfile];
+const PROFILES = [dallasProfile, bexarProfile];
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -20,5 +21,6 @@ function profileForMarket(market) {
 }
 
 module.exports = {
+  PROFILES,
   profileForMarket
 };

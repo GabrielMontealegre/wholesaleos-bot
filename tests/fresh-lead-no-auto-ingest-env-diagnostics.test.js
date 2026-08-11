@@ -119,6 +119,8 @@ geminiProvider.runGeminiScoutDiscovery = async function mockGemini(job, options)
     city: 'Dallas',
     quantity: 5,
     include_previous_results: false,
+    source_acquisition_enabled: false,
+    acquisition_core_enabled: false,
     wholesale_criteria: ['investor_special', 'cash_only', 'as_is'],
     max_provider_calls: 2
   });

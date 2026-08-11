@@ -67,6 +67,7 @@ function buildFreePublicDealBoardPreviewInput(input = {}, options = {}) {
     enable_census_zip_resolution: input.enable_census_zip_resolution !== false,
     enable_screenshot_comp_evidence: input.enable_screenshot_comp_evidence !== false,
     screenshot_comp_caps: input.screenshot_comp_caps,
+    existing_queue_rows: Array.isArray(input.existing_queue_rows) ? input.existing_queue_rows : [],
     preview_only: true,
     should_ingest: false,
     no_global_mutation: true

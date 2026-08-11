@@ -195,6 +195,16 @@ function normalizePropertyCandidate(input, context) {
     program: cleanText(input.program),
     property_kind_if_visible: cleanText(input.property_kind_if_visible),
     vacant_lot_if_visible: input.vacant_lot_if_visible === true ? true : input.vacant_lot_if_visible === false ? false : null,
+    free_contact_routes: Array.isArray(input.free_contact_routes) ? input.free_contact_routes.slice(0, 10) : [],
+    blocked_sources: Array.isArray(input.blocked_sources) ? input.blocked_sources.slice(0, 10) : [],
+    free_searches_run: Array.isArray(input.free_searches_run) ? input.free_searches_run.slice(0, 12) : [],
+    why_call_ready_or_blocked: cleanText(input.why_call_ready_or_blocked),
+    enrichment_ledger: input.enrichment_ledger && typeof input.enrichment_ledger === 'object'
+      ? JSON.parse(JSON.stringify(input.enrichment_ledger))
+      : { attempts: [], dropped_count: 0 },
+    lifecycle_status: input.lifecycle_status && typeof input.lifecycle_status === 'object'
+      ? Object.assign({}, input.lifecycle_status)
+      : null,
     beds: cleanText(input.beds || input.bedrooms),
     baths: cleanText(input.baths || input.bathrooms),
     sqft: cleanText(input.sqft || input.square_feet),
@@ -335,6 +345,12 @@ function candidateToFindMeCard(candidate, context) {
     pipeline_status: 'New',
     can_send_to_analyzer: candidate.source_confidence >= 60 && candidate.identity_confidence >= 60,
     lead_evidence: candidate.lead_evidence,
+    free_contact_routes: candidate.free_contact_routes,
+    blocked_sources: candidate.blocked_sources,
+    free_searches_run: candidate.free_searches_run,
+    why_call_ready_or_blocked: candidate.why_call_ready_or_blocked,
+    enrichment_ledger: candidate.enrichment_ledger,
+    lifecycle_status: candidate.lifecycle_status,
     preview_only: true,
     should_ingest: false,
     not_a_saved_lead: true,

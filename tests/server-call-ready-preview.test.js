@@ -77,6 +77,7 @@ function mockResponse(body, url) {
     const ready = callReadyPreviewService.buildCallReadyPreviewCaps(readyEnv);
     assert.strictEqual(ready.timeout_ms, 8000);
 
+    const recentPostedAt = new Date(Date.now() - 2 * 86400000).toISOString();
     const craigslistUrl = 'https://dallas.craigslist.org/dal/reo/d/dallas-motivated-owner-fixer/7919000001.html';
     const searchHtml = `<html><body><a href="${craigslistUrl}">Dallas owner property</a></body></html>`;
     const postHtml = `<html>
@@ -87,11 +88,11 @@ function mockResponse(body, url) {
           "addressLocality":"Dallas",
           "addressRegion":"TX",
           "postalCode":"75208",
-          "datePosted":"2026-06-21T10:00:00-05:00"
+          "datePosted":"${recentPostedAt}"
         }</script>
       </head>
       <body>
-        <time datetime="2026-06-21T10:00:00-05:00"></time>
+        <time datetime="${recentPostedAt}"></time>
         <section id="postingbody">For sale by owner. Cash only. Call owner at (214) 555-0123.</section>
       </body>
     </html>`;

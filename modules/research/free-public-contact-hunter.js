@@ -211,6 +211,23 @@ function contactStatusFromRoutes(routes, mailingRoute, searchesRun) {
   return searchesRun.length ? 'CONTACT_SEARCH_EXHAUSTED_FREE' : 'CONTACT_SEARCH_NOT_RUN';
 }
 
+function contactAttemptForRow(row, result, nowIso) {
+  const status = cleanText(result && result.free_contact_status);
+  const blocked = Array.isArray(result && result.blocked_sources) && result.blocked_sources.length;
+  const found = status === 'CALL_READY' || status === 'OUTREACH_READY' || status === 'MAIL_READY';
+  const outcome = found ? 'FOUND' : blocked ? 'BLOCKED' : 'NOT_FOUND';
+  return {
+    lane: 'public_search',
+    attempted_at: nowIso,
+    outcome,
+    reason_code: found ? status : blocked ? 'FREE_CONTACT_SOURCE_BLOCKED' : 'NO_VISIBLE_FREE_CONTACT_ROUTE',
+    reason_text: cleanText(result && result.why_call_ready_or_blocked) || (found ? 'Free public contact route found.' : 'No visible public contact route found.'),
+    source_url: cleanText(row && (row.source_document_url || row.source_url)),
+    cost_usd: 0,
+    next_eligible_at: ''
+  };
+}
+
 function nextFreeAction(status, blockedSources) {
   if (status === 'CALL_READY') return 'CALL_VISIBLE_ROUTE_AND_ASK_FOR_OWNER_PATH';
   if (status === 'OUTREACH_READY') return 'SEND_OUTREACH_VIA_VISIBLE_ROUTE';
@@ -358,19 +375,25 @@ async function runFreePublicContactHunter(input = {}, options = {}) {
   const rows = (Array.isArray(input.rows) ? input.rows : []).filter((row) => cleanText(row && row.normalized_address));
   const distinct = [];
   const seen = new Set();
+  const preselected = input.preselected_rows === true;
   for (const row of rows) {
     const key = cleanText(row.normalized_address).toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     distinct.push(row);
-    if (distinct.length >= caps.max_rows) break;
+    if (!preselected && distinct.length >= caps.max_rows) break;
   }
   const results = new Map();
+  const attempt_records = [];
+  const attemptedAt = new Date().toISOString();
   for (const row of distinct) {
-    results.set(cleanText(row.normalized_address).toLowerCase(), await huntContactForRow(row, options, caps, budget, cache));
+    const result = await huntContactForRow(row, options, caps, budget, cache);
+    results.set(cleanText(row.normalized_address).toLowerCase(), result);
+    attempt_records.push(Object.assign({ row_key: cleanText(row.queue_key || row.normalized_address).toLowerCase() }, contactAttemptForRow(row, result, attemptedAt)));
   }
   return {
     results,
+    attempt_records,
     rows_hunted: distinct.length,
     budget_exhausted: !budget.allow(),
     preview_only: true,

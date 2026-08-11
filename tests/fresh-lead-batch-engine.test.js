@@ -145,6 +145,8 @@ assert.throws(() => findMeScoutJobs.createJob({
     city: 'Dallas',
     quantity: 10,
     include_previous_results: false,
+    source_acquisition_enabled: false,
+    acquisition_core_enabled: false,
     include_auction: false,
     exclude_reo: true,
     exclude_sold: true,
@@ -225,6 +227,8 @@ assert.throws(() => findMeScoutJobs.createJob({
     city: 'Raleigh',
     quantity: 5,
     operator_request_id: 'timeout-test',
+    source_acquisition_enabled: false,
+    acquisition_core_enabled: false,
     provider_timeout_ms: 50
   });
   const timeoutRun = await findMeScoutJobs.runJob(timeoutJob.job_id);

@@ -99,6 +99,26 @@ function compStatus(verifiedCount, searchesRun) {
   return searchesRun.length ? 'COMP_SEARCH_EXHAUSTED_FREE' : 'COMP_SEARCH_NOT_RUN';
 }
 
+function compAttemptForRow(row, result, nowIso) {
+  const status = cleanText(result && result.free_comp_status);
+  const blocked = Array.isArray(result && result.blocked_sources) && result.blocked_sources.length;
+  const found = status === 'COMP_READY' || status === 'COMP_PARTIAL';
+  return {
+    lane: 'sold_comp',
+    attempted_at: nowIso,
+    outcome: found ? 'FOUND' : blocked ? 'BLOCKED' : 'NOT_FOUND',
+    reason_code: found ? status : blocked ? 'FREE_COMP_SOURCE_BLOCKED' : 'NO_VERIFIED_FREE_SOLD_COMPS',
+    reason_text: found
+      ? `${Number(result && result.verified_comps && result.verified_comps.length || 0)} verified public sold comp candidate(s) found.`
+      : blocked
+        ? 'Free public comp source blocked or unavailable.'
+        : 'No verified public sold comps found in the bounded free search.',
+    source_url: cleanText(row && (row.source_document_url || row.source_url)),
+    cost_usd: 0,
+    next_eligible_at: ''
+  };
+}
+
 async function huntCompsForRow(row, options, caps, budget, cache) {
   const address = cleanText(row && row.normalized_address);
   const subjectKey = addressKey(address);
@@ -199,19 +219,25 @@ async function runFreePublicCompHunter(input = {}, options = {}) {
   const rows = (Array.isArray(input.rows) ? input.rows : []).filter((row) => cleanText(row && row.normalized_address));
   const distinct = [];
   const seen = new Set();
+  const preselected = input.preselected_rows === true;
   for (const row of rows) {
     const key = cleanText(row.normalized_address).toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     distinct.push(row);
-    if (distinct.length >= caps.max_rows) break;
+    if (!preselected && distinct.length >= caps.max_rows) break;
   }
   const results = new Map();
+  const attempt_records = [];
+  const attemptedAt = new Date().toISOString();
   for (const row of distinct) {
-    results.set(cleanText(row.normalized_address).toLowerCase(), await huntCompsForRow(row, options, caps, budget, cache));
+    const result = await huntCompsForRow(row, options, caps, budget, cache);
+    results.set(cleanText(row.normalized_address).toLowerCase(), result);
+    attempt_records.push(Object.assign({ row_key: cleanText(row.queue_key || row.normalized_address).toLowerCase() }, compAttemptForRow(row, result, attemptedAt)));
   }
   return {
     results,
+    attempt_records,
     rows_hunted: distinct.length,
     budget_exhausted: !budget.allow(),
     preview_only: true,

@@ -49,6 +49,7 @@ function mockPage(body, url) {
 }
 
 (async () => {
+  const recentPostedAt = new Date(Date.now() - 2 * 86400000).toISOString();
   const phoneUrl = 'https://www.realtor.com/realestateandhomes-detail/123-Main-St_Dallas_TX_75208_M12345';
   const emailUrl = 'https://www.realtor.com/realestateandhomes-detail/124-Main-St_Dallas_TX_75208_M12346';
   const genericUrl = 'https://www.realtor.com/realestateandhomes-search/Dallas_TX';
@@ -195,10 +196,10 @@ function mockPage(body, url) {
             "addressLocality":"Dallas",
             "addressRegion":"TX",
             "postalCode":"75208",
-            "datePosted":"2026-06-21T10:00:00-05:00"
+            "datePosted":"${recentPostedAt}"
           }</script></head>
           <body>
-            <time datetime="2026-06-21T10:00:00-05:00"></time>
+            <time datetime="${recentPostedAt}"></time>
             <section id="postingbody">For sale by owner. Cash only. Call owner at (214) 555-0124.</section>
           </body>
         </html>`, url);

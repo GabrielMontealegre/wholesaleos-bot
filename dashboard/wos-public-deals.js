@@ -73,6 +73,29 @@
     return '#e5e7eb';
   }
 
+  function safeArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function lifecycleChip(row) {
+    var state = row && row.lifecycle_status;
+    if (!state || !state.status) return '';
+    var color = state.quarantined ? '#fecaca' : state.status === 'FRESH' ? '#bbf7d0' : '#e5e7eb';
+    return ' <span title="' + esc(state.reason_text || '') + '" style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:' + color + ';color:#111827;">' + esc(state.status) + '</span>';
+  }
+
+  function ledgerList(row) {
+    var ledger = row && row.enrichment_ledger;
+    var attempts = safeArray(ledger && ledger.attempts).slice(-5).reverse();
+    if (!attempts.length) return '';
+    return '<details style="margin-top:4px;font-size:11px;color:#374151;"><summary style="cursor:pointer;color:#2563eb;">What we tried (' + esc(String(safeArray(ledger.attempts).length)) + ')</summary>' +
+      '<ul style="margin:4px 0 0 18px;padding:0;">' +
+      attempts.map(function (attempt) {
+        return '<li>' + esc(attempt.lane || 'lane') + ' - ' + esc(attempt.outcome || 'UNKNOWN') +
+          ' - ' + esc(attempt.reason_code || '') + ' - $' + esc(String(attempt.cost_usd == null ? 0 : attempt.cost_usd)) + '</li>';
+      }).join('') + '</ul></details>';
+  }
+
   function localDateIso() {
     var today = new Date();
     return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -114,7 +137,7 @@
     lines.push('<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + esc(title) +
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
-      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span>' + saleDateBadge(row) + '</div>');
+      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
     if (zipReview && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     }
@@ -140,19 +163,21 @@
       (row.verified_sold_comp_count ? ' (' + esc(row.verified_sold_comp_count) + ' verified)' : '') +
       ' | ARV: ' + esc(row.ARV_lock_state || 'unknown') + ' | MAO: ' + esc(row.MAO_lock_state || 'unknown') +
       (row.appraisal_clue ? ' | County appraisal clue: ' + esc(row.appraisal_clue) + ' (not ARV)' : '') + '</div>');
-    if (row.verified_comps && row.verified_comps.length) {
+    if (row.arv_lock_reason) lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;">ARV reason: ' + esc(row.arv_lock_reason) + '</div>');
+    if (safeArray(row.verified_comps).length) {
       lines.push('<div style="font-size:11px;color:#065f46;margin-top:2px;">Verified comps: ' +
-        row.verified_comps.map(function (c) { return esc(c.comp_address) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('src', c.source_url); }).join(' | ') + '</div>');
+        safeArray(row.verified_comps).map(function (c) { return esc(c.comp_address) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('src', c.source_url); }).join(' | ') + '</div>');
     }
     if (row.next_comp_action) lines.push('<div style="font-size:11px;color:#374151;">Comp action: ' + esc(row.next_comp_action) + '</div>');
     lines.push('<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'review') + '</b>' +
       (row.missing_fields && row.missing_fields.length ? ' <span style="color:#6b7280;">Missing: ' + esc(row.missing_fields.join(', ')) + '</span>' : '') + '</div>');
-    if (row.seller_questions && row.seller_questions.length) {
+    lines.push(ledgerList(row));
+    if (safeArray(row.seller_questions).length) {
       lines.push('<details style="margin-top:4px;font-size:12px;"><summary style="cursor:pointer;color:#2563eb;">Seller questions (' + row.seller_questions.length + ')</summary><ul style="margin:4px 0 0 18px;padding:0;">' +
-        row.seller_questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul></details>');
+        safeArray(row.seller_questions).map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul></details>');
     }
-    if (row.blocked_sources && row.blocked_sources.length) {
-      lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(row.blocked_sources.map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
+    if (safeArray(row.blocked_sources).length) {
+      lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(safeArray(row.blocked_sources).map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
     }
     return '<div class="wos-public-deal-row" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
   }
@@ -250,6 +275,7 @@
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
+      chip('Quarantined', c.quarantined || 0, '#fecaca'),
       chip('Rows total', c.total_rows || 0)
     ].join('');
     var meta = batch
@@ -377,13 +403,15 @@
   }
 
   function topDealsPanel(rows) {
-    var topRows = rows.filter(function (r) { return isActionableRow(r) || r.normalized_address; });
-    var proofRows = rows.filter(function (r) { return topRows.indexOf(r) === -1; });
+    var quarantinedRows = rows.filter(function (r) { return r.lifecycle_status && r.lifecycle_status.quarantined === true; });
+    var topRows = rows.filter(function (r) { return quarantinedRows.indexOf(r) === -1 && (isActionableRow(r) || r.normalized_address); });
+    var proofRows = rows.filter(function (r) { return topRows.indexOf(r) === -1 && quarantinedRows.indexOf(r) === -1; });
     var callReadyFirst = sortTopDealsRows(topRows);
     var body = (callReadyFirst.length
       ? callReadyFirst.map(rowCard).join('')
       : '<div style="font-size:12px;color:#6b7280;">No actionable rows yet. Run a batch or wait for the next auto-run.</div>') +
-      (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '');
+      (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '') +
+      (quarantinedRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#991b1b;">Quarantined - verify before calling (' + quarantinedRows.length + ')</summary>' + quarantinedRows.map(rowCard).join('') + '</details>' : '');
     return panelBox('Top Deals <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + callReadyFirst.length + '</span>',
       'CALL_READY first, then upcoming sale dates, then dateless rows; passed sale dates stay last. Every link goes to the real public source.',
       body, '#fcd34d');

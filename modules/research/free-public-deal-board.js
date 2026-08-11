@@ -7,6 +7,10 @@ const censusZipResolution = require('./census-zip-resolution');
 const compResearchProvider = require('./comp-research-provider');
 const freePublicCompHunter = require('./free-public-comp-hunter');
 const freePublicContactHunter = require('./free-public-contact-hunter');
+const enrichmentLedger = require('./enrichment-ledger');
+const enrichmentScheduler = require('./enrichment-scheduler');
+const leadLifecycleStatus = require('./lead-lifecycle-status');
+const marketCompPolicy = require('./market-comp-policy');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
@@ -1712,10 +1716,38 @@ async function applyCensusZipResolution(deals, input, options, context) {
   return diagnostics;
 }
 
+function recordEnrichmentSkipRollup(row, lane, reasonCode, nowIso) {
+  if (!row || typeof row !== 'object') return;
+  const laneKey = cleanText(lane) || 'unknown';
+  const existing = row.enrichment_skip_rollups && typeof row.enrichment_skip_rollups === 'object'
+    ? row.enrichment_skip_rollups
+    : {};
+  const previous = existing[laneKey] && typeof existing[laneKey] === 'object' ? existing[laneKey] : {};
+  row.enrichment_skip_rollups = Object.assign({}, existing, {
+    [laneKey]: {
+      last_skipped_at: cleanText(nowIso),
+      skipped_count: (Number(previous.skipped_count) || 0) + 1,
+      last_skip_reason: cleanText(reasonCode)
+    }
+  });
+}
+
 async function applyFreePublicHunters(deals, input, options, context) {
   // Opt-in: unit/board tests stay hermetic; the server preview service enables it.
   const disabled = !(input.enable_free_public_hunters === true || options.enable_free_public_hunters === true);
   const addressDeals = deals.filter((deal) => cleanText(deal.normalized_address));
+  const existingRows = Array.isArray(input.existing_queue_rows) ? input.existing_queue_rows : [];
+  const existingByAddress = new Map(existingRows
+    .filter((row) => cleanText(row && row.normalized_address))
+    .map((row) => [cleanText(row.normalized_address).toLowerCase(), row]));
+  for (const deal of addressDeals) {
+    const existing = existingByAddress.get(cleanText(deal.normalized_address).toLowerCase());
+    if (!existing) continue;
+    if (existing.enrichment_ledger) deal.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, deal);
+    if (existing.enrichment_skip_rollups) deal.enrichment_skip_rollups = Object.assign({}, existing.enrichment_skip_rollups);
+    deal.first_seen_at = existing.first_seen_at || deal.first_seen_at;
+    deal.last_seen_at = existing.last_seen_at || deal.last_seen_at;
+  }
   const diagnostics = {
     free_hunters_enabled: !disabled,
     free_contact_rows_hunted: 0,
@@ -1726,7 +1758,12 @@ async function applyFreePublicHunters(deals, input, options, context) {
     free_contact_exhausted_count: 0,
     free_comp_ready_count: 0,
     free_comp_partial_count: 0,
-    free_blocked_source_count: 0
+    free_blocked_source_count: 0,
+    enrichment_selected_contact_count: 0,
+    enrichment_selected_comp_count: 0,
+    enrichment_skipped_contact_count: 0,
+    enrichment_skipped_comp_count: 0,
+    tx_comp_policy_skipped_count: 0
   };
   if (disabled || !addressDeals.length) return diagnostics;
   const contactHunter = typeof options.free_contact_hunter_impl === 'function' ? options.free_contact_hunter_impl : freePublicContactHunter.runFreePublicContactHunter;
@@ -1738,10 +1775,61 @@ async function applyFreePublicHunters(deals, input, options, context) {
     mock_search_results: options.mock_free_search_results
   };
   const caps = input.free_hunter_caps || options.free_hunter_caps;
-  const contactOut = await contactHunter({ rows: addressDeals, caps }, hunterOptions);
-  const compOut = await compHunter({ rows: addressDeals, caps }, hunterOptions);
+  const maxRows = Math.max(1, Math.min(Number(caps && caps.max_rows) || freePublicContactHunter.DEFAULT_CAPS.max_rows, freePublicContactHunter.DEFAULT_CAPS.max_rows));
+  const now = new Date().toISOString();
+  const contactSelection = enrichmentScheduler.selectRowsForEnrichment(addressDeals, {
+    lane: 'public_search',
+    limit: maxRows,
+    now_iso: now,
+    market_policy: {}
+  });
+  const compPolicy = marketCompPolicy.compPolicyForMarket(context.market);
+  const compSelection = enrichmentScheduler.selectRowsForEnrichment(addressDeals, {
+    lane: 'sold_comp',
+    limit: maxRows,
+    now_iso: now,
+    market_policy: compPolicy
+  });
+  diagnostics.enrichment_selected_contact_count = contactSelection.selected.length;
+  diagnostics.enrichment_selected_comp_count = compSelection.selected.length;
+  diagnostics.enrichment_skipped_contact_count = contactSelection.skipped.length;
+  diagnostics.enrichment_skipped_comp_count = compSelection.skipped.length;
+  for (const skip of contactSelection.skipped) {
+    const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
+    if (!row) continue;
+    recordEnrichmentSkipRollup(row, 'public_search', skip.skip_reason, now);
+  }
+  for (const skip of compSelection.skipped) {
+    const row = addressDeals.find((deal) => (deal.queue_key || cleanText(deal.normalized_address).toLowerCase()) === skip.queue_key);
+    if (!row) continue;
+    const policySkip = skip.skip_reason === 'lane_disabled_by_market_policy';
+    if (policySkip) {
+      enrichmentLedger.appendAttempt(row, {
+        lane: 'sold_comp',
+        attempted_at: now,
+        outcome: 'SKIPPED_POLICY',
+        reason_code: compPolicy.arv_lock_reason_when_disabled,
+        reason_text: compPolicy.work_order,
+        source_url: cleanText(row.source_document_url || row.source_url),
+        cost_usd: 0,
+        next_eligible_at: 'PERMANENT_UNTIL_POLICY_CHANGE'
+      });
+      diagnostics.tx_comp_policy_skipped_count += 1;
+    } else {
+      recordEnrichmentSkipRollup(row, 'sold_comp', skip.skip_reason, now);
+    }
+  }
+  const contactOut = await contactHunter({ rows: contactSelection.selected, caps, preselected_rows: true }, hunterOptions);
+  const compOut = compPolicy.comp_lane_enabled
+    ? await compHunter({ rows: compSelection.selected, caps, preselected_rows: true }, hunterOptions)
+    : { rows_hunted: 0, results: new Map(), attempt_records: [] };
   diagnostics.free_contact_rows_hunted = Number(contactOut && contactOut.rows_hunted || 0) || 0;
   diagnostics.free_comp_rows_hunted = Number(compOut && compOut.rows_hunted || 0) || 0;
+  for (const attempt of [].concat(contactOut.attempt_records || [], compOut.attempt_records || [])) {
+    const row = addressDeals.find((deal) => cleanText(deal.normalized_address).toLowerCase() === cleanText(attempt.row_key));
+    if (!row) continue;
+    enrichmentLedger.appendAttempt(row, attempt);
+  }
   const seenStatusByAddress = new Map();
   for (const deal of addressDeals) {
     const key = cleanText(deal.normalized_address).toLowerCase();
@@ -1776,6 +1864,14 @@ async function applyFreePublicHunters(deals, input, options, context) {
         deal.ARV_lock_state = comp.verified_comps.length >= 3 ? 'ARV_UNLOCKED_VERIFIED_COMPS' : 'ARV_LOCKED_NO_VERIFIED_COMPS';
       }
     }
+    if (!compPolicy.comp_lane_enabled) {
+      deal.free_comp_status = 'SKIPPED_POLICY';
+      deal.arv_lock_reason = compPolicy.arv_lock_reason_when_disabled;
+      deal.next_comp_action = compPolicy.work_order;
+      deal.ARV_lock_state = 'ARV_LOCKED_NO_VERIFIED_COMPS';
+    }
+    deal.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(deal, now);
+    deal.enrichment_ledger_summary = enrichmentLedger.ledgerSummary(deal);
     deal.call_prep = callPrepProjection.buildCallPrep(deal);
     deal.call_readiness = deal.call_prep.call_readiness;
     deal.MAO_lock_state = deal.call_prep.MAO_lock_state;
@@ -1786,7 +1882,9 @@ async function applyFreePublicHunters(deals, input, options, context) {
       free_contact_status: deal.free_contact_status || 'CONTACT_SEARCH_NOT_RUN',
       free_comp_status: deal.free_comp_status || 'COMP_SEARCH_NOT_RUN',
       next_free_action: deal.next_free_action || '',
-      why_call_ready_or_blocked: deal.why_call_ready_or_blocked || ''
+      why_call_ready_or_blocked: deal.why_call_ready_or_blocked || '',
+      lifecycle_status: deal.lifecycle_status,
+      enrichment_ledger_summary: deal.enrichment_ledger_summary
     });
     diagnostics.free_blocked_source_count += (deal.blocked_sources || []).length;
     if (!seenStatusByAddress.has(key)) {

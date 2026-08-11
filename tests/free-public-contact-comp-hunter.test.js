@@ -153,8 +153,10 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.ok(/zillow\.com\/homedetails\/comp-a/.test(compResult.verified_comps[0].source_url));
   assert.ok(compResult.comp_candidates.some((candidate) => candidate.rejected_reason === 'subject_property_not_a_comp'));
 
-  // 7) Board wiring: mock hunter impls, statuses land on rows and call_prep, no mutations.
-  const boardResult = await dealBoard.runFreePublicDealBoardPreview({
+  // 7) TX board wiring: comp lane is skipped by policy before any comp fetch/impl call.
+  let txCompImplCalls = 0;
+  let txSoldCompFetches = 0;
+  const txBoardResult = await dealBoard.runFreePublicDealBoardPreview({
     market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
     enable_free_public_hunters: true,
     source_records: [{
@@ -164,6 +166,52 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       source_document_url: noticePdfUrl,
       source_family: 'preforeclosure_trustee_notice',
       motivation_type: 'preforeclosure_trustee_notice',
+      motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE'
+    }]
+  }, {
+    fetch_impl: async (url) => {
+      if (/zillow|redfin|realtor|homedetails|sold/i.test(String(url))) txSoldCompFetches += 1;
+      return makeResponse('<html>ok</html>');
+    },
+    free_contact_hunter_impl: async ({ rows }) => ({
+      rows_hunted: rows.length,
+      results: new Map([[rows[0].normalized_address.toLowerCase(), {
+        free_contact_status: 'CONTACT_SEARCH_EXHAUSTED_FREE',
+        free_contact_routes: [],
+        owner_or_entity_clues: [],
+        mailing_route: null,
+        free_searches_run: [{ source: 'row_source_document', target: noticePdfUrl }],
+        blocked_sources: [],
+        next_free_action: 'PAID_SKIP_TRACE_REQUIRED',
+        why_call_ready_or_blocked: 'No free public owner contact found.',
+        preview_only: true
+      }]])
+    }),
+    free_comp_hunter_impl: async () => {
+      txCompImplCalls += 1;
+      throw new Error('TX comp hunter should be skipped by market policy');
+    }
+  });
+  const txBoardRow = txBoardResult.free_public_deals.find((deal) => deal.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
+  assert.ok(txBoardRow);
+  assert.strictEqual(txCompImplCalls, 0);
+  assert.strictEqual(txSoldCompFetches, 0);
+  assert.strictEqual(txBoardRow.free_comp_status, 'SKIPPED_POLICY');
+  assert.strictEqual(txBoardRow.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
+  assert.strictEqual(txBoardRow.arv_lock_reason, 'ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED');
+  assert.ok(txBoardRow.enrichment_ledger.attempts.some((attempt) => attempt.lane === 'sold_comp' && attempt.outcome === 'SKIPPED_POLICY'));
+
+  // 8) MI board wiring: mock hunter impls, statuses land on rows and call_prep, no mutations.
+  const boardResult = await dealBoard.runFreePublicDealBoardPreview({
+    market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
+    enable_free_public_hunters: true,
+    source_records: [{
+      headline: '13905 Sussex St, Detroit, MI 48227',
+      address: '13905 Sussex St, Detroit, MI 48227',
+      source_url: 'https://buildingdetroit.org/properties/13905-sussex',
+      source_document_url: noticePdfUrl,
+      source_family: 'land_bank_public_sale',
+      motivation_type: 'land_bank_public_sale',
       motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE'
     }]
   }, {
@@ -194,7 +242,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       }]])
     })
   });
-  const boardRow = boardResult.free_public_deals.find((deal) => deal.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
+  const boardRow = boardResult.free_public_deals.find((deal) => deal.normalized_address === '13905 Sussex St, Detroit, MI 48227');
   assert.ok(boardRow);
   assert.strictEqual(boardRow.free_contact_status, 'CALL_READY');
   assert.strictEqual(boardRow.call_readiness, 'CALL_READY');
@@ -212,7 +260,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.strictEqual(boardResult.preview_only, true);
   assert.strictEqual(boardResult.should_ingest, false);
 
-  // 8) Hunters stay off unless explicitly enabled.
+  // 9) Hunters stay off unless explicitly enabled.
   const offResult = await dealBoard.runFreePublicDealBoardPreview({
     market: { city: 'Dallas', county: 'Dallas', state: 'TX' },
     source_records: [{
