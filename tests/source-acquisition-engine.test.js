@@ -60,6 +60,7 @@ writeJson(process.env.FINDME_SCOUT_JOBS_PATH, {
 const geminiProvider = require('../modules/research/gemini-scout-discovery-provider');
 const searchProviderWorker = require('../modules/research/search-provider-worker');
 const findMeScoutJobs = require('../modules/research/findme-scout-jobs');
+const sourceAcquisitionOrchestrator = require('../modules/research/source-acquisition-orchestrator');
 
 let geminiCalls = 0;
 geminiProvider.runGeminiScoutDiscovery = async function noGemini() {
@@ -157,6 +158,43 @@ searchProviderWorker.runSearchProvider = async function noSearch() {
 
   const storedDb = JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8'));
   assert.deepStrictEqual(storedDb.leads, []);
+
+  const bexarStructuredAddress = '15603 Garam Trl, Von Ormy, TX 78073';
+  const bexarCore = await sourceAcquisitionOrchestrator.runAcquisitionCore({
+    source_acquisition_mode: 'mock',
+    city: 'San Antonio',
+    county: 'Bexar',
+    state: 'TX',
+    discovery_batch_id: 'bexar_structured_address_idempotence',
+    mock_acquisition_candidates: [{
+      source_id: 'tx_bexar_county_foreclosure_notices',
+      source_name: 'Bexar County Clerk Current Foreclosures',
+      source_family: 'preforeclosure_trustee_notice',
+      source_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
+      source_document_url: 'https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures',
+      source_row_reference: '20260900015',
+      normalized_address: bexarStructuredAddress,
+      property_address: bexarStructuredAddress,
+      raw_address_text: bexarStructuredAddress,
+      source_structured_address_verified: true,
+      city: 'Von Ormy',
+      county: 'Bexar',
+      state: 'TX',
+      zip: '78073',
+      motivation_type: 'preforeclosure_trustee_notice',
+      motivation_evidence_text: 'Bexar County Clerk current foreclosure list.',
+      current_status: 'On Bexar County Clerk current foreclosure list',
+      status_evidence_text: 'Listed on the Bexar County Clerk current foreclosure list (document 20260900015, type MORTGAGE)',
+      foreclosure_type: 'MORTGAGE',
+      filing_period: '2026-09',
+      risk_flags: ['NO_SALE_DATE_IN_SOURCE']
+    }]
+  });
+  assert.strictEqual(bexarCore.candidates[0].normalized_address, bexarStructuredAddress, 'orchestrator normalization must preserve an explicit source-structured address verbatim');
+  assert.strictEqual(bexarCore.cards[0].display_address, bexarStructuredAddress, 'card normalization must remain idempotent for source-structured addresses');
+  assert.strictEqual(bexarCore.cards[0].listing_status, 'On Bexar County Clerk current foreclosure list');
+  assert.strictEqual(bexarCore.cards[0].foreclosure_type, 'MORTGAGE');
+  assert.ok(bexarCore.candidates[0].not_a_saved_lead && bexarCore.cards[0].not_a_saved_lead);
 
   console.log('source-acquisition-engine tests passed');
 })().catch((error) => {
