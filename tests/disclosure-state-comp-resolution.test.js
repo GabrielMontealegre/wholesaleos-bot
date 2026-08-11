@@ -134,7 +134,7 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
       { address: '14121 Sussex St, Detroit, MI 48227', parcel_id: 'old3', amt_sale_price: 8000, sale_date: '2013-02-20', property_class_description: 'Residential', zip_code: '48227' }
     ]
   });
-  assert.strictEqual(oldWouldHaveUnlocked.status, 'COMP_PARTIAL', 'dry-run comparison: old loose logic would count dated rows, strict window keeps only rows in the active window');
+  assert.strictEqual(oldWouldHaveUnlocked.status, 'COMP_PARTIAL', 'dry-run comparison: at the older comparison date, only the 2013 sale remains inside the active window');
 
   console.log('disclosure state comp resolution tests passed');
 })().catch((error) => {
