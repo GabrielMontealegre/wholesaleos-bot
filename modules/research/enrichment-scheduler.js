@@ -43,6 +43,76 @@ function lifecycleRank(status) {
   return 9;
 }
 
+function marketThroughputRank(tier) {
+  const text = cleanText(tier).toLowerCase();
+  if (text === 'active') return 0;
+  if (text === 'piloting') return 1;
+  if (text === 'candidate') return 2;
+  return 9;
+}
+
+function marketThroughputPlan(markets, options = {}) {
+  const standingBudget = Math.max(0, Number(options.standing_budget) || 24);
+  const pilotBudget = Math.max(0, Number(options.pilot_budget) || 6);
+  const candidateBudget = Math.max(0, Number(options.candidate_budget) || 0);
+  const items = (Array.isArray(markets) ? markets : []).map((market) => ({
+    market_key: cleanText(market && market.market_key) || cleanText([market && market.city, market && market.county, market && market.state].filter(Boolean).join('|')).toLowerCase(),
+    city: cleanText(market && market.city),
+    county: cleanText(market && market.county),
+    state: cleanText(market && market.state).toUpperCase(),
+    tier: cleanText(market && market.tier || market && market.status || 'candidate').toLowerCase(),
+    status: cleanText(market && market.status || ''),
+    open_legs: Array.isArray(market && market.open_legs) ? market.open_legs.slice() : [],
+    blocked_reason: cleanText(market && market.blocked_reason),
+    row_count: Number(market && market.row_count || 0) || 0,
+    backlog_count: Number(market && market.backlog_count || market && market.row_count || 0) || 0
+  })).filter((market) => market.market_key);
+  const active = items.filter((market) => market.tier === 'active').sort((a, b) => a.market_key.localeCompare(b.market_key));
+  const piloting = items.filter((market) => market.tier === 'piloting').sort((a, b) => a.market_key.localeCompare(b.market_key));
+  const candidate = items.filter((market) => market.tier === 'candidate').sort((a, b) => a.market_key.localeCompare(b.market_key));
+  const allocations = [];
+  function allocateRoundRobin(pool, budget, label) {
+    if (!budget || !pool.length) return;
+    let remaining = budget;
+    let index = 0;
+    while (remaining > 0 && pool.length) {
+      const market = pool[index % pool.length];
+      const existing = allocations.find((entry) => entry.market_key === market.market_key);
+      if (existing) {
+        existing.allocated_slots += 1;
+      } else {
+        allocations.push({
+          market_key: market.market_key,
+          city: market.city,
+          county: market.county,
+          state: market.state,
+          tier: market.tier,
+          status: market.status,
+          allocated_slots: 1,
+          budget_class: label
+        });
+      }
+      remaining -= 1;
+      index += 1;
+      if (index >= pool.length && remaining > 0) index = 0;
+      if (remaining > 0 && pool.length === 1 && allocations[allocations.length - 1].allocated_slots >= budget) break;
+    }
+  }
+  allocateRoundRobin(active, standingBudget, 'standing');
+  allocateRoundRobin(piloting, pilotBudget, 'pilot');
+  allocateRoundRobin(candidate, candidateBudget, 'candidate');
+  return {
+    standing_budget: standingBudget,
+    pilot_budget: pilotBudget,
+    candidate_budget: candidateBudget,
+    active_market_count: active.length,
+    piloting_market_count: piloting.length,
+    candidate_market_count: candidate.length,
+    markets: items,
+    allocations
+  };
+}
+
 function selectRowsForEnrichment(rows, options = {}) {
   const lane = cleanText(options.lane);
   const limit = Math.max(0, Number(options.limit) || 0);
@@ -104,4 +174,6 @@ function selectRowsForEnrichment(rows, options = {}) {
 
 module.exports = {
   selectRowsForEnrichment
+  ,
+  marketThroughputPlan
 };

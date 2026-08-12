@@ -8,42 +8,41 @@ Daily routine: see [GABRIEL_DAILY_DEAL_WORKFLOW.md](GABRIEL_DAILY_DEAL_WORKFLOW.
 
 ---
 
-## 1. How a lead flows: source → OCR → board → call prep
+## 1. How a lead flows: source ? OCR ? board ? call prep
 
 ```
 County posts foreclosure notice PDFs (public, free)
-        │
-        ▼
+        ¦
+        ?
 Source lanes: Dallas clerk + Craigslist + FSBO + open TX county profiles
   modules/sources/tx-county-foreclosure-source-profiles.js  (config, 1 entry per county)
-        │
-        ▼
+        ¦
+        ?
 Document hunter finds notice PDFs on county sites (DocumentCenter / Archive.aspx)
-        │
-        ├── PDF has a text layer → pdf-parse extracts notice text
-        └── PDF is a scan → OCR lane (modules/research/ocr-notice-extraction.js)
-            Chromium renders pages → tesseract.js reads them → two-pass retry,
+        ¦
+        +-- PDF has a text layer ? pdf-parse extracts notice text
+        +-- PDF is a scan ? OCR lane (modules/research/ocr-notice-extraction.js)
+            Chromium renders pages ? tesseract.js reads them ? two-pass retry,
             confidence floor 45, courthouse/servicer addresses rejected
-        │
-        ▼
-Notice text → property rows (address, sale date, borrower = owner clue)
-  Stale sale dates rejected. Generic/junk addresses rejected. Nothing invented.
-        │
-        ▼
+        ¦
+        ?
+Notice text ? property rows (address, sale date, borrower = owner clue)
+        ¦
+        ?
 Free Public Deal Board (modules/research/free-public-deal-board.js)
   Quality buckets: INSPECT_NOW (full verified address)
                    NEEDS_ZIP_REVIEW (street+city real, zip unreadable)
                    SOURCE_PROOF_ONLY (document watched, no address yet)
-        │
-        ▼
+        ¦
+        ?
 Contact + comp hunters (free public pages only)
-  visible phones → CALL_READY; TX non-disclosure → comps/ARV/MAO stay LOCKED
-        │
-        ▼
+  visible phones ? CALL_READY; TX non-disclosure ? comps/ARV/MAO stay LOCKED
+        ¦
+        ?
 Call prep (modules/research/call-prep-projection.js)
   contact status, ARV/MAO lock reasons, seller questions from evidence
-        │
-        ▼
+        ¦
+        ?
 Dashboard queue snapshot (deal-board-snapshots.json — NOT saved leads)
   accumulates/dedupes to 500 rows per market, refresh preserves evidence
 ```
@@ -119,10 +118,11 @@ questions. Proof-only rows collapsed underneath.
 | Detroit public owner + land use | City of Detroit Assessor `Parcels_Current` layer exposes owner, mailing, address, parcel number, and property class for about 380,445 parcels | use sourced property class as comp-similarity evidence; empty values stay empty and do not unlock comps |
 | Detroit public sales comps | public ArcGIS layer exposes parcel id, address, sale date, sale price, property class, and ZIP | use only as disclosure-state sold-comp evidence with provenance and the strict similarity/window/price gates; no TX comp inference |
 | California public comps | San Diego parcel data has no sale price; Los Angeles assessor parcels have no sale price/date, while the small multifamily sales table has no address or ZIP | keep CA comp lanes pending; do not treat APN-only or aggregate sales as neighborhood comps |
+| Cycle 9 county onboarding | corrected schema-only survey shows 0 live, 0 piloting, 0 survey, and 17 blocked candidates; all registry URLs are currently portals/homepages rather than documented machine-readable schemas | keep hypotheses separate from findings; add a county only after an ArcGIS/Socrata/JSON/CSV descriptor proves the required fields |
 
 ## 6. Exact daily workflow
 
-Morning: open dashboard → AUTO-RUN chip ON? → call CALL_READY rows → verify
+Morning: open dashboard ? AUTO-RUN chip ON? ? call CALL_READY rows ? verify
 ZIP Review rows against their PDFs. Noon: glance at "Actionable today", read
 new INSPECT_NOW PDFs. Evening: check runs-today is climbing and the error
 line is empty. Full detail: [GABRIEL_DAILY_DEAL_WORKFLOW.md](GABRIEL_DAILY_DEAL_WORKFLOW.md).
@@ -148,6 +148,6 @@ adds rows all day without him.
   runs comps himself or pays for data. Locked = honest, not broken.
 
 **One bug this proof found and fixed:** before `0828cb9` the deal section was
-destroyed by the app's own re-render seconds after page load — the machine
-worked but was invisible. The proof-pack screenshots in `exports/` show it
-rendering after the fix.
+ destroyed by the app's own re-render seconds after page load — the machine
+ worked but was invisible. The proof-pack screenshots in `exports/` show it
+ rendering after the fix.

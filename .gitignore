@@ -12,6 +12,9 @@ exports/cycle5-los-angeles-ca-gate/*
 !exports/cycle6-tx-volume-wave-gate/
 exports/cycle6-tx-volume-wave-gate/*
 !exports/cycle6-tx-volume-wave-gate/*.json
+!exports/county-onboarding/
+exports/county-onboarding/*
+!exports/county-onboarding/*.json
 !exports/public-parcel-api-discovery/
 exports/public-parcel-api-discovery/*
 !exports/public-parcel-api-discovery/*.json

@@ -102,5 +102,31 @@ function recordBoardSkipRollup(row, lane, reason, nowIso) {
     market_policy: {}
   }).selected.length, 0, 'legacy SKIPPED_BUDGET must not erase FOUND cooldown');
 
+  const markets = Array.from({ length: 20 }, (_, index) => ({
+    market_key: `market-${index}`,
+    city: `City ${index}`,
+    county: `County ${index}`,
+    state: 'TX',
+    tier: index < 8 ? 'active' : index < 14 ? 'piloting' : 'candidate',
+    status: index < 8 ? 'live' : index < 14 ? 'survey' : 'candidate',
+    row_count: 1 + index,
+    backlog_count: 2 + index
+  }));
+  const plan = scheduler.marketThroughputPlan(markets, {
+    standing_budget: 24,
+    pilot_budget: 6,
+    candidate_budget: 6
+  });
+  assert.strictEqual(plan.active_market_count, 8);
+  assert.strictEqual(plan.piloting_market_count, 6);
+  assert.strictEqual(plan.candidate_market_count, 6);
+  assert.strictEqual(plan.allocations.reduce((sum, allocation) => sum + Number(allocation.allocated_slots || 0), 0), 36);
+  assert.strictEqual(plan.allocations.filter((allocation) => allocation.budget_class === 'standing').length, 8);
+  assert.strictEqual(plan.allocations.filter((allocation) => allocation.budget_class === 'pilot').length, 6);
+  assert.strictEqual(plan.allocations.filter((allocation) => allocation.budget_class === 'candidate').length, 6);
+  assert.ok(plan.allocations.filter((allocation) => allocation.budget_class === 'standing').every((allocation) => allocation.allocated_slots === 3));
+  assert.ok(plan.allocations.filter((allocation) => allocation.budget_class === 'pilot').every((allocation) => allocation.allocated_slots === 1));
+  assert.ok(plan.allocations.filter((allocation) => allocation.budget_class === 'candidate').every((allocation) => allocation.allocated_slots === 1));
+
   console.log('enrichment scheduler tests passed');
 })();
