@@ -298,6 +298,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
           owner_name: 'Example Holdings LLC',
           mailing_address: 'PO BOX 10 DETROIT MI 48201',
           parcel_id: 'W-123',
+          land_use: 'Residential',
           is_entity: true,
           source_kind: 'official_public_record',
           source_url: 'https://services2.arcgis.com/parcel/query',
@@ -360,6 +361,8 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   const cycle8Row = cycle8Result.free_public_deals.find((deal) => deal.normalized_address === '13905 Sussex St, Detroit, MI 48227');
   assert.ok(cycle8Row);
   assert.strictEqual(cycle8Row.owner_record.owner_name, 'Example Holdings LLC');
+  assert.strictEqual(cycle8Row.owner_record.land_use, 'Residential');
+  assert.strictEqual(cycle8Row.land_use, 'Residential');
   assert.strictEqual(cycle8Row.mailing_route.source_kind, 'official_public_record');
   assert.strictEqual(cycle8Row.business_entity_resolution.registered_agent_name, 'Jane Agent');
   assert.strictEqual(cycle8Row.row_state, 'CALL_READY');

@@ -58,6 +58,12 @@ const ledger = require('../modules/research/enrichment-ledger');
     next_eligible_at: ''
   });
   assert.strictEqual(ledger.isLaneEligible(policy, 'sold_comp', '2027-01-01T00:00:00Z'), false);
+  assert.strictEqual(ledger.isLaneEligible(policy, 'sold_comp', '2027-01-01T00:00:00Z', {
+    policy_reason_code: 'TX_NON_DISCLOSURE'
+  }), false, 'the same policy identity must remain blocked');
+  assert.strictEqual(ledger.isLaneEligible(policy, 'sold_comp', '2027-01-01T00:00:00Z', {
+    policy_reason_code: 'DISCLOSURE_STATE_PUBLIC_SALES_ENABLED'
+  }), true, 'a changed policy identity must reopen the lane');
   ledger.appendAttempt(policy, {
     lane: 'sold_comp',
     attempted_at: '2026-08-11T00:01:00Z',

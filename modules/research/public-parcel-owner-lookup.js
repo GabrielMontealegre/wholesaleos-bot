@@ -9,11 +9,17 @@ const DEFAULT_CAPS = Object.freeze({
   timeout_ms: 8000
 });
 
-const ENTITY_SUFFIX_RE = /\b(?:llc|l\.l\.c\.|inc|inc\.|corp|corporation|company|co\.|lp|l\.p\.|llp|trust|partners|properties|holdings|ventures|capital|investments)\b/i;
+const ENTITY_SUFFIX_RE = /\b(?:llc|l\.l\.c\.|inc|inc\.|corp|corporation|company|co\.|lp|l\.p\.|llp|trust|bank|partners|properties|holdings|ventures|capital|investments)\b/i;
 const BLOCKED_TEXT_RE = /\b(captcha|verify you are human|access denied|forbidden|login required|sign in|subscription required|paywall)\b/i;
+const STREET_SUFFIX_RE = /\b(?:st(?:reet)?|ave(?:nue)?|rd|road|dr(?:ive)?|ln|lane|ct|court|trl|trail|blvd|boulevard|pkwy|parkway|pl|place|cir|circle|way|hwy|highway)\.?$/i;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+}
+
+function hasFieldValue(value) {
+  if (Array.isArray(value)) return value.some((item) => cleanText(item));
+  return !!cleanText(value);
 }
 
 function normalizeCaps(caps) {
@@ -42,6 +48,27 @@ function fieldList(fieldMap) {
     else if (cleanText(value)) fields.push(value);
   }
   return Array.from(new Set(fields.map(cleanText).filter(Boolean)));
+}
+
+function profileRecordRole(profile) {
+  const map = profile && profile.field_map || {};
+  return hasFieldValue(map.taxpayer_name) && !hasFieldValue(map.owner_name)
+    ? 'taxpayer_of_record'
+    : 'owner_of_record';
+}
+
+function profileRecordLabel(profile) {
+  return profileRecordRole(profile) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record';
+}
+
+function profileNameFields(profile) {
+  const map = profile && profile.field_map || {};
+  return hasFieldValue(map.owner_name) ? map.owner_name : map.taxpayer_name;
+}
+
+function profileMailingFields(profile) {
+  const map = profile && profile.field_map || {};
+  return hasFieldValue(map.mailing_address) ? map.mailing_address : map.taxpayer_mailing_address;
 }
 
 function attrsValue(attrs, field) {
@@ -78,7 +105,7 @@ function whereForRow(row, profile) {
   const situsField = cleanText(map.situs_address);
   if (street && situsField) {
     const number = (street.match(/^\d{1,7}/) || [])[0];
-    const words = street.replace(/^\d{1,7}\s+/, '').split(/\s+/).filter(Boolean).slice(0, 3).join(' ');
+    const words = street.replace(/^\d{1,7}\s+/, '').replace(STREET_SUFFIX_RE, '').split(/\s+/).filter(Boolean).slice(0, 3).join(' ');
     if (number && words) return `${situsField} LIKE '%${number}%' AND UPPER(${situsField}) LIKE '%${words.toUpperCase()}%'`;
     return `UPPER(${situsField}) LIKE '%${street.toUpperCase()}%'`;
   }
@@ -118,28 +145,45 @@ async function fetchJson(url, options = {}, caps = DEFAULT_CAPS) {
 
 function recordFromAttributes(attrs, profile, sourceUrl) {
   const map = profile.field_map || {};
-  const ownerName = combinedAttrsValue(attrs, map.owner_name);
-  const mailingAddress = combinedAttrsValue(attrs, map.mailing_address);
+  const ownerName = combinedAttrsValue(attrs, profileNameFields(profile));
+  const taxpayerName = combinedAttrsValue(attrs, map.taxpayer_name);
+  const taxpayerNameSecondary = combinedAttrsValue(attrs, map.taxpayer_name_secondary);
+  const mailingAddress = combinedAttrsValue(attrs, profileMailingFields(profile));
   const parcelId = combinedAttrsValue(attrs, map.parcel_id);
   const situsAddress = combinedAttrsValue(attrs, map.situs_address);
   const assessedValue = combinedAttrsValue(attrs, map.assessed_value);
+  const landUse = combinedAttrsValue(attrs, map.land_use);
+  const recordRole = profileRecordRole(profile);
+  const recordLabel = profileRecordLabel(profile);
+  const displayName = cleanText(ownerName || taxpayerName);
+  const visibleOwnerName = recordRole === 'taxpayer_of_record' ? '' : displayName;
+  const taxpayerNameParts = [taxpayerName, taxpayerNameSecondary].map(cleanText).filter(Boolean);
   const caveat = cleanText(profile.verification_status).startsWith('unverified_')
     ? `Profile caveat: ${cleanText(profile.verification_status)}`
     : '';
   return {
-    owner_name: ownerName,
+    owner_name: visibleOwnerName,
+    taxpayer_name: cleanText(taxpayerName),
+    taxpayer_name_secondary: cleanText(taxpayerNameSecondary),
+    taxpayer_names: taxpayerNameParts,
     mailing_address: mailingAddress,
+    taxpayer_mailing_address: recordRole === 'taxpayer_of_record' ? mailingAddress : '',
     parcel_id: parcelId,
     situs_address: situsAddress,
-    is_entity: isEntityName(ownerName),
+    land_use: landUse,
+    owner_role: recordRole,
+    record_label: recordLabel,
+    is_entity: isEntityName(displayName),
     verification_status: cleanText(profile.verification_status),
     source_kind: 'official_public_record',
     source_url: sourceUrl,
     evidence_text: cleanText([
       caveat,
-      ownerName ? `Owner: ${ownerName}` : '',
+      displayName ? `${recordLabel}: ${displayName}` : '',
+      taxpayerNameSecondary ? `Secondary taxpayer: ${taxpayerNameSecondary}` : '',
       mailingAddress ? `Mailing: ${mailingAddress}` : '',
       parcelId ? `Parcel: ${parcelId}` : '',
+      landUse ? `Land use: ${landUse}` : '',
       assessedValue ? `Assessed value clue: ${assessedValue}` : ''
     ].filter(Boolean).join(' | '))
   };
@@ -163,15 +207,22 @@ async function lookupOwnerForRow(row, options = {}) {
     const features = Array.isArray(fetched.data && fetched.data.features) ? fetched.data.features : [];
     if (!features.length) continue;
     const records = features.map((feature) => recordFromAttributes(feature.attributes || {}, profile, queryUrl))
-      .filter((record) => cleanText(record.owner_name) || cleanText(record.mailing_address) || cleanText(record.parcel_id));
+      .filter((record) => cleanText(record.owner_name) || cleanText(record.taxpayer_name) || cleanText(record.taxpayer_name_secondary) || cleanText(record.mailing_address) || cleanText(record.taxpayer_mailing_address) || cleanText(record.parcel_id));
     if (records.length === 1) {
       const record = records[0];
       return {
-        status: cleanText(record.owner_name) ? 'owner_found' : 'no_match',
+        status: cleanText(record.owner_name || record.taxpayer_name) ? 'owner_found' : 'no_match',
         owner_name: record.owner_name,
+        taxpayer_name: record.taxpayer_name,
+        taxpayer_name_secondary: record.taxpayer_name_secondary,
+        taxpayer_names: record.taxpayer_names,
         mailing_address: record.mailing_address,
+        taxpayer_mailing_address: record.taxpayer_mailing_address,
         parcel_id: record.parcel_id,
+        land_use: record.land_use,
         is_entity: record.is_entity,
+        owner_role: record.owner_role,
+        record_label: record.record_label,
         verification_status: cleanText(profile.verification_status),
         source_url: record.source_url,
         evidence_text: record.evidence_text,
@@ -183,7 +234,9 @@ async function lookupOwnerForRow(row, options = {}) {
           source_url: record.source_url,
           evidence_text: record.evidence_text,
           confidence: 'High',
-          risk_flags: ['mail_only_route', 'owner_of_record_may_differ_from_occupant']
+          risk_flags: ['mail_only_route'].concat(record.owner_role === 'taxpayer_of_record'
+            ? ['taxpayer_may_not_be_owner_may_be_servicer_or_escrow']
+            : ['owner_of_record_may_differ_from_occupant'])
         } : null
       };
     }
@@ -202,6 +255,8 @@ function attemptForRow(row, result, nowIso) {
   const status = cleanText(result && result.status);
   const found = status === 'owner_found';
   const blocked = status === 'blocked' || status === 'failed';
+  const recordLabel = cleanText(result && result.owner_record && result.owner_record.record_label)
+    || (cleanText(result && result.owner_record && result.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
   return {
     lane: 'county_appraisal',
     attempted_at: nowIso,
@@ -209,7 +264,7 @@ function attemptForRow(row, result, nowIso) {
     reason_code: found ? 'OFFICIAL_OWNER_RECORD_FOUND' : blocked ? cleanText(result.blocked_reason || status).toUpperCase() : (status || 'NO_PUBLIC_PARCEL_MATCH').toUpperCase(),
     reason_text: found
       ? cleanText([
-        'Owner-of-record and/or mailing route found in official public parcel API.',
+        `${recordLabel} and/or mailing route found in official public parcel API.`,
         cleanText(result && result.verification_status).startsWith('unverified_') ? `Profile caveat: ${cleanText(result.verification_status)}` : ''
       ].filter(Boolean).join(' '))
       : cleanText(result && (result.evidence_text || result.blocked_reason)) || 'No official public parcel owner record matched this row.',

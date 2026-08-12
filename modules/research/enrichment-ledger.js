@@ -107,11 +107,20 @@ function latestAttempt(row, lane) {
   return attemptsForLane(row, lane).slice().sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0] || null;
 }
 
-function isLaneEligible(row, lane, nowIso) {
+function currentPolicyReasonCode(policyContext) {
+  if (typeof policyContext === 'string') return cleanText(policyContext);
+  return cleanText(policyContext && (policyContext.policy_reason_code || policyContext.reason_code));
+}
+
+function isLaneEligible(row, lane, nowIso, policyContext) {
   const laneAttempts = attemptsForLane(row, lane);
-  if (laneAttempts.some((attempt) =>
-    cleanText(attempt && attempt.outcome) === 'SKIPPED_POLICY' ||
-    cleanText(attempt && attempt.next_eligible_at) === 'PERMANENT_UNTIL_POLICY_CHANGE')) return false;
+  const policyReason = currentPolicyReasonCode(policyContext);
+  const hasExplicitPolicyContext = policyContext !== undefined;
+  if (laneAttempts.some((attempt) => {
+    if (cleanText(attempt && attempt.outcome) !== 'SKIPPED_POLICY') return false;
+    if (!hasExplicitPolicyContext) return true;
+    return Boolean(policyReason) && cleanText(attempt && attempt.reason_code) === policyReason;
+  })) return false;
   const latest = laneAttempts
     .filter((attempt) => !cleanText(attempt && attempt.outcome).startsWith('SKIPPED_'))
     .slice()

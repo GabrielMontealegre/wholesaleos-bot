@@ -8,9 +8,48 @@ const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
 const BLOCKED_TEXT_RE = /\b(captcha|verify you are human|access denied|forbidden|login required|sign in|subscription required|paywall)\b/i;
 
 const DEFAULT_TARGETS = [
-  { market: 'Bexar TX', service_url: 'https://maps.bexar.org/arcgis/rest/services/Parcels/MapServer', layer: 0 },
-  { market: 'San Diego CA', service_url: 'https://webmaps.sandiego.gov/arcgis/rest/services/GeocoderMerged/MapServer', layer: 1 },
-  { market: 'Wayne MI', service_url: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/assessor_property_sales_view/FeatureServer', layer: 0 }
+  {
+    market: 'Detroit / Wayne MI parcel attributes',
+    purpose: 'owner_and_land_use',
+    service_url: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/Parcels_Current/FeatureServer',
+    layer: 0,
+    required_capabilities: ['owner_name', 'land_use', 'property_location_key']
+  },
+  {
+    market: 'Bexar TX parcel owner retry',
+    purpose: 'owner_and_land_use',
+    service_url: 'https://maps.bexar.org/arcgis/rest/services/Parcels/MapServer',
+    layer: 0,
+    required_capabilities: ['owner_name', 'land_use', 'property_location_key']
+  },
+  {
+    market: 'San Diego CA recorded-sales candidate',
+    purpose: 'recorded_sales',
+    service_url: 'https://webmaps.sandiego.gov/arcgis/rest/services/GeocoderMerged/MapServer',
+    layer: 1,
+    required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+  },
+  {
+    market: 'Los Angeles CA assessor-parcel candidate',
+    purpose: 'recorded_sales',
+    service_url: 'https://services.arcgis.com/RmCCgQtiZLDCtblq/arcgis/rest/services/ASSR_PARCELS_25_View/FeatureServer',
+    layer: 0,
+    required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+  },
+  {
+    market: 'Los Angeles CA multifamily-sales candidate',
+    purpose: 'recorded_sales',
+    service_url: 'https://services.arcgis.com/RmCCgQtiZLDCtblq/arcgis/rest/services/TENYRSALES50to300UNITSpt5A_2024/FeatureServer',
+    layer: 0,
+    required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+  },
+  {
+    market: 'Wayne MI recorded-sales profile',
+    purpose: 'recorded_sales',
+    service_url: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/assessor_property_sales_view/FeatureServer',
+    layer: 0,
+    required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+  }
 ];
 
 function cleanText(value) {
@@ -61,41 +100,83 @@ async function fetchJson(url, options = {}) {
 }
 
 function classifyFieldMap(fieldNames) {
-  const names = new Set((fieldNames || []).map(cleanText));
-  const find = (patterns) => fieldNames.find((name) => patterns.some((pattern) => pattern.test(name))) || '';
+  const normalizedNames = (fieldNames || []).map(cleanText).filter(Boolean);
+  const names = new Set(normalizedNames);
+  const find = (patterns) => {
+    for (const pattern of patterns) {
+      const match = normalizedNames.find((name) => pattern.test(name));
+      if (match) return match;
+    }
+    return '';
+  };
   return {
-    owner_name: find([/^owner/i, /^own_?name/i, /^own/i]),
-    mailing_address: fieldNames.filter((name) => /mail|own_addr|addr/i.test(name)).slice(0, 6),
+    owner_name: find([/^owner/i, /^own_?name/i, /^own/i, /^taxpayer_?1$/i, /^taxpayer.*name/i]),
+    mailing_address: normalizedNames.filter((name) => /mail|own_addr|taxpayer_(?:street|city|state|zip)/i.test(name)).slice(0, 6),
     situs_address: find([/situs.*address/i, /^address$/i, /site.*address/i]),
-    parcel_id: find([/^apn$/i, /parcel/i, /ain/i, /propid/i]),
+    parcel_id: find([/^apn$/i, /parcel/i, /ain/i, /propid/i, /parcel.*number/i]),
     sale_price: find([/sale.*price/i, /amt_sale_price/i, /sold.*price/i]),
-    sale_date: find([/sale.*date/i, /docdate/i]),
-    land_use: find([/land.*use/i, /class.*description/i, /property.*class/i]),
+    sale_date: find([/sale.*date/i, /recording.*date/i, /docdate/i]),
+    land_use: find([/land.*use/i, /class.*desc/i, /use.*desc/i, /property.*class/i, /use.*code/i]),
     year_built: find([/year.*built/i, /year_effective/i]),
+    zip: find([/^zip$/i, /zip.*code/i, /postal/i]),
     field_count: names.size
   };
+}
+
+function capabilitiesForMap(fieldMap) {
+  const map = fieldMap || {};
+  const capabilities = {
+    owner_name: Boolean(cleanText(map.owner_name)),
+    mailing_address: Array.isArray(map.mailing_address) && map.mailing_address.length > 0,
+    situs_address: Boolean(cleanText(map.situs_address)),
+    parcel_id: Boolean(cleanText(map.parcel_id)),
+    sale_price: Boolean(cleanText(map.sale_price)),
+    sale_date: Boolean(cleanText(map.sale_date)),
+    land_use: Boolean(cleanText(map.land_use)),
+    zip: Boolean(cleanText(map.zip))
+  };
+  capabilities.property_location_key = capabilities.situs_address || capabilities.zip || capabilities.parcel_id;
+  capabilities.comp_location_key = capabilities.situs_address || capabilities.zip;
+  return capabilities;
 }
 
 async function inspectArcgisLayer(target, options = {}) {
   const url = `${layerUrl(target)}?f=json`;
   const meta = await fetchJson(url, options);
   if (meta.status !== 'ok') {
-    return Object.assign({ market: target.market, service_url: target.service_url, layer: target.layer, status: meta.status }, meta);
+    return Object.assign({
+      market: target.market,
+      purpose: cleanText(target.purpose),
+      service_url: target.service_url,
+      layer: target.layer,
+      status: meta.status,
+      gate_status: meta.status,
+      required_capabilities: Array.isArray(target.required_capabilities) ? target.required_capabilities.slice() : []
+    }, meta);
   }
   const fields = Array.isArray(meta.data && meta.data.fields) ? meta.data.fields : [];
   const countUrl = `${layerUrl(target)}/query?f=json&where=1%3D1&returnCountOnly=true`;
   const count = await fetchJson(countUrl, options);
   const fieldNames = fields.map((field) => cleanText(field && field.name)).filter(Boolean);
+  const fieldMapGuess = classifyFieldMap(fieldNames);
+  const capabilities = capabilitiesForMap(fieldMapGuess);
+  const requiredCapabilities = Array.isArray(target.required_capabilities) ? target.required_capabilities.slice() : [];
+  const missingRequiredCapabilities = requiredCapabilities.filter((capability) => capabilities[capability] !== true);
   return {
     market: target.market,
+    purpose: cleanText(target.purpose),
     service_url: target.service_url,
     layer: target.layer,
     status: 'open',
+    gate_status: missingRequiredCapabilities.length ? 'open_insufficient_fields' : 'open_usable',
     record_count: count.status === 'ok' ? Number(count.data && count.data.count || 0) || 0 : null,
     count_status: count.status,
     field_names: fieldNames,
     relevant_fields: ownerFields(fields),
-    field_map_guess: classifyFieldMap(fieldNames),
+    field_map_guess: fieldMapGuess,
+    capabilities,
+    required_capabilities: requiredCapabilities,
+    missing_required_capabilities: missingRequiredCapabilities,
     exposes_owner_name: /owner|own/i.test(fieldNames.join(' ')),
     exposes_mailing_address: /mail|own_addr/i.test(fieldNames.join(' ')),
     exposes_situs_address: /situs|address/i.test(fieldNames.join(' ')),
@@ -124,9 +205,12 @@ async function runDiscovery(options = {}) {
     } catch (error) {
       results.push({
         market: target.market,
+        purpose: cleanText(target.purpose),
         service_url: target.service_url,
         layer: target.layer,
         status: 'failed',
+        gate_status: 'failed',
+        required_capabilities: Array.isArray(target.required_capabilities) ? target.required_capabilities.slice() : [],
         blocked_reason: cleanText(error && error.message).slice(0, 120) || 'discovery_failed'
       });
     }
@@ -142,7 +226,7 @@ async function runDiscovery(options = {}) {
 }
 
 async function main() {
-  const report = await runDiscovery({ delay_ms: 250 });
+  const report = await runDiscovery({ delay_ms: 250, timeout_ms: 75000 });
   const outDir = path.join(process.cwd(), 'exports', 'public-parcel-api-discovery');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, `public-parcel-api-discovery-${report.generated_at.replace(/[:.]/g, '-')}.json`);
@@ -159,6 +243,7 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_TARGETS,
+  capabilitiesForMap,
   classifyFieldMap,
   inspectArcgisLayer,
   runDiscovery

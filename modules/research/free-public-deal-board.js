@@ -1893,26 +1893,40 @@ async function applyFreePublicHunters(deals, input, options, context) {
     if (!owner || owner.status !== 'owner_found') continue;
     deal.owner_record = owner.owner_record || {
       owner_name: cleanText(owner.owner_name),
+      taxpayer_name: cleanText(owner.taxpayer_name),
+      taxpayer_name_secondary: cleanText(owner.taxpayer_name_secondary),
+      taxpayer_names: Array.isArray(owner.taxpayer_names) ? owner.taxpayer_names.map(cleanText).filter(Boolean) : [],
       mailing_address: cleanText(owner.mailing_address),
+      taxpayer_mailing_address: cleanText(owner.taxpayer_mailing_address),
       parcel_id: cleanText(owner.parcel_id),
+      land_use: cleanText(owner.land_use),
       is_entity: owner.is_entity === true,
+      owner_role: cleanText(owner.owner_role) || 'owner_of_record',
+      record_label: cleanText(owner.record_label) || 'Owner of record',
       verification_status: cleanText(owner.verification_status),
       source_kind: 'official_public_record',
       source_url: cleanText(owner.source_url),
       evidence_text: cleanText(owner.evidence_text)
     };
+    if (deal.owner_record && cleanText(deal.owner_record.land_use)) {
+      deal.land_use = cleanText(deal.owner_record.land_use);
+    }
     deal.mailing_route = owner.mailing_route || deal.mailing_route || null;
-    if (deal.owner_record && cleanText(deal.owner_record.owner_name)) {
+    const ownerDisplayName = cleanText(deal.owner_record && (deal.owner_record.owner_name || deal.owner_record.taxpayer_name));
+    const ownerDisplayLabel = cleanText(deal.owner_record && deal.owner_record.record_label) || (cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
+    if (deal.owner_record && ownerDisplayName) {
       deal.owner_or_entity_clues = (deal.owner_or_entity_clues || []).concat([{
-        clue_kind: 'appraisal_owner_of_record',
-        value: cleanText(deal.owner_record.owner_name),
+        clue_kind: cleanText(deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'taxpayer_of_record' : 'appraisal_owner_of_record',
+        value: cleanText(deal.owner_record.owner_role) === 'taxpayer_of_record' ? `${ownerDisplayLabel}: ${ownerDisplayName}` : ownerDisplayName,
         source_kind: 'official_public_record',
         source_url: cleanText(deal.owner_record.source_url),
         evidence_text: cleanText(deal.owner_record.evidence_text),
         confidence: 'High',
-        risk_flags: ['owner_of_record_may_differ_from_occupant']
+        risk_flags: cleanText(deal.owner_record.owner_role) === 'taxpayer_of_record'
+          ? ['taxpayer_may_not_be_owner_may_be_servicer_or_escrow']
+          : ['owner_of_record_may_differ_from_occupant']
       }]).slice(0, 6);
-      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = cleanText(deal.owner_record.owner_name);
+      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = ownerDisplayName;
     }
     diagnostics.public_parcel_owner_found_count += 1;
     if (deal.mailing_route && cleanText(deal.mailing_route.value)) diagnostics.public_parcel_mail_ready_count += 1;
@@ -2133,16 +2147,18 @@ async function applyOfficialBrowserLookup(deals, input, options, context) {
     deal.browser_sources_checked = lookup.browser_sources_checked;
     deal.browser_blocked_sources = lookup.browser_blocked_sources;
     deal.next_official_lookup_action = lookup.next_official_lookup_action;
-    if (lookup.owner_record && cleanText(lookup.owner_record.owner_name)) {
+    const lookupOwnerDisplayName = cleanText(lookup.owner_record && (lookup.owner_record.owner_name || lookup.owner_record.taxpayer_name));
+    const lookupOwnerDisplayLabel = cleanText(lookup.owner_record && lookup.owner_record.record_label) || (cleanText(lookup.owner_record && lookup.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
+    if (lookup.owner_record && lookupOwnerDisplayName) {
       deal.owner_or_entity_clues = (deal.owner_or_entity_clues || []).concat([{
-        clue_kind: 'appraisal_owner_of_record',
-        value: lookup.owner_record.owner_name,
+        clue_kind: cleanText(lookup.owner_record.owner_role) === 'taxpayer_of_record' ? 'taxpayer_of_record' : 'appraisal_owner_of_record',
+        value: cleanText(lookup.owner_record.owner_role) === 'taxpayer_of_record' ? `${lookupOwnerDisplayLabel}: ${lookupOwnerDisplayName}` : lookupOwnerDisplayName,
         source_url: lookup.owner_record.source_url,
         evidence_text: lookup.owner_record.evidence_text,
         confidence: lookup.owner_record.confidence,
         risk_flags: lookup.owner_record.risk_flags
       }]).slice(0, 6);
-      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = lookup.owner_record.owner_name;
+      if (!cleanText(deal.owner_name_if_visible)) deal.owner_name_if_visible = lookupOwnerDisplayName;
     }
     deal.call_prep = callPrepProjection.buildCallPrep(deal);
     deal.call_readiness = deal.call_prep.call_readiness;
