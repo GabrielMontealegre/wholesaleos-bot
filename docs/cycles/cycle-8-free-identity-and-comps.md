@@ -19,6 +19,9 @@ Evidence artifact:
 Bexar retry artifact:
 [[../../exports/public-parcel-api-discovery/public-parcel-api-discovery-bexar-retry-2026-08-11T21-14-55-027Z.json]]
 
+Cycle 8 follow-up discovery artifact:
+[[../../exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json]]
+
 ## Public API Discovery
 
 | Market | Source | Result | Decision |
@@ -26,6 +29,10 @@ Bexar retry artifact:
 | Bexar TX | `maps.bexar.org` ArcGIS parcels | Failed from the local public API discovery run and failed again on a 30-second retry. | Keep profile marked unverified; any result from the guessed field map must carry a caveat. TX comps remain locked because Texas is non-disclosure. |
 | San Diego CA | SD county ArcGIS GeocoderMerged layer | Open. Exposes APN, owner name fields, owner mailing address fields, situs fields, document date, assessed values. | Use as official owner-of-record and mailing-route source for San Diego rows. Assessed values are not ARV. |
 | Wayne MI / Detroit | Detroit ArcGIS property sales layer | Open. Exposes parcel id, address, sale date, sale price, sale verification, property class, and zip. | Use as a disclosure-state public comp source for Detroit rows. |
+| Detroit MI parcel attributes | City of Detroit Office of the Assessor `Parcels_Current` layer | Open; 380,445 records. Exposes taxpayer owner fields, mailing components, address, parcel number, and `property_class_desc`. | Use as official owner, mailing, and sourced land-use evidence. Never infer land use when the field is empty. |
+| Bexar TX follow-up | `maps.bexar.org` ArcGIS parcels | Failed again with a 75-second discovery timeout/unreachable result; no official alternative public parcel layer was verified. | Keep the guessed field map unverified and caveated. |
+| San Diego CA recorded sales | Verified parcel layer plus official public searches | Parcel layer is open and addressable but has document date only; no sale-price field. | Keep CA comp lane pending. |
+| Los Angeles CA recorded sales | Official assessor parcel and multifamily-sales candidates | Parcel layer has no sale price/date; the 597-row multifamily table has price/date but no address or ZIP comp-location key. | Keep CA comp lane pending; do not use AIN-only records as neighborhood comps. |
 
 ## Build Decision
 
@@ -59,3 +66,5 @@ Gabriel should see a clearer row state:
 - TX sold comps remain locked until MLS access or paid comp data is approved.
 - Free public entity registries do not guarantee owner phone numbers; registered
   agents are labeled honestly.
+- San Diego and Los Angeles remain `COMP_LANE_PENDING_PUBLIC_SALES_SOURCE` until
+  a property-level public layer exposes sale price, sale date, and an address or ZIP.

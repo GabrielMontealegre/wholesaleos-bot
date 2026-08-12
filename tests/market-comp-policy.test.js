@@ -3,6 +3,8 @@
 const assert = require('assert');
 const policy = require('../modules/research/market-comp-policy');
 const scheduler = require('../modules/research/enrichment-scheduler');
+const ledger = require('../modules/research/enrichment-ledger');
+const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
 
 (() => {
   const tx = policy.compPolicyForMarket({ city: 'San Antonio', county: 'Bexar', state: 'TX' });
@@ -23,6 +25,30 @@ const scheduler = require('../modules/research/enrichment-scheduler');
   assert.strictEqual(caPending.comp_lane_source, 'comp_lane_pending_source');
   assert.strictEqual(caPending.arv_lock_reason_when_disabled, 'COMP_LANE_PENDING_PUBLIC_SALES_SOURCE');
   assert.strictEqual(caPending.work_order, 'VERIFY_PUBLIC_RECORDED_SALES_SOURCE_BEFORE_RUNNING_COMPS');
+  const laPending = policy.compPolicyForMarket({ city: 'Los Angeles', county: 'Los Angeles', state: 'CA' });
+  assert.strictEqual(laPending.comp_lane_enabled, false);
+  assert.strictEqual(laPending.comp_lane_source, 'comp_lane_pending_source');
+  assert.strictEqual(parcelProfiles.PUBLIC_SOURCE_GAPS.find((item) => item.market.county === 'San Diego').status, 'pending_source_missing_sale_price');
+  assert.strictEqual(parcelProfiles.PUBLIC_SOURCE_GAPS.find((item) => item.market.county === 'Los Angeles').status, 'pending_source_missing_property_location_key');
+
+  const policyFlipRow = { queue_key: 'policy-flip', normalized_address: '2 Main St, Detroit, MI 48201' };
+  ledger.appendAttempt(policyFlipRow, {
+    lane: 'sold_comp',
+    attempted_at: '2026-08-11T00:00:00Z',
+    outcome: 'SKIPPED_POLICY',
+    reason_code: 'COMP_LANE_PENDING_PUBLIC_SALES_SOURCE',
+    reason_text: 'No verified public sales source yet.',
+    source_url: '',
+    cost_usd: 0,
+    next_eligible_at: 'PERMANENT_UNTIL_POLICY_CHANGE'
+  });
+  const reopened = scheduler.selectRowsForEnrichment([policyFlipRow], {
+    lane: 'sold_comp',
+    limit: 1,
+    now_iso: '2026-08-11T01:00:00Z',
+    market_policy: detroit
+  });
+  assert.strictEqual(reopened.selected.length, 1, 'changing to an enabled comp policy must reopen a previously skipped row');
   assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).comp_lane_enabled, false);
   assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).arv_lock_reason_when_disabled, 'COMP_POLICY_UNKNOWN_FOR_MARKET');
   console.log('market comp policy tests passed');

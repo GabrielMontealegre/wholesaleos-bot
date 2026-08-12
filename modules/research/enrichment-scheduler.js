@@ -19,14 +19,20 @@ function laneAllowedByPolicy(lane, policy) {
   return !policy || policy.comp_lane_enabled !== false;
 }
 
+function policyReasonCode(lane, policy) {
+  if (lane !== 'sold_comp') return '';
+  if (policy && policy.comp_lane_enabled === false) return cleanText(policy.arv_lock_reason_when_disabled);
+  return cleanText(policy && policy.comp_lane_source) || 'COMP_LANE_ENABLED';
+}
+
 function firstAttemptAt(row, lane) {
-  const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => attempt.outcome !== 'SKIPPED_BUDGET');
+  const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => !cleanText(attempt.outcome).startsWith('SKIPPED_'));
   if (!attempts.length) return '';
   return attempts.slice().sort((a, b) => cleanText(a.attempted_at).localeCompare(cleanText(b.attempted_at)))[0].attempted_at;
 }
 
 function latestAttemptAt(row, lane) {
-  const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => attempt.outcome !== 'SKIPPED_BUDGET');
+  const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => !cleanText(attempt.outcome).startsWith('SKIPPED_'));
   if (!attempts.length) return '';
   return attempts.slice().sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0].attempted_at;
 }
@@ -57,11 +63,13 @@ function selectRowsForEnrichment(rows, options = {}) {
       skipped.push({ queue_key: key, skip_reason: 'lane_disabled_by_market_policy' });
       continue;
     }
-    if (!enrichmentLedger.isLaneEligible(row, lane, nowIso)) {
+    if (!enrichmentLedger.isLaneEligible(row, lane, nowIso, {
+      policy_reason_code: policyReasonCode(lane, marketPolicy)
+    })) {
       skipped.push({ queue_key: key, skip_reason: 'lane_cooldown_active' });
       continue;
     }
-    const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => attempt.outcome !== 'SKIPPED_BUDGET');
+    const attempts = enrichmentLedger.attemptsForLane(row, lane).filter((attempt) => !cleanText(attempt.outcome).startsWith('SKIPPED_'));
     candidates.push({
       row,
       queue_key: key,

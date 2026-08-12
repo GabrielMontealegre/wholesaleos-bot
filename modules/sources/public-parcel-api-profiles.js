@@ -27,6 +27,8 @@ const PROFILES = Object.freeze([
     disclosure_state: false,
     verified_at: null,
     verification_status: 'unverified_field_map_guess_discovery_timed_out',
+    verification_evidence: 'exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json',
+    verification_last_outcome: 'failed_source_unreachable',
     record_count: null,
     notes: 'Public ArcGIS parcel candidate for Bexar owner and mailing route; TX sold prices are not disclosure data.'
   },
@@ -55,6 +57,34 @@ const PROFILES = Object.freeze([
     notes: 'SanGIS public parcel layer exposes owner, mailing, APN, situs, and document date; assessed value is not ARV.'
   },
   {
+    profile_id: 'mi_detroit_arcgis_parcels_current',
+    market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
+    county: 'Wayne',
+    state: 'MI',
+    api_kind: 'arcgis',
+    service_url: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/Parcels_Current/FeatureServer',
+    layer: 0,
+    field_map: {
+      taxpayer_name: 'taxpayer_1',
+      taxpayer_name_secondary: 'taxpayer_2',
+      taxpayer_mailing_address: ['taxpayer_street', 'taxpayer_city', 'taxpayer_state', 'taxpayer_zip'],
+      situs_address: 'address',
+      parcel_id: 'parcel_number',
+      sale_price: '',
+      sale_date: '',
+      land_use: 'property_class_desc',
+      year_built: 'year_built',
+      assessed_value: 'assessed_value',
+      zip: 'zip_code'
+    },
+    disclosure_state: true,
+    verified_at: '2026-08-11',
+    verification_status: 'verified_public_schema_taxpayer_only_no_owner_field',
+    verification_evidence: 'exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json',
+    record_count: 380445,
+    notes: 'City of Detroit Office of the Assessor parcel layer used for sourced taxpayer-of-record, mailing, parcel, and property-class evidence. It exposes taxpayer fields rather than an owner field; the separate verified sales profile remains the comp source.'
+  },
+  {
     profile_id: 'mi_detroit_arcgis_property_sales',
     market: { city: 'Detroit', county: 'Wayne', state: 'MI' },
     county: 'Wayne',
@@ -80,6 +110,27 @@ const PROFILES = Object.freeze([
   }
 ]);
 
+const PUBLIC_SOURCE_GAPS = Object.freeze([
+  {
+    market: { city: 'San Antonio', county: 'Bexar', state: 'TX' },
+    capability: 'owner_and_land_use',
+    status: 'unverified_source_unreachable',
+    evidence: 'exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json'
+  },
+  {
+    market: { city: 'San Diego', county: 'San Diego', state: 'CA' },
+    capability: 'recorded_sales_comps',
+    status: 'pending_source_missing_sale_price',
+    evidence: 'exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json'
+  },
+  {
+    market: { city: 'Los Angeles', county: 'Los Angeles', state: 'CA' },
+    capability: 'recorded_sales_comps',
+    status: 'pending_source_missing_property_location_key',
+    evidence: 'exports/public-parcel-api-discovery/public-parcel-api-discovery-2026-08-11T22-57-27-738Z.json'
+  }
+]);
+
 function marketMatches(profile, market = {}) {
   const state = cleanText(market.state).toUpperCase();
   const haystack = `${cleanText(market.city)} ${cleanText(market.county)}`.toLowerCase();
@@ -94,7 +145,9 @@ function profilesForMarket(market = {}) {
 function ownerProfilesForMarket(market = {}) {
   return profilesForMarket(market).filter((profile) =>
     cleanText(profile.field_map && profile.field_map.owner_name) ||
-    Array.isArray(profile.field_map && profile.field_map.owner_name));
+    Array.isArray(profile.field_map && profile.field_map.owner_name) ||
+    cleanText(profile.field_map && profile.field_map.taxpayer_name) ||
+    Array.isArray(profile.field_map && profile.field_map.taxpayer_name));
 }
 
 function compProfilesForMarket(market = {}) {
@@ -106,6 +159,7 @@ function compProfilesForMarket(market = {}) {
 
 module.exports = {
   PROFILES,
+  PUBLIC_SOURCE_GAPS,
   profilesForMarket,
   ownerProfilesForMarket,
   compProfilesForMarket

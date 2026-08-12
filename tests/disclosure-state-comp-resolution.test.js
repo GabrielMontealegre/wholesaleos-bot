@@ -24,7 +24,7 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
     county: 'Wayne',
     state: 'MI',
     source_row_reference: 'subject-1',
-    property_kind_if_visible: 'Residential'
+    land_use: 'Residential'
   };
   const features = [
     { address: '13905 Sussex St, Detroit, MI 48227', parcel_id: 'subject-1', amt_sale_price: 200000, sale_date: '2026-02-01', property_class_description: 'Residential', zip_code: '48227' },
@@ -99,6 +99,7 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
     ]
   });
   assert.strictEqual(sameZipOnly.status, 'COMP_SEARCH_EXHAUSTED_FREE');
+  assert.strictEqual(sameZipOnly.verified_comps.length, 0);
   assert.ok(sameZipOnly.rejected_comp_candidates.every((comp) => comp.rejected_reason === 'missing_similarity_basis'));
 
   const arcgisError = await compResolution.resolveCompsForRow(row, {

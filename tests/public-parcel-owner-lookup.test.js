@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const ownerLookup = require('../modules/research/public-parcel-owner-lookup');
+const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
 
 function response(body, status = 200) {
   return {
@@ -21,6 +22,7 @@ function response(body, status = 200) {
       mailing_address: ['MAIL1', 'MAIL_CITY', 'MAIL_STATE', 'MAIL_ZIP'],
       situs_address: 'SITUS',
       parcel_id: 'APN',
+      land_use: 'LAND_USE',
       assessed_value: 'TOTAL_VALUE'
     }
   };
@@ -43,6 +45,7 @@ function response(body, status = 200) {
         MAIL_ZIP: '78201',
         SITUS: '123 Main St',
         APN: '12345',
+        LAND_USE: 'Single Family Residential',
         TOTAL_VALUE: 155000
       } }] });
     }
@@ -50,9 +53,79 @@ function response(body, status = 200) {
   assert.strictEqual(found.status, 'owner_found');
   assert.strictEqual(found.owner_record.owner_name, 'KILLER CAPITAL CONSULTANTS LLC');
   assert.strictEqual(found.owner_record.is_entity, true);
+  assert.strictEqual(found.owner_record.owner_role, 'owner_of_record');
   assert.strictEqual(found.owner_record.source_kind, 'official_public_record');
+  assert.strictEqual(found.owner_record.land_use, 'Single Family Residential');
+  assert.strictEqual(found.land_use, 'Single Family Residential');
+  assert.match(found.evidence_text, /Land use: Single Family Residential/);
   assert.strictEqual(found.mailing_route.route_kind, 'mailing_address');
   assert.strictEqual(found.mailing_route.source_kind, 'official_public_record');
+
+  let detroitQueryUrl = '';
+  const suffixTolerant = await ownerLookup.lookupOwnerForRow({
+    normalized_address: '13905 Robson St, Detroit, MI 48227',
+    city: 'Detroit', county: 'Wayne', state: 'MI'
+  }, {
+    profiles: [{
+      api_kind: 'arcgis',
+      service_url: 'https://services.example.gov/arcgis/rest/services/DetroitParcels/FeatureServer',
+      layer: 0,
+      verification_status: 'verified_public_schema_2026_08_11',
+      field_map: { taxpayer_name: 'taxpayer_1', taxpayer_name_secondary: 'taxpayer_2', taxpayer_mailing_address: ['taxpayer_street', 'taxpayer_city', 'taxpayer_state', 'taxpayer_zip'], situs_address: 'address', parcel_id: 'parcel_number', land_use: 'property_class_desc' }
+    }],
+    fetch_impl: async (url) => {
+      detroitQueryUrl = decodeURIComponent(String(url));
+      return response({ features: [{ attributes: {
+        taxpayer_1: 'PUBLIC OWNER', taxpayer_2: 'CO-OWNER', taxpayer_street: 'PO BOX 100', taxpayer_city: 'DETROIT', taxpayer_state: 'MI', taxpayer_zip: '48227', address: '13905 ROBSON', parcel_number: '22044339', property_class_desc: 'RESIDENTIAL-IMPROVED'
+      } }] });
+    }
+  });
+  assert.strictEqual(suffixTolerant.status, 'owner_found');
+  assert.strictEqual(suffixTolerant.owner_record.owner_name, '');
+  assert.strictEqual(suffixTolerant.owner_record.taxpayer_name, 'PUBLIC OWNER');
+  assert.strictEqual(suffixTolerant.owner_record.taxpayer_name_secondary, 'CO-OWNER');
+  assert.deepStrictEqual(suffixTolerant.owner_record.taxpayer_names, ['PUBLIC OWNER', 'CO-OWNER']);
+  assert.strictEqual(suffixTolerant.owner_record.owner_role, 'taxpayer_of_record');
+  assert.strictEqual(suffixTolerant.owner_record.record_label, 'Taxpayer of record');
+  assert.match(detroitQueryUrl, /UPPER\(address\) LIKE '%ROBSON%'/);
+  assert.ok(!/ROBSON ST%/.test(detroitQueryUrl), 'street suffix must not make Detroit suffix-free records unmatchable');
+  assert.strictEqual(suffixTolerant.land_use, 'RESIDENTIAL-IMPROVED');
+  assert.match(suffixTolerant.owner_record.evidence_text, /Taxpayer of record: PUBLIC OWNER/);
+  assert.match(suffixTolerant.owner_record.evidence_text, /Secondary taxpayer: CO-OWNER/);
+
+  const taxpayerRun = await ownerLookup.runPublicParcelOwnerLookup({
+    rows: [{
+      normalized_address: '13905 Robson St, Detroit, MI 48227',
+      city: 'Detroit', county: 'Wayne', state: 'MI'
+    }],
+    market: { city: 'Detroit', county: 'Wayne', state: 'MI' }
+  }, {
+    profiles: [{
+      api_kind: 'arcgis',
+      service_url: 'https://services.example.gov/arcgis/rest/services/DetroitParcels/FeatureServer',
+      layer: 0,
+      verification_status: 'verified_public_schema_taxpayer_only_no_owner_field',
+      field_map: { taxpayer_name: 'taxpayer_1', taxpayer_name_secondary: 'taxpayer_2', taxpayer_mailing_address: ['taxpayer_street', 'taxpayer_city', 'taxpayer_state', 'taxpayer_zip'], situs_address: 'address', parcel_id: 'parcel_number', land_use: 'property_class_desc' }
+    }],
+    fetch_impl: async () => response({ features: [{ attributes: {
+      taxpayer_1: 'WELLS FARGO BANK NA TAX SERVICE ESCROW DEPT',
+      taxpayer_2: 'TAX SERVICE ESCROW DEPT',
+      taxpayer_street: 'PO BOX 1629',
+      taxpayer_city: 'MINNEAPOLIS',
+      taxpayer_state: 'MN',
+      taxpayer_zip: '55440',
+      address: '13905 ROBSON',
+      parcel_number: '22044339',
+      property_class_desc: 'RESIDENTIAL-IMPROVED'
+    } }] })
+  });
+  assert.strictEqual(taxpayerRun.attempt_records[0].outcome, 'FOUND');
+  assert.match(taxpayerRun.attempt_records[0].reason_text, /Taxpayer of record and\/or mailing route found/);
+  assert.strictEqual(taxpayerRun.results.get('13905 robson st, detroit, mi 48227').owner_record.owner_name, '');
+  assert.strictEqual(taxpayerRun.results.get('13905 robson st, detroit, mi 48227').owner_record.taxpayer_name, 'WELLS FARGO BANK NA TAX SERVICE ESCROW DEPT');
+  assert.deepStrictEqual(taxpayerRun.results.get('13905 robson st, detroit, mi 48227').owner_record.taxpayer_names, ['WELLS FARGO BANK NA TAX SERVICE ESCROW DEPT', 'TAX SERVICE ESCROW DEPT']);
+  assert.strictEqual(taxpayerRun.results.get('13905 robson st, detroit, mi 48227').owner_record.is_entity, true);
+  assert.ok(taxpayerRun.results.get('13905 robson st, detroit, mi 48227').mailing_route.risk_flags.includes('taxpayer_may_not_be_owner_may_be_servicer_or_escrow'));
 
   const ambiguous = await ownerLookup.lookupOwnerForRow(row, {
     profiles: [profile],
@@ -123,6 +196,14 @@ function response(body, status = 200) {
     fetch_impl: async () => response({ features: [{ attributes: { OWNER: 'Jane Owner', MAIL1: '100 Mail St', APN: 'ABC' } }] })
   });
   assert.match(unverifiedRun.attempt_records[0].reason_text, /Profile caveat: unverified_field_map_guess_discovery_timed_out/);
+  const bexarProfile = parcelProfiles.PROFILES.find((item) => item.profile_id === 'tx_bexar_arcgis_parcels');
+  assert.strictEqual(bexarProfile.verified_at, null, 'Bexar cannot be marked verified after an unreachable discovery retry');
+  assert.strictEqual(bexarProfile.verification_status, 'unverified_field_map_guess_discovery_timed_out');
+  assert.match(bexarProfile.verification_evidence, /22-57-27-738Z\.json$/);
+  const detroitProfile = parcelProfiles.PROFILES.find((item) => item.profile_id === 'mi_detroit_arcgis_parcels_current');
+  assert.strictEqual(detroitProfile.verified_at, '2026-08-11');
+  assert.strictEqual(detroitProfile.field_map.land_use, 'property_class_desc');
+  assert.strictEqual(detroitProfile.record_count, 380445);
 
   console.log('public parcel owner lookup tests passed');
 })().catch((error) => {

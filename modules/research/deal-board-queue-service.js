@@ -412,6 +412,9 @@ function sourceIdentityKey(row) {
 
 function projectRowForQueue(deal, dedupeKey, seenAt) {
   const rowState = rowStateForDeal(deal);
+  const ownerDisplayName = cleanText(deal.owner_record && (deal.owner_record.owner_name || deal.owner_record.taxpayer_name));
+  const ownerDisplayLabel = cleanText(deal.owner_record && deal.owner_record.record_label)
+    || (cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
   return {
     queue_key: dedupeKey,
     headline: cleanText(deal.headline),
@@ -449,20 +452,28 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     realtor_url: cleanText(deal.realtor_url) || null,
     auction_url: cleanText(deal.auction_url) || null,
     official_property_record_url: cleanText(deal.official_property_record_url) || null,
-    owner_clue: deal.owner_record && cleanText(deal.owner_record.owner_name)
-      ? `${cleanText(deal.owner_record.owner_name)}${deal.owner_record.is_entity ? ' [entity]' : ''}`
+    owner_clue: ownerDisplayName
+      ? `${cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? `${ownerDisplayLabel}: ${ownerDisplayName}` : ownerDisplayName}${deal.owner_record.is_entity ? ' [entity]' : ''}`
       : cleanText(((deal.owner_or_entity_clues || [])[0] || {}).value) || cleanText(deal.owner_name_if_visible),
     owner_record: deal.owner_record && typeof deal.owner_record === 'object' ? {
       owner_name: cleanText(deal.owner_record.owner_name),
+      taxpayer_name: cleanText(deal.owner_record.taxpayer_name),
+      taxpayer_name_secondary: cleanText(deal.owner_record.taxpayer_name_secondary),
+      taxpayer_names: Array.isArray(deal.owner_record.taxpayer_names) ? deal.owner_record.taxpayer_names.map(cleanText).filter(Boolean) : [],
       mailing_address: cleanText(deal.owner_record.mailing_address),
+      taxpayer_mailing_address: cleanText(deal.owner_record.taxpayer_mailing_address),
       parcel_id: cleanText(deal.owner_record.parcel_id),
       situs_address: cleanText(deal.owner_record.situs_address),
+      land_use: cleanText(deal.owner_record.land_use),
       is_entity: deal.owner_record.is_entity === true,
+      owner_role: cleanText(deal.owner_record.owner_role),
+      record_label: cleanText(deal.owner_record.record_label),
       verification_status: cleanText(deal.owner_record.verification_status),
       source_kind: cleanText(deal.owner_record.source_kind),
       source_url: cleanText(deal.owner_record.source_url),
       evidence_text: cleanText(deal.owner_record.evidence_text)
     } : null,
+    land_use: cleanText(deal.land_use || (deal.owner_record && deal.owner_record.land_use)),
     mailing_route: deal.mailing_route && typeof deal.mailing_route === 'object' ? {
       route_kind: cleanText(deal.mailing_route.route_kind),
       route_type: cleanText(deal.mailing_route.route_type),
@@ -707,7 +718,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
-    'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts',
+    'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'land_use',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',

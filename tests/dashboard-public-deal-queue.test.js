@@ -34,7 +34,7 @@ function mockDeal(overrides) {
     maps_url: 'https://maps.example/q',
     free_contact_status: 'CALL_READY',
     free_contact_routes: [{ route_kind: 'phone', value: '(888) 313-1969', route_type: 'trustee_servicer_or_official', source_kind: 'public_source_document', source_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf', evidence_text: 'For Sale Information: (888) 313-1969' }],
-    owner_record: { owner_name: 'KILLER CAPITAL CONSULTANTS LLC', is_entity: true, source_kind: 'official_public_record', source_url: 'https://dcad.org/record', evidence_text: 'Owner: KILLER CAPITAL CONSULTANTS LLC' },
+    owner_record: { owner_name: 'KILLER CAPITAL CONSULTANTS LLC', land_use: 'Commercial', is_entity: true, source_kind: 'official_public_record', source_url: 'https://dcad.org/record', evidence_text: 'Owner: KILLER CAPITAL CONSULTANTS LLC | Land use: Commercial' },
     official_lookup_status: 'OWNER_CLUE_ONLY',
     appraisal_clues: [{ value: '$153,440' }],
     verified_sold_comp_count: 0,
@@ -190,6 +190,8 @@ function mockDeal(overrides) {
   assert.strictEqual(stored.markets['dallas|dallas|tx'].batches[0].suppressed_nav_chrome_samples.length, 5, 'stored batch must retain bounded suppression samples');
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, [], 'no saved-lead mutation');
   assert.ok(run1.rows.every((row) => row.not_a_saved_lead === true && row.preview_only === true));
+  assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').land_use, 'Commercial');
+  assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').owner_record.land_use, 'Commercial');
 
   // Non-TX markets with no verified lanes should short-circuit before any preview work.
   const clevelandPreviewCalls = [];

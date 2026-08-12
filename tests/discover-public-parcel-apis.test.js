@@ -28,7 +28,13 @@ function response(body, status = 200) {
   map.set('https://example.gov/arcgis/rest/services/Parcels/MapServer/0/query?f=json&where=1%3D1&returnCountOnly=true', response({ count: 123 }));
 
   const report = await discovery.runDiscovery({
-    targets: [{ market: 'Example', service_url: 'https://example.gov/arcgis/rest/services/Parcels/MapServer', layer: 0 }],
+    targets: [{
+      market: 'Example',
+      purpose: 'recorded_sales',
+      service_url: 'https://example.gov/arcgis/rest/services/Parcels/MapServer',
+      layer: 0,
+      required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+    }],
     fetch_impl: async (url) => {
       const hit = map.get(String(url));
       if (!hit) throw new Error(`unexpected:${url}`);
@@ -39,6 +45,23 @@ function response(body, status = 200) {
   assert.strictEqual(report.results[0].record_count, 123);
   assert.strictEqual(report.results[0].exposes_owner_name, true);
   assert.strictEqual(report.results[0].exposes_sale_price, true);
+  assert.strictEqual(report.results[0].gate_status, 'open_usable');
+  assert.deepStrictEqual(report.results[0].missing_required_capabilities, []);
+
+  const insufficient = await discovery.runDiscovery({
+    targets: [{
+      market: 'No price',
+      purpose: 'recorded_sales',
+      service_url: 'https://example.gov/arcgis/rest/services/Parcels/MapServer',
+      layer: 0,
+      required_capabilities: ['sale_price', 'sale_date', 'comp_location_key']
+    }],
+    fetch_impl: async (url) => String(url).includes('/query?')
+      ? response({ count: 1 })
+      : response({ fields: [{ name: 'APN' }, { name: 'DOCDATE' }] })
+  });
+  assert.strictEqual(insufficient.results[0].gate_status, 'open_insufficient_fields');
+  assert.deepStrictEqual(insufficient.results[0].missing_required_capabilities, ['sale_price', 'comp_location_key']);
 
   const blocked = await discovery.runDiscovery({
     targets: [{ market: 'Blocked', service_url: 'https://blocked.gov/arcgis/rest/services/Parcels/MapServer', layer: 0 }],
