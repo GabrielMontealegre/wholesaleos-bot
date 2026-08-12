@@ -1,0 +1,2609 @@
+{
+  "generated_at": "2026-08-12T12:18:38.617Z",
+  "preview_only": true,
+  "no_global_mutation": true,
+  "targets_checked": 17,
+  "counties": [
+    {
+      "county": "Franklin",
+      "state": "OH",
+      "metro": "Columbus",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://property.franklincountyauditor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://auditor.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://property.franklincountyauditor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://court.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.franklincountyohio.gov/Government/Departments/Treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Franklin may have a free auditor layer or searchable records index with enough parcel context for taxpayer or owner routing.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://property.franklincountyauditor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://auditor.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://property.franklincountyauditor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://court.franklincountyohio.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.franklincountyohio.gov/Government/Departments/Treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Franklin",
+        "state": "OH",
+        "metro": "Columbus",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://property.franklincountyauditor.com/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Franklin may have a free auditor layer or searchable records index with enough parcel context for taxpayer or owner routing.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Hamilton",
+      "state": "OH",
+      "metro": "Cincinnati",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hamiltoncountyohio.gov/government/departments/auditor",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://cagis.hamilton-co.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://cagis.hamilton-co.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hamiltoncountyohio.gov/government/departments/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.hamiltoncountyauditor.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Hamilton may expose parcel or appraisal search through a county GIS or auditor portal; foreclosure postings may ride a separate county index.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hamiltoncountyohio.gov/government/departments/auditor",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://cagis.hamilton-co.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://cagis.hamilton-co.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hamiltoncountyohio.gov/government/departments/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.hamiltoncountyauditor.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Hamilton",
+        "state": "OH",
+        "metro": "Cincinnati",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.hamiltoncountyohio.gov/government/departments/auditor",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Hamilton may expose parcel or appraisal search through a county GIS or auditor portal; foreclosure postings may ride a separate county index.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Cuyahoga",
+      "state": "OH",
+      "metro": "Cleveland",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://cuyahogacounty.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://cuyahogacounty.gov/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://cuyahogacounty.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://cuyahogacounty.gov/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://cuyahogalandbank.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Recheck monthly. Current verified outcome remains blocked by county network reachability from automated vantages.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://cuyahogacounty.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://cuyahogacounty.gov/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://cuyahogacounty.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://cuyahogacounty.gov/treasurer",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://cuyahogalandbank.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Cuyahoga",
+        "state": "OH",
+        "metro": "Cleveland",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://cuyahogacounty.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Recheck monthly. Current verified outcome remains blocked by county network reachability from automated vantages.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Philadelphia",
+      "state": "PA",
+      "metro": "Philadelphia",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://property.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://atlas.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://property.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://opendataphilly.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.phila.gov/departments/department-of-records/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Philadelphia may support open parcel and distress-data workflows through property and open-data portals.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://property.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://atlas.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://property.phila.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://opendataphilly.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.phila.gov/departments/department-of-records/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Philadelphia",
+        "state": "PA",
+        "metro": "Philadelphia",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://property.phila.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Philadelphia may support open parcel and distress-data workflows through property and open-data portals.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Cook",
+      "state": "IL",
+      "metro": "Chicago",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.cookcountyassessor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://datacatalog.cookcountyil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://datacatalog.cookcountyil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.cookcountyclerkil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.cookcountysheriffil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Cook may expose assessor/search and public data catalog endpoints suitable for proof-only or mail-ready evidence.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.cookcountyassessor.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://datacatalog.cookcountyil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://datacatalog.cookcountyil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.cookcountyclerkil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.cookcountysheriffil.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Cook",
+        "state": "IL",
+        "metro": "Chicago",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.cookcountyassessor.com/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Cook may expose assessor/search and public data catalog endpoints suitable for proof-only or mail-ready evidence.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Mecklenburg",
+      "state": "NC",
+      "metro": "Charlotte",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://polaris3g.mecklenburgcountync.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.mecknc.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://polaris3g.mecklenburgcountync.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://meckrod.manatron.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.mecknc.gov/TaxCollections",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Mecklenburg may expose parcel detail through Polaris or related county record systems.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://polaris3g.mecklenburgcountync.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.mecknc.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://polaris3g.mecklenburgcountync.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://meckrod.manatron.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.mecknc.gov/TaxCollections",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Mecklenburg",
+        "state": "NC",
+        "metro": "Charlotte",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://polaris3g.mecklenburgcountync.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Mecklenburg may expose parcel detail through Polaris or related county record systems.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Marion",
+      "state": "IN",
+      "metro": "Indianapolis",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.indy.gov/activity/code-enforcement",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Marion may expose property and distress evidence through Indy maps or city/county open-data pages.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.indy.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.indy.gov/activity/code-enforcement",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Marion",
+        "state": "IN",
+        "metro": "Indianapolis",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://maps.indy.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Marion may expose property and distress evidence through Indy maps or city/county open-data pages.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Duval",
+      "state": "FL",
+      "metro": "Jacksonville",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://paopropertysearch.coj.net/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.coj.net/departments/property-appraiser",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://paopropertysearch.coj.net/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.coj.net/departments/property-appraiser",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.coj.net/departments/code-enforcement",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Duval may provide free public parcel/search and city distress pages suitable for public-proof rows.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://paopropertysearch.coj.net/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.coj.net/departments/property-appraiser",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://paopropertysearch.coj.net/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.coj.net/departments/property-appraiser",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.coj.net/departments/code-enforcement",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Duval",
+        "state": "FL",
+        "metro": "Jacksonville",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://paopropertysearch.coj.net/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Duval may provide free public parcel/search and city distress pages suitable for public-proof rows.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Hillsborough",
+      "state": "FL",
+      "metro": "Tampa",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hcpafl.org/Property-Search",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.hillsboroughcounty.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hcpafl.org/Property-Search",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hillsclerk.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.hillsboroughcounty.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Hillsborough may have an assessor search and clerk notices suitable for a free public lane.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hcpafl.org/Property-Search",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.hillsboroughcounty.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hcpafl.org/Property-Search",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hillsclerk.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.hillsboroughcounty.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Hillsborough",
+        "state": "FL",
+        "metro": "Tampa",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.hcpafl.org/Property-Search",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Hillsborough may have an assessor search and clerk notices suitable for a free public lane.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Clark",
+      "state": "NV",
+      "metro": "Las Vegas",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.clarkcountynv.gov/government/departments",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Clark may expose GIS/assessor data and county notices through public map services.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.clarkcountynv.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.clarkcountynv.gov/government/departments",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Clark",
+        "state": "NV",
+        "metro": "Las Vegas",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://maps.clarkcountynv.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Clark may expose GIS/assessor data and county notices through public map services.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Oakland",
+      "state": "MI",
+      "metro": "Detroit",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.oakgov.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://bsaonline.com/?uid=215",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.oakgov.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.oakgov.com/government/property-assessment",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.oakgov.com/government/departments/community-development/land-banking",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Oakland may expose parcel and land-bank evidence through county or BSAOnline-linked public pages.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.oakgov.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://bsaonline.com/?uid=215",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.oakgov.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.oakgov.com/government/property-assessment",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.oakgov.com/government/departments/community-development/land-banking",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Oakland",
+        "state": "MI",
+        "metro": "Detroit",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.oakgov.com/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Oakland may expose parcel and land-bank evidence through county or BSAOnline-linked public pages.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Macomb",
+      "state": "MI",
+      "metro": "Detroit",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://access.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://access.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.macombgov.org/tax-foreclosure",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Macomb may have public parcel or tax-foreclosure material through county web properties.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://access.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://access.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.macombgov.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.macombgov.org/tax-foreclosure",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Macomb",
+        "state": "MI",
+        "metro": "Detroit",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.macombgov.org/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Macomb may have public parcel or tax-foreclosure material through county web properties.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Genesee",
+      "state": "MI",
+      "metro": "Flint",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://bsaonline.com/?uid=1487",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.geneseecountymi.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://bsaonline.com/?uid=1487",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.geneseecountymi.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.geneseecountymi.gov/departments/treasurer.php",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Genesee may expose property and distress evidence through a BSAOnline-backed county page or county treasury pages.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://bsaonline.com/?uid=1487",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.geneseecountymi.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://bsaonline.com/?uid=1487",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.geneseecountymi.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.geneseecountymi.gov/departments/treasurer.php",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Genesee",
+        "state": "MI",
+        "metro": "Flint",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://bsaonline.com/?uid=1487",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Genesee may expose property and distress evidence through a BSAOnline-backed county page or county treasury pages.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Maricopa",
+      "state": "AZ",
+      "metro": "Phoenix",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://mcassessor.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://mcassessor.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.maricopa.gov/3525/Tax-Sale",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Maricopa has longstanding assessor and tax-sale public data that may support a future free lane.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://mcassessor.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://mcassessor.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.maricopa.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.maricopa.gov/3525/Tax-Sale",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Maricopa",
+        "state": "AZ",
+        "metro": "Phoenix",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://mcassessor.maricopa.gov/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Maricopa has longstanding assessor and tax-sale public data that may support a future free lane.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Harris",
+      "state": "TX",
+      "metro": "Houston",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hcad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.cclerk.hctx.net/applications/websearch/FRCL_R.aspx",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.hcad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.cclerk.hctx.net/applications/websearch/FRCL_R.aspx",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.harriscountytreasurer.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Harris has search-app foreclosure pages but no config-fit direct notice lane yet.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hcad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.cclerk.hctx.net/applications/websearch/FRCL_R.aspx",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.hcad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.cclerk.hctx.net/applications/websearch/FRCL_R.aspx",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.harriscountytreasurer.com/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Harris",
+        "state": "TX",
+        "metro": "Houston",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.hcad.org/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Harris has search-app foreclosure pages but no config-fit direct notice lane yet.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Tarrant",
+      "state": "TX",
+      "metro": "Fort Worth",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.tad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://publicsearch.tarrantcountytx.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.tad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://www.tarrantcountytx.gov/en/county-clerk/real-estate-records/foreclosures.html",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://publicsearch.tarrantcountytx.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Tarrant remains portal-heavy; retain as a future free-public survey candidate only.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.tad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://publicsearch.tarrantcountytx.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.tad.org/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://www.tarrantcountytx.gov/en/county-clerk/real-estate-records/foreclosures.html",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://publicsearch.tarrantcountytx.gov/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Tarrant",
+        "state": "TX",
+        "metro": "Fort Worth",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://www.tad.org/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Hypothesis: Tarrant remains portal-heavy; retain as a future free-public survey candidate only.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    },
+    {
+      "county": "Bexar",
+      "state": "TX",
+      "metro": "San Antonio",
+      "tier": "BLOCKED",
+      "status": "blocked",
+      "open_legs": [],
+      "closed_legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "reasons": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            },
+            {
+              "url": "https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema"
+            }
+          ]
+        }
+      ],
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Verified open in Cycle 6 for the foreclosure lane; parcel owner lookup remains separately caveated.",
+      "legs": [
+        {
+          "leg": "parcel",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "sales",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        },
+        {
+          "leg": "distress",
+          "status": "closed",
+          "results": [
+            {
+              "url": "https://maps.bexar.org/foreclosures/",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            },
+            {
+              "url": "https://www.bexar.org/DocumentCenter/View/505/Current-County-Clerk-Foreclosures",
+              "status": "closed",
+              "blocked_reason": "html_portal_no_machine_readable_schema",
+              "schema_parsed": false,
+              "schema_kind": "",
+              "field_list": [],
+              "field_map_proposal": {}
+            }
+          ]
+        }
+      ],
+      "profile_draft": {
+        "county": "Bexar",
+        "state": "TX",
+        "metro": "San Antonio",
+        "readiness_tier": "BLOCKED",
+        "verification_status": "unverified_no_machine_readable_schema",
+        "verified_at": null,
+        "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+        "source_family": "county_onboarding_discovery",
+        "source_url": "https://maps.bexar.org/foreclosures/",
+        "city_names": [],
+        "field_map": {},
+        "blocked_reason": "html_portal_no_machine_readable_schema",
+        "hypothesis": "Verified open in Cycle 6 for the foreclosure lane; parcel owner lookup remains separately caveated.",
+        "notes": "html_portal_no_machine_readable_schema"
+      }
+    }
+  ],
+  "profile_drafts": [
+    {
+      "county": "Franklin",
+      "state": "OH",
+      "metro": "Columbus",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://property.franklincountyauditor.com/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Franklin may have a free auditor layer or searchable records index with enough parcel context for taxpayer or owner routing.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Hamilton",
+      "state": "OH",
+      "metro": "Cincinnati",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.hamiltoncountyohio.gov/government/departments/auditor",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Hamilton may expose parcel or appraisal search through a county GIS or auditor portal; foreclosure postings may ride a separate county index.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Cuyahoga",
+      "state": "OH",
+      "metro": "Cleveland",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://cuyahogacounty.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Recheck monthly. Current verified outcome remains blocked by county network reachability from automated vantages.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Philadelphia",
+      "state": "PA",
+      "metro": "Philadelphia",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://property.phila.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Philadelphia may support open parcel and distress-data workflows through property and open-data portals.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Cook",
+      "state": "IL",
+      "metro": "Chicago",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.cookcountyassessor.com/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Cook may expose assessor/search and public data catalog endpoints suitable for proof-only or mail-ready evidence.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Mecklenburg",
+      "state": "NC",
+      "metro": "Charlotte",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://polaris3g.mecklenburgcountync.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Mecklenburg may expose parcel detail through Polaris or related county record systems.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Marion",
+      "state": "IN",
+      "metro": "Indianapolis",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://maps.indy.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Marion may expose property and distress evidence through Indy maps or city/county open-data pages.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Duval",
+      "state": "FL",
+      "metro": "Jacksonville",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://paopropertysearch.coj.net/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Duval may provide free public parcel/search and city distress pages suitable for public-proof rows.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Hillsborough",
+      "state": "FL",
+      "metro": "Tampa",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.hcpafl.org/Property-Search",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Hillsborough may have an assessor search and clerk notices suitable for a free public lane.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Clark",
+      "state": "NV",
+      "metro": "Las Vegas",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://maps.clarkcountynv.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Clark may expose GIS/assessor data and county notices through public map services.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Oakland",
+      "state": "MI",
+      "metro": "Detroit",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.oakgov.com/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Oakland may expose parcel and land-bank evidence through county or BSAOnline-linked public pages.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Macomb",
+      "state": "MI",
+      "metro": "Detroit",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.macombgov.org/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Macomb may have public parcel or tax-foreclosure material through county web properties.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Genesee",
+      "state": "MI",
+      "metro": "Flint",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://bsaonline.com/?uid=1487",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Genesee may expose property and distress evidence through a BSAOnline-backed county page or county treasury pages.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Maricopa",
+      "state": "AZ",
+      "metro": "Phoenix",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://mcassessor.maricopa.gov/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Maricopa has longstanding assessor and tax-sale public data that may support a future free lane.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Harris",
+      "state": "TX",
+      "metro": "Houston",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.hcad.org/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Harris has search-app foreclosure pages but no config-fit direct notice lane yet.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Tarrant",
+      "state": "TX",
+      "metro": "Fort Worth",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://www.tad.org/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Hypothesis: Tarrant remains portal-heavy; retain as a future free-public survey candidate only.",
+      "notes": "html_portal_no_machine_readable_schema"
+    },
+    {
+      "county": "Bexar",
+      "state": "TX",
+      "metro": "San Antonio",
+      "readiness_tier": "BLOCKED",
+      "verification_status": "unverified_no_machine_readable_schema",
+      "verified_at": null,
+      "verification_evidence": "exports/county-onboarding/county-onboarding-2026-08-12T12-18-38-617Z.json",
+      "source_family": "county_onboarding_discovery",
+      "source_url": "https://maps.bexar.org/foreclosures/",
+      "city_names": [],
+      "field_map": {},
+      "blocked_reason": "html_portal_no_machine_readable_schema",
+      "hypothesis": "Verified open in Cycle 6 for the foreclosure lane; parcel owner lookup remains separately caveated.",
+      "notes": "html_portal_no_machine_readable_schema"
+    }
+  ],
+  "output_path": "C:\\Users\\criss\\Desktop\\Github-Codex folder\\wholesaleos-bot\\exports\\county-onboarding\\county-onboarding-2026-08-12T12-18-38-617Z.json"
+}

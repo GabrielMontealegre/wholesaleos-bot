@@ -163,6 +163,10 @@ function mockDeal(overrides) {
   );
   assert.strictEqual(run1.ok, true);
   assert.strictEqual(run1.snapshot_kind, 'deal_board_snapshot_not_saved_leads');
+  assert.ok(run1.county_onboarding, 'batch response must include county onboarding summary');
+  assert.strictEqual(run1.county_onboarding.current_market.city, 'Dallas');
+  assert.ok(run1.county_onboarding.readiness_counts.total_counties >= 16, 'county onboarding summary must include the candidate registry');
+  assert.ok(run1.county_onboarding.throughput_plan.active_market_count >= 6, 'throughput plan must include active markets');
   assert.strictEqual(run1.batch.new_rows, 2);
   assert.strictEqual(run1.counts.total_rows, 2);
   assert.strictEqual(run1.counts.call_ready, 1);
@@ -212,6 +216,8 @@ function mockDeal(overrides) {
   assert.deepStrictEqual(clevelandRun.batch.source_coverage, []);
   assert.strictEqual(clevelandRun.batch.ocr, null);
   assert.strictEqual(clevelandRun.counts.total_rows, 0);
+  assert.ok(clevelandRun.county_onboarding, 'empty market response must still include county onboarding summary');
+  assert.strictEqual(clevelandRun.county_onboarding.current_market.city, 'Cleveland');
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file still persisted for empty market');
   const storedAfterCleveland = JSON.parse(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, 'utf8'));
   assert.ok(storedAfterCleveland.markets['cleveland|cuyahoga|oh'], 'empty market bucket must still be recorded');
@@ -747,10 +753,11 @@ function mockDeal(overrides) {
   assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
+  assert.ok(queueSource.includes('countyOnboardingArtifactCache') && queueSource.includes('mtimeMs'), 'county onboarding artifact reads must be cached by modification time');
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=15'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=16'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -804,6 +811,11 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('batches_today'), 'Daily Deal Machine must show batches today');
   assert.ok(uiSource.includes('ocr_address_rows_today'), 'Daily Deal Machine must show OCR rows today');
   assert.ok(uiSource.includes('CALL_READY first'), 'Top Deals must order CALL_READY rows first');
+  assert.ok(uiSource.includes('County Onboarding'), 'dashboard must render the county onboarding panel');
+  assert.ok(uiSource.includes('readiness_counts'), 'county onboarding panel must show readiness counts');
+  assert.ok(uiSource.includes('throughput_plan'), 'county onboarding panel must show the throughput plan');
+  assert.ok(uiSource.includes('Hypothesis'), 'county onboarding panel must separate hypotheses from blocked findings');
+  assert.ok(uiSource.includes('survey artifact') || uiSource.includes('probe artifacts'), 'county onboarding panel must explain the artifact surface');
   assert.ok(uiSource.includes('sale_date_iso'), 'dashboard must consume the normalized sale-date key');
   assert.ok(uiSource.includes('Sale date passed - verify status'), 'dashboard must render passed-sale verification badge');
   assert.ok(uiSource.includes('sortTopDealsRows'), 'dashboard must use the urgency comparator');

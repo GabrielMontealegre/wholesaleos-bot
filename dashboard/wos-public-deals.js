@@ -417,6 +417,52 @@
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
 
+  function countyOnboardingPanel(data) {
+    var onboarding = data.county_onboarding || {};
+    var counts = onboarding.readiness_counts || {};
+    var plan = onboarding.throughput_plan || onboarding.market_plan || {};
+    var counties = Array.isArray(onboarding.counties) ? onboarding.counties : [];
+    var allocations = Array.isArray(plan.allocations) ? plan.allocations : [];
+    var countyRows = counties.length
+      ? counties.slice(0, 8).map(function (county) {
+        return '<tr>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc(county.county || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc(county.state || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc(county.metro || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc(county.tier || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc(county.status || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;">' + esc((county.open_legs || []).join(', ')) + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;color:#991b1b;">' + esc(county.blocked_reason || '') + '</td>' +
+          '<td style="padding:2px 8px;border-bottom:1px solid #eef2ff;color:#6b7280;">' + esc(county.hypothesis || '') + '</td>' +
+          '</tr>';
+      }).join('')
+      : '<tr><td colspan="8" style="padding:4px 8px;color:#6b7280;">No county onboarding registry entries yet.</td></tr>';
+    var allocationList = allocations.length
+      ? '<div style="font-size:11px;color:#374151;margin-top:6px;">Throughput plan: ' + allocations.slice(0, 10).map(function (entry) {
+        return esc(entry.county || entry.market_key || '') + ' ' + esc(entry.allocated_slots || 0) + ' (' + esc(entry.budget_class || '') + ')';
+      }).join(' | ') + '</div>'
+      : '';
+    return panelBox('County Onboarding',
+      'Candidate counties, probe artifacts, and throughput snapshots for the next markets.',
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        chip('Counties', counts.total_counties || counties.length || 0) +
+        chip('Open legs', counts.open_leg_count || 0, '#ddd6fe') +
+        chip('Blocked', counts.blocked_count || 0, '#fecaca') +
+        chip('Active markets', plan.active_market_count || 0, '#bbf7d0') +
+        chip('Piloting markets', plan.piloting_market_count || 0, '#bfdbfe') +
+        chip('Candidate markets', plan.candidate_market_count || 0, '#fed7aa') +
+      '</div>' +
+      (onboarding.generated_at ? '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Generated ' + esc(onboarding.generated_at) + '</div>' : '') +
+      (onboarding.artifact_path ? '<div style="font-size:11px;color:#6b7280;margin-top:2px;">Artifact: ' + esc(onboarding.artifact_path) + '</div>' : '') +
+      allocationList +
+      '<div style="margin-top:6px;overflow:auto;">' +
+      '<table style="width:100%;font-size:11px;border-collapse:collapse;">' +
+      '<tr><th style="text-align:left;padding:2px 8px;">County</th><th style="text-align:left;padding:2px 8px;">State</th><th style="text-align:left;padding:2px 8px;">Metro</th><th style="text-align:left;padding:2px 8px;">Tier</th><th style="text-align:left;padding:2px 8px;">Status</th><th style="text-align:left;padding:2px 8px;">Open legs</th><th style="text-align:left;padding:2px 8px;">Blocked reason</th><th style="text-align:left;padding:2px 8px;">Hypothesis</th></tr>' +
+      countyRows + '</table></div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">county_onboarding / readiness_counts / throughput_plan remain preview metadata only.</div>',
+      '#c7d2fe');
+  }
+
   function sortTopDealsRows(rows) {
     return rows.slice().sort(function (a, b) {
       var aSale = saleDateInfo(a);
@@ -497,7 +543,8 @@
     if (page === 'dashboard') {
       body.innerHTML =
         (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
-        dealDeskCard(data, rows);
+        dealDeskCard(data, rows) +
+        countyOnboardingPanel(data);
       return;
     }
     body.innerHTML =

@@ -19,6 +19,8 @@ const propertyIdentity = require('./property-identity');
 const enrichmentLedger = require('./enrichment-ledger');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const fieldProvenance = require('./field-provenance');
+const enrichmentScheduler = require('./enrichment-scheduler');
+const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const SNAPSHOT_FILE = path.resolve(
@@ -63,6 +65,8 @@ const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROF
 const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS));
+const COUNTY_ONBOARDING_DIR = path.join(process.cwd(), 'exports', 'county-onboarding');
+let countyOnboardingArtifactCache = null;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -410,6 +414,130 @@ function sourceIdentityKey(row) {
   return reference && documentUrl ? `${documentUrl}|${reference}` : '';
 }
 
+function countyReadinessByEntry(entry, artifactCounty) {
+  const tier = cleanText(artifactCounty && artifactCounty.tier) || countyCandidateRegistry.countyOnboardingTier(entry, artifactCounty);
+  const status = cleanText(artifactCounty && artifactCounty.status) || countyCandidateRegistry.countyOnboardingStatus(entry, artifactCounty);
+  return {
+    county: cleanText(entry && entry.county),
+    state: cleanText(entry && entry.state),
+    metro: cleanText(entry && entry.metro),
+    tier,
+    status,
+    open_legs: Array.isArray(artifactCounty && artifactCounty.open_legs)
+      ? artifactCounty.open_legs.slice()
+      : [],
+    blocked_reason: cleanText(artifactCounty && artifactCounty.blocked_reason),
+    hypothesis: cleanText(artifactCounty && artifactCounty.hypothesis) || cleanText(entry && entry.notes),
+    legs: Array.isArray(artifactCounty && artifactCounty.legs) ? artifactCounty.legs.slice() : [],
+    candidate_parcel_hosts: Array.isArray(entry && entry.candidate_parcel_hosts) ? entry.candidate_parcel_hosts.slice() : [],
+    candidate_sales_hosts: Array.isArray(entry && entry.candidate_sales_hosts) ? entry.candidate_sales_hosts.slice() : [],
+    candidate_distress_sources: Array.isArray(entry && entry.candidate_distress_sources) ? entry.candidate_distress_sources.slice() : []
+  };
+}
+
+function throughputTierForCountyStatus(status) {
+  const text = cleanText(status).toLowerCase();
+  if (text === 'live') return 'active';
+  if (text === 'piloting') return 'piloting';
+  return 'candidate';
+}
+
+function latestCountyOnboardingArtifact() {
+  try {
+    if (!fs.existsSync(COUNTY_ONBOARDING_DIR)) return null;
+    const directoryMtimeMs = fs.statSync(COUNTY_ONBOARDING_DIR).mtimeMs;
+    if (countyOnboardingArtifactCache && countyOnboardingArtifactCache.directoryMtimeMs === directoryMtimeMs) {
+      return countyOnboardingArtifactCache.value;
+    }
+    const files = fs.readdirSync(COUNTY_ONBOARDING_DIR)
+      .filter((name) => /\.json$/i.test(name))
+      .map((name) => {
+        const fullPath = path.join(COUNTY_ONBOARDING_DIR, name);
+        const stat = fs.statSync(fullPath);
+        return { fullPath, mtimeMs: stat.mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    if (!files.length) return null;
+    const fullPath = files[0].fullPath;
+    if (countyOnboardingArtifactCache &&
+        countyOnboardingArtifactCache.fullPath === fullPath &&
+        countyOnboardingArtifactCache.mtimeMs === files[0].mtimeMs) {
+      countyOnboardingArtifactCache.directoryMtimeMs = directoryMtimeMs;
+      return countyOnboardingArtifactCache.value;
+    }
+    const data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    const value = { fullPath: path.relative(process.cwd(), fullPath).replace(/\\/g, '/'), data };
+    countyOnboardingArtifactCache = { directoryMtimeMs, fullPath, mtimeMs: files[0].mtimeMs, value };
+    return value;
+  } catch (error) {
+    countyOnboardingArtifactCache = null;
+    return null;
+  }
+}
+
+function countyOnboardingSummary(market) {
+  const artifact = latestCountyOnboardingArtifact();
+  const artifactCounties = artifact && artifact.data && Array.isArray(artifact.data.counties) ? artifact.data.counties : [];
+  const counties = countyCandidateRegistry.COUNTY_CANDIDATES.map((entry) => countyReadinessByEntry(
+    entry,
+    artifactCounties.find((item) => cleanText(item && item.county).toLowerCase() === cleanText(entry && entry.county).toLowerCase() &&
+    cleanText(item && item.state).toUpperCase() === cleanText(entry && entry.state).toUpperCase())
+  ));
+  const liveMarkets = [
+    { market_key: 'dallas|dallas|tx', city: 'Dallas', county: 'Dallas', state: 'TX', tier: 'active', status: 'live', open_legs: ['official_foreclosure', 'tax_sale', 'owner_contact'], row_count: 0, backlog_count: 0 },
+    { market_key: 'detroit|wayne|mi', city: 'Detroit', county: 'Wayne', state: 'MI', tier: 'active', status: 'live', open_legs: ['land_bank', 'official_public_record'], row_count: 0, backlog_count: 0 },
+    { market_key: 'san diego|san diego|ca', city: 'San Diego', county: 'San Diego', state: 'CA', tier: 'active', status: 'live', open_legs: ['tax_default_notice'], row_count: 0, backlog_count: 0 },
+    { market_key: 'los angeles|los angeles|ca', city: 'Los Angeles', county: 'Los Angeles', state: 'CA', tier: 'active', status: 'live', open_legs: ['auction_book'], row_count: 0, backlog_count: 0 },
+    { market_key: 'san antonio|bexar|tx', city: 'San Antonio', county: 'Bexar', state: 'TX', tier: 'active', status: 'live', open_legs: ['foreclosure_notices'], row_count: 0, backlog_count: 0 },
+    { market_key: 'houston|harris|tx', city: 'Houston', county: 'Harris', state: 'TX', tier: 'active', status: 'live', open_legs: ['search_portal'], row_count: 0, backlog_count: 0 }
+  ];
+  const onboardingMarkets = counties.map((county) => ({
+    market_key: `${cleanText(county.county).toLowerCase()}|${cleanText(county.state).toLowerCase()}`,
+    city: cleanText(county.metro) || cleanText(county.county),
+    county: cleanText(county.county),
+    state: cleanText(county.state).toUpperCase(),
+    tier: throughputTierForCountyStatus(county.status),
+    status: county.status || 'candidate',
+    open_legs: Array.isArray(county.open_legs) ? county.open_legs.slice() : [],
+    blocked_reason: cleanText(county.blocked_reason),
+    row_count: 0,
+    backlog_count: 0
+  }));
+  const throughputPlan = enrichmentScheduler.marketThroughputPlan(liveMarkets.concat(onboardingMarkets), {
+    standing_budget: 24,
+    pilot_budget: 6,
+    candidate_budget: 0
+  });
+  const readinessCounts = counties.reduce((memo, county) => {
+    memo.total_counties += 1;
+    memo.by_status[county.status] = (memo.by_status[county.status] || 0) + 1;
+    const throughputTier = throughputTierForCountyStatus(county.status);
+    memo.by_tier[throughputTier] = (memo.by_tier[throughputTier] || 0) + 1;
+    if (Array.isArray(county.open_legs) && county.open_legs.length) memo.open_leg_count += 1;
+    if (cleanText(county.blocked_reason)) memo.blocked_count += 1;
+    return memo;
+  }, {
+    total_counties: 0,
+    open_leg_count: 0,
+    blocked_count: 0,
+    by_status: { live: 0, piloting: 0, survey: 0, blocked: 0 },
+    by_tier: { active: 0, piloting: 0, candidate: 0 }
+  });
+  return {
+    generated_at: artifact && artifact.data && artifact.data.generated_at ? artifact.data.generated_at : nowIso(),
+    artifact_path: artifact ? artifact.fullPath : '',
+    current_market: {
+      city: cleanText(market && market.city),
+      county: cleanText(market && market.county),
+      state: cleanText(market && market.state).toUpperCase()
+    },
+    counties,
+    readiness_counts: readinessCounts,
+    throughput_plan: throughputPlan,
+    market_plan: throughputPlan
+  };
+}
+
 function projectRowForQueue(deal, dedupeKey, seenAt) {
   const rowState = rowStateForDeal(deal);
   const ownerDisplayName = cleanText(deal.owner_record && (deal.owner_record.owner_name || deal.owner_record.taxpayer_name));
@@ -691,6 +819,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
       no_global_mutation: true,
       snapshot_kind: 'deal_board_snapshot_not_saved_leads',
       market,
+      county_onboarding: countyOnboardingSummary(market),
       batch,
       counts: queueCounts([]),
       rows: bucket.rows.slice(0, 100)
@@ -807,6 +936,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     no_global_mutation: true,
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
+    county_onboarding: countyOnboardingSummary(market),
     batch,
     counts,
     rows: bucket.rows.slice(0, 100)
@@ -821,14 +951,15 @@ function latestDealBoardSnapshot(input = {}) {
     return {
       ok: true,
       preview_only: true,
-      snapshot_kind: 'deal_board_snapshot_not_saved_leads',
-      market,
-      has_snapshot: false,
-      counts: queueCounts([]),
-      batch: null,
-      daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
-      auto_run: getAutoRunStatus(market),
-      rows: []
+    snapshot_kind: 'deal_board_snapshot_not_saved_leads',
+    market,
+    has_snapshot: false,
+    counts: queueCounts([]),
+    batch: null,
+    county_onboarding: countyOnboardingSummary(market),
+    daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
+    auto_run: getAutoRunStatus(market),
+    rows: []
     };
   }
   const today = nowIso().slice(0, 10);
@@ -844,6 +975,7 @@ function latestDealBoardSnapshot(input = {}) {
     has_snapshot: true,
     counts: queueCounts(rows),
     batch: (bucket.batches || [])[0] || null,
+    county_onboarding: countyOnboardingSummary(market),
     batches_today: batchesToday.length,
     daily: {
       batches_today: batchesToday.length,
@@ -1107,6 +1239,7 @@ module.exports = {
   backfillCensusKeysForStoredRows,
   collapseStoredCensusExactDuplicates,
   queueCounts,
+  countyOnboardingSummary,
   runDealBoardBatch,
   latestDealBoardSnapshot,
   startDealBoardBatchJob,
