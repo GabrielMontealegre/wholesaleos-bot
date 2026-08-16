@@ -85,6 +85,7 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
 
   const titleNeeded = row({
     contact_workflow_complete: true,
+    contact_workflow_outcome: 'reached',
     free_contact_status: 'CALL_READY',
     free_contact_routes: [route('phone', '(214) 555-0102')],
     verified_sold_comp_count: 3
@@ -92,6 +93,16 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
   assertState('TITLE_NEEDED', titleNeeded, /no verified public title workflow source exists yet/i, /qualified title company/i);
 
   assert.notStrictEqual(leadOperationsState.rowStateForDeal(needsComps).row_state, 'TITLE_NEEDED', 'fewer than 3 comps must never reach title workflow');
+
+  const closedNotInterested = row({
+    queue_key: 'closed-not-interested',
+    contact_workflow_outcome: 'not_interested',
+    contact_workflow_status: 'CLOSED_NOT_INTERESTED',
+    free_contact_status: 'CALL_READY',
+    free_contact_routes: [route('phone', '(214) 555-0105')],
+    verified_sold_comp_count: 3
+  });
+  assertState('CLOSED_NOT_INTERESTED', closedNotInterested, /not interested/i, /do not continue outreach/i);
 
   const quarantined = row({
     queue_key: 'row-quarantined',
@@ -110,24 +121,27 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
 
   const ordered = leadOperationsQueue.buildLeadOperationsQueue([
     row({ queue_key: 'call-late', free_contact_status: 'CALL_READY', free_contact_routes: [route('phone', '1')], sale_date_iso: '2026-08-20' }),
+    row({ queue_key: 'call-follow-up', free_contact_status: 'CALL_READY', free_contact_routes: [route('phone', '9')], contact_follow_up_requested: true, contact_workflow_outcome: 'follow_up', contact_follow_up_at: '2026-08-12T11:00:00.000Z' }),
     row({ queue_key: 'call-soon', free_contact_status: 'CALL_READY', free_contact_routes: [route('phone', '2')], sale_date_iso: '2026-08-14' }),
     row({ queue_key: 'call-tie-b', free_contact_status: 'CALL_READY', free_contact_routes: [route('phone', '3')], sale_date_iso: '2026-08-14' }),
     row({ queue_key: 'call-tie-a', free_contact_status: 'CALL_READY', free_contact_routes: [route('phone', '4')], sale_date_iso: '2026-08-14' }),
     Object.assign({}, contactSearch, { queue_key: 'needs-contact-search' }),
     skipTrace,
+    closedNotInterested,
     quarantined,
     titleNeeded
   ], { today_iso: '2026-08-12' });
   const callKeys = ordered.segments.find((segment) => segment.key === 'CALL_READY').rows.map((item) => item.queue_key);
-  assert.deepStrictEqual(callKeys, ['call-soon', 'call-tie-a', 'call-tie-b', 'call-late']);
+  assert.deepStrictEqual(callKeys, ['call-follow-up', 'call-soon', 'call-tie-a', 'call-tie-b', 'call-late']);
   assert.deepStrictEqual(ordered.segments.find((segment) => segment.key === 'BLOCKED').rows.map((item) => item.queue_key), ['row-quarantined']);
   assert.ok(ordered.segments.filter((segment) => segment.key !== 'BLOCKED').every((segment) => !segment.rows.some((item) => item.queue_key === 'row-quarantined')));
-  assert.deepStrictEqual(ordered.segment_order, ['CALL_READY', 'OUTREACH_READY', 'MAIL_READY', 'NEEDS_CONTACT_SEARCH', 'NEEDS_SKIP_TRACE', 'NEEDS_COMPS', 'TITLE_NEEDED', 'BLOCKED']);
+  assert.deepStrictEqual(ordered.segment_order, ['CALL_READY', 'OUTREACH_READY', 'MAIL_READY', 'NEEDS_CONTACT_SEARCH', 'NEEDS_SKIP_TRACE', 'NEEDS_COMPS', 'TITLE_NEEDED', 'CLOSED_NOT_INTERESTED', 'BLOCKED']);
   assert.strictEqual(ordered.counts.NEEDS_CONTACT_SEARCH, 1);
   assert.strictEqual(ordered.counts.NEEDS_SKIP_TRACE, 1);
   assert.deepStrictEqual(ordered.segments.find((segment) => segment.key === 'NEEDS_CONTACT_SEARCH').rows.map((item) => item.queue_key), ['needs-contact-search']);
   assert.deepStrictEqual(ordered.segments.find((segment) => segment.key === 'NEEDS_SKIP_TRACE').rows.map((item) => item.queue_key), ['needs-skip-trace']);
   assert.strictEqual(ordered.counts.TITLE_NEEDED, 1);
+  assert.strictEqual(ordered.counts.CLOSED_NOT_INTERESTED, 1);
   const summarized = leadOperationsQueue.summarizeLeadOperationsQueue(ordered);
   assert.deepStrictEqual(summarized.segments.find((segment) => segment.key === 'CALL_READY').row_keys, callKeys);
   assert.ok(!JSON.stringify(summarized).includes('normalized_address'), 'transport summary must not duplicate full row payloads');

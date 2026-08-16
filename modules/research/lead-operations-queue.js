@@ -10,6 +10,7 @@ const SEGMENT_ORDER = Object.freeze([
   'NEEDS_SKIP_TRACE',
   'NEEDS_COMPS',
   'TITLE_NEEDED',
+  'CLOSED_NOT_INTERESTED',
   'BLOCKED'
 ]);
 
@@ -21,6 +22,7 @@ const SEGMENT_LABELS = Object.freeze({
   NEEDS_SKIP_TRACE: 'Needs Skip Trace',
   NEEDS_COMPS: 'Needs Comps',
   TITLE_NEEDED: 'Title Needed',
+  CLOSED_NOT_INTERESTED: 'Closed - Not Interested',
   BLOCKED: 'Blocked / Quarantined'
 });
 
@@ -47,6 +49,13 @@ function segmentKey(row) {
 }
 
 function compareRows(a, b, todayIso) {
+  const aFollowUp = a && (a.contact_follow_up_requested === true || cleanText(a.contact_workflow_outcome) === 'follow_up');
+  const bFollowUp = b && (b.contact_follow_up_requested === true || cleanText(b.contact_workflow_outcome) === 'follow_up');
+  if (aFollowUp !== bFollowUp) return aFollowUp ? -1 : 1;
+  if (aFollowUp && bFollowUp) {
+    const followDiff = cleanText(b && b.contact_follow_up_at).localeCompare(cleanText(a && a.contact_follow_up_at));
+    if (followDiff) return followDiff;
+  }
   const today = dateOnly(todayIso) || new Date().toISOString().slice(0, 10);
   const aSale = dateOnly(a && a.sale_date_iso);
   const bSale = dateOnly(b && b.sale_date_iso);

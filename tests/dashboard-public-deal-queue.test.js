@@ -769,6 +769,7 @@ function mockDeal(overrides) {
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/job\/:id',\s*requireAdmin/.test(serverSource), 'job status route must be admin-protected');
   assert.ok(/startDealBoardBatchJob/.test(serverSource), 'run route must start a background job');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/auto-run',\s*requireAdmin/.test(serverSource), 'auto-run route must be admin-protected');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/contact-workflow',\s*requireAdmin/.test(serverSource), 'contact workflow route must be admin-protected');
   assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
@@ -776,7 +777,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=18'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=19'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -795,6 +796,12 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Needs contact search'), 'dashboard must show unfinished free-contact-search counts separately');
   assert.ok(uiSource.includes('NEEDS_CONTACT_SEARCH'), 'dashboard must render the contact-search segment');
   assert.ok(uiSource.includes('Needs skip trace'), 'dashboard must show skip-trace need counts');
+  assert.ok(uiSource.includes('API_CONTACT_WORKFLOW') && uiSource.includes('/contact-workflow'), 'dashboard must call the explicit contact-workflow route');
+  assert.ok(uiSource.includes('Select outcome') && uiSource.includes('Mark contacted'), 'Deal Finder rows must expose the operator contact control');
+  assert.ok(uiSource.includes('Nothing changes until you save an outcome.'), 'contact control must state that it is explicit operator input');
+  assert.ok(uiSource.includes('CLOSED_NOT_INTERESTED') && uiSource.includes('Closed - Not Interested'), 'dashboard must render closed-not-interested as its own segment');
+  assert.ok(uiSource.includes('contact_workflow_attempts') && uiSource.includes('Last contact attempt'), 'dashboard must expose append-only contact attempt history');
+  assert.ok(queueSource.includes('contact_workflow_invalidated_routes') && queueSource.includes('OPERATOR_WRONG_NUMBER_REPORTED'), 'wrong-number contact workflow must invalidate the disproven route');
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
