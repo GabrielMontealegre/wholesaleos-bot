@@ -59,6 +59,7 @@ function buildJob(overrides = {}) {
     city: 'Dallas',
     county: 'Dallas',
     state: 'TX',
+    source_ids: ['tx_dallas_county_clerk_foreclosure_notices'],
     source_families: ['preforeclosure_trustee_notice'],
     source_acquisition_enabled: true,
     acquisition_core_enabled: true,

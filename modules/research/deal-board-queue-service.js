@@ -34,6 +34,13 @@ const MAX_BATCHES_PER_MARKET = 60;
 const MIN_BATCH_LIMIT = 5;
 const MAX_BATCH_LIMIT = 25;
 const MAX_STORED_CENSUS_BACKFILLS_PER_BATCH = 5;
+const CONTACT_WORKFLOW_OUTCOMES = Object.freeze([
+  'reached',
+  'left_message',
+  'wrong_number',
+  'not_interested',
+  'follow_up'
+]);
 
 // Queue lanes: every registered free adapter, requested EXPLICITLY so the
 // orchestrator also runs contact-first lanes that are auto_select:false.
@@ -75,7 +82,12 @@ function cleanText(value) {
 
 function cloneSnapshotRow(row) {
   const copy = Object.assign({}, row || {});
-  for (const key of ['risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps', 'seller_questions', 'free_contact_routes', 'entity_contacts', 'blocked_sources', 'free_searches_run']) {
+  for (const key of [
+    'risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps',
+    'seller_questions', 'free_contact_routes', 'entity_contacts',
+    'blocked_sources', 'free_searches_run', 'contact_workflow_attempts',
+    'contact_workflow_invalidated_routes'
+  ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
   for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution']) {
@@ -97,6 +109,52 @@ function prependUnique(values, additions, limit) {
       return true;
     })
     .slice(0, limit);
+}
+
+function appendRiskFlag(flags, flag, limit) {
+  return prependUnique(flags || [], [flag], limit || 6);
+}
+
+function safeRouteList(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function routeValue(route) {
+  return cleanText(route && route.value);
+}
+
+function invalidatedRouteValues(row) {
+  return new Set(safeRouteList(row && row.contact_workflow_invalidated_routes)
+    .map((item) => routeValue(item))
+    .filter(Boolean));
+}
+
+function markRoutesDisproved(row, values) {
+  const invalidated = values instanceof Set ? values : invalidatedRouteValues(row);
+  if (!invalidated.size) return row;
+  row.free_contact_routes = safeRouteList(row.free_contact_routes).map((route) => {
+    if (!invalidated.has(routeValue(route))) return route;
+    const updated = Object.assign({}, route);
+    updated.operator_disproved = true;
+    updated.operator_disproved_reason = 'wrong_number';
+    updated.risk_flags = appendRiskFlag(updated.risk_flags, 'OPERATOR_WRONG_NUMBER_REPORTED', 6);
+    return updated;
+  });
+  const bestContact = cleanText(row.best_contact);
+  if (bestContact && Array.from(invalidated).some((value) => bestContact.includes(value))) row.best_contact = '';
+  return row;
+}
+
+function mergeRouteInvalidations(existing, refreshed) {
+  const invalidated = invalidatedRouteValues(existing);
+  if (!invalidated.size) return refreshed;
+  refreshed.contact_workflow_invalidated_routes = safeRouteList(existing.contact_workflow_invalidated_routes)
+    .concat(safeRouteList(refreshed.contact_workflow_invalidated_routes))
+    .filter((item, index, list) => {
+      const value = routeValue(item);
+      return value && list.findIndex((other) => routeValue(other) === value) === index;
+    });
+  return markRoutesDisproved(refreshed, invalidated);
 }
 
 function mapsSearchUrlForReview(value) {
@@ -200,6 +258,7 @@ function repairCountyFromSourceHost(row) {
 
 function repairStoredSnapshotRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((row) => {
+    markRoutesDisproved(row, invalidatedRouteValues(row));
     quarantineSuspectedPrefixRow(row);
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
@@ -620,6 +679,14 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     row_state_next_action: rowState.next_action,
     contact_workflow_complete: deal.contact_workflow_complete === true,
     contact_workflow_status: cleanText(deal.contact_workflow_status || deal.operator_contact_status),
+    contact_workflow_outcome: cleanText(deal.contact_workflow_outcome),
+    contact_workflow_at: cleanText(deal.contact_workflow_at),
+    contact_workflow_source: cleanText(deal.contact_workflow_source),
+    contact_workflow_recorded_by: cleanText(deal.contact_workflow_recorded_by),
+    contact_workflow_attempts: Array.isArray(deal.contact_workflow_attempts) ? deal.contact_workflow_attempts.slice() : [],
+    contact_workflow_invalidated_routes: Array.isArray(deal.contact_workflow_invalidated_routes) ? deal.contact_workflow_invalidated_routes.slice() : [],
+    contact_follow_up_requested: deal.contact_follow_up_requested === true,
+    contact_follow_up_at: cleanText(deal.contact_follow_up_at),
     official_lookup_status: cleanText(deal.official_lookup_status),
     contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
     free_contact_status: cleanText(deal.free_contact_status),
@@ -764,6 +831,7 @@ function queueCounts(rows) {
     needs_skip_trace: rows.filter((row) => row.row_state === 'NEEDS_SKIP_TRACE').length,
     needs_comps_state: rows.filter((row) => row.row_state === 'NEEDS_COMPS').length,
     title_needed: rows.filter((row) => row.row_state === 'TITLE_NEEDED').length,
+    closed_not_interested: rows.filter((row) => row.row_state === 'CLOSED_NOT_INTERESTED').length,
     locked: rows.filter((row) => row.row_state === 'LOCKED').length,
     row_states: states,
     inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW').length,
@@ -855,7 +923,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible', 'free_contact_status',
     'free_contact_routes', 'blocked_sources', 'free_searches_run', 'why_call_ready_or_blocked',
-    'contact_workflow_complete', 'contact_workflow_status',
+    'contact_workflow_complete', 'contact_workflow_status', 'contact_workflow_outcome',
+    'contact_workflow_at', 'contact_workflow_source', 'contact_workflow_recorded_by',
+    'contact_workflow_attempts', 'contact_workflow_invalidated_routes',
+    'contact_follow_up_requested', 'contact_follow_up_at',
     'enrichment_ledger', 'enrichment_skip_rollups'
   ];
   let newRows = 0;
@@ -883,6 +954,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
       for (const field of PRESERVE_FIELDS) {
         if (Array.isArray(existing[field])) {
           if (!Array.isArray(refreshed[field]) || !refreshed[field].length) refreshed[field] = existing[field].slice();
+        } else if (field === 'contact_workflow_complete') {
+          if (existing.contact_workflow_complete === true) refreshed.contact_workflow_complete = true;
+        } else if (field === 'contact_follow_up_requested') {
+          if (existing.contact_follow_up_requested === true) refreshed.contact_follow_up_requested = true;
         } else if (field === 'enrichment_ledger') {
           refreshed.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, refreshed);
         } else if (field === 'enrichment_skip_rollups') {
@@ -893,6 +968,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
         refreshed.verified_comps = existing.verified_comps;
         refreshed.verified_sold_comp_count = Number(existing.verified_sold_comp_count) || existing.verified_comps.length;
       }
+      mergeRouteInvalidations(existing, refreshed);
       byKey.set(dedupeKey, refreshed);
       if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, refreshed);
       refreshedRows += 1;
@@ -989,6 +1065,117 @@ function latestDealBoardSnapshot(input = {}) {
     lead_operations_queue: leadOperationsQueueForResponse(rows),
     rows: rows.slice(0, 100)
   };
+}
+
+function contactWorkflowError(message, code, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.status_code = statusCode;
+  return error;
+}
+
+function normalizeContactWorkflowOutcome(value) {
+  return cleanText(value).toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function routeForWrongNumber(row) {
+  const routes = safeRouteList(row && row.free_contact_routes);
+  return routes.find((route) => cleanText(route && route.route_kind).toLowerCase() === 'phone' && routeValue(route)) ||
+    routes.find((route) => routeValue(route)) ||
+    null;
+}
+
+function contactWorkflowStatusForOutcome(outcome) {
+  if (outcome === 'reached') return 'CONTACTED';
+  if (outcome === 'not_interested') return 'CLOSED_NOT_INTERESTED';
+  if (outcome === 'wrong_number') return 'WRONG_NUMBER_REPORTED';
+  if (outcome === 'left_message') return 'LEFT_MESSAGE';
+  if (outcome === 'follow_up') return 'FOLLOW_UP_REQUESTED';
+  return 'ATTEMPT_RECORDED';
+}
+
+// Explicit operator input only. This mutates the preview snapshot row, never a
+// saved lead, and refuses to race an active market batch that could overwrite it.
+function recordContactWorkflow(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const key = marketKey(market);
+  const queueKey = cleanText(input.queue_key);
+  const outcome = normalizeContactWorkflowOutcome(input.outcome);
+  if (!queueKey) throw contactWorkflowError('queue_key is required', 'contact_workflow_queue_key_required', 400);
+  if (!CONTACT_WORKFLOW_OUTCOMES.includes(outcome)) {
+    throw contactWorkflowError(
+      'outcome must be reached, left_message, wrong_number, not_interested, or follow_up',
+      'contact_workflow_outcome_invalid',
+      400
+    );
+  }
+  if (activeJobForMarket(key)) {
+    throw contactWorkflowError(
+      'A batch is running for this market. Try again when it finishes.',
+      'contact_workflow_market_batch_running',
+      409
+    );
+  }
+
+  const store = readStore();
+  const bucket = store.markets[key];
+  if (!bucket || !Array.isArray(bucket.rows)) {
+    throw contactWorkflowError('No snapshot exists for this market.', 'contact_workflow_market_not_found', 404);
+  }
+  const row = bucket.rows.find((item) => cleanText(item && item.queue_key) === queueKey);
+  if (!row) throw contactWorkflowError('The selected queue row was not found.', 'contact_workflow_row_not_found', 404);
+
+  const recordedAt = typeof options.now_impl === 'function' ? cleanText(options.now_impl()) : nowIso();
+  const attempt = {
+    outcome,
+    recorded_at: recordedAt,
+    source: 'operator_input',
+    recorded_by: cleanText(options.operator_id) || 'admin'
+  };
+  row.contact_workflow_attempts = safeRouteList(row.contact_workflow_attempts).concat([attempt]);
+  row.contact_workflow_complete = outcome === 'reached';
+  row.contact_workflow_status = contactWorkflowStatusForOutcome(outcome);
+  row.contact_workflow_outcome = outcome;
+  row.contact_workflow_at = recordedAt;
+  row.contact_workflow_source = 'operator_input';
+  row.contact_workflow_recorded_by = attempt.recorded_by;
+  if (outcome === 'follow_up') {
+    row.contact_follow_up_requested = true;
+    row.contact_follow_up_at = recordedAt;
+  }
+  if (outcome === 'wrong_number') {
+    const badRoute = routeForWrongNumber(row);
+    if (badRoute) {
+      const invalidated = {
+        outcome,
+        value: routeValue(badRoute),
+        route_kind: cleanText(badRoute.route_kind),
+        route_type: cleanText(badRoute.route_type),
+        recorded_at: recordedAt
+      };
+      row.contact_workflow_invalidated_routes = safeRouteList(row.contact_workflow_invalidated_routes)
+        .filter((item) => routeValue(item) !== invalidated.value)
+        .concat([invalidated]);
+      attempt.invalidated_route_value = invalidated.value;
+      markRoutesDisproved(row, invalidatedRouteValues(row));
+    }
+  }
+  const state = leadOperationsState.rowStateForDeal(row);
+  row.row_state = state.row_state;
+  row.row_state_reason = state.row_state_reason;
+  row.row_state_next_action = state.next_action;
+  writeStore(store);
+
+  const snapshot = latestDealBoardSnapshot({ market });
+  snapshot.contact_workflow = {
+    queue_key: queueKey,
+    outcome,
+    recorded_at: recordedAt,
+    source: 'operator_input'
+  };
+  snapshot.should_ingest = false;
+  snapshot.no_global_mutation = true;
+  return snapshot;
 }
 
 // ---------------------------------------------------------------------------
@@ -1245,10 +1432,12 @@ module.exports = {
   rowStateForDeal: leadOperationsState.rowStateForDeal,
   buildLeadOperationsQueue: leadOperationsQueue.buildLeadOperationsQueue,
   summarizeLeadOperationsQueue: leadOperationsQueue.summarizeLeadOperationsQueue,
+  CONTACT_WORKFLOW_OUTCOMES,
   queueCounts,
   countyOnboardingSummary,
   runDealBoardBatch,
   latestDealBoardSnapshot,
+  recordContactWorkflow,
   startDealBoardBatchJob,
   getDealBoardJob,
   setAutoRun,

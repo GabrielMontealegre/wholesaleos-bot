@@ -10,7 +10,8 @@ const ROW_STATES = Object.freeze({
   NEEDS_CONTACT_SEARCH: 'NEEDS_CONTACT_SEARCH',
   NEEDS_SKIP_TRACE: 'NEEDS_SKIP_TRACE',
   NEEDS_COMPS: 'NEEDS_COMPS',
-  TITLE_NEEDED: 'TITLE_NEEDED'
+  TITLE_NEEDED: 'TITLE_NEEDED',
+  CLOSED_NOT_INTERESTED: 'CLOSED_NOT_INTERESTED'
 });
 
 function cleanText(value) {
@@ -21,8 +22,20 @@ function routesForDeal(deal) {
   return Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [];
 }
 
+function routeDisprovedByOperator(deal, route) {
+  const flags = Array.isArray(route && route.risk_flags) ? route.risk_flags.map(cleanText) : [];
+  if (route && route.operator_disproved === true) return true;
+  if (flags.includes('OPERATOR_WRONG_NUMBER_REPORTED')) return true;
+  const invalidated = Array.isArray(deal && deal.contact_workflow_invalidated_routes)
+    ? deal.contact_workflow_invalidated_routes
+    : [];
+  const value = cleanText(route && route.value);
+  return Boolean(value && invalidated.some((item) => cleanText(item && item.value) === value));
+}
+
 function provenRoute(deal, matcher) {
   return routesForDeal(deal).find((route) => route && cleanText(route.value) &&
+    !routeDisprovedByOperator(deal, route) &&
     matcher(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route)) || null;
 }
 
@@ -43,6 +56,8 @@ function identityKnown(deal) {
 }
 
 function contactWorkflowComplete(deal) {
+  const outcome = cleanText(deal && deal.contact_workflow_outcome).toLowerCase();
+  if (outcome && outcome !== 'reached') return false;
   const status = cleanText(deal && (deal.contact_workflow_status || deal.operator_contact_status)).toUpperCase();
   return deal && deal.contact_workflow_complete === true || /^(CONTACTED|CONVERSATION_COMPLETE|CONTACT_COMPLETE)$/.test(status);
 }
@@ -80,6 +95,11 @@ function rowStateForDeal(deal) {
   const workflowComplete = contactWorkflowComplete(deal);
   const compsReady = (Number(deal.verified_sold_comp_count) || 0) >= 3;
   const hasIdentity = identityKnown(deal);
+  const contactOutcome = cleanText(deal.contact_workflow_outcome).toLowerCase();
+
+  if (contactOutcome === 'not_interested' || cleanText(deal.contact_workflow_status).toUpperCase() === 'CLOSED_NOT_INTERESTED') {
+    return out(ROW_STATES.CLOSED_NOT_INTERESTED, 'The operator recorded that this contact is not interested.', 'Do not continue outreach unless new source evidence changes the situation.');
+  }
 
   if (!workflowComplete && phone) {
     return out(ROW_STATES.CALL_READY, 'A source-linked public phone route is visible.', 'Verify the source evidence, then call this contact.');

@@ -5,6 +5,7 @@
 (function () {
   var API_LATEST = '/api/dashboard/free-public-deal-board/latest';
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
+  var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
@@ -82,6 +83,7 @@
     if (status === 'NEEDS_SKIP_TRACE') return '#fed7aa';
     if (status === 'NEEDS_COMPS') return '#fde68a';
     if (status === 'TITLE_NEEDED') return '#ddd6fe';
+    if (status === 'CLOSED_NOT_INTERESTED') return '#e5e7eb';
     return '#e5e7eb';
   }
 
@@ -140,6 +142,33 @@
       MARKET_PRESETS.map(function (market) {
         return '<option value="' + esc(market.key) + '"' + (market.key === selectedMarketKey ? ' selected' : '') + '>' + esc(market.label) + '</option>';
       }).join('') + '</select></label>';
+  }
+
+  function contactWorkflowControl(row) {
+    var attempts = safeArray(row.contact_workflow_attempts);
+    var lastAttempt = row.contact_workflow_outcome ? '<div style="font-size:11px;color:#374151;margin-top:6px;">Last contact attempt: <b>' +
+      esc(String(row.contact_workflow_outcome || '').replace(/_/g, ' ')) + '</b>' +
+      (row.contact_workflow_at ? ' at ' + esc(row.contact_workflow_at) : '') +
+      (attempts.length ? ' (' + esc(String(attempts.length)) + ' attempts)' : '') + '</div>' : '';
+    if (row.row_state === 'CLOSED_NOT_INTERESTED') {
+      return '<div style="font-size:11px;color:#374151;margin-top:6px;padding:6px 8px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;">' +
+        'Closed: <b>not interested</b>' + (row.contact_workflow_at ? ' at ' + esc(row.contact_workflow_at) : '') + '</div>';
+    }
+    if (row.contact_workflow_complete === true) {
+      return '<div style="font-size:11px;color:#065f46;margin-top:6px;padding:6px 8px;border:1px solid #bbf7d0;border-radius:7px;background:#f0fdf4;">' +
+        'Contact recorded: <b>' + esc(String(row.contact_workflow_outcome || 'contacted').replace(/_/g, ' ')) + '</b>' +
+        (row.contact_workflow_at ? ' at ' + esc(row.contact_workflow_at) : '') +
+        (attempts.length ? ' (' + esc(String(attempts.length)) + ' attempts)' : '') + '</div>';
+    }
+    if (['CALL_READY', 'OUTREACH_READY', 'MAIL_READY'].indexOf(row.row_state) === -1) return lastAttempt;
+    return lastAttempt + '<div class="wos-contact-workflow" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;padding:7px 8px;border:1px solid #bfdbfe;border-radius:7px;background:#eff6ff;">' +
+      '<label style="font-size:11px;color:#1e3a8a;font-weight:600;">Contact outcome ' +
+      '<select class="wos-contact-outcome" style="margin-left:4px;border:1px solid #93c5fd;border-radius:6px;padding:5px 7px;background:#fff;color:#111827;font-size:11px;">' +
+      '<option value="">Select outcome</option><option value="reached">Reached</option><option value="left_message">Left message</option>' +
+      '<option value="wrong_number">Wrong number</option><option value="not_interested">Not interested</option><option value="follow_up">Follow up</option>' +
+      '</select></label>' +
+      '<button type="button" class="wos-contact-save" style="padding:5px 9px;border-radius:6px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Mark contacted</button>' +
+      '<span class="wos-contact-message" style="font-size:11px;color:#6b7280;">Nothing changes until you save an outcome.</span></div>';
   }
 
   function rowCard(row) {
@@ -210,6 +239,7 @@
     if (row.row_state_next_action) {
       lines.push('<div style="font-size:12px;color:#1f2937;margin-top:2px;">Work-queue action: <b>' + esc(row.row_state_next_action) + '</b></div>');
     }
+    lines.push(contactWorkflowControl(row));
     lines.push(ledgerList(row));
     if (safeArray(row.seller_questions).length) {
       lines.push('<details style="margin-top:4px;font-size:12px;"><summary style="cursor:pointer;color:#2563eb;">Seller questions (' + row.seller_questions.length + ')</summary><ul style="margin:4px 0 0 18px;padding:0;">' +
@@ -218,7 +248,7 @@
     if (safeArray(row.blocked_sources).length) {
       lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(safeArray(row.blocked_sources).map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
     }
-    return '<div class="wos-public-deal-row" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
+    return '<div class="wos-public-deal-row" data-queue-key="' + esc(row.queue_key || '') + '" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
   }
 
   function panelBox(title, subtitle, bodyHtml, accent) {
@@ -506,14 +536,16 @@
       CALL_READY: 'Call Ready', OUTREACH_READY: 'Outreach Ready', MAIL_READY: 'Mail Ready',
       NEEDS_CONTACT_SEARCH: 'Needs Contact Search', NEEDS_SKIP_TRACE: 'Needs Skip Trace',
       NEEDS_COMPS: 'Needs Comps', TITLE_NEEDED: 'Title Needed',
+      CLOSED_NOT_INTERESTED: 'Closed - Not Interested',
       BLOCKED: 'Blocked / Quarantined'
     };
     var colors = {
       CALL_READY: '#bbf7d0', OUTREACH_READY: '#bfdbfe', MAIL_READY: '#ccfbf1',
       NEEDS_CONTACT_SEARCH: '#e0f2fe', NEEDS_SKIP_TRACE: '#fed7aa',
-      NEEDS_COMPS: '#fde68a', TITLE_NEEDED: '#ddd6fe', BLOCKED: '#fecaca'
+      NEEDS_COMPS: '#fde68a', TITLE_NEEDED: '#ddd6fe',
+      CLOSED_NOT_INTERESTED: '#e5e7eb', BLOCKED: '#fecaca'
     };
-    var summary = ['CALL_READY', 'OUTREACH_READY', 'MAIL_READY', 'NEEDS_CONTACT_SEARCH', 'NEEDS_SKIP_TRACE', 'NEEDS_COMPS', 'TITLE_NEEDED', 'BLOCKED']
+    var summary = ['CALL_READY', 'OUTREACH_READY', 'MAIL_READY', 'NEEDS_CONTACT_SEARCH', 'NEEDS_SKIP_TRACE', 'NEEDS_COMPS', 'TITLE_NEEDED', 'CLOSED_NOT_INTERESTED', 'BLOCKED']
       .map(function (key) { return chip(key.replace(/_/g, ' '), counts[key] || 0, colors[key]); }).join('');
     var body = segments.map(function (segment) {
       var rows = safeArray(segment && segment.row_keys).map(function (key) { return rowsByKey[key]; }).filter(Boolean);
@@ -658,6 +690,37 @@
       .catch(function (err) { fail(err.message); });
   }
 
+  function saveContactWorkflow(container, button) {
+    var card = button.closest && button.closest('.wos-public-deal-row');
+    var select = card && card.querySelector('.wos-contact-outcome');
+    var message = card && card.querySelector('.wos-contact-message');
+    var queueKey = card && card.dataset && card.dataset.queueKey;
+    var outcome = select && select.value;
+    if (!queueKey || !outcome) {
+      if (message) message.textContent = 'Choose an outcome first.';
+      return;
+    }
+    var requestMarketKey = selectedMarketKey;
+    button.disabled = true;
+    button.textContent = 'Saving...';
+    fetch(API_CONTACT_WORKFLOW, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ market: selectedMarket(), queue_key: queueKey, outcome: outcome })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || data.ok === false) throw new Error((data && data.error) || 'contact outcome update failed');
+        if (requestMarketKey !== selectedMarketKey) return;
+        render(container, data, 'Contact outcome saved from explicit operator input.');
+      })
+      .catch(function (err) {
+        button.disabled = false;
+        button.textContent = 'Mark contacted';
+        if (message) message.textContent = 'Could not save: ' + err.message;
+      });
+  }
+
   function ensureSection(page) {
     var host = document.getElementById('content') || document.getElementById('app') || document.body;
     var section = document.getElementById('wos-public-deals');
@@ -711,6 +774,14 @@
     var autoBox = document.getElementById('wos-public-deals-auto');
     var runButton = document.getElementById('wos-public-deals-run');
     var marketSelect = document.getElementById('wos-public-deals-market');
+
+    if (!section._wosContactBound) {
+      section._wosContactBound = true;
+      section.addEventListener('click', function (event) {
+        var button = event.target && event.target.closest && event.target.closest('.wos-contact-save');
+        if (button) saveContactWorkflow(section, button);
+      });
+    }
 
     if (marketSelect && !marketSelect._wosBound) {
       marketSelect._wosBound = true;
