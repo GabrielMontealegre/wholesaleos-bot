@@ -13,6 +13,7 @@ const enrichmentLedger = require('./enrichment-ledger');
 const enrichmentScheduler = require('./enrichment-scheduler');
 const fieldProvenance = require('./field-provenance');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
+const leadOperationsState = require('./lead-operations-state');
 const marketCompPolicy = require('./market-comp-policy');
 const publicParcelOwnerLookup = require('./public-parcel-owner-lookup');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
@@ -857,28 +858,6 @@ function whyNotReady(deal) {
   const missing = deal.missing_fields || [];
   if (!missing.length) return '';
   return `Missing ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ', more' : ''}.`;
-}
-
-function firstProvenContactRoute(deal) {
-  const routes = Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [];
-  return routes.find((route) => route && cleanText(route.value) && fieldProvenance.routeHasProvenance(route)) || null;
-}
-
-function rowStateForDeal(deal) {
-  const phoneRoute = (Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [])
-    .find((route) => route && route.route_kind === 'phone' && cleanText(route.value) && fieldProvenance.routeHasProvenance(route));
-  const outreachRoute = (Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [])
-    .find((route) => route && /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && cleanText(route.value) && fieldProvenance.routeHasProvenance(route));
-  const mailingRoute = deal && deal.mailing_route && cleanText(deal.mailing_route.value) && fieldProvenance.routeHasProvenance(deal.mailing_route)
-    ? deal.mailing_route
-    : null;
-  if (phoneRoute) return { row_state: 'CALL_READY', row_state_reason: 'Source-linked public phone route is visible; verify before dialing.' };
-  if (outreachRoute) return { row_state: 'OUTREACH_READY', row_state_reason: 'Source-linked public email/form/reply route is visible; verify before outreach.' };
-  if (mailingRoute) return { row_state: 'MAIL_READY', row_state_reason: 'Owner-of-record mailing address is visible on an official public record.' };
-  if (!cleanText(deal && deal.normalized_address)) return { row_state: 'LOCKED', row_state_reason: 'Property identity is incomplete.' };
-  if (!firstProvenContactRoute(deal) && !mailingRoute) return { row_state: 'NEEDS_SKIP_TRACE', row_state_reason: 'No source-linked free phone, email, form, or mailing route is ready yet.' };
-  if ((Number(deal && deal.verified_sold_comp_count) || 0) < 3) return { row_state: 'NEEDS_COMPS', row_state_reason: 'Need 3 verified sold comps before ARV/MAO can unlock.' };
-  return { row_state: 'LOCKED', row_state_reason: 'Deal has evidence but still needs operator review before an offer.' };
 }
 
 function rankDeal(deal) {
@@ -2073,9 +2052,10 @@ async function applyFreePublicHunters(deals, input, options, context) {
       deal.ARV_lock_state = 'ARV_LOCKED_NO_VERIFIED_COMPS';
     }
     deal.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(deal, now);
-    const rowState = rowStateForDeal(deal);
+    const rowState = leadOperationsState.rowStateForDeal(deal);
     deal.row_state = rowState.row_state;
     deal.row_state_reason = rowState.row_state_reason;
+    deal.row_state_next_action = rowState.next_action;
     deal.enrichment_ledger_summary = enrichmentLedger.ledgerSummary(deal);
     deal.call_prep = callPrepProjection.buildCallPrep(deal);
     deal.call_readiness = deal.call_prep.call_readiness;
@@ -2091,6 +2071,7 @@ async function applyFreePublicHunters(deals, input, options, context) {
       lifecycle_status: deal.lifecycle_status,
       row_state: deal.row_state,
       row_state_reason: deal.row_state_reason,
+      row_state_next_action: deal.row_state_next_action,
       enrichment_ledger_summary: deal.enrichment_ledger_summary
     });
     diagnostics.free_blocked_source_count += (deal.blocked_sources || []).length;
@@ -2384,5 +2365,6 @@ module.exports = {
   dealFromRecord,
   propertySpecificUrl,
   validateCompRecords,
+  rowStateForDeal: leadOperationsState.rowStateForDeal,
   mapsUrl
 };

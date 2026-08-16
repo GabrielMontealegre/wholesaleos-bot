@@ -172,6 +172,16 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.counts.call_ready, 1);
   assert.strictEqual(run1.counts.inspect_now, 1);
   assert.strictEqual(run1.counts.needs_comps, 1);
+  assert.strictEqual(queueService.queueCounts([
+    { row_state: 'NEEDS_CONTACT_SEARCH' },
+    { row_state: 'NEEDS_SKIP_TRACE' }
+  ]).needs_contact_search, 1, 'unfinished free contact search must be counted separately');
+  assert.strictEqual(queueService.queueCounts([
+    { row_state: 'NEEDS_CONTACT_SEARCH' },
+    { row_state: 'NEEDS_SKIP_TRACE' }
+  ]).needs_skip_trace, 1, 'skip-trace count must include only genuinely exhausted rows');
+  assert.strictEqual(run1.lead_operations_queue.counts.CALL_READY, 1);
+  assert.deepStrictEqual(run1.lead_operations_queue.segments.find((segment) => segment.key === 'CALL_READY').row_keys.length, 1);
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file must exist');
   assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
   assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
@@ -196,6 +206,15 @@ function mockDeal(overrides) {
   assert.ok(run1.rows.every((row) => row.not_a_saved_lead === true && row.preview_only === true));
   assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').land_use, 'Commercial');
   assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').owner_record.land_use, 'Commercial');
+
+  const completedContactRun = await queueService.runDealBoardBatch(
+    { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 },
+    { preview_impl: async () => ({ free_public_deals: [mockDeal({ contact_workflow_complete: true, contact_workflow_status: 'CONTACTED' })], rejected_generic_count: 0 }) }
+  );
+  const completedContactRow = completedContactRun.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
+  assert.strictEqual(completedContactRow.contact_workflow_complete, true);
+  assert.strictEqual(completedContactRow.contact_workflow_status, 'CONTACTED');
+  assert.strictEqual(completedContactRow.row_state, 'NEEDS_COMPS', 'completed contact workflow must advance to comp work');
 
   // Non-TX markets with no verified lanes should short-circuit before any preview work.
   const clevelandPreviewCalls = [];
@@ -757,7 +776,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=16'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=18'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -773,6 +792,8 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Mailing route') && uiSource.includes('mailing_route'), 'dashboard must render MAIL_READY owner mailing routes');
   assert.ok(uiSource.includes('Entity lookup') && uiSource.includes('registered agent is not the seller'), 'dashboard must label registered agents honestly');
   assert.ok(uiSource.includes('row_state') && uiSource.includes('MAIL_READY'), 'dashboard must render row state and mail-ready counts');
+  assert.ok(uiSource.includes('Needs contact search'), 'dashboard must show unfinished free-contact-search counts separately');
+  assert.ok(uiSource.includes('NEEDS_CONTACT_SEARCH'), 'dashboard must render the contact-search segment');
   assert.ok(uiSource.includes('Needs skip trace'), 'dashboard must show skip-trace need counts');
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
@@ -800,17 +821,19 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('last_error'), 'dashboard must surface the last auto-run error');
   assert.ok(uiSource.includes('ocr_text_quality_score'), 'dashboard must show OCR quality score');
 
-  // 6) The three operator panels exist: Daily Deal Machine, ZIP Review, Top Deals.
+  // 6) The operator panels exist: Daily Deal Machine, ZIP Review, segmented Lead Operations Queue.
   assert.ok(uiSource.includes('Daily Deal Machine'), 'dashboard must render the Daily Deal Machine panel');
   assert.ok(uiSource.includes('ZIP Review'), 'dashboard must render the ZIP Review panel');
-  assert.ok(uiSource.includes('Top Deals'), 'dashboard must render the Top Deals panel');
+  assert.ok(uiSource.includes('Lead Operations Queue'), 'dashboard must render the segmented Lead Operations Queue');
   assert.ok(uiSource.includes('VERIFY_ZIP_FROM_SOURCE_DOCUMENT'), 'ZIP Review panel must show the verify-from-document action');
   assert.ok(uiSource.includes('Never guess or fake a zip'), 'ZIP Review panel must carry the no-fake-zip warning');
   assert.ok(uiSource.includes('maps_search_url_review_needed'), 'ZIP Review panel must use the review-labeled maps search link');
   assert.ok(uiSource.includes('Source blockers'), 'Daily Deal Machine must list source blockers');
   assert.ok(uiSource.includes('batches_today'), 'Daily Deal Machine must show batches today');
   assert.ok(uiSource.includes('ocr_address_rows_today'), 'Daily Deal Machine must show OCR rows today');
-  assert.ok(uiSource.includes('CALL_READY first'), 'Top Deals must order CALL_READY rows first');
+  assert.ok(uiSource.includes('TITLE_NEEDED') && uiSource.includes('BLOCKED'), 'dashboard must render every lead-operations segment');
+  assert.ok(uiSource.includes('no verified public title workflow source yet'), 'title workflow must remain an honest placeholder');
+  assert.ok(uiSource.includes('row_state_reason') && uiSource.includes('row_state_next_action'), 'each work-queue row must show a plain-English reason and action');
   assert.ok(uiSource.includes('County Onboarding'), 'dashboard must render the county onboarding panel');
   assert.ok(uiSource.includes('readiness_counts'), 'county onboarding panel must show readiness counts');
   assert.ok(uiSource.includes('throughput_plan'), 'county onboarding panel must show the throughput plan');
@@ -832,7 +855,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes("chip('Actionable now'"), 'Dashboard card must show current actionable inventory before today-only activity');
   assert.ok(uiSource.includes('lifecycleChip'), 'row cards must surface lifecycle status');
   assert.ok(uiSource.includes('ledgerList'), 'row cards must surface enrichment ledger attempts');
-  assert.ok(uiSource.includes('Quarantined - verify before calling'), 'Dashboard must keep quarantined rows separate');
+  assert.ok(uiSource.includes('Blocked / Quarantined'), 'Dashboard must keep quarantined rows in a separate collapsed segment');
   assert.ok(uiSource.includes("return 'CALL_READY'"), 'Dashboard urgent rows must label call-ready context');
   assert.ok(uiSource.includes("return 'Sale in '"), 'Dashboard urgent rows must label sale urgency context');
   assert.ok(uiSource.includes("return row.quality_bucket || 'REVIEW'"), 'Dashboard urgent rows must label their bucket context');

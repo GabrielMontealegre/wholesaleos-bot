@@ -18,7 +18,8 @@ const censusZipResolution = require('./census-zip-resolution');
 const propertyIdentity = require('./property-identity');
 const enrichmentLedger = require('./enrichment-ledger');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
-const fieldProvenance = require('./field-provenance');
+const leadOperationsQueue = require('./lead-operations-queue');
+const leadOperationsState = require('./lead-operations-state');
 const enrichmentScheduler = require('./enrichment-scheduler');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
@@ -203,9 +204,10 @@ function repairStoredSnapshotRows(rows) {
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
     row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
-    const state = rowStateForDeal(row);
+    const state = leadOperationsState.rowStateForDeal(row);
     row.row_state = state.row_state;
     row.row_state_reason = state.row_state_reason;
+    row.row_state_next_action = state.next_action;
     return row;
   });
 }
@@ -395,19 +397,6 @@ function dedupeKeyForDeal(deal) {
   return `proof|${crypto.createHash('sha1').update([doc, src, phone, body].join('|')).digest('hex').slice(0, 20)}`;
 }
 
-function rowStateForDeal(deal) {
-  const routes = Array.isArray(deal && deal.free_contact_routes) ? deal.free_contact_routes : [];
-  const phone = routes.find((route) => route && route.route_kind === 'phone' && fieldProvenance.routeHasProvenance(route));
-  const outreach = routes.find((route) => route && /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route));
-  const mailing = deal && deal.mailing_route && fieldProvenance.routeHasProvenance(deal.mailing_route) ? deal.mailing_route : null;
-  if (phone) return { row_state: 'CALL_READY', row_state_reason: 'Source-linked public phone route is visible; verify before dialing.' };
-  if (outreach) return { row_state: 'OUTREACH_READY', row_state_reason: 'Source-linked public email/form/reply route is visible; verify before outreach.' };
-  if (mailing) return { row_state: 'MAIL_READY', row_state_reason: 'Owner-of-record mailing address is visible on an official public record.' };
-  if (!cleanText(deal && deal.normalized_address)) return { row_state: 'LOCKED', row_state_reason: 'Property identity is incomplete.' };
-  if ((Number(deal && deal.verified_sold_comp_count) || 0) < 3) return { row_state: 'NEEDS_COMPS', row_state_reason: 'Need 3 verified sold comps before ARV/MAO can unlock.' };
-  return { row_state: 'NEEDS_SKIP_TRACE', row_state_reason: 'No source-linked free contact or mailing route is ready yet.' };
-}
-
 function sourceIdentityKey(row) {
   const reference = cleanText(row && row.source_row_reference).toLowerCase();
   const documentUrl = cleanText(row && (row.source_document_url || row.source_url)).toLowerCase();
@@ -539,7 +528,7 @@ function countyOnboardingSummary(market) {
 }
 
 function projectRowForQueue(deal, dedupeKey, seenAt) {
-  const rowState = rowStateForDeal(deal);
+  const rowState = leadOperationsState.rowStateForDeal(deal);
   const ownerDisplayName = cleanText(deal.owner_record && (deal.owner_record.owner_name || deal.owner_record.taxpayer_name));
   const ownerDisplayLabel = cleanText(deal.owner_record && deal.owner_record.record_label)
     || (cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
@@ -628,6 +617,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     })) : [],
     row_state: rowState.row_state,
     row_state_reason: rowState.row_state_reason,
+    row_state_next_action: rowState.next_action,
+    contact_workflow_complete: deal.contact_workflow_complete === true,
+    contact_workflow_status: cleanText(deal.contact_workflow_status || deal.operator_contact_status),
     official_lookup_status: cleanText(deal.official_lookup_status),
     contact_status: cleanText(deal.free_contact_status || (deal.call_prep && deal.call_prep.contact_status)),
     free_contact_status: cleanText(deal.free_contact_status),
@@ -765,10 +757,13 @@ function queueCounts(rows) {
     total_rows: rows.length,
     today_rows: rows.filter((row) => String(row.first_seen_at).slice(0, 10) === today || String(row.last_seen_at).slice(0, 10) === today).length,
     address_rows: rows.filter((row) => row.normalized_address).length,
-    call_ready: rows.filter((row) => row.contact_status === 'CALL_READY').length,
-    outreach_ready: rows.filter((row) => row.contact_status === 'OUTREACH_READY').length,
+    call_ready: rows.filter((row) => row.row_state === 'CALL_READY').length,
+    outreach_ready: rows.filter((row) => row.row_state === 'OUTREACH_READY').length,
     mail_ready: rows.filter((row) => row.row_state === 'MAIL_READY' || row.contact_status === 'MAIL_READY').length,
+    needs_contact_search: rows.filter((row) => row.row_state === 'NEEDS_CONTACT_SEARCH').length,
     needs_skip_trace: rows.filter((row) => row.row_state === 'NEEDS_SKIP_TRACE').length,
+    needs_comps_state: rows.filter((row) => row.row_state === 'NEEDS_COMPS').length,
+    title_needed: rows.filter((row) => row.row_state === 'TITLE_NEEDED').length,
     locked: rows.filter((row) => row.row_state === 'LOCKED').length,
     row_states: states,
     inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW').length,
@@ -779,6 +774,10 @@ function queueCounts(rows) {
     owner_clues: rows.filter((row) => row.owner_clue).length,
     quarantined: rows.filter((row) => row.lifecycle_status && row.lifecycle_status.quarantined === true).length
   };
+}
+
+function leadOperationsQueueForResponse(rows) {
+  return leadOperationsQueue.summarizeLeadOperationsQueue(leadOperationsQueue.buildLeadOperationsQueue(rows));
 }
 
 async function runDealBoardBatch(input = {}, options = {}) {
@@ -822,6 +821,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
       county_onboarding: countyOnboardingSummary(market),
       batch,
       counts: queueCounts([]),
+      lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
       rows: bucket.rows.slice(0, 100)
     };
   }
@@ -855,6 +855,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',
     'property_kind_if_visible', 'vacant_lot_if_visible', 'free_contact_status',
     'free_contact_routes', 'blocked_sources', 'free_searches_run', 'why_call_ready_or_blocked',
+    'contact_workflow_complete', 'contact_workflow_status',
     'enrichment_ledger', 'enrichment_skip_rollups'
   ];
   let newRows = 0;
@@ -939,6 +940,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     county_onboarding: countyOnboardingSummary(market),
     batch,
     counts,
+    lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
     rows: bucket.rows.slice(0, 100)
   };
 }
@@ -959,6 +961,7 @@ function latestDealBoardSnapshot(input = {}) {
     county_onboarding: countyOnboardingSummary(market),
     daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
     auto_run: getAutoRunStatus(market),
+    lead_operations_queue: leadOperationsQueueForResponse([]),
     rows: []
     };
   }
@@ -983,6 +986,7 @@ function latestDealBoardSnapshot(input = {}) {
       ocr_address_rows_today: batchesToday.reduce((sum, item) => sum + Number(item.ocr && item.ocr.ocr_rows_with_address || 0), 0)
     },
     auto_run: getAutoRunStatus(market),
+    lead_operations_queue: leadOperationsQueueForResponse(rows),
     rows: rows.slice(0, 100)
   };
 }
@@ -1238,6 +1242,9 @@ module.exports = {
   repairCountyFromSourceHost,
   backfillCensusKeysForStoredRows,
   collapseStoredCensusExactDuplicates,
+  rowStateForDeal: leadOperationsState.rowStateForDeal,
+  buildLeadOperationsQueue: leadOperationsQueue.buildLeadOperationsQueue,
+  summarizeLeadOperationsQueue: leadOperationsQueue.summarizeLeadOperationsQueue,
   queueCounts,
   countyOnboardingSummary,
   runDealBoardBatch,
