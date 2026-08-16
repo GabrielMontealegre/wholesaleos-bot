@@ -78,8 +78,10 @@
     if (status === 'CALL_READY') return '#bbf7d0';
     if (status === 'OUTREACH_READY') return '#bfdbfe';
     if (status === 'MAIL_READY') return '#ccfbf1';
+    if (status === 'NEEDS_CONTACT_SEARCH') return '#e0f2fe';
     if (status === 'NEEDS_SKIP_TRACE') return '#fed7aa';
     if (status === 'NEEDS_COMPS') return '#fde68a';
+    if (status === 'TITLE_NEEDED') return '#ddd6fe';
     return '#e5e7eb';
   }
 
@@ -156,15 +158,18 @@
         (row.row_state_reason ? ' <span style="color:#6b7280;">' + esc(row.row_state_reason) + '</span>' : '') + '</div>');
     }
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
-    if (row.owner_record && row.owner_record.owner_name) {
-      lines.push('<div style="font-size:12px;">Owner of record: <b>' + esc(row.owner_record.owner_name) + '</b>' +
+    var recordName = row.owner_record && (row.owner_record.owner_name || row.owner_record.taxpayer_name);
+    var recordLabel = row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record';
+    if (recordName) {
+      lines.push('<div style="font-size:12px;">' + esc(recordLabel) + ': <b>' + esc(recordName) + '</b>' +
         (row.owner_record.is_entity ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#ddd6fe;">ENTITY</span>' : '') +
         (row.owner_record.parcel_id ? ' <span style="color:#6b7280;">Parcel/APN ' + esc(row.owner_record.parcel_id) + '</span>' : '') +
         ' ' + link('owner proof', row.owner_record.source_url) + '</div>');
     }
     if (row.mailing_route && row.mailing_route.value) {
+      var taxpayerMail = row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record';
       lines.push('<div style="font-size:12px;">Mailing route: <b>' + esc(row.mailing_route.value) + '</b> ' +
-        '<span style="color:#991b1b;">mail only - owner of record may differ from occupant</span> ' +
+        '<span style="color:#991b1b;">' + esc(taxpayerMail ? 'taxpayer may be a servicer or escrow company, not the owner' : 'mail only - owner of record may differ from occupant') + '</span> ' +
         link('mail proof', row.mailing_route.source_url) + '</div>');
     }
     if (row.business_entity_resolution && (row.business_entity_resolution.status || row.business_entity_resolution.registered_agent_name)) {
@@ -202,6 +207,9 @@
     if (row.next_comp_action) lines.push('<div style="font-size:11px;color:#374151;">Comp action: ' + esc(row.next_comp_action) + '</div>');
     lines.push('<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'review') + '</b>' +
       (row.missing_fields && row.missing_fields.length ? ' <span style="color:#6b7280;">Missing: ' + esc(row.missing_fields.join(', ')) + '</span>' : '') + '</div>');
+    if (row.row_state_next_action) {
+      lines.push('<div style="font-size:12px;color:#1f2937;margin-top:2px;">Work-queue action: <b>' + esc(row.row_state_next_action) + '</b></div>');
+    }
     lines.push(ledgerList(row));
     if (safeArray(row.seller_questions).length) {
       lines.push('<details style="margin-top:4px;font-size:12px;"><summary style="cursor:pointer;color:#2563eb;">Seller questions (' + row.seller_questions.length + ')</summary><ul style="margin:4px 0 0 18px;padding:0;">' +
@@ -308,6 +316,7 @@
       chip('OCR rows today', daily.ocr_address_rows_today || 0),
       chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
       chip('MAIL_READY', c.mail_ready || 0, '#ccfbf1'),
+      chip('Needs contact search', c.needs_contact_search || 0, '#e0f2fe'),
       chip('Needs skip trace', c.needs_skip_trace || 0, '#fed7aa'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
@@ -463,8 +472,9 @@
       '#c7d2fe');
   }
 
+  // Retained for the compact Dashboard summary and its deterministic tests.
   function sortTopDealsRows(rows) {
-    return rows.slice().sort(function (a, b) {
+    return safeArray(rows).slice().sort(function (a, b) {
       var aSale = saleDateInfo(a);
       var bSale = saleDateInfo(b);
       function rank(row, sale) {
@@ -472,33 +482,54 @@
         if (row.contact_status === 'CALL_READY') return 0;
         if (row.row_state === 'MAIL_READY') return 1;
         if (sale.iso) return 2;
-        // ZIP-review rows retain their dedicated review tier and panel.
-        if (row.quality_bucket === 'NEEDS_ZIP_REVIEW') return 3;
         return 3;
       }
       var aRank = rank(a, aSale);
       var bRank = rank(b, bSale);
       if (aRank !== bRank) return aRank - bRank;
-      if (aRank === 1 && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
+      if (aSale.iso && bSale.iso && aSale.iso !== bSale.iso) return aSale.iso.localeCompare(bSale.iso);
       return String(a.normalized_address || a.partial_address || a.headline || '').localeCompare(
         String(b.normalized_address || b.partial_address || b.headline || '')
       );
     });
   }
 
-  function topDealsPanel(rows) {
-    var quarantinedRows = rows.filter(function (r) { return r.lifecycle_status && r.lifecycle_status.quarantined === true; });
-    var topRows = rows.filter(function (r) { return quarantinedRows.indexOf(r) === -1 && (isActionableRow(r) || r.normalized_address); });
-    var proofRows = rows.filter(function (r) { return topRows.indexOf(r) === -1 && quarantinedRows.indexOf(r) === -1; });
-    var callReadyFirst = sortTopDealsRows(topRows);
-    var body = (callReadyFirst.length
-      ? callReadyFirst.map(rowCard).join('')
-      : '<div style="font-size:12px;color:#6b7280;">No actionable rows yet. Run a batch or wait for the next auto-run.</div>') +
-      (proofRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#2563eb;">Source-proof rows without address yet (' + proofRows.length + ')</summary>' + proofRows.map(rowCard).join('') + '</details>' : '') +
-      (quarantinedRows.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:13px;color:#991b1b;">Quarantined - verify before calling (' + quarantinedRows.length + ')</summary>' + quarantinedRows.map(rowCard).join('') + '</details>' : '');
-    return panelBox('Top Deals <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + callReadyFirst.length + '</span>',
-      'CALL_READY first, then upcoming sale dates, then dateless rows; passed sale dates stay last. Every link goes to the real public source.',
-      body, '#fcd34d');
+  function leadOperationsQueuePanel(data, allRows) {
+    var queue = data && data.lead_operations_queue || {};
+    var segments = safeArray(queue.segments);
+    var counts = queue.counts || {};
+    var rowsByKey = {};
+    safeArray(allRows).forEach(function (row) {
+      if (row && row.queue_key) rowsByKey[row.queue_key] = row;
+    });
+    var labels = {
+      CALL_READY: 'Call Ready', OUTREACH_READY: 'Outreach Ready', MAIL_READY: 'Mail Ready',
+      NEEDS_CONTACT_SEARCH: 'Needs Contact Search', NEEDS_SKIP_TRACE: 'Needs Skip Trace',
+      NEEDS_COMPS: 'Needs Comps', TITLE_NEEDED: 'Title Needed',
+      BLOCKED: 'Blocked / Quarantined'
+    };
+    var colors = {
+      CALL_READY: '#bbf7d0', OUTREACH_READY: '#bfdbfe', MAIL_READY: '#ccfbf1',
+      NEEDS_CONTACT_SEARCH: '#e0f2fe', NEEDS_SKIP_TRACE: '#fed7aa',
+      NEEDS_COMPS: '#fde68a', TITLE_NEEDED: '#ddd6fe', BLOCKED: '#fecaca'
+    };
+    var summary = ['CALL_READY', 'OUTREACH_READY', 'MAIL_READY', 'NEEDS_CONTACT_SEARCH', 'NEEDS_SKIP_TRACE', 'NEEDS_COMPS', 'TITLE_NEEDED', 'BLOCKED']
+      .map(function (key) { return chip(key.replace(/_/g, ' '), counts[key] || 0, colors[key]); }).join('');
+    var body = segments.map(function (segment) {
+      var rows = safeArray(segment && segment.row_keys).map(function (key) { return rowsByKey[key]; }).filter(Boolean);
+      var key = segment && segment.key || 'BLOCKED';
+      var titleNote = key === 'TITLE_NEEDED' ? ' - no verified public title workflow source yet' : '';
+      return '<details style="margin-top:8px;"' + (key === 'CALL_READY' || key === 'OUTREACH_READY' || key === 'MAIL_READY' ? ' open' : '') + '>' +
+        '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (colors[key] || '#e5e7eb') + ';">' +
+        esc(labels[key] || segment && segment.label || key) + ' (' + esc(String(segment && segment.count || 0)) + ')' + esc(titleNote) +
+        (rows.length < Number(segment && segment.count || 0) ? ' - showing ' + esc(String(rows.length)) + ' loaded rows' : '') + '</summary>' +
+        (rows.length ? '<div style="margin-top:7px;">' + rows.map(rowCard).join('') + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No rows in this work state.</div>') +
+        '</details>';
+    }).join('');
+    if (!segments.length) body = '<div style="font-size:12px;color:#6b7280;">No lead-operations queue is available yet. Run a batch or wait for auto-run.</div>';
+    return panelBox('Lead Operations Queue <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + esc(String(queue.total_rows || 0)) + '</span>',
+      'Work phone leads first, then public outreach and mail. Skip trace, comps, title, and quarantined rows stay in separate honest queues.',
+      '<div style="margin-bottom:6px;">' + summary + '</div>' + body, '#fcd34d');
   }
 
   function coverageTable(batch) {
@@ -551,7 +582,7 @@
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       dailyMachinePanel(data, rows) +
       zipReviewPanel(rows) +
-      topDealsPanel(rows);
+      leadOperationsQueuePanel(data, rows);
   }
 
   function fetchLatest(container) {
