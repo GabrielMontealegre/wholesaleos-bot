@@ -12,6 +12,9 @@ const MAX_ROWS_PER_BATCH = 5;
 const MAX_PDF_BYTES = 6 * 1024 * 1024;
 const RECOVERY_FLAG = 'DOCUMENT_REEXTRACTED_FROM_STORED_SOURCE';
 const OCR_REVIEW_FLAG = 'OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED';
+const FAILURE_TERMINAL_SENTINEL = 'PERMANENT_UNTIL_DOCUMENT_REVIEW';
+const FAILURE_COOLDOWN_MS = [6 * 3600000, 24 * 3600000];
+const MAX_IDENTICAL_FAILURE_STREAK = 3;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -134,6 +137,9 @@ function rowsFromText(text, row, market, documentUrl) {
 async function rowsFromOcr(buffer, row, market, documentUrl, options) {
   const profile = profileForRow(row, market);
   if (!profile) return [];
+  if (typeof options.ocr_notice_extraction_impl === 'function') {
+    return options.ocr_notice_extraction_impl(buffer, row, market, documentUrl, options) || [];
+  }
   const result = await ocrNoticeExtraction.runOcrNoticeExtraction({
     documents: [{
       url: documentUrl,
@@ -215,6 +221,32 @@ function evidenceText(extracted, documentUrl) {
     cleanText(extracted && (extracted.source_proof_text || extracted.source_text || extracted.raw_text)),
     documentUrl
   ].filter(Boolean).join(' | ')).slice(0, 1000);
+}
+
+function identicalFailureStreak(row, documentUrl, reasonCode) {
+  const targetUrl = cleanText(documentUrl);
+  const targetReason = cleanText(reasonCode);
+  const attempts = (row && row.enrichment_ledger && Array.isArray(row.enrichment_ledger.attempts) ? row.enrichment_ledger.attempts : [])
+    .filter((attempt) => cleanText(attempt && attempt.lane) === LANE)
+    .filter((attempt) => cleanText(attempt && attempt.source_url) === targetUrl)
+    .filter((attempt) => cleanText(attempt && attempt.outcome) === 'FAILED')
+    .filter((attempt) => cleanText(attempt && attempt.reason_code) === targetReason)
+    .slice()
+    .sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)));
+  let streak = 0;
+  for (const attempt of attempts) {
+    if (cleanText(attempt && attempt.source_url) !== targetUrl) break;
+    if (cleanText(attempt && attempt.reason_code) !== targetReason) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+function nextFailureEligibleAt(row, documentUrl, reasonCode, nowIso) {
+  const streak = identicalFailureStreak(row, documentUrl, reasonCode) + 1;
+  if (streak >= MAX_IDENTICAL_FAILURE_STREAK) return FAILURE_TERMINAL_SENTINEL;
+  const offset = FAILURE_COOLDOWN_MS[Math.min(streak - 1, FAILURE_COOLDOWN_MS.length - 1)];
+  return new Date(Date.parse(nowIso) + offset).toISOString();
 }
 
 function applyExtractionToRow(row, extraction, market, documentUrl, nowIso) {
@@ -310,7 +342,13 @@ async function reextractRow(row, market, options, documentTextCache) {
   }
   const extraction = bestExtraction(extractedRows);
   if (!extraction) {
-    if (cached.status === 'failed') return cached;
+    if (cached.status === 'failed') {
+      return {
+        status: 'failed',
+        reason_code: 'pdf_text_and_ocr_both_recovered_nothing',
+        reason_text: 'PDF text parsing failed and OCR still found no recoverable address.'
+      };
+    }
     return { status: 'not_found', reason_code: 'no_recoverable_address_in_document', reason_text: 'Strict document re-extraction found no recoverable address.' };
   }
   const forceReview = extraction.ocr || (Array.isArray(row && row.risk_flags) && row.risk_flags.includes(OCR_REVIEW_FLAG));
@@ -395,7 +433,7 @@ async function runDocumentReextractionPass(rows, input = {}, options = {}) {
     } else {
       diagnostics.no_recovery_count += 1;
     }
-    enrichmentLedger.appendAttempt(row, {
+    const ledgerAttempt = {
       lane: LANE,
       attempted_at: nowIso,
       outcome: ledgerOutcome,
@@ -403,7 +441,11 @@ async function runDocumentReextractionPass(rows, input = {}, options = {}) {
       reason_text: cleanText(outcome.reason_text || 'Document re-extraction attempted.'),
       source_url: documentUrl,
       cost_usd: 0
-    });
+    };
+    if (ledgerOutcome === 'FAILED') {
+      ledgerAttempt.next_eligible_at = nextFailureEligibleAt(row, documentUrl, ledgerAttempt.reason_code, nowIso);
+    }
+    enrichmentLedger.appendAttempt(row, ledgerAttempt);
   }
   return diagnostics;
 }

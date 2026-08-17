@@ -13,6 +13,8 @@ Module._load = function patchedLoad(request, parent, isMain) {
 };
 
 const pass = require('../modules/research/document-reextraction-pass');
+const enrichmentLedger = require('../modules/research/enrichment-ledger');
+const enrichmentScheduler = require('../modules/research/enrichment-scheduler');
 
 const PDF_URL = 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf';
 
@@ -105,6 +107,38 @@ function noticeText(address, saleDate) {
   assert.strictEqual(noRecoveryRow.quality_bucket, 'SOURCE_PROOF_ONLY');
   assert.strictEqual(noRecoveryRow.normalized_address, '');
   assert.ok(noRecoveryRow.enrichment_ledger.attempts.some((attempt) => attempt.lane === 'document_reextraction' && attempt.outcome === 'NOT_FOUND'));
+
+  const dualFailureRow = sourceProofRow({ queue_key: 'dual-failure-1' });
+  const dualFailure = await pass.runDocumentReextractionPass([dualFailureRow], { market, now_iso: '2026-08-17T10:12:00.000Z' }, {
+    fetch_impl: fetchImpl,
+    pdf_parse_impl: async () => { throw new Error('pdf text exploded'); },
+    ocr_notice_extraction_impl: async () => []
+  });
+  assert.strictEqual(dualFailure.failed_count, 1);
+  assert.strictEqual(dualFailure.reason_counts.pdf_text_and_ocr_both_recovered_nothing, 1);
+  assert.strictEqual(dualFailureRow.enrichment_ledger.attempts[0].reason_code, 'pdf_text_and_ocr_both_recovered_nothing');
+  assert.ok(String(dualFailureRow.enrichment_ledger.attempts[0].next_eligible_at).startsWith('2026-08-17T16:12:00'));
+
+  const terminalFailureRow = sourceProofRow({ queue_key: 'terminal-failure-1', source_document_url: `${PDF_URL}?terminal=1` });
+  const failingOptions = {
+    fetch_impl: fetchImpl,
+    pdf_parse_impl: async () => { throw new Error('pdf text exploded'); },
+    ocr_notice_extraction_impl: async () => []
+  };
+  await pass.runDocumentReextractionPass([terminalFailureRow], { market, now_iso: '2026-08-17T11:00:00.000Z' }, failingOptions);
+  await pass.runDocumentReextractionPass([terminalFailureRow], { market, now_iso: '2026-08-17T18:30:00.000Z' }, failingOptions);
+  await pass.runDocumentReextractionPass([terminalFailureRow], { market, now_iso: '2026-08-18T20:00:00.000Z' }, failingOptions);
+  const terminalLatest = enrichmentLedger.attemptsForLane(terminalFailureRow, 'document_reextraction')
+    .slice()
+    .sort((a, b) => String(b.attempted_at).localeCompare(String(a.attempted_at)))[0];
+  assert.ok(String(terminalLatest.next_eligible_at).startsWith('PERMANENT_UNTIL_DOCUMENT_REVIEW'));
+  const terminalSelection = enrichmentScheduler.selectRowsForEnrichment([terminalFailureRow], {
+    lane: 'document_reextraction',
+    limit: 5,
+    now_iso: '2026-08-19T20:00:00.000Z',
+    market_policy: {}
+  });
+  assert.strictEqual(terminalSelection.selected.length, 0);
 
   const rows = Array.from({ length: 6 }, (_, index) => sourceProofRow({
     queue_key: `rotation-${index}`,

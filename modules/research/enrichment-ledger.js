@@ -127,6 +127,7 @@ function isLaneEligible(row, lane, nowIso, policyContext) {
     .slice()
     .sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0] || null;
   if (!latest) return true;
+  if (cleanText(latest.next_eligible_at).startsWith('PERMANENT_')) return false;
   const nowMs = Date.parse(nowIso);
   const nextMs = Date.parse(latest.next_eligible_at);
   if (!Number.isFinite(nextMs) || !Number.isFinite(nowMs)) return true;
