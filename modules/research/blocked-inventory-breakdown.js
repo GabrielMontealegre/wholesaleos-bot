@@ -52,6 +52,15 @@ function pushLockedOtherReason(target, row) {
   if (reason && !target.includes(reason)) target.push(reason);
 }
 
+function researchReferenceReason(row) {
+  const rejected = cleanText(row && (row.rejected_reason || row.rejected_reason_code || row.rejection_reason));
+  if (rejected) return rejected;
+  const bucket = cleanText(row && row.quality_bucket).toUpperCase();
+  if (bucket === 'SOURCE_PROOF_ONLY') return 'source_proof_only';
+  if (bucket === 'REJECTED_GENERIC') return 'rejected_generic';
+  return 'unknown';
+}
+
 function researchReferenceBadSkipped(row) {
   const bucket = cleanText(row && row.quality_bucket).toUpperCase();
   return bucket === 'REJECTED_GENERIC' || bucket === 'SOURCE_PROOF_ONLY';
@@ -90,6 +99,10 @@ function emptySummary() {
     sale_passed: {
       times_seen_distribution: {},
       filing_period_distribution: {}
+    },
+    research_reference_bad_skipped: {
+      rejected_reason_distribution: {},
+      quality_bucket_distribution: {}
     }
   };
 }
@@ -106,6 +119,10 @@ function applyRow(summary, row) {
     incrementDistribution(summary.sale_passed.times_seen_distribution, row && row.times_seen);
     incrementDistribution(summary.sale_passed.filing_period_distribution, row && row.filing_period);
   }
+  if (reason === 'RESEARCH_REFERENCE_BAD_SKIPPED') {
+    incrementDistribution(summary.research_reference_bad_skipped.rejected_reason_distribution, researchReferenceReason(row));
+    incrementDistribution(summary.research_reference_bad_skipped.quality_bucket_distribution, row && row.quality_bucket);
+  }
 }
 
 function compactMarket(marketKey, bucket) {
@@ -120,6 +137,10 @@ function compactMarket(marketKey, bucket) {
     sale_passed: {
       times_seen_distribution: {},
       filing_period_distribution: {}
+    },
+    research_reference_bad_skipped: {
+      rejected_reason_distribution: {},
+      quality_bucket_distribution: {}
     }
   };
 }
@@ -148,6 +169,8 @@ function mergeMarketIntoTotal(total, market) {
   }
   mergeDistribution(total.sale_passed.times_seen_distribution, market.sale_passed.times_seen_distribution);
   mergeDistribution(total.sale_passed.filing_period_distribution, market.sale_passed.filing_period_distribution);
+  mergeDistribution(total.research_reference_bad_skipped.rejected_reason_distribution, market.research_reference_bad_skipped.rejected_reason_distribution);
+  mergeDistribution(total.research_reference_bad_skipped.quality_bucket_distribution, market.research_reference_bad_skipped.quality_bucket_distribution);
 }
 
 function buildBlockedInventoryBreakdownFromStore(store) {

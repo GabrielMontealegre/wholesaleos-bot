@@ -336,6 +336,17 @@
       var samples = reason === 'LOCKED_OTHER' && safeArray(breakdown.locked_other_reason_samples).length
         ? '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Reason samples: ' + esc(breakdown.locked_other_reason_samples.join(' | ')) + '</div>'
         : '';
+      if (reason === 'RESEARCH_REFERENCE_BAD_SKIPPED' && breakdown.research_reference_bad_skipped) {
+        var split = breakdown.research_reference_bad_skipped.rejected_reason_distribution || {};
+        var splitText = Object.keys(split).sort(function (a, b) {
+          return Number(split[b] || 0) - Number(split[a] || 0) || a.localeCompare(b);
+        }).slice(0, 6).map(function (key) {
+          return key + ': ' + split[key];
+        }).join(' | ');
+        if (splitText) {
+          samples += '<div style="font-size:11px;color:#7c2d12;margin-top:4px;">Rejected/source-proof split: ' + esc(splitText) + '</div>';
+        }
+      }
       var unloaded = loadedRows.length < count
         ? '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">' + esc(String(count - loadedRows.length)) + ' row detail' + (count - loadedRows.length === 1 ? ' is' : 's are') + ' outside the first 100 loaded rows; count and next action are still shown.</div>'
         : '';
@@ -473,6 +484,17 @@
         esc(batch.ocr.ocr_skipped_oversize) + ' oversize skipped, ' +
         esc(batch.ocr.ocr_failures) + ' failed.</div>';
     }
+    var reextractionLine = '';
+    if (batch && batch.document_reextraction) {
+      var doc = batch.document_reextraction;
+      reextractionLine = '<div style="font-size:11px;color:#4b5563;margin-top:4px;">Document re-extraction: ' +
+        esc(doc.selected_count || 0) + ' stored rows selected, ' +
+        esc(doc.complete_address_recovered_count || 0) + ' complete addresses recovered, ' +
+        esc(doc.needs_zip_review_recovered_count || 0) + ' moved to ZIP/address review, ' +
+        esc(doc.no_recovery_count || 0) + ' no recovery, ' +
+        esc(doc.blocked_count || 0) + ' blocked, ' +
+        esc(doc.failed_count || 0) + ' failed.</div>';
+    }
     var errLine = autoRun.last_error
       ? '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Last auto-run error: ' + esc(autoRun.last_error) + '</div>' : '';
     var blockers = '';
@@ -486,7 +508,7 @@
     }
     return panelBox('Daily Deal Machine',
       selectedMarketLabel() + ' - free public sources only - snapshot cache, not saved leads.',
-      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + errLine + blockers + coverageTable(batch),
+      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + reextractionLine + errLine + blockers + coverageTable(batch),
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
 

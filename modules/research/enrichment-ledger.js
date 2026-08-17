@@ -9,6 +9,7 @@ const LANES = Object.freeze([
   'public_search',
   'official_browser_lookup',
   'sold_comp',
+  'document_reextraction',
   'paid_fallback'
 ]);
 

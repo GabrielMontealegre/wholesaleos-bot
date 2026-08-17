@@ -22,6 +22,7 @@ const leadOperationsQueue = require('./lead-operations-queue');
 const leadOperationsState = require('./lead-operations-state');
 const enrichmentScheduler = require('./enrichment-scheduler');
 const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
+const documentReextractionPass = require('./document-reextraction-pass');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -645,6 +646,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
     status_evidence_text: cleanText(deal.status_evidence_text) || null,
+    rejected_reason: cleanText(deal.rejected_reason) || null,
     listing_date_if_visible: cleanText(deal.listing_date_if_visible) || null,
     offer_deadline_if_visible: cleanText(deal.offer_deadline_if_visible) || null,
     auction_closing_at_if_visible: cleanText(deal.auction_closing_at_if_visible) || null,
@@ -775,6 +777,11 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     call_readiness: cleanText(deal.call_readiness),
     next_best_action: cleanText(deal.next_best_action),
     missing_fields: Array.isArray(deal.missing_fields) ? deal.missing_fields.slice(0, 8) : [],
+    document_reextraction_status: cleanText(deal.document_reextraction_status),
+    document_reextraction_reason: cleanText(deal.document_reextraction_reason),
+    document_reextraction_at: cleanText(deal.document_reextraction_at),
+    document_reextraction_source_url: cleanText(deal.document_reextraction_source_url),
+    document_reextraction_evidence_text: cleanText(deal.document_reextraction_evidence_text),
     seller_questions: deal.call_prep && Array.isArray(deal.call_prep.seller_questions) ? deal.call_prep.seller_questions.slice(0, 8) : [],
     blocked_sources: [].concat(deal.blocked_sources || [], deal.browser_blocked_sources || [])
       .map((item) => ({ source: cleanText(item && item.source), reason: cleanText(item && item.reason) })).slice(0, 6),
@@ -915,6 +922,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
       board_blocker_summary: 'no_verified_source_lanes_for_this_market',
       source_coverage: [],
       suppressed_nav_chrome_samples: [],
+      document_reextraction: null,
       ocr: null
     };
     bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
@@ -958,6 +966,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'land_use',
+    'rejected_reason',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',
@@ -969,6 +978,9 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'contact_workflow_at', 'contact_workflow_source', 'contact_workflow_recorded_by',
     'contact_workflow_attempts', 'contact_workflow_invalidated_routes',
     'contact_follow_up_requested', 'contact_follow_up_at',
+    'document_reextraction_status', 'document_reextraction_reason',
+    'document_reextraction_at', 'document_reextraction_source_url',
+    'document_reextraction_evidence_text',
     'enrichment_ledger', 'enrichment_skip_rollups'
   ];
   let newRows = 0;
@@ -1022,6 +1034,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
     }
   }
   bucket.rows = repairStoredSnapshotRows(Array.from(byKey.values()));
+  const documentReextractionDiagnostics = await documentReextractionPass.runDocumentReextractionPass(bucket.rows.filter((row) => storedQueueKeys.has(row.queue_key)), {
+    enabled: input.enable_document_reextraction !== false,
+    market,
+    now_iso: runAt
+  }, options);
+  bucket.rows = repairStoredSnapshotRows(bucket.rows);
   await backfillCensusKeysForStoredRows(
     bucket.rows.filter((row) => storedQueueKeys.has(row.queue_key)),
     options
@@ -1042,6 +1060,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     board_blocker_summary: cleanText(preview && preview.board_blocker_summary),
     source_coverage: sourceCoverageFromPreview(preview),
     suppressed_nav_chrome_samples: suppressedNavChromeSamplesFromPreview(preview),
+    document_reextraction: documentReextractionDiagnostics,
     ocr: ocrSummaryFromPreview(preview)
   };
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);

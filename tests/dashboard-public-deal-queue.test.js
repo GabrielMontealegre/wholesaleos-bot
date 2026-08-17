@@ -777,7 +777,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=20'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=21'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -827,6 +827,9 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('next_run_at'), 'dashboard must show next run ETA');
   assert.ok(uiSource.includes('last_error'), 'dashboard must surface the last auto-run error');
   assert.ok(uiSource.includes('ocr_text_quality_score'), 'dashboard must show OCR quality score');
+  assert.ok(uiSource.includes('Document re-extraction'), 'dashboard must show stored document re-extraction diagnostics');
+  assert.ok(uiSource.includes('complete_address_recovered_count'), 'dashboard must show complete-address recoveries');
+  assert.ok(uiSource.includes('needs_zip_review_recovered_count'), 'dashboard must show ZIP/address-review recoveries');
 
   // 6) The operator panels exist: Daily Deal Machine, ZIP Review, segmented Lead Operations Queue.
   assert.ok(uiSource.includes('Daily Deal Machine'), 'dashboard must render the Daily Deal Machine panel');
@@ -869,6 +872,8 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Verify the complete address from the source document.'), 'Dashboard must show address-repair next action');
   assert.ok(uiSource.includes('Run or await the public owner/taxpayer record lookup.'), 'Dashboard must show identity next action');
   assert.ok(uiSource.includes('Reference only; not a callable lead.'), 'Dashboard must label reference/bad/skipped inventory');
+  assert.ok(uiSource.includes('rejected_reason_distribution'), 'Dashboard must show the rejected/source-proof reason split');
+  assert.ok(uiSource.includes('Rejected/source-proof split'), 'Dashboard must label the reason-code split');
   assert.ok(uiSource.includes("row.quality_bucket === 'SOURCE_PROOF_ONLY'") && uiSource.includes("row.quality_bucket === 'REJECTED_GENERIC'"), 'Dashboard must classify reference/bad/skipped rows by explicit buckets only');
   assert.ok(!uiSource.includes('\\b(RESEARCH|REFERENCE|BAD|SKIPPED)\\b'), 'Dashboard must not scan free-text prose for reference/bad/skipped classification');
   assert.ok(uiSource.includes('outside the first 100 loaded rows'), 'Dashboard must explain when aggregate rows are not loaded in the response');

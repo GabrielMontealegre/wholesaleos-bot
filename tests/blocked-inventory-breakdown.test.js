@@ -49,6 +49,7 @@ function subreasonTotal(counts) {
       queue_key: 'research-1',
       normalized_address: '',
       quality_bucket: 'SOURCE_PROOF_ONLY',
+      rejected_reason: 'no_recoverable_address_in_document',
       lifecycle_status: { status: 'SALE_PASSED', quarantined: true }
     }),
     row({
@@ -135,6 +136,8 @@ function subreasonTotal(counts) {
   assert.strictEqual(market.counts.LOCKED_NO_COMPLETE_ADDRESS, 1);
   assert.deepStrictEqual(market.sale_passed.times_seen_distribution, { 3: 1 });
   assert.deepStrictEqual(market.sale_passed.filing_period_distribution, { '2026-07': 1 });
+  assert.deepStrictEqual(market.research_reference_bad_skipped.rejected_reason_distribution, { no_recoverable_address_in_document: 1 });
+  assert.deepStrictEqual(market.research_reference_bad_skipped.quality_bucket_distribution, { SOURCE_PROOF_ONLY: 1 });
   assert.deepStrictEqual(market.locked_other_reason_samples, ['Manual engineering review required.']);
 
   const mixedRows = [
@@ -142,6 +145,7 @@ function subreasonTotal(counts) {
       queue_key: 'blocked-source-proof',
       normalized_address: '',
       quality_bucket: 'SOURCE_PROOF_ONLY',
+      rejected_reason: 'generic_source_without_property_identity',
       lifecycle_status: { status: 'SALE_PASSED', quarantined: true }
     }),
     row({
@@ -180,6 +184,7 @@ function subreasonTotal(counts) {
     Object.values(mixedMarket.example_queue_keys).flat().sort(),
     ['blocked-missing-address', 'blocked-source-proof']
   );
+  assert.deepStrictEqual(mixedMarket.research_reference_bad_skipped.rejected_reason_distribution, { generic_source_without_property_identity: 1 });
 
   const healthy = breakdown.buildBlockedInventoryBreakdownFromStore(store(rows.filter((item) => item.queue_key !== 'locked-other-1')));
   assert.strictEqual(healthy.markets[0].counts.LOCKED_OTHER, 0);
