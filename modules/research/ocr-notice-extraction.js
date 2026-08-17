@@ -123,7 +123,10 @@ async function renderPdfPagesToPngs(pdfBuffer, caps, options = {}) {
 async function ocrPngToText(pngBuffer, options = {}) {
   if (typeof options.ocr_impl === 'function') return options.ocr_impl(pngBuffer);
   const Tesseract = require('tesseract.js');
-  const result = await Tesseract.recognize(pngBuffer, 'eng', { cachePath: ocrCacheDir(options) });
+  const result = await Tesseract.recognize(pngBuffer, 'eng', Object.assign(
+    { cachePath: ocrCacheDir(options) },
+    options.tesseract_params || {}
+  ));
   return {
     text: String(result && result.data && result.data.text || ''),
     confidence: Number(result && result.data && result.data.confidence || 0) || 0
