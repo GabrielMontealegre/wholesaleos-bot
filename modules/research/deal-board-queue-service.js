@@ -21,6 +21,7 @@ const leadLifecycleStatus = require('./lead-lifecycle-status');
 const leadOperationsQueue = require('./lead-operations-queue');
 const leadOperationsState = require('./lead-operations-state');
 const enrichmentScheduler = require('./enrichment-scheduler');
+const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -75,6 +76,7 @@ const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(caLosAngelesTaxDefaultSourceProf
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 const COUNTY_ONBOARDING_DIR = path.join(process.cwd(), 'exports', 'county-onboarding');
 let countyOnboardingArtifactCache = null;
+let blockedInventoryBreakdownCache = null;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -382,6 +384,7 @@ function writeStore(store) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   store.updated_at = nowIso();
   fs.writeFileSync(file, JSON.stringify(store, null, 2));
+  blockedInventoryBreakdownCache = null;
 }
 
 function marketKey(market) {
@@ -584,6 +587,45 @@ function countyOnboardingSummary(market) {
     throughput_plan: throughputPlan,
     market_plan: throughputPlan
   };
+}
+
+function blockedInventoryBreakdownCacheKey(store) {
+  const today = nowIso().slice(0, 10);
+  const file = snapshotFilePath();
+  try {
+    const stat = fs.statSync(file);
+    return `${file}|${stat.mtimeMs}|${stat.size}|${today}`;
+  } catch (error) {
+    return `missing|${cleanText(store && store.updated_at)}|${today}`;
+  }
+}
+
+function blockedInventoryStoreForSummary(store) {
+  const clone = {
+    version: store && store.version || 1,
+    store_kind: cleanText(store && store.store_kind),
+    updated_at: cleanText(store && store.updated_at),
+    markets: {}
+  };
+  for (const [key, bucket] of Object.entries(store && store.markets || {})) {
+    clone.markets[key] = Object.assign({}, bucket || {}, {
+      market: Object.assign({}, bucket && bucket.market || {}),
+      rows: repairStoredSnapshotRows((Array.isArray(bucket && bucket.rows) ? bucket.rows : []).map(cloneSnapshotRow))
+    });
+  }
+  return clone;
+}
+
+function blockedInventoryBreakdownForResponse(store) {
+  const cacheKey = blockedInventoryBreakdownCacheKey(store);
+  if (blockedInventoryBreakdownCache && blockedInventoryBreakdownCache.cache_key === cacheKey) {
+    return blockedInventoryBreakdownCache.value;
+  }
+  const value = blockedInventoryBreakdown.buildBlockedInventoryBreakdownFromStore(
+    blockedInventoryStoreForSummary(store || {})
+  );
+  blockedInventoryBreakdownCache = { cache_key: cacheKey, value };
+  return value;
 }
 
 function projectRowForQueue(deal, dedupeKey, seenAt) {
@@ -1037,6 +1079,7 @@ function latestDealBoardSnapshot(input = {}) {
     county_onboarding: countyOnboardingSummary(market),
     daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
     auto_run: getAutoRunStatus(market),
+    blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     lead_operations_queue: leadOperationsQueueForResponse([]),
     rows: []
     };
@@ -1062,6 +1105,7 @@ function latestDealBoardSnapshot(input = {}) {
       ocr_address_rows_today: batchesToday.reduce((sum, item) => sum + Number(item.ocr && item.ocr.ocr_rows_with_address || 0), 0)
     },
     auto_run: getAutoRunStatus(market),
+    blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     lead_operations_queue: leadOperationsQueueForResponse(rows),
     rows: rows.slice(0, 100)
   };
@@ -1432,6 +1476,7 @@ module.exports = {
   rowStateForDeal: leadOperationsState.rowStateForDeal,
   buildLeadOperationsQueue: leadOperationsQueue.buildLeadOperationsQueue,
   summarizeLeadOperationsQueue: leadOperationsQueue.summarizeLeadOperationsQueue,
+  blockedInventoryBreakdownForResponse,
   CONTACT_WORKFLOW_OUTCOMES,
   queueCounts,
   countyOnboardingSummary,

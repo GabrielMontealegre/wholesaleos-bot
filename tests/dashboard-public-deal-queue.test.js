@@ -777,7 +777,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=19'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=20'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -863,6 +863,15 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('lifecycleChip'), 'row cards must surface lifecycle status');
   assert.ok(uiSource.includes('ledgerList'), 'row cards must surface enrichment ledger attempts');
   assert.ok(uiSource.includes('Blocked / Quarantined'), 'Dashboard must keep quarantined rows in a separate collapsed segment');
+  assert.ok(uiSource.includes('blocked_inventory_breakdown'), 'Dashboard must consume the server-side blocked inventory breakdown');
+  assert.ok(uiSource.includes('blockedInventoryGroups'), 'Dashboard must group blocked rows by subreason');
+  assert.ok(uiSource.includes('LOCKED_NO_COMPLETE_ADDRESS') && uiSource.includes('LOCKED_NO_SOURCED_IDENTITY'), 'Dashboard must render address and identity blocked subreasons');
+  assert.ok(uiSource.includes('Verify the complete address from the source document.'), 'Dashboard must show address-repair next action');
+  assert.ok(uiSource.includes('Run or await the public owner/taxpayer record lookup.'), 'Dashboard must show identity next action');
+  assert.ok(uiSource.includes('Reference only; not a callable lead.'), 'Dashboard must label reference/bad/skipped inventory');
+  assert.ok(uiSource.includes("row.quality_bucket === 'SOURCE_PROOF_ONLY'") && uiSource.includes("row.quality_bucket === 'REJECTED_GENERIC'"), 'Dashboard must classify reference/bad/skipped rows by explicit buckets only');
+  assert.ok(!uiSource.includes('\\b(RESEARCH|REFERENCE|BAD|SKIPPED)\\b'), 'Dashboard must not scan free-text prose for reference/bad/skipped classification');
+  assert.ok(uiSource.includes('outside the first 100 loaded rows'), 'Dashboard must explain when aggregate rows are not loaded in the response');
   assert.ok(uiSource.includes("return 'CALL_READY'"), 'Dashboard urgent rows must label call-ready context');
   assert.ok(uiSource.includes("return 'Sale in '"), 'Dashboard urgent rows must label sale urgency context');
   assert.ok(uiSource.includes("return row.quality_bucket || 'REVIEW'"), 'Dashboard urgent rows must label their bucket context');

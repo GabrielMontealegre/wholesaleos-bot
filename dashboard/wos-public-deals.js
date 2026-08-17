@@ -36,6 +36,13 @@
     return selectedMarket().label;
   }
 
+  function selectedMarketStoreKey() {
+    var market = selectedMarket();
+    return [market.city, market.county, market.state].map(function (value) {
+      return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }).join('|');
+  }
+
   function latestUrl() {
     var market = selectedMarket();
     return API_LATEST + '?city=' + encodeURIComponent(market.city) +
@@ -249,6 +256,105 @@
       lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(safeArray(row.blocked_sources).map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
     }
     return '<div class="wos-public-deal-row" data-queue-key="' + esc(row.queue_key || '') + '" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
+  }
+
+  var BLOCKED_SUBREASON_ORDER = [
+    'SALE_PASSED',
+    'SUPERSEDED_DUPLICATE',
+    'UNVERIFIABLE',
+    'LOCKED_NO_COMPLETE_ADDRESS',
+    'LOCKED_NO_SOURCED_IDENTITY',
+    'RESEARCH_REFERENCE_BAD_SKIPPED',
+    'LOCKED_OTHER'
+  ];
+
+  var BLOCKED_SUBREASON_LABELS = {
+    SALE_PASSED: 'Sale Passed',
+    SUPERSEDED_DUPLICATE: 'Superseded Duplicate',
+    UNVERIFIABLE: 'Unverifiable',
+    LOCKED_NO_COMPLETE_ADDRESS: 'Missing Complete Address',
+    LOCKED_NO_SOURCED_IDENTITY: 'Missing Sourced Identity',
+    RESEARCH_REFERENCE_BAD_SKIPPED: 'Research / Reference and Bad / Skipped',
+    LOCKED_OTHER: 'Locked Other'
+  };
+
+  var BLOCKED_SUBREASON_ACTIONS = {
+    LOCKED_NO_COMPLETE_ADDRESS: 'Verify the complete address from the source document.',
+    LOCKED_NO_SOURCED_IDENTITY: 'Run or await the public owner/taxpayer record lookup.',
+    SALE_PASSED: 'Verify a repost only if a newer source document exists.',
+    SUPERSEDED_DUPLICATE: 'Confirm the richer duplicate row is the one to work.',
+    UNVERIFIABLE: 'No usable address or source document; leave parked.',
+    RESEARCH_REFERENCE_BAD_SKIPPED: 'Reference only; not a callable lead.',
+    LOCKED_OTHER: 'Unclassified; report the reason to engineering.'
+  };
+
+  function rowIsResearchReferenceBadSkipped(row) {
+    return row.quality_bucket === 'SOURCE_PROOF_ONLY' ||
+      row.quality_bucket === 'REJECTED_GENERIC';
+  }
+
+  function blockedSubreasonForLoadedRow(row) {
+    var status = row.lifecycle_status && row.lifecycle_status.status;
+    if (rowIsResearchReferenceBadSkipped(row)) return 'RESEARCH_REFERENCE_BAD_SKIPPED';
+    if (status === 'SUPERSEDED_DUPLICATE') return 'SUPERSEDED_DUPLICATE';
+    if (status === 'UNVERIFIABLE') return 'UNVERIFIABLE';
+    if (status === 'SALE_PASSED') return 'SALE_PASSED';
+    if (!row.normalized_address) return 'LOCKED_NO_COMPLETE_ADDRESS';
+    if (/owner|taxpayer|identity/i.test(row.row_state_reason || '')) return 'LOCKED_NO_SOURCED_IDENTITY';
+    return 'LOCKED_OTHER';
+  }
+
+  function selectedMarketBreakdown(data) {
+    var breakdown = data && data.blocked_inventory_breakdown || {};
+    var key = selectedMarketStoreKey();
+    var markets = safeArray(breakdown.markets);
+    return markets.find(function (entry) { return entry && entry.market_key === key; }) || null;
+  }
+
+  function blockedInventoryGroups(data, segment, rows, color) {
+    var breakdown = selectedMarketBreakdown(data);
+    if (!breakdown) {
+      return '<details style="margin-top:8px;">' +
+        '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (color || '#fecaca') + ';">Blocked / Quarantined (' + esc(String(segment && segment.count || 0)) + ')</summary>' +
+        (rows.length ? '<div style="margin-top:7px;">' + rows.map(rowCard).join('') + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No loaded blocked row details.</div>') +
+        '</details>';
+    }
+    var byReason = {};
+    rows.forEach(function (row) {
+      var reason = blockedSubreasonForLoadedRow(row);
+      if (!byReason[reason]) byReason[reason] = [];
+      byReason[reason].push(row);
+    });
+    var order = safeArray(data && data.blocked_inventory_breakdown && data.blocked_inventory_breakdown.subreason_order).length
+      ? safeArray(data.blocked_inventory_breakdown.subreason_order)
+      : BLOCKED_SUBREASON_ORDER;
+    var counts = breakdown.counts || {};
+    var groups = order.map(function (reason) {
+      var count = Number(counts[reason] || 0);
+      var loadedRows = safeArray(byReason[reason]);
+      if (!count && !loadedRows.length) return '';
+      var samples = reason === 'LOCKED_OTHER' && safeArray(breakdown.locked_other_reason_samples).length
+        ? '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Reason samples: ' + esc(breakdown.locked_other_reason_samples.join(' | ')) + '</div>'
+        : '';
+      var unloaded = loadedRows.length < count
+        ? '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">' + esc(String(count - loadedRows.length)) + ' row detail' + (count - loadedRows.length === 1 ? ' is' : 's are') + ' outside the first 100 loaded rows; count and next action are still shown.</div>'
+        : '';
+      return '<details style="margin-top:7px;">' +
+        '<summary style="cursor:pointer;font-size:12px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:#fee2e2;">' +
+        esc(BLOCKED_SUBREASON_LABELS[reason] || reason) + ' (' + esc(String(count)) + ')</summary>' +
+        '<div style="font-size:12px;color:#374151;margin-top:6px;">Next action: <b>' + esc(BLOCKED_SUBREASON_ACTIONS[reason] || BLOCKED_SUBREASON_ACTIONS.LOCKED_OTHER) + '</b></div>' +
+        samples +
+        (loadedRows.length ? '<div style="margin-top:7px;">' + loadedRows.map(rowCard).join('') + '</div>' : '') +
+        unloaded +
+        (!loadedRows.length && !unloaded ? '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No rows in this blocked subreason.</div>' : '') +
+        '</details>';
+    }).join('');
+    if (!groups) groups = '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No blocked inventory in this market.</div>';
+    return '<details style="margin-top:8px;">' +
+      '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (color || '#fecaca') + ';">Blocked / Quarantined (' + esc(String(segment && segment.count || breakdown.total_inventory || 0)) + ') - grouped by reason</summary>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:5px;">blocked_inventory_breakdown returns counts and queue keys only; row details appear only when already loaded in this snapshot response.</div>' +
+      groups +
+      '</details>';
   }
 
   function panelBox(title, subtitle, bodyHtml, accent) {
@@ -551,6 +657,7 @@
       var rows = safeArray(segment && segment.row_keys).map(function (key) { return rowsByKey[key]; }).filter(Boolean);
       var key = segment && segment.key || 'BLOCKED';
       var titleNote = key === 'TITLE_NEEDED' ? ' - no verified public title workflow source yet' : '';
+      if (key === 'BLOCKED') return blockedInventoryGroups(data, segment, rows, colors[key]);
       return '<details style="margin-top:8px;"' + (key === 'CALL_READY' || key === 'OUTREACH_READY' || key === 'MAIL_READY' ? ' open' : '') + '>' +
         '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (colors[key] || '#e5e7eb') + ';">' +
         esc(labels[key] || segment && segment.label || key) + ' (' + esc(String(segment && segment.count || 0)) + ')' + esc(titleNote) +
