@@ -107,6 +107,32 @@ const PROFILES = Object.freeze([
     verified_at: '2026-08-11',
     record_count: null,
     notes: 'Detroit public ArcGIS property-sales layer exposes sale price and sale date for verified comp evidence.'
+  },
+  {
+    profile_id: 'il_cook_socrata_property_sales',
+    market: { city: 'Chicago', county: 'Cook', state: 'IL' },
+    county: 'Cook',
+    state: 'IL',
+    api_kind: 'socrata',
+    service_url: 'https://datacatalog.cookcountyil.gov/resource/wvhk-k5uv.json',
+    layer: 0,
+    field_map: {
+      owner_name: '',
+      mailing_address: '',
+      situs_address: '',
+      parcel_id: 'pin',
+      sale_price: 'sale_price',
+      sale_date: 'sale_date',
+      land_use: 'class',
+      year_built: '',
+      zip: ''
+    },
+    disclosure_state: true,
+    verified_at: '2026-08-19',
+    verification_status: 'verified_machine_readable_public_sales_schema',
+    verification_evidence: 'exports/public-sales-layer-discovery/public-sales-layer-discovery-2026-08-19T17-42-59-006Z.json',
+    record_count: null,
+    notes: 'Cook County Socrata property-sales dataset exposes PIN, sale price, sale date, and class for public-record comp candidates; no owner or mailing fields are used.'
   }
 ]);
 

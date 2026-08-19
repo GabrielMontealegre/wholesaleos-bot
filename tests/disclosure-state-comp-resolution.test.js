@@ -45,6 +45,7 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
   assert.ok(ready.verified_comps.every((comp) => /Comp window: 2025-08-11 to 2026-08-11/.test(comp.evidence_text)));
   assert.ok(ready.verified_comps.every((comp) => /Similarity: land_use:residential/.test(comp.evidence_text)));
   assert.ok(!ready.verified_comps.some((comp) => comp.parcel_id === 'subject-1'));
+  assert.ok(ready.verified_comps.every((comp) => comp.comp_identity_kind === 'street_address'), 'Detroit address-bearing comps must keep street-address identity');
 
   const partial = await compResolution.resolveCompsForRow(row, {
     profiles: [profile],
@@ -125,6 +126,74 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
   });
   assert.strictEqual(arcgisRun.attempt_records[0].outcome, 'FAILED');
   assert.match(arcgisRun.attempt_records[0].reason_code, /^ARCGIS_ERROR_400/);
+
+  const socrataProfile = {
+    api_kind: 'socrata',
+    service_url: 'https://datacatalog.example.gov/resource/sales.json',
+    disclosure_state: true,
+    field_map: {
+      situs_address: '',
+      parcel_id: 'pin',
+      sale_price: 'sale_price',
+      sale_date: 'sale_date',
+      land_use: 'class'
+    }
+  };
+  let socrataUrl = '';
+  const socrata = await compResolution.resolveCompsForRow({
+    normalized_address: '500 Example Ave, Chicago, IL 60601',
+    city: 'Chicago',
+    county: 'Cook',
+    state: 'IL',
+    parcel_id: '14-01-100-001-0000',
+    land_use: 'Residential'
+  }, {
+    profiles: [socrataProfile],
+    now_iso: '2026-08-11T00:00:00Z',
+    fetch_impl: async (url) => {
+      socrataUrl = url;
+      return {
+        ok: true,
+        status: 200,
+        async text() {
+          return JSON.stringify([
+            { pin: '14-01-100-001-0000', sale_price: '400000', sale_date: '2026-01-10', class: 'Residential' },
+            { pin: '14-01-100-002-0000', sale_price: '210000', sale_date: '2026-02-15', class: 'Residential' },
+            { pin: '14-01-100-003-0000', sale_price: '220000', sale_date: '2026-03-15', class: 'Residential' },
+            { pin: '14-01-100-004-0000', sale_price: '230000', sale_date: '2026-04-15', class: 'Residential' }
+          ]);
+        }
+      };
+    }
+  });
+  assert.strictEqual(socrata.status, 'COMP_READY');
+  assert.strictEqual(socrata.verified_comps.length, 3);
+  assert.ok(!socrata.verified_comps.some((comp) => comp.parcel_id === '14-01-100-001-0000'), 'subject PIN must never become its own comp');
+  assert.ok(socrata.rejected_comp_candidates.some((comp) => comp.parcel_id === '14-01-100-001-0000' && comp.rejected_reason === 'subject_parcel_not_a_comp'));
+  assert.ok(socrata.verified_comps.every((comp) => comp.comp_identity_kind === 'parcel_id_only'));
+  assert.ok(socrataUrl.includes('datacatalog.example.gov/resource/sales.json?'));
+  assert.ok(socrataUrl.includes('%24where='));
+  assert.ok(socrata.verified_comps.every((comp) => comp.source_kind === 'official_public_record'));
+  assert.ok(socrata.verified_comps.every((comp) => /Similarity: land_use:residential/.test(comp.evidence_text)));
+
+  const unsafeParcelOnly = await compResolution.resolveCompsForRow({
+    normalized_address: '500 Example Ave, Chicago, IL 60601',
+    city: 'Chicago',
+    county: 'Cook',
+    state: 'IL',
+    land_use: 'Residential'
+  }, {
+    profiles: [socrataProfile],
+    now_iso: '2026-08-11T00:00:00Z',
+    mock_comp_features: [
+      { pin: '14-01-100-001-0000', sale_price: '400000', sale_date: '2026-01-10', class: 'Residential' },
+      { pin: '14-01-100-002-0000', sale_price: '210000', sale_date: '2026-02-15', class: 'Residential' },
+      { pin: '14-01-100-003-0000', sale_price: '220000', sale_date: '2026-03-15', class: 'Residential' }
+    ]
+  });
+  assert.strictEqual(unsafeParcelOnly.status, 'COMP_SEARCH_EXHAUSTED_FREE');
+  assert.strictEqual(unsafeParcelOnly.verified_comps.length, 0);
+  assert.ok(unsafeParcelOnly.rejected_comp_candidates.every((comp) => comp.rejected_reason === 'parcel_only_comp_without_subject_parcel_id'));
 
   const oldWouldHaveUnlocked = await compResolution.resolveCompsForRow(row, {
     profiles: [profile],

@@ -45,6 +45,10 @@ function layerUrl(profile) {
   return `${base}/${Number(profile && profile.layer) || 0}`;
 }
 
+function socrataUrl(profile) {
+  return cleanText(profile && profile.service_url).replace(/\/+$/, '');
+}
+
 function normalizeArcgisDate(value) {
   if (value == null || value === '') return '';
   const num = Number(value);
@@ -77,7 +81,7 @@ function addressKey(value) {
 }
 
 function subjectParcel(row) {
-  return cleanText(row && (row.parcel_or_account || row.parcel_id || row.apn || row.source_row_reference)).toLowerCase();
+  return cleanText(row && (row.parcel_or_account || row.parcel_id || row.apn || row.pin)).toLowerCase();
 }
 
 function subjectZip(row) {
@@ -126,6 +130,7 @@ function compFromAttributes(attrs, profile, queryUrl, context = {}) {
   ].filter(Boolean).join(' | '));
   return {
     comp_address: address,
+    comp_identity_kind: address ? 'street_address' : parcelId ? 'parcel_id_only' : '',
     sold_status: 'sold',
     sold_price: price,
     sold_date: soldDate,
@@ -190,9 +195,44 @@ function whereForRow(row, profile, options = {}) {
   return clauses.length ? clauses.join(' AND ') : '1=1';
 }
 
+function socrataLiteral(value) {
+  return `'${cleanText(value).replace(/'/g, "''")}'`;
+}
+
+function socrataWhereForRow(row, profile, options = {}) {
+  const map = profile.field_map || {};
+  const clauses = [];
+  const landUse = rowLandUse(row);
+  if (landUse && cleanText(map.land_use)) clauses.push(`${map.land_use} like ${socrataLiteral(`%${landUse}%`)}`);
+  const priceField = cleanText(map.sale_price);
+  const dateField = cleanText(map.sale_date);
+  const floor = Number(profile.min_market_sale_price || options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
+  const today = todayIso(options);
+  const recentCutoff = addMonthsIso(today, -12);
+  if (priceField) clauses.push(`${priceField} >= ${floor}`);
+  if (dateField && recentCutoff) clauses.push(`${dateField} >= ${socrataLiteral(recentCutoff)}`);
+  return clauses.length ? clauses.join(' AND ') : '';
+}
+
+function queryUrlForProfile(row, profile, context, caps) {
+  if (profile.api_kind === 'socrata') {
+    const base = socrataUrl(profile);
+    const params = new URLSearchParams();
+    params.set('$limit', String(caps.max_results_per_row));
+    const where = socrataWhereForRow(row, profile, context);
+    if (where) params.set('$where', where);
+    return `${base}?${params.toString()}`;
+  }
+  const urlBase = layerUrl(profile);
+  return `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile, context))}&outFields=*&returnGeometry=false&resultRecordCount=${caps.max_results_per_row}`;
+}
+
 function rejectReason(candidate, row, options = {}) {
-  if (subjectParcel(row) && cleanText(candidate.parcel_id).toLowerCase() === subjectParcel(row)) return 'subject_parcel_not_a_comp';
+  const rowParcel = subjectParcel(row);
+  const candidateParcel = cleanText(candidate.parcel_id).toLowerCase();
+  if (rowParcel && candidateParcel === rowParcel) return 'subject_parcel_not_a_comp';
   if (addressKey(candidate.comp_address) && addressKey(candidate.comp_address) === addressKey(row && row.normalized_address)) return 'subject_address_not_a_comp';
+  if (!cleanText(candidate.comp_address) && candidateParcel && !rowParcel) return 'parcel_only_comp_without_subject_parcel_id';
   const floor = Number(options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
   if (!(Number(candidate.sold_price) >= floor)) return 'nominal_or_non_market_sale_price';
   const today = todayIso(options);
@@ -215,15 +255,14 @@ async function resolveCompsForRow(row, options = {}) {
   if (!profiles.length) return { status: 'no_profile', blocked_reason: 'no_verified_disclosure_state_sales_profile', verified_comps: [], rejected_comp_candidates: [] };
   const mock = options.mock_comp_features;
   for (const profile of profiles) {
-    if (profile.api_kind !== 'arcgis') continue;
-    const urlBase = layerUrl(profile);
+    if (!['arcgis', 'socrata'].includes(profile.api_kind)) continue;
     const context = {
       row,
       today_iso: todayIso(options),
       recent_cutoff_iso: addMonthsIso(todayIso(options), -12),
       min_market_sale_price: Number(profile.min_market_sale_price || options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE
     };
-    const queryUrl = `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile, context))}&outFields=*&returnGeometry=false&resultRecordCount=${caps.max_results_per_row}`;
+    const queryUrl = queryUrlForProfile(row, profile, context, caps);
     let features;
     if (Array.isArray(mock)) {
       features = mock.map((attributes) => ({ attributes }));
@@ -238,7 +277,13 @@ async function resolveCompsForRow(row, options = {}) {
           source_url: queryUrl
         };
       }
-      features = Array.isArray(fetched.data && fetched.data.features) ? fetched.data.features : [];
+      if (Array.isArray(fetched.data && fetched.data.features)) {
+        features = fetched.data.features;
+      } else if (Array.isArray(fetched.data)) {
+        features = fetched.data.map((attributes) => ({ attributes }));
+      } else {
+        features = [];
+      }
     }
     const verified = [];
     const rejected = [];

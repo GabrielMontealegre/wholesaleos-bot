@@ -1003,6 +1003,7 @@ function dealFromRecord(record, context) {
     program: cleanText(record && record.program),
     property_kind_if_visible: cleanText(record && record.property_kind_if_visible),
     vacant_lot_if_visible: record && record.vacant_lot_if_visible === true ? true : record && record.vacant_lot_if_visible === false ? false : null,
+    property_story: record && record.property_story && typeof record.property_story === 'object' ? Object.assign({}, record.property_story) : null,
     source_structured_address_verified: record && record.source_structured_address_verified === true,
     beds: record && record.beds != null ? record.beds : null,
     baths: record && record.baths != null ? record.baths : null,
@@ -1089,6 +1090,7 @@ function candidateRecord(candidate, source) {
     program: cleanText(candidate.program),
     property_kind_if_visible: cleanText(candidate.property_kind_if_visible),
     vacant_lot_if_visible: candidate.vacant_lot_if_visible === true ? true : candidate.vacant_lot_if_visible === false ? false : null,
+    property_story: candidate.property_story && typeof candidate.property_story === 'object' ? Object.assign({}, candidate.property_story) : null,
     source_structured_address_verified: candidate.source_structured_address_verified === true,
     beds: candidate.beds,
     baths: candidate.baths,
@@ -1959,6 +1961,7 @@ async function applyFreePublicHunters(deals, input, options, context) {
     if (owner && owner.status === 'owner_found') {
       deal.owner_record = deal.owner_record || owner.owner_record;
       deal.mailing_route = deal.mailing_route || owner.mailing_route || null;
+      deal.property_story = deal.property_story || owner.property_story || owner.owner_record && owner.owner_record.property_story || null;
     }
     if (contact) {
       deal.free_contact_status = contact.free_contact_status;

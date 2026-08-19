@@ -84,6 +84,16 @@ function combinedAttrsValue(attrs, fields) {
   return fields.map((field) => attrsValue(attrs, field)).filter(Boolean).join(' ');
 }
 
+function yearsSinceDate(value, now = new Date()) {
+  const text = cleanText(value);
+  const match = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  const date = new Date(`${match[0]}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return '';
+  const years = (now.getTime() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  return years >= 0 ? String(Math.floor(years)) : '';
+}
+
 function streetSearchTerm(row) {
   const address = cleanText(row && row.normalized_address);
   const street = cleanText(address.split(',')[0]);
@@ -152,6 +162,12 @@ function recordFromAttributes(attrs, profile, sourceUrl) {
   const parcelId = combinedAttrsValue(attrs, map.parcel_id);
   const situsAddress = combinedAttrsValue(attrs, map.situs_address);
   const assessedValue = combinedAttrsValue(attrs, map.assessed_value);
+  const priorYearAssessedValue = combinedAttrsValue(attrs, map.prior_year_assessed_value);
+  const yearBuilt = combinedAttrsValue(attrs, map.year_built);
+  const livingArea = combinedAttrsValue(attrs, map.living_area);
+  const lastRecordedSalePrice = combinedAttrsValue(attrs, map.last_recorded_sale_price || map.sale_price);
+  const lastRecordedSaleDate = combinedAttrsValue(attrs, map.last_recorded_sale_date || map.sale_date);
+  const priorDocumentDate = combinedAttrsValue(attrs, map.prior_document_date || map.sale_date);
   const landUse = combinedAttrsValue(attrs, map.land_use);
   const recordRole = profileRecordRole(profile);
   const recordLabel = profileRecordLabel(profile);
@@ -171,6 +187,29 @@ function recordFromAttributes(attrs, profile, sourceUrl) {
     parcel_id: parcelId,
     situs_address: situsAddress,
     land_use: landUse,
+    property_story: {
+      last_recorded_sale_price: lastRecordedSalePrice,
+      last_recorded_sale_date: lastRecordedSaleDate,
+      years_since_last_sale: yearsSinceDate(lastRecordedSaleDate),
+      year_built: yearBuilt,
+      living_area: livingArea,
+      land_use: landUse,
+      assessed_value: assessedValue,
+      prior_year_assessed_value: priorYearAssessedValue,
+      prior_document_date: priorDocumentDate,
+      source_kind: 'official_public_record',
+      source_url: sourceUrl,
+      evidence_text: cleanText([
+        lastRecordedSalePrice ? `Last recorded sale price: ${lastRecordedSalePrice}` : '',
+        lastRecordedSaleDate ? `Last recorded sale date: ${lastRecordedSaleDate}` : '',
+        yearBuilt ? `Year built: ${yearBuilt}` : '',
+        livingArea ? `Living area: ${livingArea}` : '',
+        landUse ? `Land use: ${landUse}` : '',
+        assessedValue ? `Assessed value clue, not ARV: ${assessedValue}` : '',
+        priorYearAssessedValue ? `Prior-year assessed value clue, not ARV: ${priorYearAssessedValue}` : '',
+        priorDocumentDate ? `Prior document date: ${priorDocumentDate}` : ''
+      ].filter(Boolean).join(' | '))
+    },
     owner_role: recordRole,
     record_label: recordLabel,
     is_entity: isEntityName(displayName),
@@ -182,9 +221,9 @@ function recordFromAttributes(attrs, profile, sourceUrl) {
       displayName ? `${recordLabel}: ${displayName}` : '',
       taxpayerNameSecondary ? `Secondary taxpayer: ${taxpayerNameSecondary}` : '',
       mailingAddress ? `Mailing: ${mailingAddress}` : '',
-      parcelId ? `Parcel: ${parcelId}` : '',
-      landUse ? `Land use: ${landUse}` : '',
-      assessedValue ? `Assessed value clue: ${assessedValue}` : ''
+        parcelId ? `Parcel: ${parcelId}` : '',
+        landUse ? `Land use: ${landUse}` : '',
+        assessedValue ? `Assessed value clue, not ARV: ${assessedValue}` : ''
     ].filter(Boolean).join(' | '))
   };
 }
@@ -220,6 +259,7 @@ async function lookupOwnerForRow(row, options = {}) {
         taxpayer_mailing_address: record.taxpayer_mailing_address,
         parcel_id: record.parcel_id,
         land_use: record.land_use,
+        property_story: record.property_story,
         is_entity: record.is_entity,
         owner_role: record.owner_role,
         record_label: record.record_label,

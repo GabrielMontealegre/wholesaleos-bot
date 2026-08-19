@@ -269,7 +269,10 @@
     if (row.arv_lock_reason) lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;">ARV reason: ' + esc(row.arv_lock_reason) + '</div>');
     if (safeArray(row.verified_comps).length) {
       lines.push('<div style="font-size:11px;color:#065f46;margin-top:2px;">Verified comps: ' +
-        safeArray(row.verified_comps).map(function (c) { return esc(c.comp_address) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('public record', c.source_url); }).join(' | ') + '</div>');
+        safeArray(row.verified_comps).map(function (c) {
+          var compLabel = c.comp_address || (c.comp_identity_kind === 'parcel_id_only' ? 'parcel only - no street address on the public record' : '');
+          return esc(compLabel) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('public record', c.source_url);
+        }).join(' | ') + '</div>');
     }
     if (row.next_comp_action) lines.push('<div style="font-size:11px;color:#374151;">Comp action: ' + esc(row.next_comp_action) + '</div>');
     lines.push('<div style="font-size:12px;margin-top:3px;">Next action: <b>' + esc(row.next_best_action || 'review') + '</b>' +

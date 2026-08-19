@@ -9,6 +9,28 @@ const marketCompPolicy = require('../modules/research/market-comp-policy');
 
 const BLOCKED_TEXT_RE = /\b(captcha|verify you are human|access denied|forbidden|login required|sign in|subscription required|paywall)\b/i;
 const COUNTY_ONBOARDING_DIR = path.join(process.cwd(), 'exports', 'county-onboarding');
+const PUBLIC_SALES_DISCOVERY_DIR = path.join(process.cwd(), 'exports', 'public-sales-layer-discovery');
+
+const PRIORITY_SALES_COUNTIES = Object.freeze([
+  { county: 'Wayne', state: 'MI', metro: 'Detroit', hosts: ['services2.arcgis.com/qvkbeam7Wirps6zC'] },
+  { county: 'Oakland', state: 'MI', metro: 'Detroit' },
+  { county: 'Macomb', state: 'MI', metro: 'Detroit' },
+  { county: 'Franklin', state: 'OH', metro: 'Columbus' },
+  { county: 'Hamilton', state: 'OH', metro: 'Cincinnati' },
+  { county: 'Cuyahoga', state: 'OH', metro: 'Cleveland' },
+  { county: 'Mecklenburg', state: 'NC', metro: 'Charlotte' },
+  { county: 'Wake', state: 'NC', metro: 'Raleigh' },
+  { county: 'Marion', state: 'IN', metro: 'Indianapolis' },
+  { county: 'Duval', state: 'FL', metro: 'Jacksonville' },
+  { county: 'Hillsborough', state: 'FL', metro: 'Tampa' },
+  { county: 'Pinellas', state: 'FL', metro: 'Tampa' },
+  { county: 'Broward', state: 'FL', metro: 'Fort Lauderdale' },
+  { county: 'Clark', state: 'NV', metro: 'Las Vegas' },
+  { county: 'Philadelphia', state: 'PA', metro: 'Philadelphia' },
+  { county: 'Cook', state: 'IL', metro: 'Chicago' },
+  { county: 'San Diego', state: 'CA', metro: 'San Diego' },
+  { county: 'Los Angeles', state: 'CA', metro: 'Los Angeles' }
+]);
 
 const DEFAULT_TARGETS = [
   {
@@ -146,18 +168,348 @@ function classifyFieldMap(fieldNames) {
     }
     return '';
   };
+  const parcelId = find([/^apn$/i, /^pin$/i, /^ain$/i, /^parcel(?:_id|id|_number|number)?$/i, /propid/i, /parcel.*number/i]);
   return {
     owner_name: find([/^owner/i, /^own_?name/i, /^own/i, /^taxpayer_?1$/i, /^taxpayer.*name/i]),
     mailing_address: normalizedNames.filter((name) => /mail|own_addr|taxpayer_(?:street|city|state|zip)/i.test(name)).slice(0, 6),
     situs_address: find([/situs.*address/i, /^address$/i, /site.*address/i]),
-    parcel_id: find([/^apn$/i, /parcel/i, /ain/i, /propid/i, /parcel.*number/i]),
-    sale_price: find([/sale.*price/i, /amt_sale_price/i, /sold.*price/i]),
-    sale_date: find([/sale.*date/i, /recording.*date/i, /docdate/i]),
-    land_use: find([/land.*use/i, /class.*desc/i, /use.*desc/i, /property.*class/i, /use.*code/i]),
+    parcel_id: /^num_?parcels/i.test(parcelId) ? '' : parcelId,
+    sale_price: find([/sale.*price/i, /amt_sale_price/i, /sold.*price/i, /consideration/i, /transfer.*amount/i, /sale.*amt/i]),
+    sale_date: find([/sale.*date/i, /recording.*date/i, /docdate/i, /deed.*date/i, /transfer.*date/i, /recorded.*date/i]),
+    land_use: find([/land.*use/i, /^class$/i, /class.*desc/i, /use.*desc/i, /property.*class/i, /use.*code/i]),
     year_built: find([/year.*built/i, /year_effective/i]),
+    living_area: find([/living.*area/i, /bldg.*area/i, /building.*area/i, /sqft/i, /square.*feet/i]),
+    assessed_value: find([/assessed.*value/i, /asr.*total/i, /total.*value/i, /totval/i, /taxable.*value/i]),
+    prior_document_date: find([/docdate/i, /document.*date/i, /recording.*date/i, /recorded.*date/i, /deed.*date/i]),
     zip: find([/^zip$/i, /zip.*code/i, /postal/i]),
     field_count: names.size
   };
+}
+
+function hasSalesCompShape(fieldMap) {
+  const capabilities = capabilitiesForMap(fieldMap);
+  return capabilities.sale_price === true &&
+    capabilities.sale_date === true &&
+    (capabilities.situs_address === true || capabilities.parcel_id === true || capabilities.zip === true);
+}
+
+function salesDiscoveryTier(result) {
+  if (!result || result.status !== 'open' || result.schema_parsed !== true) return 'blocked';
+  return hasSalesCompShape(result.field_map_proposal) ? 'comp_capable' : 'schema_insufficient';
+}
+
+function countySlug(county) {
+  return cleanText(county && county.county).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function hostCandidatesForCounty(county) {
+  const explicit = Array.isArray(county && county.hosts) ? county.hosts : [];
+  const slug = countySlug(county);
+  const state = cleanText(county && county.state).toLowerCase();
+  const baseHosts = [
+    `${slug}county.gov`,
+    `${slug}county${state}.gov`,
+    `${slug}.${state}.gov`,
+    `${slug}gis.${state}.gov`,
+    `${slug}county.${state}.gov`
+  ];
+  const subdomains = ['gis', 'maps', 'opendata', 'services', 'data', `${slug}gis`];
+  const derived = [];
+  for (const host of baseHosts) {
+    derived.push(host);
+    for (const sub of subdomains) derived.push(`${sub}.${host}`);
+  }
+  return Array.from(new Set(explicit.concat(derived).map((item) => cleanText(item).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase()).filter(Boolean)));
+}
+
+function arcgisDirectoryUrl(host) {
+  return `https://${cleanText(host).replace(/\/+$/, '')}/arcgis/rest/services?f=json`;
+}
+
+function arcgisServiceUrl(host, service = {}) {
+  const name = cleanText(service.name);
+  const type = cleanText(service.type || 'FeatureServer');
+  if (!name || !/^(?:FeatureServer|MapServer)$/i.test(type)) return '';
+  return `https://${cleanText(host).replace(/\/+$/, '')}/arcgis/rest/services/${name}/${type}`;
+}
+
+function isLikelySalesService(service) {
+  const haystack = `${cleanText(service && service.name)} ${cleanText(service && service.type)}`.toLowerCase().replace(/[_-]+/g, ' ');
+  return /\b(sale|sales|assessor|assessment|parcel|property|tax|deed|transfer|record)\b/i.test(haystack);
+}
+
+async function inspectArcgisServiceLayers(host, service, county, options = {}) {
+  const serviceUrl = arcgisServiceUrl(host, service);
+  if (!serviceUrl) return [];
+  const metadata = await fetchJson(`${serviceUrl}?f=json`, options);
+  if (metadata.status !== 'ok') {
+    return [{
+      endpoint: serviceUrl,
+      status: metadata.status,
+      blocked_reason: metadata.blocked_reason || metadata.status,
+      schema_parsed: false,
+      field_list: [],
+      field_map_proposal: {},
+      record_count: null,
+      tier: 'blocked'
+    }];
+  }
+  const layers = Array.isArray(metadata.data && metadata.data.layers) ? metadata.data.layers : [];
+  const tables = Array.isArray(metadata.data && metadata.data.tables) ? metadata.data.tables : [];
+  const layerIds = layers.concat(tables)
+    .map((layer) => Number(layer && layer.id))
+    .filter((id) => Number.isInteger(id))
+    .slice(0, Number(options.max_layers_per_service || 12));
+  const ids = layerIds.length ? layerIds : [0];
+  const reports = [];
+  for (const id of ids) {
+    const target = {
+      market: `${cleanText(county.metro)} / ${cleanText(county.county)} ${cleanText(county.state)}`,
+      purpose: 'recorded_sales',
+      service_url: serviceUrl,
+      layer: id,
+      required_capabilities: ['sale_price', 'sale_date']
+    };
+    const inspected = await inspectArcgisLayer(target, options);
+    const fieldList = Array.isArray(inspected.field_names) ? inspected.field_names : [];
+    const fieldMap = inspected.field_map_guess || classifyFieldMap(fieldList);
+    reports.push({
+      endpoint: `${serviceUrl}/${id}`,
+      status: inspected.status === 'open' ? 'open' : inspected.status,
+      blocked_reason: inspected.status === 'open' ? '' : cleanText(inspected.blocked_reason || inspected.gate_status),
+      schema_parsed: inspected.status === 'open' && fieldList.length > 0,
+      schema_kind: 'arcgis_fields_descriptor',
+      field_list: fieldList,
+      field_map_proposal: fieldMap,
+      record_count: inspected.record_count,
+      exposes_price_date_location: hasSalesCompShape(fieldMap),
+      tier: inspected.status === 'open' && hasSalesCompShape(fieldMap) ? 'comp_capable' : 'schema_insufficient',
+      service_name: cleanText(service.name),
+      layer: id
+    });
+    if (reports[reports.length - 1].tier === 'comp_capable') break;
+  }
+  return reports;
+}
+
+async function enumerateArcgisServiceDirectoryForCounty(county, options = {}) {
+  const reports = [];
+  for (const host of hostCandidatesForCounty(county).slice(0, Number(options.max_hosts_per_county || 18))) {
+    const directory = await fetchJson(arcgisDirectoryUrl(host), options);
+    if (directory.status !== 'ok') {
+      reports.push({
+        host,
+        endpoint: arcgisDirectoryUrl(host),
+        status: directory.status,
+        blocked_reason: directory.blocked_reason || directory.status,
+        schema_parsed: false,
+        field_list: [],
+        field_map_proposal: {},
+        record_count: null,
+        tier: 'blocked'
+      });
+      continue;
+    }
+    const services = (Array.isArray(directory.data && directory.data.services) ? directory.data.services : [])
+      .filter((service) => /^(?:FeatureServer|MapServer)$/i.test(cleanText(service && service.type)))
+      .filter(isLikelySalesService)
+      .slice(0, Number(options.max_services_per_host || 20));
+    if (!services.length) {
+      reports.push({
+        host,
+        endpoint: arcgisDirectoryUrl(host),
+        status: 'closed',
+        blocked_reason: 'service_directory_has_no_likely_sales_or_parcel_services',
+        schema_parsed: true,
+        field_list: [],
+        field_map_proposal: {},
+        record_count: null,
+        tier: 'blocked'
+      });
+      continue;
+    }
+    for (const service of services) {
+      const layerReports = await inspectArcgisServiceLayers(host, service, county, options);
+      reports.push(...layerReports.map((report) => Object.assign({ host }, report)));
+      if (layerReports.some((report) => report.tier === 'comp_capable')) break;
+    }
+    if (reports.some((report) => report.host === host && report.tier === 'comp_capable')) break;
+  }
+  return reports;
+}
+
+async function querySocrataCatalogForCounty(county, options = {}) {
+  const fetchImpl = options.fetch_impl || options.fetchImpl || fetchDefault;
+  const query = encodeURIComponent(`${cleanText(county.county)} ${cleanText(county.state)} sales parcels`);
+  const url = `https://api.us.socrata.com/api/catalog/v1?q=${query}`;
+  const fetched = await fetchJson(url, Object.assign({}, options, { fetch_impl: fetchImpl }));
+  if (fetched.status !== 'ok') {
+    return [{ endpoint: url, status: fetched.status, blocked_reason: fetched.blocked_reason || fetched.status, schema_parsed: false, field_list: [], field_map_proposal: {}, record_count: null, tier: 'blocked' }];
+  }
+  const results = Array.isArray(fetched.data && fetched.data.results) ? fetched.data.results : [];
+  return results.slice(0, Number(options.max_socrata_results || 8)).map((item) => {
+    const resource = item && item.resource || {};
+    const domain = cleanText(resource.domain || item && item.metadata && item.metadata.domain);
+    const id = cleanText(resource.id);
+    const relevantText = cleanText([
+      domain,
+      resource.name,
+      resource.description,
+      item && item.metadata && item.metadata.name,
+      item && item.metadata && item.metadata.description
+    ].join(' ')).toLowerCase();
+    const countyNeedle = cleanText(county && county.county).toLowerCase();
+    const metroNeedle = cleanText(county && county.metro).toLowerCase();
+    const stateNeedle = cleanText(county && county.state).toLowerCase();
+    const relevant = !!countyNeedle && (
+      relevantText.includes(countyNeedle) ||
+      (!!metroNeedle && relevantText.includes(metroNeedle) && relevantText.includes(stateNeedle))
+    );
+    const fields = (Array.isArray(resource.columns_field_name) ? resource.columns_field_name : [])
+      .concat(Array.isArray(resource.columns_name) ? resource.columns_name : [])
+      .map(cleanText)
+      .filter(Boolean);
+    const fieldMap = classifyFieldMap(fields);
+    if (!domain || !id) {
+      return {
+        endpoint: url,
+        status: 'closed',
+        blocked_reason: 'socrata_result_missing_domain_or_resource_id',
+        schema_parsed: fields.length > 0,
+        schema_kind: fields.length ? 'socrata_catalog_fields_descriptor' : '',
+        field_list: fields,
+        field_map_proposal: fields.length ? fieldMap : {},
+        record_count: null,
+        exposes_price_date_location: false,
+        tier: 'blocked',
+        service_name: cleanText(resource.name)
+      };
+    }
+    if (!relevant) {
+      return {
+        endpoint: `https://${domain}/resource/${id}.json`,
+        status: 'closed',
+        blocked_reason: 'socrata_result_not_county_relevant',
+        schema_parsed: fields.length > 0,
+        schema_kind: fields.length ? 'socrata_catalog_fields_descriptor' : '',
+        field_list: fields,
+        field_map_proposal: fields.length ? fieldMap : {},
+        record_count: null,
+        exposes_price_date_location: false,
+        tier: 'blocked',
+        service_name: cleanText(resource.name)
+      };
+    }
+    return {
+      endpoint: `https://${domain}/resource/${id}.json`,
+      status: fields.length ? 'open' : 'closed',
+      blocked_reason: fields.length ? '' : 'socrata_result_has_no_schema_fields',
+      schema_parsed: fields.length > 0,
+      schema_kind: 'socrata_catalog_fields_descriptor',
+      field_list: fields,
+      field_map_proposal: fieldMap,
+      record_count: Number(resource.count || resource.row_count || 0) || null,
+      exposes_price_date_location: hasSalesCompShape(fieldMap),
+      tier: fields.length && hasSalesCompShape(fieldMap) ? 'comp_capable' : 'schema_insufficient',
+      service_name: cleanText(resource.name)
+    };
+  });
+}
+
+function publicSalesProfileDraft(county, result, generatedAt, artifactPath) {
+  if (!result || result.tier !== 'comp_capable') return null;
+  validateFieldMapProposal(result.field_map_proposal || {}, result.field_list || []);
+  return {
+    profile_id: `${cleanText(county.state).toLowerCase()}_${countySlug(county)}_public_sales_discovery`,
+    market: { city: cleanText(county.metro), county: cleanText(county.county), state: cleanText(county.state).toUpperCase() },
+    county: cleanText(county.county),
+    state: cleanText(county.state).toUpperCase(),
+    api_kind: /arcgis/i.test(cleanText(result.schema_kind)) ? 'arcgis' : 'socrata',
+    service_url: cleanText(result.endpoint).replace(/\/\d+$/, ''),
+    layer: Number(result.layer) || 0,
+    field_map: result.field_map_proposal,
+    disclosure_state: true,
+    verified_at: generatedAt.slice(0, 10),
+    verification_status: 'verified_machine_readable_public_sales_schema',
+    verification_evidence: cleanText(artifactPath).replace(/\\/g, '/'),
+    record_count: Number(result.record_count) || null,
+    notes: 'Discovered from a machine-readable government service directory. Sale price/date/location schema only; rows still require normal comp quality gates.'
+  };
+}
+
+async function runPublicSalesLayerDiscovery(options = {}) {
+  const counties = Array.isArray(options.counties) ? options.counties : PRIORITY_SALES_COUNTIES;
+  const generatedAt = new Date().toISOString();
+  const artifactPath = `exports/public-sales-layer-discovery/public-sales-layer-discovery-${generatedAt.replace(/[:.]/g, '-')}.json`;
+  const countyReports = [];
+  for (const county of counties) {
+    const existingProfileResults = [];
+    const existingCompProfiles = parcelProfiles.compProfilesForMarket({
+      city: cleanText(county.metro),
+      county: cleanText(county.county),
+      state: cleanText(county.state)
+    });
+    for (const profile of existingCompProfiles) {
+      const inspected = await inspectArcgisLayer({
+        market: `${cleanText(county.metro)} / ${cleanText(county.county)} ${cleanText(county.state)}`,
+        purpose: 'recorded_sales_existing_profile',
+        service_url: profile.service_url,
+        layer: profile.layer,
+        required_capabilities: ['sale_price', 'sale_date']
+      }, options);
+      const fieldList = Array.isArray(inspected.field_names) ? inspected.field_names : [];
+      const fieldMap = inspected.field_map_guess || classifyFieldMap(fieldList);
+      existingProfileResults.push({
+        endpoint: `${cleanText(profile.service_url).replace(/\/+$/, '')}/${Number(profile.layer) || 0}`,
+        status: inspected.status === 'open' ? 'open' : inspected.status,
+        blocked_reason: inspected.status === 'open' ? '' : cleanText(inspected.blocked_reason || inspected.gate_status),
+        schema_parsed: inspected.status === 'open' && fieldList.length > 0,
+        schema_kind: 'arcgis_fields_descriptor_existing_profile',
+        field_list: fieldList,
+        field_map_proposal: fieldMap,
+        record_count: inspected.record_count || profile.record_count || null,
+        exposes_price_date_location: hasSalesCompShape(fieldMap),
+        tier: inspected.status === 'open' && hasSalesCompShape(fieldMap) ? 'comp_capable' : 'schema_insufficient',
+        service_name: cleanText(profile.profile_id),
+        layer: Number(profile.layer) || 0,
+        source: 'existing_verified_profile'
+      });
+    }
+    const arcgisResults = await enumerateArcgisServiceDirectoryForCounty(county, options);
+    const socrataResults = options.skip_socrata === true ? [] : await querySocrataCatalogForCounty(county, options);
+    const results = existingProfileResults.concat(arcgisResults, socrataResults);
+    const compCapable = results.find((result) => result.tier === 'comp_capable') || null;
+    countyReports.push({
+      county: cleanText(county.county),
+      state: cleanText(county.state).toUpperCase(),
+      metro: cleanText(county.metro),
+      status: compCapable ? 'open' : 'blocked',
+      endpoint_found: cleanText(compCapable && compCapable.endpoint),
+      record_count: Number(compCapable && compCapable.record_count) || null,
+      exposes_price_date_location: !!compCapable,
+      tier: compCapable ? 'comp_capable' : 'blocked',
+      results,
+      profile_draft: compCapable ? publicSalesProfileDraft(county, compCapable, generatedAt, artifactPath) : null
+    });
+    if (options.delay_ms) await new Promise((resolve) => setTimeout(resolve, options.delay_ms));
+  }
+  const report = {
+    generated_at: generatedAt,
+    preview_only: true,
+    no_global_mutation: true,
+    method: 'service_directory_schema_discovery',
+    targets_checked: counties.length,
+    counties: countyReports,
+    profile_drafts: countyReports.map((county) => county.profile_draft).filter(Boolean)
+  };
+  if (options.write_output !== false) {
+    const outDir = options.output_dir || PUBLIC_SALES_DISCOVERY_DIR;
+    fs.mkdirSync(outDir, { recursive: true });
+    const outPath = path.join(outDir, path.basename(artifactPath));
+    fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
+    report.output_path = outPath;
+  }
+  return report;
 }
 
 function capabilitiesForMap(fieldMap) {
@@ -173,7 +525,7 @@ function capabilitiesForMap(fieldMap) {
     zip: Boolean(cleanText(map.zip))
   };
   capabilities.property_location_key = capabilities.situs_address || capabilities.zip || capabilities.parcel_id;
-  capabilities.comp_location_key = capabilities.situs_address || capabilities.zip;
+  capabilities.comp_location_key = capabilities.situs_address || capabilities.zip || capabilities.parcel_id;
   return capabilities;
 }
 
@@ -187,7 +539,7 @@ function candidateLegsForCounty(county) {
 
 function mappedFieldNames(fieldMap) {
   const map = fieldMap || {};
-  return ['owner_name', 'mailing_address', 'situs_address', 'parcel_id', 'sale_price', 'sale_date', 'land_use', 'year_built', 'zip']
+  return ['owner_name', 'mailing_address', 'situs_address', 'parcel_id', 'sale_price', 'sale_date', 'land_use', 'year_built', 'living_area', 'assessed_value', 'prior_document_date', 'zip']
     .flatMap((key) => Array.isArray(map[key]) ? map[key] : [map[key]])
     .map(cleanText)
     .filter(Boolean);
@@ -623,13 +975,24 @@ async function runDiscovery(options = {}) {
 
 async function main() {
   const countyMode = process.argv.includes('--county-onboarding') || process.env.COUNTY_ONBOARDING_MODE === '1';
-  const report = countyMode
+  const salesMode = process.argv.includes('--public-sales') || process.env.PUBLIC_SALES_DISCOVERY_MODE === '1';
+  const report = salesMode
+    ? await runPublicSalesLayerDiscovery({
+      delay_ms: 150,
+      timeout_ms: Number(process.env.PUBLIC_SALES_DISCOVERY_TIMEOUT_MS || 8000) || 8000,
+      max_hosts_per_county: Number(process.env.PUBLIC_SALES_DISCOVERY_MAX_HOSTS || 5) || 5,
+      max_services_per_host: Number(process.env.PUBLIC_SALES_DISCOVERY_MAX_SERVICES || 12) || 12,
+      max_layers_per_service: Number(process.env.PUBLIC_SALES_DISCOVERY_MAX_LAYERS || 8) || 8
+    })
+    : countyMode
     ? await runCountyOnboardingSweep({ delay_ms: 250, timeout_ms: 75000 })
     : await runDiscovery({ delay_ms: 250, timeout_ms: 75000 });
   const outDir = countyMode
     ? countyOnboardingArtifactsDir()
+    : salesMode
+      ? PUBLIC_SALES_DISCOVERY_DIR
     : path.join(process.cwd(), 'exports', 'public-parcel-api-discovery');
-  if (countyMode) {
+  if (countyMode || salesMode) {
     console.log(report.output_path || countyOnboardingArtifactPath(report, outDir));
     return;
   }
@@ -653,9 +1016,13 @@ module.exports = {
   countyReadinessTierFromLegs,
   inspectCountySchemaEndpoint,
   inspectArcgisLayer,
+  enumerateArcgisServiceDirectoryForCounty,
+  hasSalesCompShape,
   profileDraftFromLegReport,
+  runPublicSalesLayerDiscovery,
   runCountyOnboardingSweep,
   runDiscovery,
+  salesDiscoveryTier,
   schemaFieldsFromDocument,
   validateFieldMapProposal
 };

@@ -207,6 +207,34 @@ function mockDeal(overrides) {
   assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').land_use, 'Commercial');
   assert.strictEqual(run1.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241').owner_record.land_use, 'Commercial');
 
+  const parcelOnlyCompRun = await queueService.runDealBoardBatch({
+    market: { city: 'Chicago', county: 'Cook', state: 'IL' },
+    source_ids: ['il_cook_socrata_property_sales']
+  }, {
+    preview_impl: async () => ({
+      free_public_deals: [
+        mockDeal({
+          city: 'Chicago',
+          county: 'Cook',
+          state: 'IL',
+          verified_sold_comp_count: 1,
+          verified_sold_comps: [{
+            comp_address: '',
+            comp_identity_kind: 'parcel_id_only',
+            parcel_id: '14-01-100-002-0000',
+            sold_price: 210000,
+            sold_date: '2026-02-15',
+            source_kind: 'official_public_record',
+            source_url: 'https://datacatalog.example.gov/resource/sales.json',
+            evidence_text: 'Parcel: 14-01-100-002-0000 | Recorded sale price: $210000'
+          }]
+        })
+      ],
+      diagnostics: { source_adapter: { source_adapter_results: [] } }
+    })
+  });
+  assert.strictEqual(parcelOnlyCompRun.rows[0].verified_comps[0].comp_identity_kind, 'parcel_id_only', 'parcel-only comp identity must survive queue projection');
+
   const completedContactRun = await queueService.runDealBoardBatch(
     { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 },
     { preview_impl: async () => ({ free_public_deals: [mockDeal({ contact_workflow_complete: true, contact_workflow_status: 'CONTACTED' })], rejected_generic_count: 0 }) }
@@ -778,7 +806,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=22'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=23'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -809,6 +837,7 @@ function mockDeal(overrides) {
   assert.ok(queueSource.includes('contact_workflow_invalidated_routes') && queueSource.includes('OPERATOR_WRONG_NUMBER_REPORTED'), 'wrong-number contact workflow must invalidate the disproven route');
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
+  assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Status evidence: <b>') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
