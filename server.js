@@ -2032,6 +2032,24 @@ app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin,
   }
 });
 
+app.post('/api/dashboard/free-public-deal-board/document-review-clear', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(dealBoardQueueService.recordDocumentReviewClear(req.body || {}, {
+      operator_id: req.headers['x-user-id'] || 'admin'
+    }));
+  } catch (e) {
+    res.status(Number(e && e.status_code || 500) || 500).json({
+      ok: false,
+      error: e.message,
+      code: e.code || 'document_review_clear_failed',
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    });
+  }
+});
+
 // Starts a background batch job and returns immediately (the full batch
 // outlives the HTTP edge timeout). Poll the job endpoint, then read latest.
 app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, (req, res) => {

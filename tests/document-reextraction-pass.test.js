@@ -119,6 +119,16 @@ function noticeText(address, saleDate) {
   assert.strictEqual(dualFailureRow.enrichment_ledger.attempts[0].reason_code, 'pdf_text_and_ocr_both_recovered_nothing');
   assert.ok(String(dualFailureRow.enrichment_ledger.attempts[0].next_eligible_at).startsWith('2026-08-17T16:12:00'));
 
+  const ocrThrowRow = sourceProofRow({ queue_key: 'ocr-throw-1' });
+  const ocrThrow = await pass.runDocumentReextractionPass([ocrThrowRow], { market, now_iso: '2026-08-17T10:13:00.000Z' }, {
+    fetch_impl: fetchImpl,
+    pdf_parse_impl: async () => { throw new Error('pdf text exploded'); },
+    ocr_notice_extraction_impl: async () => { throw new Error('ocr exploded'); }
+  });
+  assert.strictEqual(ocrThrow.failed_count, 1);
+  assert.strictEqual(ocrThrow.reason_counts.ocr_reextraction_threw_after_pdf_text_failure, 1);
+  assert.strictEqual(ocrThrowRow.enrichment_ledger.attempts[0].reason_code, 'ocr_reextraction_threw_after_pdf_text_failure');
+
   const terminalFailureRow = sourceProofRow({ queue_key: 'terminal-failure-1', source_document_url: `${PDF_URL}?terminal=1` });
   const failingOptions = {
     fetch_impl: fetchImpl,
@@ -139,6 +149,30 @@ function noticeText(address, saleDate) {
     market_policy: {}
   });
   assert.strictEqual(terminalSelection.selected.length, 0);
+
+  const relocatedTerminalRow = sourceProofRow({
+    queue_key: 'terminal-relocated-1',
+    source_document_url: `${PDF_URL}?terminal=relocated-old`
+  });
+  await pass.runDocumentReextractionPass([relocatedTerminalRow], { market, now_iso: '2026-08-17T11:15:00.000Z' }, failingOptions);
+  await pass.runDocumentReextractionPass([relocatedTerminalRow], { market, now_iso: '2026-08-18T11:15:00.000Z' }, failingOptions);
+  await pass.runDocumentReextractionPass([relocatedTerminalRow], { market, now_iso: '2026-08-19T11:15:00.000Z' }, failingOptions);
+  relocatedTerminalRow.source_document_url = `${PDF_URL}?terminal=relocated-new`;
+  relocatedTerminalRow.source_document_urls = [relocatedTerminalRow.source_document_url, `${PDF_URL}?terminal=relocated-old`];
+  let terminalScopeCalls = 0;
+  const relocatedSelection = await pass.runDocumentReextractionPass([relocatedTerminalRow], { market, now_iso: '2026-08-20T11:15:00.000Z' }, {
+    document_reextraction_impl: async (row, context) => {
+      terminalScopeCalls += 1;
+      assert.strictEqual(context.document_url, `${PDF_URL}?terminal=relocated-new`);
+      return {
+        status: 'not_found',
+        reason_code: 'no_recoverable_address_in_document',
+        reason_text: 'Strict document re-extraction found no recoverable address.'
+      };
+    }
+  });
+  assert.strictEqual(terminalScopeCalls, 1, 'terminal document review must be scoped to the current document URL');
+  assert.strictEqual(relocatedSelection.selected_count, 1);
 
   const rows = Array.from({ length: 6 }, (_, index) => sourceProofRow({
     queue_key: `rotation-${index}`,

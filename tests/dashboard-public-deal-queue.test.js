@@ -770,6 +770,7 @@ function mockDeal(overrides) {
   assert.ok(/startDealBoardBatchJob/.test(serverSource), 'run route must start a background job');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/auto-run',\s*requireAdmin/.test(serverSource), 'auto-run route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/contact-workflow',\s*requireAdmin/.test(serverSource), 'contact workflow route must be admin-protected');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/document-review-clear',\s*requireAdmin/.test(serverSource), 'document review clear route must be admin-protected');
   assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
@@ -777,7 +778,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=21'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=22'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -797,8 +798,12 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('NEEDS_CONTACT_SEARCH'), 'dashboard must render the contact-search segment');
   assert.ok(uiSource.includes('Needs skip trace'), 'dashboard must show skip-trace need counts');
   assert.ok(uiSource.includes('API_CONTACT_WORKFLOW') && uiSource.includes('/contact-workflow'), 'dashboard must call the explicit contact-workflow route');
+  assert.ok(uiSource.includes('API_DOCUMENT_REVIEW_CLEAR') && uiSource.includes('/document-review-clear'), 'dashboard must call the explicit document-review-clear route');
   assert.ok(uiSource.includes('Select outcome') && uiSource.includes('Mark contacted'), 'Deal Finder rows must expose the operator contact control');
   assert.ok(uiSource.includes('Nothing changes until you save an outcome.'), 'contact control must state that it is explicit operator input');
+  assert.ok(uiSource.includes('Documents Needing Review'), 'dashboard must render the terminal document review panel');
+  assert.ok(uiSource.includes('Mark reviewed'), 'dashboard must expose the terminal review clear button');
+  assert.ok(uiSource.includes('does nothing until clicked'), 'dashboard must state the review panel is read-only until clicked');
   assert.ok(uiSource.includes('CLOSED_NOT_INTERESTED') && uiSource.includes('Closed - Not Interested'), 'dashboard must render closed-not-interested as its own segment');
   assert.ok(uiSource.includes('contact_workflow_attempts') && uiSource.includes('Last contact attempt'), 'dashboard must expose append-only contact attempt history');
   assert.ok(queueSource.includes('contact_workflow_invalidated_routes') && queueSource.includes('OPERATOR_WRONG_NUMBER_REPORTED'), 'wrong-number contact workflow must invalidate the disproven route');
@@ -937,6 +942,79 @@ function mockDeal(overrides) {
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[0]), 'CALL_READY');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[1]), 'Sale in 3 days');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[2]), 'NEEDS_ZIP_REVIEW');
+
+  const reviewMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
+  fs.writeFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, JSON.stringify({
+    version: 1,
+    store_kind: 'deal_board_snapshots_not_saved_leads',
+    updated_at: '2026-08-18T00:00:00.000Z',
+    markets: {
+      'dallas|dallas|tx': {
+        market: reviewMarket,
+        rows: [{
+          queue_key: 'review|terminal|1',
+          headline: 'Sensitive review row',
+          normalized_address: '123 Review St, Dallas, TX 75201',
+          partial_address: '',
+          city: 'Dallas',
+          county: 'Dallas',
+          state: 'TX',
+          owner_record: { owner_name: 'ALICE OWNER', taxpayer_name: 'ALICE TAXPAYER', mailing_address: '123 MAILING LN' },
+          mailing_route: { value: '123 MAILING LN' },
+          free_contact_routes: [{ route_kind: 'phone', value: '(214) 555-1212' }],
+          source_document_url: 'https://example.test/doc.pdf',
+          source_document_urls: ['https://example.test/doc.pdf'],
+          document_reextraction_status: 'needs_zip_review_recovered',
+          document_reextraction_reason: 'human_verify_reextracted_document_text',
+          document_reextraction_at: '2026-08-18T00:00:00.000Z',
+          document_reextraction_source_url: 'https://example.test/doc.pdf',
+          document_reextraction_evidence_text: 'Document re-extraction recovered evidence from a stored official source document.',
+          enrichment_ledger: {
+            attempts: [{
+              lane: 'document_reextraction',
+              attempted_at: '2026-08-18T00:00:00.000Z',
+              outcome: 'FAILED',
+              reason_code: 'pdf_text_parse_failed',
+              reason_text: 'PDF text parse failed: test',
+              source_url: 'https://example.test/doc.pdf',
+              cost_usd: 0,
+              next_eligible_at: 'PERMANENT_UNTIL_DOCUMENT_REVIEW'
+            }],
+            dropped_count: 0
+          },
+          risk_flags: ['DOCUMENT_REEXTRACTED_FROM_STORED_SOURCE'],
+          preview_only: true,
+          not_a_saved_lead: true
+        }],
+        batches: []
+      }
+    }
+  }, null, 2));
+  const reviewSnapshot = queueService.latestDealBoardSnapshot({ market: reviewMarket });
+  assert.strictEqual(reviewSnapshot.document_reextraction_terminal_review.total_count, 1, 'terminal review queue must surface one row');
+  const reviewPayload = JSON.stringify(reviewSnapshot.document_reextraction_terminal_review);
+  assert.ok(!reviewPayload.includes('123 Review St, Dallas, TX 75201'));
+  assert.ok(!reviewPayload.includes('ALICE OWNER'));
+  assert.ok(!reviewPayload.includes('ALICE TAXPAYER'));
+  assert.ok(!reviewPayload.includes('123 MAILING LN'));
+  assert.ok(!reviewPayload.includes('214) 555-1212'));
+  const clearedSnapshot = queueService.recordDocumentReviewClear({
+    market: reviewMarket,
+    queue_key: 'review|terminal|1',
+    document_url: 'https://example.test/doc.pdf'
+  }, {
+    now_impl: () => '2026-08-18T01:00:00.000Z',
+    operator_id: 'admin'
+  });
+  assert.strictEqual(clearedSnapshot.document_review_clear.queue_key, 'review|terminal|1');
+  assert.strictEqual(clearedSnapshot.document_review_clear.document_url, 'https://example.test/doc.pdf');
+  const clearedReviewSnapshot = queueService.latestDealBoardSnapshot({ market: reviewMarket });
+  assert.strictEqual(clearedReviewSnapshot.document_reextraction_terminal_review.total_count, 0, 'clearing the terminal review should remove it from the review queue');
+  const clearedRow = (clearedReviewSnapshot.rows || []).find((row) => row.queue_key === 'review|terminal|1');
+  assert.ok(clearedRow, 'cleared row must still be present in the stored snapshot');
+  const clearedAttempts = (clearedRow.enrichment_ledger && clearedRow.enrichment_ledger.attempts) || [];
+  assert.strictEqual(clearedAttempts[clearedAttempts.length - 1].outcome, 'OPERATOR_RESET');
+  assert.strictEqual(clearedAttempts[clearedAttempts.length - 1].reason_code, 'DOCUMENT_REVIEW_CLEARED');
 
   // 7) The section must survive the app's content.innerHTML rewrites.
   assert.ok(uiSource.includes('MutationObserver'), 'section must re-mount when the app wipes #content');

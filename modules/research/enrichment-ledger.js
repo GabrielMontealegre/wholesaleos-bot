@@ -19,7 +19,8 @@ const OUTCOMES = Object.freeze([
   'BLOCKED',
   'SKIPPED_POLICY',
   'SKIPPED_BUDGET',
-  'FAILED'
+  'FAILED',
+  'OPERATOR_RESET'
 ]);
 
 const COOLDOWN_MS = Object.freeze({
@@ -113,9 +114,19 @@ function currentPolicyReasonCode(policyContext) {
   return cleanText(policyContext && (policyContext.policy_reason_code || policyContext.reason_code));
 }
 
+function currentTerminalSourceUrl(policyContext) {
+  if (typeof policyContext === 'string') return '';
+  return cleanText(policyContext && (
+    policyContext.terminal_source_url ||
+    policyContext.source_url ||
+    policyContext.document_url
+  ));
+}
+
 function isLaneEligible(row, lane, nowIso, policyContext) {
   const laneAttempts = attemptsForLane(row, lane);
   const policyReason = currentPolicyReasonCode(policyContext);
+  const terminalSourceUrl = currentTerminalSourceUrl(policyContext);
   const hasExplicitPolicyContext = policyContext !== undefined;
   if (laneAttempts.some((attempt) => {
     if (cleanText(attempt && attempt.outcome) !== 'SKIPPED_POLICY') return false;
@@ -127,7 +138,10 @@ function isLaneEligible(row, lane, nowIso, policyContext) {
     .slice()
     .sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0] || null;
   if (!latest) return true;
-  if (cleanText(latest.next_eligible_at).startsWith('PERMANENT_')) return false;
+  if (cleanText(latest.next_eligible_at).startsWith('PERMANENT_')) {
+    if (!terminalSourceUrl) return false;
+    return cleanText(latest.source_url) !== terminalSourceUrl;
+  }
   const nowMs = Date.parse(nowIso);
   const nextMs = Date.parse(latest.next_eligible_at);
   if (!Number.isFinite(nextMs) || !Number.isFinite(nowMs)) return true;
