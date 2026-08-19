@@ -765,6 +765,20 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       source_url: cleanText(deal.owner_record.source_url),
       evidence_text: cleanText(deal.owner_record.evidence_text)
     } : null,
+    property_story: deal.property_story && typeof deal.property_story === 'object' ? {
+      last_recorded_sale_price: cleanText(deal.property_story.last_recorded_sale_price),
+      last_recorded_sale_date: cleanText(deal.property_story.last_recorded_sale_date),
+      years_since_last_sale: cleanText(deal.property_story.years_since_last_sale),
+      year_built: cleanText(deal.property_story.year_built),
+      living_area: cleanText(deal.property_story.living_area),
+      land_use: cleanText(deal.property_story.land_use),
+      assessed_value: cleanText(deal.property_story.assessed_value),
+      prior_year_assessed_value: cleanText(deal.property_story.prior_year_assessed_value),
+      prior_document_date: cleanText(deal.property_story.prior_document_date),
+      source_kind: cleanText(deal.property_story.source_kind),
+      source_url: cleanText(deal.property_story.source_url),
+      evidence_text: cleanText(deal.property_story.evidence_text)
+    } : null,
     land_use: cleanText(deal.land_use || (deal.owner_record && deal.owner_record.land_use)),
     mailing_route: deal.mailing_route && typeof deal.mailing_route === 'object' ? {
       route_kind: cleanText(deal.mailing_route.route_kind),
@@ -822,6 +836,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     verified_sold_comp_count: Number(deal.verified_sold_comp_count || 0) || 0,
     verified_comps: Array.isArray(deal.verified_sold_comps) ? deal.verified_sold_comps.slice(0, 3).map((comp) => ({
       comp_address: cleanText(comp.comp_address || comp.address),
+      comp_identity_kind: cleanText(comp.comp_identity_kind),
       sold_price: Number(comp.sold_price) || 0,
       sold_date: cleanText(comp.sold_date),
       source_kind: cleanText(comp.source_kind),
@@ -1038,7 +1053,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
-    'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'land_use',
+    'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
     'rejected_reason',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',

@@ -65,7 +65,46 @@ function response(body, status = 200) {
       : response({ fields: [{ name: 'APN' }, { name: 'DOCDATE' }] })
   });
   assert.strictEqual(insufficient.results[0].gate_status, 'open_insufficient_fields');
-  assert.deepStrictEqual(insufficient.results[0].missing_required_capabilities, ['sale_price', 'comp_location_key']);
+  assert.deepStrictEqual(insufficient.results[0].missing_required_capabilities, ['sale_price']);
+
+  const directoryCalls = [];
+  const publicSales = await discovery.runPublicSalesLayerDiscovery({
+    counties: [{ county: 'Wayne', state: 'MI', metro: 'Detroit', hosts: ['gis.example.gov'] }],
+    skip_socrata: true,
+    write_output: false,
+    max_hosts_per_county: 1,
+    fetch_impl: async (url) => {
+      directoryCalls.push(String(url));
+      if (String(url) === 'https://gis.example.gov/arcgis/rest/services?f=json') {
+        return response({ services: [{ name: 'assessor_property_sales_view', type: 'FeatureServer' }] });
+      }
+      if (String(url) === 'https://gis.example.gov/arcgis/rest/services/assessor_property_sales_view/FeatureServer?f=json') {
+        return response({ layers: [{ id: 0, name: 'Sales' }] });
+      }
+      if (String(url) === 'https://gis.example.gov/arcgis/rest/services/assessor_property_sales_view/FeatureServer/0?f=json') {
+        return response({ fields: [
+          { name: 'address' }, { name: 'parcel_id' }, { name: 'amt_sale_price' }, { name: 'sale_date' }, { name: 'property_class_description' }
+        ] });
+      }
+      if (String(url).includes('/query?')) return response({ count: 532071 });
+      throw new Error(`unexpected:${url}`);
+    }
+  });
+  assert.strictEqual(publicSales.counties[0].tier, 'comp_capable');
+  assert.strictEqual(publicSales.counties[0].endpoint_found, 'https://gis.example.gov/arcgis/rest/services/assessor_property_sales_view/FeatureServer/0');
+  assert.strictEqual(publicSales.counties[0].record_count, 532071);
+  assert.strictEqual(publicSales.counties[0].profile_draft.verification_status, 'verified_machine_readable_public_sales_schema');
+  assert.ok(directoryCalls.includes('https://gis.example.gov/arcgis/rest/services?f=json'));
+
+  const homepageOnlySales = await discovery.runPublicSalesLayerDiscovery({
+    counties: [{ county: 'Portal', state: 'XY', metro: 'Portal Metro', hosts: ['www.portal.example.gov'] }],
+    skip_socrata: true,
+    write_output: false,
+    max_hosts_per_county: 1,
+    fetch_impl: async () => response('<html><body>sale price sale date address</body></html>')
+  });
+  assert.strictEqual(homepageOnlySales.counties[0].tier, 'blocked');
+  assert.strictEqual(homepageOnlySales.counties[0].profile_draft, null);
 
   const blocked = await discovery.runDiscovery({
     targets: [{ market: 'Blocked', service_url: 'https://blocked.gov/arcgis/rest/services/Parcels/MapServer', layer: 0 }],

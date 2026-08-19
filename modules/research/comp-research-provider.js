@@ -427,7 +427,7 @@ function normalizeCompCandidate(rawCandidate, provider) {
 function validateVerifiedCompCandidate(candidate) {
   candidate = candidate || {};
   const missing = [];
-  if (!cleanText(candidate.comp_address)) missing.push('Comp address');
+  if (!cleanText(candidate.comp_address || candidate.parcel_id || candidate.apn || candidate.pin)) missing.push('Comp address or parcel id');
   if (!/\b(sold|closed)\b/.test(cleanText(candidate.sold_status).toLowerCase())) missing.push('Sold status');
   if (!(numberValue(candidate.sold_price) > 0)) missing.push('Sold price');
   if (!cleanText(candidate.sold_date)) missing.push('Sold date');

@@ -776,6 +776,39 @@ const rejectedRecords = [
     assert.strictEqual(sameCountySuburb.out_of_market, false, 'same-county suburbs belong to a county-scoped market');
     assert.strictEqual(differentCounty.out_of_market, true, 'a different county must remain outside the county-scoped market');
 
+    const txNumbersOnly = await dealBoard.runFreePublicDealBoardPreview({
+      market: { city: 'San Antonio', county: 'Bexar', state: 'TX' },
+      source_records: [{
+        headline: 'Bexar numbers are anchors, not ARV',
+        normalized_address: '200 Anchor St, San Antonio, TX 78201',
+        city: 'San Antonio',
+        county: 'Bexar',
+        state: 'TX',
+        source_url: 'https://bexar.tx.publicsearch.us/current-foreclosures.pdf',
+        source_document_url: 'https://bexar.tx.publicsearch.us/current-foreclosures.pdf',
+        motivation_evidence_text: 'Official Bexar foreclosure row.',
+        status_evidence_text: 'Listed on the current foreclosure list.',
+        minimum_bid: '$42,000',
+        minimum_bid_evidence_text: 'Minimum bid shown by the official county list: $42,000',
+        delinquent_redemption_amount: '$6,500',
+        delinquent_redemption_amount_evidence_text: 'Delinquent amount shown by the official county list: $6,500',
+        property_story: {
+          assessed_value: '$155,000',
+          source_kind: 'official_public_record',
+          source_url: 'https://bexar.example.gov/parcels/200-anchor',
+          evidence_text: 'Assessed value clue, not ARV: $155,000'
+        }
+      }]
+    }, { fetch_impl: fetchImpl });
+    const txNumberRow = txNumbersOnly.free_public_deals[0];
+    assert.strictEqual(txNumberRow.minimum_bid, '$42,000');
+    assert.strictEqual(txNumberRow.delinquent_redemption_amount, '$6,500');
+    assert.strictEqual(txNumberRow.property_story.assessed_value, '$155,000');
+    assert.strictEqual(txNumberRow.property_story.source_kind, 'official_public_record');
+    assert.strictEqual(txNumberRow.verified_sold_comp_count, 0);
+    assert.strictEqual(txNumberRow.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
+    assert.notStrictEqual(txNumberRow.comp_status, 'verified_sold_comps_ready');
+
     const capped = await dealBoard.runFreePublicDealBoardPreview({
       source_records: Array.from({ length: 40 }, (_, index) => ({
         headline: `Deal ${index}`,

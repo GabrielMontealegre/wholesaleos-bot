@@ -23,7 +23,10 @@ function response(body, status = 200) {
       situs_address: 'SITUS',
       parcel_id: 'APN',
       land_use: 'LAND_USE',
-      assessed_value: 'TOTAL_VALUE'
+      assessed_value: 'TOTAL_VALUE',
+      year_built: 'YEAR_BUILT',
+      living_area: 'LIVING_AREA',
+      prior_document_date: 'DOCDATE'
     }
   };
   const row = {
@@ -46,7 +49,10 @@ function response(body, status = 200) {
         SITUS: '123 Main St',
         APN: '12345',
         LAND_USE: 'Single Family Residential',
-        TOTAL_VALUE: 155000
+        TOTAL_VALUE: 155000,
+        YEAR_BUILT: 1984,
+        LIVING_AREA: 1422,
+        DOCDATE: '2025-05-01'
       } }] });
     }
   });
@@ -57,6 +63,12 @@ function response(body, status = 200) {
   assert.strictEqual(found.owner_record.source_kind, 'official_public_record');
   assert.strictEqual(found.owner_record.land_use, 'Single Family Residential');
   assert.strictEqual(found.land_use, 'Single Family Residential');
+  assert.strictEqual(found.property_story.source_kind, 'official_public_record');
+  assert.strictEqual(found.property_story.assessed_value, '155000');
+  assert.strictEqual(found.property_story.year_built, '1984');
+  assert.strictEqual(found.property_story.living_area, '1422');
+  assert.strictEqual(found.property_story.prior_document_date, '2025-05-01');
+  assert.match(found.property_story.evidence_text, /Assessed value clue, not ARV: 155000/);
   assert.match(found.evidence_text, /Land use: Single Family Residential/);
   assert.strictEqual(found.mailing_route.route_kind, 'mailing_address');
   assert.strictEqual(found.mailing_route.source_kind, 'official_public_record');

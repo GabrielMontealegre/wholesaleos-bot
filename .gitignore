@@ -18,6 +18,9 @@ exports/county-onboarding/*
 !exports/public-parcel-api-discovery/
 exports/public-parcel-api-discovery/*
 !exports/public-parcel-api-discovery/*.json
+!exports/public-sales-layer-discovery/
+exports/public-sales-layer-discovery/*
+!exports/public-sales-layer-discovery/*.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

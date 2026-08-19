@@ -8,7 +8,8 @@ const SOURCE_KINDS = Object.freeze([
   'official_public_record',
   'public_source_document',
   'public_web_page',
-  'search_snippet'
+  'search_snippet',
+  'paid_api'
 ]);
 
 function sourceKind(value, fallback) {
@@ -41,7 +42,8 @@ function routeHasProvenance(route) {
 
 function compHasProvenance(comp) {
   return !!(hasProvenance(comp) &&
-    cleanText(comp.comp_address || comp.address) &&
+    sourceKind(comp.source_kind) !== 'paid_api' &&
+    cleanText(comp.comp_address || comp.address || comp.parcel_id || comp.apn || comp.pin) &&
     Number(comp.sold_price) > 0 &&
     cleanText(comp.sold_date));
 }
