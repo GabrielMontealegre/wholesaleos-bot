@@ -102,6 +102,34 @@ function recordBoardSkipRollup(row, lane, reason, nowIso) {
     market_policy: {}
   }).selected.length, 0, 'legacy SKIPPED_BUDGET must not erase FOUND cooldown');
 
+  const terminalRow = rows(1)[0];
+  terminalRow.queue_key = 'terminal-row-00';
+  terminalRow.source_document_url = 'https://example.test/doc-old.pdf';
+  ledger.appendAttempt(terminalRow, {
+    lane: 'document_reextraction',
+    attempted_at: '2026-08-11T00:00:00Z',
+    outcome: 'FAILED',
+    reason_code: 'pdf_text_and_ocr_both_recovered_nothing',
+    reason_text: 'Document review found nothing recoverable.',
+    source_url: terminalRow.source_document_url,
+    cost_usd: 0,
+    next_eligible_at: 'PERMANENT_UNTIL_DOCUMENT_REVIEW'
+  });
+  assert.strictEqual(scheduler.selectRowsForEnrichment([terminalRow], {
+    lane: 'document_reextraction',
+    limit: 1,
+    now_iso: '2026-08-11T00:02:00Z',
+    market_policy: {},
+    terminal_source_url_for_row: () => 'https://example.test/doc-old.pdf'
+  }).selected.length, 0, 'terminal review should remain blocked for the same source document');
+  assert.strictEqual(scheduler.selectRowsForEnrichment([terminalRow], {
+    lane: 'document_reextraction',
+    limit: 1,
+    now_iso: '2026-08-11T00:02:00Z',
+    market_policy: {},
+    terminal_source_url_for_row: () => 'https://example.test/doc-new.pdf'
+  }).selected.length, 1, 'terminal review should reopen when the source document changes');
+
   const markets = Array.from({ length: 20 }, (_, index) => ({
     market_key: `market-${index}`,
     city: `City ${index}`,

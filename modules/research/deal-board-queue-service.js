@@ -78,6 +78,7 @@ const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(DA
 const COUNTY_ONBOARDING_DIR = path.join(process.cwd(), 'exports', 'county-onboarding');
 let countyOnboardingArtifactCache = null;
 let blockedInventoryBreakdownCache = null;
+let documentReviewQueueCache = null;
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -386,6 +387,7 @@ function writeStore(store) {
   store.updated_at = nowIso();
   fs.writeFileSync(file, JSON.stringify(store, null, 2));
   blockedInventoryBreakdownCache = null;
+  documentReviewQueueCache = null;
 }
 
 function marketKey(market) {
@@ -626,6 +628,76 @@ function blockedInventoryBreakdownForResponse(store) {
     blockedInventoryStoreForSummary(store || {})
   );
   blockedInventoryBreakdownCache = { cache_key: cacheKey, value };
+  return value;
+}
+
+function terminalDocumentReviewQueueCacheKey(store, market) {
+  const today = nowIso().slice(0, 10);
+  const file = snapshotFilePath();
+  const marketKeyValue = marketKey(market);
+  try {
+    const stat = fs.statSync(file);
+    return `${file}|${stat.mtimeMs}|${stat.size}|${today}|${marketKeyValue}`;
+  } catch (error) {
+    return `missing|${cleanText(store && store.updated_at)}|${today}|${marketKeyValue}`;
+  }
+}
+
+function latestAttemptForDocumentUrl(row, documentUrl) {
+  const targetUrl = cleanText(documentUrl);
+  return (Array.isArray(row && row.enrichment_ledger && row.enrichment_ledger.attempts)
+    ? row.enrichment_ledger.attempts
+    : [])
+    .filter((attempt) => cleanText(attempt && attempt.lane) === 'document_reextraction')
+    .filter((attempt) => cleanText(attempt && attempt.source_url) === targetUrl)
+    .slice()
+    .sort((a, b) => cleanText(b.attempted_at).localeCompare(cleanText(a.attempted_at)))[0] || null;
+}
+
+function documentReviewQueueForResponse(store, market) {
+  const cacheKey = terminalDocumentReviewQueueCacheKey(store, market);
+  if (documentReviewQueueCache && documentReviewQueueCache.cache_key === cacheKey) {
+    return documentReviewQueueCache.value;
+  }
+  const bucket = (store && store.markets && store.markets[marketKey(market)]) || {};
+  const rows = repairStoredSnapshotRows((Array.isArray(bucket.rows) ? bucket.rows : []).map(cloneSnapshotRow));
+  const items = rows.map((row) => {
+    const documentUrl = documentUrlsForRow(row)[0];
+    if (!documentUrl) return null;
+    const latest = latestAttemptForDocumentUrl(row, documentUrl);
+    if (!latest || !cleanText(latest.next_eligible_at).startsWith('PERMANENT_')) return null;
+    return {
+      queue_key: cleanText(row.queue_key),
+      market: {
+        city: cleanText(row.city),
+        county: cleanText(row.county),
+        state: cleanText(row.state).toUpperCase()
+      },
+      document_url: documentUrl,
+      document_reextraction_status: cleanText(row.document_reextraction_status),
+      document_reextraction_reason: cleanText(row.document_reextraction_reason),
+      latest_attempted_at: cleanText(latest.attempted_at),
+      latest_reason_code: cleanText(latest.reason_code),
+      latest_reason_text: cleanText(latest.reason_text),
+      latest_next_eligible_at: cleanText(latest.next_eligible_at),
+      attempt_count: Array.isArray(row && row.enrichment_ledger && row.enrichment_ledger.attempts)
+        ? row.enrichment_ledger.attempts.filter((attempt) =>
+          cleanText(attempt && attempt.lane) === 'document_reextraction' &&
+          cleanText(attempt && attempt.source_url) === documentUrl
+        ).length
+        : 0
+    };
+  }).filter(Boolean).slice(0, 25);
+  const value = {
+    total_count: items.length,
+    market: {
+      city: cleanText(market && market.city),
+      county: cleanText(market && market.county),
+      state: cleanText(market && market.state).toUpperCase()
+    },
+    items
+  };
+  documentReviewQueueCache = { cache_key: cacheKey, value };
   return value;
 }
 
@@ -929,19 +1001,20 @@ async function runDealBoardBatch(input = {}, options = {}) {
     bucket.market = market;
     store.markets[key] = bucket;
     writeStore(store);
-    return {
-      ok: true,
-      preview_only: true,
-      should_ingest: false,
-      no_global_mutation: true,
-      snapshot_kind: 'deal_board_snapshot_not_saved_leads',
-      market,
-      county_onboarding: countyOnboardingSummary(market),
-      batch,
-      counts: queueCounts([]),
-      lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
-      rows: bucket.rows.slice(0, 100)
-    };
+  return {
+    ok: true,
+    preview_only: true,
+    should_ingest: false,
+    no_global_mutation: true,
+    snapshot_kind: 'deal_board_snapshot_not_saved_leads',
+    market,
+    county_onboarding: countyOnboardingSummary(market),
+    document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
+    batch,
+    counts: queueCounts([]),
+    lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
+    rows: bucket.rows.slice(0, 100)
+  };
   }
   const preview = await previewImpl({
     market,
@@ -1117,6 +1190,7 @@ function latestDealBoardSnapshot(input = {}) {
     counts: queueCounts(rows),
     batch: (bucket.batches || [])[0] || null,
     county_onboarding: countyOnboardingSummary(market),
+    document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
     batches_today: batchesToday.length,
     daily: {
       batches_today: batchesToday.length,
@@ -1233,6 +1307,62 @@ function recordContactWorkflow(input = {}, options = {}) {
   snapshot.contact_workflow = {
     queue_key: queueKey,
     outcome,
+    recorded_at: recordedAt,
+    source: 'operator_input'
+  };
+  snapshot.should_ingest = false;
+  snapshot.no_global_mutation = true;
+  return snapshot;
+}
+
+function recordDocumentReviewClear(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const key = marketKey(market);
+  const queueKey = cleanText(input.queue_key);
+  const documentUrl = cleanText(input.document_url || input.document_reextraction_source_url);
+  if (!queueKey) throw contactWorkflowError('queue_key is required', 'document_review_queue_key_required', 400);
+  if (!documentUrl) throw contactWorkflowError('document_url is required', 'document_review_document_url_required', 400);
+  if (activeJobForMarket(key)) {
+    throw contactWorkflowError(
+      'A batch is running for this market. Try again when it finishes. This review queue is read-only while a batch is active.',
+      'document_review_market_batch_running',
+      409
+    );
+  }
+
+  const store = readStore();
+  const bucket = store.markets[key];
+  if (!bucket || !Array.isArray(bucket.rows)) {
+    throw contactWorkflowError('No snapshot exists for this market.', 'document_review_market_not_found', 404);
+  }
+  const row = bucket.rows.find((item) => cleanText(item && item.queue_key) === queueKey);
+  if (!row) throw contactWorkflowError('The selected queue row was not found.', 'document_review_row_not_found', 404);
+  const currentDocumentUrls = documentUrlsForRow(row);
+  if (!currentDocumentUrls.includes(documentUrl)) {
+    throw contactWorkflowError('The selected document is not attached to this snapshot row.', 'document_review_document_not_found', 404);
+  }
+  const latest = latestAttemptForDocumentUrl(row, documentUrl);
+  if (!latest || !cleanText(latest.next_eligible_at).startsWith('PERMANENT_')) {
+    throw contactWorkflowError('The selected document is not awaiting terminal review.', 'document_review_not_terminal', 404);
+  }
+
+  const recordedAt = typeof options.now_impl === 'function' ? cleanText(options.now_impl()) : nowIso();
+  const attempt = {
+    lane: 'document_reextraction',
+    attempted_at: recordedAt,
+    outcome: 'OPERATOR_RESET',
+    reason_code: 'DOCUMENT_REVIEW_CLEARED',
+    reason_text: 'Operator reviewed the stored source document and cleared the terminal review state.',
+    source_url: documentUrl,
+    cost_usd: 0
+  };
+  enrichmentLedger.appendAttempt(row, attempt);
+  writeStore(store);
+
+  const snapshot = latestDealBoardSnapshot({ market });
+  snapshot.document_review_clear = {
+    queue_key: queueKey,
+    document_url: documentUrl,
     recorded_at: recordedAt,
     source: 'operator_input'
   };
@@ -1507,6 +1637,7 @@ module.exports = {
   setAutoRun,
   getAutoRunStatus,
   loadAutoRunFromDisk,
+  recordDocumentReviewClear,
   MIN_AUTO_RUN_INTERVAL_MINUTES,
   DAILY_AUTO_RUN_CAP
 };

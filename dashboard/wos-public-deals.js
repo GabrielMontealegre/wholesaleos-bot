@@ -6,6 +6,7 @@
   var API_LATEST = '/api/dashboard/free-public-deal-board/latest';
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
   var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
+  var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
@@ -176,6 +177,36 @@
       '</select></label>' +
       '<button type="button" class="wos-contact-save" style="padding:5px 9px;border-radius:6px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Mark contacted</button>' +
       '<span class="wos-contact-message" style="font-size:11px;color:#6b7280;">Nothing changes until you save an outcome.</span></div>';
+  }
+
+  function documentReviewItem(item) {
+    var docUrl = item && item.document_url || '';
+    return '<div class="wos-document-review-item" data-queue-key="' + esc(item.queue_key || '') + '" data-document-url="' + esc(docUrl) + '" style="border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' +
+      '<div style="font-weight:700;font-size:13px;margin-bottom:3px;">' + esc(item.queue_key || 'document review') + ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fee2e2;">Terminal review</span></div>' +
+      '<div style="font-size:12px;color:#374151;">' +
+        (item.market && item.market.county ? esc(item.market.county) + ' County, ' : '') +
+        (item.market && item.market.state ? esc(item.market.state) : '') +
+        ' - ' + link('Open document', docUrl) + '</div>' +
+      '<div style="font-size:12px;margin-top:3px;color:#374151;">Reason: <b>' + esc(item.latest_reason_code || '') + '</b>' +
+        (item.latest_reason_text ? ' - ' + esc(item.latest_reason_text) : '') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">This is read-only until you click Mark reviewed. It only clears the terminal review flag for this document URL.</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;">' +
+        '<button type="button" class="wos-document-review-clear" style="padding:5px 9px;border-radius:6px;border:1px solid #dc2626;background:#dc2626;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Mark reviewed</button>' +
+        '<span class="wos-document-review-message" style="font-size:11px;color:#6b7280;">Nothing changes until you click.</span>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function documentReviewPanel(data) {
+    var review = data && data.document_reextraction_terminal_review || {};
+    var items = safeArray(review.items);
+    var body = items.length
+      ? items.map(documentReviewItem).join('')
+      : '<div style="font-size:12px;color:#6b7280;">No terminal document reviews right now.</div>';
+    return panelBox('Documents Needing Review <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fecaca;">' + esc(review.total_count || 0) + '</span>',
+      'Read-only terminal review queue from stored source documents. This does nothing until clicked.',
+      body,
+      '#fca5a5');
   }
 
   function rowCard(row) {
@@ -736,6 +767,7 @@
       body.innerHTML =
         (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +
+        documentReviewPanel(data) +
         countyOnboardingPanel(data);
       return;
     }
@@ -850,6 +882,36 @@
       });
   }
 
+  function clearDocumentReview(container, button) {
+    var card = button.closest && button.closest('.wos-document-review-item');
+    var queueKey = card && card.dataset && card.dataset.queueKey;
+    var documentUrl = card && card.dataset && card.dataset.documentUrl;
+    var message = card && card.querySelector('.wos-document-review-message');
+    if (!queueKey || !documentUrl) {
+      if (message) message.textContent = 'Missing queue key or document URL.';
+      return;
+    }
+    var requestMarketKey = selectedMarketKey;
+    button.disabled = true;
+    button.textContent = 'Clearing...';
+    fetch(API_DOCUMENT_REVIEW_CLEAR, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ market: selectedMarket(), queue_key: queueKey, document_url: documentUrl })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || data.ok === false) throw new Error((data && data.error) || 'document review clear failed');
+        if (requestMarketKey !== selectedMarketKey) return;
+        render(container, data, 'Terminal document review cleared from explicit operator input.');
+      })
+      .catch(function (err) {
+        button.disabled = false;
+        button.textContent = 'Mark reviewed';
+        if (message) message.textContent = 'Could not clear: ' + err.message;
+      });
+  }
+
   function ensureSection(page) {
     var host = document.getElementById('content') || document.getElementById('app') || document.body;
     var section = document.getElementById('wos-public-deals');
@@ -909,6 +971,8 @@
       section.addEventListener('click', function (event) {
         var button = event.target && event.target.closest && event.target.closest('.wos-contact-save');
         if (button) saveContactWorkflow(section, button);
+        var reviewButton = event.target && event.target.closest && event.target.closest('.wos-document-review-clear');
+        if (reviewButton) clearDocumentReview(section, reviewButton);
       });
     }
 

@@ -99,6 +99,45 @@ const ledger = require('../modules/research/enrichment-ledger');
   });
   assert.strictEqual(ledger.isLaneEligible(foundWithSkipNoise, 'public_search', '2026-08-11T00:02:00Z'), false, 'skip noise must not erase FOUND cooldown');
 
+  const reset = {};
+  ledger.appendAttempt(reset, {
+    lane: 'document_reextraction',
+    attempted_at: '2026-08-11T00:00:00Z',
+    outcome: 'FAILED',
+    reason_code: 'pdf_text_and_ocr_both_recovered_nothing',
+    reason_text: 'Terminal failure.',
+    source_url: 'https://example.test/doc-old',
+    cost_usd: 0,
+    next_eligible_at: 'PERMANENT_UNTIL_DOCUMENT_REVIEW'
+  });
+  ledger.appendAttempt(reset, {
+    lane: 'document_reextraction',
+    attempted_at: '2026-08-11T01:00:00Z',
+    outcome: 'OPERATOR_RESET',
+    reason_code: 'DOCUMENT_REVIEW_CLEARED',
+    reason_text: 'Operator reviewed the stored document.',
+    source_url: 'https://example.test/doc-old',
+    cost_usd: 0,
+    next_eligible_at: ''
+  });
+  assert.strictEqual(ledger.isLaneEligible(reset, 'document_reextraction', '2026-08-11T01:01:00Z', {
+    terminal_source_url: 'https://example.test/doc-old'
+  }), true, 'operator reset should reopen the same document URL');
+  const moved = {};
+  ledger.appendAttempt(moved, {
+    lane: 'document_reextraction',
+    attempted_at: '2026-08-11T00:00:00Z',
+    outcome: 'FAILED',
+    reason_code: 'pdf_text_and_ocr_both_recovered_nothing',
+    reason_text: 'Terminal failure.',
+    source_url: 'https://example.test/doc-old',
+    cost_usd: 0,
+    next_eligible_at: 'PERMANENT_UNTIL_DOCUMENT_REVIEW'
+  });
+  assert.strictEqual(ledger.isLaneEligible(moved, 'document_reextraction', '2026-08-11T01:01:00Z', {
+    terminal_source_url: 'https://example.test/doc-new'
+  }), true, 'a replaced document URL should reopen even if the old URL remains terminal');
+
   const capped = {};
   for (let i = 0; i < 25; i += 1) {
     ledger.appendAttempt(capped, {

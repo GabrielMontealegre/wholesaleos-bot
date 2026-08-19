@@ -332,7 +332,13 @@ async function reextractRow(row, market, options, documentTextCache) {
     try {
       extractedRows = await rowsFromOcr(cached.buffer, row, market, documentUrl, options);
     } catch (error) {
-      if (cached.status === 'failed') return cached;
+      if (cached.status === 'failed') {
+        return {
+          status: 'failed',
+          reason_code: 'ocr_reextraction_threw_after_pdf_text_failure',
+          reason_text: `OCR re-extraction also failed after PDF text parsing failed: ${cleanText(error && error.message).slice(0, 120)}`
+        };
+      }
       return {
         status: 'failed',
         reason_code: 'ocr_reextraction_failed',
@@ -398,7 +404,8 @@ async function runDocumentReextractionPass(rows, input = {}, options = {}) {
     lane: LANE,
     limit,
     now_iso: nowIso,
-    market_policy: {}
+    market_policy: {},
+    terminal_source_url_for_row: (row) => documentUrlsForRow(row)[0] || ''
   });
   diagnostics.selected_count = selection.selected.length;
   diagnostics.skipped_count = selection.skipped.length;

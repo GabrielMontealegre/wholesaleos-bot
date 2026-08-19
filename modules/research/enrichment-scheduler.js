@@ -118,6 +118,9 @@ function selectRowsForEnrichment(rows, options = {}) {
   const limit = Math.max(0, Number(options.limit) || 0);
   const nowIso = cleanText(options.now_iso) || new Date().toISOString();
   const marketPolicy = options.market_policy || {};
+  const terminalSourceUrlForRow = typeof options.terminal_source_url_for_row === 'function'
+    ? options.terminal_source_url_for_row
+    : null;
   const selected = [];
   const skipped = [];
   const candidates = [];
@@ -134,7 +137,8 @@ function selectRowsForEnrichment(rows, options = {}) {
       continue;
     }
     if (!enrichmentLedger.isLaneEligible(row, lane, nowIso, {
-      policy_reason_code: policyReasonCode(lane, marketPolicy)
+      policy_reason_code: policyReasonCode(lane, marketPolicy),
+      terminal_source_url: terminalSourceUrlForRow ? terminalSourceUrlForRow(row) : ''
     })) {
       skipped.push({ queue_key: key, skip_reason: 'lane_cooldown_active' });
       continue;
