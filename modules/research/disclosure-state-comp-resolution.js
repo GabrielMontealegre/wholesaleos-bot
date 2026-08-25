@@ -364,6 +364,7 @@ async function runDisclosureStateCompResolution(input = {}, options = {}) {
 
 module.exports = {
   DEFAULT_CAPS,
+  rejectReason,
   resolveCompsForRow,
   runDisclosureStateCompResolution,
   compFromAttributes

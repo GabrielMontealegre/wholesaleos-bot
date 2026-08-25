@@ -23,6 +23,7 @@ const leadOperationsState = require('./lead-operations-state');
 const enrichmentScheduler = require('./enrichment-scheduler');
 const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
 const documentReextractionPass = require('./document-reextraction-pass');
+const manualEvidencePacketService = require('./manual-evidence-packet-service');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -728,6 +729,10 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     state: cleanText(deal.state),
     quality_bucket: cleanText(deal.quality_bucket),
     source_family: cleanText(deal.source_family),
+    motivation_type: cleanText(deal.motivation_type),
+    motivation_evidence_text: cleanText(deal.motivation_evidence_text),
+    source_proof_text: cleanText(deal.source_proof_text),
+    why_this_might_be_a_deal: cleanText(deal.why_this_might_be_a_deal),
     source_url: cleanText(deal.source_url),
     source_document_url: cleanText(deal.source_document_url),
     source_row_reference: cleanText(deal.source_row_reference),
@@ -1054,6 +1059,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
+    'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
     'rejected_reason',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
@@ -1187,6 +1193,7 @@ function latestDealBoardSnapshot(input = {}) {
     daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
     auto_run: getAutoRunStatus(market),
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
+    manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows: [] }),
     lead_operations_queue: leadOperationsQueueForResponse([]),
     rows: []
     };
@@ -1214,6 +1221,7 @@ function latestDealBoardSnapshot(input = {}) {
     },
     auto_run: getAutoRunStatus(market),
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
+    manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows }),
     lead_operations_queue: leadOperationsQueueForResponse(rows),
     rows: rows.slice(0, 100)
   };

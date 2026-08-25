@@ -7,6 +7,8 @@
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
   var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
+  var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
+  var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
@@ -59,6 +61,10 @@
 
   function headers() {
     return { 'Content-Type': 'application/json', 'x-user-id': window._uid || 'admin' };
+  }
+
+  function authHeaders() {
+    return { 'x-user-id': window._uid || 'admin' };
   }
 
   function esc(value) {
@@ -207,6 +213,124 @@
       'Read-only terminal review queue from stored source documents. This does nothing until clicked.',
       body,
       '#fca5a5');
+  }
+
+  var MANUAL_EVIDENCE_SLOTS = [
+    { key: 'subject_property', label: '1. Subject property', sources: ['Zillow', 'Redfin', 'Realtor.com', 'Google Maps'] },
+    { key: 'sold_comp', label: '2. Sold comp', sources: ['Zillow sold result', 'Redfin sold result', 'Realtor.com sold result', 'County sales record'] },
+    { key: 'county_appraisal_record', label: '3. County appraisal record', sources: ['County appraisal district', 'County parcel record'] },
+    { key: 'auction_status', label: '4. Auction / sale status', sources: ['County auction page', 'Official source document'] },
+    { key: 'skip_trace', label: '5. Skip-trace clue', sources: ['CyberBackgroundChecks', 'Official public contact page', 'Public search result'] }
+  ];
+
+  var MANUAL_FIELD_LABELS = {
+    normalized_address: 'Address', property_kind: 'Property type', beds: 'Beds', baths: 'Baths', sqft: 'Sqft', year_built: 'Year built',
+    zestimate: 'Zestimate clue', list_price: 'List price clue', asking_price: 'Asking price clue', source_url: 'Source URL', comp_address: 'Comp address', parcel_id: 'Parcel / APN',
+    sold_status: 'Sold status', sold_price: 'Sold price', sold_date: 'Sold date', similarity_basis: 'Similarity basis', land_use: 'Land use',
+    distance_miles: 'Distance miles', owner_name: 'Possible owner name', taxpayer_name: 'Taxpayer name', assessed_value: 'Assessed value clue',
+    tax_value: 'Tax value clue', sale_date: 'Sale date', status: 'Sale status', minimum_bid: 'Minimum bid clue',
+    redemption_amount: 'Redemption amount clue', contact_value: 'Phone / email / link', contact_route_kind: 'Contact type',
+    contact_classification: 'Who this may reach', seller_owner_confirmed: 'I confirmed this is the owner / seller'
+  };
+
+  function manualFieldInput(item, key) {
+    var value = item && item.fields && item.fields[key];
+    var base = 'class="wos-manual-field" data-field="' + esc(key) + '" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;background:#fff;color:#111827;font-size:11px;"';
+    if (key === 'seller_owner_confirmed') {
+      return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151;"><input type="checkbox" ' + base + (value === true ? ' checked' : '') + '> ' + esc(MANUAL_FIELD_LABELS[key]) + '</label>';
+    }
+    if (key === 'contact_classification') {
+      var choices = [
+        ['unknown_unverified_contact', 'Unknown / unverified contact'],
+        ['possible_owner_contact', 'Possible owner contact'],
+        ['possible_household_or_relative_contact', 'Possible household / relative'],
+        ['trustee_servicer_or_attorney_contact', 'Trustee / servicer / attorney']
+      ];
+      return '<label style="font-size:10px;color:#6b7280;">' + esc(MANUAL_FIELD_LABELS[key]) + '<select ' + base + '>' + choices.map(function (choice) {
+        return '<option value="' + esc(choice[0]) + '"' + (String(value || 'unknown_unverified_contact') === choice[0] ? ' selected' : '') + '>' + esc(choice[1]) + '</option>';
+      }).join('') + '</select></label>';
+    }
+    if (key === 'contact_route_kind') {
+      return '<label style="font-size:10px;color:#6b7280;">' + esc(MANUAL_FIELD_LABELS[key]) + '<select ' + base + '>' +
+        ['phone', 'email', 'form', 'reply_link'].map(function (choice) { return '<option value="' + choice + '"' + (String(value || '') === choice ? ' selected' : '') + '>' + esc(choice.replace(/_/g, ' ')) + '</option>'; }).join('') +
+        '</select></label>';
+    }
+    return '<label style="font-size:10px;color:#6b7280;">' + esc(MANUAL_FIELD_LABELS[key] || key.replace(/_/g, ' ')) +
+      '<input type="text" ' + base + ' value="' + esc(value || '') + '"></label>';
+  }
+
+  function manualEvidenceItem(item) {
+    var keys = Object.keys(MANUAL_FIELD_LABELS).filter(function (key) {
+      if (item.evidence_type === 'sold_comp') return ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'distance_miles', 'beds', 'baths', 'sqft'].indexOf(key) !== -1;
+      if (item.evidence_type === 'skip_trace') return ['owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
+      if (item.evidence_type === 'county_appraisal_record') return ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'].indexOf(key) !== -1;
+      if (item.evidence_type === 'auction_status') return ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'].indexOf(key) !== -1;
+      return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
+    });
+    var conflicts = safeArray(item.conflicts);
+    return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b style="font-size:11px;">' + esc(String(item.evidence_type || '').replace(/_/g, ' ')) + ' from ' + esc(item.source_name || 'screenshot') + '</b>' +
+      '<span style="font-size:10px;padding:2px 7px;border-radius:9px;background:' + (item.operator_confirmed ? '#bbf7d0' : '#fde68a') + ';">' + (item.operator_confirmed ? 'CONFIRMED' : 'UNCONFIRMED OCR PROPOSAL') + '</span></div>' +
+      '<div style="font-size:10px;color:#6b7280;margin-top:3px;">Captured ' + esc(item.captured_at || '') + ' - screenshot ' + esc(item.screenshot_id || '') + '</div>' +
+      (conflicts.length ? '<div style="font-size:11px;color:#991b1b;margin-top:5px;"><b>Conflict - no overwrite:</b> ' + conflicts.map(function (conflict) { return esc(conflict.field + ': official "' + conflict.official_value + '" vs screenshot "' + conflict.screenshot_value + '"'); }).join(' | ') + '</div>' : '') +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:7px;">' + keys.map(function (key) { return manualFieldInput(item, key); }).join('') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;"><button type="button" class="wos-manual-confirm" style="padding:5px 9px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">' + (item.operator_confirmed ? 'Update confirmed evidence' : 'Confirm these fields') + '</button>' +
+      '<span class="wos-manual-proposal-message" style="font-size:10px;color:#6b7280;">Nothing counts until you confirm.</span></div></div>';
+  }
+
+  function manualUploadSlot(slot) {
+    return '<div class="wos-manual-upload-slot" data-evidence-type="' + esc(slot.key) + '" style="border:1px solid #dbeafe;border-radius:7px;padding:7px;background:#f8fafc;">' +
+      '<div style="font-size:11px;font-weight:700;color:#1e3a8a;margin-bottom:5px;">' + esc(slot.label) + '</div>' +
+      '<select class="wos-manual-source" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px;background:#fff;font-size:10px;">' + slot.sources.map(function (source) { return '<option value="' + esc(source) + '">' + esc(source) + '</option>'; }).join('') + '</select>' +
+      '<input class="wos-manual-source-url" type="url" placeholder="Paste the exact page URL" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px;margin-top:5px;font-size:10px;">' +
+      '<input class="wos-manual-file" type="file" accept="image/png,image/jpeg,image/webp" style="width:100%;font-size:10px;margin-top:5px;">' +
+      '<button type="button" class="wos-manual-upload" style="width:100%;padding:5px 7px;margin-top:5px;border-radius:6px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">Upload screenshot</button>' +
+      '<div class="wos-manual-upload-message" style="font-size:10px;color:#6b7280;margin-top:4px;">PNG, JPG or WebP, max 8MB.</div></div>';
+  }
+
+  function manualEvidenceCard(item) {
+    var packet = item.packet || {};
+    var evaluation = packet.evaluation || {};
+    var links = safeArray(item.research_links).map(function (entry) {
+      return '<a href="' + esc(entry.url || '') + '" target="_blank" rel="noopener" title="' + esc(entry.warning || '') + '" style="display:inline-block;padding:5px 8px;margin:3px 4px 0 0;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:10px;text-decoration:none;font-weight:600;">' + esc(entry.label || 'Open source') + '</a>';
+    }).join('');
+    var missing = safeArray(item.missing_evidence);
+    var proposals = safeArray(packet.evidence_items);
+    var arv = evaluation.arv_range;
+    return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
+      '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
+        '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
+        '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
+      '</div>' +
+      '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
+      '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
+        '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
+        (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' : '') +
+        (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc(clue.field + ' ' + clue.value); }).join(', ') : '') +
+      '</div>' +
+      (proposals.length ? '<div style="margin-top:7px;"><b style="font-size:11px;">Review OCR proposals:</b>' + proposals.map(manualEvidenceItem).join('') + '</div>' : '') +
+      '</details>';
+  }
+
+  function manualEvidencePanel(data) {
+    var packet = data && data.manual_evidence_packet || {};
+    var items = safeArray(packet.items);
+    return panelBox('Manual Evidence Packet <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;">' + esc(String(packet.selected_count || 0)) + ' sample leads</span>',
+      'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
+      '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
+      (items.length ? items.map(manualEvidenceCard).join('') : '<div style="font-size:12px;color:#6b7280;margin-top:8px;">' + esc(packet.empty_reason || 'No eligible stored rows for this market yet.') + '</div>'), '#60a5fa');
+  }
+
+  function manualEvidenceSummary(data) {
+    var packet = data && data.manual_evidence_packet || {};
+    var items = safeArray(packet.items);
+    var confirmed = items.reduce(function (sum, item) { return sum + Number(item.packet && item.packet.evaluation && item.packet.evaluation.confirmed_evidence_count || 0); }, 0);
+    return panelBox('Manual Evidence Packet',
+      'A small, deterministic set of the best current rows is prepared for screenshot research.',
+      '<div>' + chip('Prepared leads', packet.selected_count || 0, '#dbeafe') + chip('Confirmed evidence', confirmed, '#bbf7d0') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:5px;">Open Deal Finder to use the Zillow, Redfin, Realtor.com, Maps, county, auction, and background-check links.</div>', '#93c5fd');
   }
 
   function rowCard(row) {
@@ -770,6 +894,7 @@
       body.innerHTML =
         (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +
+        manualEvidenceSummary(data) +
         documentReviewPanel(data) +
         countyOnboardingPanel(data);
       return;
@@ -778,6 +903,7 @@
       (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       dailyMachinePanel(data, rows) +
       zipReviewPanel(rows) +
+      manualEvidencePanel(data) +
       leadOperationsQueuePanel(data, rows);
   }
 
@@ -915,6 +1041,81 @@
       });
   }
 
+  function uploadManualEvidence(container, button) {
+    var card = button.closest && button.closest('.wos-manual-evidence-card');
+    var slot = button.closest && button.closest('.wos-manual-upload-slot');
+    var fileInput = slot && slot.querySelector('.wos-manual-file');
+    var sourceSelect = slot && slot.querySelector('.wos-manual-source');
+    var sourceUrl = slot && slot.querySelector('.wos-manual-source-url');
+    var message = slot && slot.querySelector('.wos-manual-upload-message');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) {
+      if (message) message.textContent = 'Choose a screenshot first.';
+      return;
+    }
+    if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl.value || '')) {
+      if (message) message.textContent = 'Paste the exact page URL shown in the screenshot.';
+      return;
+    }
+    var form = new FormData();
+    form.append('market', JSON.stringify(selectedMarket()));
+    form.append('queue_key', card && card.dataset && card.dataset.queueKey || '');
+    form.append('evidence_type', slot && slot.dataset && slot.dataset.evidenceType || '');
+    form.append('source_name', sourceSelect && sourceSelect.value || 'operator screenshot');
+    form.append('source_url', sourceUrl.value);
+    form.append('captured_at', new Date().toISOString());
+    form.append('screenshot', file, file.name);
+    button.disabled = true;
+    button.textContent = 'Reading screenshot...';
+    if (message) message.textContent = 'OCR is proposing fields. Nothing is confirmed yet.';
+    fetch(API_MANUAL_EVIDENCE_UPLOAD, { method: 'POST', headers: authHeaders(), body: form })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || data.ok === false) throw new Error((data && data.error) || 'screenshot upload failed');
+        fetchLatestWithNote(container, 'Screenshot read. Review the OCR proposal and confirm only fields you can see in the image.');
+      })
+      .catch(function (err) {
+        button.disabled = false;
+        button.textContent = 'Upload screenshot';
+        if (message) message.textContent = 'Could not upload: ' + err.message;
+      });
+  }
+
+  function confirmManualEvidence(container, button) {
+    var card = button.closest && button.closest('.wos-manual-evidence-card');
+    var proposal = button.closest && button.closest('.wos-manual-proposal');
+    var message = proposal && proposal.querySelector('.wos-manual-proposal-message');
+    var fields = {};
+    safeArray(proposal && proposal.querySelectorAll ? Array.prototype.slice.call(proposal.querySelectorAll('.wos-manual-field')) : []).forEach(function (field) {
+      var key = field.dataset && field.dataset.field;
+      if (!key) return;
+      fields[key] = field.type === 'checkbox' ? field.checked : field.value;
+    });
+    button.disabled = true;
+    button.textContent = 'Saving confirmation...';
+    fetch(API_MANUAL_EVIDENCE_PROPOSAL, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        market: selectedMarket(),
+        queue_key: card && card.dataset && card.dataset.queueKey || '',
+        evidence_id: proposal && proposal.dataset && proposal.dataset.evidenceId || '',
+        fields: fields,
+        operator_confirmed: true
+      })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || data.ok === false) throw new Error((data && data.error) || 'evidence confirmation failed');
+        fetchLatestWithNote(container, 'Screenshot fields confirmed as explicit operator evidence. Official evidence remains unchanged.');
+      })
+      .catch(function (err) {
+        button.disabled = false;
+        button.textContent = 'Confirm these fields';
+        if (message) message.textContent = 'Could not confirm: ' + err.message;
+      });
+  }
+
   function ensureSection(page) {
     var host = document.getElementById('content') || document.getElementById('app') || document.body;
     var section = document.getElementById('wos-public-deals');
@@ -976,6 +1177,10 @@
         if (button) saveContactWorkflow(section, button);
         var reviewButton = event.target && event.target.closest && event.target.closest('.wos-document-review-clear');
         if (reviewButton) clearDocumentReview(section, reviewButton);
+        var uploadButton = event.target && event.target.closest && event.target.closest('.wos-manual-upload');
+        if (uploadButton) uploadManualEvidence(section, uploadButton);
+        var confirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-confirm');
+        if (confirmButton) confirmManualEvidence(section, confirmButton);
       });
     }
 

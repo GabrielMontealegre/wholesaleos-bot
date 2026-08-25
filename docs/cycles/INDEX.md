@@ -16,6 +16,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-8-free-identity-and-comps]] - free public owner/mailing routes, entity resolution, and disclosure-state comp unlock.
 - [[cycle-9-county-onboarding]] - county candidate registry, probe artifact, and multi-market throughput planning.
 - [[cycle-10-lead-operations]] - segmented lead operations queue and manual mail-ready export.
+- [[cycle-16-manual-evidence-packet]] - screenshot-assisted evidence packets for the best current rows in every live market.
 
 ## Market Notes
 

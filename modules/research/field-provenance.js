@@ -9,6 +9,7 @@ const SOURCE_KINDS = Object.freeze([
   'public_source_document',
   'public_web_page',
   'search_snippet',
+  'operator_supplied_screenshot',
   'paid_api'
 ]);
 

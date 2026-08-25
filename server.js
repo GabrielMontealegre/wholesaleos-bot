@@ -21,7 +21,9 @@ const callReadyPreviewService = require('./modules/research/call-ready-preview-s
 const selectedDealPacketService = require('./modules/research/selected-deal-packet-service');
 const freePublicDealBoardPreviewService = require('./modules/research/free-public-deal-board-preview-service');
 const dealBoardQueueService = require('./modules/research/deal-board-queue-service');
+const manualEvidencePacketService = require('./modules/research/manual-evidence-packet-service');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
+const multer = require('multer');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
@@ -2009,6 +2011,78 @@ app.get('/api/dashboard/free-public-deal-board/latest', requireAdmin, (req, res)
     }));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message, code: 'deal_board_snapshot_read_failed' });
+  }
+});
+
+const manualEvidenceUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: manualEvidencePacketService.MAX_UPLOAD_BYTES, files: 1, fields: 20 }
+}).single('screenshot');
+
+function manualEvidenceMarket(body) {
+  const input = body || {};
+  if (input.market && typeof input.market === 'object') return input.market;
+  if (typeof input.market === 'string') {
+    try { return JSON.parse(input.market); } catch (error) { /* use individual fields */ }
+  }
+  return { city: input.city || '', county: input.county || '', state: input.state || '' };
+}
+
+function manualEvidenceError(res, error) {
+  const multerTooLarge = error && error.code === 'LIMIT_FILE_SIZE';
+  const status = multerTooLarge ? 413 : Number(error && error.status_code || 500) || 500;
+  res.status(status).json({
+    ok: false,
+    error: multerTooLarge ? 'screenshot exceeds the 8MB limit' : error.message,
+    code: multerTooLarge ? 'manual_evidence_file_too_large' : error.code || 'manual_evidence_update_failed',
+    preview_only: true,
+    should_ingest: false,
+    no_global_mutation: true
+  });
+}
+
+app.get('/api/dashboard/free-public-deal-board/manual-evidence/sample', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(manualEvidencePacketService.sampleModeForAllMarkets());
+  } catch (error) {
+    manualEvidenceError(res, error);
+  }
+});
+
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', requireAdmin, (req, res) => {
+  manualEvidenceUpload(req, res, async (uploadError) => {
+    if (uploadError) return manualEvidenceError(res, uploadError);
+    try {
+      res.set('Cache-Control', 'no-store');
+      res.json(await manualEvidencePacketService.uploadScreenshot({
+        market: manualEvidenceMarket(req.body),
+        queue_key: req.body && req.body.queue_key,
+        evidence_type: req.body && req.body.evidence_type,
+        source_name: req.body && req.body.source_name,
+        source_url: req.body && req.body.source_url,
+        captured_at: req.body && req.body.captured_at,
+        filename: req.file && req.file.originalname,
+        buffer: req.file && req.file.buffer
+      }, {
+        operator_id: req.headers['x-user-id'] || 'admin'
+      }));
+    } catch (error) {
+      manualEvidenceError(res, error);
+    }
+  });
+});
+
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(manualEvidencePacketService.recordEvidenceProposal(Object.assign({}, req.body || {}, {
+      market: manualEvidenceMarket(req.body)
+    }), {
+      operator_id: req.headers['x-user-id'] || 'admin'
+    }));
+  } catch (error) {
+    manualEvidenceError(res, error);
   }
 });
 
