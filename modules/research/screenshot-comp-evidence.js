@@ -31,8 +31,26 @@ const DEFAULT_CAPS = Object.freeze({
 });
 
 const BLOCKED_TEXT_RE = /\b(captcha|verify you are human|human verification|access denied|denied access|forbidden|login required|sign in to view|create an account|subscription required|paywall|press & hold|are you a robot)\b/i;
-const SOLD_CARD_RE = /(\$[\d,]{4,12})[^]{0,120}?\bsold\b[^]{0,60}?((?:\d{1,2}\/\d{1,2}\/\d{2,4})|(?:[A-Z][a-z]{2,8}\.?\s+\d{1,2},?\s+\d{4}))[^]{0,240}?(\d{1,7}\s+[A-Za-z0-9 .'#-]{3,60}(?:,\s*[A-Za-z .'-]{2,40})?,?\s*(?:TX|Texas)\s*\d{5})/gi;
-const SOLD_CARD_ALT_RE = /(\d{1,7}\s+[A-Za-z0-9 .'#-]{3,60}(?:,\s*[A-Za-z .'-]{2,40})?,?\s*(?:TX|Texas)\s*\d{5})[^]{0,240}?\bsold\b[^]{0,80}?((?:\d{1,2}\/\d{1,2}\/\d{2,4})|(?:[A-Z][a-z]{2,8}\.?\s+\d{1,2},?\s+\d{4}))[^]{0,120}?(\$[\d,]{4,12})/gi;
+const LIVE_STATE_PATTERNS = Object.freeze({
+  TX: 'TX|Texas',
+  CA: 'CA|California',
+  MI: 'MI|Michigan'
+});
+const SOLD_DATE_PATTERN = '(?:\\d{1,2}\\/\\d{1,2}\\/\\d{2,4})|(?:[A-Z][a-z]{2,8}\\.?\\s+\\d{1,2},?\\s+\\d{4})';
+const ADDRESS_START_PATTERN = "\\d{1,7}\\s+[A-Za-z0-9 .'#-]{3,60}(?:,\\s*[A-Za-z .'-]{2,40})?,?\\s*";
+
+function soldCardRegexes(state) {
+  const stateCode = cleanText(state).toUpperCase();
+  const statePattern = LIVE_STATE_PATTERNS[stateCode] || LIVE_STATE_PATTERNS.TX;
+  const addressPattern = `${ADDRESS_START_PATTERN}(?:${statePattern})\\s*\\d{5}`;
+  return {
+    primary: new RegExp(`(\\$[\\d,]{4,12})[^]{0,120}?\\bsold\\b[^]{0,60}?(${SOLD_DATE_PATTERN})[^]{0,240}?(${addressPattern})`, 'gi'),
+    alternate: new RegExp(`(${addressPattern})[^]{0,240}?\\bsold\\b[^]{0,80}?(${SOLD_DATE_PATTERN})[^]{0,120}?(\\$[\\d,]{4,12})`, 'gi')
+  };
+}
+
+const SOLD_CARD_RE = soldCardRegexes('TX').primary;
+const SOLD_CARD_ALT_RE = soldCardRegexes('TX').alternate;
 const FACTS_RE = /(\d+)\s*(?:bd|beds?)\b[^]{0,30}?(\d+(?:\.\d+)?)\s*(?:ba|baths?)\b[^]{0,40}?([\d,]{3,6})\s*(?:sq\s?ft|sqft)/i;
 
 function cleanText(value) {
@@ -67,6 +85,7 @@ function extractCompCandidatesFromVisibleText(pageText, context = {}) {
   const source = String(pageText || '');
   const candidates = [];
   const seen = new Set();
+  const patterns = soldCardRegexes(context.state);
   const push = (address, soldDate, price, matchText) => {
     const key = addressKey(address);
     if (!key || seen.has(key)) return;
@@ -88,10 +107,10 @@ function extractCompCandidatesFromVisibleText(pageText, context = {}) {
     });
   };
   let match;
-  SOLD_CARD_RE.lastIndex = 0;
-  while ((match = SOLD_CARD_RE.exec(source)) && candidates.length < 8) push(match[3], match[2], match[1], match[0]);
-  SOLD_CARD_ALT_RE.lastIndex = 0;
-  while ((match = SOLD_CARD_ALT_RE.exec(source)) && candidates.length < 8) push(match[1], match[2], match[3], match[0]);
+  patterns.primary.lastIndex = 0;
+  while ((match = patterns.primary.exec(source)) && candidates.length < 8) push(match[3], match[2], match[1], match[0]);
+  patterns.alternate.lastIndex = 0;
+  while ((match = patterns.alternate.exec(source)) && candidates.length < 8) push(match[1], match[2], match[3], match[0]);
   return candidates;
 }
 
@@ -300,6 +319,11 @@ async function runScreenshotCompEvidence(input = {}, options = {}) {
 module.exports = {
   DEFAULT_CAPS,
   screenshotDir,
+  addressKey,
+  moneyToNumber,
+  SOLD_CARD_RE,
+  SOLD_CARD_ALT_RE,
+  soldCardRegexes,
   extractCompCandidatesFromVisibleText,
   validateScreenshotComp,
   runScreenshotCompEvidence

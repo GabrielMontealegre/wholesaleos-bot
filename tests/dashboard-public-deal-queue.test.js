@@ -799,6 +799,10 @@ function mockDeal(overrides) {
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/auto-run',\s*requireAdmin/.test(serverSource), 'auto-run route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/contact-workflow',\s*requireAdmin/.test(serverSource), 'contact workflow route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/document-review-clear',\s*requireAdmin/.test(serverSource), 'document review clear route must be admin-protected');
+  assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/sample',\s*requireAdmin/.test(serverSource), 'manual evidence sample route must be admin-protected');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/upload',\s*requireAdmin/.test(serverSource), 'manual evidence upload route must be admin-protected');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/proposal',\s*requireAdmin/.test(serverSource), 'manual evidence confirmation route must be admin-protected');
+  assert.ok(serverSource.includes('multer.memoryStorage()') && serverSource.includes('MAX_UPLOAD_BYTES'), 'screenshots must use bounded multipart upload rather than base64 JSON');
   assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
   assert.ok(!/comp-agent|skip-trace-agent/.test(queueSource), 'no legacy agents');
@@ -806,7 +810,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=23'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=24'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -831,6 +835,13 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Nothing changes until you save an outcome.'), 'contact control must state that it is explicit operator input');
   assert.ok(uiSource.includes('Documents Needing Review'), 'dashboard must render the terminal document review panel');
   assert.ok(uiSource.includes('Mark reviewed'), 'dashboard must expose the terminal review clear button');
+  assert.ok(uiSource.includes('Manual Evidence Packet'), 'dashboard must render the manual evidence packet');
+  assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_UPLOAD') && uiSource.includes('/manual-evidence/upload'), 'dashboard must call the screenshot upload route');
+  assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_PROPOSAL') && uiSource.includes('/manual-evidence/proposal'), 'dashboard must confirm OCR proposals through an explicit route');
+  assert.ok(uiSource.includes('Nothing counts until you confirm.'), 'dashboard must state that OCR proposals are unconfirmed');
+  assert.ok(uiSource.includes('Conflict - no overwrite'), 'dashboard must surface screenshot conflicts without overwriting official evidence');
+  assert.ok(uiSource.includes('Zillow') && uiSource.includes('CyberBackgroundChecks'), 'dashboard must expose human research link controls');
+  assert.ok(uiSource.includes('subject_property') && uiSource.includes('sold_comp') && uiSource.includes('county_appraisal_record') && uiSource.includes('auction_status') && uiSource.includes('skip_trace'), 'dashboard must provide all five evidence slots');
   assert.ok(uiSource.includes('does nothing until clicked'), 'dashboard must state the review panel is read-only until clicked');
   assert.ok(uiSource.includes('CLOSED_NOT_INTERESTED') && uiSource.includes('Closed - Not Interested'), 'dashboard must render closed-not-interested as its own segment');
   assert.ok(uiSource.includes('contact_workflow_attempts') && uiSource.includes('Last contact attempt'), 'dashboard must expose append-only contact attempt history');

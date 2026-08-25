@@ -138,6 +138,17 @@ function fakePlaywrightServing(pagesByUrl) {
   assert.strictEqual(visible[0].sold_date, '05/10/2026');
   assert.ok(/3720 Barnabus Rd/.test(visible[0].comp_address));
 
+  const californiaVisible = screenshotComp.extractCompCandidatesFromVisibleText(
+    'Recently sold: $615,000 Sold on 06/20/2026 123 Palm Ave, San Diego, CA 92101 3 bd 2 ba 1,350 sqft',
+    { state: 'CA', source_url: 'https://www.redfin.com/CA/San-Diego/home/1' }
+  );
+  const michiganVisible = screenshotComp.extractCompCandidatesFromVisibleText(
+    'Recently sold: $145,000 Sold on 07/01/2026 456 Woodward Ave, Detroit, MI 48201 2 bd 1 ba 1,050 sqft',
+    { state: 'MI', source_url: 'https://www.realtor.com/realestateandhomes-detail/1' }
+  );
+  assert.strictEqual(californiaVisible.length, 1, 'CA sold-card OCR must use the same deterministic parser');
+  assert.strictEqual(michiganVisible.length, 1, 'MI sold-card OCR must use the same deterministic parser');
+
   // 6) Board wiring: COMP_READY unlocks ARV honestly, MAO stays locked without repair evidence;
   //    partial evidence never unlocks ARV.
   const boardRecord = {
