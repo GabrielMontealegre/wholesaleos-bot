@@ -28,5 +28,6 @@ deal-board-doc-ledger.json
 data/deal-board-doc-ledger-*.json
 data/manual-evidence-packets.json
 data/manual-evidence-packets-*.json
+data/market-demand-index-full.json
 deal-board-jobs.json
 deal-board-auto-run.json

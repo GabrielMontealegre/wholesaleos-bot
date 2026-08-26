@@ -15,6 +15,14 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
       sale_price: 'amt_sale_price',
       sale_date: 'sale_date',
       land_use: 'property_class_description',
+      property_kind: 'property_kind',
+      living_area: 'sqft',
+      bedrooms: 'beds',
+      bathrooms: 'baths',
+      year_built: 'year_built',
+      lot_size: 'lot_size',
+      latitude: 'latitude',
+      longitude: 'longitude',
       zip: 'zip_code'
     }
   };
@@ -24,14 +32,30 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
     county: 'Wayne',
     state: 'MI',
     source_row_reference: 'subject-1',
-    land_use: 'Residential'
+    land_use: 'Residential',
+    property_kind: 'single family',
+    sqft: 1500,
+    beds: 3,
+    baths: 2,
+    year_built: 1995,
+    lot_size: 6000,
+    latitude: 42.391,
+    longitude: -83.281
   };
+  function gridAttrs(attributes, index) {
+    return Object.assign({
+      property_kind: 'single family', sqft: 1500, beds: 3, baths: 2,
+      year_built: 1998, lot_size: 6200,
+      latitude: 42.391 + Number(index || 0) * 0.001,
+      longitude: -83.281 + Number(index || 0) * 0.001
+    }, attributes);
+  }
   const features = [
-    { address: '13905 Sussex St, Detroit, MI 48227', parcel_id: 'subject-1', amt_sale_price: 200000, sale_date: '2026-02-01', property_class_description: 'Residential', zip_code: '48227' },
-    { address: '14001 Sussex St, Detroit, MI 48227', parcel_id: 'c1', amt_sale_price: 210000, sale_date: '2026-01-15', property_class_description: 'Residential', zip_code: '48227' },
-    { address: '14011 Sussex St, Detroit, MI 48227', parcel_id: 'c2', amt_sale_price: 220000, sale_date: '2026-03-15', property_class_description: 'Residential', zip_code: '48227' },
-    { address: '14021 Sussex St, Detroit, MI 48227', parcel_id: 'c3', amt_sale_price: 230000, sale_date: '2026-04-15', property_class_description: 'Residential', zip_code: '48227' },
-    { address: '14031 Sussex St, Detroit, MI 48227', parcel_id: 'gift', amt_sale_price: 1, sale_date: '2026-05-01', property_class_description: 'Quitclaim', zip_code: '48227' }
+    gridAttrs({ address: '13905 Sussex St, Detroit, MI 48227', parcel_id: 'subject-1', amt_sale_price: 200000, sale_date: '2026-02-01', property_class_description: 'Residential', zip_code: '48227' }, 0),
+    gridAttrs({ address: '14001 Sussex St, Detroit, MI 48227', parcel_id: 'c1', amt_sale_price: 210000, sale_date: '2026-01-15', property_class_description: 'Residential', zip_code: '48227' }, 1),
+    gridAttrs({ address: '14011 Sussex St, Detroit, MI 48227', parcel_id: 'c2', amt_sale_price: 220000, sale_date: '2026-03-15', property_class_description: 'Residential', zip_code: '48227' }, 2),
+    gridAttrs({ address: '14021 Sussex St, Detroit, MI 48227', parcel_id: 'c3', amt_sale_price: 230000, sale_date: '2026-04-15', property_class_description: 'Residential', zip_code: '48227' }, 3),
+    gridAttrs({ address: '14031 Sussex St, Detroit, MI 48227', parcel_id: 'gift', amt_sale_price: 1, sale_date: '2026-05-01', property_class_description: 'Quitclaim', zip_code: '48227' }, 4)
   ];
   const ready = await compResolution.resolveCompsForRow(row, {
     profiles: [profile],
@@ -136,7 +160,15 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
       parcel_id: 'pin',
       sale_price: 'sale_price',
       sale_date: 'sale_date',
-      land_use: 'class'
+      land_use: 'class',
+      property_kind: 'property_kind',
+      living_area: 'sqft',
+      bedrooms: 'beds',
+      bathrooms: 'baths',
+      year_built: 'year_built',
+      lot_size: 'lot_size',
+      latitude: 'latitude',
+      longitude: 'longitude'
     }
   };
   let socrataUrl = '';
@@ -146,7 +178,8 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
     county: 'Cook',
     state: 'IL',
     parcel_id: '14-01-100-001-0000',
-    land_use: 'Residential'
+    land_use: 'Residential', property_kind: 'single family', sqft: 1500, beds: 3, baths: 2,
+    year_built: 1995, lot_size: 6000, latitude: 41.884, longitude: -87.632
   }, {
     profiles: [socrataProfile],
     now_iso: '2026-08-11T00:00:00Z',
@@ -157,10 +190,10 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
         status: 200,
         async text() {
           return JSON.stringify([
-            { pin: '14-01-100-001-0000', sale_price: '400000', sale_date: '2026-01-10', class: 'Residential' },
-            { pin: '14-01-100-002-0000', sale_price: '210000', sale_date: '2026-02-15', class: 'Residential' },
-            { pin: '14-01-100-003-0000', sale_price: '220000', sale_date: '2026-03-15', class: 'Residential' },
-            { pin: '14-01-100-004-0000', sale_price: '230000', sale_date: '2026-04-15', class: 'Residential' }
+            { pin: '14-01-100-001-0000', sale_price: '400000', sale_date: '2026-01-10', class: 'Residential', property_kind: 'single family', sqft: 1500, beds: 3, baths: 2, year_built: 1998, lot_size: 6200, latitude: 41.884, longitude: -87.632 },
+            { pin: '14-01-100-002-0000', sale_price: '210000', sale_date: '2026-02-15', class: 'Residential', property_kind: 'single family', sqft: 1450, beds: 3, baths: 2, year_built: 1998, lot_size: 6200, latitude: 41.885, longitude: -87.632 },
+            { pin: '14-01-100-003-0000', sale_price: '220000', sale_date: '2026-03-15', class: 'Residential', property_kind: 'single family', sqft: 1550, beds: 4, baths: 2, year_built: 1992, lot_size: 5900, latitude: 41.886, longitude: -87.633 },
+            { pin: '14-01-100-004-0000', sale_price: '230000', sale_date: '2026-04-15', class: 'Residential', property_kind: 'single family', sqft: 1600, beds: 3, baths: 3, year_built: 2000, lot_size: 6500, latitude: 41.887, longitude: -87.634 }
           ]);
         }
       };
@@ -199,12 +232,57 @@ const compResolution = require('../modules/research/disclosure-state-comp-resolu
     profiles: [profile],
     now_iso: '2013-08-11T00:00:00Z',
     mock_comp_features: [
-      { address: '14101 Sussex St, Detroit, MI 48227', parcel_id: 'old1', amt_sale_price: 6500, sale_date: '2011-04-12', property_class_description: 'Residential', zip_code: '48227' },
-      { address: '14111 Sussex St, Detroit, MI 48227', parcel_id: 'old2', amt_sale_price: 5200, sale_date: '2012-09-03', property_class_description: 'Residential', zip_code: '48227' },
-      { address: '14121 Sussex St, Detroit, MI 48227', parcel_id: 'old3', amt_sale_price: 8000, sale_date: '2013-02-20', property_class_description: 'Residential', zip_code: '48227' }
+      gridAttrs({ address: '14101 Sussex St, Detroit, MI 48227', parcel_id: 'old1', amt_sale_price: 6500, sale_date: '2011-04-12', property_class_description: 'Residential', zip_code: '48227' }, 1),
+      gridAttrs({ address: '14111 Sussex St, Detroit, MI 48227', parcel_id: 'old2', amt_sale_price: 5200, sale_date: '2012-09-03', property_class_description: 'Residential', zip_code: '48227' }, 2),
+      gridAttrs({ address: '14121 Sussex St, Detroit, MI 48227', parcel_id: 'old3', amt_sale_price: 8000, sale_date: '2013-02-20', property_class_description: 'Residential', zip_code: '48227' }, 3)
     ]
   });
   assert.strictEqual(oldWouldHaveUnlocked.status, 'COMP_PARTIAL', 'dry-run comparison: at the older comparison date, only the 2013 sale remains inside the active window');
+
+  const baseComp = gridAttrs({
+    comp_address: '14001 Sussex St, Detroit, MI 48227', sold_status: 'sold', sold_price: 220000,
+    sold_date: '2026-02-01', source_kind: 'official_public_record', source_url: 'https://example.gov/comp',
+    evidence_text: 'Recorded sale', similarity_basis: 'land_use:residential', land_use: 'Residential'
+  }, 1);
+  const gridOptions = { today_iso: '2026-08-25' };
+  const acceptedGrid = compResolution.evaluateStrictCompGrid(baseComp, row, gridOptions);
+  assert.strictEqual(acceptedGrid.accepted, true);
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'sold_recency' && item.status === 'APPLIED_PASS'));
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'market_sale_price' && item.status === 'APPLIED_PASS'));
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'similarity_basis' && item.status === 'APPLIED_PASS'));
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'provenance' && item.status === 'APPLIED_PASS'));
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'year_built' && item.status === 'APPLIED_PASS'));
+  assert.ok(acceptedGrid.criteria.some((item) => item.criterion === 'lot_size' && item.status === 'APPLIED_PASS'));
+
+  const rejectionMatrix = [
+    ['nominal_or_non_market_sale_price', Object.assign({}, baseComp, { sold_price: 250 }), row],
+    ['missing_sold_date', Object.assign({}, baseComp, { sold_date: '' }), row],
+    ['sale_outside_comp_window', Object.assign({}, baseComp, { sold_date: '2024-01-01' }), row],
+    ['stale_comp', Object.assign({}, baseComp, { sold_date: '2025-02-01' }), row],
+    ['missing_similarity_basis', Object.assign({}, baseComp, { similarity_basis: '' }), row],
+    ['missing_comp_provenance', Object.assign({}, baseComp, { source_url: '' }), row],
+    ['strict_grid_distance_not_applied', Object.assign({}, baseComp, { latitude: '', longitude: '' }), row],
+    ['rural_exception_requires_operator_review', Object.assign({}, baseComp, { latitude: 42.43, longitude: -83.281 }), row],
+    ['comp_outside_one_mile', Object.assign({}, baseComp, { latitude: 42.5, longitude: -83.281 }), row],
+    ['property_type_mismatch', Object.assign({}, baseComp, { property_kind: 'condominium' }), row],
+    ['living_area_outside_20_percent', Object.assign({}, baseComp, { sqft: 2000 }), row],
+    ['bedrooms_outside_range', Object.assign({}, baseComp, { beds: 5 }), row],
+    ['bathrooms_outside_range', Object.assign({}, baseComp, { baths: 4 }), row],
+    ['year_built_not_similar', Object.assign({}, baseComp, { year_built: 1960 }), row],
+    ['lot_size_not_similar', Object.assign({}, baseComp, { lot_size: 10000 }), row]
+  ];
+  rejectionMatrix.forEach(([reason, candidate, subject]) => {
+    assert.strictEqual(compResolution.evaluateStrictCompGrid(candidate, subject, gridOptions).rejected_reason, reason);
+  });
+  const missingFacts = compResolution.evaluateStrictCompGrid(Object.assign({}, baseComp, { sqft: '', beds: '', baths: '' }), row, gridOptions);
+  assert.strictEqual(missingFacts.accepted, false);
+  assert.ok(missingFacts.criteria.filter((item) => ['living_area', 'bedrooms', 'bathrooms'].includes(item.criterion)).every((item) => item.status === 'NOT_APPLIED'));
+  const ruralApproved = compResolution.evaluateStrictCompGrid(Object.assign({}, baseComp, { latitude: 42.43, longitude: -83.281 }), row, {
+    today_iso: '2026-08-25',
+    rural_exception_review: { approved: true, reviewed_by: 'admin', reviewed_at: '2026-08-25T12:00:00Z' }
+  });
+  assert.strictEqual(ruralApproved.accepted, true);
+  assert.match(ruralApproved.rural_exception_warning, /Rural comp exception approved/);
 
   console.log('disclosure state comp resolution tests passed');
 })().catch((error) => {

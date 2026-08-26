@@ -37,8 +37,8 @@ const LIVE_MARKETS = Object.freeze([
 ]);
 
 const FIELD_ALLOWLIST = Object.freeze({
-  subject_property: ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'zestimate', 'list_price', 'asking_price', 'source_url'],
-  sold_comp: ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'distance_miles', 'beds', 'baths', 'sqft'],
+  subject_property: ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'],
+  sold_comp: ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'],
   county_appraisal_record: ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'],
   auction_status: ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'],
   skip_trace: ['owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url']
@@ -272,10 +272,15 @@ function compCandidateFromItem(item) {
     evidence_text: `Operator confirmed screenshot from ${cleanText(item.source_name)}: ${cleanText(fields.comp_address || fields.parcel_id)} sold ${cleanText(fields.sold_date)} for ${cleanText(fields.sold_price)}. Similarity: ${cleanText(fields.similarity_basis)}.`,
     similarity_basis: cleanText(fields.similarity_basis),
     land_use: cleanText(fields.land_use),
+    property_kind: cleanText(fields.property_kind || fields.land_use),
     distance_miles: cleanText(fields.distance_miles),
+    latitude: cleanText(fields.latitude),
+    longitude: cleanText(fields.longitude),
     beds: cleanText(fields.beds),
     baths: cleanText(fields.baths),
     sqft: cleanText(fields.sqft),
+    year_built: cleanText(fields.year_built),
+    lot_size: cleanText(fields.lot_size),
     screenshot_id: item.screenshot_id,
     source_name: item.source_name,
     captured_at: item.captured_at,
@@ -283,14 +288,39 @@ function compCandidateFromItem(item) {
   };
 }
 
+function subjectForCompGrid(row, confirmedItems) {
+  const subject = Object.assign({}, row || {});
+  const subjectItem = confirmedItems.find((entry) => entry.evidence_type === 'subject_property');
+  const fields = subjectItem && subjectItem.fields || {};
+  const mappings = {
+    property_kind: ['property_kind', 'property_kind_if_visible', 'land_use'],
+    beds: ['beds', 'bedrooms'],
+    baths: ['baths', 'bathrooms'],
+    sqft: ['sqft', 'living_area'],
+    year_built: ['year_built'],
+    lot_size: ['lot_size', 'lot_size_sqft'],
+    latitude: ['latitude', 'geocoded_latitude'],
+    longitude: ['longitude', 'geocoded_longitude']
+  };
+  Object.keys(mappings).forEach((target) => {
+    const hasOfficial = mappings[target].some((name) => cleanText(row && row[name]));
+    if (!hasOfficial && cleanText(fields[target])) subject[target] = fields[target];
+  });
+  return subject;
+}
+
 function evaluatePacket(packet, row, options = {}) {
   const items = Array.isArray(packet && packet.evidence_items) ? packet.evidence_items : [];
   const confirmed = items.filter((item) => item && item.operator_confirmed === true);
+  const compGridSubject = subjectForCompGrid(row, confirmed);
   const verifiedComps = [];
   const rejectedComps = [];
   for (const item of confirmed.filter((entry) => entry.evidence_type === 'sold_comp')) {
     const candidate = compCandidateFromItem(item);
-    const rejectedReason = disclosureStateCompResolution.rejectReason(candidate, row, {
+    candidate.comp_grid = disclosureStateCompResolution.evaluateStrictCompGrid(candidate, compGridSubject, options);
+    candidate.distance_miles = candidate.comp_grid.distance_miles;
+    candidate.rural_comp_warning = candidate.comp_grid.rural_exception_warning;
+    const rejectedReason = disclosureStateCompResolution.rejectReason(candidate, compGridSubject, {
       today_iso: cleanText(options.today_iso) || new Date().toISOString().slice(0, 10)
     });
     if (rejectedReason) rejectedComps.push(Object.assign({}, candidate, { rejected_reason: rejectedReason }));
@@ -345,6 +375,9 @@ function evaluatePacket(packet, row, options = {}) {
     confirmed_evidence_count: confirmed.length,
     verified_screenshot_comps: usedComps,
     rejected_screenshot_comps: rejectedComps,
+    comp_grid_comps: usedComps.length || rejectedComps.length
+      ? usedComps.concat(rejectedComps)
+      : (Array.isArray(row && row.verified_comps) ? row.verified_comps : []),
     verified_sold_comp_count: usedComps.length,
     arv_status: arvUnlocked ? 'ARV_UNLOCKED_VERIFIED_COMPS' : 'ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS',
     arv_evidence_basis: arvUnlocked ? SOURCE_KIND : '',

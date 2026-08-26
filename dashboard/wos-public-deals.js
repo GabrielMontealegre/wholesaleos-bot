@@ -9,9 +9,12 @@
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
   var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
   var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
+  var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
+  var marketDemandFetchInFlight = false;
+  var marketDemandData = null;
   var dataByMarket = {};
   var MARKET_PRESETS = [
     { key: 'dallas', label: 'Dallas County, TX', city: 'Dallas', county: 'Dallas', state: 'TX' },
@@ -225,6 +228,7 @@
 
   var MANUAL_FIELD_LABELS = {
     normalized_address: 'Address', property_kind: 'Property type', beds: 'Beds', baths: 'Baths', sqft: 'Sqft', year_built: 'Year built',
+    lot_size: 'Lot size', latitude: 'Latitude', longitude: 'Longitude',
     zestimate: 'Zestimate clue', list_price: 'List price clue', asking_price: 'Asking price clue', source_url: 'Source URL', comp_address: 'Comp address', parcel_id: 'Parcel / APN',
     sold_status: 'Sold status', sold_price: 'Sold price', sold_date: 'Sold date', similarity_basis: 'Similarity basis', land_use: 'Land use',
     distance_miles: 'Distance miles', owner_name: 'Possible owner name', taxpayer_name: 'Taxpayer name', assessed_value: 'Assessed value clue',
@@ -261,11 +265,11 @@
 
   function manualEvidenceItem(item) {
     var keys = Object.keys(MANUAL_FIELD_LABELS).filter(function (key) {
-      if (item.evidence_type === 'sold_comp') return ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'distance_miles', 'beds', 'baths', 'sqft'].indexOf(key) !== -1;
+      if (item.evidence_type === 'sold_comp') return ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'].indexOf(key) !== -1;
       if (item.evidence_type === 'skip_trace') return ['owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'county_appraisal_record') return ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'auction_status') return ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'].indexOf(key) !== -1;
-      return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
+      return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
     });
     var conflicts = safeArray(item.conflicts);
     return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
@@ -297,18 +301,28 @@
     var missing = safeArray(item.missing_evidence);
     var proposals = safeArray(packet.evidence_items);
     var arv = evaluation.arv_range;
+    var researchUrls = safeArray(item.research_links).map(function (entry) { return entry && entry.url; }).filter(Boolean);
+    var gridSummary = safeArray(evaluation.comp_grid_comps).map(function (comp) {
+      var criteria = safeArray(comp && comp.comp_grid && comp.comp_grid.criteria);
+      return '<div style="font-size:10px;color:#374151;margin-top:3px;"><b>' + esc(comp.comp_address || comp.parcel_id || 'comp') + ':</b> ' +
+        criteria.map(function (entry) { return esc(entry.criterion + ' ' + entry.status + (entry.reason ? ' (' + entry.reason + ')' : '')); }).join(' | ') +
+        (comp.rejected_reason ? ' <span style="color:#991b1b;">Rejected: ' + esc(comp.rejected_reason) + '</span>' : '') +
+        (comp.rural_comp_warning ? ' <span style="color:#9a3412;">' + esc(comp.rural_comp_warning) + '</span>' : '') + '</div>';
+    }).join('');
     return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
       '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
         '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
-      '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') + '</div>' +
+      '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
+        (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
         (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' : '') +
         (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc(clue.field + ' ' + clue.value); }).join(', ') : '') +
+        (gridSummary ? '<details style="margin-top:5px;"><summary style="cursor:pointer;color:#1d4ed8;">Strict comp grid evidence</summary><div style="font-size:10px;color:#6b7280;">NOT_APPLIED means a required fact was missing; it never silently passes the comp.</div>' + gridSummary + '</details>' : '') +
       '</div>' +
       (proposals.length ? '<div style="margin-top:7px;"><b style="font-size:11px;">Review OCR proposals:</b>' + proposals.map(manualEvidenceItem).join('') + '</div>' : '') +
       '</details>';
@@ -331,6 +345,64 @@
       'A small, deterministic set of the best current rows is prepared for screenshot research.',
       '<div>' + chip('Prepared leads', packet.selected_count || 0, '#dbeafe') + chip('Confirmed evidence', confirmed, '#bbf7d0') + '</div>' +
       '<div style="font-size:11px;color:#6b7280;margin-top:5px;">Open Deal Finder to use the Zillow, Redfin, Realtor.com, Maps, county, auction, and background-check links.</div>', '#93c5fd');
+  }
+
+  function demandValue(component, format) {
+    if (!component || component.status !== 'KNOWN') return 'UNKNOWN';
+    if (format === 'number') return Number(component.value || 0).toLocaleString();
+    if (format === 'percent') return Number(component.value || 0).toFixed(1) + '%';
+    return component.value;
+  }
+
+  function marketDemandPanel() {
+    if (!marketDemandData) {
+      return panelBox('County Demand Index', 'Demand is separate from lead evidence and never unlocks ARV.', '<div style="font-size:12px;color:#6b7280;">Loading the reproducible county ranking...</div>', '#a7f3d0');
+    }
+    if (!safeArray(marketDemandData.counties).length) {
+      return panelBox('County Demand Index', 'Demand is separate from lead evidence and never unlocks ARV.', '<div style="font-size:12px;color:#991b1b;">Index unavailable: ' + esc(marketDemandData.unavailable_reason || 'no counties') + '</div>', '#a7f3d0');
+    }
+    var rows = safeArray(marketDemandData.counties).slice(0, 400).map(function (county) {
+      var components = county.components || {};
+      var city = components.nearest_major_city && components.nearest_major_city.value;
+      var evidence = Object.keys(components).map(function (key) {
+        var component = components[key] || {};
+        return '<div><b>' + esc(key.replace(/_/g, ' ')) + ':</b> ' + esc(component.status || 'UNKNOWN') +
+          ' - ' + esc(component.source || 'source unavailable') + ' (' + esc(component.evidence_date || 'date unavailable') + ')' +
+          (component.unknown_reason ? ' - ' + esc(component.unknown_reason) : '') + '</div>';
+      }).join('');
+      return '<tr>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-weight:700;">' + esc(county.rank) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;">' + esc(county.county + ', ' + county.state) + '<details style="font-size:9px;color:#6b7280;"><summary style="cursor:pointer;">sources and dates</summary>' + evidence + '</details></td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(county.demand_score) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(county.confidence_score) + '%</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(demandValue(components.population, 'number')) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(demandValue(components.growth_rate, 'percent')) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;">' + esc(city ? city.name + ' (' + city.distance_miles + ' mi)' : 'UNKNOWN') + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;">' + esc(demandValue(components.source_readiness)) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;">' + esc(demandValue(components.comp_readiness)) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(county.unknown_component_count) + '</td>' +
+      '</tr>';
+    }).join('');
+    return panelBox('County Demand Index <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#d1fae5;">' + esc(marketDemandData.county_count || 0) + ' counties ranked</span>',
+      'Population, growth, density, metro proximity, rural class, source readiness, and comp readiness. This score never changes a lead or unlocks ARV.',
+      '<div style="font-size:10px;color:#6b7280;margin-bottom:5px;">Top ' + esc(Math.min(400, marketDemandData.returned_count || 0)) + ' shown. UNKNOWN values are omitted from scoring and reduce confidence. Expand a county to see every source and evidence date.</div>' +
+      '<div style="overflow:auto;max-height:340px;"><table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr><th>#</th><th>County</th><th>Score</th><th>Confidence</th><th>Population</th><th>Growth</th><th>Nearest major city</th><th>Lead source</th><th>Public comps</th><th>Unknown</th></tr></thead><tbody>' + rows + '</tbody></table></div>', '#6ee7b7');
+  }
+
+  function fetchMarketDemand(container) {
+    if (marketDemandData || marketDemandFetchInFlight) return;
+    marketDemandFetchInFlight = true;
+    fetch(API_MARKET_DEMAND_INDEX, { headers: headers() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        marketDemandData = data || { counties: [], unavailable_reason: 'empty_response' };
+        if (currentPage() === 'dashboard' && lastData) render(container, lastData, lastNote);
+      })
+      .catch(function (error) {
+        marketDemandData = { counties: [], unavailable_reason: error.message || 'request_failed' };
+        if (currentPage() === 'dashboard' && lastData) render(container, lastData, lastNote);
+      })
+      .finally(function () { marketDemandFetchInFlight = false; });
   }
 
   function rowCard(row) {
@@ -896,7 +968,9 @@
         dealDeskCard(data, rows) +
         manualEvidenceSummary(data) +
         documentReviewPanel(data) +
-        countyOnboardingPanel(data);
+        countyOnboardingPanel(data) +
+        marketDemandPanel();
+      fetchMarketDemand(container);
       return;
     }
     body.innerHTML =
@@ -1116,6 +1190,18 @@
       });
   }
 
+  function openResearchSet(button) {
+    var message = button.parentNode && button.parentNode.querySelector('.wos-open-research-message');
+    var urls = [];
+    try { urls = JSON.parse(decodeURIComponent(button.dataset.researchUrls || '[]')); } catch (_) { urls = []; }
+    var opened = 0;
+    urls.filter(function (url) { return /^https?:\/\//i.test(url || ''); }).forEach(function (url) {
+      var tab = window.open(url, '_blank', 'noopener,noreferrer');
+      if (tab) opened += 1;
+    });
+    if (message) message.textContent = opened + ' of ' + urls.length + ' research tabs opened. Allow pop-ups for this dashboard if some were blocked.';
+  }
+
   function ensureSection(page) {
     var host = document.getElementById('content') || document.getElementById('app') || document.body;
     var section = document.getElementById('wos-public-deals');
@@ -1133,7 +1219,7 @@
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
         '<h2 style="margin:0;font-size:17px;">Today\'s Deal Desk <span style="font-size:11px;font-weight:500;color:#6b7280;">free sources - snapshot cache, not saved leads</span></h2>' +
         marketSelectHtml() +
-        '</div><div class="wos-public-deals-body" style="max-height:240px;overflow:auto;">Loading public deals...</div>';
+        '</div><div class="wos-public-deals-body" style="max-height:620px;overflow:auto;">Loading public deals...</div>';
     } else if (needsRebuild) {
       section.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px;gap:8px;">' +
@@ -1181,6 +1267,8 @@
         if (uploadButton) uploadManualEvidence(section, uploadButton);
         var confirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-confirm');
         if (confirmButton) confirmManualEvidence(section, confirmButton);
+        var researchButton = event.target && event.target.closest && event.target.closest('.wos-open-research-set');
+        if (researchButton) openResearchSet(researchButton);
       });
     }
 

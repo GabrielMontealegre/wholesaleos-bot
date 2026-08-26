@@ -23,6 +23,7 @@ function censusPayload(matches) {
     {
       fetchImpl: fakeFetch(censusPayload([{
         matchedAddress: '4016 POPLAR POINT DR, ROCKWALL, TX, 75032',
+        coordinates: { x: -96.4597, y: 32.9312 },
         addressComponents: { zip: '75032', streetName: 'POPLAR POINT', suffixType: 'DR', city: 'ROCKWALL', state: 'TX' }
       }]))
     }
@@ -31,6 +32,9 @@ function censusPayload(matches) {
   assert.strictEqual(match.zip, '75032');
   assert.strictEqual(match.normalized_address, '4016 Poplar Point Dr, Rockwall, TX 75032');
   assert.strictEqual(match.source, 'us_census_geocoder');
+  assert.strictEqual(match.latitude, 32.9312);
+  assert.strictEqual(match.longitude, -96.4597);
+  assert.strictEqual(match.coordinate_source, 'us_census_geocoder_address_match');
 
   // 2) Street number disagreement is rejected - never snap to a nearby range.
   const numberMismatch = await censusZip.resolveZipFromCensus(

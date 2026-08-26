@@ -98,6 +98,9 @@ async function resolveZipFromCensus(partial, options = {}) {
     normalized_address: `${prettyStreet}, ${prettyCity}, ${matchedState || state.toUpperCase()} ${zip}`,
     city: prettyCity,
     state: matchedState || state.toUpperCase(),
+    latitude: Number.isFinite(Number(match.coordinates && match.coordinates.y)) ? Number(match.coordinates.y) : null,
+    longitude: Number.isFinite(Number(match.coordinates && match.coordinates.x)) ? Number(match.coordinates.x) : null,
+    coordinate_source: match.coordinates ? 'us_census_geocoder_address_match' : null,
     source: 'us_census_geocoder',
     source_url: CENSUS_GEOCODER_URL
   };
