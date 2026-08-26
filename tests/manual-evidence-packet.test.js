@@ -41,6 +41,14 @@ function row(queueKey, market, overrides) {
     source_url: `https://county.example.gov/notices/${queueKey}`,
     source_document_url: `https://county.example.gov/notices/${queueKey}.pdf`,
     owner_clue: 'JANE SAMPLE',
+    property_kind: 'single family',
+    sqft: 1500,
+    beds: 3,
+    baths: 2,
+    year_built: 1995,
+    lot_size: 6000,
+    latitude: 32.7767,
+    longitude: -96.797,
     missing_fields: ['3 verified sold comps', 'public contact route'],
     preview_only: true,
     should_ingest: false,
@@ -97,7 +105,15 @@ function comp(index, overrides) {
     sold_date: '2026-06-15',
     source_url: `https://www.zillow.com/homedetails/nearby-${index}_zpid/`,
     similarity_basis: 'same single-family land use and nearby location',
-    land_use: 'single family'
+    land_use: 'single family',
+    property_kind: 'single family',
+    beds: '3',
+    baths: '2',
+    sqft: '1500',
+    year_built: '1998',
+    lot_size: '6200',
+    latitude: String(32.7767 + index * 0.001),
+    longitude: String(-96.797 + index * 0.001)
   }, overrides || {});
 }
 
@@ -219,6 +235,7 @@ function pngBuffer(size) {
   assert.strictEqual(three.verified_sold_comp_count, 3);
   assert.strictEqual(three.arv_status, 'ARV_UNLOCKED_VERIFIED_COMPS');
   assert.strictEqual(three.arv_evidence_basis, 'operator_supplied_screenshot');
+  assert.ok(three.verified_screenshot_comps.every((item) => item.comp_grid.accepted === true));
   assert.deepStrictEqual(three.arv_range, {
     low: 210000, high: 230000, median: 220000, count: 3, basis: 'operator_supplied_screenshot',
     label: 'Preliminary ARV range from operator-confirmed screenshot sold comps. Review before any offer.'
@@ -237,6 +254,10 @@ function pngBuffer(size) {
     'subject_address_not_a_comp', 'parcel_only_comp_without_subject_parcel_id'
   ]);
   assert.strictEqual(rejected.verified_sold_comp_count, 0);
+
+  const missingGridFacts = service.evaluatePacket(packetWithComps([comp(7, { sqft: '', beds: '', baths: '' })]), snapshot.markets[marketKey(DALLAS)].rows[0], { today_iso: TODAY });
+  assert.strictEqual(missingGridFacts.verified_sold_comp_count, 0);
+  assert.ok(missingGridFacts.rejected_screenshot_comps[0].comp_grid.criteria.some((item) => item.status === 'NOT_APPLIED'));
 
   const officialConflictRow = Object.assign({}, snapshot.markets[marketKey(DALLAS)].rows[0], { listed_price: '$300,000' });
   const conflict = service.evaluatePacket({ evidence_items: [{

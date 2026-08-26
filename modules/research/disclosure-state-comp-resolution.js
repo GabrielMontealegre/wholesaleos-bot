@@ -4,6 +4,7 @@ const fetchDefault = require('node-fetch');
 const compResearchProvider = require('./comp-research-provider');
 const fieldProvenance = require('./field-provenance');
 const parcelProfiles = require('../sources/public-parcel-api-profiles');
+const strictCompGridConfig = require('./strict-comp-grid-config');
 
 const DEFAULT_CAPS = Object.freeze({
   max_rows: 6,
@@ -21,6 +22,12 @@ function cleanText(value) {
 
 function numberValue(value) {
   return Number(cleanText(value).replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function optionalNumber(value) {
+  if (value == null || value === '') return null;
+  const number = Number(cleanText(value).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(number) ? number : null;
 }
 
 function normalizeCaps(caps) {
@@ -108,13 +115,219 @@ function similarityBasis(candidate, row) {
   return '';
 }
 
-function compFromAttributes(attrs, profile, queryUrl, context = {}) {
+function normalizePropertyType(value) {
+  const text = cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!text) return '';
+  if (/\b(single family|singlefamily|sfr|one family|residential)\b/.test(text)) return 'single_family';
+  if (/\b(townhome|townhouse|town home)\b/.test(text)) return 'townhouse';
+  if (/\b(condo|condominium)\b/.test(text)) return 'condominium';
+  if (/\b(duplex|triplex|fourplex|multi family|multifamily)\b/.test(text)) return 'multifamily';
+  if (/\b(vacant|land|lot)\b/.test(text)) return 'vacant_land';
+  if (/\b(mobile|manufactured)\b/.test(text)) return 'manufactured_home';
+  return text.replace(/\s+/g, '_');
+}
+
+function coordinatePair(value) {
+  const latitude = optionalNumber(value && (value.latitude != null ? value.latitude : value.lat));
+  const longitude = optionalNumber(value && (value.longitude != null ? value.longitude : value.lng));
+  if (latitude == null || longitude == null || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  return { latitude, longitude };
+}
+
+function geometryCoordinates(geometry) {
+  if (!geometry || geometry.x == null || geometry.y == null) return null;
+  let longitude = Number(geometry.x);
+  let latitude = Number(geometry.y);
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null;
+  if (Math.abs(longitude) > 180 || Math.abs(latitude) > 90) {
+    longitude = longitude * 180 / 20037508.34;
+    latitude = Math.atan(Math.exp(latitude * Math.PI / 20037508.34)) * 360 / Math.PI - 90;
+  }
+  return coordinatePair({ latitude, longitude });
+}
+
+function haversineMiles(a, b) {
+  const left = coordinatePair(a);
+  const right = coordinatePair(b);
+  if (!left || !right) return null;
+  const radians = (value) => Number(value) * Math.PI / 180;
+  const deltaLat = radians(right.latitude - left.latitude);
+  const deltaLon = radians(right.longitude - left.longitude);
+  const part = Math.sin(deltaLat / 2) ** 2 + Math.cos(radians(left.latitude)) * Math.cos(radians(right.latitude)) * Math.sin(deltaLon / 2) ** 2;
+  return 3958.7613 * 2 * Math.atan2(Math.sqrt(part), Math.sqrt(1 - part));
+}
+
+function subjectGridFacts(row) {
+  const story = row && row.property_story || {};
+  return {
+    coordinates: coordinatePair({
+      latitude: row && (row.latitude != null ? row.latitude : row.geocoded_latitude),
+      longitude: row && (row.longitude != null ? row.longitude : row.geocoded_longitude)
+    }),
+    property_type: normalizePropertyType(row && (row.property_kind || row.property_kind_if_visible || row.land_use || story.property_kind)),
+    living_area: optionalNumber(row && (row.living_area || row.sqft || story.living_area || story.living_area_sqft)),
+    bedrooms: optionalNumber(row && (row.bedrooms != null ? row.bedrooms : row.beds != null ? row.beds : story.bedrooms != null ? story.bedrooms : story.beds)),
+    bathrooms: optionalNumber(row && (row.bathrooms != null ? row.bathrooms : row.baths != null ? row.baths : story.bathrooms != null ? story.bathrooms : story.baths)),
+    year_built: optionalNumber(row && (row.year_built || story.year_built)),
+    lot_size: optionalNumber(row && (row.lot_size || row.lot_size_sqft || story.lot_size || story.lot_size_sqft))
+  };
+}
+
+function candidateGridFacts(candidate) {
+  return {
+    coordinates: coordinatePair(candidate),
+    property_type: normalizePropertyType(candidate && (candidate.property_kind || candidate.land_use)),
+    living_area: optionalNumber(candidate && (candidate.living_area || candidate.sqft)),
+    bedrooms: optionalNumber(candidate && (candidate.bedrooms != null ? candidate.bedrooms : candidate.beds)),
+    bathrooms: optionalNumber(candidate && (candidate.bathrooms != null ? candidate.bathrooms : candidate.baths)),
+    year_built: optionalNumber(candidate && candidate.year_built),
+    lot_size: optionalNumber(candidate && (candidate.lot_size || candidate.lot_size_sqft))
+  };
+}
+
+function criterion(name, status, reason, subjectValue, compValue, threshold) {
+  return {
+    criterion: name,
+    status,
+    reason,
+    subject_value: subjectValue == null ? null : subjectValue,
+    comp_value: compValue == null ? null : compValue,
+    threshold: threshold == null ? null : threshold
+  };
+}
+
+function ruralReviewApproved(row, options) {
+  const review = options.rural_exception_review || row && row.rural_comp_review;
+  return !!(review && review.approved === true && cleanText(review.reviewed_by) && cleanText(review.reviewed_at));
+}
+
+function evaluateStrictCompGrid(candidate, row, options = {}) {
+  const config = Object.assign({}, strictCompGridConfig, options.strict_comp_grid || {});
+  const subject = subjectGridFacts(row || {});
+  const comp = candidateGridFacts(candidate || {});
+  const criteria = [];
+  let firstRejection = '';
+  let warning = '';
+  const reject = (reason) => { if (!firstRejection) firstRejection = reason; };
+
+  const floor = Number(options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
+  const soldPrice = Number(candidate && candidate.sold_price) || 0;
+  if (soldPrice >= floor) {
+    criteria.push(criterion('market_sale_price', 'APPLIED_PASS', 'sale_price_above_market_floor', floor, soldPrice, `>=${floor}`));
+  } else {
+    criteria.push(criterion('market_sale_price', 'APPLIED_FAIL', 'nominal_or_non_market_sale_price', floor, soldPrice || null, `>=${floor}`));
+    reject('nominal_or_non_market_sale_price');
+  }
+
+  const today = todayIso(options);
+  const recentCutoff = addMonthsIso(today, -12);
+  const staleCutoff = addMonthsIso(today, -24);
+  const soldDate = isoDate(candidate && candidate.sold_date);
+  if (!soldDate) {
+    criteria.push(criterion('sold_recency', 'NOT_APPLIED', 'missing_sold_date', recentCutoff, null, 'sold within 12 months'));
+    reject('missing_sold_date');
+  } else if (staleCutoff && soldDate < staleCutoff) {
+    criteria.push(criterion('sold_recency', 'APPLIED_FAIL', 'sale_outside_comp_window', recentCutoff, soldDate, 'sold within 12 months; reject beyond 24 months'));
+    reject('sale_outside_comp_window');
+  } else if (recentCutoff && soldDate < recentCutoff) {
+    criteria.push(criterion('sold_recency', 'APPLIED_FAIL', 'stale_comp', recentCutoff, soldDate, 'sold within 12 months'));
+    reject('stale_comp');
+  } else {
+    criteria.push(criterion('sold_recency', 'APPLIED_PASS', 'sold_within_12_months', recentCutoff, soldDate, 'sold within 12 months'));
+  }
+
+  const basis = cleanText(candidate && candidate.similarity_basis);
+  if (basis) {
+    criteria.push(criterion('similarity_basis', 'APPLIED_PASS', 'source_similarity_basis_present', cleanText(rowLandUse(row)), basis, 'at least one sourced similarity dimension'));
+  } else {
+    criteria.push(criterion('similarity_basis', 'NOT_APPLIED', 'missing_similarity_basis', cleanText(rowLandUse(row)), null, 'at least one sourced similarity dimension'));
+    reject('missing_similarity_basis');
+  }
+
+  if (fieldProvenance.compHasProvenance(candidate || {})) {
+    criteria.push(criterion('provenance', 'APPLIED_PASS', 'comp_provenance_present', null, cleanText(candidate && candidate.source_kind), 'accepted source kind plus exact source URL'));
+  } else {
+    criteria.push(criterion('provenance', 'NOT_APPLIED', 'missing_comp_provenance', null, cleanText(candidate && candidate.source_kind), 'accepted source kind plus exact source URL'));
+    reject('missing_comp_provenance');
+  }
+
+  const miles = haversineMiles(subject.coordinates, comp.coordinates);
+  if (miles == null) {
+    criteria.push(criterion('distance', 'NOT_APPLIED', 'distance_coordinates_missing', subject.coordinates, comp.coordinates, `<=${config.max_distance_miles} mile`));
+    reject('strict_grid_distance_not_applied');
+  } else if (miles <= config.max_distance_miles) {
+    criteria.push(criterion('distance', 'APPLIED_PASS', 'within_one_mile', Number(miles.toFixed(3)), Number(miles.toFixed(3)), `<=${config.max_distance_miles} mile`));
+  } else if (ruralReviewApproved(row, options) && miles <= config.rural_operator_max_distance_miles) {
+    warning = `Rural comp exception approved by operator; distance ${miles.toFixed(2)} miles exceeds the standard one-mile grid.`;
+    criteria.push(criterion('distance', 'APPLIED_PASS', 'operator_approved_rural_exception', Number(miles.toFixed(3)), Number(miles.toFixed(3)), `operator-reviewed <=${config.rural_operator_max_distance_miles} miles`));
+  } else {
+    const reason = miles <= config.rural_operator_max_distance_miles ? 'rural_exception_requires_operator_review' : 'comp_outside_one_mile';
+    criteria.push(criterion('distance', reason === 'rural_exception_requires_operator_review' ? 'OPERATOR_REVIEW_REQUIRED' : 'APPLIED_FAIL', reason, Number(miles.toFixed(3)), Number(miles.toFixed(3)), `<=${config.max_distance_miles} mile`));
+    reject(reason);
+  }
+
+  if (!subject.property_type || !comp.property_type) {
+    criteria.push(criterion('property_type', 'NOT_APPLIED', 'property_type_missing', subject.property_type, comp.property_type, 'same normalized property type'));
+    reject('strict_grid_property_type_not_applied');
+  } else if (subject.property_type !== comp.property_type) {
+    criteria.push(criterion('property_type', 'APPLIED_FAIL', 'property_type_mismatch', subject.property_type, comp.property_type, 'same normalized property type'));
+    reject('property_type_mismatch');
+  } else {
+    criteria.push(criterion('property_type', 'APPLIED_PASS', 'same_property_type', subject.property_type, comp.property_type, 'same normalized property type'));
+  }
+
+  if (!(subject.living_area > 0) || !(comp.living_area > 0)) {
+    criteria.push(criterion('living_area', 'NOT_APPLIED', 'living_area_missing', subject.living_area, comp.living_area, `+/-${config.max_living_area_variance_ratio * 100}%`));
+    reject('strict_grid_living_area_not_applied');
+  } else {
+    const variance = Math.abs(comp.living_area - subject.living_area) / subject.living_area;
+    const passes = variance <= config.max_living_area_variance_ratio;
+    criteria.push(criterion('living_area', passes ? 'APPLIED_PASS' : 'APPLIED_FAIL', passes ? 'living_area_within_20_percent' : 'living_area_outside_20_percent', subject.living_area, comp.living_area, `+/-${config.max_living_area_variance_ratio * 100}%`));
+    if (!passes) reject('living_area_outside_20_percent');
+  }
+
+  [['bedrooms', config.max_bedroom_difference], ['bathrooms', config.max_bathroom_difference]].forEach(([name, allowed]) => {
+    if (subject[name] == null || comp[name] == null) {
+      criteria.push(criterion(name, 'NOT_APPLIED', `${name}_missing`, subject[name], comp[name], `difference <=${allowed}`));
+      reject(`strict_grid_${name}_not_applied`);
+      return;
+    }
+    const passes = Math.abs(comp[name] - subject[name]) <= allowed;
+    criteria.push(criterion(name, passes ? 'APPLIED_PASS' : 'APPLIED_FAIL', passes ? `${name}_within_range` : `${name}_outside_range`, subject[name], comp[name], `difference <=${allowed}`));
+    if (!passes) reject(`${name}_outside_range`);
+  });
+
+  [['year_built', config.max_year_built_difference, 'years'], ['lot_size', config.max_lot_size_variance_ratio, 'ratio']].forEach(([name, allowed, kind]) => {
+    if (subject[name] == null || comp[name] == null) {
+      criteria.push(criterion(name, 'NOT_APPLIED', `${name}_not_visible_on_both`, subject[name], comp[name], kind === 'years' ? `difference <=${allowed} years` : `+/-${allowed * 100}%`));
+      return;
+    }
+    const difference = kind === 'years' ? Math.abs(comp[name] - subject[name]) : Math.abs(comp[name] - subject[name]) / subject[name];
+    const passes = difference <= allowed;
+    criteria.push(criterion(name, passes ? 'APPLIED_PASS' : 'APPLIED_FAIL', passes ? `${name}_similar` : `${name}_not_similar`, subject[name], comp[name], kind === 'years' ? `difference <=${allowed} years` : `+/-${allowed * 100}%`));
+    if (!passes) reject(`${name}_not_similar`);
+  });
+
+  return {
+    accepted: !firstRejection,
+    rejected_reason: firstRejection || null,
+    distance_miles: miles == null ? null : Number(miles.toFixed(3)),
+    rural_exception_warning: warning || null,
+    criteria
+  };
+}
+
+function compFromAttributes(attrs, profile, queryUrl, context = {}, geometry = null) {
   const map = profile.field_map || {};
   const address = attrsValue(attrs, map.situs_address);
   const price = numberValue(attrsValue(attrs, map.sale_price));
   const soldDate = isoDate(attrsValue(attrs, map.sale_date)) || normalizeArcgisDate(attrsValue(attrs, map.sale_date));
   const parcelId = attrsValue(attrs, map.parcel_id);
   const landUse = attrsValue(attrs, map.land_use);
+  const coordinates = geometryCoordinates(geometry) || coordinatePair({
+    latitude: attrsValue(attrs, map.latitude),
+    longitude: attrsValue(attrs, map.longitude)
+  });
   const basis = similarityBasis({ land_use: landUse }, context.row);
   const windowText = context.recent_cutoff_iso
     ? `Comp window: ${context.recent_cutoff_iso} to ${context.today_iso}`
@@ -136,6 +349,14 @@ function compFromAttributes(attrs, profile, queryUrl, context = {}) {
     sold_date: soldDate,
     parcel_id: parcelId,
     land_use: landUse,
+    property_kind: attrsValue(attrs, map.property_kind) || landUse,
+    living_area: optionalNumber(attrsValue(attrs, map.living_area || map.sqft)),
+    bedrooms: optionalNumber(attrsValue(attrs, map.bedrooms || map.beds)),
+    bathrooms: optionalNumber(attrsValue(attrs, map.bathrooms || map.baths)),
+    year_built: optionalNumber(attrsValue(attrs, map.year_built)),
+    lot_size: optionalNumber(attrsValue(attrs, map.lot_size || map.lot_size_sqft)),
+    latitude: coordinates && coordinates.latitude,
+    longitude: coordinates && coordinates.longitude,
     similarity_basis: basis,
     comp_window: windowText,
     source_kind: 'official_public_record',
@@ -224,7 +445,7 @@ function queryUrlForProfile(row, profile, context, caps) {
     return `${base}?${params.toString()}`;
   }
   const urlBase = layerUrl(profile);
-  return `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile, context))}&outFields=*&returnGeometry=false&resultRecordCount=${caps.max_results_per_row}`;
+  return `${urlBase}/query?f=json&where=${encodeURIComponent(whereForRow(row, profile, context))}&outFields=*&returnGeometry=true&outSR=4326&resultRecordCount=${caps.max_results_per_row}`;
 }
 
 function rejectReason(candidate, row, options = {}) {
@@ -245,6 +466,8 @@ function rejectReason(candidate, row, options = {}) {
   if (!cleanText(candidate.similarity_basis)) return 'missing_similarity_basis';
   if (NON_ARMS_LENGTH_RE.test(candidate.evidence_text)) return 'non_arms_length_transfer_visible';
   if (!fieldProvenance.compHasProvenance(candidate)) return 'missing_comp_provenance';
+  const grid = candidate.comp_grid || evaluateStrictCompGrid(candidate, row, options);
+  if (!grid.accepted) return grid.rejected_reason;
   const validation = compResearchProvider.validateVerifiedCompCandidate(candidate);
   return validation.verified ? '' : `missing_${validation.missing_fields.join('_').toLowerCase()}`;
 }
@@ -265,7 +488,7 @@ async function resolveCompsForRow(row, options = {}) {
     const queryUrl = queryUrlForProfile(row, profile, context, caps);
     let features;
     if (Array.isArray(mock)) {
-      features = mock.map((attributes) => ({ attributes }));
+      features = mock.map((item) => item && item.attributes ? item : ({ attributes: item }));
     } else {
       const fetched = await fetchJson(queryUrl, options, caps);
       if (fetched.status !== 'ok') {
@@ -288,7 +511,11 @@ async function resolveCompsForRow(row, options = {}) {
     const verified = [];
     const rejected = [];
     for (const feature of features) {
-      const candidate = compFromAttributes(feature.attributes || {}, profile, queryUrl, context);
+      const candidate = compFromAttributes(feature.attributes || {}, profile, queryUrl, context, feature.geometry);
+      candidate.comp_grid = evaluateStrictCompGrid(candidate, row, context);
+      candidate.distance_miles = candidate.comp_grid.distance_miles;
+      candidate.rural_comp_warning = candidate.comp_grid.rural_exception_warning;
+      candidate.evidence_text = cleanText(`${candidate.evidence_text} | Strict comp grid: ${candidate.comp_grid.criteria.map((item) => `${item.criterion}=${item.status}`).join(', ')}`);
       const rejection = rejectReason(candidate, row, context);
       if (rejection) rejected.push(Object.assign({}, candidate, { rejected_reason: rejection }));
       else verified.push(candidate);
@@ -365,6 +592,8 @@ async function runDisclosureStateCompResolution(input = {}, options = {}) {
 module.exports = {
   DEFAULT_CAPS,
   rejectReason,
+  evaluateStrictCompGrid,
+  haversineMiles,
   resolveCompsForRow,
   runDisclosureStateCompResolution,
   compFromAttributes

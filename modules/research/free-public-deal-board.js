@@ -1707,6 +1707,11 @@ async function applyCensusZipResolution(deals, input, options, context) {
     deal.census_zip_status = 'resolved';
     deal.census_zip_suggestion = outcome.zip;
     deal.census_matched_address = outcome.matched_address;
+    if (Number.isFinite(Number(outcome.latitude)) && Number.isFinite(Number(outcome.longitude))) {
+      deal.latitude = Number(outcome.latitude);
+      deal.longitude = Number(outcome.longitude);
+      deal.coordinate_source = cleanText(outcome.coordinate_source || 'us_census_geocoder_address_match');
+    }
     const hasEventEvidence = !!(deal.status_evidence_text || deal.sale_date_or_event_date);
     const reviewOnly = deal.ocr_address_review === true || (Array.isArray(deal.risk_flags) && deal.risk_flags.includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'));
     if (reviewOnly || !hasEventEvidence) {

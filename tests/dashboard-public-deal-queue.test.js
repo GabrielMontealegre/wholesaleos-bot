@@ -680,7 +680,13 @@ function mockDeal(overrides) {
   const censusResolver = async (input) => {
     censusCalls += 1;
     const street = input.street_or_partial;
-    if (street.includes('Yellow Jacket')) return { resolved: true, matched_address: '1111 Yellow Jacket Ln, Rockwall, TX 75032' };
+    if (street.includes('Yellow Jacket')) return {
+      resolved: true,
+      matched_address: '1111 Yellow Jacket Ln, Rockwall, TX 75032',
+      latitude: 32.9312,
+      longitude: -96.4597,
+      coordinate_source: 'us_census_geocoder_address_match'
+    };
     return { resolved: true, matched_address: `Census ${street}` };
   };
   const emptyPreview = async () => ({ free_public_deals: [], rejected_generic_count: 0 });
@@ -700,6 +706,9 @@ function mockDeal(overrides) {
   assert.strictEqual(mergedYellow.merged_duplicate_count, 1);
   assert.strictEqual(mergedYellow.first_seen_at, '2026-07-01T08:00:00.000Z');
   assert.strictEqual(mergedYellow.source_document_urls.length, 2);
+  assert.strictEqual(mergedYellow.latitude, 32.9312);
+  assert.strictEqual(mergedYellow.longitude, -96.4597);
+  assert.strictEqual(mergedYellow.coordinate_source, 'us_census_geocoder_address_match');
   assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|rockwall').county, 'Rockwall');
   assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|hunt').county, 'Hunt');
 
@@ -810,7 +819,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=24'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=25'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -838,6 +847,12 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Manual Evidence Packet'), 'dashboard must render the manual evidence packet');
   assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_UPLOAD') && uiSource.includes('/manual-evidence/upload'), 'dashboard must call the screenshot upload route');
   assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_PROPOSAL') && uiSource.includes('/manual-evidence/proposal'), 'dashboard must confirm OCR proposals through an explicit route');
+  assert.ok(uiSource.includes('API_MARKET_DEMAND_INDEX') && uiSource.includes('County Demand Index'), 'dashboard must render the separate county demand index');
+  assert.ok(uiSource.includes('Open research set') && uiSource.includes('window.open'), 'manual evidence card must open the existing human research links without a server fetch');
+  assert.ok(uiSource.includes('max-height:620px'), 'dashboard summary must leave enough stable room for the county demand index');
+  assert.ok(uiSource.includes('slice(0, 400)') && uiSource.includes('sources and dates'), 'dashboard must surface the top 400 counties with component provenance');
+  assert.ok(uiSource.includes('Strict comp grid evidence') && uiSource.includes('NOT_APPLIED'), 'dashboard must show applied and skipped comp-grid criteria');
+  assert.ok(/app\.get\('\/api\/dashboard\/market-demand-index',\s*requireAdmin/.test(serverSource), 'market demand index route must be admin-protected');
   assert.ok(uiSource.includes('Nothing counts until you confirm.'), 'dashboard must state that OCR proposals are unconfirmed');
   assert.ok(uiSource.includes('Conflict - no overwrite'), 'dashboard must surface screenshot conflicts without overwriting official evidence');
   assert.ok(uiSource.includes('Zillow') && uiSource.includes('CyberBackgroundChecks'), 'dashboard must expose human research link controls');

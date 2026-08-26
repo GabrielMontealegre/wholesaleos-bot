@@ -319,6 +319,11 @@ async function backfillCensusKeysForStoredRows(rows, options = {}) {
       if (outcome && outcome.resolved && cleanText(outcome.matched_address)) {
         row.census_matched_address = cleanText(outcome.matched_address);
         row.census_zip_status = 'backfilled_for_dedupe';
+        if (Number.isFinite(Number(outcome.latitude)) && Number.isFinite(Number(outcome.longitude))) {
+          row.latitude = Number(outcome.latitude);
+          row.longitude = Number(outcome.longitude);
+          row.coordinate_source = cleanText(outcome.coordinate_source || 'us_census_geocoder_address_match');
+        }
       }
     } catch (error) { /* keep unresolved snapshot rows separate */ }
   }
@@ -716,6 +721,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     census_zip_suggestion: cleanText(deal.census_zip_suggestion) || null,
     census_matched_address: cleanText(deal.census_matched_address) || null,
     census_zip_status: cleanText(deal.census_zip_status) || null,
+    latitude: Number.isFinite(Number(deal.latitude)) ? Number(deal.latitude) : null,
+    longitude: Number.isFinite(Number(deal.longitude)) ? Number(deal.longitude) : null,
+    coordinate_source: cleanText(deal.coordinate_source) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
     status_evidence_text: cleanText(deal.status_evidence_text) || null,
@@ -785,6 +793,12 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       evidence_text: cleanText(deal.property_story.evidence_text)
     } : null,
     land_use: cleanText(deal.land_use || (deal.owner_record && deal.owner_record.land_use)),
+    property_kind: cleanText(deal.property_kind || deal.property_kind_if_visible || deal.land_use),
+    living_area: Number.isFinite(Number(deal.living_area || deal.sqft)) ? Number(deal.living_area || deal.sqft) : null,
+    bedrooms: Number.isFinite(Number(deal.bedrooms != null ? deal.bedrooms : deal.beds)) ? Number(deal.bedrooms != null ? deal.bedrooms : deal.beds) : null,
+    bathrooms: Number.isFinite(Number(deal.bathrooms != null ? deal.bathrooms : deal.baths)) ? Number(deal.bathrooms != null ? deal.bathrooms : deal.baths) : null,
+    year_built: Number.isFinite(Number(deal.year_built)) ? Number(deal.year_built) : null,
+    lot_size: Number.isFinite(Number(deal.lot_size || deal.lot_size_sqft)) ? Number(deal.lot_size || deal.lot_size_sqft) : null,
     mailing_route: deal.mailing_route && typeof deal.mailing_route === 'object' ? {
       route_kind: cleanText(deal.mailing_route.route_kind),
       route_type: cleanText(deal.mailing_route.route_type),
@@ -848,7 +862,18 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       source_url: cleanText(comp.source_url),
       evidence_text: cleanText(comp.evidence_text),
       parcel_id: cleanText(comp.parcel_id),
-      land_use: cleanText(comp.land_use)
+      land_use: cleanText(comp.land_use),
+      property_kind: cleanText(comp.property_kind),
+      living_area: Number.isFinite(Number(comp.living_area || comp.sqft)) ? Number(comp.living_area || comp.sqft) : null,
+      bedrooms: Number.isFinite(Number(comp.bedrooms != null ? comp.bedrooms : comp.beds)) ? Number(comp.bedrooms != null ? comp.bedrooms : comp.beds) : null,
+      bathrooms: Number.isFinite(Number(comp.bathrooms != null ? comp.bathrooms : comp.baths)) ? Number(comp.bathrooms != null ? comp.bathrooms : comp.baths) : null,
+      year_built: Number.isFinite(Number(comp.year_built)) ? Number(comp.year_built) : null,
+      lot_size: Number.isFinite(Number(comp.lot_size || comp.lot_size_sqft)) ? Number(comp.lot_size || comp.lot_size_sqft) : null,
+      latitude: Number.isFinite(Number(comp.latitude)) ? Number(comp.latitude) : null,
+      longitude: Number.isFinite(Number(comp.longitude)) ? Number(comp.longitude) : null,
+      distance_miles: Number.isFinite(Number(comp.distance_miles)) ? Number(comp.distance_miles) : null,
+      rural_comp_warning: cleanText(comp.rural_comp_warning) || null,
+      comp_grid: comp.comp_grid && typeof comp.comp_grid === 'object' ? JSON.parse(JSON.stringify(comp.comp_grid)) : null
     })) : [],
     arv_lock_reason: cleanText(deal.arv_lock_reason || (deal.call_prep && deal.call_prep.ARV_lock_reason)),
     mao_lock_reason: cleanText(deal.mao_lock_reason || (deal.call_prep && deal.call_prep.MAO_lock_reason)),
@@ -1059,6 +1084,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
+    'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
     'rejected_reason',
     'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
