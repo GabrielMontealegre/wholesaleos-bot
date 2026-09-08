@@ -53,9 +53,10 @@ M0-M3 completed; M4 not invoked because the measured identity defect binds first
 M5 implemented and targeted suites pass; M6 local synthetic browser workflow passes.
 M7 complete: final 64/64 tests pass with 300s per-file timeouts and recorded durations.
 INDEX corrected, aggregate report generated, and actual PDF addresses visually checked.
-Final delivery work: commit/push this branch and open one DRAFT PR, then STOP for QA.
+Cycle 19 completes the previously unmet OCR/three-county trace criterion using cached
+Navarro/Rockwall scans. Final delivery work: update the existing DRAFT PR, then STOP for QA.
 
-Acceptance: 15/16 (93.75%), separate from usable-lead yield.
+Acceptance: 16/16 for the bounded Cycle 18/19 evidence package, separate from usable-lead yield.
 
 | Criterion | Result | Evidence / limitation |
 | --- | --- | --- |
@@ -63,7 +64,7 @@ Acceptance: 15/16 (93.75%), separate from usable-lead yield.
 | 2 frozen corpus | PASS | corpus-lock.json; before/after matching manifest hash |
 | 3 county / market baseline | PASS | summary.json; absent capture/unique inventory null with reasons |
 | 4 production unreachable | PASS | All six live markets UNREACHABLE; no production access |
-| 5 six property rows / three counties | NOT MET | Property rows only in Hunt; other county document traces cannot substitute |
+| 5 six property rows / three counties | PASS | Cycle 19 OCR traces cover Hunt, Navarro and Rockwall; OCR rows remain review-only |
 | 6 named anomalies | PASS | Cycle note explains market family, separate counters, unresolved original failure reasons |
 | 7 ranked measured losses | PASS | Cycle note priority table: 3 false addresses, 2 extra unique identities, 33 unmeasured scans |
 | 8 scope frozen first | PASS | M3 IN/OUT and decision above predate implementation |
@@ -81,7 +82,10 @@ addresses. All three notices state September 1, 2026 sales; current availability
 Before: 17 rows, four normalized addresses, only one property-supported unique address.
 After: nine rows, four normalized addresses, three property-supported unique addresses.
 No seller-contact or comp yield gain. No production access.
-Default OCR browser executable is missing locally. OCR recovery is UNMEASURED, not zero.
+Cycle 19 verified the local OCR runtime mismatch: Playwright default launch resolved to
+missing `chromium_headless_shell-1234`; the installed `chromium-1117` launched when named.
+A shared resolver now tries Playwright default first, then discovers installed Playwright
+browser cache executables. OCR recovery is MEASURED on the frozen Navarro/Rockwall scans.
 Existing Chromium 1117 was explicitly used for local screenshots and PDF visual inspection
 only; no runtime setting, dependency or rendering/extraction parameter was changed.
 The approval-review usage limit interrupted PDF rendering once; the next authorized retry
@@ -113,8 +117,10 @@ to architect QA using docs/cycles/cycle-18-architect-review.md. No ready/merge/d
 - Franklin/Hamilton/Mecklenburg/Wake discovery hostname failures.
 - Production default-PIN display and write-endpoint authentication hardening (no production access here).
 - Market-demand index readMarketDemandIndex re-parses JSON per call; mtime cache is absent.
-- Local OCR executable mismatch needs a separately reviewed deployment/runtime remedy.
-- All extracted property rows in the frozen text corpus are Hunt County: six actual property
-  rows across three counties cannot be demonstrated from these inputs. Trace administrative
-  and scan source-proof paths separately and report this acceptance limitation honestly.
+- Cycle 19 cache-only OCR measurement: Navarro 7 docs / 22 pages / 1 OCR row / 0 complete
+  source-supported addresses / 1 partial; Rockwall 26 docs / 94 pages / 15 OCR rows /
+  14 complete source-visible addresses / 1 partial. All OCR rows remain review-only with
+  empty normalized_address and no precise maps_url.
+- Criterion 5 is now met across Hunt, Navarro and Rockwall by source-backed property-row
+  traces, but this still does not create callable sellers or offer-ready rows.
 - Read-only production snapshot export requires a later authorized cycle.

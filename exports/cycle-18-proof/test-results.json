@@ -1,458 +1,458 @@
 {
-  "started_at": "2026-09-08T04:57:40.365Z",
+  "started_at": "2026-09-08T11:02:01.577Z",
   "timeout_seconds_per_file": 300,
   "node": "v22.22.0",
   "results": [
     {
       "file": "actionable-lead-reconnection.test.js",
       "status": "PASS",
-      "duration_seconds": 0.257,
+      "duration_seconds": 0.592,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "blocked-inventory-breakdown.test.js",
       "status": "PASS",
-      "duration_seconds": 0.304,
+      "duration_seconds": 0.366,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "business-entity-owner-resolution.test.js",
       "status": "PASS",
-      "duration_seconds": 0.146,
+      "duration_seconds": 0.2,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "ca-los-angeles-tax-default-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.565,
+      "duration_seconds": 0.579,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "ca-tax-default-notice-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.414,
+      "duration_seconds": 0.415,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "call-ready-deal-packet.test.js",
       "status": "PASS",
-      "duration_seconds": 0.267,
+      "duration_seconds": 0.284,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "canonical-legacy-readback.test.js",
       "status": "PASS",
-      "duration_seconds": 0.436,
+      "duration_seconds": 0.324,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "canonical-opportunity-kernel.test.js",
       "status": "PASS",
-      "duration_seconds": 0.324,
+      "duration_seconds": 0.29,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "census-zip-resolution.test.js",
       "status": "PASS",
-      "duration_seconds": 0.108,
+      "duration_seconds": 0.105,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "contact-first-property-detail-discovery.test.js",
       "status": "PASS",
-      "duration_seconds": 0.327,
+      "duration_seconds": 0.369,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "contact-workflow-control.test.js",
       "status": "PASS",
-      "duration_seconds": 0.53,
+      "duration_seconds": 0.614,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-craigslist-owner-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.314,
+      "duration_seconds": 0.331,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-foreclosure-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 16.196,
+      "duration_seconds": 231.4,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-foreclosure-document-hunter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.421,
+      "duration_seconds": 0.517,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-foreclosure-live-source-preview.test.js",
       "status": "PASS",
-      "duration_seconds": 1.134,
+      "duration_seconds": 1.12,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-foreclosure-publicsearch-input.test.js",
       "status": "PASS",
-      "duration_seconds": 0.359,
+      "duration_seconds": 0.419,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dallas-fsbo-contact-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.368,
+      "duration_seconds": 0.367,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dashboard-boxes-filter-guard.test.js",
       "status": "PASS",
-      "duration_seconds": 0.119,
+      "duration_seconds": 0.13,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "dashboard-public-deal-queue.test.js",
       "status": "PASS",
-      "duration_seconds": 3.405,
+      "duration_seconds": 3.587,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "disclosure-state-comp-resolution.test.js",
       "status": "PASS",
-      "duration_seconds": 0.193,
+      "duration_seconds": 0.228,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "discover-public-parcel-apis.test.js",
       "status": "PASS",
-      "duration_seconds": 0.176,
+      "duration_seconds": 0.179,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "document-reextraction-pass.test.js",
       "status": "PASS",
-      "duration_seconds": 0.752,
+      "duration_seconds": 5.101,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "enrichment-ledger-snapshot-persistence.test.js",
       "status": "PASS",
-      "duration_seconds": 0.802,
+      "duration_seconds": 0.803,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "enrichment-ledger.test.js",
       "status": "PASS",
-      "duration_seconds": 0.121,
+      "duration_seconds": 0.13,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "enrichment-scheduler.test.js",
       "status": "PASS",
-      "duration_seconds": 0.141,
+      "duration_seconds": 0.147,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "evidence-packet-throughput.test.js",
       "status": "PASS",
-      "duration_seconds": 0.307,
+      "duration_seconds": 0.309,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "executable-work-orders.test.js",
       "status": "PASS",
-      "duration_seconds": 0.379,
+      "duration_seconds": 0.382,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "export-free-public-deal-board.test.js",
       "status": "PASS",
-      "duration_seconds": 0.239,
+      "duration_seconds": 0.258,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "free-public-contact-comp-hunter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.265,
+      "duration_seconds": 0.264,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "free-public-deal-board.test.js",
       "status": "PASS",
-      "duration_seconds": 0.378,
+      "duration_seconds": 0.352,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "fresh-lead-batch-engine.test.js",
       "status": "PASS",
-      "duration_seconds": 0.651,
+      "duration_seconds": 0.595,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "fresh-lead-no-auto-ingest-env-diagnostics.test.js",
       "status": "PASS",
-      "duration_seconds": 0.581,
+      "duration_seconds": 0.316,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "fresh-lead-source-enrichment.test.js",
       "status": "PASS",
-      "duration_seconds": 0.185,
+      "duration_seconds": 0.167,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "gemini-specialist-workers.test.js",
       "status": "PASS",
-      "duration_seconds": 0.343,
+      "duration_seconds": 0.328,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "lead-address-dossier-dedup.test.js",
       "status": "PASS",
-      "duration_seconds": 0.405,
+      "duration_seconds": 0.355,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "lead-lifecycle-status.test.js",
       "status": "PASS",
-      "duration_seconds": 0.106,
+      "duration_seconds": 0.122,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "lead-operations-queue.test.js",
       "status": "PASS",
-      "duration_seconds": 0.275,
+      "duration_seconds": 0.361,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "listing-radar-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.191,
+      "duration_seconds": 0.236,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "live-provider-readiness.test.js",
       "status": "PASS",
-      "duration_seconds": 0.138,
+      "duration_seconds": 0.134,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "manual-evidence-packet.test.js",
       "status": "PASS",
-      "duration_seconds": 0.251,
+      "duration_seconds": 0.257,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "market-comp-policy.test.js",
       "status": "PASS",
-      "duration_seconds": 0.115,
+      "duration_seconds": 0.116,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "market-demand-index.test.js",
       "status": "PASS",
-      "duration_seconds": 0.189,
+      "duration_seconds": 0.202,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "mi-land-bank-acquisition-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.482,
+      "duration_seconds": 0.444,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "ocr-notice-extraction.test.js",
       "status": "PASS",
-      "duration_seconds": 0.185,
+      "duration_seconds": 0.193,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "opportunity-execution-spine.test.js",
       "status": "PASS",
-      "duration_seconds": 0.291,
+      "duration_seconds": 0.289,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "opportunity-work-orders.test.js",
       "status": "PASS",
-      "duration_seconds": 0.27,
+      "duration_seconds": 0.293,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "paid-provider-fallback-registry.test.js",
       "status": "PASS",
-      "duration_seconds": 0.115,
+      "duration_seconds": 0.117,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "property-candidate.test.js",
       "status": "PASS",
-      "duration_seconds": 0.215,
+      "duration_seconds": 0.196,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "property-detail-query-planner.test.js",
       "status": "PASS",
-      "duration_seconds": 0.134,
+      "duration_seconds": 0.133,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "provenance.test.js",
       "status": "PASS",
-      "duration_seconds": 0.1,
+      "duration_seconds": 0.109,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "public-parcel-owner-lookup.test.js",
       "status": "PASS",
-      "duration_seconds": 0.146,
+      "duration_seconds": 0.157,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "public-record-browser-lookup.test.js",
       "status": "PASS",
-      "duration_seconds": 0.246,
+      "duration_seconds": 0.253,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "screenshot-comp-evidence.test.js",
       "status": "PASS",
-      "duration_seconds": 0.285,
+      "duration_seconds": 0.262,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "search-provider-fallback.test.js",
       "status": "PASS",
-      "duration_seconds": 0.335,
+      "duration_seconds": 0.318,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "search-snippet-evidence-conversion.test.js",
       "status": "PASS",
-      "duration_seconds": 0.324,
+      "duration_seconds": 0.351,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "selected-deal-packet-service.test.js",
       "status": "PASS",
-      "duration_seconds": 0.305,
+      "duration_seconds": 0.325,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "serper-free-query-mode.test.js",
       "status": "PASS",
-      "duration_seconds": 0.151,
+      "duration_seconds": 0.159,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "serper-provider-execution-diagnostics.test.js",
       "status": "PASS",
-      "duration_seconds": 0.156,
+      "duration_seconds": 0.15,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "server-call-ready-preview.test.js",
       "status": "PASS",
-      "duration_seconds": 0.269,
+      "duration_seconds": 0.275,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "server-free-public-deal-board-preview.test.js",
       "status": "PASS",
-      "duration_seconds": 0.669,
+      "duration_seconds": 1.003,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "source-acquisition-engine.test.js",
       "status": "PASS",
-      "duration_seconds": 0.355,
+      "duration_seconds": 0.345,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "tx-bexar-county-free-lookup-profile.test.js",
       "status": "PASS",
-      "duration_seconds": 0.104,
+      "duration_seconds": 0.107,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "tx-county-foreclosure-adapter.test.js",
       "status": "PASS",
-      "duration_seconds": 0.635,
+      "duration_seconds": 0.646,
       "exit_code": 0,
       "error": null
     },
     {
       "file": "zillow-fsbo-direct-detail-discovery.test.js",
       "status": "PASS",
-      "duration_seconds": 0.276,
+      "duration_seconds": 0.273,
       "exit_code": 0,
       "error": null
     }
   ],
-  "completed_at": "2026-09-08T04:58:19.751Z",
+  "completed_at": "2026-09-08T11:06:21.490Z",
   "passed": 64,
   "total": 64
 }

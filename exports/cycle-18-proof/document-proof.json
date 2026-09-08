@@ -1,8 +1,6 @@
 {
   "default_ocr_runtime": {
-    "status": "UNREACHABLE",
-    "reason": "browserType.launch: Executable doesn't exist at C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
-    "implication": "Default installed Playwright expects an absent browser binary. OCR recovery yield is unmeasured, not zero. No download or product runtime change made."
+    "status": "AVAILABLE"
   },
   "outputs": [
     {
@@ -36,5 +34,5 @@
       "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
     }
   ],
-  "inspection_runtime": "Explicit installed Chromium for visual review only; scale 1.4 is display-only and does not change extraction settings."
+  "inspection_runtime": "Shared Playwright browser resolver; scale 1.4 is display-only and does not change extraction settings."
 }

@@ -16,6 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 
+const { launchChromiumWithResolvedBrowser } = require('./playwright-browser-resolver');
 const txTrusteeNoticeExtractor = require('./tx-trustee-notice-text-extractor');
 
 const DEFAULT_CAPS = Object.freeze({
@@ -70,7 +71,8 @@ async function renderPdfPagesToPngs(pdfBuffer, caps, options = {}) {
   if (!pdfjs) throw new Error('bundled_pdfjs_unavailable');
   let playwright = options.playwright_impl;
   if (!playwright) playwright = require('playwright');
-  const browser = await playwright.chromium.launch({ headless: true });
+  const launched = await launchChromiumWithResolvedBrowser(playwright, { headless: true }, options);
+  const browser = launched.browser;
   try {
     const page = await (await browser.newContext()).newPage();
     await page.setContent('<html><body></body></html>');
@@ -160,6 +162,7 @@ function tagOcrRow(row, meta) {
   return Object.assign({}, row, {
     normalized_address: '',
     source_structured_address_verified: false,
+    property_identity_source_only: true,
     extraction_method: 'ocr_trustee_notice_extraction',
     extraction_confidence: rowConfidenceLevel(row, meta.confidence) === 'medium' ? 'Medium' : 'Low',
     ocr_confidence: meta.confidence,
@@ -189,7 +192,8 @@ async function runOcrNoticeExtraction(input = {}, options = {}) {
     ocr_rows_rejected_low_confidence: 0,
     ocr_text_quality_score: 0,
     ocr_address_parse_failures: 0,
-    ocr_date_parse_failures: 0
+    ocr_date_parse_failures: 0,
+    ocr_pages_rendered: 0
   };
   const rows = [];
   const attempts = [];
@@ -197,6 +201,7 @@ async function runOcrNoticeExtraction(input = {}, options = {}) {
 
   async function ocrPass(doc, passCaps, started) {
     const pngs = await renderPdfPagesToPngs(doc.buffer, passCaps, options);
+    diagnostics.ocr_pages_rendered += pngs.length;
     let text = '';
     let confidence = 0;
     for (const png of pngs) {

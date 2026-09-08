@@ -33,6 +33,9 @@ exports/cycle-18-proof/*
 !exports/cycle-18-proof/document-proof.json
 !exports/cycle-18-proof/test-results.json
 !exports/cycle-18-proof/synthetic-*.png
+!exports/cycle-19-ocr-runtime/
+exports/cycle-19-ocr-runtime/*
+!exports/cycle-19-ocr-runtime/ocr-yield.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

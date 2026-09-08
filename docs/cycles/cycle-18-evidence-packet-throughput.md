@@ -98,7 +98,7 @@ Files are under `modules/research/` unless prefixed dashboard.
 | Hunt 46:1, PDF 17 | Thibodaux complete identity already worked; preserved exactly in both transports | No live seller or sold evidence added | Existing success retained; absent source inputs remain UNKNOWN beyond corpus |
 | Hunt 3:1, PDF 03 | Text layer says split number `19 16`; old fallback selected courthouse; now normalized address empty | Review-only partial, no exact property map | PREVENTABLE courthouse substitution removed; ambiguous source text not silently repaired |
 | Hunt 47:1, PDF 18 | Trustee-address context previously treated 10119 Lake Creek as property; now excluded | No property row to enrich/render from that office | PREVENTABLE: context guard `tx-trustee-notice-text-extractor.js:234` |
-| Navarro scan document | Cached PDF has zero text characters; no property rows from text extraction | No actual property row exists to carry through snapshot/queue | LOCAL ENVIRONMENT: OCR browser missing; OCR yield UNMEASURED, not external county block |
+| Navarro scan document | Cached PDF has zero text characters; no property rows from text extraction | No actual property row exists to carry through snapshot/queue | LOCAL RUNTIME RESOLUTION: Playwright default browser resolution pointed at an absent installed build; OCR yield was UNMEASURED at Cycle 18, not an external county block |
 | Kaufman tax-rate document | Table contains administrative rates, not notice property rows | No actual property row exists to carry downstream | EXTERNAL TO THIS DOCUMENT: requested property evidence is not in this selected artifact; not a claim about county availability |
 | Parker fee schedules | Civil/family fee amounts, not property prices | No actual property row exists to carry downstream | EXTERNAL TO THIS DOCUMENT: wrong artifact for this objective; no prices/addresses invented |
 
@@ -164,9 +164,9 @@ Browser proof uses the actual packet service and dashboard JavaScript, a minimal
 harness, synthetic data and the already-installed Chromium 1117. It is not a production
 dashboard screenshot, full server integration test, real mailing route or live listing.
 All non-loopback browser requests were denied; no external requests occurred.
-Default product OCR launch fails because the expected headless Chromium 1234 file is
-absent locally. Visual inspection explicitly selected existing Chromium, without changing
-the product runtime or lowering OCR settings.
+At Cycle 18 delivery time, default product OCR launch failed because Playwright resolved
+to an absent headless Chromium build. Visual inspection explicitly selected existing
+Chromium, without changing the product runtime or lowering OCR settings.
 
 Synthetic screenshots in `exports/cycle-18-proof/`:
 `synthetic-desktop-packet.png`, `synthetic-failed-upload.png`,
@@ -211,6 +211,15 @@ three counties from this frozen corpus. Criteria 1-4 and 6-16 each have evidence
 in the checkpoint, aggregate JSON, test timings and browser proof. Final checklist is in
 the checkpoint. This percentage is completion of this bounded review package, NOT
 percentage of the entire SaaS or of 100 daily callable leads.
+
+Cycle 19 addendum: the runtime resolver now tries Playwright's default browser first,
+then discovers an installed Playwright Chromium build from the local browser cache. The
+same frozen Navarro and Rockwall scan PDFs were measured from cache only, with no refetch
+and no production access. Navarro produced 1 OCR property row, left review-only. Rockwall
+produced 15 OCR property rows, 14 with complete source-visible addresses, all review-only.
+Criterion 5 is now met as evidence traces across Hunt, Navarro and Rockwall, while OCR
+rows still have no normalized address and no precise maps URL. Evidence is in
+`exports/cycle-19-ocr-runtime/ocr-yield.json`.
 
 No complete real offer packet is demonstrated. Exact missing inputs: verified current
 event status, owner/authorized-seller identity and sourced route, property facts and

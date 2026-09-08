@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const assert = require('assert');
 const root = path.resolve(__dirname, '..');
+const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
 const proof = path.join(root, 'exports/cycle-18-proof');
 fs.mkdirSync(proof, { recursive: true });
 const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'cycle18-synthetic-'));
@@ -48,8 +49,11 @@ async function main() {
   const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   const url = `http://127.0.0.1:${server.address().port}`;
   let browser;
+  let browserRuntime;
   try {
-    browser = await require('playwright').chromium.launch({ headless: true, executablePath: path.join(os.homedir(), 'AppData/Local/ms-playwright/chromium-1117/chrome-win/chrome.exe') });
+    const launched = await launchChromiumWithResolvedBrowser(require('playwright'), { headless: true });
+    browser = launched.browser;
+    browserRuntime = launched.runtime;
     const context = await browser.newContext({ viewport: { width: 1440, height: 1050 } });
     const external = [];
     await context.route('**/*', (route) => { if (route.request().url().startsWith(url + '/')) return route.continue(); external.push(route.request().url()); return route.abort(); });
@@ -90,7 +94,7 @@ async function main() {
     const overflow = await page.locator('.wos-manual-evidence-card').evaluate((el) => el.scrollWidth > el.clientWidth + 2);
     assert.strictEqual(overflow, false, 'Packet must fit mobile width');
     assert.deepStrictEqual(errors, []); assert.deepStrictEqual(external, []);
-    fs.writeFileSync(path.join(proof, 'browser-results.json'), JSON.stringify({ data_kind: 'SYNTHETIC_TEST_ONLY', runtime: 'existing Chromium 1117 explicitly selected for local harness', failed_upload_rejected: true, duplicate_unconfirmed_uploads_count: 2, duplicate_uploads_do_not_unlock_comps: true, persistence_after_refresh: true, snapshot_unchanged: true, upload_requests: uploadCount, page_errors: errors, external_requests: external, mobile_overflow: overflow }, null, 2));
+    fs.writeFileSync(path.join(proof, 'browser-results.json'), JSON.stringify({ data_kind: 'SYNTHETIC_TEST_ONLY', runtime: browserRuntime, failed_upload_rejected: true, duplicate_unconfirmed_uploads_count: 2, duplicate_uploads_do_not_unlock_comps: true, persistence_after_refresh: true, snapshot_unchanged: true, upload_requests: uploadCount, page_errors: errors, external_requests: external, mobile_overflow: overflow }, null, 2));
     console.log('Local browser proof passed; 4 screenshots captured; no external requests.');
   } finally { if (browser) await browser.close(); await new Promise((resolve) => server.close(resolve)); }
 }

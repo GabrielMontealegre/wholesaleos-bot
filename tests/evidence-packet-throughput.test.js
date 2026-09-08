@@ -33,7 +33,7 @@ const flamingo = rows('07').filter((r) => /6407 FLAMINGO/i.test(r.address));
 assert(flamingo.length > 0);
 assert(flamingo.some((r) => pipeline(r).normalized_address === '6407 Flamingo Rd, Greenville, TX 75402'));
 for (const raw of flamingo) assert(!/2507 Lee/i.test(pipeline(raw).normalized_address), 'Courthouse never replaces property');
-const ocrReview = pipeline({ ...flamingo[0], normalized_address: '', source_structured_address_verified: false, risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'], extraction_method: 'ocr_trustee_notice_extraction' });
+const ocrReview = pipeline({ ...flamingo[0], normalized_address: '', source_structured_address_verified: false, property_identity_source_only: true, risk_flags: ['OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED'], extraction_method: 'ocr_trustee_notice_extraction', ocr_confidence: 99 });
 assert.strictEqual(ocrReview.normalized_address, '');
 assert(!ocrReview.maps_url, 'OCR cannot acquire a precise maps URL');
 assert.notStrictEqual(ocrReview.quality_bucket, 'INSPECT_NOW');
