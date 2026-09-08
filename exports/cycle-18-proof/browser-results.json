@@ -1,0 +1,13 @@
+{
+  "data_kind": "SYNTHETIC_TEST_ONLY",
+  "runtime": "existing Chromium 1117 explicitly selected for local harness",
+  "failed_upload_rejected": true,
+  "duplicate_unconfirmed_uploads_count": 2,
+  "duplicate_uploads_do_not_unlock_comps": true,
+  "persistence_after_refresh": true,
+  "snapshot_unchanged": true,
+  "upload_requests": 3,
+  "page_errors": [],
+  "external_requests": [],
+  "mobile_overflow": false
+}

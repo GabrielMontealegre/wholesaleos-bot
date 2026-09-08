@@ -158,6 +158,8 @@ function rowConfidenceLevel(row, textQuality) {
 
 function tagOcrRow(row, meta) {
   return Object.assign({}, row, {
+    normalized_address: '',
+    source_structured_address_verified: false,
     extraction_method: 'ocr_trustee_notice_extraction',
     extraction_confidence: rowConfidenceLevel(row, meta.confidence) === 'medium' ? 'Medium' : 'Low',
     ocr_confidence: meta.confidence,

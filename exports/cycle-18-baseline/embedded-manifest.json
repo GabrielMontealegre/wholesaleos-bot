@@ -1,0 +1,222 @@
+[
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-01.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-01.pdf",
+    "captured_at": "2026-09-07T23:48:39.834Z",
+    "http_status": 200,
+    "content_sha256": "c69da41072d56656313f356d24d8ebeca6e090dfe68cffee2b6d74d0fd7f1a20",
+    "bytes": 69465,
+    "body_file": "bodies/c8a5f74b5961182a4185c4abe0249eb2c371a7dfabcb9eb1a105132c1bbb1294-c69da41072d56656313f356d24d8ebeca6e090dfe68cffee2b6d74d0fd7f1a20.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-02.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-02.pdf",
+    "captured_at": "2026-09-07T23:48:40.877Z",
+    "http_status": 200,
+    "content_sha256": "c905529ab2d7968753583e04364d5836476d0ee0d9ee43e76957399febe25cda",
+    "bytes": 86584,
+    "body_file": "bodies/5176823036b4ebcec13a2a8c171a9e7178ef326f6b384386ec8de60c7a76a7c1-c905529ab2d7968753583e04364d5836476d0ee0d9ee43e76957399febe25cda.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-03.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-03.pdf",
+    "captured_at": "2026-09-07T23:48:41.557Z",
+    "http_status": 200,
+    "content_sha256": "8e07a26c2170e22e8a5ffe900d7e07450d9bcfa41348872ff4a31ff25d673b00",
+    "bytes": 88195,
+    "body_file": "bodies/1055ad579ccc929687d08c8829d232f7283718e632fe9f6c5dbb72f5baee9751-8e07a26c2170e22e8a5ffe900d7e07450d9bcfa41348872ff4a31ff25d673b00.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-04.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-04.pdf",
+    "captured_at": "2026-09-07T23:48:42.247Z",
+    "http_status": 200,
+    "content_sha256": "2643cac9cba679ed555d18a3cf55b191abb45642d6f1e456e3ff7fb02d0f677d",
+    "bytes": 159717,
+    "body_file": "bodies/67dbc76b7038505664e4f9bc9c6dc0c56c08d0f001c8781b8521a5c589dbad32-2643cac9cba679ed555d18a3cf55b191abb45642d6f1e456e3ff7fb02d0f677d.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-05.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-05.pdf",
+    "captured_at": "2026-09-07T23:48:42.926Z",
+    "http_status": 200,
+    "content_sha256": "11a51783ac0e45ae107b5e17651386aee27ef44f8ffac789219cb8cb75202c6b",
+    "bytes": 122016,
+    "body_file": "bodies/37b4efdc49f4c8f2021245e752e668561a20e8b3e8e2a52d5d1f93b5fdc29fa8-11a51783ac0e45ae107b5e17651386aee27ef44f8ffac789219cb8cb75202c6b.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-06.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-06.pdf",
+    "captured_at": "2026-09-07T23:48:43.526Z",
+    "http_status": 200,
+    "content_sha256": "0222f65b0e36efb5abed3b51a92e3f81086da97a1cc9147a989907482b6f2f79",
+    "bytes": 102265,
+    "body_file": "bodies/28bf0832dc23a1d651a7592f91428447260658e869a48a234fde0fc79debb837-0222f65b0e36efb5abed3b51a92e3f81086da97a1cc9147a989907482b6f2f79.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-07.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-07.pdf",
+    "captured_at": "2026-09-07T23:48:44.142Z",
+    "http_status": 200,
+    "content_sha256": "880417885cd34114752d784199f0c49cc4060be94cfc7ea66445310ea802faea",
+    "bytes": 224951,
+    "body_file": "bodies/c928004585d86c1493c4de757752d627b5efe8311343d2ac8f2a69b8ceb3364f-880417885cd34114752d784199f0c49cc4060be94cfc7ea66445310ea802faea.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-08.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-08.pdf",
+    "captured_at": "2026-09-07T23:48:44.823Z",
+    "http_status": 200,
+    "content_sha256": "0183fd12dac0002b06124a21ed3bb2d457f322e5bfd3daed111438fedfd84778",
+    "bytes": 114011,
+    "body_file": "bodies/702e6a51a7fb809da6f134ef8e73fcac92c35e15acf0d1b2c9b25afcfc2f33d3-0183fd12dac0002b06124a21ed3bb2d457f322e5bfd3daed111438fedfd84778.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-09.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-09.pdf",
+    "captured_at": "2026-09-07T23:48:45.441Z",
+    "http_status": 200,
+    "content_sha256": "23dfb7a445891e999da72d2acb8aa17afe669a2120c6a489832323b65417e00d",
+    "bytes": 103112,
+    "body_file": "bodies/1c9f96b63919cf1689252c5033b29409a546479311a5cf6484457d5646b41e2e-23dfb7a445891e999da72d2acb8aa17afe669a2120c6a489832323b65417e00d.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-10.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-10.pdf",
+    "captured_at": "2026-09-07T23:48:46.030Z",
+    "http_status": 200,
+    "content_sha256": "1797eda4e53bb886285e45fd5046e05c3ad821a4f56486a844f01dd712fb2718",
+    "bytes": 111509,
+    "body_file": "bodies/a2e0a89cbb2aef5848756cabd364daf5bfd38e840f5a3ee50d69f3612793ddb3-1797eda4e53bb886285e45fd5046e05c3ad821a4f56486a844f01dd712fb2718.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-11.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-11.pdf",
+    "captured_at": "2026-09-07T23:48:46.683Z",
+    "http_status": 200,
+    "content_sha256": "2f4033dfcc64308f9cde72888c3ba661fde6f1c802a1e10aef763617aff51a9a",
+    "bytes": 113166,
+    "body_file": "bodies/a6e9d4fc85ffced9f64d1fa32197d884e1e1b61f572de4a17719aa419f72a409-2f4033dfcc64308f9cde72888c3ba661fde6f1c802a1e10aef763617aff51a9a.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-12.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-12.pdf",
+    "captured_at": "2026-09-07T23:48:47.355Z",
+    "http_status": 200,
+    "content_sha256": "204204f0f8de039e9a492ffcfede166621a9bef3c53aa4f8f0ea93511aa2c880",
+    "bytes": 70467,
+    "body_file": "bodies/718f4c9f1cad475ad5b8534e20aa8c2fc85d9b88cf0bb36033554a67c43b20d1-204204f0f8de039e9a492ffcfede166621a9bef3c53aa4f8f0ea93511aa2c880.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-13.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-13.pdf",
+    "captured_at": "2026-09-07T23:48:48.022Z",
+    "http_status": 200,
+    "content_sha256": "207f0a83ba20e9f1860b033a7382eeb2fd92ccdfd7503d37e63021f383bdb128",
+    "bytes": 92276,
+    "body_file": "bodies/3bf6f6c80b7e0dedb99547fd4035847e2f3df2ee69169a3a2c57a4c8a86ab40f-207f0a83ba20e9f1860b033a7382eeb2fd92ccdfd7503d37e63021f383bdb128.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-14.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-14.pdf",
+    "captured_at": "2026-09-07T23:48:48.652Z",
+    "http_status": 200,
+    "content_sha256": "76b38f5c552a66fbddb2eb74929198bc857057d866433a848db8996519f78656",
+    "bytes": 174438,
+    "body_file": "bodies/fa885f81de66ea4806dcbeee73b297ec9dbd39ff74b4a7d2646f127072fcb18c-76b38f5c552a66fbddb2eb74929198bc857057d866433a848db8996519f78656.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-15.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-15.pdf",
+    "captured_at": "2026-09-07T23:48:49.310Z",
+    "http_status": 200,
+    "content_sha256": "3de2e1f9c412d8f886beb06a5c2f43c6df05732ce0f21402dd44f8a048f6d6b6",
+    "bytes": 105363,
+    "body_file": "bodies/4fb4956b46f78de68c29d62e554b58fb3c157f0a84269707606614d200677abf-3de2e1f9c412d8f886beb06a5c2f43c6df05732ce0f21402dd44f8a048f6d6b6.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-16.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-16.pdf",
+    "captured_at": "2026-09-07T23:48:49.967Z",
+    "http_status": 200,
+    "content_sha256": "5f03f8cda99106342b74b31a89e804dc357bf18525b3c6025f91a769f6a68f0c",
+    "bytes": 91319,
+    "body_file": "bodies/cff85ed210c1176bc41a62c0b09e87ba106692decbb256cb8d93968d1673fd47-5f03f8cda99106342b74b31a89e804dc357bf18525b3c6025f91a769f6a68f0c.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-17.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-17.pdf",
+    "captured_at": "2026-09-07T23:48:50.606Z",
+    "http_status": 200,
+    "content_sha256": "67cfc0825c92f5bb16ae018a9017074f27aff774752a9286ce0f479e5eeffe1e",
+    "bytes": 63472,
+    "body_file": "bodies/c3d42df26d3047bccb9a7523ed2968bce5d4c175ca7e08b107e4d9dce42c6042-67cfc0825c92f5bb16ae018a9017074f27aff774752a9286ce0f479e5eeffe1e.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-18.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-18.pdf",
+    "captured_at": "2026-09-07T23:48:51.273Z",
+    "http_status": 200,
+    "content_sha256": "127aa826bfeb2b12653cfbc5cf562a5aa5fd570947a8fac53b0eee76ae397c8e",
+    "bytes": 96661,
+    "body_file": "bodies/ecc222fcfe94a71312ef6b715335ea5ba45a65104d2cb5ef6964d860885a8dc3-127aa826bfeb2b12653cfbc5cf562a5aa5fd570947a8fac53b0eee76ae397c8e.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-19.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-19.pdf",
+    "captured_at": "2026-09-07T23:48:51.915Z",
+    "http_status": 200,
+    "content_sha256": "831dbdacf8d9d52767c077f20bc3c12c747f9f3b9b516468b8eaa6a63dc361a6",
+    "bytes": 278212,
+    "body_file": "bodies/d9ca64b5e79706c89be380a36532884d6fdb9267b38952676105002c41151b27-831dbdacf8d9d52767c077f20bc3c12c747f9f3b9b516468b8eaa6a63dc361a6.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  },
+  {
+    "parent_url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-20.pdf",
+    "url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-20.pdf",
+    "captured_at": "2026-09-07T23:48:52.568Z",
+    "http_status": 200,
+    "content_sha256": "5e06231ff8c796a574069c70c7519b9193dd8c157f1843c4f54f897e28eeaadd",
+    "bytes": 282818,
+    "body_file": "bodies/01bf29ad418208580458c4771e1b6d6cf5e89e5b6d4e7ceb41563528029b9b92-5e06231ff8c796a574069c70c7519b9193dd8c157f1843c4f54f897e28eeaadd.pdf",
+    "fetch_status": "PDF_CAPTURED",
+    "reason": null
+  }
+]

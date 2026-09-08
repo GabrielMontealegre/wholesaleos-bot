@@ -94,6 +94,18 @@ function tabularNoticeParserSignature() {
   return 'tabular-notice-v2';
 }
 
+function completeSourceAddress(value, cityNames) {
+  const source = cleanText(value);
+  for (const city of (cityNames || []).slice().sort((a, b) => b.length - a.length)) {
+    const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = source.match(new RegExp(`^(\\d{1,7}\\s+[A-Za-z][^,]{1,100}?)\\s*,?\\s+(${escaped})\\s*,?\\s+(?:TX|Texas)\\s+(\\d{5}(?:-\\d{4})?)$`, 'i'));
+    if (match && new RegExp(`\\b${STREET_SUFFIX}\\.?$`, 'i').test(match[1])) {
+      return `${cleanText(match[1]).replace(/\.$/, '')}, ${match[2]}, TX ${match[3]}`;
+    }
+  }
+  return '';
+}
+
 function filingPeriodFromDocumentNumber(documentNumber) {
   const match = cleanText(documentNumber).match(/^(\d{4})(\d{2})/);
   if (!match) return '';
@@ -219,14 +231,16 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
   while ((match = addressRe.exec(source))) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
+    if (/\b(?:trustee'?s?|servicer'?s?|mortgagee'?s?|beneficiary'?s?)\s+address\s*[:#-]?\s*$/i.test(precedingContext)) continue;
     const address = cleanText(match[0]).replace(/\s+,/g, ',');
     // Require a zip, or at least a known city from the county profile -
     // "123 Somewhere Rd, TX" alone is too weak to present as a property.
-    const hasZip = /\d{5}/.test(address);
+    const hasZip = /\b(?:TX|Texas)\s+\d{5}(?:-\d{4})?\b/i.test(address);
     const hasKnownCity = (Array.isArray(profile.city_names) ? profile.city_names : [])
       .some((city) => city && new RegExp(`\\b${String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(address));
     if (!hasZip && !hasKnownCity) continue;
     if (excludedRe && excludedRe.test(address)) continue;
+    const structuredAddress = completeSourceAddress(address, profile.city_names);
     const windowText = noticeWindow(source, match.index);
     const saleDate = saleDateFromWindow(windowText);
     const key = `${cleanText(context.source_proof_url)}|${address.toLowerCase()}|${saleDate}`;
@@ -241,6 +255,9 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
     rows.push({
       address,
       property_address: address,
+      normalized_address: structuredAddress,
+      source_structured_address_verified: !!structuredAddress,
+      property_identity_source_only: true,
       county,
       state: cleanText(profile.state) || 'TX',
       owner_name: ownerFromWindow(windowText),

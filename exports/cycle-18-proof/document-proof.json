@@ -1,0 +1,40 @@
+{
+  "default_ocr_runtime": {
+    "status": "UNREACHABLE",
+    "reason": "browserType.launch: Executable doesn't exist at C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
+    "implication": "Default installed Playwright expects an absent browser binary. OCR recovery yield is unmeasured, not zero. No download or product runtime change made."
+  },
+  "outputs": [
+    {
+      "file": "REAL-hunt-07-page-1.png",
+      "source_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-07.pdf",
+      "source_content_sha256": "880417885cd34114752d784199f0c49cc4060be94cfc7ea66445310ea802faea",
+      "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
+    },
+    {
+      "file": "REAL-hunt-07-page-2.png",
+      "source_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-07.pdf",
+      "source_content_sha256": "880417885cd34114752d784199f0c49cc4060be94cfc7ea66445310ea802faea",
+      "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
+    },
+    {
+      "file": "REAL-hunt-10-page-1.png",
+      "source_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-10.pdf",
+      "source_content_sha256": "1797eda4e53bb886285e45fd5046e05c3ad821a4f56486a844f01dd712fb2718",
+      "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
+    },
+    {
+      "file": "REAL-hunt-10-page-2.png",
+      "source_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-10.pdf",
+      "source_content_sha256": "1797eda4e53bb886285e45fd5046e05c3ad821a4f56486a844f01dd712fb2718",
+      "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
+    },
+    {
+      "file": "REAL-hunt-17-page-1.png",
+      "source_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-17.pdf",
+      "source_content_sha256": "67cfc0825c92f5bb16ae018a9017074f27aff774752a9286ce0f479e5eeffe1e",
+      "purpose": "MANUAL_VISUAL_INSPECTION_ONLY_NOT_EXTRACTION"
+    }
+  ],
+  "inspection_runtime": "Explicit installed Chromium for visual review only; scale 1.4 is display-only and does not change extraction settings."
+}

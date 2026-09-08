@@ -1,0 +1,1045 @@
+{
+  "kind": "FROZEN_LOCAL_MEASUREMENT_NOT_LIVE_LEADS",
+  "generated_at": "2026-09-08T04:58:11.703Z",
+  "corpus_sha256": "00e4cf4ca8714ce82b0c6552ad8d8faef49e58095d6bc6b514156036609fa15a",
+  "ledger_updated_at": "2026-08-26T19:11:36.421Z",
+  "source_capture_started_at": "2026-09-07T23:46:37.317Z",
+  "root_capture_frozen_at": "2026-09-07T23:47:35.191Z",
+  "live_markets": {
+    "Dallas": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    },
+    "San Antonio": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    },
+    "Detroit": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    },
+    "San Diego": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    },
+    "Los Angeles": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    },
+    "Houston": {
+      "status": "UNREACHABLE",
+      "counts": null,
+      "reason": "No local snapshot; production access prohibited by Cycle 18 authorization."
+    }
+  },
+  "before": {
+    "status": "MEASURED_TEXT_LAYER_ONLY",
+    "extracted_rows": 17,
+    "unique_properties": null,
+    "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+    "distinct_nonempty_address_strings": 3,
+    "complete_addresses": 4,
+    "partial_or_apn_only": 13,
+    "owner_identity": 0,
+    "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+    "phone_routes": 0,
+    "email_routes": 0,
+    "mailing_routes": 0,
+    "qualifying_comps": 0,
+    "rejected_comps": 0,
+    "rejected_comp_reasons": {},
+    "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+    "lifecycle": {
+      "AGING": 17
+    },
+    "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+    "missing_evidence": {
+      "current status or event date evidence": 10,
+      "visible contact route": 17,
+      "3 verified sold comps": 17,
+      "complete property address": 7,
+      "zip (verify from the source document)": 6
+    },
+    "can_contact": 0,
+    "can_value": 0,
+    "ready_to_offer": 0
+  },
+  "after": {
+    "status": "MEASURED_TEXT_LAYER_ONLY",
+    "extracted_rows": 9,
+    "unique_properties": null,
+    "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+    "distinct_nonempty_address_strings": 3,
+    "complete_addresses": 4,
+    "partial_or_apn_only": 5,
+    "owner_identity": 0,
+    "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+    "phone_routes": 0,
+    "email_routes": 0,
+    "mailing_routes": 0,
+    "qualifying_comps": 0,
+    "rejected_comps": 0,
+    "rejected_comp_reasons": {},
+    "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+    "lifecycle": {
+      "AGING": 9
+    },
+    "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+    "missing_evidence": {
+      "zip (verify from the source document)": 5,
+      "current status or event date evidence": 6,
+      "visible contact route": 9,
+      "3 verified sold comps": 9
+    },
+    "can_contact": 0,
+    "can_value": 0,
+    "ready_to_offer": 0
+  },
+  "counties": [
+    {
+      "county": "Hunt",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-01.pdf",
+          "captured_at": "2026-09-07T23:46:37.344Z",
+          "ledger_attempted_at": "2026-08-11T20:57:24.104Z",
+          "embedded_captured_at": "2026-09-07T23:48:39.834Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-02.pdf",
+          "captured_at": "2026-09-07T23:46:38.560Z",
+          "ledger_attempted_at": "2026-08-11T20:57:24.512Z",
+          "embedded_captured_at": "2026-09-07T23:48:40.877Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-03.pdf",
+          "captured_at": "2026-09-07T23:46:39.147Z",
+          "ledger_attempted_at": "2026-08-11T20:57:24.778Z",
+          "embedded_captured_at": "2026-09-07T23:48:41.557Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-04.pdf",
+          "captured_at": "2026-09-07T23:46:39.729Z",
+          "ledger_attempted_at": "2026-08-11T20:57:25.070Z",
+          "embedded_captured_at": "2026-09-07T23:48:42.247Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-05.pdf",
+          "captured_at": "2026-09-07T23:46:40.316Z",
+          "ledger_attempted_at": "2026-08-11T20:57:25.284Z",
+          "embedded_captured_at": "2026-09-07T23:48:42.926Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-06.pdf",
+          "captured_at": "2026-09-07T23:46:59.613Z",
+          "ledger_attempted_at": "2026-08-11T21:17:41.439Z",
+          "embedded_captured_at": "2026-09-07T23:48:43.526Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-07.pdf",
+          "captured_at": "2026-09-07T23:47:00.314Z",
+          "ledger_attempted_at": "2026-08-11T21:17:42.012Z",
+          "embedded_captured_at": "2026-09-07T23:48:44.142Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-08.pdf",
+          "captured_at": "2026-09-07T23:47:00.884Z",
+          "ledger_attempted_at": "2026-08-11T21:17:42.268Z",
+          "embedded_captured_at": "2026-09-07T23:48:44.823Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-09.pdf",
+          "captured_at": "2026-09-07T23:47:01.452Z",
+          "ledger_attempted_at": "2026-08-11T21:17:42.497Z",
+          "embedded_captured_at": "2026-09-07T23:48:45.441Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-10.pdf",
+          "captured_at": "2026-09-07T23:47:02.034Z",
+          "ledger_attempted_at": "2026-08-11T21:17:42.728Z",
+          "embedded_captured_at": "2026-09-07T23:48:46.030Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-11.pdf",
+          "captured_at": "2026-09-07T23:47:07.824Z",
+          "ledger_attempted_at": "2026-08-11T21:23:13.149Z",
+          "embedded_captured_at": "2026-09-07T23:48:46.683Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-12.pdf",
+          "captured_at": "2026-09-07T23:47:08.576Z",
+          "ledger_attempted_at": "2026-08-11T21:23:13.553Z",
+          "embedded_captured_at": "2026-09-07T23:48:47.355Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-13.pdf",
+          "captured_at": "2026-09-07T23:47:09.158Z",
+          "ledger_attempted_at": "2026-08-11T21:23:13.815Z",
+          "embedded_captured_at": "2026-09-07T23:48:48.022Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-14.pdf",
+          "captured_at": "2026-09-07T23:47:09.756Z",
+          "ledger_attempted_at": "2026-08-11T21:23:14.098Z",
+          "embedded_captured_at": "2026-09-07T23:48:48.652Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-15.pdf",
+          "captured_at": "2026-09-07T23:47:10.324Z",
+          "ledger_attempted_at": "2026-08-11T21:23:14.344Z",
+          "embedded_captured_at": "2026-09-07T23:48:49.310Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-16.pdf",
+          "captured_at": "2026-09-07T23:47:16.081Z",
+          "ledger_attempted_at": "2026-08-11T21:34:26.576Z",
+          "embedded_captured_at": "2026-09-07T23:48:49.967Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-17.pdf",
+          "captured_at": "2026-09-07T23:47:16.797Z",
+          "ledger_attempted_at": "2026-08-11T21:34:26.949Z",
+          "embedded_captured_at": "2026-09-07T23:48:50.606Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-18.pdf",
+          "captured_at": "2026-09-07T23:47:17.378Z",
+          "ledger_attempted_at": "2026-08-11T21:34:27.213Z",
+          "embedded_captured_at": "2026-09-07T23:48:51.273Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-19.pdf",
+          "captured_at": "2026-09-07T23:47:17.956Z",
+          "ledger_attempted_at": "2026-08-11T21:34:27.545Z",
+          "embedded_captured_at": "2026-09-07T23:48:51.915Z"
+        },
+        {
+          "url": "https://apps.huntcounty.net/foreclosures/showdoc.asp?year=2026&docName=2026-09-01-foreclosure-20.pdf",
+          "captured_at": "2026-09-07T23:47:18.533Z",
+          "ledger_attempted_at": "2026-08-11T21:34:27.803Z",
+          "embedded_captured_at": "2026-09-07T23:48:52.568Z"
+        }
+      ],
+      "documents": 20,
+      "captured_pdfs": 20,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 17,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 3,
+        "complete_addresses": 4,
+        "partial_or_apn_only": 13,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {
+          "AGING": 17
+        },
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {
+          "current status or event date evidence": 10,
+          "visible contact route": 17,
+          "3 verified sold comps": 17,
+          "complete property address": 7,
+          "zip (verify from the source document)": 6
+        },
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 9,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 3,
+        "complete_addresses": 4,
+        "partial_or_apn_only": 5,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {
+          "AGING": 9
+        },
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {
+          "zip (verify from the source document)": 5,
+          "current status or event date evidence": 6,
+          "visible contact route": 9,
+          "3 verified sold comps": 9
+        },
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Navarro",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-101.pdf",
+          "captured_at": "2026-09-07T23:46:40.913Z",
+          "ledger_attempted_at": "2026-08-26T19:11:23.836Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-102.pdf",
+          "captured_at": "2026-09-07T23:46:42.148Z",
+          "ledger_attempted_at": "2026-08-26T19:11:23.836Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-10-foreclosures-2026-100.pdf",
+          "captured_at": "2026-09-07T23:46:42.865Z",
+          "ledger_attempted_at": "2026-08-26T19:11:23.836Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-06-foreclosures-2026-095.pdf",
+          "captured_at": "2026-09-07T23:46:43.519Z",
+          "ledger_attempted_at": "2026-08-13T03:00:44.349Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-06-foreclosures-2026-096.pdf",
+          "captured_at": "2026-09-07T23:46:44.098Z",
+          "ledger_attempted_at": "2026-08-13T03:00:44.349Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-14-foreclosures-2026-104.pdf",
+          "captured_at": "2026-09-07T23:47:28.530Z",
+          "ledger_attempted_at": "2026-08-26T19:11:23.836Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-13-foreclosures-2026-103.pdf",
+          "captured_at": "2026-09-07T23:47:30.161Z",
+          "ledger_attempted_at": "2026-08-26T19:11:23.836Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 7,
+      "captured_pdfs": 7,
+      "scans_with_ocr_unmeasured": 7,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Van Zandt",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://www.vanzandtcounty.org/upload/common/YD%20PLAN%20SIGNED%20hefjw.pdf",
+          "captured_at": "2026-09-07T23:46:44.688Z",
+          "ledger_attempted_at": "2026-08-11T20:59:07.766Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 1,
+      "captured_pdfs": 1,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Tarrant",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://www.tarrantcountytx.gov/content/dam/main/district-clerk/Criminal_Felony_Payments-web.pdf",
+          "captured_at": "2026-09-07T23:46:46.300Z",
+          "ledger_attempted_at": "2026-08-11T20:59:09.014Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.tarrantcountytx.gov/content/dam/main/engineering-services/Guideline_for_Development_in_Unincorporated_areas_of_Tarrant_County.pdf",
+          "captured_at": "2026-09-07T23:46:47.386Z",
+          "ledger_attempted_at": "2026-08-11T20:59:09.526Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 2,
+      "captured_pdfs": 2,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Ellis",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5199",
+          "captured_at": "2026-09-07T23:46:48.170Z",
+          "ledger_attempted_at": "2026-08-11T21:00:15.636Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5198",
+          "captured_at": "2026-09-07T23:46:49.288Z",
+          "ledger_attempted_at": "2026-08-11T21:00:15.636Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5126",
+          "captured_at": "2026-09-07T23:46:49.888Z",
+          "ledger_attempted_at": "2026-08-11T21:00:15.636Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5206",
+          "captured_at": "2026-09-07T23:47:27.710Z",
+          "ledger_attempted_at": "2026-08-12T23:06:18.663Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5209",
+          "captured_at": "2026-09-07T23:47:31.296Z",
+          "ledger_attempted_at": "2026-08-16T05:47:26.520Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5213",
+          "captured_at": "2026-09-07T23:47:31.878Z",
+          "ledger_attempted_at": "2026-08-25T16:06:15.437Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://co.ellis.tx.us/Archive.aspx?ADID=5214",
+          "captured_at": "2026-09-07T23:47:32.464Z",
+          "ledger_attempted_at": "2026-08-25T16:06:15.437Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 7,
+      "captured_pdfs": 0,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "UNREACHABLE",
+        "reason": "No PDF captured under frozen allowlist; not evidence of a county access block.",
+        "unique_properties": null,
+        "complete_addresses": null,
+        "partial_or_apn_only": null,
+        "owner_identity": null,
+        "phone_routes": null,
+        "email_routes": null,
+        "mailing_routes": null,
+        "qualifying_comps": null,
+        "rejected_comps": null,
+        "lifecycle": null,
+        "missing_evidence": null,
+        "can_contact": null,
+        "can_value": null,
+        "ready_to_offer": null
+      },
+      "after": {
+        "status": "UNREACHABLE",
+        "reason": "No PDF captured under frozen allowlist; not evidence of a county access block.",
+        "unique_properties": null,
+        "complete_addresses": null,
+        "partial_or_apn_only": null,
+        "owner_identity": null,
+        "phone_routes": null,
+        "email_routes": null,
+        "mailing_routes": null,
+        "qualifying_comps": null,
+        "rejected_comps": null,
+        "lifecycle": null,
+        "missing_evidence": null,
+        "can_contact": null,
+        "can_value": null,
+        "ready_to_offer": null
+      }
+    },
+    {
+      "county": "Kaufman",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://www.kaufmancounty.net/DocumentCenter/View/7890/2024-TAX-RATES-2",
+          "captured_at": "2026-09-07T23:46:50.468Z",
+          "ledger_attempted_at": "2026-08-11T21:00:17.307Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 1,
+      "captured_pdfs": 1,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Parker",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://www.parkercountytx.gov/DocumentCenter/View/11571/Civil-Family-Fee-Schedules",
+          "captured_at": "2026-09-07T23:46:52.007Z",
+          "ledger_attempted_at": "2026-08-11T21:00:19.515Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.parkercountytx.gov/DocumentCenter/View/10573/Fee-Schedule-2024",
+          "captured_at": "2026-09-07T23:46:53.457Z",
+          "ledger_attempted_at": "2026-08-11T21:00:20.257Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 2,
+      "captured_pdfs": 2,
+      "scans_with_ocr_unmeasured": 0,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    },
+    {
+      "county": "Rockwall",
+      "configured_market_family": "Dallas",
+      "state": "TX",
+      "source_timestamps": [
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8338",
+          "captured_at": "2026-09-07T23:46:54.141Z",
+          "ledger_attempted_at": "2026-08-11T21:01:51.547Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8328",
+          "captured_at": "2026-09-07T23:46:56.323Z",
+          "ledger_attempted_at": "2026-08-11T21:01:51.547Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8323",
+          "captured_at": "2026-09-07T23:46:57.264Z",
+          "ledger_attempted_at": "2026-08-11T21:01:51.547Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8315",
+          "captured_at": "2026-09-07T23:46:57.960Z",
+          "ledger_attempted_at": "2026-08-11T21:01:51.547Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8313",
+          "captured_at": "2026-09-07T23:46:58.658Z",
+          "ledger_attempted_at": "2026-08-11T21:01:51.547Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8298",
+          "captured_at": "2026-09-07T23:47:02.617Z",
+          "ledger_attempted_at": "2026-08-11T21:23:00.730Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8291",
+          "captured_at": "2026-09-07T23:47:03.586Z",
+          "ledger_attempted_at": "2026-08-11T21:23:00.730Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7851",
+          "captured_at": "2026-09-07T23:47:04.471Z",
+          "ledger_attempted_at": "2026-08-11T21:23:00.730Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7850",
+          "captured_at": "2026-09-07T23:47:05.672Z",
+          "ledger_attempted_at": "2026-08-11T21:23:00.731Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7849",
+          "captured_at": "2026-09-07T23:47:06.772Z",
+          "ledger_attempted_at": "2026-08-11T21:23:00.731Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7848",
+          "captured_at": "2026-09-07T23:47:10.894Z",
+          "ledger_attempted_at": "2026-08-11T21:26:14.587Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7840",
+          "captured_at": "2026-09-07T23:47:12.060Z",
+          "ledger_attempted_at": "2026-08-11T21:26:14.587Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7839",
+          "captured_at": "2026-09-07T23:47:13.162Z",
+          "ledger_attempted_at": "2026-08-11T21:26:14.587Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7831",
+          "captured_at": "2026-09-07T23:47:14.246Z",
+          "ledger_attempted_at": "2026-08-11T21:26:14.587Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7823",
+          "captured_at": "2026-09-07T23:47:15.216Z",
+          "ledger_attempted_at": "2026-08-11T21:26:14.587Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7822",
+          "captured_at": "2026-09-07T23:47:19.102Z",
+          "ledger_attempted_at": "2026-08-11T21:37:03.521Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7814",
+          "captured_at": "2026-09-07T23:47:19.964Z",
+          "ledger_attempted_at": "2026-08-11T21:37:03.521Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7813",
+          "captured_at": "2026-09-07T23:47:20.869Z",
+          "ledger_attempted_at": "2026-08-11T21:37:03.521Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7812",
+          "captured_at": "2026-09-07T23:47:21.973Z",
+          "ledger_attempted_at": "2026-08-11T21:37:03.521Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7801",
+          "captured_at": "2026-09-07T23:47:22.854Z",
+          "ledger_attempted_at": "2026-08-11T21:37:03.521Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7793",
+          "captured_at": "2026-09-07T23:47:23.971Z",
+          "ledger_attempted_at": "2026-08-11T21:47:10.436Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7787",
+          "captured_at": "2026-09-07T23:47:24.774Z",
+          "ledger_attempted_at": "2026-08-11T21:47:10.436Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7777",
+          "captured_at": "2026-09-07T23:47:25.791Z",
+          "ledger_attempted_at": "2026-08-11T21:47:10.436Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7744",
+          "captured_at": "2026-09-07T23:47:26.744Z",
+          "ledger_attempted_at": "2026-08-11T21:47:10.436Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8356",
+          "captured_at": "2026-09-07T23:47:33.048Z",
+          "ledger_attempted_at": "2026-08-25T16:06:23.139Z",
+          "embedded_captured_at": null
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8353",
+          "captured_at": "2026-09-07T23:47:34.416Z",
+          "ledger_attempted_at": "2026-08-25T16:06:23.139Z",
+          "embedded_captured_at": null
+        }
+      ],
+      "documents": 26,
+      "captured_pdfs": 26,
+      "scans_with_ocr_unmeasured": 26,
+      "before": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      },
+      "after": {
+        "status": "MEASURED_TEXT_LAYER_ONLY",
+        "extracted_rows": 0,
+        "unique_properties": null,
+        "unique_properties_reason": "Incomplete identities and unmeasured scan pages prevent a whole-corpus unique-property count.",
+        "distinct_nonempty_address_strings": 0,
+        "complete_addresses": 0,
+        "partial_or_apn_only": 0,
+        "owner_identity": 0,
+        "owner_identity_basis": "No parcel owner proof in this source-only measurement; grantor/trustor clues are not verified current ownership.",
+        "phone_routes": 0,
+        "email_routes": 0,
+        "mailing_routes": 0,
+        "qualifying_comps": 0,
+        "rejected_comps": 0,
+        "rejected_comp_reasons": {},
+        "route_and_comp_basis": "No supported seller routes or sold-comp candidates present on measured rows; enrichment was NOT run.",
+        "lifecycle": {},
+        "lifecycle_caveat": "Computed from extracted fields only. Visual inspection confirms Sep 1 dates on all three complete properties; missing date extraction is not proof of current availability.",
+        "missing_evidence": {},
+        "can_contact": 0,
+        "can_value": 0,
+        "ready_to_offer": 0
+      }
+    }
+  ],
+  "manual_address_accuracy": {
+    "denominator": "All nonempty normalized board addresses in the frozen text-layer measurement; compared visually against source property locations.",
+    "before": {
+      "correct_rows": 1,
+      "total_rows": 4,
+      "incorrect_property_rows": 3,
+      "distinct_supported_properties": 1
+    },
+    "after": {
+      "correct_rows": 4,
+      "total_rows": 4,
+      "incorrect_property_rows": 0,
+      "distinct_supported_properties": 3
+    },
+    "all_pdf_property_recall": null,
+    "recall_reason": "33 scanned PDFs not OCR-processed; no complete manual property ground truth."
+  },
+  "extraction_benchmark": {
+    "before": {
+      "scope": "EXTRACTOR_ONLY_SAME_59_CACHED_PDF_TEXTS",
+      "warmup_passes": 1,
+      "measured_passes": 10,
+      "rows_per_pass": 17,
+      "median_ms": 6.282,
+      "max_ms": 11.211,
+      "peak_process_rss_kb": 51252
+    },
+    "after": {
+      "scope": "EXTRACTOR_ONLY_SAME_59_CACHED_PDF_TEXTS",
+      "warmup_passes": 1,
+      "measured_passes": 10,
+      "rows_per_pass": 9,
+      "median_ms": 4.389,
+      "max_ms": 5.561,
+      "peak_process_rss_kb": 51128
+    }
+  },
+  "unchanged_pdf_parse": {
+    "total_runtime_ms": 9015.498,
+    "largest_worker_peak_rss_kb": 72360,
+    "scope": "Same cached pdf-parse outputs reused both phases; no change to parsing or OCR settings."
+  },
+  "burden": {
+    "new_dependencies": 0,
+    "installation": "None",
+    "license": "Repository JavaScript; existing pdf-parse MIT, Playwright Apache-2.0 and Tesseract.js Apache-2.0 unchanged.",
+    "new_provider_cost": 0,
+    "infrastructure": "Existing local CPU/RAM and cached disk still cost resources; no production infrastructure benchmark or dollar estimate is available."
+  },
+  "historical_reference": {
+    "file": "dallas-deal-board-2026-07-02T15-42-00.json",
+    "date": "2026-07-02",
+    "sha256": "22b19f1cfb7f44ef25ca192b50269bcb567381168143f7975bcc8511e398557e",
+    "scope": "HISTORICAL_REFERENCE_ONLY",
+    "generated_at": "2026-07-02T15:42:00.579Z",
+    "exported_rows": 5,
+    "board_rows": 8,
+    "counters": {
+      "usable_deal_count": 8,
+      "inspect_now_count": 6,
+      "call_ready_count": 2,
+      "free_call_ready_count": 1,
+      "free_mail_ready_count": 0,
+      "free_comp_ready_count": 0,
+      "free_comp_partial_count": 0,
+      "needs_contact_route_count": 4,
+      "official_lookup_rows": 3,
+      "official_lookup_ready_count": 0,
+      "foreclosure_rows_from_evidence_count": 2,
+      "foreclosure_rows_with_address_count": 0,
+      "pdf_notice_rows_extracted": 5,
+      "pdf_notice_rows_with_address": 5
+    },
+    "not_current_inventory": true
+  },
+  "trace_limit": "Actual extracted property rows exist only for Hunt County. Administrative/scan traces in other counties are document traces, not fabricated property rows.",
+  "source_expansion": "NOT_RUN: frozen address-integrity scope selected before implementation."
+}

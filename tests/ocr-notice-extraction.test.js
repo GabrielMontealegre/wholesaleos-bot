@@ -51,6 +51,8 @@ function doc(url, bytes) {
   assert.strictEqual(cleanRun.diagnostics.ocr_rows_with_address, 1);
   assert.strictEqual(cleanRun.diagnostics.ocr_rows_with_sale_date, 1);
   const row = cleanRun.rows[0];
+  assert.strictEqual(row.normalized_address, '', 'OCR cannot inherit the text-layer complete address authority');
+  assert.strictEqual(row.source_structured_address_verified, false);
   assert.ok(/88 Heath Ridge Ct/.test(row.address));
   assert.strictEqual(row.sale_date, '08/04/2026');
   assert.strictEqual(row.county, 'Rockwall');
