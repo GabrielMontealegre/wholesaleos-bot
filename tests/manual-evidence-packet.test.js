@@ -289,6 +289,38 @@ function pngBuffer(size) {
   assert.strictEqual(ownerContact.contact_routes_accepted.length, 1);
   assert.strictEqual(ownerContact.projected_row_state, 'CALL_READY');
 
+  const favorablePacket = {
+    evidence_items: packetWithComps([comp(1), comp(2), comp(3)]).evidence_items
+      .concat(contactPacket('possible_owner_contact', true).evidence_items)
+  };
+  const favorable = service.evaluatePacket(favorablePacket, snapshot.markets[marketKey(DALLAS)].rows[0], { today_iso: TODAY });
+  assert.strictEqual(favorable.readiness.can_contact.status, 'YES');
+  assert.strictEqual(favorable.readiness.can_value.status, 'YES');
+  assert.strictEqual(favorable.readiness.ready_to_offer.status, 'UNKNOWN', 'even the most favorable evidence packet cannot authorize an offer');
+
+  const readinessStatuses = [];
+  [false, true].forEach((hasContact) => {
+    [false, true].forEach((hasComps) => {
+      [false, true].forEach((isQuarantined) => {
+        [false, true].forEach((isClosed) => {
+          const evidenceItems = []
+            .concat(hasComps ? packetWithComps([comp(1), comp(2), comp(3)]).evidence_items : [])
+            .concat(hasContact ? contactPacket('possible_owner_contact', true).evidence_items : []);
+          const permutationRow = Object.assign({}, snapshot.markets[marketKey(DALLAS)].rows[0], {
+            sale_date_iso: isQuarantined ? '2026-08-01' : '2026-09-01',
+            sale_date_or_event_date: isQuarantined ? '08/01/2026' : '09/01/2026',
+            contact_workflow_outcome: isClosed ? 'not_interested' : '',
+            contact_workflow_status: isClosed ? 'CLOSED_NOT_INTERESTED' : ''
+          });
+          const evaluated = service.evaluatePacket({ evidence_items: evidenceItems }, permutationRow, { today_iso: TODAY });
+          readinessStatuses.push(evaluated.readiness.ready_to_offer.status);
+          assert.ok(['UNKNOWN', 'NO'].includes(evaluated.readiness.ready_to_offer.status), 'Ready to offer must stay UNKNOWN or NO across every evidence permutation');
+        });
+      });
+    });
+  });
+  assert.ok(readinessStatuses.includes('UNKNOWN') && readinessStatuses.includes('NO'), 'the test matrix must exercise both permitted offer-readiness outcomes');
+
   assert.deepStrictEqual(JSON.parse(fs.readFileSync(process.env.DB_PATH, 'utf8')).leads, [], 'manual packets never write saved leads');
   assert.deepStrictEqual(fs.readFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), beforeSnapshotBytes, 'manual evidence writes cannot mutate official snapshot rows');
   console.log(JSON.stringify({ sample_mode: selectedByMarket, outbound_research_requests: outboundRequests }));
