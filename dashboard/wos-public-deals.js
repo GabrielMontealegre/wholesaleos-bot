@@ -295,6 +295,11 @@
   function manualEvidenceCard(item) {
     var packet = item.packet || {};
     var evaluation = packet.evaluation || {};
+    var readiness = evaluation.readiness || {};
+    var axes = [['can_contact', 'Can contact'], ['can_value', 'Can value'], ['ready_to_offer', 'Ready to offer']].map(function (axis) {
+      var result = readiness[axis[0]] || {};
+      return '<div><b>' + esc(axis[1]) + ': ' + esc(result.status || 'UNKNOWN') + '</b><br>' + esc(result.reason || 'Evidence has not been evaluated.') + '</div>';
+    }).join('');
     var links = safeArray(item.research_links).map(function (entry) {
       return '<a href="' + esc(entry.url || '') + '" target="_blank" rel="noopener" title="' + esc(entry.warning || '') + '" style="display:inline-block;padding:5px 8px;margin:3px 4px 0 0;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:10px;text-decoration:none;font-weight:600;">' + esc(entry.label || 'Open source') + '</a>';
     }).join('');
@@ -315,6 +320,8 @@
         '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
+      '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
+      '<div style="margin-top:6px;font-size:11px;"><b>Source event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + ' <b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
         (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +

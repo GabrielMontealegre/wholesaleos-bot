@@ -1,0 +1,1063 @@
+{
+  "generated_at": "2026-09-08T10:57:45.436Z",
+  "scope": "CACHE_ONLY_OCR_MEASUREMENT_NAVARRO_ROCKWALL_NO_REFETCH_NO_PRODUCTION",
+  "runtime_resolution_pre_change_observation": {
+    "default_launch": "failed: missing chromium_headless_shell-1234 executable",
+    "explicit_installed_chromium_1117": "succeeded when launched outside the sandbox before code changes"
+  },
+  "counties": [
+    {
+      "county": "Navarro",
+      "profile_source_id": "tx_navarro_county_foreclosure_notices",
+      "summary": {
+        "documents_in_cache": 7,
+        "documents_processed": 7,
+        "documents_missing_cache_body": 0,
+        "documents_attempted": 7,
+        "documents_succeeded": 7,
+        "documents_skipped_oversize": 0,
+        "documents_failed": 0,
+        "pages_rendered": 22,
+        "rows_extracted": 1,
+        "rows_with_complete_source_supported_address": 0,
+        "rows_left_partial": 1,
+        "confidence_distribution": {
+          "high": 1,
+          "medium": 0,
+          "low_rejected": 0,
+          "none": 0
+        },
+        "document_confidence_distribution": {
+          "high": 7,
+          "medium": 0,
+          "low_rejected": 0,
+          "none": 0
+        },
+        "runtime_ms": 92726,
+        "peak_rss_kb": 333372,
+        "reason_counts": {
+          "ocr_done": 1,
+          "ocr_completed_no_source_supported_rows": 6
+        }
+      },
+      "rows": [
+        {
+          "county": "Navarro",
+          "source_document_url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-101.pdf",
+          "raw_address": "906 Blue Heron Way, Kerens, Texas 75144",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        }
+      ],
+      "attempts": [
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-101.pdf",
+          "status": "ocr_done",
+          "ms": 8751,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-102.pdf",
+          "status": "ocr_done",
+          "ms": 18124,
+          "confidence": 93,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-10-foreclosures-2026-100.pdf",
+          "status": "ocr_done",
+          "ms": 25812,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-06-foreclosures-2026-095.pdf",
+          "status": "ocr_done",
+          "ms": 7202,
+          "confidence": 90,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-06-foreclosures-2026-096.pdf",
+          "status": "ocr_done",
+          "ms": 6523,
+          "confidence": 90,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-14-foreclosures-2026-104.pdf",
+          "status": "ocr_done",
+          "ms": 16840,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-13-foreclosures-2026-103.pdf",
+          "status": "ocr_done",
+          "ms": 9410,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "profile_source_id": "tx_rockwall_county_foreclosure_notices",
+      "summary": {
+        "documents_in_cache": 26,
+        "documents_processed": 26,
+        "documents_missing_cache_body": 0,
+        "documents_attempted": 26,
+        "documents_succeeded": 26,
+        "documents_skipped_oversize": 0,
+        "documents_failed": 0,
+        "pages_rendered": 94,
+        "rows_extracted": 15,
+        "rows_with_complete_source_supported_address": 14,
+        "rows_left_partial": 1,
+        "confidence_distribution": {
+          "high": 15,
+          "medium": 0,
+          "low_rejected": 0,
+          "none": 0
+        },
+        "document_confidence_distribution": {
+          "high": 26,
+          "medium": 0,
+          "low_rejected": 0,
+          "none": 0
+        },
+        "runtime_ms": 429005,
+        "peak_rss_kb": 386900,
+        "reason_counts": {
+          "ocr_completed_no_source_supported_rows": 12,
+          "ocr_done": 14
+        }
+      },
+      "rows": [
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8328",
+          "raw_address": "4028 GROTTO DR, ROYSE CITY, TX 75189",
+          "raw_sale_date": "0/06/2026",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8323",
+          "raw_address": "704 MACKENZIE DR ROYSE CITY, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8313",
+          "raw_address": "122 Mischief Ln, Rockwall, TX 75032",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8298",
+          "raw_address": "577 JAMESTOWN LN FATE, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7850",
+          "raw_address": "204 WINDY LN, ROCKWALL, TX 75087",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7849",
+          "raw_address": "10 SUNSET TRL, HEATH, TX 75032",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7823",
+          "raw_address": "1773 La Costa Drive. Rockwall, TX 75032",
+          "raw_sale_date": "01/06/2026",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7822",
+          "raw_address": "824 COSTLOW LANE, FATE, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7814",
+          "raw_address": "400 NORTHSTAR DRIVE, ROYSE CITY, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7813",
+          "raw_address": "305 Cookston Lane, Royse City, TX 75189",
+          "raw_sale_date": "01/06/2026",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7812",
+          "raw_address": "470 PLEASANT HILL LN Fate, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7793",
+          "raw_address": "10 be posted at the location directed by the Rockwall County Commissioners Court.",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "SOURCE_PROOF_ONLY",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7787",
+          "raw_address": "3401 AUGUSTA BOULEVARD, ROCKWALL, TX 75087",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8353",
+          "raw_address": "045123 2122 MOSSBROOK DRIVE, ROYSE CITY, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        },
+        {
+          "county": "Rockwall",
+          "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8353",
+          "raw_address": "2122 MOSSBROOK DRIVE ROYSE CITY, TX 75189",
+          "raw_sale_date": "",
+          "extraction_method": "ocr_trustee_notice_extraction",
+          "candidate_normalized_address": "",
+          "card_normalized_address": "",
+          "board_normalized_address": "",
+          "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+          "queue_segment": "BLOCKED",
+          "candidate_and_card_agree": true,
+          "losses": [
+            {
+              "stage": "extraction_to_board",
+              "file_line": "modules/research/ocr-notice-extraction.js:163",
+              "classification": "PREVENTABLE",
+              "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+            },
+            {
+              "stage": "board_to_queue",
+              "file_line": "modules/research/free-public-deal-board.js:308",
+              "classification": "PREVENTABLE",
+              "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+            }
+          ]
+        }
+      ],
+      "attempts": [
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8338",
+          "status": "ocr_done",
+          "ms": 24459,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8328",
+          "status": "ocr_done",
+          "ms": 11743,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8323",
+          "status": "ocr_done",
+          "ms": 11722,
+          "confidence": 90,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8315",
+          "status": "ocr_done",
+          "ms": 18199,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8313",
+          "status": "ocr_done",
+          "ms": 14307,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8298",
+          "status": "ocr_done",
+          "ms": 13074,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8291",
+          "status": "ocr_done",
+          "ms": 16307,
+          "confidence": 91,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7851",
+          "status": "ocr_done",
+          "ms": 26463,
+          "confidence": 95,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7850",
+          "status": "ocr_done",
+          "ms": 12288,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7849",
+          "status": "ocr_done",
+          "ms": 12445,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7848",
+          "status": "ocr_done",
+          "ms": 24189,
+          "confidence": 90,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7840",
+          "status": "ocr_done",
+          "ms": 24769,
+          "confidence": 89,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7839",
+          "status": "ocr_done",
+          "ms": 21857,
+          "confidence": 87,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7831",
+          "status": "ocr_done",
+          "ms": 21005,
+          "confidence": 95,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7823",
+          "status": "ocr_done",
+          "ms": 12380,
+          "confidence": 93,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7822",
+          "status": "ocr_done",
+          "ms": 9718,
+          "confidence": 93,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7814",
+          "status": "ocr_done",
+          "ms": 6924,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7813",
+          "status": "ocr_done",
+          "ms": 11803,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7812",
+          "status": "ocr_done",
+          "ms": 9328,
+          "confidence": 92,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7801",
+          "status": "ocr_done",
+          "ms": 28702,
+          "confidence": 95,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7793",
+          "status": "ocr_done",
+          "ms": 6406,
+          "confidence": 86,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7787",
+          "status": "ocr_done",
+          "ms": 11256,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 1
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7777",
+          "status": "ocr_done",
+          "ms": 25043,
+          "confidence": 88,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7744",
+          "status": "ocr_done",
+          "ms": 24417,
+          "confidence": 93,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8356",
+          "status": "ocr_done",
+          "ms": 21859,
+          "confidence": 85,
+          "pass": 1,
+          "rows": 0
+        },
+        {
+          "url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8353",
+          "status": "ocr_done",
+          "ms": 8151,
+          "confidence": 94,
+          "pass": 1,
+          "rows": 2
+        }
+      ]
+    }
+  ],
+  "criterion_5": {
+    "met": true,
+    "hunt_property_traces_used": 3,
+    "navarro_rockwall_property_traces_used": 16,
+    "county_count_with_property_rows": 3,
+    "note": "Six source-backed property-row traces across at least three counties are present."
+  },
+  "traces": [
+    {
+      "county": "Hunt",
+      "source_document_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-07.pdf",
+      "raw_address": "6407 FLAMINGO RD GREENVILLE, TEXAS 75402",
+      "candidate_normalized_address": "6407 FLAMINGO RD, GREENVILLE, TX 75402",
+      "board_normalized_address": "6407 Flamingo Rd, Greenville, TX 75402",
+      "queue_segment": "BLOCKED",
+      "losses": []
+    },
+    {
+      "county": "Hunt",
+      "source_document_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-07.pdf",
+      "raw_address": "6407 FLAMINGO RD GREENVILLE, TX 75402",
+      "candidate_normalized_address": "6407 FLAMINGO RD, GREENVILLE, TX 75402",
+      "board_normalized_address": "6407 Flamingo Rd, Greenville, TX 75402",
+      "queue_segment": "BLOCKED",
+      "losses": []
+    },
+    {
+      "county": "Hunt",
+      "source_document_url": "https://apps.huntcounty.net/foreclosures/LinkedDir/2026/2026-09-01-foreclosure-10.pdf",
+      "raw_address": "1929 STANFORD ST GREENVILLE, TX 75401",
+      "candidate_normalized_address": "1929 STANFORD ST, GREENVILLE, TX 75401",
+      "board_normalized_address": "1929 Stanford St, Greenville, TX 75401",
+      "queue_segment": "BLOCKED",
+      "losses": []
+    },
+    {
+      "county": "Navarro",
+      "source_document_url": "http://navarro.easydocs.us/foreclosures/LinkedDir/2026/2026-08-11-foreclosures-2026-101.pdf",
+      "raw_address": "906 Blue Heron Way, Kerens, Texas 75144",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8328",
+      "raw_address": "4028 GROTTO DR, ROYSE CITY, TX 75189",
+      "raw_sale_date": "0/06/2026",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8323",
+      "raw_address": "704 MACKENZIE DR ROYSE CITY, TX 75189",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8313",
+      "raw_address": "122 Mischief Ln, Rockwall, TX 75032",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=8298",
+      "raw_address": "577 JAMESTOWN LN FATE, TX 75189",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7850",
+      "raw_address": "204 WINDY LN, ROCKWALL, TX 75087",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7849",
+      "raw_address": "10 SUNSET TRL, HEATH, TX 75032",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7823",
+      "raw_address": "1773 La Costa Drive. Rockwall, TX 75032",
+      "raw_sale_date": "01/06/2026",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    },
+    {
+      "county": "Rockwall",
+      "source_document_url": "https://www.rockwallcountytexas.com/Archive.aspx?ADID=7822",
+      "raw_address": "824 COSTLOW LANE, FATE, TX 75189",
+      "raw_sale_date": "",
+      "extraction_method": "ocr_trustee_notice_extraction",
+      "candidate_normalized_address": "",
+      "card_normalized_address": "",
+      "board_normalized_address": "",
+      "board_quality_bucket": "NEEDS_ZIP_REVIEW",
+      "queue_segment": "BLOCKED",
+      "candidate_and_card_agree": true,
+      "losses": [
+        {
+          "stage": "extraction_to_board",
+          "file_line": "modules/research/ocr-notice-extraction.js:163",
+          "classification": "PREVENTABLE",
+          "reason": "OCR text is source evidence but cannot become a normalized address without human review."
+        },
+        {
+          "stage": "board_to_queue",
+          "file_line": "modules/research/free-public-deal-board.js:308",
+          "classification": "PREVENTABLE",
+          "reason": "Source-only identity cannot borrow unrelated courthouse or trustee addresses."
+        }
+      ]
+    }
+  ]
+}

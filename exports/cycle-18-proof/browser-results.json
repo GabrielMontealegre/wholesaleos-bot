@@ -1,0 +1,17 @@
+{
+  "data_kind": "SYNTHETIC_TEST_ONLY",
+  "runtime": {
+    "resolution": "discovered_playwright_browser",
+    "executablePath": "C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium-1117\\chrome-win\\chrome.exe",
+    "default_failure": "browserType.launch: Executable doesn't exist at C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe"
+  },
+  "failed_upload_rejected": true,
+  "duplicate_unconfirmed_uploads_count": 2,
+  "duplicate_uploads_do_not_unlock_comps": true,
+  "persistence_after_refresh": true,
+  "snapshot_unchanged": true,
+  "upload_requests": 3,
+  "page_errors": [],
+  "external_requests": [],
+  "mobile_overflow": false
+}

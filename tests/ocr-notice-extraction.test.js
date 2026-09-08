@@ -18,6 +18,7 @@ process.env.DEAL_BOARD_DOCUMENT_LEDGER_PATH = path.join(tmpDir, 'deal-board-doc-
 
 const ocrExtraction = require('../modules/research/ocr-notice-extraction');
 const countyAdapter = require('../modules/sources/tx-county-foreclosure-acquisition-adapter');
+const browserResolver = require('../modules/research/playwright-browser-resolver');
 
 const CLEAN_NOTICE_OCR_TEXT = [
   'NOTICE OF SUBSTITUTE TRUSTEE SALE',
@@ -38,6 +39,34 @@ function doc(url, bytes) {
 }
 
 (async () => {
+  // 0) Playwright browser resolver: default first, then installed browser cache fallback.
+  const browserRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-browser-cache-'));
+  const fakeExecutable = path.join(browserRoot, 'chromium-1117', 'chrome-win', 'chrome.exe');
+  fs.mkdirSync(path.dirname(fakeExecutable), { recursive: true });
+  fs.writeFileSync(fakeExecutable, 'fake browser executable');
+  const launchCalls = [];
+  const fakeBrowser = { close: async () => {} };
+  const fakePlaywright = {
+    chromium: {
+      launch: async (opts) => {
+        launchCalls.push(opts || {});
+        if (!opts || !opts.executablePath) throw new Error('missing default browser');
+        assert.strictEqual(opts.executablePath, fakeExecutable);
+        return fakeBrowser;
+      }
+    }
+  };
+  const launched = await browserResolver.launchChromiumWithResolvedBrowser(fakePlaywright, { headless: true }, { browser_root: browserRoot });
+  assert.strictEqual(launched.browser, fakeBrowser);
+  assert.strictEqual(launched.runtime.resolution, 'discovered_playwright_browser');
+  assert.strictEqual(launchCalls.length, 2);
+  assert.strictEqual(launchCalls[0].headless, true);
+  assert.strictEqual(launchCalls[1].executablePath, fakeExecutable);
+  await assert.rejects(
+    () => browserResolver.launchChromiumWithResolvedBrowser(fakePlaywright, { headless: true }, { browser_root: path.join(browserRoot, 'none') }),
+    /playwright_browser_unavailable/
+  );
+
   // 1) Clean OCR text -> address/date rows with OCR risk flag and Low confidence.
   const cleanRun = await ocrExtraction.runOcrNoticeExtraction({
     documents: [doc('https://www.rockwallcountytexas.com/Archive.aspx?ADID=7689')]
@@ -51,6 +80,9 @@ function doc(url, bytes) {
   assert.strictEqual(cleanRun.diagnostics.ocr_rows_with_address, 1);
   assert.strictEqual(cleanRun.diagnostics.ocr_rows_with_sale_date, 1);
   const row = cleanRun.rows[0];
+  assert.strictEqual(row.normalized_address, '', 'OCR cannot inherit the text-layer complete address authority');
+  assert.strictEqual(row.source_structured_address_verified, false);
+  assert.strictEqual(row.maps_url, undefined, 'high-confidence OCR still never gets a precise maps URL');
   assert.ok(/88 Heath Ridge Ct/.test(row.address));
   assert.strictEqual(row.sale_date, '08/04/2026');
   assert.strictEqual(row.county, 'Rockwall');

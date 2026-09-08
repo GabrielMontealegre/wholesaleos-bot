@@ -305,6 +305,10 @@ function addressFromAuctionUrl(sourceUrl) {
 }
 
 function addressResolutionFromRecord(record) {
+  if (record && record.property_identity_source_only === true &&
+      record.source_structured_address_verified !== true) {
+    return { address: '', bad_address_rejected: false, bad_address_rejected_reason: '' };
+  }
   const explicit = cleanText(record && (
     record.normalized_address ||
     record.property_address ||
@@ -327,6 +331,10 @@ function addressResolutionFromRecord(record) {
   }
   if (sanitizedExplicit.rejected_reason) {
     return { address: '', bad_address_rejected: true, bad_address_rejected_reason: sanitizedExplicit.rejected_reason };
+  }
+
+  if (record && record.property_identity_source_only === true) {
+    return { address: '', bad_address_rejected: false, bad_address_rejected_reason: '' };
   }
 
   const sourceUrl = cleanText(record && (record.source_url || record.url || record.zillow_url || record.redfin_url || record.realtor_url || record.auction_url));
@@ -909,7 +917,10 @@ function dealFromRecord(record, context) {
   const market = context.market;
   const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
-  const parts = parseAddressParts(address || cleanText(record && (record.raw_address_text || record.address || record.display_address)), market);
+  const sourceOnlyReview = record && record.property_identity_source_only === true &&
+    record.source_structured_address_verified !== true;
+  const rawAddressFallback = sourceOnlyReview ? '' : cleanText(record && (record.raw_address_text || record.address || record.display_address));
+  const parts = parseAddressParts(address || rawAddressFallback, market);
   if (addressResolution.source_structured_address_verified === true) {
     parts.normalized_address = addressResolution.address;
     parts.raw_address_text = addressResolution.address;
@@ -1005,6 +1016,7 @@ function dealFromRecord(record, context) {
     vacant_lot_if_visible: record && record.vacant_lot_if_visible === true ? true : record && record.vacant_lot_if_visible === false ? false : null,
     property_story: record && record.property_story && typeof record.property_story === 'object' ? Object.assign({}, record.property_story) : null,
     source_structured_address_verified: record && record.source_structured_address_verified === true,
+    property_identity_source_only: record && record.property_identity_source_only === true,
     beds: record && record.beds != null ? record.beds : null,
     baths: record && record.baths != null ? record.baths : null,
     sqft: record && record.sqft != null ? record.sqft : null,
@@ -1051,9 +1063,10 @@ function hasExplicitInputRecords(input = {}) {
 function candidateRecord(candidate, source) {
   candidate = candidate || {};
   source = source || {};
+  const sourceOnly = candidate.property_identity_source_only === true;
   return {
     headline: cleanText(candidate.normalized_address || candidate.property_address || candidate.source_row_reference || source.source_name || 'Source adapter candidate'),
-    normalized_address: cleanText(candidate.normalized_address || candidate.property_address),
+    normalized_address: sourceOnly ? cleanText(candidate.normalized_address) : cleanText(candidate.normalized_address || candidate.property_address),
     city: cleanText(candidate.city),
     county: cleanText(candidate.county || source.county),
     state: cleanText(candidate.state || source.state),
@@ -1092,6 +1105,7 @@ function candidateRecord(candidate, source) {
     vacant_lot_if_visible: candidate.vacant_lot_if_visible === true ? true : candidate.vacant_lot_if_visible === false ? false : null,
     property_story: candidate.property_story && typeof candidate.property_story === 'object' ? Object.assign({}, candidate.property_story) : null,
     source_structured_address_verified: candidate.source_structured_address_verified === true,
+    property_identity_source_only: sourceOnly,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
@@ -1109,6 +1123,9 @@ function cardRecord(card, source) {
     query_group: cleanText(card && card.source_name) || cleanText(source && source.source_name)
   });
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
+  record.source_structured_address_verified = card && card.source_structured_address_verified === true;
+  record.property_identity_source_only = card && card.property_identity_source_only === true;
+  if (record.property_identity_source_only) record.normalized_address = cleanText(card.display_address);
   record.source_row_reference = cleanText(card && card.source_row_reference);
   record.contact_route_if_visible = cleanText(card && (card.public_contact_route || card.contact_phone || card.contact_email));
   record.minimum_bid = cleanText(card && card.minimum_bid);

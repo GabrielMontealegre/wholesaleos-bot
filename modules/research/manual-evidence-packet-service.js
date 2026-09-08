@@ -11,6 +11,7 @@ const path = require('path');
 const disclosureStateCompResolution = require('./disclosure-state-comp-resolution');
 const leadOperationsState = require('./lead-operations-state');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
+const leadLifecycleStatus = require('./lead-lifecycle-status');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -362,6 +363,28 @@ function evaluatePacket(packet, row, options = {}) {
     ARV_lock_state: arvUnlocked ? 'ARV_UNLOCKED_VERIFIED_COMPS' : cleanText(row && row.ARV_lock_state) || 'ARV_LOCKED_NO_VERIFIED_COMPS'
   });
   const projectedState = leadOperationsState.rowStateForDeal(projectedRow);
+  // Report route availability independently of valuation and workflow completion.
+  const contactState = leadOperationsState.rowStateForDeal(Object.assign({}, projectedRow, {
+    contact_workflow_complete: false, contact_workflow_outcome: '',
+    contact_workflow_status: '', operator_contact_status: '', lifecycle_status: {}
+  }));
+  const canContact = /^(CALL_READY|OUTREACH_READY|MAIL_READY)$/.test(contactState.row_state);
+  const officialComps = (Array.isArray(row && row.verified_sold_comps) ? row.verified_sold_comps :
+    Array.isArray(row && row.verified_comps) ? row.verified_comps : []).filter((comp) => {
+      const checked = Object.assign({}, comp, { comp_grid: disclosureStateCompResolution.evaluateStrictCompGrid(comp, compGridSubject, options) });
+      return !disclosureStateCompResolution.rejectReason(checked, compGridSubject, options);
+    });
+  const distinctCount = (comps) => new Set(comps.map((comp) => cleanText(comp.parcel_id || comp.apn || comp.pin || comp.comp_address).toLowerCase()).filter(Boolean)).size;
+  const canValue = Math.max(distinctCount(officialComps), distinctCount(usedComps)) >= 3;
+  const lifecycle = leadLifecycleStatus.computeLifecycleStatus(row || {}, options.today_iso || new Date().toISOString());
+  const closedContact = cleanText(row && row.contact_workflow_outcome).toLowerCase() === 'not_interested' || cleanText(row && row.contact_workflow_status).toUpperCase() === 'CLOSED_NOT_INTERESTED';
+  const readiness = {
+    can_contact: { status: canContact ? 'YES' : 'NO', reason: canContact ? contactState.row_state_reason : 'No supported contact route is available for this property.' },
+    can_value: { status: canValue ? 'YES' : 'NO', reason: canValue ? 'Three distinct sold comps pass the existing quality checks.' : 'Fewer than three distinct sold comps pass the existing quality checks.' },
+    ready_to_offer: { status: canContact && canValue && !lifecycle.quarantined && !closedContact ? 'UNKNOWN' : 'NO', reason: closedContact ? 'The operator recorded not interested. This contact workflow is closed.' : lifecycle.quarantined ? lifecycle.reason_text : 'Confirm current event status, title, property condition and offer assumptions before making an offer.' },
+    event_status: lifecycle,
+    not_an_offer_authorization: true
+  };
   const clues = [];
   confirmed.forEach((item) => {
     const fields = item.fields || {};
@@ -372,6 +395,7 @@ function evaluatePacket(packet, row, options = {}) {
   });
   const conflicts = items.flatMap((item) => conflictsForItem(item, row));
   return {
+    readiness,
     confirmed_evidence_count: confirmed.length,
     verified_screenshot_comps: usedComps,
     rejected_screenshot_comps: rejectedComps,
@@ -511,6 +535,8 @@ function sampleItem(row, packetStore, market, options) {
     address_state: cleanText(row.normalized_address) ? 'complete_source_address' : 'partial_address_verify_first',
     lead_origin: leadOrigin(row),
     source_proof_url: cleanText(row.source_document_url || row.source_url),
+    source_event_date: cleanText(row.sale_date_or_event_date || row.sale_date_iso),
+    source_last_checked_at: cleanText(row.last_seen_at || row.retrieved_at),
     why_worth_checking: whyWorthChecking(row),
     row_state: cleanText(row.row_state),
     row_state_reason: cleanText(row.row_state_reason),

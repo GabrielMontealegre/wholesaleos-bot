@@ -71,7 +71,9 @@ function normalizePropertyCandidate(input, context) {
   context = context || {};
   const sourceUrl = cleanText(input.source_url || input.canonical_source_url || input.source_document_url);
   const structuredAddressInput = input.source_structured_address_verified === true
-    ? [input.property_address, input.raw_address_text, input.normalized_address, input.address]
+    ? (input.property_identity_source_only === true
+      ? [input.normalized_address, input.property_address, input.raw_address_text, input.address]
+      : [input.property_address, input.raw_address_text, input.normalized_address, input.address])
       .map(cleanText)
       .find((value) => SOURCE_STRUCTURED_COMPLETE_ADDRESS_RE.test(value)) || ''
     : '';
@@ -120,6 +122,8 @@ function normalizePropertyCandidate(input, context) {
       normalizedAddress = `${normalizedAddress} ${zipMatch[0]}`;
     }
   }
+  // Notice rows nominate one property. Never borrow city/ZIP from the document's other addresses.
+  if (input.property_identity_source_only === true) normalizedAddress = structuredAddressInput || '';
   const sourceType = cleanText(input.source_classification || sourceEvidenceAdapter.classifySourceUrl(sourceUrl));
   const officialSource = inferOfficialSource(input, sourceUrl);
   const base = {
@@ -152,6 +156,7 @@ function normalizePropertyCandidate(input, context) {
     property_address: cleanText(input.property_address || input.address),
     raw_address_text: cleanText(input.raw_address_text || input.property_address || input.address),
     source_structured_address_verified: input.source_structured_address_verified === true,
+    property_identity_source_only: input.property_identity_source_only === true,
     county: cleanText(input.county),
     city: cleanText(input.city),
     state: cleanText(input.state),
@@ -321,6 +326,7 @@ function candidateToFindMeCard(candidate, context) {
     offer_deadline_if_visible: candidate.offer_deadline_if_visible,
     auction_closing_at_if_visible: candidate.auction_closing_at_if_visible,
     source_structured_address_verified: candidate.source_structured_address_verified === true,
+    property_identity_source_only: candidate.property_identity_source_only === true,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
