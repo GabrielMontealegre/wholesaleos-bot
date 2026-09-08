@@ -9932,6 +9932,11 @@ function renderSettings() {
         </div>`).join('')}
       <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="openAddTeamMember()">+ Add Team Member</button>
     </div>
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:20px;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px">Saved Lead Maintenance</div>
+      <div style="font-size:12px;color:#3a3a3c;line-height:1.5;margin-bottom:12px">Rebuild saved lead links rewrites the address and link fields on every saved lead. It runs only when you choose this action and confirm it.</div>
+      <button class="btn btn-outline" onclick="rebuildAllLeadLinksExplicit()">Rebuild saved lead links</button>
+    </div>
     <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:20px">
       <div style="font-size:14px;font-weight:600;margin-bottom:14px">Automation Settings</div>
       <div style="font-size:12px;color:#3a3a3c;line-height:2">
@@ -11805,6 +11810,17 @@ async function saveCustomContractFromUI() {
 // ══════════════════════════════════════════════════════════
 //  BUY BOX MANAGER
 // ══════════════════════════════════════════════════════════
+async function readAdminJsonOrEmpty(url, emptyPayload) {
+  try {
+    const headers = typeof window._authHeaders === 'function' ? window._authHeaders() : {};
+    const res = await fetch(url, { headers: headers });
+    if (!res.ok) return emptyPayload;
+    return await res.json();
+  } catch (e) {
+    return emptyPayload;
+  }
+}
+
 function renderBuyBoxes() {
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -11829,9 +11845,10 @@ async function loadBuyBoxes() {
   const recsEl = document.getElementById('buybox-recs');
   if (!el) return;
   try {
-    const [boxRes, recRes] = await Promise.all([fetch('/api/buyboxes'), fetch('/api/buyboxes/recommendations')]);
-    const boxData = await boxRes.json();
-    const recData = await recRes.json();
+    const [boxData, recData] = await Promise.all([
+      readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}),
+      readAdminJsonOrEmpty('/api/buyboxes/recommendations', {recommendations:[]})
+    ]);
     const boxes = boxData.buyboxes || [];
     if (!boxes.length) {
       el.innerHTML = `<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;border:1px solid #e5e5ea">
@@ -11882,7 +11899,7 @@ async function extractBuyBoxes() {
 }
 
 async function matchDealsForBuyBox(boxId) {
-  const box = (await fetch('/api/buyboxes').then(r=>r.json())).buyboxes?.find(b=>b.id===boxId);
+  const box = (await readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]})).buyboxes?.find(b=>b.id===boxId);
   if (!box) return;
   const matches = APP.leads.filter(l =>
     (!box.state || l.state===box.state) &&
@@ -13163,7 +13180,7 @@ render = function() {
   if (APP.page === 'review') setTimeout(loadReviewQueue, 50);
   if (APP.page === 'automation') setTimeout(function() {
     var el = document.getElementById('buybox-stats');
-    if (el) fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(d){
+    if (el) readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}).then(function(d){
       el.textContent = (d.buyboxes||[]).length + ' buy boxes · ' + APP.buyers.length + ' buyers in database';
     }).catch(function(){});
   }, 50);
@@ -13244,7 +13261,7 @@ function showMatchTab(tab) {
           '</div>';
       }).join('') + '</div>';
   } else {
-    fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(data) {
+    readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}).then(function(data) {
       var boxes = data.buyboxes || [];
       if (!boxes.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b">No buy boxes yet. Go to Buy Boxes tab to extract from buyers.</div>'; return; }
       el.innerHTML = '<div style="display:grid;gap:10px">' +
@@ -16198,6 +16215,11 @@ function renderSettings() {
         </div>`).join('')}
       <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="openAddTeamMember()">+ Add Team Member</button>
     </div>
+    <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:20px;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px">Saved Lead Maintenance</div>
+      <div style="font-size:12px;color:#3a3a3c;line-height:1.5;margin-bottom:12px">Rebuild saved lead links rewrites the address and link fields on every saved lead. It runs only when you choose this action and confirm it.</div>
+      <button class="btn btn-outline" onclick="rebuildAllLeadLinksExplicit()">Rebuild saved lead links</button>
+    </div>
     <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:20px">
       <div style="font-size:14px;font-weight:600;margin-bottom:14px">Automation Settings</div>
       <div style="font-size:12px;color:#3a3a3c;line-height:2">
@@ -18076,9 +18098,10 @@ async function loadBuyBoxes() {
   const recsEl = document.getElementById('buybox-recs');
   if (!el) return;
   try {
-    const [boxRes, recRes] = await Promise.all([fetch('/api/buyboxes'), fetch('/api/buyboxes/recommendations')]);
-    const boxData = await boxRes.json();
-    const recData = await recRes.json();
+    const [boxData, recData] = await Promise.all([
+      readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}),
+      readAdminJsonOrEmpty('/api/buyboxes/recommendations', {recommendations:[]})
+    ]);
     const boxes = boxData.buyboxes || [];
     if (!boxes.length) {
       el.innerHTML = `<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;border:1px solid #e5e5ea">
@@ -18129,7 +18152,7 @@ async function extractBuyBoxes() {
 }
 
 async function matchDealsForBuyBox(boxId) {
-  const box = (await fetch('/api/buyboxes').then(r=>r.json())).buyboxes?.find(b=>b.id===boxId);
+  const box = (await readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]})).buyboxes?.find(b=>b.id===boxId);
   if (!box) return;
   const matches = APP.leads.filter(l =>
     (!box.state || l.state===box.state) &&
@@ -19261,7 +19284,7 @@ function showMatchTab(tab) {
           '</div>';
       }).join('') + '</div>';
   } else {
-    fetch('/api/buyboxes').then(function(r){return r.json();}).then(function(data) {
+    readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}).then(function(data) {
       var boxes = data.buyboxes || [];
       if (!boxes.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#86868b">No buy boxes yet. Go to Buy Boxes tab to extract from buyers.</div>'; return; }
       el.innerHTML = '<div style="display:grid;gap:10px">' +
@@ -21255,8 +21278,8 @@ function loadMatchingData() {
   return Promise.all([
     fetch('/api/buyers').then(function(r){return r.json();}).catch(function(){return {buyers:[]};}),
     fetch('/api/leads?limit=300&sort=motivation_score').then(function(r){return r.json();}).catch(function(){return {leads:[]};}),
-    fetch('/api/buyboxes').then(function(r){return r.json();}).catch(function(){return {buyboxes:[]};}),
-    fetch('/api/buyboxes/recommendations').then(function(r){return r.json();}).catch(function(){return {recommendations:[]};})
+    readAdminJsonOrEmpty('/api/buyboxes', {buyboxes:[]}),
+    readAdminJsonOrEmpty('/api/buyboxes/recommendations', {recommendations:[]})
   ]).then(function(res){
     APP.buyers=res[0].buyers||res[0]||[];
     var ls=res[1].leads||res[1]||[];
@@ -27567,20 +27590,20 @@ window.openWholesaleGuide = function() {
   }, 800);
 })();
 
-// ── Rebuild links on first load (runs once) ──
-(function rebuildLinksOnce() {
-  var key = 'montsan_links_rebuilt_v3';
-  if (localStorage.getItem(key)) return;
-  fetch('/api/leads/rebuild-links', { method:'POST', headers: window._authHeaders() })
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if (d.ok) {
-        localStorage.setItem(key, '1');
-        console.log('Links rebuilt for '+d.rebuilt+' leads');
-      }
-    })
-    .catch(function(){});
-})();
+// ── Explicit saved-lead maintenance action ──
+window.rebuildAllLeadLinksExplicit = async function() {
+  var warning = 'This rewrites the address and link fields on every saved lead. Continue?';
+  if (!window.confirm(warning)) return;
+  try {
+    var headers = typeof window._authHeaders === 'function' ? window._authHeaders() : {};
+    var res = await fetch('/api/leads/rebuild-links', { method:'POST', headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Rebuild failed');
+    toast('Saved lead links rebuilt for ' + (data.rebuilt || 0) + ' leads', 'success');
+  } catch (error) {
+    toast('Saved lead link rebuild failed: ' + error.message, 'error');
+  }
+};
 
 // ── Run system limits check (once per session) ──
 setTimeout(checkSystemLimits, 3000);

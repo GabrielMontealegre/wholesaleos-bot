@@ -845,6 +845,10 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Documents Needing Review'), 'dashboard must render the terminal document review panel');
   assert.ok(uiSource.includes('Mark reviewed'), 'dashboard must expose the terminal review clear button');
   assert.ok(uiSource.includes('Manual Evidence Packet'), 'dashboard must render the manual evidence packet');
+  assert.ok(!indexHtml.includes('rebuildLinksOnce'), 'dashboard load must not invoke saved-lead link rebuilding');
+  assert.ok(!indexHtml.includes('montsan_links_rebuilt_v3'), 'dashboard must not retain the automatic rebuild localStorage gate');
+  assert.ok(indexHtml.includes('rebuildAllLeadLinksExplicit') && indexHtml.includes('rewrites the address and link fields on every saved lead'), 'settings must expose an explicit warned saved-lead maintenance action');
+  assert.ok(indexHtml.includes('readAdminJsonOrEmpty') && indexHtml.includes("typeof window._authHeaders === 'function'"), 'admin-gated buy-box reads must use guarded auth headers');
   assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_UPLOAD') && uiSource.includes('/manual-evidence/upload'), 'dashboard must call the screenshot upload route');
   assert.ok(uiSource.includes('API_MANUAL_EVIDENCE_PROPOSAL') && uiSource.includes('/manual-evidence/proposal'), 'dashboard must confirm OCR proposals through an explicit route');
   assert.ok(uiSource.includes('API_MARKET_DEMAND_INDEX') && uiSource.includes('County Demand Index'), 'dashboard must render the separate county demand index');
