@@ -1,0 +1,312 @@
+{
+  "data_kind": "SYNTHETIC_TEST_ONLY",
+  "generated_at": "2026-09-08T21:39:24.152Z",
+  "browser_runtime": {
+    "resolution": "discovered_playwright_browser",
+    "executablePath": "C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium-1117\\chrome-win\\chrome.exe",
+    "default_failure": "browserType.launch: Executable doesn't exist at C:\\Users\\criss\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe"
+  },
+  "observation_window_ms": 5000,
+  "dashboard_rendered": true,
+  "readiness_axes_rendered": true,
+  "non_get_request_count": 0,
+  "failed_response_count": 0,
+  "console_error_count": 0,
+  "page_error_count": 0,
+  "isolated_db_byte_identical": true,
+  "buybox_reads_include_admin_header": true,
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/auth/role?uid=admin",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-theme-a1.js?v=1",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-features.js?v=17",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-outreach.js?v=1",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-pipeline.js?v=1",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-comms.js?v=1",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-leads-detail.js?v=2",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-buyers.js?v=1",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/dashboard/wos-public-deals.js?v=27",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/buyers",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/leads?limit=300&sort=motivation_score",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/buyboxes",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/buyboxes/recommendations",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/leads?limit=300&offset=0&sort=priority&operational_mode=national",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/auth/role",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/dashboard/free-public-deal-board/latest?city=Dallas&county=Dallas&state=TX",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/deal-call-dossiers?limit=50",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/buyers",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/dashboard/market-demand-index?limit=400",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/deal-call-dossiers?limit=50",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/review-queue",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/review-queue",
+      "status": 200,
+      "failure": ""
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:54799/api/system/limits",
+      "status": 200,
+      "failure": ""
+    }
+  ],
+  "server_requests": [
+    {
+      "method": "GET",
+      "url": "/dashboard/",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/auth/role?uid=admin",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-theme-a1.js?v=1",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-features.js?v=17",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-outreach.js?v=1",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-pipeline.js?v=1",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-comms.js?v=1",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-leads-detail.js?v=2",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-buyers.js?v=1",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/dashboard/wos-public-deals.js?v=27",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/buyers",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/leads?limit=300&sort=motivation_score",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/buyboxes",
+      "x_user_id": "admin",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/buyboxes/recommendations",
+      "x_user_id": "admin",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/leads?limit=300&offset=0&sort=priority&operational_mode=national",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/auth/role",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/dashboard/free-public-deal-board/latest?city=Dallas&county=Dallas&state=TX",
+      "x_user_id": "admin",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/deal-call-dossiers?limit=50",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/buyers",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/dashboard/market-demand-index?limit=400",
+      "x_user_id": "admin",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/deal-call-dossiers?limit=50",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/review-queue",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/review-queue",
+      "x_user_id": "",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/limits",
+      "x_user_id": "admin",
+      "status": 200
+    }
+  ],
+  "console_errors": [],
+  "page_errors": []
+}

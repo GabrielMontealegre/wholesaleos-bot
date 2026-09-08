@@ -41,6 +41,9 @@ exports/cycle-20-dashboard-packet/*
 !exports/cycle-20-dashboard-packet/browser-results.json
 !exports/cycle-20-dashboard-packet/synthetic-desktop-packet.png
 !exports/cycle-20-dashboard-packet/synthetic-mobile-packet.png
+!exports/cycle-21-dashboard-hygiene/
+exports/cycle-21-dashboard-hygiene/*
+!exports/cycle-21-dashboard-hygiene/load-requests.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json
