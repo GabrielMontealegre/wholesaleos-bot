@@ -7,7 +7,8 @@ const os = require('os');
 const assert = require('assert');
 const root = path.resolve(__dirname, '..');
 const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
-const proof = path.join(root, 'exports/cycle-18-proof');
+const proof = path.resolve(root, process.env.CYCLE_BROWSER_PROOF_DIR || 'exports/cycle-18-proof');
+const harnessPage = process.env.CYCLE_BROWSER_PROOF_PAGE === 'dashboard' ? 'dashboard' : 'findme_scout';
 fs.mkdirSync(proof, { recursive: true });
 const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'cycle18-synthetic-'));
 process.env.DB_PATH = path.join(isolated, 'db.json');
@@ -35,7 +36,7 @@ const express = require('express');
 const app = express();
 const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: service.MAX_UPLOAD_BYTES } });
 let uploadCount = 0;
-app.get('/', (req, res) => res.type('html').send('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cycle 18 SYNTHETIC TEST ONLY</title><style>body{margin:0;font:14px Arial;background:#fafafa;color:#191919}h1{font-size:20px;padding:16px;margin:0;background:#ffeb9c}*,*:before,*:after{box-sizing:border-box}#content{max-width:1400px;margin:auto}</style></head><body><h1>SYNTHETIC TEST ONLY - not a real lead</h1><main id="content"></main><script>window.APP={page:"findme_scout"};window._uid="synthetic-test-operator";</script><script src="/dashboard/wos-public-deals.js"></script></body></html>'));
+app.get('/', (req, res) => res.type('html').send('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cycle 20 SYNTHETIC TEST ONLY</title><style>body{margin:0;font:14px Arial;background:#fafafa;color:#191919}h1{font-size:20px;padding:16px;margin:0;background:#ffeb9c}*,*:before,*:after{box-sizing:border-box}#content{max-width:1400px;margin:auto}</style></head><body><h1>SYNTHETIC TEST ONLY - not a real lead</h1><main id="content"></main><script>window.APP={page:' + JSON.stringify(harnessPage) + '};window._uid="synthetic-test-operator";</script><script src="/dashboard/wos-public-deals.js"></script></body></html>'));
 app.get('/dashboard/wos-public-deals.js', (req, res) => res.sendFile(path.join(root, 'dashboard/wos-public-deals.js')));
 app.get('/api/dashboard/free-public-deal-board/latest', (req, res) => res.json({ ok: true, has_snapshot: true, market, rows: [row], counts: {}, source_coverage: [], auto_run: { enabled: false }, manual_evidence_packet: service.latestManualEvidenceSnapshot({ market }, { today_iso: today }) }));
 app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', upload.single('screenshot'), async (req, res) => {
@@ -64,7 +65,7 @@ async function main() {
     const card = page.locator('.wos-manual-evidence-card').first();
     assert((await card.innerText()).includes('Can contact: YES'));
     assert((await card.innerText()).includes('Can value: NO'));
-    await card.screenshot({ path: path.join(proof, 'synthetic-desktop-packet.png') });
+    await page.screenshot({ path: path.join(proof, 'synthetic-desktop-packet.png'), fullPage: true });
     const slot = card.locator('.wos-manual-upload-slot').first();
     await slot.locator('.wos-manual-source-url').fill('https://county.example.gov/SYNTHETIC');
     await slot.locator('input[type=file]').setInputFiles({ name: 'bad.png', mimeType: 'image/png', buffer: Buffer.from('invalid image') });
@@ -94,7 +95,7 @@ async function main() {
     const overflow = await page.locator('.wos-manual-evidence-card').evaluate((el) => el.scrollWidth > el.clientWidth + 2);
     assert.strictEqual(overflow, false, 'Packet must fit mobile width');
     assert.deepStrictEqual(errors, []); assert.deepStrictEqual(external, []);
-    fs.writeFileSync(path.join(proof, 'browser-results.json'), JSON.stringify({ data_kind: 'SYNTHETIC_TEST_ONLY', runtime: browserRuntime, failed_upload_rejected: true, duplicate_unconfirmed_uploads_count: 2, duplicate_uploads_do_not_unlock_comps: true, persistence_after_refresh: true, snapshot_unchanged: true, upload_requests: uploadCount, page_errors: errors, external_requests: external, mobile_overflow: overflow }, null, 2));
+    fs.writeFileSync(path.join(proof, 'browser-results.json'), JSON.stringify({ data_kind: 'SYNTHETIC_TEST_ONLY', page: harnessPage, runtime: browserRuntime, failed_upload_rejected: true, duplicate_unconfirmed_uploads_count: 2, duplicate_uploads_do_not_unlock_comps: true, persistence_after_refresh: true, snapshot_unchanged: true, upload_requests: uploadCount, page_errors: errors, external_requests: external, mobile_overflow: overflow }, null, 2));
     console.log('Local browser proof passed; 4 screenshots captured; no external requests.');
   } finally { if (browser) await browser.close(); await new Promise((resolve) => server.close(resolve)); }
 }

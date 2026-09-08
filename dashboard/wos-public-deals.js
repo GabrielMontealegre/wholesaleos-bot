@@ -338,7 +338,8 @@
   function manualEvidencePanel(data) {
     var packet = data && data.manual_evidence_packet || {};
     var items = safeArray(packet.items);
-    return panelBox('Manual Evidence Packet <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;">' + esc(String(packet.selected_count || 0)) + ' sample leads</span>',
+    var confirmed = items.reduce(function (sum, item) { return sum + Number(item.packet && item.packet.evaluation && item.packet.evaluation.confirmed_evidence_count || 0); }, 0);
+    return panelBox('Manual Evidence Packet <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;">' + esc(String(packet.selected_count || 0)) + ' sample leads</span> <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#bbf7d0;">' + esc(String(confirmed)) + ' confirmed evidence</span>',
       'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
       '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
       (items.length ? items.map(manualEvidenceCard).join('') : '<div style="font-size:12px;color:#6b7280;margin-top:8px;">' + esc(packet.empty_reason || 'No eligible stored rows for this market yet.') + '</div>'), '#60a5fa');
@@ -969,19 +970,23 @@
     if (!body) return;
     var rows = Array.isArray(data.rows) ? data.rows : [];
     var page = currentPage();
+    body.innerHTML = panelsForPage(page, data, rows, note);
     if (page === 'dashboard') {
-      body.innerHTML =
-        (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
-        dealDeskCard(data, rows) +
-        manualEvidenceSummary(data) +
-        documentReviewPanel(data) +
-        countyOnboardingPanel(data) +
-        marketDemandPanel();
       fetchMarketDemand(container);
       return;
     }
-    body.innerHTML =
-      (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
+  }
+
+  function panelsForPage(page, data, rows, note) {
+    if (page === 'dashboard') {
+      return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
+        dealDeskCard(data, rows) +
+        manualEvidencePanel(data) +
+        documentReviewPanel(data) +
+        countyOnboardingPanel(data) +
+        marketDemandPanel();
+    }
+    return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
       dailyMachinePanel(data, rows) +
       zipReviewPanel(rows) +
       manualEvidencePanel(data) +
@@ -1364,6 +1369,9 @@
   }
 
   window.__wosPublicDealsTestHooks = {
+    panelsForPage: panelsForPage,
+    manualEvidencePanel: manualEvidencePanel,
+    manualEvidenceCard: manualEvidenceCard,
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
     urgentContextLabel: urgentContextLabel,

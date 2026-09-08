@@ -819,7 +819,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=26'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=27'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -955,6 +955,51 @@ function mockDeal(overrides) {
   uiContext.window.__wosPublicDealsTestHooks.storeSelectedMarket('san_antonio');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().county, 'Bexar');
   assert.ok(/city=San%20Antonio&county=Bexar&state=TX/.test(uiContext.window.__wosPublicDealsTestHooks.latestUrl()), 'latest snapshot URL must target the selected market');
+  const packetFixture = {
+    manual_evidence_packet: {
+      selected_count: 1,
+      items: [{
+        queue_key: 'synthetic|dashboard-packet|1',
+        headline: 'SYNTHETIC TEST PROPERTY',
+        address: '100 Synthetic Proof St, Dallas, TX 75201',
+        address_state: 'complete_source_supported_address',
+        lead_origin: 'SYNTHETIC TEST ONLY',
+        source_proof_url: 'https://county.example.gov/synthetic-proof.pdf',
+        source_event_date: '2026-09-15',
+        source_last_checked_at: '2026-09-08T12:00:00.000Z',
+        why_worth_checking: 'Synthetic fixture for render-path verification.',
+        row_state: 'CALL_READY',
+        missing_evidence: ['3 verified sold comps'],
+        research_links: [],
+        packet: {
+          evidence_items: [],
+          evaluation: {
+            confirmed_evidence_count: 2,
+            verified_sold_comp_count: 0,
+            arv_status: 'ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS',
+            readiness: {
+              can_contact: { status: 'YES', reason: 'Synthetic supported contact route.' },
+              can_value: { status: 'NO', reason: 'Synthetic fixture has fewer than three comps.' },
+              ready_to_offer: { status: 'NO', reason: 'Synthetic fixture is not offer ready.' },
+              event_status: { reason_text: 'Synthetic event status for rendering only.' }
+            }
+          }
+        }
+      }]
+    }
+  };
+  const dashboardPanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard', packetFixture, [], '');
+  const dealFinderPanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', packetFixture, [], '');
+  ['Manual Evidence Packet', 'Can contact', 'Can value', 'Ready to offer', 'Source event date', 'Last checked', '100 Synthetic Proof St, Dallas, TX 75201'].forEach((text) => {
+    assert.ok(dashboardPanels.includes(text), `Dashboard rendered output must include ${text}`);
+    assert.ok(dealFinderPanels.includes(text), `Deal Finder rendered output must include ${text}`);
+  });
+  assert.ok(dashboardPanels.includes('2 confirmed evidence'), 'Dashboard packet title must retain the confirmed-evidence count');
+  assert.strictEqual((dashboardPanels.match(/Manual Evidence Packet/g) || []).length, 1, 'Dashboard must render exactly one Manual Evidence Packet heading');
+  assert.ok(!dashboardPanels.includes('Ready to offer: YES'), 'Dashboard must never render automatic offer authorization');
+  assert.ok(!dealFinderPanels.includes('Ready to offer: YES'), 'Deal Finder must never render automatic offer authorization');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidencePanel, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidenceCard, 'function');
   const orderedRows = uiContext.window.__wosPublicDealsTestHooks.sortTopDealsRows([
     { headline: 'dateless', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: '' },
     { headline: 'passed', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: yesterday },
