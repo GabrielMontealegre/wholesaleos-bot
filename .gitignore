@@ -44,6 +44,9 @@ exports/cycle-20-dashboard-packet/*
 !exports/cycle-21-dashboard-hygiene/
 exports/cycle-21-dashboard-hygiene/*
 !exports/cycle-21-dashboard-hygiene/load-requests.json
+!exports/cycle-22-contact-routes/
+exports/cycle-22-contact-routes/*
+!exports/cycle-22-contact-routes/measurement.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

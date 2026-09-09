@@ -16,7 +16,8 @@ function route(kind, value, overrides) {
     value,
     source_kind: 'official_public_record',
     source_url: 'https://county.example.gov/property/1',
-    evidence_text: `${kind} is visible on the official public record.`
+    evidence_text: `Owner of record ${kind} is visible on the official public record.`,
+    route_type: 'owner'
   }, overrides || {});
 }
 
@@ -53,6 +54,18 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
 
   const email = row({ free_contact_status: 'OUTREACH_READY', free_contact_routes: [route('email', 'seller@example.com')] });
   assertState('OUTREACH_READY', email, /email, form, or reply route/i, /outreach route/i);
+
+  ['trustee', 'servicer', 'attorney'].forEach((roleName) => {
+    const nonSeller = row({
+      free_contact_status: 'CALL_READY',
+      free_contact_routes: [route('phone', '(214) 555-0199', {
+        route_type: 'trustee_servicer_or_official',
+        evidence_text: `${roleName} phone is visible on the official notice.`
+      })],
+      enrichment_ledger: { attempts: [] }
+    });
+    assertState('NEEDS_CONTACT_SEARCH', nonSeller, /free public contact search has not finished/i, /free contact lanes run/i);
+  });
 
   const mailing = row({
     free_contact_status: 'MAIL_READY',

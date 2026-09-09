@@ -20,11 +20,11 @@ const CONTACT_LANES = ['row_source_document', 'county_appraisal', 'public_search
 function phoneRoute(number) {
   return {
     route_kind: 'phone',
-    route_type: 'official_public_contact',
+    route_type: 'owner',
     value: number,
     source_kind: 'official_public_record',
     source_url: 'https://county.example.gov/property/1',
-    evidence_text: `Phone ${number} is visible on the official public record.`
+    evidence_text: `Owner of record phone ${number} is visible on the official public record.`
   };
 }
 

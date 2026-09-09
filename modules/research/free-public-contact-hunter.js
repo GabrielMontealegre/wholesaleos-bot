@@ -12,6 +12,7 @@
 // - blocked sources (captcha/login/paywall/403/429) are reported, not bypassed
 
 const searchProviderWorker = require('./search-provider-worker');
+const contactRouteRoles = require('./contact-route-roles');
 
 const DEFAULT_CAPS = Object.freeze({
   max_rows: 6,
@@ -215,8 +216,9 @@ function addressParts(address) {
 }
 
 function contactStatusFromRoutes(routes, mailingRoute, searchesRun) {
-  if (routes.some((route) => route.route_kind === 'phone')) return 'CALL_READY';
-  if (routes.some((route) => route.route_kind === 'email' || route.route_kind === 'form' || route.route_kind === 'reply_link')) return 'OUTREACH_READY';
+  const sellerEligible = (route) => contactRouteRoles.sellerContactEligibility(route).status === contactRouteRoles.SELLER_CONTACT_ELIGIBLE;
+  if (routes.some((route) => route.route_kind === 'phone' && sellerEligible(route))) return 'CALL_READY';
+  if (routes.some((route) => (route.route_kind === 'email' || route.route_kind === 'form' || route.route_kind === 'reply_link') && sellerEligible(route))) return 'OUTREACH_READY';
   if (mailingRoute && mailingRoute.value) return 'MAIL_READY';
   return searchesRun.length ? 'CONTACT_SEARCH_EXHAUSTED_FREE' : 'CONTACT_SEARCH_NOT_RUN';
 }
@@ -355,8 +357,9 @@ async function huntContactForRow(row, options, caps, budget, cache) {
     }
   }
 
-  routes = routes.slice(0, 10);
+  routes = routes.slice(0, 10).map(contactRouteRoles.withContactRouteRole);
   const status = contactStatusFromRoutes(routes, mailingRoute, searchesRun);
+  const eligibleRoute = routes.find((route) => route.seller_contact_eligibility === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
   return {
     free_contact_status: status,
     free_contact_routes: routes,
@@ -366,7 +369,9 @@ async function huntContactForRow(row, options, caps, budget, cache) {
     blocked_sources: blockedSources,
     next_free_action: nextFreeAction(status, blockedSources),
     why_call_ready_or_blocked: status === 'CALL_READY'
-      ? `Visible ${routes.find((route) => route.route_kind === 'phone').route_type.replace(/_/g, ' ')} phone found with source evidence; it is not confirmed as the owner.`
+      ? `Seller-eligible ${eligibleRoute.role} phone found with source evidence.`
+      : status === 'OUTREACH_READY'
+        ? `Seller-eligible ${eligibleRoute.role} outreach route found with source evidence.`
       : status === 'MAIL_READY'
         ? 'Owner mailing route visible on county record; no public phone/email found.'
         : blockedSources.length
@@ -417,5 +422,6 @@ module.exports = {
   DEFAULT_CAPS,
   runFreePublicContactHunter,
   mineContactRoutesFromText,
-  ownerCluesFromText
+  ownerCluesFromText,
+  contactStatusFromRoutes
 };
