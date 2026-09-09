@@ -54,7 +54,7 @@ assert.strictEqual(unavailable.readiness.can_value.status, 'NO', 'A count withou
 assert.strictEqual(unavailable.readiness.ready_to_offer.status, 'NO');
 assert.strictEqual(unavailable.readiness.event_status.status, 'SALE_PASSED');
 assert.strictEqual(JSON.stringify(subject), original);
-const callable = { ...subject, free_contact_routes: [{ route_kind: 'phone', value: '202-555-0100', source_kind: 'public_source_document', source_url: 'https://county.example.gov/synthetic', evidence_text: 'SYNTHETIC TEST route to test contact availability.' }] };
+const callable = { ...subject, free_contact_routes: [{ route_kind: 'phone', route_type: 'owner', value: '202-555-0100', source_kind: 'public_source_document', source_url: 'https://county.example.gov/synthetic', evidence_text: 'SYNTHETIC TEST owner of record phone route.' }] };
 const ready = service.evaluatePacket({}, callable, { today_iso: '2026-09-07' }).readiness;
 assert.strictEqual(ready.can_contact.status, 'YES');
 assert.strictEqual(ready.can_value.status, 'NO');

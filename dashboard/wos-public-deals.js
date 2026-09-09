@@ -188,6 +188,57 @@
       '<span class="wos-contact-message" style="font-size:11px;color:#6b7280;">Nothing changes until you save an outcome.</span></div>';
   }
 
+  function routeInvalidated(row, route) {
+    if (route && route.operator_disproved === true) return true;
+    if (safeArray(route && route.risk_flags).indexOf('OPERATOR_WRONG_NUMBER_REPORTED') !== -1) return true;
+    var value = String(route && route.value || '').trim();
+    return Boolean(value && safeArray(row && row.contact_workflow_invalidated_routes).some(function (item) {
+      return String(item && item.value || '').trim() === value;
+    }));
+  }
+
+  function contactRouteName(route) {
+    return route.contact_name || route.person_name || route.entity_name || route.owner_name ||
+      route.taxpayer_name || route.source_stated_name || 'Not stated by source';
+  }
+
+  function contactRouteLine(row, route, sellerEligible) {
+    var value = String(route.value || '').trim();
+    var role = route.role || 'unknown';
+    var checked = route.last_checked_at || route.source_last_checked_at || route.checked_at ||
+      row.source_last_checked_at || row.last_checked_at || 'Not recorded';
+    var controls = '';
+    if (sellerEligible && route.route_kind === 'phone') {
+      controls = ' <a class="wos-seller-call" href="tel:' + esc(value) + '" style="font-size:11px;font-weight:700;color:#065f46;">Call seller</a>' +
+        ' <button type="button" class="wos-copy-seller-number" data-contact-value="' + esc(value) + '" style="padding:2px 6px;border:1px solid #86efac;border-radius:5px;background:#f0fdf4;color:#065f46;font-size:10px;cursor:pointer;">Copy number</button>';
+    }
+    return '<div class="wos-contact-route" data-contact-role="' + esc(role) + '" data-contact-eligibility="' + esc(route.seller_contact_eligibility || 'RESEARCH_ONLY') + '" style="font-size:11px;margin-top:5px;padding:6px 8px;border:1px solid ' + (sellerEligible ? '#86efac' : '#fde68a') + ';border-radius:6px;background:' + (sellerEligible ? '#f0fdf4' : '#fffbeb') + ';">' +
+      '<div><b>' + esc(value) + '</b>' + controls + '</div>' +
+      '<div>Person/entity: <b>' + esc(contactRouteName(route)) + '</b> | Role: <b>' + esc(String(role).replace(/_/g, ' ')) + '</b> | Eligibility: <b>' + esc(route.seller_contact_eligibility || 'RESEARCH_ONLY') + '</b></div>' +
+      '<div>Evidence: ' + esc(route.evidence_text || 'Not recorded') + ' ' + link('contact proof', route.source_url) + '</div>' +
+      '<div>Last checked: ' + esc(checked) + (route.seller_contact_eligibility_reason ? ' | ' + esc(route.seller_contact_eligibility_reason) : '') + '</div>' +
+      '</div>';
+  }
+
+  function contactRoutesHtml(row) {
+    var routes = safeArray(row && row.free_contact_routes).filter(function (route) {
+      return route && route.value && !routeInvalidated(row, route);
+    });
+    if (!routes.length) return '';
+    var eligible = routes.filter(function (route) { return route.seller_contact_eligibility === 'SELLER_CONTACT_ELIGIBLE'; });
+    var research = routes.filter(function (route) { return route.seller_contact_eligibility !== 'SELLER_CONTACT_ELIGIBLE'; });
+    var html = '';
+    if (eligible.length) {
+      html += '<div class="wos-seller-contact-routes" style="margin-top:6px;"><div style="font-size:12px;font-weight:700;color:#065f46;">Seller contact routes</div>' +
+        eligible.map(function (route) { return contactRouteLine(row, route, true); }).join('') + '</div>';
+    }
+    if (research.length) {
+      html += '<div class="wos-research-contact-routes" style="margin-top:6px;"><div style="font-size:12px;font-weight:700;color:#92400e;">Research contacts - not the seller</div>' +
+        research.map(function (route) { return contactRouteLine(row, route, false); }).join('') + '</div>';
+    }
+    return html;
+  }
+
   function documentReviewItem(item) {
     var docUrl = item && item.document_url || '';
     return '<div class="wos-document-review-item" data-queue-key="' + esc(item.queue_key || '') + '" data-document-url="' + esc(docUrl) + '" style="border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' +
@@ -452,7 +503,8 @@
     var links = link('Source proof', row.source_document_url || row.source_url) + link('Best click', row.best_link_to_click_first) +
       link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
-    if (row.best_contact) lines.push('<div style="font-size:12px;">Contact route: <b>' + esc(row.best_contact) + '</b></div>');
+    var contactRoutes = contactRoutesHtml(row);
+    if (contactRoutes) lines.push(contactRoutes);
     if (row.foreclosure_type || row.source_row_reference || row.filing_period) {
       lines.push('<div style="font-size:12px;color:#374151;">' +
         (row.foreclosure_type ? 'Type: <b>' + esc(row.foreclosure_type) + '</b> ' : '') +
@@ -1127,6 +1179,16 @@
       });
   }
 
+  function copySellerNumber(button) {
+    var value = button && button.dataset && button.dataset.contactValue;
+    if (!value || !navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') return;
+    navigator.clipboard.writeText(value).then(function () {
+      button.textContent = 'Copied';
+    }).catch(function () {
+      button.textContent = 'Copy failed';
+    });
+  }
+
   function uploadManualEvidence(container, button) {
     var card = button.closest && button.closest('.wos-manual-evidence-card');
     var slot = button.closest && button.closest('.wos-manual-upload-slot');
@@ -1275,6 +1337,8 @@
         if (button) saveContactWorkflow(section, button);
         var reviewButton = event.target && event.target.closest && event.target.closest('.wos-document-review-clear');
         if (reviewButton) clearDocumentReview(section, reviewButton);
+        var copyButton = event.target && event.target.closest && event.target.closest('.wos-copy-seller-number');
+        if (copyButton) copySellerNumber(copyButton);
         var uploadButton = event.target && event.target.closest && event.target.closest('.wos-manual-upload');
         if (uploadButton) uploadManualEvidence(section, uploadButton);
         var confirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-confirm');
@@ -1375,6 +1439,8 @@
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
     urgentContextLabel: urgentContextLabel,
+    contactRoutesHtml: contactRoutesHtml,
+    routeInvalidated: routeInvalidated,
     selectedMarket: selectedMarket,
     storeSelectedMarket: storeSelectedMarket,
     latestUrl: latestUrl

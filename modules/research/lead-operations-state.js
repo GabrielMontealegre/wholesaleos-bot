@@ -1,6 +1,7 @@
 'use strict';
 
 const fieldProvenance = require('./field-provenance');
+const contactRouteRoles = require('./contact-route-roles');
 
 const ROW_STATES = Object.freeze({
   LOCKED: 'LOCKED',
@@ -36,7 +37,8 @@ function routeDisprovedByOperator(deal, route) {
 function provenRoute(deal, matcher) {
   return routesForDeal(deal).find((route) => route && cleanText(route.value) &&
     !routeDisprovedByOperator(deal, route) &&
-    matcher(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route)) || null;
+    matcher(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route) &&
+    contactRouteRoles.sellerContactEligibility(route).status === contactRouteRoles.SELLER_CONTACT_ELIGIBLE) || null;
 }
 
 function provenMailingRoute(deal) {

@@ -288,6 +288,22 @@ function pngBuffer(size) {
   assert.notStrictEqual(servicerContact.projected_row_state, 'CALL_READY');
   assert.strictEqual(ownerContact.contact_routes_accepted.length, 1);
   assert.strictEqual(ownerContact.projected_row_state, 'CALL_READY');
+  assert.strictEqual(ownerContact.contact_routes_accepted[0].role, 'owner');
+  assert.strictEqual(ownerContact.contact_routes_accepted[0].source_kind, 'operator_supplied_screenshot');
+  assert.strictEqual(ownerContact.contact_routes_accepted[0].seller_contact_eligibility, 'SELLER_CONTACT_ELIGIBLE');
+  assert.strictEqual(ownerContact.contact_routes_accepted[0].contact_name, 'JANE SAMPLE');
+  assert.strictEqual(unknownContact.readiness.can_contact.status, 'NO');
+  assert.strictEqual(relativeContact.readiness.can_contact.status, 'NO');
+  assert.strictEqual(servicerContact.readiness.can_contact.status, 'NO');
+  assert.strictEqual(ownerContact.readiness.can_contact.status, 'YES');
+  const mailingOnlyContact = service.evaluatePacket({}, Object.assign({}, snapshot.markets[marketKey(DALLAS)].rows[0], {
+    mailing_route: {
+      route_kind: 'mailing_address', value: 'PO Box 100, Dallas, TX 75201', source_kind: 'official_public_record',
+      source_url: 'https://county.example.gov/parcel/1', evidence_text: 'Taxpayer mailing address on the official parcel record.'
+    }
+  }), { today_iso: TODAY });
+  assert.strictEqual(mailingOnlyContact.projected_row_state, 'MAIL_READY');
+  assert.strictEqual(mailingOnlyContact.readiness.can_contact.status, 'NO', 'mail-ready alone is not a seller-eligible direct contact route');
 
   const favorablePacket = {
     evidence_items: packetWithComps([comp(1), comp(2), comp(3)]).evidence_items

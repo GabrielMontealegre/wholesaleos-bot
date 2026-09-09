@@ -10,6 +10,7 @@ const path = require('path');
 
 const disclosureStateCompResolution = require('./disclosure-state-comp-resolution');
 const leadOperationsState = require('./lead-operations-state');
+const contactRouteRoles = require('./contact-route-roles');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 
@@ -344,17 +345,20 @@ function evaluatePacket(packet, row, options = {}) {
     const fields = item.fields || {};
     if (fields.contact_classification !== 'possible_owner_contact' || fields.seller_owner_confirmed !== true) continue;
     if (!/^(phone|email|form|reply_link)$/i.test(cleanText(fields.contact_route_kind)) || !cleanText(fields.contact_value) || !/^https?:\/\//i.test(cleanText(fields.source_url))) continue;
-    manualRoutes.push({
+    manualRoutes.push(contactRouteRoles.withContactRouteRole({
       route_kind: cleanText(fields.contact_route_kind).toLowerCase(),
       route_type: 'operator_confirmed_owner_or_seller_contact',
       value: cleanText(fields.contact_value),
+      contact_name: cleanText(fields.owner_name),
       source_kind: SOURCE_KIND,
       source_url: cleanText(fields.source_url),
       evidence_text: `Operator confirmed this ${cleanText(fields.contact_route_kind)} as an owner or seller route from ${cleanText(item.source_name)} screenshot ${cleanText(item.screenshot_id)}.`,
       risk_flags: ['OPERATOR_SUPPLIED_SCREENSHOT_CONTACT'],
       screenshot_id: item.screenshot_id,
-      operator_confirmed: true
-    });
+      operator_confirmed: true,
+      seller_owner_confirmed: true,
+      last_checked_at: cleanText(item.captured_at)
+    }));
   }
   const projectedRow = Object.assign({}, row || {}, {
     free_contact_routes: [].concat(Array.isArray(row && row.free_contact_routes) ? row.free_contact_routes : [], manualRoutes),
@@ -368,7 +372,7 @@ function evaluatePacket(packet, row, options = {}) {
     contact_workflow_complete: false, contact_workflow_outcome: '',
     contact_workflow_status: '', operator_contact_status: '', lifecycle_status: {}
   }));
-  const canContact = /^(CALL_READY|OUTREACH_READY|MAIL_READY)$/.test(contactState.row_state);
+  const canContact = /^(CALL_READY|OUTREACH_READY)$/.test(contactState.row_state);
   const officialComps = (Array.isArray(row && row.verified_sold_comps) ? row.verified_sold_comps :
     Array.isArray(row && row.verified_comps) ? row.verified_comps : []).filter((comp) => {
       const checked = Object.assign({}, comp, { comp_grid: disclosureStateCompResolution.evaluateStrictCompGrid(comp, compGridSubject, options) });
@@ -379,7 +383,7 @@ function evaluatePacket(packet, row, options = {}) {
   const lifecycle = leadLifecycleStatus.computeLifecycleStatus(row || {}, options.today_iso || new Date().toISOString());
   const closedContact = cleanText(row && row.contact_workflow_outcome).toLowerCase() === 'not_interested' || cleanText(row && row.contact_workflow_status).toUpperCase() === 'CLOSED_NOT_INTERESTED';
   const readiness = {
-    can_contact: { status: canContact ? 'YES' : 'NO', reason: canContact ? contactState.row_state_reason : 'No supported contact route is available for this property.' },
+    can_contact: { status: canContact ? 'YES' : 'NO', reason: canContact ? contactState.row_state_reason : 'No seller-eligible phone, email, form, or reply route is available for this property.' },
     can_value: { status: canValue ? 'YES' : 'NO', reason: canValue ? 'Three distinct sold comps pass the existing quality checks.' : 'Fewer than three distinct sold comps pass the existing quality checks.' },
     ready_to_offer: { status: canContact && canValue && !lifecycle.quarantined && !closedContact ? 'UNKNOWN' : 'NO', reason: closedContact ? 'The operator recorded not interested. This contact workflow is closed.' : lifecycle.quarantined ? lifecycle.reason_text : 'Confirm current event status, title, property condition and offer assumptions before making an offer.' },
     event_status: lifecycle,

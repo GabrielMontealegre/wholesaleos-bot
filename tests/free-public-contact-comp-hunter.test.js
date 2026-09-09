@@ -37,7 +37,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
     'For Reinstatement Requests: 1-866-874-5860'
   ].join('\n');
 
-  // 1) Visible phone in trusted source document -> CALL_READY, labeled non-owner.
+  // 1) A trustee phone remains visible evidence but is never seller-callable.
   const phoneRun = await contactHunter.runFreePublicContactHunter({
     rows: [{ normalized_address: '3723 Barnabus Rd, Dallas, TX 75241', source_document_url: noticePdfUrl, city: 'Dallas' }]
   }, {
@@ -49,10 +49,12 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   });
   const phoneResult = phoneRun.results.get('3723 barnabus rd, dallas, tx 75241');
   assert.ok(phoneResult);
-  assert.strictEqual(phoneResult.free_contact_status, 'CALL_READY');
+  assert.strictEqual(phoneResult.free_contact_status, 'CONTACT_SEARCH_EXHAUSTED_FREE');
   const phoneRoute = phoneResult.free_contact_routes.find((route) => route.route_kind === 'phone');
   assert.ok(phoneRoute);
   assert.strictEqual(phoneRoute.route_type, 'trustee_servicer_or_official');
+  assert.strictEqual(phoneRoute.role, 'trustee');
+  assert.strictEqual(phoneRoute.seller_contact_eligibility, 'RESEARCH_ONLY');
   assert.ok(phoneRoute.risk_flags.includes('not_confirmed_owner_contact'));
   assert.ok(phoneRoute.source_url === noticePdfUrl);
   assert.ok(/sale information/i.test(phoneRoute.evidence_text));
@@ -60,7 +62,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.ok(!phoneResult.owner_or_entity_clues.some((clue) => /trustee|mers|bank/i.test(clue.value)));
   assert.strictEqual(phoneResult.preview_only, true);
 
-  // 2) Email/form -> OUTREACH_READY; telemetry emails and mixed-separator
+  // 2) A listing email stays research-only; telemetry emails and mixed-separator
   // digit runs are never treated as contact routes.
   const emailRun = await contactHunter.runFreePublicContactHunter({
     rows: [{ normalized_address: '10 Test St, Dallas, TX 75201', source_document_url: 'https://notices.dallascounty.org/notice.html', city: 'Dallas' }]
@@ -69,8 +71,9 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
     env: { ENABLE_SEARCH_PROVIDER: 'false' }
   });
   const emailResult = emailRun.results.get('10 test st, dallas, tx 75201');
-  assert.strictEqual(emailResult.free_contact_status, 'OUTREACH_READY');
+  assert.strictEqual(emailResult.free_contact_status, 'CONTACT_SEARCH_EXHAUSTED_FREE');
   assert.ok(emailResult.free_contact_routes.some((route) => route.route_kind === 'email' && route.value === 'owner.reply@sellermail.com'));
+  assert.ok(emailResult.free_contact_routes.some((route) => route.route_kind === 'email' && route.seller_contact_eligibility === 'RESEARCH_ONLY'));
   assert.ok(!emailResult.free_contact_routes.some((route) => /sentry/i.test(route.value)));
   assert.ok(!emailResult.free_contact_routes.some((route) => route.route_kind === 'phone'));
 
@@ -244,18 +247,17 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   });
   const boardRow = boardResult.free_public_deals.find((deal) => deal.normalized_address === '13905 Sussex St, Detroit, MI 48227');
   assert.ok(boardRow);
-  assert.strictEqual(boardRow.free_contact_status, 'CALL_READY');
-  assert.strictEqual(boardRow.call_readiness, 'CALL_READY');
-  assert.ok(/\(888\) 313-1969/.test(boardRow.contact_route_if_visible));
-  assert.ok(/trustee/.test(boardRow.contact_route_if_visible));
+  assert.strictEqual(boardRow.free_contact_status, 'CONTACT_SEARCH_EXHAUSTED_FREE');
+  assert.strictEqual(boardRow.call_readiness, 'NEEDS_CONTACT_ROUTE');
+  assert.strictEqual(boardRow.contact_route_if_visible, '');
   assert.strictEqual(boardRow.free_comp_status, 'COMP_PARTIAL');
   assert.strictEqual(boardRow.verified_sold_comp_count, 1);
   assert.strictEqual(boardRow.call_prep.ARV_lock_state, 'ARV_LOCKED_NO_VERIFIED_COMPS');
   assert.strictEqual(boardRow.MAO_lock_state, 'MAO_LOCKED_NO_ARV');
-  assert.strictEqual(boardRow.call_prep.free_contact_status, 'CALL_READY');
-  assert.strictEqual(boardRow.call_prep.next_free_action, 'CALL_VISIBLE_ROUTE_AND_ASK_FOR_OWNER_PATH');
+  assert.strictEqual(boardRow.call_prep.free_contact_status, 'CONTACT_SEARCH_EXHAUSTED_FREE');
+  assert.strictEqual(boardRow.call_prep.next_free_action, 'DECIDE_PAID_SKIP_TRACE');
   assert.ok(boardRow.owner_or_entity_clues.length >= 1);
-  assert.strictEqual(boardResult.free_call_ready_count, 1);
+  assert.strictEqual(boardResult.free_call_ready_count, 0);
   assert.strictEqual(boardResult.free_comp_partial_count, 1);
   assert.strictEqual(boardResult.preview_only, true);
   assert.strictEqual(boardResult.should_ingest, false);
@@ -365,8 +367,8 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   assert.strictEqual(cycle8Row.land_use, 'Residential');
   assert.strictEqual(cycle8Row.mailing_route.source_kind, 'official_public_record');
   assert.strictEqual(cycle8Row.business_entity_resolution.registered_agent_name, 'Jane Agent');
-  assert.strictEqual(cycle8Row.row_state, 'CALL_READY');
-  assert.strictEqual(cycle8Row.free_contact_status, 'CALL_READY');
+  assert.strictEqual(cycle8Row.row_state, 'MAIL_READY');
+  assert.strictEqual(cycle8Row.free_contact_status, 'MAIL_READY');
   assert.strictEqual(cycle8Row.free_comp_status, 'COMP_READY');
   assert.strictEqual(cycle8Row.ARV_lock_state, 'ARV_UNLOCKED_VERIFIED_COMPS');
   assert.strictEqual(cycle8Row.verified_sold_comp_count, 3);

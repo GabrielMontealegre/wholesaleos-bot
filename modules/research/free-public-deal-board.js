@@ -12,6 +12,7 @@ const freePublicContactHunter = require('./free-public-contact-hunter');
 const enrichmentLedger = require('./enrichment-ledger');
 const enrichmentScheduler = require('./enrichment-scheduler');
 const fieldProvenance = require('./field-provenance');
+const contactRouteRoles = require('./contact-route-roles');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const leadOperationsState = require('./lead-operations-state');
 const marketCompPolicy = require('./market-comp-policy');
@@ -1987,33 +1988,38 @@ async function applyFreePublicHunters(deals, input, options, context) {
     }
     if (contact) {
       deal.free_contact_status = contact.free_contact_status;
-      deal.free_contact_routes = contact.free_contact_routes;
+      deal.free_contact_routes = (Array.isArray(contact.free_contact_routes) ? contact.free_contact_routes : [])
+        .map(contactRouteRoles.withContactRouteRole);
       deal.owner_or_entity_clues = contact.owner_or_entity_clues;
       deal.mailing_route = contact.mailing_route || deal.mailing_route || null;
       deal.free_searches_run = contact.free_searches_run;
       deal.blocked_sources = contact.blocked_sources;
       deal.next_free_action = contact.next_free_action;
       deal.why_call_ready_or_blocked = contact.why_call_ready_or_blocked;
-      const routes = Array.isArray(contact.free_contact_routes) ? contact.free_contact_routes : [];
-      const phoneRoute = routes.find((route) => route.route_kind === 'phone');
-      const outreachRoute = routes.find((route) => route.route_kind === 'email' || route.route_kind === 'form' || route.route_kind === 'reply_link');
+      const routes = deal.free_contact_routes;
+      const phoneRoute = routes.find((route) => route.route_kind === 'phone' && route.seller_contact_eligibility === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
+      const outreachRoute = routes.find((route) => (route.route_kind === 'email' || route.route_kind === 'form' || route.route_kind === 'reply_link') && route.seller_contact_eligibility === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
       if (!callPrepProjection.visibleContactRoute(deal)) {
         if (phoneRoute) deal.contact_route_if_visible = `${phoneRoute.value} (${phoneRoute.route_type})`;
         else if (outreachRoute) deal.contact_route_if_visible = `${outreachRoute.value} (${outreachRoute.route_type})`;
       }
     }
     const provenPhoneRoute = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
-      .find((route) => route.route_kind === 'phone' && fieldProvenance.routeHasProvenance(route));
+      .find((route) => route.route_kind === 'phone' && fieldProvenance.routeHasProvenance(route) &&
+        contactRouteRoles.sellerContactEligibility(route).status === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
     const provenOutreachRoute = (Array.isArray(deal.free_contact_routes) ? deal.free_contact_routes : [])
-      .find((route) => /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route));
+      .find((route) => /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && fieldProvenance.routeHasProvenance(route) &&
+        contactRouteRoles.sellerContactEligibility(route).status === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
     if (deal.free_contact_status === 'CALL_READY' && !provenPhoneRoute) {
       deal.free_contact_status = provenOutreachRoute ? 'OUTREACH_READY' : 'CONTACT_SEARCH_EXHAUSTED_FREE';
-      deal.why_call_ready_or_blocked = 'A visible contact route existed, but it was missing source provenance; verify the source before using it.';
+      deal.next_free_action = provenOutreachRoute ? 'SEND_OUTREACH_VIA_VISIBLE_ROUTE' : 'DECIDE_PAID_SKIP_TRACE';
+      deal.why_call_ready_or_blocked = 'A visible contact route exists, but the evidence does not support it as an owner or occupant route.';
       if (!provenOutreachRoute) deal.contact_route_if_visible = '';
     }
     if (deal.free_contact_status === 'OUTREACH_READY' && !provenOutreachRoute) {
       deal.free_contact_status = 'CONTACT_SEARCH_EXHAUSTED_FREE';
-      deal.why_call_ready_or_blocked = 'A visible outreach route existed, but it was missing source provenance; verify the source before using it.';
+      deal.next_free_action = 'DECIDE_PAID_SKIP_TRACE';
+      deal.why_call_ready_or_blocked = 'A visible outreach route exists, but the evidence does not support it as an owner or occupant route.';
       deal.contact_route_if_visible = '';
     }
     if ((!deal.free_contact_status || deal.free_contact_status === 'CONTACT_SEARCH_EXHAUSTED_FREE' || deal.free_contact_status === 'CONTACT_SEARCH_NOT_RUN') &&
@@ -2034,19 +2040,23 @@ async function applyFreePublicHunters(deals, input, options, context) {
         evidence_text: cleanText(entity.evidence_text),
         blocked_reason: cleanText(entity.blocked_reason)
       };
-      deal.entity_contacts = Array.isArray(entity.entity_contacts) ? entity.entity_contacts.slice(0, 4) : [];
+      deal.entity_contacts = Array.isArray(entity.entity_contacts)
+        ? entity.entity_contacts.slice(0, 4).map(contactRouteRoles.withContactRouteRole)
+        : [];
       if (deal.entity_contacts.length) {
         deal.free_contact_routes = (deal.free_contact_routes || []).concat(deal.entity_contacts).slice(0, 12);
-        if (deal.entity_contacts.some((route) => route.route_kind === 'phone')) {
-          const route = deal.entity_contacts.find((item) => item.route_kind === 'phone');
+        const sellerPhone = deal.entity_contacts.find((route) => route.route_kind === 'phone' && route.seller_contact_eligibility === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
+        const sellerOutreach = deal.entity_contacts.find((route) => /^(email|form|reply_link)$/i.test(cleanText(route.route_kind)) && route.seller_contact_eligibility === contactRouteRoles.SELLER_CONTACT_ELIGIBLE);
+        if (sellerPhone) {
+          const route = sellerPhone;
           deal.free_contact_status = 'CALL_READY';
           deal.contact_route_if_visible = `${route.value} (${route.route_type})`;
           deal.next_free_action = 'CALL_VISIBLE_ROUTE_AND_ASK_FOR_OWNER_PATH';
-          deal.why_call_ready_or_blocked = 'Business registry published a phone route; it may be a registered agent, not the seller.';
-        } else if (!deal.free_contact_status || deal.free_contact_status === 'CONTACT_SEARCH_EXHAUSTED_FREE' || deal.free_contact_status === 'CONTACT_SEARCH_NOT_RUN') {
+          deal.why_call_ready_or_blocked = 'Business registry published a seller-eligible phone route with source evidence.';
+        } else if (sellerOutreach) {
           deal.free_contact_status = 'OUTREACH_READY';
-          deal.next_free_action = 'CONTACT_REGISTERED_AGENT_OR_SEND_ENTITY_NOTICE';
-          deal.why_call_ready_or_blocked = 'Business registry published a registered-agent route; it is not confirmed as the seller.';
+          deal.next_free_action = 'SEND_OUTREACH_VIA_VISIBLE_ROUTE';
+          deal.why_call_ready_or_blocked = 'Business registry published a seller-eligible outreach route with source evidence.';
         }
         diagnostics.business_entity_agent_found_count += 1;
       }

@@ -1,0 +1,9 @@
+{
+  "cycle": 22,
+  "status": "UNREACHABLE",
+  "reason": "No local deal-board snapshot store exists in this checkout; the snapshot lives only on the Railway volume. Production was not contacted.",
+  "snapshot_path_checked": "C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json",
+  "production_contacted": false,
+  "markets": {},
+  "dallas": null
+}

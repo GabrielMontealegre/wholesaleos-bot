@@ -169,7 +169,8 @@ function mockDeal(overrides) {
   assert.ok(run1.county_onboarding.throughput_plan.active_market_count >= 6, 'throughput plan must include active markets');
   assert.strictEqual(run1.batch.new_rows, 2);
   assert.strictEqual(run1.counts.total_rows, 2);
-  assert.strictEqual(run1.counts.call_ready, 1);
+  assert.strictEqual(run1.counts.call_ready, 0, 'trustee sale-information phone must not count as a seller-callable route');
+  assert.strictEqual(run1.counts.needs_contact_search, 1, 'the row must return to seller contact research');
   assert.strictEqual(run1.counts.inspect_now, 1);
   assert.strictEqual(run1.counts.needs_comps, 1);
   assert.strictEqual(queueService.queueCounts([
@@ -180,8 +181,9 @@ function mockDeal(overrides) {
     { row_state: 'NEEDS_CONTACT_SEARCH' },
     { row_state: 'NEEDS_SKIP_TRACE' }
   ]).needs_skip_trace, 1, 'skip-trace count must include only genuinely exhausted rows');
-  assert.strictEqual(run1.lead_operations_queue.counts.CALL_READY, 1);
-  assert.deepStrictEqual(run1.lead_operations_queue.segments.find((segment) => segment.key === 'CALL_READY').row_keys.length, 1);
+  assert.strictEqual(run1.lead_operations_queue.counts.CALL_READY, 0);
+  assert.deepStrictEqual(run1.lead_operations_queue.segments.find((segment) => segment.key === 'CALL_READY').row_keys.length, 0);
+  assert.strictEqual(run1.lead_operations_queue.counts.NEEDS_CONTACT_SEARCH, 1);
   assert.ok(fs.existsSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH), 'snapshot file must exist');
   assert.strictEqual(run1.counts.today_rows, 2, 'today count must track fresh rows');
   assert.strictEqual(run1.batch.source_coverage.length, 2, 'batch must carry per-source coverage');
@@ -237,7 +239,14 @@ function mockDeal(overrides) {
 
   const completedContactRun = await queueService.runDealBoardBatch(
     { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, limit: 25 },
-    { preview_impl: async () => ({ free_public_deals: [mockDeal({ contact_workflow_complete: true, contact_workflow_status: 'CONTACTED' })], rejected_generic_count: 0 }) }
+    { preview_impl: async () => ({ free_public_deals: [mockDeal({
+      contact_workflow_complete: true,
+      contact_workflow_status: 'CONTACTED',
+      free_contact_routes: [{
+        route_kind: 'phone', value: '(214) 555-0111', route_type: 'owner', source_kind: 'official_public_record',
+        source_url: 'https://county.example.gov/owner/1', evidence_text: 'Owner of record phone is visible on the official public record.'
+      }]
+    })], rejected_generic_count: 0 }) }
   );
   const completedContactRow = completedContactRun.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
   assert.strictEqual(completedContactRow.contact_workflow_complete, true);
@@ -819,7 +828,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=27'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=28'), 'dashboard must load the cache-busted public deals script');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -868,6 +877,9 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('next_best_action'));
   assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
+  assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
+  assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=28'), 'dashboard must load the Cycle 22 cache-busted contact workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Status evidence: <b>') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
@@ -1004,6 +1016,58 @@ function mockDeal(overrides) {
   assert.ok(!dealFinderPanels.includes('Ready to offer: YES'), 'Deal Finder must never render automatic offer authorization');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidencePanel, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidenceCard, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml, 'function');
+  const contactRow = {
+    queue_key: 'synthetic-contact-row',
+    normalized_address: '100 Contact Test St, Dallas, TX 75201',
+    row_state: 'CALL_READY',
+    source_last_checked_at: '2026-09-08T12:00:00.000Z',
+    free_contact_routes: [
+      {
+        route_kind: 'phone', value: '(214) 555-0100', contact_name: 'JANE OWNER', role: 'owner',
+        seller_contact_eligibility: 'SELLER_CONTACT_ELIGIBLE', seller_contact_eligibility_reason: 'Official owner route.',
+        source_url: 'https://county.example.gov/owner/1', evidence_text: 'Owner of record phone appears on the official record.', last_checked_at: '2026-09-08T11:00:00.000Z'
+      },
+      {
+        route_kind: 'phone', value: '(214) 555-0200', entity_name: 'TRUSTEE LAW PLLC', role: 'trustee',
+        seller_contact_eligibility: 'RESEARCH_ONLY', seller_contact_eligibility_reason: 'Trustee is not the seller.',
+        source_url: 'https://county.example.gov/notice/1', evidence_text: 'Substitute trustee sale information line.', last_checked_at: '2026-09-08T10:00:00.000Z'
+      },
+      {
+        route_kind: 'phone', value: '(214) 555-0300', contact_name: 'OLD NUMBER', role: 'owner',
+        seller_contact_eligibility: 'SELLER_CONTACT_ELIGIBLE',
+        source_url: 'https://county.example.gov/owner/old', evidence_text: 'Old owner number.'
+      }
+    ],
+    contact_workflow_invalidated_routes: [{ value: '(214) 555-0300', reason: 'wrong_number' }]
+  };
+  const contactBefore = JSON.stringify(contactRow);
+  const contactHtml = uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml(contactRow);
+  assert.ok(contactHtml.includes('JANE OWNER') && contactHtml.includes('Role: <b>owner</b>'));
+  assert.ok(contactHtml.includes('TRUSTEE LAW PLLC') && contactHtml.includes('Role: <b>trustee</b>'));
+  assert.ok(contactHtml.includes('https://county.example.gov/owner/1') && contactHtml.includes('Owner of record phone appears on the official record.'));
+  assert.ok(contactHtml.includes('Research contacts - not the seller'));
+  assert.ok(contactHtml.includes('tel:(214) 555-0100') && contactHtml.includes('Copy number'));
+  assert.ok(!contactHtml.includes('tel:(214) 555-0200'), 'research-only trustee number must have no click-to-call control');
+  assert.ok(!contactHtml.includes('(214) 555-0300'), 'invalidated route must disappear from valid controls entirely');
+  assert.strictEqual(JSON.stringify(contactRow), contactBefore, 'rendering contact controls must not record an outcome or mutate a row');
+  const researchOnlyHtml = uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml({
+    free_contact_routes: [contactRow.free_contact_routes[1]]
+  });
+  assert.ok(!researchOnlyHtml.includes('tel:'), 'no tel control may render without a seller-eligible phone');
+  assert.ok(!researchOnlyHtml.includes('Copy number'), 'no copy control may render without a seller-eligible phone');
+  const contactPanelData = {
+    lead_operations_queue: {
+      total_rows: 1,
+      counts: { CALL_READY: 1 },
+      segments: [{ key: 'CALL_READY', count: 1, row_keys: ['synthetic-contact-row'] }]
+    }
+  };
+  const contactPanelFirst = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', contactPanelData, [contactRow], '');
+  const contactPanelSecond = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', contactPanelData, [contactRow], '');
+  assert.strictEqual(contactPanelSecond, contactPanelFirst, 'role, evidence, source, and invalidation must survive a deterministic re-render');
+  assert.ok(contactPanelFirst.includes('JANE OWNER') && contactPanelFirst.includes('TRUSTEE LAW PLLC'));
+  assert.ok(!contactPanelFirst.includes('(214) 555-0300'));
   const orderedRows = uiContext.window.__wosPublicDealsTestHooks.sortTopDealsRows([
     { headline: 'dateless', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: '' },
     { headline: 'passed', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: yesterday },
