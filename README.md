@@ -1,132 +1,152 @@
-# WholesaleOS Bot — Setup Guide
-## Gabriel's Wholesale Automation System
+# WholesaleOS
 
----
+WholesaleOS is Gabriel's evidence-first acquisition workbench. It collects free
+public distress records, preserves the official source behind every claim, and
+organizes each property by the next action a human can honestly take.
 
-## STEP 1 — Get Your Telegram User ID
-1. Open Telegram
-2. Search @userinfobot
-3. Send /start
-4. Copy the number it gives you — that's your BOT_OWNER_ID
+It is not a purchased lead list and it does not pretend that an attorney,
+trustee, lender, government office, or research contact is the seller.
 
----
+## Open The Dashboard
 
-## STEP 2 — Get Gmail App Password
-(This is NOT your real Gmail password — it's a special 16-character password just for the bot)
+Production dashboard:
 
-1. Go to myaccount.google.com
-2. Click "Security" in the left menu
-3. Under "How you sign in to Google" click "2-Step Verification"
-4. Enable 2-Step Verification if not already on
-5. Scroll down to "App passwords"
-6. Click "App passwords"
-7. Select app: "Mail" / Select device: "Other (custom name)" → type "WholesaleOS"
-8. Click Generate
-9. Copy the 16-character password (no spaces)
-10. Save as GMAIL_APP_PASSWORD in Railway
+https://wholesaleos-bot-production.up.railway.app/dashboard
 
----
+Sign in with the PIN configured for your account. WholesaleOS must never display
+or publish that PIN.
 
-## STEP 3 — Get Free Groq API Key (Llama AI)
-1. Go to console.groq.com
-2. Sign up free — no credit card
-3. Click "API Keys" → "Create API Key"
-4. Name it "WholesaleOS"
-5. Copy the key (starts with gsk_)
-6. Save as GROQ_API_KEY in Railway
+## What A Lead Card Tells You
 
----
+Each card answers six practical questions:
 
-## STEP 4 — Get Your New Telegram Bot Token
-1. Open Telegram → search @BotFather
-2. Send /newbot (or use your existing bot after revoking)
-3. Follow prompts → copy the token
-4. Save as TELEGRAM_BOT_TOKEN in Railway
-5. NEVER paste this token in any chat
+1. **Why is this property here?** The distress source, such as a foreclosure
+   notice, tax-default auction book, or land-bank listing.
+2. **Can I prove it?** The official document or public-record link and the exact
+   evidence captured from it.
+3. **Is the property identity complete?** A source-supported address or an honest
+   APN-only / ZIP-review state. WholesaleOS does not guess missing address parts.
+4. **Can I contact someone useful?** A seller-eligible phone or email, a mailing
+   route, or a clearly labeled institutional/research contact.
+5. **Can I value it?** Three verified sold comps that pass the similarity rules,
+   or a clear explanation of why ARV and MAO remain locked.
+6. **What should I do next?** One operator action based on the evidence currently
+   available.
 
----
+## Your Daily Workflow
 
-## STEP 5 — Deploy to Railway
-1. Go to railway.com → your project
-2. Click "New Service" → "Deploy from GitHub repo"
-   OR drag this folder into Railway
-3. Go to Variables tab and add ALL of these:
+### 1. Start With Lead Operations Queue
 
-   TELEGRAM_BOT_TOKEN   = [your new token]
-   BOT_OWNER_ID         = [your Telegram user ID from Step 1]
-   GROQ_API_KEY         = [from Step 3]
-   GMAIL_USER           = montsan.rei@gmail.com
-   GMAIL_APP_PASSWORD   = [16-char from Step 2]
-   AI_MODE              = free
-   PORT                 = 3000
-   WOS_ENABLE_BACKGROUND_INGESTION = false
+Work the segments in this order:
 
-4. Railway will auto-deploy. Check logs for "WholesaleOS Bot started"
+- **Call Ready**: a source-linked, seller-eligible phone is visible. Verify the
+  evidence on the card, then call.
+- **Outreach Ready**: a source-linked seller email or other permitted outreach
+  route is visible.
+- **Mail Ready**: a public owner or taxpayer mailing route is visible. Check the
+  label before mailing; a taxpayer can be a servicer or escrow company.
+- **Needs Contact Search**: free public contact research has not finished.
+- **Needs Skip Trace**: the free contact lanes were actually exhausted. This is
+  the honest population to use when deciding whether paid skip tracing is worth it.
+- **Needs Comps**: contact with the seller was reached, but three verified comps
+  are still missing.
+- **Title Needed**: seller contact and comp evidence are ready for title review.
+- **Closed - Not Interested**: the seller explicitly declined.
+- **Blocked**: the row is stale, unverifiable, duplicated, or missing critical
+  source evidence. This is not a calling queue.
 
-   `WOS_ENABLE_BACKGROUND_INGESTION=false` is the default safety setting for production. Set it to `true` only if you intentionally want startup autoruns and scheduled ingestion jobs enabled.
+### 2. Read The Evidence Before Acting
 
----
+Open the official source link. Confirm that the property, event, date, amount,
+and named party shown on the card are actually present in that source. A minimum
+bid, assessed value, asking price, or tax balance is not ARV and is not an offer.
 
-## STEP 6 — Test Your Bot
-1. Open Telegram → find your bot
-2. Send /start
-3. Send /test — should show all green checkmarks
-4. Send /leads Dallas 10 — should generate a PDF with 10 leads
+### 3. Use The Manual Evidence Packet When Free Automation Stops
 
----
+The Manual Evidence Packet provides research links for a small sample of the
+best-supported rows. You may upload screenshots you personally captured from a
+permitted site. WholesaleOS records them as operator-supplied evidence.
 
-## BOT COMMANDS REFERENCE
+For comparable sales:
 
-/leads Dallas 200          → Find 200 leads in Dallas County (PDF delivered)
-/leads Tarrant 100 Pre-FC  → Specific category
-/pipeline                  → View your deal pipeline
-/buyers                    → List all buyers
-/addbuyer Name|Type|Contact|Phone|Email|$100K-$400K
-/match [lead-id]           → Find buyers for a lead
-/send [lead-id] [buyer]    → Email deal to buyer (PDF attached)
-/reach [lead-id]           → Send outreach to seller
-/add                       → Add a lead manually
-/addlead [pipe-separated]  → Quick add with data
-/status [lead] [status]    → Update lead status
-/calendar                  → Upcoming events
-/remind 2026-04-15 Closing date for Fort Worth deal
-/stats                     → Dashboard summary
-/mode free                 → Switch to Llama (free)
-/mode premium              → Switch to Claude (pay-per-use)
-/test                      → Test all connections
-/help                      → Full command list
+- Use sold properties, not active asking prices.
+- Prefer the same property type within one mile.
+- Keep living area within 20 percent and beds/baths within one.
+- Use at least three recent sales.
+- A screenshot proposal never unlocks ARV unless every strict comp check passes.
+- Never use a neighboring property's sale as the subject property's own sale.
 
----
+### 4. Record The Real Contact Outcome
 
-## UPGRADING TO CLAUDE (Premium)
+Only save an outcome after a real human contact attempt:
 
-1. Go to console.anthropic.com
-2. Sign up → verify phone → create API key
-3. Add to Railway: ANTHROPIC_API_KEY = sk-ant-api03-...
-4. Add $5 credit to start
-5. Text your bot: /mode premium
+- **Reached** completes the contact objective and advances the row toward comps.
+- **Left message** keeps the row callable.
+- **Follow up** keeps it callable and moves it to the top of its segment.
+- **Wrong number** invalidates that route and returns the row to contact research.
+- **Not interested** closes it in a separate terminal segment.
 
-Cost: ~$3-4 per 400-property analysis run
+Nothing marks a property contacted automatically.
 
----
+## How To Read Readiness
 
-## ADDING BATCHED LEADS DATA (BatchLeads)
+- **Can contact: YES** means a permitted, source-linked contact route exists.
+- **Can value: YES** means the row has enough verified comparable-sales evidence.
+- **Ready to offer** remains **NO** or **UNKNOWN** until every required gate passes.
 
-When ready to add real owner data + phone numbers:
-1. Sign up at batchleads.io
-2. Enable API access in account settings
-3. Get your API key
-4. Add to Railway: BATCHLEADS_API_KEY = your_key
-5. Cost: $97/month — pays for itself on first deal
+One YES does not imply the others. WholesaleOS is designed to show missing work,
+not hide it.
 
----
+## Current Coverage
 
-## TOTAL MONTHLY COST (without BatchLeads)
-- Telegram Bot:  $0
-- Groq/Llama:    $0
-- Gmail:         $0
-- Railway:       $0 (free tier covers this easily)
-- Database:      $0 (local JSON file)
-TOTAL:           $0/month
+The production system recognizes separate routing for Dallas, Houston, San
+Antonio, Austin, Detroit, San Diego, Los Angeles, and Cleveland. Not every route
+has a producing lane. A market can return zero rows when no source is verified or
+when its public source is blocked, seasonal, oversized, or does not publish
+property-level records.
 
-Claude API runs: ~$3-4 only when you use premium mode
+Current strengths:
+
+- Official source preservation and evidence links.
+- PDF text extraction, bounded OCR, and document-review controls.
+- Honest address, lifecycle, contact, comp, and offer-readiness states.
+- Market-isolated routing and snapshot-only preview rows.
+- Manual screenshot evidence with strict provenance.
+
+Current bottlenecks:
+
+- Seller phone and email data are rarely public.
+- Texas sold prices are not broadly public, so Texas ARV/MAO stays locked without
+  MLS or an approved data provider.
+- Probate, liens, code violations, vacancy, and inheritance records are not yet
+  available consistently across all markets.
+- Public county portals frequently require a new adapter, human review, or a
+  different official machine-readable source.
+
+## Safety Rules
+
+- Every important claim needs a source URL and evidence text.
+- Missing data stays missing. Never invent an address, owner, phone, price, date,
+  comp, or seller relationship.
+- Board rows remain `preview_only` and `not_a_saved_lead` until Gabriel makes a
+  deliberate operator decision.
+- Do not bypass logins, CAPTCHAs, paywalls, robots controls, or access restrictions.
+- Do not automate Zillow or background-check websites. Use permitted manual
+  screenshots or an approved data provider.
+- Paid connectors remain disabled until their value and compliance are reviewed.
+
+## More Detail
+
+- [Daily operator workflow](docs/GABRIEL_DAILY_DEAL_WORKFLOW.md)
+- [System and source map](docs/WHOLESALEOS_OPERATOR_MAP.md)
+- [Current operating state](docs/current-operating-state.md)
+- [Local research tools](docs/LOCAL_RESEARCH_TOOLS.md)
+- [Source registry](source-registry/README.md)
+
+## For Maintainers
+
+Keep production behavior deterministic and fail closed. New sources start as
+disabled candidates, include schema and freshness evidence, and must pass a dry
+validation before they can create preview rows. A new tool is not a new source:
+its output must still pass the existing source, identity, provenance, lifecycle,
+contact-role, comp, and offer-readiness gates.
