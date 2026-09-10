@@ -471,7 +471,7 @@
     lines.push('<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + esc(title) +
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
-      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + statusColor(row.contact_status) + ';">' + esc(row.contact_status || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
+      ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
     if (zipReview && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     }
@@ -667,7 +667,7 @@
 
   function isActionableRow(row) {
     return row.quality_bucket === 'INSPECT_NOW' || row.quality_bucket === 'NEEDS_ZIP_REVIEW' ||
-      row.contact_status === 'CALL_READY' || row.contact_status === 'OUTREACH_READY' || row.contact_status === 'MAIL_READY' || row.row_state === 'MAIL_READY';
+      row.row_state === 'CALL_READY' || row.row_state === 'OUTREACH_READY' || row.row_state === 'MAIL_READY';
   }
 
   function minutesUntil(iso) {
@@ -692,11 +692,11 @@
   function topUrgentAddresses(rows) {
     return rows.filter(function (row) {
       var riskFlags = Array.isArray(row.risk_flags) ? row.risk_flags : [];
-      var excluded = row.contact_status === 'ADDRESS_VERIFICATION_REQUIRED' ||
+      var excluded = row.row_state === 'LOCKED' ||
         riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT') !== -1 ||
         riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS') !== -1;
       var sale = saleDateInfo(row);
-      var eligible = row.contact_status === 'CALL_READY' ||
+      var eligible = row.row_state === 'CALL_READY' ||
         row.row_state === 'MAIL_READY' ||
         (sale.iso && !sale.passed) ||
         row.quality_bucket === 'INSPECT_NOW' ||
@@ -706,7 +706,7 @@
       var aSale = saleDateInfo(a);
       var bSale = saleDateInfo(b);
       function rank(row, sale) {
-        if (row.contact_status === 'CALL_READY') return 0;
+        if (row.row_state === 'CALL_READY') return 0;
         if (row.row_state === 'MAIL_READY') return 1;
         if (sale.iso && !sale.passed) return 2;
         if (row.quality_bucket === 'INSPECT_NOW') return 3;
@@ -723,7 +723,7 @@
   }
 
   function urgentContextLabel(row) {
-    if (row.contact_status === 'CALL_READY') return 'CALL_READY';
+    if (row.row_state === 'CALL_READY') return 'CALL_READY';
     if (row.row_state === 'MAIL_READY') return 'MAIL_READY';
     var sale = saleDateInfo(row);
     if (sale.iso && !sale.passed) return 'Sale in ' + sale.days + ' days';
@@ -838,9 +838,10 @@
     }).length;
     var soonest = upcomingSaleRow(rows);
     var urgent = topUrgentAddresses(rows);
-    var actionableNow = Number(c.call_ready || 0) + Number(c.inspect_now || 0) + Number(c.needs_zip_review || 0);
+    var canonicalCallReady = rows.filter(function (row) { return row.row_state === 'CALL_READY'; }).length;
+    var actionableNow = canonicalCallReady + Number(c.inspect_now || 0) + Number(c.needs_zip_review || 0);
     var summary = [
-      chip('CALL_READY', c.call_ready || 0, '#bbf7d0'),
+      chip('CALL_READY', canonicalCallReady, '#bbf7d0'),
       chip('MAIL_READY', c.mail_ready || 0, '#ccfbf1'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
@@ -927,7 +928,7 @@
       var bSale = saleDateInfo(b);
       function rank(row, sale) {
         if (sale.passed) return 4;
-        if (row.contact_status === 'CALL_READY') return 0;
+        if (row.row_state === 'CALL_READY') return 0;
         if (row.row_state === 'MAIL_READY') return 1;
         if (sale.iso) return 2;
         return 3;

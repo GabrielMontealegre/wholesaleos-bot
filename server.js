@@ -166,7 +166,7 @@ function requireAdmin(req, res, next) {
     req.currentUser = user;
     next();
   } catch(e) {
-    res.status(500).json({ error: e.message });
+    res.status(503).json({ error: 'Admin authorization unavailable', code: 'ADMIN_AUTHORIZATION_UNAVAILABLE' });
   }
 }
 
@@ -2176,20 +2176,7 @@ app.post('/api/dashboard/free-public-deal-board/auto-run', requireAdmin, (req, r
 try { dealBoardQueueService.loadAutoRunFromDisk({ env: process.env }); } catch (e) { /* best effort */ }
 
 // Admin-only: protect sensitive routes
-app.use(['/api/buyboxes', '/api/settings', '/api/integrations'], (req, res, next) => {
-  try {
-    const users = db.readDB().users || [];
-    const userId = req.headers['x-user-id'] || req.query._uid ||
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    const user = users.find(u => u.id === userId);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required', code: 'FORBIDDEN' });
-    }
-    next();
-  } catch(e) {
-    next(); // fail open for now, harden later
-  }
-});
+app.use(['/api/buyboxes', '/api/settings', '/api/integrations'], requireAdmin);
 
 // ====================== ADDRESS VALIDATION ROUTES (must be before :id routes) ======================
 // GET /api/leads/validate — validate all leads and return report

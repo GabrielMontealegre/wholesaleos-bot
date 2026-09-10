@@ -7,19 +7,23 @@
 const PLACEHOLDER_CONTACT_RE = /^(?:manual\s+lookup\s+needed|manual\s+verification\s+needed|unknown|n\/?a|none)$/i;
 const enrichmentLedger = require('./enrichment-ledger');
 const paidFallbackRegistry = require('./paid-provider-fallback-registry');
+const leadOperationsState = require('./lead-operations-state');
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
 
 function visibleContactRoute(deal) {
+  if (leadOperationsState.rowStateForDeal(deal || {}).row_state !== leadOperationsState.ROW_STATES.CALL_READY) return '';
   const route = cleanText(deal && deal.contact_route_if_visible);
   if (!route || PLACEHOLDER_CONTACT_RE.test(route)) return '';
   return route;
 }
 
 function contactStatus(deal) {
-  return visibleContactRoute(deal) ? 'VISIBLE_PUBLIC_CONTACT' : 'CONTACT_LOOKUP_REQUIRED';
+  return leadOperationsState.rowStateForDeal(deal || {}).row_state === leadOperationsState.ROW_STATES.CALL_READY
+    ? 'VISIBLE_PUBLIC_CONTACT'
+    : 'CONTACT_LOOKUP_REQUIRED';
 }
 
 function arvLock(deal) {
@@ -72,9 +76,9 @@ function sellerQuestions(deal) {
 }
 
 function callReadiness(deal) {
+  const state = leadOperationsState.rowStateForDeal(deal || {}).row_state;
+  if (state === leadOperationsState.ROW_STATES.CALL_READY) return 'CALL_READY';
   const address = cleanText(deal && deal.normalized_address);
-  const route = visibleContactRoute(deal);
-  if (address && route) return 'CALL_READY';
   if (address) return 'NEEDS_CONTACT_ROUTE';
   return 'NEEDS_PROPERTY_IDENTITY';
 }

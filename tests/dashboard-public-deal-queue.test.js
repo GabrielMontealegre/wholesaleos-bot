@@ -243,7 +243,7 @@ function mockDeal(overrides) {
       contact_workflow_complete: true,
       contact_workflow_status: 'CONTACTED',
       free_contact_routes: [{
-        route_kind: 'phone', value: '(214) 555-0111', route_type: 'owner', source_kind: 'official_public_record',
+        route_kind: 'phone', value: '(214) 555-0111', route_type: 'unclassified_public_contact', source_kind: 'official_public_record',
         source_url: 'https://county.example.gov/owner/1', evidence_text: 'Owner of record phone is visible on the official public record.'
       }]
     })], rejected_generic_count: 0 }) }
@@ -820,6 +820,9 @@ function mockDeal(overrides) {
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/sample',\s*requireAdmin/.test(serverSource), 'manual evidence sample route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/upload',\s*requireAdmin/.test(serverSource), 'manual evidence upload route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/proposal',\s*requireAdmin/.test(serverSource), 'manual evidence confirmation route must be admin-protected');
+  assert.ok(/app\.use\(\['\/api\/buyboxes', '\/api\/settings', '\/api\/integrations'\], requireAdmin\)/.test(serverSource), 'sensitive dashboard routes must reuse the fail-closed admin gate');
+  assert.ok(serverSource.includes("code: 'ADMIN_AUTHORIZATION_UNAVAILABLE'"), 'admin authorization failures must return a clear unavailable code');
+  assert.ok(!serverSource.includes('fail open for now'), 'no sensitive route may fail open');
   assert.ok(serverSource.includes('multer.memoryStorage()') && serverSource.includes('MAX_UPLOAD_BYTES'), 'screenshots must use bounded multipart upload rather than base64 JSON');
   assert.ok(/loadAutoRunFromDisk/.test(serverSource), 'server must restore the schedule on boot');
   const queueSource = fs.readFileSync(path.join(__dirname, '..', 'modules', 'research', 'deal-board-queue-service.js'), 'utf8');
@@ -828,7 +831,10 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=28'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=29'), 'dashboard must load the cache-busted public deals script');
+  assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
+  assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
+  assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
   const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
   assert.ok(uiSource.includes('Best Public Deals'));
   assert.ok(uiSource.includes("Today\\'s Deal Desk"));
@@ -879,7 +885,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=28'), 'dashboard must load the Cycle 22 cache-busted contact workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=29'), 'dashboard must load the Cycle 23 cache-busted canonical-readiness workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Status evidence: <b>') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
@@ -935,7 +941,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('dataset.wosTarget'), 'addon must stamp the mounted target on the section');
   assert.ok(uiSource.includes('fetchInFlight'), 'addon must guard the initial snapshot fetch');
   assert.ok(uiSource.includes('mountForCurrentPage'), 'addon must refresh from the current page state');
-  assert.ok(uiSource.includes("contact_status === 'ADDRESS_VERIFICATION_REQUIRED'"), 'Dashboard top urgent must exclude address-verification rows');
+  assert.ok(uiSource.includes("row.row_state === 'LOCKED'"), 'Dashboard top urgent must exclude canonically locked rows');
   assert.ok(uiSource.includes("riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT')"), 'Dashboard top urgent must exclude prefix-suspected rows');
   assert.ok(uiSource.includes("riskFlags.indexOf('SALE_DATE_PASSED_VERIFY_STATUS')"), 'Dashboard top urgent must exclude passed-sale rows');
   assert.ok(uiSource.includes("chip('Actionable now'"), 'Dashboard card must show current actionable inventory before today-only activity');
@@ -1069,36 +1075,36 @@ function mockDeal(overrides) {
   assert.ok(contactPanelFirst.includes('JANE OWNER') && contactPanelFirst.includes('TRUSTEE LAW PLLC'));
   assert.ok(!contactPanelFirst.includes('(214) 555-0300'));
   const orderedRows = uiContext.window.__wosPublicDealsTestHooks.sortTopDealsRows([
-    { headline: 'dateless', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: '' },
-    { headline: 'passed', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: yesterday },
-    { headline: 'upcoming', quality_bucket: 'INSPECT_NOW', contact_status: '', sale_date_iso: inThreeDays },
-    { headline: 'call-ready', quality_bucket: 'INSPECT_NOW', contact_status: 'CALL_READY', sale_date_iso: '' }
+    { headline: 'dateless', quality_bucket: 'INSPECT_NOW', row_state: 'NEEDS_CONTACT_SEARCH', sale_date_iso: '' },
+    { headline: 'passed', quality_bucket: 'INSPECT_NOW', row_state: 'NEEDS_CONTACT_SEARCH', sale_date_iso: yesterday },
+    { headline: 'upcoming', quality_bucket: 'INSPECT_NOW', row_state: 'NEEDS_CONTACT_SEARCH', sale_date_iso: inThreeDays },
+    { headline: 'call-ready', quality_bucket: 'INSPECT_NOW', row_state: 'CALL_READY', sale_date_iso: '' }
   ]);
   assert.deepStrictEqual(orderedRows.map((row) => row.headline), ['call-ready', 'upcoming', 'dateless', 'passed']);
   const cleanUrgentRows = uiContext.window.__wosPublicDealsTestHooks.topUrgentAddresses([
     {
       partial_address: '02971 424 Cookston Ln, Royse City, TX 75189',
       quality_bucket: 'NEEDS_ZIP_REVIEW',
-      contact_status: 'ADDRESS_VERIFICATION_REQUIRED',
+      row_state: 'LOCKED',
       risk_flags: ['ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT']
     },
     {
       normalized_address: '100 Call Ready St, Dallas, TX 75201',
       quality_bucket: 'INSPECT_NOW',
-      contact_status: 'CALL_READY',
+      row_state: 'CALL_READY',
       risk_flags: []
     },
     {
       normalized_address: '200 Auction St, Dallas, TX 75202',
       quality_bucket: 'INSPECT_NOW',
-      contact_status: '',
+      row_state: 'NEEDS_CONTACT_SEARCH',
       sale_date_iso: inThreeDays,
       risk_flags: []
     },
     {
       partial_address: '300 Review St, Dallas, TX',
       quality_bucket: 'NEEDS_ZIP_REVIEW',
-      contact_status: '',
+      row_state: 'NEEDS_CONTACT_SEARCH',
       risk_flags: []
     }
   ]);
@@ -1110,6 +1116,29 @@ function mockDeal(overrides) {
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[0]), 'CALL_READY');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[1]), 'Sale in 3 days');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(cleanUrgentRows[2]), 'NEEDS_ZIP_REVIEW');
+
+  const disagreementRow = {
+    queue_key: 'dallas|canonical-readiness|1',
+    headline: 'Canonical readiness fixture',
+    normalized_address: '400 Canonical St, Dallas, TX 75201',
+    quality_bucket: 'INSPECT_NOW',
+    contact_status: 'CALL_READY',
+    row_state: 'NEEDS_CONTACT_SEARCH',
+    risk_flags: []
+  };
+  const disagreementData = {
+    counts: { call_ready: 1, inspect_now: 0, needs_zip_review: 0 },
+    lead_operations_queue: {
+      total_rows: 1,
+      counts: { CALL_READY: 0, NEEDS_CONTACT_SEARCH: 1 },
+      segments: [{ key: 'NEEDS_CONTACT_SEARCH', count: 1, row_keys: [disagreementRow.queue_key] }]
+    }
+  };
+  const canonicalDashboard = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard', disagreementData, [disagreementRow], '');
+  const canonicalQueue = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', disagreementData, [disagreementRow], '');
+  assert.ok(canonicalDashboard.includes('CALL_READY: 0'), 'Deal Desk chip must count canonical row_state, not legacy contact_status');
+  assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(disagreementRow), 'INSPECT_NOW', 'row label must ignore a conflicting legacy contact_status');
+  assert.ok(canonicalQueue.includes('CALL READY: 0') && canonicalQueue.includes('Needs Contact Search (1)'), 'Lead Operations Queue must agree with the canonical Deal Desk count');
 
   const reviewMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
   fs.writeFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, JSON.stringify({
