@@ -78,6 +78,9 @@ markets.forEach((market) => {
 snapshot.markets[marketKey(DALLAS)].rows[0] = row('dallas-subject', DALLAS, {
   normalized_address: SUBJECT,
   source_document_url: 'https://dallascounty.example.gov/notices/subject.pdf',
+  minimum_bid: '$75,000',
+  minimum_bid_evidence_text: 'Minimum bid: $75,000',
+  last_checked_at: '2026-08-19T11:00:00.000Z',
   sale_date_iso: '2026-09-01',
   sale_date_or_event_date: '09/01/2026'
 });
@@ -151,7 +154,14 @@ function pngBuffer(size) {
   const selected = dallas.items.find((item) => item.queue_key === 'dallas-subject');
   assert.ok(selected, 'future-sale Dallas subject must be selected deterministically');
   assert.ok(selected.research_links.some((entry) => /zillow/i.test(entry.label) && /dallas/i.test(entry.url)));
+  assert.ok(selected.research_links.some((entry) => /County appraisal or assessor search/i.test(entry.label)));
   assert.ok(selected.research_links.some((entry) => /CyberBackgroundChecks address/i.test(entry.label)));
+  assert.strictEqual(selected.source_last_checked_at, '2026-08-19T11:00:00.000Z');
+  assert.strictEqual(selected.distress_evidence.money_facts[0].amount_type, 'minimum_bid');
+  assert.strictEqual(selected.distress_evidence.money_facts[0].exact_amount, '$75,000');
+  const partialResearch = service.researchLinks({ partial_address: '100 Sample St, Dallas, TX', county: 'Dallas', state: 'TX' });
+  assert.ok(partialResearch.some((entry) => /Zillow subject search \(partial address - verify first\)/.test(entry.label)));
+  assert.ok(partialResearch.every((entry) => !/exact property/i.test(entry.label)));
   assert.strictEqual(selected.packet.preview_only, true);
   assert.strictEqual(selected.packet.not_a_saved_lead, true);
 

@@ -6,9 +6,9 @@ const lifecycle = require('../modules/research/lead-lifecycle-status');
 (() => {
   const now = '2026-08-11T12:00:00Z';
   assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', sale_date_iso: '2026-08-20' }, now).status, 'FRESH');
-  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', last_seen_at: '2026-08-09T01:00:00Z' }, now).status, 'FRESH');
-  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', last_seen_at: '2026-07-25T01:00:00Z' }, now).status, 'AGING');
-  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201' }, now).reason_code, 'NO_DATE_EVIDENCE');
+  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', source_date: '2026-08-09', last_seen_at: '2026-08-11T01:00:00Z' }, now).status, 'FRESH');
+  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', source_date: '2026-07-25', last_seen_at: '2026-08-11T01:00:00Z' }, now).status, 'AGING');
+  assert.strictEqual(lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', last_seen_at: '2026-08-11T01:00:00Z' }, now).reason_code, 'NO_SOURCE_DATE_EVIDENCE');
   const passed = lifecycle.computeLifecycleStatus({ normalized_address: '1 Main St, Dallas, TX 75201', sale_date_iso: '2026-08-01' }, now);
   assert.strictEqual(passed.status, 'SALE_PASSED');
   assert.strictEqual(passed.quarantined, true);

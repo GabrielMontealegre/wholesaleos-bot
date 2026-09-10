@@ -12,7 +12,7 @@ const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
   assert.strictEqual(tx.comp_lane_enabled, false);
   assert.strictEqual(tx.arv_lock_reason_when_disabled, 'ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED');
   assert.strictEqual(tx.work_order, 'OBTAIN_MLS_COMPS_VIA_LICENSED_AGENT_PARTNERSHIP_OR_PAID_COMP_DATA');
-  const rows = [{ queue_key: 'a', normalized_address: '1 Main St, San Antonio, TX 78201', source_document_url: 'https://bexar.org/doc.pdf' }];
+  const rows = [{ queue_key: 'a', normalized_address: '1 Main St, San Antonio, TX 78201', source_document_url: 'https://bexar.org/doc.pdf', source_date: '2026-08-20' }];
   const selected = scheduler.selectRowsForEnrichment(rows, { lane: 'sold_comp', limit: 6, now_iso: '2026-08-11T00:00:00Z', market_policy: tx });
   assert.strictEqual(selected.selected.length, 0, 'TX comp lane should run zero queries and zero fetches');
   assert.strictEqual(selected.skipped[0].skip_reason, 'lane_disabled_by_market_policy');
@@ -31,7 +31,7 @@ const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
   assert.strictEqual(parcelProfiles.PUBLIC_SOURCE_GAPS.find((item) => item.market.county === 'San Diego').status, 'pending_source_missing_sale_price');
   assert.strictEqual(parcelProfiles.PUBLIC_SOURCE_GAPS.find((item) => item.market.county === 'Los Angeles').status, 'pending_source_missing_property_location_key');
 
-  const policyFlipRow = { queue_key: 'policy-flip', normalized_address: '2 Main St, Detroit, MI 48201' };
+  const policyFlipRow = { queue_key: 'policy-flip', normalized_address: '2 Main St, Detroit, MI 48201', source_date: '2026-08-20' };
   ledger.appendAttempt(policyFlipRow, {
     lane: 'sold_comp',
     attempted_at: '2026-08-11T00:00:00Z',

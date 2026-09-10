@@ -155,6 +155,20 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
   assert.deepStrictEqual(ordered.segments.find((segment) => segment.key === 'NEEDS_SKIP_TRACE').rows.map((item) => item.queue_key), ['needs-skip-trace']);
   assert.strictEqual(ordered.counts.TITLE_NEEDED, 1);
   assert.strictEqual(ordered.counts.CLOSED_NOT_INTERESTED, 1);
+  const typedMoneyQueue = leadOperationsQueue.buildLeadOperationsQueue([row({
+    queue_key: 'typed-money-row',
+    tax_due: '$12,400.17',
+    tax_due_evidence_text: 'Delinquent taxes due: $12,400.17',
+    minimum_bid: '$80,000',
+    minimum_bid_evidence_text: 'Minimum bid: $80,000',
+    source_document_url: 'https://county.example.gov/notices/typed.pdf',
+    source_date: '2026-08-10',
+    last_checked_at: '2026-08-12T12:00:00.000Z'
+  })]);
+  const typedMoneyRow = typedMoneyQueue.segments.flatMap((segment) => segment.rows).find((item) => item.queue_key === 'typed-money-row');
+  assert.deepStrictEqual(typedMoneyRow.distress_evidence.money_facts.map((item) => item.amount_type), ['tax_due', 'minimum_bid']);
+  assert.strictEqual(typedMoneyRow.distress_evidence.money_facts[0].exact_amount, '$12,400.17');
+  assert.strictEqual(typedMoneyRow.distress_evidence.money_facts[1].plain_english_meaning, 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.');
   const summarized = leadOperationsQueue.summarizeLeadOperationsQueue(ordered);
   assert.deepStrictEqual(summarized.segments.find((segment) => segment.key === 'CALL_READY').row_keys, callKeys);
   assert.ok(!JSON.stringify(summarized).includes('normalized_address'), 'transport summary must not duplicate full row payloads');

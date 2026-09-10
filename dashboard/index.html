@@ -6060,12 +6060,22 @@ function sourceTruthFallbackCategory(lead) {
   return 'other';
 }
 
+function sourceTruthMoneyFacts(lead) {
+  var facts = lead && lead.distress_evidence && Array.isArray(lead.distress_evidence.money_facts)
+    ? lead.distress_evidence.money_facts
+    : [];
+  return facts.filter(function(fact) {
+    return fact && fact.amount_type && (fact.exact_amount || fact.amount) && (fact.exact_amount || fact.amount) !== 'Not published in source';
+  });
+}
+
 function sourceTruthMoneyAmount(lead) {
-  return mdaLeadPickNumber(lead || {}, [
-    'tax_due', 'taxes_due', 'taxes_owed', 'lien_amount', 'taxes_liens', 'amount_owed',
-    'source_details.tax_due', 'source_details.taxes_due', 'source_details.lien_amount',
-    'lead_intelligence.evidence.money.tax_due', 'lead_intelligence.evidence.money.taxes_due', 'lead_intelligence.evidence.money.lien_amount'
-  ]);
+  var debt = sourceTruthMoneyFacts(lead).find(function(fact) {
+    return fact.semantic_role === 'debt';
+  });
+  var value = debt && (debt.exact_amount || debt.amount);
+  var number = Number(String(value || '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
 function sourceTruthAddress(lead) {
@@ -6226,6 +6236,10 @@ function renderLeadSourceTruthPanel(lead) {
         return '<span style="font-size:10px;color:#fecaca;background:#7f1d1d55;border:1px solid #ef444455;border-radius:999px;padding:3px 7px;font-weight:800">' + leadIntelText(flag) + '</span>';
       }).join('')
     : '<span style="font-size:10px;color:#86efac;background:#052e1a;border:1px solid #10b98155;border-radius:999px;padding:3px 7px;font-weight:800">no repair flag</span>';
+  var moneyFacts = sourceTruthMoneyFacts(lead);
+  var moneyTiles = moneyFacts.length ? moneyFacts.map(function(fact) {
+    return tile(fact.operator_label || 'Published amount', (fact.exact_amount || fact.amount) + ' - ' + (fact.plain_english_meaning || 'Verify meaning in official source.'));
+  }).join('') : tile('Published amount', 'Not published in source');
   return '<div style="margin:10px 0;padding:12px;background:#0b1120;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb">' +
     '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:9px">' +
       '<div><div style="font-size:10px;color:#f4c542;text-transform:uppercase;font-weight:800;letter-spacing:.06em">Source Registry / Source Truth</div>' +
@@ -6245,7 +6259,7 @@ function renderLeadSourceTruthPanel(lead) {
       tile('Distress Reason', truth.distress_reason) +
       tile('Verification', truth.verification_status) +
       tile('Source Confidence', truth.source_confidence_text || truth.confidence) +
-      tile('Amount', truth.amount > 0 ? mdaMoney(truth.amount) : 'Not saved') +
+      moneyTiles +
       tile('Evidence Ref', truth.evidence_ref) +
     '</div>' +
     '<div style="background:#111827;border:1px solid #243044;border-radius:8px;padding:9px;margin-bottom:8px">' +
@@ -24810,7 +24824,7 @@ function leadQueueQuality(lead) {
   var sourceRecord = leadQueueHasAny(lead, ['source_record_url','record_url','source_url','verification_url','source_pdf_url','evidence_ref','source_reference','source_details.record_url','source_details.source_url','source_details.query_url','_courthouse_metadata.source_url','_courthouse_metadata.source_pdf_url']);
   var distressText = [lead.distress, lead.distress_type, lead.doc_type, lead.lead_type, lead.category, lead.source_category, lead.priority_flag, Array.isArray(lead.distress_types) ? lead.distress_types.join(' ') : '', Array.isArray(lead.priority_flags) ? lead.priority_flags.join(' ') : ''].filter(Boolean).join(' ').toLowerCase();
   var distress = /tax|foreclos|auction|code|violation|probate|lien|vacant|delinquent|sheriff|court/.test(distressText);
-  var amount = leadQueueHasAny(lead, ['amount_owed','tax_due','tax_lien_amount','lien_amount','violation_amount','judgment_amount','minimum_bid','source_amount','_courthouse_metadata.lien_amount']);
+  var amount = sourceTruthMoneyFacts(lead).length > 0 || !!lead.amount_or_judgment;
   var dateCase = leadQueueHasAny(lead, ['case_number','parcel','apn','parcel_id','auction_date','sale_date','filing_date','filed_date','source_published_at','_courthouse_metadata.case_number','_courthouse_metadata.parcel','_courthouse_metadata.auction_date','_courthouse_metadata.filed_date']);
   var hasEvidence = leadQueueHasAny(lead, ['owner_name','owner','parcel','apn','parcel_id','case_number']) || amount || dateCase;
   var hasContact = !!(lead.phone || lead.email || lead.owner_phone || lead.owner_email || (Array.isArray(lead.contacts) && lead.contacts.length));
@@ -24856,6 +24870,20 @@ function dallasVerifiedBadge(lead) {
   return '<span title="' + leadQueueAttr(title) + '" style="display:inline-flex;white-space:nowrap;font-size:10px;font-weight:900;color:' + color + ';background:' + bg + ';border:1px solid ' + color + '55;border-radius:999px;padding:3px 8px">Dallas ' + leadQueueSafeText(level) + '</span>';
 }
 
+function leadQueueMoneyRows(evidence) {
+  evidence = evidence || {};
+  var facts = evidence.distress_evidence && Array.isArray(evidence.distress_evidence.money_facts)
+    ? evidence.distress_evidence.money_facts
+    : (Array.isArray(evidence.money_facts) ? evidence.money_facts : []);
+  if (facts.length) return facts.map(function(fact) {
+    return [fact.operator_label || 'Published amount', (fact.exact_amount || fact.amount || 'Not published in source') + ' - ' + (fact.plain_english_meaning || 'Verify meaning in official source')];
+  });
+  if (evidence.amount_or_judgment) {
+    return [['Unknown source amount', evidence.amount_or_judgment + ' - Unlabeled legacy amount; not confirmed debt, bid, value, ARV, or offer price.']];
+  }
+  return [['Published amount', 'Not published in source']];
+}
+
 function renderDallasSheriffPipelinePanel(lead) {
   var sheriff = dallasSheriffStatus(lead);
   if (!sheriff) return '';
@@ -24869,14 +24897,13 @@ function renderDallasSheriffPipelinePanel(lead) {
     ['Source URL', sourceUrl || 'missing'],
     ['PDF/Page/Row Ref', evidence.pdf_page_reference || evidence.source_file_reference || evidence.source_reference || 'missing'],
     ['Sale Date', evidence.filing_or_sale_date || 'missing'],
-    ['Amount / Judgment / Bid', evidence.amount_or_judgment || 'missing'],
     ['Parcel / APN', evidence.parcel_apn || 'missing'],
     ['Owner', evidence.owner || 'missing'],
     ['Parser Adapter', sheriff.parser_adapter || 'unknown'],
     ['Extraction Quality', sheriff.extraction_quality || 'unknown'],
     ['Evidence Confidence', sheriff.confidence_level || 'Low'],
     ['Comp Confidence', comp.confidence || 'Low']
-  ];
+  ].concat(leadQueueMoneyRows(evidence));
   return '<div style="background:' + bg + ';border:1px solid ' + color + '55;border-radius:10px;padding:11px;color:#111827">' +
     '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">' +
       '<div><div style="font-size:10px;color:' + color + ';text-transform:uppercase;font-weight:900">Dallas Sheriff / Tax Sale Pipeline</div>' +
@@ -24909,7 +24936,7 @@ function renderDallasVerifiedBanner(lead) {
     '</div>' +
     '<div style="font-size:11px;color:#374151;line-height:1.45;margin-top:7px">' + leadQueueSafeText(dallas.confidence_reason || '') + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px">' +
-      [['Source Family', dallas.source_family || 'unknown'], ['Parser', dallas.parser_adapter || 'unknown'], ['Extraction', dallas.extraction_quality || 'unknown'], ['Evidence', dallas.evidence_quality || 'unknown'], ['Case/Cause', evidence.case_or_cause_number || 'missing'], ['Parcel/APN', evidence.parcel_apn || 'missing'], ['Timing', evidence.filing_or_sale_date || 'missing'], ['Amount', evidence.amount_or_judgment || 'missing'], ['Evidence Ref', evidence.source_reference || evidence.pdf_page_reference || evidence.source_file_reference || 'missing']].map(function(pair) {
+      [['Source Family', dallas.source_family || 'unknown'], ['Parser', dallas.parser_adapter || 'unknown'], ['Extraction', dallas.extraction_quality || 'unknown'], ['Evidence', dallas.evidence_quality || 'unknown'], ['Case/Cause', evidence.case_or_cause_number || 'missing'], ['Parcel/APN', evidence.parcel_apn || 'missing'], ['Timing', evidence.filing_or_sale_date || 'missing'], ['Evidence Ref', evidence.source_reference || evidence.pdf_page_reference || evidence.source_file_reference || 'missing']].concat(leadQueueMoneyRows(evidence)).map(function(pair) {
         return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:7px"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:800">' + leadQueueSafeText(pair[0]) + '</div><div style="font-size:10px;color:#111827;font-weight:800;word-break:break-word">' + leadQueueSafeText(pair[1]) + '</div></div>';
       }).join('') +
     '</div>' +
@@ -28642,10 +28669,9 @@ if(document.readyState==="loading"){
       : false;
   }
   function compactLeadMoney(lead) {
-    var direct = compactLeadPick(lead, ['amount_owed','tax_due','tax_lien_amount','lien_amount','violation_amount','judgment_amount','minimum_bid','source_amount']);
-    if (!direct && typeof sourceTruthMoneyAmount === 'function') direct = sourceTruthMoneyAmount(lead);
-    var n = Number(String(direct || '').replace(/[^0-9.-]/g, ''));
-    if (Number.isFinite(n) && n > 0) return typeof mdaMoney === 'function' ? mdaMoney(n) : ('$' + Math.round(n).toLocaleString());
+    var fact = sourceTruthMoneyFacts(lead)[0];
+    if (fact) return (fact.operator_label || 'Published amount') + ': ' + (fact.exact_amount || fact.amount);
+    if (lead && lead.amount_or_judgment) return 'Unknown source amount: ' + lead.amount_or_judgment;
     return 'Amount not verified';
   }
   function compactLeadSourceUrl(lead) {
@@ -29143,6 +29169,6 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-comms.js?v=1"></script>
 <script src="/dashboard/wos-leads-detail.js?v=2"></script>
 <script src="/dashboard/wos-buyers.js?v=1"></script>
-<script src="/dashboard/wos-public-deals.js?v=29"></script>
+<script src="/dashboard/wos-public-deals.js?v=30"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ const fieldProvenance = require('./field-provenance');
 const contactRouteRoles = require('./contact-route-roles');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const leadOperationsState = require('./lead-operations-state');
+const distressEvidenceModel = require('./distress-evidence-model');
 const marketCompPolicy = require('./market-comp-policy');
 const publicParcelOwnerLookup = require('./public-parcel-owner-lookup');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
@@ -959,6 +960,7 @@ function dealFromRecord(record, context) {
     source_url: sourceUrl,
     source_document_url: sourceDocumentUrl,
     source_row_reference: cleanText(record && record.source_row_reference),
+    last_checked_at: cleanText(record && (record.last_checked_at || record.retrieved_at || record.source_checked_at)),
     zillow_url: links.zillow_url,
     redfin_url: links.redfin_url,
     realtor_url: links.realtor_url,
@@ -971,6 +973,13 @@ function dealFromRecord(record, context) {
     motivation_evidence_text: motivation.motivation_evidence_text,
     status_evidence_text: statusEvidenceFromRecord(record),
     sale_date_or_event_date: eventDateFromRecord(record),
+    source_date: cleanText(record && record.source_date),
+    current_status: cleanText(record && record.current_status),
+    source_listing_status: cleanText(record && record.source_listing_status),
+    source_no_longer_listed: record && record.source_no_longer_listed === true,
+    reposted_source_date: cleanText(record && record.reposted_source_date),
+    reposted_source_evidence_text: cleanText(record && record.reposted_source_evidence_text),
+    reposted_source_url: cleanText(record && record.reposted_source_url),
     foreclosure_type: cleanText(record && record.foreclosure_type),
     filing_period: cleanText(record && record.filing_period),
     filing_period_evidence_text: cleanText(record && record.filing_period_evidence_text),
@@ -1006,6 +1015,25 @@ function dealFromRecord(record, context) {
     asking_price: cleanText(record && record.asking_price),
     listed_price: cleanText(record && record.listed_price),
     listed_price_evidence_text: cleanText(record && record.listed_price_evidence_text),
+    amount_or_judgment: cleanText(record && record.amount_or_judgment),
+    unknown_source_amount: cleanText(record && record.unknown_source_amount),
+    unknown_source_amount_evidence_text: cleanText(record && (record.unknown_source_amount_evidence_text || record.amount_or_judgment_evidence_text)),
+    tax_due: cleanText(record && (record.tax_due || record.tax_amount)),
+    tax_due_evidence_text: cleanText(record && (record.tax_due_evidence_text || record.tax_amount_evidence_text)),
+    mortgage_arrears: cleanText(record && record.mortgage_arrears),
+    mortgage_arrears_evidence_text: cleanText(record && record.mortgage_arrears_evidence_text),
+    lien_amount: cleanText(record && (record.lien_amount || record.tax_lien_amount)),
+    lien_amount_evidence_text: cleanText(record && (record.lien_amount_evidence_text || record.tax_lien_amount_evidence_text)),
+    judgment_amount: cleanText(record && record.judgment_amount),
+    judgment_amount_evidence_text: cleanText(record && record.judgment_amount_evidence_text),
+    redemption_amount: cleanText(record && (record.redemption_amount || record.delinquent_redemption_amount)),
+    redemption_amount_evidence_text: cleanText(record && (record.redemption_amount_evidence_text || record.delinquent_redemption_amount_evidence_text)),
+    opening_bid: cleanText(record && record.opening_bid),
+    opening_bid_evidence_text: cleanText(record && record.opening_bid_evidence_text),
+    assessed_value: cleanText(record && (record.assessed_value || record.appraised_value)),
+    assessed_value_evidence_text: cleanText(record && (record.assessed_value_evidence_text || record.appraised_value_evidence_text)),
+    public_estimate: cleanText(record && (record.public_estimate || record.estimated_value)),
+    public_estimate_evidence_text: cleanText(record && (record.public_estimate_evidence_text || record.estimated_value_evidence_text)),
     delinquent_redemption_amount: cleanText(record && record.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(record && record.delinquent_redemption_amount_evidence_text),
     minimum_bid: cleanText(record && record.minimum_bid),
@@ -1036,6 +1064,7 @@ function dealFromRecord(record, context) {
   deal.bad_address_rejected = addressResolution.bad_address_rejected === true;
   deal.bad_address_rejected_reason = cleanText(addressResolution.bad_address_rejected_reason);
   deal.out_of_market = isOutOfMarket(deal, market);
+  deal.distress_evidence = distressEvidenceModel.buildDistressEvidence(deal);
   return finalizeDeal(deal);
 }
 
@@ -1081,12 +1110,20 @@ function candidateRecord(candidate, source) {
     motivation_evidence_text: cleanText(candidate.motivation_evidence_text || candidate.source_proof_text || candidate.source_excerpt || candidate.motivation_phrase),
     status_evidence_text: cleanText(candidate.status_evidence_text || candidate.current_status),
     sale_date_or_event_date: cleanText(candidate.event_date || candidate.sale_date || candidate.auction_date),
+    source_date: cleanText(candidate.source_date),
+    current_status: cleanText(candidate.current_status),
+    source_listing_status: cleanText(candidate.source_listing_status),
+    source_no_longer_listed: candidate.source_no_longer_listed === true,
+    reposted_source_date: cleanText(candidate.reposted_source_date),
+    reposted_source_evidence_text: cleanText(candidate.reposted_source_evidence_text),
+    reposted_source_url: cleanText(candidate.reposted_source_url),
     listing_date_if_visible: cleanText(candidate.listing_date_if_visible),
     offer_deadline_if_visible: cleanText(candidate.offer_deadline_if_visible),
     auction_closing_at_if_visible: cleanText(candidate.auction_closing_at_if_visible),
     owner_name_if_visible: cleanText(candidate.owner_name_candidate || candidate.owner_name),
     contact_route_if_visible: cleanText(candidate.contact_route || candidate.public_contact_route || candidate.contact_phone || candidate.contact_email),
     source_row_reference: cleanText(candidate.source_row_reference || candidate.parcel_or_account),
+    last_checked_at: cleanText(candidate.last_checked_at || candidate.retrieved_at || candidate.source_checked_at),
     address_provenance: cleanText(candidate.address_provenance),
     listing_radar_status: cleanText(candidate.listing_radar_status),
     foreclosure_type: cleanText(candidate.foreclosure_type),
@@ -1095,6 +1132,25 @@ function candidateRecord(candidate, source) {
     asking_price: cleanText(candidate.asking_price),
     listed_price: cleanText(candidate.listed_price),
     listed_price_evidence_text: cleanText(candidate.listed_price_evidence_text),
+    amount_or_judgment: cleanText(candidate.amount_or_judgment),
+    unknown_source_amount: cleanText(candidate.unknown_source_amount),
+    unknown_source_amount_evidence_text: cleanText(candidate.unknown_source_amount_evidence_text || candidate.amount_or_judgment_evidence_text),
+    tax_due: cleanText(candidate.tax_due || candidate.tax_amount),
+    tax_due_evidence_text: cleanText(candidate.tax_due_evidence_text || candidate.tax_amount_evidence_text),
+    mortgage_arrears: cleanText(candidate.mortgage_arrears),
+    mortgage_arrears_evidence_text: cleanText(candidate.mortgage_arrears_evidence_text),
+    lien_amount: cleanText(candidate.lien_amount || candidate.tax_lien_amount),
+    lien_amount_evidence_text: cleanText(candidate.lien_amount_evidence_text || candidate.tax_lien_amount_evidence_text),
+    judgment_amount: cleanText(candidate.judgment_amount),
+    judgment_amount_evidence_text: cleanText(candidate.judgment_amount_evidence_text),
+    redemption_amount: cleanText(candidate.redemption_amount || candidate.delinquent_redemption_amount),
+    redemption_amount_evidence_text: cleanText(candidate.redemption_amount_evidence_text || candidate.delinquent_redemption_amount_evidence_text),
+    opening_bid: cleanText(candidate.opening_bid),
+    opening_bid_evidence_text: cleanText(candidate.opening_bid_evidence_text),
+    assessed_value: cleanText(candidate.assessed_value || candidate.appraised_value),
+    assessed_value_evidence_text: cleanText(candidate.assessed_value_evidence_text || candidate.appraised_value_evidence_text),
+    public_estimate: cleanText(candidate.public_estimate || candidate.estimated_value),
+    public_estimate_evidence_text: cleanText(candidate.public_estimate_evidence_text || candidate.estimated_value_evidence_text),
     delinquent_redemption_amount: cleanText(candidate.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(candidate.delinquent_redemption_amount_evidence_text),
     minimum_bid: cleanText(candidate.minimum_bid),
@@ -1128,9 +1184,32 @@ function cardRecord(card, source) {
   record.property_identity_source_only = card && card.property_identity_source_only === true;
   if (record.property_identity_source_only) record.normalized_address = cleanText(card.display_address);
   record.source_row_reference = cleanText(card && card.source_row_reference);
+  record.sale_date_or_event_date = cleanText(card && card.sale_date_or_event_date);
+  record.source_date = cleanText(card && card.source_date);
+  record.current_status = cleanText(card && (card.current_status || card.listing_status));
+  record.last_checked_at = cleanText(card && (card.last_checked_at || card.retrieved_at || card.exact_source_phrase_checked_at));
   record.contact_route_if_visible = cleanText(card && (card.public_contact_route || card.contact_phone || card.contact_email));
   record.minimum_bid = cleanText(card && card.minimum_bid);
   record.minimum_bid_evidence_text = cleanText(card && card.minimum_bid_evidence_text);
+  record.amount_or_judgment = cleanText(card && card.amount_or_judgment);
+  record.unknown_source_amount = cleanText(card && card.unknown_source_amount);
+  record.unknown_source_amount_evidence_text = cleanText(card && card.unknown_source_amount_evidence_text);
+  record.tax_due = cleanText(card && card.tax_due);
+  record.tax_due_evidence_text = cleanText(card && card.tax_due_evidence_text);
+  record.mortgage_arrears = cleanText(card && card.mortgage_arrears);
+  record.mortgage_arrears_evidence_text = cleanText(card && card.mortgage_arrears_evidence_text);
+  record.lien_amount = cleanText(card && card.lien_amount);
+  record.lien_amount_evidence_text = cleanText(card && card.lien_amount_evidence_text);
+  record.judgment_amount = cleanText(card && card.judgment_amount);
+  record.judgment_amount_evidence_text = cleanText(card && card.judgment_amount_evidence_text);
+  record.redemption_amount = cleanText(card && card.redemption_amount);
+  record.redemption_amount_evidence_text = cleanText(card && card.redemption_amount_evidence_text);
+  record.opening_bid = cleanText(card && card.opening_bid);
+  record.opening_bid_evidence_text = cleanText(card && card.opening_bid_evidence_text);
+  record.assessed_value = cleanText(card && card.assessed_value);
+  record.assessed_value_evidence_text = cleanText(card && card.assessed_value_evidence_text);
+  record.public_estimate = cleanText(card && card.public_estimate);
+  record.public_estimate_evidence_text = cleanText(card && card.public_estimate_evidence_text);
   record.nsb_number = cleanText(card && card.nsb_number);
   record.improvement_flag = cleanText(card && card.improvement_flag);
   record.foreclosure_type = cleanText(card && card.foreclosure_type);
@@ -2086,6 +2165,8 @@ async function applyFreePublicHunters(deals, input, options, context) {
       deal.next_comp_action = compPolicy.work_order;
       deal.ARV_lock_state = 'ARV_LOCKED_NO_VERIFIED_COMPS';
     }
+    deal.last_checked_at = now;
+    deal.distress_evidence = distressEvidenceModel.buildDistressEvidence(deal);
     deal.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(deal, now);
     const rowState = leadOperationsState.rowStateForDeal(deal);
     deal.row_state = rowState.row_state;

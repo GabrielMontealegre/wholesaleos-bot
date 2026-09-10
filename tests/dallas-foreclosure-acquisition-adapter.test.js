@@ -42,14 +42,20 @@ const sourceAcquisitionScore = require('../modules/research/source-acquisition-s
       property_address: '7421 Birch Ave, Dallas, TX 75228',
       source_row_reference: '2026-12345',
       contact_route: 'Manual Lookup Needed',
-      source_proof_text: 'Foreclosure sale notice.'
+      source_proof_text: 'Foreclosure sale notice. Judgment amount: $81,250. Opening bid: $50,000.',
+      judgment_amount: '$81,250',
+      judgment_amount_evidence_text: 'Judgment amount: $81,250',
+      opening_bid: '$50,000',
+      opening_bid_evidence_text: 'Opening bid: $50,000'
     },
     {
       property_address: '7423 Birch Ave, Dallas, TX 75228',
       source_row_reference: '2026-12346',
       contact_route: 'Public Contact Form',
       contact_phone: '214-555-1212',
-      source_proof_text: 'Foreclosure sale notice.'
+      source_proof_text: 'Foreclosure sale notice. Delinquent taxes due: $12,400.17.',
+      tax_amount: '$12,400.17',
+      tax_amount_evidence_text: 'Delinquent taxes due: $12,400.17'
     }
   ];
 
@@ -90,6 +96,12 @@ const sourceAcquisitionScore = require('../modules/research/source-acquisition-s
   assert.strictEqual(skipTrace.lead_evidence.normalized_address, '7421 Birch Ave, Dallas, TX 75228');
   assert.ok(skipTrace.lead_evidence.exact_source_phrase);
   assert.strictEqual(skipTrace.next_best_worker, sourceAcquisitionScore.NEXT_BEST_WORKERS.SKIP_TRACE);
+  assert.strictEqual(skipTrace.amount_or_judgment, '');
+  assert.strictEqual(skipTrace.judgment_amount, '$81,250');
+  assert.strictEqual(skipTrace.opening_bid, '$50,000');
+  assert.deepStrictEqual(skipTrace.distress_evidence.money_facts.map((fact) => fact.amount_type), ['judgment_amount', 'opening_bid']);
+  assert.strictEqual(pipeline.tax_due, '$12,400.17');
+  assert.ok(!pipeline.judgment_amount);
   assert.strictEqual(pipeline.next_best_worker, sourceAcquisitionScore.NEXT_BEST_WORKERS.PIPELINE);
   assert.ok(pipeline.contact_confidence >= 50);
   assert.ok(manualReview.missing_evidence.includes('current listing status'));

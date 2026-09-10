@@ -4,6 +4,7 @@ const {
   buildDallasCompCaptureLinks,
   summarizeDallasCompCapture
 } = require('./dallas-comp-capture-agent');
+const distressEvidenceModel = require('./distress-evidence-model');
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -218,15 +219,8 @@ function timingPressureScore(input) {
 }
 
 function amountPressureScore(input) {
-  const amount = parseMoney(pick(input, [
-    'amount_owed',
-    'tax_due',
-    'judgment_amount',
-    'minimum_bid',
-    'minimum_bid_amount',
-    'lien_amount',
-    'evidence.amount_or_judgment'
-  ]));
+  const amount = distressEvidenceModel.debtMoneyFactsForRow(input)
+    .reduce((largest, fact) => Math.max(largest, parseMoney(fact.exact_amount)), 0);
   if (amount >= 50000) return 15;
   if (amount >= 20000) return 12;
   if (amount >= 5000) return 8;
@@ -264,7 +258,7 @@ function distressConfidenceScore(input) {
 function titleTaxConfidenceScore(input) {
   let score = 0;
   if (hasValue(pick(input, ['parcel', 'apn', 'account_number', 'tax_account', 'evidence.parcel_apn']))) score += 3;
-  if (hasValue(pick(input, ['tax_due', 'judgment_amount', 'minimum_bid', 'case_number', 'cause_number']))) score += 2;
+  if (distressEvidenceModel.moneyFactsForRow(input).length || hasValue(pick(input, ['case_number', 'cause_number']))) score += 2;
   return score;
 }
 

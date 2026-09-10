@@ -25,11 +25,17 @@ function mockDeal(overrides) {
     headline: '3723 Barnabus Rd, Dallas, TX 75241',
     normalized_address: '3723 Barnabus Rd, Dallas, TX 75241',
     city: 'Dallas',
+    county: 'Dallas',
     state: 'TX',
     quality_bucket: 'INSPECT_NOW',
     source_family: 'preforeclosure_trustee_notice',
     source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
     source_document_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf',
+    sale_date_or_event_date: '2026-12-01',
+    source_date: '2026-12-01',
+    last_checked_at: '2026-09-09T10:00:00.000Z',
+    minimum_bid: '$50,000',
+    minimum_bid_evidence_text: 'Minimum bid: $50,000',
     best_link_to_click_first: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf',
     maps_url: 'https://maps.example/q',
     free_contact_status: 'CALL_READY',
@@ -458,6 +464,16 @@ function mockDeal(overrides) {
   assert.strictEqual(run2.counts.total_rows, 2);
   const barnabus = run2.rows.find((row) => row.normalized_address === '3723 Barnabus Rd, Dallas, TX 75241');
   assert.ok(barnabus.times_seen >= 2);
+  assert.strictEqual(barnabus.sale_date_or_event_date, '2026-12-01');
+  assert.strictEqual(barnabus.last_checked_at, '2026-09-09T10:00:00.000Z');
+  assert.ok(barnabus.first_seen_at);
+  assert.ok(barnabus.last_seen_at);
+  assert.notStrictEqual(barnabus.sale_date_or_event_date, barnabus.last_checked_at);
+  assert.notStrictEqual(barnabus.first_seen_at, barnabus.last_checked_at);
+  assert.strictEqual(barnabus.distress_evidence.money_facts[0].amount_type, 'minimum_bid');
+  assert.strictEqual(barnabus.distress_evidence.money_facts[0].exact_amount, '$50,000');
+  assert.ok(barnabus.research_links.some((entry) => entry.label === 'Zillow subject search'));
+  assert.ok(barnabus.research_links.some((entry) => entry.label === 'County appraisal or assessor search'));
 
   // Evidence fields survive a refresh from a weaker duplicate sighting.
   const weakerPreview = async () => ({
@@ -831,7 +847,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=29'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=30'), 'dashboard must load the cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -881,13 +897,13 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('contact_workflow_attempts') && uiSource.includes('Last contact attempt'), 'dashboard must expose append-only contact attempt history');
   assert.ok(queueSource.includes('contact_workflow_invalidated_routes') && queueSource.includes('OPERATOR_WRONG_NUMBER_REPORTED'), 'wrong-number contact workflow must invalidate the disproven route');
   assert.ok(uiSource.includes('next_best_action'));
-  assert.ok(uiSource.includes('Source listed price') && uiSource.includes('not ARV or MAO'), 'visible source price must be honestly labeled');
+  assert.ok(uiSource.includes('Verified money facts') && uiSource.includes('plain_english_meaning'), 'visible source money must use canonical labels and meanings');
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=29'), 'dashboard must load the Cycle 23 cache-busted canonical-readiness workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=30'), 'dashboard must load the Cycle 25 cache-busted distress truth workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
-  assert.ok(uiSource.includes('Status evidence: <b>') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
+  assert.ok(uiSource.includes('Official event/status') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
   assert.ok(uiSource.includes('(not a sale date)'), 'dashboard must label filing period as not a sale date');
   assert.ok(uiSource.includes('seller_questions'));
@@ -1023,6 +1039,52 @@ function mockDeal(overrides) {
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidencePanel, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidenceCard, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.rowCard, 'function');
+  const distressCardHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard({
+    queue_key: 'distress-truth-row',
+    normalized_address: '100 Truth St, Dallas, TX 75201',
+    county: 'Dallas',
+    row_state: 'NEEDS_CONTACT_SEARCH',
+    quality_bucket: 'INSPECT_NOW',
+    why_this_might_be_a_deal: 'Official trustee sale notice.',
+    status_evidence_text: 'Sale scheduled by official notice.',
+    source_document_url: 'https://county.example.gov/notices/truth.pdf',
+    source_date: '2026-09-09',
+    last_checked_at: '2026-09-10T12:00:00.000Z',
+    lifecycle_status: { status: 'FRESH', quarantined: false, reason_text: 'Source evidence is dated 1 day ago.' },
+    distress_evidence: {
+      distress_reason: 'Official trustee sale notice.',
+      official_event_status: 'Sale scheduled by official notice.',
+      source_date: '2026-09-09',
+      last_checked_at: '2026-09-10T12:00:00.000Z',
+      official_source_url: 'https://county.example.gov/notices/truth.pdf',
+      money_facts: [{
+        amount_type: 'minimum_bid', exact_amount: '$152,743', operator_label: 'Minimum bid',
+        plain_english_meaning: 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.',
+        evidence_text: '157 2317-018-044 $152,743 539'
+      }]
+    },
+    research_links: [
+      { label: 'Zillow subject search', url: 'https://www.zillow.com/homes/100-Truth-St_rb/' },
+      { label: 'Redfin subject search', url: 'https://www.redfin.com/search?q=100%20Truth%20St' },
+      { label: 'Google Maps', url: 'https://www.google.com/maps/search/?api=1&query=100%20Truth%20St' },
+      { label: 'County appraisal or assessor search', url: 'https://www.dallascad.org/' }
+    ],
+    ARV_lock_state: 'ARV_LOCKED_NO_VERIFIED_COMPS',
+    MAO_lock_state: 'MAO_LOCKED_NO_ARV',
+    verified_sold_comp_count: 0,
+    free_contact_routes: [],
+    blocked_sources: [],
+    missing_fields: []
+  });
+  ['Why this lead exists', 'Official event/status', 'Minimum bid', '$152,743', 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.', 'Source date', 'Last checked', 'Freshness', 'Open official source', 'Zillow subject search', 'Redfin subject search', 'Value status', 'ARV lock reason'].forEach((text) => {
+    assert.ok(distressCardHtml.includes(text), `Cycle 25 row card must render ${text}`);
+  });
+  assert.ok(distressCardHtml.indexOf('Why this lead exists') < distressCardHtml.indexOf('Official event/status'));
+  assert.ok(distressCardHtml.indexOf('Official event/status') < distressCardHtml.indexOf('Verified money facts'));
+  assert.ok(distressCardHtml.indexOf('Verified money facts') < distressCardHtml.indexOf('Source date'));
+  assert.ok(!distressCardHtml.includes('Amount / Judgment / Bid'));
+  assert.ok(!indexHtml.includes('Amount / Judgment / Bid'), 'no dashboard path may retain the combined money label');
   const contactRow = {
     queue_key: 'synthetic-contact-row',
     normalized_address: '100 Contact Test St, Dallas, TX 75201',
