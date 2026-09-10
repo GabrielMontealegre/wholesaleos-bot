@@ -24,6 +24,7 @@ const enrichmentScheduler = require('./enrichment-scheduler');
 const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
 const documentReextractionPass = require('./document-reextraction-pass');
 const manualEvidencePacketService = require('./manual-evidence-packet-service');
+const distressEvidenceModel = require('./distress-evidence-model');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -91,11 +92,11 @@ function cloneSnapshotRow(row) {
     'risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps',
     'seller_questions', 'free_contact_routes', 'entity_contacts',
     'blocked_sources', 'free_searches_run', 'contact_workflow_attempts',
-    'contact_workflow_invalidated_routes'
+    'contact_workflow_invalidated_routes', 'research_links'
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
-  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution']) {
+  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence']) {
     if (copy[key] && typeof copy[key] === 'object') copy[key] = JSON.parse(JSON.stringify(copy[key]));
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
@@ -267,6 +268,7 @@ function repairStoredSnapshotRows(rows) {
     quarantineSuspectedPrefixRow(row);
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
+    row.distress_evidence = distressEvidenceModel.buildDistressEvidence(row);
     row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
     const state = leadOperationsState.rowStateForDeal(row);
     row.row_state = state.row_state;
@@ -726,7 +728,17 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     coordinate_source: cleanText(deal.coordinate_source) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
+    source_date: cleanText(deal.source_date) || null,
+    current_status: cleanText(deal.current_status) || null,
     status_evidence_text: cleanText(deal.status_evidence_text) || null,
+    source_listing_status: cleanText(deal.source_listing_status) || null,
+    source_no_longer_listed: deal.source_no_longer_listed === true,
+    reposted_source_date: cleanText(deal.reposted_source_date) || null,
+    reposted_source_evidence_text: cleanText(deal.reposted_source_evidence_text) || null,
+    reposted_source_url: cleanText(deal.reposted_source_url) || null,
+    replacement_source_date: cleanText(deal.replacement_source_date) || null,
+    replacement_source_evidence_text: cleanText(deal.replacement_source_evidence_text) || null,
+    replacement_source_url: cleanText(deal.replacement_source_url) || null,
     rejected_reason: cleanText(deal.rejected_reason) || null,
     listing_date_if_visible: cleanText(deal.listing_date_if_visible) || null,
     offer_deadline_if_visible: cleanText(deal.offer_deadline_if_visible) || null,
@@ -880,6 +892,25 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     appraisal_clue: cleanText(((deal.appraisal_clues || [])[0] || {}).value),
     listed_price: cleanText(deal.listed_price),
     listed_price_evidence_text: cleanText(deal.listed_price_evidence_text),
+    amount_or_judgment: cleanText(deal.amount_or_judgment),
+    unknown_source_amount: cleanText(deal.unknown_source_amount),
+    unknown_source_amount_evidence_text: cleanText(deal.unknown_source_amount_evidence_text || deal.amount_or_judgment_evidence_text),
+    tax_due: cleanText(deal.tax_due || deal.tax_amount),
+    tax_due_evidence_text: cleanText(deal.tax_due_evidence_text || deal.tax_amount_evidence_text),
+    mortgage_arrears: cleanText(deal.mortgage_arrears),
+    mortgage_arrears_evidence_text: cleanText(deal.mortgage_arrears_evidence_text),
+    lien_amount: cleanText(deal.lien_amount || deal.tax_lien_amount),
+    lien_amount_evidence_text: cleanText(deal.lien_amount_evidence_text || deal.tax_lien_amount_evidence_text),
+    judgment_amount: cleanText(deal.judgment_amount),
+    judgment_amount_evidence_text: cleanText(deal.judgment_amount_evidence_text),
+    redemption_amount: cleanText(deal.redemption_amount || deal.delinquent_redemption_amount),
+    redemption_amount_evidence_text: cleanText(deal.redemption_amount_evidence_text || deal.delinquent_redemption_amount_evidence_text),
+    opening_bid: cleanText(deal.opening_bid),
+    opening_bid_evidence_text: cleanText(deal.opening_bid_evidence_text),
+    assessed_value: cleanText(deal.assessed_value || deal.appraised_value),
+    assessed_value_evidence_text: cleanText(deal.assessed_value_evidence_text || deal.appraised_value_evidence_text),
+    public_estimate: cleanText(deal.public_estimate || deal.estimated_value),
+    public_estimate_evidence_text: cleanText(deal.public_estimate_evidence_text || deal.estimated_value_evidence_text),
     delinquent_redemption_amount: cleanText(deal.delinquent_redemption_amount),
     delinquent_redemption_amount_evidence_text: cleanText(deal.delinquent_redemption_amount_evidence_text),
     minimum_bid: cleanText(deal.minimum_bid),
@@ -904,10 +935,15 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
       .map((item) => ({ source: cleanText(item && item.source), reason: cleanText(item && item.reason) })).slice(0, 6),
     enrichment_ledger: deal.enrichment_ledger || { attempts: [], dropped_count: 0 },
     enrichment_skip_rollups: deal.enrichment_skip_rollups || {},
+    distress_evidence: distressEvidenceModel.buildDistressEvidence(Object.assign({}, deal, {
+      last_checked_at: cleanText(deal.last_checked_at) || seenAt
+    })),
+    research_links: manualEvidencePacketService.researchLinks(deal),
     lifecycle_status: deal.lifecycle_status || leadLifecycleStatus.computeLifecycleStatus(deal, seenAt),
     enrichment_ledger_summary: enrichmentLedger.ledgerSummary(deal),
     first_seen_at: seenAt,
     last_seen_at: seenAt,
+    last_checked_at: cleanText(deal.last_checked_at) || seenAt,
     times_seen: 1,
     preview_only: true,
     not_a_saved_lead: true
@@ -1086,9 +1122,18 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
     'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
+    'distress_evidence', 'research_links',
     'rejected_reason',
-    'sale_date_or_event_date', 'sale_date_iso', 'status_evidence_text', 'listing_date_if_visible', 'offer_deadline_if_visible',
+    'sale_date_or_event_date', 'sale_date_iso', 'source_date', 'current_status', 'status_evidence_text',
+    'source_listing_status', 'source_no_longer_listed', 'reposted_source_date', 'reposted_source_evidence_text',
+    'reposted_source_url', 'replacement_source_date', 'replacement_source_evidence_text', 'replacement_source_url',
+    'listing_date_if_visible', 'offer_deadline_if_visible',
     'auction_closing_at_if_visible', 'source_row_reference', 'listed_price', 'listed_price_evidence_text',
+    'amount_or_judgment', 'unknown_source_amount', 'unknown_source_amount_evidence_text',
+    'tax_due', 'tax_due_evidence_text', 'mortgage_arrears', 'mortgage_arrears_evidence_text',
+    'lien_amount', 'lien_amount_evidence_text', 'judgment_amount', 'judgment_amount_evidence_text',
+    'redemption_amount', 'redemption_amount_evidence_text', 'opening_bid', 'opening_bid_evidence_text',
+    'assessed_value', 'assessed_value_evidence_text', 'public_estimate', 'public_estimate_evidence_text',
     'foreclosure_type', 'filing_period', 'filing_period_evidence_text',
     'delinquent_redemption_amount', 'delinquent_redemption_amount_evidence_text',
     'minimum_bid', 'minimum_bid_evidence_text', 'nsb_number', 'improvement_flag', 'program',

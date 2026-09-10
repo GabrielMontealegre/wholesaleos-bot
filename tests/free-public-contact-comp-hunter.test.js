@@ -15,6 +15,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
 const contactHunter = require('../modules/research/free-public-contact-hunter');
 const compHunter = require('../modules/research/free-public-comp-hunter');
 const dealBoard = require('../modules/research/free-public-deal-board');
+const SOURCE_EVENT_DATE = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
 function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 200, finalUrl = '') {
   const buffer = Buffer.from(String(body || ''), 'utf8');
@@ -168,6 +169,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
       source_document_url: noticePdfUrl,
       source_family: 'preforeclosure_trustee_notice',
+      source_date: SOURCE_EVENT_DATE,
       motivation_type: 'preforeclosure_trustee_notice',
       motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE'
     }]
@@ -214,6 +216,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       source_url: 'https://buildingdetroit.org/properties/13905-sussex',
       source_document_url: noticePdfUrl,
       source_family: 'land_bank_public_sale',
+      source_date: SOURCE_EVENT_DATE,
       motivation_type: 'land_bank_public_sale',
       motivation_evidence_text: 'NOTICE OF SUBSTITUTE TRUSTEE SALE'
     }]
@@ -271,6 +274,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
       address: '13905 Sussex St, Detroit, MI 48227',
       source_url: 'https://buildingdetroit.org/properties/13905-sussex',
       source_family: 'land_bank_public_sale',
+      source_date: SOURCE_EVENT_DATE,
       motivation_type: 'land_bank_public_sale',
       motivation_evidence_text: 'Public land bank sale row',
       status_evidence_text: 'Active public listing'

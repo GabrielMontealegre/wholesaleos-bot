@@ -13,6 +13,7 @@ const leadOperationsState = require('./lead-operations-state');
 const contactRouteRoles = require('./contact-route-roles');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
+const distressEvidenceModel = require('./distress-evidence-model');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -422,6 +423,22 @@ function slug(value) {
   return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+const COUNTY_PROPERTY_RECORD_LINKS = Object.freeze({
+  'TX|DALLAS': 'https://www.dallascad.org/SearchOwner.aspx?type=Search',
+  'TX|BEXAR': 'https://bexar.trueautomation.com/clientdb/PropertySearch.aspx?cid=110',
+  'TX|HARRIS': 'https://hcad.org/property-search/',
+  'MI|WAYNE': 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/Parcels_Current/FeatureServer/0',
+  'CA|SAN DIEGO': 'https://webmaps.sandiego.gov/arcgis/rest/services/GeocoderMerged/MapServer/1',
+  'CA|LOS ANGELES': 'https://portal.assessor.lacounty.gov/'
+});
+
+function countyPropertyRecordUrl(row) {
+  const explicit = cleanText(row && row.official_property_record_url);
+  if (explicit) return explicit;
+  const key = `${cleanText(row && row.state).toUpperCase()}|${cleanText(row && row.county).toUpperCase()}`;
+  return COUNTY_PROPERTY_RECORD_LINKS[key] || '';
+}
+
 function researchLinks(row) {
   const address = cleanText(row && (row.normalized_address || row.partial_address || row.headline));
   const partial = !cleanText(row && row.normalized_address) && !!address;
@@ -446,7 +463,7 @@ function researchLinks(row) {
   }
   if (owner) push('CyberBackgroundChecks name search', `https://www.google.com/search?q=${encodeURIComponent(`site:cyberbackgroundchecks.com/detail "${owner}" "${cleanText(row && row.city)} ${cleanText(row && row.state)}"`)}`);
   push('County source proof', cleanText(row && (row.source_document_url || row.source_url)), 'source_proof');
-  push('County property record', cleanText(row && row.official_property_record_url), 'official_property_record');
+  push('County appraisal or assessor search', countyPropertyRecordUrl(row), 'official_property_record_search');
   if (cleanText(row && row.auction_url) && (cleanText(row && row.sale_date_or_event_date) || /auction|foreclosure|tax/i.test(cleanText(row && row.source_family)))) {
     push('Auction or sale status', cleanText(row.auction_url), 'source_backed_auction_status');
   }
@@ -540,7 +557,8 @@ function sampleItem(row, packetStore, market, options) {
     lead_origin: leadOrigin(row),
     source_proof_url: cleanText(row.source_document_url || row.source_url),
     source_event_date: cleanText(row.sale_date_or_event_date || row.sale_date_iso),
-    source_last_checked_at: cleanText(row.last_seen_at || row.retrieved_at),
+    source_last_checked_at: cleanText(row.last_checked_at),
+    distress_evidence: distressEvidenceModel.buildDistressEvidence(row),
     why_worth_checking: whyWorthChecking(row),
     row_state: cleanText(row.row_state),
     row_state_reason: cleanText(row.row_state_reason),

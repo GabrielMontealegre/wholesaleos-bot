@@ -1,0 +1,196 @@
+{
+  "cycle": 25,
+  "status": "UNREACHABLE",
+  "reason": "Local deal-board snapshot store does not exist at C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json. The production Railway volume was not contacted.",
+  "production_contacted": false,
+  "snapshot_path": "C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json",
+  "generated_at": "2026-09-10T18:50:47.129Z",
+  "markets": [
+    {
+      "market": {
+        "city": "Dallas",
+        "county": "Dallas",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    },
+    {
+      "market": {
+        "city": "Detroit",
+        "county": "Wayne",
+        "state": "MI"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    },
+    {
+      "market": {
+        "city": "San Diego",
+        "county": "San Diego",
+        "state": "CA"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    },
+    {
+      "market": {
+        "city": "Los Angeles",
+        "county": "Los Angeles",
+        "state": "CA"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    },
+    {
+      "market": {
+        "city": "San Antonio",
+        "county": "Bexar",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    },
+    {
+      "market": {
+        "city": "Houston",
+        "county": "Harris",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "complete_verified_addresses": null,
+      "distress_reason_present": null,
+      "amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "source_date_present": null,
+      "stale": null,
+      "sale_passed": null,
+      "date_unknown": null,
+      "zillow_research_ready": null,
+      "redfin_research_ready": null,
+      "public_estimate_present": null,
+      "arv_unlocked": null
+    }
+  ]
+}

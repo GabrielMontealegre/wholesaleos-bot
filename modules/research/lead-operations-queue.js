@@ -1,6 +1,7 @@
 'use strict';
 
 const leadOperationsState = require('./lead-operations-state');
+const distressEvidenceModel = require('./distress-evidence-model');
 
 const SEGMENT_ORDER = Object.freeze([
   'CALL_READY',
@@ -78,7 +79,8 @@ function buildLeadOperationsQueue(rows, options = {}) {
     const row = Object.assign({}, source, {
       row_state: state.row_state,
       row_state_reason: state.row_state_reason,
-      row_state_next_action: state.next_action
+      row_state_next_action: state.next_action,
+      distress_evidence: distressEvidenceModel.buildDistressEvidence(source)
     });
     buckets[segmentKey(row)].push(row);
   }

@@ -9,6 +9,7 @@ function rows(count) {
     queue_key: `row-${String(index).padStart(2, '0')}`,
     normalized_address: `${1000 + index} Test St, San Antonio, TX 78201`,
     source_document_url: 'https://bexar.org/doc.pdf',
+    source_date: '2026-09-01',
     first_seen_at: `2026-08-${String(1 + (index % 9)).padStart(2, '0')}T00:00:00Z`,
     last_seen_at: '2026-08-10T00:00:00Z'
   }));
@@ -101,6 +102,16 @@ function recordBoardSkipRollup(row, lane, reason, nowIso) {
     now_iso: '2026-08-11T00:02:00Z',
     market_policy: {}
   }).selected.length, 0, 'legacy SKIPPED_BUDGET must not erase FOUND cooldown');
+
+  const datelessRepairRow = rows(1)[0];
+  delete datelessRepairRow.source_date;
+  assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
+    lane: 'public_search', limit: 1, now_iso: now, market_policy: {}
+  }).selected.length, 0, 'date-unknown rows must remain quarantined from ordinary enrichment');
+  assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
+    lane: 'document_reextraction', limit: 1, now_iso: now, market_policy: {},
+    terminal_source_url_for_row: (row) => row.source_document_url
+  }).selected.length, 1, 'document re-extraction must be allowed to repair date-unknown source evidence');
 
   const terminalRow = rows(1)[0];
   terminalRow.queue_key = 'terminal-row-00';

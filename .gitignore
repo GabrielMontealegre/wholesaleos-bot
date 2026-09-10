@@ -50,6 +50,9 @@ exports/cycle-22-contact-routes/*
 !exports/cycle-23-auth-preflight/
 exports/cycle-23-auth-preflight/*
 !exports/cycle-23-auth-preflight/preflight.json
+!exports/cycle-25-distress-inventory/
+exports/cycle-25-distress-inventory/*
+!exports/cycle-25-distress-inventory/inventory.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

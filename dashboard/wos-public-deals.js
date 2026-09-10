@@ -464,6 +464,28 @@
       .finally(function () { marketDemandFetchInFlight = false; });
   }
 
+  function distressMoneyHtml(row) {
+    var distress = row && row.distress_evidence || {};
+    var facts = safeArray(distress.money_facts);
+    if (!facts.length) {
+      return '<div style="font-size:12px;">Published amount: <b>Not published in source</b></div>';
+    }
+    return facts.map(function (fact) {
+      return '<div style="font-size:12px;margin-top:2px;"><b>' + esc(fact.operator_label || 'Published amount') + ':</b> ' +
+        '<span style="font-weight:700;">' + esc(fact.exact_amount || fact.amount || 'Not published in source') + '</span>' +
+        '<div style="font-size:11px;color:#6b7280;margin-left:10px;">Meaning: ' + esc(fact.plain_english_meaning || 'Verify the meaning in the official source.') +
+        (fact.evidence_text ? ' Evidence: ' + esc(fact.evidence_text) : '') + '</div></div>';
+    }).join('');
+  }
+
+  function researchLinksHtml(row) {
+    var links = safeArray(row && row.research_links).filter(function (entry) {
+      return entry && entry.url && /zillow|redfin|google maps|county appraisal|county assessor/i.test(entry.label || '');
+    });
+    if (!links.length) return '';
+    return links.map(function (entry) { return link(entry.label, entry.url); }).join('');
+  }
+
   function rowCard(row) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -479,6 +501,22 @@
       lines.push('<div style="font-size:12px;">Row state: <b style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state) + '</b>' +
         (row.row_state_reason ? ' <span style="color:#6b7280;">' + esc(row.row_state_reason) + '</span>' : '') + '</div>');
     }
+    var distress = row.distress_evidence || {};
+    lines.push('<div style="font-size:12px;margin-top:4px;"><b>Why this lead exists:</b> ' + esc(distress.distress_reason || row.why_this_might_be_a_deal || row.motivation_evidence_text || 'Official source evidence requires review.') + '</div>');
+    lines.push('<div style="font-size:12px;"><b>Official event/status:</b> ' + esc(distress.official_event_status || row.status_evidence_text || 'Not published in source') + '</div>');
+    lines.push('<div style="margin-top:4px;"><b style="font-size:12px;">Verified money facts</b>' + distressMoneyHtml(row) + '</div>');
+    lines.push('<div style="font-size:12px;margin-top:4px;"><b>Source date:</b> ' + esc(distress.source_date || row.source_date || row.sale_date_or_event_date || 'Not published in source') + '</div>');
+    lines.push('<div style="font-size:12px;"><b>Last checked:</b> ' + esc(distress.last_checked_at || row.last_checked_at || 'Not recorded') + '</div>');
+    lines.push('<div style="font-size:12px;"><b>Freshness:</b> ' + esc(row.lifecycle_status && row.lifecycle_status.status || 'DATE_UNKNOWN_REVERIFY') +
+      (row.lifecycle_status && row.lifecycle_status.reason_text ? ' <span style="color:#6b7280;">' + esc(row.lifecycle_status.reason_text) + '</span>' : '') + '</div>');
+    lines.push('<div style="font-size:12px;margin-top:3px;"><b>Official proof:</b> ' + link('Open official source', distress.official_source_url || row.source_document_url || row.source_url) + '</div>');
+    var researchLinks = researchLinksHtml(row);
+    if (researchLinks) lines.push('<div style="font-size:12px;"><b>Property research:</b> ' + researchLinks + '</div>');
+    lines.push('<div style="font-size:11px;color:#374151;margin-top:3px;"><b>Value status:</b> Comps ' + esc(row.screenshot_comp_status || row.comp_status || 'not run') +
+      (row.verified_sold_comp_count ? ' (' + esc(row.verified_sold_comp_count) + ' verified)' : '') +
+      ' | ARV ' + esc(row.ARV_lock_state || 'ARV_LOCKED_NO_VERIFIED_COMPS') + ' | MAO ' + esc(row.MAO_lock_state || 'unknown') +
+      (row.appraisal_clue ? ' | County appraisal clue ' + esc(row.appraisal_clue) + ' (not ARV)' : '') + '</div>');
+    lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;"><b>ARV lock reason:</b> ' + esc(row.arv_lock_reason || 'ARV stays locked until 3 verified qualifying sold comps pass the strict comp grid.') + '</div>');
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
     var recordName = row.owner_record && (row.owner_record.owner_name || row.owner_record.taxpayer_name);
     var recordLabel = row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record';
@@ -500,8 +538,7 @@
         (row.business_entity_resolution.registered_agent_address ? ' - ' + esc(row.business_entity_resolution.registered_agent_address) : '') +
         ' <span style="color:#991b1b;">registered agent is not the seller</span> ' + link('entity proof', row.business_entity_resolution.source_url) + '</div>');
     }
-    var links = link('Source proof', row.source_document_url || row.source_url) + link('Best click', row.best_link_to_click_first) +
-      link('Maps', row.maps_url) + link('Zillow', row.zillow_url) + link('Redfin', row.redfin_url) + link('Realtor', row.realtor_url) + link('Auction', row.auction_url) + link('County record', row.official_property_record_url);
+    var links = link('Best click', row.best_link_to_click_first) + link('Auction', row.auction_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
     var contactRoutes = contactRoutesHtml(row);
     if (contactRoutes) lines.push(contactRoutes);
@@ -512,17 +549,6 @@
         (row.filing_period ? 'Filing period <b>' + esc(row.filing_period) + '</b> <span style="color:#991b1b;">(not a sale date)</span>' : '') +
         '</div>');
     }
-    if (row.status_evidence_text) {
-      lines.push('<div style="font-size:12px;color:#374151;">Status evidence: <b>' + esc(row.status_evidence_text) + '</b></div>');
-    }
-    if (row.listed_price) lines.push('<div style="font-size:12px;">Source listed price: <b>' + esc(row.listed_price) + '</b>' +
-      (row.program ? ' <span style="color:#6b7280;">(' + esc(row.program) + ')</span>' : '') +
-      ' <span style="color:#991b1b;">not ARV or MAO</span></div>');
-    lines.push('<div style="font-size:11px;color:#374151;margin-top:3px;">Comps: ' + esc(row.screenshot_comp_status || row.comp_status || 'not run') +
-      (row.verified_sold_comp_count ? ' (' + esc(row.verified_sold_comp_count) + ' verified)' : '') +
-      ' | ARV: ' + esc(row.ARV_lock_state || 'unknown') + ' | MAO: ' + esc(row.MAO_lock_state || 'unknown') +
-      (row.appraisal_clue ? ' | County appraisal clue: ' + esc(row.appraisal_clue) + ' (not ARV)' : '') + '</div>');
-    if (row.arv_lock_reason) lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;">ARV reason: ' + esc(row.arv_lock_reason) + '</div>');
     if (safeArray(row.verified_comps).length) {
       lines.push('<div style="font-size:11px;color:#065f46;margin-top:2px;">Verified comps: ' +
         safeArray(row.verified_comps).map(function (c) {
@@ -1437,6 +1463,7 @@
     panelsForPage: panelsForPage,
     manualEvidencePanel: manualEvidencePanel,
     manualEvidenceCard: manualEvidenceCard,
+    rowCard: rowCard,
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
     urgentContextLabel: urgentContextLabel,

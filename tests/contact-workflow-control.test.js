@@ -16,6 +16,7 @@ const queueService = require('../modules/research/deal-board-queue-service');
 const MARKET = { city: 'Dallas', county: 'Dallas', state: 'TX' };
 const CONTACTED_AT = '2026-08-15T18:30:00.000Z';
 const CONTACT_LANES = ['row_source_document', 'county_appraisal', 'public_search', 'official_browser_lookup'];
+const SOURCE_EVENT_DATE = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
 function phoneRoute(number) {
   return {
@@ -58,6 +59,7 @@ function deal(slug, verifiedCompCount, overrides) {
     source_family: 'test_official_notice',
     source_url: `https://county.example.gov/property/${slug}`,
     source_document_url: `https://county.example.gov/notices/${slug}.pdf`,
+    source_date: SOURCE_EVENT_DATE,
     free_contact_status: 'CALL_READY',
     free_contact_routes: [phoneRoute(stableNumber(slug, verifiedCompCount))],
     owner_record: {

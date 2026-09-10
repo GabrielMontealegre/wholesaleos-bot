@@ -128,7 +128,8 @@ function selectRowsForEnrichment(rows, options = {}) {
   for (const row of Array.isArray(rows) ? rows : []) {
     const key = rowKey(row);
     const state = lifecycle.computeLifecycleStatus(row, nowIso);
-    if (state.quarantined) {
+    const documentDateReverification = lane === 'document_reextraction' && state.status === 'DATE_UNKNOWN_REVERIFY';
+    if (state.quarantined && !documentDateReverification) {
       skipped.push({ queue_key: key, skip_reason: `lifecycle_${state.status.toLowerCase()}` });
       continue;
     }

@@ -8,6 +8,7 @@ const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const compResearchProvider = require('./comp-research-provider');
 const leadEvidence = require('./lead-evidence');
 const propertyIdentity = require('./property-identity');
+const distressEvidenceModel = require('./distress-evidence-model');
 
 const JOB_STATUSES = new Set([
   'queued',
@@ -316,8 +317,16 @@ function collectSourceEvidence(lead, job) {
   if (caseNumber) evidence.push({ type: 'case_reference', label: 'Case/reference found', value: cleanText(caseNumber), status: 'found' });
   const parcel = pick(lead, ['parcel', 'apn', 'parcel_id', 'account_number', 'source_details.parcel', 'source_details.apn', 'source_truth.parcel', 'source_truth.source_record_url', '_courthouse_metadata.parcel']);
   if (parcel) evidence.push({ type: 'parcel_reference', label: 'Parcel/account found', value: cleanText(parcel), status: 'found' });
-  const amount = pick(lead, ['amount_owed', 'tax_due', 'tax_lien_amount', 'lien_amount', 'violation_amount', 'judgment_amount', 'minimum_bid', 'source_amount', 'source_details.amount_owed', 'source_truth.amount', '_courthouse_metadata.lien_amount']);
-  if (amount) evidence.push({ type: 'amount_reference', label: 'Amount field present', value: cleanText(amount), status: 'needs_verification' });
+  distressEvidenceModel.moneyFactsForRow(lead).forEach((fact) => {
+    evidence.push({
+      type: `amount_reference_${fact.amount_type}`,
+      label: fact.operator_label,
+      value: fact.exact_amount,
+      meaning: fact.plain_english_meaning,
+      evidence_text: fact.evidence_text,
+      status: fact.verification_state
+    });
+  });
   return evidence;
 }
 
