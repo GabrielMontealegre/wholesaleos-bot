@@ -306,7 +306,7 @@ tr.selected td{background:#f0f6ff}
     <button class="pin-btn" onclick="pinPress('ok')" style="background:#1d1d1f;color:#fff">OK</button>
   </div>
   <div class="pin-error" id="pin-error"></div>
-  <div style="font-size:11px;color:#86868b;margin-top:8px">Default PIN: 1234 — change in Settings</div>
+  <div style="font-size:11px;color:#86868b;margin-top:8px">Use the PIN configured for your account.</div>
 </div>
 
 <!-- Main App -->
@@ -429,7 +429,7 @@ window.regionalMode = window.regionalMode || function () {
 //  STATE
 // ══════════════════════════════════════════════════════════
 const APP = {
-  pin: localStorage.getItem('montsan_pin') || '1234',
+  pin: localStorage.getItem('montsan_pin') || '',
   currentUser: null,
   userId: 'admin',
   isAdmin: true,
@@ -535,7 +535,7 @@ async function checkPin() {
   }
   
   // Local PIN check (always works)
-  const correctPin = APP.pin || localStorage.getItem('montsan_pin') || '1234';
+  const correctPin = APP.pin || localStorage.getItem('montsan_pin') || '';
   if (apiSuccess || pin === correctPin || pin === '1234') {
     if (!APP.currentUser) {
       APP.currentUser = {id: 'admin', name: 'Gabriel', role: 'admin', color: '#1d1d1f'};
@@ -9428,13 +9428,12 @@ function renderBuyers() {
 async function extractBuyBoxesFromBuyersTab() {
   toast('Extracting buy boxes from buyers...', 'success');
   try {
-    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes/extract', {method:'POST'});
     const count = data.extracted || data.count || 0;
     if (count > 0) toast(`✅ ${count} buy box${count===1?'':'es'} extracted from buyers database`, 'success');
     else toast('No new buy boxes found — all already extracted', 'success');
     loadLeadsFromAPI();
-  } catch(e) { toast('Extract failed — check connection', 'error'); }
+  } catch(e) { toast('Extract failed: ' + e.message, 'error'); }
 }
 
 function renderBuyerCard(b) {
@@ -11821,6 +11820,17 @@ async function readAdminJsonOrEmpty(url, emptyPayload) {
   }
 }
 
+async function writeAdminJson(url, options) {
+  const request = Object.assign({}, options || {});
+  const authHeaders = typeof window._authHeaders === 'function' ? window._authHeaders() : {};
+  request.headers = Object.assign({}, authHeaders, request.headers || {});
+  const res = await fetch(url, request);
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.error || ('Admin request failed (' + res.status + ')'));
+  return data;
+}
+
 function renderBuyBoxes() {
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -11891,8 +11901,7 @@ async function loadBuyBoxes() {
 
 async function extractBuyBoxes() {
   try {
-    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes/extract', {method:'POST'});
     toast(`${data.extracted} buy boxes extracted!`, 'success');
     loadBuyBoxes();
   } catch(e) { toast('Error: '+e.message, 'error'); }
@@ -11936,8 +11945,7 @@ async function saveBuyBox() {
   const box = { name:g('bb-name'), contact:g('bb-contact'), state:g('bb-state')||'TX', county:g('bb-county'), strategy:g('bb-strategy'), rehabLevel:g('bb-rehab'), maxPrice:parseInt(g('bb-maxprice'))||400000, minSpread:parseInt(g('bb-minspread'))||10000, notes:g('bb-notes'), source:'Manual' };
   if (!box.name) { toast('Name required', 'error'); return; }
   try {
-    const res = await fetch('/api/buyboxes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(box)});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(box)});
     if (!data.ok) { toast(data.error||'Duplicate buy box', 'error'); return; }
     closeModal(); toast('Buy box saved!', 'success'); render();
   } catch(e) { toast('Error: '+e.message, 'error'); }
@@ -13124,7 +13132,7 @@ async function renderUsersPanel() {
       }
     }
   } catch(e) {}
-  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin (1234) sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
+  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
 }
 
 async function saveEditUser(userId) {
@@ -15711,13 +15719,12 @@ function renderBuyers() {
 async function extractBuyBoxesFromBuyersTab() {
   toast('Extracting buy boxes from buyers...', 'success');
   try {
-    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes/extract', {method:'POST'});
     const count = data.extracted || data.count || 0;
     if (count > 0) toast(`✅ ${count} buy box${count===1?'':'es'} extracted from buyers database`, 'success');
     else toast('No new buy boxes found — all already extracted', 'success');
     loadLeadsFromAPI();
-  } catch(e) { toast('Extract failed — check connection', 'error'); }
+  } catch(e) { toast('Extract failed: ' + e.message, 'error'); }
 }
 
 function renderBuyerCard(b) {
@@ -18144,8 +18151,7 @@ async function loadBuyBoxes() {
 
 async function extractBuyBoxes() {
   try {
-    const res = await fetch('/api/buyboxes/extract', {method:'POST'});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes/extract', {method:'POST'});
     toast(`${data.extracted} buy boxes extracted!`, 'success');
     loadBuyBoxes();
   } catch(e) { toast('Error: '+e.message, 'error'); }
@@ -18189,8 +18195,7 @@ async function saveBuyBox() {
   const box = { name:g('bb-name'), contact:g('bb-contact'), state:g('bb-state')||'TX', county:g('bb-county'), strategy:g('bb-strategy'), rehabLevel:g('bb-rehab'), maxPrice:parseInt(g('bb-maxprice'))||400000, minSpread:parseInt(g('bb-minspread'))||10000, notes:g('bb-notes'), source:'Manual' };
   if (!box.name) { toast('Name required', 'error'); return; }
   try {
-    const res = await fetch('/api/buyboxes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(box)});
-    const data = await res.json();
+    const data = await writeAdminJson('/api/buyboxes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(box)});
     if (!data.ok) { toast(data.error||'Duplicate buy box', 'error'); return; }
     closeModal(); toast('Buy box saved!', 'success'); render();
   } catch(e) { toast('Error: '+e.message, 'error'); }
@@ -19173,7 +19178,7 @@ async function renderUsersPanel() {
       }
     }
   } catch(e) {}
-  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin (1234) sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
+  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
 }
 
 async function saveEditUser(userId) {
@@ -20882,17 +20887,8 @@ async function sendSMSReply(leadId) {
 // ══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   try {
-    var saved = localStorage.getItem('wos_pin');
-    if (saved === '1234') {
-      document.getElementById('pin-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      APP.unlocked = true;
-      window.WOS_DASHBOARD_UNLOCKED = true;
-      initApp();
-    } else {
-      document.getElementById('pin-screen').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-    }
+    document.getElementById('pin-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
   } catch(e) {
     console.log('Boot error:', e.message);
   }
@@ -29147,6 +29143,6 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-comms.js?v=1"></script>
 <script src="/dashboard/wos-leads-detail.js?v=2"></script>
 <script src="/dashboard/wos-buyers.js?v=1"></script>
-<script src="/dashboard/wos-public-deals.js?v=28"></script>
+<script src="/dashboard/wos-public-deals.js?v=29"></script>
 </body>
 </html>

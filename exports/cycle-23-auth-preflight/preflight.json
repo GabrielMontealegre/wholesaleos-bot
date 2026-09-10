@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-09-09T11:09:06.100Z",
+  "production_contacted": false,
+  "database_path": "data/db.json",
+  "lockout_risk": "UNREACHABLE",
+  "reason": "local_database_not_found",
+  "user_count": null,
+  "admin_count": null,
+  "admin_pin_resolves_server_side": null,
+  "current_pin_would_authenticate_server_side": null,
+  "c3_step_3_allowed": false,
+  "c3_step_3_status": "WITHHELD",
+  "required_confirmation": "Confirm that a real admin user and PIN exist in the deployed database and that /api/auth/login authenticates that PIN before removing the client fallback."
+}

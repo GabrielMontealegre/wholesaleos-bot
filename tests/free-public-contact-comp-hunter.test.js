@@ -67,7 +67,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
   const emailRun = await contactHunter.runFreePublicContactHunter({
     rows: [{ normalized_address: '10 Test St, Dallas, TX 75201', source_document_url: 'https://notices.dallascounty.org/notice.html', city: 'Dallas' }]
   }, {
-    fetch_impl: async () => makeResponse('<html>Reply to listing: contact seller at owner.reply@sellermail.com. Telemetry: a0dfc4d25bb843acb944ff1d115fd1b2@o168728.ingest.sentry.io ref 469.572 1775 build.</html>'),
+    fetch_impl: async () => makeResponse('<html>Reply to listing: listing agent at owner.reply@sellermail.com. Telemetry: a0dfc4d25bb843acb944ff1d115fd1b2@o168728.ingest.sentry.io ref 469.572 1775 build.</html>'),
     env: { ENABLE_SEARCH_PROVIDER: 'false' }
   });
   const emailResult = emailRun.results.get('10 test st, dallas, tx 75201');

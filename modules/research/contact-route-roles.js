@@ -10,6 +10,7 @@ const ROLES = Object.freeze([
   'servicer',
   'escrow',
   'auction_company',
+  'registered_agent',
   'government_office',
   'unknown',
   'other_source_stated_role'
@@ -25,9 +26,8 @@ function cleanText(value) {
 function descriptiveEvidence(route) {
   return [
     route && route.evidence_text,
-    route && route.source_label,
-    route && route.source_kind,
-    route && route.source_url
+    route && route.source_stated_role,
+    route && route.contact_role
   ].map(cleanText).filter(Boolean).join(' | ');
 }
 
@@ -48,43 +48,44 @@ function classifyRoute(route) {
   const descriptive = descriptiveEvidence(route);
   const routeType = cleanText(route && route.route_type);
   const normalizedType = routeType.toLowerCase();
-
-  if (normalizedType === 'operator_confirmed_owner_or_seller_contact') {
-    return classified('owner', 'route_type_operator_confirmed_owner', routeType);
-  }
-  if (/^(owner|owner_contact|owner_phone|owner_email|owner_of_record)$/.test(normalizedType)) {
-    return classified('owner', 'source_stated_route_type', routeType);
-  }
-  if (/^(occupant|occupant_contact|resident_contact)$/.test(normalizedType)) {
-    return classified('occupant', 'source_stated_route_type', routeType);
-  }
-
-  const mappings = [
+  const sellerClaimedByType = normalizedType === 'operator_confirmed_owner_or_seller_contact' ||
+    /^(owner|owner_contact|owner_phone|owner_email|owner_of_record|occupant|occupant_contact|resident_contact)$/.test(normalizedType);
+  const institutionalMappings = [
     ['trustee', /\b(?:substitute\s+trustee|trustee)\b/i],
     ['attorney', /\b(?:attorney(?:\s+at\s+law)?|law\s+firm|legal\s+counsel)\b/i],
     ['servicer', /\b(?:mortgage\s+servicer|loan\s+servicer|servicing\s+agent|servicer|service\s+link|servicelink)\b/i],
     ['escrow', /\b(?:tax\s+service\s+escrow|escrow(?:\s+agent|\s+department)?)\b/i],
-    ['lender', /\b(?:mortgagee|beneficiary|secured\s+lender|lender)\b/i],
+    ['lender', /\b(?:bank(?:\s+na)?|mortgagee|beneficiary|secured\s+lender|lender)\b/i],
     ['auction_company', /\b(?:auction(?:eer|\s+company)?|xome|sale\s+information\s+line)\b/i],
+    ['registered_agent', /\bregistered\s+agent\b/i],
     ['government_office', /\b(?:county\s+clerk|court\s+clerk|tax\s+assessor|county\s+appraisal|government\s+office|sheriff(?:'s)?\s+office|marshal(?:'s)?\s+office)\b/i],
-    ['taxpayer', /\btaxpayer(?:\s+of\s+record)?\b/i],
-    ['occupant', /\b(?:property\s+occupant|current\s+occupant|occupant|resident)\b/i],
-    ['owner', /\b(?:property\s+owner|owner\s+of\s+record|record\s+owner|seller\s+contact)\b/i]
+    ['taxpayer', /\btaxpayer(?:\s+of\s+record)?\b/i]
   ];
-  for (const [role, pattern] of mappings) {
+  for (const [role, pattern] of institutionalMappings) {
+    const sourceText = statedMatch(descriptive, pattern);
+    if (sourceText) {
+      return classified(role, sellerClaimedByType
+        ? 'institutional_evidence_overrides_route_type'
+        : 'source_stated_evidence', sourceText);
+    }
+  }
+
+  const sellerMappings = [
+    ['occupant', /\b(?:property\s+occupant|current\s+occupant|occupant|resident)\b/i],
+    ['owner', /\b(?:property\s+owner|owner\s+of\s+record|record\s+owner|seller\s+contact|contact\s+seller|self-described\s+owner)\b/i]
+  ];
+  for (const [role, pattern] of sellerMappings) {
     const sourceText = statedMatch(descriptive, pattern);
     if (sourceText) return classified(role, 'source_stated_evidence', sourceText);
   }
 
-  if (normalizedType === 'listing_agent_or_poster' || /(?:agent|poster|broker|realtor)/i.test(normalizedType)) {
-    return classified('other_source_stated_role', 'unmapped_source_stated_route_type', routeType);
+  if (normalizedType === 'operator_confirmed_owner_or_seller_contact') {
+    return classified('owner', 'route_type_operator_confirmed_owner', routeType);
   }
-  const otherStatedRole = statedMatch(descriptive, /\b(?:listing\s+agent|registered\s+agent|contact\s+agent|poster|broker|realtor|borrower|mortgagor|debtor|grantor)\b/i);
+
+  const otherStatedRole = statedMatch(descriptive, /\b(?:listing\s+agent|contact\s+agent|poster|broker|realtor|borrower|mortgagor|debtor|grantor)\b/i);
   if (otherStatedRole) {
     return classified('other_source_stated_role', 'unmapped_source_stated_evidence', otherStatedRole);
-  }
-  if (normalizedType && !/^(unclassified_public_contact|trustee_servicer_or_official|official_public_contact|unknown)$/.test(normalizedType)) {
-    return classified('other_source_stated_role', 'unmapped_source_stated_route_type', routeType);
   }
   return classified('unknown', 'role_not_supported_by_route_evidence', '');
 }

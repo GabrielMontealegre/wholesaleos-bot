@@ -63,7 +63,7 @@ function row(contactRoute, overrides) {
   const listingAgent = route({ route_type: 'listing_agent_or_poster', evidence_text: 'Listing agent phone: (214) 555-0400.' });
   const listingClass = roles.classifyRoute(listingAgent);
   assert.strictEqual(listingClass.role, 'other_source_stated_role');
-  assert.strictEqual(listingClass.role_source_stated_text, 'listing_agent_or_poster');
+  assert.strictEqual(listingClass.role_source_stated_text, 'Listing agent');
 
   const borrower = route({ route_type: 'unclassified_public_contact', evidence_text: 'Borrower phone: (214) 555-0450.' });
   assert.strictEqual(roles.classifyRoute(borrower).role, 'other_source_stated_role');
