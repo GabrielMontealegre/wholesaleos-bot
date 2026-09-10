@@ -100,3 +100,21 @@ never promote a row by themselves. WholesaleOS remains the authority for:
 - lifecycle and contact-role classification
 - comp verification and ARV/MAO locks
 - operator readiness and saved-lead decisions
+
+## Government Catalog Discovery
+
+WholesaleOS also includes a bounded command that searches official ArcGIS,
+Socrata, and Data.gov catalogs for possible county data sources:
+
+```powershell
+node scripts/discover-government-catalogs.js --county Dallas --state TX --city Dallas
+```
+
+Add `--write` only when a review artifact is needed. The command returns source
+candidates, never leads. Every result remains `candidate_unverified`,
+`preview_only`, `not_lead_evidence`, and `should_ingest:false` until a separate
+source-verification pass proves the host, schema, fields, dates, and row meaning.
+
+Data.gov's current catalog API requires an API key. The command uses its public,
+low-volume `DEMO_KEY` for bounded exploration unless `DATA_GOV_API_KEY` is set in
+the local environment. It never writes the key into a report or repository file.
