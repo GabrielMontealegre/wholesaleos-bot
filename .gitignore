@@ -59,6 +59,9 @@ exports/cycle-26-recovery/*
 !exports/cycle-27-phone-readiness/
 exports/cycle-27-phone-readiness/*
 !exports/cycle-27-phone-readiness/readiness.json
+!exports/cycle-28-venue-audit/
+exports/cycle-28-venue-audit/*
+!exports/cycle-28-venue-audit/audit.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

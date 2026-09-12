@@ -283,7 +283,7 @@ function pngBuffer(size) {
   function contactPacket(classification, confirmed) {
     return { evidence_items: [{
       evidence_type: 'skip_trace', screenshot_id: 'shot-contact', source_name: 'CyberBackgroundChecks', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true,
-      fields: { owner_name: 'JANE SAMPLE', contact_value: '(214) 555-0100', contact_route_kind: 'phone', contact_classification: classification, seller_owner_confirmed: confirmed, source_url: 'https://www.cyberbackgroundchecks.com/address/example' }
+      fields: { normalized_address: SUBJECT, owner_name: 'JANE SAMPLE', contact_value: '(214) 555-0100', contact_route_kind: 'phone', contact_classification: classification, seller_owner_confirmed: confirmed, source_url: 'https://www.cyberbackgroundchecks.com/address/example' }
     }] };
   }
   const unknownContact = service.evaluatePacket(contactPacket('unknown_unverified_contact', false), snapshot.markets[marketKey(DALLAS)].rows[0], { today_iso: TODAY });

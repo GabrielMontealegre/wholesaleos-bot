@@ -1,0 +1,9 @@
+{
+  "status": "UNREACHABLE",
+  "production_contacted": false,
+  "generated_at": "2026-09-12T18:59:33.871Z",
+  "snapshot_path": "C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json",
+  "reason": "No local deal-board snapshot exists; the live snapshot is stored on the Railway volume and production access is forbidden for this build.",
+  "totals": null,
+  "markets": null
+}

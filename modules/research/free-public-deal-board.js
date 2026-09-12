@@ -22,6 +22,7 @@ const publicRecordBrowserLookup = require('./public-record-browser-lookup');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
 const propertyIdentity = require('./property-identity');
+const propertyAddressEvidence = require('./property-address-evidence');
 const searchProviderWorker = require('./search-provider-worker');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const sourceAcquisitionOrchestrator = require('./source-acquisition-orchestrator');
@@ -247,6 +248,10 @@ function textBundle(record) {
     record && record.source_title,
     record && record.snippet,
     record && record.source_snippet,
+    record && record.source_proof_text,
+    record && record.source_text,
+    record && record.source_excerpt,
+    record && record.raw_text,
     record && record.motivation_evidence_text,
     record && record.status_evidence_text,
     record && record.body,
@@ -255,10 +260,11 @@ function textBundle(record) {
 }
 
 function completeAddressFromText(value) {
-  const text = cleanText(value);
-  const match = text.match(/\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,80}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?\s*,\s*[A-Za-z][A-Za-z .'-]{1,40}\s*,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/i);
-  const address = sanitizeAddressCandidate(cleanText(match && match[0])).address;
-  return propertyIdentity.isCompleteAddress(address) ? propertyIdentity.canonicalAddress(address) : '';
+  const evidence = propertyAddressEvidence.extractPropertyAddressEvidence(value);
+  const subject = evidence.candidates.find((item) => item.role === 'subject_property');
+  if (subject) return subject.address;
+  const unlabeled = evidence.candidates.find((item) => item.role === 'unlabeled_address');
+  return unlabeled ? unlabeled.address : '';
 }
 
 function sanitizeAddressCandidate(value) {
@@ -318,8 +324,11 @@ function addressResolutionFromRecord(record) {
     record.raw_address_text ||
     record.display_address
   ));
+  const text = textBundle(record);
+  const explicitRole = propertyAddressEvidence.roleForAddressInText(explicit, text);
+  const explicitIsNonProperty = !!explicitRole && explicitRole !== 'subject_property' && explicitRole !== 'unlabeled_address';
   const sanitizedExplicit = sanitizeAddressCandidate(explicit);
-  if (record && record.source_structured_address_verified === true &&
+  if (!explicitIsNonProperty && record && record.source_structured_address_verified === true &&
       /^\d{1,7}\s+[^,]{2,100},\s*[A-Za-z][A-Za-z .'-]{1,40},\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?$/i.test(sanitizedExplicit.address)) {
     return {
       address: sanitizedExplicit.address,
@@ -328,7 +337,7 @@ function addressResolutionFromRecord(record) {
       bad_address_rejected_reason: ''
     };
   }
-  if (propertyIdentity.isCompleteAddress(sanitizedExplicit.address)) {
+  if (!explicitIsNonProperty && propertyIdentity.isCompleteAddress(sanitizedExplicit.address)) {
     return { address: propertyIdentity.canonicalAddress(sanitizedExplicit.address), bad_address_rejected: false, bad_address_rejected_reason: '' };
   }
   if (sanitizedExplicit.rejected_reason) {
@@ -347,8 +356,9 @@ function addressResolutionFromRecord(record) {
   const fromAuction = addressFromAuctionUrl(sourceUrl);
   if (fromAuction) return { address: fromAuction, bad_address_rejected: false, bad_address_rejected_reason: '' };
 
-  const text = textBundle(record);
-  const fromText = completeAddressFromText(text);
+  const ocrReviewIdentity = Array.isArray(record && record.risk_flags) &&
+    record.risk_flags.map(cleanText).includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED');
+  const fromText = ocrReviewIdentity ? '' : completeAddressFromText(text);
   if (fromText) return { address: fromText, bad_address_rejected: false, bad_address_rejected_reason: '' };
   if (BAD_ADDRESS_PREFIX_RE.test(text)) return { address: '', bad_address_rejected: true, bad_address_rejected_reason: 'bad_address_metadata_prefix' };
   return { address: '', bad_address_rejected: false, bad_address_rejected_reason: '' };
@@ -959,6 +969,9 @@ function dealFromRecord(record, context) {
     source_name: sourceName(record, family),
     source_url: sourceUrl,
     source_document_url: sourceDocumentUrl,
+    sale_venue_address: cleanText(record && record.sale_venue_address),
+    sale_venue_evidence_text: cleanText(record && record.sale_venue_evidence_text),
+    sale_venue_source_url: cleanText(record && record.sale_venue_source_url),
     source_row_reference: cleanText(record && record.source_row_reference),
     last_checked_at: cleanText(record && (record.last_checked_at || record.retrieved_at || record.source_checked_at)),
     zillow_url: links.zillow_url,
@@ -971,6 +984,7 @@ function dealFromRecord(record, context) {
     maps_search_url_review_needed: !parts.normalized_address && partialAddress ? mapsUrl(partialAddress, market) || null : null,
     motivation_type: motivation.motivation_type,
     motivation_evidence_text: motivation.motivation_evidence_text,
+    source_proof_text: cleanText(record && (record.source_proof_text || record.source_text || record.source_excerpt)),
     status_evidence_text: statusEvidenceFromRecord(record),
     sale_date_or_event_date: eventDateFromRecord(record),
     source_date: cleanText(record && record.source_date),
@@ -1108,6 +1122,7 @@ function candidateRecord(candidate, source) {
     source_document_url: cleanText(candidate.source_document_url),
     motivation_type: cleanText(candidate.motivation_type || candidate.source_family || source.source_family),
     motivation_evidence_text: cleanText(candidate.motivation_evidence_text || candidate.source_proof_text || candidate.source_excerpt || candidate.motivation_phrase),
+    source_proof_text: cleanText(candidate.source_proof_text || candidate.source_text || candidate.source_excerpt),
     status_evidence_text: cleanText(candidate.status_evidence_text || candidate.current_status),
     sale_date_or_event_date: cleanText(candidate.event_date || candidate.sale_date || candidate.auction_date),
     source_date: cleanText(candidate.source_date),
@@ -1163,6 +1178,9 @@ function candidateRecord(candidate, source) {
     property_story: candidate.property_story && typeof candidate.property_story === 'object' ? Object.assign({}, candidate.property_story) : null,
     source_structured_address_verified: candidate.source_structured_address_verified === true,
     property_identity_source_only: sourceOnly,
+    sale_venue_address: cleanText(candidate.sale_venue_address),
+    sale_venue_evidence_text: cleanText(candidate.sale_venue_evidence_text),
+    sale_venue_source_url: cleanText(candidate.sale_venue_source_url),
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
@@ -1182,6 +1200,10 @@ function cardRecord(card, source) {
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
   record.source_structured_address_verified = card && card.source_structured_address_verified === true;
   record.property_identity_source_only = card && card.property_identity_source_only === true;
+  record.source_proof_text = cleanText(card && (card.source_proof_text || card.exact_source_phrase));
+  record.sale_venue_address = cleanText(card && card.sale_venue_address);
+  record.sale_venue_evidence_text = cleanText(card && card.sale_venue_evidence_text);
+  record.sale_venue_source_url = cleanText(card && card.sale_venue_source_url);
   if (record.property_identity_source_only) record.normalized_address = cleanText(card.display_address);
   record.source_row_reference = cleanText(card && card.source_row_reference);
   record.sale_date_or_event_date = cleanText(card && card.sale_date_or_event_date);
@@ -1260,7 +1282,9 @@ function sourceProofRecordsFromAdapterResult(result) {
     .map((item, index) => {
       const url = item.url;
       const text = cleanText(item.text);
-      const address = completeAddressFromText(text);
+      const addressEvidence = propertyAddressEvidence.extractPropertyAddressEvidence(text);
+      const foreclosureProof = /foreclosure|trustee|dallas county clerk/i.test(`${sourceNameText} ${sourceFamilyText}`);
+      const address = foreclosureProof ? addressEvidence.subject_address : completeAddressFromText(text);
       const eventDate = sourceProofDateFromText(text);
       const documentUrl = isDocumentLikeProofLink(url, item) ? url : '';
       const suppressionReason = sourceProofSuppressionReason(url, text, address, documentUrl);
@@ -1273,6 +1297,11 @@ function sourceProofRecordsFromAdapterResult(result) {
         headline: headlineParts.join(' - '),
         normalized_address: address,
         raw_address_text: address,
+        source_structured_address_verified: foreclosureProof && !!address,
+        property_identity_source_only: foreclosureProof,
+        sale_venue_address: addressEvidence.sale_venue_address,
+        sale_venue_evidence_text: addressEvidence.sale_venue_evidence_text,
+        sale_venue_source_url: addressEvidence.sale_venue_address ? (documentUrl || url) : '',
         source_family: sourceFamilyText,
         source_name: sourceNameText,
         source_url: documentUrl ? sourceUrl : url,
@@ -1284,7 +1313,7 @@ function sourceProofRecordsFromAdapterResult(result) {
         why_this_might_be_a_deal: text || 'Official source evidence is available, but property identity still needs extraction.',
         source_row_reference: url,
         record_origin: 'source_adapter',
-        foreclosure_source_proof_record: /foreclosure|trustee|dallas county clerk/i.test(`${sourceNameText} ${sourceFamilyText}`)
+        foreclosure_source_proof_record: foreclosureProof
       };
     })
     .filter(Boolean);
@@ -2487,6 +2516,8 @@ module.exports = {
   dealFromRecord,
   propertySpecificUrl,
   validateCompRecords,
+  completeAddressFromText,
+  sourceProofRecordsFromAdapterResult,
   rowStateForDeal: leadOperationsState.rowStateForDeal,
   mapsUrl
 };

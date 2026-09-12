@@ -7,6 +7,7 @@ const propertyIdentity = require('./property-identity');
 const sourceEvidenceAdapter = require('./source-evidence-adapter');
 const acquisitionScore = require('./source-acquisition-score');
 const distressEvidenceModel = require('./distress-evidence-model');
+const propertyAddressEvidence = require('./property-address-evidence');
 
 const NEXT_BEST_WORKERS = acquisitionScore.NEXT_BEST_WORKERS;
 const INLINE_COMPLETE_ADDRESS_RE = /^(.+?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway))\s*,?\s+([A-Za-z][A-Za-z .'-]*?)\s+(TX|Texas|[A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i;
@@ -71,21 +72,24 @@ function normalizePropertyCandidate(input, context) {
   input = input || {};
   context = context || {};
   const sourceUrl = cleanText(input.source_url || input.canonical_source_url || input.source_document_url);
-  const structuredAddressInput = input.source_structured_address_verified === true
+  const sourceTextAddressSource = cleanText(input.source_proof_text || input.raw_text || input.source_excerpt || input.source_page_text || input.source_text);
+  const addressEvidence = propertyAddressEvidence.extractPropertyAddressEvidence(sourceTextAddressSource);
+  let structuredAddressInput = input.source_structured_address_verified === true
     ? (input.property_identity_source_only === true
       ? [input.normalized_address, input.property_address, input.raw_address_text, input.address]
       : [input.property_address, input.raw_address_text, input.normalized_address, input.address])
       .map(cleanText)
       .find((value) => SOURCE_STRUCTURED_COMPLETE_ADDRESS_RE.test(value)) || ''
     : '';
+  const structuredAddressRole = propertyAddressEvidence.roleForAddressInText(structuredAddressInput, sourceTextAddressSource);
+  if (structuredAddressInput && structuredAddressRole && structuredAddressRole !== 'subject_property' && structuredAddressRole !== 'unlabeled_address') {
+    structuredAddressInput = '';
+  }
   const rawAddressInput = structuredAddressInput || cleanText(input.normalized_address || input.property_address || input.address);
-  const sourceTextAddressSource = cleanText(input.source_proof_text || input.raw_text || input.source_excerpt || input.source_page_text || input.source_text);
-  const sourceTextAddressMatch = sourceTextAddressSource.match(/(?:property\s+address|address)\s*:\s*([0-9][^|;]*?\b\d{5}(?:-\d{4})?)/i);
-  const sourceTextAddressRaw = cleanText(sourceTextAddressMatch && sourceTextAddressMatch[1]);
-  const sourceTextAddressParsed = sourceTextAddressRaw ? propertyIdentity.parseAddress(sourceTextAddressRaw) : null;
-  const sourceTextAddress = sourceTextAddressParsed && sourceTextAddressParsed.full_address
-    ? cleanText(sourceTextAddressParsed.full_address)
-    : sourceTextAddressRaw;
+  const rawAddressRole = propertyAddressEvidence.roleForAddressInText(rawAddressInput, sourceTextAddressSource);
+  const rawAddressIsNonProperty = !!rawAddressRole && rawAddressRole !== 'subject_property' && rawAddressRole !== 'unlabeled_address';
+  const ocrReviewIdentity = textList(input.risk_flags).includes('OCR_EXTRACTED_TEXT_REVIEW_RECOMMENDED');
+  const sourceTextAddress = ocrReviewIdentity ? '' : addressEvidence.subject_address;
   const trimmedAddressInput = propertyIdentity.isCompleteAddress(rawAddressInput)
     ? rawAddressInput
     : rawAddressInput.replace(/,\s*[A-Za-z .'-]+,\s*(?:TX|Texas|[A-Z]{2})\s+\d{5}(?:-\d{4})?$/i, '');
@@ -103,16 +107,16 @@ function normalizePropertyCandidate(input, context) {
     addressOverrides.state = cleanText(input.state || context.state);
     addressOverrides.zip = cleanText(input.zip || input.postal_code);
   }
-  const address = structuredAddressInput || sourceTextAddress || inlineCompleteAddress || propertyIdentity.canonicalAddress(input, {
+  const address = structuredAddressInput || sourceTextAddress || (rawAddressIsNonProperty ? '' : inlineCompleteAddress) || (rawAddressIsNonProperty ? '' : propertyIdentity.canonicalAddress(input, {
     normalized_address: addressOverrides.normalized_address,
     source_url: sourceUrl,
     city: addressOverrides.city || '',
     state: addressOverrides.state || '',
     zip: addressOverrides.zip || ''
-  });
+  }));
   let normalizedAddress = cleanText(address);
   const zipMatch = cleanText(input.source_proof_text || input.raw_text || input.source_text || input.source_excerpt || input.source_page_text).match(/\b75[23]\d{2}\b/);
-  if (zipMatch && !/\b\d{5}(?:-\d{4})?\b/.test(normalizedAddress)) {
+  if (normalizedAddress && zipMatch && !/\b\d{5}(?:-\d{4})?\b/.test(normalizedAddress)) {
     const city = cleanText(input.city || context.city || 'Dallas');
     const state = cleanText(input.state || context.state || 'TX');
     if (/\b(?:TX|Texas|[A-Z]{2})\b$/i.test(normalizedAddress)) {
@@ -124,7 +128,14 @@ function normalizePropertyCandidate(input, context) {
     }
   }
   // Notice rows nominate one property. Never borrow city/ZIP from the document's other addresses.
-  if (input.property_identity_source_only === true) normalizedAddress = structuredAddressInput || '';
+  if (input.property_identity_source_only === true) {
+    normalizedAddress = sourceTextAddress || (!sourceTextAddressSource ? structuredAddressInput : '');
+  }
+  if (ocrReviewIdentity) normalizedAddress = '';
+  const sourceStructuredAddressVerified = !rawAddressIsNonProperty && (
+    input.source_structured_address_verified === true ||
+    (input.property_identity_source_only === true && !ocrReviewIdentity && !!sourceTextAddress)
+  );
   const sourceType = cleanText(input.source_classification || sourceEvidenceAdapter.classifySourceUrl(sourceUrl));
   const officialSource = inferOfficialSource(input, sourceUrl);
   const base = {
@@ -156,8 +167,11 @@ function normalizePropertyCandidate(input, context) {
     // (zip-less) identities and county labels survive normalization.
     property_address: cleanText(input.property_address || input.address),
     raw_address_text: cleanText(input.raw_address_text || input.property_address || input.address),
-    source_structured_address_verified: input.source_structured_address_verified === true,
+    source_structured_address_verified: sourceStructuredAddressVerified,
     property_identity_source_only: input.property_identity_source_only === true,
+    sale_venue_address: cleanText(input.sale_venue_address || addressEvidence.sale_venue_address),
+    sale_venue_evidence_text: cleanText(input.sale_venue_evidence_text || addressEvidence.sale_venue_evidence_text),
+    sale_venue_source_url: cleanText(input.sale_venue_source_url || input.source_document_url || sourceUrl),
     county: cleanText(input.county),
     city: cleanText(input.city),
     state: cleanText(input.state),
@@ -324,6 +338,7 @@ function candidateToFindMeCard(candidate, context) {
     exact_source_phrase_source_type: phrase ? 'source_acquisition_visible_evidence' : '',
     exact_source_phrase_checked_at: candidate.retrieved_at,
     exact_source_phrase_verbatim: !!(phrase && candidate.lead_evidence && candidate.lead_evidence.exact_source_phrase_verbatim === true),
+    source_proof_text: candidate.source_proof_text,
     listing_status: candidate.current_status || candidate.status_evidence_text,
     public_contact_route: candidate.contact_route,
     contact_role: candidate.contact_role,
@@ -382,6 +397,9 @@ function candidateToFindMeCard(candidate, context) {
     auction_closing_at_if_visible: candidate.auction_closing_at_if_visible,
     source_structured_address_verified: candidate.source_structured_address_verified === true,
     property_identity_source_only: candidate.property_identity_source_only === true,
+    sale_venue_address: candidate.sale_venue_address,
+    sale_venue_evidence_text: candidate.sale_venue_evidence_text,
+    sale_venue_source_url: candidate.sale_venue_source_url,
     beds: candidate.beds,
     baths: candidate.baths,
     sqft: candidate.sqft,
