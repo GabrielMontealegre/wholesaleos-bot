@@ -1880,6 +1880,8 @@ async function applyFreePublicHunters(deals, input, options, context) {
     enrichment_selected_contact_count: 0,
     enrichment_selected_comp_count: 0,
     enrichment_selected_owner_count: 0,
+    date_unknown_contact_evidence_selected_count: 0,
+    date_unknown_owner_evidence_selected_count: 0,
     enrichment_selected_entity_count: 0,
     enrichment_skipped_contact_count: 0,
     enrichment_skipped_comp_count: 0,
@@ -1931,6 +1933,10 @@ async function applyFreePublicHunters(deals, input, options, context) {
   diagnostics.enrichment_selected_contact_count = contactSelection.selected.length;
   diagnostics.enrichment_selected_comp_count = compSelection.selected.length;
   diagnostics.enrichment_selected_owner_count = ownerSelection.selected.length;
+  diagnostics.date_unknown_contact_evidence_selected_count = contactSelection.selected_reasons
+    .filter((item) => item.reason === 'date_unknown_evidence_supply_only').length;
+  diagnostics.date_unknown_owner_evidence_selected_count = ownerSelection.selected_reasons
+    .filter((item) => item.reason === 'date_unknown_evidence_supply_only').length;
   diagnostics.enrichment_skipped_contact_count = contactSelection.skipped.length;
   diagnostics.enrichment_skipped_comp_count = compSelection.skipped.length;
   diagnostics.enrichment_skipped_owner_count = ownerSelection.skipped.length;

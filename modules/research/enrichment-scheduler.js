@@ -3,6 +3,12 @@
 const lifecycle = require('./lead-lifecycle-status');
 const enrichmentLedger = require('./enrichment-ledger');
 
+const DATE_UNKNOWN_EVIDENCE_LANES = Object.freeze([
+  'document_reextraction',
+  'county_appraisal',
+  'public_search'
+]);
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -128,8 +134,8 @@ function selectRowsForEnrichment(rows, options = {}) {
   for (const row of Array.isArray(rows) ? rows : []) {
     const key = rowKey(row);
     const state = lifecycle.computeLifecycleStatus(row, nowIso);
-    const documentDateReverification = lane === 'document_reextraction' && state.status === 'DATE_UNKNOWN_REVERIFY';
-    if (state.quarantined && !documentDateReverification) {
+    const dateUnknownEvidenceSupply = state.status === 'DATE_UNKNOWN_REVERIFY' && DATE_UNKNOWN_EVIDENCE_LANES.includes(lane);
+    if (state.quarantined && !dateUnknownEvidenceSupply) {
       skipped.push({ queue_key: key, skip_reason: `lifecycle_${state.status.toLowerCase()}` });
       continue;
     }
@@ -149,6 +155,7 @@ function selectRowsForEnrichment(rows, options = {}) {
       row,
       queue_key: key,
       lifecycle_status: state.status,
+      selection_reason: dateUnknownEvidenceSupply ? 'date_unknown_evidence_supply_only' : 'standard_enrichment_eligibility',
       never_attempted: attempts.length === 0,
       first_seen_at: cleanText(row && row.first_seen_at),
       first_attempted_at: firstAttemptAt(row, lane),
@@ -170,14 +177,19 @@ function selectRowsForEnrichment(rows, options = {}) {
     return cleanText(a.queue_key).localeCompare(cleanText(b.queue_key));
   });
 
+  const selected_reasons = [];
   for (const item of candidates) {
-    if (selected.length < limit) selected.push(item.row);
+    if (selected.length < limit) {
+      selected.push(item.row);
+      selected_reasons.push({ queue_key: item.queue_key, lane, reason: item.selection_reason });
+    }
     else skipped.push({ queue_key: item.queue_key, skip_reason: 'batch_limit_not_selected' });
   }
-  return { selected, skipped };
+  return { selected, skipped, selected_reasons };
 }
 
 module.exports = {
+  DATE_UNKNOWN_EVIDENCE_LANES,
   selectRowsForEnrichment
   ,
   marketThroughputPlan
