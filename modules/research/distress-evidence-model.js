@@ -49,7 +49,7 @@ const DEFINITIONS = Object.freeze({
     plain_english_meaning: 'Judgment amount explicitly stated by the official source.',
     fields: ['judgment_amount'],
     evidence_fields: ['judgment_amount_evidence_text'],
-    debt_pattern: /\b(?:judgment\s+(?:amount|balance|due)|amount\s+of\s+(?:the\s+)?judgment)\b/i
+    debt_pattern: /\b(?:judgment\s+(?:amount|balance|due)|judgment\s+in\s+the\s+amount\s+of|amount\s+of\s+(?:the\s+)?judgment)\b/i
   },
   redemption_amount: {
     semantic_role: 'debt',

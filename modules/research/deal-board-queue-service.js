@@ -25,6 +25,7 @@ const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
 const documentReextractionPass = require('./document-reextraction-pass');
 const manualEvidencePacketService = require('./manual-evidence-packet-service');
 const distressEvidenceModel = require('./distress-evidence-model');
+const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -96,7 +97,7 @@ function cloneSnapshotRow(row) {
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
-  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence']) {
+  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence', 'source_evidence_recovery']) {
     if (copy[key] && typeof copy[key] === 'object') copy[key] = JSON.parse(JSON.stringify(copy[key]));
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
@@ -263,11 +264,13 @@ function repairCountyFromSourceHost(row) {
 }
 
 function repairStoredSnapshotRows(rows) {
-  return (Array.isArray(rows) ? rows : []).map((row) => {
+  return (Array.isArray(rows) ? rows : []).map((storedRow) => {
+    let row = storedRow;
     markRoutesDisproved(row, invalidatedRouteValues(row));
     quarantineSuspectedPrefixRow(row);
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
+    row = sourceEvidenceRecovery.recoverRow(row, { now_iso: nowIso() }).row;
     row.distress_evidence = distressEvidenceModel.buildDistressEvidence(row);
     row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
     const state = leadOperationsState.rowStateForDeal(row);
@@ -1022,13 +1025,21 @@ function queueCounts(rows) {
     const state = cleanText(row && row.row_state) || 'UNKNOWN';
     states[state] = (Number(states[state]) || 0) + 1;
   }
+  const rawQualityBucketTotals = {
+    inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW').length,
+    needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW').length
+  };
+  const notQuarantined = (row) => !(row && row.lifecycle_status && row.lifecycle_status.quarantined === true);
+  const actionableStates = new Set(['CALL_READY', 'OUTREACH_READY', 'MAIL_READY']);
   return {
     total_rows: rows.length,
     today_rows: rows.filter((row) => String(row.first_seen_at).slice(0, 10) === today || String(row.last_seen_at).slice(0, 10) === today).length,
+    actionable_now: rows.filter((row) => notQuarantined(row) && actionableStates.has(cleanText(row && row.row_state))).length,
+    actionable_today: rows.filter((row) => notQuarantined(row) && actionableStates.has(cleanText(row && row.row_state)) && String(row.first_seen_at).slice(0, 10) === today).length,
     address_rows: rows.filter((row) => row.normalized_address).length,
     call_ready: rows.filter((row) => row.row_state === 'CALL_READY').length,
     outreach_ready: rows.filter((row) => row.row_state === 'OUTREACH_READY').length,
-    mail_ready: rows.filter((row) => row.row_state === 'MAIL_READY' || row.contact_status === 'MAIL_READY').length,
+    mail_ready: rows.filter((row) => row.row_state === 'MAIL_READY').length,
     needs_contact_search: rows.filter((row) => row.row_state === 'NEEDS_CONTACT_SEARCH').length,
     needs_skip_trace: rows.filter((row) => row.row_state === 'NEEDS_SKIP_TRACE').length,
     needs_comps_state: rows.filter((row) => row.row_state === 'NEEDS_COMPS').length,
@@ -1036,13 +1047,36 @@ function queueCounts(rows) {
     closed_not_interested: rows.filter((row) => row.row_state === 'CLOSED_NOT_INTERESTED').length,
     locked: rows.filter((row) => row.row_state === 'LOCKED').length,
     row_states: states,
-    inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW').length,
-    needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW').length,
-    needs_contact: rows.filter((row) => row.normalized_address && row.contact_status !== 'CALL_READY' && row.contact_status !== 'OUTREACH_READY').length,
+    inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW' && notQuarantined(row)).length,
+    needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW' && notQuarantined(row)).length,
+    raw_quality_bucket_totals: rawQualityBucketTotals,
+    needs_contact: rows.filter((row) => row.normalized_address && !actionableStates.has(cleanText(row && row.row_state))).length,
     needs_comps: rows.filter((row) => row.normalized_address && row.verified_sold_comp_count < 3).length,
     source_proof_only: rows.filter((row) => row.quality_bucket === 'SOURCE_PROOF_ONLY').length,
     owner_clues: rows.filter((row) => row.owner_clue).length,
     quarantined: rows.filter((row) => row.lifecycle_status && row.lifecycle_status.quarantined === true).length
+  };
+}
+
+const LIFECYCLE_STATUSES = Object.freeze([
+  'FRESH',
+  'AGING',
+  'SALE_PASSED',
+  'REPOSTED_OR_REPLACED',
+  'SOURCE_NO_LONGER_LISTED',
+  'DATE_UNKNOWN_REVERIFY',
+  'UNVERIFIABLE'
+]);
+
+function lifecycleAggregate(rows, atIso) {
+  const counts = Object.fromEntries(LIFECYCLE_STATUSES.map((status) => [status, 0]));
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const status = leadLifecycleStatus.computeLifecycleStatus(row || {}, atIso || nowIso()).status;
+    counts[LIFECYCLE_STATUSES.includes(status) ? status : 'UNVERIFIABLE'] += 1;
+  }
+  return {
+    population_total: Object.values(counts).reduce((sum, count) => sum + count, 0),
+    counts
   };
 }
 
@@ -1082,6 +1116,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     bucket.market = market;
     store.markets[key] = bucket;
     writeStore(store);
+    const responseRows = repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow));
   return {
     ok: true,
     preview_only: true,
@@ -1092,9 +1127,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
     county_onboarding: countyOnboardingSummary(market),
     document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
     batch,
-    counts: queueCounts([]),
-    lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
-    rows: bucket.rows.slice(0, 100)
+    counts: queueCounts(responseRows),
+    lifecycle_aggregate: lifecycleAggregate(responseRows),
+    lead_operations_queue: leadOperationsQueueForResponse(responseRows),
+    rows: responseRows.slice(0, 100)
   };
   }
   const preview = await previewImpl({
@@ -1242,6 +1278,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     county_onboarding: countyOnboardingSummary(market),
     batch,
     counts,
+    lifecycle_aggregate: lifecycleAggregate(bucket.rows),
     lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
     rows: bucket.rows.slice(0, 100)
   };
@@ -1259,6 +1296,7 @@ function latestDealBoardSnapshot(input = {}) {
     market,
     has_snapshot: false,
     counts: queueCounts([]),
+    lifecycle_aggregate: lifecycleAggregate([]),
     batch: null,
     county_onboarding: countyOnboardingSummary(market),
     daily: { batches_today: 0, address_rows_today: 0, ocr_address_rows_today: 0 },
@@ -1281,6 +1319,7 @@ function latestDealBoardSnapshot(input = {}) {
     market,
     has_snapshot: true,
     counts: queueCounts(rows),
+    lifecycle_aggregate: lifecycleAggregate(rows),
     batch: (bucket.batches || [])[0] || null,
     county_onboarding: countyOnboardingSummary(market),
     document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
@@ -1722,6 +1761,7 @@ module.exports = {
   blockedInventoryBreakdownForResponse,
   CONTACT_WORKFLOW_OUTCOMES,
   queueCounts,
+  lifecycleAggregate,
   countyOnboardingSummary,
   runDealBoardBatch,
   latestDealBoardSnapshot,

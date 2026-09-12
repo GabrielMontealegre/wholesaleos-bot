@@ -854,21 +854,42 @@
       body, '#fdba74');
   }
 
+  function dealDeskMetrics(data) {
+    var c = data && data.counts || {};
+    var queueCounts = data && data.lead_operations_queue && data.lead_operations_queue.counts || {};
+    var callReady = Number(queueCounts.CALL_READY || 0);
+    var outreachReady = Number(queueCounts.OUTREACH_READY || 0);
+    var mailReady = Number(queueCounts.MAIL_READY || 0);
+    return {
+      call_ready: callReady,
+      outreach_ready: outreachReady,
+      mail_ready: mailReady,
+      actionable_now: callReady + outreachReady + mailReady,
+      actionable_today: Number(c.actionable_today || 0)
+    };
+  }
+
+  function lifecycleAggregateHtml(data) {
+    var aggregate = data && data.lifecycle_aggregate || {};
+    var counts = aggregate.counts || {};
+    var statuses = ['FRESH', 'AGING', 'SALE_PASSED', 'REPOSTED_OR_REPLACED', 'SOURCE_NO_LONGER_LISTED', 'DATE_UNKNOWN_REVERIFY', 'UNVERIFIABLE'];
+    return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">' +
+      '<div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Full-market freshness (' + esc(aggregate.population_total || 0) + ' rows)</div>' +
+      statuses.map(function (status) { return chip(status, Number(counts[status] || 0), '#f3f4f6'); }).join('') +
+      '</div>';
+  }
+
   function dealDeskCard(data, rows) {
     var c = data.counts || {};
     var daily = data.daily || {};
     var autoRun = data.auto_run || {};
-    var today = new Date().toISOString().slice(0, 10);
-    var actionableToday = rows.filter(function (r) {
-      return isActionableRow(r) && String(r.first_seen_at || '').slice(0, 10) === today;
-    }).length;
+    var metrics = dealDeskMetrics(data);
     var soonest = upcomingSaleRow(rows);
     var urgent = topUrgentAddresses(rows);
-    var canonicalCallReady = rows.filter(function (row) { return row.row_state === 'CALL_READY'; }).length;
-    var actionableNow = canonicalCallReady + Number(c.inspect_now || 0) + Number(c.needs_zip_review || 0);
     var summary = [
-      chip('CALL_READY', canonicalCallReady, '#bbf7d0'),
-      chip('MAIL_READY', c.mail_ready || 0, '#ccfbf1'),
+      chip('CALL_READY', metrics.call_ready, '#bbf7d0'),
+      chip('OUTREACH_READY', metrics.outreach_ready, '#dbeafe'),
+      chip('MAIL_READY', metrics.mail_ready, '#ccfbf1'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('New today', c.today_rows || 0, '#ddd6fe')
@@ -891,10 +912,11 @@
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         (autoRun.enabled ? chip('AUTO-RUN', 'ON every ' + (autoRun.interval_minutes || 20) + ' min', '#bbf7d0') : chip('AUTO-RUN', 'OFF', '#fecaca')) +
         chip('Batches today', daily.batches_today || 0) +
-        chip('Actionable now', actionableNow, '#bbf7d0') +
-        chip('Actionable today', actionableToday, '#fde68a') +
+        chip('Actionable now', metrics.actionable_now, '#bbf7d0') +
+        chip('Actionable today', metrics.actionable_today, '#fde68a') +
       '</div>' +
       '<div style="margin-top:4px;">' + summary + '</div>' +
+      lifecycleAggregateHtml(data) +
       nextAuction +
       urgentText +
       '<div style="margin-top:8px;">' + finder + '</div>',
@@ -1461,6 +1483,8 @@
 
   window.__wosPublicDealsTestHooks = {
     panelsForPage: panelsForPage,
+    dealDeskMetrics: dealDeskMetrics,
+    lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,
     manualEvidenceCard: manualEvidenceCard,
     rowCard: rowCard,

@@ -53,6 +53,9 @@ exports/cycle-23-auth-preflight/*
 !exports/cycle-25-distress-inventory/
 exports/cycle-25-distress-inventory/*
 !exports/cycle-25-distress-inventory/inventory.json
+!exports/cycle-26-recovery/
+exports/cycle-26-recovery/*
+!exports/cycle-26-recovery/report.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

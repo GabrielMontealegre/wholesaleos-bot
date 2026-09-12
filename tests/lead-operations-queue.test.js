@@ -6,6 +6,7 @@ const freePublicDealBoard = require('../modules/research/free-public-deal-board'
 const queueService = require('../modules/research/deal-board-queue-service');
 const leadOperationsQueue = require('../modules/research/lead-operations-queue');
 const leadOperationsState = require('../modules/research/lead-operations-state');
+const sourceEvidenceRecovery = require('../modules/research/source-evidence-recovery');
 const mailExport = require('../scripts/export-mail-ready-rows');
 
 const NOW = '2026-08-12T12:00:00.000Z';
@@ -169,6 +170,16 @@ function assertState(expected, deal, reasonPattern, actionPattern) {
   assert.deepStrictEqual(typedMoneyRow.distress_evidence.money_facts.map((item) => item.amount_type), ['tax_due', 'minimum_bid']);
   assert.strictEqual(typedMoneyRow.distress_evidence.money_facts[0].exact_amount, '$12,400.17');
   assert.strictEqual(typedMoneyRow.distress_evidence.money_facts[1].plain_english_meaning, 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.');
+  const recoveredQueueRow = sourceEvidenceRecovery.recoverRow(row({
+    queue_key: 'recovered-money-row',
+    source_proof_text: 'Opening bid $45,000.',
+    status_evidence_text: 'Sale date: August 20, 2026.'
+  }), { now_iso: NOW }).row;
+  const recoveredQueue = leadOperationsQueue.buildLeadOperationsQueue([recoveredQueueRow], { today_iso: '2026-08-12' });
+  const transportedRecovery = recoveredQueue.segments.flatMap((segment) => segment.rows)[0];
+  assert.strictEqual(transportedRecovery.lifecycle_status.status, 'FRESH');
+  assert.strictEqual(transportedRecovery.distress_evidence.money_facts[0].amount_type, 'opening_bid');
+  assert.strictEqual(transportedRecovery.distress_evidence.money_facts[0].semantic_role, 'bid');
   const summarized = leadOperationsQueue.summarizeLeadOperationsQueue(ordered);
   assert.deepStrictEqual(summarized.segments.find((segment) => segment.key === 'CALL_READY').row_keys, callKeys);
   assert.ok(!JSON.stringify(summarized).includes('normalized_address'), 'transport summary must not duplicate full row payloads');

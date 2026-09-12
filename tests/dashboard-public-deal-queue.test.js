@@ -1202,6 +1202,60 @@ function mockDeal(overrides) {
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.urgentContextLabel(disagreementRow), 'INSPECT_NOW', 'row label must ignore a conflicting legacy contact_status');
   assert.ok(canonicalQueue.includes('CALL READY: 0') && canonicalQueue.includes('Needs Contact Search (1)'), 'Lead Operations Queue must agree with the canonical Deal Desk count');
 
+  const quarantinedRows = Array.from({ length: 220 }, (_, index) => ({
+    queue_key: `dallas|quarantined|${index}`,
+    headline: `Quarantined fixture ${index}`,
+    normalized_address: `${index + 1} Cap Test St, Dallas, TX 75201`,
+    city: 'Dallas',
+    county: 'Dallas',
+    state: 'TX',
+    source_document_url: `https://county.example.gov/notices/${index}.pdf`,
+    source_proof_text: 'Official notice without a published date or amount.',
+    quality_bucket: 'INSPECT_NOW',
+    row_state: 'LOCKED',
+    lifecycle_status: { status: 'DATE_UNKNOWN_REVERIFY', quarantined: true },
+    preview_only: true,
+    not_a_saved_lead: true
+  }));
+  const quarantinedCounts = queueService.queueCounts(quarantinedRows);
+  const quarantinedLifecycle = queueService.lifecycleAggregate(quarantinedRows, '2026-09-10T12:00:00.000Z');
+  assert.strictEqual(quarantinedCounts.actionable_now, 0, 'quarantined rows can never count as actionable');
+  assert.strictEqual(quarantinedCounts.inspect_now, 0, 'quarantined INSPECT_NOW rows must be excluded from actionable bucket counts');
+  assert.strictEqual(quarantinedCounts.raw_quality_bucket_totals.inspect_now, 220, 'raw quality-bucket totals remain available under an explicit key');
+  assert.strictEqual(quarantinedLifecycle.population_total, 220);
+  assert.strictEqual(Object.values(quarantinedLifecycle.counts).reduce((sum, count) => sum + count, 0), quarantinedCounts.total_rows);
+
+  const cappedFixtureData = {
+    counts: quarantinedCounts,
+    lifecycle_aggregate: quarantinedLifecycle,
+    lead_operations_queue: {
+      total_rows: 220,
+      counts: { BLOCKED: 220 },
+      segments: [{ key: 'BLOCKED', count: 220, row_keys: quarantinedRows.map((row) => row.queue_key) }]
+    }
+  };
+  const cappedDashboard = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard', cappedFixtureData, quarantinedRows.slice(0, 100), '');
+  const cappedMetrics = uiContext.window.__wosPublicDealsTestHooks.dealDeskMetrics(cappedFixtureData);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(cappedMetrics)), {
+    call_ready: 0, outreach_ready: 0, mail_ready: 0, actionable_now: 0, actionable_today: 0
+  });
+  assert.ok(cappedDashboard.includes('Actionable now: 0'));
+  assert.ok(cappedDashboard.includes('Full-market freshness (220 rows)'));
+  assert.ok(!cappedDashboard.includes('Actionable now: 100'), 'the 100-row response cap must never become a displayed count');
+
+  fs.writeFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, JSON.stringify({
+    version: 1,
+    store_kind: 'deal_board_snapshots_not_saved_leads',
+    markets: {
+      'dallas|dallas|tx': { market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, rows: quarantinedRows, batches: [] }
+    }
+  }, null, 2));
+  const cappedSnapshot = queueService.latestDealBoardSnapshot({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' } });
+  assert.strictEqual(cappedSnapshot.rows.length, 100, 'row bodies remain capped');
+  assert.strictEqual(cappedSnapshot.counts.total_rows, 220, 'full-market counts are computed before slicing');
+  assert.strictEqual(cappedSnapshot.lifecycle_aggregate.population_total, 220, 'lifecycle aggregate is computed before slicing');
+  assert.strictEqual(Object.values(cappedSnapshot.lifecycle_aggregate.counts).reduce((sum, count) => sum + count, 0), cappedSnapshot.counts.total_rows);
+
   const reviewMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
   fs.writeFileSync(process.env.DEAL_BOARD_SNAPSHOTS_PATH, JSON.stringify({
     version: 1,
