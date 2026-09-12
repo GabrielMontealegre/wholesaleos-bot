@@ -1069,6 +1069,8 @@ function mockDeal(overrides) {
     why_this_might_be_a_deal: 'Official trustee sale notice.',
     status_evidence_text: 'Sale scheduled by official notice.',
     source_document_url: 'https://county.example.gov/notices/truth.pdf',
+    sale_venue_address: '101 W Main St, Waxahachie, TX 75165',
+    sale_venue_source_url: 'https://county.example.gov/notices/truth.pdf',
     source_date: '2026-09-09',
     last_checked_at: '2026-09-10T12:00:00.000Z',
     lifecycle_status: { status: 'FRESH', quarantined: false, reason_text: 'Source evidence is dated 1 day ago.' },
@@ -1097,7 +1099,7 @@ function mockDeal(overrides) {
     blocked_sources: [],
     missing_fields: []
   });
-  ['Why this lead exists', 'Official event/status', 'Minimum bid', '$152,743', 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.', 'Source date', 'Last checked', 'Freshness', 'Open official source', 'Zillow subject search', 'Redfin subject search', 'Value status', 'ARV lock reason'].forEach((text) => {
+  ['Why this lead exists', 'Official event/status', 'Minimum bid', '$152,743', 'Auction starting amount; not confirmed total debt, payoff, ARV, or offer price.', 'Source date', 'Last checked', 'Freshness', 'Open official source', 'Sale location:', '101 W Main St, Waxahachie, TX 75165', '(not the subject property)', 'Zillow subject search', 'Redfin subject search', 'Value status', 'ARV lock reason'].forEach((text) => {
     assert.ok(distressCardHtml.includes(text), `Cycle 25 row card must render ${text}`);
   });
   assert.ok(distressCardHtml.indexOf('Why this lead exists') < distressCardHtml.indexOf('Official event/status'));

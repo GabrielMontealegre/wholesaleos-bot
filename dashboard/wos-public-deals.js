@@ -337,7 +337,7 @@
   function manualEvidenceItem(item) {
     var keys = Object.keys(MANUAL_FIELD_LABELS).filter(function (key) {
       if (item.evidence_type === 'sold_comp') return ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'].indexOf(key) !== -1;
-      if (item.evidence_type === 'skip_trace') return ['owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
+      if (item.evidence_type === 'skip_trace') return ['normalized_address', 'owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'county_appraisal_record') return ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'auction_status') return ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'].indexOf(key) !== -1;
       return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
@@ -391,6 +391,7 @@
         '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
+      (item.sale_venue_address ? '<div style="font-size:11px;margin-top:6px;"><b>Sale location:</b> ' + esc(item.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span> ' + link('venue source', item.sale_venue_source_url) + '</div>' : '') +
       '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
       '<div style="margin-top:6px;font-size:11px;"><b>Source event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + ' <b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
@@ -530,6 +531,10 @@
     lines.push('<div style="font-size:12px;"><b>Freshness:</b> ' + esc(row.lifecycle_status && row.lifecycle_status.status || 'DATE_UNKNOWN_REVERIFY') +
       (row.lifecycle_status && row.lifecycle_status.reason_text ? ' <span style="color:#6b7280;">' + esc(row.lifecycle_status.reason_text) + '</span>' : '') + '</div>');
     lines.push('<div style="font-size:12px;margin-top:3px;"><b>Official proof:</b> ' + link('Open official source', distress.official_source_url || row.source_document_url || row.source_url) + '</div>');
+    if (row.sale_venue_address) {
+      lines.push('<div style="font-size:12px;margin-top:3px;"><b>Sale location:</b> ' + esc(row.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span>' +
+        (row.sale_venue_source_url ? ' ' + link('venue source', row.sale_venue_source_url) : '') + '</div>');
+    }
     var researchLinks = researchLinksHtml(row);
     if (researchLinks) lines.push('<div style="font-size:12px;"><b>Property research:</b> ' + researchLinks + '</div>');
     lines.push('<div style="font-size:11px;color:#374151;margin-top:3px;"><b>Value status:</b> Comps ' + esc(row.screenshot_comp_status || row.comp_status || 'not run') +

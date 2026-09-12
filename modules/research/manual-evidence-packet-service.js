@@ -14,6 +14,8 @@ const contactRouteRoles = require('./contact-route-roles');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const distressEvidenceModel = require('./distress-evidence-model');
+const propertyIdentity = require('./property-identity');
+const propertyAddressEvidence = require('./property-address-evidence');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -44,7 +46,7 @@ const FIELD_ALLOWLIST = Object.freeze({
   sold_comp: ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'],
   county_appraisal_record: ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'],
   auction_status: ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'],
-  skip_trace: ['owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url']
+  skip_trace: ['normalized_address', 'owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url']
 });
 
 function cleanText(value) {
@@ -345,7 +347,22 @@ function evaluatePacket(packet, row, options = {}) {
   for (const item of confirmed.filter((entry) => entry.evidence_type === 'skip_trace')) {
     const fields = item.fields || {};
     if (fields.contact_classification !== 'possible_owner_contact' || fields.seller_owner_confirmed !== true) continue;
-    if (!/^(phone|email|form|reply_link)$/i.test(cleanText(fields.contact_route_kind)) || !cleanText(fields.contact_value) || !/^https?:\/\//i.test(cleanText(fields.source_url))) continue;
+    if (!/^(phone|email|form|reply_link)$/i.test(cleanText(fields.contact_route_kind)) || !cleanText(fields.contact_value) || !/^https?:\/\//i.test(cleanText(fields.source_url)) || !cleanText(item.captured_at)) continue;
+    const personKey = (value) => cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const expectedPeople = [
+      row && row.owner_record && row.owner_record.owner_name,
+      row && row.owner_record && row.owner_record.taxpayer_name,
+      row && row.owner_name_if_visible,
+      row && row.owner_clue
+    ].map(personKey).filter(Boolean);
+    const displayedPersonMatches = !!personKey(fields.owner_name) && expectedPeople.includes(personKey(fields.owner_name));
+    const displayedAddress = propertyIdentity.parseAddress(cleanText(fields.normalized_address));
+    const subjectAddress = propertyIdentity.parseAddress(cleanText(row && row.normalized_address));
+    const displayedAddressMatches = displayedAddress.complete && subjectAddress.complete &&
+      cleanText(displayedAddress.full_address).toLowerCase() === cleanText(subjectAddress.full_address).toLowerCase();
+    const subjectSourceEstablished = !!cleanText(row && row.normalized_address) &&
+      (row && row.property_identity_source_only !== true || row && row.source_structured_address_verified === true);
+    if (!displayedPersonMatches || !displayedAddressMatches || !subjectSourceEstablished) continue;
     manualRoutes.push(contactRouteRoles.withContactRouteRole({
       route_kind: cleanText(fields.contact_route_kind).toLowerCase(),
       route_type: 'operator_confirmed_owner_or_seller_contact',
@@ -353,7 +370,7 @@ function evaluatePacket(packet, row, options = {}) {
       contact_name: cleanText(fields.owner_name),
       source_kind: SOURCE_KIND,
       source_url: cleanText(fields.source_url),
-      evidence_text: `Operator confirmed this ${cleanText(fields.contact_route_kind)} as an owner or seller route from ${cleanText(item.source_name)} screenshot ${cleanText(item.screenshot_id)}.`,
+      evidence_text: `Operator confirmed the displayed person and property address match this row, and confirmed this ${cleanText(fields.contact_route_kind)} as an owner or seller route from ${cleanText(item.source_name)} screenshot ${cleanText(item.screenshot_id)}.`,
       risk_flags: ['OPERATOR_SUPPLIED_SCREENSHOT_CONTACT'],
       screenshot_id: item.screenshot_id,
       operator_confirmed: true,
@@ -553,9 +570,14 @@ function sampleItem(row, packetStore, market, options) {
     queue_key: cleanText(row.queue_key),
     headline: cleanText(row.headline),
     address,
-    address_state: cleanText(row.normalized_address) ? 'complete_source_address' : 'partial_address_verify_first',
+    address_state: propertyAddressEvidence.isSourceSupportedSubjectAddress(row)
+      ? 'complete_source_address'
+      : 'partial_address_verify_first',
     lead_origin: leadOrigin(row),
     source_proof_url: cleanText(row.source_document_url || row.source_url),
+    sale_venue_address: cleanText(row.sale_venue_address),
+    sale_venue_evidence_text: cleanText(row.sale_venue_evidence_text),
+    sale_venue_source_url: cleanText(row.sale_venue_source_url),
     source_event_date: cleanText(row.sale_date_or_event_date || row.sale_date_iso),
     source_last_checked_at: cleanText(row.last_checked_at),
     distress_evidence: distressEvidenceModel.buildDistressEvidence(row),
