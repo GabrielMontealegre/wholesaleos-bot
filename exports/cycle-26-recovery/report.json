@@ -1,0 +1,292 @@
+{
+  "cycle": 26,
+  "status": "UNREACHABLE",
+  "reason": "Local deal-board snapshot store does not exist at C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json. The production Railway volume was not contacted.",
+  "production_contacted": false,
+  "snapshot_path": "C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json",
+  "generated_at": "2026-09-11T06:24:42.983Z",
+  "markets": [
+    {
+      "market": {
+        "city": "Dallas",
+        "county": "Dallas",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    },
+    {
+      "market": {
+        "city": "Detroit",
+        "county": "Wayne",
+        "state": "MI"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    },
+    {
+      "market": {
+        "city": "San Diego",
+        "county": "San Diego",
+        "state": "CA"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    },
+    {
+      "market": {
+        "city": "Los Angeles",
+        "county": "Los Angeles",
+        "state": "CA"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    },
+    {
+      "market": {
+        "city": "San Antonio",
+        "county": "Bexar",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    },
+    {
+      "market": {
+        "city": "Houston",
+        "county": "Harris",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "lifecycle_before": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "lifecycle_after": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "left_date_unknown_reverify": null,
+      "recovered_date_field_counts": {},
+      "rows_acquiring_money_fact": null,
+      "recovered_amount_type_counts": {
+        "tax_due": null,
+        "mortgage_arrears": null,
+        "lien_amount": null,
+        "judgment_amount": null,
+        "redemption_amount": null,
+        "minimum_bid": null,
+        "opening_bid": null,
+        "assessed_value": null,
+        "public_estimate": null,
+        "listing_price": null,
+        "unknown_source_amount": null
+      },
+      "rows_acquiring_debt_fact": null,
+      "rows_acquiring_bid_fact": null,
+      "rows_acquiring_unknown_source_amount": null,
+      "remaining_blocked": null,
+      "remaining_blocked_reason_counts": {}
+    }
+  ]
+}

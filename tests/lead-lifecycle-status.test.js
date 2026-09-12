@@ -24,5 +24,12 @@ const lifecycle = require('../modules/research/lead-lifecycle-status');
   const unverifiable = lifecycle.computeLifecycleStatus({ headline: 'empty' }, now);
   assert.strictEqual(unverifiable.status, 'UNVERIFIABLE');
   assert.strictEqual(unverifiable.quarantined, true);
+  const recoveredSaleDate = lifecycle.computeLifecycleStatus({
+    normalized_address: '1 Main St, Dallas, TX 75201',
+    source_document_url: 'https://county.example.gov/notice.pdf',
+    sale_date_or_event_date: '2026-08-20'
+  }, now);
+  assert.strictEqual(recoveredSaleDate.status, 'FRESH');
+  assert.strictEqual(recoveredSaleDate.quarantined, false);
   console.log('lead lifecycle status tests passed');
 })();
