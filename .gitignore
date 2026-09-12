@@ -56,6 +56,9 @@ exports/cycle-25-distress-inventory/*
 !exports/cycle-26-recovery/
 exports/cycle-26-recovery/*
 !exports/cycle-26-recovery/report.json
+!exports/cycle-27-phone-readiness/
+exports/cycle-27-phone-readiness/*
+!exports/cycle-27-phone-readiness/readiness.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

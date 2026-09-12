@@ -1,0 +1,116 @@
+{
+  "cycle": 27,
+  "target": "FIRST_VERIFIED_SELLER_PHONE",
+  "email_required": false,
+  "status": "UNREACHABLE",
+  "reason": "Local deal-board snapshot store does not exist at C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json. The production Railway volume was not contacted.",
+  "production_contacted": false,
+  "snapshot_path": "C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-bot-cycle10\\data\\deal-board-snapshots.json",
+  "generated_at": "2026-09-12T14:08:34.134Z",
+  "markets": [
+    {
+      "market": {
+        "city": "San Diego",
+        "county": "San Diego",
+        "state": "CA"
+      },
+      "total_rows": null,
+      "complete_verified_address_rows": null,
+      "lifecycle_status_counts": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "rows_with_seller_eligible_phone": null,
+      "rows_with_research_only_phone": null,
+      "rows_with_email_but_no_seller_phone": null,
+      "rows_with_owner_or_taxpayer_identity": null,
+      "rows_with_verified_phone_blocked_only_by_date_unknown": null,
+      "rows_eligible_for_phone_evidence_lane": null,
+      "rows_that_could_reach_call_ready_if_phone_found": null,
+      "call_ready_now": null
+    },
+    {
+      "market": {
+        "city": "Detroit",
+        "county": "Wayne",
+        "state": "MI"
+      },
+      "total_rows": null,
+      "complete_verified_address_rows": null,
+      "lifecycle_status_counts": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "rows_with_seller_eligible_phone": null,
+      "rows_with_research_only_phone": null,
+      "rows_with_email_but_no_seller_phone": null,
+      "rows_with_owner_or_taxpayer_identity": null,
+      "rows_with_verified_phone_blocked_only_by_date_unknown": null,
+      "rows_eligible_for_phone_evidence_lane": null,
+      "rows_that_could_reach_call_ready_if_phone_found": null,
+      "call_ready_now": null
+    },
+    {
+      "market": {
+        "city": "San Antonio",
+        "county": "Bexar",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "complete_verified_address_rows": null,
+      "lifecycle_status_counts": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "rows_with_seller_eligible_phone": null,
+      "rows_with_research_only_phone": null,
+      "rows_with_email_but_no_seller_phone": null,
+      "rows_with_owner_or_taxpayer_identity": null,
+      "rows_with_verified_phone_blocked_only_by_date_unknown": null,
+      "rows_eligible_for_phone_evidence_lane": null,
+      "rows_that_could_reach_call_ready_if_phone_found": null,
+      "call_ready_now": null
+    },
+    {
+      "market": {
+        "city": "Dallas",
+        "county": "Dallas",
+        "state": "TX"
+      },
+      "total_rows": null,
+      "complete_verified_address_rows": null,
+      "lifecycle_status_counts": {
+        "FRESH": null,
+        "AGING": null,
+        "SALE_PASSED": null,
+        "REPOSTED_OR_REPLACED": null,
+        "SOURCE_NO_LONGER_LISTED": null,
+        "DATE_UNKNOWN_REVERIFY": null,
+        "UNVERIFIABLE": null
+      },
+      "rows_with_seller_eligible_phone": null,
+      "rows_with_research_only_phone": null,
+      "rows_with_email_but_no_seller_phone": null,
+      "rows_with_owner_or_taxpayer_identity": null,
+      "rows_with_verified_phone_blocked_only_by_date_unknown": null,
+      "rows_eligible_for_phone_evidence_lane": null,
+      "rows_that_could_reach_call_ready_if_phone_found": null,
+      "call_ready_now": null
+    }
+  ]
+}

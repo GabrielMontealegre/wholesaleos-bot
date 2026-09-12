@@ -239,6 +239,26 @@
     return html;
   }
 
+  function phoneReadinessHtml(row) {
+    var routes = safeArray(row && row.free_contact_routes).filter(function (route) {
+      return route && route.route_kind === 'phone' && route.value && !routeInvalidated(row, route);
+    });
+    var sellerPhone = routes.find(function (route) {
+      return route.seller_contact_eligibility === 'SELLER_CONTACT_ELIGIBLE';
+    });
+    var lifecycle = row && row.lifecycle_status || {};
+    if (sellerPhone && lifecycle.quarantined === true) {
+      return '<div class="wos-phone-readiness" style="font-size:12px;margin-top:5px;padding:6px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fef2f2;color:#991b1b;"><b>Phone found, but do not call yet.</b> The seller phone has source proof, but the lead date or current status is still unverified.</div>';
+    }
+    if (sellerPhone) {
+      return '<div class="wos-phone-readiness" style="font-size:12px;margin-top:5px;padding:6px 8px;border:1px solid #86efac;border-radius:6px;background:#f0fdf4;color:#065f46;"><b>Verified seller phone available.</b> Review the linked phone evidence before calling.</div>';
+    }
+    if (routes.length) {
+      return '<div class="wos-phone-readiness" style="font-size:12px;margin-top:5px;padding:6px 8px;border:1px solid #fde68a;border-radius:6px;background:#fffbeb;color:#92400e;"><b>Phone candidate found, but it is not call-ready.</b> The source does not prove that this number reaches the owner or occupant.</div>';
+    }
+    return '<div class="wos-phone-readiness" style="font-size:12px;margin-top:5px;color:#6b7280;"><b>No seller-eligible phone found.</b> Email is optional and is not required for this workflow.</div>';
+  }
+
   function documentReviewItem(item) {
     var docUrl = item && item.document_url || '';
     return '<div class="wos-document-review-item" data-queue-key="' + esc(item.queue_key || '') + '" data-document-url="' + esc(docUrl) + '" style="border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' +
@@ -274,7 +294,7 @@
     { key: 'sold_comp', label: '2. Sold comp', sources: ['Zillow sold result', 'Redfin sold result', 'Realtor.com sold result', 'County sales record'] },
     { key: 'county_appraisal_record', label: '3. County appraisal record', sources: ['County appraisal district', 'County parcel record'] },
     { key: 'auction_status', label: '4. Auction / sale status', sources: ['County auction page', 'Official source document'] },
-    { key: 'skip_trace', label: '5. Skip-trace clue', sources: ['CyberBackgroundChecks', 'Official public contact page', 'Public search result'] }
+    { key: 'skip_trace', label: '5. Phone / skip-trace evidence', sources: ['CyberBackgroundChecks', 'Official public contact page', 'Public search result'] }
   ];
 
   var MANUAL_FIELD_LABELS = {
@@ -284,7 +304,7 @@
     sold_status: 'Sold status', sold_price: 'Sold price', sold_date: 'Sold date', similarity_basis: 'Similarity basis', land_use: 'Land use',
     distance_miles: 'Distance miles', owner_name: 'Possible owner name', taxpayer_name: 'Taxpayer name', assessed_value: 'Assessed value clue',
     tax_value: 'Tax value clue', sale_date: 'Sale date', status: 'Sale status', minimum_bid: 'Minimum bid clue',
-    redemption_amount: 'Redemption amount clue', contact_value: 'Phone / email / link', contact_route_kind: 'Contact type',
+    redemption_amount: 'Redemption amount clue', contact_value: 'Phone number or optional outreach link', contact_route_kind: 'Contact type',
     contact_classification: 'Who this may reach', seller_owner_confirmed: 'I confirmed this is the owner / seller'
   };
 
@@ -542,6 +562,7 @@
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
     var contactRoutes = contactRoutesHtml(row);
     if (contactRoutes) lines.push(contactRoutes);
+    lines.push(phoneReadinessHtml(row));
     if (row.foreclosure_type || row.source_row_reference || row.filing_period) {
       lines.push('<div style="font-size:12px;color:#374151;">' +
         (row.foreclosure_type ? 'Type: <b>' + esc(row.foreclosure_type) + '</b> ' : '') +
@@ -811,6 +832,12 @@
         esc(doc.blocked_count || 0) + ' blocked, ' +
         esc(doc.failed_count || 0) + ' failed.</div>';
     }
+    var phoneEvidenceLine = '';
+    if (batch && Number(batch.date_unknown_contact_evidence_selected_count || 0) > 0) {
+      phoneEvidenceLine = '<div style="font-size:11px;color:#4b5563;margin-top:4px;">Phone evidence: ' +
+        esc(batch.date_unknown_contact_evidence_selected_count) +
+        ' unknown-date rows searched for source-backed phone clues. Any phone remains locked until the current lead status is verified.</div>';
+    }
     var errLine = autoRun.last_error
       ? '<div style="font-size:11px;color:#991b1b;margin-top:4px;">Last auto-run error: ' + esc(autoRun.last_error) + '</div>' : '';
     var blockers = '';
@@ -824,7 +851,7 @@
     }
     return panelBox('Daily Deal Machine',
       selectedMarketLabel() + ' - free public sources only - snapshot cache, not saved leads.',
-      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + reextractionLine + errLine + blockers + coverageTable(batch),
+      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + reextractionLine + phoneEvidenceLine + errLine + blockers + coverageTable(batch),
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
 
@@ -1492,6 +1519,7 @@
     topUrgentAddresses: topUrgentAddresses,
     urgentContextLabel: urgentContextLabel,
     contactRoutesHtml: contactRoutesHtml,
+    phoneReadinessHtml: phoneReadinessHtml,
     routeInvalidated: routeInvalidated,
     selectedMarket: selectedMarket,
     storeSelectedMarket: storeSelectedMarket,

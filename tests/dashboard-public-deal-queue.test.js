@@ -847,7 +847,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=30'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=31'), 'dashboard must load the cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -869,6 +869,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Needs contact search'), 'dashboard must show unfinished free-contact-search counts separately');
   assert.ok(uiSource.includes('NEEDS_CONTACT_SEARCH'), 'dashboard must render the contact-search segment');
   assert.ok(uiSource.includes('Needs skip trace'), 'dashboard must show skip-trace need counts');
+  assert.ok(uiSource.includes('unknown-date rows searched for source-backed phone clues'), 'dashboard must explain phone evidence gathered while a row stays date-locked');
   assert.ok(uiSource.includes('API_CONTACT_WORKFLOW') && uiSource.includes('/contact-workflow'), 'dashboard must call the explicit contact-workflow route');
   assert.ok(uiSource.includes('API_DOCUMENT_REVIEW_CLEAR') && uiSource.includes('/document-review-clear'), 'dashboard must call the explicit document-review-clear route');
   assert.ok(uiSource.includes('Select outcome') && uiSource.includes('Mark contacted'), 'Deal Finder rows must expose the operator contact control');
@@ -901,7 +902,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=30'), 'dashboard must load the Cycle 25 cache-busted distress truth workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=31'), 'dashboard must load the Cycle 27 cache-busted phone-readiness workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Official event/status') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
@@ -1039,7 +1040,26 @@ function mockDeal(overrides) {
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidencePanel, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.manualEvidenceCard, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.phoneReadinessHtml, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.rowCard, 'function');
+  const phoneHook = uiContext.window.__wosPublicDealsTestHooks.phoneReadinessHtml;
+  const verifiedPhoneRoute = {
+    route_kind: 'phone', value: '(214) 555-0100', seller_contact_eligibility: 'SELLER_CONTACT_ELIGIBLE',
+    source_kind: 'official_public_record', source_url: 'https://county.example.gov/owner/1',
+    evidence_text: 'Owner of record phone: (214) 555-0100.'
+  };
+  assert.ok(phoneHook({
+    lifecycle_status: { status: 'FRESH', quarantined: false }, free_contact_routes: [verifiedPhoneRoute]
+  }).includes('Verified seller phone available'));
+  assert.ok(phoneHook({
+    lifecycle_status: { status: 'DATE_UNKNOWN_REVERIFY', quarantined: true }, free_contact_routes: [verifiedPhoneRoute]
+  }).includes('Phone found, but do not call yet'));
+  assert.ok(phoneHook({
+    lifecycle_status: { status: 'FRESH', quarantined: false },
+    free_contact_routes: [Object.assign({}, verifiedPhoneRoute, { seller_contact_eligibility: 'RESEARCH_ONLY' })]
+  }).includes('Phone candidate found, but it is not call-ready'));
+  assert.ok(phoneHook({ lifecycle_status: { status: 'FRESH', quarantined: false }, free_contact_routes: [] })
+    .includes('Email is optional and is not required for this workflow'));
   const distressCardHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard({
     queue_key: 'distress-truth-row',
     normalized_address: '100 Truth St, Dallas, TX 75201',

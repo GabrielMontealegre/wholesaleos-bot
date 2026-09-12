@@ -105,13 +105,27 @@ function recordBoardSkipRollup(row, lane, reason, nowIso) {
 
   const datelessRepairRow = rows(1)[0];
   delete datelessRepairRow.source_date;
-  assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
+  const dateUnknownContactSelection = scheduler.selectRowsForEnrichment([datelessRepairRow], {
     lane: 'public_search', limit: 1, now_iso: now, market_policy: {}
-  }).selected.length, 0, 'date-unknown rows must remain quarantined from ordinary enrichment');
+  });
+  assert.strictEqual(dateUnknownContactSelection.selected.length, 1, 'public phone evidence search may run on a date-unknown row');
+  assert.deepStrictEqual(dateUnknownContactSelection.selected_reasons, [{
+    queue_key: datelessRepairRow.queue_key,
+    lane: 'public_search',
+    reason: 'date_unknown_evidence_supply_only'
+  }]);
+  assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
+    lane: 'county_appraisal', limit: 1, now_iso: now, market_policy: {}
+  }).selected.length, 1, 'county appraisal identity evidence may run on a date-unknown row');
   assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
     lane: 'document_reextraction', limit: 1, now_iso: now, market_policy: {},
     terminal_source_url_for_row: (row) => row.source_document_url
   }).selected.length, 1, 'document re-extraction must be allowed to repair date-unknown source evidence');
+  for (const lane of ['official_browser_lookup', 'row_source_document', 'sold_comp', 'business_entity_registry']) {
+    assert.strictEqual(scheduler.selectRowsForEnrichment([datelessRepairRow], {
+      lane, limit: 1, now_iso: now, market_policy: {}
+    }).selected.length, 0, `${lane} must remain blocked on a date-unknown row`);
+  }
 
   const terminalRow = rows(1)[0];
   terminalRow.queue_key = 'terminal-row-00';
