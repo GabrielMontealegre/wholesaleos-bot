@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const dashboardAuth = require('./modules/security/dashboard-auth');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const DB_FILE = path.resolve(DB_PATH);
@@ -1865,16 +1866,16 @@ function addBuyersBulk(buyers) {
 // ══════════════════════════════════════════════════════════
 
 const DEFAULT_USERS = [
-  { id:'admin', name:'Gabriel (Admin)', pin:'1234', role:'admin', color:'#1d1d1f', initials:'GA', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u2',  name:'User 2',  pin:'2001', role:'user', color:'#0071e3', initials:'U2', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u3',  name:'User 3',  pin:'2002', role:'user', color:'#34c759', initials:'U3', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u4',  name:'User 4',  pin:'2003', role:'user', color:'#ff9500', initials:'U4', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u5',  name:'User 5',  pin:'2004', role:'user', color:'#ff3b30', initials:'U5', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u6',  name:'User 6',  pin:'2005', role:'user', color:'#5e5ce6', initials:'U6', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u7',  name:'User 7',  pin:'2006', role:'user', color:'#ff6b35', initials:'U7', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u8',  name:'User 8',  pin:'2007', role:'user', color:'#30d158', initials:'U8', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u9',  name:'User 9',  pin:'2008', role:'user', color:'#64d2ff', initials:'U9', created: new Date().toISOString().slice(0,10), firstLogin: true },
-  { id:'u10', name:'User 10', pin:'2009', role:'user', color:'#bf5af2', initials:'U10', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'admin', name:'Gabriel (Admin)', pin:null, role:'admin', color:'#1d1d1f', initials:'GA', created: new Date().toISOString().slice(0,10), firstLogin: false },
+  { id:'u2',  name:'User 2',  pin:null, role:'user', color:'#0071e3', initials:'U2', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u3',  name:'User 3',  pin:null, role:'user', color:'#34c759', initials:'U3', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u4',  name:'User 4',  pin:null, role:'user', color:'#ff9500', initials:'U4', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u5',  name:'User 5',  pin:null, role:'user', color:'#ff3b30', initials:'U5', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u6',  name:'User 6',  pin:null, role:'user', color:'#5e5ce6', initials:'U6', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u7',  name:'User 7',  pin:null, role:'user', color:'#ff6b35', initials:'U7', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u8',  name:'User 8',  pin:null, role:'user', color:'#30d158', initials:'U8', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u9',  name:'User 9',  pin:null, role:'user', color:'#64d2ff', initials:'U9', created: new Date().toISOString().slice(0,10), firstLogin: true },
+  { id:'u10', name:'User 10', pin:null, role:'user', color:'#bf5af2', initials:'U10', created: new Date().toISOString().slice(0,10), firstLogin: true },
 ];
 
 function getUsers() {
@@ -1887,7 +1888,9 @@ function getUsers() {
 }
 
 function getUserByPin(pin) {
-  return getUsers().find(u => u.pin === String(pin));
+  const candidate = dashboardAuth.cleanPin(pin);
+  if (!candidate || dashboardAuth.isSeededDefaultPin(candidate)) return undefined;
+  return getUsers().find(u => dashboardAuth.cleanPin(u.pin) === candidate);
 }
 
 function getUserById(id) {
