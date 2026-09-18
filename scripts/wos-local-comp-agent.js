@@ -4,6 +4,7 @@
 // existing manual-evidence route; it never visits a listing website.
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const resolver = require('../modules/research/playwright-browser-resolver');
@@ -16,7 +17,7 @@ const SITE_HOSTS = Object.freeze({
   realtor: 'realtor.com'
 });
 const CARD_SELECTOR = 'article, [role="article"], li, [data-testid*="card"], [data-testid*="property"]';
-const DEFAULT_CONFIG = path.resolve(__dirname, '..', '.local-comp-agent.json');
+const DEFAULT_CONFIG = path.join(os.homedir(), '.wholesaleos', 'helper.json');
 const RATE_STATE = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent', 'rate-state.json');
 const RUN_LOCK = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent', 'agent.lock');
 const LOG_DIR = path.resolve(__dirname, '..', 'exports', 'cycle-30-comp-capture');
@@ -233,7 +234,7 @@ function nextPageUrl(page, site) {
     .filter((link) => link.href && /next/i.test(link.text))[0]?.href || '').then((url) => hostAllowed(url, site) ? url : '');
 }
 
-async function uploadImage({ fetchImpl, dashboard, operatorId, market, row, sourceName, sourceUrl, type, buffer, filename }) {
+async function uploadImage({ fetchImpl, dashboard, agentToken, market, row, sourceName, sourceUrl, type, buffer, filename }) {
   const capturedAt = new Date().toISOString();
   const form = new FormData();
   form.set('market', JSON.stringify(market));
@@ -244,10 +245,11 @@ async function uploadImage({ fetchImpl, dashboard, operatorId, market, row, sour
   form.set('captured_at', capturedAt);
   form.set('screenshot', new Blob([buffer], { type: 'image/png' }), filename);
   const response = await fetchImpl(`${dashboard}/api/dashboard/free-public-deal-board/manual-evidence/upload`, {
-    method: 'POST', headers: { 'x-user-id': operatorId }, body: form
+    method: 'POST', headers: { Authorization: `Bearer ${agentToken}` }, body: form
   });
   let body;
   try { body = await response.json(); } catch (_) { body = null; }
+  if (response.status === 401) throw Object.assign(new Error('Helper pairing expired. Pair the helper again from the dashboard.'), { code: 'helper_pairing_expired' });
   if (!response.ok || !body || body.ok !== true) throw new Error(`upload_failed_http_${response.status || 0}:${clean(body && (body.code || body.error) || 'invalid_response')}`);
   if (body.preview_only !== true || body.should_ingest !== false || body.no_global_mutation !== true) throw new Error('upload_response_safety_invariant_failed');
   const evidenceItems = body.manual_evidence_item && body.manual_evidence_item.packet && body.manual_evidence_item.packet.evidence_items;
@@ -277,13 +279,14 @@ async function runCapture(input = {}, options = {}) {
   };
   const site = clean(input.site || 'zillow').toLowerCase();
   if (!SITE_HOSTS[site]) throw new Error('listing_site_not_allowed');
-  if (!input.market || !input.operator_id || !input.dashboard_url) throw new Error('market_dashboard_and_operator_identity_required');
+  if (!input.market || !input.agent_token || !input.dashboard_url) throw new Error('market_dashboard_and_agent_session_required');
   const market = typeof input.market === 'string' ? parseMarket(input.market) : input.market;
   const dashboard = dashboardOrigin(input.dashboard_url);
-  const operatorId = clean(input.operator_id);
+  const agentToken = clean(input.agent_token);
   const latestUrl = new URL('/api/dashboard/free-public-deal-board/latest', dashboard);
   latestUrl.search = new URLSearchParams({ city: market.city, county: market.county, state: market.state }).toString();
-  const latestResponse = await fetchImpl(latestUrl.toString(), { headers: { 'x-user-id': operatorId } });
+  const latestResponse = await fetchImpl(latestUrl.toString(), { headers: { Authorization: `Bearer ${agentToken}` } });
+  if (latestResponse.status === 401) throw Object.assign(new Error('Helper pairing expired. Pair the helper again from the dashboard.'), { code: 'helper_pairing_expired' });
   if (!latestResponse.ok) throw new Error(`latest_snapshot_request_failed_http_${latestResponse.status}`);
   const latest = await latestResponse.json();
   const selected = selectRow(latest.rows, latest.manual_evidence_packet && latest.manual_evidence_packet.items, input);
@@ -366,7 +369,7 @@ async function runCapture(input = {}, options = {}) {
           catch (_) { /* No OCR result means no proposal. */ }
           if (/\b(?:list|asking)\s+price\b/i.test(ocrText) && /\$\s?[\d,]{4,}/.test(ocrText)) {
             const proposalCount = await uploadImage({
-              fetchImpl, dashboard, operatorId, market, row, sourceName: new URL(target).hostname,
+              fetchImpl, dashboard, agentToken, market, row, sourceName: new URL(target).hostname,
               sourceUrl: target, type: 'subject_property', buffer, filename: `subject-listing-${shots}.png`
             });
             run.active_listing_context_captures += 1;
@@ -394,7 +397,7 @@ async function runCapture(input = {}, options = {}) {
           continue;
         }
         const proposalCount = await uploadImage({
-          fetchImpl, dashboard, operatorId, market, row, sourceName: new URL(target).hostname,
+          fetchImpl, dashboard, agentToken, market, row, sourceName: new URL(target).hostname,
           sourceUrl: target, type: 'sold_comp', buffer, filename: `sold-comp-${shots}.png`
         });
         run.captures_submitted += 1;
@@ -422,16 +425,7 @@ async function runCapture(input = {}, options = {}) {
 function configPath(args) { return path.resolve(args.config || DEFAULT_CONFIG); }
 
 async function initConfig(file) {
-  const readline = require('readline/promises');
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const dashboard_url = clean(await rl.question('Dashboard URL (HTTPS): '));
-    const operator_id = clean(await rl.question('Dashboard operator ID (kept in this local file): '));
-    if (!dashboard_url || !operator_id) throw new Error('dashboard_url_and_operator_id_required');
-    dashboardOrigin(dashboard_url);
-    fs.writeFileSync(file, JSON.stringify({ dashboard_url, operator_id }, null, 2), { flag: 'wx' });
-    console.log(`Local configuration saved at ${file}.`);
-  } finally { rl.close(); }
+  throw Object.assign(new Error('Use the dashboard Pair helper action. Credentials are never entered on the command line.'), { code: 'dashboard_pairing_required' });
 }
 
 async function main(argv = process.argv.slice(2)) {
@@ -448,7 +442,7 @@ async function main(argv = process.argv.slice(2)) {
   try {
     const result = await runCapture({
       market: args.market, queue_key: args.queue_key, address: args.address,
-      site: args.site, dashboard_url: args.dashboard_url || config.dashboard_url, operator_id: config.operator_id
+      site: args.site, dashboard_url: args.dashboard_url || config.dashboard_url, agent_token: config.agent_token
     });
     console.log(JSON.stringify({ run: result.run, log_path: result.log_path }, null, 2));
     return result.run.outcome === 'address_not_complete_source_supported' ? 2 : 0;

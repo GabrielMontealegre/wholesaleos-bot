@@ -9,13 +9,16 @@
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
   var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
   var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
+  var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
+  var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var lastData = null;
   var lastNote = '';
   var fetchInFlight = false;
   var marketDemandFetchInFlight = false;
   var marketDemandData = null;
   var manualEvidenceObjectUrls = [];
+  var localHelperState = { running: false, paired: false, capture_running: false, checked: false };
   var dataByMarket = {};
   var MARKET_PRESETS = [
     { key: 'dallas', label: 'Dallas County, TX', city: 'Dallas', county: 'Dallas', state: 'TX' },
@@ -64,11 +67,11 @@
   }
 
   function headers() {
-    return { 'Content-Type': 'application/json', 'x-user-id': window._uid || 'admin' };
+    return { 'Content-Type': 'application/json' };
   }
 
   function authHeaders() {
-    return { 'x-user-id': window._uid || 'admin' };
+    return {};
   }
 
   function esc(value) {
@@ -384,6 +387,7 @@
     var proposals = safeArray(packet.evidence_items);
     var arv = evaluation.arv_range;
     var researchUrls = safeArray(item.research_links).map(function (entry) { return entry && entry.url; }).filter(Boolean);
+    var helperEligible = item.address_state === 'complete_source_address';
     var gridSummary = safeArray(evaluation.comp_grid_comps).map(function (comp) {
       var criteria = safeArray(comp && comp.comp_grid && comp.comp_grid.criteria);
       return '<div style="font-size:10px;color:#374151;margin-top:3px;"><b>' + esc(comp.comp_address || comp.parcel_id || 'comp') + ':</b> ' +
@@ -402,6 +406,12 @@
       '<div style="margin-top:6px;font-size:11px;"><b>Source event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + ' <b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
         (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
+      '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
+        '<b>Local comp helper:</b> <span class="wos-helper-inline-status">' + esc(localHelperState.running ? (localHelperState.paired ? 'Connected' : 'Running - pairing needed') : 'Not running') + '</span><br>' +
+        (helperEligible
+          ? '<select class="wos-helper-site" style="margin-top:5px;padding:5px;border:1px solid #c4b5fd;border-radius:6px;background:#fff;"><option value="zillow">Zillow</option><option value="redfin">Redfin</option><option value="realtor">Realtor.com</option></select> <button type="button" class="wos-helper-capture" disabled style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button>'
+          : '<span style="color:#92400e;">Capture is disabled until the county source establishes a complete property address.</span>') +
+        '<div class="wos-helper-row-message" style="font-size:10px;color:#6b7280;margin-top:4px;">Nothing is captured until you click. Every result remains an unconfirmed proposal.</div></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
@@ -427,6 +437,7 @@
       'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
       '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
       '<div class="wos-comp-capture-counts" style="font-size:11px;margin-top:7px;"><b>Comp captures awaiting your confirmation:</b> ' + esc(pendingCompCaptures) + '<br><b>Rows with 3 confirmed comps in this sample:</b> ' + esc(rowsWithThreeConfirmedComps) + '</div>' +
+      '<div class="wos-local-helper-panel" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;"><b>Computer helper:</b> <span class="wos-helper-status">' + esc(localHelperState.running ? (localHelperState.paired ? 'Connected' : 'Running - click Pair helper') : 'Not running - double-click Start-WholesaleOS-Helper.cmd on this computer') + '</span> <button type="button" class="wos-helper-pair" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #7c3aed;background:#fff;color:#6d28d9;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button><div class="wos-helper-message" style="font-size:10px;color:#6b7280;margin-top:4px;">The helper runs only on your computer and opens a listing page only after you click Capture on a row.</div></div>' +
       (items.length ? items.map(manualEvidenceCard).join('') : '<div style="font-size:12px;color:#6b7280;margin-top:8px;">' + esc(packet.empty_reason || 'No eligible stored rows for this market yet.') + '</div>'), '#60a5fa');
   }
 
@@ -1140,6 +1151,7 @@
     var page = currentPage();
     body.innerHTML = panelsForPage(page, data, rows, note);
     loadManualEvidenceImages(body);
+    refreshLocalHelperStatus(container);
     if (page === 'dashboard') {
       fetchMarketDemand(container);
       return;
@@ -1393,6 +1405,96 @@
     if (message) message.textContent = opened + ' of ' + urls.length + ' research tabs opened. Allow pop-ups for this dashboard if some were blocked.';
   }
 
+  function paintLocalHelperStatus(container) {
+    var text = localHelperState.running
+      ? (localHelperState.paired ? (localHelperState.capture_running ? 'Connected - capture running' : 'Connected') : 'Running - click Pair helper')
+      : 'Not running - double-click Start-WholesaleOS-Helper.cmd on this computer';
+    safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-status, .wos-helper-inline-status')) : []).forEach(function (element) {
+      element.textContent = text;
+    });
+    safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-capture')) : []).forEach(function (button) {
+      button.disabled = !(localHelperState.running && localHelperState.paired && !localHelperState.capture_running);
+      button.style.opacity = button.disabled ? '.5' : '1';
+    });
+  }
+
+  function refreshLocalHelperStatus(container) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 1200) : null;
+    fetch(LOCAL_HELPER + '/helper/status', { mode: 'cors', cache: 'no-store', signal: controller && controller.signal })
+      .then(function (response) { if (!response.ok) throw new Error('helper_status_failed'); return response.json(); })
+      .then(function (data) {
+        localHelperState = { running: data.running === true, paired: data.paired === true, capture_running: data.capture_running === true, checked: true };
+        paintLocalHelperStatus(container);
+      })
+      .catch(function () {
+        localHelperState = { running: false, paired: false, capture_running: false, checked: true };
+        paintLocalHelperStatus(container);
+      })
+      .finally(function () { if (timer) clearTimeout(timer); });
+  }
+
+  function pairLocalHelper(container, button) {
+    var message = container.querySelector('.wos-helper-message');
+    button.disabled = true;
+    if (message) message.textContent = 'Creating a one-time pairing token...';
+    fetch(API_PAIRING_TOKEN, { method: 'POST', headers: headers(), body: '{}' })
+      .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.data.pairing_token) throw new Error(result.data.code || 'pairing_token_failed');
+        return fetch(LOCAL_HELPER + '/helper/pair', {
+          method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pairing_token: result.data.pairing_token })
+        });
+      })
+      .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.data.ok) throw new Error(result.data.code || 'helper_pairing_failed');
+        localHelperState = { running: true, paired: true, capture_running: false, checked: true };
+        paintLocalHelperStatus(container);
+        if (message) message.textContent = 'Connected. Choose a source on a complete-address row, then click Capture.';
+      })
+      .catch(function (error) {
+        if (message) message.textContent = 'Pairing stopped: ' + error.message + '. Start the helper, then try again.';
+      })
+      .finally(function () { button.disabled = false; });
+  }
+
+  function captureWithLocalHelper(container, button) {
+    var card = button.closest && button.closest('.wos-manual-evidence-card');
+    var rowBox = button.closest && button.closest('.wos-local-helper-row');
+    var message = rowBox && rowBox.querySelector('.wos-helper-row-message');
+    var site = rowBox && rowBox.querySelector('.wos-helper-site');
+    if (!localHelperState.running || !localHelperState.paired) {
+      if (message) message.textContent = 'Start and pair the helper first. No page was opened.';
+      return;
+    }
+    button.disabled = true;
+    button.textContent = 'Capturing...';
+    if (message) message.textContent = 'The helper is opening one source page and looking only for visible sold cards.';
+    fetch(LOCAL_HELPER + '/helper/capture', {
+      method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '', site: site && site.value || 'zillow' })
+    })
+      .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.data.ok) throw new Error(result.data.code || 'local_capture_failed');
+        var run = result.data.run || {};
+        if (message) message.textContent = run.captures_submitted
+          ? run.captures_submitted + ' capture(s) uploaded as unconfirmed proposals. Review them below.'
+          : 'No qualifying sold cards were captured. Reason: ' + (run.outcome || 'none found') + '.';
+        fetchLatestWithNote(container, 'Local capture finished. Nothing counts until you confirm the proposed comp fields.');
+      })
+      .catch(function (error) {
+        if (message) message.textContent = 'Capture stopped: ' + error.message + '. Nothing was confirmed.';
+      })
+      .finally(function () {
+        button.disabled = false;
+        button.textContent = 'Capture sold comps for this row';
+        refreshLocalHelperStatus(container);
+      });
+  }
+
   function ensureSection(page) {
     var host = document.getElementById('content') || document.getElementById('app') || document.body;
     var section = document.getElementById('wos-public-deals');
@@ -1462,6 +1564,10 @@
         if (confirmButton) confirmManualEvidence(section, confirmButton);
         var researchButton = event.target && event.target.closest && event.target.closest('.wos-open-research-set');
         if (researchButton) openResearchSet(researchButton);
+        var pairButton = event.target && event.target.closest && event.target.closest('.wos-helper-pair');
+        if (pairButton) pairLocalHelper(section, pairButton);
+        var captureButton = event.target && event.target.closest && event.target.closest('.wos-helper-capture');
+        if (captureButton) captureWithLocalHelper(section, captureButton);
       });
     }
 
@@ -1547,6 +1653,10 @@
   function boot() {
     mountForCurrentPage();
     keepMounted();
+    setInterval(function () {
+      var section = document.getElementById('wos-public-deals');
+      if (section) refreshLocalHelperStatus(section);
+    }, 15000);
   }
 
   window.__wosPublicDealsTestHooks = {

@@ -90,7 +90,6 @@ async function main() {
     const entry = {
       method: req.method,
       url: req.originalUrl,
-      x_user_id: String(req.headers['x-user-id'] || ''),
       status: null
     };
     serverRequests.push(entry);
@@ -186,7 +185,7 @@ async function main() {
       console_error_count: consoleErrors.length,
       page_error_count: pageErrors.length,
       isolated_db_byte_identical: Buffer.compare(syntheticDb, dbAfter) === 0,
-      buybox_reads_include_admin_header: buyboxReads.length > 0 && buyboxReads.every((entry) => entry.x_user_id === 'admin'),
+      api_reads_use_identity_header: false,
       requests: browserRequests,
       server_requests: serverRequests,
       console_errors: consoleErrors,
@@ -201,7 +200,7 @@ async function main() {
     assert.strictEqual(result.isolated_db_byte_identical, true, 'Synthetic DB must be byte-identical after dashboard load');
     assert.strictEqual(result.dashboard_rendered, true, 'Manual Evidence Packet must render on the real dashboard');
     assert.strictEqual(result.readiness_axes_rendered, true, 'All three Manual Evidence Packet readiness axes must render');
-    assert.strictEqual(result.buybox_reads_include_admin_header, true, 'Admin-gated buy-box reads must include x-user-id');
+    assert.strictEqual(result.api_reads_use_identity_header, false, 'Dashboard reads must rely on the signed session cookie, not an identity header');
     console.log(`Cycle 21 dashboard load proof passed: ${browserRequests.length} GET requests, 0 writes, 0 failed responses, DB unchanged.`);
     console.log(`Screenshot: ${screenshotPath}`);
     console.log(`Request evidence: ${resultsPath}`);

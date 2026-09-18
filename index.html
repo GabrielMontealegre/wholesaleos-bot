@@ -396,7 +396,7 @@ tr.selected td{background:#f0f6ff}
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
-<script src="/dashboard/wos-dashboard-auth.js?v=1"></script>
+<script src="/dashboard/wos-dashboard-auth.js?v=2"></script>
 <script>
 // ══════════════════════════════════════════════════════════
 //  STATE
@@ -422,6 +422,10 @@ const APP = {
 };
 window.APP = APP;
 window.WOSDashboardAuth.lockIdentity(APP);
+window.WOSDashboardAuth.installFetchGuard(APP, { onUnauthorized: function () {
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+} });
 
 function defaultBuyers() {
   return []; // No fake buyers — add real ones from Connected Investors or Facebook groups
@@ -472,6 +476,17 @@ async function checkPin() {
   APP.pinInput = ''; updatePinDots();
   setTimeout(function() { document.getElementById('pin-error').textContent = ''; }, 2000);
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  window.WOSDashboardAuth.restoreSession(APP).then(function (result) {
+    if (!result.ok) return;
+    window.WOSDashboardAuth.applyAuthenticatedUser(APP, result.user);
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('user-role-label').textContent = result.user.role === 'admin' ? 'Admin' : 'User';
+    initApp();
+  });
+});
 
 // Keyboard PIN input
 document.addEventListener('keydown', function(e) {
@@ -6079,7 +6094,7 @@ function riskBadge(r) {
 
 async function startEnrichment(leadId) {
   try {
-    const r = await fetch('/api/leads/' + leadId + '/enrich-owner', {method:'POST', headers:{'Content-Type':'application/json','x-user-id':'admin'}});
+    const r = await fetch('/api/leads/' + leadId + '/enrich-owner', {method:'POST', headers:{'Content-Type':'application/json'}});
     const d = await r.json();
     if (d.ok || d.queued) { toast('✅ Enrichment queued for this lead', 'success'); openLeadModal(leadId); }
     else toast('⚠ ' + (d.error||d.reason||'Cannot queue'), 'warning');
@@ -6102,7 +6117,7 @@ async function showAddBuyerModal() {
     status: 'Active'
   };
   try {
-    var r = await fetch('/api/buyers', {method:'POST',headers:{'Content-Type':'application/json','x-user-id':'admin'},body:JSON.stringify(buyer)});
+    var r = await fetch('/api/buyers', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buyer)});
     var d = await r.json();
     if (d.id) { toast('✅ Buyer added: ' + d.name, 'success'); renderBuyers(); }
     else toast('⚠ Error: ' + (d.error||'Unknown'), 'warning');
@@ -6192,8 +6207,7 @@ async function submitBuyerForm() {
     status:'Active'
   };
   try {
-    var uid=APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID;
-    var r=await fetch('/api/buyers',{method:'POST',headers:{'Content-Type':'application/json','x-user-id':uid},body:JSON.stringify(payload)});
+    var r=await fetch('/api/buyers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     var data=await r.json();
     if(r.ok && data.id) {
       closeBuyerModal();

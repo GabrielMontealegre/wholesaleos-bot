@@ -18,8 +18,16 @@ function isSeededDefaultPin(value) {
 }
 
 function configuredAdminPin(env) {
+  const status = adminPinStatus(env);
+  return status.status === 'configured' ? status.pin : '';
+}
+
+function adminPinStatus(env) {
   const pin = cleanPin((env || process.env).WOS_ADMIN_PIN);
-  return /^\d{4}$/.test(pin) ? pin : '';
+  if (!pin) return { status: 'unconfigured', pin: '' };
+  if (!/^\d{4}$/.test(pin)) return { status: 'malformed_length', pin: '' };
+  if (isSeededDefaultPin(pin)) return { status: 'insecure_default', pin: '' };
+  return { status: 'configured', pin };
 }
 
 function pinsEqual(left, right) {
@@ -43,22 +51,24 @@ function authenticatePin(input) {
   const options = input || {};
   const users = Array.isArray(options.users) ? options.users : [];
   const pin = cleanPin(options.pin);
-  const adminPin = configuredAdminPin(options.env);
+  const pinStatus = adminPinStatus(options.env);
+  const adminPin = pinStatus.pin;
 
-  if (!adminPin) {
-    return {
-      ok: false,
-      status: 503,
-      code: 'ADMIN_LOGIN_NOT_CONFIGURED',
-      error: 'Dashboard login is not configured.'
+  if (pinStatus.status !== 'configured') {
+    const codeByStatus = {
+      unconfigured: 'ADMIN_LOGIN_NOT_CONFIGURED',
+      malformed_length: 'ADMIN_LOGIN_MALFORMED',
+      insecure_default: 'ADMIN_LOGIN_INSECURE_DEFAULT'
     };
-  }
-  if (isSeededDefaultPin(adminPin)) {
     return {
       ok: false,
       status: 503,
-      code: 'ADMIN_LOGIN_INSECURE_DEFAULT',
-      error: 'Dashboard login is configured with a retired seeded value.'
+      code: codeByStatus[pinStatus.status],
+      error: pinStatus.status === 'malformed_length'
+        ? 'Dashboard login configuration has an unusable format.'
+        : pinStatus.status === 'insecure_default'
+          ? 'Dashboard login is configured with a retired seeded value.'
+          : 'Dashboard login is not configured.'
     };
   }
 
@@ -81,6 +91,7 @@ function authenticatePin(input) {
 
 module.exports = {
   authenticatePin,
+  adminPinStatus,
   cleanPin,
   configuredAdminPin,
   isSeededDefaultPin,

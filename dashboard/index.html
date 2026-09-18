@@ -382,6 +382,7 @@ tr.selected td{background:#f0f6ff}
       </div>
       <button class="btn btn-outline btn-sm" onclick="showAIChat()">🤖 Ask AI</button>
       <button class="btn btn-dark btn-sm" onclick="openAddLead()">+ Add Lead</button>
+      <button class="btn btn-outline btn-sm" onclick="signOutDashboard()">Sign out</button>
     <button class="btn btn-warning btn-sm" onclick="openAddressValidator()" title="Validate & fix all lead addresses" style="display:none">🔍 Validate Addresses</button>
     </div>
     <div class="content" id="content">
@@ -412,7 +413,7 @@ tr.selected td{background:#f0f6ff}
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
-<script src="/dashboard/wos-dashboard-auth.js?v=1"></script>
+<script src="/dashboard/wos-dashboard-auth.js?v=2"></script>
 <script>
 
 window.regionalMode = window.regionalMode || function () {
@@ -468,6 +469,7 @@ const APP = {
 };
 window.APP = APP;
 window.WOSDashboardAuth.lockIdentity(APP);
+window.WOSDashboardAuth.installFetchGuard(APP, { onUnauthorized: function () { showDashboardLogin('Your session ended. Sign in again.'); } });
 
 function defaultBuyers() {
   return []; // No fake buyers — add real ones from Connected Investors or Facebook groups
@@ -513,21 +515,7 @@ async function checkPin() {
   const pin = APP.pinInput;
   if (!pin || pin.length < 4) return;
   const result = await window.WOSDashboardAuth.authenticate(pin);
-  if (result.ok && window.WOSDashboardAuth.applyAuthenticatedUser(APP, result.user)) {
-    try {
-      localStorage.setItem('montsan_userId', result.user.id);
-      localStorage.setItem('montsan_role', result.user.role || 'user');
-    } catch (e) {}
-    const pinScreen = document.getElementById('pin-screen');
-    const appEl = document.getElementById('app');
-    if (pinScreen) pinScreen.style.display = 'none';
-    if (appEl) appEl.style.display = 'flex';
-    const roleLabel = document.getElementById('user-role-label');
-    if (roleLabel) roleLabel.textContent = (result.user.role === 'admin' ? 'Admin · ' : '') + result.user.name;
-    applyRoleBasedUI(result.user.role || 'user');
-    initApp();
-    return;
-  }
+  if (result.ok && unlockDashboardUser(result.user)) return;
   
   // Wrong PIN
   const errEl = document.getElementById('pin-error');
@@ -537,6 +525,44 @@ async function checkPin() {
   APP.pinInput = '';
   updatePinDots();
   setTimeout(function() { if (errEl) errEl.textContent = ''; }, 2000);
+}
+
+function showDashboardLogin(message) {
+  window.WOSDashboardAuth.lockIdentity(APP);
+  var pinScreen = document.getElementById('pin-screen');
+  var appEl = document.getElementById('app');
+  var errEl = document.getElementById('pin-error');
+  if (pinScreen) pinScreen.style.display = 'flex';
+  if (appEl) appEl.style.display = 'none';
+  if (errEl && message) errEl.textContent = message;
+}
+
+function unlockDashboardUser(user) {
+  if (!window.WOSDashboardAuth.applyAuthenticatedUser(APP, user)) return false;
+  try {
+    localStorage.setItem('montsan_userId', user.id);
+    localStorage.setItem('montsan_role', user.role || 'user');
+  } catch (e) {}
+  var pinScreen = document.getElementById('pin-screen');
+  var appEl = document.getElementById('app');
+  if (pinScreen) pinScreen.style.display = 'none';
+  if (appEl) appEl.style.display = 'flex';
+  var roleLabel = document.getElementById('user-role-label');
+  if (roleLabel) roleLabel.textContent = user.role === 'admin' ? 'Admin' : 'User';
+  applyRoleBasedUI(user.role || 'user');
+  initApp();
+  return true;
+}
+
+async function restoreDashboardSession() {
+  var result = await window.WOSDashboardAuth.restoreSession(APP);
+  if (result.ok) unlockDashboardUser(result.user);
+  else showDashboardLogin(result.status && result.status.login_configured === false ? 'Dashboard login is not configured.' : '');
+}
+
+async function signOutDashboard() {
+  await window.WOSDashboardAuth.logout(APP);
+  showDashboardLogin('Signed out.');
 }
 
 // Keyboard PIN input
@@ -10080,7 +10106,7 @@ async function saveBuyer() {
   try {
     const res = await fetch('/api/buyers', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','x-user-id': window._uid||window.WOSDashboardAuth.LOCKED_USER_ID},
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(buyer)
     });
     const data = await res.json().catch(()=>({}));
@@ -10328,7 +10354,7 @@ function riskBadge(r) {
 
 async function startEnrichment(id){
   try{
-    var r=await fetch('/api/leads/'+id+'/enrich-owner',{method:'POST',headers:{'Content-Type':'application/json','x-user-id':'admin'}});
+    var r=await fetch('/api/leads/'+id+'/enrich-owner',{method:'POST',headers:{'Content-Type':'application/json'}});
     var data=await r.json();
     if(typeof showToastMsg==='function')showToastMsg(data.ok||data.queued?'Enrichment queued':'Error: '+(data.error||data.reason),'info');
   }catch(e){if(typeof showToastMsg==="function")showToastMsg("Error: "+e.message,"error");}
@@ -16364,7 +16390,7 @@ async function saveBuyer() {
   try {
     const res = await fetch('/api/buyers', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','x-user-id': window._uid||window.WOSDashboardAuth.LOCKED_USER_ID},
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(buyer)
     });
     const data = await res.json().catch(()=>({}));
@@ -20876,8 +20902,7 @@ async function sendSMSReply(leadId) {
 // ══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   try {
-    document.getElementById('pin-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
+    restoreDashboardSession();
   } catch(e) {
     console.log('Boot error:', e.message);
   }
@@ -27097,8 +27122,7 @@ function initUserRole() {
     .then(function(d) {
       applyRoleBasedUI(d.role || 'user');
       window._currentUserId = d.userId;
-      // Inject user ID into future API calls
-      window._apiHeaders = { 'x-user-id': d.userId };
+      window._apiHeaders = {};
     })
     .catch(function() { applyRoleBasedUI('user'); });
 }
@@ -29149,6 +29173,6 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-comms.js?v=1"></script>
 <script src="/dashboard/wos-leads-detail.js?v=2"></script>
 <script src="/dashboard/wos-buyers.js?v=1"></script>
-<script src="/dashboard/wos-public-deals.js?v=32"></script>
+<script src="/dashboard/wos-public-deals.js?v=33"></script>
 </body>
 </html>

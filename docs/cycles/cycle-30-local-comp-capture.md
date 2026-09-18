@@ -1,5 +1,7 @@
 # Cycle 30: Local Comp Capture
 
+> Cycle 31 replaces the command-line setup below with the double-click launcher and dashboard pairing flow documented in [[cycle-31-secure-launch-first-comp]]. Do not put a dashboard identity or PIN in the old local configuration file.
+
 ## What this adds
 
 The dashboard can already accept screenshots, ask its existing OCR reader to propose fields, and keep each proposal separate until Gabriel confirms it. Cycle 30 adds a small command-line helper that runs on the operator's Windows computer. It opens a visible local Chromium window, reads public Zillow, Redfin, or Realtor pages, takes small screenshots of matching sold-result cards, and uploads those images to the existing manual-evidence upload endpoint.
