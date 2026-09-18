@@ -15,6 +15,7 @@
   var fetchInFlight = false;
   var marketDemandFetchInFlight = false;
   var marketDemandData = null;
+  var manualEvidenceObjectUrls = [];
   var dataByMarket = {};
   var MARKET_PRESETS = [
     { key: 'dallas', label: 'Dallas County, TX', city: 'Dallas', county: 'Dallas', state: 'TX' },
@@ -343,10 +344,15 @@
       return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
     });
     var conflicts = safeArray(item.conflicts);
+    var screenshotUrl = /^\/api\/dashboard\/free-public-deal-board\/manual-evidence\/screenshot\/[0-9a-f-]{36}$/i.test(String(item.screenshot_url || '')) ? item.screenshot_url : '';
+    var sourceUrl = String(item.fields && item.fields.source_url || '');
+    var sourceLink = /^https:\/\/(?:[a-z0-9-]+\.)?(?:zillow|redfin|realtor)\.com\//i.test(sourceUrl)
+      ? '<div style="font-size:10px;margin-top:4px;">' + link('Open captured source page', sourceUrl) + '</div>' : '';
     return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b style="font-size:11px;">' + esc(String(item.evidence_type || '').replace(/_/g, ' ')) + ' from ' + esc(item.source_name || 'screenshot') + '</b>' +
       '<span style="font-size:10px;padding:2px 7px;border-radius:9px;background:' + (item.operator_confirmed ? '#bbf7d0' : '#fde68a') + ';">' + (item.operator_confirmed ? 'CONFIRMED' : 'UNCONFIRMED OCR PROPOSAL') + '</span></div>' +
       '<div style="font-size:10px;color:#6b7280;margin-top:3px;">Captured ' + esc(item.captured_at || '') + ' - screenshot ' + esc(item.screenshot_id || '') + '</div>' +
+      (screenshotUrl ? '<img class="wos-evidence-image" data-screenshot-url="' + esc(screenshotUrl) + '" alt="Captured evidence region" loading="lazy" style="display:block;max-width:min(100%,520px);max-height:300px;object-fit:contain;margin-top:7px;border:1px solid #d1d5db;border-radius:4px;background:#fff;">' : '') + sourceLink +
       (conflicts.length ? '<div style="font-size:11px;color:#991b1b;margin-top:5px;"><b>Conflict - no overwrite:</b> ' + conflicts.map(function (conflict) { return esc(conflict.field + ': official "' + conflict.official_value + '" vs screenshot "' + conflict.screenshot_value + '"'); }).join(' | ') + '</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:7px;">' + keys.map(function (key) { return manualFieldInput(item, key); }).join('') + '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;"><button type="button" class="wos-manual-confirm" style="padding:5px 9px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">' + (item.operator_confirmed ? 'Update confirmed evidence' : 'Confirm these fields') + '</button>' +
@@ -411,10 +417,39 @@
     var packet = data && data.manual_evidence_packet || {};
     var items = safeArray(packet.items);
     var confirmed = items.reduce(function (sum, item) { return sum + Number(item.packet && item.packet.evaluation && item.packet.evaluation.confirmed_evidence_count || 0); }, 0);
+    var pendingCompCaptures = items.reduce(function (sum, item) {
+      return sum + safeArray(item.packet && item.packet.evidence_items).filter(function (evidence) { return evidence.evidence_type === 'sold_comp' && evidence.operator_confirmed !== true; }).length;
+    }, 0);
+    var rowsWithThreeConfirmedComps = items.filter(function (item) {
+      return Number(item.packet && item.packet.evaluation && item.packet.evaluation.verified_sold_comp_count || 0) >= 3;
+    }).length;
     return panelBox('Manual Evidence Packet <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;">' + esc(String(packet.selected_count || 0)) + ' sample leads</span> <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#bbf7d0;">' + esc(String(confirmed)) + ' confirmed evidence</span>',
       'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
       '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
+      '<div class="wos-comp-capture-counts" style="font-size:11px;margin-top:7px;"><b>Comp captures awaiting your confirmation:</b> ' + esc(pendingCompCaptures) + '<br><b>Rows with 3 confirmed comps in this sample:</b> ' + esc(rowsWithThreeConfirmedComps) + '</div>' +
       (items.length ? items.map(manualEvidenceCard).join('') : '<div style="font-size:12px;color:#6b7280;margin-top:8px;">' + esc(packet.empty_reason || 'No eligible stored rows for this market yet.') + '</div>'), '#60a5fa');
+  }
+
+  function loadManualEvidenceImages(container) {
+    manualEvidenceObjectUrls.forEach(function (objectUrl) { try { URL.revokeObjectURL(objectUrl); } catch (_) { /* browser unavailable */ } });
+    manualEvidenceObjectUrls = [];
+    safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-evidence-image[data-screenshot-url]')) : []).forEach(function (image) {
+      var source = image.getAttribute('data-screenshot-url');
+      if (!source) return;
+      fetch(source, { headers: authHeaders(), cache: 'no-store' }).then(function (response) {
+        if (!response.ok) throw new Error('screenshot_unavailable');
+        return response.blob();
+      }).then(function (blob) {
+        if (!/^image\/(png|jpeg|webp)$/i.test(blob.type || '')) throw new Error('screenshot_type_invalid');
+        var objectUrl = URL.createObjectURL(blob);
+        manualEvidenceObjectUrls.push(objectUrl);
+        image.src = objectUrl;
+        image.onload = function () { try { URL.revokeObjectURL(objectUrl); } catch (_) { /* browser unavailable */ } };
+      }).catch(function () {
+        image.alt = 'Captured evidence image unavailable';
+        image.style.display = 'none';
+      });
+    });
   }
 
   function manualEvidenceSummary(data) {
@@ -1104,6 +1139,7 @@
     var rows = Array.isArray(data.rows) ? data.rows : [];
     var page = currentPage();
     body.innerHTML = panelsForPage(page, data, rows, note);
+    loadManualEvidenceImages(body);
     if (page === 'dashboard') {
       fetchMarketDemand(container);
       return;
