@@ -296,11 +296,11 @@ tr.selected td{background:#f0f6ff}
     <button class="pin-btn" onclick="pinPress('ok')" style="background:#1d1d1f;color:#fff">OK</button>
   </div>
   <div class="pin-error" id="pin-error"></div>
-  <div style="font-size:11px;color:#86868b;margin-top:8px">Default PIN: 1234 — change in Settings</div>
+  <div style="font-size:11px;color:#86868b;margin-top:8px">Use the PIN configured for your account.</div>
 </div>
 
 <!-- Main App -->
-<div id="app">
+<div id="app" style="display:none">
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
@@ -396,16 +396,17 @@ tr.selected td{background:#f0f6ff}
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
+<script src="/dashboard/wos-dashboard-auth.js?v=1"></script>
 <script>
 // ══════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════
 const APP = {
-  pin: localStorage.getItem('montsan_pin') || '1234',
   currentUser: null,
-  userId: 'admin',
-  isAdmin: true,
-  role: localStorage.getItem('montsan_role') || 'admin',
+  userId: window.WOSDashboardAuth.LOCKED_USER_ID,
+  isAdmin: false,
+  role: 'user',
+  unlocked: false,
   pinInput: '',
   page: 'dashboard',
   selectedLead: null,
@@ -419,6 +420,8 @@ const APP = {
   followups: JSON.parse(localStorage.getItem('montsan_followups') || '[]'),
   contracts: JSON.parse(localStorage.getItem('montsan_contracts') || '[]'),
 };
+window.APP = APP;
+window.WOSDashboardAuth.lockIdentity(APP);
 
 function defaultBuyers() {
   return []; // No fake buyers — add real ones from Connected Investors or Facebook groups
@@ -454,32 +457,18 @@ function updatePinDots() {
 async function checkPin() {
   const pin = APP.pinInput;
   if (!pin || pin.length < 4) return;
-  try {
-    const res = await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin})});
-    if (res.ok) {
-      const data = await res.json();
-      if (data.ok) {
-        APP.currentUser = data.user;
-        APP.userId = data.user.id;
-        APP.isAdmin = data.user.role === 'admin';
-        document.getElementById('user-role-label').textContent = data.user.role === 'admin' ? 'Admin · Gabriel' : data.user.name;
-        document.getElementById('pin-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        if (data.user.firstLogin && data.user.role !== 'admin') setTimeout(function() { promptSetPin(data.user.id); }, 500);
-        initApp();
-        return;
-      }
-    }
-  } catch(e) {}
-  // Fallback local check
-  if (APP.pinInput === APP.pin) {
-    APP.currentUser = {id:'admin',name:'Gabriel',role:'admin',color:'#1d1d1f'};
-    APP.userId = 'admin'; APP.isAdmin = true;
+  const result = await window.WOSDashboardAuth.authenticate(pin);
+  if (result.ok && window.WOSDashboardAuth.applyAuthenticatedUser(APP, result.user)) {
     document.getElementById('pin-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    initApp(); return;
+    document.getElementById('user-role-label').textContent = (result.user.role === 'admin' ? 'Admin · ' : '') + result.user.name;
+    if (result.user.firstLogin && result.user.role !== 'admin') setTimeout(function() { promptSetPin(result.user.id); }, 500);
+    initApp();
+    return;
   }
-  document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+  document.getElementById('pin-error').textContent = result.code === 'ADMIN_LOGIN_NOT_CONFIGURED'
+    ? 'Dashboard login is not configured.'
+    : 'Login failed. Check the PIN and try again.';
   APP.pinInput = ''; updatePinDots();
   setTimeout(function() { document.getElementById('pin-error').textContent = ''; }, 2000);
 }
@@ -509,10 +498,10 @@ async function saveUserPin(userId) {
   if (!name) { toast('Please enter your name','error'); return; }
   if (pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) { toast('PIN must be exactly 4 digits','error'); return; }
   try {
-    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin,firstLogin:false})});
+    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:window.WOSDashboardAuth.authHeaders(APP, true),body:JSON.stringify({name,pin,firstLogin:false})});
     const data = await res.json();
     if (data.error) { toast(data.error,'error'); return; }
-    APP.currentUser = Object.assign({},APP.currentUser,{name,pin});
+    APP.currentUser = Object.assign({},APP.currentUser,{name});
     document.getElementById('user-role-label').textContent = name;
     closeModal(); toast('Welcome, '+name+'!','success');
   } catch(e) { toast('Error: '+e.message,'error'); }
@@ -572,7 +561,9 @@ function initApp() {
   const pending = APP.followups.filter(f => f.status === 'pending').length;
   document.getElementById('nav-fu-count').textContent = pending;
   document.getElementById('bot-status-text').textContent = 'Online · Webhook';
-  document.getElementById('user-role-label').textContent = 'Admin · Gabriel';
+  document.getElementById('user-role-label').textContent = APP.currentUser
+    ? (APP.currentUser.role === 'admin' ? 'Admin · ' : '') + APP.currentUser.name
+    : 'Locked';
   render();
   checkDailyUpdate();
   // SYNC: load from Railway database immediately on open
@@ -2951,7 +2942,7 @@ async function runDashboardSearch() {
     if (si < steps.length) { document.getElementById('ds-progress-bar').style.width = steps[si][0]+'%'; document.getElementById('ds-progress-detail').textContent = steps[si][1]; si++; }
   }, 4000);
   try {
-    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type: type==='buyers'?'buyers':type, userId: APP.userId||'admin', findBuyers: true})});
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type: type==='buyers'?'buyers':type, userId: APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID, findBuyers: true})});
     let polls = 0;
     const pollFn = setInterval(async function() {
       polls++;
@@ -3052,7 +3043,7 @@ async function populateState(code, name) {
   if (s && s.populated && s.leadCount > 0) { toast(name+' already has '+s.leadCount+' leads. Go to Leads tab.',''); return; }
   toast('Populating '+name+' with 150 leads… Check notifications when done.','');
   try {
-    await fetch('/api/states/populate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stateCode:code, userId:APP.userId||'admin'})});
+    await fetch('/api/states/populate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stateCode:code, userId:APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID})});
     setTimeout(loadAllStates, 15000);
     setTimeout(loadAllStates, 45000);
     loadNotifications();
@@ -3067,7 +3058,10 @@ async function renderUsersPanel() {
   let usersHtml = '<div style="padding:20px;color:#86868b;text-align:center">Loading…</div>';
   let pendingHtml = '';
   try {
-    const [ur, pr] = await Promise.all([fetch('/api/users'), fetch('/api/buyers/pending')]);
+    const [ur, pr] = await Promise.all([
+      fetch('/api/users', {headers:window.WOSDashboardAuth.authHeaders(APP, false)}),
+      fetch('/api/buyers/pending', {headers:window.WOSDashboardAuth.authHeaders(APP, false)})
+    ]);
     if (ur.ok) {
       const ud = await ur.json();
       usersHtml = '<div style="display:grid;gap:8px">' + (ud.users||[]).map(function(u) {
@@ -3084,7 +3078,7 @@ async function renderUsersPanel() {
       }
     }
   } catch(e) {}
-  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin (1234) sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
+  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Admin access requires the server-configured PIN. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
 }
 
 async function saveEditUser(userId) {
@@ -3095,7 +3089,7 @@ async function saveEditUser(userId) {
   if (pin) { if (pin.length !== 4) { toast('PIN must be 4 digits','error'); return; } updates.pin = pin; }
   if (!Object.keys(updates).length) { closeModal(); return; }
   try {
-    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updates)});
+    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:window.WOSDashboardAuth.authHeaders(APP, true),body:JSON.stringify(updates)});
     const data = await res.json();
     if (data.error) { toast(data.error,'error'); return; }
     closeModal(); toast('User updated!','success'); render();
@@ -3107,7 +3101,7 @@ async function saveNewUser() {
   const pin = (document.getElementById('nu-pin')||{value:''}).value.trim();
   if (!name || pin.length !== 4) { toast('Name and 4-digit PIN required','error'); return; }
   try {
-    const res = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin})});
+    const res = await fetch('/api/users',{method:'POST',headers:window.WOSDashboardAuth.authHeaders(APP, true),body:JSON.stringify({name,pin})});
     const data = await res.json();
     if (data.error) { toast(data.error,'error'); return; }
     closeModal(); toast('User created!','success'); render();
@@ -3587,7 +3581,7 @@ async function runAutomationSearch() {
   if (statusEl) statusEl.textContent = 'Searching ' + county + ', ' + state + ' for ' + type + '...';
   toast('Search started for ' + county + ', ' + state, 'success');
   try {
-    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||'admin'})});
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID})});
     if (statusEl) statusEl.textContent = 'Running... Check notification bell for completion.';
     setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); }, 15000);
     setTimeout(async function() {
@@ -5588,7 +5582,7 @@ async function acceptReviewItem(id) {
   const el = document.getElementById('rq-'+id);
   if (el) el.style.opacity = '0.5';
   try {
-    const res = await fetch('/api/review-queue/'+id+'/accept', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({userId: APP.userId||'admin'})});
+    const res = await fetch('/api/review-queue/'+id+'/accept', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({userId: APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID})});
     const data = await res.json();
     if (data.ok) { toast('Lead accepted and added! Check Leads tab.', 'success'); loadReviewQueue(); loadLeadsFromAPI(); }
     else { toast(data.error||'Failed to accept', 'error'); if(el) el.style.opacity='1'; }
@@ -6198,7 +6192,7 @@ async function submitBuyerForm() {
     status:'Active'
   };
   try {
-    var uid=window._currentUser||'admin';
+    var uid=APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID;
     var r=await fetch('/api/buyers',{method:'POST',headers:{'Content-Type':'application/json','x-user-id':uid},body:JSON.stringify(payload)});
     var data=await r.json();
     if(r.ok && data.id) {
@@ -6378,12 +6372,7 @@ function saveAssignment() {
 
 function saveSettings() { toast('Settings saved','success'); }
 function changePin() {
-  const old = document.getElementById('s-old-pin')?.value;
-  const newp = document.getElementById('s-new-pin')?.value;
-  if (old !== APP.pin) { toast('Current PIN incorrect','error'); return; }
-  if (!newp || newp.length < 4) { toast('New PIN must be at least 4 digits','error'); return; }
-  APP.pin = newp; localStorage.setItem('montsan_pin', newp);
-  toast('PIN changed successfully','success');
+  toast('Dashboard login PIN is managed in the server configuration.','error');
 }
 
 function openAddTeamMember() {
@@ -6490,7 +6479,7 @@ function addListeners() {
 // Full sync from Railway database — runs on init and every 30s
 async function loadLeadsFromAPI() {
   try {
-    const uid = APP.userId || 'admin';
+    const uid = APP.userId || window.WOSDashboardAuth.LOCKED_USER_ID;
     const [leadsRes, statsRes] = await Promise.all([
       fetch('/api/leads/user/' + uid),
       fetch('/api/stats/' + uid)
@@ -8621,7 +8610,7 @@ async function runDashboardSearch() {
     if (si < steps.length) { document.getElementById('ds-progress-bar').style.width = steps[si][0]+'%'; document.getElementById('ds-progress-detail').textContent = steps[si][1]; si++; }
   }, 4000);
   try {
-    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type: type==='buyers'?'buyers':type, userId: APP.userId||'admin', findBuyers: true})});
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county, state, count, type: type==='buyers'?'buyers':type, userId: APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID, findBuyers: true})});
     let polls = 0;
     const pollFn = setInterval(async function() {
       polls++;
@@ -8722,7 +8711,7 @@ async function populateState(code, name) {
   if (s && s.populated && s.leadCount > 0) { toast(name+' already has '+s.leadCount+' leads. Go to Leads tab.',''); return; }
   toast('Populating '+name+' with 150 leads… Check notifications when done.','');
   try {
-    await fetch('/api/states/populate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stateCode:code, userId:APP.userId||'admin'})});
+    await fetch('/api/states/populate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stateCode:code, userId:APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID})});
     setTimeout(loadAllStates, 15000);
     setTimeout(loadAllStates, 45000);
     loadNotifications();
@@ -8737,7 +8726,10 @@ async function renderUsersPanel() {
   let usersHtml = '<div style="padding:20px;color:#86868b;text-align:center">Loading…</div>';
   let pendingHtml = '';
   try {
-    const [ur, pr] = await Promise.all([fetch('/api/users'), fetch('/api/buyers/pending')]);
+    const [ur, pr] = await Promise.all([
+      fetch('/api/users', {headers:window.WOSDashboardAuth.authHeaders(APP, false)}),
+      fetch('/api/buyers/pending', {headers:window.WOSDashboardAuth.authHeaders(APP, false)})
+    ]);
     if (ur.ok) {
       const ud = await ur.json();
       usersHtml = '<div style="display:grid;gap:8px">' + (ud.users||[]).map(function(u) {
@@ -8754,7 +8746,7 @@ async function renderUsersPanel() {
       }
     }
   } catch(e) {}
-  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Users see only their leads. Admin (1234) sees everything. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
+  return '<div style="max-width:800px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><div style="font-size:16px;font-weight:700">User Management</div><div style="font-size:11px;color:#86868b">Each user has their own PIN and sees only their leads. Admin sees all.</div></div><button class="btn btn-dark" onclick="addNewUser()">+ Add User</button></div><div style="background:#e8f0fe;border:1px solid #1a73e8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1a73e8"><strong>How PINs work:</strong> Each PIN maps to one account. Admin access requires the server-configured PIN. Buyers database is shared.</div>'+usersHtml+pendingHtml+'</div>';
 }
 
 async function saveEditUser(userId) {
@@ -8765,7 +8757,7 @@ async function saveEditUser(userId) {
   if (pin) { if (pin.length !== 4) { toast('PIN must be 4 digits','error'); return; } updates.pin = pin; }
   if (!Object.keys(updates).length) { closeModal(); return; }
   try {
-    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updates)});
+    const res = await fetch('/api/users/'+userId, {method:'PUT',headers:window.WOSDashboardAuth.authHeaders(APP, true),body:JSON.stringify(updates)});
     const data = await res.json();
     if (data.error) { toast(data.error,'error'); return; }
     closeModal(); toast('User updated!','success'); render();
@@ -8777,7 +8769,7 @@ async function saveNewUser() {
   const pin = (document.getElementById('nu-pin')||{value:''}).value.trim();
   if (!name || pin.length !== 4) { toast('Name and 4-digit PIN required','error'); return; }
   try {
-    const res = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pin})});
+    const res = await fetch('/api/users',{method:'POST',headers:window.WOSDashboardAuth.authHeaders(APP, true),body:JSON.stringify({name,pin})});
     const data = await res.json();
     if (data.error) { toast(data.error,'error'); return; }
     closeModal(); toast('User created!','success'); render();
@@ -9257,7 +9249,7 @@ async function runAutomationSearch() {
   if (statusEl) statusEl.textContent = 'Searching ' + county + ', ' + state + ' for ' + type + '...';
   toast('Search started for ' + county + ', ' + state, 'success');
   try {
-    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||'admin'})});
+    await fetch('/api/search/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({county,state,count,type,findBuyers:true,userId:APP.userId||window.WOSDashboardAuth.LOCKED_USER_ID})});
     if (statusEl) statusEl.textContent = 'Running... Check notification bell for completion.';
     setTimeout(function() { loadLeadsFromAPI(); loadNotifications(); }, 15000);
     setTimeout(async function() {

@@ -25,6 +25,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - Cycle 17 - market demand index and strict, shared official/screenshot comp grid ([market index](../../modules/research/market-demand-index.js), [grid](../../modules/research/strict-comp-grid-config.js)).
 - [[cycle-18-evidence-packet-throughput]] - frozen-corpus property-address integrity and independent packet readiness; draft review only, no production access.
 - [[cycle-24-government-catalog-discovery]] - bounded official-catalog discovery for new public data sources; discoveries remain unverified and cannot become leads.
+- [[cycle-29-secure-dashboard-login]] - fail-closed dashboard login before seller-phone evidence can be viewed; sessions and expiry remain a documented follow-up.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.

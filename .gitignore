@@ -62,6 +62,9 @@ exports/cycle-27-phone-readiness/*
 !exports/cycle-28-venue-audit/
 exports/cycle-28-venue-audit/*
 !exports/cycle-28-venue-audit/audit.json
+!exports/cycle-29-login-preflight/
+exports/cycle-29-login-preflight/*
+!exports/cycle-29-login-preflight/preflight.json
 tests/.tmp/
 .cache/
 deal-board-snapshots.json

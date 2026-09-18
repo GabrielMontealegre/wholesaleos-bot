@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-09-18T17:40:18.149Z",
+  "production_contacted": false,
+  "verdict": "UNREACHABLE",
+  "reason": "local_database_not_found",
+  "admin_user_exists": null,
+  "admin_pin_configured": null,
+  "admin_pin_is_a_seeded_default": null,
+  "any_user_still_has_seeded_default_pin": null,
+  "login_would_succeed_for_configured_admin": null,
+  "user_write_routes_guarded": true
+}

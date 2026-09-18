@@ -24,6 +24,7 @@ const dealBoardQueueService = require('./modules/research/deal-board-queue-servi
 const manualEvidencePacketService = require('./modules/research/manual-evidence-packet-service');
 const marketDemandIndex = require('./modules/research/market-demand-index');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
+const dashboardAuth = require('./modules/security/dashboard-auth');
 const multer = require('multer');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -182,6 +183,38 @@ function requireAuth(req, res, next) {
     next();
   } catch(e) {
     res.status(500).json({ error: e.message });
+  }
+}
+
+function requireAdminOrOwnFirstLoginPinUpdate(req, res, next) {
+  try {
+    const users = db.readDB().users || [];
+    const userId = req.headers['x-user-id'] || req.query._uid ||
+                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+    const user = users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (user.role === 'admin') {
+      req.currentUser = user;
+      return next();
+    }
+
+    const updates = req.body || {};
+    const allowedKeys = ['name', 'pin', 'firstLogin'];
+    const keys = Object.keys(updates);
+    const ownFirstLoginUpdate = (
+      user.id === req.params.id &&
+      user.firstLogin === true &&
+      updates.firstLogin === false &&
+      /^\d{4}$/.test(String(updates.pin || '')) &&
+      keys.length > 0 &&
+      keys.every(key => allowedKeys.includes(key))
+    );
+    if (!ownFirstLoginUpdate) return res.status(403).json({ error: 'Admin access required' });
+    req.currentUser = user;
+    next();
+  } catch (error) {
+    res.status(503).json({ error: 'User authorization unavailable', code: 'USER_AUTHORIZATION_UNAVAILABLE' });
   }
 }
 
@@ -2974,25 +3007,28 @@ app.post('/api/deals/send', (req, res) => {
 
 // Ã¢ÂÂÃ¢ÂÂ API: Auth / Users Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post('/api/auth/login', (req, res) => {
-  const { pin } = req.body;
-  const user = db.getUserByPin(String(pin));
-  if (!user) return res.status(401).json({ error: 'Invalid PIN' });
-  res.json({ ok: true, user: { id: user.id, name: user.name, role: user.role, color: user.color, initials: user.initials, firstLogin: user.firstLogin } });
+  const result = dashboardAuth.authenticatePin({
+    pin: req.body && req.body.pin,
+    users: db.getUsers(),
+    env: process.env
+  });
+  if (!result.ok) return res.status(result.status).json({ ok: false, error: result.error, code: result.code });
+  res.json({ ok: true, user: result.user });
 });
 
-app.get('/api/users', (req, res) => {
+app.get('/api/users', requireAdmin, (req, res) => {
   // Admin only endpoint
   const users = db.getUsers().map(u => ({ id:u.id, name:u.name, role:u.role, color:u.color, initials:u.initials, firstLogin:u.firstLogin, created:u.created }));
   res.json({ users });
 });
 
-app.put('/api/users/:id', (req, res) => {
+app.put('/api/users/:id', requireAdminOrOwnFirstLoginPinUpdate, (req, res) => {
   const result = db.updateUser(req.params.id, req.body);
   if (result?.error) return res.status(400).json(result);
   res.json({ ok: true, user: result });
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', requireAdmin, (req, res) => {
   const result = db.addUser(req.body);
   if (result?.error) return res.status(400).json(result);
   res.json({ ok: true, user: result });
@@ -5232,13 +5268,10 @@ app.post('/api/auth/email-login', (req, res) => {
   } catch(e){ res.status(500).json({error:e.message}); }
 });
 
-app.post('/api/users/:id/credentials', (req, res) => {
+app.post('/api/users/:id/credentials', requireAdmin, (req, res) => {
   try {
     const dbData = db.readDB();
     const users  = dbData.users||[];
-    const adminId = req.headers['x-user-id']||req.query.uid;
-    const admin   = users.find(u=>u.id===adminId);
-    if (!admin||admin.role!=='admin') return res.status(403).json({error:'Admin only'});
     const user = users.find(u=>u.id===req.params.id);
     if (!user) return res.status(404).json({error:'User not found'});
     if (req.body.email) user.email = req.body.email.trim().toLowerCase();
