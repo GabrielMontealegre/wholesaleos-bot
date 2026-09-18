@@ -836,6 +836,7 @@ function mockDeal(overrides) {
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/sample',\s*requireAdmin/.test(serverSource), 'manual evidence sample route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/upload',\s*requireAdmin/.test(serverSource), 'manual evidence upload route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/proposal',\s*requireAdmin/.test(serverSource), 'manual evidence confirmation route must be admin-protected');
+  assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/screenshot\/:id',\s*requireAdmin/.test(serverSource), 'stored screenshot preview route must be admin-protected');
   assert.ok(/app\.use\(\['\/api\/buyboxes', '\/api\/settings', '\/api\/integrations'\], requireAdmin\)/.test(serverSource), 'sensitive dashboard routes must reuse the fail-closed admin gate');
   assert.ok(serverSource.includes("code: 'ADMIN_AUTHORIZATION_UNAVAILABLE'"), 'admin authorization failures must return a clear unavailable code');
   assert.ok(!serverSource.includes('fail open for now'), 'no sensitive route may fail open');
@@ -847,7 +848,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=31'), 'dashboard must load the cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=32'), 'dashboard must load the Cycle 30 cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -877,6 +878,8 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('Documents Needing Review'), 'dashboard must render the terminal document review panel');
   assert.ok(uiSource.includes('Mark reviewed'), 'dashboard must expose the terminal review clear button');
   assert.ok(uiSource.includes('Manual Evidence Packet'), 'dashboard must render the manual evidence packet');
+  assert.ok(uiSource.includes('Comp captures awaiting your confirmation:') && uiSource.includes('Rows with 3 confirmed comps in this sample:'), 'manual evidence packet must show pending captures and confirmed-comp sample count');
+  assert.ok(uiSource.includes('wos-evidence-image') && uiSource.includes('loadManualEvidenceImages'), 'manual evidence proposals must load their protected image through authenticated fetch');
   assert.ok(!indexHtml.includes('rebuildLinksOnce'), 'dashboard load must not invoke saved-lead link rebuilding');
   assert.ok(!indexHtml.includes('montsan_links_rebuilt_v3'), 'dashboard must not retain the automatic rebuild localStorage gate');
   assert.ok(indexHtml.includes('rebuildAllLeadLinksExplicit') && indexHtml.includes('rewrites the address and link fields on every saved lead'), 'settings must expose an explicit warned saved-lead maintenance action');
@@ -902,7 +905,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=31'), 'dashboard must load the Cycle 27 cache-busted phone-readiness workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=32'), 'dashboard must load the current phone-readiness workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Official event/status') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');

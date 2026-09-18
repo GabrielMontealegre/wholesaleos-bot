@@ -85,6 +85,33 @@ function screenshotCacheDir() {
   );
 }
 
+function readScreenshotAsset(screenshotId) {
+  const id = cleanText(screenshotId);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null;
+  const store = readPacketStore();
+  let metadata = null;
+  for (const bucket of Object.values(store.markets || {})) {
+    for (const packet of Object.values(bucket && bucket.packets || {})) {
+      const shot = (Array.isArray(packet && packet.screenshots) ? packet.screenshots : [])
+        .find((item) => cleanText(item && item.screenshot_id) === id);
+      if (shot) { metadata = shot; break; }
+    }
+    if (metadata) break;
+  }
+  if (!metadata) return null;
+  const extensionByMime = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
+  const extension = extensionByMime[cleanText(metadata.mime)];
+  if (!extension) return null;
+  const cacheDir = screenshotCacheDir();
+  const file = path.resolve(cacheDir, `${id}${extension}`);
+  if (path.dirname(file) !== path.resolve(cacheDir)) return null;
+  try {
+    const buffer = fs.readFileSync(file);
+    const detected = imageType(buffer);
+    return detected && detected.mime === metadata.mime ? { buffer, mime: detected.mime } : null;
+  } catch (_) { return null; }
+}
+
 function dealSnapshotFilePath() {
   return path.resolve(
     process.env.DEAL_BOARD_SNAPSHOTS_PATH ||
@@ -558,7 +585,12 @@ function publicPacket(packet, row, options) {
   };
   safe.screenshots = Array.isArray(safe.screenshots) ? safe.screenshots : [];
   safe.evidence_items = Array.isArray(safe.evidence_items) ? safe.evidence_items : [];
-  safe.evidence_items.forEach((item) => { item.conflicts = conflictsForItem(item, row); });
+  safe.evidence_items.forEach((item) => {
+    item.conflicts = conflictsForItem(item, row);
+    item.screenshot_url = safe.screenshots.some((shot) => cleanText(shot && shot.screenshot_id) === cleanText(item.screenshot_id))
+      ? `/api/dashboard/free-public-deal-board/manual-evidence/screenshot/${encodeURIComponent(cleanText(item.screenshot_id))}`
+      : '';
+  });
   safe.evaluation = evaluatePacket(safe, row, options);
   return safe;
 }
@@ -819,6 +851,7 @@ module.exports = {
   LIVE_MARKETS,
   packetFilePath,
   screenshotCacheDir,
+  readScreenshotAsset,
   imageType,
   normalizeFields,
   proposalFieldsFromText,

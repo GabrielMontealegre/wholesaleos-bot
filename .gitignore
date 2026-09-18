@@ -67,6 +67,9 @@ exports/cycle-29-login-preflight/*
 !exports/cycle-29-login-preflight/preflight.json
 tests/.tmp/
 .cache/
+.local-comp-agent.json
+exports/cycle-30-comp-capture/
+exports/cycle-30-vision-preflight/
 deal-board-snapshots.json
 deal-board-doc-ledger.json
 data/deal-board-doc-ledger-*.json

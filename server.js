@@ -2093,6 +2093,28 @@ app.get('/api/dashboard/free-public-deal-board/manual-evidence/sample', requireA
   }
 });
 
+app.get('/api/dashboard/free-public-deal-board/manual-evidence/screenshot/:id', requireAdmin, (req, res) => {
+  try {
+    const image = manualEvidencePacketService.readScreenshotAsset(req.params.id);
+    if (!image) return res.status(404).json({
+      ok: false,
+      error: 'Screenshot evidence was not found.',
+      code: 'manual_evidence_screenshot_not_found',
+      preview_only: true,
+      should_ingest: false,
+      no_global_mutation: true
+    });
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Type': image.mime
+    });
+    return res.send(image.buffer);
+  } catch (error) {
+    return manualEvidenceError(res, error);
+  }
+});
+
 app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', requireAdmin, (req, res) => {
   manualEvidenceUpload(req, res, async (uploadError) => {
     if (uploadError) return manualEvidenceError(res, uploadError);

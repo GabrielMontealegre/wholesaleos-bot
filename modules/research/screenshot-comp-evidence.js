@@ -318,6 +318,7 @@ async function runScreenshotCompEvidence(input = {}, options = {}) {
 
 module.exports = {
   DEFAULT_CAPS,
+  BLOCKED_TEXT_RE,
   screenshotDir,
   addressKey,
   moneyToNumber,

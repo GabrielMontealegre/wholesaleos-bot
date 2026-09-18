@@ -205,6 +205,10 @@ function pngBuffer(size) {
   assert.strictEqual(storedShot.mime, 'image/png');
   assert.ok(storedShot.sha256 && storedShot.byte_size === 40);
   assert.ok(!Object.prototype.hasOwnProperty.call(storedShot, 'buffer'));
+  const screenshotAsset = service.readScreenshotAsset(uploadedItem.screenshot_id);
+  assert.strictEqual(screenshotAsset.mime, 'image/png', 'stored evidence images are served using validated metadata');
+  assert.deepStrictEqual(screenshotAsset.buffer, pngBuffer(), 'image preview returns the exact stored screenshot bytes');
+  assert.strictEqual(service.readScreenshotAsset('../../db.json'), null, 'image preview does not accept filesystem paths');
 
   const corrected = service.recordEvidenceProposal({
     market: DALLAS,
