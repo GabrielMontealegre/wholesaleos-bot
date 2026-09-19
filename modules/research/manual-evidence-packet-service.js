@@ -610,6 +610,9 @@ function sampleItem(row, packetStore, market, options) {
     sale_venue_address: cleanText(row.sale_venue_address),
     sale_venue_evidence_text: cleanText(row.sale_venue_evidence_text),
     sale_venue_source_url: cleanText(row.sale_venue_source_url),
+    subject_address_recovery: row.subject_address_recovery && typeof row.subject_address_recovery === 'object'
+      ? JSON.parse(JSON.stringify(row.subject_address_recovery))
+      : null,
     source_event_date: cleanText(row.sale_date_or_event_date || row.sale_date_iso),
     source_last_checked_at: cleanText(row.last_checked_at),
     distress_evidence: distressEvidenceModel.buildDistressEvidence(row),

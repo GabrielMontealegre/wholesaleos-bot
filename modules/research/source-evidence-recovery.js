@@ -2,6 +2,7 @@
 
 const distressEvidenceModel = require('./distress-evidence-model');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
+const propertyAddressEvidence = require('./property-address-evidence');
 
 const EVIDENCE_FIELDS = Object.freeze([
   'source_proof_text',
@@ -172,6 +173,110 @@ function mergeMoneyFacts(existing, recovered) {
   return facts;
 }
 
+function addressEvidenceFields(row) {
+  return EVIDENCE_FIELDS.map((field) => ({
+    field,
+    text: String(row && row[field] == null ? '' : row[field])
+  })).filter((entry) => entry.text.trim());
+}
+
+function exactPhrase(text, rawAddress) {
+  const tokens = cleanText(rawAddress).split(' ').filter(Boolean);
+  if (!tokens.length) return '';
+  const pattern = tokens.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  const match = String(text || '').match(new RegExp(pattern, 'i'));
+  return match ? match[0] : '';
+}
+
+function roleForStoredAddress(address, fields) {
+  const roles = fields.map((entry) => propertyAddressEvidence.roleForAddressInText(address, entry.text)).filter(Boolean);
+  if (roles.includes('sale_venue')) return 'sale_venue';
+  if (roles.includes('non_property_address')) return 'non_property_address';
+  if (roles.includes('subject_property')) return 'subject_property';
+  if (roles.includes('unlabeled_address')) return 'unlabeled_address';
+  return '';
+}
+
+function recoverSubjectAddress(row, options = {}) {
+  const nowIso = cleanText(options.now_iso) || new Date().toISOString();
+  const fields = addressEvidenceFields(row);
+  const currentAddress = cleanText(row && row.normalized_address);
+  const currentRole = currentAddress ? roleForStoredAddress(currentAddress, fields) : 'empty';
+
+  function refused(reasonCode, extra = {}) {
+    return Object.assign({ recovered: false, reason_code: reasonCode, previous_value_role: currentRole }, extra);
+  }
+
+  if (!fields.length) return refused('source_evidence_missing');
+  if (currentAddress && propertyAddressEvidence.isSourceSupportedSubjectAddress(row)) {
+    return refused('current_address_subject_supported');
+  }
+  if (currentAddress && currentRole !== 'sale_venue' && currentRole !== 'non_property_address') {
+    return refused(currentRole === 'unlabeled_address'
+      ? 'current_address_unlabeled_not_repairable'
+      : 'current_address_role_not_repairable');
+  }
+
+  const occurrences = [];
+  let unlabeledCount = 0;
+  for (const entry of fields) {
+    const evidence = propertyAddressEvidence.extractPropertyAddressEvidence(entry.text);
+    for (const candidate of evidence.candidates) {
+      if (candidate.role === 'unlabeled_address') unlabeledCount += 1;
+      if (candidate.role !== 'subject_property') continue;
+      const phrase = exactPhrase(entry.text, candidate.raw_address);
+      occurrences.push({ field: entry.field, text: entry.text, candidate, phrase });
+    }
+  }
+  const byAddress = new Map();
+  for (const occurrence of occurrences) {
+    const key = cleanText(occurrence.candidate.address).toLowerCase();
+    if (!byAddress.has(key)) byAddress.set(key, occurrence);
+  }
+  if (byAddress.size > 1) return refused('multiple_subject_candidates');
+  if (!byAddress.size) {
+    return refused(unlabeledCount ? 'subject_candidate_unlabeled_only' : 'subject_candidate_missing_or_truncated');
+  }
+
+  const recovered = Array.from(byAddress.values())[0];
+  if (!recovered.phrase || !recovered.text.includes(recovered.phrase)) {
+    return refused('subject_candidate_not_verbatim');
+  }
+
+  let displacedEvidence = cleanText(row.sale_venue_evidence_text);
+  if (currentAddress) {
+    for (const entry of fields) {
+      const match = propertyAddressEvidence.extractPropertyAddressEvidence(entry.text).candidates.find((candidate) =>
+        cleanText(candidate.address).toLowerCase() === currentAddress.toLowerCase()
+      );
+      if (match) {
+        displacedEvidence = cleanText(match.evidence_text);
+        break;
+      }
+    }
+    row.sale_venue_address = currentAddress;
+    row.sale_venue_evidence_text = displacedEvidence;
+    row.sale_venue_source_url = cleanText(row.sale_venue_source_url || row.source_document_url || row.source_url);
+  }
+  row.normalized_address = cleanText(recovered.candidate.address);
+  row.property_identity_source_only = true;
+  row.source_structured_address_verified = true;
+  row.subject_address_recovery = {
+    recovered_from_field: recovered.field,
+    recovered_phrase: recovered.phrase,
+    previous_value_role: currentRole,
+    recovered_at: nowIso
+  };
+  return {
+    recovered: true,
+    reason_code: 'subject_address_recovered_from_stored_evidence',
+    previous_value_role: currentRole,
+    subject_address: row.normalized_address,
+    recovered_from_field: recovered.field,
+    recovered_phrase: recovered.phrase
+  };
+}
+
 function recoverRow(input, options = {}) {
   const row = JSON.parse(JSON.stringify(input || {}));
   const nowIso = cleanText(options.now_iso) || new Date().toISOString();
@@ -182,6 +287,7 @@ function recoverRow(input, options = {}) {
   const segments = evidenceSegments(row);
   const recoveredDates = recoverDates(row, segments);
   const recoveredMoneyFacts = recoverMoney(row, segments, existingFacts);
+  const subjectAddressRecovery = recoverSubjectAddress(row, { now_iso: nowIso });
   const mergedFacts = mergeMoneyFacts(existingFacts, recoveredMoneyFacts);
   row.distress_evidence = distressEvidenceModel.buildDistressEvidence(Object.assign({}, row, {
     distress_evidence: mergedFacts.length ? { money_facts: mergedFacts } : null
@@ -192,6 +298,8 @@ function recoverRow(input, options = {}) {
     recovered_dates: recoveredDates,
     recovered_money_fact_count: recoveredMoneyFacts.length,
     recovered_money_types: Array.from(new Set(recoveredMoneyFacts.map((fact) => fact.amount_type))),
+    subject_address_reason_code: subjectAddressRecovery.reason_code,
+    subject_address_recovered: subjectAddressRecovery.recovered === true,
     lifecycle_before: lifecycleBefore.status,
     lifecycle_after: row.lifecycle_status.status
   };
@@ -199,6 +307,7 @@ function recoverRow(input, options = {}) {
     row,
     recovered_dates: recoveredDates,
     recovered_money_facts: recoveredMoneyFacts,
+    subject_address_recovery: subjectAddressRecovery,
     lifecycle_before: lifecycleBefore,
     lifecycle_after: row.lifecycle_status
   };
@@ -212,6 +321,7 @@ module.exports = {
   EVIDENCE_FIELDS,
   dateToIso,
   evidenceSegments,
+  recoverSubjectAddress,
   recoverRow,
   recoverRows
 };

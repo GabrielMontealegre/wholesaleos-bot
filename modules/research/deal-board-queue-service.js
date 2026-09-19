@@ -97,7 +97,7 @@ function cloneSnapshotRow(row) {
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
-  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence', 'source_evidence_recovery']) {
+  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence', 'source_evidence_recovery', 'subject_address_recovery']) {
     if (copy[key] && typeof copy[key] === 'object') copy[key] = JSON.parse(JSON.stringify(copy[key]));
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
@@ -763,6 +763,9 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     sale_venue_address: cleanText(deal.sale_venue_address),
     sale_venue_evidence_text: cleanText(deal.sale_venue_evidence_text),
     sale_venue_source_url: cleanText(deal.sale_venue_source_url),
+    subject_address_recovery: deal.subject_address_recovery && typeof deal.subject_address_recovery === 'object'
+      ? JSON.parse(JSON.stringify(deal.subject_address_recovery))
+      : null,
     source_row_reference: cleanText(deal.source_row_reference),
     foreclosure_type: cleanText(deal.foreclosure_type),
     filing_period: cleanText(deal.filing_period),
@@ -1163,7 +1166,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
     'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
-    'sale_venue_address', 'sale_venue_evidence_text', 'sale_venue_source_url',
+    'sale_venue_address', 'sale_venue_evidence_text', 'sale_venue_source_url', 'subject_address_recovery',
     'source_structured_address_verified', 'property_identity_source_only',
     'distress_evidence', 'research_links',
     'rejected_reason',
