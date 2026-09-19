@@ -41,10 +41,11 @@
   }
 
   function authHeaders(app, includeJson) {
-    var headers = includeJson ? { 'Content-Type': 'application/json' } : {};
-    var userId = app && app.unlocked && app.currentUser && app.currentUser.id;
-    if (userId) headers['x-user-id'] = userId;
-    return headers;
+    return includeJson ? { 'Content-Type': 'application/json' } : {};
+  }
+
+  function apiRequestOptions(options) {
+    return Object.assign({}, options || {}, { credentials: 'include' });
   }
 
   async function authenticate(pin, options) {
@@ -57,6 +58,7 @@
     var request = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ pin: String(pin || '') })
     };
     if (root.AbortSignal && typeof root.AbortSignal.timeout === 'function') {
@@ -75,11 +77,79 @@
     }
   }
 
+  async function sessionStatus(options) {
+    var opts = options || {};
+    var fetchImpl = opts.fetch_impl || root.fetch;
+    if (typeof fetchImpl !== 'function') return { authenticated: false, code: 'SESSION_TRANSPORT_UNAVAILABLE' };
+    try {
+      var response = await fetchImpl('/api/auth/session', { credentials: 'include', cache: 'no-store' });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) return { authenticated: false, code: data.code || 'SESSION_STATUS_FAILED' };
+      return data;
+    } catch (_) {
+      return { authenticated: false, code: 'SESSION_STATUS_FAILED' };
+    }
+  }
+
+  async function restoreSession(app, options) {
+    var status = await sessionStatus(options);
+    if (!status.authenticated) {
+      lockIdentity(app);
+      return { ok: false, status: status };
+    }
+    var user = { id: 'admin', role: status.role || 'user' };
+    applyAuthenticatedUser(app, user);
+    return { ok: true, user: user, status: status };
+  }
+
+  async function logout(app, options) {
+    var opts = options || {};
+    var fetchImpl = opts.fetch_impl || root.fetch;
+    try {
+      if (typeof fetchImpl === 'function') {
+        await fetchImpl('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      }
+    } finally {
+      lockIdentity(app);
+    }
+    return { ok: true };
+  }
+
+  function installFetchGuard(app, options) {
+    var opts = options || {};
+    if (!root || typeof root.fetch !== 'function') return false;
+    if (root.fetch.__wosSessionGuard) return true;
+    var original = root.fetch.bind(root);
+    var guarded = async function (input, init) {
+      var url = typeof input === 'string' ? input : input && input.url || '';
+      var sameApi = /^\/api\//.test(url);
+      if (!sameApi) {
+        try { sameApi = new URL(url, root.location && root.location.href).origin === root.location.origin && /\/api\//.test(new URL(url, root.location.href).pathname); }
+        catch (_) { sameApi = false; }
+      }
+      var request = sameApi ? apiRequestOptions(init) : init;
+      var response = await original(input, request);
+      if (sameApi && response.status === 401) {
+        lockIdentity(app);
+        if (typeof opts.onUnauthorized === 'function') opts.onUnauthorized();
+      }
+      return response;
+    };
+    guarded.__wosSessionGuard = true;
+    guarded.__wosOriginalFetch = original;
+    root.fetch = guarded;
+    return true;
+  }
+
   return {
     LOCKED_USER_ID: LOCKED_USER_ID,
     applyAuthenticatedUser: applyAuthenticatedUser,
     authenticate: authenticate,
     authHeaders: authHeaders,
-    lockIdentity: lockIdentity
+    installFetchGuard: installFetchGuard,
+    lockIdentity: lockIdentity,
+    logout: logout,
+    restoreSession: restoreSession,
+    sessionStatus: sessionStatus
   };
 });

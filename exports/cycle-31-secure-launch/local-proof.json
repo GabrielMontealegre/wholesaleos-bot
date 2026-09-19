@@ -1,0 +1,24 @@
+{
+  "data_kind": "SYNTHETIC_LOCAL_HELPER_PROOF",
+  "evidence_date": "2026-09-18",
+  "helper_bound_to_loopback": true,
+  "non_allowlisted_origin_rejected": true,
+  "passive_status_checks_started_capture_count": 0,
+  "explicit_capture_requests": 1,
+  "subject_address": "100 Synthetic St, Dallas, TX 75201",
+  "rows_attempted": 1,
+  "pages_visited": 1,
+  "hosts_visited": [
+    "127.0.0.1"
+  ],
+  "regions_captured": 4,
+  "proposals_created": 4,
+  "discards": [],
+  "block_events": [],
+  "elapsed_ms": 4319,
+  "all_proposals_operator_confirmed": false,
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "not_a_saved_lead": true
+}

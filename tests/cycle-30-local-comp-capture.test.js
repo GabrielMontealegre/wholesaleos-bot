@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
@@ -150,7 +151,7 @@ async function main() {
     return originalFetch(url, init);
   };
   const common = {
-    market, dashboard_url: fixtureUrl, operator_id: 'synthetic-test-operator', site: 'zillow',
+    market, dashboard_url: fixtureUrl, agent_token: crypto.randomBytes(32).toString('base64url'), site: 'zillow',
     allow_local_source: true, log_dir: logDir,
     fetch_impl: localFetch,
     ocr_impl: async (_buffer, context) => context && context.kind === 'subject_property' ? 'List price $350,000 Days on market 12' : listingText,

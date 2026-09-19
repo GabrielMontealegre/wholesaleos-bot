@@ -25,6 +25,9 @@ const manualEvidencePacketService = require('./modules/research/manual-evidence-
 const marketDemandIndex = require('./modules/research/market-demand-index');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
 const dashboardAuth = require('./modules/security/dashboard-auth');
+const dashboardSession = require('./modules/security/dashboard-session');
+const dashboardPairing = require('./modules/security/dashboard-pairing');
+const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
 const app  = express();
 // NOTE: Railway proxy requires trust proxy = 1
@@ -149,22 +152,55 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: 'Too many login attempts. Try again later.', code: 'LOGIN_RATE_LIMITED' }
+});
+const pairingExchangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: 'Too many pairing attempts. Try again later.', code: 'PAIRING_RATE_LIMITED' }
+});
+
 
 
 // ============================================================
 // ROLE-BASED ACCESS CONTROL MIDDLEWARE
 // ============================================================
+function setDashboardSessionCookie(res, user, options) {
+  const issued = dashboardSession.issueSession({ userId: user.id, role: user.role, scope: 'dashboard' }, Object.assign({ env: process.env }, options || {}));
+  res.setHeader('Set-Cookie', dashboardSession.sessionCookie(issued.token, issued.lifetime_ms));
+  return issued;
+}
+
+function dashboardIdentity(req, res) {
+  if (!dashboardSession.isConfigured({ env: process.env })) return { ok: false, code: 'SESSION_REQUIRED' };
+  const verified = dashboardSession.verifySession(dashboardSession.tokenFromRequest(req), { env: process.env });
+  if (!verified.ok || verified.user.scope !== 'dashboard') return { ok: false, code: 'SESSION_REQUIRED' };
+  const users = db.readDB().users || [];
+  const user = users.find((candidate) => candidate && candidate.id === verified.user.id);
+  if (!user) return { ok: false, code: 'SESSION_REQUIRED' };
+  if (verified.should_renew) setDashboardSessionCookie(res, user);
+  return { ok: true, user };
+}
+
+function bearerToken(req) {
+  const value = String(req.headers.authorization || '');
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+}
+
 function requireAdmin(req, res, next) {
   try {
-    const users = db.readDB().users || [];
-    // Get session user from cookie or header
-    const userId = req.headers['x-user-id'] || req.query._uid || 
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-    req.currentUser = user;
+    const identity = dashboardIdentity(req, res);
+    if (!identity.ok) return res.status(401).json({ error: 'Signed session required', code: 'SESSION_REQUIRED' });
+    if (identity.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required', code: 'ADMIN_REQUIRED' });
+    req.currentUser = identity.user;
     next();
   } catch(e) {
     res.status(503).json({ error: 'Admin authorization unavailable', code: 'ADMIN_AUTHORIZATION_UNAVAILABLE' });
@@ -173,27 +209,41 @@ function requireAdmin(req, res, next) {
 
 function requireAuth(req, res, next) {
   try {
-    const users = db.readDB().users || [];
-    const userId = req.headers['x-user-id'] || req.query._uid ||
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    req.currentUser = user;
+    const identity = dashboardIdentity(req, res);
+    if (!identity.ok) return res.status(401).json({ error: 'Signed session required', code: 'SESSION_REQUIRED' });
+    req.currentUser = identity.user;
     next();
   } catch(e) {
-    res.status(500).json({ error: e.message });
+    res.status(503).json({ error: 'Authorization unavailable', code: 'AUTHORIZATION_UNAVAILABLE' });
   }
+}
+
+function requireAdminOrAgent(permission) {
+  return function scopedAuthorization(req, res, next) {
+    try {
+      const identity = dashboardIdentity(req, res);
+      if (identity.ok) {
+        if (identity.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required', code: 'ADMIN_REQUIRED' });
+        req.currentUser = identity.user;
+        req.authScope = 'dashboard';
+        return next();
+      }
+      const agent = dashboardPairing.verifyAgent(bearerToken(req), permission, { env: process.env });
+      if (!agent.ok) return res.status(401).json({ error: 'Authorized local helper session required', code: 'SESSION_REQUIRED' });
+      req.currentUser = { id: agent.user.id, role: agent.user.role };
+      req.authScope = 'agent';
+      return next();
+    } catch (_) {
+      return res.status(503).json({ error: 'Authorization unavailable', code: 'AUTHORIZATION_UNAVAILABLE' });
+    }
+  };
 }
 
 function requireAdminOrOwnFirstLoginPinUpdate(req, res, next) {
   try {
-    const users = db.readDB().users || [];
-    const userId = req.headers['x-user-id'] || req.query._uid ||
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    const identity = dashboardIdentity(req, res);
+    if (!identity.ok) return res.status(401).json({ error: 'Signed session required', code: 'SESSION_REQUIRED' });
+    const user = identity.user;
     if (user.role === 'admin') {
       req.currentUser = user;
       return next();
@@ -1263,17 +1313,9 @@ app.get('/api/leads', (req, res) => {
 
 
 
-// Role check endpoint — reads userId from x-user-id header or query param
-app.get('/api/auth/role', (req, res) => {
-  try {
-    const users = db.readDB().users || [];
-    const userId = req.headers['x-user-id'] || req.query.uid ||
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    if (!userId) return res.json({ role: 'user', isAdmin: false, userId: null });
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.json({ role: 'user', isAdmin: false, userId: null });
-    res.json({ role: user.role||'user', isAdmin: user.role==='admin', userId: user.id, name: user.name });
-  } catch(e) { res.json({ role: 'user', isAdmin: false }); }
+app.get('/api/auth/role', requireAuth, (req, res) => {
+  const user = req.currentUser;
+  res.json({ role: user.role || 'user', isAdmin: user.role === 'admin', userId: user.id, name: user.name });
 });
 
 app.post('/api/research/comp-scout', async (req, res) => {
@@ -2033,7 +2075,7 @@ app.post('/api/preview/free-public-deal-board', requireAdmin, async (req, res) =
 });
 
 // Dashboard Deal Queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
-app.get('/api/dashboard/free-public-deal-board/latest', requireAdmin, (req, res) => {
+app.get('/api/dashboard/free-public-deal-board/latest', requireAdminOrAgent('deal_board:read'), (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     res.json(dealBoardQueueService.latestDealBoardSnapshot({
@@ -2115,7 +2157,7 @@ app.get('/api/dashboard/free-public-deal-board/manual-evidence/screenshot/:id', 
   }
 });
 
-app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', requireAdmin, (req, res) => {
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', requireAdminOrAgent('manual_evidence:write'), (req, res) => {
   manualEvidenceUpload(req, res, async (uploadError) => {
     if (uploadError) return manualEvidenceError(res, uploadError);
     try {
@@ -2130,7 +2172,7 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', require
         filename: req.file && req.file.originalname,
         buffer: req.file && req.file.buffer
       }, {
-        operator_id: req.headers['x-user-id'] || 'admin'
+        operator_id: req.currentUser.id
       }));
     } catch (error) {
       manualEvidenceError(res, error);
@@ -2138,13 +2180,13 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', require
   });
 });
 
-app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requireAdmin, (req, res) => {
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requireAdminOrAgent('manual_evidence:write'), (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     res.json(manualEvidencePacketService.recordEvidenceProposal(Object.assign({}, req.body || {}, {
       market: manualEvidenceMarket(req.body)
     }), {
-      operator_id: req.headers['x-user-id'] || 'admin'
+      operator_id: req.currentUser.id
     }));
   } catch (error) {
     manualEvidenceError(res, error);
@@ -2157,7 +2199,7 @@ app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin,
   try {
     res.set('Cache-Control', 'no-store');
     res.json(dealBoardQueueService.recordContactWorkflow(req.body || {}, {
-      operator_id: req.headers['x-user-id'] || 'admin'
+      operator_id: req.currentUser.id
     }));
   } catch (e) {
     res.status(Number(e && e.status_code || 500) || 500).json({
@@ -2175,7 +2217,7 @@ app.post('/api/dashboard/free-public-deal-board/document-review-clear', requireA
   try {
     res.set('Cache-Control', 'no-store');
     res.json(dealBoardQueueService.recordDocumentReviewClear(req.body || {}, {
-      operator_id: req.headers['x-user-id'] || 'admin'
+      operator_id: req.currentUser.id
     }));
   } catch (e) {
     res.status(Number(e && e.status_code || 500) || 500).json({
@@ -2448,7 +2490,7 @@ app.delete('/api/leads/:id', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Buyers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.get('/api/buyers', (req, res) => {
+app.get('/api/buyers', requireAuth, (req, res) => {
   try {
     let buyers = db.readDB().buyers || [];
     
@@ -2478,11 +2520,7 @@ app.get('/api/buyers', (req, res) => {
     }
     
     // Role check — users get limited buyer info (no full contact details)
-    const userId = req.headers['x-user-id'] || req.query._uid ||
-                   (req.headers.cookie||'').match(/userId=([^;]+)/)?.[1];
-    const users  = db.readDB().users || [];
-    const currentUser = users.find(u => u.id === userId);
-    const isAdmin = currentUser && currentUser.role === 'admin';
+    const isAdmin = req.currentUser && req.currentUser.role === 'admin';
     
     if (!isAdmin) {
       // Non-admins: return limited buyer info only (no contact details)
@@ -3028,14 +3066,62 @@ app.post('/api/deals/send', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Auth / Users Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/auth/login', (req, res) => {
+app.get('/api/auth/session', (req, res) => {
+  const pin = dashboardAuth.adminPinStatus(process.env);
+  const configured = dashboardSession.isConfigured({ env: process.env });
+  let authenticated = false;
+  let role = null;
+  if (configured) {
+    const verified = dashboardSession.verifySession(dashboardSession.tokenFromRequest(req), { env: process.env });
+    if (verified.ok && verified.user.scope === 'dashboard') {
+      const user = (db.readDB().users || []).find((candidate) => candidate && candidate.id === verified.user.id);
+      if (user) { authenticated = true; role = user.role || 'user'; }
+    }
+  }
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    login_configured: pin.status === 'configured',
+    login_status: pin.status,
+    session_configured: configured,
+    authenticated,
+    role
+  });
+});
+
+app.post('/api/auth/login', loginLimiter, (req, res) => {
+  if (!dashboardSession.isConfigured({ env: process.env })) {
+    return res.status(503).json({ ok: false, error: 'Dashboard session signing is not configured.', code: 'SESSION_NOT_CONFIGURED' });
+  }
   const result = dashboardAuth.authenticatePin({
     pin: req.body && req.body.pin,
     users: db.getUsers(),
     env: process.env
   });
   if (!result.ok) return res.status(result.status).json({ ok: false, error: result.error, code: result.code });
+  setDashboardSessionCookie(res, result.user);
   res.json({ ok: true, user: result.user });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.setHeader('Set-Cookie', dashboardSession.clearCookie());
+  res.json({ ok: true });
+});
+
+app.post('/api/auth/pairing-token', requireAdmin, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(Object.assign({ ok: true }, dashboardPairing.createPairing(req.currentUser, { env: process.env })));
+});
+
+app.post('/api/auth/pairing-exchange', pairingExchangeLimiter, (req, res) => {
+  const result = dashboardPairing.exchangePairing(req.body && req.body.pairing_token, { env: process.env });
+  if (!result.ok) return res.status(401).json({ ok: false, error: 'Pairing token is invalid or already used.', code: result.code });
+  res.set('Cache-Control', 'no-store');
+  res.json(result);
+});
+
+app.post('/api/auth/pairing-revoke', requireAdmin, (req, res) => {
+  const revoked = dashboardPairing.revokeForUser(req.currentUser.id, { env: process.env });
+  res.json({ ok: true, revoked_count: revoked });
 });
 
 app.get('/api/users', requireAdmin, (req, res) => {
@@ -4266,20 +4352,9 @@ app.get('/api/dialer/calls', (req, res) => {
 // Deal Scraper + Buyer Finder + Creative Finance Analysis
 // ============================================================
 
-const axios = require('axios');
-const SCRAPER_KEY = process.env.SCRAPERAPI_KEY || 'e99518e9c129422db35188517b89a212';
-
 // ── Scraper helper ───────────────────────────────────────────
 async function scraperFetch(url, opts) {
-  try {
-    opts = opts || {};
-    var apiUrl = 'http://api.scraperapi.com?api_key=' + SCRAPER_KEY + '&url=' + encodeURIComponent(url);
-    if (opts.render) apiUrl += '&render=true';
-    var res = await axios.get(apiUrl, { timeout: 25000, headers: { 'Accept': 'text/html,application/json' } });
-    return res.data || '';
-  } catch(e) {
-    return '';
-  }
+  return scraperApiClient.scraperFetch(url, Object.assign({ env: process.env }, opts || {}));
 }
 
 // ── Dedup helper ─────────────────────────────────────────────
@@ -4541,8 +4616,9 @@ async function scrapeCraigslistDeals(city, state) {
   var baseUrl = 'https://' + city + '.craigslist.org/search/rea?query=' + encodeURIComponent(keywords[Math.floor(Math.random() * keywords.length)]) + '&sort=date';
 
   try {
-    var html = await scraperFetch(baseUrl, { render: false });
-    if (!html) return deals;
+    var scraped = await scraperFetch(baseUrl, { render: false });
+    if (!scraped.ok) return deals;
+    var html = scraped.data;
     var text = cleanText(html);
 
     // Extract listing items
@@ -4594,8 +4670,9 @@ async function searchDealsGoogle(state, keyword) {
   var deals = [];
 
   try {
-    var html = await scraperFetch(url, { render: false });
-    if (!html) return deals;
+    var scraped = await scraperFetch(url, { render: false });
+    if (!scraped.ok) return deals;
+    var html = scraped.data;
     var text = cleanText(html);
 
     // Extract results
@@ -4642,8 +4719,9 @@ async function findBuyersGoogle(state, city) {
   for (var qi = 0; qi < queries.length; qi++) {
     var url = 'https://www.google.com/search?q=' + encodeURIComponent(queries[qi]) + '&num=8';
     try {
-      var html = await scraperFetch(url, { render: false });
-      if (!html) continue;
+      var scraped = await scraperFetch(url, { render: false });
+      if (!scraped.ok) continue;
+      var html = scraped.data;
 
       // Extract website URLs from results
       var urlMatches = html.match(/https?:\/\/(?!www\.google)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/g) || [];
@@ -4701,9 +4779,10 @@ async function findBuyersGoogle(state, city) {
 async function enrichBuyerFromWebsite(website) {
   if (!website) return {};
   try {
-    var html = await scraperFetch(website + '/contact', { render: false });
-    if (!html) html = await scraperFetch(website, { render: false });
-    if (!html) return {};
+    var scraped = await scraperFetch(website + '/contact', { render: false });
+    if (!scraped.ok) scraped = await scraperFetch(website, { render: false });
+    if (!scraped.ok) return {};
+    var html = scraped.data;
     var text = cleanText(html);
     return {
       phone: extractPhone(text) || '',
@@ -5278,15 +5357,20 @@ app.get('/api/buyers/stats', (req, res) => {
 
 
 // ── Email login ──
-app.post('/api/auth/email-login', (req, res) => {
+app.post('/api/auth/email-login', loginLimiter, (req, res) => {
   try {
+    if (!dashboardSession.isConfigured({ env: process.env })) {
+      return res.status(503).json({ ok: false, error: 'Dashboard session signing is not configured.', code: 'SESSION_NOT_CONFIGURED' });
+    }
     const { email, password } = req.body||{};
     if (!email) return res.status(400).json({ error: 'Email required' });
     const users = db.readDB().users||[];
     const user = users.find(u => (u.email||'').toLowerCase()===email.toLowerCase().trim());
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-    if (user.password && user.password!==password) return res.status(401).json({ error: 'Invalid credentials' });
-    res.json({ ok:true, user:{ id:user.id, name:user.name, role:user.role, color:user.color, initials:user.initials }});
+    if (!user.password || !password || user.password!==password) return res.status(401).json({ error: 'Invalid credentials' });
+    const publicUser = dashboardAuth.publicUser(user);
+    setDashboardSessionCookie(res, publicUser);
+    res.json({ ok:true, user:publicUser });
   } catch(e){ res.status(500).json({error:e.message}); }
 });
 
