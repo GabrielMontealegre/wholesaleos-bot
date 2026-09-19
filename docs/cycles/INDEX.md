@@ -27,6 +27,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-24-government-catalog-discovery]] - bounded official-catalog discovery for new public data sources; discoveries remain unverified and cannot become leads.
 - [[cycle-29-secure-dashboard-login]] - fail-closed dashboard login before seller-phone evidence can be viewed; sessions and expiry remain a documented follow-up.
 - [[cycle-31-secure-launch-first-comp]] - signed dashboard sessions and a paired, loopback-only helper for one explicit local comp capture at a time.
+- [[cycle-32-local-config-path]] - cross-platform writable helper configuration with legacy migration and Windows-safe startup diagnostics.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.
