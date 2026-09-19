@@ -1,0 +1,112 @@
+{
+  "data_kind": "SYNTHETIC_TEST_ONLY",
+  "source_results": [
+    {
+      "source": "zillow",
+      "source_url": "http://127.0.0.1:63435/fixture/zillow-sold-results.html",
+      "url_kind": "sold_results",
+      "page_state": "loaded",
+      "cards_detected": 3,
+      "cards_with_price": 2,
+      "cards_with_date": 2,
+      "cards_with_address": 2,
+      "candidates_built": 0,
+      "discards": [
+        {
+          "reason_code": "MISSING_SOLD_DATE",
+          "count": 1
+        },
+        {
+          "reason_code": "MISSING_SOLD_PRICE",
+          "count": 1
+        },
+        {
+          "reason_code": "MISSING_ADDRESS",
+          "count": 1
+        }
+      ],
+      "screenshots": 0,
+      "proposals": 0,
+      "outcome_code": "CARDS_MISSING_REQUIRED_FIELDS"
+    },
+    {
+      "source": "redfin",
+      "source_url": "http://127.0.0.1:63435/fixture/redfin-sold-results.html",
+      "url_kind": "sold_results",
+      "page_state": "loaded",
+      "cards_detected": 1,
+      "cards_with_price": 1,
+      "cards_with_date": 1,
+      "cards_with_address": 1,
+      "candidates_built": 1,
+      "discards": [],
+      "screenshots": 1,
+      "proposals": 1,
+      "outcome_code": "PROPOSALS_CREATED"
+    },
+    {
+      "source": "realtor",
+      "source_url": "http://127.0.0.1:63435/fixture/realtor-sold-results.html",
+      "url_kind": "sold_results",
+      "page_state": "loaded",
+      "cards_detected": 2,
+      "cards_with_price": 2,
+      "cards_with_date": 2,
+      "cards_with_address": 2,
+      "candidates_built": 2,
+      "discards": [],
+      "screenshots": 2,
+      "proposals": 2,
+      "outcome_code": "PROPOSALS_CREATED"
+    }
+  ],
+  "blocked_path": [
+    {
+      "source": "zillow",
+      "source_url": "http://127.0.0.1:63435/fixture/blocked.html",
+      "url_kind": "blocked",
+      "page_state": "blocked",
+      "cards_detected": 0,
+      "cards_with_price": 0,
+      "cards_with_date": 0,
+      "cards_with_address": 0,
+      "candidates_built": 0,
+      "discards": [
+        {
+          "reason_code": "HTTP_403",
+          "count": 1
+        }
+      ],
+      "screenshots": 0,
+      "proposals": 0,
+      "outcome_code": "BLOCKED_STOPPED"
+    },
+    {
+      "source": "redfin",
+      "source_url": "http://127.0.0.1:63435/fixture/blocked.html",
+      "url_kind": "blocked",
+      "page_state": "blocked",
+      "cards_detected": 0,
+      "cards_with_price": 0,
+      "cards_with_date": 0,
+      "cards_with_address": 0,
+      "candidates_built": 0,
+      "discards": [
+        {
+          "reason_code": "HTTP_403",
+          "count": 1
+        }
+      ],
+      "screenshots": 0,
+      "proposals": 0,
+      "outcome_code": "BLOCKED_STOPPED"
+    }
+  ],
+  "proposals_created": 3,
+  "screenshots": 3,
+  "external_requests": 0,
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "not_a_saved_lead": true
+}

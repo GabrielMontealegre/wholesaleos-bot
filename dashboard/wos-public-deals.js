@@ -19,6 +19,7 @@
   var marketDemandData = null;
   var manualEvidenceObjectUrls = [];
   var localHelperState = { running: false, paired: false, capture_running: false, checked: false };
+  var localCaptureResults = {};
   var dataByMarket = {};
   var MARKET_PRESETS = [
     { key: 'dallas', label: 'Dallas County, TX', city: 'Dallas', county: 'Dallas', state: 'TX' },
@@ -372,6 +373,40 @@
       '<div class="wos-manual-upload-message" style="font-size:10px;color:#6b7280;margin-top:4px;">PNG, JPG or WebP, max 8MB.</div></div>';
   }
 
+  function captureReasonLabel(code) {
+    return ({
+      MISSING_SOLD_PRICE: 'missing a sold price', MISSING_SOLD_DATE: 'missing a sold date', MISSING_ADDRESS: 'missing a complete address',
+      ADDRESS_EQUALS_SUBJECT: 'was the subject property itself', OCR_UNREADABLE: 'could not be read from the screenshot',
+      DISTANCE_OVER_ONE_MILE: 'was beyond one mile', SOLD_DATE_OUTSIDE_WINDOW: 'was outside the sold-date window',
+      PRICE_BELOW_FLOOR: 'was below the price floor', PROPERTY_TYPE_MISMATCH: 'had the wrong property type',
+      GRID_REJECTED_OTHER: 'failed another unchanged comp-grid check', BLOCKED_TEXT_DETECTED: 'was stopped by the site',
+      HTTP_403: 'returned access denied', HTTP_429: 'returned a rate limit'
+    })[code] || String(code || 'unknown reason').toLowerCase().replace(/_/g, ' ');
+  }
+
+  function captureResultLine(result) {
+    var name = ({ zillow: 'Zillow', redfin: 'Redfin', realtor: 'Realtor.com' })[result.source] || result.source || 'Source';
+    var outcome = result.outcome_code || '';
+    var lead = '';
+    if (outcome === 'PROPOSALS_CREATED') lead = result.proposals + ' unconfirmed proposal(s) created from ' + result.cards_detected + ' visible sold card(s)';
+    else if (outcome === 'WRONG_PAGE_TYPE') lead = 'the page was ' + String(result.url_kind || 'unknown').replace(/_/g, ' ') + ', not usable sold results';
+    else if (outcome === 'NO_SOLD_CARDS_ON_PAGE') lead = 'the sold-results page showed no sold cards';
+    else if (outcome === 'SELECTOR_MATCHED_NOTHING') lead = result.page_state === 'client_render_timeout' ? 'the sold cards did not finish loading before the safe timeout' : 'the sold-results container loaded but no supported card markup was found';
+    else if (outcome === 'BLOCKED_STOPPED') lead = 'the site blocked access, so the helper stopped without retrying';
+    else if (outcome === 'CANDIDATES_DISCARDED_BY_GRID') lead = result.candidates_built + ' candidate(s) were found but none could be uploaded safely';
+    else lead = result.cards_detected + ' card(s) were found, but required visible fields were missing';
+    var reasons = safeArray(result.discards).map(function (item) { return item.count + ' ' + captureReasonLabel(item.reason_code); });
+    return '<div style="margin-top:3px;"><b>' + esc(name) + ':</b> ' + esc(lead) + (reasons.length ? ' (' + esc(reasons.join(', ')) + ')' : '') + '.</div>';
+  }
+
+  function captureResultsMarkup(queueKey) {
+    var run = localCaptureResults[queueKey];
+    if (!run || !safeArray(run.source_results).length) return '';
+    return '<div class="wos-helper-diagnostics" style="margin-top:6px;padding:6px 7px;border:1px solid #ddd6fe;border-radius:6px;background:#fff;color:#374151;">' +
+      safeArray(run.source_results).map(captureResultLine).join('') +
+      '<div style="margin-top:4px;color:#6b7280;">Total: ' + esc(run.screenshots || 0) + ' screenshot(s), ' + esc(run.proposals || 0) + ' unconfirmed proposal(s). Nothing counts until you confirm it.</div></div>';
+  }
+
   function manualEvidenceCard(item) {
     var packet = item.packet || {};
     var evaluation = packet.evaluation || {};
@@ -410,9 +445,9 @@
       '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
         '<b>Local comp helper:</b> <span class="wos-helper-inline-status">' + esc(localHelperState.running ? (localHelperState.paired ? 'Connected' : 'Running - pairing needed') : 'Not running') + '</span><br>' +
         (helperEligible
-          ? '<select class="wos-helper-site" style="margin-top:5px;padding:5px;border:1px solid #c4b5fd;border-radius:6px;background:#fff;"><option value="zillow">Zillow</option><option value="redfin">Redfin</option><option value="realtor">Realtor.com</option></select> <button type="button" class="wos-helper-capture" disabled style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button>'
+          ? '<span style="display:inline-block;margin-top:5px;margin-right:6px;color:#4c1d95;">Zillow, then Redfin, then Realtor.com</span><button type="button" class="wos-helper-capture" disabled style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button>'
           : '<span style="color:#92400e;">Capture is disabled until the county source establishes a complete property address.</span>') +
-        '<div class="wos-helper-row-message" style="font-size:10px;color:#6b7280;margin-top:4px;">Nothing is captured until you click. Every result remains an unconfirmed proposal.</div></div>' +
+        '<div class="wos-helper-row-message" style="font-size:10px;color:#6b7280;margin-top:4px;">Nothing is captured until you click. Every result remains an unconfirmed proposal.</div>' + captureResultsMarkup(item.queue_key || '') + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
@@ -1468,7 +1503,6 @@
     var card = button.closest && button.closest('.wos-manual-evidence-card');
     var rowBox = button.closest && button.closest('.wos-local-helper-row');
     var message = rowBox && rowBox.querySelector('.wos-helper-row-message');
-    var site = rowBox && rowBox.querySelector('.wos-helper-site');
     if (!localHelperState.running || !localHelperState.paired) {
       if (message) message.textContent = 'Start and pair the helper first. No page was opened.';
       return;
@@ -1478,12 +1512,13 @@
     if (message) message.textContent = 'The helper is opening one source page and looking only for visible sold cards.';
     fetch(LOCAL_HELPER + '/helper/capture', {
       method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '', site: site && site.value || 'zillow' })
+      body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '' })
     })
       .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
       .then(function (result) {
         if (!result.response.ok || !result.data.ok) throw new Error(result.data.code || 'local_capture_failed');
         var run = result.data.run || {};
+        if (card && card.dataset.queueKey) localCaptureResults[card.dataset.queueKey] = run;
         if (message) message.textContent = run.captures_submitted
           ? run.captures_submitted + ' capture(s) uploaded as unconfirmed proposals. Review them below.'
           : 'No qualifying sold cards were captured. Reason: ' + (run.outcome || 'none found') + '.';
