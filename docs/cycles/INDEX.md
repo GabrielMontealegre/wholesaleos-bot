@@ -28,6 +28,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-29-secure-dashboard-login]] - fail-closed dashboard login before seller-phone evidence can be viewed; sessions and expiry remain a documented follow-up.
 - [[cycle-31-secure-launch-first-comp]] - signed dashboard sessions and a paired, loopback-only helper for one explicit local comp capture at a time.
 - [[cycle-32-local-config-path]] - cross-platform writable helper configuration with legacy migration and Windows-safe startup diagnostics.
+- [[cycle-34-first-real-comp-proposals]] - sequential local Zillow, Redfin, and Realtor.com sold-card proposals with precise per-source diagnostics and unchanged confirmation/value gates.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.
