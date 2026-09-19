@@ -218,13 +218,17 @@ function recoverSubjectAddress(row, options = {}) {
   }
 
   const occurrences = [];
+  const datePrefixRejections = [];
   let unlabeledCount = 0;
   for (const entry of fields) {
     const evidence = propertyAddressEvidence.extractPropertyAddressEvidence(entry.text);
+    for (const rejection of evidence.date_prefix_rejections || []) {
+      datePrefixRejections.push(Object.assign({ field: entry.field }, rejection));
+    }
     for (const candidate of evidence.candidates) {
       if (candidate.role === 'unlabeled_address') unlabeledCount += 1;
       if (candidate.role !== 'subject_property') continue;
-      const phrase = exactPhrase(entry.text, candidate.raw_address);
+      const phrase = cleanText(candidate.recovered_phrase) || exactPhrase(entry.text, candidate.raw_address);
       occurrences.push({ field: entry.field, text: entry.text, candidate, phrase });
     }
   }
@@ -235,6 +239,16 @@ function recoverSubjectAddress(row, options = {}) {
   }
   if (byAddress.size > 1) return refused('multiple_subject_candidates');
   if (!byAddress.size) {
+    if (datePrefixRejections.length) {
+      const priority = [
+        'labelled_date_prefix_invalid',
+        'labelled_date_prefix_address_incomplete',
+        'labelled_date_prefix_intervening_text',
+        'labelled_date_prefix_address_not_verbatim'
+      ];
+      const selected = priority.find((code) => datePrefixRejections.some((item) => item.reason_code === code));
+      if (selected) return refused(selected);
+    }
     return refused(unlabeledCount ? 'subject_candidate_unlabeled_only' : 'subject_candidate_missing_or_truncated');
   }
 
@@ -267,13 +281,17 @@ function recoverSubjectAddress(row, options = {}) {
     previous_value_role: currentRole,
     recovered_at: nowIso
   };
+  if (cleanText(recovered.candidate.skipped_date_prefix)) {
+    row.subject_address_recovery.skipped_date_prefix = cleanText(recovered.candidate.skipped_date_prefix);
+  }
   return {
     recovered: true,
     reason_code: 'subject_address_recovered_from_stored_evidence',
     previous_value_role: currentRole,
     subject_address: row.normalized_address,
     recovered_from_field: recovered.field,
-    recovered_phrase: recovered.phrase
+    recovered_phrase: recovered.phrase,
+    skipped_date_prefix: cleanText(recovered.candidate.skipped_date_prefix)
   };
 }
 
