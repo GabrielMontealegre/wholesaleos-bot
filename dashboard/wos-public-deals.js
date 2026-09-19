@@ -401,6 +401,7 @@
         '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
+      (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property</div>' : '') +
       (item.sale_venue_address ? '<div style="font-size:11px;margin-top:6px;"><b>Sale location:</b> ' + esc(item.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span> ' + link('venue source', item.sale_venue_source_url) + '</div>' : '') +
       '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
       '<div style="margin-top:6px;font-size:11px;"><b>Source event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + ' <b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
@@ -580,6 +581,9 @@
     if (row.sale_venue_address) {
       lines.push('<div style="font-size:12px;margin-top:3px;"><b>Sale location:</b> ' + esc(row.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span>' +
         (row.sale_venue_source_url ? ' ' + link('venue source', row.sale_venue_source_url) : '') + '</div>');
+    }
+    if (row.subject_address_recovery) {
+      lines.push('<div style="font-size:12px;margin-top:3px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property</div>');
     }
     var researchLinks = researchLinksHtml(row);
     if (researchLinks) lines.push('<div style="font-size:12px;"><b>Property research:</b> ' + researchLinks + '</div>');
