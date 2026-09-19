@@ -4,12 +4,12 @@
 // existing manual-evidence route; it never visits a listing website.
 const fs = require('fs');
 const crypto = require('crypto');
-const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const resolver = require('../modules/research/playwright-browser-resolver');
 const addressEvidence = require('../modules/research/property-address-evidence');
 const compEvidence = require('../modules/research/screenshot-comp-evidence');
+const localConfig = require('../modules/security/local-config-path');
 
 const SITE_HOSTS = Object.freeze({
   zillow: 'zillow.com',
@@ -17,7 +17,6 @@ const SITE_HOSTS = Object.freeze({
   realtor: 'realtor.com'
 });
 const CARD_SELECTOR = 'article, [role="article"], li, [data-testid*="card"], [data-testid*="property"]';
-const DEFAULT_CONFIG = path.join(os.homedir(), '.wholesaleos', 'helper.json');
 const RATE_STATE = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent', 'rate-state.json');
 const RUN_LOCK = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent', 'agent.lock');
 const LOG_DIR = path.resolve(__dirname, '..', 'exports', 'cycle-30-comp-capture');
@@ -112,19 +111,25 @@ function sourceUrlFor(row, site, options = {}) {
   return `https://www.realtor.com/realestateandhomes-search/${encoded}`;
 }
 
-function readRateState(file, now) {
+function readRateState(file, now, options = {}) {
+  const fsImpl = options.fs_impl || fs;
   let state = {};
-  try { state = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { state = {}; }
+  try { state = JSON.parse(fsImpl.readFileSync(file, 'utf8')); } catch (_) { state = {}; }
   const cutoff = now - 60 * 60 * 1000;
   return { page_times: (Array.isArray(state.page_times) ? state.page_times : []).map(Number).filter((time) => Number.isFinite(time) && time > cutoff) };
 }
 
-function reservePage(file, now, limit) {
-  const state = readRateState(file, now);
+function writeState(file, state, options = {}) {
+  const fsImpl = options.fs_impl || fs;
+  fsImpl.mkdirSync(path.dirname(file), { recursive: true });
+  fsImpl.writeFileSync(file, JSON.stringify(state, null, 2), { mode: 0o600 });
+}
+
+function reservePage(file, now, limit, options = {}) {
+  const state = readRateState(file, now, options);
   if (state.page_times.length >= limit) return false;
   state.page_times.push(now);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(state, null, 2));
+  writeState(file, state, options);
   return true;
 }
 
@@ -422,7 +427,10 @@ async function runCapture(input = {}, options = {}) {
   return writeRunLog(run, options.log_dir || LOG_DIR);
 }
 
-function configPath(args) { return path.resolve(args.config || DEFAULT_CONFIG); }
+function configPath(args = {}, options = {}) {
+  if (args.config) return path.resolve(args.config);
+  return localConfig.resolveLocalConfigPath({ env: options.env || process.env }).path;
+}
 
 async function initConfig(file) {
   throw Object.assign(new Error('Use the dashboard Pair helper action. Credentials are never entered on the command line.'), { code: 'dashboard_pairing_required' });
@@ -458,6 +466,6 @@ if (require.main === module) {
 
 module.exports = {
   SITE_HOSTS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
-  selectRow, sourceUrlFor, readRateState, reservePage, acquireRunLock, cleanRunLog, writeRunLog, safeFailureReason,
+  selectRow, sourceUrlFor, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog, safeFailureReason, configPath,
   activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, runCapture, main
 };

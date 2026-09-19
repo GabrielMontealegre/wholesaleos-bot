@@ -69,6 +69,8 @@ tests/.tmp/
 .cache/
 .local-comp-agent.json
 .wholesaleos/
+helper.json
+helper.json.*.tmp
 data/dashboard-pairing-state.json
 data/dashboard-pairing-state.json.*
 exports/cycle-30-comp-capture/
