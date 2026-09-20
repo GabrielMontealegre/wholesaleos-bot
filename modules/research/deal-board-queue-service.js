@@ -25,6 +25,7 @@ const blockedInventoryBreakdown = require('./blocked-inventory-breakdown');
 const documentReextractionPass = require('./document-reextraction-pass');
 const manualEvidencePacketService = require('./manual-evidence-packet-service');
 const distressEvidenceModel = require('./distress-evidence-model');
+const propertyLeverageDossier = require('./property-leverage-dossier');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
@@ -97,7 +98,7 @@ function cloneSnapshotRow(row) {
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
-  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence', 'source_evidence_recovery', 'subject_address_recovery']) {
+  for (const key of ['owner_record', 'mailing_route', 'business_entity_resolution', 'distress_evidence', 'source_evidence_recovery', 'subject_address_recovery', 'leverage_dossier', 'equity_estimate']) {
     if (copy[key] && typeof copy[key] === 'object') copy[key] = JSON.parse(JSON.stringify(copy[key]));
   }
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
@@ -277,8 +278,24 @@ function repairStoredSnapshotRows(rows) {
     row.row_state = state.row_state;
     row.row_state_reason = state.row_state_reason;
     row.row_state_next_action = state.next_action;
+    attachLeverageProjection(row);
     return row;
   });
+}
+
+function attachLeverageProjection(row) {
+  const contactState = leadOperationsState.contactStateForDeal(row);
+  const propertyState = leadOperationsState.propertyStateForDeal(row);
+  const leverageDossier = propertyLeverageDossier.buildLeverageDossier(row);
+  const leverageEquity = propertyLeverageDossier.equityEstimate(leverageDossier);
+  row.contact_state = contactState.contact_state;
+  row.contact_state_reason = contactState.contact_state_reason;
+  row.property_state = propertyState.property_state;
+  row.property_state_reason = propertyState.property_state_reason;
+  row.leverage_dossier = leverageDossier;
+  row.equity_estimate = leverageEquity;
+  row.room_to_offer = leverageEquity.room_to_offer;
+  return row;
 }
 
 function rowEvidenceScore(row) {
@@ -714,6 +731,10 @@ function documentReviewQueueForResponse(store, market) {
 
 function projectRowForQueue(deal, dedupeKey, seenAt) {
   const rowState = leadOperationsState.rowStateForDeal(deal);
+  const contactState = leadOperationsState.contactStateForDeal(deal);
+  const propertyState = leadOperationsState.propertyStateForDeal(deal);
+  const leverageDossier = propertyLeverageDossier.buildLeverageDossier(deal);
+  const leverageEquity = propertyLeverageDossier.equityEstimate(leverageDossier);
   const ownerDisplayName = cleanText(deal.owner_record && (deal.owner_record.owner_name || deal.owner_record.taxpayer_name));
   const ownerDisplayLabel = cleanText(deal.owner_record && deal.owner_record.record_label)
     || (cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
@@ -849,6 +870,13 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     row_state: rowState.row_state,
     row_state_reason: rowState.row_state_reason,
     row_state_next_action: rowState.next_action,
+    contact_state: contactState.contact_state,
+    contact_state_reason: contactState.contact_state_reason,
+    property_state: propertyState.property_state,
+    property_state_reason: propertyState.property_state_reason,
+    leverage_dossier: leverageDossier,
+    equity_estimate: leverageEquity,
+    room_to_offer: leverageEquity.room_to_offer,
     contact_workflow_complete: deal.contact_workflow_complete === true,
     contact_workflow_status: cleanText(deal.contact_workflow_status || deal.operator_contact_status),
     contact_workflow_outcome: cleanText(deal.contact_workflow_outcome),
@@ -1054,6 +1082,10 @@ function queueCounts(rows) {
     title_needed: rows.filter((row) => row.row_state === 'TITLE_NEEDED').length,
     closed_not_interested: rows.filter((row) => row.row_state === 'CLOSED_NOT_INTERESTED').length,
     locked: rows.filter((row) => row.row_state === 'LOCKED').length,
+    property_ready: rows.filter((row) => row.property_state === 'PROPERTY_READY').length,
+    needs_property_facts: rows.filter((row) => row.property_state === 'NEEDS_PROPERTY_FACTS').length,
+    needs_value_source: rows.filter((row) => row.property_state === 'NEEDS_VALUE_SOURCE').length,
+    room_to_offer_likely: rows.filter((row) => row.room_to_offer === 'LIKELY').length,
     row_states: states,
     inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW' && notQuarantined(row)).length,
     needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW' && notQuarantined(row)).length,
