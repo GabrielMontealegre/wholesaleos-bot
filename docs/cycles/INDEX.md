@@ -32,6 +32,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-11-property-leverage-lane]] - independent property and contact states plus a provenance-gated leverage dossier and equity clue.
 - [[cycle-13-manual-value-source-unlock]] - Cycle 36 manual screenshot comp confirmation, strict-grid counts, and operator-visible leverage dossier.
 - [[cycle-37-single-property-dossier]] - 3808 Kings Drive property dossier and fail-closed Railway listing-egress boundary.
+- [[cycle-38-research-queue-alias]] - neutral authenticated snapshot read alias with bounded dashboard loading and retry.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.

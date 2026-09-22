@@ -110,12 +110,14 @@ async function main() {
   fs.mkdirSync(syntheticLogDir, { recursive: true });
   let browserLaunches = 0;
 
-  fixtureApp.get('/api/dashboard/free-public-deal-board/latest', (req, res) => {
+  function latestSnapshotFixture(req, res) {
     res.json({
       ok: true, rows: [latestRow],
       manual_evidence_packet: service.latestManualEvidenceSnapshot({ market, rows: [latestRow] }, { today_iso: '2026-09-18' })
     });
-  });
+  }
+  fixtureApp.get('/api/dashboard/free-public-deal-board/latest', latestSnapshotFixture);
+  fixtureApp.get('/api/dashboard/research-queue/current', latestSnapshotFixture);
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: service.MAX_UPLOAD_BYTES } }).single('screenshot');
   fixtureApp.post('/api/dashboard/free-public-deal-board/manual-evidence/upload', upload, async (req, res) => {
     uploadCount += 1;

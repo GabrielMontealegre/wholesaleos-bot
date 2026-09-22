@@ -21,6 +21,7 @@ const callReadyPreviewService = require('./modules/research/call-ready-preview-s
 const selectedDealPacketService = require('./modules/research/selected-deal-packet-service');
 const freePublicDealBoardPreviewService = require('./modules/research/free-public-deal-board-preview-service');
 const dealBoardQueueService = require('./modules/research/deal-board-queue-service');
+const researchQueueReadRoute = require('./modules/research/research-queue-read-route');
 const manualEvidencePacketService = require('./modules/research/manual-evidence-packet-service');
 const marketDemandIndex = require('./modules/research/market-demand-index');
 const providerCapabilityAudit = require('./modules/research/provider-capability-audit');
@@ -2107,21 +2108,8 @@ app.post('/api/preview/free-public-deal-board', requireAdmin, async (req, res) =
   }
 });
 
-// Dashboard Deal Queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
-app.get('/api/dashboard/free-public-deal-board/latest', requireAdminOrAgent('deal_board:read'), (req, res) => {
-  try {
-    res.set('Cache-Control', 'no-store');
-    res.json(dealBoardQueueService.latestDealBoardSnapshot({
-      market: {
-        city: req.query.city || 'Dallas',
-        county: req.query.county || 'Dallas',
-        state: req.query.state || 'TX'
-      }
-    }));
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message, code: 'deal_board_snapshot_read_failed' });
-  }
-});
+// Dashboard research queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
+researchQueueReadRoute.registerResearchQueueReadRoutes(app, requireAdminOrAgent);
 
 app.get('/api/dashboard/market-demand-index', requireAdmin, (req, res) => {
   try {
