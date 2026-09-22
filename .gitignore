@@ -77,6 +77,7 @@ data/dashboard-pairing-state.json
 data/dashboard-pairing-state.json.*
 exports/cycle-30-comp-capture/
 exports/cycle-30-vision-preflight/
+!exports/cycle-41-local-proof.json
 exports/cycle-31-secure-launch/
 !exports/cycle-31-secure-launch/
 exports/cycle-31-secure-launch/*

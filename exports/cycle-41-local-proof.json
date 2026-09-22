@@ -1,0 +1,405 @@
+{
+  "data_kind": "CYCLE_41_SYNTHETIC_LOCAL_PROOF",
+  "synthetic_fixture_only": true,
+  "network_requests": 0,
+  "subject_address": "3808 Kings Dr, Ennis, TX 75119",
+  "resolution_chain": [
+    {
+      "step": "address_search",
+      "url": "http://127.0.0.1:4141/address-search/zillow",
+      "url_kind": "address_search",
+      "host": "127.0.0.1",
+      "http_status": 200,
+      "address_match": "EXACT",
+      "matched_card_text": "3808 Kings Dr, Ennis, TX 75119 Synthetic fixture"
+    },
+    {
+      "step": "property_detail",
+      "url": "http://127.0.0.1:4141/property-detail/3808-kings",
+      "url_kind": "property_detail",
+      "host": "127.0.0.1",
+      "http_status": 200,
+      "address_match": "EXACT",
+      "matched_card_text": "3808 Kings Dr, Ennis, TX 75119"
+    }
+  ],
+  "subject_proposal": {
+    "evidence_type": "subject_property",
+    "operator_confirmed": false,
+    "fields": {
+      "source_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+      "property_kind": "single family home",
+      "beds": "3",
+      "baths": "2",
+      "sqft": "1640",
+      "year_built": "2003",
+      "lot_size": "7,200 sqft",
+      "list_price": "$320,000"
+    },
+    "source_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+    "screenshot_id": "synthetic-subject-shot"
+  },
+  "sold_search": {
+    "url": "http://127.0.0.1:4141/sold/zillow",
+    "url_kind": "sold_search"
+  },
+  "sold_proposals": [
+    {
+      "evidence_type": "sold_comp",
+      "operator_confirmed": false,
+      "fields": {
+        "address": "3812 Kings Dr, Ennis, TX 75119",
+        "comp_address": "3812 Kings Dr, Ennis, TX 75119",
+        "sold_status": "sold",
+        "sold_price": 305000,
+        "sold_date": "June 10, 2026",
+        "beds": null,
+        "baths": null,
+        "sqft": null,
+        "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-1",
+        "evidence_text": "$305,000 sold June 10, 2026 3812 Kings Dr, Ennis, TX 75119",
+        "confidence": "Medium",
+        "risk_flags": [
+          "visible_page_text_extraction"
+        ]
+      },
+      "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-1",
+      "screenshot_id": "synthetic-shot-1",
+      "grid_verdict": {
+        "accepted": true,
+        "rejected_reason": null,
+        "criteria": [
+          {
+            "criterion": "market_sale_price",
+            "status": "APPLIED_PASS",
+            "reason": "sale_price_above_market_floor",
+            "subject_value": 5000,
+            "comp_value": 305000,
+            "threshold": ">=5000"
+          },
+          {
+            "criterion": "sold_recency",
+            "status": "APPLIED_PASS",
+            "reason": "sold_within_12_months",
+            "subject_value": "2025-09-22",
+            "comp_value": "2026-06-10",
+            "threshold": "sold within 12 months"
+          },
+          {
+            "criterion": "similarity_basis",
+            "status": "APPLIED_PASS",
+            "reason": "source_similarity_basis_present",
+            "subject_value": "single family",
+            "comp_value": "same single-family property type and living area",
+            "threshold": "at least one sourced similarity dimension"
+          },
+          {
+            "criterion": "provenance",
+            "status": "APPLIED_PASS",
+            "reason": "comp_provenance_present",
+            "subject_value": null,
+            "comp_value": "operator_supplied_screenshot",
+            "threshold": "accepted source kind plus exact source URL"
+          },
+          {
+            "criterion": "distance",
+            "status": "APPLIED_PASS",
+            "reason": "within_one_mile",
+            "subject_value": 0.039,
+            "comp_value": 0.039,
+            "threshold": "<=1 mile"
+          },
+          {
+            "criterion": "property_type",
+            "status": "APPLIED_PASS",
+            "reason": "same_property_type",
+            "subject_value": "single_family",
+            "comp_value": "single_family",
+            "threshold": "same normalized property type"
+          },
+          {
+            "criterion": "living_area",
+            "status": "APPLIED_PASS",
+            "reason": "living_area_within_20_percent",
+            "subject_value": 1640,
+            "comp_value": 1640,
+            "threshold": "+/-20%"
+          },
+          {
+            "criterion": "bedrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bedrooms_within_range",
+            "subject_value": 3,
+            "comp_value": 3,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "bathrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bathrooms_within_range",
+            "subject_value": 2,
+            "comp_value": 2,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "year_built",
+            "status": "APPLIED_PASS",
+            "reason": "year_built_similar",
+            "subject_value": 2003,
+            "comp_value": 2003,
+            "threshold": "difference <=15 years"
+          },
+          {
+            "criterion": "lot_size",
+            "status": "APPLIED_PASS",
+            "reason": "lot_size_similar",
+            "subject_value": 7200,
+            "comp_value": 7200,
+            "threshold": "+/-30%"
+          }
+        ]
+      }
+    },
+    {
+      "evidence_type": "sold_comp",
+      "operator_confirmed": false,
+      "fields": {
+        "address": "3820 Kings Dr, Ennis, TX 75119",
+        "comp_address": "3820 Kings Dr, Ennis, TX 75119",
+        "sold_status": "sold",
+        "sold_price": 299000,
+        "sold_date": "May 22, 2026",
+        "beds": null,
+        "baths": null,
+        "sqft": null,
+        "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-2",
+        "evidence_text": "$299,000 sold May 22, 2026 3820 Kings Dr, Ennis, TX 75119",
+        "confidence": "Medium",
+        "risk_flags": [
+          "visible_page_text_extraction"
+        ]
+      },
+      "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-2",
+      "screenshot_id": "synthetic-shot-2",
+      "grid_verdict": {
+        "accepted": true,
+        "rejected_reason": null,
+        "criteria": [
+          {
+            "criterion": "market_sale_price",
+            "status": "APPLIED_PASS",
+            "reason": "sale_price_above_market_floor",
+            "subject_value": 5000,
+            "comp_value": 299000,
+            "threshold": ">=5000"
+          },
+          {
+            "criterion": "sold_recency",
+            "status": "APPLIED_PASS",
+            "reason": "sold_within_12_months",
+            "subject_value": "2025-09-22",
+            "comp_value": "2026-05-22",
+            "threshold": "sold within 12 months"
+          },
+          {
+            "criterion": "similarity_basis",
+            "status": "APPLIED_PASS",
+            "reason": "source_similarity_basis_present",
+            "subject_value": "single family",
+            "comp_value": "same single-family property type and living area",
+            "threshold": "at least one sourced similarity dimension"
+          },
+          {
+            "criterion": "provenance",
+            "status": "APPLIED_PASS",
+            "reason": "comp_provenance_present",
+            "subject_value": null,
+            "comp_value": "operator_supplied_screenshot",
+            "threshold": "accepted source kind plus exact source URL"
+          },
+          {
+            "criterion": "distance",
+            "status": "APPLIED_PASS",
+            "reason": "within_one_mile",
+            "subject_value": 0.065,
+            "comp_value": 0.065,
+            "threshold": "<=1 mile"
+          },
+          {
+            "criterion": "property_type",
+            "status": "APPLIED_PASS",
+            "reason": "same_property_type",
+            "subject_value": "single_family",
+            "comp_value": "single_family",
+            "threshold": "same normalized property type"
+          },
+          {
+            "criterion": "living_area",
+            "status": "APPLIED_PASS",
+            "reason": "living_area_within_20_percent",
+            "subject_value": 1640,
+            "comp_value": 1640,
+            "threshold": "+/-20%"
+          },
+          {
+            "criterion": "bedrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bedrooms_within_range",
+            "subject_value": 3,
+            "comp_value": 3,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "bathrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bathrooms_within_range",
+            "subject_value": 2,
+            "comp_value": 2,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "year_built",
+            "status": "APPLIED_PASS",
+            "reason": "year_built_similar",
+            "subject_value": 2003,
+            "comp_value": 2003,
+            "threshold": "difference <=15 years"
+          },
+          {
+            "criterion": "lot_size",
+            "status": "APPLIED_PASS",
+            "reason": "lot_size_similar",
+            "subject_value": 7200,
+            "comp_value": 7200,
+            "threshold": "+/-30%"
+          }
+        ]
+      }
+    },
+    {
+      "evidence_type": "sold_comp",
+      "operator_confirmed": false,
+      "fields": {
+        "address": "3704 Kings Dr, Ennis, TX 75119",
+        "comp_address": "3704 Kings Dr, Ennis, TX 75119",
+        "sold_status": "sold",
+        "sold_price": 312000,
+        "sold_date": "April 18, 2026",
+        "beds": null,
+        "baths": null,
+        "sqft": null,
+        "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-3",
+        "evidence_text": "$312,000 sold April 18, 2026 3704 Kings Dr, Ennis, TX 75119",
+        "confidence": "Medium",
+        "risk_flags": [
+          "visible_page_text_extraction"
+        ]
+      },
+      "source_url": "http://127.0.0.1:4141/property-detail/3808-kings-comp-3",
+      "screenshot_id": "synthetic-shot-3",
+      "grid_verdict": {
+        "accepted": true,
+        "rejected_reason": null,
+        "criteria": [
+          {
+            "criterion": "market_sale_price",
+            "status": "APPLIED_PASS",
+            "reason": "sale_price_above_market_floor",
+            "subject_value": 5000,
+            "comp_value": 312000,
+            "threshold": ">=5000"
+          },
+          {
+            "criterion": "sold_recency",
+            "status": "APPLIED_PASS",
+            "reason": "sold_within_12_months",
+            "subject_value": "2025-09-22",
+            "comp_value": "2026-04-18",
+            "threshold": "sold within 12 months"
+          },
+          {
+            "criterion": "similarity_basis",
+            "status": "APPLIED_PASS",
+            "reason": "source_similarity_basis_present",
+            "subject_value": "single family",
+            "comp_value": "same single-family property type and living area",
+            "threshold": "at least one sourced similarity dimension"
+          },
+          {
+            "criterion": "provenance",
+            "status": "APPLIED_PASS",
+            "reason": "comp_provenance_present",
+            "subject_value": null,
+            "comp_value": "operator_supplied_screenshot",
+            "threshold": "accepted source kind plus exact source URL"
+          },
+          {
+            "criterion": "distance",
+            "status": "APPLIED_PASS",
+            "reason": "within_one_mile",
+            "subject_value": 0.051,
+            "comp_value": 0.051,
+            "threshold": "<=1 mile"
+          },
+          {
+            "criterion": "property_type",
+            "status": "APPLIED_PASS",
+            "reason": "same_property_type",
+            "subject_value": "single_family",
+            "comp_value": "single_family",
+            "threshold": "same normalized property type"
+          },
+          {
+            "criterion": "living_area",
+            "status": "APPLIED_PASS",
+            "reason": "living_area_within_20_percent",
+            "subject_value": 1640,
+            "comp_value": 1640,
+            "threshold": "+/-20%"
+          },
+          {
+            "criterion": "bedrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bedrooms_within_range",
+            "subject_value": 3,
+            "comp_value": 3,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "bathrooms",
+            "status": "APPLIED_PASS",
+            "reason": "bathrooms_within_range",
+            "subject_value": 2,
+            "comp_value": 2,
+            "threshold": "difference <=1"
+          },
+          {
+            "criterion": "year_built",
+            "status": "APPLIED_PASS",
+            "reason": "year_built_similar",
+            "subject_value": 2003,
+            "comp_value": 2003,
+            "threshold": "difference <=15 years"
+          },
+          {
+            "criterion": "lot_size",
+            "status": "APPLIED_PASS",
+            "reason": "lot_size_similar",
+            "subject_value": 7200,
+            "comp_value": 7200,
+            "threshold": "+/-30%"
+          }
+        ]
+      }
+    }
+  ],
+  "proposal_count": 4,
+  "confirmed_count": 0,
+  "arv_status_before": "ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED",
+  "arv_status_after": "ARV_LOCKED_NON_DISCLOSURE_STATE_MLS_REQUIRED",
+  "ready_to_offer": "NO",
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "not_a_saved_lead": true
+}
