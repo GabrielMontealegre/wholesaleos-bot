@@ -73,7 +73,7 @@ function listen(server) {
     assert.ok(!agentSource.includes('x-user-id'));
     assert.ok(!/\bpin\b/i.test(agentSource), 'agent never reads a PIN');
     assert.ok(helperSource.includes("server.listen(port, host"), 'launcher binds the helper through the loopback host constant');
-    assert.ok(dashboardSource.includes('class="wos-helper-capture" disabled'), 'capture starts disabled while helper status is unknown or absent');
+    assert.ok(/class="wos-helper-capture"[^>]*\sdisabled(?:\s|>)/.test(dashboardSource), 'capture starts disabled while helper status is unknown or absent');
     assert.ok(!/refreshLocalHelperStatus[\s\S]{0,800}helper\/capture/.test(dashboardSource), 'passive status polling does not call capture');
   } finally {
     await new Promise((resolve) => server.close(resolve));

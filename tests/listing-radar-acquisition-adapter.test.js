@@ -76,6 +76,7 @@ function htmlResponse(status, html, finalUrl) {
     const successPage = await radar.fetchListingPageEvidence(
       'https://www.zillow.com/homedetails/123-Main-St-Dallas-TX-75208/123456_zpid/',
       {
+        env: { WOS_ENABLE_LEGACY_LISTING_FETCH: 'true' },
         page_fetch_impl: async () => htmlResponse(200, '<title>123 Main St Dallas TX 75208</title><body>$199,000 3 beds 2 baths 1,420 sqft For sale. Cash only fixer, needs TLC. Listed by Jane Agent.</body>')
       }
     );
@@ -89,7 +90,7 @@ function htmlResponse(status, html, finalUrl) {
 
     const blockedPage = await radar.fetchListingPageEvidence(
       'https://www.zillow.com/homedetails/321-Pine-St-Dallas-TX-75208/999_zpid/',
-      { page_fetch_impl: async () => htmlResponse(403, '') }
+      { env: { WOS_ENABLE_LEGACY_LISTING_FETCH: 'true' }, page_fetch_impl: async () => htmlResponse(403, '') }
     );
     assert.strictEqual(blockedPage.blocked, true);
     assert.strictEqual(blockedPage.blocked_reason, 'http_403');
@@ -108,6 +109,7 @@ function htmlResponse(status, html, finalUrl) {
         max_results: 10
       }],
       env: {
+        WOS_ENABLE_LEGACY_LISTING_FETCH: 'true',
         NODE_ENV: 'test',
         ENABLE_SEARCH_PROVIDER: 'true',
         SEARCH_PROVIDER: 'mock'

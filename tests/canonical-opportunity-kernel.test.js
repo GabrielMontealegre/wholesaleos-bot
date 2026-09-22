@@ -4,6 +4,9 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const previousLegacyListingFetch = process.env.WOS_ENABLE_LEGACY_LISTING_FETCH;
+process.env.WOS_ENABLE_LEGACY_LISTING_FETCH = 'true';
 const Module = require('module');
 
 const originalLoad = Module._load;
@@ -223,6 +226,8 @@ function mockResponse(body, url) {
 
     console.log('canonical opportunity kernel tests passed');
   } finally {
+    if (previousLegacyListingFetch === undefined) delete process.env.WOS_ENABLE_LEGACY_LISTING_FETCH;
+    else process.env.WOS_ENABLE_LEGACY_LISTING_FETCH = previousLegacyListingFetch;
     Module._load = originalLoad;
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

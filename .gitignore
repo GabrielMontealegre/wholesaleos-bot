@@ -1,5 +1,7 @@
 node_modules/
 exports/*
+!exports/cycle-37-egress-proof.json
+!exports/cycle-37-local-proof.json
 !exports/cycle3-jefferson-al-gate/
 exports/cycle3-jefferson-al-gate/*
 !exports/cycle3-jefferson-al-gate/*.json

@@ -65,5 +65,5 @@ const closed = service.evaluatePacket({}, { ...callable, contact_workflow_outcom
 assert.strictEqual(closed.ready_to_offer.status, 'NO');
 assert(closed.ready_to_offer.reason.includes('closed'));
 const ui = fs.readFileSync(path.resolve(__dirname, '../dashboard/wos-public-deals.js'), 'utf8');
-for (const label of ['Can contact', 'Can value', 'Ready to offer', 'Source event date:', 'Last checked:']) assert(ui.includes(label));
+for (const label of ['Can contact', 'Can value', 'Ready to offer', 'Sale/event date:', 'Last checked:']) assert(ui.includes(label));
 console.log('evidence packet throughput: real source identity, unrelated-address exclusion, independent readiness and immutability passed');

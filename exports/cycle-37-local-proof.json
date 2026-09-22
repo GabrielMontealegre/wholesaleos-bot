@@ -1,0 +1,316 @@
+{
+  "generated_at": "2026-09-22T11:26:47.320Z",
+  "fixture": "3808 Kings Dr, Ennis, TX 75119",
+  "network_requests_made": 0,
+  "browser_launched": false,
+  "saved_leads_mutated": false,
+  "steps": [
+    {
+      "label": "baseline",
+      "confirmed_subject_field_count": 0,
+      "subject_grid_readiness": {
+        "ready": false,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "property_type",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": [
+          "year_built",
+          "lot_size",
+          "property_type"
+        ]
+      },
+      "confirmed_strict_comp_count": 0,
+      "property_state": "NEEDS_COMPS",
+      "contact_state": "LOCKED",
+      "can_value": "NO",
+      "ready_to_offer": "NO",
+      "arv_range": null,
+      "comp_addresses": [],
+      "contact_route_count": 0
+    },
+    {
+      "label": "subject facts proposed but unconfirmed",
+      "confirmed_subject_field_count": 0,
+      "subject_grid_readiness": {
+        "ready": false,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "property_type",
+            "status": "MISSING"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": [
+          "year_built",
+          "lot_size",
+          "property_type"
+        ]
+      },
+      "confirmed_strict_comp_count": 0,
+      "property_state": "NEEDS_COMPS",
+      "contact_state": "LOCKED",
+      "can_value": "NO",
+      "ready_to_offer": "NO",
+      "arv_range": null,
+      "comp_addresses": [],
+      "contact_route_count": 0
+    },
+    {
+      "label": "subject facts confirmed",
+      "confirmed_subject_field_count": 3,
+      "subject_grid_readiness": {
+        "ready": true,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "READY"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "READY"
+          },
+          {
+            "attribute": "property_type",
+            "status": "READY"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": []
+      },
+      "confirmed_strict_comp_count": 0,
+      "property_state": "NEEDS_COMPS",
+      "contact_state": "LOCKED",
+      "can_value": "NO",
+      "ready_to_offer": "NO",
+      "arv_range": null,
+      "comp_addresses": [],
+      "contact_route_count": 0
+    },
+    {
+      "label": "one comp confirmed",
+      "confirmed_subject_field_count": 3,
+      "subject_grid_readiness": {
+        "ready": true,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "READY"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "READY"
+          },
+          {
+            "attribute": "property_type",
+            "status": "READY"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": []
+      },
+      "confirmed_strict_comp_count": 1,
+      "property_state": "NEEDS_COMPS",
+      "contact_state": "LOCKED",
+      "can_value": "NO",
+      "ready_to_offer": "NO",
+      "arv_range": null,
+      "comp_addresses": [
+        "3812 Kings Dr, Ennis, TX 75119"
+      ],
+      "contact_route_count": 0
+    },
+    {
+      "label": "two comps confirmed",
+      "confirmed_subject_field_count": 3,
+      "subject_grid_readiness": {
+        "ready": true,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "READY"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "READY"
+          },
+          {
+            "attribute": "property_type",
+            "status": "READY"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": []
+      },
+      "confirmed_strict_comp_count": 2,
+      "property_state": "NEEDS_COMPS",
+      "contact_state": "LOCKED",
+      "can_value": "NO",
+      "ready_to_offer": "NO",
+      "arv_range": null,
+      "comp_addresses": [
+        "3812 Kings Dr, Ennis, TX 75119",
+        "3814 Kings Dr, Ennis, TX 75119"
+      ],
+      "contact_route_count": 0
+    },
+    {
+      "label": "three comps confirmed",
+      "confirmed_subject_field_count": 3,
+      "subject_grid_readiness": {
+        "ready": true,
+        "attributes": [
+          {
+            "attribute": "living_area",
+            "status": "READY"
+          },
+          {
+            "attribute": "bedrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "bathrooms",
+            "status": "READY"
+          },
+          {
+            "attribute": "year_built",
+            "status": "READY"
+          },
+          {
+            "attribute": "lot_size",
+            "status": "READY"
+          },
+          {
+            "attribute": "property_type",
+            "status": "READY"
+          },
+          {
+            "attribute": "coordinates",
+            "status": "READY"
+          }
+        ],
+        "missing": []
+      },
+      "confirmed_strict_comp_count": 3,
+      "property_state": "PROPERTY_READY",
+      "contact_state": "LOCKED",
+      "can_value": "YES",
+      "ready_to_offer": "NO",
+      "arv_range": {
+        "low": 220000,
+        "high": 240000,
+        "median": 230000,
+        "count": 3,
+        "basis": "operator_supplied_screenshot",
+        "label": "Preliminary ARV range from operator-confirmed screenshot sold comps. Review before any offer."
+      },
+      "comp_addresses": [
+        "3812 Kings Dr, Ennis, TX 75119",
+        "3814 Kings Dr, Ennis, TX 75119",
+        "3816 Kings Dr, Ennis, TX 75119"
+      ],
+      "contact_route_count": 0
+    }
+  ],
+  "final_assertion": {
+    "transition": "NEEDS_COMPS -> PROPERTY_READY",
+    "property_state": "PROPERTY_READY",
+    "contact_state": "LOCKED",
+    "contact_route_count": 0,
+    "ready_to_offer": "NO"
+  }
+}

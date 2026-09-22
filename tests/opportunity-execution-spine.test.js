@@ -177,10 +177,10 @@ function mockResponse(body, url) {
     });
     assert.strictEqual(preview.packet_count, 1);
     assert.strictEqual(preview.opportunity_count, 1);
-    assert.strictEqual(preview.opportunities[0].stage, opportunitySpine.OPPORTUNITY_STAGES.CONTACT_READY);
+    assert.strictEqual(preview.opportunities[0].stage, opportunitySpine.OPPORTUNITY_STAGES.IDENTITY_READY);
     assert.strictEqual(preview.item_results[0].opportunity_id, preview.opportunities[0].opportunity_id);
-    assert.strictEqual(preview.item_results[0].next_action, opportunitySpine.OPPORTUNITY_TASKS.CALL_SELLER);
-    assert.strictEqual(preview.diagnostics.opportunity_stage_counts.CONTACT_READY, 1);
+    assert.strictEqual(preview.item_results[0].next_action, opportunitySpine.OPPORTUNITY_TASKS.VERIFY_MOTIVATION_EVIDENCE);
+    assert.strictEqual(preview.diagnostics.opportunity_stage_counts.IDENTITY_READY, 1);
 
     for (const opportunity of [
       callOpportunity,

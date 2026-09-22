@@ -27,6 +27,7 @@ const providerCapabilityAudit = require('./modules/research/provider-capability-
 const dashboardAuth = require('./modules/security/dashboard-auth');
 const dashboardSession = require('./modules/security/dashboard-session');
 const dashboardPairing = require('./modules/security/dashboard-pairing');
+const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
 const app  = express();
@@ -35,8 +36,40 @@ app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 8080;
 const ENABLE_BACKGROUND_INGESTION = /^(1|true|yes|on)$/i.test(String(process.env.WOS_ENABLE_BACKGROUND_INGESTION || ''));
+const LEGACY_LISTING_FETCH_ROUTES = Object.freeze([
+  'GET /api/leads/:id/comps',
+  'POST /api/leads/reanalyze',
+  'POST /api/leads/:id/analyze',
+  'GET /api/property/intel/:leadId',
+  'POST /api/scraper/deals',
+  'POST /api/leads/:id/enrich',
+  'POST /api/courthouse/scrape',
+  'POST /api/datasources/run-all',
+  'POST /api/datasources/:source'
+]);
 if (!ENABLE_BACKGROUND_INGESTION) {
   logger.info('Background ingestion disabled by WOS_ENABLE_BACKGROUND_INGESTION=false');
+}
+logger.info({
+  event: 'legacy_listing_fetch_routes',
+  enabled: listingEgressGuard.legacyListingFetchEnabled(process.env),
+  routes: LEGACY_LISTING_FETCH_ROUTES
+});
+
+function allowLegacyListingRoute(routeName, res) {
+  try {
+    listingEgressGuard.assertLegacyListingFetchAllowed(routeName, process.env);
+    return true;
+  } catch (error) {
+    if (!error || error.code !== 'LEGACY_LISTING_FETCH_DISABLED') throw error;
+    res.status(503).json({
+      ok: false,
+      code: error.code,
+      route: routeName,
+      message: 'Server-side listing fetches are disabled. Use the local helper.'
+    });
+    return false;
+  }
 }
 
 process.on('uncaughtException', function(err) {
@@ -2206,6 +2239,19 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/comp-confirmatio
   }
 });
 
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/subject-fact-confirmation', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(manualEvidencePacketService.recordSubjectFactConfirmation(Object.assign({}, req.body || {}, {
+      market: manualEvidenceMarket(req.body)
+    }), {
+      operator_id: req.currentUser.id
+    }));
+  } catch (error) {
+    manualEvidenceError(res, error);
+  }
+});
+
 // Explicit operator input on preview snapshot rows. This never creates or
 // updates a saved lead and never runs automatically.
 app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin, (req, res) => {
@@ -3464,6 +3510,7 @@ app.post('/api/gmail/reply', async (req, res) => {
 
 // Ã¢ÂÂÃ¢ÂÂ Property Intelligence Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/property/intel/:leadId', async (req, res) => {
+  if (!allowLegacyListingRoute('GET /api/property/intel/:leadId', res)) return;
   try {
     const lead = db.getLeads().find(l => l.id === req.params.leadId);
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
@@ -3644,6 +3691,7 @@ app.post('/api/scraper/buyers', async (req, res) => {
 
 // Trigger deal scrape manually
 app.post('/api/scraper/deals', async (req, res) => {
+  if (!allowLegacyListingRoute('POST /api/scraper/deals', res)) return;
   try {
     const customMarkets = req.body.markets;
     const markets = Array.isArray(customMarkets) && customMarkets.length > 0
@@ -3724,6 +3772,7 @@ app.post('/api/review-queue/:id/skip', (req, res) => {
 
 // Enrich a single existing lead on demand
 app.post('/api/leads/:id/enrich', async (req, res) => {
+  if (!allowLegacyListingRoute('POST /api/leads/:id/enrich', res)) return;
   try {
     const lead = db.getLeads().find(l => l.id === req.params.id);
     if (!lead) return res.json({ ok: false, error: 'Lead not found' });
@@ -3946,6 +3995,7 @@ app.post('/api/import/propwire', express.text({ limit: '100mb', type: '*/*' }), 
 
 // Run all free data sources
 app.post('/api/datasources/run-all', async (req, res) => {
+  if (!allowLegacyListingRoute('POST /api/datasources/run-all', res)) return;
   try {
     const states = req.body.states || null;
     res.json({ ok: true, message: 'All free data sources started. Check Review Queue and Buyers in 5-10 minutes.' });
@@ -3983,6 +4033,7 @@ app.post('/api/datasources/run-all', async (req, res) => {
 
 // Run specific source
 app.post('/api/datasources/:source', async (req, res) => {
+  if (!allowLegacyListingRoute('POST /api/datasources/:source', res)) return;
   try {
     const { source } = req.params;
     const states = req.body.states || null;
@@ -5888,6 +5939,7 @@ app.post('/api/leads/delete-batch', function(req, res) {
 });
 // Alias: /api/leads/delete-bulk (same as delete-batch, matches dashboard bulkDelete() call)
 app.get('/api/leads/:id/comps', function(req, res) {
+  if (!allowLegacyListingRoute('GET /api/leads/:id/comps', res)) return;
   var agent = getCompAgent();
   if (!agent) return res.status(503).json({ error: 'comp-agent unavailable' });
   agent.fetchCompsForLead(req.params.id)
@@ -6002,37 +6054,6 @@ if (ENABLE_BACKGROUND_INGESTION) {
 }
 
 
-// DEBUG: test comp scraper
-app.get('/api/debug/comp-test', async function(req,res){
-  var address=req.query.address||'6901 S Oglesby Ave';
-  var city=req.query.city||'Chicago';
-  var state=req.query.state||'IL';
-  var errors=[];
-  var redfinResult=null;
-  var zillowResult=null;
-  var skipResult=null;
-  try{
-    var axios=require('axios');
-    var H={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36','Accept':'text/html,*/*;q=0.9','Accept-Language':'en-US,en;q=0.9'};
-    // Test Redfin stingray
-    try{
-      var rfUrl='https://www.redfin.com/stingray/do/location-autocomplete?location='+encodeURIComponent(address+', '+city+', '+state)+'&v=2';
-      var rfRes=await axios.get(rfUrl,{headers:H,timeout:10000});
-      redfinResult={status:rfRes.status,len:rfRes.data.length,preview:rfRes.data.toString().slice(0,200)};
-    }catch(e){errors.push('Redfin: '+e.message);}
-    // Test Zillow search
-    try{
-      var zUrl='https://www.zillow.com/search/GetSearchPageState.htm?searchQueryState='+encodeURIComponent(JSON.stringify({usersSearchTerm:address+' '+city+' '+state,isMapVisible:false,filterState:{isRecentlySold:{value:true}}}))+'&wants={"cat1":["listResults"]}';
-      var zRes=await axios.get(zUrl,{headers:H,timeout:10000});
-      zillowResult={status:zRes.status,len:zRes.data.length,preview:JSON.stringify(zRes.data).slice(0,200)};
-    }catch(e){errors.push('Zillow: '+e.message);}
-    // Test TruePeopleSearch
-    try{
-      var tpsUrl='https://www.truepeoplesearch.com/results?streetaddress='+encodeURIComponent(address)+'&citystatezip='+encodeURIComponent(city+' '+state);
-      var tpsRes=await axios.get(tpsUrl,{headers:H,timeout:10000});
-      skipResult={status:tpsRes.status,len:tpsRes.data.length,preview:tpsRes.data.slice(0,300)};
-    }catch(e){errors.push('TPS: '+e.message);}
- 
 // ── ArcGIS Sources API ────────────────────────────────────────────────────
 // POST /api/leads/run-arcgis — trigger ArcGIS sources manually
 app.post('/api/leads/run-arcgis', function(req, res) {
@@ -6042,10 +6063,6 @@ app.post('/api/leads/run-arcgis', function(req, res) {
   arcgis.runArcGISSources()
     .then(function(r) { res.json({ ok: true, total: r.total, added: r.added }); })
     .catch(function(e) { res.status(500).json({ error: e.message }); });
-});
-
- }catch(e){errors.push('General: '+e.message);}
-  res.json({errors,redfinResult,zillowResult,skipResult});
 });
 
 
@@ -6082,6 +6099,7 @@ app.post('/api/leads/fetch-now', requireAdmin, async function(req, res) {
 
 // POST /api/courthouse/scrape — on-demand courthouse scrape
 app.post('/api/courthouse/scrape', function(req, res) {
+  if (!allowLegacyListingRoute('POST /api/courthouse/scrape', res)) return;
   var limit = parseInt(req.body && req.body.limit) || 30;
   var scraper;
   try { scraper = require('./courthouse-addon/scraper'); }
@@ -6203,6 +6221,7 @@ app.get('/api/leads/sources', function(req, res) {
 
   // POST /api/leads/reanalyze — on-demand full reanalysis
   app.post('/api/leads/reanalyze', async function(req, res) {
+  if (!allowLegacyListingRoute('POST /api/leads/reanalyze', res)) return;
   var body = req.body || {};
   var maxLeads = Math.min(parseInt(body.max || 200), 1000);
   var force = !!body.force;
@@ -6217,6 +6236,7 @@ app.get('/api/leads/sources', function(req, res) {
 
   // POST /api/leads/:id/analyze — analyze single lead
   app.post('/api/leads/:id/analyze', async function(req, res) {
+    if (!allowLegacyListingRoute('POST /api/leads/:id/analyze', res)) return;
     try {
       var lead = db.getLead ? db.getLead(req.params.id) : null;
       if (!lead) return res.status(404).json({ ok: false, error: 'Lead not found' });

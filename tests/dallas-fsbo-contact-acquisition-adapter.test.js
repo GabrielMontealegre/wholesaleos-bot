@@ -113,6 +113,7 @@ function mockPage(body, url) {
     county: 'Dallas',
     state: 'TX',
     env: {
+      WOS_ENABLE_LEGACY_LISTING_FETCH: 'true',
       ENABLE_SEARCH_PROVIDER: 'true',
       SEARCH_PROVIDER: 'mock',
       SEARCH_PROVIDER_MAX_RESULTS: '10'
@@ -157,6 +158,7 @@ function mockPage(body, url) {
     source_families: ['fsbo']
   }, {
     env: {
+      WOS_ENABLE_LEGACY_LISTING_FETCH: 'true',
       ENABLE_SEARCH_PROVIDER: 'true',
       SEARCH_PROVIDER: 'mock',
       SEARCH_PROVIDER_MAX_RESULTS: '10'
@@ -167,7 +169,7 @@ function mockPage(body, url) {
   });
   assert.strictEqual(core.status, 'available');
   assert.strictEqual(core.call_ready_packet_count, 2);
-  assert.ok(core.call_ready_packets.some((packet) => packet.packet_status === 'CALL_READY'));
+  assert.ok(core.call_ready_packets.every((packet) => !/^(CALL_READY|OUTREACH_READY)$/.test(packet.packet_status)), 'snippet-only rows never claim a verified contact route');
   assert.strictEqual(core.preview_only, true);
   assert.strictEqual(core.should_ingest, false);
 

@@ -7,8 +7,9 @@ if exist "%CURSOR_NODE%" (
 ) else (
   set "WOS_NODE=node"
 )
-"%WOS_NODE%" "%~dp0wos-local-helper.js" --print-config-directory
+"%WOS_NODE%" "%~dp0wos-local-helper.js" --doctor
 if errorlevel 1 goto helper_failed
+echo.
 "%WOS_NODE%" "%~dp0wos-local-helper.js"
 if errorlevel 1 goto helper_failed
 exit /b 0

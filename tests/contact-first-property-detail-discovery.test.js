@@ -174,6 +174,7 @@ function mockPage(body, url) {
       search_mode: 'contact_first_acquisition'
     }, {
       env: {
+        WOS_ENABLE_LEGACY_LISTING_FETCH: 'true',
         ENABLE_SEARCH_PROVIDER: 'true',
         SEARCH_PROVIDER: 'serper',
         SERPER_API_KEY: 'super_secret_serper_key_that_must_not_leak',
@@ -199,6 +200,7 @@ function mockPage(body, url) {
       county: 'Dallas',
       state: 'TX',
       env: {
+        WOS_ENABLE_LEGACY_LISTING_FETCH: 'true',
         ENABLE_SEARCH_PROVIDER: 'true',
         SEARCH_PROVIDER: 'serper',
         SERPER_API_KEY: 'super_secret_serper_key_that_must_not_leak',

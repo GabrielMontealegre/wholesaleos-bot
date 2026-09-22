@@ -31,6 +31,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-34-first-real-comp-proposals]] - sequential local Zillow, Redfin, and Realtor.com sold-card proposals with precise per-source diagnostics and unchanged confirmation/value gates.
 - [[cycle-11-property-leverage-lane]] - independent property and contact states plus a provenance-gated leverage dossier and equity clue.
 - [[cycle-13-manual-value-source-unlock]] - Cycle 36 manual screenshot comp confirmation, strict-grid counts, and operator-visible leverage dossier.
+- [[cycle-37-single-property-dossier]] - 3808 Kings Drive property dossier and fail-closed Railway listing-egress boundary.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.

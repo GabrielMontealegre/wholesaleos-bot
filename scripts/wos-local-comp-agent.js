@@ -98,6 +98,8 @@ function safeRowAddress(row) { return clean(row && row.normalized_address); }
 
 function selectRow(rows, packetItems, input) {
   const matches = rows.filter((row) => {
+    const lifecycle = row && row.lifecycle_status && typeof row.lifecycle_status === 'object' ? row.lifecycle_status : {};
+    if (lifecycle.quarantined === true || row && row.quarantined === true) return false;
     if (input.queue_key) return clean(row.queue_key) === clean(input.queue_key);
     return compEvidence.addressKey(safeRowAddress(row)) === compEvidence.addressKey(input.address);
   });
@@ -196,6 +198,7 @@ function acquireRunLock(file = RUN_LOCK) {
 function cleanRunLog(value) {
   return {
     data_kind: 'OPERATOR_LOCAL_CAPTURE_RUN',
+    mode: value.mode || 'sold_comps',
     started_at: value.started_at,
     completed_at: value.completed_at,
     elapsed_ms: value.elapsed_ms,
@@ -393,6 +396,11 @@ function nextPageUrl(page, site) {
 }
 
 async function uploadImage({ fetchImpl, dashboard, agentToken, market, row, sourceName, sourceUrl, type, buffer, filename }) {
+  const items = await uploadImageDetailed({ fetchImpl, dashboard, agentToken, market, row, sourceName, sourceUrl, type, buffer, filename });
+  return items.length;
+}
+
+async function uploadImageDetailed({ fetchImpl, dashboard, agentToken, market, row, sourceName, sourceUrl, type, buffer, filename }) {
   const captureMs = Math.max(Date.now(), lastUploadCaptureMs + 1);
   lastUploadCaptureMs = captureMs;
   const capturedAt = new Date(captureMs).toISOString();
@@ -419,7 +427,50 @@ async function uploadImage({ fetchImpl, dashboard, agentToken, market, row, sour
     .map((shot) => clean(shot.screenshot_id)).filter(Boolean));
   const newEvidenceItems = (Array.isArray(evidenceItems) ? evidenceItems : []).filter((item) => newScreenshotIds.has(clean(item.screenshot_id)));
   if (!newEvidenceItems.length || newEvidenceItems.some((item) => item.operator_confirmed !== false)) throw new Error('upload_response_must_remain_unconfirmed_proposals');
-  return newEvidenceItems.length;
+  return newEvidenceItems;
+}
+
+function subjectFactsFromVisibleText(text, sourceUrl) {
+  const source = clean(text);
+  const fields = { source_url: clean(sourceUrl) };
+  const propertyKind = source.match(/\b(single[- ]family(?: home| residence)?|townhouse|townhome|condo(?:minium)?|duplex|triplex|fourplex|multi[- ]family|manufactured home|mobile home)\b/i);
+  const beds = source.match(/\b(\d+(?:\.\d+)?)\s*(?:beds?|bds?|bedrooms?)\b/i);
+  const baths = source.match(/\b(\d+(?:\.\d+)?)\s*(?:baths?|bas?|bathrooms?)\b/i);
+  const sqft = source.match(/\b([\d,]{3,8})\s*(?:sq\.?\s*ft\.?|sqft|square feet)\b/i);
+  const yearBuilt = source.match(/\b(?:year\s+built|built\s+in|built)\s*:?\s*((?:18|19|20)\d{2})\b/i);
+  const lotSize = source.match(/\blot(?:\s+size)?\s*:?\s*([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\b/i);
+  const latitude = source.match(/\blat(?:itude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
+  const longitude = source.match(/\blon(?:gitude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
+  const listPrice = source.match(/(?:list|asking)\s+price[^$\d]{0,20}(\$[\d,]+)/i);
+  if (propertyKind) fields.property_kind = clean(propertyKind[1]).toLowerCase();
+  if (beds) fields.beds = clean(beds[1]);
+  if (baths) fields.baths = clean(baths[1]);
+  if (sqft) fields.sqft = clean(sqft[1]).replace(/,/g, '');
+  if (yearBuilt) fields.year_built = clean(yearBuilt[1]);
+  if (lotSize) fields.lot_size = `${clean(lotSize[1])} ${clean(lotSize[2]).toLowerCase()}`;
+  if (latitude) fields.latitude = clean(latitude[1]);
+  if (longitude) fields.longitude = clean(longitude[1]);
+  if (listPrice) fields.list_price = clean(listPrice[1]);
+  return fields;
+}
+
+async function recordSubjectProposalFields({ fetchImpl, dashboard, agentToken, market, row, evidenceId, fields }) {
+  const response = await fetchImpl(`${dashboard}/api/dashboard/free-public-deal-board/manual-evidence/proposal`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${agentToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ market, queue_key: clean(row.queue_key), evidence_id: evidenceId, operator_confirmed: false, fields })
+  });
+  let body;
+  try { body = await response.json(); } catch (_) { body = null; }
+  if (response.status === 401) throw Object.assign(new Error('Helper pairing expired. Pair the helper again from the dashboard.'), { code: 'helper_pairing_expired' });
+  if (!response.ok || !body || body.ok !== true) throw new Error(`proposal_failed_http_${response.status || 0}:${clean(body && (body.code || body.error) || 'invalid_response')}`);
+  if (body.preview_only !== true || body.should_ingest !== false || body.no_global_mutation !== true) throw new Error('proposal_response_safety_invariant_failed');
+  const items = body.manual_evidence_item && body.manual_evidence_item.packet && body.manual_evidence_item.packet.evidence_items;
+  const item = (Array.isArray(items) ? items : []).find((entry) => clean(entry && entry.evidence_id) === clean(evidenceId));
+  if (!item || item.operator_confirmed !== false || item.operator_confirmation && item.operator_confirmation.confirmed === true) {
+    throw new Error('subject_proposal_must_remain_unconfirmed');
+  }
+  return item;
 }
 
 async function recognizeLocal(buffer, options, kind) {
@@ -434,10 +485,11 @@ async function runCapture(input = {}, options = {}) {
   const fetchImpl = options.fetch_impl || global.fetch;
   const started = now();
   const run = {
-    started_at: new Date(started).toISOString(), subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
+    started_at: new Date(started).toISOString(), mode: clean(input.mode || 'sold_comps'), subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
     pages_visited: 0, hosts_visited: [], captures_submitted: 0, discards: [], block_events: [], source_results: [],
     screenshots: 0, proposals: 0, outcome: 'started'
   };
+  if (!['sold_comps', 'subject_facts'].includes(run.mode)) throw new Error('capture_mode_invalid');
   const site = clean(input.site || 'zillow').toLowerCase();
   if (!SITE_HOSTS[site]) throw new Error('listing_site_not_allowed');
   if (!input.market || !input.agent_token || !input.dashboard_url) throw new Error('market_dashboard_and_agent_session_required');
@@ -496,7 +548,54 @@ async function runCapture(input = {}, options = {}) {
     let blockedSources = 0;
     const minimumProposals = Math.max(3, Number(options.minimum_proposals) || 3);
     const uploadedAddresses = new Set();
-    for (const currentSite of sites) {
+    if (run.mode === 'subject_facts') {
+      const target = sourceUrlFor(row, site, options);
+      if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
+        run.discards.push({ reason: 'pages_per_hour_limit_30' });
+      } else {
+        run.pages_visited = 1;
+        run.hosts_visited.push(new URL(target).hostname);
+        let response;
+        try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
+        catch (error) { run.discards.push({ host: new URL(target).hostname, reason: 'NAVIGATION_FAILED', detail: safeFailureReason(error) }); }
+        if (response) {
+          const classification = await pageClassification(page, response.status(), site, target, options, market.state);
+          if (classification.type === 'blocked' || classification.type === 'unknown') {
+            run.block_events.push({ host: new URL(target).hostname, reason: classification.reason || classification.type });
+            run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
+          } else if (classification.type !== 'property_detail') {
+            run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_PROPERTY_DETAIL_REQUIRED' });
+            run.outcome = 'WRONG_PAGE_TYPE';
+          } else {
+            const region = await page.locator('main').count().catch(() => 0) ? page.locator('main').first() : page.locator('body');
+            const buffer = await region.screenshot({ type: 'png' });
+            shots = 1;
+            run.screenshots = 1;
+            if (typeof options.on_capture_impl === 'function') options.on_capture_impl(buffer, { kind: 'subject_property', host: new URL(target).hostname, index: 1 });
+            let ocrText = '';
+            try { ocrText = await recognizeLocal(buffer, options, 'subject_property'); }
+            catch (_) { /* Missing OCR remains an honest no-proposal result. */ }
+            const fields = subjectFactsFromVisibleText(ocrText, target);
+            const proposedNames = Object.keys(fields).filter((name) => name !== 'source_url');
+            if (!proposedNames.length) {
+              run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_FACTS_NOT_VISIBLE' });
+              run.outcome = 'NO_SUBJECT_FACTS_VISIBLE';
+            } else {
+              const items = await uploadImageDetailed({
+                fetchImpl, dashboard, agentToken, market, row, sourceName: SITE_HOSTS[site], sourceUrl: target,
+                type: 'subject_property', buffer, filename: 'subject-property.png'
+              });
+              if (items.length !== 1) throw new Error('subject_capture_must_create_one_proposal');
+              await recordSubjectProposalFields({ fetchImpl, dashboard, agentToken, market, row, evidenceId: items[0].evidence_id, fields });
+              run.captures_submitted = 1;
+              run.active_listing_context_captures = 1;
+              run.proposals = 1;
+              run.outcome = 'SUBJECT_FACT_PROPOSAL_CREATED';
+            }
+          }
+        }
+      }
+    } else for (const currentSite of sites) {
       let target = '';
       try { target = soldResultsUrlFor(row, currentSite, options); }
       catch (error) {
@@ -651,7 +750,7 @@ async function main(argv = process.argv.slice(2)) {
   try {
     const result = await runCapture({
       market: args.market, queue_key: args.queue_key, address: args.address,
-      site: args.site, dashboard_url: args.dashboard_url || config.dashboard_url, agent_token: config.agent_token
+      site: args.site, mode: args.mode, dashboard_url: args.dashboard_url || config.dashboard_url, agent_token: config.agent_token
     });
     console.log(JSON.stringify({ run: result.run, log_path: result.log_path }, null, 2));
     return result.run.outcome === 'address_not_complete_source_supported' ? 2 : 0;
@@ -669,5 +768,6 @@ module.exports = {
   SITE_HOSTS, SOURCE_ORDER, SOURCE_SELECTORS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
   selectRow, sourceUrlFor, soldResultsUrlFor, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog,
   safeFailureReason, configPath, incrementDiscard, gridDiscardCode, visibleFieldState, emptySourceResult, waitForSoldRender, inspectSoldPage,
-  activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, runCapture, main
+  activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, uploadImageDetailed,
+  subjectFactsFromVisibleText, recordSubjectProposalFields, runCapture, main
 };
