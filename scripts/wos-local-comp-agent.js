@@ -4,6 +4,7 @@
 // existing manual-evidence route; it never visits a listing website.
 const fs = require('fs');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const resolver = require('../modules/research/playwright-browser-resolver');
@@ -17,6 +18,15 @@ const SITE_HOSTS = Object.freeze({
   realtor: 'realtor.com'
 });
 const SOURCE_ORDER = Object.freeze(['zillow', 'redfin', 'realtor']);
+const SUPPORTED_MODES = Object.freeze(['sold_comps', 'subject_facts']);
+function helperBuild() {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+      cwd: path.resolve(__dirname, '..'), timeout: 2000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']
+    }).trim() || 'unknown';
+  } catch (_) { return 'unknown'; }
+}
+const HELPER_BUILD = helperBuild();
 const CARD_SELECTOR = 'article, [role="article"], li, [data-testid*="card"], [data-testid*="property"]';
 const SOURCE_SELECTORS = Object.freeze({
   zillow: Object.freeze({
@@ -149,6 +159,39 @@ function soldResultsUrlFor(row, site, options = {}) {
   throw new Error('listing_site_not_allowed');
 }
 
+function listingUrlKind(value, options = {}) {
+  let url;
+  try { url = new URL(value); } catch (_) { return 'other'; }
+  if (options.allow_local_source === true && ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) {
+    return /(?:^|[/-])property-detail(?:[/.]|$)/i.test(url.pathname) ? 'property_detail' :
+      /(?:^|[/-])sold(?:[/-]|$)/i.test(url.pathname) ? 'sold_search' : 'other';
+  }
+  const hostname = url.hostname.toLowerCase();
+  const pathname = url.pathname.toLowerCase();
+  if (hostname === 'zillow.com' || hostname.endsWith('.zillow.com')) {
+    if (pathname.startsWith('/homedetails/')) return 'property_detail';
+    if (pathname.startsWith('/homes/recently_sold/')) return 'sold_search';
+    return 'other';
+  }
+  if (hostname === 'redfin.com' || hostname.endsWith('.redfin.com')) {
+    if (/\/home\/\d+(?:\/|$)/.test(pathname)) return 'property_detail';
+    if (pathname.startsWith('/search')) return 'sold_search';
+    return 'other';
+  }
+  if (hostname === 'realtor.com' || hostname.endsWith('.realtor.com')) {
+    if (pathname.startsWith('/realestateandhomes-detail/')) return 'property_detail';
+    if (pathname.startsWith('/realestateandhomes-search/')) return 'sold_search';
+  }
+  return 'other';
+}
+
+function recordVisitedUrl(run, value, options = {}) {
+  const url = new URL(value);
+  run.pages_visited += 1;
+  run.hosts_visited.push(url.hostname);
+  run.url_kinds_visited.push({ host: url.hostname, url_kind: listingUrlKind(value, options) });
+}
+
 function readRateState(file, now, options = {}) {
   const fsImpl = options.fs_impl || fs;
   let state = {};
@@ -196,9 +239,15 @@ function acquireRunLock(file = RUN_LOCK) {
 }
 
 function cleanRunLog(value) {
+  if (!SUPPORTED_MODES.includes(value.requested_mode) || value.requested_mode !== value.effective_mode ||
+      value.effective_mode !== value.mode) throw new Error('capture_mode_mismatch');
   return {
     data_kind: 'OPERATOR_LOCAL_CAPTURE_RUN',
-    mode: value.mode || 'sold_comps',
+    mode: value.mode,
+    helper_build: value.helper_build,
+    requested_mode: value.requested_mode,
+    effective_mode: value.effective_mode,
+    url_kinds_visited: value.url_kinds_visited,
     started_at: value.started_at,
     completed_at: value.completed_at,
     elapsed_ms: value.elapsed_ms,
@@ -481,15 +530,18 @@ async function recognizeLocal(buffer, options, kind) {
 }
 
 async function runCapture(input = {}, options = {}) {
+  const mode = input.mode;
+  if (!SUPPORTED_MODES.includes(mode)) throw new Error('capture_mode_required');
   const now = options.now_impl || Date.now;
   const fetchImpl = options.fetch_impl || global.fetch;
   const started = now();
   const run = {
-    started_at: new Date(started).toISOString(), mode: clean(input.mode || 'sold_comps'), subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
+    started_at: new Date(started).toISOString(), mode, requested_mode: mode, effective_mode: mode,
+    helper_build: HELPER_BUILD, url_kinds_visited: [], subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
     pages_visited: 0, hosts_visited: [], captures_submitted: 0, discards: [], block_events: [], source_results: [],
     screenshots: 0, proposals: 0, outcome: 'started'
   };
-  if (!['sold_comps', 'subject_facts'].includes(run.mode)) throw new Error('capture_mode_invalid');
+  Object.defineProperty(run, 'mode', { value: mode, enumerable: true, writable: false });
   const site = clean(input.site || 'zillow').toLowerCase();
   if (!SITE_HOSTS[site]) throw new Error('listing_site_not_allowed');
   if (!input.market || !input.agent_token || !input.dashboard_url) throw new Error('market_dashboard_and_agent_session_required');
@@ -512,6 +564,13 @@ async function runCapture(input = {}, options = {}) {
   const row = selected.row;
   run.rows_attempted = 1;
   run.subject_address = safeRowAddress(row);
+  const subjectTarget = mode === 'subject_facts' ? sourceUrlFor(row, site, options) : '';
+  if (mode === 'subject_facts' && listingUrlKind(subjectTarget, options) !== 'property_detail') {
+    run.outcome = 'subject_target_not_property_detail';
+    run.completed_at = new Date(now()).toISOString();
+    run.elapsed_ms = now() - started;
+    return writeRunLog(run, options.log_dir || LOG_DIR);
+  }
   const sites = options.allow_local_source === true && !options.source_urls
     ? [site]
     : (Array.isArray(options.source_order) && options.source_order.length ? options.source_order : SOURCE_ORDER).filter((value) => SITE_HOSTS[value]);
@@ -535,6 +594,8 @@ async function runCapture(input = {}, options = {}) {
       await context.route('**/*', (route) => {
         let url;
         try { url = new URL(route.request().url()); } catch (_) { return route.abort(); }
+        if (mode === 'subject_facts' && route.request().isNavigationRequest() &&
+            listingUrlKind(url.toString(), options) !== 'property_detail') return route.abort();
         const localAllowed = options.allow_local_source === true && ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
         const listingHost = SOURCE_ORDER.some((source) => url.hostname === SITE_HOSTS[source] || url.hostname.endsWith(`.${SITE_HOSTS[source]}`));
         return (localAllowed || url.protocol === 'data:' || url.protocol === 'blob:' || listingHost)
@@ -549,48 +610,52 @@ async function runCapture(input = {}, options = {}) {
     const minimumProposals = Math.max(3, Number(options.minimum_proposals) || 3);
     const uploadedAddresses = new Set();
     if (run.mode === 'subject_facts') {
-      const target = sourceUrlFor(row, site, options);
+      const target = subjectTarget;
       if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
         run.discards.push({ reason: 'pages_per_hour_limit_30' });
       } else {
-        run.pages_visited = 1;
-        run.hosts_visited.push(new URL(target).hostname);
+        recordVisitedUrl(run, target, options);
         let response;
         try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
         catch (error) { run.discards.push({ host: new URL(target).hostname, reason: 'NAVIGATION_FAILED', detail: safeFailureReason(error) }); }
         if (response) {
-          const classification = await pageClassification(page, response.status(), site, target, options, market.state);
-          if (classification.type === 'blocked' || classification.type === 'unknown') {
-            run.block_events.push({ host: new URL(target).hostname, reason: classification.reason || classification.type });
-            run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
-          } else if (classification.type !== 'property_detail') {
+          if (listingUrlKind(page.url(), options) !== 'property_detail') {
+            run.outcome = 'subject_target_not_property_detail';
             run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_PROPERTY_DETAIL_REQUIRED' });
-            run.outcome = 'WRONG_PAGE_TYPE';
           } else {
-            const region = await page.locator('main').count().catch(() => 0) ? page.locator('main').first() : page.locator('body');
-            const buffer = await region.screenshot({ type: 'png' });
-            shots = 1;
-            run.screenshots = 1;
-            if (typeof options.on_capture_impl === 'function') options.on_capture_impl(buffer, { kind: 'subject_property', host: new URL(target).hostname, index: 1 });
-            let ocrText = '';
-            try { ocrText = await recognizeLocal(buffer, options, 'subject_property'); }
-            catch (_) { /* Missing OCR remains an honest no-proposal result. */ }
-            const fields = subjectFactsFromVisibleText(ocrText, target);
-            const proposedNames = Object.keys(fields).filter((name) => name !== 'source_url');
-            if (!proposedNames.length) {
-              run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_FACTS_NOT_VISIBLE' });
-              run.outcome = 'NO_SUBJECT_FACTS_VISIBLE';
+            const classification = await pageClassification(page, response.status(), site, target, options, market.state);
+            if (classification.type === 'blocked' || classification.type === 'unknown') {
+              run.block_events.push({ host: new URL(target).hostname, reason: classification.reason || classification.type });
+              run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
+            } else if (classification.type !== 'property_detail') {
+              run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_PROPERTY_DETAIL_REQUIRED' });
+              run.outcome = 'WRONG_PAGE_TYPE';
             } else {
-              const items = await uploadImageDetailed({
-                fetchImpl, dashboard, agentToken, market, row, sourceName: SITE_HOSTS[site], sourceUrl: target,
-                type: 'subject_property', buffer, filename: 'subject-property.png'
-              });
-              if (items.length !== 1) throw new Error('subject_capture_must_create_one_proposal');
-              await recordSubjectProposalFields({ fetchImpl, dashboard, agentToken, market, row, evidenceId: items[0].evidence_id, fields });
-              run.captures_submitted = 1;
-              run.active_listing_context_captures = 1;
-              run.proposals = 1;
-              run.outcome = 'SUBJECT_FACT_PROPOSAL_CREATED';
+              const region = await page.locator('main').count().catch(() => 0) ? page.locator('main').first() : page.locator('body');
+              const buffer = await region.screenshot({ type: 'png' });
+              shots = 1;
+              run.screenshots = 1;
+              if (typeof options.on_capture_impl === 'function') options.on_capture_impl(buffer, { kind: 'subject_property', host: new URL(target).hostname, index: 1 });
+              let ocrText = '';
+              try { ocrText = await recognizeLocal(buffer, options, 'subject_property'); }
+              catch (_) { /* Missing OCR remains an honest no-proposal result. */ }
+              const fields = subjectFactsFromVisibleText(ocrText, target);
+              const proposedNames = Object.keys(fields).filter((name) => name !== 'source_url');
+              if (!proposedNames.length) {
+                run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_FACTS_NOT_VISIBLE' });
+                run.outcome = 'NO_SUBJECT_FACTS_VISIBLE';
+              } else {
+                const items = await uploadImageDetailed({
+                  fetchImpl, dashboard, agentToken, market, row, sourceName: SITE_HOSTS[site], sourceUrl: target,
+                  type: 'subject_property', buffer, filename: 'subject-property.png'
+                });
+                if (items.length !== 1) throw new Error('subject_capture_must_create_one_proposal');
+                await recordSubjectProposalFields({ fetchImpl, dashboard, agentToken, market, row, evidenceId: items[0].evidence_id, fields });
+                run.captures_submitted = 1;
+                run.active_listing_context_captures = 1;
+                run.proposals = 1;
+                run.outcome = 'SUBJECT_FACT_PROPOSAL_CREATED';
+              }
             }
           }
         }
@@ -608,8 +673,7 @@ async function runCapture(input = {}, options = {}) {
       if (run.pages_visited >= compEvidence.DEFAULT_CAPS.max_pages_per_row) { run.discards.push({ reason: 'per_row_page_limit' }); break; }
       const rateStatePath = options.rate_state_path || RATE_STATE;
       if (!reservePage(rateStatePath, now(), 30)) { run.discards.push({ reason: 'pages_per_hour_limit_30' }); break; }
-      run.pages_visited += 1;
-      run.hosts_visited.push(new URL(target).hostname);
+      recordVisitedUrl(run, target, options);
       if (now() - started > compEvidence.DEFAULT_CAPS.total_budget_ms) {
         run.discards.push({ reason: 'total_runtime_budget_90_seconds' });
         break;
@@ -765,8 +829,8 @@ if (require.main === module) {
 }
 
 module.exports = {
-  SITE_HOSTS, SOURCE_ORDER, SOURCE_SELECTORS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
-  selectRow, sourceUrlFor, soldResultsUrlFor, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog,
+  SITE_HOSTS, SOURCE_ORDER, SUPPORTED_MODES, HELPER_BUILD, SOURCE_SELECTORS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
+  selectRow, sourceUrlFor, soldResultsUrlFor, listingUrlKind, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog,
   safeFailureReason, configPath, incrementDiscard, gridDiscardCode, visibleFieldState, emptySourceResult, waitForSoldRender, inspectSoldPage,
   activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, uploadImageDetailed,
   subjectFactsFromVisibleText, recordSubjectProposalFields, runCapture, main

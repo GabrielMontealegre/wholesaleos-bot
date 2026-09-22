@@ -98,6 +98,21 @@ function probePort(host, port, options = {}) {
   });
 }
 
+function probeRunningHelper(host, port, origin) {
+  return new Promise((resolve) => {
+    const request = http.get({ host, port, path: '/helper/status', headers: { Origin: origin }, timeout: 1500 }, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+        catch (_) { resolve(null); }
+      });
+    });
+    request.on('timeout', () => request.destroy());
+    request.on('error', () => resolve(null));
+  });
+}
+
 async function doctorReport(options = {}) {
   const resolved = configResolution(options);
   const fsImpl = options.fs_impl || fs;
@@ -117,6 +132,8 @@ async function doctorReport(options = {}) {
   }
   const portState = await probePort(host, port, options);
   const config = readConfig(resolved.path);
+  const runningStatus = portState.free ? null : await (options.running_status_impl
+    ? options.running_status_impl(host, port) : probeRunningHelper(host, port, config && config.dashboard_url || DEFAULT_DASHBOARD));
   const nextAction = !writable
     ? 'Set WOS_HELPER_HOME to a folder you can write to, then run scripts\\Start-WholesaleOS-Helper.cmd again.'
     : !portState.free
@@ -135,6 +152,11 @@ async function doctorReport(options = {}) {
     port_reason: portState.reason,
     pairing_config_exists: !!config,
     dashboard_origin: config ? config.dashboard_url : '',
+    local_helper_build: compAgent.HELPER_BUILD,
+    local_subject_facts_supported: compAgent.SUPPORTED_MODES.includes('subject_facts'),
+    running_helper_build: clean(runningStatus && runningStatus.helper_build) || 'unknown',
+    running_subject_facts_supported: runningStatus && runningStatus.subject_facts_supported === true,
+    running_helper_stale: !!runningStatus && (!clean(runningStatus.helper_build) || runningStatus.subject_facts_supported !== true),
     next_action: nextAction
   };
 }
@@ -146,6 +168,8 @@ function printDoctor(report) {
   console.log(`Configuration directory writable: ${report.config_writable ? 'YES' : `NO (${report.config_write_reason || 'unknown reason'})`}`);
   console.log(`Port ${report.port}: ${report.port_free ? 'FREE' : `ALREADY HELD (${report.port_reason || 'unknown reason'})`}`);
   console.log(`Pairing configuration: ${report.pairing_config_exists ? `PRESENT for ${report.dashboard_origin}` : 'NOT PRESENT'}`);
+  console.log(`Local checkout helper build: ${report.local_helper_build}; subject_facts: ${report.local_subject_facts_supported ? 'YES' : 'NO'}`);
+  if (!report.port_free) console.log(`Running helper build: ${report.running_helper_build}; subject_facts: ${report.running_subject_facts_supported ? 'YES' : 'NO/UNKNOWN'}${report.running_helper_stale ? '; STALE/UNKNOWN BUILD - restart helper' : ''}`);
   console.log(`Next action: ${report.next_action}`);
 }
 
@@ -173,7 +197,8 @@ function createHelperServer(options = {}) {
 
     try {
       if (req.method === 'GET' && req.url === '/helper/status') {
-        return json(res, 200, { ok: true, connected: true, version: 1, running: true, paired: !!readConfig(configFile), capture_running: captureRunning }, allowedOrigin);
+        return json(res, 200, { ok: true, connected: true, version: 1, running: true, paired: !!readConfig(configFile),
+          capture_running: captureRunning, helper_build: compAgent.HELPER_BUILD, subject_facts_supported: compAgent.SUPPORTED_MODES.includes('subject_facts') }, allowedOrigin);
       }
 
       if (req.method === 'POST' && req.url === '/helper/pair') {
@@ -199,13 +224,14 @@ function createHelperServer(options = {}) {
         if (!config) return json(res, 401, { ok: false, code: 'HELPER_PAIRING_REQUIRED' }, allowedOrigin);
         const body = await readJson(req);
         if (!body.market || !clean(body.queue_key)) return json(res, 400, { ok: false, code: 'MARKET_AND_QUEUE_KEY_REQUIRED' }, allowedOrigin);
+        if (!compAgent.SUPPORTED_MODES.includes(body.mode)) return json(res, 400, { ok: false, code: 'CAPTURE_MODE_REQUIRED' }, allowedOrigin);
         captureRunning = true;
         try {
           const result = await runCapture({
             market: body.market,
             queue_key: clean(body.queue_key),
             site: clean(body.site || 'zillow'),
-            mode: clean(body.mode || 'sold_comps'),
+            mode: body.mode,
             dashboard_url: config.dashboard_url,
             agent_token: config.agent_token
           });

@@ -155,7 +155,7 @@ async function main() {
     return originalFetch(url, init);
   };
   const common = {
-    market, dashboard_url: fixtureUrl, agent_token: crypto.randomBytes(32).toString('base64url'), site: 'zillow',
+    market, dashboard_url: fixtureUrl, agent_token: crypto.randomBytes(32).toString('base64url'), site: 'zillow', mode: 'sold_comps',
     allow_local_source: true, log_dir: logDir,
     fetch_impl: localFetch,
     ocr_impl: async (_buffer, context) => context && context.kind === 'subject_property' ? 'List price $350,000 Days on market 12' : listingText,
