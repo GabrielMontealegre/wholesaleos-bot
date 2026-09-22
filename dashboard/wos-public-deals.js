@@ -3,7 +3,8 @@
 'use strict';
 
 (function () {
-  var API_LATEST = '/api/dashboard/free-public-deal-board/latest';
+  var API_LATEST = '/api/dashboard/research-queue/current';
+  var SNAPSHOT_TIMEOUT_MS = 20000;
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
   var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
@@ -1336,29 +1337,73 @@
       leadOperationsQueuePanel(data, rows);
   }
 
-  function fetchLatest(container) {
+  function snapshotErrorMarkup(error) {
+    var status = error && Number(error.status);
+    var sessionExpired = status === 401;
+    var summary = sessionExpired
+      ? 'Your dashboard session expired. Sign in again, then retry.'
+      : 'Could not load the property queue (request blocked or timed out).';
+    var cause = sessionExpired
+      ? 'The property queue remains private and no snapshot data was returned.'
+      : 'A browser privacy or ad-blocking extension may be blocking this request. Try disabling it for this site, or use a different browser.';
+    var detail = status ? 'HTTP ' + status : 'blocked';
+    return '<div class="wos-snapshot-error" style="border:1px solid #fecaca;background:#fff7f7;padding:12px;color:#7f1d1d;font-size:13px;">' +
+      '<div style="font-weight:700;margin-bottom:5px;">' + esc(summary) + '</div>' +
+      '<div style="margin-bottom:7px;">' + esc(cause) + '</div>' +
+      '<div style="font-size:12px;margin-bottom:9px;">Status: ' + esc(detail) + '</div>' +
+      '<button type="button" class="wos-snapshot-retry" style="padding:7px 12px;border:1px solid #991b1b;background:#fff;color:#991b1b;cursor:pointer;">Retry</button>' +
+      '</div>';
+  }
+
+  function renderSnapshotError(container, error) {
+    var body = container && container.querySelector && container.querySelector('.wos-public-deals-body');
+    if (body) body.innerHTML = snapshotErrorMarkup(error);
+  }
+
+  function requestLatestSnapshot() {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timeout = setTimeout(function () {
+      if (controller) controller.abort();
+    }, SNAPSHOT_TIMEOUT_MS);
+    var options = { headers: headers() };
+    if (controller) options.signal = controller.signal;
+    return fetch(latestUrl(), options)
+      .then(function (res) {
+        if (!res.ok) {
+          var httpError = new Error('snapshot_request_failed');
+          httpError.status = res.status;
+          throw httpError;
+        }
+        return res.json();
+      })
+      .catch(function (error) {
+        if (error && error.name === 'AbortError') {
+          var timeoutError = new Error('snapshot_request_timed_out');
+          timeoutError.blocked = true;
+          throw timeoutError;
+        }
+        throw error;
+      })
+      .finally(function () { clearTimeout(timeout); });
+  }
+
+  function fetchLatest(container, note) {
     var requestMarketKey = selectedMarketKey;
-    fetch(latestUrl(), { headers: headers() })
-      .then(function (res) { return res.json(); })
+    return requestLatestSnapshot()
       .then(function (data) {
         if (requestMarketKey !== selectedMarketKey) return;
-        render(container, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
+        var autoBox = document.getElementById('wos-public-deals-auto');
+        if (currentPage() === 'findme_scout' && autoBox) autoBox.checked = !!(data && data.auto_run && data.auto_run.enabled);
+        render(container, data || {}, note || (data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.'));
       })
       .catch(function (err) {
         if (requestMarketKey !== selectedMarketKey) return;
-        container.querySelector('.wos-public-deals-body').innerHTML = '<div style="color:#991b1b;font-size:13px;">Could not load public deals: ' + esc(err.message) + '</div>';
+        renderSnapshotError(container, err);
       });
   }
 
   function fetchLatestWithNote(container, note) {
-    var requestMarketKey = selectedMarketKey;
-    fetch(latestUrl(), { headers: headers() })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (requestMarketKey !== selectedMarketKey) return;
-        render(container, data || {}, note);
-      })
-      .catch(function () { fetchLatest(container); });
+    return fetchLatest(container, note);
   }
 
   function runBatch(container, button) {
@@ -1812,6 +1857,12 @@
         if (retryButton) refreshLocalHelperStatus(section);
         var captureButton = event.target && event.target.closest && event.target.closest('.wos-helper-capture');
         if (captureButton) captureWithLocalHelper(section, captureButton);
+        var snapshotRetryButton = event.target && event.target.closest && event.target.closest('.wos-snapshot-retry');
+        if (snapshotRetryButton) {
+          var body = section.querySelector('.wos-public-deals-body');
+          if (body) body.innerHTML = '<div style="font-size:12px;color:#6b7280;">Loading ' + esc(selectedMarketLabel()) + ' public deals...</div>';
+          fetchLatest(section);
+        }
       });
     }
 
@@ -1870,15 +1921,7 @@
 
     if (fetchInFlight) return;
     fetchInFlight = true;
-    var requestMarketKey = selectedMarketKey;
-    fetch(latestUrl(), { headers: headers() })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (requestMarketKey !== selectedMarketKey) return;
-        if (page === 'findme_scout' && autoBox) autoBox.checked = !!(data && data.auto_run && data.auto_run.enabled);
-        render(section, data || {}, data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.');
-      })
-      .catch(function () { fetchLatest(section); })
+    fetchLatest(section)
       .finally(function () { fetchInFlight = false; });
   }
 
@@ -1920,7 +1963,9 @@
     routeInvalidated: routeInvalidated,
     selectedMarket: selectedMarket,
     storeSelectedMarket: storeSelectedMarket,
-    latestUrl: latestUrl
+    latestUrl: latestUrl,
+    snapshotErrorMarkup: snapshotErrorMarkup,
+    requestLatestSnapshot: requestLatestSnapshot
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
