@@ -851,7 +851,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=39'), 'dashboard must load the Cycle 38 cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=40'), 'dashboard must load the Cycle 39 cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -908,7 +908,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=39'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=40'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Official event/status') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
@@ -962,7 +962,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes("page === 'findme_scout'"), 'addon must have a Deal Finder branch');
   assert.ok(uiSource.includes('removeSection'), 'addon must remove itself on non-target pages');
   assert.ok(uiSource.includes('dataset.wosTarget'), 'addon must stamp the mounted target on the section');
-  assert.ok(uiSource.includes('fetchInFlight'), 'addon must guard the initial snapshot fetch');
+  assert.ok(uiSource.includes('pendingRequestId') && uiSource.includes('activeRequestId'), 'addon must token-guard snapshot requests without starving remounted sections');
   assert.ok(uiSource.includes('mountForCurrentPage'), 'addon must refresh from the current page state');
   assert.ok(uiSource.includes("row.row_state === 'LOCKED'"), 'Dashboard top urgent must exclude canonically locked rows');
   assert.ok(uiSource.includes("riskFlags.indexOf('ADDRESS_PREFIX_SUSPECTED_VERIFY_DOCUMENT')"), 'Dashboard top urgent must exclude prefix-suspected rows');
