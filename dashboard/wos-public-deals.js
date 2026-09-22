@@ -17,7 +17,11 @@
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var lastData = null;
   var lastNote = '';
-  var fetchInFlight = false;
+  var pendingRequestId = 0;
+  var activeRequestId = 0;
+  var snapshotWatchdogTimer = null;
+  var snapshotMountId = 0;
+  var snapshotWatchdogEnabled = true;
   var marketDemandFetchInFlight = false;
   var marketDemandData = null;
   var manualEvidenceObjectUrls = [];
@@ -1310,9 +1314,12 @@
     dataByMarket[selectedMarketKey] = { data: data, note: lastNote };
     var body = container.querySelector('.wos-public-deals-body');
     if (!body) return;
+    clearSnapshotWatchdog(container);
     var rows = Array.isArray(data.rows) ? data.rows : [];
     var page = currentPage();
     body.innerHTML = panelsForPage(page, data, rows, note);
+    container._wosRenderedData = data;
+    container._wosRenderedNote = lastNote;
     loadManualEvidenceImages(body);
     refreshLocalHelperStatus(container);
     if (page === 'dashboard') {
@@ -1340,7 +1347,7 @@
   function snapshotErrorMarkup(error) {
     var status = error && Number(error.status);
     var sessionExpired = status === 401;
-    var summary = sessionExpired
+    var summary = error && error.summary ? error.summary : sessionExpired
       ? 'Your dashboard session expired. Sign in again, then retry.'
       : 'Could not load the property queue (request blocked or timed out).';
     var cause = sessionExpired
@@ -1355,8 +1362,42 @@
       '</div>';
   }
 
-  function renderSnapshotError(container, error) {
-    var body = container && container.querySelector && container.querySelector('.wos-public-deals-body');
+  function liveSection() {
+    return document.getElementById('wos-public-deals');
+  }
+
+  function clearSnapshotWatchdog(section) {
+    if (!section || section !== liveSection()) return;
+    if (snapshotWatchdogTimer) clearTimeout(snapshotWatchdogTimer);
+    snapshotWatchdogTimer = null;
+    section._wosSnapshotWatchdogArmed = false;
+  }
+
+  function armSnapshotWatchdog(section) {
+    if (!snapshotWatchdogEnabled || !section || section._wosSnapshotWatchdogArmed) return;
+    if (snapshotWatchdogTimer) clearTimeout(snapshotWatchdogTimer);
+    var mountId = ++snapshotMountId;
+    section._wosSnapshotMountId = mountId;
+    section._wosSnapshotWatchdogArmed = true;
+    snapshotWatchdogTimer = setTimeout(function () {
+      var current = liveSection();
+      if (!current || current._wosSnapshotMountId !== mountId) return;
+      var body = current.querySelector('.wos-public-deals-body');
+      if (!body || body.textContent.indexOf('Loading public deals...') === -1) return;
+      renderSnapshotError({ watchdog: true });
+    }, SNAPSHOT_TIMEOUT_MS + 5000);
+  }
+
+  function renderSnapshotError(error) {
+    var container = liveSection();
+    if (!container) return;
+    var body = container.querySelector && container.querySelector('.wos-public-deals-body');
+    clearSnapshotWatchdog(container);
+    if (error && error.watchdog) {
+      var watchdogError = new Error('snapshot_watchdog_elapsed');
+      watchdogError.summary = 'The property queue did not load.';
+      error = watchdogError;
+    }
     if (body) body.innerHTML = snapshotErrorMarkup(error);
   }
 
@@ -1389,16 +1430,28 @@
 
   function fetchLatest(container, note) {
     var requestMarketKey = selectedMarketKey;
+    var requestId = ++pendingRequestId;
+    activeRequestId = requestId;
+    var requestSection = liveSection() || container;
+    if (requestSection) requestSection._wosSnapshotRequestId = requestId;
     return requestLatestSnapshot()
       .then(function (data) {
         if (requestMarketKey !== selectedMarketKey) return;
+        if (requestId !== activeRequestId) return;
+        var current = liveSection();
+        if (!current) return;
         var autoBox = document.getElementById('wos-public-deals-auto');
         if (currentPage() === 'findme_scout' && autoBox) autoBox.checked = !!(data && data.auto_run && data.auto_run.enabled);
-        render(container, data || {}, note || (data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.'));
+        render(current, data || {}, note || (data && data.has_snapshot ? '' : 'Snapshot cache only - nothing here is a saved lead.'));
       })
       .catch(function (err) {
         if (requestMarketKey !== selectedMarketKey) return;
-        renderSnapshotError(container, err);
+        if (requestId !== activeRequestId) return;
+        renderSnapshotError(err);
+      })
+      .finally(function () {
+        var current = liveSection();
+        if (current && current._wosSnapshotRequestId === requestId) current._wosSnapshotRequestId = 0;
       });
   }
 
@@ -1824,10 +1877,10 @@
       return;
     }
 
-    var existing = document.getElementById('wos-public-deals');
-    if (existing && existing.dataset.wosTarget === page) return;
-
+    var existing = liveSection();
     var section = ensureSection(page);
+    var loadingBody = section.querySelector('.wos-public-deals-body');
+    if (loadingBody && loadingBody.textContent.indexOf('Loading public deals...') !== -1) armSnapshotWatchdog(section);
     var autoBox = document.getElementById('wos-public-deals-auto');
     var runButton = document.getElementById('wos-public-deals-run');
     var marketSelect = document.getElementById('wos-public-deals-market');
@@ -1915,14 +1968,12 @@
 
     if (lastData) {
       if (page === 'findme_scout' && autoBox) autoBox.checked = !!(lastData.auto_run && lastData.auto_run.enabled);
-      render(section, lastData, lastNote);
+      if (section._wosRenderedData !== lastData || section._wosRenderedNote !== lastNote) render(section, lastData, lastNote);
       return;
     }
 
-    if (fetchInFlight) return;
-    fetchInFlight = true;
-    fetchLatest(section)
-      .finally(function () { fetchInFlight = false; });
+    if (section._wosSnapshotRequestId && section._wosSnapshotRequestId === activeRequestId) return;
+    fetchLatest(section);
   }
 
   function keepMounted() {
@@ -1965,7 +2016,20 @@
     storeSelectedMarket: storeSelectedMarket,
     latestUrl: latestUrl,
     snapshotErrorMarkup: snapshotErrorMarkup,
-    requestLatestSnapshot: requestLatestSnapshot
+    requestLatestSnapshot: requestLatestSnapshot,
+    liveSection: liveSection,
+    mountForCurrentPage: mountForCurrentPage,
+    fetchLatest: fetchLatest,
+    snapshotRequestState: function () {
+      return { pendingRequestId: pendingRequestId, activeRequestId: activeRequestId };
+    },
+    setSnapshotWatchdogEnabled: function (enabled) {
+      snapshotWatchdogEnabled = enabled !== false;
+      if (!snapshotWatchdogEnabled && snapshotWatchdogTimer) {
+        clearTimeout(snapshotWatchdogTimer);
+        snapshotWatchdogTimer = null;
+      }
+    }
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
