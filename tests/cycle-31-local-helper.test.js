@@ -39,7 +39,8 @@ function listen(server) {
     assert.strictEqual(forbidden.status, 403);
 
     const initial = await fetch(`${base}/helper/status`, { headers: { Origin: dashboard } });
-    assert.deepStrictEqual(await initial.json(), { ok: true, connected: true, version: 1, running: true, paired: false, capture_running: false });
+    assert.deepStrictEqual(await initial.json(), { ok: true, connected: true, version: 1, running: true, paired: false,
+      capture_running: false, helper_build: require('../scripts/wos-local-comp-agent').HELPER_BUILD, subject_facts_supported: true });
     assert.strictEqual(captureCalls, 0, 'status polling never starts a capture');
 
     const unpaired = await fetch(`${base}/helper/capture`, {
@@ -62,7 +63,7 @@ function listen(server) {
 
     const capture = await fetch(`${base}/helper/capture`, {
       method: 'POST', headers: { Origin: dashboard, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, queue_key: 'fixture-row', site: 'zillow' })
+      body: JSON.stringify({ market: { city: 'Dallas', county: 'Dallas', state: 'TX' }, queue_key: 'fixture-row', site: 'zillow', mode: 'sold_comps' })
     });
     assert.strictEqual(capture.status, 200);
     assert.strictEqual(captureCalls, 1, 'one explicit request starts exactly one capture');

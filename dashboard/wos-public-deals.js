@@ -1799,13 +1799,17 @@
       if (message) message.textContent = 'Start and pair the helper first. No page was opened.';
       return;
     }
+    var mode = button.dataset && button.dataset.captureMode;
+    if (mode !== 'subject_facts' && mode !== 'sold_comps') {
+      if (message) message.textContent = 'Capture mode missing — nothing was opened.';
+      return;
+    }
     button.disabled = true;
-    var mode = button.dataset && button.dataset.captureMode || 'sold_comps';
     button.textContent = 'Capturing...';
     if (message) message.textContent = mode === 'subject_facts'
       ? 'The helper is opening the subject property page and reading only visible property facts.'
       : 'The helper is opening one source page and looking only for visible sold cards.';
-    fetch(LOCAL_HELPER + '/helper/capture', {
+    return fetch(LOCAL_HELPER + '/helper/capture', {
       method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '', mode: mode })
     })
@@ -1816,9 +1820,9 @@
         if (card && card.dataset.queueKey) localCaptureResults[card.dataset.queueKey] = run;
         if (message) message.textContent = run.captures_submitted
           ? run.captures_submitted + ' capture(s) uploaded as unconfirmed proposals. Review them below.'
-          : 'No qualifying sold cards were captured. Reason: ' + (run.outcome || 'none found') + '.';
+          : (mode === 'subject_facts' ? 'No subject facts captured. Reason: ' : 'No qualifying sold cards were captured. Reason: ') + (run.outcome || 'none found') + '.';
         fetchLatestWithNote(container, mode === 'subject_facts'
-          ? 'Subject capture finished. Confirm each visible fact separately; nothing counts automatically.'
+          ? (run.captures_submitted ? 'Subject capture finished. Confirm each visible fact separately; nothing counts automatically.' : 'Subject capture stopped without a proposal.')
           : 'Local capture finished. Nothing counts until you confirm the proposed comp fields.');
       })
       .catch(function (error) {

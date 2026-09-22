@@ -173,7 +173,7 @@ async function main() {
     ];
     let ocrIndex = 0;
     const common = {
-      market, queue_key: latestRow.queue_key, dashboard_url: base, agent_token: crypto.randomBytes(32).toString('base64url'),
+      market, queue_key: latestRow.queue_key, dashboard_url: base, agent_token: crypto.randomBytes(32).toString('base64url'), mode: 'sold_comps',
       allow_local_source: true, source_order: ['zillow', 'redfin', 'realtor'],
       source_urls: {
         zillow: `${base}/fixture/zillow-sold-results.html`, redfin: `${base}/fixture/redfin-sold-results.html`,
