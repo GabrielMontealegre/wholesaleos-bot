@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-09-22T11:34:28.276Z",
+  "claim": "With default configuration, this server issues zero requests to listing hosts.",
+  "default_flag_enabled": false,
+  "listing_hosts": [
+    "zillow.com",
+    "redfin.com",
+    "realtor.com",
+    "trulia.com",
+    "maps.google.com"
+  ],
+  "default_dallas_queue_source_ids": [
+    "tx_dallas_county_clerk_foreclosure_notices",
+    "tx_dallas_craigslist_owner_posts",
+    "tx_dallas_fsbo_contact_first",
+    "tx_hunt_county_foreclosure_notices",
+    "tx_navarro_county_foreclosure_notices",
+    "tx_rains_county_foreclosure_notices",
+    "tx_hill_county_foreclosure_notices",
+    "tx_van_zandt_county_foreclosure_notices",
+    "tx_bell_county_foreclosure_notices",
+    "tx_tarrant_county_foreclosure_notices",
+    "tx_collin_county_foreclosure_notices",
+    "tx_ellis_county_foreclosure_notices",
+    "tx_kaufman_county_foreclosure_notices",
+    "tx_parker_county_foreclosure_notices",
+    "tx_rockwall_county_foreclosure_notices",
+    "tx_johnson_county_foreclosure_notices",
+    "tx_denton_county_foreclosure_notices"
+  ],
+  "listing_host_requests_observed": [],
+  "dallas_fixture_coverage": {
+    "before": {
+      "row_count": 3,
+      "contact_verified_count": 3,
+      "call_ready_count": 3,
+      "outreach_ready_count": 0,
+      "listing_host_contact_verified_count": 3,
+      "listing_radar_accepted_count": 0,
+      "listing_radar_rejected_count": 0
+    },
+    "after": {
+      "row_count": 3,
+      "contact_verified_count": 0,
+      "call_ready_count": 0,
+      "outreach_ready_count": 0,
+      "listing_host_contact_verified_count": 0,
+      "listing_radar_accepted_count": 0,
+      "listing_radar_rejected_count": 0,
+      "listing_radar_skip_code": "LISTING_EGRESS_DISABLED"
+    }
+  },
+  "assertions": {
+    "egress_cases_passed": 16,
+    "material_row_count_drop": false,
+    "unexpected_listing_request_paths": 0
+  }
+}

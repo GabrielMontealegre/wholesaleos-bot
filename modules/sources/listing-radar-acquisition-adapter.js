@@ -4,6 +4,7 @@ const propertyCandidate = require('../research/property-candidate');
 const propertyIdentity = require('../research/property-identity');
 const searchProviderWorker = require('../research/search-provider-worker');
 const sourceEvidenceAdapter = require('../research/source-evidence-adapter');
+const listingEgressGuard = require('../security/listing-egress-guard');
 
 const SOURCE_ID = 'tx_dallas_listing_radar';
 const SOURCE_NAME = 'Dallas Listing Radar';
@@ -402,6 +403,15 @@ async function inspectViaPlaywright(url, options) {
 
 async function fetchListingPageEvidence(sourceUrl, options = {}) {
   const url = cleanText(sourceUrl);
+  if (!listingEgressGuard.legacyListingFetchEnabled(options.env || process.env)) {
+    return {
+      status: BLOCKED_PUBLIC_SOURCE,
+      source_url: url,
+      final_source_url: url,
+      blocked: true,
+      blocked_reason: 'listing_egress_disabled'
+    };
+  }
   const classification = classifyListingUrl(url);
   if (!classification.accepted) return { status: 'rejected', source_url: url, final_source_url: url, rejected_reason: classification.reason, blocked: false };
   if (typeof options.page_fetch_impl === 'function') {
@@ -554,6 +564,7 @@ async function runListingRadarAcquisitionAdapter(options = {}) {
         page_fetch_impl: options.page_fetch_impl || options.pageFetchImpl,
         fetch_impl: options.fetch_impl || options.fetchImpl,
         playwright_impl: options.playwright_impl || options.playwrightImpl,
+        env: options.env,
         timeout_ms: options.timeout_ms
       });
       pageFetches.push({

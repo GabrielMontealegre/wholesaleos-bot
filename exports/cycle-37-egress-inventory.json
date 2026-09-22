@@ -1,46 +1,12 @@
 {
-  "generated_at": "2026-09-22T08:23:10.343Z",
+  "generated_at": "2026-09-22T11:28:56.364Z",
   "network_requests_made": 0,
   "scope": "Server-reachable listing-host requests and operator-facing URL builders.",
-  "architecture_complete": false,
-  "unexpected_request_call_site_count": 3,
-  "unexpected_request_call_sites": [
-    {
-      "file": "modules/sources/listing-radar-acquisition-adapter.js",
-      "line": 408,
-      "host": "zillow.com|redfin.com|realtor.com",
-      "kind": "request",
-      "transport": "injected fetch",
-      "owner": "POST /api/preview/free-public-deal-board with source_ids=[tx_dallas_listing_radar]; deal-board run with an explicit source id",
-      "gated": "admin auth only; adapter is excluded from default queue but remains explicitly selectable",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
-      "evidence": "source-adapter-registry registers tx_dallas_listing_radar and free-public-deal-board passes caller-supplied source_ids to the acquisition orchestrator"
-    },
-    {
-      "file": "modules/sources/listing-radar-acquisition-adapter.js",
-      "line": 415,
-      "host": "zillow.com|redfin.com|realtor.com",
-      "kind": "request",
-      "transport": "Playwright page.goto",
-      "owner": "POST /api/preview/free-public-deal-board with source_ids=[tx_dallas_listing_radar]; deal-board run with an explicit source id",
-      "gated": "admin auth only; adapter is excluded from default queue but remains explicitly selectable",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
-      "evidence": "this is the default path when no injected listing-page fetch implementation is supplied"
-    },
-    {
-      "file": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
-      "line": 190,
-      "host": "zillow.com|redfin.com|realtor.com",
-      "kind": "request",
-      "transport": "fetch",
-      "owner": "Default Dallas deal-board queue and POST /api/preview/free-public-deal-board through tx_dallas_fsbo_contact_first",
-      "gated": "admin auth on preview; included in the default Dallas queue; no listing-egress capability gate",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
-      "evidence": "ALLOWED_CONTACT_HOSTS includes Zillow, Redfin, and Realtor; property-specific result URLs are passed to fetchContactPageEvidence, which defaults to global.fetch"
-    }
+  "architecture_complete": true,
+  "unexpected_request_call_site_count": 0,
+  "unexpected_request_call_sites": [],
+  "removed_routes": [
+    "GET /api/debug/comp-test"
   ],
   "registered_adapter_count": 23,
   "registered_adapters": [
@@ -48,16 +14,19 @@
       "source_id": "tx_dallas_county_clerk_foreclosure_notices",
       "adapter_id": "dallas_foreclosure_acquisition_adapter",
       "module": "modules/sources/dallas-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_dallas_fsbo_contact_first",
       "adapter_id": "dallas_fsbo_contact_acquisition_adapter",
       "module": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "optional_degrades",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [
         "zillow.com",
         "redfin.com",
@@ -66,24 +35,28 @@
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "request",
       "known_listing_request_path": true
     },
     {
       "source_id": "tx_dallas_craigslist_owner_posts",
       "adapter_id": "dallas_craigslist_owner_acquisition_adapter",
       "module": "modules/sources/dallas-craigslist-owner-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_dallas_listing_radar",
       "adapter_id": "listing_radar_acquisition_adapter",
       "module": "modules/sources/listing-radar-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "required",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [
         "zillow.com",
         "redfin.com",
@@ -93,241 +66,258 @@
         "fetch",
         "playwright"
       ],
+      "request_or_url_builder": "request",
       "known_listing_request_path": true
     },
     {
       "source_id": "tx_hunt_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_navarro_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_rains_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_hill_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_van_zandt_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_bell_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_tarrant_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_collin_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_ellis_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_kaufman_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_parker_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_rockwall_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_fort_bend_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_bexar_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_johnson_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "tx_denton_county_foreclosure_notices",
       "adapter_id": "tx_county_foreclosure_acquisition_adapter",
       "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": true,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "mi_wayne_detroit_land_bank_listings",
       "adapter_id": "mi_land_bank_acquisition_adapter",
       "module": "modules/sources/mi-land-bank-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "ca_san_diego_tax_default_power_to_sell",
       "adapter_id": "ca_tax_default_notice_acquisition_adapter",
       "module": "modules/sources/ca-tax-default-notice-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     },
     {
       "source_id": "ca_los_angeles_tax_default_auction_book",
       "adapter_id": "ca_los_angeles_tax_default_acquisition_adapter",
       "module": "modules/sources/ca-los-angeles-tax-default-acquisition-adapter.js",
-      "requires_listing_egress": null,
+      "listing_egress": "none",
+      "in_default_dallas_queue": false,
       "listing_hosts_referenced": [],
       "transports_present": [
         "fetch"
       ],
+      "request_or_url_builder": "none",
       "known_listing_request_path": false
     }
   ],
   "entries": [
-    {
-      "file": "server.js",
-      "line": 6032,
-      "host": "redfin.com",
-      "kind": "request",
-      "transport": "axios.get",
-      "owner": "GET /api/debug/comp-test",
-      "gated": false,
-      "disposition": "REMOVE",
-      "architecture_listed": true
-    },
-    {
-      "file": "server.js",
-      "line": 6038,
-      "host": "zillow.com",
-      "kind": "request",
-      "transport": "axios.get",
-      "owner": "GET /api/debug/comp-test",
-      "gated": false,
-      "disposition": "REMOVE",
-      "architecture_listed": true
-    },
     {
       "file": "modules/agents/comp-agent.js",
       "line": 10,
@@ -335,7 +325,7 @@
       "kind": "request",
       "transport": "fetch",
       "owner": "GET /api/leads/:id/comps; POST /api/leads/reanalyze; POST /api/leads/:id/analyze; 4AM cron",
-      "gated": "routes: no; cron: ENABLE_BACKGROUND_INGESTION",
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH; cron also requires ENABLE_BACKGROUND_INGESTION",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -346,7 +336,7 @@
       "kind": "request",
       "transport": "fetch",
       "owner": "GET /api/leads/:id/comps; POST /api/leads/reanalyze; POST /api/leads/:id/analyze; 4AM cron",
-      "gated": "routes: no; cron: ENABLE_BACKGROUND_INGESTION",
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH; cron also requires ENABLE_BACKGROUND_INGESTION",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -357,7 +347,7 @@
       "kind": "request",
       "transport": "scraperGet -> axios.get",
       "owner": "GET /api/property/intel/:leadId; POST /api/leads/:id/enrich",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -368,7 +358,7 @@
       "kind": "request",
       "transport": "scraperGet -> axios.get",
       "owner": "GET /api/property/intel/:leadId; POST /api/leads/:id/enrich",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -379,7 +369,7 @@
       "kind": "request",
       "transport": "scraperGet -> axios.get",
       "owner": "GET /api/property/intel/:leadId; POST /api/leads/:id/enrich",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -390,7 +380,7 @@
       "kind": "request",
       "transport": "scraperGet -> axios.get",
       "owner": "GET /api/property/intel/:leadId; POST /api/leads/:id/enrich",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -401,7 +391,7 @@
       "kind": "request",
       "transport": "dsGet -> axios.get",
       "owner": "POST /api/datasources/run-all; POST /api/datasources/:source",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
@@ -412,49 +402,49 @@
       "kind": "request",
       "transport": "ScraperAPI proxy -> axios.get",
       "owner": "POST /api/datasources/run-all; POST /api/datasources/:source",
-      "gated": false,
+      "gated": "routes require WOS_ENABLE_LEGACY_LISTING_FETCH",
       "disposition": "ISOLATE",
       "architecture_listed": true
     },
     {
       "file": "modules/sources/listing-radar-acquisition-adapter.js",
-      "line": 408,
+      "line": 418,
       "host": "zillow.com|redfin.com|realtor.com",
       "kind": "request",
       "transport": "injected fetch",
       "owner": "POST /api/preview/free-public-deal-board with source_ids=[tx_dallas_listing_radar]; deal-board run with an explicit source id",
-      "gated": "admin auth only; adapter is excluded from default queue but remains explicitly selectable",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
+      "gated": "listing_egress required; skipped with LISTING_EGRESS_DISABLED unless WOS_ENABLE_LEGACY_LISTING_FETCH is true",
+      "disposition": "GATE_REQUIRED",
+      "architecture_listed": true,
       "evidence": "source-adapter-registry registers tx_dallas_listing_radar and free-public-deal-board passes caller-supplied source_ids to the acquisition orchestrator"
     },
     {
       "file": "modules/sources/listing-radar-acquisition-adapter.js",
-      "line": 415,
+      "line": 425,
       "host": "zillow.com|redfin.com|realtor.com",
       "kind": "request",
       "transport": "Playwright page.goto",
       "owner": "POST /api/preview/free-public-deal-board with source_ids=[tx_dallas_listing_radar]; deal-board run with an explicit source id",
-      "gated": "admin auth only; adapter is excluded from default queue but remains explicitly selectable",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
+      "gated": "listing_egress required; skipped with LISTING_EGRESS_DISABLED unless WOS_ENABLE_LEGACY_LISTING_FETCH is true",
+      "disposition": "GATE_REQUIRED",
+      "architecture_listed": true,
       "evidence": "this is the default path when no injected listing-page fetch implementation is supplied"
     },
     {
       "file": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
-      "line": 190,
+      "line": 194,
       "host": "zillow.com|redfin.com|realtor.com",
       "kind": "request",
       "transport": "fetch",
       "owner": "Default Dallas deal-board queue and POST /api/preview/free-public-deal-board through tx_dallas_fsbo_contact_first",
-      "gated": "admin auth on preview; included in the default Dallas queue; no listing-egress capability gate",
-      "disposition": "UNDECIDED",
-      "architecture_listed": false,
+      "gated": "listing_egress optional_degrades; listing-host fetches blocked unless WOS_ENABLE_LEGACY_LISTING_FETCH is true",
+      "disposition": "HOST_SCOPED_OPTIONAL_DEGRADATION",
+      "architecture_listed": true,
       "evidence": "ALLOWED_CONTACT_HOSTS includes Zillow, Redfin, and Realtor; property-specific result URLs are passed to fetchContactPageEvidence, which defaults to global.fetch"
     },
     {
       "file": "server.js",
-      "line": 784,
+      "line": 817,
       "host": "zillow.com",
       "kind": "url_builder",
       "transport": "none",
@@ -465,7 +455,7 @@
     },
     {
       "file": "server.js",
-      "line": 785,
+      "line": 818,
       "host": "redfin.com",
       "kind": "url_builder",
       "transport": "none",

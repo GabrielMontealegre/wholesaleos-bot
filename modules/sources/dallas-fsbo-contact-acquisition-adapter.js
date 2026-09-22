@@ -6,6 +6,7 @@ const propertyIdentity = require('../research/property-identity');
 const searchProviderWorker = require('../research/search-provider-worker');
 const searchSnippetEvidence = require('../research/search-snippet-evidence');
 const sourceEvidenceAdapter = require('../research/source-evidence-adapter');
+const listingEgressGuard = require('../security/listing-egress-guard');
 
 const SOURCE_ID = 'tx_dallas_fsbo_contact_first';
 const SOURCE_NAME = 'Dallas FSBO / owner-contact listing sources';
@@ -176,10 +177,13 @@ function extractVisibleContactEvidence(input) {
 
 async function fetchContactPageEvidence(sourceUrl, options = {}) {
   const url = cleanText(sourceUrl);
-  const fetchImpl = options.fetch_impl || options.fetchImpl || global.fetch;
   if (!isAllowedContactSourceUrl(url)) {
     return { status: 'unsafe_host_rejected', source_url: url, contact_verified: false };
   }
+  if (listingEgressGuard.isListingHost(url) && !listingEgressGuard.legacyListingFetchEnabled(options.env || process.env)) {
+    return { status: 'listing_egress_disabled', source_url: url, contact_verified: false };
+  }
+  const fetchImpl = options.fetch_impl || options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== 'function') {
     return { status: 'fetch_unavailable', source_url: url, contact_verified: false };
   }
@@ -194,6 +198,9 @@ async function fetchContactPageEvidence(sourceUrl, options = {}) {
       signal: controller ? controller.signal : undefined
     });
     const finalUrl = cleanText(response && response.url) || url;
+    if (listingEgressGuard.isListingHost(finalUrl) && !listingEgressGuard.legacyListingFetchEnabled(options.env || process.env)) {
+      return { status: 'listing_egress_disabled_redirect', source_url: url, contact_verified: false };
+    }
     if (!isAllowedContactSourceUrl(finalUrl)) {
       return { status: 'unsafe_redirect_rejected', source_url: url, final_source_url: finalUrl, contact_verified: false };
     }
@@ -275,15 +282,24 @@ function candidateFromSearchCard(card, pageEvidence, context = {}) {
   const normalizedAddress = propertyIdentity.isCompleteAddress(canonicalAddress) && cleanText(canonicalAddress)
     ? canonicalAddress
     : (propertyIdentity.isCompleteAddress(rawAddress) ? rawAddress : canonicalAddress);
-  const contact = extractVisibleContactEvidence({
+  const pageContact = extractVisibleContactEvidence({
     source_url: sourceUrl,
-    title,
-    snippet,
     page_title: pageEvidence.page_title,
     page_description: pageEvidence.page_description,
     page_visible_text: pageEvidence.page_visible_text,
     page_html: pageEvidence.page_html
   });
+  const contact = pageEvidence.contact_verified === true
+    ? pageContact
+    : {
+      contact_route: 'Manual Lookup Needed',
+      contact_phone: '',
+      contact_email: '',
+      contact_source_url: '',
+      contact_evidence_text: '',
+      contact_verification_status: 'not_verified',
+      contact_verified: false
+    };
   const sourceProofText = cleanText([
     phrase.text,
     status.text,
@@ -399,6 +415,7 @@ async function runDallasFsboContactAcquisitionAdapter(options = {}) {
       pageFetchCount += 1;
       pageEvidence = await fetchContactPageEvidence(sourceUrl, {
         fetch_impl: options.page_fetch_impl || options.pageFetchImpl,
+        env: options.env,
         timeout_ms: options.timeout_ms
       });
       pageFetches.push({

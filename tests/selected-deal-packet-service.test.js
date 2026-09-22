@@ -128,21 +128,21 @@ async function fetchImpl(url) {
       retries: 0
     });
     assert.strictEqual(preview.page_fetches, 2);
-    assert.strictEqual(fetchCalls.length, 2);
+    assert.deepStrictEqual(fetchCalls, [formUrl]);
     assert.strictEqual(preview.packet_count, 3);
 
     const phonePacket = preview.packets[0];
-    assert.strictEqual(phonePacket.packet_status, 'CALL_READY');
+    assert.strictEqual(phonePacket.packet_status, 'RESEARCH_ONLY');
     assert.strictEqual(phonePacket.property.normalized_address, '123 Main St, Dallas, TX 75208');
-    assert.strictEqual(phonePacket.property.address_evidence_source, 'structured_page_metadata');
-    assert.strictEqual(phonePacket.contact.route_type, 'DIRECT_PHONE');
-    assert.strictEqual(phonePacket.contact.phone, '(214) 555-0123');
-    assert.ok(phonePacket.contact.evidence_text.includes('(214) 555-0123'));
-    assert.strictEqual(phonePacket.motivation_evidence.verbatim, true);
-    assert.ok(phonePacket.motivation_evidence.exact_phrase.toLowerCase().includes('cash only'));
-    assert.strictEqual(phonePacket.current_status.verified_visible_source, true);
-    assert.ok(phonePacket.call_script.why_calling);
-    assert.strictEqual(phonePacket.questions_to_ask_seller.length, 5);
+    assert.strictEqual(phonePacket.property.address_evidence_source, 'property_url');
+    assert.strictEqual(phonePacket.contact.route_type, 'NONE');
+    assert.strictEqual(phonePacket.contact.phone, '');
+    assert.ok(!phonePacket.contact.evidence_text.includes('(214) 555-0123'));
+    assert.strictEqual(phonePacket.motivation_evidence.verbatim, false);
+    assert.strictEqual(phonePacket.motivation_evidence.exact_phrase, '');
+    assert.strictEqual(phonePacket.current_status.verified_visible_source, false);
+    assert.strictEqual(phonePacket.call_script.why_calling, '');
+    assert.strictEqual(phonePacket.questions_to_ask_seller.length, 0);
     assert.strictEqual(phonePacket.arv.range, null);
     assert.strictEqual(phonePacket.mao.range, null);
     assert.strictEqual(phonePacket.offer_recommendation.maximum_contract_price_range, null);
@@ -221,10 +221,7 @@ async function fetchImpl(url) {
       high: 128000,
       desired_assignment_fee: 10000
     });
-    assert.deepStrictEqual(valuedPacket.offer_recommendation.maximum_contract_price_range, {
-      low: 114000,
-      high: 128000
-    });
+    assert.strictEqual(valuedPacket.offer_recommendation.maximum_contract_price_range, null);
 
     await assert.rejects(
       selectedDealPacketService.runSelectedDealPacketPreview({

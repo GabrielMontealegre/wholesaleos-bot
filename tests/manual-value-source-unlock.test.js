@@ -140,11 +140,11 @@ legacyFixtures.forEach(([fixture, expected]) => assert.strictEqual(leadState.row
 const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 assert.match(serverSource, /manual-evidence\/comp-confirmation', requireAdmin,/);
-const mandatedLabel = 'Original loan amount at origination (NOT the current balance)';
+const mandatedLabel = 'Original loan amount at origination (NOT the current payoff)';
 assert.ok(uiSource.includes(mandatedLabel));
 const debtRenderer = uiSource.slice(uiSource.indexOf('function debtFactsHtml'), uiSource.indexOf('function leverageDossierHtml'));
-assert.ok(!/amount owed|payoff|current debt/i.test(debtRenderer));
-assert.strictEqual((debtRenderer.match(/current balance/gi) || []).length, 1, 'current balance may appear only in the required NOT-current-balance warning');
+assert.ok(!/amount owed|current balance|current debt/i.test(debtRenderer));
+assert.strictEqual((debtRenderer.match(/current payoff/gi) || []).length, 1, 'payoff may appear only in the required NOT-current-payoff warning');
 
 assert.throws(() => manualEvidence.recordCompConfirmation({
   market: MARKET, queue_key: ROW_KEY, evidence_ids: ['comp-1', 'comp-2'], confirmed: true
