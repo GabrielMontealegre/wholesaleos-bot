@@ -95,6 +95,7 @@ function packetWithComps(comps) {
       source_name: 'Zillow sold result',
       captured_at: '2026-08-19T12:00:00.000Z',
       operator_confirmed: true,
+      operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: '2026-08-19T12:00:00.000Z' },
       fields
     }))
   };
@@ -214,11 +215,15 @@ function pngBuffer(size) {
     market: DALLAS,
     queue_key: 'dallas-subject',
     evidence_id: uploadedItem.evidence_id,
-    operator_confirmed: true,
+    operator_confirmed: false,
     fields: comp(1, { comp_address: '200 Nearby St, Dallas, TX 75201', sold_price: '$225,000' })
   }, { now_impl: () => '2026-08-19T12:05:00.000Z', operator_id: 'admin' });
-  assert.strictEqual(corrected.manual_evidence_item.packet.evaluation.verified_sold_comp_count, 1);
-  assert.strictEqual(corrected.manual_evidence_item.packet.evaluation.arv_range, null);
+  assert.strictEqual(corrected.manual_evidence_item.packet.evaluation.verified_sold_comp_count, 0);
+  const confirmedComp = service.recordCompConfirmation({
+    market: DALLAS, queue_key: 'dallas-subject', evidence_id: uploadedItem.evidence_id, confirmed: true
+  }, { now_impl: () => '2026-08-19T12:05:00.000Z', operator_id: 'admin' });
+  assert.strictEqual(confirmedComp.manual_evidence_item.packet.evaluation.verified_sold_comp_count, 1);
+  assert.strictEqual(confirmedComp.manual_evidence_item.packet.evaluation.arv_range, null);
 
   const blankOcrUpload = await service.uploadScreenshot({
     market: DALLAS,
@@ -275,7 +280,7 @@ function pngBuffer(size) {
 
   const officialConflictRow = Object.assign({}, snapshot.markets[marketKey(DALLAS)].rows[0], { listed_price: '$300,000' });
   const conflict = service.evaluatePacket({ evidence_items: [{
-    evidence_type: 'subject_property', screenshot_id: 'shot-clue', source_name: 'Zillow', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true,
+    evidence_type: 'subject_property', screenshot_id: 'shot-clue', source_name: 'Zillow', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true, operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: '2026-08-19T12:00:00.000Z' },
     fields: { normalized_address: '999 Different St, Dallas, TX 75201', list_price: '$350,000', zestimate: '$410,000', source_url: 'https://zillow.com/x' }
   }] }, officialConflictRow, { today_iso: TODAY });
   assert.strictEqual(officialConflictRow.normalized_address, SUBJECT, 'screenshot conflict cannot overwrite official address');
@@ -286,7 +291,7 @@ function pngBuffer(size) {
 
   function contactPacket(classification, confirmed) {
     return { evidence_items: [{
-      evidence_type: 'skip_trace', screenshot_id: 'shot-contact', source_name: 'CyberBackgroundChecks', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true,
+      evidence_type: 'skip_trace', screenshot_id: 'shot-contact', source_name: 'CyberBackgroundChecks', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true, operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: '2026-08-19T12:00:00.000Z' },
       fields: { normalized_address: SUBJECT, owner_name: 'JANE SAMPLE', contact_value: '(214) 555-0100', contact_route_kind: 'phone', contact_classification: classification, seller_owner_confirmed: confirmed, source_url: 'https://www.cyberbackgroundchecks.com/address/example' }
     }] };
   }

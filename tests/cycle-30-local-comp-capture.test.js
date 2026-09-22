@@ -45,7 +45,7 @@ function row(overrides) {
     address_state: 'complete_source_address',
     normalized_address: subjectAddress,
     city: 'Dallas', county: 'Dallas', state: 'TX',
-    property_kind: 'single family', land_use: 'single family', beds: 3, baths: 2, sqft: 1500,
+    property_kind: 'single family', land_use: 'single family', beds: 3, baths: 2, sqft: 1500, year_built: 1998, lot_size: 6200,
     latitude: 32.7767, longitude: -96.797,
     source_family: 'synthetic_public_notice',
     source_proof_text: `SYNTHETIC TEST ONLY subject property at ${subjectAddress}`,
@@ -84,7 +84,9 @@ function packetFor(comps, confirmed) {
     screenshot_id: `synthetic-shot-${index}`,
     evidence_type: 'sold_comp', source_name: 'Synthetic fixture',
     captured_at: '2026-09-18T12:00:00.000Z',
-    operator_confirmed: confirmed, fields
+    operator_confirmed: confirmed,
+    operator_confirmation: confirmed ? { confirmed: true, confirmed_by: 'synthetic-operator', confirmed_at: '2026-09-18T12:00:00.000Z' } : null,
+    fields
   })) };
 }
 

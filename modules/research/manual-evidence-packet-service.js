@@ -291,6 +291,28 @@ function median(values) {
   return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
+function validIsoTimestamp(value) {
+  const text = cleanText(value);
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(text) && Number.isFinite(Date.parse(text));
+}
+
+function hasExplicitOperatorConfirmation(item) {
+  const confirmation = item && item.operator_confirmation;
+  return !!(confirmation && confirmation.confirmed === true &&
+    cleanText(confirmation.confirmed_by) && validIsoTimestamp(confirmation.confirmed_at));
+}
+
+function setOperatorConfirmation(item, confirmed, operatorId, confirmedAt) {
+  const by = confirmed ? cleanText(operatorId) : '';
+  const at = confirmed ? cleanText(confirmedAt) : '';
+  item.operator_confirmation = { confirmed: confirmed === true, confirmed_by: by, confirmed_at: at };
+  // Keep the original display fields during the transition; counting uses only the nested record.
+  item.operator_confirmed = confirmed === true;
+  item.confirmed_by = by;
+  item.confirmed_at = at;
+  item.proposal_status = confirmed ? 'operator_confirmed' : 'operator_confirmation_required';
+}
+
 function compCandidateFromItem(item) {
   const fields = item.fields || {};
   return {
@@ -341,23 +363,72 @@ function subjectForCompGrid(row, confirmedItems) {
   return subject;
 }
 
-function evaluatePacket(packet, row, options = {}) {
+const SUBJECT_GRID_ATTRIBUTES = Object.freeze([
+  { attribute: 'living_area', fields: ['living_area', 'sqft'] },
+  { attribute: 'bedrooms', fields: ['bedrooms', 'beds'] },
+  { attribute: 'bathrooms', fields: ['bathrooms', 'baths'] },
+  { attribute: 'year_built', fields: ['year_built'] },
+  { attribute: 'lot_size', fields: ['lot_size', 'lot_size_sqft'] },
+  { attribute: 'property_type', fields: ['property_kind', 'property_kind_if_visible', 'land_use'] },
+  { attribute: 'coordinates', fields: ['latitude', 'longitude'] }
+]);
+
+function subjectGridReadiness(subject) {
+  const attributes = SUBJECT_GRID_ATTRIBUTES.map((definition) => {
+    const present = definition.attribute === 'coordinates'
+      ? definition.fields.every((fieldName) => cleanText(subject && subject[fieldName]))
+      : definition.fields.some((fieldName) => cleanText(subject && subject[fieldName]));
+    return { attribute: definition.attribute, status: present ? 'READY' : 'MISSING' };
+  });
+  return {
+    ready: attributes.every((item) => item.status === 'READY'),
+    attributes,
+    missing: attributes.filter((item) => item.status === 'MISSING').map((item) => item.attribute)
+  };
+}
+
+function manualCompEvaluation(packet, row, options = {}) {
   const items = Array.isArray(packet && packet.evidence_items) ? packet.evidence_items : [];
-  const confirmed = items.filter((item) => item && item.operator_confirmed === true);
-  const compGridSubject = subjectForCompGrid(row, confirmed);
+  const confirmedItems = items.filter(hasExplicitOperatorConfirmation);
+  const compGridSubject = subjectForCompGrid(row, confirmedItems);
+  const readiness = subjectGridReadiness(compGridSubject);
   const verifiedComps = [];
   const rejectedComps = [];
-  for (const item of confirmed.filter((entry) => entry.evidence_type === 'sold_comp')) {
+  const confirmedComps = confirmedItems.filter((entry) => entry.evidence_type === 'sold_comp');
+  const unconfirmedCandidateCount = items.filter((entry) => entry && entry.evidence_type === 'sold_comp' && !hasExplicitOperatorConfirmation(entry)).length;
+  for (const item of confirmedComps) {
     const candidate = compCandidateFromItem(item);
+    candidate.operator_confirmation = Object.assign({}, item.operator_confirmation);
     candidate.comp_grid = disclosureStateCompResolution.evaluateStrictCompGrid(candidate, compGridSubject, options);
     candidate.distance_miles = candidate.comp_grid.distance_miles;
     candidate.rural_comp_warning = candidate.comp_grid.rural_exception_warning;
-    const rejectedReason = disclosureStateCompResolution.rejectReason(candidate, compGridSubject, {
+    let rejectedReason = disclosureStateCompResolution.rejectReason(candidate, compGridSubject, {
       today_iso: cleanText(options.today_iso) || new Date().toISOString().slice(0, 10)
     });
+    if (!rejectedReason && readiness.missing.length) rejectedReason = `subject_grid_${readiness.missing[0]}_not_applied`;
     if (rejectedReason) rejectedComps.push(Object.assign({}, candidate, { rejected_reason: rejectedReason }));
     else verifiedComps.push(candidate);
   }
+  return {
+    confirmed_items: confirmedItems,
+    subject: compGridSubject,
+    subject_grid_readiness: readiness,
+    verified_comps: verifiedComps,
+    rejected_comps: rejectedComps,
+    confirmed_strict_comp_count: verifiedComps.length,
+    confirmed_but_grid_rejected_count: rejectedComps.length,
+    unconfirmed_candidate_count: unconfirmedCandidateCount,
+    grid_rejection_reasons: rejectedComps.map((item) => item.rejected_reason)
+  };
+}
+
+function evaluatePacket(packet, row, options = {}) {
+  const items = Array.isArray(packet && packet.evidence_items) ? packet.evidence_items : [];
+  const compEvaluation = manualCompEvaluation(packet, row, options);
+  const confirmed = compEvaluation.confirmed_items;
+  const compGridSubject = compEvaluation.subject;
+  const verifiedComps = compEvaluation.verified_comps;
+  const rejectedComps = compEvaluation.rejected_comps;
   const usedComps = verifiedComps.slice(0, 3);
   const prices = usedComps.map((comp) => comp.sold_price).filter((price) => price > 0);
   const arvUnlocked = prices.length >= 3;
@@ -446,6 +517,11 @@ function evaluatePacket(packet, row, options = {}) {
   return {
     readiness,
     confirmed_evidence_count: confirmed.length,
+    confirmed_strict_comp_count: compEvaluation.confirmed_strict_comp_count,
+    confirmed_but_grid_rejected_count: compEvaluation.confirmed_but_grid_rejected_count,
+    unconfirmed_candidate_count: compEvaluation.unconfirmed_candidate_count,
+    subject_grid_readiness: compEvaluation.subject_grid_readiness,
+    grid_rejection_reasons: compEvaluation.grid_rejection_reasons,
     verified_screenshot_comps: usedComps,
     rejected_screenshot_comps: rejectedComps,
     comp_grid_comps: usedComps.length || rejectedComps.length
@@ -553,6 +629,12 @@ function rowStateRank(row) {
   return index < 0 ? order.length : index;
 }
 
+function propertyStateRank(row) {
+  const order = ['PROPERTY_READY', 'NEEDS_COMPS', 'NEEDS_PROPERTY_FACTS', 'NEEDS_VALUE_SOURCE', 'LOCKED'];
+  const index = order.indexOf(cleanText(row && row.property_state).toUpperCase());
+  return index < 0 ? order.length : index;
+}
+
 function deterministicSampleRows(rows, market, options = {}) {
   const definition = LIVE_MARKETS.find((entry) => marketKey(entry) === marketKey(market));
   const limit = Number(options.limit || definition && definition.sample_limit || 2);
@@ -563,6 +645,8 @@ function deterministicSampleRows(rows, market, options = {}) {
     .sort((a, b) => {
       const lifecycle = lifecycleRank(a) - lifecycleRank(b);
       if (lifecycle) return lifecycle;
+      const propertyState = propertyStateRank(a) - propertyStateRank(b);
+      if (propertyState) return propertyState;
       const aSale = futureSale(a, today);
       const bSale = futureSale(b, today);
       if (!!aSale !== !!bSale) return aSale ? -1 : 1;
@@ -619,6 +703,18 @@ function sampleItem(row, packetStore, market, options) {
     why_worth_checking: whyWorthChecking(row),
     row_state: cleanText(row.row_state),
     row_state_reason: cleanText(row.row_state_reason),
+    contact_state: cleanText(row.contact_state),
+    contact_state_reason: cleanText(row.contact_state_reason),
+    property_state: cleanText(row.property_state),
+    property_state_reason: cleanText(row.property_state_reason),
+    leverage_dossier: row.leverage_dossier && typeof row.leverage_dossier === 'object' ? JSON.parse(JSON.stringify(row.leverage_dossier)) : null,
+    equity_estimate: row.equity_estimate && typeof row.equity_estimate === 'object' ? JSON.parse(JSON.stringify(row.equity_estimate)) : null,
+    room_to_offer: cleanText(row.room_to_offer),
+    confirmed_strict_comp_count: Number(row.confirmed_strict_comp_count) || 0,
+    confirmed_but_grid_rejected_count: Number(row.confirmed_but_grid_rejected_count) || 0,
+    unconfirmed_candidate_count: Number(row.unconfirmed_candidate_count) || 0,
+    subject_grid_readiness: row.subject_grid_readiness && typeof row.subject_grid_readiness === 'object' ? JSON.parse(JSON.stringify(row.subject_grid_readiness)) : null,
+    manual_comp_grid_rejection_reasons: Array.isArray(row.manual_comp_grid_rejection_reasons) ? row.manual_comp_grid_rejection_reasons.slice() : [],
     missing_evidence: Array.isArray(row.missing_fields) ? row.missing_fields.slice() : [],
     research_links: researchLinks(row),
     packet: publicPacket(packet, row, options)
@@ -829,11 +925,13 @@ function recordEvidenceProposal(input = {}, options = {}) {
   }
   const fields = normalizeFields(item.evidence_type, input.fields);
   const confirmed = input.operator_confirmed === true;
+  if (item.evidence_type === 'sold_comp' && confirmed) {
+    throw serviceError('Sold comps must be confirmed through the admin-only single-comp confirmation route.', 'manual_comp_confirmation_endpoint_required', 400);
+  }
   item.fields = fields;
-  item.operator_confirmed = confirmed;
-  item.confirmed_at = confirmed ? nowIso(options) : '';
-  item.confirmed_by = confirmed ? cleanText(options.operator_id) || 'admin' : '';
-  item.proposal_status = confirmed ? 'operator_confirmed' : 'operator_confirmation_required';
+  const operatorId = cleanText(options.operator_id);
+  if (confirmed && !operatorId) throw serviceError('An authenticated operator identity is required to confirm evidence.', 'manual_evidence_operator_identity_required', 400);
+  setOperatorConfirmation(item, confirmed, operatorId, confirmed ? nowIso(options) : '');
   item.field_evidence = fieldEvidence(fields, {
     screenshot_id: item.screenshot_id,
     captured_at: item.captured_at,
@@ -844,6 +942,61 @@ function recordEvidenceProposal(input = {}, options = {}) {
   packet.updated_at = nowIso(options);
   writePacketStore(store);
   return packetResponse(market, queueKey, options);
+}
+
+function recordCompConfirmation(input = {}, options = {}) {
+  if (Array.isArray(input.evidence_id) || Array.isArray(input.evidence_ids) || input.evidence_ids != null || input.comp_ids != null) {
+    throw serviceError('Confirm exactly one comp per request.', 'manual_comp_confirmation_single_only', 400);
+  }
+  const market = normalizeMarket(input.market);
+  const queueKey = cleanText(input.queue_key || input.row_id);
+  const evidenceId = cleanText(input.evidence_id || input.comp_id);
+  if (!queueKey || !evidenceId) throw serviceError('One row id and one comp evidence id are required.', 'manual_comp_confirmation_identity_required', 400);
+  if (typeof input.confirmed !== 'boolean') throw serviceError('confirmed must be true or false.', 'manual_comp_confirmation_value_required', 400);
+  const operatorId = cleanText(options.operator_id);
+  if (!operatorId) throw serviceError('An authenticated operator identity is required.', 'manual_comp_confirmation_operator_required', 400);
+  const row = snapshotRow(market, queueKey, options);
+  if (!row) throw serviceError('The selected snapshot row was not found.', 'manual_evidence_row_not_found', 404);
+  const store = readPacketStore();
+  const packet = packetForRow(store, market, queueKey, false);
+  const item = packet && Array.isArray(packet.evidence_items)
+    ? packet.evidence_items.find((entry) => cleanText(entry && entry.evidence_id) === evidenceId)
+    : null;
+  if (!item || item.evidence_type !== 'sold_comp') throw serviceError('The selected sold-comp proposal was not found.', 'manual_comp_confirmation_not_found', 404);
+  if (!Array.isArray(packet.screenshots) || !packet.screenshots.some((shot) => cleanText(shot && shot.screenshot_id) === cleanText(item.screenshot_id))) {
+    throw serviceError('The comp proposal has no matching screenshot metadata.', 'manual_evidence_screenshot_not_found', 404);
+  }
+  if (input.confirmed === true && hasExplicitOperatorConfirmation(item) && cleanText(item.operator_confirmation.confirmed_by) === operatorId) {
+    return packetResponse(market, queueKey, options);
+  }
+  if (input.confirmed === false && item.operator_confirmation && item.operator_confirmation.confirmed === false) {
+    return packetResponse(market, queueKey, options);
+  }
+  setOperatorConfirmation(item, input.confirmed, operatorId, input.confirmed ? nowIso(options) : '');
+  item.field_evidence = fieldEvidence(item.fields || {}, {
+    screenshot_id: item.screenshot_id,
+    captured_at: item.captured_at,
+    source_name: item.source_name,
+    operator_confirmed: input.confirmed
+  });
+  item.conflicts = conflictsForItem(item, row);
+  packet.updated_at = nowIso(options);
+  writePacketStore(store);
+  return packetResponse(market, queueKey, options);
+}
+
+function manualValueSummaryForRow(row, market, options = {}) {
+  const store = options.packet_store || readPacketStore();
+  const packet = packetForRow(store, market || row, cleanText(row && row.queue_key), false);
+  const evaluation = manualCompEvaluation(packet || {}, row || {}, options);
+  return {
+    confirmed_strict_comp_count: evaluation.confirmed_strict_comp_count,
+    confirmed_but_grid_rejected_count: evaluation.confirmed_but_grid_rejected_count,
+    unconfirmed_candidate_count: evaluation.unconfirmed_candidate_count,
+    subject_grid_readiness: evaluation.subject_grid_readiness,
+    grid_rejection_reasons: evaluation.grid_rejection_reasons,
+    confirmed_strict_comps: evaluation.verified_comps
+  };
 }
 
 module.exports = {
@@ -861,9 +1014,15 @@ module.exports = {
   researchLinks,
   leadOrigin,
   deterministicSampleRows,
+  hasExplicitOperatorConfirmation,
+  subjectGridReadiness,
+  manualCompEvaluation,
+  manualValueSummaryForRow,
   evaluatePacket,
   latestManualEvidenceSnapshot,
   sampleModeForAllMarkets,
   uploadScreenshot,
-  recordEvidenceProposal
+  recordEvidenceProposal,
+  recordCompConfirmation,
+  readPacketStore
 };

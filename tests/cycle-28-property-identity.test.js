@@ -194,6 +194,7 @@ try {
     return { evidence_items: [{
       evidence_type: 'skip_trace', screenshot_id: 'shot-phone', source_name: 'Public background-check page',
       captured_at: fixture.captured_at, operator_confirmed: true,
+      operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: fixture.captured_at },
       fields: Object.assign({
         normalized_address: SUBJECT,
         owner_name: 'JANE SAMPLE',

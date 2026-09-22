@@ -2193,6 +2193,19 @@ app.post('/api/dashboard/free-public-deal-board/manual-evidence/proposal', requi
   }
 });
 
+app.post('/api/dashboard/free-public-deal-board/manual-evidence/comp-confirmation', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(manualEvidencePacketService.recordCompConfirmation(Object.assign({}, req.body || {}, {
+      market: manualEvidenceMarket(req.body)
+    }), {
+      operator_id: req.currentUser.id
+    }));
+  } catch (error) {
+    manualEvidenceError(res, error);
+  }
+});
+
 // Explicit operator input on preview snapshot rows. This never creates or
 // updates a saved lead and never runs automatically.
 app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin, (req, res) => {
