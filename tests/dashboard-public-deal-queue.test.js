@@ -836,6 +836,7 @@ function mockDeal(overrides) {
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/sample',\s*requireAdmin/.test(serverSource), 'manual evidence sample route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/upload',\s*requireAdmin/.test(serverSource), 'manual evidence upload route must be admin-protected');
   assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/proposal',\s*requireAdmin/.test(serverSource), 'manual evidence confirmation route must be admin-protected');
+  assert.ok(/app\.post\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/comp-confirmation',\s*requireAdmin,/.test(serverSource), 'single-comp confirmation route must use the admin gate');
   assert.ok(/app\.get\('\/api\/dashboard\/free-public-deal-board\/manual-evidence\/screenshot\/:id',\s*requireAdmin/.test(serverSource), 'stored screenshot preview route must be admin-protected');
   assert.ok(/app\.use\(\['\/api\/buyboxes', '\/api\/settings', '\/api\/integrations'\], requireAdmin\)/.test(serverSource), 'sensitive dashboard routes must reuse the fail-closed admin gate');
   assert.ok(serverSource.includes("code: 'ADMIN_AUTHORIZATION_UNAVAILABLE'"), 'admin authorization failures must return a clear unavailable code');
@@ -848,7 +849,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=36'), 'dashboard must load the Cycle 34 cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=37'), 'dashboard must load the Cycle 36 cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -905,7 +906,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=36'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=37'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
   assert.ok(uiSource.includes('Official event/status') && uiSource.includes('status_evidence_text'), 'dashboard must render source-stated status evidence');
   assert.ok(uiSource.includes('Doc #<b>') && uiSource.includes('filing_period'), 'dashboard must render document number and filing period');
@@ -1045,6 +1046,29 @@ function mockDeal(overrides) {
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.contactRoutesHtml, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.phoneReadinessHtml, 'function');
   assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.rowCard, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.leverageDossierHtml, 'function');
+  assert.strictEqual(typeof uiContext.window.__wosPublicDealsTestHooks.debtFactsHtml, 'function');
+  const unknownFact = { value: null, status: 'UNKNOWN', provenance: {} };
+  const originalLoanFact = { value: '$150,000', status: 'VERIFIED', provenance: { source_url: 'https://county.example.gov/deed/1' } };
+  const dossierHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard({
+    queue_key: 'cycle36-dossier', normalized_address: '3808 Kings Dr, Ennis, TX 75119', county: 'Ellis',
+    row_state: 'LOCKED', row_state_reason: 'Legacy contact state remains locked.',
+    contact_state: 'LOCKED', contact_state_reason: 'No contact route is ready.',
+    property_state: 'NEEDS_COMPS', property_state_reason: 'Fewer than 3 qualifying sold comps are available.',
+    lifecycle_status: { status: 'FRESH', quarantined: false }, distress_evidence: {},
+    leverage_dossier: {
+      identity: { normalized_address: unknownFact, parcel_id: unknownFact, beds: unknownFact, baths: unknownFact, sqft: unknownFact, year_built: unknownFact, lot_size: unknownFact, property_type: unknownFact },
+      ownership: { owner_of_record: unknownFact, owner_role: unknownFact, prior_sale_price: unknownFact, prior_sale_date: unknownFact, years_held: unknownFact },
+      debt: { original_loan_amount: originalLoanFact, lien_amounts: unknownFact, tax_due: unknownFact, judgment_amount: unknownFact, minimum_bid: unknownFact, unknown_source_amount: unknownFact },
+      distress_overlay: {}
+    },
+    equity_estimate: { status: 'UNKNOWN', equity_estimate: null, equity_basis: 'unknown', room_to_offer: 'UNKNOWN' },
+    room_to_offer: 'UNKNOWN', subject_grid_readiness: { missing: ['year_built'] },
+    manual_comp_grid_rejection_reasons: ['comp_outside_one_mile']
+  });
+  assert.ok(dossierHtml.includes('Contact status:') && dossierHtml.includes('Property status:') && dossierHtml.includes('Legacy combined state:'));
+  assert.ok(dossierHtml.includes('Property leverage dossier') && dossierHtml.includes('Original loan amount at origination (NOT the current balance)'));
+  assert.ok(dossierHtml.includes('Equity clue') && dossierHtml.includes('Unknown') && dossierHtml.includes('subject year built') && dossierHtml.includes('comp rejected: comp outside one mile'));
   const phoneHook = uiContext.window.__wosPublicDealsTestHooks.phoneReadinessHtml;
   const verifiedPhoneRoute = {
     route_kind: 'phone', value: '(214) 555-0100', seller_contact_eligibility: 'SELLER_CONTACT_ELIGIBLE',

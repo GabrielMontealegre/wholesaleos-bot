@@ -167,13 +167,21 @@ function propertyStateForDeal(deal) {
     return propertyOut(PROPERTY_STATES.NEEDS_PROPERTY_FACTS, 'Beds, baths, square footage and year built are all missing.', 'Find source-supported property facts before selecting comps.');
   }
   const policy = marketCompPolicy.compPolicyForMarket({ city: deal.city, county: deal.county, state: deal.state });
-  if (policy.comp_lane_enabled === false) {
+  const hasAutomatedLane = policy.comp_lane_enabled === true;
+  const hasManualLane = policy.manual_value_lane_enabled === true;
+  if (!hasAutomatedLane && !hasManualLane) {
     return propertyOut(PROPERTY_STATES.NEEDS_VALUE_SOURCE, cleanText(policy.arv_lock_reason_when_disabled) || 'No approved value source is enabled for this market.', cleanText(policy.work_order) || 'Verify an approved value source for this market.');
   }
-  if ((Number(deal.verified_sold_comp_count) || 0) < 3) {
-    return propertyOut(PROPERTY_STATES.NEEDS_COMPS, 'Fewer than 3 verified sold comps are available.', 'Research 3 verified sold comps using the existing strict comp grid.');
+  const automatedCount = hasAutomatedLane ? Number(deal.verified_sold_comp_count) || 0 : 0;
+  const manualCount = hasManualLane ? Number(deal.confirmed_strict_comp_count) || 0 : 0;
+  const qualifiedCount = Math.max(automatedCount, manualCount);
+  const automatedNote = !hasAutomatedLane && cleanText(policy.arv_lock_reason_when_disabled)
+    ? ` Automated lane note: ${cleanText(policy.arv_lock_reason_when_disabled)}.`
+    : '';
+  if (qualifiedCount < 3) {
+    return propertyOut(PROPERTY_STATES.NEEDS_COMPS, `Fewer than 3 qualifying sold comps are available.${automatedNote}`, 'Confirm 3 operator-captured comps that pass the unchanged strict comp grid.');
   }
-  return propertyOut(PROPERTY_STATES.PROPERTY_READY, 'At least 3 verified sold comps are available for this property.', 'Review the leverage dossier and verify offer assumptions.');
+  return propertyOut(PROPERTY_STATES.PROPERTY_READY, 'At least 3 qualifying sold comps are available for this property.', 'Review the leverage dossier and verify offer assumptions.');
 }
 
 function rowStateForDeal(deal) {

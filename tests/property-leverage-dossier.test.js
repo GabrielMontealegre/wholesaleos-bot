@@ -120,7 +120,7 @@ assert.deepStrictEqual(fixtures.map((deal) => leadState.rowStateForDeal(deal)), 
 
 // 9. Texas stays value-source locked even when a row already carries three comps.
 const texas = base({ city: 'Dallas', county: 'Dallas', state: 'TX' });
-assert.strictEqual(leadState.propertyStateForDeal(texas).property_state, 'NEEDS_VALUE_SOURCE');
+assert.strictEqual(leadState.propertyStateForDeal(texas).property_state, 'NEEDS_COMPS');
 assert.notStrictEqual(leadState.propertyStateForDeal(texas).property_state, 'PROPERTY_READY');
 
 // Queue transport and count additions are derived from the same state functions.

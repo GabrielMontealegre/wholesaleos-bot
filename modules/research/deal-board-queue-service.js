@@ -298,6 +298,29 @@ function attachLeverageProjection(row) {
   return row;
 }
 
+function projectManualValueEvidence(rows, market, options = {}) {
+  const packetStore = options.packet_store || manualEvidencePacketService.readPacketStore();
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const summary = manualEvidencePacketService.manualValueSummaryForRow(row, market, Object.assign({}, options, { packet_store: packetStore }));
+    row.confirmed_strict_comp_count = summary.confirmed_strict_comp_count;
+    row.confirmed_but_grid_rejected_count = summary.confirmed_but_grid_rejected_count;
+    row.unconfirmed_candidate_count = summary.unconfirmed_candidate_count;
+    row.subject_grid_readiness = summary.subject_grid_readiness;
+    row.manual_comp_grid_rejection_reasons = summary.grid_rejection_reasons;
+    if (summary.confirmed_strict_comps.length) {
+      const existing = Array.isArray(row.verified_comps) ? row.verified_comps : [];
+      const byIdentity = new Map();
+      existing.concat(summary.confirmed_strict_comps).forEach((comp) => {
+        const identity = cleanText(comp && (comp.parcel_id || comp.apn || comp.pin || comp.comp_address)).toLowerCase();
+        if (identity) byIdentity.set(identity, comp);
+      });
+      row.verified_comps = Array.from(byIdentity.values());
+    }
+    attachLeverageProjection(row);
+    return row;
+  });
+}
+
 function rowEvidenceScore(row) {
   return [
     'source_document_url', 'source_url', 'best_link_to_click_first', 'maps_url',
@@ -1067,6 +1090,14 @@ function queueCounts(rows) {
   };
   const notQuarantined = (row) => !(row && row.lifecycle_status && row.lifecycle_status.quarantined === true);
   const actionableStates = new Set(['CALL_READY', 'OUTREACH_READY', 'MAIL_READY']);
+  const propertyStateCounts = Object.fromEntries(['LOCKED', 'NEEDS_PROPERTY_FACTS', 'NEEDS_VALUE_SOURCE', 'NEEDS_COMPS', 'PROPERTY_READY'].map((state) => [state, 0]));
+  const roomToOfferCounts = Object.fromEntries(['LIKELY', 'TIGHT', 'NONE', 'UNKNOWN'].map((state) => [state, 0]));
+  rows.forEach((row) => {
+    const propertyState = Object.prototype.hasOwnProperty.call(propertyStateCounts, cleanText(row && row.property_state)) ? cleanText(row.property_state) : 'LOCKED';
+    const roomToOffer = Object.prototype.hasOwnProperty.call(roomToOfferCounts, cleanText(row && row.room_to_offer)) ? cleanText(row.room_to_offer) : 'UNKNOWN';
+    propertyStateCounts[propertyState] += 1;
+    roomToOfferCounts[roomToOffer] += 1;
+  });
   return {
     total_rows: rows.length,
     today_rows: rows.filter((row) => String(row.first_seen_at).slice(0, 10) === today || String(row.last_seen_at).slice(0, 10) === today).length,
@@ -1083,9 +1114,16 @@ function queueCounts(rows) {
     closed_not_interested: rows.filter((row) => row.row_state === 'CLOSED_NOT_INTERESTED').length,
     locked: rows.filter((row) => row.row_state === 'LOCKED').length,
     property_ready: rows.filter((row) => row.property_state === 'PROPERTY_READY').length,
+    property_locked: propertyStateCounts.LOCKED,
     needs_property_facts: rows.filter((row) => row.property_state === 'NEEDS_PROPERTY_FACTS').length,
     needs_value_source: rows.filter((row) => row.property_state === 'NEEDS_VALUE_SOURCE').length,
-    room_to_offer_likely: rows.filter((row) => row.room_to_offer === 'LIKELY').length,
+    property_needs_comps: propertyStateCounts.NEEDS_COMPS,
+    property_state_counts: propertyStateCounts,
+    room_to_offer_likely: roomToOfferCounts.LIKELY,
+    room_to_offer_tight: roomToOfferCounts.TIGHT,
+    room_to_offer_none: roomToOfferCounts.NONE,
+    room_to_offer_unknown: roomToOfferCounts.UNKNOWN,
+    room_to_offer_counts: roomToOfferCounts,
     row_states: states,
     inspect_now: rows.filter((row) => row.quality_bucket === 'INSPECT_NOW' && notQuarantined(row)).length,
     needs_zip_review: rows.filter((row) => row.quality_bucket === 'NEEDS_ZIP_REVIEW' && notQuarantined(row)).length,
@@ -1353,7 +1391,7 @@ function latestDealBoardSnapshot(input = {}) {
   const batchesToday = (bucket.batches || []).filter((item) => String(item.run_at).slice(0, 10) === today);
   // Read-time repairs are deliberately applied to a copy: the dashboard gets
   // safer rows immediately after deploy without turning a read into a write.
-  const rows = repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow));
+  const rows = projectManualValueEvidence(repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow)), market);
   return {
     ok: true,
     preview_only: true,
@@ -1803,6 +1841,7 @@ module.exports = {
   blockedInventoryBreakdownForResponse,
   CONTACT_WORKFLOW_OUTCOMES,
   queueCounts,
+  projectManualValueEvidence,
   projectRowForQueue,
   lifecycleAggregate,
   countyOnboardingSummary,

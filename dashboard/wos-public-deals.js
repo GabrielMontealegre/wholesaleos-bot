@@ -9,6 +9,7 @@
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
   var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
   var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
+  var API_MANUAL_COMP_CONFIRMATION = '/api/dashboard/free-public-deal-board/manual-evidence/comp-confirmation';
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
@@ -352,7 +353,7 @@
     var sourceUrl = String(item.fields && item.fields.source_url || '');
     var sourceLink = /^https:\/\/(?:[a-z0-9-]+\.)?(?:zillow|redfin|realtor)\.com\//i.test(sourceUrl)
       ? '<div style="font-size:10px;margin-top:4px;">' + link('Open captured source page', sourceUrl) + '</div>' : '';
-    return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
+    return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" data-evidence-type="' + esc(item.evidence_type || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b style="font-size:11px;">' + esc(String(item.evidence_type || '').replace(/_/g, ' ')) + ' from ' + esc(item.source_name || 'screenshot') + '</b>' +
       '<span style="font-size:10px;padding:2px 7px;border-radius:9px;background:' + (item.operator_confirmed ? '#bbf7d0' : '#fde68a') + ';">' + (item.operator_confirmed ? 'CONFIRMED' : 'UNCONFIRMED OCR PROPOSAL') + '</span></div>' +
       '<div style="font-size:10px;color:#6b7280;margin-top:3px;">Captured ' + esc(item.captured_at || '') + ' - screenshot ' + esc(item.screenshot_id || '') + '</div>' +
@@ -360,6 +361,7 @@
       (conflicts.length ? '<div style="font-size:11px;color:#991b1b;margin-top:5px;"><b>Conflict - no overwrite:</b> ' + conflicts.map(function (conflict) { return esc(conflict.field + ': official "' + conflict.official_value + '" vs screenshot "' + conflict.screenshot_value + '"'); }).join(' | ') + '</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:7px;">' + keys.map(function (key) { return manualFieldInput(item, key); }).join('') + '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;"><button type="button" class="wos-manual-confirm" style="padding:5px 9px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">' + (item.operator_confirmed ? 'Update confirmed evidence' : 'Confirm these fields') + '</button>' +
+      (item.evidence_type === 'sold_comp' && item.operator_confirmed ? '<button type="button" class="wos-manual-unconfirm" style="padding:5px 9px;border-radius:6px;border:1px solid #b91c1c;background:#fff;color:#b91c1c;font-size:11px;font-weight:700;cursor:pointer;">Remove confirmation</button>' : '') +
       '<span class="wos-manual-proposal-message" style="font-size:10px;color:#6b7280;">Nothing counts until you confirm.</span></div></div>';
   }
 
@@ -433,7 +435,7 @@
     return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
       '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
-        '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Current state:</b> ' + esc(item.row_state || 'review') + '<br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
+        '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Contact status:</b> ' + esc(item.contact_state || 'LOCKED') + ' - ' + esc(item.contact_state_reason || 'No contact route is ready.') + '<br><b>Property status:</b> ' + esc(item.property_state || 'LOCKED') + ' - ' + esc(item.property_state_reason || 'Property work is not ready.') + '<br><span style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(item.row_state || 'review') + '</span><br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
       (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property' + (item.subject_address_recovery.skipped_date_prefix ? '; a date fragment appeared between the property label and address' : '') + '</div>' : '') +
@@ -589,6 +591,71 @@
     return links.map(function (entry) { return link(entry.label, entry.url); }).join('');
   }
 
+  function dossierValue(value) {
+    if (value === null || value === undefined || value === '') return 'Unknown';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'number') return value.toLocaleString('en-US');
+    if (Array.isArray(value)) return value.map(function (item) {
+      if (item && typeof item === 'object') return item.amount || item.exact_amount || item.value || JSON.stringify(item);
+      return String(item);
+    }).join(', ');
+    if (typeof value === 'object') return value.amount || value.address || value.price || JSON.stringify(value);
+    return String(value);
+  }
+
+  function dossierFact(label, entry, options) {
+    options = options || {};
+    var known = entry && entry.status && entry.status !== 'UNKNOWN' && entry.value !== null && entry.value !== undefined && entry.value !== '';
+    if (!known) return '<div><b>' + esc(label) + ':</b> Unknown <span style="color:#6b7280;">(' + esc(options.unknown_reason || 'source-backed evidence is missing') + ')</span></div>';
+    var provenance = entry.provenance || {};
+    var value = dossierValue(entry.value);
+    if (options.money && typeof entry.value === 'number') value = '$' + Number(entry.value).toLocaleString('en-US');
+    return '<div><b>' + esc(label) + ':</b> ' + esc(value) + ' <span style="font-size:10px;color:' + (entry.status === 'CLUE' ? '#92400e' : '#166534') + ';">' + esc(entry.status) + '</span> ' +
+      (provenance.source_url ? link('evidence', provenance.source_url) : '<span style="font-size:10px;color:#6b7280;">No provenance link</span>') + '</div>';
+  }
+
+  function debtFactsHtml(debt) {
+    debt = debt || {};
+    return [
+      dossierFact('Original loan amount at origination (NOT the current balance)', debt.original_loan_amount),
+      dossierFact('Recorded lien amount', debt.lien_amounts),
+      dossierFact('Property tax due', debt.tax_due),
+      dossierFact('Judgment amount', debt.judgment_amount),
+      dossierFact('Auction minimum bid', debt.minimum_bid),
+      dossierFact('Unlabelled amount from source — type unknown', debt.unknown_source_amount)
+    ].join('');
+  }
+
+  function leverageDossierHtml(row) {
+    var dossier = row && row.leverage_dossier || {};
+    var identity = dossier.identity || {};
+    var ownership = dossier.ownership || {};
+    var distressOverlay = dossier.distress_overlay || {};
+    var equity = row && row.equity_estimate || {};
+    var valueBasis = equity.equity_basis === 'verified_arv' ? 'Verified ARV from strict confirmed sold comps' : equity.equity_basis === 'list_price_proxy' ? 'List price proxy (CLUE only)' : 'None';
+    var equityText = equity.status === 'UNKNOWN' || equity.equity_estimate === null || equity.equity_estimate === undefined
+      ? 'Unknown (both a supported debt figure and a value reference are required)'
+      : '$' + Number(equity.equity_estimate).toLocaleString('en-US') + ' - CLUE only; basis ' + valueBasis + '; confidence ' + String(equity.equity_confidence || 'unknown');
+    var room = String(row && row.room_to_offer || equity.room_to_offer || 'UNKNOWN');
+    var roomReason = room === 'LIKELY' ? 'The clue-level value reference exceeds the supported debt estimate by at least 30%.' : room === 'TIGHT' ? 'The clue-level spread is positive but below 30%.' : room === 'NONE' ? 'The supported debt estimate is at or above the clue-level value reference.' : 'Debt or value evidence is incomplete, so room cannot be calculated.';
+    var missing = [];
+    [['address', identity.normalized_address], ['parcel number', identity.parcel_id], ['beds', identity.beds], ['baths', identity.baths], ['square footage', identity.sqft], ['year built', identity.year_built], ['lot size', identity.lot_size], ['property type', identity.property_type], ['owner of record', ownership.owner_of_record]].forEach(function (pair) {
+      if (!pair[1] || pair[1].status === 'UNKNOWN') missing.push(pair[0]);
+    });
+    safeArray(row && row.subject_grid_readiness && row.subject_grid_readiness.missing).forEach(function (name) { missing.push('subject ' + String(name).replace(/_/g, ' ')); });
+    safeArray(row && row.manual_comp_grid_rejection_reasons).forEach(function (reason) { missing.push('comp rejected: ' + String(reason).replace(/_/g, ' ')); });
+    var distressFacts = Object.keys(distressOverlay).map(function (key) { return dossierFact(key.replace(/_/g, ' '), distressOverlay[key]); }).join('');
+    return '<details class="wos-leverage-dossier" style="margin-top:7px;border:1px solid #cbd5e1;border-radius:7px;padding:7px 8px;background:#f8fafc;font-size:11px;"><summary style="cursor:pointer;font-weight:700;color:#111827;">Property leverage dossier</summary>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin-top:7px;">' +
+      '<section><b>Property facts</b>' + dossierFact('Address', identity.normalized_address) + dossierFact('Parcel', identity.parcel_id) + dossierFact('Beds', identity.beds) + dossierFact('Baths', identity.baths) + dossierFact('Square feet', identity.sqft) + dossierFact('Year built', identity.year_built) + dossierFact('Lot size', identity.lot_size) + dossierFact('Property type', identity.property_type) + '</section>' +
+      '<section><b>Ownership</b>' + dossierFact('Owner of record', ownership.owner_of_record) + dossierFact('Role', ownership.owner_role) + dossierFact('Prior sale price', ownership.prior_sale_price) + dossierFact('Prior sale date', ownership.prior_sale_date) + dossierFact('Years held', ownership.years_held) + '</section>' +
+      '<section><b>Debt</b>' + debtFactsHtml(dossier.debt) + '</section>' +
+      '<section><b>Distress reason</b>' + (distressFacts || '<div>Unknown (no sourced distress overlay)</div>') + '</section>' +
+      '<section><b>Value reference</b><div>' + esc(valueBasis) + '</div><b>Equity clue</b><div>' + esc(equityText) + '</div><b>Room to offer</b><div>' + esc(room) + ' - ' + esc(roomReason) + '</div></section>' +
+      '<section><b>Missing evidence</b><div>' + esc(missing.length ? Array.from(new Set(missing)).join(', ') : 'No dossier field gaps are currently listed.') + '</div><div style="margin-top:4px;">Confirmed strict comps: ' + esc(row.confirmed_strict_comp_count || 0) + '; confirmed but rejected: ' + esc(row.confirmed_but_grid_rejected_count || 0) + '; unconfirmed candidates: ' + esc(row.unconfirmed_candidate_count || 0) + '.</div></section>' +
+      '</div></details>';
+  }
+
   function rowCard(row) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -600,10 +667,9 @@
     if (zipReview && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     }
-    if (row.row_state) {
-      lines.push('<div style="font-size:12px;">Row state: <b style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state) + '</b>' +
-        (row.row_state_reason ? ' <span style="color:#6b7280;">' + esc(row.row_state_reason) + '</span>' : '') + '</div>');
-    }
+    lines.push('<div style="font-size:12px;"><b>Contact status:</b> ' + esc(row.contact_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.contact_state_reason || 'No contact route is ready.') + '</span></div>');
+    lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(row.property_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
+    if (row.row_state) lines.push('<div style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(row.row_state) + (row.row_state_reason ? ' - ' + esc(row.row_state_reason) : '') + '</div>');
     var distress = row.distress_evidence || {};
     lines.push('<div style="font-size:12px;margin-top:4px;"><b>Why this lead exists:</b> ' + esc(distress.distress_reason || row.why_this_might_be_a_deal || row.motivation_evidence_text || 'Official source evidence requires review.') + '</div>');
     lines.push('<div style="font-size:12px;"><b>Official event/status:</b> ' + esc(distress.official_event_status || row.status_evidence_text || 'Not published in source') + '</div>');
@@ -627,6 +693,7 @@
       ' | ARV ' + esc(row.ARV_lock_state || 'ARV_LOCKED_NO_VERIFIED_COMPS') + ' | MAO ' + esc(row.MAO_lock_state || 'unknown') +
       (row.appraisal_clue ? ' | County appraisal clue ' + esc(row.appraisal_clue) + ' (not ARV)' : '') + '</div>');
     lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;"><b>ARV lock reason:</b> ' + esc(row.arv_lock_reason || 'ARV stays locked until 3 verified qualifying sold comps pass the strict comp grid.') + '</div>');
+    lines.push(leverageDossierHtml(row));
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
     var recordName = row.owner_record && (row.owner_record.owner_name || row.owner_record.taxpayer_name);
     var recordLabel = row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record';
@@ -1409,20 +1476,32 @@
     });
     button.disabled = true;
     button.textContent = 'Saving confirmation...';
+    var isSoldComp = proposal && proposal.dataset && proposal.dataset.evidenceType === 'sold_comp';
+    var identity = {
+      market: selectedMarket(),
+      queue_key: card && card.dataset && card.dataset.queueKey || '',
+      evidence_id: proposal && proposal.dataset && proposal.dataset.evidenceId || ''
+    };
     fetch(API_MANUAL_EVIDENCE_PROPOSAL, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({
-        market: selectedMarket(),
-        queue_key: card && card.dataset && card.dataset.queueKey || '',
-        evidence_id: proposal && proposal.dataset && proposal.dataset.evidenceId || '',
+      body: JSON.stringify(Object.assign({}, identity, {
         fields: fields,
-        operator_confirmed: true
-      })
+        operator_confirmed: !isSoldComp
+      }))
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (!data || data.ok === false) throw new Error((data && data.error) || 'evidence confirmation failed');
+        if (!isSoldComp) return data;
+        return fetch(API_MANUAL_COMP_CONFIRMATION, {
+          method: 'POST', headers: headers(), body: JSON.stringify(Object.assign({}, identity, { confirmed: true }))
+        }).then(function (res) { return res.json(); }).then(function (confirmation) {
+          if (!confirmation || confirmation.ok === false) throw new Error((confirmation && confirmation.error) || 'comp confirmation failed');
+          return confirmation;
+        });
+      })
+      .then(function () {
         fetchLatestWithNote(container, 'Screenshot fields confirmed as explicit operator evidence. Official evidence remains unchanged.');
       })
       .catch(function (err) {
@@ -1430,6 +1509,31 @@
         button.textContent = 'Confirm these fields';
         if (message) message.textContent = 'Could not confirm: ' + err.message;
       });
+  }
+
+  function unconfirmManualComp(container, button) {
+    var card = button.closest && button.closest('.wos-manual-evidence-card');
+    var proposal = button.closest && button.closest('.wos-manual-proposal');
+    var message = proposal && proposal.querySelector('.wos-manual-proposal-message');
+    button.disabled = true;
+    button.textContent = 'Removing...';
+    fetch(API_MANUAL_COMP_CONFIRMATION, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        market: selectedMarket(),
+        queue_key: card && card.dataset && card.dataset.queueKey || '',
+        evidence_id: proposal && proposal.dataset && proposal.dataset.evidenceId || '',
+        confirmed: false
+      })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || data.ok === false) throw new Error((data && data.error) || 'comp unconfirm failed');
+      fetchLatestWithNote(container, 'Comp confirmation removed. The screenshot proposal and history remain available.');
+    }).catch(function (err) {
+      button.disabled = false;
+      button.textContent = 'Remove confirmation';
+      if (message) message.textContent = 'Could not remove confirmation: ' + err.message;
+    });
   }
 
   function openResearchSet(button) {
@@ -1601,6 +1705,8 @@
         if (uploadButton) uploadManualEvidence(section, uploadButton);
         var confirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-confirm');
         if (confirmButton) confirmManualEvidence(section, confirmButton);
+        var unconfirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-unconfirm');
+        if (unconfirmButton) unconfirmManualComp(section, unconfirmButton);
         var researchButton = event.target && event.target.closest && event.target.closest('.wos-open-research-set');
         if (researchButton) openResearchSet(researchButton);
         var pairButton = event.target && event.target.closest && event.target.closest('.wos-helper-pair');
@@ -1704,6 +1810,8 @@
     lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,
     manualEvidenceCard: manualEvidenceCard,
+    leverageDossierHtml: leverageDossierHtml,
+    debtFactsHtml: debtFactsHtml,
     rowCard: rowCard,
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
