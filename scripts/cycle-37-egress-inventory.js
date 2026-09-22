@@ -5,6 +5,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUTPUT = path.join(ROOT, 'exports', 'cycle-37-egress-inventory.json');
+const sourceAdapterRegistry = require('../modules/sources/source-adapter-registry');
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
@@ -87,6 +88,13 @@ const entries = [
     disposition: 'UNDECIDED', architecture_listed: false,
     evidence: 'this is the default path when no injected listing-page fetch implementation is supplied'
   }),
+  entry('modules/sources/dallas-fsbo-contact-acquisition-adapter.js', 'const response = await fetchImpl(url, {', {
+    host: 'zillow.com|redfin.com|realtor.com', kind: 'request', transport: 'fetch',
+    owner: 'Default Dallas deal-board queue and POST /api/preview/free-public-deal-board through tx_dallas_fsbo_contact_first',
+    gated: 'admin auth on preview; included in the default Dallas queue; no listing-egress capability gate',
+    disposition: 'UNDECIDED', architecture_listed: false,
+    evidence: 'ALLOWED_CONTACT_HOSTS includes Zillow, Redfin, and Realtor; property-specific result URLs are passed to fetchContactPageEvidence, which defaults to global.fetch'
+  }),
   entry('server.js', "zillow: zillowDirect || (full ? 'https://www.zillow.com/homes/", {
     host: 'zillow.com', kind: 'url_builder', transport: 'none', owner: 'operator research link',
     gated: false, disposition: 'KEEP', architecture_listed: true
@@ -114,6 +122,44 @@ const entries = [
 ];
 
 const unexpected = entries.filter((item) => item.kind === 'request' && item.architecture_listed === false);
+const adapterModulePaths = {
+  dallas_foreclosure_acquisition_adapter: 'modules/sources/dallas-foreclosure-acquisition-adapter.js',
+  dallas_fsbo_contact_acquisition_adapter: 'modules/sources/dallas-fsbo-contact-acquisition-adapter.js',
+  dallas_craigslist_owner_acquisition_adapter: 'modules/sources/dallas-craigslist-owner-acquisition-adapter.js',
+  listing_radar_acquisition_adapter: 'modules/sources/listing-radar-acquisition-adapter.js',
+  tx_county_foreclosure_acquisition_adapter: 'modules/sources/tx-county-foreclosure-acquisition-adapter.js',
+  mi_land_bank_acquisition_adapter: 'modules/sources/mi-land-bank-acquisition-adapter.js',
+  ca_tax_default_notice_acquisition_adapter: 'modules/sources/ca-tax-default-notice-acquisition-adapter.js',
+  ca_los_angeles_tax_default_acquisition_adapter: 'modules/sources/ca-los-angeles-tax-default-acquisition-adapter.js'
+};
+const listingHostPatterns = {
+  'zillow.com': /zillow\.com/i,
+  'redfin.com': /redfin\.com/i,
+  'realtor.com': /realtor\.com/i,
+  'trulia.com': /trulia\.com/i,
+  'maps.google.com': /maps\.google\.com|google\.com\/maps/i
+};
+const registeredAdapters = sourceAdapterRegistry.listRegisteredAdapters().map((adapter) => {
+  const modulePath = adapterModulePaths[adapter.adapter_id] || '';
+  const source = modulePath ? read(modulePath) : '';
+  const listingHosts = Object.entries(listingHostPatterns)
+    .filter(([, pattern]) => pattern.test(source))
+    .map(([host]) => host);
+  const transport = [];
+  if (/\bfetchImpl\s*\(|\bglobal\.fetch\b|\bfetch\s*\(/.test(source)) transport.push('fetch');
+  if (/page\.goto\s*\(|inspectViaPlaywright|playwright\.chromium\.launch/.test(source)) transport.push('playwright');
+  return {
+    source_id: adapter.source_id,
+    adapter_id: adapter.adapter_id,
+    module: modulePath,
+    requires_listing_egress: Object.prototype.hasOwnProperty.call(adapter, 'requires_listing_egress')
+      ? adapter.requires_listing_egress
+      : null,
+    listing_hosts_referenced: listingHosts,
+    transports_present: transport,
+    known_listing_request_path: adapter.source_id === 'tx_dallas_listing_radar' || adapter.source_id === 'tx_dallas_fsbo_contact_first'
+  };
+});
 const artifact = {
   generated_at: new Date().toISOString(),
   network_requests_made: 0,
@@ -121,6 +167,8 @@ const artifact = {
   architecture_complete: unexpected.length === 0,
   unexpected_request_call_site_count: unexpected.length,
   unexpected_request_call_sites: unexpected,
+  registered_adapter_count: registeredAdapters.length,
+  registered_adapters: registeredAdapters,
   entries
 };
 

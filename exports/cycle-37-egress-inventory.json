@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-22T07:24:56.942Z",
+  "generated_at": "2026-09-22T08:23:10.343Z",
   "network_requests_made": 0,
   "scope": "Server-reachable listing-host requests and operator-facing URL builders.",
   "architecture_complete": false,
-  "unexpected_request_call_site_count": 2,
+  "unexpected_request_call_site_count": 3,
   "unexpected_request_call_sites": [
     {
       "file": "modules/sources/listing-radar-acquisition-adapter.js",
@@ -28,6 +28,281 @@
       "disposition": "UNDECIDED",
       "architecture_listed": false,
       "evidence": "this is the default path when no injected listing-page fetch implementation is supplied"
+    },
+    {
+      "file": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
+      "line": 190,
+      "host": "zillow.com|redfin.com|realtor.com",
+      "kind": "request",
+      "transport": "fetch",
+      "owner": "Default Dallas deal-board queue and POST /api/preview/free-public-deal-board through tx_dallas_fsbo_contact_first",
+      "gated": "admin auth on preview; included in the default Dallas queue; no listing-egress capability gate",
+      "disposition": "UNDECIDED",
+      "architecture_listed": false,
+      "evidence": "ALLOWED_CONTACT_HOSTS includes Zillow, Redfin, and Realtor; property-specific result URLs are passed to fetchContactPageEvidence, which defaults to global.fetch"
+    }
+  ],
+  "registered_adapter_count": 23,
+  "registered_adapters": [
+    {
+      "source_id": "tx_dallas_county_clerk_foreclosure_notices",
+      "adapter_id": "dallas_foreclosure_acquisition_adapter",
+      "module": "modules/sources/dallas-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_dallas_fsbo_contact_first",
+      "adapter_id": "dallas_fsbo_contact_acquisition_adapter",
+      "module": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [
+        "zillow.com",
+        "redfin.com",
+        "realtor.com"
+      ],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": true
+    },
+    {
+      "source_id": "tx_dallas_craigslist_owner_posts",
+      "adapter_id": "dallas_craigslist_owner_acquisition_adapter",
+      "module": "modules/sources/dallas-craigslist-owner-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_dallas_listing_radar",
+      "adapter_id": "listing_radar_acquisition_adapter",
+      "module": "modules/sources/listing-radar-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [
+        "zillow.com",
+        "redfin.com",
+        "realtor.com"
+      ],
+      "transports_present": [
+        "fetch",
+        "playwright"
+      ],
+      "known_listing_request_path": true
+    },
+    {
+      "source_id": "tx_hunt_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_navarro_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_rains_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_hill_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_van_zandt_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_bell_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_tarrant_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_collin_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_ellis_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_kaufman_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_parker_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_rockwall_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_fort_bend_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_bexar_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_johnson_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "tx_denton_county_foreclosure_notices",
+      "adapter_id": "tx_county_foreclosure_acquisition_adapter",
+      "module": "modules/sources/tx-county-foreclosure-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "mi_wayne_detroit_land_bank_listings",
+      "adapter_id": "mi_land_bank_acquisition_adapter",
+      "module": "modules/sources/mi-land-bank-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "ca_san_diego_tax_default_power_to_sell",
+      "adapter_id": "ca_tax_default_notice_acquisition_adapter",
+      "module": "modules/sources/ca-tax-default-notice-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
+    },
+    {
+      "source_id": "ca_los_angeles_tax_default_auction_book",
+      "adapter_id": "ca_los_angeles_tax_default_acquisition_adapter",
+      "module": "modules/sources/ca-los-angeles-tax-default-acquisition-adapter.js",
+      "requires_listing_egress": null,
+      "listing_hosts_referenced": [],
+      "transports_present": [
+        "fetch"
+      ],
+      "known_listing_request_path": false
     }
   ],
   "entries": [
@@ -164,6 +439,18 @@
       "disposition": "UNDECIDED",
       "architecture_listed": false,
       "evidence": "this is the default path when no injected listing-page fetch implementation is supplied"
+    },
+    {
+      "file": "modules/sources/dallas-fsbo-contact-acquisition-adapter.js",
+      "line": 190,
+      "host": "zillow.com|redfin.com|realtor.com",
+      "kind": "request",
+      "transport": "fetch",
+      "owner": "Default Dallas deal-board queue and POST /api/preview/free-public-deal-board through tx_dallas_fsbo_contact_first",
+      "gated": "admin auth on preview; included in the default Dallas queue; no listing-egress capability gate",
+      "disposition": "UNDECIDED",
+      "architecture_listed": false,
+      "evidence": "ALLOWED_CONTACT_HOSTS includes Zillow, Redfin, and Realtor; property-specific result URLs are passed to fetchContactPageEvidence, which defaults to global.fetch"
     },
     {
       "file": "server.js",
