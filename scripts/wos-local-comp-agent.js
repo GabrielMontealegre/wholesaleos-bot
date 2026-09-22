@@ -11,6 +11,7 @@ const resolver = require('../modules/research/playwright-browser-resolver');
 const addressEvidence = require('../modules/research/property-address-evidence');
 const compEvidence = require('../modules/research/screenshot-comp-evidence');
 const localConfig = require('../modules/security/local-config-path');
+const addressCanonical = require('./lib/address-canonical');
 
 const SITE_HOSTS = Object.freeze({
   zillow: 'zillow.com',
@@ -164,23 +165,25 @@ function listingUrlKind(value, options = {}) {
   try { url = new URL(value); } catch (_) { return 'other'; }
   if (options.allow_local_source === true && ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) {
     return /(?:^|[/-])property-detail(?:[/.]|$)/i.test(url.pathname) ? 'property_detail' :
-      /(?:^|[/-])sold(?:[/-]|$)/i.test(url.pathname) ? 'sold_search' : 'other';
+      /(?:^|[/-])sold(?:[/-]|$)/i.test(url.pathname) ? 'sold_search' :
+        /(?:^|[/-])address-search(?:[/.]|$)/i.test(url.pathname) ? 'address_search' : 'other';
   }
   const hostname = url.hostname.toLowerCase();
   const pathname = url.pathname.toLowerCase();
   if (hostname === 'zillow.com' || hostname.endsWith('.zillow.com')) {
     if (pathname.startsWith('/homedetails/')) return 'property_detail';
     if (pathname.startsWith('/homes/recently_sold/')) return 'sold_search';
+    if (pathname.startsWith('/homes/')) return 'address_search';
     return 'other';
   }
   if (hostname === 'redfin.com' || hostname.endsWith('.redfin.com')) {
     if (/\/home\/\d+(?:\/|$)/.test(pathname)) return 'property_detail';
-    if (pathname.startsWith('/search')) return 'sold_search';
+    if (pathname.startsWith('/search')) return /(?:^|[?&])sold_within_days=/i.test(url.search) ? 'sold_search' : 'address_search';
     return 'other';
   }
   if (hostname === 'realtor.com' || hostname.endsWith('.realtor.com')) {
     if (pathname.startsWith('/realestateandhomes-detail/')) return 'property_detail';
-    if (pathname.startsWith('/realestateandhomes-search/')) return 'sold_search';
+    if (pathname.startsWith('/realestateandhomes-search/')) return /\/show-recently-sold(?:\/|$)/i.test(pathname) ? 'sold_search' : 'address_search';
   }
   return 'other';
 }
@@ -190,6 +193,88 @@ function recordVisitedUrl(run, value, options = {}) {
   run.pages_visited += 1;
   run.hosts_visited.push(url.hostname);
   run.url_kinds_visited.push({ host: url.hostname, url_kind: listingUrlKind(value, options) });
+}
+
+function localSourceAllowed(value, options = {}) {
+  try { return options.allow_local_source === true && ['localhost', '127.0.0.1', '::1'].includes(new URL(value).hostname); }
+  catch (_) { return false; }
+}
+
+function addressCandidatesFromText(text) {
+  const source = clean(text);
+  const pattern = /\b\d{1,7}\s+[A-Za-z0-9 .'#-]{2,80}?\s+(?:DR(?:IVE)?|ST(?:REET)?|RD|ROAD|LN|LANE|AVE(?:NUE)?|BLVD|BOULEVARD|CT|COURT|CIR(?:CLE)?|PL(?:ACE)?|TRL|TRAIL|PKWY|PARKWAY|HWY|HIGHWAY|WAY|TER(?:RACE)?),?\s+[A-Za-z .'-]{2,50},?\s+[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/gi;
+  return source.match(pattern) || [];
+}
+
+async function visibleSearchCards(page, site, options = {}) {
+  if (typeof options.visible_card_reader_impl === 'function') return options.visible_card_reader_impl(page, site);
+  const selectors = SOURCE_SELECTORS[site] || SOURCE_SELECTORS.zillow;
+  const sourceCount = await page.locator(selectors.cards).count().catch(() => 0);
+  const selector = sourceCount ? selectors.cards : CARD_SELECTOR;
+  return page.locator(selector).evaluateAll((elements) => elements.map((element, index) => {
+    const rect = element.getBoundingClientRect();
+    const anchor = element.matches && element.matches('a[href]') ? element : element.querySelector('a[href]');
+    return {
+      index,
+      text: (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim(),
+      href: anchor ? (anchor.getAttribute('href') || anchor.href || '') : '',
+      visible: rect.width > 0 && rect.height > 0
+    };
+  }).filter((item) => item.visible && item.text));
+}
+
+async function resolveDetailUrlFromSearch(page, subjectAddress, site, options = {}) {
+  const searchUrl = clean(options.search_url);
+  if (listingUrlKind(searchUrl, options) !== 'address_search') throw new Error('subject_search_url_required');
+  let response;
+  try { response = await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
+  catch (error) { return { blocked: true, reason: safeFailureReason(error), http_status: 0, matches: [] }; }
+  const status = response ? response.status() : 0;
+  if (status === 403 || status === 429) return { blocked: true, reason: `http_${status}`, http_status: status, matches: [] };
+  const current = clean(page.url());
+  if ((!hostAllowed(current, site) && !localSourceAllowed(current, options)) || listingUrlKind(current, options) !== 'address_search') {
+    return { blocked: true, reason: 'subject_search_redirected_or_wrong_type', http_status: status, matches: [] };
+  }
+  const bodyText = clean(await page.locator('body').innerText().catch(() => ''));
+  if (compEvidence.BLOCKED_TEXT_RE.test(bodyText)) return { blocked: true, reason: 'blocked_text_detected', http_status: status, matches: [] };
+  const selectors = SOURCE_SELECTORS[site] || SOURCE_SELECTORS.zillow;
+  const renderWaitMs = Math.max(100, Math.min(Number(options.render_wait_ms) || 5000, 10000));
+  await page.locator(`${selectors.container}, ${selectors.cards}`).first().waitFor({ state: 'visible', timeout: renderWaitMs }).catch(() => {});
+  const cards = await visibleSearchCards(page, site, options);
+  const matches = [];
+  for (const card of cards) {
+    const displayed = addressCandidatesFromText(card.text).find((candidate) => addressCanonical.addressesMatchExactly(candidate, subjectAddress));
+    if (!displayed || !clean(card.href)) continue;
+    let detailUrl = '';
+    try { detailUrl = new URL(card.href, current).toString(); } catch (_) { continue; }
+    if ((!hostAllowed(detailUrl, site) && !localSourceAllowed(detailUrl, options)) || listingUrlKind(detailUrl, options) !== 'property_detail') continue;
+    matches.push({ detail_url: detailUrl, matched_card_text: clean(card.text), match_index: card.index });
+  }
+  if (matches.length === 1) return Object.assign({ blocked: false, http_status: status }, matches[0]);
+  return { blocked: true, reason: matches.length ? 'ambiguous_address_match' : 'no_exact_address_match_visible', http_status: status, matches };
+}
+
+async function detailAddressVerification(page, subjectAddress, options = {}) {
+  const texts = typeof options.detail_address_reader_impl === 'function'
+    ? await options.detail_address_reader_impl(page)
+    : await page.locator('h1, address, [data-testid*="address" i], [class*="address" i]').evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 ? (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    }).filter(Boolean)).catch(async () => [clean(await page.locator('body').innerText().catch(() => ''))]);
+  for (const text of Array.isArray(texts) ? texts : [texts]) {
+    const exact = addressCandidatesFromText(text).find((candidate) => addressCanonical.addressesMatchExactly(candidate, subjectAddress));
+    if (exact) return { matched: true, matched_text: clean(text) };
+  }
+  return { matched: false, matched_text: '' };
+}
+
+function appendResolutionStep(run, step) {
+  run.resolution_chain.push({
+    step: clean(step.step), url: clean(step.url), url_kind: clean(step.url_kind), host: clean(step.host),
+    http_status: Number(step.http_status) || 0,
+    address_match: ['EXACT', 'NONE', 'AMBIGUOUS', 'NA'].includes(step.address_match) ? step.address_match : 'NA',
+    matched_card_text: clean(step.matched_card_text)
+  });
 }
 
 function readRateState(file, now, options = {}) {
@@ -241,6 +326,16 @@ function acquireRunLock(file = RUN_LOCK) {
 function cleanRunLog(value) {
   if (!SUPPORTED_MODES.includes(value.requested_mode) || value.requested_mode !== value.effective_mode ||
       value.effective_mode !== value.mode) throw new Error('capture_mode_mismatch');
+  const chain = Array.isArray(value.resolution_chain) ? value.resolution_chain : [];
+  if (value.mode === 'subject_facts') {
+    if (chain.length > 2 || (value.url_kinds_visited || []).some((item) => item.url_kind === 'sold_search')) {
+      throw new Error('subject_navigation_invariant_failed');
+    }
+    if (Number(value.proposals) > 0) {
+      const terminal = chain[chain.length - 1] || {};
+      if (terminal.url_kind !== 'property_detail' || terminal.address_match !== 'EXACT') throw new Error('subject_proposal_resolution_chain_incomplete');
+    }
+  }
   return {
     data_kind: 'OPERATOR_LOCAL_CAPTURE_RUN',
     mode: value.mode,
@@ -248,6 +343,7 @@ function cleanRunLog(value) {
     requested_mode: value.requested_mode,
     effective_mode: value.effective_mode,
     url_kinds_visited: value.url_kinds_visited,
+    resolution_chain: chain,
     started_at: value.started_at,
     completed_at: value.completed_at,
     elapsed_ms: value.elapsed_ms,
@@ -351,7 +447,11 @@ async function inspectSoldPage(page, status, site, sourceUrl, subjectAddress, op
   const cardSelector = sourceCardCount ? selectors.cards : CARD_SELECTOR;
   const cardData = await page.locator(cardSelector).evaluateAll((elements) => elements.map((element, index) => {
     const rect = element.getBoundingClientRect();
-    return { index, text: (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim(), visible: rect.width > 0 && rect.height > 0 };
+    const anchor = element.matches && element.matches('a[href]') ? element : element.querySelector('a[href]');
+    return {
+      index, text: (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim(),
+      href: anchor ? (anchor.getAttribute('href') || anchor.href || '') : '', visible: rect.width > 0 && rect.height > 0
+    };
   }).filter((item) => item.visible && item.text && item.text.length <= 5000));
   const currentText = clean(await page.locator('body').innerText().catch(() => bodyText)).slice(0, 30000);
   const explicitEmpty = /\b(?:0\s+(?:homes|properties|results)|no\s+(?:sold\s+)?(?:homes|properties|results)\s+(?:found|available)|no matches)\b/i.test(currentText) ||
@@ -366,11 +466,13 @@ async function inspectSoldPage(page, status, site, sourceUrl, subjectAddress, op
   result.page_state = render.timed_out ? 'client_render_timeout' : 'loaded';
   result.cards_detected = cardData.length;
   for (const card of cardData) {
+    try { card.source_url = new URL(card.href, currentUrl).toString(); } catch (_) { card.source_url = ''; }
+    if (card.source_url && !hostAllowed(card.source_url, site) && !localSourceAllowed(card.source_url, options)) card.source_url = '';
     const fields = visibleFieldState(card.text);
     if (fields.price) result.cards_with_price += 1;
     if (fields.date) result.cards_with_date += 1;
     if (fields.address) result.cards_with_address += 1;
-    const candidates = compEvidence.extractCompCandidatesFromVisibleText(card.text, { state, source_url: sourceUrl });
+    const candidates = compEvidence.extractCompCandidatesFromVisibleText(card.text, { state, source_url: card.source_url || sourceUrl });
     for (const candidate of candidates) {
       result.candidates_built += 1;
       card.candidates = (card.candidates || []).concat([candidate]);
@@ -537,7 +639,7 @@ async function runCapture(input = {}, options = {}) {
   const started = now();
   const run = {
     started_at: new Date(started).toISOString(), mode, requested_mode: mode, effective_mode: mode,
-    helper_build: HELPER_BUILD, url_kinds_visited: [], subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
+    helper_build: HELPER_BUILD, url_kinds_visited: [], resolution_chain: [], subject_address: '', rows_attempted: 0, active_listing_context_captures: 0,
     pages_visited: 0, hosts_visited: [], captures_submitted: 0, discards: [], block_events: [], source_results: [],
     screenshots: 0, proposals: 0, outcome: 'started'
   };
@@ -565,7 +667,7 @@ async function runCapture(input = {}, options = {}) {
   run.rows_attempted = 1;
   run.subject_address = safeRowAddress(row);
   const subjectTarget = mode === 'subject_facts' ? sourceUrlFor(row, site, options) : '';
-  if (mode === 'subject_facts' && listingUrlKind(subjectTarget, options) !== 'property_detail') {
+  if (mode === 'subject_facts' && !['address_search', 'property_detail'].includes(listingUrlKind(subjectTarget, options))) {
     run.outcome = 'subject_target_not_property_detail';
     run.completed_at = new Date(now()).toISOString();
     run.elapsed_ms = now() - started;
@@ -595,7 +697,7 @@ async function runCapture(input = {}, options = {}) {
         let url;
         try { url = new URL(route.request().url()); } catch (_) { return route.abort(); }
         if (mode === 'subject_facts' && route.request().isNavigationRequest() &&
-            listingUrlKind(url.toString(), options) !== 'property_detail') return route.abort();
+            !['address_search', 'property_detail'].includes(listingUrlKind(url.toString(), options))) return route.abort();
         const localAllowed = options.allow_local_source === true && ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
         const listingHost = SOURCE_ORDER.some((source) => url.hostname === SITE_HOSTS[source] || url.hostname.endsWith(`.${SITE_HOSTS[source]}`));
         return (localAllowed || url.protocol === 'data:' || url.protocol === 'blob:' || listingHost)
@@ -610,26 +712,62 @@ async function runCapture(input = {}, options = {}) {
     const minimumProposals = Math.max(3, Number(options.minimum_proposals) || 3);
     const uploadedAddresses = new Set();
     if (run.mode === 'subject_facts') {
-      const target = subjectTarget;
+      let target = subjectTarget;
+      const initialKind = listingUrlKind(target, options);
+      let detailNeedsReservation = false;
       if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
         run.discards.push({ reason: 'pages_per_hour_limit_30' });
-      } else {
+      } else if (initialKind === 'address_search') {
+        recordVisitedUrl(run, target, options);
+        const resolved = await resolveDetailUrlFromSearch(page, run.subject_address, site, Object.assign({}, options, { search_url: target }));
+        appendResolutionStep(run, {
+          step: 'address_search', url: target, url_kind: 'address_search', host: new URL(target).hostname,
+          http_status: resolved.http_status, address_match: resolved.reason === 'ambiguous_address_match' ? 'AMBIGUOUS' : resolved.blocked ? 'NONE' : 'EXACT',
+          matched_card_text: resolved.matched_card_text || ''
+        });
+        if (resolved.blocked) {
+          run.outcome = resolved.reason;
+          if (/^(?:http_403|http_429|blocked_text_detected|navigation_timeout|browser_navigation_failed)$/.test(resolved.reason)) {
+            run.block_events.push({ host: new URL(target).hostname, reason: resolved.reason });
+          } else run.discards.push({ host: new URL(target).hostname, reason: resolved.reason.toUpperCase() });
+          target = '';
+        } else { target = resolved.detail_url; detailNeedsReservation = true; }
+      }
+      if (target && detailNeedsReservation && run.pages_visited < 2) {
+        if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
+          run.discards.push({ reason: 'pages_per_hour_limit_30' });
+          target = '';
+        }
+      }
+      if (target) {
+        if (listingUrlKind(target, options) !== 'property_detail') throw new Error('subject_target_not_property_detail');
         recordVisitedUrl(run, target, options);
         let response;
+        let navigationFailure = '';
         try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
-        catch (error) { run.discards.push({ host: new URL(target).hostname, reason: 'NAVIGATION_FAILED', detail: safeFailureReason(error) }); }
-        if (response) {
-          if (listingUrlKind(page.url(), options) !== 'property_detail') {
-            run.outcome = 'subject_target_not_property_detail';
-            run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_PROPERTY_DETAIL_REQUIRED' });
+        catch (error) { navigationFailure = safeFailureReason(error); }
+        const status = response ? response.status() : 0;
+        if (navigationFailure || status === 403 || status === 429) {
+          const reason = navigationFailure || `http_${status}`;
+          appendResolutionStep(run, { step: 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname, http_status: status, address_match: 'NA' });
+          run.block_events.push({ host: new URL(target).hostname, reason });
+          run.outcome = 'BLOCKED_STOPPED';
+        } else {
+          const classification = await pageClassification(page, status, site, target, options, market.state);
+          if (classification.type === 'blocked' || classification.type === 'unknown' || classification.type !== 'property_detail') {
+            const reason = classification.reason || (classification.type === 'property_detail' ? '' : 'subject_property_detail_required');
+            appendResolutionStep(run, { step: 'property_detail', url: target, url_kind: listingUrlKind(page.url(), options), host: new URL(target).hostname, http_status: status, address_match: 'NA' });
+            run.block_events.push({ host: new URL(target).hostname, reason });
+            run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
           } else {
-            const classification = await pageClassification(page, response.status(), site, target, options, market.state);
-            if (classification.type === 'blocked' || classification.type === 'unknown') {
-              run.block_events.push({ host: new URL(target).hostname, reason: classification.reason || classification.type });
-              run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
-            } else if (classification.type !== 'property_detail') {
-              run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_PROPERTY_DETAIL_REQUIRED' });
-              run.outcome = 'WRONG_PAGE_TYPE';
+            const verification = await detailAddressVerification(page, run.subject_address, options);
+            appendResolutionStep(run, {
+              step: 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname,
+              http_status: status, address_match: verification.matched ? 'EXACT' : 'NONE', matched_card_text: verification.matched_text
+            });
+            if (!verification.matched) {
+              run.outcome = 'detail_page_address_mismatch';
+              run.discards.push({ host: new URL(target).hostname, reason: 'DETAIL_PAGE_ADDRESS_MISMATCH' });
             } else {
               const region = await page.locator('main').count().catch(() => 0) ? page.locator('main').first() : page.locator('body');
               const buffer = await region.screenshot({ type: 'png' });
@@ -681,6 +819,7 @@ async function runCapture(input = {}, options = {}) {
       let response;
       try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
       catch (error) {
+        appendResolutionStep(run, { step: 'sold_search', url: target, url_kind: 'sold_search', host: new URL(target).hostname, http_status: 0, address_match: 'NA' });
         const failed = emptySourceResult(currentSite, target);
         failed.page_state = 'unknown';
         incrementDiscard(failed, 'NAVIGATION_FAILED', safeFailureReason(error));
@@ -688,6 +827,7 @@ async function runCapture(input = {}, options = {}) {
         continue;
       }
       const status = response ? response.status() : 0;
+      appendResolutionStep(run, { step: 'sold_search', url: target, url_kind: 'sold_search', host: new URL(target).hostname, http_status: status, address_match: 'NA' });
       const inspected = await inspectSoldPage(page, status, currentSite, target, run.subject_address, options, market.state);
       const sourceResult = inspected.result;
       run.source_results.push(sourceResult);
@@ -725,6 +865,7 @@ async function runCapture(input = {}, options = {}) {
       if (sourceResult.url_kind !== 'sold_results') continue;
       for (const card of inspected.cards) {
         if (shots >= compEvidence.DEFAULT_CAPS.max_screenshots_per_row) break;
+        if (!card.source_url) { incrementDiscard(sourceResult, 'MISSING_SOURCE_URL'); continue; }
         const fields = visibleFieldState(card.text);
         if (!fields.price) { incrementDiscard(sourceResult, 'MISSING_SOLD_PRICE'); continue; }
         if (!fields.date) { incrementDiscard(sourceResult, 'MISSING_SOLD_DATE'); continue; }
@@ -744,7 +885,7 @@ async function runCapture(input = {}, options = {}) {
         try { ocrText = await recognizeLocal(buffer, options, 'sold_comp'); }
         catch (_) { /* OCR failure is a discard, never a guessed field. */ }
         if (!ocrText) { incrementDiscard(sourceResult, 'OCR_UNREADABLE'); continue; }
-        const parsed = compEvidence.extractCompCandidatesFromVisibleText(ocrText, { state: market.state, source_url: target });
+        const parsed = compEvidence.extractCompCandidatesFromVisibleText(ocrText, { state: market.state, source_url: card.source_url });
         const ocrFields = visibleFieldState(ocrText);
         if (!ocrFields.price) { incrementDiscard(sourceResult, 'MISSING_SOLD_PRICE'); continue; }
         if (!ocrFields.date) { incrementDiscard(sourceResult, 'MISSING_SOLD_DATE'); continue; }
@@ -763,7 +904,7 @@ async function runCapture(input = {}, options = {}) {
         }
         const proposalCount = await uploadImage({
           fetchImpl, dashboard, agentToken, market, row, sourceName: SITE_HOSTS[currentSite],
-          sourceUrl: target, type: 'sold_comp', buffer, filename: `sold-comp-${shots}.png`
+          sourceUrl: card.source_url, type: 'sold_comp', buffer, filename: `sold-comp-${shots}.png`
         });
         run.captures_submitted += 1;
         run.proposals += proposalCount;
@@ -833,5 +974,6 @@ module.exports = {
   selectRow, sourceUrlFor, soldResultsUrlFor, listingUrlKind, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog,
   safeFailureReason, configPath, incrementDiscard, gridDiscardCode, visibleFieldState, emptySourceResult, waitForSoldRender, inspectSoldPage,
   activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, uploadImageDetailed,
+  addressCandidatesFromText, visibleSearchCards, resolveDetailUrlFromSearch, detailAddressVerification, appendResolutionStep,
   subjectFactsFromVisibleText, recordSubjectProposalFields, runCapture, main
 };
