@@ -10,6 +10,7 @@
   var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
   var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
   var API_MANUAL_COMP_CONFIRMATION = '/api/dashboard/free-public-deal-board/manual-evidence/comp-confirmation';
+  var API_MANUAL_SUBJECT_CONFIRMATION = '/api/dashboard/free-public-deal-board/manual-evidence/subject-fact-confirmation';
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
@@ -340,7 +341,7 @@
       '<input type="text" ' + base + ' value="' + esc(value || '') + '"></label>';
   }
 
-  function manualEvidenceItem(item) {
+  function manualEvidenceItem(item, evaluation) {
     var keys = Object.keys(MANUAL_FIELD_LABELS).filter(function (key) {
       if (item.evidence_type === 'sold_comp') return ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'].indexOf(key) !== -1;
       if (item.evidence_type === 'skip_trace') return ['normalized_address', 'owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
@@ -353,16 +354,67 @@
     var sourceUrl = String(item.fields && item.fields.source_url || '');
     var sourceLink = /^https:\/\/(?:[a-z0-9-]+\.)?(?:zillow|redfin|realtor)\.com\//i.test(sourceUrl)
       ? '<div style="font-size:10px;margin-top:4px;">' + link('Open captured source page', sourceUrl) + '</div>' : '';
+    var evaluatedComp = item.evidence_type === 'sold_comp' ? safeArray(evaluation && evaluation.comp_grid_comps).find(function (comp) {
+      return String(comp && comp.screenshot_id || '') === String(item.screenshot_id || '');
+    }) : null;
+    var compVerdict = evaluatedComp
+      ? '<div style="font-size:10px;margin-top:5px;color:' + (evaluatedComp.rejected_reason ? '#991b1b' : '#166534') + ';"><b>Strict-grid verdict:</b> ' +
+        esc(evaluatedComp.rejected_reason ? String(evaluatedComp.rejected_reason).replace(/_/g, ' ') : 'accepted after explicit confirmation') + '</div>'
+      : '';
+    var subjectOnly = item.evidence_type === 'subject_property';
     return '<div class="wos-manual-proposal" data-evidence-id="' + esc(item.evidence_id || '') + '" data-evidence-type="' + esc(item.evidence_type || '') + '" style="border:1px solid ' + (item.operator_confirmed ? '#86efac' : '#fcd34d') + ';border-radius:7px;padding:8px;margin-top:7px;background:' + (item.operator_confirmed ? '#f0fdf4' : '#fffbeb') + ';">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b style="font-size:11px;">' + esc(String(item.evidence_type || '').replace(/_/g, ' ')) + ' from ' + esc(item.source_name || 'screenshot') + '</b>' +
       '<span style="font-size:10px;padding:2px 7px;border-radius:9px;background:' + (item.operator_confirmed ? '#bbf7d0' : '#fde68a') + ';">' + (item.operator_confirmed ? 'CONFIRMED' : 'UNCONFIRMED OCR PROPOSAL') + '</span></div>' +
       '<div style="font-size:10px;color:#6b7280;margin-top:3px;">Captured ' + esc(item.captured_at || '') + ' - screenshot ' + esc(item.screenshot_id || '') + '</div>' +
       (screenshotUrl ? '<img class="wos-evidence-image" data-screenshot-url="' + esc(screenshotUrl) + '" alt="Captured evidence region" loading="lazy" style="display:block;max-width:min(100%,520px);max-height:300px;object-fit:contain;margin-top:7px;border:1px solid #d1d5db;border-radius:4px;background:#fff;">' : '') + sourceLink +
-      (conflicts.length ? '<div style="font-size:11px;color:#991b1b;margin-top:5px;"><b>Conflict - no overwrite:</b> ' + conflicts.map(function (conflict) { return esc(conflict.field + ': official "' + conflict.official_value + '" vs screenshot "' + conflict.screenshot_value + '"'); }).join(' | ') + '</div>' : '') +
+      compVerdict + (conflicts.length ? '<div style="font-size:11px;color:#991b1b;margin-top:5px;"><b>Conflict - no overwrite:</b> ' + conflicts.map(function (conflict) { return esc(conflict.field + ': official "' + conflict.official_value + '" vs screenshot "' + conflict.screenshot_value + '"'); }).join(' | ') + '</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:7px;">' + keys.map(function (key) { return manualFieldInput(item, key); }).join('') + '</div>' +
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;"><button type="button" class="wos-manual-confirm" style="padding:5px 9px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">' + (item.operator_confirmed ? 'Update confirmed evidence' : 'Confirm these fields') + '</button>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;"><button type="button" class="wos-manual-confirm" style="padding:5px 9px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">' + (subjectOnly ? 'Save proposed fields' : item.operator_confirmed ? 'Update confirmed evidence' : 'Confirm these fields') + '</button>' +
       (item.evidence_type === 'sold_comp' && item.operator_confirmed ? '<button type="button" class="wos-manual-unconfirm" style="padding:5px 9px;border-radius:6px;border:1px solid #b91c1c;background:#fff;color:#b91c1c;font-size:11px;font-weight:700;cursor:pointer;">Remove confirmation</button>' : '') +
       '<span class="wos-manual-proposal-message" style="font-size:10px;color:#6b7280;">Nothing counts until you confirm.</span></div></div>';
+  }
+
+  function subjectFactsPanel(proposals, evaluation) {
+    var definitions = [
+      { attribute: 'living_area', label: 'Living area', fields: ['sqft'] },
+      { attribute: 'bedrooms', label: 'Bedrooms', fields: ['beds'] },
+      { attribute: 'bathrooms', label: 'Bathrooms', fields: ['baths'] },
+      { attribute: 'year_built', label: 'Year built', fields: ['year_built'] },
+      { attribute: 'lot_size', label: 'Lot size', fields: ['lot_size'] },
+      { attribute: 'property_type', label: 'Property type', fields: ['property_kind'] },
+      { attribute: 'coordinates', label: 'Coordinates', fields: ['latitude', 'longitude'] }
+    ];
+    var readiness = evaluation && evaluation.subject_grid_readiness || {};
+    var readyByName = {};
+    safeArray(readiness.attributes).forEach(function (entry) { readyByName[entry.attribute] = entry.status === 'READY'; });
+    var subjects = safeArray(proposals).filter(function (item) { return item.evidence_type === 'subject_property'; });
+    function proposedField(name) {
+      for (var index = subjects.length - 1; index >= 0; index -= 1) {
+        var candidate = subjects[index];
+        if (candidate.fields && candidate.fields[name]) return { item: candidate, value: candidate.fields[name] };
+      }
+      return null;
+    }
+    var rows = definitions.map(function (definition) {
+      var values = definition.fields.map(function (name) { return { name: name, proposal: proposedField(name) }; }).filter(function (entry) { return entry.proposal; });
+      var allConfirmed = values.length === definition.fields.length && values.every(function (entry) {
+        var record = entry.proposal.item.field_confirmations && entry.proposal.item.field_confirmations[entry.name];
+        return record && record.confirmed === true && record.confirmed_by && record.confirmed_at;
+      });
+      var status = readyByName[definition.attribute] ? 'READY' : values.length ? 'PROPOSED-UNCONFIRMED' : 'MISSING';
+      var details = values.map(function (entry) {
+        var proposal = entry.proposal;
+        var confirmation = proposal.item.field_confirmations && proposal.item.field_confirmations[entry.name];
+        var confirmed = confirmation && confirmation.confirmed === true && confirmation.confirmed_by && confirmation.confirmed_at;
+        var screenshot = proposal.item.screenshot_url || '';
+        return '<div style="margin-top:4px;"><b>' + esc(entry.name.replace(/_/g, ' ')) + ':</b> ' + esc(proposal.value) +
+          (screenshot ? ' <a href="' + esc(screenshot) + '" target="_blank" rel="noopener">view screenshot</a>' : '') +
+          ' <button type="button" class="wos-subject-field-confirm" data-evidence-id="' + esc(proposal.item.evidence_id || '') + '" data-field-name="' + esc(entry.name) + '" data-confirmed="' + (confirmed ? 'false' : 'true') + '" style="padding:3px 7px;border-radius:5px;border:1px solid ' + (confirmed ? '#b91c1c' : '#047857') + ';background:#fff;color:' + (confirmed ? '#b91c1c' : '#047857') + ';font-size:10px;font-weight:700;cursor:pointer;">' + (confirmed ? 'Un-confirm' : 'Confirm') + '</button></div>';
+      }).join('');
+      return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;background:#fff;"><b>' + esc(definition.label) + '</b> <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + (status === 'READY' ? '#bbf7d0' : status === 'MISSING' ? '#fee2e2' : '#fde68a') + ';">' + status + '</span>' +
+        (details || '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No operator-captured value.</div>') + (allConfirmed ? '' : '') + '</div>';
+    }).join('');
+    return '<div class="wos-subject-facts-panel" style="margin-top:8px;padding:8px;border:1px solid #a7f3d0;border-radius:7px;background:#ecfdf5;font-size:11px;"><b>Subject facts required by the strict comp grid</b><div style="font-size:10px;color:#4b5563;margin-top:2px;">Each captured value remains excluded until you confirm that exact field.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px;margin-top:6px;">' + rows + '</div></div>';
   }
 
   function manualUploadSlot(slot) {
@@ -432,6 +484,9 @@
         (comp.rejected_reason ? ' <span style="color:#991b1b;">Rejected: ' + esc(comp.rejected_reason) + '</span>' : '') +
         (comp.rural_comp_warning ? ' <span style="color:#9a3412;">' + esc(comp.rural_comp_warning) + '</span>' : '') + '</div>';
     }).join('');
+    var arvCompDetails = safeArray(evaluation.verified_screenshot_comps).slice(0, 3).map(function (comp) {
+      return '<div style="font-size:10px;margin-top:3px;"><b>' + esc(comp.comp_address || comp.parcel_id || 'comp') + '</b> - $' + esc(Number(comp.sold_price || 0).toLocaleString()) + ', sold ' + esc(comp.sold_date || 'date unavailable') + ', ' + esc(comp.distance_miles || 'distance unavailable') + ' miles. ' + esc(comp.similarity_basis || 'Similarity basis unavailable.') + '</div>';
+    }).join('');
     return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
       '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
@@ -441,23 +496,24 @@
       (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property' + (item.subject_address_recovery.skipped_date_prefix ? '; a date fragment appeared between the property label and address' : '') + '</div>' : '') +
       (item.sale_venue_address ? '<div style="font-size:11px;margin-top:6px;"><b>Sale location:</b> ' + esc(item.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span> ' + link('venue source', item.sale_venue_source_url) + '</div>' : '') +
       '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
-      '<div style="margin-top:6px;font-size:11px;"><b>Source event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + ' <b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
+      '<div class="wos-distress-facts" style="margin-top:7px;padding:7px 8px;border:1px solid #fca5a5;border-radius:7px;background:#fff7ed;font-size:11px;"><b>Official distress facts</b><br><b>Source:</b> ' + esc(item.lead_origin || 'official county source') + '<br><b>Sale/event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + '<br>' + link('Open official source document', item.source_proof_url) + '<br><b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
         (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
       '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
         '<b>Local comp helper:</b> <span class="wos-helper-inline-status">' + esc(localHelperState.running ? (localHelperState.paired ? 'Connected' : 'Running - pairing needed') : 'Not running') + '</span><br>' +
         (helperEligible
-          ? '<span style="display:inline-block;margin-top:5px;margin-right:6px;color:#4c1d95;">Zillow, then Redfin, then Realtor.com</span><button type="button" class="wos-helper-capture" disabled style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button>'
+          ? '<span style="display:inline-block;margin-top:5px;margin-right:6px;color:#4c1d95;">Zillow, then Redfin, then Realtor.com</span><button type="button" class="wos-helper-capture" data-capture-mode="subject_facts" disabled style="padding:5px 9px;margin-right:5px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture subject facts</button><button type="button" class="wos-helper-capture" data-capture-mode="sold_comps" disabled style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button><div class="wos-helper-start-instruction" style="margin-top:5px;color:#92400e;">Run <b>scripts\\Start-WholesaleOS-Helper.cmd</b>, leave its window open, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div><button type="button" class="wos-helper-pair wos-helper-inline-pair" style="display:none;margin-top:5px;padding:4px 8px;border-radius:5px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button>'
           : '<span style="color:#92400e;">Capture is disabled until the county source establishes a complete property address.</span>') +
         '<div class="wos-helper-row-message" style="font-size:10px;color:#6b7280;margin-top:4px;">Nothing is captured until you click. Every result remains an unconfirmed proposal.</div>' + captureResultsMarkup(item.queue_key || '') + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
+      subjectFactsPanel(proposals, evaluation) +
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
-        (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' : '') +
+        (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' + arvCompDetails : '') +
         (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc(clue.field + ' ' + clue.value); }).join(', ') : '') +
         (gridSummary ? '<details style="margin-top:5px;"><summary style="cursor:pointer;color:#1d4ed8;">Strict comp grid evidence</summary><div style="font-size:10px;color:#6b7280;">NOT_APPLIED means a required fact was missing; it never silently passes the comp.</div>' + gridSummary + '</details>' : '') +
       '</div>' +
-      (proposals.length ? '<div style="margin-top:7px;"><b style="font-size:11px;">Review OCR proposals:</b>' + proposals.map(manualEvidenceItem).join('') + '</div>' : '') +
+      (proposals.length ? '<div style="margin-top:7px;"><b style="font-size:11px;">Review OCR proposals:</b>' + proposals.map(function (proposal) { return manualEvidenceItem(proposal, evaluation); }).join('') + '</div>' : '') +
       '</details>';
   }
 
@@ -617,11 +673,11 @@
   function debtFactsHtml(debt) {
     debt = debt || {};
     return [
-      dossierFact('Original loan amount at origination (NOT the current balance)', debt.original_loan_amount),
+      dossierFact('Original loan amount at origination (NOT the current payoff)', debt.original_loan_amount),
       dossierFact('Recorded lien amount', debt.lien_amounts),
       dossierFact('Property tax due', debt.tax_due),
       dossierFact('Judgment amount', debt.judgment_amount),
-      dossierFact('Auction minimum bid', debt.minimum_bid),
+      dossierFact('Published minimum bid', debt.minimum_bid),
       dossierFact('Unlabelled amount from source — type unknown', debt.unknown_source_amount)
     ].join('');
   }
@@ -1477,6 +1533,7 @@
     button.disabled = true;
     button.textContent = 'Saving confirmation...';
     var isSoldComp = proposal && proposal.dataset && proposal.dataset.evidenceType === 'sold_comp';
+    var isSubjectProperty = proposal && proposal.dataset && proposal.dataset.evidenceType === 'subject_property';
     var identity = {
       market: selectedMarket(),
       queue_key: card && card.dataset && card.dataset.queueKey || '',
@@ -1487,7 +1544,7 @@
       headers: headers(),
       body: JSON.stringify(Object.assign({}, identity, {
         fields: fields,
-        operator_confirmed: !isSoldComp
+        operator_confirmed: !isSoldComp && !isSubjectProperty
       }))
     })
       .then(function (res) { return res.json(); })
@@ -1509,6 +1566,33 @@
         button.textContent = 'Confirm these fields';
         if (message) message.textContent = 'Could not confirm: ' + err.message;
       });
+  }
+
+  function confirmSubjectField(container, button) {
+    var card = button.closest && button.closest('.wos-manual-evidence-card');
+    var confirmed = button.dataset && button.dataset.confirmed === 'true';
+    button.disabled = true;
+    button.textContent = confirmed ? 'Confirming...' : 'Removing...';
+    fetch(API_MANUAL_SUBJECT_CONFIRMATION, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        market: selectedMarket(),
+        queue_key: card && card.dataset && card.dataset.queueKey || '',
+        evidence_id: button.dataset && button.dataset.evidenceId || '',
+        field_name: button.dataset && button.dataset.fieldName || '',
+        confirmed: confirmed
+      })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || data.ok === false) throw new Error((data && data.error) || 'subject field confirmation failed');
+      fetchLatestWithNote(container, confirmed ? 'One subject fact was explicitly confirmed.' : 'One subject fact confirmation was removed.');
+    }).catch(function (error) {
+      button.disabled = false;
+      button.textContent = confirmed ? 'Confirm' : 'Un-confirm';
+      var proposal = button.closest && button.closest('.wos-manual-proposal');
+      var message = proposal && proposal.querySelector('.wos-manual-proposal-message');
+      if (message) message.textContent = 'Could not update subject fact: ' + error.message;
+    });
   }
 
   function unconfirmManualComp(container, button) {
@@ -1558,6 +1642,12 @@
     safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-capture')) : []).forEach(function (button) {
       button.disabled = !(localHelperState.running && localHelperState.paired && !localHelperState.capture_running);
       button.style.opacity = button.disabled ? '.5' : '1';
+    });
+    safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-start-instruction')) : []).forEach(function (element) {
+      element.style.display = localHelperState.running ? 'none' : 'block';
+    });
+    safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-inline-pair')) : []).forEach(function (element) {
+      element.style.display = localHelperState.running && !localHelperState.paired ? 'inline-block' : 'none';
     });
   }
 
@@ -1612,11 +1702,14 @@
       return;
     }
     button.disabled = true;
+    var mode = button.dataset && button.dataset.captureMode || 'sold_comps';
     button.textContent = 'Capturing...';
-    if (message) message.textContent = 'The helper is opening one source page and looking only for visible sold cards.';
+    if (message) message.textContent = mode === 'subject_facts'
+      ? 'The helper is opening the subject property page and reading only visible property facts.'
+      : 'The helper is opening one source page and looking only for visible sold cards.';
     fetch(LOCAL_HELPER + '/helper/capture', {
       method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '' })
+      body: JSON.stringify({ market: selectedMarket(), queue_key: card && card.dataset.queueKey || '', mode: mode })
     })
       .then(function (response) { return response.json().then(function (data) { return { response: response, data: data }; }); })
       .then(function (result) {
@@ -1626,14 +1719,16 @@
         if (message) message.textContent = run.captures_submitted
           ? run.captures_submitted + ' capture(s) uploaded as unconfirmed proposals. Review them below.'
           : 'No qualifying sold cards were captured. Reason: ' + (run.outcome || 'none found') + '.';
-        fetchLatestWithNote(container, 'Local capture finished. Nothing counts until you confirm the proposed comp fields.');
+        fetchLatestWithNote(container, mode === 'subject_facts'
+          ? 'Subject capture finished. Confirm each visible fact separately; nothing counts automatically.'
+          : 'Local capture finished. Nothing counts until you confirm the proposed comp fields.');
       })
       .catch(function (error) {
         if (message) message.textContent = 'Capture stopped: ' + error.message + '. Nothing was confirmed.';
       })
       .finally(function () {
         button.disabled = false;
-        button.textContent = 'Capture sold comps for this row';
+        button.textContent = mode === 'subject_facts' ? 'Capture subject facts' : 'Capture sold comps for this row';
         refreshLocalHelperStatus(container);
       });
   }
@@ -1705,12 +1800,16 @@
         if (uploadButton) uploadManualEvidence(section, uploadButton);
         var confirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-confirm');
         if (confirmButton) confirmManualEvidence(section, confirmButton);
+        var subjectButton = event.target && event.target.closest && event.target.closest('.wos-subject-field-confirm');
+        if (subjectButton) confirmSubjectField(section, subjectButton);
         var unconfirmButton = event.target && event.target.closest && event.target.closest('.wos-manual-unconfirm');
         if (unconfirmButton) unconfirmManualComp(section, unconfirmButton);
         var researchButton = event.target && event.target.closest && event.target.closest('.wos-open-research-set');
         if (researchButton) openResearchSet(researchButton);
         var pairButton = event.target && event.target.closest && event.target.closest('.wos-helper-pair');
         if (pairButton) pairLocalHelper(section, pairButton);
+        var retryButton = event.target && event.target.closest && event.target.closest('.wos-helper-retry');
+        if (retryButton) refreshLocalHelperStatus(section);
         var captureButton = event.target && event.target.closest && event.target.closest('.wos-helper-capture');
         if (captureButton) captureWithLocalHelper(section, captureButton);
       });

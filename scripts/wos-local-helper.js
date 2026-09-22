@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const http = require('http');
+const net = require('net');
 const path = require('path');
 const compAgent = require('./wos-local-comp-agent');
 const localConfig = require('../modules/security/local-config-path');
@@ -81,6 +82,73 @@ function readJson(req, limit = 64 * 1024) {
   });
 }
 
+function probePort(host, port, options = {}) {
+  const netImpl = options.net_impl || net;
+  return new Promise((resolve) => {
+    const server = netImpl.createServer();
+    let settled = false;
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      try { server.close(); } catch (_) { /* Probe server may not be listening. */ }
+      resolve(result);
+    };
+    server.once('error', (error) => done({ free: false, reason: clean(error && error.code || error && error.message || 'unknown') }));
+    server.listen(port, host, () => done({ free: true, reason: '' }));
+  });
+}
+
+async function doctorReport(options = {}) {
+  const resolved = configResolution(options);
+  const fsImpl = options.fs_impl || fs;
+  const host = options.host || DEFAULT_HOST;
+  const port = Number(options.port || process.env.LOCAL_COMP_AGENT_PORT || DEFAULT_PORT);
+  let writable = false;
+  let writeReason = '';
+  const probeFile = path.join(resolved.directory, `.wos-doctor-${process.pid}-${Date.now()}.tmp`);
+  try {
+    fsImpl.mkdirSync(resolved.directory, { recursive: true });
+    fsImpl.writeFileSync(probeFile, 'probe', { mode: 0o600 });
+    fsImpl.unlinkSync(probeFile);
+    writable = true;
+  } catch (error) {
+    writeReason = clean(error && error.code || error && error.message || 'write failed');
+    try { fsImpl.unlinkSync(probeFile); } catch (_) { /* Best effort. */ }
+  }
+  const portState = await probePort(host, port, options);
+  const config = readConfig(resolved.path);
+  const nextAction = !writable
+    ? 'Set WOS_HELPER_HOME to a folder you can write to, then run scripts\\Start-WholesaleOS-Helper.cmd again.'
+    : !portState.free
+      ? 'The helper port is already in use. Return to the dashboard and click Retry connection.'
+      : config
+        ? 'Start the helper and leave this window open, then return to the dashboard and click Retry connection.'
+        : 'Start the helper, leave this window open, then use Pair helper once in the dashboard.';
+  return {
+    node_binary: process.execPath,
+    node_version: process.version,
+    config_directory: resolved.directory,
+    config_writable: writable,
+    config_write_reason: writeReason,
+    port,
+    port_free: portState.free,
+    port_reason: portState.reason,
+    pairing_config_exists: !!config,
+    dashboard_origin: config ? config.dashboard_url : '',
+    next_action: nextAction
+  };
+}
+
+function printDoctor(report) {
+  console.log('WholesaleOS Local Helper Doctor');
+  console.log(`Node: ${report.node_binary} (${report.node_version})`);
+  console.log(`Configuration directory: ${report.config_directory}`);
+  console.log(`Configuration directory writable: ${report.config_writable ? 'YES' : `NO (${report.config_write_reason || 'unknown reason'})`}`);
+  console.log(`Port ${report.port}: ${report.port_free ? 'FREE' : `ALREADY HELD (${report.port_reason || 'unknown reason'})`}`);
+  console.log(`Pairing configuration: ${report.pairing_config_exists ? `PRESENT for ${report.dashboard_origin}` : 'NOT PRESENT'}`);
+  console.log(`Next action: ${report.next_action}`);
+}
+
 function createHelperServer(options = {}) {
   const allowedOrigin = dashboardOrigin(options.dashboard_url || process.env.WOS_DASHBOARD_URL || DEFAULT_DASHBOARD);
   const resolvedConfig = configResolution(options);
@@ -137,6 +205,7 @@ function createHelperServer(options = {}) {
             market: body.market,
             queue_key: clean(body.queue_key),
             site: clean(body.site || 'zillow'),
+            mode: clean(body.mode || 'sold_comps'),
             dashboard_url: config.dashboard_url,
             agent_token: config.agent_token
           });
@@ -155,7 +224,7 @@ function createHelperServer(options = {}) {
   });
 }
 
-function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   let resolvedConfig;
   try { resolvedConfig = configResolution(); }
   catch (error) {
@@ -165,6 +234,10 @@ function main(argv = process.argv.slice(2)) {
   }
   if (argv.includes('--print-config-directory')) {
     console.log(resolvedConfig.directory);
+    return 0;
+  }
+  if (argv.includes('--doctor')) {
+    printDoctor(await doctorReport({ config_path: resolvedConfig.path }));
     return 0;
   }
   const host = DEFAULT_HOST;
@@ -178,7 +251,10 @@ function main(argv = process.argv.slice(2)) {
   });
 }
 
-if (require.main === module) main();
+if (require.main === module) main().catch((error) => {
+  console.error(error && error.message ? error.message : 'WholesaleOS helper failed.');
+  process.exitCode = 1;
+});
 
 module.exports = {
   DEFAULT_DASHBOARD,
@@ -187,7 +263,10 @@ module.exports = {
   clearConfig,
   createHelperServer,
   configResolution,
+  doctorReport,
   dashboardOrigin,
   readConfig,
+  probePort,
+  printDoctor,
   writeConfig
 };

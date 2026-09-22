@@ -246,9 +246,17 @@ function packetForRow(store, market, queueKey, create) {
 function snapshotRow(market, queueKey, options = {}) {
   const store = options.snapshot_store || readDealSnapshotStore();
   const bucket = store && store.markets && store.markets[marketKey(market)];
-  return bucket && Array.isArray(bucket.rows)
-    ? bucket.rows.find((row) => cleanText(row && row.queue_key) === queueKey) || null
+  const row = bucket && Array.isArray(bucket.rows)
+    ? bucket.rows.find((entry) => cleanText(entry && entry.queue_key) === queueKey) || null
     : null;
+  return row && !rowIsQuarantined(row) ? row : null;
+}
+
+function rowIsQuarantined(row) {
+  const lifecycle = row && row.lifecycle_status && typeof row.lifecycle_status === 'object'
+    ? row.lifecycle_status
+    : {};
+  return lifecycle.quarantined === true || row && row.quarantined === true;
 }
 
 function officialValueForField(row, key) {
@@ -302,6 +310,12 @@ function hasExplicitOperatorConfirmation(item) {
     cleanText(confirmation.confirmed_by) && validIsoTimestamp(confirmation.confirmed_at));
 }
 
+function hasExplicitSubjectFieldConfirmation(item, fieldName) {
+  const confirmation = item && item.field_confirmations && item.field_confirmations[fieldName];
+  return !!(confirmation && confirmation.confirmed === true &&
+    cleanText(confirmation.confirmed_by) && validIsoTimestamp(confirmation.confirmed_at));
+}
+
 function setOperatorConfirmation(item, confirmed, operatorId, confirmedAt) {
   const by = confirmed ? cleanText(operatorId) : '';
   const at = confirmed ? cleanText(confirmedAt) : '';
@@ -342,10 +356,8 @@ function compCandidateFromItem(item) {
   };
 }
 
-function subjectForCompGrid(row, confirmedItems) {
+function subjectForCompGrid(row, evidenceItems) {
   const subject = Object.assign({}, row || {});
-  const subjectItem = confirmedItems.find((entry) => entry.evidence_type === 'subject_property');
-  const fields = subjectItem && subjectItem.fields || {};
   const mappings = {
     property_kind: ['property_kind', 'property_kind_if_visible', 'land_use'],
     beds: ['beds', 'bedrooms'],
@@ -358,7 +370,11 @@ function subjectForCompGrid(row, confirmedItems) {
   };
   Object.keys(mappings).forEach((target) => {
     const hasOfficial = mappings[target].some((name) => cleanText(row && row[name]));
-    if (!hasOfficial && cleanText(fields[target])) subject[target] = fields[target];
+    if (hasOfficial) return;
+    const subjectItem = (Array.isArray(evidenceItems) ? evidenceItems : []).find((entry) =>
+      entry && entry.evidence_type === 'subject_property' && cleanText(entry.fields && entry.fields[target]) &&
+      hasExplicitSubjectFieldConfirmation(entry, target));
+    if (subjectItem) subject[target] = subjectItem.fields[target];
   });
   return subject;
 }
@@ -390,7 +406,7 @@ function subjectGridReadiness(subject) {
 function manualCompEvaluation(packet, row, options = {}) {
   const items = Array.isArray(packet && packet.evidence_items) ? packet.evidence_items : [];
   const confirmedItems = items.filter(hasExplicitOperatorConfirmation);
-  const compGridSubject = subjectForCompGrid(row, confirmedItems);
+  const compGridSubject = subjectForCompGrid(row, items);
   const readiness = subjectGridReadiness(compGridSubject);
   const verifiedComps = [];
   const rejectedComps = [];
@@ -411,6 +427,8 @@ function manualCompEvaluation(packet, row, options = {}) {
   }
   return {
     confirmed_items: confirmedItems,
+    confirmed_subject_field_count: items.reduce((count, item) => count +
+      Object.keys(item && item.fields || {}).filter((fieldName) => hasExplicitSubjectFieldConfirmation(item, fieldName)).length, 0),
     subject: compGridSubject,
     subject_grid_readiness: readiness,
     verified_comps: verifiedComps,
@@ -480,9 +498,12 @@ function evaluatePacket(packet, row, options = {}) {
     free_contact_routes: [].concat(Array.isArray(row && row.free_contact_routes) ? row.free_contact_routes : [], manualRoutes),
     verified_sold_comp_count: Math.max(Number(row && row.verified_sold_comp_count) || 0, usedComps.length),
     verified_comps: usedComps.length ? usedComps : (Array.isArray(row && row.verified_comps) ? row.verified_comps : []),
+    confirmed_strict_comp_count: usedComps.length,
     ARV_lock_state: arvUnlocked ? 'ARV_UNLOCKED_VERIFIED_COMPS' : cleanText(row && row.ARV_lock_state) || 'ARV_LOCKED_NO_VERIFIED_COMPS'
   });
   const projectedState = leadOperationsState.rowStateForDeal(projectedRow);
+  const projectedPropertyState = leadOperationsState.propertyStateForDeal(projectedRow);
+  const projectedContactState = leadOperationsState.contactStateForDeal(projectedRow);
   // Report route availability independently of valuation and workflow completion.
   const contactState = leadOperationsState.rowStateForDeal(Object.assign({}, projectedRow, {
     contact_workflow_complete: false, contact_workflow_outcome: '',
@@ -517,6 +538,7 @@ function evaluatePacket(packet, row, options = {}) {
   return {
     readiness,
     confirmed_evidence_count: confirmed.length,
+    confirmed_subject_field_count: compEvaluation.confirmed_subject_field_count,
     confirmed_strict_comp_count: compEvaluation.confirmed_strict_comp_count,
     confirmed_but_grid_rejected_count: compEvaluation.confirmed_but_grid_rejected_count,
     unconfirmed_candidate_count: compEvaluation.unconfirmed_candidate_count,
@@ -534,6 +556,10 @@ function evaluatePacket(packet, row, options = {}) {
     contact_routes_accepted: manualRoutes,
     projected_row_state: projectedState.row_state,
     projected_row_state_reason: projectedState.row_state_reason,
+    projected_property_state: projectedPropertyState.property_state,
+    projected_property_state_reason: projectedPropertyState.property_state_reason,
+    projected_contact_state: projectedContactState.contact_state,
+    projected_contact_state_reason: projectedContactState.contact_state_reason,
     clue_values_not_arv: clues,
     conflicts
   };
@@ -640,7 +666,7 @@ function deterministicSampleRows(rows, market, options = {}) {
   const limit = Number(options.limit || definition && definition.sample_limit || 2);
   const today = cleanText(options.today_iso) || new Date().toISOString().slice(0, 10);
   return (Array.isArray(rows) ? rows : [])
-    .filter((row) => cleanText(row && row.queue_key) && cleanText(row && (row.normalized_address || row.partial_address || row.headline)))
+    .filter((row) => !rowIsQuarantined(row) && cleanText(row && row.queue_key) && cleanText(row && (row.normalized_address || row.partial_address || row.headline)))
     .slice()
     .sort((a, b) => {
       const lifecycle = lifecycleRank(a) - lifecycleRank(b);
@@ -805,8 +831,24 @@ function proposalFieldsFromText(type, text, context = {}) {
   if (type === 'subject_property') {
     const zestimate = source.match(/zestimate[^$\d]{0,20}(\$[\d,]+)/i);
     const listPrice = source.match(/(?:list|asking)\s+price[^$\d]{0,20}(\$[\d,]+)/i);
+    const propertyKind = source.match(/\b(single[- ]family(?: home| residence)?|townhouse|townhome|condo(?:minium)?|duplex|triplex|fourplex|multi[- ]family|manufactured home|mobile home)\b/i);
+    const beds = source.match(/\b(\d+(?:\.\d+)?)\s*(?:beds?|bds?|bedrooms?)\b/i);
+    const baths = source.match(/\b(\d+(?:\.\d+)?)\s*(?:baths?|bas?|bathrooms?)\b/i);
+    const sqft = source.match(/\b([\d,]{3,8})\s*(?:sq\.?\s*ft\.?|sqft|square feet)\b/i);
+    const yearBuilt = source.match(/\b(?:year\s+built|built\s+in|built)\s*:?\s*((?:18|19|20)\d{2})\b/i);
+    const lotSize = source.match(/\blot(?:\s+size)?\s*:?\s*([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\b/i);
+    const latitude = source.match(/\blat(?:itude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
+    const longitude = source.match(/\blon(?:gitude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
     if (zestimate) fields.zestimate = cleanText(zestimate[1]);
     if (listPrice) fields.list_price = cleanText(listPrice[1]);
+    if (propertyKind) fields.property_kind = cleanText(propertyKind[1]).toLowerCase();
+    if (beds) fields.beds = cleanText(beds[1]);
+    if (baths) fields.baths = cleanText(baths[1]);
+    if (sqft) fields.sqft = cleanText(sqft[1]).replace(/,/g, '');
+    if (yearBuilt) fields.year_built = cleanText(yearBuilt[1]);
+    if (lotSize) fields.lot_size = `${cleanText(lotSize[1])} ${cleanText(lotSize[2]).toLowerCase()}`;
+    if (latitude) fields.latitude = cleanText(latitude[1]);
+    if (longitude) fields.longitude = cleanText(longitude[1]);
   }
   return [normalizeFields(type, fields)];
 }
@@ -985,12 +1027,79 @@ function recordCompConfirmation(input = {}, options = {}) {
   return packetResponse(market, queueKey, options);
 }
 
+function recordSubjectFactConfirmation(input = {}, options = {}) {
+  if (Array.isArray(input.evidence_id) || Array.isArray(input.evidence_ids) || input.evidence_ids != null ||
+      Array.isArray(input.field_name) || Array.isArray(input.field_names) || input.field_names != null || input.comp_ids != null) {
+    throw serviceError('Confirm exactly one subject field on one proposal per request.', 'manual_subject_confirmation_single_only', 400);
+  }
+  const market = normalizeMarket(input.market);
+  const queueKey = cleanText(input.queue_key || input.row_id);
+  const evidenceId = cleanText(input.evidence_id);
+  const fieldName = cleanText(input.field_name);
+  if (!queueKey || !evidenceId || !fieldName) {
+    throw serviceError('One row id, one evidence id and one field name are required.', 'manual_subject_confirmation_identity_required', 400);
+  }
+  if (!FIELD_ALLOWLIST.subject_property.includes(fieldName)) {
+    throw serviceError('The selected subject field is not allowed.', 'manual_subject_confirmation_field_invalid', 400);
+  }
+  if (typeof input.confirmed !== 'boolean') {
+    throw serviceError('confirmed must be true or false.', 'manual_subject_confirmation_value_required', 400);
+  }
+  const operatorId = cleanText(options.operator_id);
+  if (!operatorId) throw serviceError('An authenticated operator identity is required.', 'manual_subject_confirmation_operator_required', 400);
+  const row = snapshotRow(market, queueKey, options);
+  if (!row) throw serviceError('The selected snapshot row was not found or is quarantined.', 'manual_evidence_row_not_found', 404);
+  const store = readPacketStore();
+  const packet = packetForRow(store, market, queueKey, false);
+  const item = packet && Array.isArray(packet.evidence_items)
+    ? packet.evidence_items.find((entry) => cleanText(entry && entry.evidence_id) === evidenceId)
+    : null;
+  if (!item || item.evidence_type !== 'subject_property') {
+    throw serviceError('The selected subject-property proposal was not found.', 'manual_subject_confirmation_not_found', 404);
+  }
+  if (!cleanText(item.fields && item.fields[fieldName])) {
+    throw serviceError('The selected field has no proposed value.', 'manual_subject_confirmation_value_missing', 400);
+  }
+  if (!Array.isArray(packet.screenshots) || !packet.screenshots.some((shot) => cleanText(shot && shot.screenshot_id) === cleanText(item.screenshot_id))) {
+    throw serviceError('The subject proposal has no matching screenshot metadata.', 'manual_evidence_screenshot_not_found', 404);
+  }
+  item.field_confirmations = item.field_confirmations && typeof item.field_confirmations === 'object'
+    ? item.field_confirmations
+    : {};
+  const previous = item.field_confirmations[fieldName];
+  if (input.confirmed === true && previous && previous.confirmed === true && cleanText(previous.confirmed_by) === operatorId && validIsoTimestamp(previous.confirmed_at)) {
+    return packetResponse(market, queueKey, options);
+  }
+  if (input.confirmed === false && previous && previous.confirmed === false) {
+    return packetResponse(market, queueKey, options);
+  }
+  item.field_confirmations[fieldName] = {
+    confirmed: input.confirmed === true,
+    confirmed_by: input.confirmed ? operatorId : '',
+    confirmed_at: input.confirmed ? nowIso(options) : ''
+  };
+  item.field_evidence = item.field_evidence && typeof item.field_evidence === 'object' ? item.field_evidence : {};
+  item.field_evidence[fieldName] = Object.assign({}, item.field_evidence[fieldName] || {}, {
+    value: item.fields[fieldName],
+    source_kind: SOURCE_KIND,
+    captured_at: item.captured_at,
+    source_name: item.source_name,
+    screenshot_id: item.screenshot_id,
+    operator_confirmed: input.confirmed === true
+  });
+  item.conflicts = conflictsForItem(item, row);
+  packet.updated_at = nowIso(options);
+  writePacketStore(store);
+  return packetResponse(market, queueKey, options);
+}
+
 function manualValueSummaryForRow(row, market, options = {}) {
   const store = options.packet_store || readPacketStore();
   const packet = packetForRow(store, market || row, cleanText(row && row.queue_key), false);
   const evaluation = manualCompEvaluation(packet || {}, row || {}, options);
   return {
     confirmed_strict_comp_count: evaluation.confirmed_strict_comp_count,
+    confirmed_subject_field_count: evaluation.confirmed_subject_field_count,
     confirmed_but_grid_rejected_count: evaluation.confirmed_but_grid_rejected_count,
     unconfirmed_candidate_count: evaluation.unconfirmed_candidate_count,
     subject_grid_readiness: evaluation.subject_grid_readiness,
@@ -1004,6 +1113,7 @@ module.exports = {
   SOURCE_KIND,
   EVIDENCE_TYPES,
   CONTACT_CLASSIFICATIONS,
+  FIELD_ALLOWLIST,
   LIVE_MARKETS,
   packetFilePath,
   screenshotCacheDir,
@@ -1015,6 +1125,8 @@ module.exports = {
   leadOrigin,
   deterministicSampleRows,
   hasExplicitOperatorConfirmation,
+  hasExplicitSubjectFieldConfirmation,
+  rowIsQuarantined,
   subjectGridReadiness,
   manualCompEvaluation,
   manualValueSummaryForRow,
@@ -1024,5 +1136,6 @@ module.exports = {
   uploadScreenshot,
   recordEvidenceProposal,
   recordCompConfirmation,
+  recordSubjectFactConfirmation,
   readPacketStore
 };
