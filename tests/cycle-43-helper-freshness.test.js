@@ -76,6 +76,7 @@ function createHarness() {
 
 function renderTarget() {
   const statuses = [{ textContent: '' }, { textContent: '' }];
+  const builds = [{ textContent: '', style: {} }];
   const buttons = [
     { dataset: { captureMode: 'subject_facts' }, style: {}, disabled: true, title: '' },
     { dataset: { captureMode: 'sold_comps' }, style: {}, disabled: true, title: '' }
@@ -86,13 +87,14 @@ function renderTarget() {
   const message = [{ textContent: 'The helper runs only on your computer.' }];
   const bySelector = {
     '.wos-helper-status, .wos-helper-inline-status': statuses,
+    '.wos-helper-build': builds,
     '.wos-helper-capture': buttons,
     '.wos-helper-start-instruction': start,
     '.wos-helper-inline-pair': pair,
     '.wos-helper-outdated-instruction': incompatible,
     '.wos-helper-message': message
   };
-  return { statuses, buttons, start, incompatible, pair, message, querySelectorAll: (selector) => bySelector[selector] || [] };
+  return { statuses, builds, buttons, start, incompatible, pair, message, querySelectorAll: (selector) => bySelector[selector] || [] };
 }
 
 function captureButton(mode) {
@@ -145,6 +147,7 @@ async function main() {
     api.setState(completeState({ helper_build: build }));
     api.paint(target);
     assert.strictEqual(target.statuses[0].textContent, `Connected - build ${build}`);
+    assert.strictEqual(target.builds[0].textContent, `Build: ${build}`);
     assert.deepStrictEqual(target.buttons.map((button) => button.disabled), [false, false]);
   }
 
@@ -211,6 +214,7 @@ async function main() {
   api.setState(completeState({ capture_running: true }));
   api.paint(target);
   assert.strictEqual(target.statuses[0].textContent, 'Connected - capture running');
+  assert.strictEqual(target.builds[0].textContent, 'Build: aaaaaaa');
   assert.deepStrictEqual(target.buttons.map((button) => button.disabled), [true, true]);
 
   // G11: not-running and not-paired states remain unchanged.
