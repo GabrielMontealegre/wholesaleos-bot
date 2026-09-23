@@ -1,0 +1,56 @@
+{
+  "data_kind": "OPERATOR_LOCAL_CAPTURE_RUN",
+  "mode": "sold_comps",
+  "helper_build": "<build>",
+  "requested_mode": "sold_comps",
+  "effective_mode": "sold_comps",
+  "url_kinds_visited": [
+    { "host": "127.0.0.1", "url_kind": "sold_search" }
+  ],
+  "resolution_chain": [
+    {
+      "step": "sold_search",
+      "url": "http://127.0.0.1:4141/sold/zillow",
+      "url_kind": "sold_search",
+      "host": "127.0.0.1",
+      "http_status": 200,
+      "address_match": "NA",
+      "matched_card_text": ""
+    }
+  ],
+  "started_at": "2026-09-22T12:00:00.000Z",
+  "completed_at": "2026-09-22T12:00:00.000Z",
+  "elapsed_ms": 0,
+  "subject_address": "3808 Kings Dr, Ennis, TX 75119",
+  "rows_attempted": 1,
+  "pages_visited": 1,
+  "hosts_visited": ["127.0.0.1"],
+  "captures_submitted": 1,
+  "active_listing_context_captures": 0,
+  "discards": [],
+  "block_events": [],
+  "source_results": [
+    {
+      "source": "zillow",
+      "source_url": "http://127.0.0.1:4141/sold/zillow",
+      "url_kind": "sold_results",
+      "page_state": "loaded",
+      "cards_detected": 1,
+      "cards_with_price": 1,
+      "cards_with_date": 1,
+      "cards_with_address": 1,
+      "candidates_built": 1,
+      "discards": [],
+      "screenshots": 1,
+      "proposals": 1,
+      "outcome_code": "PROPOSALS_CREATED"
+    }
+  ],
+  "screenshots": 1,
+  "proposals": 1,
+  "outcome": "PROPOSALS_CREATED",
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "not_a_saved_lead": true
+}

@@ -226,17 +226,26 @@ async function visibleSearchCards(page, site, options = {}) {
 async function resolveDetailUrlFromSearch(page, subjectAddress, site, options = {}) {
   const searchUrl = clean(options.search_url);
   if (listingUrlKind(searchUrl, options) !== 'address_search') throw new Error('subject_search_url_required');
+  const requestedKind = listingUrlKind(searchUrl, options);
+  const resolution = (values) => Object.assign({
+    requested_url: searchUrl, final_url: clean(page.url()) || searchUrl,
+    redirected: (clean(page.url()) || searchUrl) !== searchUrl,
+    url_kind_requested: requestedKind, url_kind_final: listingUrlKind(clean(page.url()) || searchUrl, options)
+  }, values);
   let response;
   try { response = await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
-  catch (error) { return { blocked: true, reason: safeFailureReason(error), http_status: 0, matches: [] }; }
+  catch (error) { return resolution({ blocked: true, reason: safeFailureReason(error), http_status: 0, matches: [] }); }
   const status = response ? response.status() : 0;
-  if (status === 403 || status === 429) return { blocked: true, reason: `http_${status}`, http_status: status, matches: [] };
+  if (status === 403 || status === 429) return resolution({ blocked: true, reason: `http_${status}`, http_status: status, matches: [] });
   const current = clean(page.url());
-  if ((!hostAllowed(current, site) && !localSourceAllowed(current, options)) || listingUrlKind(current, options) !== 'address_search') {
-    return { blocked: true, reason: 'subject_search_redirected_or_wrong_type', http_status: status, matches: [] };
+  if (!hostAllowed(current, site) && !localSourceAllowed(current, options)) {
+    return resolution({ blocked: true, reason: 'subject_search_left_allowed_host', http_status: status, matches: [] });
   }
+  const finalKind = listingUrlKind(current, options);
+  if (finalKind === 'property_detail') return resolution({ blocked: false, direct_redirect: true, detail_url: current, http_status: status, matches: [] });
+  if (finalKind !== 'address_search') return resolution({ blocked: true, reason: 'subject_search_redirected_or_wrong_type', http_status: status, matches: [] });
   const bodyText = clean(await page.locator('body').innerText().catch(() => ''));
-  if (compEvidence.BLOCKED_TEXT_RE.test(bodyText)) return { blocked: true, reason: 'blocked_text_detected', http_status: status, matches: [] };
+  if (compEvidence.BLOCKED_TEXT_RE.test(bodyText)) return resolution({ blocked: true, reason: 'blocked_text_detected', http_status: status, matches: [] });
   const selectors = SOURCE_SELECTORS[site] || SOURCE_SELECTORS.zillow;
   const renderWaitMs = Math.max(100, Math.min(Number(options.render_wait_ms) || 5000, 10000));
   await page.locator(`${selectors.container}, ${selectors.cards}`).first().waitFor({ state: 'visible', timeout: renderWaitMs }).catch(() => {});
@@ -250,8 +259,8 @@ async function resolveDetailUrlFromSearch(page, subjectAddress, site, options = 
     if ((!hostAllowed(detailUrl, site) && !localSourceAllowed(detailUrl, options)) || listingUrlKind(detailUrl, options) !== 'property_detail') continue;
     matches.push({ detail_url: detailUrl, matched_card_text: clean(card.text), match_index: card.index });
   }
-  if (matches.length === 1) return Object.assign({ blocked: false, http_status: status }, matches[0]);
-  return { blocked: true, reason: matches.length ? 'ambiguous_address_match' : 'no_exact_address_match_visible', http_status: status, matches };
+  if (matches.length === 1) return resolution(Object.assign({ blocked: false, direct_redirect: false, http_status: status }, matches[0]));
+  return resolution({ blocked: true, reason: matches.length ? 'ambiguous_address_match' : 'no_exact_address_match_visible', http_status: status, matches });
 }
 
 async function detailAddressVerification(page, subjectAddress, options = {}) {
@@ -269,12 +278,23 @@ async function detailAddressVerification(page, subjectAddress, options = {}) {
 }
 
 function appendResolutionStep(run, step) {
-  run.resolution_chain.push({
+  const entry = {
     step: clean(step.step), url: clean(step.url), url_kind: clean(step.url_kind), host: clean(step.host),
     http_status: Number(step.http_status) || 0,
     address_match: ['EXACT', 'NONE', 'AMBIGUOUS', 'NA'].includes(step.address_match) ? step.address_match : 'NA',
     matched_card_text: clean(step.matched_card_text)
-  });
+  };
+  if (run.mode === 'subject_facts') {
+    const requestedUrl = clean(step.requested_url || step.url);
+    const finalUrl = clean(step.final_url || step.url);
+    Object.assign(entry, {
+      requested_url: requestedUrl, final_url: finalUrl,
+      redirected: typeof step.redirected === 'boolean' ? step.redirected : requestedUrl !== finalUrl,
+      url_kind_requested: clean(step.url_kind_requested || step.url_kind),
+      url_kind_final: clean(step.url_kind_final || step.url_kind)
+    });
+  }
+  run.resolution_chain.push(entry);
 }
 
 function readRateState(file, now, options = {}) {
@@ -333,7 +353,7 @@ function cleanRunLog(value) {
     }
     if (Number(value.proposals) > 0) {
       const terminal = chain[chain.length - 1] || {};
-      if (terminal.url_kind !== 'property_detail' || terminal.address_match !== 'EXACT') throw new Error('subject_proposal_resolution_chain_incomplete');
+      if ((terminal.url_kind_final || terminal.url_kind) !== 'property_detail' || terminal.address_match !== 'EXACT') throw new Error('subject_proposal_resolution_chain_incomplete');
     }
   }
   return {
@@ -535,7 +555,7 @@ async function pageClassification(page, status, site, sourceUrl, options = {}, s
   const searchStructure = await page.locator('form[role="search"], input[type="search"], [aria-label*="search" i]').count().catch(() => 0);
   const sold = compEvidence.extractCompCandidatesFromVisibleText(text, { source_url: sourceUrl, state }).length > 0;
   if (sold && cards > 0) return { type: 'sold_results', reason: '', text };
-  if (mainRegion > 0 && /\b(?:list|asking)\s+price\b/i.test(text)) return { type: 'property_detail', reason: '', text };
+  if (mainRegion > 0 && (listingUrlKind(currentUrl, options) === 'property_detail' || /\b(?:list|asking)\s+price\b/i.test(text))) return { type: 'property_detail', reason: '', text };
   if (cards > 0 || searchStructure > 0) return { type: 'search_results', reason: '', text };
   return { type: 'unknown', reason: 'page_type_unknown', text };
 }
@@ -593,6 +613,7 @@ function subjectFactsFromVisibleText(text, sourceUrl) {
   const latitude = source.match(/\blat(?:itude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
   const longitude = source.match(/\blon(?:gitude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
   const listPrice = source.match(/(?:list|asking)\s+price[^$\d]{0,20}(\$[\d,]+)/i);
+  const publicEstimate = source.match(/(?:zestimate|(?:redfin|realtor)(?:\.com)?\s+estimate|estimated\s+market\s+value|zillow\s+estimate)[^$\d]{0,30}(\$[\d,]+)/i);
   if (propertyKind) fields.property_kind = clean(propertyKind[1]).toLowerCase();
   if (beds) fields.beds = clean(beds[1]);
   if (baths) fields.baths = clean(baths[1]);
@@ -602,6 +623,7 @@ function subjectFactsFromVisibleText(text, sourceUrl) {
   if (latitude) fields.latitude = clean(latitude[1]);
   if (longitude) fields.longitude = clean(longitude[1]);
   if (listPrice) fields.list_price = clean(listPrice[1]);
+  if (publicEstimate) fields.public_estimate = clean(publicEstimate[1]);
   return fields;
 }
 
@@ -715,23 +737,40 @@ async function runCapture(input = {}, options = {}) {
       let target = subjectTarget;
       const initialKind = listingUrlKind(target, options);
       let detailNeedsReservation = false;
+      let directRedirect = false;
+      let redirectResolution = null;
       if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
         run.discards.push({ reason: 'pages_per_hour_limit_30' });
       } else if (initialKind === 'address_search') {
         recordVisitedUrl(run, target, options);
         const resolved = await resolveDetailUrlFromSearch(page, run.subject_address, site, Object.assign({}, options, { search_url: target }));
-        appendResolutionStep(run, {
-          step: 'address_search', url: target, url_kind: 'address_search', host: new URL(target).hostname,
-          http_status: resolved.http_status, address_match: resolved.reason === 'ambiguous_address_match' ? 'AMBIGUOUS' : resolved.blocked ? 'NONE' : 'EXACT',
-          matched_card_text: resolved.matched_card_text || ''
-        });
         if (resolved.blocked) {
+          appendResolutionStep(run, {
+            step: 'address_search', url: resolved.final_url || target,
+            url_kind: resolved.url_kind_final || 'address_search', host: new URL(resolved.final_url || target).hostname,
+            requested_url: resolved.requested_url, final_url: resolved.final_url, redirected: resolved.redirected,
+            url_kind_requested: resolved.url_kind_requested, url_kind_final: resolved.url_kind_final,
+            http_status: resolved.http_status, address_match: resolved.reason === 'ambiguous_address_match' ? 'AMBIGUOUS' : 'NONE',
+            matched_card_text: resolved.matched_card_text || ''
+          });
           run.outcome = resolved.reason;
           if (/^(?:http_403|http_429|blocked_text_detected|navigation_timeout|browser_navigation_failed)$/.test(resolved.reason)) {
             run.block_events.push({ host: new URL(target).hostname, reason: resolved.reason });
           } else run.discards.push({ host: new URL(target).hostname, reason: resolved.reason.toUpperCase() });
           target = '';
-        } else { target = resolved.detail_url; detailNeedsReservation = true; }
+        } else {
+          target = resolved.detail_url;
+          directRedirect = resolved.direct_redirect === true;
+          redirectResolution = resolved;
+          detailNeedsReservation = !directRedirect;
+          if (!directRedirect) appendResolutionStep(run, {
+            step: 'address_search', url: resolved.final_url || resolved.requested_url || subjectTarget,
+            url_kind: 'address_search', host: new URL(resolved.final_url || subjectTarget).hostname,
+            requested_url: resolved.requested_url, final_url: resolved.final_url, redirected: resolved.redirected,
+            url_kind_requested: resolved.url_kind_requested, url_kind_final: resolved.url_kind_final,
+            http_status: resolved.http_status, address_match: 'EXACT', matched_card_text: resolved.matched_card_text || ''
+          });
+        }
       }
       if (target && detailNeedsReservation && run.pages_visited < 2) {
         if (!reservePage(options.rate_state_path || RATE_STATE, now(), 30)) {
@@ -741,30 +780,41 @@ async function runCapture(input = {}, options = {}) {
       }
       if (target) {
         if (listingUrlKind(target, options) !== 'property_detail') throw new Error('subject_target_not_property_detail');
-        recordVisitedUrl(run, target, options);
         let response;
         let navigationFailure = '';
-        try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
-        catch (error) { navigationFailure = safeFailureReason(error); }
+        if (directRedirect) response = { status: () => redirectResolution.http_status };
+        else {
+          recordVisitedUrl(run, target, options);
+          try { response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: compEvidence.DEFAULT_CAPS.timeout_ms }); }
+          catch (error) { navigationFailure = safeFailureReason(error); }
+        }
         const status = response ? response.status() : 0;
+        const resolutionFields = directRedirect ? {
+          requested_url: redirectResolution.requested_url, final_url: redirectResolution.final_url,
+          redirected: redirectResolution.redirected, url_kind_requested: redirectResolution.url_kind_requested,
+          url_kind_final: redirectResolution.url_kind_final
+        } : {
+          requested_url: target, final_url: clean(page.url()) || target, redirected: clean(page.url()) !== target,
+          url_kind_requested: 'property_detail', url_kind_final: listingUrlKind(clean(page.url()) || target, options)
+        };
         if (navigationFailure || status === 403 || status === 429) {
           const reason = navigationFailure || `http_${status}`;
-          appendResolutionStep(run, { step: 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname, http_status: status, address_match: 'NA' });
+          appendResolutionStep(run, Object.assign({ step: directRedirect ? 'address_search' : 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname, http_status: status, address_match: 'NA' }, resolutionFields));
           run.block_events.push({ host: new URL(target).hostname, reason });
           run.outcome = 'BLOCKED_STOPPED';
         } else {
           const classification = await pageClassification(page, status, site, target, options, market.state);
           if (classification.type === 'blocked' || classification.type === 'unknown' || classification.type !== 'property_detail') {
             const reason = classification.reason || (classification.type === 'property_detail' ? '' : 'subject_property_detail_required');
-            appendResolutionStep(run, { step: 'property_detail', url: target, url_kind: listingUrlKind(page.url(), options), host: new URL(target).hostname, http_status: status, address_match: 'NA' });
+            appendResolutionStep(run, Object.assign({ step: directRedirect ? 'address_search' : 'property_detail', url: target, url_kind: listingUrlKind(page.url(), options), host: new URL(target).hostname, http_status: status, address_match: 'NA' }, resolutionFields));
             run.block_events.push({ host: new URL(target).hostname, reason });
             run.outcome = classification.type === 'blocked' ? 'BLOCKED_STOPPED' : 'WRONG_PAGE_TYPE';
           } else {
             const verification = await detailAddressVerification(page, run.subject_address, options);
-            appendResolutionStep(run, {
-              step: 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname,
+            appendResolutionStep(run, Object.assign({
+              step: directRedirect ? 'address_search' : 'property_detail', url: target, url_kind: 'property_detail', host: new URL(target).hostname,
               http_status: status, address_match: verification.matched ? 'EXACT' : 'NONE', matched_card_text: verification.matched_text
-            });
+            }, resolutionFields));
             if (!verification.matched) {
               run.outcome = 'detail_page_address_mismatch';
               run.discards.push({ host: new URL(target).hostname, reason: 'DETAIL_PAGE_ADDRESS_MISMATCH' });

@@ -1,0 +1,107 @@
+{
+  "data_kind": "CYCLE_42_SYNTHETIC_LOCAL_PROOF",
+  "synthetic_fixture_only": true,
+  "network_requests": 0,
+  "market": {
+    "city": "Ennis",
+    "county": "Ellis",
+    "state": "TX"
+  },
+  "subject_address": "3808 Kings Dr, Ennis, TX 75119",
+  "flows": [
+    {
+      "shape": "direct_redirect",
+      "navigations": 1,
+      "resolution_chain": [
+        {
+          "step": "address_search",
+          "url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "url_kind": "property_detail",
+          "host": "127.0.0.1",
+          "http_status": 200,
+          "address_match": "EXACT",
+          "matched_card_text": "",
+          "requested_url": "http://127.0.0.1:4141/address-search/zillow",
+          "final_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "redirected": true,
+          "url_kind_requested": "address_search",
+          "url_kind_final": "property_detail"
+        }
+      ],
+      "proposal": {
+        "evidence_type": "subject_property",
+        "fields": {
+          "source_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "property_kind": "single family home",
+          "beds": "3",
+          "baths": "2",
+          "sqft": "1640",
+          "year_built": "2003",
+          "lot_size": "7,200 sqft",
+          "public_estimate": "$268,400"
+        },
+        "operator_confirmed": false,
+        "source_url": "http://127.0.0.1:4141/property-detail/3808-kings"
+      }
+    },
+    {
+      "shape": "search_card",
+      "navigations": 2,
+      "resolution_chain": [
+        {
+          "step": "address_search",
+          "url": "http://127.0.0.1:4141/address-search/zillow",
+          "url_kind": "address_search",
+          "host": "127.0.0.1",
+          "http_status": 200,
+          "address_match": "EXACT",
+          "matched_card_text": "",
+          "requested_url": "http://127.0.0.1:4141/address-search/zillow",
+          "final_url": "http://127.0.0.1:4141/address-search/zillow",
+          "redirected": false,
+          "url_kind_requested": "address_search",
+          "url_kind_final": "address_search"
+        },
+        {
+          "step": "property_detail",
+          "url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "url_kind": "property_detail",
+          "host": "127.0.0.1",
+          "http_status": 200,
+          "address_match": "EXACT",
+          "matched_card_text": "",
+          "requested_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "final_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "redirected": false,
+          "url_kind_requested": "property_detail",
+          "url_kind_final": "property_detail"
+        }
+      ],
+      "proposal": {
+        "evidence_type": "subject_property",
+        "fields": {
+          "source_url": "http://127.0.0.1:4141/property-detail/3808-kings",
+          "property_kind": "single family home",
+          "beds": "3",
+          "baths": "2",
+          "sqft": "1640",
+          "year_built": "2003",
+          "lot_size": "7,200 sqft",
+          "public_estimate": "$268,400"
+        },
+        "operator_confirmed": false,
+        "source_url": "http://127.0.0.1:4141/property-detail/3808-kings"
+      }
+    }
+  ],
+  "confirmed_proposal_count": 0,
+  "arv_status_before": "ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS",
+  "arv_status_after": "ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS",
+  "arv_range_after": null,
+  "verified_sold_comp_count_after": 0,
+  "ready_to_offer_after": "NO",
+  "preview_only": true,
+  "should_ingest": false,
+  "no_global_mutation": true,
+  "not_a_saved_lead": true
+}
