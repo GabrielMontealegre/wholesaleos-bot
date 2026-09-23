@@ -557,8 +557,10 @@ async function pageClassification(page, status, site, sourceUrl, options = {}, s
   const mainRegion = await page.locator('main').count().catch(() => 0);
   const searchStructure = await page.locator('form[role="search"], input[type="search"], [aria-label*="search" i]').count().catch(() => 0);
   const sold = compEvidence.extractCompCandidatesFromVisibleText(text, { source_url: sourceUrl, state }).length > 0;
+  // Listing detail pages need not contain a <main>; the exact address is checked before capture.
+  if (listingUrlKind(currentUrl, options) === 'property_detail') return { type: 'property_detail', reason: '', text };
   if (sold && cards > 0) return { type: 'sold_results', reason: '', text };
-  if (mainRegion > 0 && (listingUrlKind(currentUrl, options) === 'property_detail' || /\b(?:list|asking)\s+price\b/i.test(text))) return { type: 'property_detail', reason: '', text };
+  if (mainRegion > 0 && /\b(?:list|asking)\s+price\b/i.test(text)) return { type: 'property_detail', reason: '', text };
   if (cards > 0 || searchStructure > 0) return { type: 'search_results', reason: '', text };
   return { type: 'unknown', reason: 'page_type_unknown', text };
 }
@@ -610,16 +612,23 @@ function subjectFactsFromVisibleText(text, sourceUrl) {
   const propertyKind = source.match(/\b(single[- ]family(?: home| residence)?|townhouse|townhome|condo(?:minium)?|duplex|triplex|fourplex|multi[- ]family|manufactured home|mobile home)\b/i);
   const beds = source.match(/\b(\d+(?:\.\d+)?)\s*(?:beds?|bds?|bedrooms?)\b/i);
   const baths = source.match(/\b(\d+(?:\.\d+)?)\s*(?:baths?|bas?|bathrooms?)\b/i);
-  const sqft = source.match(/\b([\d,]{3,8})\s*(?:sq\.?\s*ft\.?|sqft|square feet)\b/i);
+  const sqft = Array.from(source.matchAll(/\b([\d,]{3,8})\s*(?:sq\.?\s*ft\.?|sqft|square feet)\b/gi)).find((match) => {
+    const before = source.slice(Math.max(0, match.index - 20), match.index);
+    const after = source.slice(match.index + match[0].length, match.index + match[0].length + 12);
+    const area = Number(match[1].replace(/,/g, ''));
+    return area >= 100 && area <= 30000 && !/\blot(?:\s+size)?\s*:?\s*$/i.test(before) && !/^\s*lot\b/i.test(after);
+  });
   const yearBuilt = source.match(/\b(?:year\s+built|built\s+in|built)\s*:?\s*((?:18|19|20)\d{2})\b/i);
-  const lotSize = source.match(/\blot(?:\s+size)?\s*:?\s*([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\b/i);
+  const lotSize = source.match(/\blot(?:\s+size)?\s*:?\s*([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\b/i) ||
+    source.match(/\b([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\s+lot\b/i);
   const latitude = source.match(/\blat(?:itude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
   const longitude = source.match(/\blon(?:gitude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
   const listPrice = source.match(/(?:list|asking)\s+price[^$\d]{0,20}(\$[\d,]+)/i);
-  const publicEstimate = source.match(/(?:zestimate|(?:redfin|realtor)(?:\.com)?\s+estimate|estimated\s+market\s+value|zillow\s+estimate)[^$\d]{0,30}(\$[\d,]+)/i);
+  const publicEstimate = source.match(/(?:zestimate|(?:redfin|realtor)(?:\.com)?\s+estimate|estimated\s+market\s+value|zillow\s+estimate)[^$\d]{0,30}(\$[\d,]+)/i) ||
+    source.match(/(\$[\d,]+)\s*(?:zestimate|(?:redfin|realtor)(?:\.com)?\s+estimate)\b/i);
   if (propertyKind) fields.property_kind = clean(propertyKind[1]).toLowerCase();
-  if (beds) fields.beds = clean(beds[1]);
-  if (baths) fields.baths = clean(baths[1]);
+  if (beds && Number(beds[1]) > 0 && Number(beds[1]) <= 20) fields.beds = clean(beds[1]);
+  if (baths && Number(baths[1]) > 0 && Number(baths[1]) <= 20) fields.baths = clean(baths[1]);
   if (sqft) fields.sqft = clean(sqft[1]).replace(/,/g, '');
   if (yearBuilt) fields.year_built = clean(yearBuilt[1]);
   if (lotSize) fields.lot_size = `${clean(lotSize[1])} ${clean(lotSize[2]).toLowerCase()}`;
@@ -830,7 +839,13 @@ async function runCapture(input = {}, options = {}) {
               let ocrText = '';
               try { ocrText = await recognizeLocal(buffer, options, 'subject_property'); }
               catch (_) { /* Missing OCR remains an honest no-proposal result. */ }
-              const fields = subjectFactsFromVisibleText(ocrText, target);
+              const visibleText = clean(classification.text);
+              const addressText = clean(verification.matched_text);
+              const subjectIndex = addressText ? visibleText.toLowerCase().indexOf(addressText.toLowerCase()) : -1;
+              const subjectSummary = subjectIndex >= 0 ? visibleText.slice(subjectIndex, subjectIndex + 700) : '';
+              const visibleFields = subjectFactsFromVisibleText(subjectSummary, target);
+              const fields = Object.keys(visibleFields).length > 1
+                ? visibleFields : subjectFactsFromVisibleText(ocrText, target);
               const proposedNames = Object.keys(fields).filter((name) => name !== 'source_url');
               if (!proposedNames.length) {
                 run.discards.push({ host: new URL(target).hostname, reason: 'SUBJECT_FACTS_NOT_VISIBLE' });
