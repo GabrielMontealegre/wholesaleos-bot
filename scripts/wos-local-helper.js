@@ -198,7 +198,10 @@ function createHelperServer(options = {}) {
     try {
       if (req.method === 'GET' && req.url === '/helper/status') {
         return json(res, 200, { ok: true, connected: true, version: 1, running: true, paired: !!readConfig(configFile),
-          capture_running: captureRunning, helper_build: compAgent.HELPER_BUILD, subject_facts_supported: compAgent.SUPPORTED_MODES.includes('subject_facts') }, allowedOrigin);
+          capture_running: captureRunning, helper_build: compAgent.HELPER_BUILD,
+          helper_protocol_version: compAgent.HELPER_PROTOCOL_VERSION,
+          subject_facts_supported: compAgent.SUPPORTED_MODES.includes('subject_facts'),
+          sold_comps_supported: compAgent.SUPPORTED_MODES.includes('sold_comps') }, allowedOrigin);
       }
 
       if (req.method === 'POST' && req.url === '/helper/pair') {
