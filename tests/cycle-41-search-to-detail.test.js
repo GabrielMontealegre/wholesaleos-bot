@@ -172,6 +172,14 @@ async function main() {
     assert.strictEqual(directCaptured.proposals[0].fields.public_estimate, '$268,400');
     assert.strictEqual(directRun.run.proposals, 1);
     assert.ok(directCaptured.proposals.every((proposal) => proposal.operator_confirmed === false));
+
+    const noMainCaptured = { uploads: [], proposals: [] };
+    const noMain = runOptions(tmp, { ...directFixture, [SEARCH]: { ...directFixture[SEARCH], main: false } }, noMainCaptured);
+    const noMainRun = await agent.runCapture({ market, queue_key: row.queue_key, dashboard_url: 'https://dashboard.example.test', agent_token: 'token', site: 'zillow', mode: 'subject_facts' }, noMain.options);
+    assert.strictEqual(noMainRun.run.outcome, 'SUBJECT_FACT_PROPOSAL_CREATED');
+    assert.strictEqual(noMainRun.run.resolution_chain[0].address_match, 'EXACT');
+    assert.strictEqual(noMain.counters.screenshots, 1);
+    assert.strictEqual(noMainCaptured.proposals[0].operator_confirmed, false);
     assert.strictEqual(agent.subjectFactsFromVisibleText('Redfin Estimate $251,000', 'https://www.redfin.com/property-detail/synthetic').public_estimate, '$251,000');
 
     for (const source of [
@@ -186,7 +194,7 @@ async function main() {
     }
 
     const mismatchDirectCapture = { uploads: [], proposals: [] };
-    const mismatchDirect = runOptions(tmp, { ...directFixture, [DETAIL]: { ...directFixture[DETAIL], displayed_addresses: ['3810 Kings Dr, Ennis, TX 75119'] } }, mismatchDirectCapture, {
+    const mismatchDirect = runOptions(tmp, { ...directFixture, [SEARCH]: { ...directFixture[SEARCH], main: false }, [DETAIL]: { ...directFixture[DETAIL], displayed_addresses: ['3810 Kings Dr, Ennis, TX 75119'] } }, mismatchDirectCapture, {
       detail_address_reader_impl: async () => ['3810 Kings Dr, Ennis, TX 75119']
     });
     const mismatchDirectRun = await agent.runCapture({ market, queue_key: row.queue_key, dashboard_url: 'https://dashboard.example.test', agent_token: 'token', site: 'zillow', mode: 'subject_facts' }, mismatchDirect.options);

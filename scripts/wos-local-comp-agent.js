@@ -557,8 +557,10 @@ async function pageClassification(page, status, site, sourceUrl, options = {}, s
   const mainRegion = await page.locator('main').count().catch(() => 0);
   const searchStructure = await page.locator('form[role="search"], input[type="search"], [aria-label*="search" i]').count().catch(() => 0);
   const sold = compEvidence.extractCompCandidatesFromVisibleText(text, { source_url: sourceUrl, state }).length > 0;
+  // Listing detail pages need not contain a <main>; the exact address is checked before capture.
+  if (listingUrlKind(currentUrl, options) === 'property_detail') return { type: 'property_detail', reason: '', text };
   if (sold && cards > 0) return { type: 'sold_results', reason: '', text };
-  if (mainRegion > 0 && (listingUrlKind(currentUrl, options) === 'property_detail' || /\b(?:list|asking)\s+price\b/i.test(text))) return { type: 'property_detail', reason: '', text };
+  if (mainRegion > 0 && /\b(?:list|asking)\s+price\b/i.test(text)) return { type: 'property_detail', reason: '', text };
   if (cards > 0 || searchStructure > 0) return { type: 'search_results', reason: '', text };
   return { type: 'unknown', reason: 'page_type_unknown', text };
 }
