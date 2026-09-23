@@ -20,14 +20,8 @@ const SITE_HOSTS = Object.freeze({
 });
 const SOURCE_ORDER = Object.freeze(['zillow', 'redfin', 'realtor']);
 const SUPPORTED_MODES = Object.freeze(['sold_comps', 'subject_facts']);
-function helperBuild() {
-  try {
-    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
-      cwd: path.resolve(__dirname, '..'), timeout: 2000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']
-    }).trim() || 'unknown';
-  } catch (_) { return 'unknown'; }
-}
-const HELPER_BUILD = helperBuild();
+// Bump this only for an incompatible helper-to-dashboard contract change, such as a route request/response shape, capture-mode meaning, or safety-gate semantic change; never bump it for a bug fix, selector update, or refactor.
+const HELPER_PROTOCOL_VERSION = 1;
 const CARD_SELECTOR = 'article, [role="article"], li, [data-testid*="card"], [data-testid*="property"]';
 const SOURCE_SELECTORS = Object.freeze({
   zillow: Object.freeze({
@@ -50,6 +44,15 @@ const RATE_STATE = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent
 const RUN_LOCK = path.resolve(__dirname, '..', '.cache', 'wos-local-comp-agent', 'agent.lock');
 const LOG_DIR = path.resolve(__dirname, '..', 'exports', 'cycle-30-comp-capture');
 let lastUploadCaptureMs = 0;
+
+function helperBuild() {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+      cwd: path.resolve(__dirname, '..'), timeout: 2000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']
+    }).trim() || 'unknown';
+  } catch (_) { return 'unknown'; }
+}
+const HELPER_BUILD = helperBuild();
 
 function clean(value) { return String(value == null ? '' : value).replace(/\s+/g, ' ').trim(); }
 
@@ -1020,7 +1023,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  SITE_HOSTS, SOURCE_ORDER, SUPPORTED_MODES, HELPER_BUILD, SOURCE_SELECTORS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
+  SITE_HOSTS, SOURCE_ORDER, SUPPORTED_MODES, HELPER_PROTOCOL_VERSION, HELPER_BUILD, SOURCE_SELECTORS, CARD_SELECTOR, hostAllowed, dashboardOrigin, parseMarket, parseArgs,
   selectRow, sourceUrlFor, soldResultsUrlFor, listingUrlKind, readRateState, writeState, reservePage, acquireRunLock, cleanRunLog, writeRunLog,
   safeFailureReason, configPath, incrementDiscard, gridDiscardCode, visibleFieldState, emptySourceResult, waitForSoldRender, inspectSoldPage,
   activeListingRegion, pageClassification, parseVisibleCards, nextPageUrl, uploadImage, uploadImageDetailed,

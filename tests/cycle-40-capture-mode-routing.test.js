@@ -55,7 +55,7 @@ function dashboardCaptureFunction(calls) {
   const end = uiSource.indexOf('  function ensureSection(', start);
   assert.ok(start >= 0 && end > start);
   const context = {
-    localHelperState: { running: true, paired: true, helper_build: '9eac148', subject_facts_supported: true },
+    localHelperState: { running: true, paired: true, capture_running: false, helper_build: 'synthetic', helper_protocol_version: 1, subject_facts_supported: true, sold_comps_supported: true },
     LOCAL_HELPER: 'http://127.0.0.1:8797',
     selectedMarket: () => market,
     fetchLatestWithNote() {}, refreshLocalHelperStatus() {},
@@ -67,7 +67,7 @@ function dashboardCaptureFunction(calls) {
   };
   const helperStart = uiSource.indexOf('  function normalizedHelperBuild(');
   const helperEnd = uiSource.indexOf('  function paintLocalHelperStatus(', helperStart);
-  return vm.runInNewContext(`var SUPPORTED_HELPER_BUILD = '9eac148';\n${uiSource.slice(helperStart, helperEnd)}\n${uiSource.slice(start, end)}\ncaptureWithLocalHelper`, context);
+  return vm.runInNewContext(`var SUPPORTED_HELPER_PROTOCOLS = [1];\n${uiSource.slice(helperStart, helperEnd)}\n${uiSource.slice(start, end)}\ncaptureWithLocalHelper`, context);
 }
 
 async function dashboardMode(mode, expected) {

@@ -40,7 +40,8 @@ function listen(server) {
 
     const initial = await fetch(`${base}/helper/status`, { headers: { Origin: dashboard } });
     assert.deepStrictEqual(await initial.json(), { ok: true, connected: true, version: 1, running: true, paired: false,
-      capture_running: false, helper_build: require('../scripts/wos-local-comp-agent').HELPER_BUILD, subject_facts_supported: true });
+      capture_running: false, helper_build: require('../scripts/wos-local-comp-agent').HELPER_BUILD,
+      helper_protocol_version: 1, subject_facts_supported: true, sold_comps_supported: true });
     assert.strictEqual(captureCalls, 0, 'status polling never starts a capture');
 
     const unpaired = await fetch(`${base}/helper/capture`, {

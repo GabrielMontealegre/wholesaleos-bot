@@ -15,7 +15,7 @@
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
-  var SUPPORTED_HELPER_BUILD = '9eac148';
+  var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
   var lastNote = '';
   var pendingRequestId = 0;
@@ -26,7 +26,7 @@
   var marketDemandFetchInFlight = false;
   var marketDemandData = null;
   var manualEvidenceObjectUrls = [];
-  var localHelperState = { running: false, paired: false, capture_running: false, checked: false, helper_build: '', subject_facts_supported: false };
+  var localHelperState = { running: false, paired: false, capture_running: false, checked: false, helper_build: '', helper_protocol_version: null, subject_facts_supported: false, sold_comps_supported: false };
   var localCaptureResults = {};
   var dataByMarket = {};
   var MARKET_PRESETS = [
@@ -508,7 +508,7 @@
       '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
         '<b>Local comp helper:</b> <span class="wos-helper-inline-status">' + esc(localHelperStatusText()) + '</span><br>' +
         (helperEligible
-          ? '<span style="display:inline-block;margin-top:5px;margin-right:6px;color:#4c1d95;">Zillow, then Redfin, then Realtor.com</span><button type="button" class="wos-helper-capture" data-capture-mode="subject_facts" disabled title="Helper status is being checked." style="padding:5px 9px;margin-right:5px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture subject facts</button><button type="button" class="wos-helper-capture" data-capture-mode="sold_comps" disabled title="Helper status is being checked." style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button><div class="wos-helper-start-instruction" style="margin-top:5px;color:#92400e;">Run <b>scripts\\Start-WholesaleOS-Helper.cmd</b>, leave its window open, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div><div class="wos-helper-outdated-instruction" style="display:none;margin-top:5px;color:#92400e;">Run <b>scripts\\Start-WholesaleOS-Helper.cmd</b> from the current checkout, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div><button type="button" class="wos-helper-pair wos-helper-inline-pair" style="display:none;margin-top:5px;padding:4px 8px;border-radius:5px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button>'
+          ? '<span style="display:inline-block;margin-top:5px;margin-right:6px;color:#4c1d95;">Zillow, then Redfin, then Realtor.com</span><button type="button" class="wos-helper-capture" data-capture-mode="subject_facts" disabled title="Helper status is being checked." style="padding:5px 9px;margin-right:5px;border-radius:6px;border:1px solid #047857;background:#047857;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture subject facts</button><button type="button" class="wos-helper-capture" data-capture-mode="sold_comps" disabled title="Helper status is being checked." style="padding:5px 9px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;opacity:.5;">Capture sold comps for this row</button><div class="wos-helper-start-instruction" style="margin-top:5px;color:#92400e;">Start the local helper, leave its window open, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div><div class="wos-helper-outdated-instruction" style="display:none;margin-top:5px;color:#92400e;">Restart the local helper from the current checkout, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div><button type="button" class="wos-helper-pair wos-helper-inline-pair" style="display:none;margin-top:5px;padding:4px 8px;border-radius:5px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button>'
           : '<span style="color:#92400e;">Capture is disabled until the county source establishes a complete property address.</span>') +
         '<div class="wos-helper-row-message" style="font-size:10px;color:#6b7280;margin-top:4px;">Nothing is captured until you click. Every result remains an unconfirmed proposal.</div>' + captureResultsMarkup(item.queue_key || '') + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-top:8px;">' + MANUAL_EVIDENCE_SLOTS.map(manualUploadSlot).join('') + '</div>' +
@@ -537,7 +537,7 @@
       'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
       '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
       '<div class="wos-comp-capture-counts" style="font-size:11px;margin-top:7px;"><b>Comp captures awaiting your confirmation:</b> ' + esc(pendingCompCaptures) + '<br><b>Rows with 3 confirmed comps in this sample:</b> ' + esc(rowsWithThreeConfirmedComps) + '</div>' +
-      '<div class="wos-local-helper-panel" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;"><b>Computer helper:</b> <span class="wos-helper-status">' + esc(localHelperStatusText()) + '</span> <button type="button" class="wos-helper-pair" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #7c3aed;background:#fff;color:#6d28d9;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button><div class="wos-helper-message" style="font-size:10px;color:#6b7280;margin-top:4px;">The helper runs only on your computer and opens a listing page only after you click Capture on a row.</div><div class="wos-helper-outdated-instruction" style="display:none;margin-top:5px;color:#92400e;">Run <b>scripts\\Start-WholesaleOS-Helper.cmd</b> from the current checkout, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div></div>' +
+      '<div class="wos-local-helper-panel" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;"><b>Computer helper:</b> <span class="wos-helper-status">' + esc(localHelperStatusText()) + '</span> <button type="button" class="wos-helper-pair" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #7c3aed;background:#fff;color:#6d28d9;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button><div class="wos-helper-message" style="font-size:10px;color:#6b7280;margin-top:4px;">The helper runs only on your computer and opens a listing page only after you click Capture on a row.</div><div class="wos-helper-outdated-instruction" style="display:none;margin-top:5px;color:#92400e;">Restart the local helper from the current checkout, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div></div>' +
       (items.length ? items.map(manualEvidenceCard).join('') : '<div style="font-size:12px;color:#6b7280;margin-top:8px;">' + esc(packet.empty_reason || 'No eligible stored rows for this market yet.') + '</div>'), '#60a5fa');
   }
 
@@ -1735,31 +1735,39 @@
     return String(value || '').trim();
   }
 
-  function helperBuildMatches(value) {
-    var build = normalizedHelperBuild(value);
-    return build.length >= 7 && build.slice(0, 7).toLowerCase() === SUPPORTED_HELPER_BUILD.slice(0, 7).toLowerCase();
+  function helperProtocolSupported(value) {
+    return typeof value === 'number' && Number.isInteger(value) && SUPPORTED_HELPER_PROTOCOLS.indexOf(value) >= 0;
   }
 
-  function helperIsOutdated() {
-    return localHelperState.running && localHelperState.paired && !helperBuildMatches(localHelperState.helper_build);
+  function helperModeSupported(mode) {
+    if (mode === 'subject_facts') return localHelperState.subject_facts_supported === true;
+    if (mode === 'sold_comps') return localHelperState.sold_comps_supported === true;
+    return false;
+  }
+
+  function helperIsIncompatible() {
+    return localHelperState.running && localHelperState.paired && !helperProtocolSupported(localHelperState.helper_protocol_version);
   }
 
   function localHelperStatusText() {
     if (!localHelperState.running) return 'Not running';
     if (!localHelperState.paired) return 'Running - click Pair helper';
     if (localHelperState.capture_running) return 'Connected - capture running';
-    if (!helperBuildMatches(localHelperState.helper_build)) {
-      return 'Connected - OUTDATED helper (running ' + (normalizedHelperBuild(localHelperState.helper_build) || 'unknown') + ', needs ' + SUPPORTED_HELPER_BUILD + '). Restart it from the current folder.';
+    if (!helperProtocolSupported(localHelperState.helper_protocol_version)) {
+      var protocol = typeof localHelperState.helper_protocol_version === 'number' ? localHelperState.helper_protocol_version : 'unknown';
+      return 'Connected - INCOMPATIBLE helper (protocol ' + protocol + ', this dashboard supports ' + SUPPORTED_HELPER_PROTOCOLS.join(', ') + '). Restart it from the current checkout.';
     }
-    return 'Connected - build ' + normalizedHelperBuild(localHelperState.helper_build);
+    return 'Connected - build ' + (normalizedHelperBuild(localHelperState.helper_build) || 'unknown');
   }
 
   function helperCaptureDisabledReason(mode) {
     if (!localHelperState.running) return 'Start the helper before capturing.';
     if (!localHelperState.paired) return 'Pair the helper before capturing.';
     if (localHelperState.capture_running) return 'A capture is already running.';
-    if (!helperBuildMatches(localHelperState.helper_build)) return 'Helper is outdated. Restart it from the current checkout.';
-    if (mode === 'subject_facts' && localHelperState.subject_facts_supported !== true) return 'This helper does not support subject-facts capture.';
+    if (!helperProtocolSupported(localHelperState.helper_protocol_version)) return 'Helper protocol is incompatible. Restart it from the current checkout.';
+    if (mode === 'subject_facts' && !helperModeSupported(mode)) return 'This helper does not support subject-facts capture.';
+    if (mode === 'sold_comps' && !helperModeSupported(mode)) return 'This helper does not support sold-comps capture.';
+    if (!helperModeSupported(mode)) return 'Capture mode is unsupported.';
     return '';
   }
 
@@ -1781,11 +1789,11 @@
       element.style.display = localHelperState.running && !localHelperState.paired ? 'inline-block' : 'none';
     });
     safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-outdated-instruction')) : []).forEach(function (element) {
-      element.style.display = helperIsOutdated() ? 'block' : 'none';
+      element.style.display = helperIsIncompatible() ? 'block' : 'none';
     });
     safeArray(container && container.querySelectorAll ? Array.prototype.slice.call(container.querySelectorAll('.wos-helper-message')) : []).forEach(function (element) {
-      element.textContent = helperIsOutdated()
-        ? 'Run scripts\\Start-WholesaleOS-Helper.cmd from the current checkout, then Retry connection.'
+      element.textContent = helperIsIncompatible()
+        ? 'Restart the local helper from the current checkout, then Retry connection.'
         : 'The helper runs only on your computer and opens a listing page only after you click Capture on a row.';
     });
   }
@@ -1797,11 +1805,14 @@
       .then(function (response) { if (!response.ok) throw new Error('helper_status_failed'); return response.json(); })
       .then(function (data) {
         localHelperState = { running: data.running === true, paired: data.paired === true, capture_running: data.capture_running === true, checked: true,
-          helper_build: normalizedHelperBuild(data.helper_build), subject_facts_supported: data.subject_facts_supported === true };
+          helper_build: normalizedHelperBuild(data.helper_build),
+          helper_protocol_version: typeof data.helper_protocol_version === 'number' ? data.helper_protocol_version : null,
+          subject_facts_supported: data.subject_facts_supported === true,
+          sold_comps_supported: data.sold_comps_supported === true };
         paintLocalHelperStatus(container);
       })
       .catch(function () {
-        localHelperState = { running: false, paired: false, capture_running: false, checked: true, helper_build: '', subject_facts_supported: false };
+        localHelperState = { running: false, paired: false, capture_running: false, checked: true, helper_build: '', helper_protocol_version: null, subject_facts_supported: false, sold_comps_supported: false };
         paintLocalHelperStatus(container);
       })
       .finally(function () { if (timer) clearTimeout(timer); });
@@ -1824,7 +1835,8 @@
       .then(function (result) {
         if (!result.response.ok || !result.data.ok) throw new Error(result.data.code || 'helper_pairing_failed');
         localHelperState = { running: true, paired: true, capture_running: false, checked: true,
-          helper_build: normalizedHelperBuild(localHelperState.helper_build), subject_facts_supported: localHelperState.subject_facts_supported === true };
+          helper_build: normalizedHelperBuild(localHelperState.helper_build), helper_protocol_version: localHelperState.helper_protocol_version,
+          subject_facts_supported: localHelperState.subject_facts_supported === true, sold_comps_supported: localHelperState.sold_comps_supported === true };
         paintLocalHelperStatus(container);
         if (message) message.textContent = 'Connected. Choose a source on a complete-address row, then click Capture.';
       })
@@ -1838,21 +1850,22 @@
     var card = button.closest && button.closest('.wos-manual-evidence-card');
     var rowBox = button.closest && button.closest('.wos-local-helper-row');
     var message = rowBox && rowBox.querySelector('.wos-helper-row-message');
-    if (!localHelperState.running || !localHelperState.paired) {
-      if (message) message.textContent = 'Start and pair the helper first. No page was opened.';
-      return;
-    }
-    if (!helperBuildMatches(localHelperState.helper_build)) {
-      if (message) message.textContent = 'Helper is outdated - nothing was opened.';
-      return;
-    }
     var mode = button.dataset && button.dataset.captureMode;
     if (mode !== 'subject_facts' && mode !== 'sold_comps') {
       if (message) message.textContent = 'Capture mode missing — nothing was opened.';
       return;
     }
-    if (mode === 'subject_facts' && localHelperState.subject_facts_supported !== true) {
-      if (message) message.textContent = 'This helper does not support subject-facts capture - nothing was opened.';
+    if (localHelperState.running && localHelperState.paired &&
+        (!helperProtocolSupported(localHelperState.helper_protocol_version) || !helperModeSupported(mode))) {
+      if (message) message.textContent = 'Helper is incompatible - nothing was opened.';
+      return;
+    }
+    if (!localHelperState.running || !localHelperState.paired) {
+      if (message) message.textContent = 'Start and pair the helper first. No page was opened.';
+      return;
+    }
+    if (localHelperState.capture_running) {
+      if (message) message.textContent = 'A capture is already running. Nothing was opened.';
       return;
     }
     button.disabled = true;
