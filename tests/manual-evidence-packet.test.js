@@ -289,6 +289,22 @@ function pngBuffer(size) {
   assert.ok(conflict.clue_values_not_arv.every((item) => item.label === 'CLUE_ONLY_NOT_ARV'));
   assert.strictEqual(conflict.arv_status, 'ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS');
 
+  const estimateText = service.proposalFieldsFromText('subject_property', 'Zestimate $268,400', { source_url: 'https://www.zillow.com/homedetails/synthetic/1_zpid/' })[0];
+  assert.deepStrictEqual({ public_estimate: estimateText.public_estimate, source_url: estimateText.source_url }, {
+    public_estimate: '$268,400', source_url: 'https://www.zillow.com/homedetails/synthetic/1_zpid/'
+  });
+  assert.strictEqual(service.proposalFieldsFromText('subject_property', 'Redfin Estimate $251,000', { source_url: 'https://www.redfin.com/property-detail/synthetic' })[0].public_estimate, '$251,000');
+  const estimateOnly = service.evaluatePacket({ evidence_items: [{
+    evidence_type: 'subject_property', screenshot_id: 'shot-estimate', source_name: 'Zillow', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true,
+    operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: '2026-08-19T12:00:00.000Z' },
+    fields: { public_estimate: '$268,400', source_url: estimateText.source_url }
+  }] }, snapshot.markets[marketKey(DALLAS)].rows[0], { today_iso: TODAY });
+  assert.strictEqual(estimateOnly.arv_status, 'ARV_LOCKED_NEEDS_3_VERIFIED_SOLD_COMPS');
+  assert.strictEqual(estimateOnly.arv_range, null);
+  assert.strictEqual(estimateOnly.verified_sold_comp_count, 0);
+  assert.strictEqual(estimateOnly.readiness.ready_to_offer.status, 'NO');
+  assert.strictEqual(estimateOnly.clue_values_not_arv.find((clue) => clue.field === 'public_estimate').source_url, estimateText.source_url);
+
   function contactPacket(classification, confirmed) {
     return { evidence_items: [{
       evidence_type: 'skip_trace', screenshot_id: 'shot-contact', source_name: 'CyberBackgroundChecks', captured_at: '2026-08-19T12:00:00Z', operator_confirmed: true, operator_confirmation: { confirmed: true, confirmed_by: 'admin', confirmed_at: '2026-08-19T12:00:00.000Z' },

@@ -312,7 +312,7 @@
   var MANUAL_FIELD_LABELS = {
     normalized_address: 'Address', property_kind: 'Property type', beds: 'Beds', baths: 'Baths', sqft: 'Sqft', year_built: 'Year built',
     lot_size: 'Lot size', latitude: 'Latitude', longitude: 'Longitude',
-    zestimate: 'Zestimate clue', list_price: 'List price clue', asking_price: 'Asking price clue', source_url: 'Source URL', comp_address: 'Comp address', parcel_id: 'Parcel / APN',
+    public_estimate: 'Provider estimate (clue only; not a sold comp)', zestimate: 'Zestimate clue (not a sold comp)', list_price: 'List price clue', asking_price: 'Asking price clue', source_url: 'Source URL', comp_address: 'Comp address', parcel_id: 'Parcel / APN',
     sold_status: 'Sold status', sold_price: 'Sold price', sold_date: 'Sold date', similarity_basis: 'Similarity basis', land_use: 'Land use',
     distance_miles: 'Distance miles', owner_name: 'Possible owner name', taxpayer_name: 'Taxpayer name', assessed_value: 'Assessed value clue',
     tax_value: 'Tax value clue', sale_date: 'Sale date', status: 'Sale status', minimum_bid: 'Minimum bid clue',
@@ -352,7 +352,7 @@
       if (item.evidence_type === 'skip_trace') return ['normalized_address', 'owner_name', 'contact_value', 'contact_route_kind', 'contact_classification', 'seller_owner_confirmed', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'county_appraisal_record') return ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'].indexOf(key) !== -1;
       if (item.evidence_type === 'auction_status') return ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'].indexOf(key) !== -1;
-      return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
+      return ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'public_estimate', 'zestimate', 'list_price', 'asking_price', 'source_url'].indexOf(key) !== -1;
     });
     var conflicts = safeArray(item.conflicts);
     var screenshotUrl = /^\/api\/dashboard\/free-public-deal-board\/manual-evidence\/screenshot\/[0-9a-f-]{36}$/i.test(String(item.screenshot_url || '')) ? item.screenshot_url : '';
@@ -515,7 +515,7 @@
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
         (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' + arvCompDetails : '') +
-        (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc(clue.field + ' ' + clue.value); }).join(', ') : '') +
+        (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc((clue.field === 'public_estimate' ? 'Site estimate (not a sold comp)' : clue.field) + ' ' + clue.value); }).join(', ') : '') +
         (gridSummary ? '<details style="margin-top:5px;"><summary style="cursor:pointer;color:#1d4ed8;">Strict comp grid evidence</summary><div style="font-size:10px;color:#6b7280;">NOT_APPLIED means a required fact was missing; it never silently passes the comp.</div>' + gridSummary + '</details>' : '') +
       '</div>' +
       (proposals.length ? '<div style="margin-top:7px;"><b style="font-size:11px;">Review OCR proposals:</b>' + proposals.map(function (proposal) { return manualEvidenceItem(proposal, evaluation); }).join('') + '</div>' : '') +

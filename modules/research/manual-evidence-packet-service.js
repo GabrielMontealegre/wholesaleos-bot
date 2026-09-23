@@ -42,7 +42,7 @@ const LIVE_MARKETS = Object.freeze([
 ]);
 
 const FIELD_ALLOWLIST = Object.freeze({
-  subject_property: ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'zestimate', 'list_price', 'asking_price', 'source_url'],
+  subject_property: ['normalized_address', 'property_kind', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'latitude', 'longitude', 'public_estimate', 'zestimate', 'list_price', 'asking_price', 'source_url'],
   sold_comp: ['comp_address', 'parcel_id', 'sold_status', 'sold_price', 'sold_date', 'source_url', 'similarity_basis', 'land_use', 'property_kind', 'distance_miles', 'latitude', 'longitude', 'beds', 'baths', 'sqft', 'year_built', 'lot_size'],
   county_appraisal_record: ['normalized_address', 'owner_name', 'taxpayer_name', 'parcel_id', 'assessed_value', 'tax_value', 'year_built', 'land_use', 'source_url'],
   auction_status: ['normalized_address', 'sale_date', 'status', 'minimum_bid', 'redemption_amount', 'source_url'],
@@ -529,9 +529,9 @@ function evaluatePacket(packet, row, options = {}) {
   const clues = [];
   confirmed.forEach((item) => {
     const fields = item.fields || {};
-    ['zestimate', 'list_price', 'asking_price', 'minimum_bid', 'redemption_amount', 'tax_value', 'assessed_value'].forEach((key) => {
+    ['public_estimate', 'zestimate', 'list_price', 'asking_price', 'minimum_bid', 'redemption_amount', 'tax_value', 'assessed_value'].forEach((key) => {
       if (!cleanText(fields[key])) return;
-      clues.push({ field: key, value: fields[key], label: 'CLUE_ONLY_NOT_ARV', screenshot_id: item.screenshot_id, source_name: item.source_name });
+      clues.push({ field: key, value: fields[key], label: 'CLUE_ONLY_NOT_ARV', source_url: cleanText(fields.source_url), screenshot_id: item.screenshot_id, source_name: item.source_name });
     });
   });
   const conflicts = items.flatMap((item) => conflictsForItem(item, row));
@@ -829,7 +829,7 @@ function proposalFieldsFromText(type, text, context = {}) {
     if (bid) fields.minimum_bid = cleanText(bid[1]);
   }
   if (type === 'subject_property') {
-    const zestimate = source.match(/zestimate[^$\d]{0,20}(\$[\d,]+)/i);
+    const zestimate = source.match(/(?:zestimate|(?:redfin|realtor)(?:\.com)?\s+estimate|estimated\s+market\s+value|zillow\s+estimate)[^$\d]{0,30}(\$[\d,]+)/i);
     const listPrice = source.match(/(?:list|asking)\s+price[^$\d]{0,20}(\$[\d,]+)/i);
     const propertyKind = source.match(/\b(single[- ]family(?: home| residence)?|townhouse|townhome|condo(?:minium)?|duplex|triplex|fourplex|multi[- ]family|manufactured home|mobile home)\b/i);
     const beds = source.match(/\b(\d+(?:\.\d+)?)\s*(?:beds?|bds?|bedrooms?)\b/i);
@@ -839,7 +839,7 @@ function proposalFieldsFromText(type, text, context = {}) {
     const lotSize = source.match(/\blot(?:\s+size)?\s*:?\s*([\d,.]+)\s*(acres?|sq\.?\s*ft\.?|sqft|square feet)\b/i);
     const latitude = source.match(/\blat(?:itude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
     const longitude = source.match(/\blon(?:gitude)?\s*:?\s*(-?\d{1,3}\.\d{4,})\b/i);
-    if (zestimate) fields.zestimate = cleanText(zestimate[1]);
+    if (zestimate) fields.public_estimate = cleanText(zestimate[1]);
     if (listPrice) fields.list_price = cleanText(listPrice[1]);
     if (propertyKind) fields.property_kind = cleanText(propertyKind[1]).toLowerCase();
     if (beds) fields.beds = cleanText(beds[1]);
