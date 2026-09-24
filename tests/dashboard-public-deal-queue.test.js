@@ -851,7 +851,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=43'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=44'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -908,7 +908,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=43'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=44'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1002,6 +1002,25 @@ function mockDeal(overrides) {
   uiContext.window.__wosPublicDealsTestHooks.storeSelectedMarket('san_antonio');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().county, 'Bexar');
   assert.ok(/city=San%20Antonio&county=Bexar&state=TX/.test(uiContext.window.__wosPublicDealsTestHooks.latestUrl()), 'latest snapshot URL must target the selected market');
+  const countyCoverage = uiContext.window.__wosPublicDealsTestHooks.countyCoverageHtml;
+  const unstagedCoverage = countyCoverage({ state: 'no county file ingested', markets: {
+    'dallas|dallas|tx': { rows_total: 254, county_distribution: { 'Ellis County, TX': 2, 'Dallas County, TX': 251, 'unknown/unset county': 1 } }
+  }, ellis: { rows_total: 2, yield: null } }, 'dallas|dallas|tx');
+  assert.ok(unstagedCoverage.includes('254 stored rows across 3 county buckets; 2 in Ellis County'));
+  assert.ok(unstagedCoverage.includes('Ellis across all stored markets:</b> 2 rows'));
+  assert.ok(unstagedCoverage.includes('Ownership and mailing yield not measured. no county file ingested'));
+  assert.ok(!unstagedCoverage.includes('MAIL_READY gain:'), 'unstaged file must never imply owner or mailing yield');
+  assert.ok(!unstagedCoverage.includes('do not reconcile'), 'county bucket totals must reconcile');
+  const stagedCoverage = countyCoverage({ state: 'ready_for_explicit_apply', markets: {
+    'dallas|dallas|tx': { rows_total: 2, county_distribution: { 'Ellis County, TX': 2 } }
+  }, ellis: { rows_total: 2, exact_match: 1, ambiguous_match: 0, no_match: 1,
+    yield: { owner_of_record: 1, mailing_address: 1, mail_ready: 1 },
+    equity_clue_distribution: { LIKELY_EQUITY: 1, LIKELY_THIN: 0, LIKELY_NONE: 0, UNKNOWN: 0 },
+    qualifying_candidate_count: 0 } }, 'dallas|dallas|tx');
+  assert.ok(stagedCoverage.includes('Exact matches: 1; ambiguous: 0; no match: 1'));
+  assert.ok(stagedCoverage.includes('Owner gain: 1; mailing gain: 1; MAIL_READY gain: 1'));
+  assert.ok(stagedCoverage.includes('not ARV or debt'));
+  assert.ok(!stagedCoverage.includes('apply'), 'read-only panel must not offer an apply action');
   const packetFixture = {
     manual_evidence_packet: {
       selected_count: 1,
@@ -1042,6 +1061,8 @@ function mockDeal(overrides) {
     assert.ok(dealFinderPanels.includes(text), `Deal Finder rendered output must include ${text}`);
   });
   assert.ok(dashboardPanels.includes('2 confirmed evidence'), 'Dashboard packet title must retain the confirmed-evidence count');
+  assert.ok(dashboardPanels.includes('County coverage') && dashboardPanels.includes('Refresh county coverage'), 'main dashboard must expose the read-only county preview');
+  assert.ok(!dashboardPanels.includes('county-appraisal-apply') && !dashboardPanels.includes('county-appraisal-stage'), 'dashboard preview must not include production write controls');
   assert.strictEqual((dashboardPanels.match(/Manual Evidence Packet/g) || []).length, 1, 'Dashboard must render exactly one Manual Evidence Packet heading');
   assert.ok(!dashboardPanels.includes('Ready to offer: YES'), 'Dashboard must never render automatic offer authorization');
   assert.ok(!dealFinderPanels.includes('Ready to offer: YES'), 'Deal Finder must never render automatic offer authorization');
