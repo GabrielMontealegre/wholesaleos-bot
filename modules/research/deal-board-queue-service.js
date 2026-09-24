@@ -1234,6 +1234,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
+    'county_appraisal_record', 'appraisal_conflicts', 'geo_id', 'legal_description',
     'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
     'sale_venue_address', 'sale_venue_evidence_text', 'sale_venue_source_url', 'subject_address_recovery',
