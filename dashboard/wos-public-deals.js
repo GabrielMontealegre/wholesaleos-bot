@@ -15,6 +15,7 @@
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var API_COUNTY_APPRAISAL_PREVIEW = '/api/dashboard/research-queue/county-appraisal-preview';
+  var API_COUNTY_APPRAISAL_STAGE = '/api/dashboard/research-queue/county-appraisal-stage';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
@@ -1262,6 +1263,8 @@
     var measured = preview.state === 'ready_for_explicit_apply';
     var yieldCounts = ellis.yield || {};
     var equity = ellis.equity_clue_distribution || {};
+    var provenance = preview.ingest_provenance || {};
+    var ranked = safeArray(ellis.ranked_candidates);
     return '<div style="font-size:12px;margin-bottom:6px;"><b>' + esc(marketPreset ? marketPreset.label : marketKey) + ':</b> ' +
       esc(market.rows_total) + ' stored rows across ' + esc(names.length) + ' county buckets; ' + esc(selectedEllis) + ' in Ellis County.</div>' +
       (counted === Number(market.rows_total) ? '' : '<div style="font-size:12px;color:#991b1b;">County counts do not reconcile with the stored row total.</div>') +
@@ -1275,13 +1278,26 @@
         : 'Ownership and mailing yield not measured. ' + esc(preview.state || 'No current county file.')) + '</div>' +
       (measured ? '<div style="font-size:11px;color:#374151;margin-top:5px;">Equity clues only, not ARV or debt: ' +
         ['LIKELY_EQUITY', 'LIKELY_THIN', 'LIKELY_NONE', 'UNKNOWN'].map(function (key) { return esc(key) + ' ' + esc(equity[key] || 0); }).join(' | ') +
-        '. Qualifying ranked candidates: ' + esc(ellis.qualifying_candidate_count || 0) + '.</div>' : '') +
+        '. Qualifying ranked candidates: ' + esc(ellis.qualifying_candidate_count || 0) + '. Conflicts: ' + esc(safeArray(ellis.conflicts).length) + '.</div>' : '') +
+      (measured ? '<div style="font-size:11px;color:#6b7280;margin-top:5px;">Staged file: ' + esc(provenance.file_name || '') +
+        ' | source records: ' + esc(provenance.record_count || 0) + ' | SHA-256: ' + esc(String(provenance.file_hash || '').slice(0, 12)) + '...</div>' : '') +
+      (measured && ranked.length ? '<details style="margin-top:7px;"><summary style="cursor:pointer;font-size:12px;">Ranked Ellis candidates (' + esc(ranked.length) + ' shown)</summary>' +
+        ranked.map(function (row) {
+          return '<div style="font-size:11px;margin-top:7px;padding-top:5px;border-top:1px solid #e5e7eb;"><b>' + esc(row.address || row.queue_key || '') + '</b> | ' +
+            esc(row.equity_signal || '') + ' | built ' + esc(row.year_built || 'unknown') + ' | held ' + esc(row.years_held || 'unknown') +
+            ' years | sale/event ' + esc(row.source_event_date || 'unknown') + ' | county value clue ' + esc(row.assessed_value_clue || 'unknown') +
+            (typeof row.source_url === 'string' && /^https?:\/\//i.test(row.source_url) ? ' | ' + link('Official source', row.source_url) : '') + '</div>';
+        }).join('') + '</details>' : '') +
       '<div style="font-size:11px;color:#6b7280;margin-top:5px;">Read-only preview. No county evidence has been applied by this action.</div>';
   }
 
   function countyCoveragePanel() {
     return panelBox('County coverage', 'Stored snapshot rows, not just the first cards on screen.',
       '<button type="button" class="wos-county-coverage-load" style="padding:6px 10px;border:1px solid #2563eb;background:#fff;color:#1d4ed8;cursor:pointer;">Refresh county coverage</button>' +
+      '<div class="wos-county-stage" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;">' +
+      '<input type="file" class="wos-county-stage-file" accept=".dbf,.csv" aria-label="Ellis public ownership DBF or CSV" style="font-size:12px;max-width:270px;">' +
+      '<button type="button" class="wos-county-stage-submit" style="padding:6px 10px;border:1px solid #047857;background:#fff;color:#047857;cursor:pointer;">Stage Ellis file for preview</button>' +
+      '<span class="wos-county-stage-message" style="font-size:11px;color:#374151;">Admin only. Staging does not apply evidence to leads.</span></div>' +
       '<div class="wos-county-coverage-result" style="margin-top:8px;">' +
       (countyCoverageError ? '<div style="font-size:12px;color:#991b1b;">' + esc(countyCoverageError) + '</div>' : countyCoverageHtml(countyCoverageData, selectedMarketStoreKey())) +
       '</div>', '#cbd5e1');
@@ -1291,7 +1307,18 @@
     var requestMarket = selectedMarketStoreKey();
     button.disabled = true;
     button.textContent = 'Reading stored rows...';
-    fetch(API_COUNTY_APPRAISAL_PREVIEW, { headers: authHeaders(), cache: 'no-store' })
+    return fetchCountyCoverage()
+      .catch(function (error) { countyCoverageError = error.message || 'County coverage preview was unavailable.'; })
+      .finally(function () {
+        if (requestMarket !== selectedMarketStoreKey() || currentPage() !== 'dashboard') return;
+        renderCountyCoverageResult(container, requestMarket);
+        button.disabled = false;
+        button.textContent = 'Refresh county coverage';
+      });
+  }
+
+  function fetchCountyCoverage() {
+    return fetch(API_COUNTY_APPRAISAL_PREVIEW, { headers: authHeaders(), cache: 'no-store' })
       .then(function (response) {
         if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Sign in as an administrator to view county coverage.' : 'County coverage request failed (HTTP ' + response.status + ').');
         return response.json();
@@ -1300,16 +1327,57 @@
         if (!data || !data.ok) throw new Error('County coverage preview was unavailable.');
         countyCoverageData = data;
         countyCoverageError = '';
+      });
+  }
+
+  function renderCountyCoverageResult(container, marketKey) {
+    var result = container.querySelector('.wos-county-coverage-result');
+    if (result) result.innerHTML = countyCoverageError
+      ? '<div style="font-size:12px;color:#991b1b;">' + esc(countyCoverageError) + '</div>'
+      : countyCoverageHtml(countyCoverageData, marketKey);
+  }
+
+  function stageEllisCountyFile(container, button) {
+    var formHost = button.closest && button.closest('.wos-county-stage');
+    var input = formHost && formHost.querySelector('.wos-county-stage-file');
+    var message = formHost && formHost.querySelector('.wos-county-stage-message');
+    var file = input && input.files && input.files[0];
+    if (!file || !/\.(dbf|csv)$/i.test(file.name || '')) {
+      if (message) message.textContent = 'Choose the official Ellis .dbf or .csv file first.';
+      return Promise.resolve(false);
+    }
+    if (file.size > 350 * 1024 * 1024) {
+      if (message) message.textContent = 'File exceeds the 350 MB upload limit.';
+      return Promise.resolve(false);
+    }
+    var form = new FormData();
+    form.append('county', 'Ellis');
+    form.append('state', 'TX');
+    form.append('county_file', file, file.name);
+    button.disabled = true;
+    button.textContent = 'Staging Ellis file...';
+    if (message) message.textContent = 'Uploading public ownership data for preview only. No lead evidence is being applied.';
+    return fetch(API_COUNTY_APPRAISAL_STAGE, { method: 'POST', headers: authHeaders(), body: form })
+      .then(function (response) {
+        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Sign in as an administrator to stage the file.' : 'File staging failed (HTTP ' + response.status + ').');
+        return response.json();
       })
-      .catch(function (error) { countyCoverageError = error.message || 'County coverage preview was unavailable.'; })
+      .then(function (data) {
+        if (!data || !data.ok) throw new Error('File staging failed; no preview was produced.');
+        if (message) message.textContent = 'File staged; ' + String(data.indexed_snapshot_records || 0) + ' matching source records indexed. Reading preview...';
+        return fetchCountyCoverage().then(function () {
+          renderCountyCoverageResult(container, selectedMarketStoreKey());
+          if (message) message.textContent = 'Preview updated. No ownership evidence was applied to a lead.';
+          return true;
+        });
+      })
+      .catch(function (error) {
+        if (message) message.textContent = error.message || 'File staging failed.';
+        return false;
+      })
       .finally(function () {
-        if (requestMarket !== selectedMarketStoreKey() || currentPage() !== 'dashboard') return;
-        var result = container.querySelector('.wos-county-coverage-result');
-        if (result) result.innerHTML = countyCoverageError
-          ? '<div style="font-size:12px;color:#991b1b;">' + esc(countyCoverageError) + '</div>'
-          : countyCoverageHtml(countyCoverageData, requestMarket);
         button.disabled = false;
-        button.textContent = 'Refresh county coverage';
+        button.textContent = 'Stage Ellis file for preview';
       });
   }
 
@@ -1432,8 +1500,8 @@
       return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +
         manualEvidencePanel(data) +
-        documentReviewPanel(data) +
         countyCoveragePanel() +
+        documentReviewPanel(data) +
         countyOnboardingPanel(data) +
         marketDemandPanel();
     }
@@ -2089,6 +2157,8 @@
         }
         var countyCoverageButton = event.target && event.target.closest && event.target.closest('.wos-county-coverage-load');
         if (countyCoverageButton) loadCountyCoverage(section, countyCoverageButton);
+        var countyStageButton = event.target && event.target.closest && event.target.closest('.wos-county-stage-submit');
+        if (countyStageButton) stageEllisCountyFile(section, countyStageButton);
       });
     }
 
@@ -2173,6 +2243,7 @@
   window.__wosPublicDealsTestHooks = {
     panelsForPage: panelsForPage,
     countyCoverageHtml: countyCoverageHtml,
+    stageEllisCountyFile: stageEllisCountyFile,
     dealDeskMetrics: dealDeskMetrics,
     lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,

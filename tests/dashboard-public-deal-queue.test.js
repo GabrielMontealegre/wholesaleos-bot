@@ -851,7 +851,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=44'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=45'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -908,7 +908,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=44'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=45'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1021,6 +1021,43 @@ function mockDeal(overrides) {
   assert.ok(stagedCoverage.includes('Owner gain: 1; mailing gain: 1; MAIL_READY gain: 1'));
   assert.ok(stagedCoverage.includes('not ARV or debt'));
   assert.ok(!stagedCoverage.includes('apply'), 'read-only panel must not offer an apply action');
+  const stagedRequests = [];
+  uiContext.window.APP = { page: 'dashboard' };
+  uiContext.window.__wosPublicDealsTestHooks.storeSelectedMarket('dallas');
+  uiContext.FormData = class SyntheticFormData {
+    constructor() { this.fields = []; }
+    append() { this.fields.push(Array.from(arguments)); }
+  };
+  uiContext.fetch = (url, options) => {
+    stagedRequests.push({ url, options });
+    if (url.endsWith('/county-appraisal-stage')) return Promise.resolve({ ok: true, json: async () => ({ ok: true, indexed_snapshot_records: 1 }) });
+    if (url.endsWith('/county-appraisal-preview')) return Promise.resolve({ ok: true, json: async () => ({
+      ok: true, state: 'ready_for_explicit_apply', markets: {
+        'dallas|dallas|tx': { rows_total: 18, county_distribution: { 'Ellis County, TX': 18 } }
+      }, ellis: { rows_total: 18, exact_match: 1, ambiguous_match: 0, no_match: 17,
+        yield: { owner_of_record: 1, mailing_address: 1, mail_ready: 1 },
+        equity_clue_distribution: { LIKELY_EQUITY: 0, LIKELY_THIN: 0, LIKELY_NONE: 0, UNKNOWN: 1 },
+        ranked_candidates: [], qualifying_candidate_count: 0 },
+      ingest_provenance: { file_name: 'ellis_ownership.dbf', record_count: 102906, file_hash: 'a'.repeat(64) }
+    }) });
+    throw new Error('unexpected network request');
+  };
+  const stageMessage = { textContent: '' };
+  const stageInput = { files: [{ name: 'ellis_ownership.dbf', size: 268483868 }] };
+  const stageHost = { querySelector: (selector) => selector === '.wos-county-stage-file' ? stageInput : stageMessage };
+  const stageButton = { disabled: false, textContent: '', closest: () => stageHost };
+  const coverageResult = { innerHTML: '' };
+  const stageContainer = { querySelector: () => coverageResult };
+  assert.strictEqual(await uiContext.window.__wosPublicDealsTestHooks.stageEllisCountyFile(stageContainer, stageButton), true);
+  assert.deepStrictEqual(stagedRequests.map((entry) => entry.url), [
+    '/api/dashboard/research-queue/county-appraisal-stage',
+    '/api/dashboard/research-queue/county-appraisal-preview'
+  ], 'staging must call only the stage route and read-only preview, never apply');
+  assert.strictEqual(stagedRequests[0].options.method, 'POST');
+  assert.deepStrictEqual(stagedRequests[0].options.body.fields.map((field) => field[0]), ['county', 'state', 'county_file']);
+  assert.ok(coverageResult.innerHTML.includes('18 in Ellis County'));
+  assert.ok(stageMessage.textContent.includes('No ownership evidence was applied'));
+  assert.strictEqual(stageButton.disabled, false);
   const packetFixture = {
     manual_evidence_packet: {
       selected_count: 1,
@@ -1062,6 +1099,7 @@ function mockDeal(overrides) {
   });
   assert.ok(dashboardPanels.includes('2 confirmed evidence'), 'Dashboard packet title must retain the confirmed-evidence count');
   assert.ok(dashboardPanels.includes('County coverage') && dashboardPanels.includes('Refresh county coverage'), 'main dashboard must expose the read-only county preview');
+  assert.ok(dashboardPanels.includes('Stage Ellis file for preview') && dashboardPanels.includes('Staging does not apply evidence to leads'), 'staging must be explicit and not an apply action');
   assert.ok(!dashboardPanels.includes('county-appraisal-apply') && !dashboardPanels.includes('county-appraisal-stage'), 'dashboard preview must not include production write controls');
   assert.strictEqual((dashboardPanels.match(/Manual Evidence Packet/g) || []).length, 1, 'Dashboard must render exactly one Manual Evidence Packet heading');
   assert.ok(!dashboardPanels.includes('Ready to offer: YES'), 'Dashboard must never render automatic offer authorization');
