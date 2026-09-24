@@ -188,6 +188,18 @@ async function ingestBulkFile(input) {
   const byParcel = new Map();
   const byGeo = new Map();
   const matchKeys = input.match_keys;
+  const auditRaw = new Map();
+  const auditNear = new Map();
+  const targetsByNumber = new Map();
+  const targetsByStreet = new Map();
+  for (const target of matchKeys && matchKeys.audit_targets || []) {
+    auditNear.set(target.key, { count: 0, candidates: [] });
+    for (const [map, value] of [[targetsByNumber, target.parts.number], [targetsByStreet, target.parts.street]]) {
+      if (!value) continue;
+      if (!map.has(value)) map.set(value, []);
+      map.get(value).push(target);
+    }
+  }
   const iterator = extension === '.dbf' ? dbfRows(filePath) : csvRows(filePath);
   const requiredFields = ['parcel_id', 'owner_of_record', 'situs_number', 'situs_street', 'situs_city',
     'situs_state', 'situs_zip', 'mailing_street', 'mailing_city', 'mailing_state', 'mailing_zip'];
@@ -199,14 +211,44 @@ async function ingestBulkFile(input) {
     }
     provenance.record_count += 1;
     const record = bulkRecord(sourceRow, profile, provenance);
+    if (record.address_key && auditNear.size) {
+      const parts = canonicalizeAddress(record.normalized_address);
+      const targets = new Map([...(targetsByNumber.get(parts.number) || []), ...(targetsByStreet.get(parts.street) || [])]
+        .map((target) => [target.key, target]));
+      for (const target of targets.values()) {
+        if (record.address_key === target.parts.canonical_string) continue;
+        const slot = auditNear.get(target.key);
+        slot.count += 1;
+        const same = ['number', 'directional', 'street', 'suffix', 'unit', 'city', 'state', 'zip']
+          .filter((field) => target.parts[field] === parts[field]).length;
+        const distance = /^\d+$/.test(target.parts.number) && /^\d+$/.test(parts.number)
+          ? Math.abs(Number(target.parts.number) - Number(parts.number)) : 999999;
+        slot.candidates.push({ parcel_id: record.parcel_id, geo_id: record.geo_id, parts,
+          score: same, number_distance: distance });
+        slot.candidates.sort((a, b) => b.score - a.score || a.number_distance - b.number_distance ||
+          a.parts.canonical_string.localeCompare(b.parts.canonical_string) || a.parcel_id.localeCompare(b.parcel_id));
+        if (slot.candidates.length > 5) slot.candidates.length = 5;
+      }
+    }
     if (matchKeys && !((record.address_key && matchKeys.addresses.has(record.address_key)) ||
         (record.parcel_id && matchKeys.parcels.has(record.parcel_id)) ||
         (record.geo_id && matchKeys.geos.has(record.geo_id)))) continue;
+    const raw = (field) => {
+      const name = profile.field_map[field];
+      return { field_name: name || '', raw: name && Object.hasOwn(sourceRow, name) ? String(sourceRow[name]) : null };
+    };
+    auditRaw.set(`${record.parcel_id}|${record.address_key}`, {
+      situs_fields: Object.fromEntries(['situs_number', 'situs_prefix', 'situs_street', 'situs_suffix',
+        'situs_secondary', 'situs_city', 'situs_state', 'situs_zip'].map((field) => [field, raw(field)])),
+      diagnostic_fields: Object.fromEntries(['latest_deed_date', 'latest_deed_instrument',
+        'improvement_actual_year', 'assessed_value', 'acreage'].map((field) => [field, raw(field)]))
+    });
     addToIndex(byAddress, record.address_key, record);
     addToIndex(byParcel, record.parcel_id, record);
     addToIndex(byGeo, record.geo_id, record);
   }
-  return { profile, provenance, by_address: byAddress, by_parcel: byParcel, by_geo: byGeo };
+  return { profile, provenance, by_address: byAddress, by_parcel: byParcel, by_geo: byGeo,
+    audit_raw: auditRaw, audit_near: auditNear };
 }
 function matchRow(row, index) {
   if (clean(row && row.state).toUpperCase() !== clean(index.profile.state).toUpperCase() ||

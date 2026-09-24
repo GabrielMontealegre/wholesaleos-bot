@@ -2121,6 +2121,17 @@ app.get('/api/dashboard/research-queue/county-appraisal-preview', requireAdmin, 
   }
 });
 
+app.get('/api/dashboard/research-queue/county-appraisal-audit', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(countyAppraisalEvidence.audit({ snapshot_file: dealBoardQueueService.snapshotFilePath(),
+      county: req.query.county, state: req.query.state, queue_key: req.query.queue_key }));
+  } catch (caught) {
+    res.status(Number(caught && caught.status_code || 500) || 500).json({ ok: false,
+      code: caught && caught.code || 'county_appraisal_audit_failed' });
+  }
+});
+
 const countyAppraisalUpload = multer({
   storage: multer.diskStorage({
     destination(req, file, callback) {
