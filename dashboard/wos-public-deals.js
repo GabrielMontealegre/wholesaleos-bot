@@ -15,6 +15,7 @@
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
   var API_COUNTY_APPRAISAL_PREVIEW = '/api/dashboard/research-queue/county-appraisal-preview';
+  var API_COUNTY_APPRAISAL_AUDIT = '/api/dashboard/research-queue/county-appraisal-audit?county=Ellis&state=TX';
   var API_COUNTY_APPRAISAL_STAGE = '/api/dashboard/research-queue/county-appraisal-stage';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
@@ -29,6 +30,9 @@
   var marketDemandData = null;
   var countyCoverageData = null;
   var countyCoverageError = '';
+  var countyAuditData = null;
+  var countyAuditError = '';
+  var countyAuditDetail = null;
   var manualEvidenceObjectUrls = [];
   var localHelperState = { running: false, paired: false, capture_running: false, checked: false, helper_build: '', helper_protocol_version: null, subject_facts_supported: false, sold_comps_supported: false };
   var localCaptureResults = {};
@@ -1303,6 +1307,92 @@
       '</div>', '#cbd5e1');
   }
 
+  function countyAuditPanel() {
+    return panelBox('Ellis county match audit', 'Read-only preview. County ownership has not been applied.',
+      '<button type="button" class="wos-county-audit-load" style="padding:6px 10px;border:1px solid #2563eb;background:#fff;color:#1d4ed8;cursor:pointer;">Refresh audit</button>' +
+      '<div class="wos-county-audit-result" style="margin-top:8px;max-height:460px;overflow:auto;">' + countyAuditHtml() + '</div>', '#cbd5e1');
+  }
+
+  function countyAuditHtml() {
+    if (countyAuditError) return '<div style="color:#991b1b;font-size:12px;">' + esc(countyAuditError) + '</div>';
+    if (!countyAuditData) return '<div style="font-size:12px;color:#6b7280;">Reading staged Ellis match results...</div>';
+    var rows = safeArray(countyAuditData.rows);
+    var table = rows.map(function (row) {
+      return '<tr><td style="padding:4px;border-bottom:1px solid #e5e7eb;"><button type="button" class="wos-county-audit-detail" data-queue-key="' + esc(row.queue_key) + '" style="border:0;background:none;color:#1d4ed8;text-align:left;cursor:pointer;">' + esc(row.row_address_canonical || row.queue_key) + '</button></td>' +
+        '<td style="padding:4px;">' + esc(row.match_verdict) + '</td><td style="padding:4px;">' + esc(row.match_reason_text) + '</td>' +
+        '<td style="padding:4px;">' + esc(row.mail_ready_would_change ? 'Yes' : row.mail_ready_block_reason_code) + '</td>' +
+        '<td style="padding:4px;">' + esc(row.equity_clue) + ' (' + esc(row.equity_clue_reason_code) + ')</td></tr>';
+    }).join('');
+    return '<div style="font-size:12px;margin-bottom:6px;">' + esc(rows.length) + ' stored Ellis rows. No ownership evidence applied.</div>' +
+      '<table style="font-size:11px;border-collapse:collapse;width:100%;min-width:720px;"><thead><tr><th>Property</th><th>Match</th><th>Why</th><th>MAIL_READY change</th><th>Equity clue</th></tr></thead><tbody>' + table + '</tbody></table>' +
+      '<div class="wos-county-audit-detail-result" style="margin-top:10px;">' + countyAuditDetailHtml() + '</div>';
+  }
+
+  function countyAuditDetailHtml() {
+    var row = countyAuditDetail && countyAuditDetail.detail;
+    if (!row) return '';
+    var county = row.county_side || {};
+    var comparison = safeArray(row.comparison).map(function (part) {
+      return '<tr><td>' + esc(part.component) + '</td><td>' + esc(part.row_value) + '</td><td>' + esc(part.county_value) + '</td><td>' + esc(part.result) + '</td></tr>';
+    }).join('');
+    var raw = Object.keys(row.raw_field_echo || {}).map(function (key) {
+      var field = row.raw_field_echo[key];
+      return '<tr><td>' + esc(key) + ' (' + esc(field.field_name) + ')</td><td>' + esc(field.raw) + '</td><td>' + esc(field.parsed) + '</td><td>' + esc(field.parse_status) + '</td></tr>';
+    }).join('');
+    var near = safeArray(row.near_misses).map(function (item) {
+      return '<div>' + esc(item.parcel_id) + ' | ' + esc(item.canonical && item.canonical.canonical_string) + ' | ' + esc(item.differing_component) + '</div>';
+    }).join('');
+    var conflicts = safeArray(row.conflicts).map(function (item) {
+      return '<div>' + esc(item.field) + ': stored ' + esc(item.prior_value) + ' | county ' + esc(item.official_value) + ' | ' + esc(item.reason) + '</div>';
+    }).join('');
+    var changes = safeArray(row.would_apply_preview && row.would_apply_preview.fields).map(function (item) {
+      return '<div>' + esc(item.field) + ': ' + esc(JSON.stringify(item.stored_value)) + ' -> ' + esc(JSON.stringify(item.would_be)) + '</div>';
+    }).join('');
+    return '<div style="border-top:1px solid #cbd5e1;padding-top:8px;font-size:11px;">' +
+      '<b>' + esc(row.row_side && row.row_side.sourced_address) + '</b> | ' + esc(row.match_verdict) + ' | ' + esc(row.match_reason_code) + '<br>' +
+      'Subject source: ' + link('Document', row.row_side && row.row_side.source_document_url) + ' | Address status: ' + esc(row.row_side && row.row_side.address_state) + '<br>' +
+      'County parcel: ' + esc(county.parcel_id) + ' | Geographic ID: ' + esc(county.geo_id) + ' | Legal: ' + esc(county.legal_description) +
+      ' | Acres: ' + esc(county.acreage) + ' | State code: ' + esc(county.state_code) + ' | Type: ' + esc(county.property_type) + '<br>' +
+      'Owner of record: ' + esc(row.owner_of_record) + ' | Mailing: ' + esc(row.mailing_address) + '<br>' +
+      'County source: ' + link('Official parcel', row.provenance && row.provenance.source_url) +
+      ' | File: ' + esc(row.provenance && row.provenance.bulk_file_name) + ' | SHA-256: ' + esc(row.provenance && row.provenance.file_hash) +
+      ' | Records: ' + esc(row.provenance && row.provenance.record_count) + ' | Ingested: ' + esc(row.provenance && row.provenance.ingested_at) +
+      ' | Supplied by: ' + esc(row.provenance && row.provenance.operator_id) +
+      '<div style="margin-top:6px;"><b>Address comparison</b><table style="width:100%;"><tr><th>Component</th><th>Subject</th><th>County</th><th>Result</th></tr>' + comparison + '</table></div>' +
+      '<div style="margin-top:6px;"><b>Raw mapped fields</b><table style="width:100%;"><tr><th>Field</th><th>Raw DBF</th><th>Parsed</th><th>Status</th></tr>' + raw + '</table></div>' +
+      '<div><b>Near misses:</b> ' + (near || 'None') + '</div><div><b>Conflicts:</b> ' + (conflicts || 'None') + '</div>' +
+      '<div><b>Would apply, not applied:</b> ' + (changes || 'No field changes') + '</div></div>';
+  }
+
+  function loadCountyAudit(container) {
+    return fetch(API_COUNTY_APPRAISAL_AUDIT, { headers: authHeaders(), cache: 'no-store' })
+      .then(function (response) { return response.json().then(function (body) { return { response: response, body: body }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.body.ok) throw new Error(result.body.code || 'county_appraisal_audit_failed');
+        countyAuditData = result.body;
+        countyAuditError = '';
+      }).catch(function (caught) { countyAuditError = caught.message || 'County audit unavailable.'; })
+      .finally(function () {
+        var result = container.querySelector('.wos-county-audit-result');
+        if (result) result.innerHTML = countyAuditHtml();
+      });
+  }
+
+  function loadCountyAuditDetail(container, queueKey) {
+    return fetch(API_COUNTY_APPRAISAL_AUDIT + '&queue_key=' + encodeURIComponent(queueKey),
+      { headers: authHeaders(), cache: 'no-store' })
+      .then(function (response) { return response.json().then(function (body) { return { response: response, body: body }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.body.ok) throw new Error(result.body.code || 'county_appraisal_audit_detail_failed');
+        countyAuditDetail = result.body;
+        var target = container.querySelector('.wos-county-audit-detail-result');
+        if (target) target.innerHTML = countyAuditDetailHtml();
+      }).catch(function (caught) {
+        var target = container.querySelector('.wos-county-audit-detail-result');
+        if (target) target.textContent = caught.message || 'County audit detail unavailable.';
+      });
+  }
+
   function loadCountyCoverage(container, button) {
     var requestMarket = selectedMarketStoreKey();
     button.disabled = true;
@@ -1491,6 +1581,7 @@
     refreshLocalHelperStatus(container);
     if (page === 'dashboard') {
       fetchMarketDemand(container);
+      loadCountyAudit(container);
       return;
     }
   }
@@ -1501,6 +1592,7 @@
         dealDeskCard(data, rows) +
         manualEvidencePanel(data) +
         countyCoveragePanel() +
+        countyAuditPanel() +
         documentReviewPanel(data) +
         countyOnboardingPanel(data) +
         marketDemandPanel();
@@ -2159,6 +2251,10 @@
         if (countyCoverageButton) loadCountyCoverage(section, countyCoverageButton);
         var countyStageButton = event.target && event.target.closest && event.target.closest('.wos-county-stage-submit');
         if (countyStageButton) stageEllisCountyFile(section, countyStageButton);
+        var countyAuditButton = event.target && event.target.closest && event.target.closest('.wos-county-audit-load');
+        if (countyAuditButton) loadCountyAudit(section);
+        var countyAuditRowButton = event.target && event.target.closest && event.target.closest('.wos-county-audit-detail');
+        if (countyAuditRowButton) loadCountyAuditDetail(section, countyAuditRowButton.dataset.queueKey);
       });
     }
 
