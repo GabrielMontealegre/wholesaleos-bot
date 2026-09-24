@@ -14,6 +14,7 @@
   var API_MANUAL_SUBJECT_CONFIRMATION = '/api/dashboard/free-public-deal-board/manual-evidence/subject-fact-confirmation';
   var API_PAIRING_TOKEN = '/api/auth/pairing-token';
   var API_MARKET_DEMAND_INDEX = '/api/dashboard/market-demand-index?limit=400';
+  var API_COUNTY_APPRAISAL_PREVIEW = '/api/dashboard/research-queue/county-appraisal-preview';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
@@ -25,6 +26,8 @@
   var snapshotWatchdogEnabled = true;
   var marketDemandFetchInFlight = false;
   var marketDemandData = null;
+  var countyCoverageData = null;
+  var countyCoverageError = '';
   var manualEvidenceObjectUrls = [];
   var localHelperState = { running: false, paired: false, capture_running: false, checked: false, helper_build: '', helper_protocol_version: null, subject_facts_supported: false, sold_comps_supported: false };
   var localCaptureResults = {};
@@ -1240,6 +1243,76 @@
       '#c7d2fe');
   }
 
+  function countyCoverageHtml(preview, marketKey) {
+    if (!preview) return '<div style="font-size:12px;color:#6b7280;">Open the read-only preview to see the counties behind this market.</div>';
+    var market = preview.markets && preview.markets[marketKey];
+    if (!market) return '<div style="font-size:12px;color:#991b1b;">No stored rows found for this selected market.</div>';
+    var marketPreset = MARKET_PRESETS.find(function (entry) {
+      return [entry.city, entry.county, entry.state].map(function (value) { return String(value).toLowerCase(); }).join('|') === marketKey;
+    });
+    var counties = market.county_distribution || {};
+    var selectedEllis = Number(counties['Ellis County, TX'] || 0);
+    var names = Object.keys(counties).sort(function (a, b) { return a.localeCompare(b); });
+    var counted = names.reduce(function (total, name) { return total + Number(counties[name] || 0); }, 0);
+    var rows = names.map(function (name) {
+      return '<tr><td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;">' + esc(name) + '</td>' +
+        '<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">' + esc(counties[name]) + '</td></tr>';
+    }).join('');
+    var ellis = preview.ellis || {};
+    var measured = preview.state === 'ready_for_explicit_apply';
+    var yieldCounts = ellis.yield || {};
+    var equity = ellis.equity_clue_distribution || {};
+    return '<div style="font-size:12px;margin-bottom:6px;"><b>' + esc(marketPreset ? marketPreset.label : marketKey) + ':</b> ' +
+      esc(market.rows_total) + ' stored rows across ' + esc(names.length) + ' county buckets; ' + esc(selectedEllis) + ' in Ellis County.</div>' +
+      (counted === Number(market.rows_total) ? '' : '<div style="font-size:12px;color:#991b1b;">County counts do not reconcile with the stored row total.</div>') +
+      '<table style="border-collapse:collapse;font-size:12px;max-width:440px;width:100%;">' +
+      '<tr><th style="text-align:left;padding:3px 8px;">Source county</th><th style="text-align:right;padding:3px 8px;">Rows</th></tr>' + rows + '</table>' +
+      '<div style="font-size:12px;margin-top:8px;"><b>Ellis across all stored markets:</b> ' + esc(ellis.rows_total || 0) + ' rows. ' +
+      (measured
+        ? 'Exact matches: ' + esc(ellis.exact_match || 0) + '; ambiguous: ' + esc(ellis.ambiguous_match || 0) +
+          '; no match: ' + esc(ellis.no_match || 0) + '. Owner gain: ' + esc(yieldCounts.owner_of_record || 0) +
+          '; mailing gain: ' + esc(yieldCounts.mailing_address || 0) + '; MAIL_READY gain: ' + esc(yieldCounts.mail_ready || 0) + '.'
+        : 'Ownership and mailing yield not measured. ' + esc(preview.state || 'No current county file.')) + '</div>' +
+      (measured ? '<div style="font-size:11px;color:#374151;margin-top:5px;">Equity clues only, not ARV or debt: ' +
+        ['LIKELY_EQUITY', 'LIKELY_THIN', 'LIKELY_NONE', 'UNKNOWN'].map(function (key) { return esc(key) + ' ' + esc(equity[key] || 0); }).join(' | ') +
+        '. Qualifying ranked candidates: ' + esc(ellis.qualifying_candidate_count || 0) + '.</div>' : '') +
+      '<div style="font-size:11px;color:#6b7280;margin-top:5px;">Read-only preview. No county evidence has been applied by this action.</div>';
+  }
+
+  function countyCoveragePanel() {
+    return panelBox('County coverage', 'Stored snapshot rows, not just the first cards on screen.',
+      '<button type="button" class="wos-county-coverage-load" style="padding:6px 10px;border:1px solid #2563eb;background:#fff;color:#1d4ed8;cursor:pointer;">Refresh county coverage</button>' +
+      '<div class="wos-county-coverage-result" style="margin-top:8px;">' +
+      (countyCoverageError ? '<div style="font-size:12px;color:#991b1b;">' + esc(countyCoverageError) + '</div>' : countyCoverageHtml(countyCoverageData, selectedMarketStoreKey())) +
+      '</div>', '#cbd5e1');
+  }
+
+  function loadCountyCoverage(container, button) {
+    var requestMarket = selectedMarketStoreKey();
+    button.disabled = true;
+    button.textContent = 'Reading stored rows...';
+    fetch(API_COUNTY_APPRAISAL_PREVIEW, { headers: authHeaders(), cache: 'no-store' })
+      .then(function (response) {
+        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Sign in as an administrator to view county coverage.' : 'County coverage request failed (HTTP ' + response.status + ').');
+        return response.json();
+      })
+      .then(function (data) {
+        if (!data || !data.ok) throw new Error('County coverage preview was unavailable.');
+        countyCoverageData = data;
+        countyCoverageError = '';
+      })
+      .catch(function (error) { countyCoverageError = error.message || 'County coverage preview was unavailable.'; })
+      .finally(function () {
+        if (requestMarket !== selectedMarketStoreKey() || currentPage() !== 'dashboard') return;
+        var result = container.querySelector('.wos-county-coverage-result');
+        if (result) result.innerHTML = countyCoverageError
+          ? '<div style="font-size:12px;color:#991b1b;">' + esc(countyCoverageError) + '</div>'
+          : countyCoverageHtml(countyCoverageData, requestMarket);
+        button.disabled = false;
+        button.textContent = 'Refresh county coverage';
+      });
+  }
+
   // Retained for the compact Dashboard summary and its deterministic tests.
   function sortTopDealsRows(rows) {
     return safeArray(rows).slice().sort(function (a, b) {
@@ -1360,6 +1433,7 @@
         dealDeskCard(data, rows) +
         manualEvidencePanel(data) +
         documentReviewPanel(data) +
+        countyCoveragePanel() +
         countyOnboardingPanel(data) +
         marketDemandPanel();
     }
@@ -2013,6 +2087,8 @@
           if (body) body.innerHTML = '<div style="font-size:12px;color:#6b7280;">Loading ' + esc(selectedMarketLabel()) + ' public deals...</div>';
           fetchLatest(section);
         }
+        var countyCoverageButton = event.target && event.target.closest && event.target.closest('.wos-county-coverage-load');
+        if (countyCoverageButton) loadCountyCoverage(section, countyCoverageButton);
       });
     }
 
@@ -2096,6 +2172,7 @@
 
   window.__wosPublicDealsTestHooks = {
     panelsForPage: panelsForPage,
+    countyCoverageHtml: countyCoverageHtml,
     dealDeskMetrics: dealDeskMetrics,
     lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,
