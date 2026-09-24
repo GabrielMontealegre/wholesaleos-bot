@@ -434,10 +434,11 @@ function mockDeal(overrides) {
     { preview_impl: bexarAddressPreview }
   );
   const bexarRows = bexarUpgraded.rows.filter((row) => row.source_row_reference === bexarReference);
-  assert.strictEqual(bexarRows.length, 1, 'verified address row must replace its stale proof-only snapshot row');
-  assert.strictEqual(bexarRows[0].normalized_address, '15603 Garam Trl, Von Ormy, TX 78073');
-  assert.strictEqual(bexarRows[0].quality_bucket, 'INSPECT_NOW');
-  assert.strictEqual(bexarRows[0].status_evidence_text, bexarStatusEvidence);
+  assert.strictEqual(bexarRows.length, 2, 'the proof-only source row must survive the address-bearing row');
+  const bexarAddressRow = bexarRows.find((row) => row.normalized_address === '15603 Garam Trl, Von Ormy, TX 78073');
+  assert(bexarRows.some((row) => !row.normalized_address && row.quality_bucket === 'SOURCE_PROOF_ONLY'));
+  assert.strictEqual(bexarAddressRow.quality_bucket, 'INSPECT_NOW');
+  assert.strictEqual(bexarAddressRow.status_evidence_text, bexarStatusEvidence);
   assert.strictEqual(bexarUpgraded.counts.inspect_now, 1);
 
   // limit clamps up to the minimum too
@@ -720,20 +721,23 @@ function mockDeal(overrides) {
     { preview_impl: emptyPreview, census_zip_resolver_impl: censusResolver }
   );
   assert.strictEqual(censusCalls, 5, 'stored Census backfill must cap lookups at five per batch');
-  assert.strictEqual(repairedBatch.rows.length, 7, 'only exact Census duplicates may collapse');
+  assert.strictEqual(repairedBatch.rows.length, 8, 'source rows survive exact Census address matches');
   const persistedPrefix = repairedBatch.rows.find((row) => row.queue_key === 'stored|prefix');
   assert.strictEqual(persistedPrefix.normalized_address, '');
   assert.strictEqual(persistedPrefix.maps_url, null);
   assert.strictEqual(persistedPrefix.next_best_action, 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT');
   assert.ok(persistedPrefix.missing_fields.includes('verified street number and spelling (check source document)'));
-  const mergedYellow = repairedBatch.rows.find((row) => row.census_matched_address === '1111 Yellow Jacket Ln, Rockwall, TX 75032');
-  assert.ok(mergedYellow);
-  assert.strictEqual(mergedYellow.merged_duplicate_count, 1);
-  assert.strictEqual(mergedYellow.first_seen_at, '2026-07-01T08:00:00.000Z');
-  assert.strictEqual(mergedYellow.source_document_urls.length, 2);
-  assert.strictEqual(mergedYellow.latitude, 32.9312);
-  assert.strictEqual(mergedYellow.longitude, -96.4597);
-  assert.strictEqual(mergedYellow.coordinate_source, 'us_census_geocoder_address_match');
+  const yellowRows = repairedBatch.rows.filter((row) => row.census_matched_address === '1111 Yellow Jacket Ln, Rockwall, TX 75032');
+  assert.strictEqual(yellowRows.length, 2);
+  assert.deepStrictEqual(new Set(yellowRows.map((row) => row.queue_key)), new Set(['stored|yellow-a', 'stored|yellow-b']));
+  assert.deepStrictEqual(new Set(yellowRows.map((row) => row.first_seen_at)),
+    new Set(['2026-07-01T08:00:00.000Z', '2026-07-02T08:00:00.000Z']));
+  assert.deepStrictEqual(new Set(yellowRows.map((row) => row.source_document_url)),
+    new Set([yellowA.source_document_url, yellowB.source_document_url]));
+  assert(yellowRows.every((row) => row.latitude === 32.9312 && row.longitude === -96.4597));
+  assert(yellowRows.every((row) => row.coordinate_source === 'us_census_geocoder_address_match'));
+  assert(repairedBatch.property_groups.some((group) => group.member_count === 2 &&
+    group.member_queue_keys.includes('stored|yellow-a') && group.member_queue_keys.includes('stored|yellow-b')));
   assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|rockwall').county, 'Rockwall');
   assert.strictEqual(repairedBatch.rows.find((row) => row.queue_key === 'stored|hunt').county, 'Hunt');
 
@@ -851,7 +855,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=46'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=47'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -908,7 +912,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=46'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=47'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');

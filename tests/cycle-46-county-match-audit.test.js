@@ -130,6 +130,10 @@ async function run() {
     assert.deepStrictEqual([f.snapshot, f.db, f.stage].map((file) => fs.readFileSync(file).toString('hex')), bytes);
     assert.strictEqual(fs.existsSync(f.evidence), false);
     assert.strictEqual(index.row_count, 6);
+    assert.strictEqual(index.identity_counts.rows_total, 6);
+    assert.strictEqual(index.identity_counts.properties_total, 5);
+    assert(!JSON.stringify(index.rows).includes('property_identity_key'),
+      'audit index must not expose the derived address identity; detail may');
     const serialized = JSON.stringify(index).toUpperCase();
     assert(!serialized.includes(OWNER));
     assert(!serialized.includes('WITTE'));

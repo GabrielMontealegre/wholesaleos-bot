@@ -7,6 +7,7 @@ const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
 const { profileForCounty } = require('../sources/county-appraisal-profiles');
 const { applyMatchedRecord, ingestBulkFile, matchRow } = require('../sources/county-appraisal-adapter');
 const { compareCandidates } = require('../../scripts/cycle-44-select-test-property');
+const propertyIdentityGrouping = require('./property-identity-grouping');
 
 function clean(value) { return String(value == null ? '' : value).trim(); }
 function error(code, statusCode) {
@@ -293,6 +294,7 @@ function auditRow(item, index, stage, nowIso, detail) {
   const enriched = record ? enrich(row, record, nowIso, '', '') : null;
   const mail = record ? mailAudit(row, record, enriched) : { would_change: false, reason_code: 'no_matched_county_record' };
   const equity = record ? enriched.county_appraisal_record.equity_signal : 'UNKNOWN';
+  const diagnostics = propertyIdentityGrouping.rowDiagnostics(row, nowIso);
   const reasonTexts = { exact_canonical_match: 'The complete sourced property address matches one county parcel.',
     multiple_exact_county_records: 'More than one county parcel has this exact property address.',
     county_or_state_mismatch: 'This row is outside Ellis County, Texas.',
@@ -308,7 +310,10 @@ function auditRow(item, index, stage, nowIso, detail) {
     parcel_id: clean(record && record.parcel_id || row.parcel_id), geo_id: clean(record && record.geo_id || row.geo_id),
     mail_ready_would_change: mail.would_change, mail_ready_block_reason_code: mail.would_change ? null : mail.reason_code,
     equity_clue: equity, equity_clue_reason_code: record ? equityAuditReason(enriched.county_appraisal_record, echo) : 'no_matched_county_record',
-    conflict_count: enriched ? enriched.appraisal_conflicts.length : 0, near_miss_count: near.count || 0 };
+    conflict_count: enriched ? enriched.appraisal_conflicts.length : 0, near_miss_count: near.count || 0,
+    quarantine_reason_code: diagnostics.quarantine_reason_code || null,
+    queue_key_address_mismatch: diagnostics.queue_key_address_mismatch,
+    queue_key_contaminated_by: diagnostics.queue_key_contaminated_by };
   if (!detail) return summary;
   const countyParts = record ? canonicalizeAddress(record.normalized_address) : null;
   const nearMisses = (near.candidates || []).map((candidate) => ({ parcel_id: candidate.parcel_id,
@@ -316,10 +321,12 @@ function auditRow(item, index, stage, nowIso, detail) {
   const changedFields = enriched ? Object.keys(enriched).filter((field) =>
     JSON.stringify(enriched[field]) !== JSON.stringify(row[field])).map((field) => ({ field,
       stored_value: row[field] === undefined ? null : row[field], would_be: enriched[field] })) : [];
-  return Object.assign({}, summary, {
+  return Object.assign({}, summary, diagnostics, {
     row_side: { sourced_address: clean(row.normalized_address), canonical: rowParts,
       source_document_url: clean(row.document_reextraction_source_url || row.source_document_url || row.source_url),
-      address_state: clean(row.address_state), complete_source_address: clean(row.address_state) === 'complete_source_address' && completeAddress(row) },
+      address_state: clean(row.address_state), address_state_display: diagnostics.address_state_display,
+      address_state_reason_code: diagnostics.address_state_reason_code,
+      complete_source_address: clean(row.address_state) === 'complete_source_address' && completeAddress(row) },
     county_side: record ? { canonical: countyParts, mapped_situs_fields: raw && raw.situs_fields || null,
       parcel_id: record.parcel_id, geo_id: record.geo_id, legal_description: record.legal_description,
       acreage: record.lot_size_acres, state_code: record.state_code, property_type: record.property_type } : null,
@@ -357,10 +364,13 @@ function audit(input) {
     return { ok: true, preview_only: true, not_a_saved_lead: true, not_applied: true,
       detail: auditRow(matches[0], index, stage, nowIso, true) };
   }
-  const rows = current.rows.filter((item) => clean(item.row.county).toUpperCase() === 'ELLIS' &&
-    clean(item.row.state).toUpperCase() === 'TX').map((item) => auditRow(item, index, stage, nowIso, false));
+  const ellisItems = current.rows.filter((item) => clean(item.row.county).toUpperCase() === 'ELLIS' &&
+    clean(item.row.state).toUpperCase() === 'TX');
+  const rows = ellisItems.map((item) => auditRow(item, index, stage, nowIso, false));
   return { ok: true, preview_only: true, not_a_saved_lead: true, not_applied: true,
-    county: 'Ellis', state: 'TX', row_count: rows.length, rows };
+    county: 'Ellis', state: 'TX', row_count: rows.length,
+    identity_counts: propertyIdentityGrouping.groupRows(ellisItems.map((item) => item.row), nowIso).counts,
+    rows };
 }
 function conflictAudit(items) {
   return (items || []).map((item) => Object.assign({}, item, {

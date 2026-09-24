@@ -715,6 +715,9 @@ function sampleItem(row, packetStore, market, options) {
     address_state: propertyAddressEvidence.isSourceSupportedSubjectAddress(row)
       ? 'complete_source_address'
       : 'partial_address_verify_first',
+    stored_address_state_display: cleanText(row.address_state) || 'not recorded',
+    stored_address_state_reason_code: cleanText(row.address_state) ? 'stored_state'
+      : cleanText(row.address_state_history) || 'prior_state_history_unknown',
     lead_origin: leadOrigin(row),
     source_proof_url: cleanText(row.source_document_url || row.source_url),
     sale_venue_address: cleanText(row.sale_venue_address),
