@@ -504,7 +504,7 @@
     return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
       '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
-        '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Contact status:</b> ' + esc(item.contact_state || 'LOCKED') + ' - ' + esc(item.contact_state_reason || 'No contact route is ready.') + '<br><b>Property status:</b> ' + esc(item.property_state || 'LOCKED') + ' - ' + esc(item.property_state_reason || 'Property work is not ready.') + '<br><span style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(item.row_state || 'review') + '</span><br><b>Address status:</b> ' + esc(item.address_state || '') + '</div>' +
+        '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Contact status:</b> ' + esc(item.contact_state || 'LOCKED') + ' - ' + esc(item.contact_state_reason || 'No contact route is ready.') + '<br><b>Property status:</b> ' + esc(item.property_state || 'LOCKED') + ' - ' + esc(item.property_state_reason || 'Property work is not ready.') + '<br><span style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(item.row_state || 'review') + '</span><br><b>Source-supported address check:</b> ' + esc(item.address_state || '') + '<br><b>Stored address status:</b> ' + esc(item.stored_address_state_display || 'not recorded') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
       '</div>' +
       (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property' + (item.subject_address_recovery.skipped_date_prefix ? '; a date fragment appeared between the property label and address' : '') + '</div>' : '') +
@@ -750,7 +750,7 @@
       '<div>' + link('Open Ellis CAD source', record.source_url || record.bulk_source_url) + '</div></details>';
   }
 
-  function rowCard(row) {
+  function rowCard(row, embedded) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
     var lines = [];
@@ -763,6 +763,15 @@
     }
     lines.push('<div style="font-size:12px;"><b>Contact status:</b> ' + esc(row.contact_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.contact_state_reason || 'No contact route is ready.') + '</span></div>');
     lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(row.property_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
+    lines.push('<div style="font-size:12px;"><b>Stored address status:</b> ' + esc(row.address_state_display || row.address_state || 'not recorded') +
+      (row.address_state_reason_code && row.address_state_reason_code !== 'stored_state' ? ' (' + esc(row.address_state_reason_code.replace(/_/g, ' ')) + ')' : '') + '</div>');
+    if (row.queue_key_address_mismatch) {
+      lines.push('<div style="font-size:12px;color:#92400e;margin-top:4px;"><b>Internal ID warning:</b> ' +
+        esc(row.queue_key_contaminated_by === 'sale_venue'
+          ? "This lead's internal ID was built from the courthouse address, not the house. The property address above is the sourced one."
+          : "This lead's internal ID contains a different address from the sourced property address above.") +
+        ' Embedded address: ' + esc(row.queue_key_embedded_address || '') + '. The ID has not been changed.</div>');
+    }
     if (row.row_state) lines.push('<div style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(row.row_state) + (row.row_state_reason ? ' - ' + esc(row.row_state_reason) : '') + '</div>');
     var distress = row.distress_evidence || {};
     lines.push('<div style="font-size:12px;margin-top:4px;"><b>Why this lead exists:</b> ' + esc(distress.distress_reason || row.why_this_might_be_a_deal || row.motivation_evidence_text || 'Official source evidence requires review.') + '</div>');
@@ -772,6 +781,13 @@
     lines.push('<div style="font-size:12px;"><b>Last checked:</b> ' + esc(distress.last_checked_at || row.last_checked_at || 'Not recorded') + '</div>');
     lines.push('<div style="font-size:12px;"><b>Freshness:</b> ' + esc(row.lifecycle_status && row.lifecycle_status.status || 'DATE_UNKNOWN_REVERIFY') +
       (row.lifecycle_status && row.lifecycle_status.reason_text ? ' <span style="color:#6b7280;">' + esc(row.lifecycle_status.reason_text) + '</span>' : '') + '</div>');
+    if (row.lifecycle_status && row.lifecycle_status.quarantined) {
+      lines.push('<div style="font-size:12px;color:#991b1b;"><b>Why quarantined:</b> ' + esc(row.quarantine_reason_code || 'rule not recorded') +
+        ' - ' + esc(row.quarantine_reason_text || 'The lifecycle rule requires review.') +
+        '<br><b>Quarantined at:</b> ' + esc(row.quarantined_at || 'not recorded') +
+        ' | <b>Rule:</b> ' + esc(row.quarantined_by_rule || 'not recorded') +
+        '<br><b>What would clear it:</b> ' + esc(row.what_would_clear_it || 'Review official source evidence.') + '</div>');
+    }
     lines.push('<div style="font-size:12px;margin-top:3px;"><b>Official proof:</b> ' + link('Open official source', distress.official_source_url || row.source_document_url || row.source_url) + '</div>');
     if (row.sale_venue_address) {
       lines.push('<div style="font-size:12px;margin-top:3px;"><b>Sale location:</b> ' + esc(row.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span>' +
@@ -844,7 +860,30 @@
     if (safeArray(row.blocked_sources).length) {
       lines.push('<div style="font-size:11px;color:#991b1b;margin-top:3px;">Blocked: ' + esc(safeArray(row.blocked_sources).map(function (b) { return b.source + ' (' + b.reason + ')'; }).join('; ')) + '</div>');
     }
-    return '<div class="wos-public-deal-row" data-queue-key="' + esc(row.queue_key || '') + '" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;">' + lines.join('') + '</div>';
+    return '<div class="wos-public-deal-row" data-queue-key="' + esc(row.queue_key || '') + '" style="' +
+      (embedded ? 'padding:8px 0;background:#fff;' : 'border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;') + '">' + lines.join('') + '</div>';
+  }
+
+  function propertyGroupCard(group, rowsByKey) {
+    var members = safeArray(group.member_queue_keys).map(function (key) { return rowsByKey[key]; }).filter(Boolean);
+    var primary = rowsByKey[group.primary_member] || members[0];
+    if (!primary) return '';
+    var ordered = [primary].concat(members.filter(function (row) { return row.queue_key !== primary.queue_key; }));
+    var title = primary.normalized_address || primary.partial_address || primary.headline || 'Unresolved property identity';
+    var memberList = ordered.map(function (row, index) {
+      return '<details class="wos-property-member"' + (index === 0 ? ' open' : '') +
+        ' style="border-top:1px solid #e5e7eb;margin-top:5px;padding-top:5px;">' +
+        '<summary style="cursor:pointer;font-size:11px;color:#374151;">' + esc(row.source_family || 'Source row') +
+        ' | ' + esc(row.queue_key || '') + ' | ' + esc(row.row_state || 'status unknown') + '</summary>' +
+        rowCard(row, true) + '</details>';
+    }).join('');
+    return '<div class="wos-property-group" data-property-group="' + esc(group.group_id || '') +
+      '" style="border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;margin-bottom:8px;background:#fff;">' +
+      '<div style="font-weight:700;font-size:13px;">' + esc(title) + ' <span style="font-size:11px;font-weight:600;color:#475569;">' +
+      esc(group.member_count || 1) + ' source' + (Number(group.member_count || 1) === 1 ? '' : 's') + '</span></div>' +
+      '<div style="font-size:11px;color:#64748b;">' + esc(group.primary_selection_reason || '') +
+      (group.soonest_sale_or_event_date ? ' | Soonest event: ' + esc(group.soonest_sale_or_event_date) : '') + '</div>' +
+      memberList + '</div>';
   }
 
   var BLOCKED_SUBREASON_ORDER = [
@@ -900,12 +939,12 @@
     return markets.find(function (entry) { return entry && entry.market_key === key; }) || null;
   }
 
-  function blockedInventoryGroups(data, segment, rows, color) {
+  function blockedInventoryGroups(data, segment, rows, color, renderRows) {
     var breakdown = selectedMarketBreakdown(data);
     if (!breakdown) {
       return '<details style="margin-top:8px;">' +
         '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (color || '#fecaca') + ';">Blocked / Quarantined (' + esc(String(segment && segment.count || 0)) + ')</summary>' +
-        (rows.length ? '<div style="margin-top:7px;">' + rows.map(rowCard).join('') + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No loaded blocked row details.</div>') +
+        (rows.length ? '<div style="margin-top:7px;">' + renderRows(rows) + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No loaded blocked row details.</div>') +
         '</details>';
     }
     var byReason = {};
@@ -944,7 +983,7 @@
         esc(BLOCKED_SUBREASON_LABELS[reason] || reason) + ' (' + esc(String(count)) + ')</summary>' +
         '<div style="font-size:12px;color:#374151;margin-top:6px;">Next action: <b>' + esc(BLOCKED_SUBREASON_ACTIONS[reason] || BLOCKED_SUBREASON_ACTIONS.LOCKED_OTHER) + '</b></div>' +
         samples +
-        (loadedRows.length ? '<div style="margin-top:7px;">' + loadedRows.map(rowCard).join('') + '</div>' : '') +
+        (loadedRows.length ? '<div style="margin-top:7px;">' + renderRows(loadedRows) + '</div>' : '') +
         unloaded +
         (!loadedRows.length && !unloaded ? '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No rows in this blocked subreason.</div>' : '') +
         '</details>';
@@ -1057,7 +1096,8 @@
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('Quarantined', c.quarantined || 0, '#fecaca'),
-      chip('Rows total', c.total_rows || 0)
+      chip('Source rows', c.rows_total || c.total_rows || 0) +
+      chip('Distinct properties', c.properties_total || 0, '#dbeafe')
     ].join('');
     var meta = batch
       ? '<div style="font-size:12px;color:#4b5563;margin-top:6px;">Last batch ' + esc(String(batch.run_at).replace('T', ' ').slice(0, 16)) + ' - ' + esc(batch.new_rows) + ' new, ' + esc(batch.refreshed_rows) + ' refreshed, ' + esc(batch.rejected_generic_count || 0) + ' generic rejected' + (batch.board_blocker_summary ? ' - blocker: ' + esc(batch.board_blocker_summary) : '') + '</div>'
@@ -1166,6 +1206,8 @@
     var soonest = upcomingSaleRow(rows);
     var urgent = topUrgentAddresses(rows);
     var summary = [
+      chip('Source rows', c.rows_total || c.total_rows || 0),
+      chip('Distinct properties', c.properties_total || 0, '#dbeafe'),
       chip('CALL_READY', metrics.call_ready, '#bbf7d0'),
       chip('OUTREACH_READY', metrics.outreach_ready, '#dbeafe'),
       chip('MAIL_READY', metrics.mail_ready, '#ccfbf1'),
@@ -1321,10 +1363,14 @@
       return '<tr><td style="padding:4px;border-bottom:1px solid #e5e7eb;"><button type="button" class="wos-county-audit-detail" data-queue-key="' + esc(row.queue_key) + '" style="border:0;background:none;color:#1d4ed8;text-align:left;cursor:pointer;">' + esc(row.row_address_canonical || row.queue_key) + '</button></td>' +
         '<td style="padding:4px;">' + esc(row.match_verdict) + '</td><td style="padding:4px;">' + esc(row.match_reason_text) + '</td>' +
         '<td style="padding:4px;">' + esc(row.mail_ready_would_change ? 'Yes' : row.mail_ready_block_reason_code) + '</td>' +
-        '<td style="padding:4px;">' + esc(row.equity_clue) + ' (' + esc(row.equity_clue_reason_code) + ')</td></tr>';
+        '<td style="padding:4px;">' + esc(row.equity_clue) + ' (' + esc(row.equity_clue_reason_code) + ')</td>' +
+        '<td style="padding:4px;">' + esc(row.quarantine_reason_code || 'not quarantined') + '</td></tr>';
     }).join('');
-    return '<div style="font-size:12px;margin-bottom:6px;">' + esc(rows.length) + ' stored Ellis rows. No ownership evidence applied.</div>' +
-      '<table style="font-size:11px;border-collapse:collapse;width:100%;min-width:720px;"><thead><tr><th>Property</th><th>Match</th><th>Why</th><th>MAIL_READY change</th><th>Equity clue</th></tr></thead><tbody>' + table + '</tbody></table>' +
+    var identityCounts = countyAuditData.identity_counts || {};
+    return '<div style="font-size:12px;margin-bottom:6px;">' + esc(rows.length) + ' source rows, ' +
+      esc(identityCounts.properties_total == null ? 'not measured' : identityCounts.properties_total) +
+      ' distinct properties in Ellis. No ownership evidence applied.</div>' +
+      '<table style="font-size:11px;border-collapse:collapse;width:100%;min-width:720px;"><thead><tr><th>Property</th><th>Match</th><th>Why</th><th>MAIL_READY change</th><th>Equity clue</th><th>Quarantine rule</th></tr></thead><tbody>' + table + '</tbody></table>' +
       '<div class="wos-county-audit-detail-result" style="margin-top:10px;">' + countyAuditDetailHtml() + '</div>';
   }
 
@@ -1350,7 +1396,14 @@
     }).join('');
     return '<div style="border-top:1px solid #cbd5e1;padding-top:8px;font-size:11px;">' +
       '<b>' + esc(row.row_side && row.row_side.sourced_address) + '</b> | ' + esc(row.match_verdict) + ' | ' + esc(row.match_reason_code) + '<br>' +
-      'Subject source: ' + link('Document', row.row_side && row.row_side.source_document_url) + ' | Address status: ' + esc(row.row_side && row.row_side.address_state) + '<br>' +
+      'Subject source: ' + link('Document', row.row_side && row.row_side.source_document_url) + ' | Stored address status: ' +
+      esc(row.row_side && row.row_side.address_state_display || 'not recorded') +
+      ' (' + esc(row.row_side && row.row_side.address_state_reason_code || 'prior_state_history_unknown') + ')<br>' +
+      (row.queue_key_address_mismatch ? '<div style="color:#92400e;">Internal ID address differs from the sourced property: ' +
+        esc(row.queue_key_embedded_address || '') + (row.queue_key_contaminated_by === 'sale_venue' ? ' (sale venue)' : '') + '. The ID is unchanged.</div>' : '') +
+      (row.quarantine_reason_code ? '<div style="color:#991b1b;"><b>Quarantine:</b> ' + esc(row.quarantine_reason_code) +
+        ' - ' + esc(row.quarantine_reason_text) + ' | Recorded at: ' + esc(row.quarantined_at || 'not recorded') +
+        ' | Rule: ' + esc(row.quarantined_by_rule) + ' | To clear: ' + esc(row.what_would_clear_it) + '</div>' : '') +
       'County parcel: ' + esc(county.parcel_id) + ' | Geographic ID: ' + esc(county.geo_id) + ' | Legal: ' + esc(county.legal_description) +
       ' | Acres: ' + esc(county.acreage) + ' | State code: ' + esc(county.state_code) + ' | Type: ' + esc(county.property_type) + '<br>' +
       'Owner of record: ' + esc(row.owner_of_record) + ' | Mailing: ' + esc(row.mailing_address) + '<br>' +
@@ -1501,6 +1554,20 @@
     safeArray(allRows).forEach(function (row) {
       if (row && row.queue_key) rowsByKey[row.queue_key] = row;
     });
+    var groupByMember = {};
+    safeArray(data && data.property_groups).forEach(function (group) {
+      safeArray(group.member_queue_keys).forEach(function (key) { groupByMember[key] = group; });
+    });
+    var shownGroups = {};
+    function renderPropertyRows(rows) {
+      return rows.map(function (row) {
+        var group = groupByMember[row.queue_key];
+        if (!group) return rowCard(row);
+        if (shownGroups[group.group_id]) return '';
+        shownGroups[group.group_id] = true;
+        return propertyGroupCard(group, rowsByKey);
+      }).join('');
+    }
     var labels = {
       CALL_READY: 'Call Ready', OUTREACH_READY: 'Outreach Ready', MAIL_READY: 'Mail Ready',
       NEEDS_CONTACT_SEARCH: 'Needs Contact Search', NEEDS_SKIP_TRACE: 'Needs Skip Trace',
@@ -1520,17 +1587,17 @@
       var rows = safeArray(segment && segment.row_keys).map(function (key) { return rowsByKey[key]; }).filter(Boolean);
       var key = segment && segment.key || 'BLOCKED';
       var titleNote = key === 'TITLE_NEEDED' ? ' - no verified public title workflow source yet' : '';
-      if (key === 'BLOCKED') return blockedInventoryGroups(data, segment, rows, colors[key]);
+      if (key === 'BLOCKED') return blockedInventoryGroups(data, segment, rows, colors[key], renderPropertyRows);
       return '<details style="margin-top:8px;"' + (key === 'CALL_READY' || key === 'OUTREACH_READY' || key === 'MAIL_READY' ? ' open' : '') + '>' +
         '<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#111827;padding:6px 8px;border-radius:7px;background:' + (colors[key] || '#e5e7eb') + ';">' +
         esc(labels[key] || segment && segment.label || key) + ' (' + esc(String(segment && segment.count || 0)) + ')' + esc(titleNote) +
         (rows.length < Number(segment && segment.count || 0) ? ' - showing ' + esc(String(rows.length)) + ' loaded rows' : '') + '</summary>' +
-        (rows.length ? '<div style="margin-top:7px;">' + rows.map(rowCard).join('') + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No rows in this work state.</div>') +
+        (rows.length ? '<div style="margin-top:7px;">' + renderPropertyRows(rows) + '</div>' : '<div style="font-size:12px;color:#6b7280;padding:7px 4px;">No rows in this work state.</div>') +
         '</details>';
     }).join('');
     if (!segments.length) body = '<div style="font-size:12px;color:#6b7280;">No lead-operations queue is available yet. Run a batch or wait for auto-run.</div>';
     return panelBox('Lead Operations Queue <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fde68a;">' + esc(String(queue.total_rows || 0)) + '</span>',
-      'Work phone leads first, then public outreach and mail. Skip trace, comps, title, and quarantined rows stay in separate honest queues.',
+      'Segment counts are source rows. Each property appears once, with every source row available inside it.',
       '<div style="margin-bottom:6px;">' + summary + '</div>' + body, '#fcd34d');
   }
 

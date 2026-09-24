@@ -28,6 +28,7 @@ const distressEvidenceModel = require('./distress-evidence-model');
 const propertyLeverageDossier = require('./property-leverage-dossier');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
+const propertyIdentityGrouping = require('./property-identity-grouping');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -324,25 +325,8 @@ function projectManualValueEvidence(rows, market, options = {}) {
   });
 }
 
-function rowEvidenceScore(row) {
-  return [
-    'source_document_url', 'source_url', 'best_link_to_click_first', 'maps_url',
-    'official_property_record_url', 'owner_clue', 'best_contact', 'appraisal_clue',
-    'zillow_url', 'redfin_url', 'realtor_url', 'auction_url'
-  ].reduce((score, field) => score + (cleanText(row && row[field]) ? 1 : 0), 0) +
-    (Array.isArray(row && row.source_document_urls) ? row.source_document_urls.length : 0);
-}
-
 function documentUrlsForRow(row) {
   return prependUnique(row && row.source_document_urls, [row && row.source_document_url], 3);
-}
-
-function earliestTimestamp(left, right) {
-  const a = cleanText(left);
-  const b = cleanText(right);
-  if (!a) return b;
-  if (!b) return a;
-  return a <= b ? a : b;
 }
 
 async function backfillCensusKeysForStoredRows(rows, options = {}) {
@@ -376,43 +360,6 @@ async function backfillCensusKeysForStoredRows(rows, options = {}) {
     } catch (error) { /* keep unresolved snapshot rows separate */ }
   }
   return lookups;
-}
-
-function collapseStoredCensusExactDuplicates(rows) {
-  const byCensusAddress = new Map();
-  const output = [];
-  for (const row of Array.isArray(rows) ? rows : []) {
-    const matchedAddress = typeof row.census_matched_address === 'string' ? row.census_matched_address : '';
-    if (!matchedAddress) {
-      output.push(row);
-      continue;
-    }
-    const existing = byCensusAddress.get(matchedAddress);
-    if (!existing) {
-      byCensusAddress.set(matchedAddress, row);
-      output.push(row);
-      continue;
-    }
-    const richer = rowEvidenceScore(row) > rowEvidenceScore(existing) ? row : existing;
-    const other = richer === row ? existing : row;
-    const index = output.indexOf(existing);
-    if (richer !== existing && index >= 0) output[index] = richer;
-    byCensusAddress.set(matchedAddress, richer);
-    richer.source_document_urls = prependUnique(
-      documentUrlsForRow(other),
-      documentUrlsForRow(richer),
-      3
-    );
-    richer.source_document_url = cleanText(richer.source_document_url) || cleanText(other.source_document_url) || null;
-    richer.first_seen_at = earliestTimestamp(existing.first_seen_at, row.first_seen_at);
-    richer.last_seen_at = cleanText(existing.last_seen_at) >= cleanText(row.last_seen_at)
-      ? existing.last_seen_at
-      : row.last_seen_at;
-    richer.times_seen = (Number(existing.times_seen) || 1) + (Number(row.times_seen) || 1);
-    richer.merged_duplicate_count = (Number(existing.merged_duplicate_count) || 0) +
-      (Number(row.merged_duplicate_count) || 0) + 1;
-  }
-  return output;
 }
 
 function nowIso() {
@@ -514,12 +461,6 @@ function dedupeKeyForDeal(deal) {
   const phone = rowPhone(deal);
   const body = cleanText(`${deal.headline}|${deal.motivation_evidence_text}|${deal.source_proof_text}`).toLowerCase();
   return `proof|${crypto.createHash('sha1').update([doc, src, phone, body].join('|')).digest('hex').slice(0, 20)}`;
-}
-
-function sourceIdentityKey(row) {
-  const reference = cleanText(row && row.source_row_reference).toLowerCase();
-  const documentUrl = cleanText(row && (row.source_document_url || row.source_url)).toLowerCase();
-  return reference && documentUrl ? `${documentUrl}|${reference}` : '';
 }
 
 function countyReadinessByEntry(entry, artifactCounty) {
@@ -766,6 +707,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     || (cleanText(deal.owner_record && deal.owner_record.owner_role) === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record');
   return {
     queue_key: dedupeKey,
+    address_state: cleanText(deal.address_state) || null,
+    address_state_history: cleanText(deal.address_state) ? 'recorded' : 'never_set',
     headline: cleanText(deal.headline),
     normalized_address: cleanText(deal.normalized_address),
     partial_address: cleanText(deal.partial_address),
@@ -1139,6 +1082,32 @@ function queueCounts(rows) {
   };
 }
 
+function identitySnapshot(rows) {
+  const projected = propertyIdentityGrouping.groupRows(rows, nowIso());
+  const groupByKey = new Map();
+  for (const group of projected.groups) {
+    for (const key of group.member_queue_keys) groupByKey.set(key, group);
+  }
+  const visibleGroups = new Set(projected.rows.slice(0, 100)
+    .map((row) => groupByKey.get(row.queue_key))
+    .filter(Boolean)
+    .map((group) => group.group_id));
+  return {
+    counts: Object.assign(queueCounts(projected.rows), projected.counts),
+    property_groups: projected.groups,
+    rows: projected.rows.filter((row) => {
+      const group = groupByKey.get(row.queue_key);
+      return group && visibleGroups.has(group.group_id);
+    })
+  };
+}
+
+function fullSnapshotIdentityCounts(store) {
+  const rows = Object.values(store && store.markets || {}).flatMap((bucket) =>
+    Array.isArray(bucket && bucket.rows) ? bucket.rows : []);
+  return propertyIdentityGrouping.groupRows(rows, nowIso()).counts;
+}
+
 const LIFECYCLE_STATUSES = Object.freeze([
   'FRESH',
   'AGING',
@@ -1198,6 +1167,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     store.markets[key] = bucket;
     writeStore(store);
     const responseRows = repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow));
+    const identity = identitySnapshot(responseRows);
   return {
     ok: true,
     preview_only: true,
@@ -1208,10 +1178,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
     county_onboarding: countyOnboardingSummary(market),
     document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
     batch,
-    counts: queueCounts(responseRows),
+    counts: identity.counts,
+    property_groups: identity.property_groups,
+    full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
     lifecycle_aggregate: lifecycleAggregate(responseRows),
     lead_operations_queue: leadOperationsQueueForResponse(responseRows),
-    rows: responseRows.slice(0, 100)
+    rows: identity.rows
   };
   }
   const preview = await previewImpl({
@@ -1226,11 +1198,6 @@ async function runDealBoardBatch(input = {}, options = {}) {
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
-  const sourceIdentityRows = new Map();
-  for (const row of byKey.values()) {
-    const sourceIdentity = sourceIdentityKey(row);
-    if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, row);
-  }
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
     'source_document_url', 'best_link_to_click_first', 'maps_url', 'zillow_url',
@@ -1272,23 +1239,16 @@ async function runDealBoardBatch(input = {}, options = {}) {
   let refreshedRows = 0;
   for (const deal of deals) {
     const dedupeKey = dedupeKeyForDeal(deal);
-    const sourceIdentity = sourceIdentityKey(deal);
-    const sourceIdentityRow = sourceIdentity ? sourceIdentityRows.get(sourceIdentity) : null;
-    if (sourceIdentityRow && sourceIdentityRow.queue_key !== dedupeKey) {
-      if (cleanText(deal.normalized_address) && !cleanText(sourceIdentityRow.normalized_address)) {
-        byKey.delete(sourceIdentityRow.queue_key);
-        sourceIdentityRows.delete(sourceIdentity);
-      } else if (!cleanText(deal.normalized_address) && cleanText(sourceIdentityRow.normalized_address)) {
-        sourceIdentityRow.last_seen_at = runAt;
-        sourceIdentityRow.times_seen = (Number(sourceIdentityRow.times_seen) || 1) + 1;
-        continue;
-      }
-    }
     const existing = byKey.get(dedupeKey);
     if (existing) {
       const refreshed = projectRowForQueue(deal, dedupeKey, runAt);
       refreshed.first_seen_at = existing.first_seen_at;
       refreshed.times_seen = (Number(existing.times_seen) || 1) + 1;
+      if (!refreshed.address_state) {
+        refreshed.address_state_history = cleanText(existing.address_state)
+          ? 'cleared_by_refresh'
+          : cleanText(existing.address_state_history) || 'prior_state_history_unknown';
+      }
       // Never lose evidence a previous sighting already carried.
       for (const field of PRESERVE_FIELDS) {
         if (Array.isArray(existing[field])) {
@@ -1309,12 +1269,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
       }
       mergeRouteInvalidations(existing, refreshed);
       byKey.set(dedupeKey, refreshed);
-      if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, refreshed);
       refreshedRows += 1;
     } else {
       const projected = projectRowForQueue(deal, dedupeKey, runAt);
       byKey.set(dedupeKey, projected);
-      if (sourceIdentity) sourceIdentityRows.set(sourceIdentity, projected);
       newRows += 1;
     }
   }
@@ -1329,10 +1287,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
     bucket.rows.filter((row) => storedQueueKeys.has(row.queue_key)),
     options
   );
-  bucket.rows = collapseStoredCensusExactDuplicates(bucket.rows)
-    .sort((a, b) => (b.normalized_address ? 1 : 0) - (a.normalized_address ? 1 : 0) || String(b.last_seen_at).localeCompare(String(a.last_seen_at)))
-    .slice(0, MAX_ROWS_PER_MARKET);
-  const counts = queueCounts(bucket.rows);
+  const priorRows = bucket.rows.filter((row) => storedQueueKeys.has(row.queue_key));
+  const openSlots = Math.max(0, MAX_ROWS_PER_MARKET - priorRows.length);
+  bucket.rows = priorRows.concat(bucket.rows.filter((row) => !storedQueueKeys.has(row.queue_key)).slice(0, openSlots))
+    .sort((a, b) => (b.normalized_address ? 1 : 0) - (a.normalized_address ? 1 : 0) || String(b.last_seen_at).localeCompare(String(a.last_seen_at)));
+  newRows = Math.min(newRows, openSlots);
+  const identity = identitySnapshot(projectManualValueEvidence(bucket.rows.map(cloneSnapshotRow), market));
   const batch = {
     run_at: runAt,
     limit,
@@ -1361,10 +1321,12 @@ async function runDealBoardBatch(input = {}, options = {}) {
     market,
     county_onboarding: countyOnboardingSummary(market),
     batch,
-    counts,
+    counts: identity.counts,
+    property_groups: identity.property_groups,
+    full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
     lifecycle_aggregate: lifecycleAggregate(bucket.rows),
     lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
-    rows: bucket.rows.slice(0, 100)
+    rows: identity.rows
   };
 }
 
@@ -1379,7 +1341,9 @@ function latestDealBoardSnapshot(input = {}) {
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
     has_snapshot: false,
-    counts: queueCounts([]),
+    counts: identitySnapshot([]).counts,
+    property_groups: [],
+    full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
     lifecycle_aggregate: lifecycleAggregate([]),
     batch: null,
     county_onboarding: countyOnboardingSummary(market),
@@ -1396,13 +1360,16 @@ function latestDealBoardSnapshot(input = {}) {
   // Read-time repairs are deliberately applied to a copy: the dashboard gets
   // safer rows immediately after deploy without turning a read into a write.
   const rows = projectManualValueEvidence(repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow)), market);
+  const identity = identitySnapshot(rows);
   return {
     ok: true,
     preview_only: true,
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
     has_snapshot: true,
-    counts: queueCounts(rows),
+    counts: identity.counts,
+    property_groups: identity.property_groups,
+    full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
     lifecycle_aggregate: lifecycleAggregate(rows),
     batch: (bucket.batches || [])[0] || null,
     county_onboarding: countyOnboardingSummary(market),
@@ -1417,7 +1384,7 @@ function latestDealBoardSnapshot(input = {}) {
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows }),
     lead_operations_queue: leadOperationsQueueForResponse(rows),
-    rows: rows.slice(0, 100)
+    rows: identity.rows
   };
 }
 
@@ -1838,7 +1805,6 @@ module.exports = {
   quarantineSuspectedPrefixRow,
   repairCountyFromSourceHost,
   backfillCensusKeysForStoredRows,
-  collapseStoredCensusExactDuplicates,
   rowStateForDeal: leadOperationsState.rowStateForDeal,
   buildLeadOperationsQueue: leadOperationsQueue.buildLeadOperationsQueue,
   summarizeLeadOperationsQueue: leadOperationsQueue.summarizeLeadOperationsQueue,
