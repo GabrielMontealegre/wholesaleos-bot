@@ -27,6 +27,7 @@ const manualEvidencePacketService = require('./manual-evidence-packet-service');
 const distressEvidenceModel = require('./distress-evidence-model');
 const propertyLeverageDossier = require('./property-leverage-dossier');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
+const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -265,6 +266,7 @@ function repairCountyFromSourceHost(row) {
 }
 
 function repairStoredSnapshotRows(rows) {
+  const appraisalEvidence = countyAppraisalEvidence.prepareEvidence(snapshotFilePath());
   return (Array.isArray(rows) ? rows : []).map((storedRow) => {
     let row = storedRow;
     markRoutesDisproved(row, invalidatedRouteValues(row));
@@ -272,6 +274,7 @@ function repairStoredSnapshotRows(rows) {
     repairCountyFromSourceHost(row);
     repairSaleDateUrgency(row);
     row = sourceEvidenceRecovery.recoverRow(row, { now_iso: nowIso() }).row;
+    row = countyAppraisalEvidence.joinRow(row, appraisalEvidence, nowIso());
     row.distress_evidence = distressEvidenceModel.buildDistressEvidence(row);
     row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
     const state = leadOperationsState.rowStateForDeal(row);
@@ -1234,7 +1237,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'redfin_url', 'realtor_url', 'auction_url', 'official_property_record_url',
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
-    'county_appraisal_record', 'appraisal_conflicts', 'geo_id', 'legal_description',
+    'county_appraisal_record', 'county_appraisal_field_provenance', 'appraisal_conflicts', 'geo_id', 'legal_description',
     'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
     'sale_venue_address', 'sale_venue_evidence_text', 'sale_venue_source_url', 'subject_address_recovery',

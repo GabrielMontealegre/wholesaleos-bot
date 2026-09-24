@@ -718,6 +718,30 @@
       '</div></details>';
   }
 
+  function countyAppraisalHtml(row) {
+    var record = row && row.county_appraisal_record;
+    if (!record || String(row.county || '').toLowerCase() !== 'ellis' ||
+        String(record.county || '').toLowerCase() !== 'ellis' || record.source_kind !== 'official_public_record') return '';
+    var field = function (label, value) {
+      return '<div><b>' + esc(label) + ':</b> ' + esc(value === null || value === undefined || value === '' ? 'Not published in this file' : value) + '</div>';
+    };
+    var answer = function (value) { return value === true ? 'Yes' : value === false ? 'No' : 'Not published in this file'; };
+    var conflicts = safeArray(row.appraisal_conflicts).map(function (item) {
+      return '<div><b>' + esc(item.field) + ':</b> prior ' + esc(item.prior_value) + '; county ' + esc(item.official_value) +
+        '; winner ' + esc(item.source_won || 'official_public_record') + '. ' + esc(item.reason || '') + '</div>';
+    }).join('');
+    return '<details class="wos-county-appraisal" style="margin-top:7px;border:1px solid #a7b9aa;border-radius:7px;padding:7px 8px;background:#f4f8f4;font-size:11px;">' +
+      '<summary style="cursor:pointer;font-weight:700;">County appraisal record (Ellis CAD, official public record)</summary>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:7px;">' +
+      '<section>' + field('Owner of record', record.owner_of_record) + field('Mailing address', record.mailing_address) +
+      field('Owner occupied', answer(record.owner_occupied)) + field('Homestead', answer(record.homestead_exemption)) + '</section>' +
+      '<section>' + field('Legal description', record.legal_description) + field('Acreage', record.lot_size_acres) +
+      field('Parcel ID', record.parcel_id) + field('Latest deed date', record.latest_deed_date) + '</section>' +
+      '</div>' + field('County appraised value (clue only - not an ARV, not a sold comp, not an amount owed)', record.assessed_value == null ? null : '$' + Number(record.assessed_value).toLocaleString('en-US')) +
+      (conflicts ? '<div style="margin-top:5px;"><b>Conflicting evidence (prior value retained for audit)</b>' + conflicts + '</div>' : '') +
+      '<div>' + link('Open Ellis CAD source', record.source_url || record.bulk_source_url) + '</div></details>';
+  }
+
   function rowCard(row) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -756,6 +780,7 @@
       (row.appraisal_clue ? ' | County appraisal clue ' + esc(row.appraisal_clue) + ' (not ARV)' : '') + '</div>');
     lines.push('<div style="font-size:11px;color:#6b7280;margin-top:2px;"><b>ARV lock reason:</b> ' + esc(row.arv_lock_reason || 'ARV stays locked until 3 verified qualifying sold comps pass the strict comp grid.') + '</div>');
     lines.push(leverageDossierHtml(row));
+    lines.push(countyAppraisalHtml(row));
     if (row.owner_clue) lines.push('<div style="font-size:12px;">Owner clue: <b>' + esc(row.owner_clue) + '</b>' + (row.official_lookup_status ? ' <span style="color:#6b7280;">(' + esc(row.official_lookup_status) + ')</span>' : '') + '</div>');
     var recordName = row.owner_record && (row.owner_record.owner_name || row.owner_record.taxpayer_name);
     var recordLabel = row.owner_record && row.owner_record.owner_role === 'taxpayer_of_record' ? 'Taxpayer of record' : 'Owner of record';

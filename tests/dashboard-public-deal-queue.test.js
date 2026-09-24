@@ -851,7 +851,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=42'), 'dashboard must load the Cycle 43 cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=43'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -908,7 +908,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=42'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=43'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1073,6 +1073,20 @@ function mockDeal(overrides) {
   assert.ok(dossierHtml.includes('Contact status:') && dossierHtml.includes('Property status:') && dossierHtml.includes('Legacy combined state:'));
   assert.ok(dossierHtml.includes('Property leverage dossier') && dossierHtml.includes('Original loan amount at origination (NOT the current payoff)'));
   assert.ok(dossierHtml.includes('Equity clue') && dossierHtml.includes('Unknown') && dossierHtml.includes('subject year built') && dossierHtml.includes('comp rejected: comp outside one mile'));
+  const appraisalRow = { queue_key: 'ellis-appraisal', county: 'Ellis', normalized_address: '3808 Kings Dr, Ennis, TX 75119',
+    county_appraisal_record: { county: 'Ellis', source_kind: 'official_public_record', owner_of_record: 'PUBLIC OWNER',
+      mailing_address: 'PO BOX 10', owner_occupied: false, homestead_exemption: null,
+      legal_description: 'LOT 12', lot_size_acres: 0.1148, parcel_id: '292247', latest_deed_date: '2023-06-29',
+      assessed_value: 246266, source_url: 'https://www.elliscad.org/property-detail/292247/2027' },
+    appraisal_conflicts: [{ field: 'lot_size', prior_value: 4791, official_value: 5001,
+      source_won: 'official_public_record', reason: 'Official county record.' }] };
+  const appraisalHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard(appraisalRow);
+  assert(appraisalHtml.includes('County appraisal record (Ellis CAD, official public record)'));
+  assert(appraisalHtml.includes('County appraised value (clue only - not an ARV, not a sold comp, not an amount owed)'));
+  assert(appraisalHtml.includes('PUBLIC OWNER') && appraisalHtml.includes('PO BOX 10') && appraisalHtml.includes('4,791') === false);
+  assert(appraisalHtml.includes('prior 4791; county 5001; winner official_public_record'));
+  assert(!uiContext.window.__wosPublicDealsTestHooks.rowCard(Object.assign({}, appraisalRow, { county: 'Dallas' }))
+    .includes('County appraisal record (Ellis CAD, official public record)'));
   const phoneHook = uiContext.window.__wosPublicDealsTestHooks.phoneReadinessHtml;
   const verifiedPhoneRoute = {
     route_kind: 'phone', value: '(214) 555-0100', seller_contact_eligibility: 'SELLER_CONTACT_ELIGIBLE',

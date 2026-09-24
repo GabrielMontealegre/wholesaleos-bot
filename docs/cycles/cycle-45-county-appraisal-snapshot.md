@@ -1,0 +1,13 @@
+# Cycle 45: Ellis CAD preview and refresh-safe evidence
+
+This release bundles the Cycle 44 Ellis County appraisal adapter from draft PR #192. It does not turn the Dallas market into Dallas County: the stored rows can come from many counties. The admin preview counts every row by its actual `county`, including an unknown/unset bucket. Only Ellis, TX rows are compared with the Ellis CAD ownership file.
+
+## Operator boundary
+
+1. An administrator can stage an extracted Ellis CAD `.dbf` or `.csv` using `POST /api/dashboard/research-queue/county-appraisal-stage` with multipart field `county_file` and fields `county=Ellis`, `state=TX`. The original upload is deleted after processing. The complete file is hashed and counted; only records relevant to the current Ellis snapshot are retained in a separate staging file. No county API is called.
+2. `GET /api/dashboard/research-queue/county-appraisal-preview` is read-only. It reports the county distribution first, then Ellis-only exact/ambiguous/no-match counts, possible owner and mailing gains, likely equity clues, conflicts, and at most five genuinely qualified candidate properties. With no staged file it says so and does not claim any yield. A change in Ellis row identity requires restaging; changes in other counties do not.
+3. `POST /api/dashboard/research-queue/county-appraisal-apply` requires `county`, `state`, and the exact file hash from the preview. This is **not** part of release verification. Gabriel must authorize production apply separately. The action writes only a dedicated county-appraisal evidence store and append-only write log. It does not edit the deal snapshot or saved leads. The snapshot builder joins exact county/parcel/address evidence from the store on every build.
+
+The bulk ownership table supplies owner, mailing address, parcel, legal description, acreage, county appraised value, and a latest deed date. It does **not** supply beds, baths, living area, full deed history or value history. County appraised value is a clue, never ARV, a sold comp, debt, amount owed or payoff. The three-comp requirement, provenance rules, and offer readiness do not change. A mailing address can make an otherwise current row `MAIL_READY`; it is not a phone route.
+
+Both staging and apply require a signed admin dashboard session. The stage and evidence files live next to the configured snapshot file so they can use the same persistent storage. The stage is scoped to the Ellis rows seen when it was created. The raw DBF stays outside the repository, and the server does not retain the uploaded raw file. No listing host, private county API, paid provider or per-row county portal crawl is used.

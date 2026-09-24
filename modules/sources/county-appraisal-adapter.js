@@ -187,6 +187,7 @@ async function ingestBulkFile(input) {
   const byAddress = new Map();
   const byParcel = new Map();
   const byGeo = new Map();
+  const matchKeys = input.match_keys;
   const iterator = extension === '.dbf' ? dbfRows(filePath) : csvRows(filePath);
   const requiredFields = ['parcel_id', 'owner_of_record', 'situs_number', 'situs_street', 'situs_city',
     'situs_state', 'situs_zip', 'mailing_street', 'mailing_city', 'mailing_state', 'mailing_zip'];
@@ -198,6 +199,9 @@ async function ingestBulkFile(input) {
     }
     provenance.record_count += 1;
     const record = bulkRecord(sourceRow, profile, provenance);
+    if (matchKeys && !((record.address_key && matchKeys.addresses.has(record.address_key)) ||
+        (record.parcel_id && matchKeys.parcels.has(record.parcel_id)) ||
+        (record.geo_id && matchKeys.geos.has(record.geo_id)))) continue;
     addToIndex(byAddress, record.address_key, record);
     addToIndex(byParcel, record.parcel_id, record);
     addToIndex(byGeo, record.geo_id, record);

@@ -21,6 +21,7 @@ const callReadyPreviewService = require('./modules/research/call-ready-preview-s
 const selectedDealPacketService = require('./modules/research/selected-deal-packet-service');
 const freePublicDealBoardPreviewService = require('./modules/research/free-public-deal-board-preview-service');
 const dealBoardQueueService = require('./modules/research/deal-board-queue-service');
+const countyAppraisalEvidence = require('./modules/research/county-appraisal-evidence-service');
 const researchQueueReadRoute = require('./modules/research/research-queue-read-route');
 const manualEvidencePacketService = require('./modules/research/manual-evidence-packet-service');
 const marketDemandIndex = require('./modules/research/market-demand-index');
@@ -2110,6 +2111,67 @@ app.post('/api/preview/free-public-deal-board', requireAdmin, async (req, res) =
 
 // Dashboard research queue: snapshot cache only - never saved leads/Analyzer/Dossier/Pipeline.
 researchQueueReadRoute.registerResearchQueueReadRoutes(app, requireAdminOrAgent);
+
+app.get('/api/dashboard/research-queue/county-appraisal-preview', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(countyAppraisalEvidence.preview({ snapshot_file: dealBoardQueueService.snapshotFilePath() }));
+  } catch (error) {
+    res.status(500).json({ ok: false, code: 'county_appraisal_preview_failed' });
+  }
+});
+
+const countyAppraisalUpload = multer({
+  storage: multer.diskStorage({
+    destination(req, file, callback) {
+      const directory = path.join(path.dirname(dealBoardQueueService.snapshotFilePath()), 'county-appraisal-upload-temp');
+      try {
+        require('fs').mkdirSync(directory, { recursive: true, mode: 0o700 });
+        callback(null, directory);
+      } catch (error) { callback(error); }
+    },
+    filename(req, file, callback) {
+      const extension = path.extname(file.originalname).toLowerCase();
+      callback(null, `${require('crypto').randomBytes(16).toString('hex')}${extension}`);
+    }
+  }),
+  fileFilter(req, file, callback) {
+    callback(null, /\.(dbf|csv)$/i.test(path.basename(file.originalname)));
+  },
+  limits: { fileSize: 350 * 1024 * 1024, files: 1, fields: 2 }
+}).single('county_file');
+
+app.post('/api/dashboard/research-queue/county-appraisal-stage', requireAdmin, (req, res) => {
+  countyAppraisalUpload(req, res, async (uploadError) => {
+    const file = req.file;
+    try {
+      if (uploadError) return res.status(uploadError.code === 'LIMIT_FILE_SIZE' ? 413 : 400)
+        .json({ ok: false, code: 'county_appraisal_upload_rejected' });
+      if (!file) return res.status(400).json({ ok: false, code: 'county_appraisal_dbf_or_csv_required' });
+      const result = await countyAppraisalEvidence.stageFile({
+        snapshot_file: dealBoardQueueService.snapshotFilePath(), file_path: file.path,
+        file_name: file.originalname, county: req.body.county, state: req.body.state,
+        operator_id: req.currentUser.id
+      });
+      res.json(result);
+    } catch (error) {
+      res.status(error.status_code || 500).json({ ok: false, code: error.code || 'county_appraisal_stage_failed' });
+    } finally {
+      if (file) try { require('fs').unlinkSync(file.path); } catch (_) { /* upload cleanup */ }
+    }
+  });
+});
+
+app.post('/api/dashboard/research-queue/county-appraisal-apply', requireAdmin, (req, res) => {
+  try {
+    const result = countyAppraisalEvidence.apply({ snapshot_file: dealBoardQueueService.snapshotFilePath(),
+      county: req.body && req.body.county, state: req.body && req.body.state,
+      file_hash: req.body && req.body.file_hash, operator_id: req.currentUser.id });
+    res.json(result);
+  } catch (error) {
+    res.status(error.status_code || 500).json({ ok: false, code: error.code || 'county_appraisal_apply_failed' });
+  }
+});
 
 app.get('/api/dashboard/market-demand-index', requireAdmin, (req, res) => {
   try {
