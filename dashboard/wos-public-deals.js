@@ -8,6 +8,8 @@
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
   var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
+  var API_OFFICIAL_NOTICE_SCAN = '/api/dashboard/free-public-deal-board/official-notice/scan';
+  var API_OFFICIAL_NOTICE_CONFIRM = '/api/dashboard/free-public-deal-board/official-notice/confirm';
   var API_MANUAL_EVIDENCE_UPLOAD = '/api/dashboard/free-public-deal-board/manual-evidence/upload';
   var API_MANUAL_EVIDENCE_PROPOSAL = '/api/dashboard/free-public-deal-board/manual-evidence/proposal';
   var API_MANUAL_COMP_CONFIRMATION = '/api/dashboard/free-public-deal-board/manual-evidence/comp-confirmation';
@@ -475,10 +477,101 @@
       '<div style="margin-top:4px;color:#6b7280;">Total: ' + esc(run.screenshots || 0) + ' screenshot(s), ' + esc(run.proposals || 0) + ' unconfirmed proposal(s). Nothing counts until you confirm it.</div></div>';
   }
 
+  function officialNoticeDossierHtml(notice, readiness, row) {
+    if (!notice || !row || !row.queue_key) return '';
+    var proposals = safeArray(notice.proposals);
+    var confirmations = safeArray(notice.confirmations);
+    var assessment = notice.sale_assessment || { sale_status: 'UNKNOWN' };
+    var labels = {
+      sale_date: 'Sale date', sale_time: 'Sale time', sale_location: 'Sale location', county: 'County',
+      trustee_or_substitute_trustee: 'Trustee', mortgagee_or_beneficiary: 'Mortgagee',
+      mortgage_servicer: 'Loan servicer', deed_of_trust_date: 'Date loan document was signed',
+      deed_of_trust_instrument_or_volume_page: 'Recorded document number',
+      original_principal_amount: 'Original loan amount when the loan was made',
+      property_legal_description: 'Legal property description',
+      notice_publication_date: 'Notice publication date', stated_amounts_on_notice: 'Other amount printed on notice'
+    };
+    var confirmedIds = new Set(confirmations.map(function (item) { return item.id; }));
+    var confirmedValue = function (field) {
+      var item = confirmations.find(function (entry) { return entry.field === field && entry.confirmed === true; });
+      return item ? item.value : '';
+    };
+    var verified = confirmations.length ? confirmations.map(function (item) {
+      var principalContext = item.field === 'original_principal_amount'
+        ? ' Loan date: ' + esc(confirmedValue('deed_of_trust_date') || 'not confirmed') +
+          '; recorded document: ' + esc(confirmedValue('deed_of_trust_instrument_or_volume_page') || 'not confirmed') +
+          '. This is NOT the current payoff.' : '';
+      return '<div><b>' + esc(labels[item.field] || item.field) + ':</b> ' + esc(item.value) +
+        principalContext + ' ' + link('Official PDF', item.document_url) + '<small>Confirmed ' + esc(item.confirmed_at || '') + '</small></div>';
+    }).join('') : '<div>No notice field has been confirmed by you.</div>';
+    var clueRows = proposals.filter(function (item) { return !confirmedIds.has(item.id); }).map(function (item) {
+      var crop = '/api/dashboard/free-public-deal-board/official-notice/crop/' + encodeURIComponent(item.crop_ref || '');
+      return '<div class="wos-notice-proposal" data-proposal-id="' + esc(item.id) + '" style="border-top:1px solid #e5e7eb;padding:6px 0;">' +
+        '<b>' + esc(labels[item.field] || item.field) + ':</b> ' + esc(item.value) +
+        (item.field === 'original_principal_amount' ? ' (not the current payoff)' : '') +
+        (item.amount_type ? ' <small>(' + esc(item.amount_type.replace(/_/g, ' ')) + ')</small>' : '') +
+        ' <b style="color:#92400e;">UNCONFIRMED' + (item.confidence_status === 'LOW_CONFIDENCE' ? ' - LOW CONFIDENCE' : '') + '</b>' +
+        '<div>OCR confidence ' + esc(item.confidence) + '/100; page ' + esc(item.page_number) + '. ' + link('Official PDF', item.document_url) + '</div>' +
+        '<div style="font-size:10px;">Source line: ' + esc(item.source_line || '') + '</div>' +
+        (item.crop_ref ? '<img src="' + esc(crop) + '" loading="lazy" alt="Source line crop for review" style="display:block;max-width:100%;max-height:110px;margin:5px 0;border:1px solid #cbd5e1;" />' : '<div style="color:#991b1b;">Source crop missing; cannot confirm.</div>') +
+        (item.confidence_status === 'LOW_CONFIDENCE' ? '<label><input type="checkbox" class="wos-notice-crop-viewed"> I opened and checked this crop</label> ' : '') +
+        '<button type="button" class="wos-notice-confirm"' + (item.crop_ref ? '' : ' disabled') +
+        ' style="padding:4px 8px;border:1px solid #047857;background:#fff;color:#047857;cursor:pointer;">Confirm this one field</button>' +
+        '<div class="wos-notice-message" style="font-size:10px;color:#991b1b;"></div></div>';
+    }).join('');
+    var status = assessment.sale_status === 'SCHEDULED' ? 'Scheduled by a confirmed future sale date' :
+      assessment.sale_status === 'DATE_PASSED' ? 'The confirmed sale date has passed; outcome not verified' :
+      assessment.sale_status === 'SUPERSEDED_BY_NEWER_NOTICE' ? 'A newer dated notice exists for this same property' :
+      assessment.sale_status === 'NOT_FOUND_IN_CURRENT_ARCHIVE' ? 'The document was not found in the current archive; outcome unknown' :
+      'Sale status unknown until you confirm a source date';
+    var appraised = notice.county_appraised_value != null ? '<div>County appraised value: $' + esc(Number(notice.county_appraised_value).toLocaleString('en-US')) + '. This is a clue, not a sale price or debt.</div>' : '';
+    var gate = function (key, title, fallback) {
+      var entry = readiness && readiness[key] || {};
+      return '<div><b>' + title + ': ' + esc(entry.status || 'UNKNOWN') + '</b> - ' + esc(entry.reason || fallback) + '</div>';
+    };
+    return '<details class="wos-official-notice-dossier" data-queue-key="' + esc(row.queue_key) + '" open style="margin-top:8px;padding:8px;border:1px solid #a7b9aa;border-radius:7px;background:#f7faf7;font-size:11px;">' +
+      '<summary style="cursor:pointer;font-weight:700;font-size:12px;">Official notice dossier</summary>' +
+      '<div style="margin-top:7px;"><b>WHAT WE VERIFIED</b>' + verified +
+      '<div><b>Sale status:</b> ' + esc(status) + (assessment.days_until_sale != null ? ' (' + esc(assessment.days_until_sale) + ' days until sale)' : '') + '</div></div>' +
+      '<div style="margin-top:7px;"><b>WHAT IS A CLUE</b>' + (clueRows || '<div>No readable notice fields have been proposed yet.</div>') + appraised +
+      '<div>Possible equity: UNKNOWN until both a supported value and the current amount due are known.</div></div>' +
+      '<div style="margin-top:7px;"><b>WHAT IS NOT KNOWN</b>' +
+      '<div>Current payoff: Not published. Only the loan servicer can state the current payoff.</div>' +
+      '<div>This notice does not verify a seller phone. Check the separately sourced contact route before calling.</div>' +
+      '<div>Three qualifying sold comps: verify three nearby, similar, recent sales before relying on a value.</div></div>' +
+      '<div style="margin-top:7px;border-top:1px solid #cbd5e1;padding-top:6px;">' +
+      gate('can_contact', 'Can contact', 'A sourced seller route and current sale evidence are needed.') +
+      gate('can_value', 'Can value', 'Three confirmed qualifying sold comps are needed.') +
+      gate('ready_to_offer', 'Ready to offer', 'Do not offer until identity, date, value and seller facts are verified.') + '</div>' +
+      '<div style="margin-top:7px;">' + link('Open Ellis notice archive', 'https://www.co.ellis.tx.us/Archive.aspx?AMID=60') +
+      '<label>Official notice or archive URL <input class="wos-notice-url" type="url" value="' + esc(notice.document_url || '') + '" style="width:min(100%,370px);padding:4px;border:1px solid #9ca3af;" /></label> ' +
+      '<button type="button" class="wos-notice-scan" style="padding:5px 8px;border:1px solid #166534;background:#fff;color:#166534;cursor:pointer;">Find notice and read for proposals</button>' +
+      '<div class="wos-notice-scan-message" style="font-size:10px;color:#991b1b;">No scan runs until you click. OCR does not confirm anything.</div></div>' +
+      '</details>';
+  }
+
+  function fullIdentityCountChips(data) {
+    var counts = data && data.full_snapshot_identity_counts || {};
+    return [['All-market source rows', 'rows_total'], ['All-market properties', 'properties_total'],
+      ['Internal address mismatches', 'queue_key_address_mismatch'],
+      ['Sale-venue mixups', 'sale_venue_contaminated'], ['Identity unresolved', 'identity_unresolved']]
+      .filter(function (entry) { return counts[entry[1]] != null && Number.isFinite(Number(counts[entry[1]])); })
+      .map(function (entry) { return chip(entry[0], counts[entry[1]], '#f3f4f6'); }).join('');
+  }
+
   function manualEvidenceCard(item) {
     var packet = item.packet || {};
     var evaluation = packet.evaluation || {};
     var readiness = evaluation.readiness || {};
+    var unconfirmedEllisDate = item.source_event_date && item.official_notice &&
+      item.official_notice.sale_assessment && item.official_notice.sale_assessment.sale_status !== 'SCHEDULED' &&
+      !safeArray(item.official_notice.confirmations).some(function (entry) { return entry.field === 'sale_date' && entry.confirmed === true; });
+    var noticeSaleStatus = item.official_notice && item.official_notice.sale_assessment &&
+      item.official_notice.sale_assessment.sale_status;
+    var noticeEventText = noticeSaleStatus === 'UNKNOWN' ? 'Unknown until the notice date is confirmed.' :
+      noticeSaleStatus === 'DATE_PASSED' ? 'The confirmed sale date passed; the outcome is not verified.' :
+      noticeSaleStatus === 'SUPERSEDED_BY_NEWER_NOTICE' ? 'A newer dated notice exists for this property.' :
+      noticeSaleStatus === 'NOT_FOUND_IN_CURRENT_ARCHIVE' ? 'The current archive does not list this document; cancellation is not proven.' : '';
     var axes = [['can_contact', 'Can contact'], ['can_value', 'Can value'], ['ready_to_offer', 'Ready to offer']].map(function (axis) {
       var result = readiness[axis[0]] || {};
       return '<div><b>' + esc(axis[1]) + ': ' + esc(result.status || 'UNKNOWN') + '</b><br>' + esc(result.reason || 'Evidence has not been evaluated.') + '</div>';
@@ -510,7 +603,8 @@
       (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property' + (item.subject_address_recovery.skipped_date_prefix ? '; a date fragment appeared between the property label and address' : '') + '</div>' : '') +
       (item.sale_venue_address ? '<div style="font-size:11px;margin-top:6px;"><b>Sale location:</b> ' + esc(item.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span> ' + link('venue source', item.sale_venue_source_url) + '</div>' : '') +
       '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
-      '<div class="wos-distress-facts" style="margin-top:7px;padding:7px 8px;border:1px solid #fca5a5;border-radius:7px;background:#fff7ed;font-size:11px;"><b>Official distress facts</b><br><b>Source:</b> ' + esc(item.lead_origin || 'official county source') + '<br><b>Sale/event date:</b> ' + esc(item.source_event_date || 'Not published in this evidence') + '<br>' + link('Open official source document', item.source_proof_url) + '<br><b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
+      officialNoticeDossierHtml(item.official_notice, readiness, item) +
+      '<div class="wos-distress-facts" style="margin-top:7px;padding:7px 8px;border:1px solid #fca5a5;border-radius:7px;background:#fff7ed;font-size:11px;"><b>Official distress facts</b><br><b>Source:</b> ' + esc(item.lead_origin || 'official county source') + '<br><b>' + (unconfirmedEllisDate ? 'Date in source excerpt (unconfirmed):' : 'Sale/event date:') + '</b> ' + esc(item.source_event_date || 'Not published in this evidence') + '<br>' + link('Open official source document', item.source_proof_url) + '<br><b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(noticeEventText || readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
         (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
       '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
@@ -789,6 +883,15 @@
         '<br><b>What would clear it:</b> ' + esc(row.what_would_clear_it || 'Review official source evidence.') + '</div>');
     }
     lines.push('<div style="font-size:12px;margin-top:3px;"><b>Official proof:</b> ' + link('Open official source', distress.official_source_url || row.source_document_url || row.source_url) + '</div>');
+    if (String(row.county || '').toLowerCase() === 'ellis' && String(row.state || '').toUpperCase() === 'TX') {
+      lines.push(officialNoticeDossierHtml({
+        proposals: row.notice_proposals,
+        confirmations: row.notice_confirmations,
+        sale_assessment: row.notice_sale_assessment,
+        county_appraised_value: row.county_appraisal_record && row.county_appraisal_record.assessed_value,
+        document_url: row.notice_scan && row.notice_scan.document_url || row.source_document_url
+      }, null, row));
+    }
     if (row.sale_venue_address) {
       lines.push('<div style="font-size:12px;margin-top:3px;"><b>Sale location:</b> ' + esc(row.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span>' +
         (row.sale_venue_source_url ? ' ' + link('venue source', row.sale_venue_source_url) : '') + '</div>');
@@ -1018,6 +1121,8 @@
     var upcoming = rows.map(function (row) {
       return { row: row, info: saleDateInfo(row) };
     }).filter(function (item) {
+      if (String(item.row.county || '').toLowerCase() === 'ellis' && item.row.notice_sale_assessment &&
+          item.row.notice_sale_assessment.sale_status !== 'SCHEDULED') return false;
       return item.info.iso && !item.info.passed;
     }).sort(function (a, b) {
       if (a.info.iso !== b.info.iso) return a.info.iso.localeCompare(b.info.iso);
@@ -1143,7 +1248,7 @@
     }
     return panelBox('Daily Deal Machine',
       selectedMarketLabel() + ' - free public sources only - snapshot cache, not saved leads.',
-      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + '</div>' + meta + ocrLine + reextractionLine + phoneEvidenceLine + errLine + blockers + coverageTable(batch),
+      '<div style="margin-bottom:4px;">' + statusChip + '</div><div>' + statChips + fullIdentityCountChips(data) + '</div>' + meta + ocrLine + reextractionLine + phoneEvidenceLine + errLine + blockers + coverageTable(batch),
       autoRun.enabled ? '#86efac' : '#fca5a5');
   }
 
@@ -1213,7 +1318,8 @@
       chip('MAIL_READY', metrics.mail_ready, '#ccfbf1'),
       chip('INSPECT_NOW', c.inspect_now || 0, '#fde68a'),
       chip('ZIP review', c.needs_zip_review || 0, '#fed7aa'),
-      chip('New today', c.today_rows || 0, '#ddd6fe')
+      chip('New today', c.today_rows || 0, '#ddd6fe'),
+      fullIdentityCountChips(data)
     ].join('');
     var nextAuction = soonest
       ? '<div style="font-size:12px;color:#374151;margin-top:6px;">Next auction: <b>' + esc(soonest.row.normalized_address || soonest.row.partial_address || soonest.row.headline || 'source row') + '</b> - ' +
@@ -2020,6 +2126,45 @@
     });
   }
 
+  function scanOfficialNotice(container, button) {
+    var panel = button.closest('.wos-official-notice-dossier');
+    var message = panel && panel.querySelector('.wos-notice-scan-message');
+    var url = panel && panel.querySelector('.wos-notice-url');
+    button.disabled = true;
+    if (message) message.textContent = 'Reading up to three scanned pages. Nothing will be confirmed.';
+    fetch(API_OFFICIAL_NOTICE_SCAN, { method: 'POST', headers: headers(), body: JSON.stringify({
+      market: selectedMarket(), queue_key: panel && panel.dataset.queueKey || '', document_url: url && url.value || ''
+    }) }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || data.ok === false) throw new Error(data && data.error || 'Official document could not be read.');
+      fetchLatestWithNote(container, data.proposals.length + ' notice field proposals saved. Every field still needs your review.');
+    }).catch(function (error) {
+      button.disabled = false;
+      if (message) message.textContent = error.message;
+    });
+  }
+
+  function confirmOfficialNoticeField(container, button) {
+    var panel = button.closest('.wos-official-notice-dossier');
+    var proposal = button.closest('.wos-notice-proposal');
+    var message = proposal && proposal.querySelector('.wos-notice-message');
+    var reviewed = proposal && proposal.querySelector('.wos-notice-crop-viewed');
+    if (reviewed && !reviewed.checked) {
+      if (message) message.textContent = 'Open the crop and check the box before confirming this low-confidence reading.';
+      return;
+    }
+    button.disabled = true;
+    fetch(API_OFFICIAL_NOTICE_CONFIRM, { method: 'POST', headers: headers(), body: JSON.stringify({
+      market: selectedMarket(), queue_key: panel && panel.dataset.queueKey || '',
+      proposal_id: proposal && proposal.dataset.proposalId || '', crop_viewed: !!(reviewed && reviewed.checked)
+    }) }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || data.ok === false) throw new Error(data && data.error || 'Field confirmation failed.');
+      fetchLatestWithNote(container, 'One official notice field was confirmed by you; other proposals remain unconfirmed.');
+    }).catch(function (error) {
+      button.disabled = false;
+      if (message) message.textContent = error.message;
+    });
+  }
+
   function unconfirmManualComp(container, button) {
     var card = button.closest && button.closest('.wos-manual-evidence-card');
     var proposal = button.closest && button.closest('.wos-manual-proposal');
@@ -2290,6 +2435,10 @@
         if (button) saveContactWorkflow(section, button);
         var reviewButton = event.target && event.target.closest && event.target.closest('.wos-document-review-clear');
         if (reviewButton) clearDocumentReview(section, reviewButton);
+        var noticeScanButton = event.target && event.target.closest && event.target.closest('.wos-notice-scan');
+        if (noticeScanButton) scanOfficialNotice(section, noticeScanButton);
+        var noticeConfirmButton = event.target && event.target.closest && event.target.closest('.wos-notice-confirm');
+        if (noticeConfirmButton) confirmOfficialNoticeField(section, noticeConfirmButton);
         var copyButton = event.target && event.target.closest && event.target.closest('.wos-copy-seller-number');
         if (copyButton) copySellerNumber(copyButton);
         var uploadButton = event.target && event.target.closest && event.target.closest('.wos-manual-upload');
@@ -2411,7 +2560,10 @@
     lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,
     manualEvidenceCard: manualEvidenceCard,
+    upcomingSaleRow: upcomingSaleRow,
     leverageDossierHtml: leverageDossierHtml,
+    officialNoticeDossierHtml: officialNoticeDossierHtml,
+    fullIdentityCountChips: fullIdentityCountChips,
     debtFactsHtml: debtFactsHtml,
     rowCard: rowCard,
     sortTopDealsRows: sortTopDealsRows,

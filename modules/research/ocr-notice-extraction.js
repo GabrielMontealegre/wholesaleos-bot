@@ -131,7 +131,17 @@ async function ocrPngToText(pngBuffer, options = {}) {
   ));
   return {
     text: String(result && result.data && result.data.text || ''),
-    confidence: Number(result && result.data && result.data.confidence || 0) || 0
+    confidence: Number(result && result.data && result.data.confidence || 0) || 0,
+    lines: Array.isArray(result && result.data && result.data.lines)
+      ? result.data.lines.map((line) => ({
+        text: String(line.text || ''),
+        confidence: Number(line.confidence || 0) || 0,
+        bbox: line.bbox || null,
+        words: Array.isArray(line.words) ? line.words.map((word) => ({
+          text: String(word.text || ''), confidence: Number(word.confidence || 0) || 0,
+          bbox: word.bbox || null
+        })) : []
+      })) : []
   };
 }
 
