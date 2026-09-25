@@ -7,6 +7,7 @@
   var SNAPSHOT_TIMEOUT_MS = 20000;
   var API_RUN = '/api/dashboard/free-public-deal-board/run';
   var API_CONTACT_WORKFLOW = '/api/dashboard/free-public-deal-board/contact-workflow';
+  var API_DISCOVERY_ANSWER = '/api/dashboard/free-public-deal-board/discovery-answer';
   var API_DOCUMENT_REVIEW_CLEAR = '/api/dashboard/free-public-deal-board/document-review-clear';
   var API_OFFICIAL_NOTICE_SCAN = '/api/dashboard/free-public-deal-board/official-notice/scan';
   var API_OFFICIAL_NOTICE_CONFIRM = '/api/dashboard/free-public-deal-board/official-notice/confirm';
@@ -559,6 +560,49 @@
       .map(function (entry) { return chip(entry[0], counts[entry[1]], '#f3f4f6'); }).join('');
   }
 
+  function discoveryHtml(discovery, queueKey) {
+    if (!discovery) return '';
+    var ledger = safeArray(discovery.gap_ledger);
+    var known = ledger.filter(function (entry) { return entry.current_status === 'VERIFIED'; });
+    var clues = ledger.filter(function (entry) { return entry.current_status === 'CLUE'; });
+    var openRecords = ledger.filter(function (entry) { return entry.source_class === 'ON_RECORD' && entry.current_status === 'UNKNOWN'; }).slice(0, 6);
+    var questions = safeArray(discovery.questions);
+    var sourceLink = function (label, url) { return /^https?:\/\//i.test(String(url || '')) ? link(label, url) : ''; };
+    var fact = function (entry) {
+      return '<li><b>' + esc(entry.label) + ':</b> ' + esc(entry.value) +
+        (entry.source_url ? ' ' + sourceLink('Source', entry.source_url) : '') + '</li>';
+    };
+    return '<section class="wos-discovery" data-queue-key="' + esc(queueKey) + '" style="margin-top:10px;border-top:1px solid #d1d5db;padding-top:9px;font-size:11px;color:#1f2937;">' +
+      '<b style="font-size:13px;color:' + (discovery.call_ready ? '#166534' : '#991b1b') + ';">' +
+        (discovery.call_ready ? 'Call this lead' : esc(discovery.call_blocked_reason || 'Do not call yet.')) + '</b>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:8px;">' +
+        '<section><h3 style="font-size:11px;margin:0 0 5px;">WHAT WE KNOW</h3>' +
+          (known.length ? '<ul style="padding-left:17px;margin:0;">' + known.map(fact).join('') + '</ul>' : '<p>Nothing confirmed from a record yet.</p>') +
+          (openRecords.length ? '<p style="margin:7px 0 2px;"><b>Record checks still open</b></p><ul style="padding-left:17px;margin:0;">' +
+            openRecords.map(function (entry) { return '<li>' + esc(entry.label) + ': ' + esc(entry.resolution && entry.resolution.action || 'Check the source.') +
+              (entry.resolution && entry.resolution.source_url ? ' ' + sourceLink('Source', entry.resolution.source_url) : '') + '</li>'; }).join('') + '</ul>' : '') +
+        '</section>' +
+        '<section><h3 style="font-size:11px;margin:0 0 5px;">WHAT WE\'RE GUESSING</h3>' +
+          (clues.length ? '<ul style="padding-left:17px;margin:0;">' + clues.map(function (entry) { return fact(entry).replace('<li>', '<li>Clue only: '); }).join('') + '</ul>' : '<p>No recorded clues yet.</p>') +
+          (discovery.equity_clue ? '<p>Possible equity clue: ' + esc(Number(discovery.equity_clue.amount).toLocaleString()) +
+            '. Seller-stated balance is unverified; this is not an offer.</p>' : '<p>Current balance and usable equity are not established.</p>') +
+        '</section>' +
+        '<section><h3 style="font-size:11px;margin:0 0 5px;">WHAT TO ASK THEM</h3>' +
+          (questions.length ? '<ol style="padding-left:17px;margin:0;">' + questions.map(function (item) {
+            return '<li><b>' + esc(item.wording) + '</b>' + (item.field === 'condition_detail' ? ' ' + sourceLink('Check Street View', discovery.street_view_url) : '') + '<br>' + esc(item.why) +
+              '<br><span style="color:#4b5563;">Listen for: ' + esc(item.useful_answer) + ' Follow up: ' + esc(item.follow_up) + '</span></li>';
+          }).join('') + '</ol>' : '<p>No unanswered seller questions on this row.</p>') +
+          (questions.length ? '<div style="margin-top:8px;display:grid;gap:5px;">' +
+            '<label>Question answered <select class="wos-discovery-field">' + questions.map(function (item) {
+              return '<option value="' + esc(item.field) + '">' + esc(item.wording) + '</option>';
+            }).join('') + '</select></label>' +
+            '<label>Seller answer <textarea class="wos-discovery-value" rows="2" maxlength="500" style="width:100%;"></textarea></label>' +
+            '<label>Channel <select class="wos-discovery-channel"><option value="call">Call</option><option value="sms">Text</option><option value="email">Email</option></select></label>' +
+            '<label>Verbatim note <textarea class="wos-discovery-note" rows="2" maxlength="2000" style="width:100%;"></textarea></label>' +
+            '<button type="button" class="wos-discovery-save">Save stated answer</button><span class="wos-discovery-message"></span></div>' : '') +
+        '</section></div></section>';
+  }
+
   function manualEvidenceCard(item) {
     var packet = item.packet || {};
     var evaluation = packet.evaluation || {};
@@ -603,6 +647,7 @@
       (item.subject_address_recovery ? '<div style="font-size:11px;margin-top:6px;color:#166534;"><b>Heading corrected from the source document:</b> sale venue was shown as the property' + (item.subject_address_recovery.skipped_date_prefix ? '; a date fragment appeared between the property label and address' : '') + '</div>' : '') +
       (item.sale_venue_address ? '<div style="font-size:11px;margin-top:6px;"><b>Sale location:</b> ' + esc(item.sale_venue_address) + ' <span style="color:#92400e;">(not the subject property)</span> ' + link('venue source', item.sale_venue_source_url) + '</div>' : '') +
       '<div class="wos-packet-readiness" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px;font-size:11px;overflow-wrap:anywhere;">' + axes + '</div>' +
+      discoveryHtml(item.discovery, item.queue_key || '') +
       officialNoticeDossierHtml(item.official_notice, readiness, item) +
       '<div class="wos-distress-facts" style="margin-top:7px;padding:7px 8px;border:1px solid #fca5a5;border-radius:7px;background:#fff7ed;font-size:11px;"><b>Official distress facts</b><br><b>Source:</b> ' + esc(item.lead_origin || 'official county source') + '<br><b>' + (unconfirmedEllisDate ? 'Date in source excerpt (unconfirmed):' : 'Sale/event date:') + '</b> ' + esc(item.source_event_date || 'Not published in this evidence') + '<br>' + link('Open official source document', item.source_proof_url) + '<br><b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(noticeEventText || readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
       '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
@@ -627,6 +672,15 @@
 
   function manualEvidencePanel(data) {
     var packet = data && data.manual_evidence_packet || {};
+    var discovery = data && data.discovery_summary || {};
+    var allDiscovery = data && data.full_snapshot_discovery_summary || {};
+    var rankedGaps = function (values) {
+      return Object.keys(values || {}).sort(function (a, b) { return Number(values[b]) - Number(values[a]) || a.localeCompare(b); })
+        .slice(0, 5).map(function (key) { return esc(key.replace(/_/g, ' ')) + ': ' + esc(values[key]); }).join(' | ') || 'None';
+    };
+    var blockedReasons = Object.keys(allDiscovery.call_blocked_reasons || {}).sort(function (a, b) {
+      return Number(allDiscovery.call_blocked_reasons[b]) - Number(allDiscovery.call_blocked_reasons[a]);
+    }).map(function (reason) { return esc(reason) + ' ' + esc(allDiscovery.call_blocked_reasons[reason]); }).join(' | ') || 'None';
     var items = safeArray(packet.items);
     var confirmed = items.reduce(function (sum, item) { return sum + Number(item.packet && item.packet.evaluation && item.packet.evaluation.confirmed_evidence_count || 0); }, 0);
     var pendingCompCaptures = items.reduce(function (sum, item) {
@@ -637,6 +691,11 @@
     }).length;
     return panelBox('Manual Evidence Packet <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;">' + esc(String(packet.selected_count || 0)) + ' sample leads</span> <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#bbf7d0;">' + esc(String(confirmed)) + ' confirmed evidence</span>',
       'Open the prepared research links, take screenshots, upload them to the matching slot, then review and confirm. OCR proposals count toward nothing until you confirm them.',
+      '<div class="wos-discovery-count" style="font-size:12px;margin:7px 0;"><b>Leads with a sourced reason and a seller question:</b> ' + esc(discovery.call_ready || 0) + ' of ' + esc(discovery.total_rows || 0) + '. A contact route is tracked separately.</div>' +
+      '<div class="wos-discovery-all-market" style="font-size:11px;margin:7px 0;"><b>All-market discovery:</b> ' + esc(allDiscovery.call_ready || 0) + ' of ' + esc(allDiscovery.total_rows || 0) + ' rows have a sourced reason and an unanswered seller question.<br>' +
+        '<b>Why the other rows are held:</b> ' + blockedReasons + '<br>' +
+        '<b>Records to check:</b> ' + rankedGaps(allDiscovery.on_record_gaps) + '<br>' +
+        '<b>Questions still unanswered:</b> ' + rankedGaps(allDiscovery.seller_only_gaps) + '</div>' +
       '<div style="font-size:11px;color:#374151;padding:6px 8px;border:1px solid #fde68a;border-radius:7px;background:#fffbeb;"><b>Safety:</b> screenshot evidence never overwrites official evidence. Conflicts stay side by side. Images are temporary; confirmed extracted fields and their provenance remain in the packet store.</div>' +
       '<div class="wos-comp-capture-counts" style="font-size:11px;margin-top:7px;"><b>Comp captures awaiting your confirmation:</b> ' + esc(pendingCompCaptures) + '<br><b>Rows with 3 confirmed comps in this sample:</b> ' + esc(rowsWithThreeConfirmedComps) + '</div>' +
       '<div class="wos-local-helper-panel" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;"><b>Computer helper:</b> <span class="wos-helper-status">' + esc(localHelperStatusText()) + '</span> <span class="wos-helper-build" style="display:none;color:#6b7280;"></span> <button type="button" class="wos-helper-pair" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #7c3aed;background:#fff;color:#6d28d9;font-size:10px;font-weight:700;cursor:pointer;">Pair helper</button><div class="wos-helper-message" style="font-size:10px;color:#6b7280;margin-top:4px;">The helper runs only on your computer and opens a listing page only after you click Capture on a row.</div><div class="wos-helper-outdated-instruction" style="display:none;margin-top:5px;color:#92400e;">Restart the local helper from the current checkout, then <button type="button" class="wos-helper-retry" style="padding:3px 7px;border:1px solid #92400e;border-radius:5px;background:#fff;color:#92400e;font-size:10px;cursor:pointer;">Retry connection</button></div></div>' +
@@ -859,6 +918,7 @@
     lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(row.property_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
     lines.push('<div style="font-size:12px;"><b>Stored address status:</b> ' + esc(row.address_state_display || row.address_state || 'not recorded') +
       (row.address_state_reason_code && row.address_state_reason_code !== 'stored_state' ? ' (' + esc(row.address_state_reason_code.replace(/_/g, ' ')) + ')' : '') + '</div>');
+    lines.push(discoveryHtml(row.discovery, row.queue_key || ''));
     if (row.queue_key_address_mismatch) {
       lines.push('<div style="font-size:12px;color:#92400e;margin-top:4px;"><b>Internal ID warning:</b> ' +
         esc(row.queue_key_contaminated_by === 'sale_venue'
@@ -1971,6 +2031,31 @@
       });
   }
 
+  function saveDiscoveryAnswer(container, button) {
+    var panel = button.closest && button.closest('.wos-discovery');
+    var field = panel && panel.querySelector('.wos-discovery-field');
+    var value = panel && panel.querySelector('.wos-discovery-value');
+    var channel = panel && panel.querySelector('.wos-discovery-channel');
+    var note = panel && panel.querySelector('.wos-discovery-note');
+    var message = panel && panel.querySelector('.wos-discovery-message');
+    if (!value || !value.value.trim()) {
+      if (message) message.textContent = 'Enter only what the seller actually stated.';
+      return;
+    }
+    var requestMarketKey = selectedMarketKey;
+    button.disabled = true;
+    fetch(API_DISCOVERY_ANSWER, { method: 'POST', headers: headers(), body: JSON.stringify({
+      market: selectedMarket(), queue_key: panel.dataset.queueKey, field: field.value,
+      value: value.value, channel: channel.value, verbatim_note: note.value
+    }) }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || data.ok === false) throw new Error(data && data.error || 'Could not save the seller answer.');
+      if (requestMarketKey === selectedMarketKey) render(container, data, 'Seller-stated answer saved; record evidence and offer gates did not change.');
+    }).catch(function (error) {
+      button.disabled = false;
+      if (message) message.textContent = error.message;
+    });
+  }
+
   function clearDocumentReview(container, button) {
     var card = button.closest && button.closest('.wos-document-review-item');
     var queueKey = card && card.dataset && card.dataset.queueKey;
@@ -2433,6 +2518,8 @@
       section.addEventListener('click', function (event) {
         var button = event.target && event.target.closest && event.target.closest('.wos-contact-save');
         if (button) saveContactWorkflow(section, button);
+        var discoveryButton = event.target && event.target.closest && event.target.closest('.wos-discovery-save');
+        if (discoveryButton) saveDiscoveryAnswer(section, discoveryButton);
         var reviewButton = event.target && event.target.closest && event.target.closest('.wos-document-review-clear');
         if (reviewButton) clearDocumentReview(section, reviewButton);
         var noticeScanButton = event.target && event.target.closest && event.target.closest('.wos-notice-scan');
@@ -2560,6 +2647,7 @@
     lifecycleAggregateHtml: lifecycleAggregateHtml,
     manualEvidencePanel: manualEvidencePanel,
     manualEvidenceCard: manualEvidenceCard,
+    discoveryHtml: discoveryHtml,
     upcomingSaleRow: upcomingSaleRow,
     leverageDossierHtml: leverageDossierHtml,
     officialNoticeDossierHtml: officialNoticeDossierHtml,
