@@ -2333,6 +2333,20 @@ app.post('/api/dashboard/free-public-deal-board/contact-workflow', requireAdmin,
   }
 });
 
+app.post('/api/dashboard/free-public-deal-board/discovery-answer', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(dealBoardQueueService.recordDiscoveryAnswer(req.body || {}, {
+      operator_id: req.currentUser.id
+    }));
+  } catch (error) {
+    res.status(Number(error && error.status_code || 500) || 500).json({
+      ok: false, error: error.message, code: error.code || 'discovery_answer_failed',
+      preview_only: true, should_ingest: false, no_global_mutation: true
+    });
+  }
+});
+
 app.post('/api/dashboard/free-public-deal-board/document-review-clear', requireAdmin, (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');

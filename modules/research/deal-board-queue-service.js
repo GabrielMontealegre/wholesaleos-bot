@@ -30,6 +30,7 @@ const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
 const propertyIdentityGrouping = require('./property-identity-grouping');
 const officialNoticeDossier = require('./official-notice-dossier');
+const discoveryLayer = require('./discovery-layer');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -96,7 +97,7 @@ function cloneSnapshotRow(row) {
   for (const key of [
     'risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps',
     'seller_questions', 'free_contact_routes', 'entity_contacts',
-    'blocked_sources', 'free_searches_run', 'contact_workflow_attempts',
+    'blocked_sources', 'free_searches_run', 'contact_workflow_attempts', 'discovery_answers',
     'contact_workflow_invalidated_routes', 'research_links', 'notice_proposals', 'notice_confirmations'
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
@@ -855,6 +856,7 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     contact_workflow_source: cleanText(deal.contact_workflow_source),
     contact_workflow_recorded_by: cleanText(deal.contact_workflow_recorded_by),
     contact_workflow_attempts: Array.isArray(deal.contact_workflow_attempts) ? deal.contact_workflow_attempts.slice() : [],
+    discovery_answers: Array.isArray(deal.discovery_answers) ? deal.discovery_answers.slice() : [],
     contact_workflow_invalidated_routes: Array.isArray(deal.contact_workflow_invalidated_routes) ? deal.contact_workflow_invalidated_routes.slice() : [],
     contact_follow_up_requested: deal.contact_follow_up_requested === true,
     contact_follow_up_at: cleanText(deal.contact_follow_up_at),
@@ -1230,7 +1232,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'free_contact_routes', 'blocked_sources', 'free_searches_run', 'why_call_ready_or_blocked',
     'contact_workflow_complete', 'contact_workflow_status', 'contact_workflow_outcome',
     'contact_workflow_at', 'contact_workflow_source', 'contact_workflow_recorded_by',
-    'contact_workflow_attempts', 'contact_workflow_invalidated_routes',
+    'contact_workflow_attempts', 'contact_workflow_invalidated_routes', 'discovery_answers',
     'contact_follow_up_requested', 'contact_follow_up_at',
     'document_reextraction_status', 'document_reextraction_reason',
     'document_reextraction_at', 'document_reextraction_source_url',
@@ -1329,6 +1331,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    discovery_summary: discoveryLayer.summarize(bucket.rows),
+    full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(bucket.rows),
     lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
     rows: identity.rows
@@ -1349,6 +1353,8 @@ function latestDealBoardSnapshot(input = {}) {
     counts: identitySnapshot([]).counts,
     property_groups: [],
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    discovery_summary: discoveryLayer.summarize([]),
+    full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate([]),
     batch: null,
     county_onboarding: countyOnboardingSummary(market),
@@ -1368,6 +1374,7 @@ function latestDealBoardSnapshot(input = {}) {
   const identity = identitySnapshot(rows);
   const allIdentityRows = propertyIdentityGrouping.groupRows(rows, nowIso()).rows;
   const noticeRows = identity.rows.map((row) => Object.assign({}, row, {
+    discovery: discoveryLayer.buildDiscovery(row),
     notice_sale_assessment: officialNoticeDossier.saleAssessment(row, allIdentityRows, {
       archive_contains_document: row.notice_scan && row.notice_scan.archive_contains_document
     })
@@ -1376,6 +1383,7 @@ function latestDealBoardSnapshot(input = {}) {
   const noticeByKey = new Map(allIdentityRows.map((row) => [row.queue_key, row]));
   for (const item of manualPacket.items || []) {
     const row = noticeByKey.get(item.queue_key);
+    if (row) item.discovery = discoveryLayer.buildDiscovery(row);
     if (row && cleanText(row.county).toLowerCase() === 'ellis') {
       item.official_notice = {
         proposals: Array.isArray(row.notice_proposals) ? row.notice_proposals : [],
@@ -1397,6 +1405,8 @@ function latestDealBoardSnapshot(input = {}) {
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    discovery_summary: discoveryLayer.summarize(rows),
+    full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(rows),
     batch: (bucket.batches || [])[0] || null,
     county_onboarding: countyOnboardingSummary(market),
@@ -1521,6 +1531,40 @@ function recordContactWorkflow(input = {}, options = {}) {
     recorded_at: recordedAt,
     source: 'operator_input'
   };
+  snapshot.should_ingest = false;
+  snapshot.no_global_mutation = true;
+  return snapshot;
+}
+
+function recordDiscoveryAnswer(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const key = marketKey(market);
+  const queueKey = cleanText(input.queue_key);
+  const field = cleanText(input.field);
+  const value = cleanText(input.value);
+  const channel = cleanText(input.channel).toLowerCase();
+  const verbatimNote = cleanText(input.verbatim_note);
+  if (!queueKey || !discoveryLayer.SELLER_FIELDS.includes(field) || !value || value.length > 500 ||
+    !['call', 'sms', 'email'].includes(channel) || verbatimNote.length > 2000) {
+    throw contactWorkflowError('A row, seller question, answer and channel are required.', 'discovery_answer_invalid', 400);
+  }
+  if (activeJobForMarket(key)) throw contactWorkflowError('A batch is running for this market.', 'discovery_market_batch_running', 409);
+  const store = readStore();
+  const bucket = store.markets[key];
+  if (!bucket || !Array.isArray(bucket.rows)) throw contactWorkflowError('No snapshot exists for this market.', 'discovery_market_not_found', 404);
+  const row = bucket.rows.find((item) => cleanText(item && item.queue_key) === queueKey);
+  if (!row) throw contactWorkflowError('The selected queue row was not found.', 'discovery_row_not_found', 404);
+  const recordValue = row[field];
+  const conflict = cleanText(recordValue) && cleanText(recordValue) !== value
+    ? { existing_record_value: cleanText(recordValue), seller_stated_value: value, no_overwrite: true }
+    : null;
+  const answer = { id: crypto.randomUUID(), field, value, answered_by: cleanText(options.operator_id) || 'admin',
+    answered_at: typeof options.now_impl === 'function' ? cleanText(options.now_impl()) : nowIso(),
+    channel, verbatim_note: verbatimNote, source_kind: 'seller_stated', conflict };
+  row.discovery_answers = (Array.isArray(row.discovery_answers) ? row.discovery_answers : []).concat([answer]);
+  writeStore(store);
+  const snapshot = latestDealBoardSnapshot({ market });
+  snapshot.discovery_answer = { queue_key: queueKey, answer_id: answer.id, field, source_kind: 'seller_stated' };
   snapshot.should_ingest = false;
   snapshot.no_global_mutation = true;
   return snapshot;
@@ -1963,6 +2007,7 @@ module.exports = {
   runDealBoardBatch,
   latestDealBoardSnapshot,
   recordContactWorkflow,
+  recordDiscoveryAnswer,
   startDealBoardBatchJob,
   getDealBoardJob,
   setAutoRun,
