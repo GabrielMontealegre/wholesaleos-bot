@@ -2351,6 +2351,37 @@ app.post('/api/dashboard/free-public-deal-board/document-review-clear', requireA
   }
 });
 
+app.get('/api/dashboard/free-public-deal-board/official-notice/crop/:id', requireAdmin, (req, res) => {
+  const image = dealBoardQueueService.readNoticeCrop(req.params.id);
+  if (!image) return res.status(404).json({ ok: false, code: 'notice_crop_not_found' });
+  res.set({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Type': 'image/png' });
+  return res.send(image);
+});
+
+app.post('/api/dashboard/free-public-deal-board/official-notice/scan', requireAdmin, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(await dealBoardQueueService.recordNoticeScan(req.body || {}));
+  } catch (error) {
+    res.status(Number(error && error.status_code || 422)).json({ ok: false,
+      code: error.code || 'notice_scan_failed', error: error.message,
+      preview_only: true, should_ingest: false, no_global_mutation: true });
+  }
+});
+
+app.post('/api/dashboard/free-public-deal-board/official-notice/confirm', requireAdmin, (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(dealBoardQueueService.recordNoticeFieldConfirmation(req.body || {}, {
+      operator_id: req.currentUser.id
+    }));
+  } catch (error) {
+    res.status(Number(error && error.status_code || 400)).json({ ok: false,
+      code: error.code || 'notice_confirmation_failed', error: error.message,
+      preview_only: true, should_ingest: false, no_global_mutation: true });
+  }
+});
+
 // Starts a background batch job and returns immediately (the full batch
 // outlives the HTTP edge timeout). Poll the job endpoint, then read latest.
 app.post('/api/dashboard/free-public-deal-board/run', requireAdmin, (req, res) => {

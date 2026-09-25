@@ -29,6 +29,7 @@ const propertyLeverageDossier = require('./property-leverage-dossier');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
 const propertyIdentityGrouping = require('./property-identity-grouping');
+const officialNoticeDossier = require('./official-notice-dossier');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
@@ -96,7 +97,7 @@ function cloneSnapshotRow(row) {
     'risk_flags', 'missing_fields', 'source_document_urls', 'verified_comps',
     'seller_questions', 'free_contact_routes', 'entity_contacts',
     'blocked_sources', 'free_searches_run', 'contact_workflow_attempts',
-    'contact_workflow_invalidated_routes', 'research_links'
+    'contact_workflow_invalidated_routes', 'research_links', 'notice_proposals', 'notice_confirmations'
   ]) {
     if (Array.isArray(copy[key])) copy[key] = copy[key].slice();
   }
@@ -106,6 +107,7 @@ function cloneSnapshotRow(row) {
   if (copy.enrichment_ledger) copy.enrichment_ledger = JSON.parse(JSON.stringify(copy.enrichment_ledger));
   if (copy.lifecycle_status) copy.lifecycle_status = Object.assign({}, copy.lifecycle_status);
   if (copy.enrichment_skip_rollups) copy.enrichment_skip_rollups = JSON.parse(JSON.stringify(copy.enrichment_skip_rollups));
+  if (copy.notice_scan) copy.notice_scan = Object.assign({}, copy.notice_scan);
   return copy;
 }
 
@@ -1233,7 +1235,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'document_reextraction_status', 'document_reextraction_reason',
     'document_reextraction_at', 'document_reextraction_source_url',
     'document_reextraction_evidence_text',
-    'enrichment_ledger', 'enrichment_skip_rollups'
+    'enrichment_ledger', 'enrichment_skip_rollups',
+    'notice_proposals', 'notice_confirmations', 'notice_scan'
   ];
   let newRows = 0;
   let refreshedRows = 0;
@@ -1257,6 +1260,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
           if (existing.contact_workflow_complete === true) refreshed.contact_workflow_complete = true;
         } else if (field === 'contact_follow_up_requested') {
           if (existing.contact_follow_up_requested === true) refreshed.contact_follow_up_requested = true;
+        } else if (field === 'notice_scan') {
+          if (!refreshed.notice_scan && existing.notice_scan) refreshed.notice_scan = Object.assign({}, existing.notice_scan);
         } else if (field === 'enrichment_ledger') {
           refreshed.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, refreshed);
         } else if (field === 'enrichment_skip_rollups') {
@@ -1361,6 +1366,28 @@ function latestDealBoardSnapshot(input = {}) {
   // safer rows immediately after deploy without turning a read into a write.
   const rows = projectManualValueEvidence(repairStoredSnapshotRows(bucket.rows.map(cloneSnapshotRow)), market);
   const identity = identitySnapshot(rows);
+  const allIdentityRows = propertyIdentityGrouping.groupRows(rows, nowIso()).rows;
+  const noticeRows = identity.rows.map((row) => Object.assign({}, row, {
+    notice_sale_assessment: officialNoticeDossier.saleAssessment(row, allIdentityRows, {
+      archive_contains_document: row.notice_scan && row.notice_scan.archive_contains_document
+    })
+  }));
+  const manualPacket = manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows });
+  const noticeByKey = new Map(allIdentityRows.map((row) => [row.queue_key, row]));
+  for (const item of manualPacket.items || []) {
+    const row = noticeByKey.get(item.queue_key);
+    if (row && cleanText(row.county).toLowerCase() === 'ellis') {
+      item.official_notice = {
+        proposals: Array.isArray(row.notice_proposals) ? row.notice_proposals : [],
+        confirmations: Array.isArray(row.notice_confirmations) ? row.notice_confirmations : [],
+        sale_assessment: officialNoticeDossier.saleAssessment(row, allIdentityRows, {
+          archive_contains_document: row.notice_scan && row.notice_scan.archive_contains_document
+        }),
+        county_appraised_value: row.county_appraisal_record && row.county_appraisal_record.assessed_value || null,
+        document_url: row.notice_scan && row.notice_scan.document_url || row.source_document_url || ''
+      };
+    }
+  }
   return {
     ok: true,
     preview_only: true,
@@ -1382,9 +1409,9 @@ function latestDealBoardSnapshot(input = {}) {
     },
     auto_run: getAutoRunStatus(market),
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
-    manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows }),
+    manual_evidence_packet: manualPacket,
     lead_operations_queue: leadOperationsQueueForResponse(rows),
-    rows: identity.rows
+    rows: noticeRows
   };
 }
 
@@ -1553,6 +1580,124 @@ function recordDocumentReviewClear(input = {}, options = {}) {
   snapshot.should_ingest = false;
   snapshot.no_global_mutation = true;
   return snapshot;
+}
+
+function noticeCropDirectory() {
+  return path.join(path.dirname(snapshotFilePath()), 'official-notice-crops');
+}
+
+function noticeCropPath(id) {
+  return /^[a-f0-9-]{36}$/i.test(cleanText(id)) ? path.join(noticeCropDirectory(), `${id}.png`) : '';
+}
+
+function readNoticeCrop(id) {
+  const file = noticeCropPath(id);
+  if (!file || !fs.existsSync(file)) return null;
+  const buffer = fs.readFileSync(file);
+  return buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47])) ? buffer : null;
+}
+
+function noticeRowOrError(store, market, queueKey) {
+  const bucket = store.markets[marketKey(market)];
+  if (!bucket || !Array.isArray(bucket.rows)) throw contactWorkflowError('No snapshot exists for this market.', 'notice_market_not_found', 404);
+  const row = bucket.rows.find((item) => cleanText(item.queue_key) === queueKey);
+  if (!row) throw contactWorkflowError('The selected queue row was not found.', 'notice_row_not_found', 404);
+  if (cleanText(row.county).toLowerCase() !== 'ellis' || cleanText(row.state).toUpperCase() !== 'TX') {
+    throw contactWorkflowError('Official notice review is currently limited to Ellis County, Texas.', 'notice_market_not_supported', 400);
+  }
+  return row;
+}
+
+async function recordNoticeScan(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const queueKey = cleanText(input.queue_key);
+  if (!queueKey) throw contactWorkflowError('A source row is required.', 'notice_queue_key_required', 400);
+  if (activeJobForMarket(marketKey(market))) throw contactWorkflowError('A batch is running for this market.', 'notice_market_batch_running', 409);
+  const firstStore = readStore();
+  const firstRow = noticeRowOrError(firstStore, market, queueKey);
+  const address = cleanText(firstRow.normalized_address);
+  if (!address || !propertyIdentityGrouping.sourcedAddressKey(firstRow)) {
+    throw contactWorkflowError('A complete source-supported property address is required.', 'notice_subject_address_required', 400);
+  }
+  let documentUrl = officialNoticeDossier.officialUrl(input.document_url || firstRow.source_document_url);
+  if (!documentUrl) throw contactWorkflowError('Choose an official Ellis notice PDF URL.', 'notice_official_url_required', 400);
+
+  const client = options.client_impl || officialNoticeDossier.createOfficialClient(options);
+  const archive = await client.get('https://www.co.ellis.tx.us/Archive.aspx?AMID=60');
+  if (/[?&]AMID=/.test(documentUrl)) {
+    const dateClue = parseSaleDateIso(firstRow.sale_date_or_event_date) ||
+      officialNoticeDossier.dateIso(firstRow.sale_date_or_event_date) ||
+      officialNoticeDossier.dateIso(firstRow.source_proof_text);
+    documentUrl = officialNoticeDossier.archiveDocumentForDate(archive.body.toString('utf8'), dateClue);
+    if (!documentUrl) throw contactWorkflowError(
+      'The archive did not identify one notice for this row. Paste its direct official PDF URL to review it.',
+      'notice_direct_pdf_url_required', 400);
+  }
+  const archiveContainsDocument = officialNoticeDossier.archiveContainsDocument(archive.body.toString('utf8'), documentUrl);
+  const response = await client.get(documentUrl);
+  const scan = await (options.scan_impl || officialNoticeDossier.scanPdf)({
+    buffer: response.body, document_url: response.url, subject_address: address
+  }, options);
+  if (!scan.matched_subject) {
+    throw contactWorkflowError('The property address was not found in the scanned pages. No proposals were saved.', 'notice_subject_not_in_scanned_pages', 422);
+  }
+  if (activeJobForMarket(marketKey(market))) throw contactWorkflowError('A batch started during this review.', 'notice_market_batch_running', 409);
+  const store = readStore();
+  const row = noticeRowOrError(store, market, queueKey);
+  if (cleanText(row.normalized_address) !== address) throw contactWorkflowError('The property address changed during review.', 'notice_subject_changed', 409);
+  fs.mkdirSync(noticeCropDirectory(), { recursive: true, mode: 0o700 });
+  for (const crop of scan.crops || []) {
+    const file = noticeCropPath(crop.id);
+    if (!file || !Buffer.isBuffer(crop.png) || !crop.png.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) {
+      throw contactWorkflowError('A field crop could not be saved.', 'notice_crop_invalid', 422);
+    }
+    fs.writeFileSync(file, crop.png, { flag: 'wx', mode: 0o600 });
+  }
+  const cropIds = new Set((scan.crops || []).map((crop) => crop.id));
+  if (scan.proposals.some((proposal) => !cropIds.has(proposal.id))) {
+    throw contactWorkflowError('An OCR field has no source crop.', 'notice_crop_missing', 422);
+  }
+  const proposals = scan.proposals.map((proposal) => Object.assign({}, proposal, { crop_ref: proposal.id }));
+  row.notice_proposals = (Array.isArray(row.notice_proposals) ? row.notice_proposals : []).concat(proposals).slice(-100);
+  row.notice_scan = {
+    document_url: response.url,
+    scanned_at: nowIso(),
+    page_confidences: scan.page_confidences || [],
+    matched_subject: true,
+    archive_contains_document: archiveContainsDocument
+  };
+  writeStore(store);
+  return { ok: true, preview_only: true, should_ingest: false, no_global_mutation: true,
+    queue_key: queueKey, matched_subject: true, proposals, page_confidences: scan.page_confidences || [] };
+}
+
+function recordNoticeFieldConfirmation(input = {}, options = {}) {
+  const market = Object.assign({ city: 'Dallas', county: 'Dallas', state: 'TX' }, input.market || {});
+  const queueKey = cleanText(input.queue_key);
+  const proposalId = cleanText(input.proposal_id);
+  if (activeJobForMarket(marketKey(market))) throw contactWorkflowError('A batch is running for this market.', 'notice_market_batch_running', 409);
+  const store = readStore();
+  const row = noticeRowOrError(store, market, queueKey);
+  const proposals = Array.isArray(row.notice_proposals) ? row.notice_proposals : [];
+  const index = proposals.findIndex((item) => item.id === proposalId);
+  if (index < 0) throw contactWorkflowError('The proposed field was not found.', 'notice_proposal_not_found', 404);
+  const proposal = proposals[index];
+  const confirmation = officialNoticeDossier.confirmField(proposal, {
+    operator_id: options.operator_id,
+    confirmed_at: typeof options.now_impl === 'function' ? options.now_impl() : nowIso(),
+    crop_available: !!readNoticeCrop(proposal.crop_ref),
+    crop_viewed: input.crop_viewed === true
+  });
+  proposals[index] = confirmation;
+  row.notice_confirmations = (Array.isArray(row.notice_confirmations) ? row.notice_confirmations : []).concat([confirmation]);
+  if (confirmation.field === 'sale_date') {
+    row.sale_date_or_event_date = confirmation.value;
+    row.sale_date_iso = confirmation.value;
+  }
+  writeStore(store);
+  return { ok: true, preview_only: true, should_ingest: false, no_global_mutation: true,
+    queue_key: queueKey, confirmed_field: confirmation.field,
+    snapshot: latestDealBoardSnapshot({ market }) };
 }
 
 // ---------------------------------------------------------------------------
@@ -1824,6 +1969,9 @@ module.exports = {
   getAutoRunStatus,
   loadAutoRunFromDisk,
   recordDocumentReviewClear,
+  recordNoticeScan,
+  recordNoticeFieldConfirmation,
+  readNoticeCrop,
   MIN_AUTO_RUN_INTERVAL_MINUTES,
   DAILY_AUTO_RUN_CAP
 };
