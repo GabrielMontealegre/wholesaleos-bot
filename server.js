@@ -22,6 +22,7 @@ const selectedDealPacketService = require('./modules/research/selected-deal-pack
 const freePublicDealBoardPreviewService = require('./modules/research/free-public-deal-board-preview-service');
 const dealBoardQueueService = require('./modules/research/deal-board-queue-service');
 const countyAppraisalEvidence = require('./modules/research/county-appraisal-evidence-service');
+const countyParcelEvidence = require('./modules/research/county-parcel-evidence-service');
 const researchQueueReadRoute = require('./modules/research/research-queue-read-route');
 const manualEvidencePacketService = require('./modules/research/manual-evidence-packet-service');
 const marketDemandIndex = require('./modules/research/market-demand-index');
@@ -2181,6 +2182,20 @@ app.post('/api/dashboard/research-queue/county-appraisal-apply', requireAdmin, (
     res.json(result);
   } catch (error) {
     res.status(error.status_code || 500).json({ ok: false, code: error.code || 'county_appraisal_apply_failed' });
+  }
+});
+
+app.post('/api/dashboard/research-queue/county-parcel-sync', requireAdmin, async (req, res) => {
+  try {
+    const result = await countyParcelEvidence.sync({ snapshot_file: dealBoardQueueService.snapshotFilePath(),
+      county: 'Ellis', state: 'TX', operator_id: req.currentUser.id });
+    res.set('Cache-Control', 'no-store');
+    res.status(result.ok ? 200 : result.status === 'blocked' ? 403 : 409).json(Object.assign({
+      preview_only: true, not_a_saved_lead: true, should_ingest: false, no_global_mutation: true
+    }, result));
+  } catch (error) {
+    res.status(500).json({ ok: false, code: 'county_parcel_sync_failed', preview_only: true,
+      not_a_saved_lead: true, should_ingest: false, no_global_mutation: true });
   }
 });
 

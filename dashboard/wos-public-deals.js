@@ -20,6 +20,7 @@
   var API_COUNTY_APPRAISAL_PREVIEW = '/api/dashboard/research-queue/county-appraisal-preview';
   var API_COUNTY_APPRAISAL_AUDIT = '/api/dashboard/research-queue/county-appraisal-audit?county=Ellis&state=TX';
   var API_COUNTY_APPRAISAL_STAGE = '/api/dashboard/research-queue/county-appraisal-stage';
+  var API_COUNTY_PARCEL_SYNC = '/api/dashboard/research-queue/county-parcel-sync';
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
@@ -450,7 +451,7 @@
           ' <button type="button" class="wos-subject-field-confirm" data-evidence-id="' + esc(proposal.item.evidence_id || '') + '" data-field-name="' + esc(entry.name) + '" data-confirmed="' + (confirmed ? 'false' : 'true') + '"' + (impossibleZero && !confirmed ? ' disabled title="A zero or invalid property measurement cannot be confirmed as a real fact."' : '') + ' style="padding:3px 7px;border-radius:5px;border:1px solid ' + (confirmed ? '#b91c1c' : '#047857') + ';background:#fff;color:' + (confirmed ? '#b91c1c' : '#047857') + ';font-size:10px;font-weight:700;cursor:' + (impossibleZero && !confirmed ? 'not-allowed' : 'pointer') + ';">' + (confirmed ? 'Un-confirm' : 'Confirm') + '</button></div>';
       }).join('');
       return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;background:#fff;"><b>' + esc(definition.label) + '</b> <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + (status === 'READY' ? '#bbf7d0' : status === 'MISSING' ? '#fee2e2' : '#fde68a') + ';">' + status + '</span>' +
-        (details || '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No operator-captured value.</div>') + (allConfirmed ? '' : '') + '</div>';
+        (details || '<div style="font-size:10px;color:#6b7280;margin-top:4px;">' + (status === 'READY' ? 'Official row evidence available; no operator-captured proposal.' : 'No operator-captured value.') + '</div>') + (allConfirmed ? '' : '') + '</div>';
     }).join('');
     return '<div class="wos-subject-facts-panel" style="margin-top:8px;padding:8px;border:1px solid #a7f3d0;border-radius:7px;background:#ecfdf5;font-size:11px;"><b>Subject facts required by the strict comp grid</b><div style="font-size:10px;color:#4b5563;margin-top:2px;">Each captured value remains excluded until you confirm that exact field.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px;margin-top:6px;">' + rows + '</div></div>';
   }
@@ -934,7 +935,13 @@
       field('Owner occupied', answer(record.owner_occupied)) + field('Homestead', answer(record.homestead_exemption)) + '</section>' +
       '<section>' + field('Legal description', record.legal_description) + field('Acreage', record.lot_size_acres) +
       field('Parcel ID', record.parcel_id) + field('Latest deed date', record.latest_deed_date) + '</section>' +
-      '</div>' + field('County appraised value (clue only - not an ARV, not a sold comp, not an amount owed)', record.assessed_value == null ? null : '$' + Number(record.assessed_value).toLocaleString('en-US')) +
+      '</div>' + field('Year built', record.year_built) + field('Lot size (approx. square feet from recorded acreage)', record.lot_size_sqft_approx) +
+      field('Property type', record.property_type) +
+      (record.coordinate_source === 'official_county_parcel_polygon_centroid'
+        ? field('Parcel centroid (derived, not the building location)', [record.latitude, record.longitude].join(', ')) : '') +
+      (record.source_reference_url ? '<div>' + link('County extract source', record.source_reference_url) + ' | Extract date: ' + esc(record.source_date || 'not published') + '</div>' : '') +
+      (record.source_reference_url ? '<div style="color:#92400e;margin-top:4px;">Living area, bedrooms and bathrooms are not published by Ellis County. They must be confirmed from the county record by the operator.</div>' : '') +
+      field('County appraised value (clue only - not an ARV, not a sold comp, not an amount owed)', record.assessed_value == null ? null : '$' + Number(record.assessed_value).toLocaleString('en-US')) +
       (conflicts ? '<div style="margin-top:5px;"><b>Conflicting evidence (prior value retained for audit)</b>' + conflicts + '</div>' : '') +
       '<div>' + link('Open Ellis CAD source', record.source_url || record.bulk_source_url) + '</div></details>';
   }
@@ -1556,6 +1563,9 @@
   function countyCoveragePanel() {
     return panelBox('County coverage', 'Stored snapshot rows, not just the first cards on screen.',
       '<button type="button" class="wos-county-coverage-load" style="padding:6px 10px;border:1px solid #2563eb;background:#fff;color:#1d4ed8;cursor:pointer;">Refresh county coverage</button>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;">' +
+      '<button type="button" class="wos-county-parcel-sync" title="Read the official Ellis County parcel GIS and apply only exact parcel or address matches to snapshot evidence." style="padding:6px 10px;border:1px solid #047857;background:#fff;color:#047857;cursor:pointer;">Refresh Ellis parcel facts</button>' +
+      '<span class="wos-county-parcel-message" style="font-size:11px;color:#374151;">Admin action. No listing sites, batch, saved leads, or comp confirmation.</span></div>' +
       '<div class="wos-county-stage" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;">' +
       '<input type="file" class="wos-county-stage-file" accept=".dbf,.csv" aria-label="Ellis public ownership DBF or CSV" style="font-size:12px;max-width:270px;">' +
       '<button type="button" class="wos-county-stage-submit" style="padding:6px 10px;border:1px solid #047857;background:#fff;color:#047857;cursor:pointer;">Stage Ellis file for preview</button>' +
@@ -1674,6 +1684,27 @@
         button.disabled = false;
         button.textContent = 'Refresh county coverage';
       });
+  }
+
+  function syncEllisParcel(container, button) {
+    var message = container.querySelector('.wos-county-parcel-message');
+    button.disabled = true;
+    button.textContent = 'Reading Ellis parcels...';
+    if (message) message.textContent = 'Reading the public county GIS; only exact matches may be applied.';
+    return fetch(API_COUNTY_PARCEL_SYNC, { method: 'POST', headers: authHeaders(), cache: 'no-store' })
+      .then(function (response) { return response.json().then(function (body) { return { response: response, body: body }; }); })
+      .then(function (result) {
+        if (!result.response.ok || !result.body.ok) throw new Error(result.body.reason || result.body.code || 'county_parcel_sync_failed');
+        var body = result.body;
+        var summary = 'Matched ' + body.matched + ' Ellis rows; applied ' + body.records_applied +
+          ' parcel records in ' + body.request_count + ' public request(s). Grid ready: ' + body.after.ready_count +
+          '/' + body.after.rows_total + '. Missing: ' + Object.keys(body.after.missing || {}).map(function (key) {
+            return key + ' ' + body.after.missing[key];
+          }).join(', ') + '.';
+        if (message) message.textContent = summary;
+        return fetchLatest(container, summary);
+      }).catch(function (error) { if (message) message.textContent = error.message || 'Ellis parcel refresh failed.'; })
+      .finally(function () { button.disabled = false; button.textContent = 'Refresh Ellis parcel facts'; });
   }
 
   function fetchCountyCoverage() {
@@ -2602,6 +2633,8 @@
         }
         var countyCoverageButton = event.target && event.target.closest && event.target.closest('.wos-county-coverage-load');
         if (countyCoverageButton) loadCountyCoverage(section, countyCoverageButton);
+        var countyParcelButton = event.target && event.target.closest && event.target.closest('.wos-county-parcel-sync');
+        if (countyParcelButton) syncEllisParcel(section, countyParcelButton);
         var countyStageButton = event.target && event.target.closest && event.target.closest('.wos-county-stage-submit');
         if (countyStageButton) stageEllisCountyFile(section, countyStageButton);
         var countyAuditButton = event.target && event.target.closest && event.target.closest('.wos-county-audit-load');

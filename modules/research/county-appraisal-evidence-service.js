@@ -397,9 +397,11 @@ function enrich(row, record, nowIso, appliedAt, appliedBy) {
   updated.appraisal_conflicts = conflictAudit([...(updated.appraisal_conflicts || []), ...extraConflicts]);
   const source = { source_kind: 'official_public_record', county: record.county,
     property_id: record.parcel_id, source_url: sourceUrl,
+    source_reference_url: record.source_reference_url || null, source_date: record.source_date || null,
     applied_at: appliedAt || null, applied_by: appliedBy || null };
   const fieldNames = ['owner_of_record', 'mailing_address', 'parcel_id', 'geo_id', 'legal_description',
-    'property_type', 'lot_size_acres', 'assessed_value', 'latest_deed_date'];
+    'property_type', 'lot_size_acres', 'year_built', 'latitude', 'longitude', 'coordinate_source',
+    'assessed_value', 'latest_deed_date', 'latest_deed_instrument'];
   updated.county_appraisal_field_provenance = Object.fromEntries(fieldNames.filter((field) =>
     record[field] !== null && record[field] !== undefined && clean(record[field]) !== '').map((field) => [field, source]));
   return updated;

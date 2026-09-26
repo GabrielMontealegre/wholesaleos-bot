@@ -339,6 +339,12 @@ function applyMatchedRecord(inputRow, record, nowIso = new Date().toISOString())
   setOfficial(row, 'year_built', record.year_built, url);
   setOfficial(row, 'bedrooms', record.beds, url);
   setOfficial(row, 'bathrooms', record.baths, url);
+  if (Number.isFinite(record.latitude) && Number.isFinite(record.longitude) && record.coordinate_source) {
+    setOfficial(row, 'latitude', record.latitude, url);
+    setOfficial(row, 'longitude', record.longitude, url);
+    row.coordinate_source = record.coordinate_source;
+    row.coordinate_derivation = record.coordinate_derivation;
+  }
   setOfficial(row, 'assessed_value', record.assessed_value, url);
   row.assessed_value_evidence_text = record.assessed_value == null ? row.assessed_value_evidence_text :
     `County appraised value (not a sold comp), value year ${record.assessed_value_year || 'not shown'}; ${url}`;
