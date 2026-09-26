@@ -9,7 +9,16 @@ $root = Split-Path -Parent $PSScriptRoot
 # already falls back to Cursor's bundled runtime for the same reason; mirror that here so
 # the suite can be run from the repository root without a global Node install.
 function Resolve-NodeExecutable {
-  if ($env:WOS_NODE -and (Test-Path $env:WOS_NODE)) { return $env:WOS_NODE }
+  # Every location tried is recorded, including a WOS_NODE that was set but does not
+  # exist, so a typo in that variable is visible in the failure instead of silent.
+  $attempted = @()
+  if ($env:WOS_NODE) {
+    $attempted += ("WOS_NODE=" + $env:WOS_NODE)
+    if (Test-Path $env:WOS_NODE) { return $env:WOS_NODE }
+  } else {
+    $attempted += 'WOS_NODE=(not set)'
+  }
+  $attempted += 'PATH'
   $onPath = Get-Command node -ErrorAction SilentlyContinue
   if ($onPath) { return $onPath.Source }
   $candidates = @(
@@ -18,10 +27,12 @@ function Resolve-NodeExecutable {
     (Join-Path ${env:ProgramFiles(x86)} 'nodejs\node.exe')
   )
   foreach ($candidate in $candidates) {
-    if ($candidate -and (Test-Path $candidate)) { return $candidate }
+    if (-not $candidate) { continue }
+    $attempted += $candidate
+    if (Test-Path $candidate) { return $candidate }
   }
   throw ("node_executable_not_found: install Node, or set WOS_NODE to a node.exe path. " +
-    "Attempted: PATH; " + ($candidates -join '; '))
+    "Attempted: " + ($attempted -join '; '))
 }
 
 $node = Resolve-NodeExecutable
