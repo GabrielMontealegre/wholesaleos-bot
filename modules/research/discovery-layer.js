@@ -1,6 +1,7 @@
 'use strict';
 
 const propertyAddressEvidence = require('./property-address-evidence');
+const addressDerivedResearchLinks = require('./address-derived-research-links');
 const propertyIdentity = require('./property-identity');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const marketCompPolicy = require('./market-comp-policy');
@@ -156,8 +157,9 @@ function buildDiscovery(row = {}, options = {}) {
   const questions = questionOrder(row).filter((field) => !answers.has(field) &&
     (field !== 'occupancy_plan' || row.county_appraisal_record && row.county_appraisal_record.owner_occupied === true))
     .map(question);
-  const streetViewUrl = addressVerified ? clean(row.maps_url) ||
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
+  const streetViewUrl = addressVerified
+    ? addressDerivedResearchLinks.buildAddressResearchLinks(row).find((entry) => entry.label === 'Street View')?.url || ''
+    : '';
   const callBlockedReason = lifecycle.quarantined ? 'Do not call yet: this property is quarantined until its current source status is checked.' :
     !addressVerified ? 'Do not call yet: a complete property address is not verified against its source.' :
       clean(row.contact_workflow_outcome).toLowerCase() === 'not_interested' ? 'Do not call: the seller was recorded as not interested.' :
@@ -173,7 +175,9 @@ function buildDiscovery(row = {}, options = {}) {
       debt_basis: 'seller_stated_current_payoff', warning: 'Seller-stated balance is not verified. This is not an offer or a confirmed equity amount.' }
     : null;
   return { call_ready: !callBlockedReason, call_blocked_reason: callBlockedReason, gap_ledger: ledger,
-    questions, street_view_url: streetViewUrl, equity_clue: equityClue, preview_only: true, not_a_saved_lead: true };
+    questions, street_view_url: streetViewUrl,
+    address_link_placeholder: addressVerified ? '' : 'No verified property address yet.',
+    equity_clue: equityClue, preview_only: true, not_a_saved_lead: true };
 }
 
 function summarize(rows, options = {}) {

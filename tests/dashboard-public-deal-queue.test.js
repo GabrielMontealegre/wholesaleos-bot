@@ -793,7 +793,7 @@ function mockDeal(overrides) {
   assert.strictEqual(saleRead.rows[0].next_best_action, 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT');
   assert.strictEqual(fs.readFileSync(saleSnapshotPath, 'utf8'), saleDiskBeforeRead, 'read-time sale repair must not write the snapshot');
   assert.strictEqual(queueService.parseSaleDateIso(inThreeDays), inThreeDays);
-  assert.strictEqual(queueService.parseSaleDateIso(usDate(inThreeDays)), inThreeDays);
+  assert.strictEqual(queueService.parseSaleDateIso(usDate(inThreeDays)), null, 'ambiguous slash dates must not be guessed');
   assert.strictEqual(queueService.parseSaleDateIso('sale on the first Tuesday'), null);
 
   const salePreview = async () => ({
@@ -814,7 +814,7 @@ function mockDeal(overrides) {
   assert.strictEqual(isoSale.sale_date_or_event_date, inThreeDays);
   assert.strictEqual(isoSale.sale_date_iso, inThreeDays);
   assert.strictEqual(usSale.sale_date_or_event_date, usDate(inThreeDays));
-  assert.strictEqual(usSale.sale_date_iso, inThreeDays);
+  assert.strictEqual(usSale.sale_date_iso, null, 'ambiguous slash dates stay unparsed');
   assert.strictEqual(textSale.sale_date_or_event_date, 'first Tuesday in August');
   assert.strictEqual(textSale.sale_date_iso, null);
   const persistedPastSale = saleBatch.rows.find((row) => row.queue_key === 'stored|passed-sale');
@@ -855,7 +855,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=49'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=50'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -912,7 +912,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=49'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=50'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1171,6 +1171,7 @@ function mockDeal(overrides) {
   const distressCardHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard({
     queue_key: 'distress-truth-row',
     normalized_address: '100 Truth St, Dallas, TX 75201',
+    subject_address_verified_for_research: true,
     county: 'Dallas',
     row_state: 'NEEDS_CONTACT_SEARCH',
     quality_bucket: 'INSPECT_NOW',

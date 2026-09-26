@@ -153,8 +153,8 @@ function fact(row, type) {
   const partialLinks = manualEvidencePacketService.researchLinks({
     partial_address: '100 Truth St, Dallas, TX', county: 'Dallas', state: 'TX'
   });
-  assert.ok(partialLinks.some((item) => /Zillow subject search \(partial address - verify first\)/.test(item.label)));
-  assert.ok(partialLinks.every((item) => !/exact property/i.test(item.label)));
+  assert.ok(!partialLinks.some((item) => /Zillow|Redfin|Realtor|Google Maps|Street View|CyberBackgroundChecks address/i.test(item.label)),
+    'partial address must not produce address-derived research links');
 
   console.log('distress evidence model tests passed');
 })();

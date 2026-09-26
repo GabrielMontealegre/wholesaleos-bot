@@ -16,6 +16,7 @@ const leadLifecycleStatus = require('./lead-lifecycle-status');
 const distressEvidenceModel = require('./distress-evidence-model');
 const propertyIdentity = require('./property-identity');
 const propertyAddressEvidence = require('./property-address-evidence');
+const addressDerivedResearchLinks = require('./address-derived-research-links');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -586,34 +587,9 @@ function countyPropertyRecordUrl(row) {
 }
 
 function researchLinks(row) {
-  const address = cleanText(row && (row.normalized_address || row.partial_address || row.headline));
-  const partial = !cleanText(row && row.normalized_address) && !!address;
-  const encoded = encodeURIComponent(address);
-  const parts = address.split(',').map(cleanText);
-  const street = slug(parts[0]);
-  const city = slug(parts[1] || row && row.city);
-  const state = slug(cleanText(row && row.state));
-  const owner = cleanText(row && (row.owner_clue || row.owner_record && (row.owner_record.owner_name || row.owner_record.taxpayer_name)));
-  const warning = partial ? 'partial address - verify before trusting results' : '';
-  const links = [];
-  function push(label, url, kind) {
-    if (!url || !/^https?:\/\//i.test(url)) return;
-    links.push({ label: warning ? `${label} (partial address - verify first)` : label, url, link_kind: kind || 'human_research_only', warning });
-  }
-  if (address) {
-    push('Zillow subject search', `https://www.zillow.com/homes/${encoded}_rb/`);
-    push('Redfin subject search', `https://www.redfin.com/search?q=${encoded}`);
-    push('Realtor.com subject search', `https://www.realtor.com/realestateandhomes-search/${encoded}`);
-    push('Google Maps', `https://www.google.com/maps/search/?api=1&query=${encoded}`);
-    if (street && city && state) push('CyberBackgroundChecks address search', `https://www.cyberbackgroundchecks.com/address/${street}/${city}/${state}`);
-  }
-  if (owner) push('CyberBackgroundChecks name search', `https://www.google.com/search?q=${encodeURIComponent(`site:cyberbackgroundchecks.com/detail "${owner}" "${cleanText(row && row.city)} ${cleanText(row && row.state)}"`)}`);
-  push('County source proof', cleanText(row && (row.source_document_url || row.source_url)), 'source_proof');
-  push('County appraisal or assessor search', countyPropertyRecordUrl(row), 'official_property_record_search');
-  if (cleanText(row && row.auction_url) && (cleanText(row && row.sale_date_or_event_date) || /auction|foreclosure|tax/i.test(cleanText(row && row.source_family)))) {
-    push('Auction or sale status', cleanText(row.auction_url), 'source_backed_auction_status');
-  }
-  return links;
+  return addressDerivedResearchLinks.buildAddressResearchLinks(Object.assign({}, row, {
+    official_property_record_url: countyPropertyRecordUrl(row)
+  }));
 }
 
 function leadOrigin(row) {
@@ -715,6 +691,7 @@ function sampleItem(row, packetStore, market, options) {
     address_state: propertyAddressEvidence.isSourceSupportedSubjectAddress(row)
       ? 'complete_source_address'
       : 'partial_address_verify_first',
+    subject_address_verified_for_research: propertyAddressEvidence.isSourceSupportedSubjectAddress(row),
     stored_address_state_display: cleanText(row.address_state) || 'not recorded',
     stored_address_state_reason_code: cleanText(row.address_state) ? 'stored_state'
       : cleanText(row.address_state_history) || 'prior_state_history_unknown',

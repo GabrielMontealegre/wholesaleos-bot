@@ -161,8 +161,8 @@ function pngBuffer(size) {
   assert.strictEqual(selected.distress_evidence.money_facts[0].amount_type, 'minimum_bid');
   assert.strictEqual(selected.distress_evidence.money_facts[0].exact_amount, '$75,000');
   const partialResearch = service.researchLinks({ partial_address: '100 Sample St, Dallas, TX', county: 'Dallas', state: 'TX' });
-  assert.ok(partialResearch.some((entry) => /Zillow subject search \(partial address - verify first\)/.test(entry.label)));
-  assert.ok(partialResearch.every((entry) => !/exact property/i.test(entry.label)));
+  assert.ok(!partialResearch.some((entry) => /Zillow|Redfin|Realtor|Google Maps|Street View|CyberBackgroundChecks address/i.test(entry.label)),
+    'partial address must not produce address-derived research links');
   assert.strictEqual(selected.packet.preview_only, true);
   assert.strictEqual(selected.packet.not_a_saved_lead, true);
 
