@@ -18,5 +18,10 @@ Run the suite from the repository root with:
 ./scripts/run-tests.ps1
 ```
 
+Node does not have to be on `PATH`. The runner resolves it the same way
+`scripts/Start-WholesaleOS-Helper.cmd` does: `WOS_NODE` first if it is set, then `PATH`,
+then Cursor's bundled runtime, then a standard Node install. It prints the runtime it
+chose on the first line. If none is found it stops and lists every location it tried.
+
 The default per-file timeout is 600 seconds. The final line reports passed,
 failed, skipped, and total counts independently.

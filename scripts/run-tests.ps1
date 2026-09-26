@@ -4,7 +4,28 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$node = (Get-Command node -ErrorAction Stop).Source
+
+# Node is not on PATH on every operator machine. scripts/Start-WholesaleOS-Helper.cmd
+# already falls back to Cursor's bundled runtime for the same reason; mirror that here so
+# the suite can be run from the repository root without a global Node install.
+function Resolve-NodeExecutable {
+  if ($env:WOS_NODE -and (Test-Path $env:WOS_NODE)) { return $env:WOS_NODE }
+  $onPath = Get-Command node -ErrorAction SilentlyContinue
+  if ($onPath) { return $onPath.Source }
+  $candidates = @(
+    (Join-Path $env:LOCALAPPDATA 'Programs\cursor\resources\app\resources\helpers\node.exe'),
+    (Join-Path $env:ProgramFiles 'nodejs\node.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'nodejs\node.exe')
+  )
+  foreach ($candidate in $candidates) {
+    if ($candidate -and (Test-Path $candidate)) { return $candidate }
+  }
+  throw ("node_executable_not_found: install Node, or set WOS_NODE to a node.exe path. " +
+    "Attempted: PATH; " + ($candidates -join '; '))
+}
+
+$node = Resolve-NodeExecutable
+Write-Output ("Node runtime: {0}" -f $node)
 $files = Get-ChildItem (Join-Path $root 'tests') -Filter '*.test.js' -File | Sort-Object Name
 $passed = 0
 $failed = 0

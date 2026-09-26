@@ -2,8 +2,14 @@
 
 const childProcess = require('child_process');
 
+// Only a denied SPAWN counts as a missing capability. Node tags spawn failures with
+// syscall 'spawn <cmd>'; filesystem failures carry the same EPERM/EACCES codes but a
+// different syscall. Without the syscall check, an EPERM thrown by fs.rmSync during temp
+// cleanup on Windows would be reported as "process spawn not permitted" and a genuine
+// failure would be filed as a skip.
 function processSpawnDenied(error) {
-  return !!error && ['EPERM', 'EACCES'].includes(error.code);
+  return !!error && ['EPERM', 'EACCES'].includes(error.code) &&
+    typeof error.syscall === 'string' && error.syscall.startsWith('spawn');
 }
 
 function probeProcessSpawn() {
