@@ -1,0 +1,11 @@
+# Cycle 52 - Ellis public parcel facts
+
+The Ellis County GIS parcel layer is a public, token-free county endpoint. The dashboard's **Refresh Ellis parcel facts** command reads that layer for the Ellis rows already in the stored board snapshot. It makes one batched candidate query where possible, observes one request per three seconds and no more than 60 per county per hour, and stops on a 403 or 429. A returned candidate is applied only when its parcel ID matches the row, or, where the row has no parcel ID, its complete canonical property address matches exactly. Ambiguous and conflicting matches remain unapplied.
+
+Applied facts live in `county-parcel-evidence.json` beside the board snapshot. The snapshot, `db.json`, saved leads, phone routes, comps, and ARV are not written. The board joins the official evidence on read. A second run with unchanged published facts makes no new write. Each field carries the county, parcel ID, exact query URL, extract source and date, and application timestamp. Prior conflicting values remain visible in the appraisal conflict audit.
+
+The layer publishes year built, recorded acreage, property class, and parcel polygon geometry. Lot size is shown as approximate square feet converted from recorded acreage; coordinates are the **derived parcel centroid**, not a measured building location. The layer also publishes owner of record, mailing address, county appraised value, deed metadata, legal description, and location labels. Assessed value is a clue only: it is not debt, an offer price, ARV, or a sold comp.
+
+**The layer does not publish living area, bedrooms, or bathrooms.** These stay missing, never zero or inferred from the parcel polygon or a building footprint. The strict comp grid still needs all seven subject attributes, so this cycle does not make Ellis rows ready for valuation by itself. An operator must confirm the remaining three from a reliable property record in a separate workflow. The dashboard shows the missing facts on the row.
+
+The county label on each row and the county histogram behind the Dallas market label remain visible. Running the county command is an explicit admin action; simply loading the dashboard makes no county request. No listing site, private county API, token, paid provider, or new dependency is used.

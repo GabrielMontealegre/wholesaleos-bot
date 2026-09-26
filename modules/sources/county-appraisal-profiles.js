@@ -6,6 +6,27 @@ const PROFILES = Object.freeze([Object.freeze({
   portal_kind: 'true_prodigy',
   portal_search_url: 'https://www.elliscad.org/property-search',
   portal_detail_url_template: 'https://www.elliscad.org/property-detail/{property_id}/{year}',
+  arcgis_parcel_service: Object.freeze({
+    host: 'maps.co.ellis.tx.us',
+    service_path: '/arcgis/rest/services/External/External_Web_Map/MapServer',
+    layer_id: 1047,
+    out_sr: 4326,
+    id_fields: Object.freeze({ parcel_id: 'pid', geo_id: 'geoid', parcel_id_numeric: true }),
+    address_fields: Object.freeze({
+      situs_number: 'streetnum', situs_prefix: 'streetpref', situs_street: 'streetname',
+      situs_suffix: 'streetsuff', situs_secondary: 'streetseco', situs_city: 'city',
+      situs_state: 'state', situs_zip: 'zip'
+    }),
+    field_map: Object.freeze({
+      owner_of_record: 'fileasname', owner_id: 'ownerid', mailing_street: 'owneraddrd',
+      mailing_unit: 'owneraddru', mailing_city: 'owneraddrc', mailing_state: 'owneraddrs',
+      mailing_zip: 'owneraddrz', legal_description: 'legaldescr', state_code: 'statecd',
+      acreage: 'legalacre', assessed_value: 'ownerappra', improvement_value: 'ownerimpro',
+      land_value: 'ownerlandv', year_built: 'yearbuilt', latest_deed_date: 'deeddt',
+      latest_deed_instrument: 'instrument', subdivision: 'abstractsu', market_area: 'marketarea',
+      source_reference_url: 'Source', source_date: 'SourceDate'
+    })
+  }),
   bulk_export_page_url: 'https://www.elliscad.com/gis-data/',
   bulk_export_file_url: 'https://drive.google.com/file/d/1uE04NCTYtXZKFr1fFOh9uLFEXDLTXF3G/view',
   bulk_export_notes: 'The public ownership ZIP contains a DBF attribute table. Extract the DBF locally before ingest; the bulk table does not contain beds, baths, living area, full deed history, or value history.',

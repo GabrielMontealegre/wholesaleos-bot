@@ -28,6 +28,7 @@ const distressEvidenceModel = require('./distress-evidence-model');
 const propertyLeverageDossier = require('./property-leverage-dossier');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
+const countyParcelEvidence = require('./county-parcel-evidence-service');
 const propertyIdentityGrouping = require('./property-identity-grouping');
 const officialNoticeDossier = require('./official-notice-dossier');
 const discoveryLayer = require('./discovery-layer');
@@ -361,6 +362,7 @@ function repairCountyFromSourceHost(row) {
 
 function repairStoredSnapshotRows(rows) {
   const appraisalEvidence = countyAppraisalEvidence.prepareEvidence(snapshotFilePath());
+  const parcelEvidence = countyParcelEvidence.prepareEvidence(snapshotFilePath());
   return (Array.isArray(rows) ? rows : []).map((storedRow) => {
     let row = storedRow;
     markRoutesDisproved(row, invalidatedRouteValues(row));
@@ -369,6 +371,7 @@ function repairStoredSnapshotRows(rows) {
     repairSaleDateUrgency(row);
     row = sourceEvidenceRecovery.recoverRow(row, { now_iso: nowIso() }).row;
     row = countyAppraisalEvidence.joinRow(row, appraisalEvidence, nowIso());
+    row = countyParcelEvidence.joinRow(row, parcelEvidence, nowIso());
     row.distress_evidence = distressEvidenceModel.buildDistressEvidence(row);
     const verifiedResearchAddress = addressDerivedResearchLinks.verifiedSubjectAddress(row);
     row.subject_address_verified_for_research = !!verifiedResearchAddress;
@@ -1304,7 +1307,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'owner_clue', 'official_lookup_status', 'best_contact', 'appraisal_clue', 'source_url', 'source_document_urls',
     'owner_record', 'mailing_route', 'business_entity_resolution', 'entity_contacts', 'property_story', 'land_use',
     'county_appraisal_record', 'county_appraisal_field_provenance', 'appraisal_conflicts', 'geo_id', 'legal_description',
-    'latitude', 'longitude', 'coordinate_source', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
+    'latitude', 'longitude', 'coordinate_source', 'coordinate_derivation', 'property_kind', 'living_area', 'bedrooms', 'bathrooms', 'year_built', 'lot_size',
     'motivation_type', 'motivation_evidence_text', 'source_proof_text', 'why_this_might_be_a_deal',
     'sale_venue_address', 'sale_venue_evidence_text', 'sale_venue_source_url', 'subject_address_recovery',
     'source_structured_address_verified', 'property_identity_source_only',
