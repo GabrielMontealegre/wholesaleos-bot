@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const sessions = require('../modules/security/dashboard-session');
 const pairing = require('../modules/security/dashboard-pairing');
+const { probeProcessSpawn } = require('./helpers/process-capability');
 
 const root = path.resolve(__dirname, '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wos-cycle31-session-'));
@@ -64,6 +65,10 @@ function cookieFrom(response) {
 }
 
 (async () => {
+  if (!(await probeProcessSpawn()).available) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    return;
+  }
   const pin = runtimePin();
   const secret = runtimeSecret();
   const serverDb = path.join(tmp, 'db.json');
@@ -208,6 +213,10 @@ function cookieFrom(response) {
 })().finally(() => {
   fs.rmSync(tmp, { recursive: true, force: true });
 }).catch((error) => {
+  if (require('./helpers/process-capability').processSpawnDenied(error)) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    return;
+  }
   console.error(error && error.stack ? error.stack : error);
   process.exit(1);
 });

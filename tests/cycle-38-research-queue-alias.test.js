@@ -9,6 +9,7 @@ const path = require('path');
 const vm = require('vm');
 const sessions = require('../modules/security/dashboard-session');
 const routeModule = require('../modules/research/research-queue-read-route');
+const { probeProcessSpawn } = require('./helpers/process-capability');
 
 const root = path.resolve(__dirname, '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'wos-cycle38-alias-'));
@@ -57,6 +58,11 @@ async function stop(processInfo) {
 }
 
 (async () => {
+  if (!(await probeProcessSpawn()).available) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    fs.rmSync(temp, { recursive: true, force: true });
+    return;
+  }
   const secret = crypto.randomBytes(48).toString('base64url');
   const pin = String(4000 + crypto.randomInt(5000));
   const dbFile = path.join(temp, 'db.json');
@@ -228,6 +234,10 @@ async function stop(processInfo) {
     fs.rmSync(temp, { recursive: true, force: true });
   }
 })().catch((error) => {
+  if (require('./helpers/process-capability').processSpawnDenied(error)) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    return;
+  }
   console.error(error);
   try { fs.rmSync(temp, { recursive: true, force: true }); } catch (_) {}
   process.exitCode = 1;
