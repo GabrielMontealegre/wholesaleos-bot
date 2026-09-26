@@ -40,15 +40,47 @@ function addressFromUrl(value) {
   if (host.includes('google.') && /\/maps\/place\//i.test(pathname)) {
     return pathname.split(/\/maps\/place\//i)[1].split('/')[0].replace(/\+/g, ' ');
   }
+  if (host.includes('cyberbackgroundchecks.com')) {
+    const match = pathname.match(/\/address\/([^/]+)\/([^/]+)\/([^/]+)\/?$/i);
+    if (match) return `${match[1].replace(/-/g, ' ')}, ${match[2].replace(/-/g, ' ')}, ${match[3].replace(/-/g, ' ')}`;
+  }
   return '';
 }
 
-function storedAddressLinkMatches(url, subjectAddress) {
+// Components compared when both sides publish them. Some legitimate research links
+// (CyberBackgroundChecks address search, for example) encode street/city/state but no ZIP,
+// so a whole-address equality test would report a correct link as wrong.
+const COMPARABLE_COMPONENTS = Object.freeze(['number', 'street', 'suffix', 'directional', 'unit', 'city', 'state', 'zip']);
+
+// Three outcomes, deliberately distinct:
+//   VERIFIED_MATCH - an address was read from the URL and every shared component agrees
+//   MISMATCH       - an address was read and a shared component DISAGREES (a real defect)
+//   UNVERIFIABLE   - no address could be read, or too little of one to compare
+// Only MISMATCH means the link points somewhere else. UNVERIFIABLE means we cannot tell.
+function classifyStoredAddressLink(url, subjectAddress) {
   const encodedAddress = addressFromUrl(url);
-  return !!encodedAddress && addressCanonical.addressesMatchExactly(
-    addressCanonical.canonicalizeAddress(encodedAddress),
-    addressCanonical.canonicalizeAddress(subjectAddress)
-  );
+  if (!encodedAddress) return { status: 'UNVERIFIABLE', reason: 'no_address_encoded_in_url', differing_component: '' };
+  if (!cleanText(subjectAddress)) return { status: 'UNVERIFIABLE', reason: 'no_verified_subject_address', differing_component: '' };
+
+  const linkParts = addressCanonical.canonicalizeAddress(encodedAddress);
+  const subjectParts = addressCanonical.canonicalizeAddress(subjectAddress);
+  if (!linkParts.number || !linkParts.street || !subjectParts.number || !subjectParts.street) {
+    return { status: 'UNVERIFIABLE', reason: 'insufficient_components_to_compare', differing_component: '' };
+  }
+
+  for (const component of COMPARABLE_COMPONENTS) {
+    const linkValue = linkParts[component] || '';
+    const subjectValue = subjectParts[component] || '';
+    if (!linkValue || !subjectValue) continue;
+    if (linkValue !== subjectValue) {
+      return { status: 'MISMATCH', reason: 'component_differs', differing_component: component };
+    }
+  }
+  return { status: 'VERIFIED_MATCH', reason: 'shared_components_agree', differing_component: '' };
+}
+
+function storedAddressLinkMatches(url, subjectAddress) {
+  return classifyStoredAddressLink(url, subjectAddress).status === 'VERIFIED_MATCH';
 }
 
 function isKnownAddressSearchUrl(value) {
@@ -132,10 +164,13 @@ function auditStoredAddressLinks(rows) {
     const subject = verifiedSubjectAddress(row);
     let rowMismatch = false;
     for (const entry of entries) {
-      if (!subject || !storedAddressLinkMatches(entry.url, subject)) {
-        result.unverifiable_link_count += !subject || !addressFromUrl(entry.url) ? 1 : 0;
-        result.mismatched_link_count += subject ? 1 : 0;
-        rowMismatch = rowMismatch || !!subject;
+      const verdict = classifyStoredAddressLink(entry.url, subject);
+      if (verdict.status === 'MISMATCH') {
+        result.mismatched_link_count += 1;
+        rowMismatch = true;
+      } else if (verdict.status === 'UNVERIFIABLE') {
+        // Cannot be read, so cannot be called wrong. Counted separately, never as a mismatch.
+        result.unverifiable_link_count += 1;
       }
     }
     if (rowMismatch) result.rows_with_mismatched_address_links += 1;
@@ -143,5 +178,6 @@ function auditStoredAddressLinks(rows) {
   return result;
 }
 
-module.exports = { verifiedSubjectAddress, addressFromUrl, storedAddressLinkMatches, mapsSearchUrl,
+module.exports = { verifiedSubjectAddress, addressFromUrl, storedAddressLinkMatches,
+  classifyStoredAddressLink, mapsSearchUrl,
   safeStoredAddressUrl, buildAddressResearchLinks, auditStoredAddressLinks };
