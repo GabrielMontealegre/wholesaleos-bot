@@ -32,6 +32,20 @@ const propertyIdentityGrouping = require('./property-identity-grouping');
 const officialNoticeDossier = require('./official-notice-dossier');
 const discoveryLayer = require('./discovery-layer');
 const countyCandidateRegistry = require('../sources/county-candidate-registry');
+const sourceDateNormalization = require('./normalize-source-date');
+const addressDerivedResearchLinks = require('./address-derived-research-links');
+
+const LIFECYCLE_SOURCE_DATE_FIELDS = Object.freeze([
+  'source_date', 'sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date',
+  'notice_date', 'filing_date', 'source_published_at', 'listing_date_if_visible',
+  'reposted_source_date', 'replacement_source_date'
+]);
+const DERIVED_DATE_FIELDS = Object.freeze({
+  source_date: 'source_date_iso', event_date: 'event_date_iso', sale_date: 'sale_date_normalized_iso',
+  auction_date: 'auction_date_iso', notice_date: 'notice_date_iso', filing_date: 'filing_date_iso',
+  source_published_at: 'source_published_at_iso', listing_date_if_visible: 'listing_date_if_visible_iso',
+  reposted_source_date: 'reposted_source_date_iso', replacement_source_date: 'replacement_source_date_iso'
+});
 
 const DB_PATH = process.env.DB_PATH || './data/db.json';
 const SNAPSHOT_FILE = path.resolve(
@@ -181,15 +195,93 @@ function validDateIso(year, month, day) {
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// Notice dates are evidence, not estimates. Only two unambiguous formats can
-// influence urgency; every other source string remains visible but unsorted.
 function parseSaleDateIso(value) {
-  const text = cleanText(value);
-  let match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) return validDateIso(Number(match[1]), Number(match[2]), Number(match[3]));
-  match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (match) return validDateIso(Number(match[3]), Number(match[1]), Number(match[2]));
-  return null;
+  return sourceDateNormalization.normalizeSourceDate(value).iso || null;
+}
+
+function dateParseStatus(result, raw) {
+  if (!cleanText(raw)) return 'absent';
+  if (result.iso) return 'parsed';
+  return result.reason === 'ambiguous_numeric_order' ? 'ambiguous' : 'unparsed';
+}
+
+function deriveOneDate(row, sourceField, targetField, rawValue) {
+  const raw = cleanText(rawValue);
+  const result = sourceDateNormalization.normalizeSourceDate(raw);
+  row[targetField] = result.iso;
+  row[`${targetField.replace(/_iso$/, '')}_source_field`] = raw ? sourceField : '';
+  row[`${targetField.replace(/_iso$/, '')}_format_matched`] = result.format_matched;
+  row[`${targetField.replace(/_iso$/, '')}_parse_status`] = dateParseStatus(result, raw);
+  return result;
+}
+
+function deriveSourceDates(row) {
+  if (!row || typeof row !== 'object') return row;
+  const saleSourceField = ['sale_date_or_event_date', 'sale_date', 'auction_date', 'event_date', 'sale_date_iso']
+    .find((field) => cleanText(row[field])) || '';
+  const saleRaw = saleSourceField ? row[saleSourceField] : '';
+  const saleResult = sourceDateNormalization.normalizeSourceDate(saleRaw);
+  row.sale_date_iso = saleResult.iso || null;
+  row.sale_date_source_field = saleSourceField;
+  row.sale_date_format_matched = saleResult.format_matched;
+  row.sale_date_parse_status = dateParseStatus(saleResult, saleRaw);
+
+  for (const field of LIFECYCLE_SOURCE_DATE_FIELDS) {
+    if (field === 'sale_date_or_event_date' || field === 'sale_date_iso') continue;
+    const targetField = DERIVED_DATE_FIELDS[field] || `${field}_iso`;
+    deriveOneDate(row, field, targetField, row[field]);
+  }
+  return row;
+}
+
+function lifecycleDateProjection(row) {
+  const projected = Object.assign({}, row || {});
+  deriveSourceDates(projected);
+  for (const field of LIFECYCLE_SOURCE_DATE_FIELDS) {
+    const result = sourceDateNormalization.normalizeSourceDate(projected[field]);
+    if (result.iso) projected[field] = result.iso;
+  }
+  projected.sale_date_or_event_date = projected.sale_date_iso || projected.sale_date_or_event_date;
+  return projected;
+}
+
+function lifecycleStatusWithNormalizedDates(row, atIso) {
+  return leadLifecycleStatus.computeLifecycleStatus(lifecycleDateProjection(row), atIso || nowIso());
+}
+
+function fullSnapshotDateNormalizationSummary(store, atIso = nowIso()) {
+  const rows = Object.values(store && store.markets || {}).flatMap((bucket) => Array.isArray(bucket && bucket.rows) ? bucket.rows : []);
+  const counts = { parsed: 0, ambiguous: 0, unparsed: 0, absent: 0 };
+  const failedValues = { ambiguous: new Map(), unparsed: new Map() };
+  const movedOutOfQuarantineByPriorReason = {};
+  let newlyParsedSaleDateCount = 0;
+  for (const row of rows) {
+    const source = ['sale_date_or_event_date', 'sale_date', 'auction_date', 'event_date', 'sale_date_iso']
+      .find((field) => cleanText(row && row[field])) || '';
+    const raw = source ? cleanText(row[source]) : '';
+    const result = sourceDateNormalization.normalizeSourceDate(raw);
+    const status = dateParseStatus(result, raw);
+    counts[status] += 1;
+    if (result.iso && cleanText(row && row.sale_date_iso) !== result.iso) newlyParsedSaleDateCount += 1;
+    if (status === 'ambiguous' || status === 'unparsed') {
+      failedValues[status].set(raw, (failedValues[status].get(raw) || 0) + 1);
+    }
+    const before = leadLifecycleStatus.computeLifecycleStatus(row || {}, atIso);
+    const after = lifecycleStatusWithNormalizedDates(row || {}, atIso);
+    if (before.quarantined && !after.quarantined) {
+      movedOutOfQuarantineByPriorReason[before.reason_code] = (movedOutOfQuarantineByPriorReason[before.reason_code] || 0) + 1;
+    }
+  }
+  const topFive = (map) => Array.from(map.entries()).map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)).slice(0, 5);
+  return {
+    population_total: rows.length,
+    sale_date_parse_status_counts: counts,
+    newly_parsed_sale_date_count: newlyParsedSaleDateCount,
+    moved_out_of_quarantine_by_prior_reason: movedOutOfQuarantineByPriorReason,
+    top_failed_verbatim_values: { ambiguous: topFive(failedValues.ambiguous), unparsed: topFive(failedValues.unparsed) },
+    address_link_audit: addressDerivedResearchLinks.auditStoredAddressLinks(rows)
+  };
 }
 
 function currentDateIso() {
@@ -198,10 +290,8 @@ function currentDateIso() {
 }
 
 function repairSaleDateUrgency(row, todayIso = currentDateIso()) {
-  const verbatim = cleanText(row && row.sale_date_or_event_date);
-  const iso = parseSaleDateIso(verbatim || cleanText(row && row.sale_date_iso));
-  row.sale_date_or_event_date = verbatim || null;
-  row.sale_date_iso = iso;
+  deriveSourceDates(row);
+  const iso = row.sale_date_iso;
   if (!iso || iso >= todayIso) return false;
   row.risk_flags = prependUnique(row.risk_flags, ['SALE_DATE_PASSED_VERIFY_STATUS'], 6);
   row.next_best_action = 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT';
@@ -280,7 +370,11 @@ function repairStoredSnapshotRows(rows) {
     row = sourceEvidenceRecovery.recoverRow(row, { now_iso: nowIso() }).row;
     row = countyAppraisalEvidence.joinRow(row, appraisalEvidence, nowIso());
     row.distress_evidence = distressEvidenceModel.buildDistressEvidence(row);
-    row.lifecycle_status = leadLifecycleStatus.computeLifecycleStatus(row, nowIso());
+    const verifiedResearchAddress = addressDerivedResearchLinks.verifiedSubjectAddress(row);
+    row.subject_address_verified_for_research = !!verifiedResearchAddress;
+    row.best_link_to_click_first_safe = addressDerivedResearchLinks.safeStoredAddressUrl(
+      row.best_link_to_click_first, verifiedResearchAddress);
+    row.lifecycle_status = lifecycleStatusWithNormalizedDates(row, nowIso());
     const state = leadOperationsState.rowStateForDeal(row);
     row.row_state = state.row_state;
     row.row_state_reason = state.row_state_reason;
@@ -1125,7 +1219,7 @@ const LIFECYCLE_STATUSES = Object.freeze([
 function lifecycleAggregate(rows, atIso) {
   const counts = Object.fromEntries(LIFECYCLE_STATUSES.map((status) => [status, 0]));
   for (const row of Array.isArray(rows) ? rows : []) {
-    const status = leadLifecycleStatus.computeLifecycleStatus(row || {}, atIso || nowIso()).status;
+    const status = lifecycleStatusWithNormalizedDates(row || {}, atIso || nowIso()).status;
     counts[LIFECYCLE_STATUSES.includes(status) ? status : 'UNVERIFIABLE'] += 1;
   }
   return {
@@ -1185,6 +1279,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     lifecycle_aggregate: lifecycleAggregate(responseRows),
     lead_operations_queue: leadOperationsQueueForResponse(responseRows),
     rows: identity.rows
@@ -1331,6 +1426,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     discovery_summary: discoveryLayer.summarize(bucket.rows),
     full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(bucket.rows),
@@ -1353,6 +1449,7 @@ function latestDealBoardSnapshot(input = {}) {
     counts: identitySnapshot([]).counts,
     property_groups: [],
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     discovery_summary: discoveryLayer.summarize([]),
     full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate([]),
@@ -1405,6 +1502,7 @@ function latestDealBoardSnapshot(input = {}) {
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
+    full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     discovery_summary: discoveryLayer.summarize(rows),
     full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(rows),
@@ -1990,6 +2088,9 @@ module.exports = {
   jobsFilePath,
   dedupeKeyForDeal,
   parseSaleDateIso,
+  deriveSourceDates,
+  lifecycleStatusWithNormalizedDates,
+  fullSnapshotDateNormalizationSummary,
   repairSaleDateUrgency,
   quarantineSuspectedPrefixRow,
   repairCountyFromSourceHost,

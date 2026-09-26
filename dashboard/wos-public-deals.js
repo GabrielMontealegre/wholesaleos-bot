@@ -104,6 +104,20 @@
     return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;margin-right:8px;">' + esc(label) + '</a>';
   }
 
+  function addressSearchLinks(address) {
+    var value = String(address || '').trim();
+    if (!value) return [];
+    var encoded = encodeURIComponent(value);
+    var map = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+    return [
+      { label: 'Zillow subject search', url: 'https://www.zillow.com/homes/' + encoded + '_rb/' },
+      { label: 'Redfin subject search', url: 'https://www.redfin.com/search?q=' + encoded },
+      { label: 'Realtor.com subject search', url: 'https://www.realtor.com/realestateandhomes-search/' + encoded },
+      { label: 'Google Maps', url: map },
+      { label: 'Street View', url: map }
+    ];
+  }
+
   function chip(label, value, color) {
     return '<span style="display:inline-block;margin:2px 6px 2px 0;padding:3px 10px;border-radius:12px;background:' + (color || '#eef2ff') + ';color:#111;font-size:12px;font-weight:600;">' + esc(label) + ': ' + esc(value) + '</span>';
   }
@@ -334,6 +348,9 @@
 
   function manualFieldInput(item, key) {
     var value = item && item.fields && item.fields[key];
+    var propertyNumeric = ['beds', 'baths', 'sqft', 'year_built', 'lot_size'].indexOf(key) !== -1;
+    var impossibleZero = propertyNumeric && (value === null || value === undefined || value === '' ||
+      !Number.isFinite(Number(String(value).replace(/[^0-9.-]/g, ''))) || Number(String(value).replace(/[^0-9.-]/g, '')) <= 0);
     var base = 'class="wos-manual-field" data-field="' + esc(key) + '" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;background:#fff;color:#111827;font-size:11px;"';
     if (key === 'seller_owner_confirmed') {
       return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151;"><input type="checkbox" ' + base + (value === true ? ' checked' : '') + '> ' + esc(MANUAL_FIELD_LABELS[key]) + '</label>';
@@ -355,7 +372,7 @@
         '</select></label>';
     }
     return '<label style="font-size:10px;color:#6b7280;">' + esc(MANUAL_FIELD_LABELS[key] || key.replace(/_/g, ' ')) +
-      '<input type="text" ' + base + ' value="' + esc(value || '') + '"></label>';
+      '<input type="text" ' + base + ' value="' + esc(impossibleZero ? '' : value || '') + '"' + (impossibleZero ? ' placeholder="Unknown"' : '') + '></label>';
   }
 
   function manualEvidenceItem(item, evaluation) {
@@ -408,7 +425,9 @@
     function proposedField(name) {
       for (var index = subjects.length - 1; index >= 0; index -= 1) {
         var candidate = subjects[index];
-        if (candidate.fields && candidate.fields[name]) return { item: candidate, value: candidate.fields[name] };
+        if (candidate.fields && candidate.fields[name] !== null && candidate.fields[name] !== undefined && candidate.fields[name] !== '') {
+          return { item: candidate, value: candidate.fields[name] };
+        }
       }
       return null;
     }
@@ -423,10 +442,12 @@
         var proposal = entry.proposal;
         var confirmation = proposal.item.field_confirmations && proposal.item.field_confirmations[entry.name];
         var confirmed = confirmation && confirmation.confirmed === true && confirmation.confirmed_by && confirmation.confirmed_at;
+        var numericValue = Number(String(proposal.value == null ? '' : proposal.value).replace(/[^0-9.-]/g, ''));
+        var impossibleZero = ['sqft', 'beds', 'baths', 'year_built', 'lot_size'].indexOf(entry.name) !== -1 && (!Number.isFinite(numericValue) || numericValue <= 0);
         var screenshot = proposal.item.screenshot_url || '';
-        return '<div style="margin-top:4px;"><b>' + esc(entry.name.replace(/_/g, ' ')) + ':</b> ' + esc(proposal.value) +
+        return '<div style="margin-top:4px;"><b>' + esc(entry.name.replace(/_/g, ' ')) + ':</b> ' + esc(impossibleZero ? 'Unknown' : proposal.value) +
           (screenshot ? ' <a href="' + esc(screenshot) + '" target="_blank" rel="noopener">view screenshot</a>' : '') +
-          ' <button type="button" class="wos-subject-field-confirm" data-evidence-id="' + esc(proposal.item.evidence_id || '') + '" data-field-name="' + esc(entry.name) + '" data-confirmed="' + (confirmed ? 'false' : 'true') + '" style="padding:3px 7px;border-radius:5px;border:1px solid ' + (confirmed ? '#b91c1c' : '#047857') + ';background:#fff;color:' + (confirmed ? '#b91c1c' : '#047857') + ';font-size:10px;font-weight:700;cursor:pointer;">' + (confirmed ? 'Un-confirm' : 'Confirm') + '</button></div>';
+          ' <button type="button" class="wos-subject-field-confirm" data-evidence-id="' + esc(proposal.item.evidence_id || '') + '" data-field-name="' + esc(entry.name) + '" data-confirmed="' + (confirmed ? 'false' : 'true') + '"' + (impossibleZero && !confirmed ? ' disabled title="A zero or invalid property measurement cannot be confirmed as a real fact."' : '') + ' style="padding:3px 7px;border-radius:5px;border:1px solid ' + (confirmed ? '#b91c1c' : '#047857') + ';background:#fff;color:' + (confirmed ? '#b91c1c' : '#047857') + ';font-size:10px;font-weight:700;cursor:' + (impossibleZero && !confirmed ? 'not-allowed' : 'pointer') + ';">' + (confirmed ? 'Un-confirm' : 'Confirm') + '</button></div>';
       }).join('');
       return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;background:#fff;"><b>' + esc(definition.label) + '</b> <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + (status === 'READY' ? '#bbf7d0' : status === 'MISSING' ? '#fee2e2' : '#fde68a') + ';">' + status + '</span>' +
         (details || '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No operator-captured value.</div>') + (allConfirmed ? '' : '') + '</div>';
@@ -569,7 +590,10 @@
     var questions = safeArray(discovery.questions);
     var sourceLink = function (label, url) { return /^https?:\/\//i.test(String(url || '')) ? link(label, url) : ''; };
     var fact = function (entry) {
-      return '<li><b>' + esc(entry.label) + ':</b> ' + esc(entry.value) +
+      var propertyNumber = ['living_area', 'beds', 'baths', 'year_built', 'lot_size'].indexOf(String(entry.field || '')) !== -1;
+      var numeric = Number(String(entry.value == null ? '' : entry.value).replace(/[^0-9.-]/g, ''));
+      var value = propertyNumber && (!Number.isFinite(numeric) || numeric <= 0) ? 'Unknown' : entry.value;
+      return '<li><b>' + esc(entry.label) + ':</b> ' + esc(value) +
         (entry.source_url ? ' ' + sourceLink('Source', entry.source_url) : '') + '</li>';
     };
     return '<section class="wos-discovery" data-queue-key="' + esc(queueKey) + '" style="margin-top:10px;border-top:1px solid #d1d5db;padding-top:9px;font-size:11px;color:#1f2937;">' +
@@ -589,7 +613,7 @@
         '</section>' +
         '<section><h3 style="font-size:11px;margin:0 0 5px;">WHAT TO ASK THEM</h3>' +
           (questions.length ? '<ol style="padding-left:17px;margin:0;">' + questions.map(function (item) {
-            return '<li><b>' + esc(item.wording) + '</b>' + (item.field === 'condition_detail' ? ' ' + sourceLink('Check Street View', discovery.street_view_url) : '') + '<br>' + esc(item.why) +
+            return '<li><b>' + esc(item.wording) + '</b>' + (item.field === 'condition_detail' ? (sourceLink('Check Street View', discovery.street_view_url) || ' <span>No verified property address yet.</span>') : '') + '<br>' + esc(item.why) +
               '<br><span style="color:#4b5563;">Listen for: ' + esc(item.useful_answer) + ' Follow up: ' + esc(item.follow_up) + '</span></li>';
           }).join('') + '</ol>' : '<p>No unanswered seller questions on this row.</p>') +
           (questions.length ? '<div style="margin-top:8px;display:grid;gap:5px;">' +
@@ -620,7 +644,11 @@
       var result = readiness[axis[0]] || {};
       return '<div><b>' + esc(axis[1]) + ': ' + esc(result.status || 'UNKNOWN') + '</b><br>' + esc(result.reason || 'Evidence has not been evaluated.') + '</div>';
     }).join('');
-    var links = safeArray(item.research_links).map(function (entry) {
+    var addressLinks = item.subject_address_verified_for_research ? addressSearchLinks(item.address) : [];
+    var otherLinks = safeArray(item.research_links).filter(function (entry) {
+      return !/zillow|redfin|realtor|google maps|street view|cyberbackgroundchecks address/i.test(String(entry && entry.label || ''));
+    });
+    var links = addressLinks.concat(otherLinks).map(function (entry) {
       return '<a href="' + esc(entry.url || '') + '" target="_blank" rel="noopener" title="' + esc(entry.warning || '') + '" style="display:inline-block;padding:5px 8px;margin:3px 4px 0 0;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:10px;text-decoration:none;font-weight:600;">' + esc(entry.label || 'Open source') + '</a>';
     }).join('');
     var missing = safeArray(item.missing_evidence);
@@ -650,7 +678,7 @@
       discoveryHtml(item.discovery, item.queue_key || '') +
       officialNoticeDossierHtml(item.official_notice, readiness, item) +
       '<div class="wos-distress-facts" style="margin-top:7px;padding:7px 8px;border:1px solid #fca5a5;border-radius:7px;background:#fff7ed;font-size:11px;"><b>Official distress facts</b><br><b>Source:</b> ' + esc(item.lead_origin || 'official county source') + '<br><b>' + (unconfirmedEllisDate ? 'Date in source excerpt (unconfirmed):' : 'Sale/event date:') + '</b> ' + esc(item.source_event_date || 'Not published in this evidence') + '<br>' + link('Open official source document', item.source_proof_url) + '<br><b>Last checked:</b> ' + esc(item.source_last_checked_at || 'Unknown') + '<br><b>Event status:</b> ' + esc(noticeEventText || readiness.event_status && readiness.event_status.reason_text || 'Current status has not been confirmed.') + '</div>' +
-      '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built until the address is verified.</span>') +
+      '<div style="margin-top:5px;"><b style="font-size:11px;">Open research pages:</b><br>' + (item.subject_address_verified_for_research ? links || '<span style="font-size:10px;color:#6b7280;">No safe direct link can be built yet.</span>' : '<span style="font-size:10px;color:#6b7280;">No verified property address yet.</span>' + links) +
         (researchUrls.length ? '<div style="margin-top:5px;"><button type="button" class="wos-open-research-set" data-research-urls="' + esc(encodeURIComponent(JSON.stringify(researchUrls))) + '" style="padding:6px 10px;border-radius:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Open research set</button> <span class="wos-open-research-message" style="font-size:10px;color:#6b7280;">Opens the existing human research links. No server scraping.</span></div>' : '') + '</div>' +
       '<div class="wos-local-helper-row" style="margin-top:7px;padding:7px 8px;border:1px solid #c4b5fd;border-radius:7px;background:#faf5ff;font-size:11px;">' +
         '<b>Local comp helper:</b> <span class="wos-helper-inline-status">' + esc(localHelperStatusText()) + '</span> <span class="wos-helper-build" style="display:none;color:#6b7280;"></span><br>' +
@@ -807,11 +835,14 @@
   }
 
   function researchLinksHtml(row) {
-    var links = safeArray(row && row.research_links).filter(function (entry) {
-      return entry && entry.url && /zillow|redfin|google maps|county appraisal|county assessor/i.test(entry.label || '');
+    var verified = !!(row && row.subject_address_verified_for_research);
+    var generated = verified ? addressSearchLinks(row.normalized_address) : [];
+    var other = safeArray(row && row.research_links).filter(function (entry) {
+      return entry && entry.url && !/zillow|redfin|realtor|google maps|street view|cyberbackgroundchecks address/i.test(entry.label || '') &&
+        /county appraisal|county assessor|county source proof|auction or sale status/i.test(entry.label || '');
     });
-    if (!links.length) return '';
-    return links.map(function (entry) { return link(entry.label, entry.url); }).join('');
+    return (verified ? '' : '<span>No verified property address yet.</span> ') +
+      generated.concat(other).map(function (entry) { return link(entry.label, entry.url); }).join('');
   }
 
   function dossierValue(value) {
@@ -828,7 +859,10 @@
 
   function dossierFact(label, entry, options) {
     options = options || {};
-    var known = entry && entry.status && entry.status !== 'UNKNOWN' && entry.value !== null && entry.value !== undefined && entry.value !== '';
+    var propertyNumber = options.property_number === true;
+    var numeric = Number(String(entry && entry.value == null ? '' : entry && entry.value).replace(/[^0-9.-]/g, ''));
+    var impossible = propertyNumber && (!Number.isFinite(numeric) || numeric <= 0);
+    var known = entry && entry.status && entry.status !== 'UNKNOWN' && entry.value !== null && entry.value !== undefined && entry.value !== '' && !impossible;
     if (!known) return '<div><b>' + esc(label) + ':</b> Unknown <span style="color:#6b7280;">(' + esc(options.unknown_reason || 'source-backed evidence is missing') + ')</span></div>';
     var provenance = entry.provenance || {};
     var value = dossierValue(entry.value);
@@ -863,14 +897,16 @@
     var roomReason = room === 'LIKELY' ? 'The clue-level value reference exceeds the supported debt estimate by at least 30%.' : room === 'TIGHT' ? 'The clue-level spread is positive but below 30%.' : room === 'NONE' ? 'The supported debt estimate is at or above the clue-level value reference.' : 'Debt or value evidence is incomplete, so room cannot be calculated.';
     var missing = [];
     [['address', identity.normalized_address], ['parcel number', identity.parcel_id], ['beds', identity.beds], ['baths', identity.baths], ['square footage', identity.sqft], ['year built', identity.year_built], ['lot size', identity.lot_size], ['property type', identity.property_type], ['owner of record', ownership.owner_of_record]].forEach(function (pair) {
-      if (!pair[1] || pair[1].status === 'UNKNOWN') missing.push(pair[0]);
+      var value = pair[1] && pair[1].value;
+      var propertyNumber = ['beds', 'baths', 'square footage', 'year built', 'lot size'].indexOf(pair[0]) !== -1;
+      if (!pair[1] || pair[1].status === 'UNKNOWN' || (propertyNumber && (!Number.isFinite(Number(String(value == null ? '' : value).replace(/[^0-9.-]/g, ''))) || Number(String(value == null ? '' : value).replace(/[^0-9.-]/g, '')) <= 0))) missing.push(pair[0]);
     });
     safeArray(row && row.subject_grid_readiness && row.subject_grid_readiness.missing).forEach(function (name) { missing.push('subject ' + String(name).replace(/_/g, ' ')); });
     safeArray(row && row.manual_comp_grid_rejection_reasons).forEach(function (reason) { missing.push('comp rejected: ' + String(reason).replace(/_/g, ' ')); });
     var distressFacts = Object.keys(distressOverlay).map(function (key) { return dossierFact(key.replace(/_/g, ' '), distressOverlay[key]); }).join('');
     return '<details class="wos-leverage-dossier" style="margin-top:7px;border:1px solid #cbd5e1;border-radius:7px;padding:7px 8px;background:#f8fafc;font-size:11px;"><summary style="cursor:pointer;font-weight:700;color:#111827;">Property leverage dossier</summary>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin-top:7px;">' +
-      '<section><b>Property facts</b>' + dossierFact('Address', identity.normalized_address) + dossierFact('Parcel', identity.parcel_id) + dossierFact('Beds', identity.beds) + dossierFact('Baths', identity.baths) + dossierFact('Square feet', identity.sqft) + dossierFact('Year built', identity.year_built) + dossierFact('Lot size', identity.lot_size) + dossierFact('Property type', identity.property_type) + '</section>' +
+      '<section><b>Property facts</b>' + dossierFact('Address', identity.normalized_address) + dossierFact('Parcel', identity.parcel_id) + dossierFact('Beds', identity.beds, { property_number: true }) + dossierFact('Baths', identity.baths, { property_number: true }) + dossierFact('Square feet', identity.sqft, { property_number: true }) + dossierFact('Year built', identity.year_built, { property_number: true }) + dossierFact('Lot size', identity.lot_size, { property_number: true }) + dossierFact('Property type', identity.property_type) + '</section>' +
       '<section><b>Ownership</b>' + dossierFact('Owner of record', ownership.owner_of_record) + dossierFact('Role', ownership.owner_role) + dossierFact('Prior sale price', ownership.prior_sale_price) + dossierFact('Prior sale date', ownership.prior_sale_date) + dossierFact('Years held', ownership.years_held) + '</section>' +
       '<section><b>Debt</b>' + debtFactsHtml(dossier.debt) + '</section>' +
       '<section><b>Distress reason</b>' + (distressFacts || '<div>Unknown (no sourced distress overlay)</div>') + '</section>' +
@@ -911,8 +947,10 @@
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
       ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
-    if (zipReview && row.maps_search_url_review_needed) {
+    if (zipReview && row.subject_address_verified_for_research && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
+    } else if (!row.subject_address_verified_for_research) {
+      lines.push('<div style="font-size:12px;">No verified property address yet.</div>');
     }
     lines.push('<div style="font-size:12px;"><b>Contact status:</b> ' + esc(row.contact_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.contact_state_reason || 'No contact route is ready.') + '</span></div>');
     lines.push('<div style="font-size:12px;"><b>Property status:</b> ' + esc(row.property_state || 'LOCKED') + ' - <span style="color:#6b7280;">' + esc(row.property_state_reason || 'Property work is not ready.') + '</span></div>');
@@ -989,7 +1027,7 @@
         (row.business_entity_resolution.registered_agent_address ? ' - ' + esc(row.business_entity_resolution.registered_agent_address) : '') +
         ' <span style="color:#991b1b;">registered agent is not the seller</span> ' + link('entity proof', row.business_entity_resolution.source_url) + '</div>');
     }
-    var links = link('Best click', row.best_link_to_click_first) + link('Auction', row.auction_url);
+    var links = link('Best click', row.best_link_to_click_first_safe) + link('Auction', row.auction_url);
     if (links) lines.push('<div style="font-size:12px;margin:3px 0;">' + links + '</div>');
     var contactRoutes = contactRoutesHtml(row);
     if (contactRoutes) lines.push(contactRoutes);
@@ -1319,7 +1357,9 @@
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') + '</div>' +
       '<div style="font-size:12px;margin-top:3px;">' +
       link('Open official document (find the zip here)', row.source_document_url || row.source_url) +
-      link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>' +
+      (row.subject_address_verified_for_research
+        ? link('Maps search (property address)', addressSearchLinks(row.normalized_address).filter(function (entry) { return entry.label === 'Google Maps'; })[0].url)
+        : '<span>No verified property address yet.</span>') + '</div>' +
       (row.census_zip_suggestion
         ? '<div style="font-size:12px;margin-top:3px;color:#065f46;">US Census geocoder suggests zip <b>' + esc(row.census_zip_suggestion) + '</b>' +
           (row.census_matched_address ? ' (' + esc(row.census_matched_address) + ')' : '') + ' - confirm it in the document.</div>'
@@ -1357,9 +1397,19 @@
     var aggregate = data && data.lifecycle_aggregate || {};
     var counts = aggregate.counts || {};
     var statuses = ['FRESH', 'AGING', 'SALE_PASSED', 'REPOSTED_OR_REPLACED', 'SOURCE_NO_LONGER_LISTED', 'DATE_UNKNOWN_REVERIFY', 'UNVERIFIABLE'];
+    var normalization = data && data.full_snapshot_date_normalization_summary || {};
+    var linkAudit = normalization.address_link_audit || {};
     return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">' +
       '<div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Full-market freshness (' + esc(aggregate.population_total || 0) + ' rows)</div>' +
       statuses.map(function (status) { return chip(status, Number(counts[status] || 0), '#f3f4f6'); }).join('') +
+      '<div style="font-size:10px;color:#4b5563;margin-top:4px;">Full snapshot date formats: ' +
+      Object.keys(normalization.sale_date_parse_status_counts || {}).map(function (key) { return esc(key) + ' ' + esc(normalization.sale_date_parse_status_counts[key]); }).join(' | ') +
+      ' | parsed date fields newly available: ' + esc(normalization.newly_parsed_sale_date_count || 0) +
+      ' | rows leaving quarantine: ' + esc(Object.keys(normalization.moved_out_of_quarantine_by_prior_reason || {}).reduce(function (sum, key) { return sum + Number(normalization.moved_out_of_quarantine_by_prior_reason[key] || 0); }, 0)) +
+      ' | mismatched address-link rows: ' + esc(linkAudit.rows_with_mismatched_address_links || 0) + '</div>' +
+      (normalization.top_failed_verbatim_values ? '<div style="font-size:10px;color:#6b7280;margin-top:2px;">Top ambiguous date text: ' +
+        esc(safeArray(normalization.top_failed_verbatim_values.ambiguous).map(function (item) { return item.value + ' (' + item.count + ')'; }).join(' | ') || 'none') +
+        '<br>Top unparsed date text: ' + esc(safeArray(normalization.top_failed_verbatim_values.unparsed).map(function (item) { return item.value + ' (' + item.count + ')'; }).join(' | ') || 'none') + '</div>' : '') +
       '</div>';
   }
 
@@ -2653,6 +2703,10 @@
     officialNoticeDossierHtml: officialNoticeDossierHtml,
     fullIdentityCountChips: fullIdentityCountChips,
     debtFactsHtml: debtFactsHtml,
+    dossierFact: dossierFact,
+    researchLinksHtml: researchLinksHtml,
+    addressSearchLinks: addressSearchLinks,
+    manualFieldInput: manualFieldInput,
     rowCard: rowCard,
     sortTopDealsRows: sortTopDealsRows,
     topUrgentAddresses: topUrgentAddresses,
