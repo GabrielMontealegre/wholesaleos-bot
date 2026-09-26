@@ -8,7 +8,7 @@ const assert = require('assert');
 const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { probeProcessSpawn } = require('./helpers/process-capability');
+const { processSpawnDenied, probeProcessSpawn } = require('./helpers/process-capability');
 
 const runnerPath = path.resolve(__dirname, '..', 'scripts', 'run-tests.ps1');
 
@@ -35,6 +35,7 @@ function runResolver(env) {
     const result = childProcess.spawnSync(POWERSHELL,
       ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptFile],
       { encoding: 'utf8', env: Object.assign({}, process.env, env), windowsHide: true });
+    if (result.error) throw result.error;
     return String(result.stdout || '') + String(result.stderr || '');
   } finally {
     try { fs.unlinkSync(scriptFile); } catch (_) { /* best effort */ }
@@ -85,7 +86,7 @@ function runResolver(env) {
 
   console.log('run-tests-node-resolution: all assertions passed');
 })().catch((error) => {
-  if (require('./helpers/process-capability').processSpawnDenied(error)) {
+  if (processSpawnDenied(error)) {
     console.log('SKIPPED: process spawn not permitted in this runner');
     return;
   }
