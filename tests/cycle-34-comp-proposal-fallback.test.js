@@ -22,6 +22,7 @@ fs.writeFileSync(process.env.DB_PATH, JSON.stringify({ leads: [] }));
 const agent = require('../scripts/wos-local-comp-agent');
 const service = require('../modules/research/manual-evidence-packet-service');
 const resolver = require('../modules/research/playwright-browser-resolver');
+const { probeBrowser } = require('./helpers/browser-capability');
 const originalFetch = global.fetch;
 const originalHttpGet = http.get;
 const originalHttpRequest = http.request;
@@ -80,6 +81,12 @@ function responseBodyForUpload(sourceUrl, indexByPath) {
 }
 
 async function main() {
+  const browserCheck = await probeBrowser();
+  if (!browserCheck.available) {
+    console.log(browserCheck.reason);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return;
+  }
   const app = express();
   const allowedFixtures = new Set(fs.readdirSync(fixtures));
   app.get('/fixture/late', (_req, res) => res.type('html').send('<!doctype html><html><body><h1>Recently sold homes loading</h1><script>setTimeout(function(){document.body.innerHTML += `<main data-testid="search-page-list-container"><article data-testid="property-card">$250,000 sold June 14, 2026 901 Late St, Dallas, TX 75201</article></main>`;},500);</script></body></html>'));

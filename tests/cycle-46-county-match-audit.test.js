@@ -9,6 +9,7 @@ const https = require('https');
 const os = require('os');
 const path = require('path');
 const service = require('../modules/research/county-appraisal-evidence-service');
+const { probeProcessSpawn } = require('./helpers/process-capability');
 
 const NODE_NOW = '2026-09-24T12:00:00.000Z';
 const OWNER = 'WITTE JACOB & ADRIANA';
@@ -90,6 +91,10 @@ async function checkUnauthenticatedRoute(f) {
   }
 }
 async function run() {
+  if (!(await probeProcessSpawn()).available) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    return;
+  }
   const fixtures = [];
   const original = { fetch: global.fetch, write: fs.writeFileSync, rename: fs.renameSync,
     unlink: fs.unlinkSync, mkdir: fs.mkdirSync, httpGet: http.get, httpRequest: http.request,
@@ -206,4 +211,11 @@ async function run() {
     for (const f of fixtures) fs.rmSync(f.directory, { recursive: true, force: true });
   }
 }
-run().catch((caught) => { console.error(caught); process.exitCode = 1; });
+run().catch((caught) => {
+  if (require('./helpers/process-capability').processSpawnDenied(caught)) {
+    console.log('SKIPPED: process spawn not permitted in this runner');
+    return;
+  }
+  console.error(caught);
+  process.exitCode = 1;
+});

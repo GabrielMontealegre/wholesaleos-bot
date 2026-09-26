@@ -22,6 +22,7 @@ fs.writeFileSync(process.env.DB_PATH, JSON.stringify({ leads: [] }));
 const agent = require('../scripts/wos-local-comp-agent');
 const service = require('../modules/research/manual-evidence-packet-service');
 const resolver = require('../modules/research/playwright-browser-resolver');
+const { probeBrowser } = require('./helpers/browser-capability');
 const originalLoad = Module._load;
 const originalFetch = global.fetch;
 const originalHttpGet = http.get;
@@ -91,6 +92,12 @@ function packetFor(comps, confirmed) {
 }
 
 async function main() {
+  const browserCheck = await probeBrowser();
+  if (!browserCheck.available) {
+    console.log(browserCheck.reason);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return;
+  }
   const fixtureApp = express();
   fixtureApp.get('/sold', (req, res) => {
     const cards = Array.from({ length: 5 }, (_, index) =>
