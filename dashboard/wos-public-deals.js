@@ -24,6 +24,7 @@
   var LOCAL_HELPER = 'http://127.0.0.1:8797';
   var SUPPORTED_HELPER_PROTOCOLS = [1];
   var lastData = null;
+  var dealGlossary = [];
   var lastNote = '';
   var pendingRequestId = 0;
   var activeRequestId = 0;
@@ -669,6 +670,7 @@
     }).join('');
     return '<details class="wos-manual-evidence-card" data-queue-key="' + esc(item.queue_key || '') + '" open style="border:1px solid #93c5fd;border-radius:8px;padding:9px 10px;margin-top:8px;background:#fff;">' +
       '<summary style="cursor:pointer;font-weight:700;font-size:13px;color:#111827;">' + esc(item.address || item.headline || item.queue_key) + ' <span style="font-size:10px;padding:2px 7px;border-radius:9px;background:#dbeafe;">' + esc(item.lead_origin || 'public record') + '</span></summary>' +
+      dealFitHtml(item.deal_fit_explanation) +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:7px;font-size:11px;color:#374151;">' +
         '<div><b>Why it may be a deal:</b> ' + esc(item.why_worth_checking || '') + '<br><b>Contact status:</b> ' + esc(item.contact_state || 'LOCKED') + ' - ' + esc(item.contact_state_reason || 'No contact route is ready.') + '<br><b>Property status:</b> ' + esc(item.property_state || 'LOCKED') + ' - ' + esc(item.property_state_reason || 'Property work is not ready.') + '<br><span style="font-size:10px;color:#6b7280;">Legacy combined state: ' + esc(item.row_state || 'review') + '</span><br><b>Source-supported address check:</b> ' + esc(item.address_state || '') + '<br><b>Stored address status:</b> ' + esc(item.stored_address_state_display || 'not recorded') + '</div>' +
         '<div><b>Still missing:</b> ' + esc(missing.length ? missing.join(', ') : 'nothing currently listed') + '<br>' + link('Open county source proof', item.source_proof_url) + '</div>' +
@@ -691,6 +693,11 @@
       subjectFactsPanel(proposals, evaluation) +
       '<div style="margin-top:8px;padding:7px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:11px;">' +
         '<b>Evidence status:</b> ' + esc(evaluation.confirmed_evidence_count || 0) + ' confirmed; ' + esc(evaluation.verified_sold_comp_count || 0) + '/3 verified sold comps; ARV ' + esc(String(evaluation.arv_status || 'LOCKED').replace(/_/g, ' ')) + '; projected work state ' + esc(evaluation.projected_row_state || item.row_state || 'review') + '.' +
+        safeArray(item.paid_comp_sources).map(function (comp) {
+          return '<br><b>Paid recorded comp:</b> ' + esc(comp.comp_address || comp.parcel_id || 'parcel only') +
+            ' - $' + esc(Number(comp.sold_price || 0).toLocaleString()) + ', sold ' + esc(comp.sold_date || 'date unavailable') +
+            ' | ' + esc(comp.provider_name) + ' | ' + esc(comp.price_basis) + ' ' + link('provider record', comp.source_url);
+        }).join('') +
         (arv ? '<br><b>Preliminary screenshot ARV range:</b> $' + esc(Number(arv.low || 0).toLocaleString()) + ' - $' + esc(Number(arv.high || 0).toLocaleString()) + ' (median $' + esc(Number(arv.median || 0).toLocaleString()) + '). This is separate from county/API comp evidence.' + arvCompDetails : '') +
         (safeArray(evaluation.clue_values_not_arv).length ? '<br><b>Clues only, not ARV:</b> ' + safeArray(evaluation.clue_values_not_arv).map(function (clue) { return esc((clue.field === 'public_estimate' ? 'Site estimate (not a sold comp)' : clue.field) + ' ' + clue.value); }).join(', ') : '') +
         (gridSummary ? '<details style="margin-top:5px;"><summary style="cursor:pointer;color:#1d4ed8;">Strict comp grid evidence</summary><div style="font-size:10px;color:#6b7280;">NOT_APPLIED means a required fact was missing; it never silently passes the comp.</div>' + gridSummary + '</details>' : '') +
@@ -946,6 +953,26 @@
       '<div>' + link('Open Ellis CAD source', record.source_url || record.bulk_source_url) + '</div></details>';
   }
 
+  function dealFitHtml(explanation) {
+    var summary = explanation && explanation.priority || {};
+    var best = summary.best_fit || {};
+    var fits = safeArray(explanation && explanation.fits);
+    if (!summary.band) return '';
+    return '<div class="wos-deal-fit" style="font-size:11px;line-height:1.5;margin:6px 0;padding:6px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">' +
+      '<div><b>Priority: ' + esc(summary.band.replace(/_/g, ' ')) + '</b> - ' + esc(summary.why) + '</div>' +
+      '<div><b>Best fit: ' + esc(best.path || 'Unknown') + ' (' + esc(best.verdict || 'UNKNOWN') + ')</b> - ' + esc(best.why || 'Not established.') + '</div>' +
+      '<div><b>Next step:</b> ' + esc(summary.next_step || 'Review the official source.') + '</div>' +
+      '<details><summary style="cursor:pointer;color:#2563eb;">Other deal paths</summary>' +
+        fits.map(function (item) {
+          return '<div style="margin:4px 0;"><b>' + esc(item.path) + ': ' + esc(item.verdict) + '</b> - ' + esc(item.why) +
+            '<br>What you need from the seller: ' + esc(item.seller_question) + '</div>';
+        }).join('') + '</details>' +
+      '<details><summary style="cursor:pointer;color:#2563eb;">What is this?</summary>' +
+        dealGlossary.map(function (entry) {
+          return '<div style="margin:4px 0;"><b>' + esc(entry.term) + ':</b> ' + esc(entry.definition) + '</div>';
+        }).join('') + '</details></div>';
+  }
+
   function rowCard(row, embedded) {
     var zipReview = row.quality_bucket === 'NEEDS_ZIP_REVIEW';
     var title = row.normalized_address || row.partial_address || row.headline || 'Source proof row';
@@ -954,6 +981,7 @@
       (zipReview ? ' <span style="font-weight:600;font-size:11px;padding:2px 8px;border-radius:10px;background:#fed7aa;">ZIP MISSING - verify in document</span>' : '') +
       (row.county ? ' <span style="font-weight:500;font-size:11px;color:#6b7280;">(' + esc(row.county) + ' County)</span>' : '') +
       ' <span style="font-weight:500;font-size:11px;padding:2px 8px;border-radius:10px;background:' + rowStateColor(row.row_state) + ';">' + esc(row.row_state || row.quality_bucket || '') + '</span>' + lifecycleChip(row) + saleDateBadge(row) + '</div>');
+    lines.push(dealFitHtml(row.deal_fit_explanation));
     if (zipReview && row.subject_address_verified_for_research && row.maps_search_url_review_needed) {
       lines.push('<div style="font-size:12px;">' + link('Maps search (zip unverified - review)', row.maps_search_url_review_needed) + '</div>');
     } else if (!row.subject_address_verified_for_research) {
@@ -1050,7 +1078,9 @@
       lines.push('<div style="font-size:11px;color:#065f46;margin-top:2px;">Verified comps: ' +
         safeArray(row.verified_comps).map(function (c) {
           var compLabel = c.comp_address || (c.comp_identity_kind === 'parcel_id_only' ? 'parcel only - no street address on the public record' : '');
-          return esc(compLabel) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' + link('public record', c.source_url);
+          return esc(compLabel) + ' $' + esc(String(c.sold_price)) + ' (' + esc(c.sold_date) + ') ' +
+            (c.source_kind === 'paid_api' ? esc(c.provider_name || '') + ' - ' + esc(c.price_basis || '') + ' ' : '') +
+            link(c.source_kind === 'paid_api' ? 'provider record' : 'public record', c.source_url);
         }).join(' | ') + '</div>');
     }
     if (row.next_comp_action) lines.push('<div style="font-size:11px;color:#374151;">Comp action: ' + esc(row.next_comp_action) + '</div>');
@@ -1901,6 +1931,7 @@
   }
 
   function panelsForPage(page, data, rows, note) {
+    dealGlossary = safeArray(data && data.deal_glossary);
     if (page === 'dashboard') {
       return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +

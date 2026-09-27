@@ -58,12 +58,13 @@ function centroid(geometry) {
 }
 function layerUrl(profile) {
   const config = profile && profile.arcgis_parcel_service;
+  const servicePath = config && config.service_path;
   if (!config || !/^[a-z0-9.-]+$/i.test(config.host) ||
-      !/^\/arcgis\/rest\/services\/[a-z0-9/_-]+\/MapServer$/i.test(config.service_path) ||
+      !/^\/(?:[a-z0-9_-]+\/)?arcgis\/rest\/services\/(?:[a-z0-9_-]+\/)+(?:MapServer|FeatureServer)$/i.test(servicePath) ||
       !Number.isInteger(config.layer_id) || config.out_sr !== 4326) {
     throw new Error('county_parcel_profile_invalid');
   }
-  return `https://${config.host}${config.service_path}/${config.layer_id}/query`;
+  return `https://${config.host}${servicePath}/${config.layer_id}/query`;
 }
 function recordFromFeature(feature, profile, queryUrl) {
   const config = profile.arcgis_parcel_service;
@@ -99,6 +100,10 @@ function recordFromFeature(feature, profile, queryUrl) {
     source_kind: 'official_public_record', source_url: queryUrl,
     source_reference_url: clean(value('source_reference_url')), source_date: sourceDate
   };
+  for (const field of ['living_area', 'bedrooms', 'bathrooms', 'sale_price']) {
+    if (clean(fields[field])) record[field] = numberOrNull(value(field));
+  }
+  if (clean(fields.sale_date)) record.sale_date = dateFromEpoch(value('sale_date')) || clean(value('sale_date'));
   if (point) Object.assign(record, point, {
     coordinate_source: 'official_county_parcel_polygon_centroid',
     coordinate_derivation: 'Derived from the public parcel polygon; not a measured building location.'

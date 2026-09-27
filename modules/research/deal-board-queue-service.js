@@ -26,6 +26,7 @@ const documentReextractionPass = require('./document-reextraction-pass');
 const manualEvidencePacketService = require('./manual-evidence-packet-service');
 const distressEvidenceModel = require('./distress-evidence-model');
 const propertyLeverageDossier = require('./property-leverage-dossier');
+const dealFitExplainer = require('./deal-fit-explainer');
 const sourceEvidenceRecovery = require('./source-evidence-recovery');
 const countyAppraisalEvidence = require('./county-appraisal-evidence-service');
 const countyParcelEvidence = require('./county-parcel-evidence-service');
@@ -421,6 +422,7 @@ function projectManualValueEvidence(rows, market, options = {}) {
       row.verified_comps = Array.from(byIdentity.values());
     }
     attachLeverageProjection(row);
+    row.deal_fit_explanation = dealFitExplainer.explainRow(row);
     return row;
   });
 }
@@ -1276,6 +1278,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     no_global_mutation: true,
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
+    deal_glossary: dealFitExplainer.GLOSSARY,
     county_onboarding: countyOnboardingSummary(market),
     document_reextraction_terminal_review: documentReviewQueueForResponse(store, market),
     batch,
@@ -1424,6 +1427,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     no_global_mutation: true,
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
+    deal_glossary: dealFitExplainer.GLOSSARY,
     county_onboarding: countyOnboardingSummary(market),
     batch,
     counts: identity.counts,
@@ -1449,6 +1453,7 @@ function latestDealBoardSnapshot(input = {}) {
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
     has_snapshot: false,
+    deal_glossary: dealFitExplainer.GLOSSARY,
     counts: identitySnapshot([]).counts,
     property_groups: [],
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),
@@ -1502,6 +1507,7 @@ function latestDealBoardSnapshot(input = {}) {
     snapshot_kind: 'deal_board_snapshot_not_saved_leads',
     market,
     has_snapshot: true,
+    deal_glossary: dealFitExplainer.GLOSSARY,
     counts: identity.counts,
     property_groups: identity.property_groups,
     full_snapshot_identity_counts: fullSnapshotIdentityCounts(store),

@@ -501,8 +501,11 @@ function mockDeal(overrides) {
   assert.strictEqual(latest.has_snapshot, true);
   assert.strictEqual(latest.counts.total_rows, 2);
   assert.ok(latest.batch);
+  assert(latest.deal_glossary.some((entry) => entry.term === 'Comps'));
+  assert(latest.rows.every((row) => row.deal_fit_explanation && row.deal_fit_explanation.priority));
   const empty = queueService.latestDealBoardSnapshot({ market: { city: 'Austin', county: 'Travis', state: 'TX' } });
   assert.strictEqual(empty.has_snapshot, false);
+  assert(empty.deal_glossary.some((entry) => entry.term === 'ARV'));
   assert.strictEqual(empty.counts.total_rows, 0);
   assert.deepStrictEqual(empty.rows, []);
 
@@ -855,7 +858,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=51'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=52'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -912,7 +915,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=51'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=52'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1002,6 +1005,21 @@ function mockDeal(overrides) {
     fetch: () => Promise.resolve({ json: () => Promise.resolve({}) })
   };
   vm.runInNewContext(uiSource, uiContext);
+  const fitHtml = uiContext.window.__wosPublicDealsTestHooks.rowCard(mockDeal({
+    deal_fit_explanation: {
+      priority: { band: 'WORTH_A_LOOK', why: 'A sourced notice merits review.',
+        best_fit: { path: 'Subject-to', verdict: 'LIKELY', why: 'Loan balance unknown - ask the owner.' },
+        next_step: 'Capture qualifying sold-property screenshots.' },
+      fits: [{ path: 'Subject-to', verdict: 'LIKELY', why: 'Loan balance unknown - ask the owner.',
+        seller_question: 'Ask for the current balance.' }]
+    },
+    verified_comps: [{ comp_address: '100 Test St, Dallas, TX 75201', sold_price: 100000,
+      sold_date: '2026-08-01', source_kind: 'paid_api', provider_name: 'fixture-provider',
+      price_basis: 'recorded_sale', source_url: 'https://records.example.test/sale/1' }]
+  }), false);
+  assert(fitHtml.includes('Priority: WORTH A LOOK') && fitHtml.includes('Best fit: Subject-to') &&
+    fitHtml.includes('Next step:') && fitHtml.includes('What is this?'));
+  assert(fitHtml.includes('fixture-provider - recorded_sale'), 'paid source and price basis must be visible on the card');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().key, 'dallas', 'public-deals market defaults to Dallas');
   uiContext.window.__wosPublicDealsTestHooks.storeSelectedMarket('san_antonio');
   assert.strictEqual(uiContext.window.__wosPublicDealsTestHooks.selectedMarket().county, 'Bexar');

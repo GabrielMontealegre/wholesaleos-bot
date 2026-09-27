@@ -17,6 +17,7 @@ const distressEvidenceModel = require('./distress-evidence-model');
 const propertyIdentity = require('./property-identity');
 const propertyAddressEvidence = require('./property-address-evidence');
 const addressDerivedResearchLinks = require('./address-derived-research-links');
+const fieldProvenance = require('./field-provenance');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -716,6 +717,15 @@ function sampleItem(row, packetStore, market, options) {
     leverage_dossier: row.leverage_dossier && typeof row.leverage_dossier === 'object' ? JSON.parse(JSON.stringify(row.leverage_dossier)) : null,
     equity_estimate: row.equity_estimate && typeof row.equity_estimate === 'object' ? JSON.parse(JSON.stringify(row.equity_estimate)) : null,
     room_to_offer: cleanText(row.room_to_offer),
+    deal_fit_explanation: row.deal_fit_explanation && typeof row.deal_fit_explanation === 'object'
+      ? JSON.parse(JSON.stringify(row.deal_fit_explanation)) : null,
+    paid_comp_sources: (Array.isArray(row.verified_comps) ? row.verified_comps : [])
+      .filter((comp) => comp && comp.source_kind === 'paid_api' && comp.comp_grid &&
+        comp.comp_grid.accepted === true && fieldProvenance.compHasProvenance(comp))
+      .map((comp) => ({ comp_address: cleanText(comp.comp_address), parcel_id: cleanText(comp.parcel_id),
+        sold_price: Number(comp.sold_price), sold_date: cleanText(comp.sold_date),
+        provider_name: cleanText(comp.provider_name), price_basis: cleanText(comp.price_basis),
+        source_url: cleanText(comp.source_url) })),
     confirmed_strict_comp_count: Number(row.confirmed_strict_comp_count) || 0,
     confirmed_but_grid_rejected_count: Number(row.confirmed_but_grid_rejected_count) || 0,
     unconfirmed_candidate_count: Number(row.unconfirmed_candidate_count) || 0,

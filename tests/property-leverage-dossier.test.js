@@ -72,15 +72,17 @@ assert.strictEqual(unknownValue.status, 'UNKNOWN');
 assert.strictEqual(unknownValue.value_reference, null);
 assert.strictEqual(unknownValue.equity_estimate, null);
 
-// 4. The brief's formula classifies positive 10% equity as TIGHT, not NONE.
+// 4. Original principal is not today's payoff, even when a value clue exists.
 const tight = dossierModule.equityEstimate(listingDossier(445000, 400000));
-assert.strictEqual(tight.equity_estimate, 45000);
-assert.strictEqual(tight.room_to_offer, 'TIGHT');
+assert.strictEqual(tight.estimated_debt, null);
+assert.strictEqual(tight.equity_estimate, null);
+assert.strictEqual(tight.room_to_offer, 'UNKNOWN');
 
-// 5. Large positive equity is LIKELY.
+// 5. A smaller original principal also cannot prove current equity.
 const likely = dossierModule.equityEstimate(listingDossier(60000, 16000));
-assert.strictEqual(likely.equity_estimate, 44000);
-assert.strictEqual(likely.room_to_offer, 'LIKELY');
+assert.strictEqual(likely.estimated_debt, null);
+assert.strictEqual(likely.equity_estimate, null);
+assert.strictEqual(likely.room_to_offer, 'UNKNOWN');
 
 // 6. Untyped source money never becomes debt.
 const unknownMoney = dossierModule.buildLeverageDossier(base({

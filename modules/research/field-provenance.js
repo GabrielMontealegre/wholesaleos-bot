@@ -1,5 +1,7 @@
 'use strict';
 
+const marketCompPolicy = require('./market-comp-policy');
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -42,8 +44,13 @@ function routeHasProvenance(route) {
 }
 
 function compHasProvenance(comp) {
-  return !!(hasProvenance(comp) &&
-    sourceKind(comp.source_kind) !== 'paid_api' &&
+  const paid = sourceKind(comp && comp.source_kind) === 'paid_api';
+  const policy = paid ? marketCompPolicy.compPolicyForMarket({ state: comp.subject_state }) : null;
+  const paidAllowed = !paid || !!(policy && policy.paid_comp_enabled &&
+    cleanText(policy.paid_provider_name) === cleanText(comp.provider_name) &&
+    cleanText(comp.provider_name) &&
+    ['recorded_sale', 'mls_closed_sale'].includes(cleanText(comp.price_basis)));
+  return !!(hasProvenance(comp) && paidAllowed &&
     cleanText(comp.comp_address || comp.address || comp.parcel_id || comp.apn || comp.pin) &&
     Number(comp.sold_price) > 0 &&
     cleanText(comp.sold_date));
