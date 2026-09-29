@@ -40,7 +40,7 @@ const RECORD_FIELDS = Object.freeze([
   ['baths', 'Bathrooms', 'county appraisal record', 'bathrooms', 'property_facts_source_url', 'BLOCKS_OFFER'],
   ['lot_size', 'Lot size', 'county appraisal record', 'county_appraisal_record.lot_size_sqft_approx', 'county_appraisal_record.source_url', 'BLOCKS_OFFER'],
   ['property_type', 'Property type', 'county appraisal record', 'county_appraisal_record.property_type', 'county_appraisal_record.source_url', 'BLOCKS_OFFER'],
-  ['original_principal_amount', 'Original principal', 'recorded deed of trust', 'original_principal_amount', 'source_document_url', 'INFORMATIONAL'],
+  ['original_principal_amount', 'Original loan amount - not the current payoff.', 'recorded deed of trust', 'original_principal_amount', 'source_document_url', 'INFORMATIONAL'],
   ['deed_date', 'Deed date', 'county deed record', 'county_appraisal_record.latest_deed_date', 'county_appraisal_record.source_url', 'INFORMATIONAL'],
   ['deed_instrument', 'Deed instrument', 'county deed record', 'county_appraisal_record.latest_deed_instrument', 'county_appraisal_record.source_url', 'INFORMATIONAL'],
   ['assessed_value', 'Assessed value (not market value)', 'county appraisal record', 'county_appraisal_record.assessed_value', 'county_appraisal_record.source_url', 'INFORMATIONAL']

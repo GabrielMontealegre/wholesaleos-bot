@@ -400,8 +400,10 @@ function enrich(row, record, nowIso, appliedAt, appliedBy) {
     source_reference_url: record.source_reference_url || null, source_date: record.source_date || null,
     applied_at: appliedAt || null, applied_by: appliedBy || null };
   const fieldNames = ['owner_of_record', 'mailing_address', 'parcel_id', 'geo_id', 'legal_description',
-    'property_type', 'lot_size_acres', 'year_built', 'latitude', 'longitude', 'coordinate_source',
-    'assessed_value', 'latest_deed_date', 'latest_deed_instrument'];
+    'property_type', 'lot_size_acres', 'living_area', 'beds', 'baths', 'year_built',
+    'latitude', 'longitude', 'coordinate_source', 'assessed_value', 'latest_deed_date',
+    'latest_deed_instrument', 'last_recorded_sale_date', 'last_recorded_sale_date_raw',
+    'last_recorded_sale_price'];
   updated.county_appraisal_field_provenance = Object.fromEntries(fieldNames.filter((field) =>
     record[field] !== null && record[field] !== undefined && clean(record[field]) !== '').map((field) => [field, source]));
   return updated;

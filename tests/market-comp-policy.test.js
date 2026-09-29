@@ -50,6 +50,6 @@ const parcelProfiles = require('../modules/sources/public-parcel-api-profiles');
   });
   assert.strictEqual(reopened.selected.length, 1, 'changing to an enabled comp policy must reopen a previously skipped row');
   assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).comp_lane_enabled, false);
-  assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).arv_lock_reason_when_disabled, 'COMP_POLICY_UNKNOWN_FOR_MARKET');
+  assert.strictEqual(policy.compPolicyForMarket({ state: 'AL' }).arv_lock_reason_when_disabled, 'COMP_LANE_PENDING_PUBLIC_SALES_SOURCE');
   console.log('market comp policy tests passed');
 })();

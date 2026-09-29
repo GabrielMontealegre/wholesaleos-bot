@@ -2,6 +2,7 @@
 
 const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
 const { addressFromBulk } = require('./county-appraisal-adapter');
+const { normalizeSourceDate } = require('../research/normalize-source-date');
 
 const callsByCounty = new Map();
 const blocksByCounty = new Map();
@@ -58,12 +59,13 @@ function centroid(geometry) {
 }
 function layerUrl(profile) {
   const config = profile && profile.arcgis_parcel_service;
+  const servicePath = config && config.service_path;
   if (!config || !/^[a-z0-9.-]+$/i.test(config.host) ||
-      !/^\/arcgis\/rest\/services\/[a-z0-9/_-]+\/MapServer$/i.test(config.service_path) ||
+      !/^\/(?:[a-z0-9_-]+\/)?arcgis\/rest\/services\/(?:[a-z0-9_-]+\/)+(?:MapServer|FeatureServer)$/i.test(servicePath) ||
       !Number.isInteger(config.layer_id) || config.out_sr !== 4326) {
     throw new Error('county_parcel_profile_invalid');
   }
-  return `https://${config.host}${config.service_path}/${config.layer_id}/query`;
+  return `https://${config.host}${servicePath}/${config.layer_id}/query`;
 }
 function recordFromFeature(feature, profile, queryUrl) {
   const config = profile.arcgis_parcel_service;
@@ -99,6 +101,16 @@ function recordFromFeature(feature, profile, queryUrl) {
     source_kind: 'official_public_record', source_url: queryUrl,
     source_reference_url: clean(value('source_reference_url')), source_date: sourceDate
   };
+  for (const [field, target] of [['living_area', 'living_area'], ['bedrooms', 'beds'],
+    ['bathrooms', 'baths'], ['sale_price', 'last_recorded_sale_price']]) {
+    if (clean(fields[field])) record[target] = numberOrNull(value(field));
+  }
+  if (clean(fields.sale_date)) {
+    const raw = value('sale_date');
+    const epochDate = /^\d{12,13}$/.test(clean(raw)) ? dateFromEpoch(raw) : '';
+    record.last_recorded_sale_date = epochDate || normalizeSourceDate(raw).iso || null;
+    record.last_recorded_sale_date_raw = clean(raw);
+  }
   if (point) Object.assign(record, point, {
     coordinate_source: 'official_county_parcel_polygon_centroid',
     coordinate_derivation: 'Derived from the public parcel polygon; not a measured building location.'

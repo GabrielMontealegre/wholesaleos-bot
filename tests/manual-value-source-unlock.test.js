@@ -140,7 +140,7 @@ legacyFixtures.forEach(([fixture, expected]) => assert.strictEqual(leadState.row
 const uiSource = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'wos-public-deals.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 assert.match(serverSource, /manual-evidence\/comp-confirmation', requireAdmin,/);
-const mandatedLabel = 'Original loan amount at origination (NOT the current payoff)';
+const mandatedLabel = 'Original loan amount - not the current payoff.';
 assert.ok(uiSource.includes(mandatedLabel));
 const debtRenderer = uiSource.slice(uiSource.indexOf('function debtFactsHtml'), uiSource.indexOf('function leverageDossierHtml'));
 assert.ok(!/amount owed|current balance|current debt/i.test(debtRenderer));

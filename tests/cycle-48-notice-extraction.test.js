@@ -197,7 +197,7 @@ async function run() {
   assert(html.includes('Current payoff: Not published.'), 'G7');
   assert(html.includes('Possible equity: UNKNOWN'), 'G8');
   assert(!/amount owed|current balance|current debt/i.test(html), 'G6 no amount conflation');
-  assert(html.includes('Original loan amount when the loan was made'), 'G6');
+  assert(html.includes('Original loan amount - not the current payoff.'), 'G6');
   assert(html.includes('(not the current payoff)'), 'G6: proposed original amount is not payoff');
   const principalHtml = ui.officialNoticeDossierHtml({ proposals: [], confirmations: [
     Object.assign({}, byField.original_principal_amount, { confirmed: true }),

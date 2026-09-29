@@ -172,7 +172,7 @@ try {
   }));
   passed.push(named('17 money labels are distinct and honest', () => {
     const ui = fs.readFileSync(path.join(ROOT, 'dashboard', 'wos-public-deals.js'), 'utf8');
-    ['Original loan amount at origination (NOT the current payoff)', 'Judgment amount', 'Published minimum bid', 'Property tax due', 'Recorded lien amount', 'Unlabelled amount from source — type unknown'].forEach((label) => assert.ok(ui.includes(label), label));
+    ['Original loan amount - not the current payoff.', 'Judgment amount', 'Published minimum bid', 'Property tax due', 'Recorded lien amount', 'Unlabelled amount from source — type unknown'].forEach((label) => assert.ok(ui.includes(label), label));
     const debtBlock = ui.slice(ui.indexOf('function debtFactsHtml'), ui.indexOf('function leverageDossierHtml'));
     assert.ok(!/amount owed|current debt/i.test(debtBlock));
   }));

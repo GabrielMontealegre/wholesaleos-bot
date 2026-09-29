@@ -319,34 +319,19 @@ function equityEstimate(dossier) {
   else if (liens !== null) debtParts.push({ type: 'lien_amount', amount: liens });
   if (tax !== null) debtParts.push({ type: 'tax_due', amount: tax });
   if (judgment !== null) debtParts.push({ type: 'judgment_amount', amount: judgment });
-  const estimatedDebt = debtParts.length ? debtParts.reduce((sum, part) => sum + part.amount, 0) : null;
-
   const verifiedArv = amountFromField(dossier.valuation && dossier.valuation.verified_arv);
   const listPrice = amountFromField(dossier.listing && dossier.listing.list_price);
   const valueReference = verifiedArv !== null ? verifiedArv : listPrice;
   const basis = verifiedArv !== null ? 'verified_arv' : listPrice !== null ? 'list_price_proxy' : 'unknown';
-  if (estimatedDebt === null || valueReference === null) {
-    return {
-      estimated_debt: estimatedDebt,
-      value_reference: valueReference,
-      equity_estimate: null,
-      equity_basis: basis,
-      equity_confidence: basis,
-      room_to_offer: 'UNKNOWN',
-      status: FIELD_STATUSES.UNKNOWN,
-      debt_basis: debtParts
-    };
-  }
-  const estimate = valueReference - estimatedDebt;
-  const ratio = valueReference > 0 ? estimate / valueReference : null;
+  // Recorded principal and liens do not establish the current total payoff.
   return {
-    estimated_debt: estimatedDebt,
+    estimated_debt: null,
     value_reference: valueReference,
-    equity_estimate: estimate,
+    equity_estimate: null,
     equity_basis: basis,
-    equity_confidence: basis,
-    room_to_offer: ratio === null ? 'UNKNOWN' : estimate <= 0 ? 'NONE' : ratio >= 0.3 ? 'LIKELY' : 'TIGHT',
-    status: FIELD_STATUSES.CLUE,
+    equity_confidence: 'unknown',
+    room_to_offer: 'UNKNOWN',
+    status: FIELD_STATUSES.UNKNOWN,
     debt_basis: debtParts
   };
 }

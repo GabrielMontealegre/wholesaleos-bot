@@ -35,6 +35,7 @@ Use Graph View on the wikilinks to see how markets, blockers, source lanes, and 
 - [[cycle-38-research-queue-alias]] - neutral authenticated snapshot read alias with bounded dashboard loading and retry.
 - [[cycle-51-test-environment]] - exact Playwright pin and explicit, separately reported environment skips.
 - [[cycle-52-county-parcel]] - public Ellis parcel facts with exact-match joins; three grid facts remain missing.
+- [[cycle-53-texas-closeout]] - read-only deal-fit cards, explicit comp policy, and a default-off paid-comp gate.
 
 Cycles 11-15 and 17 are linked to their actual implementations because separate cycle
 note files were not present in this checkout. These entries do not claim new deployments.
