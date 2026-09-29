@@ -50,14 +50,21 @@ try {
   for (const basis of ['estimated', 'avm', '']) {
     assert.strictEqual(provenance.compHasProvenance(Object.assign({}, paidComp, { price_basis: basis })), false);
   }
-  assert.strictEqual(provenance.compHasProvenance(paidComp), true);
-  assert.strictEqual(comps.evaluateStrictCompGrid(paidComp, subject, { today_iso: '2026-08-25' }).accepted, true);
-  assert.strictEqual(comps.evaluateStrictCompGrid(Object.assign({}, paidComp, { latitude: 43 }), subject,
+  assert.strictEqual(provenance.compHasProvenance(paidComp, { subject }), false,
+    'an environment switch cannot activate an unregistered provider');
+  const testOptions = { subject, paid_comp_adapters: { 'fixture-provider': true } };
+  assert.strictEqual(provenance.compHasProvenance(paidComp, testOptions), true);
+  assert.strictEqual(comps.evaluateStrictCompGrid(paidComp, subject, { today_iso: '2026-08-25' }).accepted, false,
+    'the existing grid caller supplies no trusted subject and keeps paid comps rejected');
+  const sourcedComp = Object.assign({}, paidComp, { source_kind: 'official_public_record' });
+  assert.strictEqual(comps.evaluateStrictCompGrid(sourcedComp, subject, { today_iso: '2026-08-25' }).accepted, true);
+  assert.strictEqual(comps.evaluateStrictCompGrid(Object.assign({}, sourcedComp, { latitude: 43 }), subject,
     { today_iso: '2026-08-25' }).accepted, false);
   const safePolicy = policy.compPolicyForMarket({ state: 'MI', county: 'Wayne', city: 'Detroit' });
   assert.strictEqual(safePolicy.paid_provider_name, 'fixture-provider');
   assert.strictEqual(safePolicy.paid_comp_key_present, true);
-  assert.strictEqual(safePolicy.paid_comp_enabled, true);
+  assert.strictEqual(safePolicy.paid_comp_enabled, false);
+  assert.strictEqual(policy.compPolicyForMarket({ state: 'MI' }, testOptions).paid_comp_enabled, true);
   assert(!JSON.stringify(safePolicy).includes(process.env[keyVar]));
 } finally {
   if (oldProvider === undefined) delete process.env[providerVar]; else process.env[providerVar] = oldProvider;
@@ -92,10 +99,10 @@ const mapped = parcel.recordFromFeature({ attributes: {
   heatedarea: 1500, bedrooms: 3, fullbaths: 2, price: 200000, dateofsale: '2026-04-01'
 } }, onlineProfile, 'https://services2.arcgis.com/ExampleOrg/arcgis/rest/services/PublicParcels/FeatureServer/0/query');
 assert.strictEqual(mapped.living_area, 1500);
-assert.strictEqual(mapped.bedrooms, 3);
-assert.strictEqual(mapped.bathrooms, 2);
-assert.strictEqual(mapped.sale_price, 200000);
-assert.strictEqual(mapped.sale_date, '2026-04-01');
+assert.strictEqual(mapped.beds, 3);
+assert.strictEqual(mapped.baths, 2);
+assert.strictEqual(mapped.last_recorded_sale_price, 200000);
+assert.strictEqual(mapped.last_recorded_sale_date, '2026-04-01');
 
 assert.strictEqual(normalizeSourceDate('October 6, 2026').iso, '2026-10-06');
 assert.strictEqual(normalizeSourceDate('10/06/2026').reason, 'ambiguous_numeric_order');
@@ -173,4 +180,4 @@ const gridHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(RO
   'modules/research/strict-comp-grid-config.js'))).digest('hex');
 assert.strictEqual(gridHash, 'b27912bf48aab12117898a19ff70d2c814b802e86e75ef27aecd2a3f36f9358e');
 
-console.log('cycle-53 texas closeout: P1-P6 and P8-P13 PASS; P7 bare numeric date requires source-specific order');
+console.log('cycle-53 texas closeout: P1-P6 and P8-P13 PASS; P7 waived, numeric dates remain quarantined');

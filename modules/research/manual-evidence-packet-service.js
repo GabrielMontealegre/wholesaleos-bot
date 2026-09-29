@@ -18,6 +18,7 @@ const propertyIdentity = require('./property-identity');
 const propertyAddressEvidence = require('./property-address-evidence');
 const addressDerivedResearchLinks = require('./address-derived-research-links');
 const fieldProvenance = require('./field-provenance');
+const propertyLeverageDossier = require('./property-leverage-dossier');
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const SOURCE_KIND = 'operator_supplied_screenshot';
@@ -685,6 +686,8 @@ function publicPacket(packet, row, options) {
 function sampleItem(row, packetStore, market, options) {
   const packet = packetForRow(packetStore, market, cleanText(row.queue_key), false);
   const address = cleanText(row.normalized_address || row.partial_address || row.headline);
+  const leverageDossier = propertyLeverageDossier.buildLeverageDossier(row);
+  const equityEstimate = propertyLeverageDossier.equityEstimate(leverageDossier);
   return {
     queue_key: cleanText(row.queue_key),
     headline: cleanText(row.headline),
@@ -714,9 +717,9 @@ function sampleItem(row, packetStore, market, options) {
     contact_state_reason: cleanText(row.contact_state_reason),
     property_state: cleanText(row.property_state),
     property_state_reason: cleanText(row.property_state_reason),
-    leverage_dossier: row.leverage_dossier && typeof row.leverage_dossier === 'object' ? JSON.parse(JSON.stringify(row.leverage_dossier)) : null,
-    equity_estimate: row.equity_estimate && typeof row.equity_estimate === 'object' ? JSON.parse(JSON.stringify(row.equity_estimate)) : null,
-    room_to_offer: cleanText(row.room_to_offer),
+    leverage_dossier: leverageDossier,
+    equity_estimate: equityEstimate,
+    room_to_offer: equityEstimate.room_to_offer,
     deal_fit_explanation: row.deal_fit_explanation && typeof row.deal_fit_explanation === 'object'
       ? JSON.parse(JSON.stringify(row.deal_fit_explanation)) : null,
     paid_comp_sources: (Array.isArray(row.verified_comps) ? row.verified_comps : [])

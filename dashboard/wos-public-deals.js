@@ -511,7 +511,7 @@
       trustee_or_substitute_trustee: 'Trustee', mortgagee_or_beneficiary: 'Mortgagee',
       mortgage_servicer: 'Loan servicer', deed_of_trust_date: 'Date loan document was signed',
       deed_of_trust_instrument_or_volume_page: 'Recorded document number',
-      original_principal_amount: 'Original loan amount when the loan was made',
+      original_principal_amount: 'Original loan amount - not the current payoff.',
       property_legal_description: 'Legal property description',
       notice_publication_date: 'Notice publication date', stated_amounts_on_notice: 'Other amount printed on notice'
     };
@@ -882,7 +882,7 @@
   function debtFactsHtml(debt) {
     debt = debt || {};
     return [
-      dossierFact('Original loan amount at origination (NOT the current payoff)', debt.original_loan_amount),
+      dossierFact('Original loan amount - not the current payoff.', debt.original_loan_amount),
       dossierFact('Recorded lien amount', debt.lien_amounts),
       dossierFact('Property tax due', debt.tax_due),
       dossierFact('Judgment amount', debt.judgment_amount),

@@ -2,6 +2,7 @@
 
 const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
 const { addressFromBulk } = require('./county-appraisal-adapter');
+const { normalizeSourceDate } = require('../research/normalize-source-date');
 
 const callsByCounty = new Map();
 const blocksByCounty = new Map();
@@ -100,10 +101,16 @@ function recordFromFeature(feature, profile, queryUrl) {
     source_kind: 'official_public_record', source_url: queryUrl,
     source_reference_url: clean(value('source_reference_url')), source_date: sourceDate
   };
-  for (const field of ['living_area', 'bedrooms', 'bathrooms', 'sale_price']) {
-    if (clean(fields[field])) record[field] = numberOrNull(value(field));
+  for (const [field, target] of [['living_area', 'living_area'], ['bedrooms', 'beds'],
+    ['bathrooms', 'baths'], ['sale_price', 'last_recorded_sale_price']]) {
+    if (clean(fields[field])) record[target] = numberOrNull(value(field));
   }
-  if (clean(fields.sale_date)) record.sale_date = dateFromEpoch(value('sale_date')) || clean(value('sale_date'));
+  if (clean(fields.sale_date)) {
+    const raw = value('sale_date');
+    const epochDate = /^\d{12,13}$/.test(clean(raw)) ? dateFromEpoch(raw) : '';
+    record.last_recorded_sale_date = epochDate || normalizeSourceDate(raw).iso || null;
+    record.last_recorded_sale_date_raw = clean(raw);
+  }
   if (point) Object.assign(record, point, {
     coordinate_source: 'official_county_parcel_polygon_centroid',
     coordinate_derivation: 'Derived from the public parcel polygon; not a measured building location.'

@@ -1152,7 +1152,7 @@ function mockDeal(overrides) {
     manual_comp_grid_rejection_reasons: ['comp_outside_one_mile']
   });
   assert.ok(dossierHtml.includes('Contact status:') && dossierHtml.includes('Property status:') && dossierHtml.includes('Legacy combined state:'));
-  assert.ok(dossierHtml.includes('Property leverage dossier') && dossierHtml.includes('Original loan amount at origination (NOT the current payoff)'));
+  assert.ok(dossierHtml.includes('Property leverage dossier') && dossierHtml.includes('Original loan amount - not the current payoff.'));
   assert.ok(dossierHtml.includes('Equity clue') && dossierHtml.includes('Unknown') && dossierHtml.includes('subject year built') && dossierHtml.includes('comp rejected: comp outside one mile'));
   const appraisalRow = { queue_key: 'ellis-appraisal', county: 'Ellis', normalized_address: '3808 Kings Dr, Ennis, TX 75119',
     county_appraisal_record: { county: 'Ellis', source_kind: 'official_public_record', owner_of_record: 'PUBLIC OWNER',

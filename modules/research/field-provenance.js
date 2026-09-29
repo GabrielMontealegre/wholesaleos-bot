@@ -1,6 +1,7 @@
 'use strict';
 
 const marketCompPolicy = require('./market-comp-policy');
+const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -43,10 +44,19 @@ function routeHasProvenance(route) {
   return hasProvenance(route);
 }
 
-function compHasProvenance(comp) {
+function compHasProvenance(comp, options = {}) {
   const paid = sourceKind(comp && comp.source_kind) === 'paid_api';
-  const policy = paid ? marketCompPolicy.compPolicyForMarket({ state: comp.subject_state }) : null;
+  const subject = options.subject;
+  const subjectState = cleanText(subject && subject.state).toUpperCase();
+  const subjectAddressState = canonicalizeAddress(subject && subject.normalized_address).state;
+  const compAddressState = canonicalizeAddress(comp && (comp.comp_address || comp.address)).state;
+  const declaredCompState = cleanText(comp && (comp.comp_state || comp.state)).toUpperCase();
+  const compState = compAddressState || declaredCompState;
+  const policy = paid && /^[A-Z]{2}$/.test(subjectState) &&
+    (!subjectAddressState || subjectAddressState === subjectState)
+    ? marketCompPolicy.compPolicyForMarket({ state: subjectState }, options) : null;
   const paidAllowed = !paid || !!(policy && policy.paid_comp_enabled &&
+    compState === subjectState && (!declaredCompState || declaredCompState === compState) &&
     cleanText(policy.paid_provider_name) === cleanText(comp.provider_name) &&
     cleanText(comp.provider_name) &&
     ['recorded_sale', 'mls_closed_sale'].includes(cleanText(comp.price_basis)));

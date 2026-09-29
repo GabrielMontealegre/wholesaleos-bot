@@ -5,6 +5,7 @@ const parcelProfiles = require('../sources/public-parcel-api-profiles');
 const NON_DISCLOSURE_STATES = new Set([
   'AK', 'ID', 'KS', 'LA', 'MS', 'MO', 'MT', 'NM', 'ND', 'TX', 'UT', 'WY'
 ]);
+const PAID_COMP_ADAPTERS = Object.freeze({});
 
 const POLICY_TABLE = Object.freeze({
   non_disclosure: Object.freeze({
@@ -33,14 +34,15 @@ function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
 
-function paidProviderForState(state, env) {
+function paidProviderForState(state, env, adapters) {
   if (!/^[A-Z]{2}$/.test(state)) return { paid_provider_name: '', paid_comp_key_present: false, paid_comp_enabled: false };
   const provider = cleanText(env[`WOS_PAID_COMP_PROVIDER_${state}`]);
   const keyPresent = !!(provider && cleanText(env[`WOS_PAID_COMP_KEY_${state}`]));
+  const registered = !!(provider && Object.prototype.hasOwnProperty.call(adapters, provider) && adapters[provider] === true);
   return {
     paid_provider_name: provider,
     paid_comp_key_present: keyPresent,
-    paid_comp_enabled: keyPresent && env[`WOS_PAID_COMP_ENABLE_${state}`] === 'true'
+    paid_comp_enabled: registered && keyPresent && env[`WOS_PAID_COMP_ENABLE_${state}`] === 'true'
   };
 }
 
@@ -53,10 +55,11 @@ function compPolicyForMarket(market, options = {}) {
   const kind = NON_DISCLOSURE_STATES.has(state) ? 'non_disclosure'
     : parcelProfiles.compProfilesForMarket(market).length ? 'public_sales' : 'pending_source';
   return Object.assign({}, manualValueLane, POLICY_TABLE[kind],
-    paidProviderForState(state, options.env || process.env));
+    paidProviderForState(state, options.env || process.env, options.paid_comp_adapters || PAID_COMP_ADAPTERS));
 }
 
 module.exports = {
   compPolicyForMarket,
-  NON_DISCLOSURE_STATES
+  NON_DISCLOSURE_STATES,
+  PAID_COMP_ADAPTERS
 };
