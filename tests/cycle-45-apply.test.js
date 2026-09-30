@@ -13,7 +13,7 @@ const now = '2026-09-23T12:00:00.000Z';
 function row(key, county, address, extra = {}) {
   return Object.assign({ queue_key: key, county, city: county === 'Ellis' ? 'Ennis' : 'Dallas', state: 'TX',
     normalized_address: address, address_state: 'complete_source_address',
-    source_event_date: '2026-10-06', sale_date_iso: '2026-10-06',
+    source_event_date: '2026-10-06', sale_date_iso: '2026-10-06', sale_date_or_event_date: 'October 6, 2026',
     source_url: 'https://www.elliscad.org/property-search', preview_only: true, not_a_saved_lead: true,
     arv_status: 'LOCKED', arv_range: null, ready_to_offer: 'NO', verified_sold_comp_count: 0,
     confirmed_strict_comp_count: 0, lot_size: 4791,

@@ -9,6 +9,8 @@ const leadEvidence = require('../research/lead-evidence');
 const propertyCandidate = require('../research/property-candidate');
 const sourceEvidenceAdapter = require('../research/source-evidence-adapter');
 const propertyIdentity = require('../research/property-identity');
+const sourceSaleDate = require('../research/resolve-source-sale-date');
+const { normalizeSourceDate } = require('../research/normalize-source-date');
 
 const SOURCE_ID = foreclosureNoticeAdapter.SOURCE_ID;
 const SOURCE_URL = foreclosureNoticeAdapter.SOURCE_URL;
@@ -137,31 +139,16 @@ function sourceHash(value) {
   return crypto.createHash('sha1').update(cleanText(value)).digest('hex').slice(0, 16);
 }
 
-function parseDateValue(value) {
+function parseDateValue(value, proof = {}) {
   const text = cleanText(value);
   if (!text) return null;
-  const parsed = Date.parse(text);
-  if (Number.isFinite(parsed)) return new Date(parsed);
-  const short = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
-  if (short) {
-    const month = Number(short[1]);
-    const day = Number(short[2]);
-    let year = Number(short[3]);
-    if (year < 100) year += year >= 70 ? 1900 : 2000;
-    const candidate = new Date(Date.UTC(year, month - 1, day));
-    if (!Number.isNaN(candidate.getTime())) return candidate;
-  }
-  return null;
+  const native = normalizeSourceDate(text);
+  const result = native.iso || sourceSaleDate.resolveSourceSaleDate(Object.assign({}, proof, { raw_text: text })).resolved_iso;
+  return result ? new Date(`${result}T00:00:00Z`) : null;
 }
 
-function isStaleSaleDate(value, referenceDate = new Date()) {
-  const parsed = parseDateValue(value);
-  if (!parsed) return false;
-  const sale = new Date(parsed);
-  const ref = new Date(referenceDate);
-  sale.setHours(0, 0, 0, 0);
-  ref.setHours(0, 0, 0, 0);
-  return sale.getTime() < ref.getTime();
+function isStaleSaleDate(value, referenceDate = new Date(), proof = {}) {
+  return sourceSaleDate.saleDateStaleness(value, referenceDate, proof).stale;
 }
 
 function uniqueCleanList(values, limit) {
@@ -258,6 +245,7 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
     status_evidence_text: cleanText([raw.sale_date, raw.workflow_status, proofText].filter(Boolean).join(' | ')),
     event_date: cleanText(raw.sale_date),
     sale_date: cleanText(raw.sale_date),
+    sale_date_resolution: raw.sale_date_resolution || null,
     amount_or_judgment: cleanText(raw.amount_or_judgment),
     tax_due: cleanText(raw.tax_due || raw.tax_amount),
     tax_due_evidence_text: cleanText(raw.tax_due_evidence_text || raw.tax_amount_evidence_text),
@@ -313,6 +301,8 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
   normalized.source_row_reference = baseCandidate.source_row_reference;
   normalized.source_proof_url = sourceUrl;
   normalized.source_proof_text = baseCandidate.source_proof_text;
+  normalized.sale_date_resolution = baseCandidate.sale_date_resolution;
+  normalized.invalid_sale_date = raw.invalid_sale_date === true;
   normalized.source_diagnostics = {
     source_url_classification: sourceEvidenceAdapter.classifySourceUrl(sourceUrl),
     document_url_classification: sourceEvidenceAdapter.classifySourceUrl(documentUrl),
@@ -488,17 +478,31 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     const rawText = cleanText(raw && (raw.source_proof_text || raw.raw_text || raw.text || raw.source_reference));
     const saleDateMatch = rawText.match(/(?:sale date|date of sale|trustee sale date|foreclosure sale date)\s*[:\-]?\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i);
     const saleDate = cleanText(raw && (raw.sale_date || raw.event_date || raw.auction_date || (saleDateMatch && saleDateMatch[1])));
-    if (isStaleSaleDate(saleDate, context.reference_date || new Date())) {
+    const saleProof = {
+      raw_field: 'sale_date', source_adapter_id: SOURCE_ID,
+      source_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)) || context.source_url || SOURCE_URL,
+      document_text: rawText
+    };
+    const saleDateCheck = sourceSaleDate.saleDateStaleness(saleDate, context.reference_date || new Date(), saleProof);
+    if (saleDateCheck.stale) {
       rejected.push({
         source_row_reference: cleanText(raw && raw.source_row_reference),
         source_proof_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)),
         source_proof_text: rawText,
         reason: 'stale_sale_date',
-        sale_date: saleDate
+        sale_date: saleDate,
+        stale_basis: saleDateCheck.stale_basis
       });
       continue;
     }
-    accepted.push(raw);
+    accepted.push(Object.assign({}, raw, {
+      sale_date_resolution: saleDateCheck.resolution && saleDateCheck.resolution.status === 'RESOLVED'
+        ? { raw_text: saleDate, raw_field: 'sale_date', resolved_iso: saleDateCheck.resolution.resolved_iso,
+          rule_ids: saleDateCheck.resolution.rule_ids, source_url: saleProof.source_url, source_adapter_id: SOURCE_ID,
+          evidence_excerpt: saleDateCheck.resolution.evidence_excerpt, resolver_version: sourceSaleDate.RESOLVER_VERSION }
+        : null,
+      invalid_sale_date: saleDateCheck.invalid_sale_date
+    }));
   }
   const candidates = accepted.map((candidate) => candidateFromRaw(candidate, context, source)).slice(0, context.max_rows || LIVE_PREVIEW_MAX_ROWS);
   const finalCandidates = candidates.map((candidate) => mergeRecordIntoCandidate(candidate, records));
@@ -654,6 +658,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       }, {}))
     });
     const diagnostics = {
+      invalid_sale_date_count: built.candidates.filter((candidate) => candidate.invalid_sale_date === true).length,
       source_hash: cacheKey,
       source_url_classification: sourceEvidenceAdapter.classifySourceUrl(sourceUrl),
       source_document_url_classification: sourceDocumentUrl ? sourceEvidenceAdapter.classifySourceUrl(sourceDocumentUrl) : 'missing_source_url',
@@ -820,6 +825,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       }, {}))
     });
     const diagnostics = {
+      invalid_sale_date_count: built.candidates.filter((candidate) => candidate.invalid_sale_date === true).length,
       source_hash: cacheKey,
       source_url_classification: sourceEvidenceAdapter.classifySourceUrl(sourceUrl),
       source_document_url_classification: sourceDocumentUrl ? sourceEvidenceAdapter.classifySourceUrl(sourceDocumentUrl) : 'missing_source_url',
@@ -929,6 +935,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     reference_date: capturedAt
   }, source);
   const diagnostics = diagnosticsFromCandidates(built.candidates, enrichedRawCandidates, records, combinedText, sourceHtml, sourceUrl, sourceDocumentUrl, sourceLinks);
+  diagnostics.invalid_sale_date_count = built.candidates.filter((candidate) => candidate.invalid_sale_date === true).length;
   const result = {
     source_id: SOURCE_ID,
     source_name: SOURCE_NAME,

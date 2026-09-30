@@ -966,6 +966,9 @@ function dealFromRecord(record, context) {
     state: parts.state,
     zip: parts.zip || ocrReviewZip,
     source_family: family,
+    source_id: cleanText(record && record.source_id),
+    sale_date_resolution: record && record.sale_date_resolution && typeof record.sale_date_resolution === 'object'
+      ? Object.assign({}, record.sale_date_resolution) : null,
     source_name: sourceName(record, family),
     source_url: sourceUrl,
     source_document_url: sourceDocumentUrl,
@@ -1117,6 +1120,9 @@ function candidateRecord(candidate, source) {
     zip: cleanText(candidate.zip),
     raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
     source_family: cleanText(candidate.source_family || source.source_family),
+    source_id: cleanText(candidate.source_id || source.source_id),
+    sale_date_resolution: candidate.sale_date_resolution && typeof candidate.sale_date_resolution === 'object'
+      ? Object.assign({}, candidate.sale_date_resolution) : null,
     source_name: cleanText(candidate.source_name || source.source_name),
     source_url: cleanText(candidate.source_url || source.source_url),
     source_document_url: cleanText(candidate.source_document_url),
@@ -1198,6 +1204,9 @@ function cardRecord(card, source) {
     query_group: cleanText(card && card.source_name) || cleanText(source && source.source_name)
   });
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
+  record.source_id = cleanText(card && card.source_id || source && source.source_id);
+  record.sale_date_resolution = card && card.sale_date_resolution && typeof card.sale_date_resolution === 'object'
+    ? Object.assign({}, card.sale_date_resolution) : null;
   record.source_structured_address_verified = card && card.source_structured_address_verified === true;
   record.property_identity_source_only = card && card.property_identity_source_only === true;
   record.source_proof_text = cleanText(card && (card.source_proof_text || card.exact_source_phrase));
