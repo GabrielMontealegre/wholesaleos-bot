@@ -143,7 +143,7 @@ does not yet persist an after-sale lane or classify a completed sale. Other
 county adapters, classification integration, operator action, buyer handoff and
 dashboard view remain for later B-05 sub-PRs.
 
-Ordered sub-PR B-05b adds a pure outcome classifier for a newer official notice,
+Ordered sub-PR [B-05b](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/218) adds a pure outcome classifier for a newer official notice,
 later official ownership record, or recorded deed. It requires an exact parcel or
 address match, dated source evidence on an allowlisted host, and leaves missing or
 conflicting evidence as `OUTCOME_UNKNOWN`. A still-owner result additionally
