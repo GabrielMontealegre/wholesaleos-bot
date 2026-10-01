@@ -53,4 +53,4 @@ ASSUMED: B-04c marks any post-sale or disclosure rule whose general legal effect
 
 ASSUMED: B-04d registers California tax-default sources under the tax-sale process but marks them notice_only; neither a completed sale nor a sale price follows from a notice — because provenance and the value gates outrank a convenient category label — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/213
 
-ASSUMED: B-04g keeps the existing primary-notice parser and planning module as compatibility wrappers while their source identity and URL come from the county profile — because D-013 requires generic registration but preserving tested ingestion behavior is safer than rewriting a working parser — 2026-10-01 — B-04g sub-PR
+ASSUMED: B-04g keeps the existing primary-notice parser and planning module as compatibility wrappers while their source identity and URL come from the county profile — because D-013 requires generic registration but preserving tested ingestion behavior is safer than rewriting a working parser — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/216

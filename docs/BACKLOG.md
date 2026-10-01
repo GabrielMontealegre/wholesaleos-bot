@@ -95,7 +95,7 @@ later ordered sub-PR.
 N-F ([PR #215](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/215)) routes the existing California tax-default and Michigan public land-bank
 catalog, adapter and queue metadata through the same registry. Tax notices remain
 notice-only; land-bank inventory remains listing-only. No new source runs.
-N-G makes the primary notice profile authoritative for the legacy planning router,
+N-G ([PR #216](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/216)) makes the primary notice profile authoritative for the legacy planning router,
 adapter registration and queue seed. The existing parser and all source IDs stay
 unchanged; Dallas/Ellis row transport equivalence remains tested.
 
