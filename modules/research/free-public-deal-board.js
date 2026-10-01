@@ -602,10 +602,18 @@ function statusEvidenceFromRecord(record) {
 }
 
 function eventDateFromRecord(record) {
+  const explicitOrigin = cleanText(record && (record.sale_date_or_event_date_origin || record.event_date_origin));
+  if (['posted_at', 'date', 'filed_date', 'created_at'].includes(explicitOrigin)) {
+    for (const field of ['sale_date', 'auction_date']) {
+      const value = cleanText(record && record[field]);
+      if (value) return { value, origin: field };
+    }
+  }
   for (const field of ['sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date', 'posted_at', 'date']) {
     const value = cleanText(record && record[field]);
     if (value) return { value, origin: field === 'sale_date_or_event_date'
-      ? cleanText(record.sale_date_or_event_date_origin) : field };
+      ? cleanText(record.sale_date_or_event_date_origin)
+      : field === 'event_date' ? cleanText(record.event_date_origin) || field : field };
   }
   return { value: '', origin: '' };
 }

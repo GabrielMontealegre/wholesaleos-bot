@@ -95,6 +95,12 @@ function computeLifecycleStatus(row, nowIso) {
   if (sourceNoLongerListed) {
     return out('SOURCE_NO_LONGER_LISTED', 'ABSENT_FROM_LATEST_MONTHLY_LIST', 'The row is absent from the latest monthly source list. Its outcome is unknown; verify against current official evidence.', 'source_listing_status');
   }
+  if (['posted_at', 'date', 'filed_date', 'created_at'].includes(cleanText(row && row.sale_date_or_event_date_origin)) &&
+      !cleanText(row && (row.sale_date || row.auction_date))) {
+    return out('DATE_UNKNOWN_REVERIFY', 'NON_SALE_DATE_ORIGIN',
+      'The source date is a filing, posting, or record-creation date, not a proven sale date; reverify before contact.',
+      'sale_date_or_event_date_origin');
+  }
   const hasNewDatedRepost = !!(repostDateIso && repostEvidence && repostUrl && (!saleIso || repostDateIso > saleIso));
   if (saleIso && saleIso < today && !hasNewDatedRepost) {
     return out('SALE_PASSED', 'SALE_DATE_BEFORE_TODAY', `Sale date ${saleIso} is before ${today}; verify status before calling.`, 'sale_date_iso');

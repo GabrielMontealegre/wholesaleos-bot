@@ -75,9 +75,10 @@ Acceptance
 
 ## B-04 · Generic state rules + county source profiles · IN PROGRESS
 
-First ordered sub-PR: N-A supersession audit, recording only stored date and
-resolution fields that actually differ from current raw-source derivation. N-B
-origin propagation and the state/county registries remain for later sub-PRs.
+Ordered sub-PRs: N-A supersession audit ([PR #210](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/210))
+records only stored date and resolution fields that differ from current raw-source
+derivation. N-B preserves the chosen source-date key and quarantines filing or
+record-creation dates; state/county registries remain for later sub-PRs.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).

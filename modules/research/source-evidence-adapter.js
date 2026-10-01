@@ -21,6 +21,14 @@ function pick(obj, keys) {
   return '';
 }
 
+function pickWithOrigin(obj, keys) {
+  for (const key of keys) {
+    const value = pick(obj, [key]);
+    if (value !== '') return { value, origin: key };
+  }
+  return { value: '', origin: '' };
+}
+
 function isHttpUrl(value) {
   return /^https?:\/\//i.test(cleanText(value));
 }
@@ -249,6 +257,10 @@ function sourceUrlFrom(job, lead) {
 }
 
 function resolvePropertyIdentityFromExistingFields(job, lead, sourceUrl) {
+  const eventDate = pickWithOrigin(lead, [
+    'event_date', 'auction_date', 'sale_date', 'hearing_date', 'filed_date', 'created_at',
+    'source_details.event_date', 'source_truth.event_date', '_courthouse_metadata.auction_date'
+  ]);
   lead = lead || {};
   job = job || {};
   const sourceIdentity = extractPropertyIdentityFromSourceUrl(sourceUrl);
@@ -316,17 +328,8 @@ function resolvePropertyIdentityFromExistingFields(job, lead, sourceUrl) {
       'source_truth.event_type',
       '_courthouse_metadata.lead_type'
     ])),
-    event_date: cleanText(pick(lead, [
-      'event_date',
-      'auction_date',
-      'sale_date',
-      'hearing_date',
-      'filed_date',
-      'created_at',
-      'source_details.event_date',
-      'source_truth.event_date',
-      '_courthouse_metadata.auction_date'
-    ])),
+    event_date: cleanText(eventDate.value),
+    event_date_origin: eventDate.origin,
     source_ref: cleanText(pick(lead, [
       'case_number',
       'cause_number',
