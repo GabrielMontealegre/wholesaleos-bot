@@ -73,28 +73,31 @@ Acceptance
 
 ---
 
-## B-04 · Generic state rules + county source profiles · IN PROGRESS
+## B-04 · Generic state rules + county source profiles · DONE
 
 Ordered sub-PRs: N-A supersession audit ([PR #210](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/210))
 records only stored date and resolution fields that differ from current raw-source
 derivation. N-B ([PR #211](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/211))
 preserves the chosen source-date key and quarantines filing or record-creation
 dates; state/county registries remain for later sub-PRs.
-N-C introduces the cited state-rules table and a generic county notice profile
+N-C ([PR #212](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/212)) introduces the cited state-rules table and a generic county notice profile
 registry; the sale-date resolver reads both and retains its adapter export as a
 derived compatibility view. Other county source kinds and full behavior-equivalence
 coverage remain for the next ordered sub-PR.
-N-D registers existing tax-sale notices, code cases, parcels and recorded-sales
+N-D ([PR #213](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/213)) registers existing tax-sale notices, code cases, parcels and recorded-sales
 layers without enabling new routes. California tax-default profiles remain
 notice-stage only; legacy county adapters remain intact. Generic routing and
 full transport equivalence remain for the final B-04 sub-PR.
-N-E routes regional trustee-sale catalog entries, adapter registration and queue
+N-E ([PR #214](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/214)) routes regional trustee-sale catalog entries, adapter registration and queue
 selection through the generic registry. Legacy parser implementations and the
 existing market source lists are unchanged; other source families remain for a
 later ordered sub-PR.
-N-F routes the existing California tax-default and Michigan public land-bank
+N-F ([PR #215](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/215)) routes the existing California tax-default and Michigan public land-bank
 catalog, adapter and queue metadata through the same registry. Tax notices remain
 notice-only; land-bank inventory remains listing-only. No new source runs.
+N-G makes the primary notice profile authoritative for the legacy planning router,
+adapter registration and queue seed. The existing parser and all source IDs stay
+unchanged; Dallas/Ellis row transport equivalence remains tested.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).

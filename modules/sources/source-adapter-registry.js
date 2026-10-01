@@ -12,18 +12,19 @@ const countySourceProfiles = require('./county-source-profile-registry');
 const listingEgressGuard = require('../security/listing-egress-guard');
 
 const LISTING_EGRESS_VALUES = Object.freeze(['required', 'optional_degrades', 'none']);
+const primaryNoticeProfile = countySourceProfiles.PROFILES.find((profile) => profile.catalog_group === 'primary' && profile.source_kind === 'trustee_sale_notice');
 
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
 }
 
 const ADAPTERS = {
-  tx_dallas_county_clerk_foreclosure_notices: {
-    source_id: 'tx_dallas_county_clerk_foreclosure_notices',
-    source_family: 'preforeclosure_trustee_notice',
+  [primaryNoticeProfile.source_id]: {
+    source_id: primaryNoticeProfile.source_id,
+    source_family: primaryNoticeProfile.source_family,
     adapter_id: 'dallas_foreclosure_acquisition_adapter',
     adapter_family: 'pdf_list_adapter',
-    source_name: 'Dallas County Clerk Foreclosure Notices',
+    source_name: primaryNoticeProfile.source_name,
     listing_egress: 'none',
     adapter: dallasForeclosureAcquisitionAdapter,
     run: dallasForeclosureAcquisitionAdapter.runDallasForeclosureAcquisitionAdapter

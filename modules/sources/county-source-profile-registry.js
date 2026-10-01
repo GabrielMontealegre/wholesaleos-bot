@@ -20,6 +20,8 @@ const EXTRA_PROFILES = Object.freeze([
     county: 'Dallas', state: 'TX', source_id: 'tx_dallas_county_clerk_foreclosure_notices',
     source_kind: 'trustee_sale_notice', catalog_group: 'primary',
     source_name: 'Dallas County Clerk Foreclosure Notices', market_group: 'dallas',
+    source_family: 'preforeclosure_trustee_notice',
+    source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
     hosts: Object.freeze(['dallascounty.org', 'www.dallascounty.org', 'dallas.tx.publicsearch.us']),
     parser_options: Object.freeze({ sale_date_fields: SALE_DATE_FIELDS })
   }),

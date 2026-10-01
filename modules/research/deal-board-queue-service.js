@@ -73,8 +73,9 @@ const CONTACT_WORKFLOW_OUTCOMES = Object.freeze([
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
 const countySourceProfiles = require('../sources/county-source-profile-registry');
+const primaryNoticeProfile = countySourceProfiles.PROFILES.find((profile) => profile.catalog_group === 'primary' && profile.source_kind === 'trustee_sale_notice');
 const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
-  'tx_dallas_county_clerk_foreclosure_notices',
+  primaryNoticeProfile.source_id,
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
 ]);
