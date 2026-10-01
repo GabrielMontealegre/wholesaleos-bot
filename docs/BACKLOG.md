@@ -80,6 +80,10 @@ records only stored date and resolution fields that differ from current raw-sour
 derivation. N-B ([PR #211](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/211))
 preserves the chosen source-date key and quarantines filing or record-creation
 dates; state/county registries remain for later sub-PRs.
+N-C introduces the cited state-rules table and a generic county notice profile
+registry; the sale-date resolver reads both and retains its adapter export as a
+derived compatibility view. Other county source kinds and full behavior-equivalence
+coverage remain for the next ordered sub-PR.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).

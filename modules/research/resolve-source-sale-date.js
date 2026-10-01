@@ -1,18 +1,18 @@
 'use strict';
 
 const { normalizeSourceDate } = require('./normalize-source-date');
+const { rulesForState } = require('./state-rules');
+const countyProfiles = require('../sources/county-source-profile-registry');
 
 const RESOLVER_VERSION = 1;
-const CHAPTER_51_TRUSTEE_SALE_ADAPTERS = Object.freeze({
-  tx_dallas_county_clerk_foreclosure_notices: Object.freeze({
-    hosts: Object.freeze(['dallascounty.org', 'www.dallascounty.org', 'dallas.tx.publicsearch.us']),
-    fields: Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'])
-  }),
-  tx_ellis_county_foreclosure_notices: Object.freeze({
-    hosts: Object.freeze(['co.ellis.tx.us', 'elliscountytx.gov', 'www.elliscountytx.gov']),
-    fields: Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'])
-  })
-});
+const CHAPTER_51_TRUSTEE_SALE_ADAPTERS = Object.freeze(Object.fromEntries(
+  countyProfiles.PROFILES.filter((profile) => {
+    const rule = rulesForState(profile.state)?.foreclosure?.sale_day;
+    return rule?.verification_status === 'verified' && rule.source_kind === profile.source_kind;
+  }).map((profile) => [profile.source_id, Object.freeze({
+    hosts: profile.hosts, fields: profile.parser_options.sale_date_fields
+  })])
+));
 const NAMED_DATE_RE = /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi;
 const SALE_LABEL_RE = /\b(?:sale date|date of sale|trustee sale date|foreclosure sale date)\s*[:#-]?\s*/gi;
 
@@ -37,14 +37,7 @@ function validReadings(text) {
 }
 
 function officialHost(adapterId, sourceUrl) {
-  const adapter = CHAPTER_51_TRUSTEE_SALE_ADAPTERS[clean(adapterId)];
-  if (!adapter) return false;
-  try {
-    const parsed = new URL(clean(sourceUrl));
-    return parsed.protocol === 'https:' && adapter.hosts.includes(parsed.hostname.toLowerCase());
-  } catch (_) {
-    return false;
-  }
+  return countyProfiles.sourceHostAllowed(countyProfiles.profileForSourceId(adapterId), sourceUrl);
 }
 
 function labelledSaleValue(documentText, raw) {
@@ -74,7 +67,7 @@ function namedSaleDates(documentText, indexSaleDateText) {
   return found.filter((item) => item.iso);
 }
 
-function legalChapter51SaleDay(value) {
+function firstTuesdayWithHolidayException(value) {
   const [year, month, day] = value.split('-').map(Number);
   const first = new Date(Date.UTC(year, month - 1, 1));
   const firstTuesday = 1 + (2 - first.getUTCDay() + 7) % 7;
@@ -100,14 +93,20 @@ function resolveSourceSaleDate(input = {}) {
   if (distinctNamed.length > 1) return result('AMBIGUOUS', 'conflicting_named_dates', '', [], named.map((item) => item.excerpt).join(' | '));
   if (distinctNamed.length === 1) conclusions.push({ iso: distinctNamed[0], rule: 'same_source_named_date', excerpt: named[0].excerpt });
 
-  const adapter = CHAPTER_51_TRUSTEE_SALE_ADAPTERS[clean(input.source_adapter_id)];
-  if (adapter && officialHost(input.source_adapter_id, input.source_url) &&
-      adapter.fields.includes(clean(input.raw_field)) && labelledSaleValue(input.document_text, raw) && readings.length === 2) {
+  const profile = countyProfiles.profileForSourceId(input.source_adapter_id);
+  const rule = profile && rulesForState(profile.state)?.foreclosure?.sale_day;
+  const kindMatches = !clean(input.source_kind) || clean(input.source_kind) === profile?.source_kind;
+  if (profile && rule?.verification_status === 'verified' &&
+      rule.source_kind === profile.source_kind && kindMatches &&
+      officialHost(input.source_adapter_id, input.source_url) &&
+      profile.parser_options.sale_date_fields.includes(clean(input.raw_field)) &&
+      labelledSaleValue(input.document_text, raw) && readings.length === 2 &&
+      rule.calculation === 'first_tuesday_with_holiday_exception') {
     const monthFirst = iso(Number(raw.slice(-4)), Number(raw.split(/[/-]/)[0]), Number(raw.split(/[/-]/)[1]));
     const dayFirst = readings.find((value) => value !== monthFirst);
-    const monthLegal = legalChapter51SaleDay(monthFirst);
-    const dayLegal = legalChapter51SaleDay(dayFirst);
-    if (monthLegal && !dayLegal) conclusions.push({ iso: monthFirst, rule: 'tx_prop_code_51_002_sale_day', excerpt: `Sale Date: ${raw}` });
+    const monthLegal = firstTuesdayWithHolidayException(monthFirst);
+    const dayLegal = firstTuesdayWithHolidayException(dayFirst);
+    if (monthLegal && !dayLegal) conclusions.push({ iso: monthFirst, rule: rule.rule_id, excerpt: `Sale Date: ${raw}` });
     else if (dayLegal && !monthLegal) return result('AMBIGUOUS', 'only_day_first_is_sale_day');
   }
   if (conclusions.some((item) => !readings.includes(item.iso)) || new Set(conclusions.map((item) => item.iso)).size > 1) {
