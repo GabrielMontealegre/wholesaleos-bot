@@ -27,4 +27,3 @@ skip-trace-agent unless explicitly instructed.
 
 Do not fake contact, comps, ARV, repairs, MAO, offer, address, motivation,
 buyer demand, title status, or closing status.
-
