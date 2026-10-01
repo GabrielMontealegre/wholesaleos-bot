@@ -140,8 +140,17 @@ Ordered sub-PR [B-05a](https://github.com/GabrielMontealegre/wholesaleos-bot/pul
 official-host notices as preview-only `post_sale_candidates` with outcome unknown.
 They remain excluded from active candidates; the stale count is unchanged. This
 does not yet persist an after-sale lane or classify a completed sale. Other
-county adapters, the pure outcome classifier, operator action, buyer handoff and
+county adapters, classification integration, operator action, buyer handoff and
 dashboard view remain for later B-05 sub-PRs.
+
+Ordered sub-PR [B-05b](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/218) adds a pure outcome classifier for a newer official notice,
+later official ownership record, or recorded deed. It requires an exact parcel or
+address match, dated source evidence on an allowlisted host, and leaves missing or
+conflicting evidence as `OUTCOME_UNKNOWN`. A still-owner result additionally
+requires a dated official search finding no later deed. It does not persist or display an
+after-sale lane, compute redemption, or permit original-owner contact. Tax/HOA
+redemption, other county adapters, operator action, buyer handoff and dashboard
+view remain for later sub-PRs.
 
 Goal: passed-date foreclosure/tax notices are kept and classified, never discarded (D-009).
 
