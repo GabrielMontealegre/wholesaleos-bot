@@ -77,8 +77,9 @@ Acceptance
 
 Ordered sub-PRs: N-A supersession audit ([PR #210](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/210))
 records only stored date and resolution fields that differ from current raw-source
-derivation. N-B preserves the chosen source-date key and quarantines filing or
-record-creation dates; state/county registries remain for later sub-PRs.
+derivation. N-B ([PR #211](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/211))
+preserves the chosen source-date key and quarantines filing or record-creation
+dates; state/county registries remain for later sub-PRs.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).
