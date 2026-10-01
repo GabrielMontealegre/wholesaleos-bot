@@ -78,9 +78,7 @@ function getToneLearnings() {
 }
 
 function getAutoSendEnabled() {
-  const learnings = getToneLearnings();
-  if (learnings.length < 10) return false;
-  return true;
+  return false;
 }
 
 // ── Human-tone message generators ────────────────────────────────────────

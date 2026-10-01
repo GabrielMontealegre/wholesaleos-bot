@@ -10,7 +10,13 @@ Mark the status here as part of each item's PR.
 
 ---
 
-## B-01 · Release the source-date proof (PR #205) · IN PROGRESS
+## B-01 · Release the source-date proof (PR #205) · DONE ([PR #205](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/205))
+
+Verification (2026-10-01): merge `098fdd5`, deployment succeeded, `/health` 200,
+authenticated Dallas dashboard loaded and a lead card opened. Date summary: parsed 28,
+ambiguous 29, unparsed 0, absent 299; rows leaving quarantine 0. Dallas CALL_READY 0,
+MAIL_READY 5. Resolver-rule counts and the other requested queue-state counts were not
+exposed in the read-only dashboard summary.
 
 Goal: merge and deploy PR #205 (numeric sale-date order proof, raw-evidence-wins, origin tags).
 
@@ -29,7 +35,7 @@ Known non-blocking follow-ups (do them in B-04): superseded-audit edge (N-A),
 
 ---
 
-## B-02 · Safety cleanup: no auto-send flag, no invented buyers · TODO
+## B-02 · Safety cleanup: no auto-send flag, no invented buyers · IN PROGRESS
 
 Goal: remove two legacy behaviors that contradict the safety invariants.
 

@@ -2,6 +2,10 @@
 
 const db = require('../db');
 
+function isGeneratedMarketBuyBox(box) {
+  return String(box && box.source || '').trim().toLowerCase() === 'auto-generated for market';
+}
+
 // ── Buy box structure ─────────────────────────────────────────────────────
 function createBuyBox(data) {
   return {
@@ -43,10 +47,11 @@ function buyBoxExists(box) {
 }
 
 function getBuyBoxes() {
-  return (db.readDB().buyboxes || []);
+  return (db.readDB().buyboxes || []).filter(box => !isGeneratedMarketBuyBox(box));
 }
 
 function addBuyBox(data) {
+  if (isGeneratedMarketBuyBox(data)) return null;
   const box = createBuyBox(data);
   if (buyBoxExists(box)) return null;
   const dbData = db.readDB();
@@ -67,6 +72,8 @@ function extractFromBuyers() {
   const buyers = db.getBuyers();
   let extracted = 0;
   buyers.forEach(buyer => {
+    if (!buyer.name || !(buyer.contact || buyer.phone || buyer.email) ||
+        /auto-generated|template/i.test(String(buyer.source || ''))) return;
     const box = {
       name: buyer.name,
       contact: buyer.contact,
@@ -90,37 +97,6 @@ function extractFromBuyers() {
     if (addBuyBox(box)) extracted++;
   });
   return extracted;
-}
-
-// ── Generate market buy boxes ─────────────────────────────────────────────
-function generateMarketBuyBoxes(county, state, count=5) {
-  const strategies = ['Wholesale Assignment','Fix and Flip','Buy and Hold','BRRRR'];
-  const rehabLevels = ['Light','Medium','Heavy'];
-  const { getMarketData } = require('../markets');
-  const market = getMarketData(county, state);
-  const boxes = [];
-
-  for (let i = 0; i < count; i++) {
-    const strategy = strategies[i % strategies.length];
-    const rehab = rehabLevels[i % rehabLevels.length];
-    const maxPricePct = strategy === 'Wholesale Assignment' ? 0.75 : strategy === 'Fix and Flip' ? 0.70 : 0.80;
-    boxes.push({
-      name: `${county} ${strategy} Investor ${i+1}`,
-      contact: `Investor ${i+1}`,
-      state, county,
-      strategy,
-      propertyTypes: ['SFR'],
-      minARV: Math.round(market.arv * 0.5),
-      maxPrice: Math.round(market.arv * maxPricePct),
-      maxRepairs: rehab === 'Light' ? 25000 : rehab === 'Medium' ? 55000 : 95000,
-      minSpread: strategy === 'Wholesale Assignment' ? 15000 : 25000,
-      rehabLevel: rehab,
-      preferredCategories: ['Pre-FC','REO','FSBO','Long DOM'],
-      closingDays: strategy === 'Wholesale Assignment' ? 14 : 30,
-      source: 'Auto-generated for market',
-    });
-  }
-  return boxes;
 }
 
 // ── Match buy boxes to a lead ─────────────────────────────────────────────
@@ -171,6 +147,6 @@ function getBuyBoxRecommendations() {
 
 module.exports = {
   getBuyBoxes, addBuyBox, addBuyBoxesBulk, extractFromBuyers,
-  generateMarketBuyBoxes, matchBuyBoxesToLead, getBuyBoxRecommendations,
+  matchBuyBoxesToLead, getBuyBoxRecommendations,
   buyBoxExists,
 };
