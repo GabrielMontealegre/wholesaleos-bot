@@ -50,3 +50,5 @@ ASSUMED: B-03 remains BLOCKED rather than being marked fixed when the reported 5
 ASSUMED: B-04b treats a date explicitly sourced from filed_date, created_at, posted_at or date as non-sale evidence even when the text is unambiguous ISO or a registered adapter is present; a separately sourced sale_date or auction_date remains eligible — because source provenance outranks convenient date parsing and a filing timestamp does not prove a sale event — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/211
 
 ASSUMED: B-04c marks any post-sale or disclosure rule whose general legal effect is not established by its cited primary source as unverified, even if the backlog gives a shorthand; only the cited trustee-sale day rule can resolve an ambiguous date — because legal uncertainty must not become an automated eligibility fact — 2026-10-01 — B-04c sub-PR
+
+ASSUMED: B-04d registers California tax-default sources under the tax-sale process but marks them notice_only; neither a completed sale nor a sale price follows from a notice — because provenance and the value gates outrank a convenient category label — 2026-10-01 — B-04d sub-PR

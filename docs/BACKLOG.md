@@ -84,6 +84,10 @@ N-C introduces the cited state-rules table and a generic county notice profile
 registry; the sale-date resolver reads both and retains its adapter export as a
 derived compatibility view. Other county source kinds and full behavior-equivalence
 coverage remain for the next ordered sub-PR.
+N-D registers existing tax-sale notices, code cases, parcels and recorded-sales
+layers without enabling new routes. California tax-default profiles remain
+notice-stage only; legacy county adapters remain intact. Generic routing and
+full transport equivalence remain for the final B-04 sub-PR.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).
