@@ -57,7 +57,32 @@ try {
   routes['POST /api/buyboxes/match/:leadId']({ params: { leadId: 'lead-1' } }, matched);
   assert.deepStrictEqual(matched.body.matches.map(box => box.id), ['real-box'], 'match endpoint must not return a generated buyer box');
   assert.ok(!source.includes('generateMarketBuyBoxes'), 'server must not retain a route to invented investors');
-  assert.strictEqual((source.match(/auto_send: getAutoSendEnabled\(\)/g) || []).length, 2, 'both tone-status responses use the disabled flag');
+  assert.strictEqual((source.match(/auto_send: getAutoSendEnabled\(\)/g) || []).length, 1, 'tone-status has one disabled response');
+
+  const outreachStart = source.indexOf("app.get('/api/outreach/tone-status'");
+  const outreachEnd = source.indexOf("app.get('/api/contracts/templates'", outreachStart);
+  assert.ok(outreachStart >= 0 && outreachEnd > outreachStart, 'outreach route block must be found');
+  const outreachRoutes = [];
+  vm.runInNewContext(source.slice(outreachStart, outreachEnd), {
+    app: {
+      get: (route, handler) => outreachRoutes.push({ method: 'GET', route, handler }),
+      post: (route, handler) => outreachRoutes.push({ method: 'POST', route, handler })
+    },
+    require: (name) => {
+      assert.strictEqual(name, './modules/outreach');
+      return outreach;
+    },
+    db
+  });
+  const firstGet = (pathName) => outreachRoutes.find(({ method, route }) => method === 'GET' &&
+    (route === pathName || (route.endsWith('/:leadId') && pathName.startsWith(route.slice(0, -7)))));
+  const status = response();
+  firstGet('/api/outreach/tone-status').handler({ params: {} }, status);
+  assert.strictEqual(status.body.auto_send, false, 'the first matching live route must expose auto_send false');
+  assert.strictEqual(status.body.edits, 12, 'tone-status must not be shadowed by lead history');
+  const history = response();
+  firstGet('/api/outreach/lead-1').handler({ params: { leadId: 'lead-1' } }, history);
+  assert.deepStrictEqual(history.body.history, [], 'ordinary outreach history route must still work');
 
   console.log('B-02 safety cleanup tests passed');
 } finally {
