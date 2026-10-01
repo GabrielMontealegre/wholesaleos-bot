@@ -40,3 +40,5 @@ corrects them during review.
 ## Agent assumptions (ASSUMED)
 
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)
+
+ASSUMED: B-01's existing PR branch is updated from current main with a merge commit rather than a force-pushed rebase — because the backlog explicitly names PR #205 and preserving its reviewed history is the safer way to satisfy the current-main requirement — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/205

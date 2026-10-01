@@ -10,7 +10,7 @@ Mark the status here as part of each item's PR.
 
 ---
 
-## B-01 · Release the source-date proof (PR #205) · TODO
+## B-01 · Release the source-date proof (PR #205) · IN PROGRESS
 
 Goal: merge and deploy PR #205 (numeric sale-date order proof, raw-evidence-wins, origin tags).
 
