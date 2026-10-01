@@ -134,7 +134,14 @@ Acceptance
 
 ---
 
-## B-05 · "After the sale" lane · TODO
+## B-05 · "After the sale" lane · IN PROGRESS
+
+Ordered sub-PR [B-05a](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/217): the existing primary notice adapter exposes proven-past,
+official-host notices as preview-only `post_sale_candidates` with outcome unknown.
+They remain excluded from active candidates; the stale count is unchanged. This
+does not yet persist an after-sale lane or classify a completed sale. Other
+county adapters, the pure outcome classifier, operator action, buyer handoff and
+dashboard view remain for later B-05 sub-PRs.
 
 Goal: passed-date foreclosure/tax notices are kept and classified, never discarded (D-009).
 

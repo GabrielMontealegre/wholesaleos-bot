@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const documentHunter = require('./dallas-foreclosure-document-hunter');
 const foreclosureNoticeAdapter = require('./dallas-foreclosure-notice-adapter');
 const realFileParser = require('./dallas-real-file-parser');
+const countySourceProfiles = require('./county-source-profile-registry');
 const leadEvidence = require('../research/lead-evidence');
 const propertyCandidate = require('../research/property-candidate');
 const sourceEvidenceAdapter = require('../research/source-evidence-adapter');
@@ -463,9 +464,45 @@ function summarizePreviewArtifacts(input = {}) {
 function buildCandidatesFromRaw(rawCandidates, records, context, source) {
   const accepted = [];
   const rejected = [];
+  const postSaleCandidates = [];
+  const noticeProfile = countySourceProfiles.profileForSourceId(SOURCE_ID);
+  const retainProvenPast = (raw, saleDate, check, proofUrl, proofText, explicitSaleDate) => {
+    if (!check.stale || !explicitSaleDate || explicitSaleDate !== saleDate ||
+        !countySourceProfiles.sourceHostAllowed(noticeProfile, proofUrl) ||
+        (!proofText && !cleanText(raw && raw.source_row_reference))) return;
+    const documentUrl = cleanText(raw && raw.source_document_url);
+    postSaleCandidates.push({
+      source_id: SOURCE_ID,
+      source_kind: 'trustee_sale_notice',
+      source_family: SOURCE_FAMILY,
+      source_url: proofUrl,
+      source_proof_url: proofUrl,
+      source_document_url: countySourceProfiles.sourceHostAllowed(noticeProfile, documentUrl) ? documentUrl : proofUrl,
+      source_row_reference: cleanText(raw && raw.source_row_reference),
+      property_address: cleanText(raw && (raw.property_address || raw.address)),
+      parcel_or_account: cleanText(raw && (raw.parcel_or_account || raw.parcel_id)),
+      sale_date: saleDate,
+      sale_date_resolution: check.resolution && check.resolution.status === 'RESOLVED' ? check.resolution : null,
+      stale_basis: check.stale_basis,
+      sale_outcome: 'OUTCOME_UNKNOWN',
+      source_proof_text: proofText,
+      captured_at: cleanText(context.captured_at),
+      can_contact_original_owner: false,
+      preview_only: true,
+      should_ingest: false
+    });
+  };
   for (const raw of Array.isArray(rawCandidates) ? rawCandidates : []) {
     const rawWorkflowStatus = cleanText(raw && (raw.workflow_status || raw.current_status));
     if (/^historical$/i.test(rawWorkflowStatus)) {
+      const proofUrl = cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)) || context.source_url || SOURCE_URL;
+      const saleDate = cleanText(raw && (raw.sale_date || raw.event_date || raw.auction_date));
+      const explicitSaleDate = cleanText(raw && (raw.sale_date || raw.auction_date));
+      const proofText = cleanText(raw && raw.source_proof_text);
+      const check = sourceSaleDate.saleDateStaleness(saleDate, context.reference_date || new Date(), {
+        raw_field: 'sale_date', source_adapter_id: SOURCE_ID, source_url: proofUrl, document_text: proofText
+      });
+      retainProvenPast(raw, saleDate, check, proofUrl, proofText, explicitSaleDate);
       rejected.push({
         source_row_reference: cleanText(raw && raw.source_row_reference),
         source_proof_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)),
@@ -478,6 +515,7 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     const rawText = cleanText(raw && (raw.source_proof_text || raw.raw_text || raw.text || raw.source_reference));
     const saleDateMatch = rawText.match(/(?:sale date|date of sale|trustee sale date|foreclosure sale date)\s*[:\-]?\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i);
     const saleDate = cleanText(raw && (raw.sale_date || raw.event_date || raw.auction_date || (saleDateMatch && saleDateMatch[1])));
+    const explicitSaleDate = cleanText(raw && (raw.sale_date || raw.auction_date || (saleDateMatch && saleDateMatch[1])));
     const saleProof = {
       raw_field: 'sale_date', source_adapter_id: SOURCE_ID,
       source_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)) || context.source_url || SOURCE_URL,
@@ -485,6 +523,7 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     };
     const saleDateCheck = sourceSaleDate.saleDateStaleness(saleDate, context.reference_date || new Date(), saleProof);
     if (saleDateCheck.stale) {
+      retainProvenPast(raw, saleDate, saleDateCheck, saleProof.source_url, rawText, explicitSaleDate);
       rejected.push({
         source_row_reference: cleanText(raw && raw.source_row_reference),
         source_proof_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)),
@@ -514,7 +553,8 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
   return {
     candidates: finalCandidates,
     cards,
-    rejected
+    rejected,
+    post_sale_candidates: postSaleCandidates
   };
 }
 
@@ -698,6 +738,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       should_ingest: false,
       candidates: built.candidates,
       cards: built.cards,
+      post_sale_candidates: built.post_sale_candidates,
       candidate_count: built.candidates.length,
       source_preview: livePreview,
       diagnostics,
@@ -871,6 +912,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       should_ingest: false,
       candidates: built.candidates,
       cards: built.cards,
+      post_sale_candidates: built.post_sale_candidates,
       candidate_count: built.candidates.length,
       source_preview: livePreview,
       diagnostics,
@@ -951,6 +993,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     should_ingest: false,
     candidates: built.candidates,
     cards: built.cards,
+    post_sale_candidates: built.post_sale_candidates,
     candidate_count: built.candidates.length,
     source_preview: summarizePreviewArtifacts({
       source_url_checked: sourceUrl,
