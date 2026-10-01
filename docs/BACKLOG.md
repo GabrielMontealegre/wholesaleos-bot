@@ -152,6 +152,13 @@ after-sale lane, compute redemption, or permit original-owner contact. Tax/HOA
 redemption, other county adapters, operator action, buyer handoff and dashboard
 view remain for later sub-PRs.
 
+Ordered sub-PR B-05c carries adapter `post_sale_candidates` through the acquisition
+diagnostics into a separate, deduplicated market snapshot collection. Repeated
+batches preserve earlier candidates; no post-sale candidate becomes an active row.
+The read-only dashboard panel shows up to 20 retained notices and says the outcome
+is unknown and former-owner contact is not allowed. This is not the final grouped
+outcome tab, and no automatic post-sale verification or outreach occurs.
+
 Goal: passed-date foreclosure/tax notices are kept and classified, never discarded (D-009).
 
 Verified facts: the county foreclosure-notice adapters currently reject proven-past notices as

@@ -858,7 +858,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=52'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=53'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -915,7 +915,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=52'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=53'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1114,6 +1114,13 @@ function mockDeal(overrides) {
     }
   };
   const dashboardPanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard', packetFixture, [], '');
+  const afterSalePanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard', Object.assign({}, packetFixture, {
+    post_sale_candidates: [{ property_address: '101 Synthetic Past St, Dallas, TX 75201', sale_date: '2026-05-05',
+      source_url: 'https://www.dallascounty.org/official-notice.pdf', sale_outcome: 'OUTCOME_UNKNOWN' }]
+  }), [], '');
+  assert.ok(afterSalePanels.includes('After the sale') && afterSalePanels.includes('101 Synthetic Past St'));
+  assert.ok(afterSalePanels.includes('Outcome unknown') && afterSalePanels.includes('Do not contact the former owner'));
+  assert.ok(!afterSalePanels.includes('Ready to offer: YES'));
   const dealFinderPanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', packetFixture, [], '');
   ['Manual Evidence Packet', 'Can contact', 'Can value', 'Ready to offer', 'Sale/event date', 'Last checked', '100 Synthetic Proof St, Dallas, TX 75201'].forEach((text) => {
     assert.ok(dashboardPanels.includes(text), `Dashboard rendered output must include ${text}`);

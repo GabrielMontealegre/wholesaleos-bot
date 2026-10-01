@@ -329,6 +329,24 @@
       '#fca5a5');
   }
 
+  function afterSalePanel(data) {
+    var items = safeArray(data && data.post_sale_candidates);
+    var body = items.length ? items.slice(0, 20).map(function (item) {
+      var url = String(item.source_url || '');
+      var sourceLink = /^https:\/\//i.test(url) ? link('Official source', url) : 'Official source link unavailable';
+      return '<div style="border-top:1px solid #e5e7eb;padding:8px 0;font-size:12px;">' +
+        '<div style="font-weight:600;color:#111827;">' + esc(item.property_address || 'Property address not established') + '</div>' +
+        '<div style="color:#374151;">Scheduled sale: ' + esc(item.sale_date || 'Date unresolved') +
+        ' · Outcome unknown · Do not contact the former owner as seller.</div>' +
+        '<div>' + sourceLink + '</div>' +
+        '<div style="color:#6b7280;">Next: check for a newer notice, recorded deed, or current owner record.</div>' +
+        '</div>';
+    }).join('') : '<div style="font-size:12px;color:#6b7280;">No past-sale notices have been retained for this market yet.</div>';
+    if (items.length > 20) body += '<div style="font-size:11px;color:#6b7280;">Showing 20 of ' + esc(items.length) + ' retained notices.</div>';
+    return panelBox('After the sale · ' + esc(items.length),
+      'Separate from active leads. A passed date does not prove a completed sale or a current owner.', body, '#d1d5db');
+  }
+
   var MANUAL_EVIDENCE_SLOTS = [
     { key: 'subject_property', label: '1. Subject property', sources: ['Zillow', 'Redfin', 'Realtor.com', 'Google Maps'] },
     { key: 'sold_comp', label: '2. Sold comp', sources: ['Zillow sold result', 'Redfin sold result', 'Realtor.com sold result', 'County sales record'] },
@@ -1935,6 +1953,7 @@
     if (page === 'dashboard') {
       return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +
+        afterSalePanel(data) +
         manualEvidencePanel(data) +
         countyCoveragePanel() +
         countyAuditPanel() +
