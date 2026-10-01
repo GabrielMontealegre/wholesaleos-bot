@@ -1,5 +1,8 @@
 'use strict';
 
+const countySourceProfiles = require('./county-source-profile-registry');
+const primaryNoticeProfile = countySourceProfiles.PROFILES.find((profile) => profile.catalog_group === 'primary' && profile.source_kind === 'trustee_sale_notice');
+
 const CATEGORY_WEIGHTS = {
   preforeclosure_trustee_notice: 98,
   sheriff_sale: 96,
@@ -16,11 +19,11 @@ const CATEGORY_WEIGHTS = {
 
 const DALLAS_SOURCE_PLAN = [
   {
-    source_id: 'tx_dallas_county_clerk_foreclosure_notices',
-    source_name: 'Dallas County Clerk Foreclosure Notices',
+    source_id: primaryNoticeProfile.source_id,
+    source_name: primaryNoticeProfile.source_name,
     category: 'preforeclosure / trustee notice / foreclosure notice',
     category_key: 'preforeclosure_trustee_notice',
-    source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+    source_url: primaryNoticeProfile.source_url,
     source_type: 'PDF / public search portal',
     why_it_matters: 'Trustee and foreclosure notices create time-sensitive seller motivation before auction.',
     expected_lead_type: 'Preforeclosure and trustee-sale leads',
@@ -302,7 +305,7 @@ function buildDallasSourcePriorityPlan(context = {}) {
   const needsAdapter = sources.filter((source) => /Needs adapter|Needs source research/i.test(source.readiness));
   const supportOnly = sources.filter((source) => /support/i.test(source.use_policy) && !/blocked/i.test(source.use_policy));
   const blockedSensitive = sources.filter((source) => /Blocked/i.test(source.readiness) || source.use_policy === 'blocked_sensitive');
-  const recommendedNext = sources.find((source) => source.source_id === 'tx_dallas_county_clerk_foreclosure_notices') || highestPriority[0] || sources[0] || null;
+  const recommendedNext = sources.find((source) => source.source_id === primaryNoticeProfile.source_id) || highestPriority[0] || sources[0] || null;
   return {
     ok: true,
     preview_only: true,
