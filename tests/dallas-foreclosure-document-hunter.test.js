@@ -74,7 +74,7 @@ function makeResponse(body, contentType = 'text/html; charset=UTF-8', status = 2
 
   // Sale dates are computed relative to today so the fixture never rots into
   // the stale-sale-date gate as real time passes.
-  const futureSale = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const futureSale = require('./helpers/future-sale-date').futureSaleDate();
   const futureSaleSlash = `${String(futureSale.getMonth() + 1).padStart(2, '0')}/${String(futureSale.getDate()).padStart(2, '0')}/${futureSale.getFullYear()}`;
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const futureSaleLong = `${MONTHS[futureSale.getMonth()]} ${futureSale.getDate()}, ${futureSale.getFullYear()}`;

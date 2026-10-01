@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const realFileParser = require('./dallas-real-file-parser');
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
+const sourceSaleDate = require('../research/resolve-source-sale-date');
 
 const SOURCE_ID = 'tx_dallas_county_clerk_foreclosure_notices';
 const SOURCE_URL = 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php';
@@ -84,31 +85,16 @@ function normalizeDate(value) {
   return match ? cleanText(match[0]) : '';
 }
 
-function parseDateValue(value) {
+function parseDateValue(value, proof = {}) {
   const text = cleanText(value);
   if (!text) return null;
-  const parsed = Date.parse(text);
-  if (Number.isFinite(parsed)) return new Date(parsed);
-  const short = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
-  if (short) {
-    const month = Number(short[1]);
-    const day = Number(short[2]);
-    let year = Number(short[3]);
-    if (year < 100) year += year >= 70 ? 1900 : 2000;
-    const parsedShort = new Date(Date.UTC(year, month - 1, day));
-    if (!Number.isNaN(parsedShort.getTime())) return parsedShort;
-  }
-  return null;
+  const native = require('../research/normalize-source-date').normalizeSourceDate(text);
+  const result = native.iso || sourceSaleDate.resolveSourceSaleDate(Object.assign({}, proof, { raw_text: text })).resolved_iso;
+  return result ? new Date(`${result}T00:00:00Z`) : null;
 }
 
-function isStaleSaleDate(value, referenceDate = new Date()) {
-  const parsed = parseDateValue(value);
-  if (!parsed) return false;
-  const sale = new Date(parsed);
-  const ref = new Date(referenceDate);
-  sale.setHours(0, 0, 0, 0);
-  ref.setHours(0, 0, 0, 0);
-  return sale.getTime() < ref.getTime();
+function isStaleSaleDate(value, referenceDate = new Date(), proof = {}) {
+  return sourceSaleDate.saleDateStaleness(value, referenceDate, proof).stale;
 }
 
 function fieldValue(text, labelPattern) {
@@ -187,7 +173,12 @@ function candidateFromBlock(block, context = {}) {
   const debtAmount = parseMoney(fieldValue(text, 'debt|amount due|amount owed|unpaid balance'));
   const zip = (address.match(/\b75[23]\d{2}\b/) || text.match(/\b75[23]\d{2}\b/) || [])[0] || '';
   const proofUrl = cleanText(context.source_proof_url || context.source_url || SOURCE_URL);
-  const staleSaleDate = isStaleSaleDate(saleDate, context.captured_at || nowIso());
+  const saleProof = {
+    raw_field: 'sale_date', source_adapter_id: SOURCE_ID,
+    source_url: proofUrl, document_text: text
+  };
+  const saleDateCheck = sourceSaleDate.saleDateStaleness(saleDate, context.captured_at || nowIso(), saleProof);
+  const staleSaleDate = saleDateCheck.stale;
   const missing = [];
   if (addressQuality !== 'valid') missing.push('complete Dallas property address');
   if (!saleDate) missing.push('sale date');
@@ -215,6 +206,13 @@ function candidateFromBlock(block, context = {}) {
     lender_name: lender,
     event_type: /trustee/i.test(text) ? 'trustee_notice' : 'foreclosure_notice',
     sale_date: saleDate,
+    sale_date_resolution: saleDateCheck.resolution && saleDateCheck.resolution.status === 'RESOLVED'
+      ? { raw_text: saleDate, raw_field: 'sale_date', resolved_iso: saleDateCheck.resolution.resolved_iso,
+        rule_ids: saleDateCheck.resolution.rule_ids, source_url: proofUrl, source_adapter_id: SOURCE_ID,
+        evidence_excerpt: saleDateCheck.resolution.evidence_excerpt, resolver_version: sourceSaleDate.RESOLVER_VERSION }
+      : null,
+    stale_basis: saleDateCheck.stale_basis,
+    invalid_sale_date: saleDateCheck.invalid_sale_date,
     auction_date: saleDate,
     notice_date: noticeDate,
     filing_date: filingDate,
@@ -503,7 +501,10 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
   const documentUrlsFound = links.map((link) => cleanText(link && link.url ? link.url : link)).filter(Boolean);
   const documentUrlsParsed = parsedAttempts.filter((attempt) => attempt.status === 'parsed').map((attempt) => cleanText(attempt.url)).filter(Boolean);
   const documentUrlsSkipped = parsedAttempts.filter((attempt) => attempt.status !== 'parsed').map((attempt) => ({ url: cleanText(attempt.url), reason: cleanText(attempt.blocked_reason || attempt.status) })).filter((item) => item.url);
-  const staleSaleDateCount = candidates.filter((candidate) => isStaleSaleDate(candidate.sale_date)).length;
+  const staleSaleDateCount = candidates.filter((candidate) => isStaleSaleDate(candidate.sale_date, new Date(), {
+    raw_field: 'sale_date', source_adapter_id: SOURCE_ID,
+    source_url: candidate.source_proof_url, document_text: candidate.source_proof_text
+  })).length;
   return Object.assign({}, counts, {
     ok: true,
     status: candidates.length ? 'candidates_found' : 'needs_manual_review',
@@ -518,6 +519,7 @@ async function runDallasForeclosureNoticeAdapter(options = {}) {
     document_urls_parsed: documentUrlsParsed,
     document_urls_skipped: documentUrlsSkipped,
     stale_sale_date_count: staleSaleDateCount,
+    invalid_sale_date_count: candidates.filter((candidate) => candidate.invalid_sale_date === true).length,
     files_detected: fileResult ? Number(fileResult.files_detected || 0) : 0,
     files_parsed: fileResult ? Number(fileResult.files_parsed || 0) : 0,
     files_blocked: fileResult ? Number(fileResult.files_blocked || 0) : 0,

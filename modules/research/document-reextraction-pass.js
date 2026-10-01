@@ -269,7 +269,13 @@ function applyExtractionToRow(row, extraction, market, documentUrl, nowIso) {
   row.source_row_reference = cleanText(row.source_row_reference || extracted.source_row_reference || extracted.case_number);
   row.motivation_evidence_text = cleanText(row.motivation_evidence_text || extracted.source_proof_text || extracted.source_text);
   row.status_evidence_text = cleanText(row.status_evidence_text || extracted.status_evidence_text || extracted.current_status);
-  row.sale_date_or_event_date = cleanText(row.sale_date_or_event_date || extracted.sale_date || extracted.auction_date);
+  const existingSaleDate = cleanText(row.sale_date_or_event_date);
+  const extractedSaleDate = cleanText(extracted.sale_date);
+  const extractedAuctionDate = cleanText(extracted.auction_date);
+  row.sale_date_or_event_date = existingSaleDate || extractedSaleDate || extractedAuctionDate;
+  if (!existingSaleDate && row.sale_date_or_event_date) {
+    row.sale_date_or_event_date_origin = extractedSaleDate ? 'sale_date' : 'auction_date';
+  }
   row.foreclosure_type = cleanText(row.foreclosure_type || extracted.foreclosure_type);
   row.filing_period = cleanText(row.filing_period || extracted.filing_period);
   row.filing_period_evidence_text = cleanText(row.filing_period_evidence_text || extracted.filing_period_evidence_text);

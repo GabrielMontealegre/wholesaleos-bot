@@ -1,7 +1,7 @@
 'use strict';
 
 // Fixture sale dates must stay in the future - hardcoded dates rot as the calendar advances.
-const FUTURE_SALE_DATE = (() => { const d = new Date(Date.now() + 60 * 24 * 3600 * 1000); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })();
+const FUTURE_SALE_DATE = (() => { const d = require('./helpers/future-sale-date').futureSaleDate(); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })();
 
 const assert = require('assert');
 const fs = require('fs');
