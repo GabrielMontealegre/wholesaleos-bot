@@ -253,20 +253,34 @@ function deriveSourceDates(row) {
     (!possibleReadings.length || !possibleReadings.includes(value)));
   const mismatch = !!(saleSourceField && !rederivedIso &&
     (storedResolution || storedIsoConflicts));
-  const superseded = !!(rederivedIso && (
-    storedDerivedIso && storedDerivedIso !== rederivedIso ||
-    storedEventIso && storedEventIso !== rederivedIso ||
-    storedResolution && (cleanText(storedResolution.raw_text) !== cleanText(saleRaw) ||
-      cleanText(storedResolution.resolved_iso) !== rederivedIso ||
-      !numericResolution || numericResolution.status !== 'RESOLVED' ||
-      Array.isArray(storedResolution.rule_ids) &&
-        storedResolution.rule_ids.join('|') !== numericResolution.rule_ids.join('|'))
-  ));
-  if (superseded) row.sale_date_resolution_superseded = {
+  const oldValues = [];
+  if (rederivedIso) {
+    if (storedDerivedIso && storedDerivedIso !== rederivedIso) {
+      oldValues.push({ field: 'sale_date_iso', old_value: storedDerivedIso });
+    }
+    if (cleanText(row.source_event_date) && storedEventIso !== rederivedIso) {
+      oldValues.push({ field: 'source_event_date', old_value: cleanText(row.source_event_date) });
+    }
+    if (storedResolution) {
+      if (Object.hasOwn(storedResolution, 'raw_text') && cleanText(storedResolution.raw_text) !== saleRaw) {
+        oldValues.push({ field: 'sale_date_resolution.raw_text', old_value: storedResolution.raw_text });
+      }
+      if (Object.hasOwn(storedResolution, 'resolved_iso') && cleanText(storedResolution.resolved_iso) !== rederivedIso) {
+        oldValues.push({ field: 'sale_date_resolution.resolved_iso', old_value: storedResolution.resolved_iso });
+      }
+      const currentRules = numericResolution && numericResolution.status === 'RESOLVED' ? numericResolution.rule_ids : [];
+      if (Object.hasOwn(storedResolution, 'rule_ids') &&
+          JSON.stringify(storedResolution.rule_ids) !== JSON.stringify(currentRules)) {
+        oldValues.push({ field: 'sale_date_resolution.rule_ids', old_value: storedResolution.rule_ids });
+      }
+    }
+  }
+  if (oldValues.length) row.sale_date_resolution_superseded = {
     raw_text: cleanText(storedResolution && storedResolution.raw_text) || cleanText(saleRaw),
     resolved_iso: cleanText(storedResolution && storedResolution.resolved_iso) ||
       (storedDerivedIso !== rederivedIso ? storedDerivedIso : '') ||
       (storedEventIso !== rederivedIso ? storedEventIso : ''),
+    old_values: oldValues,
     superseded_at: nowIso()
   };
   row.sale_date_resolution_issue = mismatch ? 'date_resolution_mismatch'
