@@ -44,3 +44,5 @@ corrects them during review.
 ASSUMED: B-01's existing PR branch is updated from current main with a merge commit rather than a force-pushed rebase — because the backlog explicitly names PR #205 and preserving its reviewed history is the safer way to satisfy the current-main requirement — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/205
 
 ASSUMED: B-02 hides legacy market-generated buy boxes from read APIs and matching without deleting their stored records — because safety and data preservation outrank showing invented buyers — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/207
+
+ASSUMED: B-03 remains BLOCKED rather than being marked fixed when the reported 502 cannot be reproduced or attributed — because data truth forbids a speculative root cause and saved-lead safety forbids a speculative mutation — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209

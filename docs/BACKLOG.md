@@ -35,7 +35,14 @@ Known non-blocking follow-ups (do them in B-04): superseded-audit edge (N-A),
 
 ---
 
-## B-02 · Safety cleanup: no auto-send flag, no invented buyers · IN PROGRESS
+## B-02 · Safety cleanup: no auto-send flag, no invented buyers · DONE ([PR #207](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/207), [PR #208](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/208))
+
+Verification (2026-10-01): final merge `c03ee9f`, Railway deployment succeeded,
+`/health` 200, and read-only `/api/outreach/tone-status` returned
+`auto_send: false`. The authenticated dashboard loaded Dallas rows and the
+Buyers view showed 0 active buy boxes and 0 templates. No outreach or saved-data
+mutation was performed. PR #208 corrected a pre-existing generic-route shadow
+found during read-only verification of PR #207.
 
 Goal: remove two legacy behaviors that contradict the safety invariants.
 
@@ -49,7 +56,13 @@ Acceptance
 
 ---
 
-## B-03 · Saved-leads HTTP 502 · TODO
+## B-03 · Saved-leads HTTP 502 · BLOCKED ([issue #209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209))
+
+Read-only check (2026-10-01): the reported 502 did not reproduce. GETs for
+50 and 1,000 saved leads returned 200; Texas and National views loaded and
+Dallas showed its empty state. No root cause was established, so no speculative
+saved-data change was made. Issue #209 requests the original incident evidence
+or a decision to close this stale report.
 
 Goal: find and fix the 502 seen on the saved-leads view.
 
@@ -60,7 +73,11 @@ Acceptance
 
 ---
 
-## B-04 · Generic state rules + county source profiles · TODO
+## B-04 · Generic state rules + county source profiles · IN PROGRESS
+
+First ordered sub-PR: N-A supersession audit, recording only stored date and
+resolution fields that actually differ from current raw-source derivation. N-B
+origin propagation and the state/county registries remain for later sub-PRs.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).
