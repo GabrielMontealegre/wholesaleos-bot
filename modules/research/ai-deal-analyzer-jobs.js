@@ -281,6 +281,7 @@ function collectSourceEvidence(lead, job) {
     source_ref: pack.source_ref,
     event_type: pack.event_type,
     event_date: pack.event_date,
+    event_date_origin: pack.event_date_origin,
     county: pack.county,
     state: pack.state,
     confidence: pack.confidence,

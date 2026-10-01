@@ -46,3 +46,5 @@ ASSUMED: B-01's existing PR branch is updated from current main with a merge com
 ASSUMED: B-02 hides legacy market-generated buy boxes from read APIs and matching without deleting their stored records — because safety and data preservation outrank showing invented buyers — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/207
 
 ASSUMED: B-03 remains BLOCKED rather than being marked fixed when the reported 502 cannot be reproduced or attributed — because data truth forbids a speculative root cause and saved-lead safety forbids a speculative mutation — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209
+
+ASSUMED: B-04b treats a date explicitly sourced from filed_date, created_at, posted_at or date as non-sale evidence even when the text is unambiguous ISO or a registered adapter is present; a separately sourced sale_date or auction_date remains eligible — because source provenance outranks convenient date parsing and a filing timestamp does not prove a sale event — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/211

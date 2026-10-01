@@ -220,21 +220,23 @@ function deriveOneDate(row, sourceField, targetField, rawValue) {
 
 function deriveSourceDates(row) {
   if (!row || typeof row !== 'object') return row;
+  const origin = cleanText(row.sale_date_or_event_date_origin);
+  const nonSaleOrigin = ['posted_at', 'date', 'filed_date', 'created_at'].includes(origin);
   const saleSourceField = ['sale_date_or_event_date', 'sale_date', 'auction_date', 'event_date']
-    .find((field) => cleanText(row[field])) || '';
+    .find((field) => cleanText(row[field]) && !(nonSaleOrigin &&
+      ['sale_date_or_event_date', 'event_date'].includes(field))) || '';
+  const nonSaleOnly = nonSaleOrigin && !saleSourceField;
   const saleRaw = saleSourceField ? row[saleSourceField] : '';
   const saleResult = sourceDateNormalization.normalizeSourceDate(saleRaw);
   const storedDerivedIso = cleanText(row.sale_date_iso);
   const storedEventIso = sourceDateNormalization.normalizeSourceDate(row.source_event_date).iso;
   const hasRawDateText = LIFECYCLE_SOURCE_DATE_FIELDS.some((field) => cleanText(row[field]));
   const derivedOnly = !hasRawDateText && !!(storedDerivedIso || cleanText(row.source_event_date));
-  const origin = cleanText(row.sale_date_or_event_date_origin);
   const saleOrigin = ['sale_date_or_event_date', 'sale_date', 'auction_date', 'event_date',
     'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'].includes(origin);
   const directSaleField = ['sale_date', 'auction_date', 'event_date'].includes(saleSourceField);
   const registeredAdapter = Object.hasOwn(sourceSaleDate.CHAPTER_51_TRUSTEE_SALE_ADAPTERS,
     cleanText(row.source_adapter_id || row.source_id));
-  const nonSaleOrigin = ['posted_at', 'date'].includes(origin);
   const numericResolution = saleResult.reason === 'ambiguous_numeric_order' &&
     (directSaleField || !nonSaleOrigin && (saleOrigin || registeredAdapter))
     ? sourceSaleDate.resolveSourceSaleDate({
@@ -283,10 +285,11 @@ function deriveSourceDates(row) {
     old_values: oldValues,
     superseded_at: nowIso()
   };
-  row.sale_date_resolution_issue = mismatch ? 'date_resolution_mismatch'
+  row.sale_date_resolution_issue = nonSaleOnly ? 'NON_SALE_DATE_ORIGIN'
+    : mismatch ? 'date_resolution_mismatch'
     : derivedOnly ? 'DERIVED_DATE_WITHOUT_SOURCE_TEXT'
     : numericResolution && numericResolution.status !== 'RESOLVED' ? numericResolution.reason : '';
-  row.sale_date_iso = mismatch || derivedOnly ? null : rederivedIso || null;
+  row.sale_date_iso = mismatch || derivedOnly || nonSaleOnly ? null : rederivedIso || null;
   row.sale_date_source_field = saleSourceField;
   row.sale_date_format_matched = numericResolution && numericResolution.status === 'RESOLVED'
     ? numericResolution.rule_ids.join('+') : saleResult.format_matched;
@@ -315,7 +318,9 @@ function lifecycleDateProjection(row) {
     const result = sourceDateNormalization.normalizeSourceDate(projected[field]);
     if (result.iso) projected[field] = result.iso;
   }
-  projected.sale_date_or_event_date = projected.sale_date_iso || projected.sale_date_or_event_date;
+  projected.sale_date_or_event_date = projected.sale_date_iso ||
+    (projected.sale_date_resolution_issue === 'NON_SALE_DATE_ORIGIN' ? '' : projected.sale_date_or_event_date);
+  if (projected.sale_date_resolution_issue === 'NON_SALE_DATE_ORIGIN') projected.event_date = '';
   return projected;
 }
 
@@ -324,12 +329,15 @@ function lifecycleStatusWithNormalizedDates(row, atIso) {
   if (projected.sale_date_resolution_issue) return {
     status: 'DATE_UNKNOWN_REVERIFY', reason_code: projected.sale_date_resolution_issue === 'date_resolution_mismatch'
       ? 'date_resolution_mismatch' : projected.sale_date_resolution_issue === 'DERIVED_DATE_WITHOUT_SOURCE_TEXT'
-        ? 'DERIVED_DATE_WITHOUT_SOURCE_TEXT' : 'NO_SOURCE_DATE_EVIDENCE',
+        ? 'DERIVED_DATE_WITHOUT_SOURCE_TEXT' : projected.sale_date_resolution_issue === 'NON_SALE_DATE_ORIGIN'
+          ? 'NON_SALE_DATE_ORIGIN' : 'NO_SOURCE_DATE_EVIDENCE',
     reason_text: projected.sale_date_resolution_issue === 'date_resolution_mismatch'
       ? 'Stored sale-date resolution disagrees with current source evidence; reverify the date.'
       : projected.sale_date_resolution_issue === 'DERIVED_DATE_WITHOUT_SOURCE_TEXT'
         ? 'A derived date exists without source date text; reverify the original notice before contact.'
-        : 'Numeric sale-date order is not proven by the source; reverify before contact.',
+        : projected.sale_date_resolution_issue === 'NON_SALE_DATE_ORIGIN'
+          ? 'The source date is a filing, posting, or record-creation date, not a proven sale date; reverify before contact.'
+          : 'Numeric sale-date order is not proven by the source; reverify before contact.',
     quarantined: true, evidence_field: projected.sale_date_source_field || 'sale_date_or_event_date'
   };
   return leadLifecycleStatus.computeLifecycleStatus(projected, atIso || nowIso());
@@ -909,7 +917,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     coordinate_source: cleanText(deal.coordinate_source) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_or_event_date_origin: cleanText(deal.sale_date_or_event_date_origin) || null,
-    sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
+    sale_date_iso: ['posted_at', 'date', 'filed_date', 'created_at'].includes(
+      cleanText(deal.sale_date_or_event_date_origin)) ? null : parseSaleDateIso(deal.sale_date_or_event_date),
     sale_date_resolution: deal.sale_date_resolution && typeof deal.sale_date_resolution === 'object'
       ? Object.assign({}, deal.sale_date_resolution) : null,
     sale_date_resolution_superseded: deal.sale_date_resolution_superseded && typeof deal.sale_date_resolution_superseded === 'object'
