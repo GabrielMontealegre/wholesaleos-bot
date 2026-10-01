@@ -1,8 +1,6 @@
 'use strict';
 
 const dallasPriority = require('./dallas-source-priority-router');
-const miDetroitLandBankSourceProfiles = require('./mi-detroit-land-bank-source-profiles');
-const caSanDiegoTaxDefaultSourceProfiles = require('./ca-san-diego-tax-default-source-profiles');
 const sourceAdapterRegistry = require('./source-adapter-registry');
 
 function cleanText(value) {
@@ -117,8 +115,7 @@ const DFW_COUNTY_SOURCES = buildTxCountySourcesForGroup('dallas');
 const HOUSTON_COUNTY_SOURCES = buildTxCountySourcesForGroup('houston');
 const SAN_ANTONIO_COUNTY_SOURCES = buildTxCountySourcesForGroup('san_antonio');
 const AUSTIN_COUNTY_SOURCES = buildTxCountySourcesForGroup('austin');
-const caLosAngelesTaxDefaultSourceProfiles = require('./ca-los-angeles-tax-default-source-profiles');
-const LOS_ANGELES_TAX_DEFAULT_SOURCES = caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile, index) => ({
+const LOS_ANGELES_TAX_DEFAULT_SOURCES = countySourceProfiles.profilesForCountyKind('Los Angeles', 'CA', 'tax_sale').map((profile, index) => ({
   source_id: profile.source_id,
   source_name: profile.source_name,
   source_family: profile.source_family,
@@ -134,7 +131,7 @@ const LOS_ANGELES_TAX_DEFAULT_SOURCES = caLosAngelesTaxDefaultSourceProfiles.PRO
   should_ingest: false
 }));
 
-const DETROIT_LAND_BANK_SOURCES = miDetroitLandBankSourceProfiles.PROFILES.map((profile, index) => ({
+const DETROIT_LAND_BANK_SOURCES = countySourceProfiles.profilesForCountyKind('Wayne', 'MI', 'public_inventory').map((profile, index) => ({
   source_id: profile.source_id,
   source_name: profile.source_name,
   source_family: profile.source_family,
@@ -149,7 +146,7 @@ const DETROIT_LAND_BANK_SOURCES = miDetroitLandBankSourceProfiles.PROFILES.map((
   should_ingest: false
 }));
 
-const CA_SAN_DIEGO_TAX_DEFAULT_SOURCES = caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile, index) => ({
+const CA_SAN_DIEGO_TAX_DEFAULT_SOURCES = countySourceProfiles.profilesForCountyKind('San Diego', 'CA', 'tax_sale').map((profile, index) => ({
   source_id: profile.source_id,
   source_name: profile.source_name,
   source_family: profile.source_family,

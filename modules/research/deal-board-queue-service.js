@@ -73,9 +73,6 @@ const CONTACT_WORKFLOW_OUTCOMES = Object.freeze([
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
 const countySourceProfiles = require('../sources/county-source-profile-registry');
-const miDetroitLandBankSourceProfiles = require('../sources/mi-detroit-land-bank-source-profiles');
-const caSanDiegoTaxDefaultSourceProfiles = require('../sources/ca-san-diego-tax-default-source-profiles');
-const caLosAngelesTaxDefaultSourceProfiles = require('../sources/ca-los-angeles-tax-default-source-profiles');
 const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_county_clerk_foreclosure_notices',
   'tx_dallas_craigslist_owner_posts',
@@ -91,9 +88,9 @@ const DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGrou
 const HOUSTON_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('houston'));
 const SAN_ANTONIO_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('san_antonio'));
 const AUSTIN_TX_COUNTY_FORECLOSURE_SOURCE_IDS = Object.freeze(txSourceIdsForGroup('austin'));
-const MI_DETROIT_SOURCE_IDS = Object.freeze(miDetroitLandBankSourceProfiles.PROFILES.map((profile) => profile.source_id));
-const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(caSanDiegoTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
-const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(caLosAngelesTaxDefaultSourceProfiles.PROFILES.map((profile) => profile.source_id));
+const MI_DETROIT_SOURCE_IDS = Object.freeze(countySourceProfiles.profilesForCountyKind('Wayne', 'MI', 'public_inventory').map((profile) => profile.source_id));
+const CA_SAN_DIEGO_SOURCE_IDS = Object.freeze(countySourceProfiles.profilesForCountyKind('San Diego', 'CA', 'tax_sale').map((profile) => profile.source_id));
+const CA_LOS_ANGELES_SOURCE_IDS = Object.freeze(countySourceProfiles.profilesForCountyKind('Los Angeles', 'CA', 'tax_sale').map((profile) => profile.source_id));
 const DEFAULT_QUEUE_SOURCE_IDS = Object.freeze(DALLAS_QUEUE_SOURCE_IDS.concat(DALLAS_TX_COUNTY_FORECLOSURE_SOURCE_IDS));
 const COUNTY_ONBOARDING_DIR = path.join(process.cwd(), 'exports', 'county-onboarding');
 let countyOnboardingArtifactCache = null;
