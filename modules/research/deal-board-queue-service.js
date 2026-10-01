@@ -264,7 +264,9 @@ function deriveSourceDates(row) {
   ));
   if (superseded) row.sale_date_resolution_superseded = {
     raw_text: cleanText(storedResolution && storedResolution.raw_text) || cleanText(saleRaw),
-    resolved_iso: cleanText(storedResolution && storedResolution.resolved_iso) || storedDerivedIso || storedEventIso,
+    resolved_iso: cleanText(storedResolution && storedResolution.resolved_iso) ||
+      (storedDerivedIso !== rederivedIso ? storedDerivedIso : '') ||
+      (storedEventIso !== rederivedIso ? storedEventIso : ''),
     superseded_at: nowIso()
   };
   row.sale_date_resolution_issue = mismatch ? 'date_resolution_mismatch'

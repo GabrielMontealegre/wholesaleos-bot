@@ -125,6 +125,7 @@ const olderRaw = queue.deriveSourceDates(Object.assign({}, derivedScaffold, {
 }));
 assert.strictEqual(olderRaw.sale_date_iso, '2026-10-06', 'B1: current raw beats old source_event_date');
 assert.strictEqual(rowStates(olderRaw).lifecycle.status, 'FRESH');
+assert.strictEqual(olderRaw.sale_date_resolution_superseded.resolved_iso, '2026-10-07');
 
 const staleRule = queue.deriveSourceDates(dateRow('10/06/2026', {
   sale_date_resolution: { raw_text: '10/06/2026', resolved_iso: '2026-10-06',
@@ -143,6 +144,7 @@ const postponed = queue.deriveSourceDates(Object.assign({}, dateRow('2026-11-03'
 }));
 assert.strictEqual(postponed.sale_date_iso, '2026-11-03', 'B1: confirmed postponement');
 assert.strictEqual(postponed.sale_date_resolution, null);
+assert.strictEqual(postponed.sale_date_resolution_superseded.resolved_iso, '2026-10-06');
 assert.strictEqual(rowStates(postponed).lifecycle.status, 'FRESH');
 
 const market = { city: 'Dallas', county: 'Dallas', state: 'TX' };
