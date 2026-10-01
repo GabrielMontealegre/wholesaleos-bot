@@ -17,7 +17,8 @@ const VERIFIED_HOST_ALIASES = Object.freeze({
 const EXTRA_PROFILES = Object.freeze([
   Object.freeze({
     county: 'Dallas', state: 'TX', source_id: 'tx_dallas_county_clerk_foreclosure_notices',
-    source_kind: 'trustee_sale_notice',
+    source_kind: 'trustee_sale_notice', catalog_group: 'primary',
+    source_name: 'Dallas County Clerk Foreclosure Notices', market_group: 'dallas',
     hosts: Object.freeze(['dallascounty.org', 'www.dallascounty.org', 'dallas.tx.publicsearch.us']),
     parser_options: Object.freeze({ sale_date_fields: SALE_DATE_FIELDS })
   }),
@@ -52,8 +53,10 @@ function hostForUrl(value) {
 
 const NOTICE_PROFILES = existingNoticeProfiles.PROFILES.map((profile) => Object.freeze({
   county: profile.county, state: profile.state, source_id: profile.source_id,
-  source_kind: 'trustee_sale_notice',
+  source_kind: 'trustee_sale_notice', catalog_group: 'regional',
+  source_name: profile.source_name, market_group: profile.market_group || 'dallas',
   hosts: Object.freeze(allowedHosts(profile)),
+  official_hosts: Object.freeze(profile.official_hosts.slice()),
   parser_options: Object.freeze({ sale_date_fields: SALE_DATE_FIELDS }),
   source_url: profile.source_url,
   human_portal_url: profile.human_portal_url
@@ -100,6 +103,12 @@ function profilesForCountyKind(county, state, sourceKind) {
     (!sourceKind || profile.source_kind === sourceKind));
 }
 
+function regionalProfilesForGroup(group) {
+  const target = String(group || '').trim().toLowerCase();
+  return PROFILES.filter((profile) => profile.catalog_group === 'regional' &&
+    (!target || profile.market_group === target));
+}
+
 function sourceHostAllowed(profile, sourceUrl) {
   if (!profile) return false;
   try {
@@ -110,4 +119,5 @@ function sourceHostAllowed(profile, sourceUrl) {
   }
 }
 
-module.exports = { PROFILES, SOURCE_KINDS, SALE_DATE_FIELDS, profileForSourceId, profilesForCountyKind, sourceHostAllowed };
+module.exports = { PROFILES, SOURCE_KINDS, SALE_DATE_FIELDS, profileForSourceId,
+  profilesForCountyKind, regionalProfilesForGroup, sourceHostAllowed };
