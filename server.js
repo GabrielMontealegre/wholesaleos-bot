@@ -3131,7 +3131,7 @@ app.post('/api/automation/scan', function(req, res) {
 });
 
 app.post('/api/automation/extract-buyboxes', (req, res) => {
-  const { extractFromBuyers, generateMarketBuyBoxes, addBuyBoxesBulk } = require('./modules/buybox');
+  const { extractFromBuyers } = require('./modules/buybox');
   const fromBuyers = extractFromBuyers();
   db.addNotification('buyer', `${fromBuyers} buy boxes extracted`, 'Extracted from buyers database');
   res.json({ ok: true, extracted: fromBuyers });
