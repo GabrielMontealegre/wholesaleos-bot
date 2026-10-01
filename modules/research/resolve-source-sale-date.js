@@ -9,7 +9,7 @@ const CHAPTER_51_TRUSTEE_SALE_ADAPTERS = Object.freeze({
     fields: Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'])
   }),
   tx_ellis_county_foreclosure_notices: Object.freeze({
-    hosts: Object.freeze(['co.ellis.tx.us', 'elliscountytx.gov']),
+    hosts: Object.freeze(['co.ellis.tx.us', 'elliscountytx.gov', 'www.elliscountytx.gov']),
     fields: Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'])
   })
 });

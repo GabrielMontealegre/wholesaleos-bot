@@ -602,14 +602,12 @@ function statusEvidenceFromRecord(record) {
 }
 
 function eventDateFromRecord(record) {
-  return cleanText(record && (
-    record.sale_date_or_event_date ||
-    record.event_date ||
-    record.sale_date ||
-    record.auction_date ||
-    record.posted_at ||
-    record.date
-  ));
+  for (const field of ['sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date', 'posted_at', 'date']) {
+    const value = cleanText(record && record[field]);
+    if (value) return { value, origin: field === 'sale_date_or_event_date'
+      ? cleanText(record.sale_date_or_event_date_origin) : field };
+  }
+  return { value: '', origin: '' };
 }
 
 function propertySpecificUrl(value) {
@@ -927,6 +925,7 @@ function finalizeDeal(deal) {
 
 function dealFromRecord(record, context) {
   const market = context.market;
+  const eventDate = eventDateFromRecord(record);
   const addressResolution = addressResolutionFromRecord(record);
   const address = addressResolution.address;
   const sourceOnlyReview = record && record.property_identity_source_only === true &&
@@ -989,7 +988,8 @@ function dealFromRecord(record, context) {
     motivation_evidence_text: motivation.motivation_evidence_text,
     source_proof_text: cleanText(record && (record.source_proof_text || record.source_text || record.source_excerpt)),
     status_evidence_text: statusEvidenceFromRecord(record),
-    sale_date_or_event_date: eventDateFromRecord(record),
+    sale_date_or_event_date: eventDate.value,
+    sale_date_or_event_date_origin: eventDate.origin,
     source_date: cleanText(record && record.source_date),
     current_status: cleanText(record && record.current_status),
     source_listing_status: cleanText(record && record.source_listing_status),
@@ -1014,7 +1014,7 @@ function dealFromRecord(record, context) {
     why_this_might_be_a_deal: cleanText(record && record.why_this_might_be_a_deal) || cleanText([
       motivation.motivation_evidence_text,
       statusEvidenceFromRecord(record),
-      eventDateFromRecord(record)
+      eventDate.value
     ].filter(Boolean).join(' | ')),
     why_not_ready: '',
     best_link_to_click_first: '',
@@ -1131,6 +1131,8 @@ function candidateRecord(candidate, source) {
     source_proof_text: cleanText(candidate.source_proof_text || candidate.source_text || candidate.source_excerpt),
     status_evidence_text: cleanText(candidate.status_evidence_text || candidate.current_status),
     sale_date_or_event_date: cleanText(candidate.event_date || candidate.sale_date || candidate.auction_date),
+    sale_date_or_event_date_origin: cleanText(candidate.event_date ? candidate.event_date_origin || 'event_date'
+      : candidate.sale_date ? 'sale_date' : candidate.auction_date ? 'auction_date' : ''),
     source_date: cleanText(candidate.source_date),
     current_status: cleanText(candidate.current_status),
     source_listing_status: cleanText(candidate.source_listing_status),
@@ -1216,6 +1218,7 @@ function cardRecord(card, source) {
   if (record.property_identity_source_only) record.normalized_address = cleanText(card.display_address);
   record.source_row_reference = cleanText(card && card.source_row_reference);
   record.sale_date_or_event_date = cleanText(card && card.sale_date_or_event_date);
+  record.sale_date_or_event_date_origin = cleanText(card && card.sale_date_or_event_date_origin);
   record.source_date = cleanText(card && card.source_date);
   record.current_status = cleanText(card && (card.current_status || card.listing_status));
   record.last_checked_at = cleanText(card && (card.last_checked_at || card.retrieved_at || card.exact_source_phrase_checked_at));
@@ -1319,6 +1322,7 @@ function sourceProofRecordsFromAdapterResult(result) {
         motivation_evidence_text: text || `${sourceNameText} official source proof discovered.`,
         status_evidence_text: eventDate ? `Sale date ${eventDate}` : '',
         sale_date_or_event_date: eventDate,
+        sale_date_or_event_date_origin: eventDate ? 'sale_date' : '',
         why_this_might_be_a_deal: text || 'Official source evidence is available, but property identity still needs extraction.',
         source_row_reference: url,
         record_origin: 'source_adapter',

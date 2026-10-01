@@ -6,6 +6,8 @@ const { normalizeSourceDate } = require('../modules/research/normalize-source-da
 const notice = require('../modules/sources/dallas-foreclosure-notice-adapter');
 const queue = require('../modules/research/deal-board-queue-service');
 const operations = require('../modules/research/lead-operations-state');
+const board = require('../modules/research/free-public-deal-board');
+const propertyCandidate = require('../modules/research/property-candidate');
 const { futureSaleDate } = require('./helpers/future-sale-date');
 
 const dallas = (raw, overrides = {}) => Object.assign({
@@ -36,6 +38,9 @@ assert.strictEqual(resolve('10/06/2026', { raw_field: 'posted_date' }).status, '
 assert.strictEqual(resolve('10/06/2026', {
   source_adapter_id: 'tx_ellis_county_foreclosure_notices', source_url: 'https://co.ellis.tx.us/notice.pdf'
 }).resolved_iso, '2026-10-06');
+assert.strictEqual(resolve('10/06/2026', {
+  source_adapter_id: 'tx_ellis_county_foreclosure_notices', source_url: 'https://www.elliscountytx.gov/notice.pdf'
+}).resolved_iso, '2026-10-06', 'N1: Ellis www official host');
 assert.strictEqual(resolve('10/06/2026', {
   source_adapter_id: 'tx_ellis_county_foreclosure_notices', source_url: 'https://example.org/notice.pdf'
 }).status, 'AMBIGUOUS');
@@ -108,16 +113,69 @@ assert.strictEqual(operatorConfirmed.lifecycle.status, 'FRESH');
 assert.strictEqual(operatorConfirmed.lifecycle.quarantined, false);
 assert.strictEqual(operatorConfirmed.lifecycle.reason_code, 'FUTURE_SALE_DATE');
 
-assert.strictEqual(rowStates(Object.assign({}, derivedScaffold, {
+const newerRaw = queue.deriveSourceDates(Object.assign({}, derivedScaffold, {
   sale_date_or_event_date: 'October 7, 2026'
-})).lifecycle.reason_code, 'date_resolution_mismatch');
-assert.strictEqual(rowStates(Object.assign({}, derivedScaffold, {
+}));
+assert.strictEqual(newerRaw.sale_date_iso, '2026-10-07', 'B1: current raw beats old ISO');
+assert.strictEqual(rowStates(newerRaw).lifecycle.status, 'FRESH');
+assert(newerRaw.sale_date_resolution_superseded && newerRaw.sale_date_resolution_superseded.superseded_at);
+
+const olderRaw = queue.deriveSourceDates(Object.assign({}, derivedScaffold, {
   sale_date_or_event_date: 'October 6, 2026', source_event_date: '2026-10-07'
-})).lifecycle.reason_code, 'date_resolution_mismatch');
-assert.strictEqual(queue.lifecycleStatusWithNormalizedDates(dateRow('10/06/2026', {
+}));
+assert.strictEqual(olderRaw.sale_date_iso, '2026-10-06', 'B1: current raw beats old source_event_date');
+assert.strictEqual(rowStates(olderRaw).lifecycle.status, 'FRESH');
+
+const staleRule = queue.deriveSourceDates(dateRow('10/06/2026', {
   sale_date_resolution: { raw_text: '10/06/2026', resolved_iso: '2026-10-06',
     rule_ids: ['single_valid_reading'] }
-}), '2026-09-30').reason_code, 'date_resolution_mismatch');
+}));
+assert.strictEqual(rowStates(staleRule).lifecycle.status, 'FRESH');
+assert.deepStrictEqual(staleRule.sale_date_resolution.rule_ids, ['tx_prop_code_51_002_sale_day']);
+assert(staleRule.sale_date_resolution_superseded && staleRule.sale_date_resolution_superseded.superseded_at);
+
+const postponed = queue.deriveSourceDates(Object.assign({}, dateRow('2026-11-03'), {
+  sale_date_iso: '2026-11-03', source_event_date: '2026-10-06',
+  sale_date_resolution: { raw_text: '10/06/2026', resolved_iso: '2026-10-06',
+    rule_ids: ['tx_prop_code_51_002_sale_day'] },
+  notice_confirmations: [{ field: 'sale_date', value: '2026-11-03',
+    operator_id: 'fixture-operator', confirmed_at: '2026-09-30T12:00:00Z' }]
+}));
+assert.strictEqual(postponed.sale_date_iso, '2026-11-03', 'B1: confirmed postponement');
+assert.strictEqual(postponed.sale_date_resolution, null);
+assert.strictEqual(rowStates(postponed).lifecycle.status, 'FRESH');
+
+const market = { city: 'Dallas', county: 'Dallas', state: 'TX' };
+function boardDateRow(record) {
+  const deal = board.dealFromRecord(Object.assign({ normalized_address: '123 Test St, Dallas, TX 75201' }, record), { market });
+  const row = queue.projectRowForQueue(deal, 'test|date-origin', '2026-09-30T12:00:00Z');
+  return { deal, row, lifecycle: queue.lifecycleStatusWithNormalizedDates(row, '2026-09-30') };
+}
+for (const [field, value] of [['posted_at', '10/16/2026'], ['date', '11/16/2026']]) {
+  const result = boardDateRow({ [field]: value });
+  assert.strictEqual(result.deal.sale_date_or_event_date_origin, field, `B2: ${field} origin on deal`);
+  assert.strictEqual(result.row.sale_date_or_event_date_origin, field, `B2: ${field} origin on queue`);
+  assert.strictEqual(result.lifecycle.quarantined, true, `B2: ${field} numeric stays quarantined`);
+  assert.strictEqual(queue.deriveSourceDates(result.row).sale_date_resolution, null, `B2: ${field} has no sale resolution`);
+}
+const registeredPosting = boardDateRow({ posted_at: '10/16/2026', source_id: notice.SOURCE_ID });
+assert.strictEqual(registeredPosting.lifecycle.quarantined, true, 'B2: posting date is not sale evidence on a registered adapter');
+assert.strictEqual(queue.deriveSourceDates(registeredPosting.row).sale_date_resolution, null);
+const saleField = boardDateRow({ sale_date: '10/16/2026' });
+assert.strictEqual(saleField.row.sale_date_or_event_date_origin, 'sale_date');
+assert.deepStrictEqual(queue.deriveSourceDates(saleField.row).sale_date_resolution.rule_ids, ['single_valid_reading']);
+const genericField = boardDateRow({ sale_date_or_event_date: '10/16/2026' });
+assert.strictEqual(genericField.row.sale_date_or_event_date_origin, null);
+assert.strictEqual(genericField.lifecycle.quarantined, true, 'B2: untagged generic numeric stays quarantined');
+assert.strictEqual(queue.deriveSourceDates(genericField.row).sale_date_resolution, null);
+
+const normalizedCandidate = propertyCandidate.normalizePropertyCandidate({
+  normalized_address: '123 Test St, Dallas, TX 75201', sale_date: '10/16/2026',
+  source_url: notice.SOURCE_URL, source_family: 'preforeclosure_trustee_notice'
+}, market);
+assert.strictEqual(normalizedCandidate.event_date_origin, 'sale_date');
+const card = propertyCandidate.candidateToFindMeCard(normalizedCandidate, market);
+assert.strictEqual(card.sale_date_or_event_date_origin, 'sale_date');
 
 assert.strictEqual(saleDateStaleness('10/06/2026', '2027-01-01', dallas('10/06/2026')).stale, true);
 const allPast = saleDateStaleness('01/02/2026', '2026-09-30');

@@ -228,7 +228,15 @@ function deriveSourceDates(row) {
   const storedEventIso = sourceDateNormalization.normalizeSourceDate(row.source_event_date).iso;
   const hasRawDateText = LIFECYCLE_SOURCE_DATE_FIELDS.some((field) => cleanText(row[field]));
   const derivedOnly = !hasRawDateText && !!(storedDerivedIso || cleanText(row.source_event_date));
-  const numericResolution = saleResult.reason === 'ambiguous_numeric_order'
+  const origin = cleanText(row.sale_date_or_event_date_origin);
+  const saleOrigin = ['sale_date_or_event_date', 'sale_date', 'auction_date', 'event_date',
+    'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date'].includes(origin);
+  const directSaleField = ['sale_date', 'auction_date', 'event_date'].includes(saleSourceField);
+  const registeredAdapter = Object.hasOwn(sourceSaleDate.CHAPTER_51_TRUSTEE_SALE_ADAPTERS,
+    cleanText(row.source_adapter_id || row.source_id));
+  const nonSaleOrigin = ['posted_at', 'date'].includes(origin);
+  const numericResolution = saleResult.reason === 'ambiguous_numeric_order' &&
+    (directSaleField || !nonSaleOrigin && (saleOrigin || registeredAdapter))
     ? sourceSaleDate.resolveSourceSaleDate({
       raw_text: saleRaw,
       raw_field: saleSourceField,
@@ -239,15 +247,26 @@ function deriveSourceDates(row) {
     }) : null;
   const prior = row.sale_date_resolution;
   const rederivedIso = saleResult.iso || numericResolution && numericResolution.resolved_iso || '';
-  const mismatch = !!(prior && typeof prior === 'object' && (
-    cleanText(prior.raw_text) !== cleanText(saleRaw) ||
-    !numericResolution || numericResolution.status !== 'RESOLVED' ||
-    cleanText(prior.resolved_iso) !== numericResolution.resolved_iso ||
-    Array.isArray(prior.rule_ids) && prior.rule_ids.join('|') !== numericResolution.rule_ids.join('|')
-  )) || !!(saleSourceField && rederivedIso && (
+  const storedResolution = prior && typeof prior === 'object' ? prior : null;
+  const possibleReadings = saleSourceField ? sourceSaleDate.validReadings(saleRaw) : [];
+  const storedIsoConflicts = [storedDerivedIso, storedEventIso].some((value) => value &&
+    (!possibleReadings.length || !possibleReadings.includes(value)));
+  const mismatch = !!(saleSourceField && !rederivedIso &&
+    (storedResolution || storedIsoConflicts));
+  const superseded = !!(rederivedIso && (
     storedDerivedIso && storedDerivedIso !== rederivedIso ||
-    storedEventIso && storedEventIso !== rederivedIso
+    storedEventIso && storedEventIso !== rederivedIso ||
+    storedResolution && (cleanText(storedResolution.raw_text) !== cleanText(saleRaw) ||
+      cleanText(storedResolution.resolved_iso) !== rederivedIso ||
+      !numericResolution || numericResolution.status !== 'RESOLVED' ||
+      Array.isArray(storedResolution.rule_ids) &&
+        storedResolution.rule_ids.join('|') !== numericResolution.rule_ids.join('|'))
   ));
+  if (superseded) row.sale_date_resolution_superseded = {
+    raw_text: cleanText(storedResolution && storedResolution.raw_text) || cleanText(saleRaw),
+    resolved_iso: cleanText(storedResolution && storedResolution.resolved_iso) || storedDerivedIso || storedEventIso,
+    superseded_at: nowIso()
+  };
   row.sale_date_resolution_issue = mismatch ? 'date_resolution_mismatch'
     : derivedOnly ? 'DERIVED_DATE_WITHOUT_SOURCE_TEXT'
     : numericResolution && numericResolution.status !== 'RESOLVED' ? numericResolution.reason : '';
@@ -256,14 +275,14 @@ function deriveSourceDates(row) {
   row.sale_date_format_matched = numericResolution && numericResolution.status === 'RESOLVED'
     ? numericResolution.rule_ids.join('+') : saleResult.format_matched;
   row.sale_date_parse_status = row.sale_date_iso ? 'parsed' : dateParseStatus(saleResult, saleRaw);
-  if (numericResolution && numericResolution.status === 'RESOLVED' && !mismatch) {
+  if (numericResolution && numericResolution.status === 'RESOLVED') {
     row.sale_date_resolution = {
       raw_text: cleanText(saleRaw), raw_field: saleSourceField, resolved_iso: numericResolution.resolved_iso,
       rule_ids: numericResolution.rule_ids, source_url: cleanText(row.source_document_url || row.source_url),
       source_adapter_id: cleanText(row.source_adapter_id || row.source_id),
       evidence_excerpt: numericResolution.evidence_excerpt, resolver_version: sourceSaleDate.RESOLVER_VERSION
     };
-  }
+  } else if (saleResult.iso) row.sale_date_resolution = null;
 
   for (const field of LIFECYCLE_SOURCE_DATE_FIELDS) {
     if (field === 'sale_date_or_event_date' || field === 'sale_date_iso') continue;
@@ -873,9 +892,12 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     longitude: Number.isFinite(Number(deal.longitude)) ? Number(deal.longitude) : null,
     coordinate_source: cleanText(deal.coordinate_source) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
+    sale_date_or_event_date_origin: cleanText(deal.sale_date_or_event_date_origin) || null,
     sale_date_iso: parseSaleDateIso(deal.sale_date_or_event_date),
     sale_date_resolution: deal.sale_date_resolution && typeof deal.sale_date_resolution === 'object'
       ? Object.assign({}, deal.sale_date_resolution) : null,
+    sale_date_resolution_superseded: deal.sale_date_resolution_superseded && typeof deal.sale_date_resolution_superseded === 'object'
+      ? Object.assign({}, deal.sale_date_resolution_superseded) : null,
     source_adapter_id: cleanText(deal.source_adapter_id || deal.source_id),
     source_date: cleanText(deal.source_date) || null,
     current_status: cleanText(deal.current_status) || null,
@@ -1368,7 +1390,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_structured_address_verified', 'property_identity_source_only',
     'distress_evidence', 'research_links',
     'rejected_reason',
-    'sale_date_or_event_date', 'sale_date_iso', 'sale_date_resolution', 'source_adapter_id', 'source_date', 'current_status', 'status_evidence_text',
+    'sale_date_or_event_date', 'sale_date_or_event_date_origin', 'sale_date_iso', 'sale_date_resolution',
+    'sale_date_resolution_superseded', 'source_adapter_id', 'source_date', 'current_status', 'status_evidence_text',
     'source_listing_status', 'source_no_longer_listed', 'reposted_source_date', 'reposted_source_evidence_text',
     'reposted_source_url', 'replacement_source_date', 'replacement_source_evidence_text', 'replacement_source_url',
     'listing_date_if_visible', 'offer_deadline_if_visible',
@@ -1421,6 +1444,10 @@ async function runDealBoardBatch(input = {}, options = {}) {
           refreshed.enrichment_ledger = enrichmentLedger.mergeLedgers(existing, refreshed);
         } else if (field === 'enrichment_skip_rollups') {
           refreshed.enrichment_skip_rollups = Object.assign({}, existing.enrichment_skip_rollups || {}, refreshed.enrichment_skip_rollups || {});
+        } else if (field === 'sale_date_or_event_date_origin') {
+          if (!cleanText(deal.sale_date_or_event_date) && !cleanText(refreshed[field]) && cleanText(existing[field])) {
+            refreshed[field] = existing[field];
+          }
         } else if (!cleanText(refreshed[field]) && cleanText(existing[field])) refreshed[field] = existing[field];
       }
       if ((!refreshed.verified_comps || !refreshed.verified_comps.length) && Array.isArray(existing.verified_comps) && existing.verified_comps.length) {
@@ -1895,6 +1922,7 @@ function recordNoticeFieldConfirmation(input = {}, options = {}) {
   row.notice_confirmations = (Array.isArray(row.notice_confirmations) ? row.notice_confirmations : []).concat([confirmation]);
   if (confirmation.field === 'sale_date') {
     row.sale_date_or_event_date = confirmation.value;
+    row.sale_date_or_event_date_origin = 'sale_date';
     row.sale_date_iso = confirmation.value;
   }
   writeStore(store);
