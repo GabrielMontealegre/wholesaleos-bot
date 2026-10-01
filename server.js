@@ -3051,6 +3051,12 @@ app.post('/api/buyboxes/match/:leadId', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Outreach Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+app.get('/api/outreach/tone-status', (req, res) => {
+  const { getToneLearnings, getAutoSendEnabled } = require('./modules/outreach');
+  const learnings = getToneLearnings();
+  res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
+});
+
 app.get('/api/outreach/:leadId', (req, res) => {
   const { getOutreachHistory } = require('./modules/outreach');
   res.json({ history: getOutreachHistory(req.params.leadId) });
@@ -3081,12 +3087,6 @@ app.post('/api/outreach/record', (req, res) => {
   const { leadId, type, message } = req.body;
   const record = saveOutreachRecord(leadId, type, message);
   res.json({ ok: true, record });
-});
-
-app.get('/api/outreach/tone-status', (req, res) => {
-  const { getToneLearnings, getAutoSendEnabled } = require('./modules/outreach');
-  const learnings = getToneLearnings();
-  res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Contracts Library Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
@@ -3193,12 +3193,6 @@ app.post('/api/outreach/record', (req, res) => {
 app.get('/api/outreach/:leadId', (req, res) => {
   const { getOutreachHistory } = require('./modules/outreach');
   res.json({ history: getOutreachHistory(req.params.leadId) });
-});
-
-app.get('/api/outreach/tone-status', (req, res) => {
-  const { getToneLearnings, getAutoSendEnabled } = require('./modules/outreach');
-  const learnings = getToneLearnings();
-  res.json({ edits: learnings.length, auto_send: getAutoSendEnabled(), ready: learnings.length >= 5 });
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Land deals Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
