@@ -92,6 +92,9 @@ N-E routes regional trustee-sale catalog entries, adapter registration and queue
 selection through the generic registry. Legacy parser implementations and the
 existing market source lists are unchanged; other source families remain for a
 later ordered sub-PR.
+N-F routes the existing California tax-default and Michigan public land-bank
+catalog, adapter and queue metadata through the same registry. Tax notices remain
+notice-only; land-bank inventory remains listing-only. No new source runs.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).

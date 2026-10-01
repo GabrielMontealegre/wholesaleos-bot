@@ -5,11 +5,8 @@ const dallasFsboContactAcquisitionAdapter = require('./dallas-fsbo-contact-acqui
 const dallasCraigslistOwnerAcquisitionAdapter = require('./dallas-craigslist-owner-acquisition-adapter');
 const listingRadarAcquisitionAdapter = require('./listing-radar-acquisition-adapter');
 const miLandBankAcquisitionAdapter = require('./mi-land-bank-acquisition-adapter');
-const miDetroitLandBankSourceProfiles = require('./mi-detroit-land-bank-source-profiles');
 const caTaxDefaultNoticeAcquisitionAdapter = require('./ca-tax-default-notice-acquisition-adapter');
-const caSanDiegoTaxDefaultSourceProfiles = require('./ca-san-diego-tax-default-source-profiles');
 const caLosAngelesTaxDefaultAcquisitionAdapter = require('./ca-los-angeles-tax-default-acquisition-adapter');
-const caLosAngelesTaxDefaultSourceProfiles = require('./ca-los-angeles-tax-default-source-profiles');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
 const countySourceProfiles = require('./county-source-profile-registry');
 const listingEgressGuard = require('../security/listing-egress-guard');
@@ -78,7 +75,7 @@ for (const profile of countySourceProfiles.regionalProfilesForGroup()) {
   };
 }
 
-for (const profile of miDetroitLandBankSourceProfiles.PROFILES) {
+for (const profile of countySourceProfiles.profilesForCountyKind('Wayne', 'MI', 'public_inventory')) {
   ADAPTERS[profile.source_id] = {
     source_id: profile.source_id,
     source_family: profile.source_family,
@@ -91,7 +88,7 @@ for (const profile of miDetroitLandBankSourceProfiles.PROFILES) {
   };
 }
 
-for (const profile of caSanDiegoTaxDefaultSourceProfiles.PROFILES) {
+for (const profile of countySourceProfiles.profilesForCountyKind('San Diego', 'CA', 'tax_sale')) {
   ADAPTERS[profile.source_id] = {
     source_id: profile.source_id,
     source_family: profile.source_family,
@@ -104,7 +101,7 @@ for (const profile of caSanDiegoTaxDefaultSourceProfiles.PROFILES) {
   };
 }
 
-for (const profile of caLosAngelesTaxDefaultSourceProfiles.PROFILES) {
+for (const profile of countySourceProfiles.profilesForCountyKind('Los Angeles', 'CA', 'tax_sale')) {
   ADAPTERS[profile.source_id] = {
     source_id: profile.source_id,
     source_family: profile.source_family,

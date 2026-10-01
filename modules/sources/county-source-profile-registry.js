@@ -7,10 +7,11 @@ const taxNoticeProfiles = [
 ];
 const appraisalProfiles = require('./county-appraisal-profiles').PROFILES;
 const publicRecordProfiles = require('./public-parcel-api-profiles').PROFILES;
+const publicInventoryProfiles = require('./mi-detroit-land-bank-source-profiles').PROFILES;
 const codeCaseAdapter = require('./dallas-code-violations-adapter');
 
 const SALE_DATE_FIELDS = Object.freeze(['sale_date', 'auction_date', 'sale_date_or_event_date', 'date_of_sale', 'trustee_sale_date', 'foreclosure_sale_date']);
-const SOURCE_KINDS = Object.freeze(['trustee_sale_notice', 'tax_sale', 'code_case', 'parcel', 'recorded_sale']);
+const SOURCE_KINDS = Object.freeze(['trustee_sale_notice', 'tax_sale', 'code_case', 'parcel', 'recorded_sale', 'public_inventory']);
 const VERIFIED_HOST_ALIASES = Object.freeze({
   tx_ellis_county_foreclosure_notices: Object.freeze(['www.elliscountytx.gov'])
 });
@@ -64,9 +65,20 @@ const NOTICE_PROFILES = existingNoticeProfiles.PROFILES.map((profile) => Object.
 const TAX_PROFILES = taxNoticeProfiles.map((profile) => Object.freeze({
   county: profile.county, state: profile.state, source_id: profile.source_id,
   source_kind: 'tax_sale', evidence_stage: 'notice_only',
+  source_name: profile.source_name, source_family: profile.source_family,
   hosts: Object.freeze(allowedHosts(profile)),
   parser_options: Object.freeze({ source_family: profile.source_family }),
-  source_url: profile.document_url, human_portal_url: profile.human_portal_url,
+  source_url: profile.source_url, document_url: profile.document_url,
+  human_portal_url: profile.human_portal_url,
+  verification_status: 'configured_preview'
+}));
+const INVENTORY_PROFILES = publicInventoryProfiles.map((profile) => Object.freeze({
+  county: profile.county, state: profile.state, source_id: profile.source_id,
+  source_kind: 'public_inventory', evidence_stage: 'listing_only',
+  source_name: profile.source_name, source_family: profile.source_family,
+  hosts: Object.freeze(allowedHosts(profile)),
+  parser_options: Object.freeze({ api_kind: 'public_json_inventory', api_url: profile.api_url }),
+  source_url: profile.source_url, human_portal_url: profile.human_portal_url,
   verification_status: 'configured_preview'
 }));
 const APPRAISAL_PROFILES = appraisalProfiles.map((profile) => Object.freeze({
@@ -90,7 +102,7 @@ const PUBLIC_RECORD_PROFILES = publicRecordProfiles.map((profile) => {
   });
 });
 const PROFILES = Object.freeze([...EXTRA_PROFILES, ...NOTICE_PROFILES, ...TAX_PROFILES,
-  ...APPRAISAL_PROFILES, ...PUBLIC_RECORD_PROFILES].map((profile) =>
+  ...INVENTORY_PROFILES, ...APPRAISAL_PROFILES, ...PUBLIC_RECORD_PROFILES].map((profile) =>
   Object.freeze({ refresh_cadence: null, ...profile })));
 
 function profileForSourceId(sourceId) {

@@ -15,7 +15,7 @@ global.fetch = () => { requests++; throw new Error('network forbidden'); };
 http.get = https.get = () => { requests++; throw new Error('network forbidden'); };
 try {
   assert.deepStrictEqual(registry.SOURCE_KINDS,
-    ['trustee_sale_notice', 'tax_sale', 'code_case', 'parcel', 'recorded_sale']);
+    ['trustee_sale_notice', 'tax_sale', 'code_case', 'parcel', 'recorded_sale', 'public_inventory']);
   for (const state of ['TX', 'NC', 'MI']) {
     assert.strictEqual(RULES[state].date_conventions.numeric_order, 'requires_source_proof');
   }
