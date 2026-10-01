@@ -72,7 +72,7 @@ const CONTACT_WORKFLOW_OUTCOMES = Object.freeze([
 // Queue lanes: every registered free adapter, requested EXPLICITLY so the
 // orchestrator also runs contact-first lanes that are auto_select:false.
 // County foreclosure lanes come straight from the profile registry.
-const txCountyForeclosureSourceProfiles = require('../sources/tx-county-foreclosure-source-profiles');
+const countySourceProfiles = require('../sources/county-source-profile-registry');
 const miDetroitLandBankSourceProfiles = require('../sources/mi-detroit-land-bank-source-profiles');
 const caSanDiegoTaxDefaultSourceProfiles = require('../sources/ca-san-diego-tax-default-source-profiles');
 const caLosAngelesTaxDefaultSourceProfiles = require('../sources/ca-los-angeles-tax-default-source-profiles');
@@ -81,14 +81,9 @@ const DALLAS_QUEUE_SOURCE_IDS = Object.freeze([
   'tx_dallas_craigslist_owner_posts',
   'tx_dallas_fsbo_contact_first'
 ]);
-function txProfileMarketGroup(profile) {
-  return cleanText(profile && profile.market_group || 'dallas').toLowerCase();
-}
-
 function txSourceIdsForGroup(group) {
   const targetGroup = cleanText(group || 'dallas').toLowerCase();
-  return txCountyForeclosureSourceProfiles.PROFILES
-    .filter((profile) => txProfileMarketGroup(profile) === targetGroup)
+  return countySourceProfiles.regionalProfilesForGroup(targetGroup)
     .map((profile) => profile.source_id);
 }
 
@@ -424,9 +419,7 @@ function quarantineSuspectedPrefixRow(row) {
 }
 
 function officialCountyHosts() {
-  const profiles = Array.isArray(txCountyForeclosureSourceProfiles.PROFILES)
-    ? txCountyForeclosureSourceProfiles.PROFILES
-    : [];
+  const profiles = countySourceProfiles.regionalProfilesForGroup();
   return profiles.flatMap((profile) => (Array.isArray(profile.official_hosts) ? profile.official_hosts : [])
     .map((host) => ({ county: cleanText(profile.county), host: cleanText(host).toLowerCase() }))
     .filter((entry) => entry.county && entry.host));

@@ -11,7 +11,7 @@ const caSanDiegoTaxDefaultSourceProfiles = require('./ca-san-diego-tax-default-s
 const caLosAngelesTaxDefaultAcquisitionAdapter = require('./ca-los-angeles-tax-default-acquisition-adapter');
 const caLosAngelesTaxDefaultSourceProfiles = require('./ca-los-angeles-tax-default-source-profiles');
 const txCountyForeclosureAcquisitionAdapter = require('./tx-county-foreclosure-acquisition-adapter');
-const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
+const countySourceProfiles = require('./county-source-profile-registry');
 const listingEgressGuard = require('../security/listing-egress-guard');
 
 const LISTING_EGRESS_VALUES = Object.freeze(['required', 'optional_degrades', 'none']);
@@ -65,7 +65,7 @@ const ADAPTERS = {
 
 // Every TX county foreclosure profile registers against the same generic
 // adapter - adding a county is a profile entry, not adapter code.
-for (const profile of txCountyForeclosureSourceProfiles.PROFILES) {
+for (const profile of countySourceProfiles.regionalProfilesForGroup()) {
   ADAPTERS[profile.source_id] = {
     source_id: profile.source_id,
     source_family: 'preforeclosure_trustee_notice',

@@ -92,15 +92,11 @@ const SECONDARY_DALLAS_SOURCES = [
 // Regional TX county foreclosure lanes, generated from the county profile
 // registry (tx-county-foreclosure-source-profiles) - adding a county there
 // automatically adds it here and to the adapter registry.
-const txCountyForeclosureSourceProfiles = require('./tx-county-foreclosure-source-profiles');
-function txProfileMarketGroup(profile) {
-  return cleanText(profile && profile.market_group || 'dallas').toLowerCase();
-}
+const countySourceProfiles = require('./county-source-profile-registry');
 
 function buildTxCountySourcesForGroup(group) {
   const targetGroup = cleanText(group || 'dallas').toLowerCase();
-  return txCountyForeclosureSourceProfiles.PROFILES
-    .filter((profile) => txProfileMarketGroup(profile) === targetGroup)
+  return countySourceProfiles.regionalProfilesForGroup(targetGroup)
     .map((profile, index) => ({
   source_id: profile.source_id,
   source_name: profile.source_name,

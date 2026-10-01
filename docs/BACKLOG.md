@@ -88,6 +88,10 @@ N-D registers existing tax-sale notices, code cases, parcels and recorded-sales
 layers without enabling new routes. California tax-default profiles remain
 notice-stage only; legacy county adapters remain intact. Generic routing and
 full transport equivalence remain for the final B-04 sub-PR.
+N-E routes regional trustee-sale catalog entries, adapter registration and queue
+selection through the generic registry. Legacy parser implementations and the
+existing market source lists are unchanged; other source families remain for a
+later ordered sub-PR.
 
 Goal: every state and county works through the same pipeline. Dallas and Ellis become profiles, not
 special cases (D-013).
