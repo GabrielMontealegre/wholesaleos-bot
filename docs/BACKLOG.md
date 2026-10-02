@@ -111,7 +111,7 @@ Acceptance
 
 ---
 
-## B-03 · Saved-leads HTTP 502 · BLOCKED ([issue #209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209))
+## B-03 · Saved-leads HTTP 502 · DONE — closed as not reproducible (A-003, [issue #209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209))
 
 Read-only check (2026-10-01): the reported 502 did not reproduce. GETs for
 50 and 1,000 saved leads returned 200; Texas and National views loaded and
@@ -191,14 +191,6 @@ Acceptance
 
 ## B-05 · "After the sale" lane · IN PROGRESS
 
-Ordered sub-PR [B-05c](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/219)
-persists property-specific, proven-past notice records separately from active rows and
-shows a bounded read-only dashboard page. The full history stays in the snapshot;
-each response returns the newest 20 plus the total. [Issue #221](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/221)
-required exact official proof, bounded payloads, canonical deduplication and neutral
-outcome wording. Source-proof duplication, classification integration, other source
-profiles, operator actions and buyer handoff remain separate work.
-
 Ordered sub-PR [B-05a](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/217): the existing primary notice adapter exposes proven-past,
 official-host notices as preview-only `post_sale_candidates` with outcome unknown.
 They remain excluded from active candidates; the stale count is unchanged. This
@@ -215,12 +207,13 @@ after-sale lane, compute redemption, or permit original-owner contact. Tax/HOA
 redemption, other county adapters, operator action, buyer handoff and dashboard
 view remain for later sub-PRs.
 
-Ordered sub-PR B-05c carries adapter `post_sale_candidates` through the acquisition
-diagnostics into a separate, deduplicated market snapshot collection. Repeated
-batches preserve earlier candidates; no post-sale candidate becomes an active row.
-The read-only dashboard panel shows up to 20 retained notices and says the outcome
-is unknown and former-owner contact is not allowed. This is not the final grouped
-outcome tab, and no automatic post-sale verification or outreach occurs.
+Ordered sub-PR [B-05c](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/219)
+persists property-specific, proven-past notice records separately from active rows and
+shows a bounded read-only dashboard page. The full history stays in the snapshot;
+each response returns the newest 20 plus the total. [Issue #221](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/221)
+required exact official proof, bounded payloads, canonical deduplication and neutral
+outcome wording. Source-proof duplication, classification integration, other source
+profiles, operator actions and buyer handoff remain separate work.
 
 Goal: passed-date foreclosure/tax notices are kept and classified, never discarded (D-009).
 
@@ -396,6 +389,8 @@ Acceptance
   Never edited in place; corrections are new entries.
 - Lead clocks on the card: acquired date, sale/event date, days until sale, stale date, last touch.
 - Operator/VA identity: a simple actor selector or login so every entry has a name.
+- Server-side sending stays off (A-012, issue #223): the old Twilio and bulk-email send routes are not
+  re-enabled; tap-to-send replaces them.
 - Texting: Gabriel selects up to 20 leads with a contactable number; the app prepares personalized,
   human-sounding messages (templates; no AI sending) and shows tap-to-send links (`sms:` with the
   prefilled body) for the operator's phone; each tap is logged. No automated sending, no texting to
