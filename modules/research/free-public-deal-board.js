@@ -19,6 +19,7 @@ const distressEvidenceModel = require('./distress-evidence-model');
 const marketCompPolicy = require('./market-comp-policy');
 const publicParcelOwnerLookup = require('./public-parcel-owner-lookup');
 const publicRecordBrowserLookup = require('./public-record-browser-lookup');
+const postSaleCandidateStore = require('./post-sale-candidate-store');
 const screenshotCompEvidence = require('./screenshot-comp-evidence');
 const countyFreeLookupProfiles = require('../sources/county-free-lookup-profiles');
 const propertyIdentity = require('./property-identity');
@@ -1266,6 +1267,10 @@ function cardRecord(card, source) {
 function sourceProofRecordsFromAdapterResult(result) {
   const suppression = arguments[1] || null;
   result = result || {};
+  const postSaleDocumentUrls = new Set((Array.isArray(result.post_sale_candidates) ? result.post_sale_candidates : [])
+    .filter((candidate) => !postSaleCandidateStore.rejectionReason(candidate, result.source_id))
+    .map((candidate) => cleanText(candidate && candidate.source_document_url).toLowerCase())
+    .filter(Boolean));
   const diagnostics = result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
   const summary = result.source_preview ||
     diagnostics.live_source_preview ||
@@ -1292,6 +1297,7 @@ function sourceProofRecordsFromAdapterResult(result) {
     const url = cleanText(item && item.url);
     if (!isHttpUrl(url) || !isOfficialPublicSourceUrl(url)) continue;
     const key = url.toLowerCase();
+    if (postSaleDocumentUrls.has(key)) continue;
     if (seen.has(key)) continue;
     seen.add(key);
     uniqueItems.push(Object.assign({}, item, { url }));
