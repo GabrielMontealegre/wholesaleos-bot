@@ -10,6 +10,61 @@ Mark the status here as part of each item's PR.
 
 ---
 
+> **Priority order right now:** open `codex-task` issues first (they include the PR #219 fixes),
+> then B-00a, then B-00b, then continue with B-05 and below.
+
+## B-00a · County-neutral names everywhere (D-019) · TODO
+
+Goal: nothing is called "the Dallas adapter" anymore; county is data.
+
+Verified facts: 16 modules have county names in their file names (`modules/sources/dallas-*.js`,
+`modules/research/dallas-*-agent.js`); the generic registries from B-04 already exist.
+
+Acceptance
+- Rename county-named modules to generic names (e.g. `county-foreclosure-notice-adapter.js`,
+  `county-foreclosure-acquisition-adapter.js`, `county-code-violations-adapter.js`) and leave a one-line
+  re-export at each old path so nothing breaks. Update all internal `require`s to the new names.
+- Source ids that are stored in data stay as they are (they are data keys); user-facing source names
+  come from the county profile ("Dallas County Clerk foreclosure notice").
+- No county name in any new or renamed module, function, variable, test file name, UI label, PR title or
+  report wording, except as profile data.
+- Tests: the full suite passes unchanged in meaning; a static check fails if a new file under `modules/`
+  has a county name in its file name (allowlist only the compatibility re-exports).
+
+## B-00b · "Ready to reach out" replaces "call ready" (D-018) · TODO
+
+Goal: a lead with enough information to contact the owner is usable even without a phone number.
+
+Verified facts: `CALL_READY` appears 46 times in 14 files (modules, server.js, dashboard); about 29
+"call ready" strings in the dashboard. Today `lead-operations-state.js` `rowStateForDeal` requires a
+non-quarantined lifecycle AND a proven phone route for CALL_READY; quarantined rows are LOCKED.
+
+Acceptance
+- New readiness model (`lead-operations-state.js`), per AGENTS.md §5 Contact:
+  - `REACH_OUT_READY` when: verified property address + owner identity (official owner/taxpayer record,
+    or the borrower/grantor named in an official notice) + not proven to belong to someone else
+    (after-the-sale SOLD_TO_THIRD_PARTY / REVERTED_TO_LENDER) + not duplicate/unverifiable + not
+    do-not-contact + owner is not a bank or government body.
+  - `best_route`: call (proven or possible number) → text (mobile) → email → mail/visit (mailing address)
+    → find_phone (people-search links). Phone presence is a badge and a sort boost, not a gate.
+  - Unknown/ambiguous dates no longer lock outreach: show "Sale date not confirmed — ask on the call".
+  - After-the-sale OUTCOME_UNKNOWN: reachable only as a status check, labeled "Sale date passed — confirm
+    ownership first", with the script line "Is the house still yours?".
+  - Not-ready states, each with a plain reason and next step: NEEDS_ADDRESS, NEEDS_OWNER,
+    NOT_REACHABLE (bank/government/someone else now), DO_NOT_CONTACT, CLOSED.
+- Rename everywhere: `CALL_READY` → `REACH_OUT_READY` (keep `CALL_READY` as a read-only compatibility
+  alias for stored data and old exports); UI "Call ready" → "Ready to reach out"; counts "call-ready" →
+  "ready to reach out". `MAIL_READY` / `OUTREACH_READY` / `NEEDS_CONTACT_SEARCH` / `NEEDS_SKIP_TRACE`
+  fold into `REACH_OUT_READY` + `best_route` (keep aliases for stored data).
+- B-06's possible numbers now set `best_route: call` instead of creating CALL_READY.
+- Tests: no-phone lead with address + owner → REACH_OUT_READY with best_route mail or find_phone;
+  ambiguous-date lead → REACH_OUT_READY with the caution; bank-owned / sold-to-someone-else / duplicate /
+  do-not-contact → not ready with the right reason; old stored `CALL_READY` rows still render.
+- Report in the PR: row-state distribution before/after for each market (read-only), so Gabriel sees how
+  many leads became usable.
+
+---
+
 ## B-01 · Release the source-date proof (PR #205) · DONE ([PR #205](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/205))
 
 Verification (2026-10-01): merge `098fdd5`, deployment succeeded, `/health` 200,
