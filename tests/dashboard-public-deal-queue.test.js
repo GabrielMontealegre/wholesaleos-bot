@@ -1119,7 +1119,15 @@ function mockDeal(overrides) {
       source_url: 'https://www.dallascounty.org/official-notice.pdf', sale_outcome: 'OUTCOME_UNKNOWN' }]
   }), [], '');
   assert.ok(afterSalePanels.includes('After the sale') && afterSalePanels.includes('101 Synthetic Past St'));
-  assert.ok(afterSalePanels.includes('Outcome unknown') && afterSalePanels.includes('Do not contact the former owner'));
+  assert.ok(afterSalePanels.includes('Outcome unknown') && afterSalePanels.includes('may have been postponed, cancelled or completed'));
+  assert.ok(!afterSalePanels.includes('former owner'));
+  const boundedAfterSalePanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard',
+    Object.assign({}, packetFixture, { post_sale_candidate_total: 3000,
+      post_sale_candidates: Array.from({ length: 21 }, (_, index) => ({
+        property_address: `${index + 1} Synthetic Past St`, sale_date: '2026-05-05',
+        source_url: 'https://www.dallascounty.org/official-notice.pdf' })) }), [], '');
+  assert.ok(boundedAfterSalePanels.includes('Showing 20 of 3000'));
+  assert.ok(!boundedAfterSalePanels.includes('21 Synthetic Past St'));
   assert.ok(!afterSalePanels.includes('Ready to offer: YES'));
   const dealFinderPanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('findme_scout', packetFixture, [], '');
   ['Manual Evidence Packet', 'Can contact', 'Can value', 'Ready to offer', 'Sale/event date', 'Last checked', '100 Synthetic Proof St, Dallas, TX 75201'].forEach((text) => {

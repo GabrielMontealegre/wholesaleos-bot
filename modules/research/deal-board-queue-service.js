@@ -37,6 +37,7 @@ const countyCandidateRegistry = require('../sources/county-candidate-registry');
 const sourceDateNormalization = require('./normalize-source-date');
 const sourceSaleDate = require('./resolve-source-sale-date');
 const addressDerivedResearchLinks = require('./address-derived-research-links');
+const postSaleCandidateStore = require('./post-sale-candidate-store');
 
 const LIFECYCLE_SOURCE_DATE_FIELDS = Object.freeze([
   'source_date', 'sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date',
@@ -1204,30 +1205,6 @@ function sourceCoverageFromPreview(preview) {
   })).filter((item) => item.source_id);
 }
 
-function postSaleCandidatesFromPreview(preview) {
-  const results = preview && preview.diagnostics && preview.diagnostics.source_adapter &&
-    preview.diagnostics.source_adapter.source_adapter_results;
-  return (Array.isArray(results) ? results : []).flatMap((result) =>
-    (Array.isArray(result && result.post_sale_candidates) ? result.post_sale_candidates : [])
-      .filter((item) => item && item.preview_only === true && item.should_ingest === false &&
-        item.sale_outcome === 'OUTCOME_UNKNOWN' && item.can_contact_original_owner === false &&
-        cleanText(item.source_id) === cleanText(result.source_id) &&
-        countySourceProfiles.sourceHostAllowed(
-          countySourceProfiles.profileForSourceId(cleanText(item.source_id)), cleanText(item.source_url)) &&
-        cleanText(item.source_proof_text)));
-}
-
-function mergePostSaleCandidates(existing, incoming, seenAt) {
-  const byKey = new Map();
-  for (const item of (Array.isArray(existing) ? existing : []).concat(Array.isArray(incoming) ? incoming : [])) {
-    const identity = [item.source_id, item.source_url, item.source_row_reference,
-      item.sale_date, item.property_address, item.parcel_or_account].map(cleanText).join('|');
-    const key = crypto.createHash('sha256').update(identity).digest('hex');
-    if (!byKey.has(key)) byKey.set(key, Object.assign({ first_seen_at: seenAt }, item, { candidate_key: key }));
-  }
-  return Array.from(byKey.values());
-}
-
 function suppressedNavChromeSamplesFromPreview(preview) {
   const sourceAdapterDiagnostics = preview && preview.diagnostics && preview.diagnostics.source_adapter || {};
   const samples = Array.isArray(sourceAdapterDiagnostics.suppressed_nav_chrome_samples)
@@ -1402,7 +1379,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     lifecycle_aggregate: lifecycleAggregate(responseRows),
     lead_operations_queue: leadOperationsQueueForResponse(responseRows),
-    post_sale_candidates: Array.isArray(bucket.post_sale_candidates) ? bucket.post_sale_candidates : [],
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: identity.rows
   };
   }
@@ -1417,8 +1394,9 @@ async function runDealBoardBatch(input = {}, options = {}) {
   }, { env: options.env || process.env });
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
-  const postSaleCandidates = postSaleCandidatesFromPreview(preview);
-  bucket.post_sale_candidates = mergePostSaleCandidates(bucket.post_sale_candidates, postSaleCandidates, runAt);
+  const postSaleSelection = postSaleCandidateStore.collectFromPreview(preview);
+  bucket.post_sale_candidates = postSaleCandidateStore.mergeCandidates(
+    bucket.post_sale_candidates, postSaleSelection.accepted, runAt);
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
@@ -1538,7 +1516,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     document_reextraction: documentReextractionDiagnostics,
     ocr: ocrSummaryFromPreview(preview)
   };
-  batch.post_sale_candidate_count = postSaleCandidates.length;
+  batch.post_sale_candidate_count = postSaleSelection.accepted.length;
+  batch.post_sale_rejected = postSaleSelection.rejected;
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
   bucket.market = market;
   store.markets[key] = bucket;
@@ -1561,7 +1540,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(bucket.rows),
     lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
-    post_sale_candidates: bucket.post_sale_candidates,
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: identity.rows
   };
 }
@@ -1593,6 +1572,7 @@ function latestDealBoardSnapshot(input = {}) {
     manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows: [] }),
     lead_operations_queue: leadOperationsQueueForResponse([]),
     post_sale_candidates: [],
+    post_sale_candidate_total: 0,
     rows: []
     };
   }
@@ -1653,7 +1633,7 @@ function latestDealBoardSnapshot(input = {}) {
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     manual_evidence_packet: manualPacket,
     lead_operations_queue: leadOperationsQueueForResponse(rows),
-    post_sale_candidates: Array.isArray(bucket.post_sale_candidates) ? bucket.post_sale_candidates : [],
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: noticeRows
   };
 }

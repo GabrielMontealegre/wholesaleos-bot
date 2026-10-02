@@ -7,9 +7,11 @@ const http = require('http');
 const https = require('https');
 const queue = require('../modules/research/deal-board-queue-service');
 const orchestrator = require('../modules/research/source-acquisition-orchestrator');
+const postSaleStore = require('../modules/research/post-sale-candidate-store');
 
 const file = path.join(__dirname, '.tmp', 'b05c-snapshot.json');
 fs.mkdirSync(path.dirname(file), { recursive: true });
+fs.rmSync(file, { force: true });
 const priorPath = process.env.DEAL_BOARD_SNAPSHOTS_PATH;
 process.env.DEAL_BOARD_SNAPSHOTS_PATH = file;
 const originalFetch = global.fetch;
@@ -79,6 +81,68 @@ const preview = (items) => ({
     enable_document_reextraction: false
   });
   assert.strictEqual(queue.latestDealBoardSnapshot({ market }).post_sale_candidates.length, 1);
+  const indexUrl = 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php';
+  const noDocument = { ...candidate, source_url: indexUrl, source_document_url: '', source_row_reference: '' };
+  assert.strictEqual(postSaleStore.rejectionReason(noDocument, candidate.source_id), 'generic_source_url');
+  assert.strictEqual(postSaleStore.rejectionReason({ ...noDocument,
+    source_proof_text: 'Foreclosure notices are posted monthly by the County Clerk.' }, candidate.source_id),
+  'proof_not_property_specific');
+  const rowReference = { ...noDocument, property_address: '88 Row St, Dallas, TX 75201',
+    source_document_url: 'https://www.dallascounty.org/notices/monthly-list.pdf', source_proof_text: '' };
+  assert.strictEqual(postSaleStore.rejectionReason({ ...rowReference, source_row_reference: 'page 1 row 2' },
+    candidate.source_id), '');
+  assert.strictEqual(postSaleStore.rejectionReason({ ...candidate,
+    source_document_url: 'https://untrusted.example/notice.pdf' }, candidate.source_id), 'untrusted_source');
+  assert.strictEqual(postSaleStore.rejectionReason({ ...candidate, source_row_reference: '',
+    source_proof_text: 'Property Address: 101 Sample St, Dallas, TX 75201; Sale Date: 2026-06-06' },
+  candidate.source_id), 'proof_not_property_specific');
+  await queue.runDealBoardBatch({ market, enable_document_reextraction: false }, {
+    preview_impl: async () => preview([noDocument, { ...noDocument,
+      source_proof_text: 'Foreclosure notices are posted monthly by the County Clerk.' }]),
+    enable_document_reextraction: false
+  }).then((batch) => {
+    assert.strictEqual(batch.batch.post_sale_rejected.generic_source_url, 1);
+    assert.strictEqual(batch.batch.post_sale_rejected.proof_not_property_specific, 1);
+  });
+  assert.strictEqual(queue.latestDealBoardSnapshot({ market }).post_sale_candidate_total, 1);
+
+  const duplicate = { ...candidate, source_row_reference: '',
+    property_address: '77 Dup Ln, Dallas, TX 75201',
+    source_url: 'https://www.dallascounty.org/notices/one.pdf',
+    source_proof_text: 'Property Address: 77 Dup Ln, Dallas, TX 75201; Sale Date: 2026-05-05' };
+  const duplicateSpelling = { ...duplicate, property_address: '77 Dup Lane, Dallas, TX 75201',
+    source_url: 'https://www.dallascounty.org/notices/two.pdf',
+    source_proof_text: 'Property Address: 77 Dup Lane, Dallas, TX 75201; Sale Date: 2026-05-05' };
+  await queue.runDealBoardBatch({ market, enable_document_reextraction: false }, {
+    preview_impl: async () => preview([duplicate, duplicateSpelling,
+      { ...rowReference, source_row_reference: 'page 1 row 2' }]), enable_document_reextraction: false
+  });
+  const deduped = queue.latestDealBoardSnapshot({ market });
+  assert.strictEqual(deduped.post_sale_candidate_total, 3);
+  assert.strictEqual(deduped.post_sale_candidates.find((item) => item.property_address.includes('77 Dup')).source_urls.length, 2);
+
+  const largeProof = ' additional source text'.repeat(200);
+  const largeMarket = { city: 'Synthetic', county: 'Synthetic', state: 'TX' };
+  const many = Array.from({ length: 3000 }, (_, index) => ({ ...candidate,
+    property_address: `${1000 + index} Volume St, Dallas, TX 75201`, source_row_reference: '',
+    source_proof_text: `Property Address: ${1000 + index} Volume St, Dallas, TX 75201; Sale Date: 2026-05-05.${largeProof}`
+  }));
+  const largeRun = await queue.runDealBoardBatch({ market: largeMarket, source_ids: [candidate.source_id],
+    enable_document_reextraction: false }, {
+    preview_impl: async () => preview(many), enable_document_reextraction: false
+  });
+  assert.strictEqual(largeRun.post_sale_candidate_total, 3000);
+  assert.strictEqual(largeRun.post_sale_candidates.length, 20);
+  assert.ok(Buffer.byteLength(JSON.stringify(largeRun)) < 100000);
+  const latestPage = queue.latestDealBoardSnapshot({ market: largeMarket });
+  assert.strictEqual(latestPage.post_sale_candidate_total, 3000);
+  assert.strictEqual(latestPage.post_sale_candidates.length, 20);
+  assert.ok(Buffer.byteLength(JSON.stringify(latestPage)) < 100000);
+  const largeStore = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.strictEqual(largeStore.markets['synthetic|synthetic|tx'].post_sale_candidates.length, 3000);
+  assert.ok(largeStore.markets['synthetic|synthetic|tx'].post_sale_candidates.every((item) =>
+    !Object.hasOwn(item, 'source_proof_text') && item.source_proof_excerpt.length <= 1000 &&
+    /^[a-f0-9]{64}$/.test(item.source_proof_sha256)));
   console.log('B-05c separate persistent post-sale snapshot lane passed');
 })().catch((error) => {
   console.error(error);

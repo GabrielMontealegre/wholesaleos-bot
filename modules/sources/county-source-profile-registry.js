@@ -22,6 +22,7 @@ const EXTRA_PROFILES = Object.freeze([
     source_name: 'Dallas County Clerk Foreclosure Notices', market_group: 'dallas',
     source_family: 'preforeclosure_trustee_notice',
     source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
+    index_urls: Object.freeze(['https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php']),
     hosts: Object.freeze(['dallascounty.org', 'www.dallascounty.org', 'dallas.tx.publicsearch.us']),
     parser_options: Object.freeze({ sale_date_fields: SALE_DATE_FIELDS })
   }),
@@ -62,6 +63,7 @@ const NOTICE_PROFILES = existingNoticeProfiles.PROFILES.map((profile) => Object.
   official_hosts: Object.freeze(profile.official_hosts.slice()),
   parser_options: Object.freeze({ sale_date_fields: SALE_DATE_FIELDS }),
   source_url: profile.source_url,
+  index_urls: Object.freeze([profile.human_portal_url].filter(Boolean)),
   human_portal_url: profile.human_portal_url
 }));
 const TAX_PROFILES = taxNoticeProfiles.map((profile) => Object.freeze({

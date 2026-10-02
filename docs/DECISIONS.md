@@ -63,4 +63,6 @@ ASSUMED: B-05a treats a historical workflow label alone as insufficient to place
 
 ASSUMED: B-05b leaves original-owner contact false even for a newer notice or later same-owner record until the existing contact gates are wired to the after-sale lane; an unknown original owner cannot establish a third-party grantee — because contact safety and provenance outrank an early outcome label — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/218
 
+ASSUMED: B-05c accepts a row-reference-only notice only when it also points to an allowlisted official document or list that is not the profile's generic index page; a row number on a landing page is not property-specific proof — because AGENTS.md §5 requires an exact file/page/row reference and source truth outranks preserving a weak candidate — 2026-10-01 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/219
+
 ASSUMED: B-05c stores proven-past notice candidates in a separate preview-only market snapshot collection and shows a read-only panel before the final outcome tab exists — because retaining sourced records without mixing them into active leads is the smallest safe, verifiable step toward D-009 — 2026-10-01 — B-05c sub-PR

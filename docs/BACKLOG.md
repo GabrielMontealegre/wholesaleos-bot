@@ -191,6 +191,14 @@ Acceptance
 
 ## B-05 · "After the sale" lane · IN PROGRESS
 
+Ordered sub-PR [B-05c](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/219)
+persists property-specific, proven-past notice records separately from active rows and
+shows a bounded read-only dashboard page. The full history stays in the snapshot;
+each response returns the newest 20 plus the total. [Issue #221](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/221)
+required exact official proof, bounded payloads, canonical deduplication and neutral
+outcome wording. Source-proof duplication, classification integration, other source
+profiles, operator actions and buyer handoff remain separate work.
+
 Ordered sub-PR [B-05a](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/217): the existing primary notice adapter exposes proven-past,
 official-host notices as preview-only `post_sale_candidates` with outcome unknown.
 They remain excluded from active candidates; the stale count is unchanged. This
