@@ -482,6 +482,7 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
       property_address: cleanText(raw && (raw.property_address || raw.address)),
       parcel_or_account: cleanText(raw && (raw.parcel_or_account || raw.parcel_id)),
       sale_date: saleDate,
+      sale_date_raw_text: explicitSaleDate,
       sale_date_resolution: check.resolution && check.resolution.status === 'RESOLVED' ? check.resolution : null,
       stale_basis: check.stale_basis,
       sale_outcome: 'OUTCOME_UNKNOWN',

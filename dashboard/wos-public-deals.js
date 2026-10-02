@@ -329,6 +329,26 @@
       '#fca5a5');
   }
 
+  function afterSalePanel(data) {
+    var items = safeArray(data && data.post_sale_candidates);
+    var visible = items.slice(0, 20);
+    var total = Number(data && data.post_sale_candidate_total) || items.length;
+    var body = visible.length ? visible.map(function (item) {
+      var url = String(item.source_url || '');
+      var sourceLink = /^https:\/\//i.test(url) ? link('Official source', url) : 'Official source link unavailable';
+      return '<div style="border-top:1px solid #e5e7eb;padding:8px 0;font-size:12px;">' +
+        '<div style="font-weight:600;color:#111827;">' + esc(item.property_address || 'Property address not established') + '</div>' +
+        '<div style="color:#374151;">Scheduled sale: ' + esc(item.sale_date || 'Date unresolved') +
+        ' · Outcome unknown — the sale may have been postponed, cancelled or completed.</div>' +
+        '<div>' + sourceLink + '</div>' +
+        '<div style="color:#6b7280;">Next: check for a newer notice, recorded deed, or current owner record.</div>' +
+        '</div>';
+    }).join('') : '<div style="font-size:12px;color:#6b7280;">No past-sale notices have been retained for this market yet.</div>';
+    if (total > visible.length) body += '<div style="font-size:11px;color:#6b7280;">Showing ' + esc(visible.length) + ' of ' + esc(total) + ' retained notices.</div>';
+    return panelBox('After the sale · ' + esc(total),
+      'Separate from active leads. A passed date does not prove a completed sale or a current owner.', body, '#d1d5db');
+  }
+
   var MANUAL_EVIDENCE_SLOTS = [
     { key: 'subject_property', label: '1. Subject property', sources: ['Zillow', 'Redfin', 'Realtor.com', 'Google Maps'] },
     { key: 'sold_comp', label: '2. Sold comp', sources: ['Zillow sold result', 'Redfin sold result', 'Realtor.com sold result', 'County sales record'] },
@@ -1935,6 +1955,7 @@
     if (page === 'dashboard') {
       return (note ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">' + esc(note) + '</div>' : '') +
         dealDeskCard(data, rows) +
+        afterSalePanel(data) +
         manualEvidencePanel(data) +
         countyCoveragePanel() +
         countyAuditPanel() +

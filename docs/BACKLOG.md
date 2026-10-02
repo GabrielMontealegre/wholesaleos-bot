@@ -207,6 +207,14 @@ after-sale lane, compute redemption, or permit original-owner contact. Tax/HOA
 redemption, other county adapters, operator action, buyer handoff and dashboard
 view remain for later sub-PRs.
 
+Ordered sub-PR [B-05c](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/219)
+persists property-specific, proven-past notice records separately from active rows and
+shows a bounded read-only dashboard page. The full history stays in the snapshot;
+each response returns the newest 20 plus the total. [Issue #221](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/221)
+required exact official proof, bounded payloads, canonical deduplication and neutral
+outcome wording. Source-proof duplication, classification integration, other source
+profiles, operator actions and buyer handoff remain separate work.
+
 Goal: passed-date foreclosure/tax notices are kept and classified, never discarded (D-009).
 
 Verified facts: the county foreclosure-notice adapters currently reject proven-past notices as

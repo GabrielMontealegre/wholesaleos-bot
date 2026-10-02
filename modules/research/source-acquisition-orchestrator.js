@@ -111,6 +111,7 @@ function selectAcquisitionSources(job, catalog) {
 
 function normalizeAdapterResult(result) {
   const candidateList = asArray(result && result.candidates);
+  const postSaleCandidates = asArray(result && result.post_sale_candidates);
   const packetList = asArray(result && result.packets);
   return {
     source_id: cleanText(result && result.source_id),
@@ -123,6 +124,8 @@ function normalizeAdapterResult(result) {
     skip_code: cleanText(result && result.skip_code),
     skip_reason: cleanText(result && result.skip_reason),
     candidate_count: candidateList.length,
+    post_sale_candidates: postSaleCandidates,
+    post_sale_candidate_count: postSaleCandidates.length,
     packet_count: packetList.length,
     call_ready_count: packetList.filter((packet) => cleanText(packet && packet.packet_status) === 'CALL_READY').length,
     outreach_ready_count: packetList.filter((packet) => cleanText(packet && packet.packet_status) === 'OUTREACH_READY').length,

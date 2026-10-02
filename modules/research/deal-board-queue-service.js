@@ -37,6 +37,7 @@ const countyCandidateRegistry = require('../sources/county-candidate-registry');
 const sourceDateNormalization = require('./normalize-source-date');
 const sourceSaleDate = require('./resolve-source-sale-date');
 const addressDerivedResearchLinks = require('./address-derived-research-links');
+const postSaleCandidateStore = require('./post-sale-candidate-store');
 
 const LIFECYCLE_SOURCE_DATE_FIELDS = Object.freeze([
   'source_date', 'sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date',
@@ -1378,6 +1379,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     full_snapshot_date_normalization_summary: fullSnapshotDateNormalizationSummary(store),
     lifecycle_aggregate: lifecycleAggregate(responseRows),
     lead_operations_queue: leadOperationsQueueForResponse(responseRows),
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: identity.rows
   };
   }
@@ -1392,6 +1394,9 @@ async function runDealBoardBatch(input = {}, options = {}) {
   }, { env: options.env || process.env });
 
   const deals = Array.isArray(preview && preview.free_public_deals) ? preview.free_public_deals : [];
+  const postSaleSelection = postSaleCandidateStore.collectFromPreview(preview);
+  bucket.post_sale_candidates = postSaleCandidateStore.mergeCandidates(
+    bucket.post_sale_candidates, postSaleSelection.accepted, runAt);
   const byKey = new Map(bucket.rows.map((row) => [row.queue_key, row]));
   const storedQueueKeys = new Set(byKey.keys());
   const PRESERVE_FIELDS = [
@@ -1511,6 +1516,8 @@ async function runDealBoardBatch(input = {}, options = {}) {
     document_reextraction: documentReextractionDiagnostics,
     ocr: ocrSummaryFromPreview(preview)
   };
+  batch.post_sale_candidate_count = postSaleSelection.accepted.length;
+  batch.post_sale_rejected = postSaleSelection.rejected;
   bucket.batches = [batch].concat(bucket.batches || []).slice(0, MAX_BATCHES_PER_MARKET);
   bucket.market = market;
   store.markets[key] = bucket;
@@ -1533,6 +1540,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     full_snapshot_discovery_summary: discoveryLayer.summarize(Object.values(store.markets || {}).flatMap((item) => item && item.rows || [])),
     lifecycle_aggregate: lifecycleAggregate(bucket.rows),
     lead_operations_queue: leadOperationsQueueForResponse(bucket.rows),
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: identity.rows
   };
 }
@@ -1563,6 +1571,8 @@ function latestDealBoardSnapshot(input = {}) {
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     manual_evidence_packet: manualEvidencePacketService.latestManualEvidenceSnapshot({ market, rows: [] }),
     lead_operations_queue: leadOperationsQueueForResponse([]),
+    post_sale_candidates: [],
+    post_sale_candidate_total: 0,
     rows: []
     };
   }
@@ -1623,6 +1633,7 @@ function latestDealBoardSnapshot(input = {}) {
     blocked_inventory_breakdown: blockedInventoryBreakdownForResponse(store),
     manual_evidence_packet: manualPacket,
     lead_operations_queue: leadOperationsQueueForResponse(rows),
+    ...postSaleCandidateStore.responsePage(bucket.post_sale_candidates),
     rows: noticeRows
   };
 }
