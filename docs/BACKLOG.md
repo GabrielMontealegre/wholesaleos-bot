@@ -92,6 +92,12 @@ Known non-blocking follow-ups (do them in B-04): superseded-audit edge (N-A),
 
 ## B-02 · Safety cleanup: no auto-send flag, no invented buyers · DONE ([PR #207](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/207), [PR #208](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/208))
 
+Issue #223 follow-up: legacy server SMS, Gmail and buyer-deal email send routes now
+return a disabled response without reading or changing leads. The dormant follow-up
+processor also leaves due emails pending for manual action instead of sending them.
+Draft previews, inbound history and stored conversations remain. Visible
+communications-hub and bulk-send controls no longer invite an unavailable send.
+
 Verification (2026-10-01): final merge `c03ee9f`, Railway deployment succeeded,
 `/health` 200, and read-only `/api/outreach/tone-status` returned
 `auto_send: false`. The authenticated dashboard loaded Dallas rows and the

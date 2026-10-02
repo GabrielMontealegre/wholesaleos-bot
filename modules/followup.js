@@ -4,7 +4,6 @@
 
 require('dotenv').config();
 const db = require('../db');
-const { sendEmail } = require('../email');
 
 const OWNER = {
   name: 'Gabriel Montealegre',
@@ -142,20 +141,11 @@ async function processDueFollowUps(bot, ownerId) {
     }
 
     if (fu.type === 'email' && lead.email) {
-      try {
-        await sendEmail({ to: lead.email, subject: fu.subject || `Following up — ${lead.address?.split(',')[0]}`, body: fu.body || fu.call || '' });
-        fu.status = 'done';
-        summary += `📧 Email sent to ${lead.email}\n`;
-      } catch (e) {
-        summary += `❌ Email failed: ${e.message}\n`;
-      }
+      summary += 'Email follow-up due — send manually.\n';
     }
 
     summary += '\n';
   }
-
-  // Save updates
-  db.writeDB(db_data);
 
   // Send to Telegram
   if (bot && ownerId) {

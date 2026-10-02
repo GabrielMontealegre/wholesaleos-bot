@@ -95,7 +95,7 @@ function _emailPanel() {
   return `
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;">
-        ✅ Gmail OAuth connected — emails send from your Gmail account
+        Server email sending is disabled. Drafts remain available; no message is sent here.
       </div>
       <div style="display:flex;gap:10px;">
         <div style="flex:1;">
@@ -122,7 +122,7 @@ Best regards</textarea>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="wosCommsGenEmail()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">🤖 Generate AI Draft</button>
-        <button onclick="wosCommsSendEmail()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;">Send Email ✉️</button>
+        <span style="font-size:12px;color:#6b7280;">Sending from the server is disabled.</span>
       </div>
       <div id="wosEmailStatus" style="font-size:12px;text-align:center;color:#6b7280;"></div>
     </div>
@@ -136,7 +136,7 @@ function _smsPanel() {
   return `
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div id="wosSmsTwilioStatus" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;">
-        ⚠️ Twilio credentials needed in Railway env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+        Server SMS sending is disabled. Drafts remain available; no message is sent here.
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">TO (phone number)</label>
@@ -152,7 +152,7 @@ function _smsPanel() {
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="wosCommsGenSms()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">🤖 AI Draft</button>
-        <button onclick="wosCommsSendSms()" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;">Send SMS 💬</button>
+        <span style="font-size:12px;color:#6b7280;">Sending from the server is disabled.</span>
       </div>
       <div id="wosSmsStatus" style="font-size:12px;text-align:center;color:#6b7280;"></div>
     </div>

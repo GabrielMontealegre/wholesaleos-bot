@@ -5557,8 +5557,7 @@ function renderLeads() {
     </select>
     <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="bulkChangeStatus()">✓ Apply</button>
     <button class="btn btn-sm" style="background:#0071e3;color:#fff;font-size:11px" onclick="bulkExport()">⬇ Export Selected</button>
-    <button class="btn btn-sm" style="background:#5e5ce6;color:#fff;font-size:11px" onclick="openBulkEmail()">📧 Bulk Email</button>
-    <button class="btn btn-sm" style="background:#34c759;color:#fff;font-size:11px" onclick="openBulkSMS()">💬 Bulk SMS</button>
+    <span style="color:#aaa;font-size:11px">Server messaging disabled</span>
     <button class="btn btn-sm" style="background:#ff3b30;color:#fff;font-size:11px" onclick="bulkDelete()">🗑 Delete Selected</button>
     <button class="btn btn-sm" style="background:transparent;color:#aaa;border:1px solid #555;font-size:11px" onclick="clearLeadSelection()">✕ Clear</button>
   </div>
@@ -12302,8 +12301,7 @@ function showOutreachPreview(messages, lead, type) {
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
       + '<div style="font-weight:600;font-size:13px;">' + name + (phone ? ' · ' + phone : '') + (email ? ' · ' + email : '') + '</div>'
       + '<div style="display:flex;gap:6px;">'
-      + (phone && m.sms ? '<button onclick="sendOneSMS(' + i + ')" style="background:#0071e3;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Send SMS</button>' : '')
-      + (email && m.email ? '<button onclick="sendOneEmail(' + i + ')" style="background:#5e5ce6;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">Send Email</button>' : '')
+      + ((phone && m.sms) || (email && m.email) ? '<span style="font-size:11px;color:#6b7280">Draft only - server sending disabled</span>' : '')
       + '</div></div>';
 
     if (m.sms) {
@@ -14403,7 +14401,7 @@ function renderSMS() {
     <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#fafafa">
       <div style="padding:14px;border-bottom:1px solid #e5e5ea">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px">💬 SMS</div>
-        <button class="btn btn-dark" style="width:100%;font-size:12px" onclick="openBulkSMS()">📤 Bulk SMS to Selected Leads</button>
+        <div style="font-size:12px;color:#6b7280">Server SMS sending is disabled.</div>
       </div>
       <div id="sms-conv-list" style="flex:1;overflow-y:auto">
         <div style="text-align:center;padding:30px;color:#86868b">
@@ -20421,7 +20419,7 @@ function renderSMS() {
     <div style="border-right:1px solid #e5e5ea;display:flex;flex-direction:column;background:#fafafa">
       <div style="padding:14px;border-bottom:1px solid #e5e5ea">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px">💬 SMS</div>
-        <button class="btn btn-dark" style="width:100%;font-size:12px" onclick="openBulkSMS()">📤 Bulk SMS to Selected Leads</button>
+        <div style="font-size:12px;color:#6b7280">Server SMS sending is disabled.</div>
       </div>
       <div id="sms-conv-list" style="flex:1;overflow-y:auto">
         <div style="text-align:center;padding:30px;color:#86868b">
@@ -29170,7 +29168,7 @@ function wosRealPullState(stateCode, cardEl) {
 </script>
 
 <script src="/dashboard/wos-pipeline.js?v=1"></script>
-<script src="/dashboard/wos-comms.js?v=1"></script>
+<script src="/dashboard/wos-comms.js?v=2"></script>
 <script src="/dashboard/wos-leads-detail.js?v=2"></script>
 <script src="/dashboard/wos-buyers.js?v=1"></script>
 <script src="/dashboard/wos-public-deals.js?v=53"></script>
