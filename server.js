@@ -3523,29 +3523,7 @@ app.get('/api/gmail/message/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/gmail/send', async (req, res) => {
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured.' });
-    const { to, subject, body } = req.body;
-    if (!to || !subject || !body) return res.status(400).json({ error: 'Missing to, subject, or body.' });
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    // Build RFC 2822 message
-    const messageParts = [
-      'From: ' + cfg.user,
-      'To: ' + to,
-      'Subject: ' + subject,
-      'Content-Type: text/plain; charset=utf-8',
-      'MIME-Version: 1.0',
-      '',
-      body
-    ];
-    const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
-    db.addNotification('system', 'Email sent', 'To: ' + to + ' Ã¢ÂÂ ' + subject);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+app.post('/api/gmail/send', serverSendDisabled);
 
 
 // Delete Gmail messages (move to trash)
@@ -3593,34 +3571,7 @@ app.get('/api/gmail/messages', async (req, res) => {
   } catch(e) { res.json({ ok: false, messages: [], error: e.message }); }
 });
 
-app.post('/api/gmail/reply', async (req, res) => {
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured.' });
-    const { to, body, threadId, messageId } = req.body;
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    // Fetch original to get subject for Re: prefix
-    let subject = 'Re: (your message)';
-    try {
-      const orig = await gmail.users.messages.get({ userId: 'me', id: messageId, format: 'metadata', metadataHeaders: ['Subject'] });
-      const origSubject = (orig.data.payload.headers.find(h=>h.name==='Subject')||{value:''}).value;
-      subject = origSubject.startsWith('Re:') ? origSubject : 'Re: ' + origSubject;
-    } catch(e2) {}
-    const messageParts = [
-      'From: ' + cfg.user,
-      'To: ' + to,
-      'Subject: ' + subject,
-      'Content-Type: text/plain; charset=utf-8',
-      'MIME-Version: 1.0',
-      '',
-      body
-    ];
-    const raw = Buffer.from(messageParts.join('\n')).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    await gmail.users.messages.send({ userId: 'me', requestBody: { raw, threadId } });
-    db.addNotification('system', 'Reply sent', 'To: ' + to);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+app.post('/api/gmail/reply', serverSendDisabled);
 
 
 // Ã¢ÂÂÃ¢ÂÂ Property Intelligence Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
@@ -4291,15 +4242,15 @@ app.get('/api/comms/status', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ Send single SMS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/sms/send', async (req, res) => {
-  try {
-    const comms = require('./modules/comms');
-    const { to, body, leadId } = req.body;
-    if (!to || !body) return res.json({ ok: false, error: 'Missing to or body' });
-    const result = await comms.sendSMS(to, body, leadId, db);
-    res.json(result);
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
+function serverSendDisabled(req, res) {
+  return res.status(410).json({
+    ok: false,
+    error: 'Sending from the server is disabled. Use tap-to-send from your phone when available.'
+  });
+}
+
+app.post('/api/sms/send', serverSendDisabled);
+app.post('/api/email/send', serverSendDisabled);
 
 // Ã¢ÂÂÃ¢ÂÂ Preview AI SMS for a lead Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/sms/preview/:leadId', (req, res) => {
@@ -4324,47 +4275,10 @@ app.get('/api/email/preview/:leadId', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ Bulk SMS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/sms/bulk', async (req, res) => {
-  try {
-    const comms = require('./modules/comms');
-    const { leadIds, customMessage } = req.body;
-    if (!leadIds || !leadIds.length) return res.json({ ok: false, error: 'No leads selected' });
-    const leads = db.getLeads().filter(l => leadIds.includes(l.id));
-    const withPhone = leads.filter(l => l.phone);
-    if (!withPhone.length) return res.json({ ok: false, error: 'None of the selected leads have phone numbers. Add phone numbers via skip tracing first.' });
-    // Start async Ã¢ÂÂ respond immediately
-    res.json({ ok: true, total: withPhone.length, message: `Sending ${withPhone.length} SMS messages in background. Check SMS tab for progress.` });
-    setImmediate(async () => {
-      try {
-        const results = await comms.sendBulkSMS(withPhone, db, { customMessage });
-        db.addNotification('system', `Bulk SMS complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no phone)`);
-        logger.info('[BulkSMS]', results);
-      } catch(e) { logger.error('[BulkSMS]', e.message); }
-    });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
+app.post('/api/sms/bulk', serverSendDisabled);
 
 // Ã¢ÂÂÃ¢ÂÂ Bulk Email Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/email/bulk', async (req, res) => {
-  try {
-    const comms = require('./modules/comms');
-    const { leadIds, customEmail } = req.body;
-    if (!leadIds || !leadIds.length) return res.json({ ok: false, error: 'No leads selected' });
-    const leads = db.getLeads().filter(l => leadIds.includes(l.id));
-    const withEmail = leads.filter(l => l.email);
-    if (!withEmail.length) return res.json({ ok: false, error: 'None of the selected leads have email addresses. Add emails via skip tracing first.' });
-    const gmailCfg = getGmailTransport();
-    if (!gmailCfg) return res.json({ ok: false, error: 'Gmail not connected. Check Gmail settings.' });
-    res.json({ ok: true, total: withEmail.length, message: `Sending ${withEmail.length} personalized emails in background. Check Email tab for progress.` });
-    setImmediate(async () => {
-      try {
-        const results = await comms.sendBulkEmail(withEmail, gmailCfg, db, { customEmail });
-        db.addNotification('system', `Bulk Email complete`, `${results.sent} sent, ${results.failed} failed, ${results.skipped} skipped (no email)`);
-        logger.info('[BulkEmail]', results);
-      } catch(e) { logger.error('[BulkEmail]', e.message); }
-    });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
+app.post('/api/email/bulk', serverSendDisabled);
 
 // Ã¢ÂÂÃ¢ÂÂ SMS Conversations Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get('/api/sms/conversations', (req, res) => {
@@ -5236,31 +5150,7 @@ app.get('/api/buyers/:id/match-deals', async (req, res) => {
 });
 
 // 2. SEND DEALS — email batch of matched deals to buyer
-app.post('/api/buyers/:id/send-deals', async (req, res) => {
-  try {
-    const dbData = db.readDB();
-    const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
-    if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
-    if (!buyer.email) return res.status(400).json({ error: 'Buyer has no email address' });
-    const { dealIds } = req.body;
-    const leads = dbData.leads || [];
-    const dealsToSend = dealIds
-      ? leads.filter(l => dealIds.includes(l.id))
-      : leads.filter(l => l.offer && l.spread > 0).slice(0, 10);
-    if (dealsToSend.length === 0) return res.status(400).json({ error: 'No deals to send' });
-    const dealRows = dealsToSend.map((l, i) =>
-      '<tr style="background:' + (i%2===0?'#f9f9f9':'#fff') + '"><td style="padding:8px;border:1px solid #eee">' + (l.type||'SFR') + '</td><td style="padding:8px;border:1px solid #eee">' + (l.state||'') + '</td><td style="padding:8px;border:1px solid #eee">$' + (l.arv||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee">$' + (l.offer||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee;color:green;font-weight:bold">$' + (l.spread||0).toLocaleString() + '</td><td style="padding:8px;border:1px solid #eee">' + (l.repair_class||'-') + '</td></tr>'
-    ).join('');
-    const html = '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto"><h2 style="color:#1a1a2e">🏠 Deal Opportunities from Montsan REI</h2><p>Hi ' + buyer.name + ',</p><p>Here are ' + dealsToSend.length + ' off-market deal' + (dealsToSend.length>1?'s':'') + ' that match your buy box. Reply to get full property details.</p><table style="width:100%;border-collapse:collapse;margin:20px 0"><thead><tr style="background:#1a1a2e;color:#fff"><th style="padding:10px;text-align:left">Type</th><th style="padding:10px;text-align:left">State</th><th style="padding:10px;text-align:left">ARV</th><th style="padding:10px;text-align:left">Price</th><th style="padding:10px;text-align:left">Spread</th><th style="padding:10px;text-align:left">Repairs</th></tr></thead><tbody>' + dealRows + '</tbody></table><p><strong>Gabriel Montealegre</strong><br>Montsan Real Estate Investment<br>montsan.rei@gmail.com</p></div>';
-    if (transporter) {
-      await transporter.sendMail({ from: '"Montsan REI" <' + process.env.GMAIL_USER + '>', to: buyer.email, subject: dealsToSend.length + ' Off-Market Deal' + (dealsToSend.length>1?'s':'') + ' — Matches Your Buy Box', html });
-    }
-    if (!dbData.dealsSent) dbData.dealsSent = [];
-    dbData.dealsSent.push({ id: 'DS'+Date.now(), buyerId: buyer.id, buyerName: buyer.name, dealCount: dealsToSend.length, sentAt: new Date().toISOString(), dealIds: dealsToSend.map(l=>l.id) });
-    db.writeDB(dbData);
-    res.json({ success: true, sent: dealsToSend.length, to: buyer.email });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
+app.post('/api/buyers/:id/send-deals', serverSendDisabled);
 
 // 3. DEALS SENT HISTORY
 app.get('/api/buyers/:id/deals-sent', (req, res) => {
