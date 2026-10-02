@@ -10,8 +10,17 @@ Mark the status here as part of each item's PR.
 
 ---
 
-> **Priority order right now:** open `codex-task` issues first (they include the PR #219 fixes),
-> then B-00a, then B-00b, then continue with B-05 and below.
+> **Priority order right now (architect, 2026-10-02):** work the open `codex-task` issues in
+> exactly this order, then the backlog items:
+> 1. [#223](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/223) server bulk text/email routes still send (safety BLOCKER)
+> 2. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) after-sale lane stores loan dates and lender addresses (truth BLOCKER)
+> 3. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) shared sale-origin allow-list (do it with or right after #229; same list)
+> 4. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) whitespace false supersession
+> 5. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) line-ending-neutral comp-grid fingerprint tests
+> 6. B-00a, then B-00b, then the rest of B-05 and below.
+>
+> A new `codex-task` labeled BLOCKER goes ahead of everything not yet started. End every run
+> with a Run log entry above (AGENTS.md §2).
 
 ## B-00a · County-neutral names everywhere (D-019) · TODO
 
