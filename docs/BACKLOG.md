@@ -215,7 +215,8 @@ required exact official proof, bounded payloads, canonical deduplication and neu
 outcome wording. Source-proof duplication, classification integration, other source
 profiles, operator actions and buyer handoff remain separate work.
 
-Ordered sub-PR B-05d (issue #222) prevents a document already represented by a
+Ordered sub-PR [B-05d](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/228)
+(issue #222) prevents a document already represented by a
 property-specific after-sale candidate from also creating an address-less active
 source-proof row. Mixed documents retain their active candidate rows; unrelated
 document proof remains unchanged. Classification integration, other source profiles,
