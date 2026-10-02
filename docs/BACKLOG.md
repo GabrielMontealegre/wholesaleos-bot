@@ -111,7 +111,7 @@ Acceptance
 
 ---
 
-## B-03 · Saved-leads HTTP 502 · BLOCKED ([issue #209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209))
+## B-03 · Saved-leads HTTP 502 · DONE — closed as not reproducible (A-003, [issue #209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209))
 
 Read-only check (2026-10-01): the reported 502 did not reproduce. GETs for
 50 and 1,000 saved leads returned 200; Texas and National views loaded and
@@ -381,6 +381,8 @@ Acceptance
   Never edited in place; corrections are new entries.
 - Lead clocks on the card: acquired date, sale/event date, days until sale, stale date, last touch.
 - Operator/VA identity: a simple actor selector or login so every entry has a name.
+- Server-side sending stays off (A-012, issue #223): the old Twilio and bulk-email send routes are not
+  re-enabled; tap-to-send replaces them.
 - Texting: Gabriel selects up to 20 leads with a contactable number; the app prepares personalized,
   human-sounding messages (templates; no AI sending) and shows tap-to-send links (`sms:` with the
   prefilled body) for the operator's phone; each tap is logged. No automated sending, no texting to
