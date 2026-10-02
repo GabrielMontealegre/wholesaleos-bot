@@ -133,8 +133,17 @@ If two readings both satisfy 1–4, pick the more conservative one that still de
   never a dollar figure on a card and never an offer input (D-011).
 - MAO comes only from the single offer calculator (when built) using ARV from real comps.
 
-**Contact**
-- Quarantined rows are never callable.
+**Contact** (D-018)
+- "Ready to reach out" means we know enough to contact the owner by any channel. A phone number is
+  NOT required; it is a route, not a gate.
+- A lead is never reachable when: the property address isn't verified; no owner identity is known;
+  the owner is a bank or government body; it is proven to belong to someone else now (sold to a third
+  party, reverted to the lender); it is a duplicate or unverifiable; or the owner asked not to be
+  contacted.
+- An unknown or unproven date does not block reaching out. It shows a caution ("Sale date not
+  confirmed — ask on the call") and keeps affecting priority and lanes.
+- After the sale with an unknown outcome: reach out only as a status check ("Is the house still
+  yours?"), labeled "Sale date passed — confirm ownership first", never as a pre-foreclosure pitch.
 - A "possible phone number" needs a source and is always labeled "Possible number — not
   confirmed" (D-006). Rejected / wrong / do-not-call numbers never count.
 - No automatic calling or texting. Texting = operator-selected batches of at most 20, sent by the
@@ -249,3 +258,6 @@ Professional and calm. One clear next step per card.
 - "Do not apply county evidence" → county records are first-class evidence with provenance.
 - "Do not build more source adapters before selected-deal execution works" → superseded by the backlog.
 - Model routing to GPT-5.5 / GPT-5.4 Mini → obsolete; Gabriel picks the model per run.
+- "CALL_READY requires a phone number" and "quarantined rows are never contactable" → replaced by
+  D-018 ("Ready to reach out"; a phone is a route, not a gate).
+- County-named adapters, labels or reports ("Dallas adapter") → replaced by D-019 (county is data).

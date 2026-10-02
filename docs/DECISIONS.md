@@ -24,6 +24,8 @@ corrects them during review.
 | D-015 | 2026-09-26 | **Offer math**: MAO = ARV × band% − repairs − fee. Band: 70% under $120k ARV; above that, the course chart up to 80–83%. Repairs before condition is known: $20/sq ft light to $50/sq ft heavy, labeled estimate. |
 | D-016 | 2026-10-01 | **Codex merges and deploys when all gates are green.** The architect reviews after merge. Gabriel is asked only for business, money, legal and outreach decisions. |
 | D-017 | 2026-09-30 | **Presentation**: professional, plain English, not crowded. |
+| D-018 | 2026-10-01 | **"Ready to reach out" replaces "call ready".** A lead is ready when we know enough to contact the owner by any channel (verified address + owner identity, not proven to belong to someone else, not do-not-contact). A phone number is a route, not a gate: the card shows the best route (call → text → email → mail/visit → find-a-phone links). Unknown dates show a caution instead of locking the lead. Full rules: AGENTS.md §5 Contact. |
+| D-019 | 2026-10-01 | **No county names as labels.** Never call anything "the Dallas adapter" in code names, UI, reports, PR titles or tests. Sources are county profiles in one generic system; the county appears only as data ("Dallas County notice"). |
 
 ## Architect decisions (Gabriel may veto)
 
@@ -32,6 +34,8 @@ corrects them during review.
 | D-011 | 2026-09-30 | **Estimated equity band (High / Medium / Low / Unknown) for sorting only**, only where the actual loan is known (loan date + original amount from a recorded notice or deed of trust). Never a dollar amount on a card, never an offer input. |
 | A-001 | 2026-10-01 | Server-side work uses public government sources only. Listing and people-search sites are used only in the operator's browser via the local helper. |
 | A-002 | 2026-10-01 | Every lead lives in exactly one lane with a plain reason; nothing is silently dropped. |
+| A-003 | 2026-10-01 | B-03 (saved-leads 502): close as not reproducible (issue #209, option B). Keep the existing pagination/serialization regression coverage. If a 502 recurs, record timestamp, URL and response and reopen. |
+| A-004 | 2026-10-01 | Lane snapshots (e.g. after-the-sale records) are stored in full, but dashboard and batch responses return a bounded page (newest 20 + total count). Stored proof text is an excerpt of at most 1,000 characters plus a SHA-256 of the full text. |
 
 ## Open questions
 
