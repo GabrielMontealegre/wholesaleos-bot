@@ -158,13 +158,7 @@ app.use(express.json({ strict: false, limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 
-// Ã¢ÂÂÃ¢ÂÂ CORS for dashboard Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  next();
-});
-
+// Dashboard API requests are same-origin; no cross-origin wildcard is needed.
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 // ── API Rate Limiter (express-rate-limit) ──
@@ -303,6 +297,48 @@ function requireAdminOrOwnFirstLoginPinUpdate(req, res, next) {
     res.status(503).json({ error: 'User authorization unavailable', code: 'USER_AUTHORIZATION_UNAVAILABLE' });
   }
 }
+
+// Every exception is an exact method/path pair with authentication at its route.
+const API_SESSION_EXCEPTIONS = Object.freeze([
+  { method: 'GET', path: '/auth/session', reason: 'Public login status only.' },
+  { method: 'POST', path: '/auth/login', reason: 'PIN exchange for a signed session.' },
+  { method: 'POST', path: '/auth/email-login', reason: 'Credential exchange for a signed session.' },
+  { method: 'POST', path: '/auth/logout', reason: 'Clear a browser session.' },
+  { method: 'POST', path: '/auth/pairing-exchange', reason: 'Single-use pairing token exchange.' },
+  { method: 'GET', path: '/dashboard/free-public-deal-board/latest', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
+  { method: 'GET', path: '/dashboard/research-queue/current', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
+  { method: 'POST', path: '/dashboard/free-public-deal-board/manual-evidence/upload', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
+  { method: 'POST', path: '/dashboard/free-public-deal-board/manual-evidence/proposal', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
+  { method: 'POST', path: '/sms/webhook', auth: 'provider-signature', reason: 'Twilio signature verified before inbound SMS.' },
+  { method: 'POST', path: '/dialer/twiml', auth: 'provider-signature', reason: 'Twilio signature verified before voice callback.' },
+  { method: 'POST', path: '/dialer/recording-complete', auth: 'provider-signature', reason: 'Twilio signature verified before recording callback.' }
+]);
+const API_SESSION_EXCEPTION_MAP = new Map(API_SESSION_EXCEPTIONS.map((entry) => [`${entry.method} ${entry.path}`, entry]));
+
+function requireTwilioSignature(req, res, next) {
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const signature = req.get('X-Twilio-Signature');
+  if (!token || !signature || !req.is('application/x-www-form-urlencoded')) {
+    return res.status(401).json({ error: 'Signed provider request required', code: 'PROVIDER_SIGNATURE_REQUIRED' });
+  }
+  try {
+    const origin = process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : `${req.protocol}://${req.get('host')}`;
+    const url = `${origin}${req.originalUrl}`;
+    if (require('twilio').validateRequest(token, signature, url, req.body || {})) return next();
+  } catch (_) { /* Fail closed if validation or the provider library is unavailable. */ }
+  return res.status(401).json({ error: 'Signed provider request required', code: 'PROVIDER_SIGNATURE_REQUIRED' });
+}
+
+app.use('/api', (req, res, next) => {
+  const exception = API_SESSION_EXCEPTION_MAP.get(`${req.method} ${req.path}`);
+  if (exception) {
+    if (exception.auth === 'provider-signature') return requireTwilioSignature(req, res, next);
+    return next();
+  }
+  return requireAuth(req, res, next);
+});
 
 // Helper: build reliable property links
 function buildPropertyLinks(address, state, zip) {
