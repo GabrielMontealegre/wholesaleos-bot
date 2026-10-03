@@ -4350,44 +4350,15 @@ app.post('/api/sms/webhook', (req, res) => {
   }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Browser Dialer Token Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.get('/api/dialer/token', (req, res) => {
-  try {
-    const comms = require('./modules/comms');
-    const token = comms.generateDialerToken('gabriel');
-    if (!token) return res.json({ ok: false, error: 'Twilio not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET to Railway.' });
-    res.json({ ok: true, token });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
+// Server-originated voice is disabled; the operator calls from their own phone.
+function serverCallDisabled(req, res) {
+  return res.status(410).json({ ok: false, error: 'Calling from the server is disabled. Call from your phone.' });
+}
 
-// Ã¢ÂÂÃ¢ÂÂ Outbound call via Twilio REST (simpler than browser SDK) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-app.post('/api/dialer/call', async (req, res) => {
-  try {
-    const { to, leadId } = req.body;
-    const sid   = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from  = process.env.TWILIO_PHONE_NUMBER;
-    if (!sid || !token || !from) return res.json({ ok: false, error: 'Twilio not configured' });
-    const twilio = require('twilio')(sid, token);
-    const cleaned = to.replace(/[^0-9]/g,'');
-    const phone   = cleaned.length === 10 ? '+1' + cleaned : '+' + cleaned;
-    // Call connects Twilio number to seller, then bridges to your phone
-    const callbackUrl = `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/dialer/twiml`;
-    const call = await twilio.calls.create({
-      to:   phone,
-      from,
-      url:  callbackUrl || 'http://demo.twilio.com/docs/voice.xml',
-      record: true, // Enable call recording
-      recordingStatusCallback: `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/dialer/recording-complete`,
-    });
-    // Log the call
-    const dbData = db.readDB();
-    if (!dbData.callLog) dbData.callLog = [];
-    dbData.callLog.push({ id: uuidv4(), leadId, to: phone, callSid: call.sid, status: call.status, created: new Date().toISOString() });
-    db.writeDB(dbData);
-    res.json({ ok: true, callSid: call.sid, status: call.status });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
+app.get('/api/dialer/token', serverCallDisabled);
+
+// No route may place an outbound call or issue a browser voice token.
+app.post('/api/dialer/call', serverCallDisabled);
 
 // Ã¢ÂÂÃ¢ÂÂ TwiML for calls Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post('/api/dialer/twiml', (req, res) => {
