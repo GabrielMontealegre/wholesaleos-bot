@@ -8962,7 +8962,7 @@ function renderLeadDetail(l) {
 
   // QUICK ACTION BUTTONS
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
-  html += '<a href="#" onclick="event.stopPropagation();makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="' + (phoneTelHref(l.phone) || '#') + '" onclick="event.stopPropagation();if(!this.href.startsWith(&quot;tel:&quot;))event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (phoneTelHref(l.phone)?(safe?'CALL':'OFF HRS'):'NO NUMBER') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
   html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border:none;border-radius:10px;cursor:pointer;"><span style="font-size:18px">&#128231;</span><span style="font-size:9px;font-weight:600;color:#fff;">EMAIL</span></button>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
@@ -10646,7 +10646,6 @@ function addListeners() {
       const action = el.dataset.action;
       const lid = el.dataset.lid;
       const bid = el.dataset.bid;
-      if (action === 'call') logAction('call', lid);
       if (action === 'text') logAction('text', lid);
       if (action === 'email') logAction('email', lid);
       if (action === 'ai') openAIOutreach(lid);
@@ -14431,6 +14430,12 @@ function renderSMS() {
 //  DIALER TAB
 // ═══════════════════════════════════════════════════════
 
+function phoneTelHref(value) {
+  var digits = String(value || '').replace(/\D/g, '');
+  if (!/^\d{10,15}$/.test(digits)) return '';
+  return 'tel:+' + (digits.length === 10 ? '1' + digits : digits);
+}
+
 function renderDialer() {
   return `<div style="max-width:700px">
 
@@ -14438,8 +14443,8 @@ function renderDialer() {
     <div id="dialer-status-bar" style="background:#f5f5f7;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
       <div style="font-size:24px">📞</div>
       <div>
-        <div style="font-size:13px;font-weight:700">Browser Dialer</div>
-        <div style="font-size:11px;color:#86868b" id="dialer-status-text">Checking Twilio connection...</div>
+        <div style="font-size:13px;font-weight:700">Call from your phone</div>
+        <div style="font-size:11px;color:#86868b" id="dialer-status-text">Calls open your phone dialer. Nothing is sent by the server.</div>
       </div>
       <div style="margin-left:auto">
         <span id="dialer-status-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#86868b"></span>
@@ -14462,8 +14467,8 @@ function renderDialer() {
     <!-- Manual Dial Pad -->
     <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:700;margin-bottom:14px">📱 Manual Dial</div>
-      <input id="dial-number" placeholder="Enter phone number to call" style="width:100%;border:2px solid #e5e5ea;border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:10px;box-sizing:border-box">
-      <button class="btn btn-dark" style="width:100%;font-size:14px;padding:12px" onclick="makeCall(document.getElementById('dial-number').value, null, 'Manual Dial', '')">📞 Call Now</button>
+      <input id="dial-number" placeholder="Enter phone number to call" oninput="document.getElementById('dialer-manual-call').href=phoneTelHref(this.value)||'#'" style="width:100%;border:2px solid #e5e5ea;border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:10px;box-sizing:border-box">
+      <a id="dialer-manual-call" href="#" class="btn btn-dark" style="display:block;width:100%;font-size:14px;padding:12px;text-align:center" onclick="if(this.getAttribute('href')==='#'){event.preventDefault();toast('Enter a valid phone number','error')}">Call from phone</a>
     </div>
 
     <!-- Recent Calls -->
@@ -14631,43 +14636,20 @@ var _callMuted = false;
 var _callOnHold = false;
 
 async function initDialer() {
-  try {
-    var res = await fetch('/api/comms/status');
-    var data = await res.json();
-    var statusEl = document.getElementById('dialer-status-text');
-    var dotEl    = document.getElementById('dialer-status-dot');
-    if (data.twilio) {
-      if (statusEl) statusEl.textContent = '✅ Twilio connected · ' + (data.twilioPhone||'');
-      if (dotEl)    dotEl.style.background = '#34c759';
-    } else {
-      if (statusEl) statusEl.textContent = '⚠️ Twilio not configured — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to Railway';
-      if (dotEl)    dotEl.style.background = '#ff9500';
-    }
-    loadRecentCalls();
-  } catch(e) {}
+  var statusEl = document.getElementById('dialer-status-text');
+  var dotEl = document.getElementById('dialer-status-dot');
+  if (statusEl) statusEl.textContent = 'Calls open on your phone. The server does not dial.';
+  if (dotEl) dotEl.style.background = '#34c759';
+  loadRecentCalls();
 }
 
-async function makeCall(phone, leadId, name, address) {
-  if (!phone) { toast('No phone number', 'error'); return; }
-  var cleaned = phone.replace(/[^0-9]/g,'');
-  if (cleaned.length < 10) { toast('Invalid phone number', 'error'); return; }
 
-  try {
-    var res = await fetch('/api/dialer/call', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: phone, leadId })
-    });
-    var data = await res.json();
-    if (data.ok) {
-      _currentCallSid = data.callSid;
-      showActiveCall(name || 'Unknown', address || phone, data.callSid);
-      toast('📞 Calling ' + (name||phone) + '...', 'success');
-    } else {
-      toast('Call failed: ' + (data.error||'Twilio error'), 'error');
-    }
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+function makeCall(phone) {
+  var href = phoneTelHref(phone);
+  if (!href) { toast('Enter a valid phone number', 'error'); return; }
+  window.location.href = href;
 }
+
 
 function showActiveCall(name, address, callSid) {
   var panel = document.getElementById('active-call-panel');
@@ -14745,7 +14727,7 @@ async function loadRecentCalls() {
             '<div style="font-size:10px;color:#86868b">' + c.to + ' · ' + date + ' · ' + dur + '</div>' +
           '</div>' +
           (sentEmoji ? '<span style="font-size:11px;font-weight:600;color:'+sentColor+'">'+sentEmoji+' '+sentiment+'</span>' : '<span style="font-size:10px;color:#86868b">Analyzing...</span>') +
-          '<button class="btn btn-outline btn-sm" style="font-size:10px;flex-shrink:0;margin-left:6px" onclick="makeCall(\''+c.to+'\',\''+(c.leadId||'')+'\',\''+name.replace(/'/g,'')+'\',\'\')">↩ Call</button>' +
+          (phoneTelHref(c.to) ? '<a class="btn btn-outline btn-sm" style="font-size:10px;flex-shrink:0;margin-left:6px" href="' + phoneTelHref(c.to) + '">Call again</a>' : '') +
         '</div>' +
         (c.recommendation ? '<div style="background:#e8f0fe;border-radius:8px;padding:7px 10px;font-size:11px;color:#0071e3;margin-left:40px"><strong>Next step:</strong> '+c.recommendation+'</div>' : '') +
         (c.lesson ? '<div style="background:#f5f5f7;border-radius:8px;padding:5px 10px;font-size:10px;color:#86868b;margin-left:40px;margin-top:3px">💡 '+c.lesson+'</div>' : '') +
@@ -14823,7 +14805,7 @@ async function loadSMSThread(leadId) {
     panel.innerHTML = '<div style="display:flex;flex-direction:column;height:100%">' +
       '<div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px;background:#fafafa">' +
         '<div style="font-size:14px;font-weight:700;flex:1">' + name + '</div>' +
-        (lead?.phone ? '<button class="btn btn-dark btn-sm" onclick="makeCall(\'' + lead.phone + '\',\'' + leadId + '\',\'' + name + '\',\'' + (lead.address||'').split(',')[0] + '\')">📞 Call</button>' : '') +
+        (phoneTelHref(lead?.phone) ? '<a href="' + phoneTelHref(lead.phone) + '" class="btn btn-dark btn-sm">Call from phone</a>' : '') +
       '</div>' +
       '<div id="sms-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px">' +
         (msgs.length === 0 ? '<div style="text-align:center;color:#86868b;font-size:11px;padding:30px">No messages yet</div>' :
@@ -15188,7 +15170,6 @@ function renderLeadDealAnalysisBlock(lead, buyers, spread) {
 
 function renderLeadOperationsBlock(lead, followups, tz, safe) {
   var lid = lead.id;
-  var callArgs = [lead.phone || '', lead.id || '', lead.owner_name || '', lead.address || ''].map(function(v) { return JSON.stringify(v); }).join(',');
   var html = renderLeadAssignmentState(lead);
   html += '<div class="section-title">Seller Contact</div>';
   html += '<div class="seller-card"><div class="seller-info">';
@@ -15198,7 +15179,7 @@ function renderLeadOperationsBlock(lead, followups, tz, safe) {
   html += '<br>Email: ' + (lead.email||'No email') + '<br>Your time: <strong>' + tz.losCabosTime + '</strong> (Los Cabos)';
   html += '</div></div>';
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px;flex-wrap:wrap">';
-  html += '<a href="#" onclick="event.stopPropagation();makeCall(' + callArgs + ');event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none;font-size:10px;font-weight:700;color:#fff">' + (safe?'CALL':'OFF HRS') + '</a>';
+  html += '<a href="' + (phoneTelHref(lead.phone) || '#') + '" onclick="event.stopPropagation();if(!this.href.startsWith(&quot;tel:&quot;))event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none;font-size:10px;font-weight:700;color:#fff">' + (phoneTelHref(lead.phone)?(safe?'CALL':'OFF HRS'):'NO NUMBER') + '</a>';
   html += '<a href="sms:' + (lead.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none;font-size:10px;font-weight:700;color:#fff">TEXT</a>';
   html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;min-width:90px;padding:8px;background:#5e5ce6;border:none;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;color:#fff">EMAIL</button>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;min-width:90px;text-align:center;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;color:#fff">AI MSG</div>';
@@ -15342,7 +15323,7 @@ function renderLeadDetailLegacy(l) {
 
   // QUICK ACTION BUTTONS
   html += '<div style="display:flex;gap:6px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:10px">';
-  html += '<a href="#" onclick="event.stopPropagation();makeCall(l.phone,l.id,l.owner_name,l.address);event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (safe?'CALL':'OFF HRS') + '</span></a>';
+  html += '<a href="' + (phoneTelHref(l.phone) || '#') + '" onclick="event.stopPropagation();if(!this.href.startsWith(&quot;tel:&quot;))event.preventDefault()" data-action="call" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:' + (safe?'#34c759':'#ff9500') + ';border-radius:8px;text-decoration:none"><span style="font-size:18px">📞</span><span style="font-size:9px;font-weight:600;color:#fff">' + (phoneTelHref(l.phone)?(safe?'CALL':'OFF HRS'):'NO NUMBER') + '</span></a>';
   html += '<a href="sms:' + (l.phone||'') + '" data-action="text" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#0071e3;border-radius:8px;text-decoration:none"><span style="font-size:18px">💬</span><span style="font-size:9px;font-weight:600;color:#fff">TEXT</span></a>';
   html += '<button onclick="event.stopPropagation();openInSystemEmail(\'' + lid + '\')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#5e5ce6;border:none;border-radius:10px;cursor:pointer;"><span style="font-size:18px">&#128231;</span><span style="font-size:9px;font-weight:600;color:#fff;">EMAIL</span></button>';
   html += '<div data-action="ai" data-lid="' + lid + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;background:#1d1d1f;border-radius:8px;cursor:pointer"><span style="font-size:18px">🤖</span><span style="font-size:9px;font-weight:600;color:#fff">AI MSG</span></div>';
@@ -16921,7 +16902,6 @@ function addListeners() {
       const action = el.dataset.action;
       const lid = el.dataset.lid;
       const bid = el.dataset.bid;
-      if (action === 'call') logAction('call', lid);
       if (action === 'text') logAction('text', lid);
       if (action === 'email') logAction('email', lid);
       if (action === 'ai') openAIOutreach(lid);
@@ -20456,8 +20436,8 @@ function renderDialer() {
     <div id="dialer-status-bar" style="background:#f5f5f7;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
       <div style="font-size:24px">📞</div>
       <div>
-        <div style="font-size:13px;font-weight:700">Browser Dialer</div>
-        <div style="font-size:11px;color:#86868b" id="dialer-status-text">Checking Twilio connection...</div>
+        <div style="font-size:13px;font-weight:700">Call from your phone</div>
+        <div style="font-size:11px;color:#86868b" id="dialer-status-text">Calls open your phone dialer. Nothing is sent by the server.</div>
       </div>
       <div style="margin-left:auto">
         <span id="dialer-status-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#86868b"></span>
@@ -20480,8 +20460,8 @@ function renderDialer() {
     <!-- Manual Dial Pad -->
     <div style="background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:20px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:700;margin-bottom:14px">📱 Manual Dial</div>
-      <input id="dial-number" placeholder="Enter phone number to call" style="width:100%;border:2px solid #e5e5ea;border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:10px;box-sizing:border-box">
-      <button class="btn btn-dark" style="width:100%;font-size:14px;padding:12px" onclick="makeCall(document.getElementById('dial-number').value, null, 'Manual Dial', '')">📞 Call Now</button>
+      <input id="dial-number" placeholder="Enter phone number to call" oninput="document.getElementById('dialer-manual-call').href=phoneTelHref(this.value)||'#'" style="width:100%;border:2px solid #e5e5ea;border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:2px;text-align:center;margin-bottom:10px;box-sizing:border-box">
+      <a id="dialer-manual-call" href="#" class="btn btn-dark" style="display:block;width:100%;font-size:14px;padding:12px;text-align:center" onclick="if(this.getAttribute('href')==='#'){event.preventDefault();toast('Enter a valid phone number','error')}">Call from phone</a>
     </div>
 
     <!-- Recent Calls -->
@@ -20649,43 +20629,20 @@ _callMuted = false;
 _callOnHold = false;
 
 async function initDialer() {
-  try {
-    var res = await fetch('/api/comms/status');
-    var data = await res.json();
-    var statusEl = document.getElementById('dialer-status-text');
-    var dotEl    = document.getElementById('dialer-status-dot');
-    if (data.twilio) {
-      if (statusEl) statusEl.textContent = '✅ Twilio connected · ' + (data.twilioPhone||'');
-      if (dotEl)    dotEl.style.background = '#34c759';
-    } else {
-      if (statusEl) statusEl.textContent = '⚠️ Twilio not configured — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER to Railway';
-      if (dotEl)    dotEl.style.background = '#ff9500';
-    }
-    loadRecentCalls();
-  } catch(e) {}
+  var statusEl = document.getElementById('dialer-status-text');
+  var dotEl = document.getElementById('dialer-status-dot');
+  if (statusEl) statusEl.textContent = 'Calls open on your phone. The server does not dial.';
+  if (dotEl) dotEl.style.background = '#34c759';
+  loadRecentCalls();
 }
 
-async function makeCall(phone, leadId, name, address) {
-  if (!phone) { toast('No phone number', 'error'); return; }
-  var cleaned = phone.replace(/[^0-9]/g,'');
-  if (cleaned.length < 10) { toast('Invalid phone number', 'error'); return; }
 
-  try {
-    var res = await fetch('/api/dialer/call', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: phone, leadId })
-    });
-    var data = await res.json();
-    if (data.ok) {
-      _currentCallSid = data.callSid;
-      showActiveCall(name || 'Unknown', address || phone, data.callSid);
-      toast('📞 Calling ' + (name||phone) + '...', 'success');
-    } else {
-      toast('Call failed: ' + (data.error||'Twilio error'), 'error');
-    }
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+function makeCall(phone) {
+  var href = phoneTelHref(phone);
+  if (!href) { toast('Enter a valid phone number', 'error'); return; }
+  window.location.href = href;
 }
+
 
 function showActiveCall(name, address, callSid) {
   var panel = document.getElementById('active-call-panel');
@@ -20763,7 +20720,7 @@ async function loadRecentCalls() {
             '<div style="font-size:10px;color:#86868b">' + c.to + ' · ' + date + ' · ' + dur + '</div>' +
           '</div>' +
           (sentEmoji ? '<span style="font-size:11px;font-weight:600;color:'+sentColor+'">'+sentEmoji+' '+sentiment+'</span>' : '<span style="font-size:10px;color:#86868b">Analyzing...</span>') +
-          '<button class="btn btn-outline btn-sm" style="font-size:10px;flex-shrink:0;margin-left:6px" onclick="makeCall(\''+c.to+'\',\''+(c.leadId||'')+'\',\''+name.replace(/'/g,'')+'\',\'\')">↩ Call</button>' +
+          (phoneTelHref(c.to) ? '<a class="btn btn-outline btn-sm" style="font-size:10px;flex-shrink:0;margin-left:6px" href="' + phoneTelHref(c.to) + '">Call again</a>' : '') +
         '</div>' +
         (c.recommendation ? '<div style="background:#e8f0fe;border-radius:8px;padding:7px 10px;font-size:11px;color:#0071e3;margin-left:40px"><strong>Next step:</strong> '+c.recommendation+'</div>' : '') +
         (c.lesson ? '<div style="background:#f5f5f7;border-radius:8px;padding:5px 10px;font-size:10px;color:#86868b;margin-left:40px;margin-top:3px">💡 '+c.lesson+'</div>' : '') +
@@ -20841,7 +20798,7 @@ async function loadSMSThread(leadId) {
     panel.innerHTML = '<div style="display:flex;flex-direction:column;height:100%">' +
       '<div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px;background:#fafafa">' +
         '<div style="font-size:14px;font-weight:700;flex:1">' + name + '</div>' +
-        (lead?.phone ? '<button class="btn btn-dark btn-sm" onclick="makeCall(\'' + lead.phone + '\',\'' + leadId + '\',\'' + name + '\',\'' + (lead.address||'').split(',')[0] + '\')">📞 Call</button>' : '') +
+        (phoneTelHref(lead?.phone) ? '<a href="' + phoneTelHref(lead.phone) + '" class="btn btn-dark btn-sm">Call from phone</a>' : '') +
       '</div>' +
       '<div id="sms-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px">' +
         (msgs.length === 0 ? '<div style="text-align:center;color:#86868b;font-size:11px;padding:30px">No messages yet</div>' :
