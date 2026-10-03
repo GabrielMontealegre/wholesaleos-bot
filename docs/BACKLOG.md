@@ -10,17 +10,19 @@ Mark the status here as part of each item's PR.
 
 ---
 
-> **Priority order right now (architect, 2026-10-02):** work the open `codex-task` issues in
+> **Priority order right now (architect, 2026-10-03):** work the open `codex-task` issues in
 > exactly this order, then the backlog items:
-> 1. [#223](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/223) server bulk text/email routes still send (safety BLOCKER)
-> 2. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) after-sale lane stores loan dates and lender addresses (truth BLOCKER)
-> 3. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) shared sale-origin allow-list (do it with or right after #229; same list)
-> 4. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) whitespace false supersession
-> 5. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) line-ending-neutral comp-grid fingerprint tests
-> 6. B-00a, then B-00b, then the rest of B-05 and below.
+> 1. [#233](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/233) most API routes need no login; anyone with the URL can read or delete leads (security BLOCKER)
+> 2. [#234](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/234) the server still places phone calls through Twilio (safety BLOCKER, small)
+> 3. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) after-sale lane stores loan dates and lender addresses (truth BLOCKER). If you already traced it, post the trace as a comment on #229 before switching, so it is not lost.
+> 4. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) shared sale-origin allow-list (with or right after #229; same list)
+> 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) whitespace false supersession
+> 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) line-ending-neutral comp-grid fingerprint tests
+> 7. B-00a, then B-00b, then the rest of B-05 and below.
 >
-> A new `codex-task` labeled BLOCKER goes ahead of everything not yet started. End every run
-> with a Run log entry above (AGENTS.md §2).
+> #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
+> BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
+> entry above (AGENTS.md §2).
 
 ## B-00a · County-neutral names everywhere (D-019) · TODO
 
