@@ -45,6 +45,8 @@ corrects them during review.
 | A-011 | 2026-10-01 | The after-sale classifier never sets original-owner contact to true on its own; contact is decided by the shared contact rules (D-018) once wired (confirms B-05b, PR #218). |
 | A-012 | 2026-10-01 | The server never sends texts or emails. Until B-10's tap-to-send exists, server send routes return a disabled response; message previews stay available (issue #223; D-007, D-012). |
 | A-013 | 2026-10-02 | A sale date comes only from a labeled sale field (sale date, date of sale, trustee/foreclosure sale date, auction date, or the "Date, Time, and Place of Sale" section), read by one shared helper. No "first date in the text" fallback anywhere. After-sale records carry `sale_date_origin` and `property_address_origin`; an address in servicer, mortgagee, trustee, attorney, courthouse or "whose address is" context is never a property (issue #229; extends A-006 and A-010). |
+| A-014 | 2026-10-03 | Every `/api` route requires a signed dashboard session by default. The only exceptions sit in one allowlist, each with a reason: login and session endpoints, local-helper routes that check their own agent token, and signed provider webhooks. Existing admin-only routes stay admin-only. No cross-origin wildcard (issue #233). |
+| A-015 | 2026-10-03 | Extends A-012: the server never places phone calls either. Calls go from the operator's own phone (`tel:` links). The Twilio dialer stays off until Gabriel enables a paid provider (D-012) and decides on call recording and the automated greeting (issue #234). |
 
 ## Open questions
 
