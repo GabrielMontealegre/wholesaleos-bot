@@ -13,7 +13,7 @@ Mark the status here as part of each item's PR.
 > **Priority order right now (architect, 2026-10-03):** work the open `codex-task` issues in
 > exactly this order, then the backlog items:
 > 1. [#233](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/233) DONE ([PR #236](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/236)): signed session required across `/api`; anonymous lead reads denied in production; `/health` 200; signed-in dashboard still hydrated Dallas rows and opened a card.
-> 2. [#234](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/234) the server still places phone calls through Twilio (safety BLOCKER, small)
+> 2. [#234](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/234) DONE ([PR #237](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/237)): server voice-token and outbound-call routes return 410; Call controls open `tel:` links without logging a completed call. Full suite 117 passed, 0 failed, 0 skipped. Deployed `/health` 200; Dialer showed the phone link without a call. A transient saved-leads 502 appeared during reload; source rows subsequently hydrated.
 > 3. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) after-sale lane stores loan dates and lender addresses (truth BLOCKER). If you already traced it, post the trace as a comment on #229 before switching, so it is not lost.
 > 4. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) shared sale-origin allow-list (with or right after #229; same list)
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) whitespace false supersession
