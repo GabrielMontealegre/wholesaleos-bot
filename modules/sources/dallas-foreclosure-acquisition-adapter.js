@@ -12,6 +12,7 @@ const sourceEvidenceAdapter = require('../research/source-evidence-adapter');
 const propertyIdentity = require('../research/property-identity');
 const sourceSaleDate = require('../research/resolve-source-sale-date');
 const { normalizeSourceDate } = require('../research/normalize-source-date');
+const noticeFields = require('../research/notice-field-evidence');
 
 const SOURCE_ID = foreclosureNoticeAdapter.SOURCE_ID;
 const SOURCE_URL = foreclosureNoticeAdapter.SOURCE_URL;
@@ -196,6 +197,7 @@ function extractCurrentStatus(text, rawCandidate) {
   ].filter(Boolean).join(' '));
   if (!candidateText) return 'Manual Verification Needed';
   if (/\b(sold|closed|off[- ]?market|historical)\b/i.test(candidateText)) return 'Historical';
+  if (!cleanText(rawCandidate && rawCandidate.sale_date)) return 'Manual Verification Needed';
   if (cleanText(rawCandidate && (rawCandidate.sale_date || rawCandidate.event_date || rawCandidate.auction_date))) {
     return 'Current or plausibly current';
   }
@@ -246,6 +248,8 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
     status_evidence_text: cleanText([raw.sale_date, raw.workflow_status, proofText].filter(Boolean).join(' | ')),
     event_date: cleanText(raw.sale_date),
     sale_date: cleanText(raw.sale_date),
+    sale_date_origin: cleanText(raw.sale_date_origin),
+    property_address_origin: cleanText(raw.property_address_origin),
     sale_date_resolution: raw.sale_date_resolution || null,
     amount_or_judgment: cleanText(raw.amount_or_judgment),
     tax_due: cleanText(raw.tax_due || raw.tax_amount),
@@ -281,6 +285,8 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
     preview_only: true,
     should_ingest: false
   };
+  if (!baseCandidate.sale_date && !baseCandidate.missing_evidence.includes('current listing status'))
+    baseCandidate.missing_evidence.push('current listing status');
   if (!baseCandidate.source_proof_text) baseCandidate.source_proof_text = [baseCandidate.source_row_reference, baseCandidate.motivation_phrase, baseCandidate.current_status].filter(Boolean).join(' | ');
   if (!baseCandidate.parcel_or_account) baseCandidate.parcel_or_account = cleanText(raw.parcel_id || raw.account_number);
   if (!baseCandidate.owner_name_candidate) baseCandidate.owner_name_candidate = cleanText(raw.owner_name || raw.borrower_name);
@@ -303,6 +309,8 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
   normalized.source_proof_url = sourceUrl;
   normalized.source_proof_text = baseCandidate.source_proof_text;
   normalized.sale_date_resolution = baseCandidate.sale_date_resolution;
+  normalized.sale_date_origin = baseCandidate.sale_date_origin;
+  normalized.property_address_origin = baseCandidate.property_address_origin;
   normalized.invalid_sale_date = raw.invalid_sale_date === true;
   normalized.source_diagnostics = {
     source_url_classification: sourceEvidenceAdapter.classifySourceUrl(sourceUrl),
@@ -466,10 +474,12 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
   const rejected = [];
   const postSaleCandidates = [];
   const noticeProfile = countySourceProfiles.profileForSourceId(SOURCE_ID);
-  const retainProvenPast = (raw, saleDate, check, proofUrl, proofText, explicitSaleDate) => {
-    if (!check.stale || !explicitSaleDate || explicitSaleDate !== saleDate ||
+  const retainProvenPast = (raw, saleDate, check, proofUrl, proofText) => {
+    const saleEvidence = noticeFields.labeledSaleDate(proofText);
+    const addressOrigin = noticeFields.propertyAddressOrigin(proofText, raw && (raw.property_address || raw.address));
+    if (!check.stale || !saleEvidence.date || saleEvidence.date !== saleDate || !addressOrigin ||
         !countySourceProfiles.sourceHostAllowed(noticeProfile, proofUrl) ||
-        (!proofText && !cleanText(raw && raw.source_row_reference))) return;
+        !proofText) return;
     const documentUrl = cleanText(raw && raw.source_document_url);
     postSaleCandidates.push({
       source_id: SOURCE_ID,
@@ -482,7 +492,9 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
       property_address: cleanText(raw && (raw.property_address || raw.address)),
       parcel_or_account: cleanText(raw && (raw.parcel_or_account || raw.parcel_id)),
       sale_date: saleDate,
-      sale_date_raw_text: explicitSaleDate,
+      sale_date_raw_text: saleEvidence.date,
+      sale_date_origin: saleEvidence.origin,
+      property_address_origin: addressOrigin,
       sale_date_resolution: check.resolution && check.resolution.status === 'RESOLVED' ? check.resolution : null,
       stale_basis: check.stale_basis,
       sale_outcome: 'OUTCOME_UNKNOWN',
@@ -497,13 +509,13 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     const rawWorkflowStatus = cleanText(raw && (raw.workflow_status || raw.current_status));
     if (/^historical$/i.test(rawWorkflowStatus)) {
       const proofUrl = cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)) || context.source_url || SOURCE_URL;
-      const saleDate = cleanText(raw && (raw.sale_date || raw.event_date || raw.auction_date));
-      const explicitSaleDate = cleanText(raw && (raw.sale_date || raw.auction_date));
       const proofText = cleanText(raw && raw.source_proof_text);
+      const saleEvidence = noticeFields.labeledSaleDate(proofText);
+      const saleDate = saleEvidence.date;
       const check = sourceSaleDate.saleDateStaleness(saleDate, context.reference_date || new Date(), {
         raw_field: 'sale_date', source_adapter_id: SOURCE_ID, source_url: proofUrl, document_text: proofText
       });
-      retainProvenPast(raw, saleDate, check, proofUrl, proofText, explicitSaleDate);
+      retainProvenPast(raw, saleDate, check, proofUrl, proofText);
       rejected.push({
         source_row_reference: cleanText(raw && raw.source_row_reference),
         source_proof_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)),
@@ -514,9 +526,8 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
       continue;
     }
     const rawText = cleanText(raw && (raw.source_proof_text || raw.raw_text || raw.text || raw.source_reference));
-    const saleDateMatch = rawText.match(/(?:sale date|date of sale|trustee sale date|foreclosure sale date)\s*[:\-]?\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i);
-    const saleDate = cleanText(raw && (raw.sale_date || raw.event_date || raw.auction_date || (saleDateMatch && saleDateMatch[1])));
-    const explicitSaleDate = cleanText(raw && (raw.sale_date || raw.auction_date || (saleDateMatch && saleDateMatch[1])));
+    const saleEvidence = noticeFields.labeledSaleDate(rawText);
+    const saleDate = saleEvidence.date;
     const saleProof = {
       raw_field: 'sale_date', source_adapter_id: SOURCE_ID,
       source_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)) || context.source_url || SOURCE_URL,
@@ -524,7 +535,7 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     };
     const saleDateCheck = sourceSaleDate.saleDateStaleness(saleDate, context.reference_date || new Date(), saleProof);
     if (saleDateCheck.stale) {
-      retainProvenPast(raw, saleDate, saleDateCheck, saleProof.source_url, rawText, explicitSaleDate);
+      retainProvenPast(raw, saleDate, saleDateCheck, saleProof.source_url, rawText);
       rejected.push({
         source_row_reference: cleanText(raw && raw.source_row_reference),
         source_proof_url: cleanText(raw && (raw.source_proof_url || raw.source_document_url || raw.source_url)),
@@ -536,6 +547,10 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
       continue;
     }
     accepted.push(Object.assign({}, raw, {
+      sale_date: saleDate,
+      sale_date_origin: saleEvidence.origin,
+      property_address_origin: noticeFields.propertyAddressOrigin(rawText,
+        raw && (raw.property_address || raw.address)),
       sale_date_resolution: saleDateCheck.resolution && saleDateCheck.resolution.status === 'RESOLVED'
         ? { raw_text: saleDate, raw_field: 'sale_date', resolved_iso: saleDateCheck.resolution.resolved_iso,
           rule_ids: saleDateCheck.resolution.rule_ids, source_url: saleProof.source_url, source_adapter_id: SOURCE_ID,

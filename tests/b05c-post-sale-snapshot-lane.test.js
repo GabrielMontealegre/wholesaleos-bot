@@ -28,7 +28,9 @@ const candidate = {
   source_proof_text: 'Property Address: 101 Sample St, Dallas, TX 75201; Sale Date: 2026-05-05',
   source_row_reference: 'page 1 row 1',
   property_address: '101 Sample St, Dallas, TX 75201',
+  property_address_origin: 'property_address_label',
   sale_date: '2026-05-05',
+  sale_date_origin: 'labeled_sale_date',
   sale_outcome: 'OUTCOME_UNKNOWN',
   can_contact_original_owner: false,
   preview_only: true,
@@ -86,23 +88,23 @@ const preview = (items) => ({
   assert.strictEqual(postSaleStore.rejectionReason(noDocument, candidate.source_id), 'generic_source_url');
   assert.strictEqual(postSaleStore.rejectionReason({ ...noDocument,
     source_proof_text: 'Foreclosure notices are posted monthly by the County Clerk.' }, candidate.source_id),
-  'proof_not_property_specific');
+  'address_not_property_field');
   const rowReference = { ...noDocument, property_address: '88 Row St, Dallas, TX 75201',
     source_document_url: 'https://www.dallascounty.org/notices/monthly-list.pdf', source_proof_text: '' };
   assert.strictEqual(postSaleStore.rejectionReason({ ...rowReference, source_row_reference: 'page 1 row 2' },
-    candidate.source_id), '');
+    candidate.source_id), 'address_not_property_field');
   assert.strictEqual(postSaleStore.rejectionReason({ ...candidate,
     source_document_url: 'https://untrusted.example/notice.pdf' }, candidate.source_id), 'untrusted_source');
   assert.strictEqual(postSaleStore.rejectionReason({ ...candidate, source_row_reference: '',
     source_proof_text: 'Property Address: 101 Sample St, Dallas, TX 75201; Sale Date: 2026-06-06' },
-  candidate.source_id), 'proof_not_property_specific');
+  candidate.source_id), 'sale_date_differs_from_proof');
   await queue.runDealBoardBatch({ market, enable_document_reextraction: false }, {
     preview_impl: async () => preview([noDocument, { ...noDocument,
       source_proof_text: 'Foreclosure notices are posted monthly by the County Clerk.' }]),
     enable_document_reextraction: false
   }).then((batch) => {
     assert.strictEqual(batch.batch.post_sale_rejected.generic_source_url, 1);
-    assert.strictEqual(batch.batch.post_sale_rejected.proof_not_property_specific, 1);
+    assert.strictEqual(batch.batch.post_sale_rejected.address_not_property_field, 1);
   });
   assert.strictEqual(queue.latestDealBoardSnapshot({ market }).post_sale_candidate_total, 1);
 
@@ -115,7 +117,9 @@ const preview = (items) => ({
     source_proof_text: 'Property Address: 77 Dup Lane, Dallas, TX 75201; Sale Date: 2026-05-05' };
   await queue.runDealBoardBatch({ market, enable_document_reextraction: false }, {
     preview_impl: async () => preview([duplicate, duplicateSpelling,
-      { ...rowReference, source_row_reference: 'page 1 row 2' }]), enable_document_reextraction: false
+      { ...rowReference, source_row_reference: 'page 1 row 2',
+        source_proof_text: 'Property Address: 88 Row St, Dallas, TX 75201; Sale Date: 2026-05-05' }]),
+    enable_document_reextraction: false
   });
   const deduped = queue.latestDealBoardSnapshot({ market });
   assert.strictEqual(deduped.post_sale_candidate_total, 3);

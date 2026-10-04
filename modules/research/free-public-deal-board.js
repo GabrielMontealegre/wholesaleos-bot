@@ -975,6 +975,8 @@ function dealFromRecord(record, context) {
     zip: parts.zip || ocrReviewZip,
     source_family: family,
     source_id: cleanText(record && record.source_id),
+    sale_date_origin: cleanText(record && record.sale_date_origin),
+    property_address_origin: cleanText(record && record.property_address_origin),
     sale_date_resolution: record && record.sale_date_resolution && typeof record.sale_date_resolution === 'object'
       ? Object.assign({}, record.sale_date_resolution) : null,
     source_name: sourceName(record, family),
@@ -1130,6 +1132,8 @@ function candidateRecord(candidate, source) {
     raw_address_text: cleanText(candidate.raw_address_text || candidate.property_address || candidate.normalized_address),
     source_family: cleanText(candidate.source_family || source.source_family),
     source_id: cleanText(candidate.source_id || source.source_id),
+    sale_date_origin: cleanText(candidate.sale_date_origin),
+    property_address_origin: cleanText(candidate.property_address_origin),
     sale_date_resolution: candidate.sale_date_resolution && typeof candidate.sale_date_resolution === 'object'
       ? Object.assign({}, candidate.sale_date_resolution) : null,
     source_name: cleanText(candidate.source_name || source.source_name),
@@ -1216,6 +1220,8 @@ function cardRecord(card, source) {
   });
   record.normalized_address = cleanText(card && (card.display_address || card.address_or_source_text));
   record.source_id = cleanText(card && card.source_id || source && source.source_id);
+  record.sale_date_origin = cleanText(card && card.sale_date_origin);
+  record.property_address_origin = cleanText(card && card.property_address_origin);
   record.sale_date_resolution = card && card.sale_date_resolution && typeof card.sale_date_resolution === 'object'
     ? Object.assign({}, card.sale_date_resolution) : null;
   record.source_structured_address_verified = card && card.source_structured_address_verified === true;

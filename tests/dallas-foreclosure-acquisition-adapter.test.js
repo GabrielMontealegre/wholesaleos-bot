@@ -8,6 +8,7 @@ const sourceAcquisitionOrchestrator = require('../modules/research/source-acquis
 const sourceAcquisitionScore = require('../modules/research/source-acquisition-score');
 
 (async () => {
+  const futureYear = new Date().getUTCFullYear() + 1;
   assert.ok(sourceAdapterRegistry.adapterForSourceId('tx_dallas_county_clerk_foreclosure_notices'));
   assert.strictEqual(sourceAdapterRegistry.adapterIdForSourceId('tx_dallas_county_clerk_foreclosure_notices'), 'dallas_foreclosure_acquisition_adapter');
   assert.strictEqual(sourceAdapterRegistry.adapterFamilyForSourceId('tx_dallas_county_clerk_foreclosure_notices'), 'pdf_list_adapter');
@@ -16,7 +17,7 @@ const sourceAcquisitionScore = require('../modules/research/source-acquisition-s
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
     'Property Address: 7421 Birch Ave, Dallas, TX 75228',
     'Borrower: Jane Doe',
-    'Sale Date: 07/02/2026',
+    `Sale Date: 07/02/${futureYear}`,
     'Case Number: 2026-12345',
     'Parcel: 123456789',
     'Foreclosure sale notice. Investor special - cash only.',
@@ -24,7 +25,7 @@ const sourceAcquisitionScore = require('../modules/research/source-acquisition-s
     'NOTICE OF SUBSTITUTE TRUSTEE SALE',
     'Property Address: 7423 Birch Ave, Dallas, TX 75228',
     'Borrower: John Smith',
-    'Sale Date: 07/02/2026',
+    `Sale Date: 07/02/${futureYear}`,
     'Case Number: 2026-12346',
     'Parcel: 987654321',
     'Foreclosure sale notice. As-is fixer upper.',

@@ -187,7 +187,7 @@ const countyPageHtml = `
       'NOTICE OF SUBSTITUTE TRUSTEE SALE | Property Address: 7435 Birch Ave, Dallas, TX 75228 | Borrower: Missing Status Buyer | Investor special - cash only. | Case Number: 2026-12352 | Parcel: 888999000'
     ].join('\n'))
   });
-  assert.strictEqual(statusMissing.candidates[0].current_status, 'Current or plausibly current');
+  assert.strictEqual(statusMissing.candidates[0].current_status, 'Manual Verification Needed');
   assert.ok(!cleanText(statusMissing.candidates[0].sale_date));
 
   const directDoc = await runCore({

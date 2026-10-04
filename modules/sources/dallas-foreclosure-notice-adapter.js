@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const realFileParser = require('./dallas-real-file-parser');
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 const sourceSaleDate = require('../research/resolve-source-sale-date');
+const noticeFieldEvidence = require('../research/notice-field-evidence');
 
 const SOURCE_ID = 'tx_dallas_county_clerk_foreclosure_notices';
 const SOURCE_URL = 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php';
@@ -130,13 +131,20 @@ function classifyAddressQuality(address, text) {
 function extractProofBlocks(text) {
   const raw = String(text || '');
   const fullText = cleanText(textFromHtml(raw));
+  const noticeBlocks = raw
+    .replace(/\r/g, '\n')
+    .split(/(?=\bNOTICE\s+OF\s+(?:(?:SUBSTITUTE\s+)?TRUSTEE'?S?|FORECLOSURE)\s+SALE\b)/i)
+    .map((block) => cleanText(textFromHtml(block)))
+    .filter((block) => FORECLOSURE_HINT_RE.test(block) && noticeFieldEvidence.sourcePropertyAddress(block));
   const blocks = raw
     .replace(/\r/g, '\n')
     .split(/\n{1,}|(?=\bNOTICE\b)|(?=\bNotice\b)|(?=\b\d{1,6}\s+[A-Za-z0-9.'# -]{2,80}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|pkwy|parkway|pl|place|trl|trail|way|loop|ter|terrace|hwy|highway|expy|expressway)\b)|(?=\bProperty\s+Address\b)|(?=\bAddress\s*:)/i)
     .map((block) => cleanText(textFromHtml(block)))
     .filter(Boolean)
     .slice(0, MAX_TEXT_BLOCKS);
-  if (FORECLOSURE_HINT_RE.test(fullText) && (STREET_RE.test(fullText) || PARTIAL_ADDRESS_RE.test(fullText))) {
+  if (noticeBlocks.length) {
+    blocks.unshift(...noticeBlocks.slice(0, MAX_TEXT_BLOCKS));
+  } else if (FORECLOSURE_HINT_RE.test(fullText) && (STREET_RE.test(fullText) || PARTIAL_ADDRESS_RE.test(fullText))) {
     blocks.unshift(fullText);
   }
   return blocks;
@@ -155,12 +163,14 @@ function candidateFromBlock(block, context = {}) {
   if (JUNK_RE.test(text) && !FORECLOSURE_HINT_RE.test(text) && !STREET_RE.test(text)) return null;
   if (!FORECLOSURE_HINT_RE.test(text) && !STREET_RE.test(text)) return null;
 
-  const address = normalizeAddress(text);
+  const sourceAddress = noticeFieldEvidence.sourcePropertyAddress(text);
+  const address = normalizeAddress(sourceAddress);
   const addressQuality = classifyAddressQuality(address, text);
   if (addressQuality === 'missing') return null;
   if (addressQuality === 'junk') return null;
 
-  const saleDate = normalizeDate(fieldValue(text, 'sale date|date of sale|trustee sale date|foreclosure sale date') || text);
+  const saleEvidence = noticeFieldEvidence.labeledSaleDate(text);
+  const saleDate = saleEvidence.date;
   const noticeDate = normalizeDate(fieldValue(text, 'notice date|posted date|filed date|recorded date|date recorded'));
   const filingDate = normalizeDate(fieldValue(text, 'filing date|file date|recording date|recorded'));
   const borrower = fieldValue(text, 'borrower|grantor|trustor|mortgagor|debtor');
@@ -181,7 +191,7 @@ function candidateFromBlock(block, context = {}) {
   const staleSaleDate = saleDateCheck.stale;
   const missing = [];
   if (addressQuality !== 'valid') missing.push('complete Dallas property address');
-  if (!saleDate) missing.push('sale date');
+  if (!saleDate) missing.push('sale_date_not_labeled');
   if (staleSaleDate) missing.push('stale sale date');
   if (!proofUrl) missing.push('source proof URL');
   if (!instrument && !caseNumber && !parcel) missing.push('instrument, case, or parcel reference');
@@ -206,6 +216,8 @@ function candidateFromBlock(block, context = {}) {
     lender_name: lender,
     event_type: /trustee/i.test(text) ? 'trustee_notice' : 'foreclosure_notice',
     sale_date: saleDate,
+    sale_date_origin: saleEvidence.origin,
+    property_address_origin: noticeFieldEvidence.propertyAddressOrigin(text, sourceAddress),
     sale_date_resolution: saleDateCheck.resolution && saleDateCheck.resolution.status === 'RESOLVED'
       ? { raw_text: saleDate, raw_field: 'sale_date', resolved_iso: saleDateCheck.resolution.resolved_iso,
         rule_ids: saleDateCheck.resolution.rule_ids, source_url: proofUrl, source_adapter_id: SOURCE_ID,
@@ -222,7 +234,7 @@ function candidateFromBlock(block, context = {}) {
     source_record_url: proofUrl,
     source_proof_url: proofUrl,
     source_reference: context.source_reference || 'Dallas County Clerk foreclosure notice evidence',
-    source_proof_text: text.slice(0, 650),
+    source_proof_text: realFileParser.noticeWindowForAddress(text, text.indexOf(sourceAddress)),
     raw_text: text.slice(0, 1200),
     captured_at: context.captured_at || nowIso(),
     extraction_confidence: workflowStatus === 'Research Ready' ? 'Medium' : 'Low',

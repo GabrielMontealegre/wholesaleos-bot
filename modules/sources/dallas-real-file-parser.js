@@ -6,6 +6,7 @@ const path = require('path');
 
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 const propertyIdentity = require('../research/property-identity');
+const noticeFieldEvidence = require('../research/notice-field-evidence');
 
 const MAX_FILE_LINKS = 8;
 const MAX_FILE_BYTES = 6 * 1024 * 1024;
@@ -34,7 +35,7 @@ const BLOCKED_PAGE_RE = /\b(captcha|human verification|verify you are human|acce
 const JUNK_ROW_RE = /\b(contact us|phone directory|public information request|privacy policy|terms of use|site map|newsletter|department directory)\b/i;
 const PARTIAL_ADDRESS_RE = /\b(?:property\s+address|address)\s*[:#-]\s*([^|;\n]{2,100})/i;
 const DALLAS_NOTICE_RE = /\b(?:notice\s+of\s+.{0,14}trustee'?s?\s+sale|substitute\s+trustee'?s?\s+sale|foreclosure\s+sale|trustee\s+sale)\b/i;
-const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|suite\s+\d{1,5})\b/i;
+const NON_PROPERTY_ADDRESS_CONTEXT_RE = noticeFieldEvidence.NON_PROPERTY_ADDRESS_CONTEXT_RE;
 const STREET_ADDRESS_RE = /\b\d{1,7}\s+[A-Za-z0-9][A-Za-z0-9 .#'/-]{1,90}?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?(?:\s+(?:apt|unit|#)\s*[A-Za-z0-9-]+)?(?:\s*,?\s+(?:Dallas|Irving|Garland|Mesquite|Grand Prairie|Cedar Hill|Duncanville|DeSoto|Lancaster|Richardson|Balch Springs|Carrollton|Farmers Branch|Rowlett|Sachse|Seagoville|Sunnyvale|Wilmer|University Park|Highland Park|Glenn Heights|Addison|Coppell|Hutchins|Cockrell Hill))?(?:\s*,?\s+(?:TX|Texas))?(?:\s*,?\s+\d{5}(?:-\d{4})?)?/ig;
 const DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
 const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
@@ -69,14 +70,7 @@ function labeledValue(text, pattern) {
 }
 
 function saleDateFromNoticeText(text) {
-  const source = cleanText(text);
-  const labeled = source.match(/\b(?:sale\s+date|date\s+of\s+sale|trustee\s+sale\s+date|foreclosure\s+sale\s+date|auction\s+date)\b\s*[:#-]?\s*([^|;\n]{4,80})/i);
-  const labeledDate = cleanText(labeled && labeled[1]).match(DATE_RE);
-  if (labeledDate) return cleanText(labeledDate[0]);
-  const saleSection = source.match(/date,?\s+time,?\s+and\s+place\s+of\s+sale\.?\s*(?:date\s*[:#-]?\s*)?([^|;]{4,120})/i);
-  const saleSectionDate = cleanText(saleSection && saleSection[1]).match(DATE_RE);
-  if (saleSectionDate) return cleanText(saleSectionDate[0]);
-  return '';
+  return noticeFieldEvidence.labeledSaleDate(text).date;
 }
 
 function noticeWindowForAddress(text, addressIndex) {
@@ -102,11 +96,14 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
   let match;
   while ((match = STREET_ADDRESS_RE.exec(source))) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
+    NON_PROPERTY_ADDRESS_CONTEXT_RE.lastIndex = 0;
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
     const address = canonicalDallasAddress(match[0]);
     if (!address) continue;
     if (/\b(500\s+elm\s+street|133\s+n\.?\s+riverfront\s+boulevard|1201\s+elm\s+street)\b/i.test(address)) continue;
     const windowText = noticeWindowForAddress(source, match.index);
+    const addressOrigin = noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]);
+    if (!addressOrigin) continue;
     const saleDate = saleDateFromNoticeText(windowText);
     const key = `${context.source_proof_url}|${address}|${saleDate}`.toLowerCase();
     if (seen.has(key)) continue;
@@ -141,6 +138,8 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
       parcel_id: parcel,
       apn: parcel,
       sale_date: saleDate,
+      sale_date_origin: noticeFieldEvidence.labeledSaleDate(windowText).origin,
+      property_address_origin: addressOrigin,
       auction_date: saleDate,
       event_type: 'Notice of Substitute Trustee Sale',
       source_text: proofText,
@@ -151,7 +150,7 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
       source_record_url: cleanText(context.source_proof_url),
       source_proof_url: cleanText(context.source_proof_url),
       source_reference: cleanText(context.source_reference || 'official Dallas foreclosure PDF notice'),
-      source_proof_text: proofText.slice(0, 800),
+      source_proof_text: windowText,
       raw_text: proofText.slice(0, 1200),
       missing_evidence: missing,
       extraction_method: 'dallas_foreclosure_pdf_notice_parser',
@@ -812,6 +811,7 @@ async function runDallasRealFileParser(options = {}) {
 }
 
 module.exports = {
+  noticeWindowForAddress,
   classifyFileLink,
   isSafeDallasOfficialFileUrl,
   parseOfficialFileLink,

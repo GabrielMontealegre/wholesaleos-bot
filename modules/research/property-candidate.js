@@ -186,6 +186,8 @@ function normalizePropertyCandidate(input, context) {
     event_date_origin: cleanText(input.event_date_origin || (input.event_date ? 'event_date'
       : input.sale_date ? 'sale_date' : input.auction_date ? 'auction_date' : '')),
     sale_date: cleanText(input.sale_date),
+    sale_date_origin: cleanText(input.sale_date_origin),
+    property_address_origin: cleanText(input.property_address_origin),
     sale_date_resolution: input.sale_date_resolution && typeof input.sale_date_resolution === 'object'
       ? Object.assign({}, input.sale_date_resolution) : null,
     source_date: cleanText(input.source_date),
@@ -390,6 +392,8 @@ function candidateToFindMeCard(candidate, context) {
     filing_period_evidence_text: candidate.filing_period_evidence_text,
     sale_date_or_event_date: candidate.event_date,
     sale_date_or_event_date_origin: candidate.event_date_origin,
+    sale_date_origin: candidate.sale_date_origin,
+    property_address_origin: candidate.property_address_origin,
     sale_date_resolution: candidate.sale_date_resolution,
     source_date: candidate.source_date,
     current_status: candidate.current_status,
