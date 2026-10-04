@@ -40,6 +40,7 @@ function row(queueKey, market, overrides) {
     motivation_evidence_text: 'Official notice of trustee sale.',
     source_url: `https://county.example.gov/notices/${queueKey}`,
     source_document_url: `https://county.example.gov/notices/${queueKey}.pdf`,
+    sale_date_or_event_date_origin: 'sale_date',
     owner_clue: 'JANE SAMPLE',
     property_kind: 'single family',
     sqft: 1500,

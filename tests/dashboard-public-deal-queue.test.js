@@ -32,6 +32,7 @@ function mockDeal(overrides) {
     source_url: 'https://www.dallascounty.org/government/county-clerk/recording/foreclosures.php',
     source_document_url: 'https://www.dallascounty.org/department/countyclerk/media/foreclosure/May/Dallas_1.pdf',
     sale_date_or_event_date: '2026-12-01',
+    sale_date_or_event_date_origin: 'sale_date',
     source_date: '2026-12-01',
     last_checked_at: '2026-09-09T10:00:00.000Z',
     minimum_bid: '$50,000',
@@ -780,6 +781,7 @@ function mockDeal(overrides) {
     headline: '500 Past Sale St, Dallas, TX 75201',
     normalized_address: '500 Past Sale St, Dallas, TX 75201',
     sale_date_or_event_date: yesterday,
+    sale_date_or_event_date_origin: 'sale_date',
     sale_date_iso: null,
     next_best_action: 'CALL_SELLER'
   });

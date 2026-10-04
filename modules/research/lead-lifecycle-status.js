@@ -1,5 +1,7 @@
 'use strict';
 
+const saleDateOrigin = require('./sale-date-origin');
+
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
@@ -43,7 +45,13 @@ function duplicateSuperseded(row) {
 
 function computeLifecycleStatus(row, nowIso) {
   const today = dateOnly(cleanText(nowIso).slice(0, 10)) || dateOnly(new Date().toISOString().slice(0, 10));
-  const saleIso = dateOnly(row && (row.sale_date_iso || row.sale_date_or_event_date));
+  const rawEventDate = cleanText(row && (row.sale_date_or_event_date || row.event_date));
+  const rawEventOrigin = cleanText(row && (row.sale_date_or_event_date
+    ? row.sale_date_or_event_date_origin : row.event_date_origin));
+  const nonSaleOrigin = rawEventDate &&
+    !saleDateOrigin.isSaleDateOrigin(rawEventOrigin,
+      row.source_adapter_id || row.source_id) && !saleDateOrigin.SALE_DATE_ORIGINS.some((field) => cleanText(row[field]));
+  const saleIso = nonSaleOrigin ? '' : dateOnly(row && (row.sale_date_iso || row.sale_date_or_event_date));
   const sourceDateFields = [
     ['source_date', row && row.source_date],
     ['sale_date_iso', row && row.sale_date_iso],
@@ -95,10 +103,9 @@ function computeLifecycleStatus(row, nowIso) {
   if (sourceNoLongerListed) {
     return out('SOURCE_NO_LONGER_LISTED', 'ABSENT_FROM_LATEST_MONTHLY_LIST', 'The row is absent from the latest monthly source list. Its outcome is unknown; verify against current official evidence.', 'source_listing_status');
   }
-  if (['posted_at', 'date', 'filed_date', 'created_at'].includes(cleanText(row && row.sale_date_or_event_date_origin)) &&
-      !cleanText(row && (row.sale_date || row.auction_date))) {
+  if (nonSaleOrigin) {
     return out('DATE_UNKNOWN_REVERIFY', 'NON_SALE_DATE_ORIGIN',
-      'The source date is a filing, posting, or record-creation date, not a proven sale date; reverify before contact.',
+      'The source date is not labeled as a sale date; verify the sale date from the source.',
       'sale_date_or_event_date_origin');
   }
   const hasNewDatedRepost = !!(repostDateIso && repostEvidence && repostUrl && (!saleIso || repostDateIso > saleIso));

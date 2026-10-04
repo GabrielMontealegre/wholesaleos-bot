@@ -1,5 +1,7 @@
 'use strict';
 
+const saleDateOrigin = require('./sale-date-origin');
+
 const crypto = require('crypto');
 
 const callPrepProjection = require('./call-prep-projection');
@@ -603,20 +605,19 @@ function statusEvidenceFromRecord(record) {
 }
 
 function eventDateFromRecord(record) {
-  const explicitOrigin = cleanText(record && (record.sale_date_or_event_date_origin || record.event_date_origin));
-  if (['posted_at', 'date', 'filed_date', 'created_at'].includes(explicitOrigin)) {
-    for (const field of ['sale_date', 'auction_date']) {
-      const value = cleanText(record && record[field]);
-      if (value) return { value, origin: field };
-    }
-  }
-  for (const field of ['sale_date_or_event_date', 'event_date', 'sale_date', 'auction_date', 'posted_at', 'date']) {
+  const candidates = [];
+  for (const field of [...saleDateOrigin.GENERIC_DATE_FIELDS, ...saleDateOrigin.SALE_DATE_ORIGINS,
+    'hearing_date', 'filed_date', 'created_at', 'posted_at', 'date']) {
     const value = cleanText(record && record[field]);
-    if (value) return { value, origin: field === 'sale_date_or_event_date'
+    if (!value) continue;
+    const origin = field === 'sale_date_or_event_date'
       ? cleanText(record.sale_date_or_event_date_origin)
-      : field === 'event_date' ? cleanText(record.event_date_origin) || field : field };
+      : field === 'event_date' ? cleanText(record.event_date_origin) || field : field;
+    candidates.push({ value, origin });
   }
-  return { value: '', origin: '' };
+  const sourceId = cleanText(record && (record.source_adapter_id || record.source_id));
+  return candidates.find((item) => saleDateOrigin.isSaleDateOrigin(item.origin, sourceId)) ||
+    candidates[0] || { value: '', origin: '' };
 }
 
 function propertySpecificUrl(value) {

@@ -101,7 +101,7 @@ const eventRow = {
   source_structured_address_verified: true, source_document_url: 'https://county.example.test/notice/1',
   source_proof_text: 'Property address: 100 Main St, Dallas, TX 75201',
   source_family: 'tx_foreclosure_notice', county: 'Dallas', state: 'TX', city: 'Dallas',
-  sale_date_or_event_date: '10/06/2026', sale_date_iso: '2026-10-06'
+  sale_date_or_event_date: '10/06/2026', sale_date_or_event_date_origin: 'sale_date', sale_date_iso: '2026-10-06'
 };
 const quarantined = queueService.lifecycleStatusWithNormalizedDates(eventRow, '2026-09-28T00:00:00Z');
 assert.strictEqual(quarantined.reason_code, 'NO_SOURCE_DATE_EVIDENCE',

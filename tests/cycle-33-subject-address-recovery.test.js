@@ -27,6 +27,7 @@ function storedRow(overrides) {
     source_url: fixture.source_url,
     sale_date_iso: '2026-10-06',
     sale_date_or_event_date: '2026-10-06',
+    sale_date_or_event_date_origin: 'sale_date',
     sale_date_evidence_text: 'Official Ellis County notice states the October 6, 2026 sale date.',
     property_identity_source_only: true,
     source_structured_address_verified: true,

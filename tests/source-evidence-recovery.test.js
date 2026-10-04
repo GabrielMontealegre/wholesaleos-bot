@@ -62,6 +62,20 @@ function row(overrides) {
     assert.strictEqual(dated.lifecycle_after.status, 'FRESH');
     assert.strictEqual(dated.lifecycle_after.quarantined, false);
     assert.deepStrictEqual(dated.recovered_dates.map((item) => item.field), ['sale_date_or_event_date']);
+    assert.strictEqual(dated.row.sale_date_or_event_date_origin, 'sale_date');
+
+    const genericEvent = recovery.recoverRow(row({
+      status_evidence_text: 'Event date: September 20, 2026.'
+    }), { now_iso: NOW });
+    assert.strictEqual(genericEvent.row.sale_date_or_event_date, '2026-09-20');
+    assert.strictEqual(genericEvent.row.sale_date_or_event_date_origin, 'event_date');
+    assert.strictEqual(genericEvent.lifecycle_after.reason_code, 'NON_SALE_DATE_ORIGIN');
+
+    const ambiguousSale = recovery.recoverRow(row({
+      status_evidence_text: 'Sale date: 10/06/2026.'
+    }), { now_iso: NOW });
+    assert.strictEqual(ambiguousSale.row.sale_date_or_event_date, undefined);
+    assert.deepStrictEqual(ambiguousSale.recovered_dates, []);
 
     const passed = recovery.recoverRow(row({
       sale_date_iso: '2026-09-01',

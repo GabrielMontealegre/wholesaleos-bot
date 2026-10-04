@@ -1,5 +1,7 @@
 'use strict';
 
+const saleDateOrigin = require('./sale-date-origin');
+
 const crypto = require('crypto');
 
 const leadEvidence = require('./lead-evidence');
@@ -182,9 +184,13 @@ function normalizePropertyCandidate(input, context) {
     motivation_evidence_text: cleanText(input.motivation_evidence_text || input.source_excerpt || input.source_text || input.source_page_text || input.source_proof_text || input.description || input.snippet),
     current_status: cleanText(input.current_status || input.listing_status || input.status),
     status_evidence_text: cleanText(input.status_evidence_text || input.status_source_text || input.current_status || input.listing_status),
-    event_date: cleanText(input.event_date || input.sale_date || input.auction_date),
-    event_date_origin: cleanText(input.event_date_origin || (input.event_date ? 'event_date'
-      : input.sale_date ? 'sale_date' : input.auction_date ? 'auction_date' : '')),
+    event_date: cleanText(input.event_date && saleDateOrigin.isSaleDateOrigin(
+      input.event_date_origin || 'event_date', input.source_adapter_id || input.source_id)
+      ? input.event_date : input.sale_date || input.auction_date || input.event_date),
+    event_date_origin: cleanText(input.event_date && saleDateOrigin.isSaleDateOrigin(
+      input.event_date_origin || 'event_date', input.source_adapter_id || input.source_id)
+      ? input.event_date_origin || 'event_date' : input.sale_date ? 'sale_date'
+        : input.auction_date ? 'auction_date' : input.event_date_origin || (input.event_date ? 'event_date' : '')),
     sale_date: cleanText(input.sale_date),
     sale_date_origin: cleanText(input.sale_date_origin),
     property_address_origin: cleanText(input.property_address_origin),

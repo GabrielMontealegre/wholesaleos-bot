@@ -73,7 +73,7 @@ function run() {
   assert.strictEqual(normalizeSourceDate('October 2026').reason, 'incomplete_date', 'K4 month and year');
   assert.strictEqual(normalizeSourceDate('2026').reason, 'incomplete_date', 'K4 year only');
 
-  const sourceDateRow = verifiedRow({ sale_date_or_event_date: 'October 6, 2026', source_date: 'Oct 1, 2026',
+  const sourceDateRow = verifiedRow({ sale_date_or_event_date: 'October 6, 2026', sale_date_or_event_date_origin: 'sale_date', source_date: 'Oct 1, 2026',
     reposted_source_date: 'September 30, 2026' });
   const verbatimBefore = JSON.stringify({ sale_date_or_event_date: sourceDateRow.sale_date_or_event_date,
     source_date: sourceDateRow.source_date, reposted_source_date: sourceDateRow.reposted_source_date });
@@ -87,7 +87,7 @@ function run() {
   assert.strictEqual(JSON.stringify({ sale_date_or_event_date: sourceDateRow.sale_date_or_event_date,
     source_date: sourceDateRow.source_date, reposted_source_date: sourceDateRow.reposted_source_date }), verbatimBefore, 'K5 verbatim source values unchanged');
 
-  const future = verifiedRow({ sale_date_or_event_date: 'October 6, 2026' });
+  const future = verifiedRow({ sale_date_or_event_date: 'October 6, 2026', sale_date_or_event_date_origin: 'sale_date' });
   const prior = lifecycle.computeLifecycleStatus(future, '2026-09-25T12:00:00Z');
   const after = service.lifecycleStatusWithNormalizedDates(future, '2026-09-25T12:00:00Z');
   assert.strictEqual(prior.reason_code, 'NO_SOURCE_DATE_EVIDENCE', 'K6 baseline is date-unknown');
@@ -95,11 +95,11 @@ function run() {
   assert.strictEqual(after.reason_code, 'FUTURE_SALE_DATE', 'K6 existing future-date reason');
   assert.strictEqual(after.quarantined, false, 'K6 no longer quarantined');
 
-  const ambiguous = verifiedRow({ sale_date_or_event_date: '06/10/2026' });
+  const ambiguous = verifiedRow({ sale_date_or_event_date: '06/10/2026', sale_date_or_event_date_origin: 'sale_date' });
   const ambiguousStatus = service.lifecycleStatusWithNormalizedDates(ambiguous, '2026-09-25T12:00:00Z');
   assert.strictEqual(ambiguousStatus.status, 'DATE_UNKNOWN_REVERIFY', 'K7 ambiguous remains quarantined');
   assert.strictEqual(ambiguousStatus.reason_code, 'NO_SOURCE_DATE_EVIDENCE', 'K7 reason unchanged');
-  assert.strictEqual(service.lifecycleStatusWithNormalizedDates(verifiedRow({ sale_date_or_event_date: 'September 1, 2026' }), '2026-09-25T12:00:00Z').status,
+  assert.strictEqual(service.lifecycleStatusWithNormalizedDates(verifiedRow({ sale_date_or_event_date: 'September 1, 2026', sale_date_or_event_date_origin: 'sale_date' }), '2026-09-25T12:00:00Z').status,
     'SALE_PASSED', 'K8 past date keeps existing rule');
 
   const staleMap = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueAddress)}`;
@@ -172,7 +172,7 @@ function run() {
   assert.strictEqual(gatesFixture.ready_to_offer, 'NO', 'K14 offer readiness never becomes YES');
 
   const snapshot = { version: 1, store_kind: 'deal_board_snapshots_not_saved_leads', markets: {
-    'ennis|ellis|tx': { market: { city: 'Ennis', county: 'Ellis', state: 'TX' }, rows: [verifiedRow({ sale_date_or_event_date: 'October 6, 2026', maps_url: staleMap })], batches: [] }
+    'ennis|ellis|tx': { market: { city: 'Ennis', county: 'Ellis', state: 'TX' }, rows: [verifiedRow({ sale_date_or_event_date: 'October 6, 2026', sale_date_or_event_date_origin: 'sale_date', maps_url: staleMap })], batches: [] }
   } };
   fs.writeFileSync(snapshotPath, JSON.stringify(snapshot));
   const snapshotBefore = fs.readFileSync(snapshotPath);

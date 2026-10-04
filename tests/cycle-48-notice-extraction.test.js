@@ -131,7 +131,8 @@ async function run() {
   assert.strictEqual(notice.officialUrl('https://www.elliscountytx.gov/ArchiveCenter/ViewFile/Item/5233').startsWith('https:'), true);
 
   const store = { version: 1, markets: { 'dallas|dallas|tx': {
-    market, rows: [makeRow({ sale_date_or_event_date: 'source date not yet verified' })], batches: []
+    market, rows: [makeRow({ sale_date_or_event_date: 'source date not yet verified',
+      sale_date_or_event_date_origin: 'sale_date' })], batches: []
   } } };
   fs.writeFileSync(snapshotFile, JSON.stringify(store));
   fs.writeFileSync(dbFile, JSON.stringify({ leads: [] }));
