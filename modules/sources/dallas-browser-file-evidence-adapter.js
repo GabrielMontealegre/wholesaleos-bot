@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const propertyIdentity = require('../research/property-identity');
+const noticeFieldEvidence = require('../research/notice-field-evidence');
 
 const MAX_EVIDENCE_LINKS = 10;
 const MAX_ATTEMPTS = 5;
@@ -157,7 +158,8 @@ function candidateFromBlock(block, context) {
   const sourceUrl = cleanText(context.source_proof_url || context.source_url);
   if (!text) return null;
 
-  const address = normalizeAddress(text);
+  const sourceAddress = noticeFieldEvidence.sourcePropertyAddress(text);
+  const address = normalizeAddress(sourceAddress);
   if (address && DALLAS_OFFICIAL_OFFICE_ADDRESS_RE.test(address)) return null;
   if (!address && context.include_junk_candidate === true && JUNK_RE.test(text)) {
     return {
@@ -178,7 +180,8 @@ function candidateFromBlock(block, context) {
   const ownerName = fieldValue(text, 'owner|owner name|defendant|taxpayer');
   const parcel = fieldValue(text, 'parcel|parcel id|parcel no|account|account no|acct|tax account|apn');
   const caseNumber = fieldValue(text, 'case|case no|cause|cause no|suit|suit no');
-  const saleDate = normalizeDate(fieldValue(text, 'sale date|auction date|date') || text);
+  const saleEvidence = noticeFieldEvidence.labeledSaleDate(text);
+  const saleDate = saleEvidence.date;
   const openingBid = parseMoney(fieldValue(text, 'opening bid|minimum bid|min bid|bid amount'));
   const taxAmount = parseMoney(fieldValue(text, 'tax amount|tax due|taxes due|amount due'));
   const judgmentAmount = parseMoney(fieldValue(text, 'judgment|judgement|judgment amount'));
@@ -199,6 +202,8 @@ function candidateFromBlock(block, context) {
     case_number: caseNumber,
     owner_name: ownerName,
     sale_date: saleDate,
+    sale_date_origin: saleEvidence.origin,
+    property_address_origin: noticeFieldEvidence.propertyAddressOrigin(text, sourceAddress),
     auction_date: saleDate,
     opening_bid: openingBid,
     tax_amount: taxAmount,
@@ -209,7 +214,7 @@ function candidateFromBlock(block, context) {
     source_reference: context.source_reference || 'official evidence text',
     source_url: context.source_url,
     source_record_url: sourceUrl,
-    source_proof_text: text.slice(0, 500),
+    source_proof_text: text.slice(Math.max(0, text.indexOf(sourceAddress) - 250), text.indexOf(sourceAddress) + 1450),
     raw_text: text.slice(0, 1000),
     missing_evidence: missing,
     extraction_method: 'dallas_browser_file_evidence_adapter',

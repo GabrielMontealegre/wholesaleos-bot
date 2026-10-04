@@ -1,4 +1,5 @@
 'use strict';
+const noticeFieldEvidence = require('./notice-field-evidence');
 
 // Texas trustee/foreclosure notice text extractor - county-configurable.
 // Generalized from the proven Dallas PDF notice parser: same honesty guards
@@ -10,7 +11,7 @@ const GATE_RE = /\b(?:property\s+address|date\s+of\s+sale|sale\s+date|date,?\s+t
 const DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
 const CASE_RE = /\b(?:case|cause|suit|instrument|document|file)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Za-z0-9-]{3,40})/i;
 const OWNER_RE = /\b(?:borrower|mortgagor|grantor|debtor|owner)\s*(?:name)?\s*[:#-]?\s*([^|;\n]{2,100})/i;
-const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|(?:mortgage\s+)?servicer\s+address|mortgagee\s+address|beneficiary\s+address|trustee\s+address|lender\s+address|escrow\s+address|auction(?:eer|\s+company)?\s+address|registered\s+agent\s+address|government\s+office|county\s+clerk\s+address|sheriff'?s?\s+office|suite\s+\d{1,5}|place\s*of\s*sale|sale\s+location|auction\s+venue|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/i;
+const NON_PROPERTY_ADDRESS_CONTEXT_RE = noticeFieldEvidence.NON_PROPERTY_ADDRESS_CONTEXT_RE;
 const STREET_SUFFIX = "(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)";
 const TABULAR_NOTICE_HEADER_RE = /\bDOCUMENT\s*NUMBER\s*TYPE\s*ADDRESS\s*CITY\/TOWN\s*ZIP\b/i;
 const TABULAR_NOTICE_ROW_RE = /^\s*([A-Z0-9-]{5,24})\s+(MORTGAGE|TAX)\s+(.+?)\s+(\d{5})(?:\s|$)/i;
@@ -33,13 +34,7 @@ function streetAddressRe(cityNames) {
 }
 
 function saleDateFromWindow(text) {
-  const source = cleanText(text);
-  const labeled = source.match(/\b(?:sale\s+date|date\s+of\s+sale|trustee\s+sale\s+date|foreclosure\s+sale\s+date|auction\s+date)\b\s*[:#-]?\s*([^|;\n]{4,80})/i);
-  const labeledDate = cleanText(labeled && labeled[1]).match(DATE_RE);
-  if (labeledDate) return cleanText(labeledDate[0]);
-  const section = source.match(/date,?\s+time,?\s+and\s+place\s+of\s+sale\.?\s*(?:date\s*[:#-]?\s*)?([^|;]{4,120})/i);
-  const sectionDate = cleanText(section && section[1]).match(DATE_RE);
-  return sectionDate ? cleanText(sectionDate[0]) : '';
+  return noticeFieldEvidence.labeledSaleDate(text).date;
 }
 
 function noticeWindow(source, index) {
@@ -230,6 +225,7 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
   let match;
   while ((match = addressRe.exec(source))) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
+    NON_PROPERTY_ADDRESS_CONTEXT_RE.lastIndex = 0;
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
     if (/\b(?:trustee'?s?|servicer'?s?|mortgagee'?s?|beneficiary'?s?)\s+address\s*[:#-]?\s*$/i.test(precedingContext)) continue;
     const address = cleanText(match[0]).replace(/\s+,/g, ',');
@@ -242,6 +238,8 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
     if (excludedRe && excludedRe.test(address)) continue;
     const structuredAddress = completeSourceAddress(address, profile.city_names);
     const windowText = noticeWindow(source, match.index);
+    const addressOrigin = noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]);
+    if (!addressOrigin) continue;
     const saleDate = saleDateFromWindow(windowText);
     const key = `${cleanText(context.source_proof_url)}|${address.toLowerCase()}|${saleDate}`;
     if (seen.has(key)) continue;
@@ -263,10 +261,12 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
       owner_name: ownerFromWindow(windowText),
       case_number: /\d/.test(caseCandidate) ? caseCandidate : '',
       sale_date: saleDate,
+      sale_date_origin: noticeFieldEvidence.labeledSaleDate(windowText).origin,
+      property_address_origin: addressOrigin,
       auction_date: saleDate,
       event_type: 'Notice of Trustee/Foreclosure Sale',
       source_text: proofText,
-      source_proof_text: proofText.slice(0, 800),
+      source_proof_text: windowText,
       raw_text: proofText.slice(0, 1200),
       source_url: cleanText(context.source_url),
       source_document_url: cleanText(context.source_proof_url),

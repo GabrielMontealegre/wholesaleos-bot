@@ -909,6 +909,8 @@ function projectRowForQueue(deal, dedupeKey, seenAt) {
     coordinate_source: cleanText(deal.coordinate_source) || null,
     sale_date_or_event_date: cleanText(deal.sale_date_or_event_date) || null,
     sale_date_or_event_date_origin: cleanText(deal.sale_date_or_event_date_origin) || null,
+    sale_date_origin: cleanText(deal.sale_date_origin) || null,
+    property_address_origin: cleanText(deal.property_address_origin) || null,
     sale_date_iso: ['posted_at', 'date', 'filed_date', 'created_at'].includes(
       cleanText(deal.sale_date_or_event_date_origin)) ? null : parseSaleDateIso(deal.sale_date_or_event_date),
     sale_date_resolution: deal.sale_date_resolution && typeof deal.sale_date_resolution === 'object'
@@ -1411,7 +1413,7 @@ async function runDealBoardBatch(input = {}, options = {}) {
     'source_structured_address_verified', 'property_identity_source_only',
     'distress_evidence', 'research_links',
     'rejected_reason',
-    'sale_date_or_event_date', 'sale_date_or_event_date_origin', 'sale_date_iso', 'sale_date_resolution',
+    'sale_date_or_event_date', 'sale_date_or_event_date_origin', 'sale_date_origin', 'property_address_origin', 'sale_date_iso', 'sale_date_resolution',
     'sale_date_resolution_superseded', 'source_adapter_id', 'source_date', 'current_status', 'status_evidence_text',
     'source_listing_status', 'source_no_longer_listed', 'reposted_source_date', 'reposted_source_evidence_text',
     'reposted_source_url', 'replacement_source_date', 'replacement_source_evidence_text', 'replacement_source_url',
@@ -1573,6 +1575,7 @@ function latestDealBoardSnapshot(input = {}) {
     lead_operations_queue: leadOperationsQueueForResponse([]),
     post_sale_candidates: [],
     post_sale_candidate_total: 0,
+    post_sale_invalidated: 0,
     rows: []
     };
   }
