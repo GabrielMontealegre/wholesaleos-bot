@@ -333,6 +333,7 @@
     var items = safeArray(data && data.post_sale_candidates);
     var visible = items.slice(0, 20);
     var total = Number(data && data.post_sale_candidate_total) || items.length;
+    var invalidated = Math.max(0, Number(data && data.post_sale_invalidated) || 0);
     var body = visible.length ? visible.map(function (item) {
       var url = String(item.source_url || '');
       var sourceLink = /^https:\/\//i.test(url) ? link('Official source', url) : 'Official source link unavailable';
@@ -345,6 +346,7 @@
         '</div>';
     }).join('') : '<div style="font-size:12px;color:#6b7280;">No past-sale notices have been retained for this market yet.</div>';
     if (total > visible.length) body += '<div style="font-size:11px;color:#6b7280;">Showing ' + esc(visible.length) + ' of ' + esc(total) + ' retained notices.</div>';
+    body += '<div style="font-size:11px;color:#6b7280;">Excluded after proof review: ' + esc(invalidated) + '</div>';
     return panelBox('After the sale · ' + esc(total),
       'Separate from active leads. A passed date does not prove a completed sale or a current owner.', body, '#d1d5db');
   }

@@ -858,7 +858,7 @@ function mockDeal(overrides) {
 
   // 5) Dashboard renders the section: script tag wired, UI shows required fields.
   const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=53'), 'dashboard must load the current cache-busted public deals script');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=54'), 'dashboard must load the current cache-busted public deals script');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes\/extract'/g) || []).length, 4, 'all duplicated buy-box extract actions must use guarded auth headers');
   assert.strictEqual((indexHtml.match(/writeAdminJson\('\/api\/buyboxes'/g) || []).length, 2, 'both duplicated buy-box save actions must use guarded auth headers');
   assert.ok(!indexHtml.includes('Default PIN:') && !indexHtml.includes('Admin (1234) sees everything'), 'shipped dashboard help must not display a PIN literal');
@@ -915,7 +915,7 @@ function mockDeal(overrides) {
   assert.ok(uiSource.includes('parcel only - no street address on the public record'), 'parcel-only public-record comps must render an explicit non-address label');
   assert.ok(uiSource.includes('Research contacts - not the seller'), 'dashboard must separate non-seller research contacts');
   assert.ok(uiSource.includes('SELLER_CONTACT_ELIGIBLE') && uiSource.includes('wos-copy-seller-number'), 'dashboard must gate seller call and copy controls on eligibility');
-  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=53'), 'dashboard must load the current secure helper workbench');
+  assert.ok(indexHtml.includes('/dashboard/wos-public-deals.js?v=54'), 'dashboard must load the current secure helper workbench');
   assert.ok(uiSource.includes('Provider estimate (clue only; not a sold comp)'), 'provider estimate must be labeled as a clue, not a sold comp');
   assert.ok(uiSource.includes('Site estimate (not a sold comp)'), 'confirmed site estimates must remain visibly separate from comps');
   assert.ok(uiSource.includes('foreclosure_type') && uiSource.includes('Type: <b>'), 'dashboard must render foreclosure type');
@@ -1119,6 +1119,13 @@ function mockDeal(overrides) {
       source_url: 'https://www.dallascounty.org/official-notice.pdf', sale_outcome: 'OUTCOME_UNKNOWN' }]
   }), [], '');
   assert.ok(afterSalePanels.includes('After the sale') && afterSalePanels.includes('101 Synthetic Past St'));
+  assert.ok(afterSalePanels.includes('Excluded after proof review: 0'));
+  const invalidatedAfterSalePanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard',
+    Object.assign({}, packetFixture, { post_sale_candidates: [], post_sale_candidate_total: 0,
+      post_sale_invalidated: 2 }), [], '');
+  assert.ok(invalidatedAfterSalePanels.includes('After the sale · 0'));
+  assert.ok(invalidatedAfterSalePanels.includes('Excluded after proof review: 2'));
+  assert.ok(!invalidatedAfterSalePanels.includes('101 Synthetic Past St'));
   assert.ok(afterSalePanels.includes('Outcome unknown') && afterSalePanels.includes('may have been postponed, cancelled or completed'));
   assert.ok(!afterSalePanels.includes('former owner'));
   const boundedAfterSalePanels = uiContext.window.__wosPublicDealsTestHooks.panelsForPage('dashboard',
