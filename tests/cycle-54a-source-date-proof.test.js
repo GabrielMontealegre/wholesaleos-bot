@@ -54,7 +54,7 @@ assert.strictEqual(resolve('02/30/2026').status, 'INVALID');
 assert.strictEqual(normalizeSourceDate('10/06/2026').reason, 'ambiguous_numeric_order');
 
 const dateRow = (raw, overrides = {}) => Object.assign({
-  sale_date_or_event_date: raw, source_id: notice.SOURCE_ID,
+  sale_date_or_event_date: raw, sale_date_or_event_date_origin: 'sale_date', source_id: notice.SOURCE_ID,
   source_url: notice.SOURCE_URL, source_document_url: notice.SOURCE_URL,
   source_proof_text: `Date of Sale: ${raw}`, normalized_address: '123 Test St, Dallas, TX 75201'
 }, overrides);
@@ -106,6 +106,7 @@ assert.strictEqual(ambiguousScaffold.contact, 'LOCKED');
 
 const operatorConfirmed = rowStates(Object.assign({}, derivedScaffold, {
   sale_date_or_event_date: '2026-10-06',
+  sale_date_or_event_date_origin: 'sale_date',
   notice_confirmations: [{ field: 'sale_date', value: '2026-10-06',
     operator_id: 'fixture-operator', confirmed_at: '2026-09-24T12:00:00Z' }]
 }));
@@ -114,14 +115,14 @@ assert.strictEqual(operatorConfirmed.lifecycle.quarantined, false);
 assert.strictEqual(operatorConfirmed.lifecycle.reason_code, 'FUTURE_SALE_DATE');
 
 const newerRaw = queue.deriveSourceDates(Object.assign({}, derivedScaffold, {
-  sale_date_or_event_date: 'October 7, 2026'
+  sale_date_or_event_date: 'October 7, 2026', sale_date_or_event_date_origin: 'sale_date'
 }));
 assert.strictEqual(newerRaw.sale_date_iso, '2026-10-07', 'B1: current raw beats old ISO');
 assert.strictEqual(rowStates(newerRaw).lifecycle.status, 'FRESH');
 assert(newerRaw.sale_date_resolution_superseded && newerRaw.sale_date_resolution_superseded.superseded_at);
 
 const olderRaw = queue.deriveSourceDates(Object.assign({}, derivedScaffold, {
-  sale_date_or_event_date: 'October 6, 2026', source_event_date: '2026-10-07'
+  sale_date_or_event_date: 'October 6, 2026', sale_date_or_event_date_origin: 'sale_date', source_event_date: '2026-10-07'
 }));
 assert.strictEqual(olderRaw.sale_date_iso, '2026-10-06', 'B1: current raw beats old source_event_date');
 assert.strictEqual(rowStates(olderRaw).lifecycle.status, 'FRESH');

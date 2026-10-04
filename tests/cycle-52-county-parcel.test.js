@@ -33,6 +33,7 @@ function row(key, extra = {}) {
   return Object.assign({ queue_key: key, county: 'Ellis', state: 'TX', normalized_address: address,
     address_state: 'complete_source_address', preview_only: true, not_a_saved_lead: true,
     source_event_date: '2026-10-06', sale_date_iso: '2026-10-06', sale_date_or_event_date: 'October 6, 2026',
+    sale_date_or_event_date_origin: 'sale_date',
     source_url: 'https://www.elliscad.org/property-search',
     arv_status: 'LOCKED', ready_to_offer: 'NO', confirmed_strict_comp_count: 0,
     verified_sold_comp_count: 0, lifecycle_status: { status: 'FRESH', quarantined: false } }, extra);

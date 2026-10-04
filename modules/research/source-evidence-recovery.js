@@ -3,6 +3,7 @@
 const distressEvidenceModel = require('./distress-evidence-model');
 const leadLifecycleStatus = require('./lead-lifecycle-status');
 const propertyAddressEvidence = require('./property-address-evidence');
+const { normalizeSourceDate } = require('./normalize-source-date');
 
 const EVIDENCE_FIELDS = Object.freeze([
   'source_proof_text',
@@ -10,14 +11,9 @@ const EVIDENCE_FIELDS = Object.freeze([
   'status_evidence_text'
 ]);
 
-const MONTHS = Object.freeze({
-  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
-  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
-});
-
 const DATE_TEXT = '(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\/\\d{1,2}\\/\\d{4}|(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},?\\s+\\d{4})';
 const DATE_RULES = Object.freeze([
-  { field: 'sale_date_or_event_date', pattern: new RegExp(`\\b(?:sale|auction|event)\\s+date\\s*(?:is|:|-|of|on)?\\s*(${DATE_TEXT})`, 'i') },
+  { field: 'sale_date_or_event_date', pattern: new RegExp(`\\b(sale|auction|event)\\s+date\\s*(?:is|:|-|of|on)?\\s*(${DATE_TEXT})`, 'i'), date_group: 2 },
   { field: 'notice_date', pattern: new RegExp(`\\bnotice\\s+date\\s*(?:is|:|-|of|on)?\\s*(${DATE_TEXT})`, 'i') },
   { field: 'filing_date', pattern: new RegExp(`\\b(?:filing\\s+date\\s*(?:is|:|-|of|on)?|filed\\s+on)\\s*(${DATE_TEXT})`, 'i') },
   { field: 'source_published_at', pattern: new RegExp(`\\b(?:posting\\s+date\\s*(?:is|:|-|of|on)?|posted\\s+on|publication\\s+date\\s*(?:is|:|-|of|on)?|published\\s+on)\\s*(${DATE_TEXT})`, 'i') }
@@ -36,22 +32,8 @@ function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
 }
 
-function validIsoDate(year, month, day) {
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
 function dateToIso(value) {
-  const text = cleanText(value);
-  let match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) return validIsoDate(Number(match[1]), Number(match[2]), Number(match[3]));
-  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) return validIsoDate(Number(match[3]), Number(match[1]), Number(match[2]));
-  match = text.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
-  if (!match) return '';
-  const month = MONTHS[match[1].toLowerCase()];
-  return month ? validIsoDate(Number(match[3]), month, Number(match[2])) : '';
+  return normalizeSourceDate(cleanText(value)).iso || '';
 }
 
 function evidenceSegments(row) {
@@ -72,9 +54,12 @@ function recoverDates(row, segments) {
     for (const rule of DATE_RULES) {
       if (cleanText(row && row[rule.field])) continue;
       const match = segment.evidence_text.match(rule.pattern);
-      const iso = match && dateToIso(match[1]);
+      const iso = match && dateToIso(match[rule.date_group || 1]);
       if (!iso) continue;
       row[rule.field] = iso;
+      if (rule.field === 'sale_date_or_event_date') {
+        row.sale_date_or_event_date_origin = `${match[1].toLowerCase()}_date`;
+      }
       recovered.push({
         field: rule.field,
         value: iso,

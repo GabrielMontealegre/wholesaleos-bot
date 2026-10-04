@@ -1,5 +1,7 @@
 'use strict';
 
+const saleDateOrigin = require('./sale-date-origin');
+
 function cleanText(value) {
   return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
 }
@@ -257,10 +259,18 @@ function sourceUrlFrom(job, lead) {
 }
 
 function resolvePropertyIdentityFromExistingFields(job, lead, sourceUrl) {
-  const eventDate = pickWithOrigin(lead, [
-    'event_date', 'auction_date', 'sale_date', 'hearing_date', 'filed_date', 'created_at',
+  const eventDateCandidates = [
+    ...saleDateOrigin.SALE_DATE_ORIGINS, 'event_date', 'hearing_date', 'filed_date', 'created_at',
     'source_details.event_date', 'source_truth.event_date', '_courthouse_metadata.auction_date'
-  ]);
+  ].map((key) => pickWithOrigin(lead, [key])).filter((item) => item.value !== '').map((item) => ({
+    value: item.value,
+    origin: item.origin === 'event_date' || item.origin.endsWith('.event_date')
+      ? cleanText(pick(lead, [item.origin.replace(/event_date$/, 'event_date_origin')])) || item.origin
+      : item.origin.endsWith('.auction_date') ? 'auction_date' : item.origin
+  }));
+  const sourceId = cleanText(pick(lead, ['source_adapter_id', 'source_id']) || pick(job, ['source_adapter_id', 'source_id']));
+  const eventDate = eventDateCandidates.find((item) => saleDateOrigin.isSaleDateOrigin(item.origin, sourceId)) ||
+    eventDateCandidates[0] || { value: '', origin: '' };
   lead = lead || {};
   job = job || {};
   const sourceIdentity = extractPropertyIdentityFromSourceUrl(sourceUrl);
