@@ -225,10 +225,22 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
   let match;
   while ((match = addressRe.exec(source))) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
+    if (/\d\s+$/.test(precedingContext)) continue;
     NON_PROPERTY_ADDRESS_CONTEXT_RE.lastIndex = 0;
-    if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
-    if (/\b(?:trustee'?s?|servicer'?s?|mortgagee'?s?|beneficiary'?s?)\s+address\s*[:#-]?\s*$/i.test(precedingContext)) continue;
-    const address = cleanText(match[0]).replace(/\s+,/g, ',');
+    if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext) ||
+        /\b(?:trustee'?s?|servicer'?s?|mortgagee'?s?|beneficiary'?s?)\s+address\s*[:#-]?\s*$/i.test(precedingContext)) {
+      if (Array.isArray(context.rejected_candidates) && context.rejected_candidates.length < 20) {
+        context.rejected_candidates.push({ source_proof_url: cleanText(context.source_proof_url),
+          source_proof_text: cleanText(source.slice(Math.max(0, match.index - 140), Math.min(source.length, addressRe.lastIndex + 50))),
+          source_row_reference: cleanText(match[0]), reason: 'address_not_property_field' });
+      }
+      continue;
+    }
+    const windowText = noticeWindow(source, match.index);
+    const nominated = noticeFieldEvidence.activeNoticeAddress(windowText);
+    if (nominated.address && !noticeFieldEvidence.sameStreet(match[0], nominated.address) &&
+        !cleanText(match[0]).toLowerCase().includes(nominated.address.split(',')[0].toLowerCase())) continue;
+    const address = nominated.address || cleanText(match[0]).replace(/\s+,/g, ',');
     // Require a zip, or at least a known city from the county profile -
     // "123 Somewhere Rd, TX" alone is too weak to present as a property.
     const hasZip = /\b(?:TX|Texas)\s+\d{5}(?:-\d{4})?\b/i.test(address);
@@ -237,24 +249,20 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
     if (!hasZip && !hasKnownCity) continue;
     if (excludedRe && excludedRe.test(address)) continue;
     const structuredAddress = completeSourceAddress(address, profile.city_names);
-    const windowText = noticeWindow(source, match.index);
-    const addressOrigin = noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]);
-    if (!addressOrigin) continue;
+    const addressOrigin = nominated.origin || noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]) || 'unlabeled';
     const saleDate = saleDateFromWindow(windowText);
     const key = `${cleanText(context.source_proof_url)}|${address.toLowerCase()}|${saleDate}`;
     if (seen.has(key)) continue;
     seen.add(key);
     const caseCandidate = cleanText((windowText.match(CASE_RE) || [])[1]);
-    const proofText = [
-      `Property Address: ${address}`,
-      saleDate ? `Sale Date: ${saleDate}` : '',
-      windowText
-    ].filter(Boolean).join(' | ');
+    const addressExcerpt = cleanText(source.slice(Math.max(0, match.index - 40),
+      Math.min(source.length, match.index + match[0].length + 55)));
+    const proofText = [addressExcerpt, windowText].filter(Boolean).join(' | ');
     rows.push({
       address,
       property_address: address,
-      normalized_address: structuredAddress,
-      source_structured_address_verified: !!structuredAddress,
+      normalized_address: addressOrigin === 'unlabeled' ? '' : structuredAddress,
+      source_structured_address_verified: addressOrigin !== 'unlabeled' && !!structuredAddress,
       property_identity_source_only: true,
       county,
       state: cleanText(profile.state) || 'TX',
@@ -266,13 +274,13 @@ function extractTrusteeNoticeRows(text, profile = {}, context = {}) {
       auction_date: saleDate,
       event_type: 'Notice of Trustee/Foreclosure Sale',
       source_text: proofText,
-      source_proof_text: windowText,
+      source_proof_text: `${addressExcerpt} | ${windowText}`,
       raw_text: proofText.slice(0, 1200),
       source_url: cleanText(context.source_url),
       source_document_url: cleanText(context.source_proof_url),
       source_proof_url: cleanText(context.source_proof_url),
       source_reference: cleanText(context.source_reference || `official ${county} County foreclosure notice document`),
-      missing_evidence: [].concat(saleDate ? [] : ['sale or auction date']),
+      missing_evidence: [].concat(saleDate ? [] : ['sale or auction date'], addressOrigin === 'unlabeled' ? ['property address label not found'] : []),
       extraction_method: 'tx_trustee_notice_text_extractor',
       extraction_confidence: saleDate ? 'Medium' : 'Low',
       preview_only: true,

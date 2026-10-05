@@ -250,6 +250,8 @@ function candidateFromRaw(rawCandidate, context, sourceMeta) {
     sale_date: cleanText(raw.sale_date),
     sale_date_origin: cleanText(raw.sale_date_origin),
     property_address_origin: cleanText(raw.property_address_origin),
+    property_identity_source_only: raw.property_identity_source_only === true || cleanText(raw.property_address_origin) === 'unlabeled',
+    source_structured_address_verified: raw.source_structured_address_verified === true && cleanText(raw.property_address_origin) !== 'unlabeled',
     sale_date_resolution: raw.sale_date_resolution || null,
     amount_or_judgment: cleanText(raw.amount_or_judgment),
     tax_due: cleanText(raw.tax_due || raw.tax_amount),
@@ -477,7 +479,8 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
   const retainProvenPast = (raw, saleDate, check, proofUrl, proofText) => {
     const saleEvidence = noticeFields.labeledSaleDate(proofText);
     const addressOrigin = noticeFields.propertyAddressOrigin(proofText, raw && (raw.property_address || raw.address));
-    if (!check.stale || !saleEvidence.date || saleEvidence.date !== saleDate || !addressOrigin ||
+    if (!check.stale || !saleEvidence.date || saleEvidence.date !== saleDate ||
+        !noticeFields.PROPERTY_ADDRESS_ORIGINS.has(addressOrigin) ||
         !countySourceProfiles.sourceHostAllowed(noticeProfile, proofUrl) ||
         !proofText) return;
     const documentUrl = cleanText(raw && raw.source_document_url);
@@ -549,8 +552,9 @@ function buildCandidatesFromRaw(rawCandidates, records, context, source) {
     accepted.push(Object.assign({}, raw, {
       sale_date: saleDate,
       sale_date_origin: saleEvidence.origin,
-      property_address_origin: noticeFields.propertyAddressOrigin(rawText,
-        raw && (raw.property_address || raw.address)),
+      property_address_origin: cleanText(raw && raw.property_address_origin) === 'unlabeled'
+        ? 'unlabeled' : noticeFields.propertyAddressOrigin(rawText,
+          raw && (raw.property_address || raw.address)),
       sale_date_resolution: saleDateCheck.resolution && saleDateCheck.resolution.status === 'RESOLVED'
         ? { raw_text: saleDate, raw_field: 'sale_date', resolved_iso: saleDateCheck.resolution.resolved_iso,
           rule_ids: saleDateCheck.resolution.rule_ids, source_url: saleProof.source_url, source_adapter_id: SOURCE_ID,
@@ -612,6 +616,7 @@ async function parseManualDocumentCandidates(options, source, context, rawCandid
   const parserCandidates = Array.isArray(manualResult.candidates) ? manualResult.candidates : [];
   return {
     candidates: parserCandidates,
+    rejected_candidates: Array.isArray(manualResult.rejected_candidates) ? manualResult.rejected_candidates : [],
     cards: [],
     attempts: Array.isArray(manualResult.attempts) ? manualResult.attempts : [],
     blocked_reason: cleanText(manualResult.blocked_reason || ''),
@@ -685,6 +690,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       max_rows: LIVE_PREVIEW_MAX_ROWS,
       reference_date: capturedAt
     }, source);
+    built.rejected.push(...(filePreview.rejected_candidates || []));
     const staleRejectedCount = Number(filePreview && filePreview.stale_sale_date_count || 0) || 0;
     if (staleRejectedCount > 0 && Array.isArray(built.candidates) && built.candidates.length) {
       built.rejected = Array.isArray(built.rejected) ? built.rejected : [];
@@ -857,6 +863,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
       max_rows: LIVE_PREVIEW_MAX_ROWS,
       reference_date: capturedAt
     }, source);
+    built.rejected.push(...(officialPreview.rejected_candidates || []), ...(manualPreview.rejected_candidates || []));
     const livePreview = summarizePreviewArtifacts({
       source_url_checked: sourceUrl,
       source_document_url_checked: sourceDocumentUrl,
@@ -941,12 +948,14 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     return result;
   }
 
+  const addressRejections = [];
   const rawCandidates = foreclosureNoticeAdapter.extractForeclosureNoticeCandidatesFromText(combinedText, {
     source_url: sourceUrl,
     source_proof_url: sourceDocumentUrl || sourceUrl,
     source_reference: 'Dallas County Clerk foreclosure notice preview',
     max_rows: maxRows,
-    captured_at: capturedAt
+    captured_at: capturedAt,
+    rejected_candidates: addressRejections
   });
   const enrichedRawCandidates = rawCandidates.map((candidate) => {
     const matchingRecord = records.find((record) => normalizedAddressKey(record.property_address) && normalizedAddressKey(candidate.property_address) === normalizedAddressKey(record.property_address))
@@ -992,6 +1001,7 @@ async function runDallasForeclosureAcquisitionAdapter(options = {}) {
     max_rows: maxRows,
     reference_date: capturedAt
   }, source);
+  built.rejected.push(...addressRejections);
   const diagnostics = diagnosticsFromCandidates(built.candidates, enrichedRawCandidates, records, combinedText, sourceHtml, sourceUrl, sourceDocumentUrl, sourceLinks);
   diagnostics.invalid_sale_date_count = built.candidates.filter((candidate) => candidate.invalid_sale_date === true).length;
   const result = {

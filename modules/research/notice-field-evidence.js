@@ -1,12 +1,13 @@
 'use strict';
 
 const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
+const { SUBJECT_PROPERTY_LABEL_PATTERN } = require('./subject-property-labels');
 
 const DATE_RE = /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})\b/i;
 const SALE_LABEL_RE = /\b(?:trustee\s+sale\s+date|foreclosure\s+sale\s+date|auction\s+date|sale\s+date|date\s+of\s+sale(?:\s+of\s+property)?)\s*[:#-]?\s*/gi;
 const SALE_SECTION_RE = /\bdate,?\s+time,?\s+and\s+place\s+of\s+sale\b/gi;
-const STREET_RE = /\b\d{1,7}\s+(?:(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\.?\s+)?[A-Za-z][A-Za-z0-9.'/-]*(?:\s+[A-Za-z0-9.'/-]+){0,7}?\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?/gi;
-const PROPERTY_LABEL_RE = /\b(?:property\s+address|commonly\s+known\s+as|property\s+to\s+be\s+sold)\s*[:#-]?/gi;
+const STREET_RE = /\b\d{1,7}\s+(?:(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\.?\s+)?[A-Za-z][A-Za-z0-9.'/-]*(?:\s+[A-Za-z][A-Za-z0-9.'/-]*){0,7}?\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?/gi;
+const PROPERTY_LABEL_RE = new RegExp(SUBJECT_PROPERTY_LABEL_PATTERN, 'gi');
 const NON_PROPERTY_ADDRESS_CONTEXT_RE = /\b(?:attorneys?\s+at\s+law|law\s+(?:firm|offices?)|office\s+center|c\/o|whose\s+address\s+is|my\s+address\s+is|certificate\s+of\s+posting|return\s+to|mail\s+to|mortgage\s+servicer\s+is|(?:mortgage\s+)?servicer\s+address|mortgagee\s+address|beneficiary\s+address|trustee\s+address|lender\s+address|escrow\s+address|auction(?:eer|\s+company)?\s+address|registered\s+agent\s+address|government\s+office|county\s+clerk\s+address|sheriff'?s?\s+office|suite\s+\d{1,5}|place\s*of\s*sale|sale\s+location|auction\s+venue|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/i;
 const SALE_DATE_ORIGINS = new Set(['labeled_sale_date', 'sale_section_date']);
 const PROPERTY_ADDRESS_ORIGINS = new Set(['property_address_label', 'commonly_known_as', 'property_to_be_sold']);
@@ -55,6 +56,8 @@ function propertyAddressOrigin(text, address) {
   const streetRe = new RegExp(STREET_RE.source, 'gi');
   let match;
   while ((match = streetRe.exec(source))) {
+    if (source[match.index - 1] === ':' || /^0+\s/.test(match[0]) ||
+        /\d\s+$/.test(source.slice(Math.max(0, match.index - 15), match.index))) continue;
     if (address && !sameStreet(match[0], address)) continue;
     const label = latestMatchBefore(PROPERTY_LABEL_RE, source, match.index);
     if (!label) continue;
@@ -66,7 +69,8 @@ function propertyAddressOrigin(text, address) {
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(intervening)) continue;
     if (/property\s+address/i.test(label[0])) return 'property_address_label';
     if (/commonly\s+known\s+as/i.test(label[0])) return 'commonly_known_as';
-    return 'property_to_be_sold';
+    if (/property\s+to\s+be\s+sold/i.test(label[0])) return 'property_to_be_sold';
+    return 'subject_property_label';
   }
   return '';
 }
@@ -76,6 +80,8 @@ function sourcePropertyAddress(text) {
   const streetRe = new RegExp(STREET_RE.source, 'gi');
   let match;
   while ((match = streetRe.exec(source))) {
+    if (source[match.index - 1] === ':' || /^0+\s/.test(match[0]) ||
+        /\d\s+$/.test(source.slice(Math.max(0, match.index - 15), match.index))) continue;
     if (propertyAddressOrigin(source, match[0])) {
       const rest = source.slice(match.index, Math.min(source.length, streetRe.lastIndex + 75));
       return clean(rest.match(/^.*?\b(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)\b\.?(?:\s*,?\s*[A-Za-z][A-Za-z .'-]*,?\s*(?:TX|Texas|[A-Z]{2})\s*\d{5}(?:-\d{4})?)?/i)?.[0] || match[0]);
@@ -84,7 +90,30 @@ function sourcePropertyAddress(text) {
   return '';
 }
 
+function activeNoticeAddress(text) {
+  const labeled = sourcePropertyAddress(text);
+  if (labeled) return { address: labeled, origin: propertyAddressOrigin(text, labeled) };
+  const source = clean(text);
+  const streetRe = new RegExp(STREET_RE.source, 'gi');
+  const candidates = new Map();
+  let match;
+  while ((match = streetRe.exec(source))) {
+    if (source[match.index - 1] === ':' || /^0+\s/.test(match[0]) ||
+        /\d\s+$/.test(source.slice(Math.max(0, match.index - 15), match.index))) continue;
+    const tail = source.slice(streetRe.lastIndex, streetRe.lastIndex + 85);
+    const location = tail.match(/^\s*,?\s*([A-Za-z][A-Za-z .'-]{1,40}?)\s*,\s*(TX|Texas)\s+(\d{5})(?:-\d{4})?\b/i);
+    if (!location) continue;
+    const before = source.slice(Math.max(0, match.index - 140), match.index);
+    if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(before)) continue;
+    const address = `${clean(match[0])}, ${clean(location[1])}, TX ${location[3]}`;
+    const parsed = canonicalizeAddress(address);
+    if (!parsed.number || !parsed.street || !parsed.suffix || !parsed.city || !parsed.zip) continue;
+    candidates.set(parsed.canonical_string, address);
+  }
+  return candidates.size === 1 ? { address: [...candidates.values()][0], origin: 'unlabeled' } : { address: '', origin: '' };
+}
+
 module.exports = {
   SALE_DATE_ORIGINS, PROPERTY_ADDRESS_ORIGINS, NON_PROPERTY_ADDRESS_CONTEXT_RE,
-  labeledSaleDate, propertyAddressOrigin, sourcePropertyAddress, sameStreet
+  labeledSaleDate, propertyAddressOrigin, sourcePropertyAddress, activeNoticeAddress, sameStreet
 };

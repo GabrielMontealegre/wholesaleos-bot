@@ -486,6 +486,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
   const selectedDocumentUrls = documentSelection.slice(0, MAX_DOCS_PER_COUNTY);
   const documentUrlsLedgerSkipped = documentDocsDiscovered - documentSelection.length;
   const scannedDocs = [];
+  const rejectedCandidates = [];
   for (const selected of selectedDocumentUrls) {
     const url = selected.url;
     const doc = await fetchBounded(url, options, true);
@@ -506,7 +507,8 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
       }, {
         source_url: profile.source_url,
         source_proof_url: proofUrl,
-        source_reference: `official ${profile.county} County foreclosure notice document`
+        source_reference: `official ${profile.county} County foreclosure notice document`,
+        rejected_candidates: rejectedCandidates
       }));
       recordDocumentLedgerAttempt(documentLedger, url, selected.postingMonth, 'done', parserSignature);
     } else {
@@ -596,6 +598,7 @@ async function runTxCountyForeclosureAcquisitionAdapter(options = {}) {
     candidates,
     cards,
     candidate_count: candidates.length,
+    rejected_candidates: rejectedCandidates,
     discovered_links: discoveredLinks,
     document_urls_found: documentUrlsFound,
     document_urls_parsed: documentUrlsParsed,
