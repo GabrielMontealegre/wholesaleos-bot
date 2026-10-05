@@ -2,6 +2,7 @@
 
 const propertyIdentity = require('./property-identity');
 const { NON_PROPERTY_ADDRESS_CONTEXT_RE } = require('./tx-trustee-notice-text-extractor');
+const { SUBJECT_PROPERTY_LABEL_PATTERN } = require('./subject-property-labels');
 
 const STREET_SUFFIX = '(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pl|place|pkwy|parkway|hwy|highway|ter|terrace|trl|trail|loop)';
 const ADDRESS_RE = new RegExp(
@@ -9,7 +10,7 @@ const ADDRESS_RE = new RegExp(
   "\\s*,?\\s+([A-Za-z][A-Za-z .'-]{0,40}?)\\s*,\\s*(TX|Texas|[A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)\\b",
   'ig'
 );
-const SUBJECT_CONTEXT_RE = /\b(?:property\s+address|(?:property\s+)?commonly\s+known\s+as|real\s+property\s+(?:located|known)\s+at|situs\s+address|subject\s+property)\s*[:#-]?/ig;
+const SUBJECT_CONTEXT_RE = new RegExp(SUBJECT_PROPERTY_LABEL_PATTERN, 'ig');
 const SALE_VENUE_CONTEXT_RE = /\b(?:place\s*of\s*sale|sale\s+location|auction\s+venue|courthouse|front\s+steps|area\s+(?:immediately\s+)?outside)\b/ig;
 const FULL_MONTH = '(?:January|February|March|April|May|June|July|August|September|October|November|December)';
 const STRICT_DATE_PREFIX = `(?:19\\d{2}|20\\d{2}|${FULL_MONTH}\\s+\\d{1,2}(?:,\\s*|\\s+)\\d{4}|\\d{2}\\/\\d{2}\\/\\d{4}|\\d{4}-\\d{2}-\\d{2})`;

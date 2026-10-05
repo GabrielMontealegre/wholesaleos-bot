@@ -871,6 +871,7 @@ function allowedSourceMissingFields(deal) {
 }
 
 function nextBestAction(deal) {
+  if (deal.property_address_origin === 'unlabeled') return 'Confirm the property address from the notice';
   if (deal.quality_bucket === QUALITY_BUCKETS.NEEDS_ZIP_REVIEW) {
     return deal.ocr_address_review ? 'VERIFY_ADDRESS_FROM_SOURCE_DOCUMENT' : 'VERIFY_ZIP_FROM_SOURCE_DOCUMENT';
   }

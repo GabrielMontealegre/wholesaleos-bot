@@ -457,6 +457,9 @@ async function runDallasForeclosureDocumentHunter(options = {}) {
     source_preview: sourcePreview,
     document_hunter_summary: documentHunterSummary,
     candidates: combinedCandidates,
+    rejected_candidates: [].concat(
+      allowOfficialPreviewArtifacts && Array.isArray(officialPreview.rejected_candidates) ? officialPreview.rejected_candidates : [],
+      Array.isArray(parserResult.rejected_candidates) ? parserResult.rejected_candidates : []),
     cards,
     candidate_count: combinedCandidates.length,
     blocked_reason: combinedCandidates.length ? '' : (officialPreview.blocked_reason || parserResult.blocked_reason || 'no_callable_document_hunter_candidates'),

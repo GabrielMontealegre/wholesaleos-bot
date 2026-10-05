@@ -7,6 +7,7 @@ const path = require('path');
 const browserFileEvidenceAdapter = require('./dallas-browser-file-evidence-adapter');
 const propertyIdentity = require('../research/property-identity');
 const noticeFieldEvidence = require('../research/notice-field-evidence');
+const propertyAddressEvidence = require('../research/property-address-evidence');
 
 const MAX_FILE_LINKS = 8;
 const MAX_FILE_BYTES = 6 * 1024 * 1024;
@@ -96,14 +97,17 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
   let match;
   while ((match = STREET_ADDRESS_RE.exec(source))) {
     const precedingContext = source.slice(Math.max(0, match.index - 140), match.index);
+    if (/\d\s+$/.test(precedingContext)) continue;
     NON_PROPERTY_ADDRESS_CONTEXT_RE.lastIndex = 0;
     if (NON_PROPERTY_ADDRESS_CONTEXT_RE.test(precedingContext)) continue;
-    const address = canonicalDallasAddress(match[0]);
+    const windowText = noticeWindowForAddress(source, match.index);
+    const nominated = noticeFieldEvidence.activeNoticeAddress(windowText);
+    if (nominated.address && !noticeFieldEvidence.sameStreet(match[0], nominated.address) &&
+        !cleanText(match[0]).toLowerCase().includes(nominated.address.split(',')[0].toLowerCase())) continue;
+    const address = canonicalDallasAddress(nominated.address || match[0]);
     if (!address) continue;
     if (/\b(500\s+elm\s+street|133\s+n\.?\s+riverfront\s+boulevard|1201\s+elm\s+street)\b/i.test(address)) continue;
-    const windowText = noticeWindowForAddress(source, match.index);
-    const addressOrigin = noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]);
-    if (!addressOrigin) continue;
+    const addressOrigin = nominated.origin || noticeFieldEvidence.propertyAddressOrigin(windowText, match[0]) || 'unlabeled';
     const saleDate = saleDateFromNoticeText(windowText);
     const key = `${context.source_proof_url}|${address}|${saleDate}`.toLowerCase();
     if (seen.has(key)) continue;
@@ -116,14 +120,10 @@ function extractDallasForeclosureNoticeRowsFromText(text, context = {}) {
     const caseNumber = /\d/.test(caseCandidate) ? caseCandidate : '';
     const parcelCandidate = labeledValue(windowText, PARCEL_RE);
     const parcel = /\d/.test(parcelCandidate) ? parcelCandidate : '';
-    const proofText = [
-      `Property Address: ${address}`,
-      saleDate ? `Sale Date: ${saleDate}` : '',
-      ownerName ? `Borrower: ${ownerName}` : '',
-      windowText
-    ].filter(Boolean).join(' | ');
+    const proofText = windowText;
     const missing = [];
     if (!saleDate) missing.push('sale or auction date');
+    if (addressOrigin === 'unlabeled') missing.push('property address label not found');
     if (!caseNumber && !parcel) missing.push('parcel or case number');
     rows.push({
       id: `DAL-PDF-NOTICE-${safeId(key)}`,
@@ -423,7 +423,8 @@ async function parseLocalFileInput(filePath, source, options = {}) {
     source_proof_url: cleanText(source.source_url || ''),
     source_reference: cleanText(source.source_reference || 'local file preview'),
     source_file_type: inspected.file_type,
-    max_candidates: options.max_candidates || MAX_CANDIDATES
+    max_candidates: options.max_candidates || MAX_CANDIDATES,
+    rejected_candidates: options.rejected_candidates
   });
   attempt.candidates_found = candidates.length;
   if (!candidates.length) attempt.blocked_reason = 'no_property_rows_found';
@@ -559,6 +560,14 @@ function textBlocksFromPlainText(text) {
 
 function candidatesFromBlocks(blocks, context) {
   const joined = (Array.isArray(blocks) ? blocks : []).join('\n');
+  if (Array.isArray(context.rejected_candidates)) {
+    for (const item of propertyAddressEvidence.addressCandidates(joined)
+      .filter((candidate) => candidate.role === 'non_property_address' || candidate.role === 'sale_venue').slice(0, MAX_CANDIDATES)) {
+      context.rejected_candidates.push({ source_proof_url: cleanText(context.source_proof_url),
+        source_proof_text: item.evidence_text, source_row_reference: item.address,
+        reason: 'address_not_property_field' });
+    }
+  }
   const noticeCandidates = extractDallasForeclosureNoticeRowsFromText(joined, context);
   if (noticeCandidates.length) return noticeCandidates;
 
@@ -703,7 +712,8 @@ async function parseOfficialFileLink(link, source, options = {}) {
     source_proof_url: url,
     source_reference: attempt.label || `official Dallas ${actualType}`,
     source_file_type: actualType,
-    max_candidates: options.max_candidates || MAX_CANDIDATES
+    max_candidates: options.max_candidates || MAX_CANDIDATES,
+    rejected_candidates: options.rejected_candidates
   });
   attempt.candidates_found = candidates.length;
   if (!candidates.length) attempt.blocked_reason = 'no_property_rows_found';
@@ -737,12 +747,14 @@ async function runDallasRealFileParser(options = {}) {
     ? { files_detected: 1, pdf_files_detected: 0, csv_files_detected: 0, xlsx_files_detected: 0 }
     : countDetectedByType(links);
   const attempts = [];
+  const rejectedCandidates = [];
   let candidates = [];
 
   if (inputFile) {
     const result = await parseLocalFileInput(inputFile, source, {
       timeout_ms: options.timeout_ms || 10000,
-      max_candidates: maxCandidates
+      max_candidates: maxCandidates,
+      rejected_candidates: rejectedCandidates
     });
     attempts.push(result.attempt);
     candidates = candidates.concat(result.candidates);
@@ -758,7 +770,8 @@ async function runDallasRealFileParser(options = {}) {
       const result = await parseOfficialFileLink(link, source, {
         timeout_ms: options.timeout_ms || 10000,
         fetch_impl: options.fetch_impl,
-        max_candidates: maxCandidates - candidates.length
+        max_candidates: maxCandidates - candidates.length,
+        rejected_candidates: rejectedCandidates
       });
       attempts.push(result.attempt);
       candidates = candidates.concat(result.candidates);
@@ -800,6 +813,7 @@ async function runDallasRealFileParser(options = {}) {
       file_sha256: attempts[0] && attempts[0].file_sha256 || ''
     } : null,
     candidates,
+    rejected_candidates: rejectedCandidates,
     candidates_extracted: candidates.length,
     attempts,
     ...pdfNoticeDiagnostics,

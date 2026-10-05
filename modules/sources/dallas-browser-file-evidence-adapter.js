@@ -158,7 +158,8 @@ function candidateFromBlock(block, context) {
   const sourceUrl = cleanText(context.source_proof_url || context.source_url);
   if (!text) return null;
 
-  const sourceAddress = noticeFieldEvidence.sourcePropertyAddress(text);
+  const addressEvidence = noticeFieldEvidence.activeNoticeAddress(text);
+  const sourceAddress = addressEvidence.address;
   const address = normalizeAddress(sourceAddress);
   if (address && DALLAS_OFFICIAL_OFFICE_ADDRESS_RE.test(address)) return null;
   if (!address && context.include_junk_candidate === true && JUNK_RE.test(text)) {
@@ -190,6 +191,7 @@ function candidateFromBlock(block, context) {
   const hasDallas = /\bdallas\b/i.test(`${address} ${text}`);
   const missing = [];
   if (!saleDate) missing.push('sale or auction date');
+  if (addressEvidence.origin === 'unlabeled') missing.push('property address label not found');
   if (!parcel && !caseNumber) missing.push('parcel or case number');
   if (!sourceUrl) missing.push('source proof URL');
 
@@ -203,7 +205,7 @@ function candidateFromBlock(block, context) {
     owner_name: ownerName,
     sale_date: saleDate,
     sale_date_origin: saleEvidence.origin,
-    property_address_origin: noticeFieldEvidence.propertyAddressOrigin(text, sourceAddress),
+    property_address_origin: addressEvidence.origin,
     auction_date: saleDate,
     opening_bid: openingBid,
     tax_amount: taxAmount,
