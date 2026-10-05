@@ -11,6 +11,7 @@ const { normalizeSourceDate } = require('../modules/research/normalize-source-da
 const comps = require('../modules/research/disclosure-state-comp-resolution');
 const explainer = require('../modules/research/deal-fit-explainer');
 const dossierModule = require('../modules/research/property-leverage-dossier');
+const { EXPECTED_LF_SHA256, compGridFingerprint } = require('./helpers/comp-grid-fingerprint');
 
 const ROOT = path.resolve(__dirname, '..');
 const subject = {
@@ -176,8 +177,8 @@ fs.writeFileSync = () => { throw new Error('write forbidden'); };
 try { assert.strictEqual(explainer.explainRow(held).fits.length >= 5, true); }
 finally { global.fetch = originalFetch; fs.writeFileSync = originalWrite; }
 
-const gridHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT,
-  'modules/research/strict-comp-grid-config.js'))).digest('hex');
-assert.strictEqual(gridHash, 'b27912bf48aab12117898a19ff70d2c814b802e86e75ef27aecd2a3f36f9358e');
+const gridHash = compGridFingerprint(fs.readFileSync(path.join(ROOT,
+  'modules/research/strict-comp-grid-config.js')));
+assert.strictEqual(gridHash, EXPECTED_LF_SHA256);
 
 console.log('cycle-53 texas closeout: P1-P6 and P8-P13 PASS; P7 waived, numeric dates remain quarantined');

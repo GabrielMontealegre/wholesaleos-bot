@@ -12,6 +12,7 @@ const appraisalEvidence = require('../modules/research/county-appraisal-evidence
 const queueService = require('../modules/research/deal-board-queue-service');
 const packetService = require('../modules/research/manual-evidence-packet-service');
 const { normalizeSourceDate } = require('../modules/research/normalize-source-date');
+const { EXPECTED_LF_SHA256, compGridFingerprint } = require('./helpers/comp-grid-fingerprint');
 
 const ROOT = path.resolve(__dirname, '..');
 const secret = crypto.randomBytes(20).toString('hex');
@@ -133,9 +134,9 @@ const rendered = uiContext.window.__wosPublicDealsTestHooks.leverageDossierHtml(
 assert(rendered.includes('Original loan amount - not the current payoff.'), 'Q7: loan clue is labeled');
 assert(rendered.includes('UNKNOWN') && !rendered.includes('$200,000'), 'Q7: stale equity cannot render');
 
-const gridHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT,
-  'modules/research/strict-comp-grid-config.js'))).digest('hex');
-assert.strictEqual(gridHash, 'b27912bf48aab12117898a19ff70d2c814b802e86e75ef27aecd2a3f36f9358e',
-  'Q8: strict comp grid must be byte-identical to main');
+const gridHash = compGridFingerprint(fs.readFileSync(path.join(ROOT,
+  'modules/research/strict-comp-grid-config.js')));
+assert.strictEqual(gridHash, EXPECTED_LF_SHA256,
+  'Q8: strict comp grid must be unchanged apart from line endings');
 
 console.log('cycle-53 PR1 hardening: Q1-Q8 PASS');
