@@ -56,6 +56,16 @@ const allEqual = queue.deriveSourceDates(sourceRow({
 assert.strictEqual(allEqual.sale_date_resolution_superseded, undefined,
   'equivalent stored values must not produce a false supersession audit');
 
+const whitespaceOnly = queue.deriveSourceDates(sourceRow({
+  sale_date_or_event_date: '10/06/2026 ',
+  sale_date_iso: '2026-10-06',
+  source_event_date: '2026-10-06',
+  sale_date_resolution: { ...matchingResolution }
+}));
+assert.strictEqual(whitespaceOnly.sale_date_iso, '2026-10-06');
+assert.strictEqual(whitespaceOnly.sale_date_resolution_superseded, undefined,
+  'trailing source whitespace must not invent an overwritten value');
+
 const noSource = queue.deriveSourceDates({ sale_date_iso: '2026-10-06', source_event_date: '2026-10-06' });
 assert.strictEqual(noSource.sale_date_iso, null, 'derived dates do not create source evidence');
 assert.strictEqual(noSource.sale_date_resolution_superseded, undefined,

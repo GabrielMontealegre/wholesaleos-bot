@@ -255,7 +255,7 @@ function deriveSourceDates(row) {
       oldValues.push({ field: 'source_event_date', old_value: cleanText(row.source_event_date) });
     }
     if (storedResolution) {
-      if (Object.hasOwn(storedResolution, 'raw_text') && cleanText(storedResolution.raw_text) !== saleRaw) {
+      if (Object.hasOwn(storedResolution, 'raw_text') && cleanText(storedResolution.raw_text) !== cleanText(saleRaw)) {
         oldValues.push({ field: 'sale_date_resolution.raw_text', old_value: storedResolution.raw_text });
       }
       if (Object.hasOwn(storedResolution, 'resolved_iso') && cleanText(storedResolution.resolved_iso) !== rederivedIso) {
