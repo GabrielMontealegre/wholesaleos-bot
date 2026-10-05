@@ -3,10 +3,10 @@
 // Registry of county free-lookup profiles for the free public hunters.
 // Add one profile per county; the hunter core stays county-agnostic.
 
-const dallasProfile = require('./dallas-county-free-lookup-profile');
+const appraisalSearchProfile = require('./county-appraisal-search-profile');
 const bexarProfile = require('./tx-bexar-county-free-lookup-profile');
 
-const PROFILES = [dallasProfile, bexarProfile];
+const PROFILES = [appraisalSearchProfile, bexarProfile];
 
 function cleanText(value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();

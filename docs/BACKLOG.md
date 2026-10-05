@@ -30,6 +30,9 @@ Mark the status here as part of each item's PR.
 
 Goal: nothing is called "the Dallas adapter" anymore; county is data.
 
+Progress: the appraisal-search profile now has a neutral implementation path and a one-line
+compatibility re-export. The other county-named modules remain to be migrated in ordered sub-PRs.
+
 Verified facts: 16 modules have county names in their file names (`modules/sources/dallas-*.js`,
 `modules/research/dallas-*-agent.js`); the generic registries from B-04 already exist.
 

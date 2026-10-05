@@ -3,7 +3,7 @@
 // Free public contact hunter.
 // Reusable, county-agnostic core: mines contact routes for address-backed
 // deal rows from free public evidence only. County specifics come in via a
-// profile object (see modules/sources/dallas-county-free-lookup-profile.js).
+// profile object (see modules/sources/county-appraisal-search-profile.js).
 //
 // Hard rules:
 // - preview-only, no mutations, never contacts anyone
