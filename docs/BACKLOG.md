@@ -10,15 +10,16 @@ Mark the status here as part of each item's PR.
 
 ---
 
-> **Priority order right now (architect, 2026-10-03):** work the open `codex-task` issues in
+> **Priority order right now (architect, 2026-10-05):** work the open `codex-task` issues in
 > exactly this order, then the backlog items:
 > 1. [#233](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/233) DONE ([PR #236](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/236)): signed session required across `/api`; anonymous lead reads denied in production; `/health` 200; signed-in dashboard still hydrated Dallas rows and opened a card.
 > 2. [#234](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/234) DONE ([PR #237](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/237)): server voice-token and outbound-call routes return 410; Call controls open `tel:` links without logging a completed call. Full suite 117 passed, 0 failed, 0 skipped. Deployed `/health` 200; Dialer showed the phone link without a call. A transient saved-leads 502 appeared during reload; source rows subsequently hydrated.
 > 3. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) DONE ([PR #238](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/238), [PR #239](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/239)): source-proof origins and read-only exclusion count deployed. `/health` 200 and signed-in dashboard hydrated. Dallas: 291 source rows, 0 visible after-sale, 2 excluded after proof review. San Antonio: 61/0/0; Detroit: 0/0/0; San Diego: 25/0/0; Los Angeles: 15/0/0; Houston: 0/0/0. Full suite: 112 passed, 0 failed, 7 environment skips. No batch.
 > 4. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) DONE ([PR #240](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/240)): shared sale-origin allow-list; hearing and unlabeled event dates remain raw and cannot become a sale date. Full suite: 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated 291 Dallas source rows and opened a card. No batch.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
-> 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) IN PROGRESS: line-ending-neutral comp-grid fingerprint tests
-> 7. B-00a, then B-00b, then the rest of B-05 and below.
+> 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): line-ending-neutral comp-grid fingerprint; architect verified the old hash was the CRLF form of the same unchanged rule file.
+> 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) BLOCKER TODO: the active notice parsers silently drop a property whose address lacks one of three exact labels (regression from PR #238). Keep the row, tagged `unlabeled`, outside the after-sale lane; give every remaining exclusion a reason.
+> 8. B-00a, then B-00b, then the rest of B-05 and below.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
