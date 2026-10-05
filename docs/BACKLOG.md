@@ -8,6 +8,8 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+- 2026-10-04 — DONE: #225 ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)) and #230 ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)); both deployed and verified read-only. BLOCKED: none. ASSUMED: none. B-00a is next; its 16 county-named modules were inventoried, with no refactor applied in this run.
+
 ---
 
 > **Priority order right now (architect, 2026-10-03):** work the open `codex-task` issues in
@@ -17,14 +19,14 @@ Mark the status here as part of each item's PR.
 > 3. [#229](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/229) DONE ([PR #238](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/238), [PR #239](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/239)): source-proof origins and read-only exclusion count deployed. `/health` 200 and signed-in dashboard hydrated. Dallas: 291 source rows, 0 visible after-sale, 2 excluded after proof review. San Antonio: 61/0/0; Detroit: 0/0/0; San Diego: 25/0/0; Los Angeles: 15/0/0; Houston: 0/0/0. Full suite: 112 passed, 0 failed, 7 environment skips. No batch.
 > 4. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) DONE ([PR #240](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/240)): shared sale-origin allow-list; hearing and unlabeled event dates remain raw and cannot become a sale date. Full suite: 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated 291 Dallas source rows and opened a card. No batch.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
-> 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) IN PROGRESS: line-ending-neutral comp-grid fingerprint tests
+> 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): LF and CRLF fingerprints agree, but a changed comp-grid threshold still fails. Full suite 113 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated 292 Dallas source rows with a lead card open. No batch.
 > 7. B-00a, then B-00b, then the rest of B-05 and below.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
 > entry above (AGENTS.md §2).
 
-## B-00a · County-neutral names everywhere (D-019) · TODO
+## B-00a · County-neutral names everywhere (D-019) · IN PROGRESS
 
 Goal: nothing is called "the Dallas adapter" anymore; county is data.
 
