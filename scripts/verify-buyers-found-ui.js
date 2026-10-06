@@ -22,7 +22,8 @@ let store = finds.ingest({ buyers: [], leads: [{ state: 'TX', city: 'Example met
 let writes = 0;
 const app = express();
 app.use(express.json());
-app.get('/', (req, res) => res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNTHETIC UI PROOF</title><style>body{margin:0;padding:16px;font:14px Arial;background:#fafafa}h1{font-size:20px}*{box-sizing:border-box}</style><h1>Buyers found - SYNTHETIC TEST ONLY</h1><main></main><script src="/ui.js"></script><script>document.querySelector("main").innerHTML=renderBuyersFound();</script>'));
+app.get('/', (req, res) => res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNTHETIC UI PROOF</title><style>body{margin:0;padding:16px;font:14px Arial}h1{font-size:20px}*{box-sizing:border-box}</style><div id="app"><main id="content"><h1>Buyers found - SYNTHETIC TEST ONLY</h1><div id="view"></div></main></div><script src="/theme.js"></script><script src="/ui.js"></script><script>document.querySelector("#view").innerHTML=renderBuyersFound();</script>'));
+app.get('/theme.js', (req, res) => res.sendFile(path.join(root, 'dashboard/wos-theme-a1.js')));
 app.get('/ui.js', (req, res) => res.sendFile(path.join(root, 'dashboard/wos-buyers-found.js')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/api/dashboard/buyers-found', (req, res) => res.json(finds.listFinds(store, { now })));
@@ -50,12 +51,29 @@ app.patch('/api/dashboard/buyers-found/:id', (req, res) => {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+    async function assertContrast(selectors) {
+      const contrasts = await page.evaluate((selectors) => {
+        function rgb(value) { return value.match(/[\d.]+/g).slice(0, 3).map(Number); }
+        function luminance(value) { return rgb(value).map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0); }
+        return selectors.map(selector => {
+          const element = document.querySelector(selector);
+          if (!element) return { selector, ratio: 0 };
+          let background = element;
+          while (background.parentElement && ['transparent', 'rgba(0, 0, 0, 0)'].includes(getComputedStyle(background).backgroundColor)) background = background.parentElement;
+          const a = luminance(getComputedStyle(element).color);
+          const b = luminance(getComputedStyle(background).backgroundColor);
+          return { selector, ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+        });
+      }, selectors);
+      contrasts.forEach(item => assert.ok(item.ratio >= 4.5, item.selector + ' contrast=' + item.ratio.toFixed(2)));
+    }
     for (const width of [1366, 400]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(base);
       await page.locator('.bf-card').waitFor();
       assert.strictEqual(writes, 0, 'loading must not write');
       assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await assertContrast(['.bf-stats', '.bf-filters label', '.bf-card h3', '.bf-card .bf-muted', '.bf-card textarea', '.bf-card a']);
       await page.screenshot({ path: path.join(output, 'synthetic-' + width + '.png'), fullPage: true });
     }
     await page.locator('textarea').fill('Edited synthetic draft.');
@@ -80,6 +98,14 @@ app.patch('/api/dashboard/buyers-found/:id', (req, res) => {
     await page.locator('[data-filter=approval]').selectOption('rejected');
     await page.locator('.bf-card').waitFor();
     assert.strictEqual(writes, 4);
+    store = { buyers: [], leads: [] };
+    for (const width of [1366, 400]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.reload();
+      await page.getByText('No buyers found yet. Public-post finds from your assistant will appear here.', { exact: true }).waitFor();
+      await assertContrast(['.bf-stats', '.bf-filters label', '.bf-page > p']);
+      await page.screenshot({ path: path.join(output, 'synthetic-empty-' + width + '.png'), fullPage: true });
+    }
     assert.deepStrictEqual(errors, []);
     assert.deepStrictEqual(external, []);
     console.log('UI proof: 1366px/400px; no overflow; 0 browser errors; 0 external requests; local draft/status persisted.');

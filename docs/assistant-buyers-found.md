@@ -85,3 +85,5 @@ weeks. No buyers are invented or seeded by this feature.
 Local proof: `node scripts/verify-buyers-found-ui.js` uses an in-memory synthetic
 store and blocks all external requests. Screenshots under
 `docs/screens/buyers-found-local/` are synthetic, not production evidence.
+The proof loads the dashboard's actual dark theme and checks contrast for both
+populated and empty states at desktop and phone widths.
