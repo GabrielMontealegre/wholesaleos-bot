@@ -16,7 +16,7 @@ No state was populated, search run, message sent, lead edited or batch started.
 | Deal Matching | No matches yet; the view asks for leads and buyer criteria. | [Desktop](matching-desktop.jpg) | [Phone](matching-mobile.jpg) |
 | Outreach Hub | No lead selected and no outreach performed; buyer identities are redacted. | [Desktop](outreach-hub-desktop.jpg) | [Phone](outreach-hub-mobile.jpg) |
 | Dialer | Manual `tel:` link opens the operator's phone; the server does not dial and recent calls are empty. | [Desktop](dialer-desktop.jpg) | [Phone](dialer-mobile.jpg) |
-| SMS | Server SMS sending is disabled; the conversation column remained on "Loading conversations..." during this audit. | [Desktop](sms-desktop.jpg) | [Phone](sms-mobile.jpg) |
+| SMS | Server SMS sending is disabled; after its read finishes, the screen shows no conversations and Twilio not configured. | [Desktop](sms-desktop.jpg) | [Phone](sms-mobile.jpg) |
 | Follow-ups | No follow-ups are shown. | [Desktop](follow-ups-desktop.jpg) | [Phone](follow-ups-mobile.jpg) |
 | Contracts | A contract template is present, but no contracts have been generated. | [Desktop](contracts-desktop.jpg) | [Phone](contracts-mobile.jpg) |
 | Assignments | No assignments or fees are shown. | [Desktop](assignments-desktop.jpg) | [Phone](assignments-mobile.jpg) |
@@ -57,8 +57,11 @@ cannot establish source health for the last seven days.
 
 ## Issues observed
 
-- The SMS conversation list stayed at "Loading conversations..." with sending
-  disabled; it did not reveal a usable conversation view.
+- The SMS list briefly showed "Loading conversations..." and then resolved to
+  "No SMS conversations yet". The first capture was premature, not a stuck load.
+- The phone menu button did not open the navigation. The browser reported
+  `toggleMobileMenu is not defined`; see issue #257. Phone screenshots were
+  captured by switching screens at desktop width before resizing to 400 pixels.
 - The Leads screen reported no Dallas leads ready, while its global badge showed
   12,039. Bot Status separately reported 300 leads. The scope and freshness of
   these counts are unclear.
