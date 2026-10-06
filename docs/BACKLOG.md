@@ -538,7 +538,7 @@ Acceptance
 
 ## B-20 · Agent desk: tasks for Muse or Claude, and a drop box for what they find · TODO
 
-Goal: Gabriel's AI assistant (Meta Muse or Claude in Chrome, D-026) does the social legwork in Gabriel's
+Goal: Gabriel's AI assistant (Claude in Chrome, D-026; Muse only if Gabriel later chooses it) does the social legwork in Gabriel's
 accounts, and WholesaleOS stays the brain and the database. No outside API is needed: the assistant reads
 a page and fills a form, which both can do.
 
@@ -565,7 +565,9 @@ Acceptance
 - Task results: the assistant marks a task done, skipped or failed, with a note and link. Everything is
   logged on the lead or buyer timeline (B-10).
 - Seller and realtor texts and calls: the desk only shows a batch after Gabriel approves it with one click
-  (up to 20, D-029). Buyer and public-want messages follow D-022 and D-026.
+  (up to 20, D-029). Deal posts, buyer messages and public-want messages: the assistant drafts them, and
+  each one is sent only after Gabriel approves it (D-022, D-026, A-016). The desk never marks a post or
+  message as sent unless the assistant reports Gabriel's approval and a link to the sent item.
 - Task types from the course's assistant workflow (playbook §7), as a morning routine ready by 8 AM local:
   - lead pulls the assistant runs in its own browser: listing-site keyword searches for distressed or stale
     listings, auction.com foreclosures at least 14 days out, and builder directories (to find land buyers
