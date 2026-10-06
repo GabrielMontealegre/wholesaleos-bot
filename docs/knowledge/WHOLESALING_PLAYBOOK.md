@@ -75,7 +75,57 @@ push back when they learn you're assigning.
 - Lender rule of thumb from a live call: lot value up to ~20% of the finished new-home value.
 - Course offers open around 50–60% of list price on stale land listings; members report counters on
   60% openers.
-- There's also a "luxury land" level-2 course (Wholesailors) not yet extracted.
+- Course details (Land L1/L2, extracted 2026-10-05) are in §4c.
+
+## 4c. Land — what the courses teach (Wholesailors Land L1 + Luxury Land L2, extracted 2026-10-05)
+
+**Find the buyer first.** Builders are the buyers. Find the active new-home builders in a city (Zillow
+has a builder directory), ask for the land acquisition contact, and get their buy box: areas, lot size,
+characteristics and the price they pay. Your offer = their price − your fee. Buyers expect at least
+~$5k below what comparable lots sell for on market.
+
+**Seven checks before any number:** infill or raw land (house on each side?); utilities (power poles
+visible?); flat and buildable (slope means dirt work, so a lower price); cleared or wooded (clearing is
+expensive, so a lower price); paved road; flood zone (a 500-year zone is tolerable, avoid 100-year);
+zoning (house only, or duplex/multifamily too?). Free parcel and zoning lookups: regrid.com. Setbacks
+and wetlands can make a lot unbuildable — the course's example deal died on setbacks.
+
+**The "10-15-20" land value rule** (land as a share of the finished new-home value):
+| Area | Buy at about | Sell at about |
+|---|---|---|
+| Lower-income | 10% | 15% |
+| Suburban | 15% | 20% |
+| High-end ($1M+ homes) | 20% | 25% |
+Use it when there are no lot comps; otherwise use lot sales from the last ~6 months (widen to 2 years
+and a bigger radius if needed). Note what the lot last sold for and ask why nobody built on it.
+
+**Leads:** the county tax-delinquent list filtered to land is "the best list for land"; vendor
+filters (tax delinquent + land) and pay-per-lead land sellers from ~$29 are the paid shortcuts. Simple
+opener: "My partners and I buy land in the area, cash, and can close quickly — would you sell?"
+
+**Teardowns (the course's preferred "land" deal):** houses built before ~1960, under ~1,500 sq ft, on
+streets with new construction, where the land is worth more than the house. Value = lot value, not the
+house. Example math: lots sell at $100k → offer about $80k, sell to the builder about $90k (demolition
+costs $5–15k). Seller pitch: the house isn't worth fixing; a builder might tear it down and build new.
+Also compare against other teardown sales on the same blocks. Pick markets with lots of new
+construction (DFW, Austin, Houston, Florida, Phoenix/Arizona, Nevada, Georgia, Tennessee) — not the
+Rust Belt or Northeast, where houses rarely get torn down.
+
+**Luxury teardowns (L2):** find ZIP codes where brand-new $2M+ homes are being built (Zillow: for sale
+$2M+, year built = current year), map those clusters, then list older homes there (built ≤1970–1980),
+owned 7+ years, value ≥ $750k, high equity, stacked with vacant / tax delinquent / pre-foreclosure /
+absentee. Value = what builders paid for nearby teardown lots; offers can be close to the estimate
+because the builder pays lot value. Fewer competing wholesalers; titles tend to be cleaner.
+
+**Closing:** use an investor-friendly title company. Find them through local real-estate investor
+groups on Facebook; ask in order: are you investor friendly → do you work with wholesalers → do you
+close assignments → do you do double closes (yes to the last one = very investor friendly).
+
+**Selling:** the course's own joint-venture dispo service, local Facebook investor groups (watch for
+middlemen passing deals along a "daisy chain"), or a buyer-blast platform once volume is high.
+
+Our honesty rules still apply: never state a value you don't believe and never claim a lender or
+partner you don't have.
 
 ## 4b. Land as a wholesale deal (architect research, 2026-10-06)
 
@@ -201,8 +251,12 @@ or city limits (ETJ) status, access, and taxes. Confirm a title company will clo
 - Annual-only extras seen: a stronger purchase & sale agreement (automatic option/inspection and closing
   extensions, access/photo clauses, seller-breach protection, earnest money after inspection, land and
   novation language).
-- Not yet extracted: Gov List Millionaire (68 modules), Pre-Foreclosure Millionaire (64), Luxury Land L2,
-  the Muse training-pack PDFs (downloads need Gabriel's OK).
+- Locked on Gabriel's plan (paid add-ons, videos hosted on Skool so they can't be transcribed): Gov List
+  Millionaire (68 lessons) and Pre-Foreclosure Millionaire (64). Not downloaded: the Muse training-pack
+  PDFs (downloads need Gabriel's OK). Extracted: Land L1 and Luxury Land L2 YouTube lessons (§4c), the
+  Muse live and "10 ways to automate" video (§7), the Dispositions course videos (§6).
+- Skool and YouTube extraction needs a LOCAL session on Gabriel's PC (his signed-in Chrome; YouTube often
+  blocks cloud servers). A cloud session can't do it.
 
 ## 10. Where to start land (architect research, 2026-10-06)
 
