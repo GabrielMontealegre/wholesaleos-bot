@@ -28,6 +28,14 @@ function writeDB(data) {
   fs.renameSync(tmp, DB_FILE);
 }
 
+function readDBStrict() {
+  try {
+    const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    if (!data || typeof data !== 'object' || Array.isArray(data) || (data.buyers !== undefined && !Array.isArray(data.buyers))) throw new Error();
+    return data;
+  } catch (_) { throw new Error('database_unavailable'); }
+}
+
 // ── Leads ──────────────────────────────────────────────
 function getLeads() { return readDB().leads || []; }
 
@@ -1561,7 +1569,7 @@ function clearFakeLeads() {
 }
 
 // ── Buyers ─────────────────────────────────────────────
-function getBuyers() { return readDB().buyers || []; }
+function getBuyers() { return (readDB().buyers || []).filter(buyer => !buyer.assistant_find); }
 
 function addBuyer(buyer) {
   const db = readDB();
@@ -2348,7 +2356,7 @@ function addEnrichmentHistory(leadId, entry) {
 
 
 module.exports = {
-  readDB, writeDB,
+  readDB, readDBStrict, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
   generateLeadReferenceId, updateLeadAssignmentState,
   getLeadActivities, addLeadActivity,
