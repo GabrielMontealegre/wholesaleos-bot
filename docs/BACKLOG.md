@@ -33,7 +33,7 @@ Mark the status here as part of each item's PR.
 >    B-13, B-14, B-15, B-22 (title companies; small, can go earlier if convenient). Parts marked "waits on
 >    Gabriel" are built switched off; everything else in the item ships normally.
 >
-> 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) TODO: "Buyers found" dashboard tab (D-034). Gabriel's priority: goes next,
+> 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) IN PROGRESS: "Buyers found" dashboard tab (D-034). Gabriel's priority: goes next,
 >    ahead of the backlog order in 10.
 > 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
 >     First do #260 (Buyers tab, with approval and correlation), then

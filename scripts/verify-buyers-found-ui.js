@@ -15,9 +15,10 @@ const items = finds.validateItems({ items: [{
   profile_url: 'https://www.facebook.com/groups/123/user/456/',
   source_url: 'https://www.facebook.com/groups/123/search/?q=buy%20box',
   what_they_buy: 'Synthetic fixture: houses in the stated metro.', deal_type: 'house',
-  states: ['TX'], areas: ['Example metro'], drafted_message: 'Synthetic draft only. Nothing is sent.', captured_at: now
+  states: ['TX'], areas: ['Example metro'], drafted_message: 'Synthetic draft only. Nothing is sent.', captured_at: now,
+  classification: 'end_buyer', buy_box: { state: 'TX', areas: ['Example metro'], types: ['house'], price_max: 200000 }
 }] }, now);
-let store = finds.ingest({ buyers: [] }, items, { now, operatorId: 'synthetic', createId: () => 'fixture' }).store;
+let store = finds.ingest({ buyers: [], leads: [{ state: 'TX', city: 'Example metro', property_type: 'house', price: 150000 }] }, items, { now, operatorId: 'synthetic', createId: () => 'fixture' }).store;
 let writes = 0;
 const app = express();
 app.use(express.json());
@@ -60,6 +61,10 @@ app.patch('/api/dashboard/buyers-found/:id', (req, res) => {
     await page.locator('textarea').fill('Edited synthetic draft.');
     await page.getByRole('button', { name: 'Save draft', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Draft saved.' }).waitFor();
+    assert.strictEqual(await page.getByRole('button', { name: 'Mark messaged', exact: true }).isDisabled(), true);
+    await page.getByRole('button', { name: 'Approve', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Approval saved.' }).waitFor();
+    await page.getByText('Leads that fit this buy box: 1', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Mark messaged', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Status saved.' }).waitFor();
     await page.reload();
@@ -68,7 +73,13 @@ app.patch('/api/dashboard/buyers-found/:id', (req, res) => {
     assert.strictEqual(await page.getByRole('button', { name: 'Mark messaged', exact: true }).isDisabled(), true);
     await page.locator('[data-filter=status]').selectOption('new');
     await page.getByText('No buyers match these filters.').waitFor();
-    assert.strictEqual(writes, 2);
+    await page.locator('[data-filter=status]').selectOption('');
+    await page.getByRole('button', { name: 'Reject', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Approval saved.' }).waitFor();
+    assert.strictEqual(await page.locator('.bf-card').count(), 0);
+    await page.locator('[data-filter=approval]').selectOption('rejected');
+    await page.locator('.bf-card').waitFor();
+    assert.strictEqual(writes, 4);
     assert.deepStrictEqual(errors, []);
     assert.deepStrictEqual(external, []);
     console.log('UI proof: 1366px/400px; no overflow; 0 browser errors; 0 external requests; local draft/status persisted.');

@@ -1569,9 +1569,13 @@ function clearFakeLeads() {
 }
 
 // ── Buyers ─────────────────────────────────────────────
-function getBuyers() { return (readDB().buyers || []).filter(buyer => !buyer.assistant_find); }
+function getBuyers() {
+  const fits = require('./modules/buyers/buyer-fit');
+  return (readDB().buyers || []).filter(fits.approvedForMatching).map(fits.matchingBuyer);
+}
 
 function addBuyer(buyer) {
+  if (buyer && Object.prototype.hasOwnProperty.call(buyer, 'assistant_find')) throw new Error('buyer_find_requires_dropbox');
   const db = readDB();
   if (!db.buyers) db.buyers = [];
   const newBuyer = {
@@ -1589,6 +1593,7 @@ function addBuyer(buyer) {
 
 function matchBuyersToLead(lead) {
   return getBuyers().filter(b => {
+    if (b.assistant_find) return require('./modules/buyers/buyer-fit').fitLead(b, lead).fits;
     if (b.status !== 'Active') return false;
     const priceOk = (!b.maxPrice || (lead.arv||0) * 0.85 <= b.maxPrice) &&
                     (!b.minARV   || (lead.arv||0) >= b.minARV);
