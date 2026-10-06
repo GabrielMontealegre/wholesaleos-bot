@@ -40,6 +40,8 @@ Mark the status here as part of each item's PR.
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) (admin Import button for buyer finds; small), then
 >     [#269](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/269) (usability floor: junk leads, wrong links, fake
 >     matches, clickable links/rows/counts, plain English; Gabriel can't use the app until this lands), then
+>     [#275](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/275) (Deal Check panel on every lead + every lead gets a use + Texas
+>     list-price comps), then
 >     [#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) (buyer audit), then
 >     [#264](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/264) (end-to-end golden path test).
 >     After that: B-09 (public-record buyers, see 13) and B-22 (Title Companies tab, seeded from
