@@ -35,6 +35,14 @@ Mark the status here as part of each item's PR.
 >
 > 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) TODO: "Buyers found" dashboard tab (D-034). Gabriel's priority: goes next,
 >    ahead of the backlog order in 10.
+> 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
+>     First do #260 (Buyers tab, with approval and correlation), then
+>     [#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) (buyer audit), then
+>     [#264](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/264) (end-to-end golden path test).
+>     After that, turn the golden-path steps green in this order: B-00a (finish PR #245), B-00b, B-06,
+>     B-08, B-19, B-17, B-10, then B-09, B-20, B-18, B-21, B-16, B-07, the rest of B-05, B-11, B-12, B-13,
+>     B-14, B-22. **B-15 (front-end pass) waits until golden-path steps 1–8 pass.** Every PR that touches
+>     the path posts the step table.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
