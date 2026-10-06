@@ -33,6 +33,9 @@ Mark the status here as part of each item's PR.
 >    B-13, B-14, B-15, B-22 (title companies; small, can go earlier if convenient). Parts marked "waits on
 >    Gabriel" are built switched off; everything else in the item ships normally.
 >
+> 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) TODO: "Buyers found" dashboard tab (D-034). Gabriel's priority: goes next,
+>    ahead of the backlog order in 10.
+>
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
 > entry above (AGENTS.md §2).
@@ -383,7 +386,7 @@ Goal: a single, honest source for offers (D-015), plus sorting signals (D-011, D
 
 Acceptance
 - One module computes MAO = ARV × band% − repairs − fee, with the band table from playbook §1 (under
-  $120k ≈70%; $120k–$200k not set until Gabriel answers the open question, shown as "multiplier not set";
+  $120k ≈70%; $120k–$200k 75% (D-031);
   $200k–$250k 80–82%; $250k–$500k 83%; $500k+ 83%, max 85% — one constant), repairs $20/sq ft light to $50/sq ft heavy until
   condition is known (labeled estimate), fee as an input. Outputs a range, labeled preliminary /
   verified / ballpark to match the ARV label. No ARV → no MAO.
