@@ -39,10 +39,15 @@ Mark the status here as part of each item's PR.
 >     First do #260 (Buyers tab, with approval and correlation), then
 >     [#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) (buyer audit), then
 >     [#264](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/264) (end-to-end golden path test).
->     After that, turn the golden-path steps green in this order: B-00a (finish PR #245), B-00b, B-06,
->     B-08, B-19, B-17, B-10, then B-09, B-20, B-18, B-21, B-16, B-07, the rest of B-05, B-11, B-12, B-13,
->     B-14, B-22. **B-15 (front-end pass) waits until golden-path steps 1–8 pass.** Every PR that touches
+>     After that: B-09 (public-record buyers, see 13) and B-22 (Title Companies tab, seeded from
+>     data/title-companies.json), then turn the golden-path steps green in this order:
+>     B-00a (finish PR #245), B-00b, B-06,
+>     B-08, B-19, B-17, B-10, then B-20, B-18, B-21, B-16, B-07, the rest of B-05, B-11, B-12, B-13,
+>     B-14. **B-15 (front-end pass) waits until golden-path steps 1–8 pass.** Every PR that touches
 >     the path posts the step table.
+> 13. **Tabs, one engine (D-037).** Leads, Buyers, Title Companies, Outreach and Deals (the machine view:
+>     each deal's golden-path stage) are separate tabs on one shared engine. B-09 (buyers from public
+>     records) moves up to right after #264 (before B-00b): it's how the SaaS finds buyers in every market without Facebook.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
@@ -667,6 +672,11 @@ Acceptance
   "yes" to double closes is marked "investor friendly".
 - On a deal card: the investor-friendly title companies for that county.
 - Tests: missing answers stay "not asked"; no invented answers.
+- Seed (2026-10-06): load `data/title-companies.json` (10 companies with phone, email, website, markets,
+  claimed investor services, evidence type and source, plus names still to check). Claimed services
+  show as "says on its website", not as Gabriel's verified answers. Status starts "not called".
+- Show the file's `lessons` on the tab (national underwriters often avoid double closes; NC uses closing
+  attorneys).
 
 ---
 

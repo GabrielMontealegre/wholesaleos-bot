@@ -43,6 +43,8 @@ corrects them during review.
 | D-034 | 2026-10-06 | **A "Buyers found" tab on the dashboard is the next product priority** (first slice of B-18/B-20). It shows the buyers the assistant finds each morning, with the drafted message, a profile link and the status (messaged / replied / not a fit). |
 | D-035 | 2026-10-06 | **Gabriel approves everything the assistant brings back.** Buyers and deals found by the assistant (Facebook now, Craigslist next) arrive categorized as `pending`. Only buyers and deals Gabriel approves are used for matching and outreach. Rejected items stay stored, hidden. Craigslist is read in Gabriel's own browser only, at human pace (A-001), and covers the "real estate wanted" and "for sale by owner" sections. |
 | D-036 | 2026-10-06 | **Build the machine before the paint.** One end-to-end golden-path test (#264) walks a deal from public notice to buyer outreach. Backlog items turn its steps green, and the front-end pass (B-15) waits until steps 1–8 pass. |
+| D-037 | 2026-10-06 | **Separate tabs, one engine.** Leads, Buyers, Title Companies, Outreach and Deals (the machine view of each deal's golden-path stage) are separate tabs that read and write the same records, so a change in one shows in all. The dashboard summarizes them. |
+| D-038 | 2026-10-06 | **Keep what is real, label the rest.** Existing dashboard buyers that check out on the public web (a real company with a current buy box) keep their buy boxes and are labeled verified. Only those that can't be found are labeled "AI-generated, unverified" and kept out of matching. Nothing is deleted (amends #262). |
 
 ## Architect decisions (Gabriel may veto)
 

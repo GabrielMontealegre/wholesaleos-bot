@@ -148,3 +148,40 @@ Candidates found for Houston, San Antonio, Austin, Tampa, Orlando, South Florida
 | 74 | Baltimore-Columbia-Towson, MD | 196 | 1 | Anne Arundel County |
 | 75 | Seaford, DE | 198 | 1 | Sussex County |
 | 76 | Hilton Head Island-Bluffton-Port Royal, SC | 199 | 1 | Beaufort County |
+
+## 8. Red flags and scam patterns seen so far
+
+| Pattern | What it looks like | What we do |
+|---|---|---|
+| Volume plus financing | "291 closed this month" **and** "we offer 100% financing" in the same post | Treat as a marketing or lending operation. Don't send full deal details first; ask for proof of a recent closing |
+| Lender-seeker posing as buyer | "Luxury builder… looking for lenders placing capital" | Not a buyer. Exclude from matching |
+| Middleman for "a builder" | Strict criteria plus "if I bring the buyer…" | Partner lane: only if we hold the exact asset under an assignable contract |
+| Daisy chain | Reposting someone else's deal without a contract | Real buyers refuse these. We only send what we hold under contract |
+| Service sellers in replies | "I'm a VA / JV partner / marketing" | Ignore; never a buyer |
+| Out-of-market poster | Buyer box in another state, posted in a Texas group | Keep under that state, not ours |
+| Stale buy box | Post 3–8 months old | "Ask if still current", never auto-send |
+
+## 9. Good practices (what serious players do)
+
+- **Buyers** publish a complete box (area, price or %ARV, type, size, year, construction, flood, rehab, exclusions, funding, speed) and say exactly what to send.
+- **Wholesalers who get answers** quote the buyer's box, send the full package (address, asking, ARV with recent comps within about 0.5 mi, repairs, occupancy, photos) and hold the contract.
+- **Respect submission rules.** Some buyers ignore any deal that doesn't follow their posted instructions.
+- **Email beats DMs** when the buyer published an email.
+- **Speed and honesty:** "no retrades" buyers drop wholesalers whose numbers don't hold.
+
+## 10. Where buyers come from (ranked for WholesaleOS)
+
+1. **Public records: entities that bought with cash in the last 6–12 months** (deed recorded with no mortgage). These are proven buyers, nationwide, and the server can collect them from government sources (B-09). This is how the SaaS finds buyers at scale.
+2. **Facebook groups:** posted buy boxes. Found by the assistant in Gabriel's browser, approved by Gabriel (D-033, D-035).
+3. **Title companies and hard-money lenders:** they know who closes cash deals. Ask "who are your most active investor clients?"
+4. **Local investor meetups (REIAs):** e.g. a DFW investor hosts a monthly gathering.
+5. **Craigslist** "real estate wanted" (mostly wholesalers; verify) and **Zillow/Redfin** cash sales (agent-listed flips show the buyer entity on the deed).
+
+## 11. Smart rails (they guide, never block)
+
+The criteria must never stop us from getting comps, finding deals or matching. They change **labels and order**, not access:
+- A stale, unknown or unverified buyer is **kept and labeled** ("ask if current", "unverified"), not deleted.
+- Approval gates only **matching and outreach** (D-035), never collection.
+- A buyer with a partial box still matches on what is known, with "unknown" shown for the rest.
+- Middlemen go in a partner lane; they're never mixed with end buyers and never lost.
+- Comps and MAO run regardless of buyer status; buyer data never blocks a lead.
