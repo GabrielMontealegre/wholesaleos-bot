@@ -25,8 +25,8 @@ Mark the status here as part of each item's PR.
 >    from the app), B-09 (buyer database), B-19 (match engine), B-20 (agent desk for Muse or Claude),
 >    B-18 (WholesaleOS panel in Chrome), B-21 (free statewide data, Texas and Florida first), B-16
 >    (land), B-06, B-07, B-08, B-17 (deal summary and first look), then the rest of B-05, B-11, B-12,
->    B-13, B-14, B-15. Parts marked "waits on Gabriel" are built switched off; everything else in the
->    item ships normally.
+>    B-13, B-14, B-15, B-22 (title companies; small, can go earlier if convenient). Parts marked "waits on
+>    Gabriel" are built switched off; everything else in the item ships normally.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
@@ -377,8 +377,9 @@ Acceptance
 Goal: a single, honest source for offers (D-015), plus sorting signals (D-011, D-010).
 
 Acceptance
-- One module computes MAO = ARV × band% − repairs − fee, with the band table (70% under $120k ARV;
-  course chart up to 80–83% above — one constant), repairs $20/sq ft light to $50/sq ft heavy until
+- One module computes MAO = ARV × band% − repairs − fee, with the band table from playbook §1 (under
+  $120k ≈70%; $120k–$200k not set until Gabriel answers the open question, shown as "multiplier not set";
+  $200k–$250k 80–82%; $250k–$500k 83%; $500k+ 83%, max 85% — one constant), repairs $20/sq ft light to $50/sq ft heavy until
   condition is known (labeled estimate), fee as an input. Outputs a range, labeled preliminary /
   verified / ballpark to match the ARV label. No ARV → no MAO.
 - Trace every existing `arv * 0.7`-style computation (e.g. `modules/agents/comp-agent.js`,
@@ -442,12 +443,26 @@ Acceptance
   No score without the listed evidence.
 - Land buyers: grantees of recorded acreage or lot deeds in the last 24 months (builders, developers, land
   funds, repeat companies) go into the buyer database (B-09) with the deed as the source.
-- Land is a wholesale deal (D-024): the same pipeline as houses. Two plays, each with its own checks
-  (playbook §4 and §4b): infill lots for builders, and edge acreage near development signals.
+- Land is a wholesale deal (D-024): the same pipeline as houses. Plays (playbook §4, §4b, §4c):
+  - infill lots for builders;
+  - edge acreage near development signals;
+  - teardowns: houses built before ~1960, under ~1,500 sq ft, on blocks with new construction (new
+    year-built parcels or new-build permits nearby), valued as a lot;
+  - luxury teardowns: older homes (built ≤1980, owned 7+ years, value ≥ $750k) in ZIPs with new $2M+
+    builds. The $2M+ evidence must be sourced (sale prices where public, or new-build permit values,
+    labeled as permits).
+  Teardown signals come from free parcel data (year built, living area) and permits. A teardown stays a
+  house lead too; it gets a "teardown candidate" tag, not a second record.
+- The seven course checks on every land card, each sourced or marked "not checked": infill (house on each
+  side), utilities, flat, cleared or wooded, paved road, flood zone (100-year = avoid, 500-year =
+  tolerable), zoning (single-family only or more). Plus the §4b red flags: access, deed restrictions,
+  back taxes, agricultural rollback tax, district taxes, easements, severed minerals, setbacks, wetlands.
+- Best land list first: the county tax-delinquent list filtered to land (where the county publishes it).
 - Red flags shown on every land card, each sourced or marked "not checked": flood zone (FEMA map),
   access, water and sewer, deed restrictions, back taxes, agricultural rollback tax, district taxes,
   easements, severed minerals.
-- Value and offer per A-018, shown only with sourced inputs and labeled "land estimate". No automatic
+- Value and offer per A-018: builder price first, then lot comps, then the 10-15-20 rule; the three offer
+  types; teardown math. Shown only with sourced inputs and labeled "land estimate". No automatic
   land values in Texas (D-001): land comps come from the B-18 panel or disclosure states. Appraised
   values, regional averages and list prices are never comps.
 - A "Land" view: parcels with their seller signals and the nearest demand signals, all with sources. No
@@ -544,8 +559,17 @@ Acceptance
     same sorter and matcher. An assistant's report never counts as a verified fact by itself.
 - Task results: the assistant marks a task done, skipped or failed, with a note and link. Everything is
   logged on the lead or buyer timeline (B-10).
-- Seller texts and calls: the desk only shows a seller batch after Gabriel approves it (up to 20,
-  D-007). Buyer and public-want messages follow D-022 and D-026.
+- Seller and realtor texts and calls: the desk only shows a batch after Gabriel approves it with one click
+  (up to 20, D-029). Buyer and public-want messages follow D-022 and D-026.
+- Task types from the course's assistant workflow (playbook §7), as a morning routine ready by 8 AM local:
+  - lead pulls the assistant runs in its own browser: listing-site keyword searches for distressed or stale
+    listings, auction.com foreclosures at least 14 days out, and builder directories (to find land buyers
+    and ask for their buy box);
+  - comps it captures go in as proposals through the strict comp grid, never as verified by themselves;
+  - realtor offers: a drafted message per stale listing, with the price from B-08 (houses, only with a real
+    ARV) or A-018 (land, e.g. 50–60% of list on stale land listings), sent only in an approved batch.
+  - The server itself never visits those sites (AGENTS §5 Network). The assistant does, in Gabriel's
+    accounts.
 - Tests: wrong or missing token refused; read endpoints refuse writes and the drop box refuses reads;
   missing source link rejected; caps enforced; no personal data in logs.
 
@@ -563,8 +587,8 @@ Acceptance
 - Florida: the Department of Revenue statewide tax-roll files (owner, mailing address, land use, recent sale
   price and date), published yearly. Florida sales feed automatic comps through the strict grid and B-09
   buyers with prices.
-  - Florida as an automatic-comp market waits on Gabriel (open question). Until then, use it for
-    leads, land and buyers only.
+  - Florida is a first automatic-comp market (D-030): Florida sales feed the strict comp grid like
+    Charlotte, plus land comps and teardown lot values.
 - Each record keeps its state file name, row reference and file date. Old values are superseded with
   an audit trail, never overwritten silently.
 - Bulk files are downloaded at most once per release, at the source's own pace. Stop on 401, 403 or 429.
@@ -610,6 +634,21 @@ Acceptance
   - skool.com is refused.
   - A forged or missing source link is rejected; duplicate posts merge.
   - The sorter is pure (spied: no network, clock or writes).
+
+---
+
+## B-22 · Title companies list · TODO
+
+Goal: know which title companies will close our deals before the first contract (playbook §4c, §8).
+
+Acceptance
+- A Title tab: company, county or market, contact, and the four answers, each with date and who asked:
+  investor friendly? works with wholesalers? closes assignments? does double closes? Plus closing for a
+  non-resident individual with a US bank account and no LLC (playbook §8).
+- Entries come from the operator or the assistant's drop box (B-20), with a source note. A company with
+  "yes" to double closes is marked "investor friendly".
+- On a deal card: the investor-friendly title companies for that county.
+- Tests: missing answers stay "not asked"; no invented answers.
 
 ---
 
