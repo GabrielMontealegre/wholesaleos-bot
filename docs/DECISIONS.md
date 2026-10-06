@@ -45,6 +45,7 @@ corrects them during review.
 | D-036 | 2026-10-06 | **Build the machine before the paint.** One end-to-end golden-path test (#264) walks a deal from public notice to buyer outreach. Backlog items turn its steps green, and the front-end pass (B-15) waits until steps 1–8 pass. |
 | D-037 | 2026-10-06 | **Separate tabs, one engine.** Leads, Buyers, Title Companies, Outreach and Deals (the machine view of each deal's golden-path stage) are separate tabs that read and write the same records, so a change in one shows in all. The dashboard summarizes them. |
 | D-038 | 2026-10-06 | **Keep what is real, label the rest.** Existing dashboard buyers that check out on the public web (a real company with a current buy box) keep their buy boxes and are labeled verified. Only those that can't be found are labeled "AI-generated, unverified" and kept out of matching. Nothing is deleted (amends #262). |
+| D-039 | 2026-10-06 | **Usability floor before the golden path** (amends D-036). Every URL is a link, every lead row opens the lead, every count opens its list, filters by state and county work, junk rows and wrong-property links are never shown as leads, and nothing can be sent to test or unverified buyers. This is access and correctness, not redesign; the visual redesign (B-15) still waits (issue #269). |
 
 ## Architect decisions (Gabriel may veto)
 
