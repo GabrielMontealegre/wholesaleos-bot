@@ -8,6 +8,19 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-06 — #271 DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)),
+application merge `0202654`. The signed-admin buyer import accepts file/paste JSON,
+previews redacted counts without writes, and saves only on explicit Import. Optional
+bulk approval records the admin/time/reason for new end buyers; other categories and
+existing decisions stay intact. Full suite: 123 passed, 0 failed, 0 skipped; final
+focused purity checks also passed. Railway succeeded; `/health` 200; bundle `?v=3`.
+Live Import form rendered at 1366/400 without overflow or console errors. Source
+rows hydrated (296), 100 saved-lead rows rendered and a card opened. Production
+find counts remained 0/0/0. No production preview/import, approval, outreach or batch.
+[Screenshots/report](screens/2026-10-06-buyer-import/README.md). No blocked item;
+assumptions in DECISIONS.md cover preview expiry and preserving duplicate approvals.
+This run handled #271 only; next is #269 per item 12.
+
 2026-10-06 — #260 DONE ([PR #274](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274)),
 application merge `77b90fa`. PR #268 was rolled back after a production theme failure;
 the corrected tab passed local contrast checks and live desktop/phone inspection.
@@ -50,7 +63,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 >    ahead of the backlog order in 10.
 > 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
->     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) (admin Import button for buyer finds; small), then
+>     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
 >     [#269](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/269) (usability floor: junk leads, wrong links, fake
 >     matches, clickable links/rows/counts, plain English; Gabriel can't use the app until this lands), then
 >     [#275](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/275) (Deal Check panel on every lead + every lead gets a use + Texas

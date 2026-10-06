@@ -92,7 +92,7 @@ corrects them during review.
 
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)
 
-ASSUMED: #271 authorizes the signed admin's explicit already-approved checkbox as an exception to #260's individual approval assumption. Only newly created, explicitly classified end buyers receive it; unknown/out-of-market/partner/caution/non-buyer records stay pending and duplicates preserve existing approvals. Previews live in bounded memory (20 at once), belong to the admin, expire after five minutes and are consumed on successful import — because explicit operator intent and preserving existing decisions outrank automatic approval or stale-preview reuse — 2026-10-06.
+ASSUMED: #271 authorizes the signed admin's explicit already-approved checkbox as an exception to #260's individual approval assumption. Only newly created, explicitly classified end buyers receive it; unknown/out-of-market/partner/caution/non-buyer records stay pending and duplicates preserve existing approvals. Previews live in bounded memory (20 at once), belong to the admin, expire after five minutes and are consumed on successful import — because explicit operator intent and preserving existing decisions outrank automatic approval or stale-preview reuse — 2026-10-06 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279.
 
 ASSUMED: #260's 2026-10-06 update supersedes its original 25-item cap with 50; 8 KiB per item, 256 KiB per request and 12 requests per paired token per hour bound the drop box. Counts use UTC calendar days and Monday-based weeks — because the update sets the batch size and deterministic limits satisfy the unchanged safety rules — 2026-10-06 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274.
 
