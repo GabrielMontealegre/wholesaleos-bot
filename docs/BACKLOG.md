@@ -8,6 +8,19 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-06 — #260 DONE ([PR #274](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274)),
+application merge `77b90fa`. PR #268 was rolled back after a production theme failure;
+the corrected tab passed local contrast checks and live desktop/phone inspection.
+Full suite: 115 passed, 0 failed, 7 environment skips; real-server session checks also
+passed outside the spawn restriction. Railway succeeded, `/health` 200, bundle `?v=2`,
+anonymous buyer-find read 401. Production: 0 new today / 0 total / 0 messaged this week;
+source rows hydrated (296 in the selected county profile), 100 national saved-lead rows
+rendered and a lead card opened. No errors logged for the corrected release; no production
+writes, buyer imports, approvals, outreach or batches. [Screenshots/report](screens/2026-10-06-buyers-found/README.md).
+#273's rollback finding is resolved. Assumptions: 50-item update, bounded token rate,
+UTC counts, conservative duplicate association and partial fit preview (DECISIONS.md).
+This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
+
 ---
 
 > **Priority order right now (architect, 2026-10-06):** work the open `codex-task` issues in
@@ -33,10 +46,10 @@ Mark the status here as part of each item's PR.
 >    B-13, B-14, B-15, B-22 (title companies; small, can go earlier if convenient). Parts marked "waits on
 >    Gabriel" are built switched off; everything else in the item ships normally.
 >
-> 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) IN PROGRESS ([#273](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/273)): PR #268 reverted after production dark-theme readability failed; scoped theme repair and actual-theme contrast proof passed, awaiting re-release verification. Gabriel's priority: goes next,
+> 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) DONE ([PR #274](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274)): approval, structured buy boxes, duplicate correlation and initial lead fits deployed and verified read-only. PR #268 was reverted and replaced after the theme failure tracked in #273. Gabriel's priority: goes next,
 >    ahead of the backlog order in 10.
 > 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
->     First do #260 (Buyers tab, with approval and correlation; DONE in PR #268), then
+>     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) (admin Import button for buyer finds; small), then
 >     [#269](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/269) (usability floor: junk leads, wrong links, fake
 >     matches, clickable links/rows/counts, plain English; Gabriel can't use the app until this lands), then
