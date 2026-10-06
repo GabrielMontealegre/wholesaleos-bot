@@ -47,9 +47,7 @@ function buyBoxExists(box) {
 }
 
 function getBuyBoxes() {
-  const store = db.readDB();
-  const fits = require('./buyers/buyer-fit');
-  return (store.buyboxes || []).filter(box => !isGeneratedMarketBuyBox(box) && fits.boxAllowed(box, store.buyers));
+  return (db.readDB().buyboxes || []).filter(box => !isGeneratedMarketBuyBox(box));
 }
 
 function addBuyBox(data) {
@@ -74,7 +72,6 @@ function extractFromBuyers() {
   const buyers = db.getBuyers();
   let extracted = 0;
   buyers.forEach(buyer => {
-    if (buyer.assistant_find) return;
     if (!buyer.name || !(buyer.contact || buyer.phone || buyer.email) ||
         /auto-generated|template/i.test(String(buyer.source || ''))) return;
     const box = {

@@ -30,7 +30,6 @@ const providerCapabilityAudit = require('./modules/research/provider-capability-
 const dashboardAuth = require('./modules/security/dashboard-auth');
 const dashboardSession = require('./modules/security/dashboard-session');
 const dashboardPairing = require('./modules/security/dashboard-pairing');
-const assistantFindRoutes = require('./modules/buyers/assistant-find-routes');
 const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
@@ -306,7 +305,6 @@ const API_SESSION_EXCEPTIONS = Object.freeze([
   { method: 'POST', path: '/auth/email-login', reason: 'Credential exchange for a signed session.' },
   { method: 'POST', path: '/auth/logout', reason: 'Clear a browser session.' },
   { method: 'POST', path: '/auth/pairing-exchange', reason: 'Single-use pairing token exchange.' },
-  { method: 'POST', path: '/assistant/finds', reason: 'Write-only assistant drop box; verifies assistant_finds:write agent token.' },
   { method: 'GET', path: '/dashboard/free-public-deal-board/latest', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
   { method: 'GET', path: '/dashboard/research-queue/current', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
   { method: 'POST', path: '/dashboard/free-public-deal-board/manual-evidence/upload', reason: 'Agent bearer token verified by requireAdminOrAgent.' },
@@ -2708,11 +2706,9 @@ app.delete('/api/leads/:id', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Buyers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env } });
-
 app.get('/api/buyers', requireAuth, (req, res) => {
   try {
-    let buyers = db.getBuyers();
+    let buyers = db.readDB().buyers || [];
     
     // State filter
     if (req.query.state) {
@@ -2761,7 +2757,6 @@ app.put('/api/buyers/:id', (req, res) => {
   const dbData = db.readDB();
   const idx = (dbData.buyers || []).findIndex(b => b.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Buyer not found' });
-  if (dbData.buyers[idx].assistant_find || Object.prototype.hasOwnProperty.call(req.body, 'assistant_find')) return res.status(409).json({ code: 'buyer_find_use_admin_workflow' });
   dbData.buyers[idx] = { ...dbData.buyers[idx], ...req.body };
   db.writeDB(dbData);
   res.json(dbData.buyers[idx]);
@@ -5137,12 +5132,6 @@ app.get('/api/buyers/:id/match-deals', async (req, res) => {
     const dbData = db.readDB();
     const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
-    if (buyer.assistant_find) {
-      const fits = require('./modules/buyers/buyer-fit');
-      if (!fits.approvedForMatching(buyer)) return res.status(409).json({ code: 'buyer_approval_required', deals: [], total: 0 });
-      const deals = (dbData.leads || []).map(lead => ({ lead, fit: fits.fitLead(buyer, lead) })).filter(item => item.fit.fits);
-      return res.json({ deals: deals.slice(0, 20).map(item => ({ ...item.lead, fit_reasons: item.fit.reasons, fit_unknown: item.fit.unknown })), total: deals.length });
-    }
     const leads = dbData.leads || [];
     const maxPrice = buyer.maxPrice || 999999999;
     const buyTypes = buyer.buyTypes || [];

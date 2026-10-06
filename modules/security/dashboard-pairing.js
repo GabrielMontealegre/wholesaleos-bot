@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const sessions = require('./dashboard-session');
 
-const AGENT_PERMISSIONS = Object.freeze(['deal_board:read', 'manual_evidence:write', 'assistant_finds:write']);
+const AGENT_PERMISSIONS = Object.freeze(['deal_board:read', 'manual_evidence:write']);
 
 function statePath(options = {}) {
   return path.resolve(options.state_path || (options.env || process.env).WOS_PAIRING_STATE_PATH || path.join(__dirname, '..', '..', 'data', 'dashboard-pairing-state.json'));

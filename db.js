@@ -28,14 +28,6 @@ function writeDB(data) {
   fs.renameSync(tmp, DB_FILE);
 }
 
-function readDBStrict() {
-  try {
-    const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    if (!data || typeof data !== 'object' || Array.isArray(data) || (data.buyers !== undefined && !Array.isArray(data.buyers))) throw new Error();
-    return data;
-  } catch (_) { throw new Error('database_unavailable'); }
-}
-
 // ── Leads ──────────────────────────────────────────────
 function getLeads() { return readDB().leads || []; }
 
@@ -1569,13 +1561,9 @@ function clearFakeLeads() {
 }
 
 // ── Buyers ─────────────────────────────────────────────
-function getBuyers() {
-  const fits = require('./modules/buyers/buyer-fit');
-  return (readDB().buyers || []).filter(fits.approvedForMatching).map(fits.matchingBuyer);
-}
+function getBuyers() { return readDB().buyers || []; }
 
 function addBuyer(buyer) {
-  if (buyer && Object.prototype.hasOwnProperty.call(buyer, 'assistant_find')) throw new Error('buyer_find_requires_dropbox');
   const db = readDB();
   if (!db.buyers) db.buyers = [];
   const newBuyer = {
@@ -1593,7 +1581,6 @@ function addBuyer(buyer) {
 
 function matchBuyersToLead(lead) {
   return getBuyers().filter(b => {
-    if (b.assistant_find) return require('./modules/buyers/buyer-fit').fitLead(b, lead).fits;
     if (b.status !== 'Active') return false;
     const priceOk = (!b.maxPrice || (lead.arv||0) * 0.85 <= b.maxPrice) &&
                     (!b.minARV   || (lead.arv||0) >= b.minARV);
@@ -2361,7 +2348,7 @@ function addEnrichmentHistory(leadId, entry) {
 
 
 module.exports = {
-  readDB, readDBStrict, writeDB,
+  readDB, writeDB,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
   generateLeadReferenceId, updateLeadAssignmentState,
   getLeadActivities, addLeadActivity,
