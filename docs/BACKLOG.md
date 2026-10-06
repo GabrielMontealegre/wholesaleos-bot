@@ -19,10 +19,11 @@ Mark the status here as part of each item's PR.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
 > 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): line-ending-neutral comp-grid fingerprint; architect verified the old hash was the CRLF form of the same unchanged rule file.
 > 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) DONE ([PR #246](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/246)): architect verified network-free that notices with eight address wordings are kept (unknown wording kept as `unlabeled`), the loan date never becomes the sale date, and the real notice corpus produces 0 after-sale records.
-> 8. Backlog items in this order: B-00a, B-00b, B-09 (buyer database, expanded), B-16 (land),
->    B-06, B-07, B-08, B-17 (deal summary and buyer first look), then the rest of B-05, B-10,
->    B-11, B-12, B-13, B-14, B-15. Parts marked "waits on Gabriel" are built switched off;
->    everything else in the item ships normally.
+> 8. Backlog items in this order (architect, 2026-10-06): B-00a, B-00b, B-10 (contact from the app,
+>    moved up per D-023), B-09 (buyer database), B-18 (WholesaleOS panel in Chrome and the
+>    opportunity inbox), B-16 (land, all major growth counties), B-06, B-07, B-08, B-17 (deal
+>    summary and first look), then the rest of B-05, B-11, B-12, B-13, B-14, B-15. Parts marked
+>    "waits on Gabriel" are built switched off; everything else in the item ships normally.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
@@ -438,12 +439,20 @@ Acceptance
   No score without the listed evidence.
 - Land buyers: grantees of recorded acreage or lot deeds in the last 24 months (builders, developers, land
   funds, repeat companies) go into the buyer database (B-09) with the deed as the source.
-- Value: no automatic land values in Texas (D-001). Land comps come from the operator's browser (B-11) or
-  from disclosure states. Appraised value is never a comp. The land offer formula waits on Gabriel.
+- Land is a wholesale deal (D-024): the same pipeline as houses. Two plays, each with its own checks
+  (playbook §4 and §4b): infill lots for builders, and edge acreage near development signals.
+- Red flags shown on every land card, each sourced or marked "not checked": flood zone (FEMA map),
+  access, water and sewer, deed restrictions, back taxes, agricultural rollback tax, district taxes,
+  easements, severed minerals.
+- Value and offer per A-018, shown only with sourced inputs and labeled "land estimate". No automatic
+  land values in Texas (D-001): land comps come from the B-18 panel or disclosure states. Appraised
+  values, regional averages and list prices are never comps.
 - A "Land" view: parcels with their seller signals and the nearest demand signals, all with sources. No
   contact actions in this item.
-- First counties: Dallas and Ellis (profiles exist), then Kaufman and Collin (active MUD filings). Adding a
-  county is a profile entry, never new county-named code (D-019).
+- Counties (D-024): rank the playbook §10 candidates with public data: Census county population
+  estimates (Vintage 2025), TCEQ district filings, and permit and plat counts where published. Publish the
+  ranking with sources in the PR. Then add counties in ranked order, starting with those that publish free
+  appraisal data. Adding a county is a profile entry, never new county-named code (D-019).
 - Tests: forged, stale, wrong-host and missing-source records rejected with a reason; pure scorers have no
   network, clock or writes (spied); no county name outside profile data.
 
@@ -462,7 +471,8 @@ Acceptance
   to the B-09 sign-up form. Built only from sourced facts; if ARV is missing it does not generate and says why.
 - Share page: a read-only, expiring public link per summary, showing the summary only. The operator can turn
   it off. No address, no seller name, no internal fields.
-- First look: rank buyers whose buy box matches. The operator picks up to 20. Email goes from the operator's
+- First look: rank buyers whose buy box matches, including people who publicly posted a matching want
+  (D-022, with the post link). The operator picks up to 20. Email goes from the operator's
   own mail (prefilled draft). Text goes only to buyers with text consent and only after the Texas texting
   decision (A-017). Every offer is logged on the buyer and the deal.
 - Group posts: a group directory (name, link, county or national, whether deal posts are allowed, the
@@ -475,6 +485,43 @@ Acceptance
 - Tests: no address or seller data in any summary or share page (negative test with a full record); the
   Texas disclosure is present on every Texas summary; missing ARV blocks generation; consent gates on every
   channel; the 20-cap; the share link expires.
+
+---
+
+## B-18 · WholesaleOS panel in Chrome and the opportunity inbox · TODO
+
+Goal: what Gabriel reads on Facebook, Zillow and Redfin can be saved into WholesaleOS with one click and
+sorted into opportunities (D-025, A-019).
+
+Acceptance
+- A Chrome extension (Manifest V3, side panel) in `extension/`, installed by Gabriel as an unpacked
+  extension. It signs in with the existing dashboard session and never sees or stores a password. It runs
+  only on facebook.com, zillow.com and redfin.com and never on skool.com.
+- Facebook: "Save post" on one post, and "Save visible posts" for what is on screen. Each saves the post
+  text, poster name and profile link, group name and link, post link, posted time and the comments
+  Gabriel has opened. Nothing is saved without a click. The panel never scrolls, opens, likes, comments,
+  posts or messages.
+- Zillow and Redfin: "Save this listing" and "Save these sold results". They feed comps as proposals
+  through the strict comp grid (B-06, B-11).
+- Opportunity inbox in WholesaleOS: every saved item with its source link and capture time, merged by post
+  link, with a delete button.
+- Sorter (pure module, fixed rules first): buyer wants a house; buyer wants land or lots; owner selling;
+  wholesaler deal post; agent listing; lender or service; needs a look.
+  - It extracts area (city, county, ZIP), property type, price range, acreage, beds, cash or financing
+    and timeline. Each value keeps the exact words it came from.
+  - The AI sorter is an optional switch, off by default (paid; Gabriel decides).
+- Matches:
+  - A buyer want that fits one of our deals or land leads → "possible buyer" (D-022).
+  - An owner selling in our counties → "possible lead", still subject to normal address and owner
+    verification.
+  - Every want → the buyer database as "publicly posted want" with the post link (B-09).
+- Privacy: poster names and links never appear in logs or aggregate reports.
+- Tests:
+  - Saved-HTML fixtures for Facebook, Zillow and Redfin.
+  - The content scripts contain no automatic scroll, click, submit or message code.
+  - skool.com is refused.
+  - A forged or missing source link is rejected; duplicate posts merge.
+  - The sorter is pure (spied: no network, clock or writes).
 
 ---
 
@@ -494,15 +541,22 @@ Acceptance
   human-sounding messages (templates; no AI sending) and shows tap-to-send links (`sms:` with the
   prefilled body) for the operator's phone; each tap is logged. No automated sending, no texting to
   numbers marked Do not call or Wrong person.
-- Texas texting gate (A-017): texting a Texas number stays switched off until Gabriel records his
-  SB 140 decision. Build it with the switch off; the card shows "Texting is off for Texas numbers".
-- Tests: log immutability, actor required, 20-cap, blocked numbers excluded, Texas switch off by default.
+- Texas texting is allowed (D-023, cleared by Gabriel's lawyer). Keep the switch so it can be turned off.
+- Calls: the `tel:` link plus a one-tap outcome log (no answer, left voicemail, talked, wrong number,
+  do not call). Email: a prefilled draft that opens in Gabriel's own email, logged when opened.
+- People who publicly posted a matching want (D-022) can be in a batch, with the post link shown.
+- If Gabriel has no US number to text from, the open question in DECISIONS decides how texts go out.
+  Never build a paid sender without his decision.
+- Tests: log immutability, actor required, 20-cap, blocked numbers excluded, every send logged.
 
 ---
 
 ## B-11 · Local helper: batch comp and phone capture in the operator's browser · TODO
 
 Goal: "try it first" (D-006) without the server touching listing or people-search sites.
+
+Note (2026-10-06): Zillow and Redfin capture now arrives through the B-18 Chrome panel (A-019). This item
+keeps the batch queue and the people-search part; reuse the B-18 panel wherever possible.
 
 Acceptance
 - Extend the local helper (`scripts/wos-local-helper.js`, `scripts/wos-local-comp-agent.js`; modes
