@@ -133,6 +133,23 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual((await request(base, 'GET', latest, { headers: { Authorization: 'Bearer forged' } })).status, 401);
     assert.strictEqual((await request(base, 'GET', '/api/leads', { headers: { Authorization: `Bearer ${exchange.body.agent_token}` } })).status, 401);
 
+    const findHeaders = { Authorization: `Bearer ${exchange.body.agent_token}` };
+    const findInput = { items: [{ name: 'SYNTHETIC BUYER', platform: 'facebook', group_name: 'SYNTHETIC GROUP', group_id: '123',
+      profile_url: 'https://www.facebook.com/groups/123/user/456/', source_url: 'https://www.facebook.com/groups/123/search/?q=buy',
+      what_they_buy: 'Synthetic fixture only', deal_type: 'house', classification: 'end_buyer', captured_at: new Date().toISOString() }] };
+    assert.strictEqual((await request(base, 'POST', '/api/assistant/finds', { body: findInput })).status, 401);
+    const findWrite = await request(base, 'POST', '/api/assistant/finds', { headers: findHeaders, body: findInput });
+    assert.strictEqual(findWrite.status, 200, 'the exact POST exception still checks its own agent scope');
+    const findId = findWrite.body.results[0].id;
+    assert.strictEqual((await request(base, 'GET', '/api/assistant/finds', { headers: findHeaders })).status, 401);
+    assert.strictEqual((await request(base, 'GET', '/api/dashboard/buyers-found', { headers: findHeaders })).status, 401);
+    assert.strictEqual((await request(base, 'PATCH', '/api/dashboard/buyers-found/' + findId, { headers: findHeaders, body: { approval: 'approved' } })).status, 401);
+    assert.strictEqual((await request(base, 'GET', '/api/dashboard/buyers-found', { headers: { Cookie: cookie } })).status, 200);
+    assert.strictEqual((await request(base, 'GET', '/api/buyers/' + findId + '/match-deals', { headers: { Cookie: cookie } })).status, 409);
+    assert.strictEqual((await request(base, 'PUT', '/api/buyers/' + findId, { headers: { Cookie: cookie }, body: { assistant_find: { approval: 'approved' } } })).status, 409);
+    assert.strictEqual((await request(base, 'PATCH', '/api/dashboard/buyers-found/' + findId, { headers: { Cookie: cookie }, body: { approval: 'approved', reason: 'Synthetic fixture review' } })).status, 200);
+    assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).buyers[0].assistant_find.history[0].operator_id, 'admin');
+
     for (const route of ['/api/sms/webhook', '/api/dialer/twiml', '/api/dialer/recording-complete']) {
       const denied = await fetch(base + route, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'CallSid=CA123' });
       assert.strictEqual(denied.status, 401, `${route} requires a provider signature`);
