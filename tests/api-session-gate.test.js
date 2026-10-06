@@ -61,7 +61,8 @@ async function request(base, method, route, options = {}) {
   const dbPath = path.join(tmp, 'db.json');
   fs.writeFileSync(dbPath, JSON.stringify({
     leads: [{ id: 'seed-lead', address: '123 Test St', status: 'New Lead' }],
-    users: [{ id: 'admin', name: 'Admin', role: 'admin', firstLogin: false }]
+    users: [{ id: 'admin', name: 'Admin', role: 'admin', firstLogin: false },
+      { id: 'regular-fixture', name: 'SYNTHETIC USER', role: 'user', firstLogin: false }]
   }));
   const child = childProcess.spawn(process.execPath, ['server.js'], {
     cwd: root,
@@ -149,6 +150,16 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual((await request(base, 'PUT', '/api/buyers/' + findId, { headers: { Cookie: cookie }, body: { assistant_find: { approval: 'approved' } } })).status, 409);
     assert.strictEqual((await request(base, 'PATCH', '/api/dashboard/buyers-found/' + findId, { headers: { Cookie: cookie }, body: { approval: 'approved', reason: 'Synthetic fixture review' } })).status, 200);
     assert.strictEqual(JSON.parse(fs.readFileSync(dbPath, 'utf8')).buyers[0].assistant_find.history[0].operator_id, 'admin');
+    const previewPath = '/api/dashboard/buyers-found/import/preview';
+    const commitPath = '/api/dashboard/buyers-found/import/commit';
+    assert.strictEqual((await request(base, 'POST', previewPath, { headers: findHeaders, body: findInput })).status, 401);
+    const regularSession = session.issueSession({ userId: 'regular-fixture', role: 'user', scope: 'dashboard' }, { secret }).token;
+    assert.strictEqual((await request(base, 'POST', previewPath, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` }, body: findInput })).status, 403);
+    const dbBeforePreview = fs.readFileSync(dbPath, 'utf8');
+    const importPreview = await request(base, 'POST', previewPath, { headers: { Cookie: cookie }, body: findInput });
+    assert.strictEqual(importPreview.status, 200);
+    assert.strictEqual(fs.readFileSync(dbPath, 'utf8'), dbBeforePreview);
+    assert.strictEqual((await request(base, 'POST', commitPath, { headers: findHeaders, body: { preview_id: importPreview.body.preview_id, bulk_approve: true } })).status, 401);
 
     for (const route of ['/api/sms/webhook', '/api/dialer/twiml', '/api/dialer/recording-complete']) {
       const denied = await fetch(base + route, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'CallSid=CA123' });

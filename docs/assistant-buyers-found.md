@@ -8,6 +8,32 @@ Changing a status records history; it never sends a message or verifies a buyer.
 
 ## Assistant integration
 
+### Import from the dashboard
+
+Open **Buyers found**, choose **Import buyers**, and select a JSON file or paste
+JSON in the same `{ "items": [...] }` format described below. Click **Preview**
+to see new, duplicate and invalid-item counts and invalid-item reasons. Preview
+saves nothing. Edit the input and preview again if corrections are needed.
+
+The optional **These were already approved by me** checkbox starts unchecked.
+It approves only newly created records explicitly classified as end buyers;
+partners, caution records, non-buyers, unknown categories and out-of-market
+records stay pending. Existing records keep their approval and outreach history.
+Each bulk approval records the signed admin, time and `approved before import`.
+
+Click **Import** to save the valid items. Rejected input items are reported, not
+silently stored. This uses the same validation and writer as the assistant drop
+box; it needs the signed admin session, never an agent token. A preview expires
+after five minutes or server restart and must be previewed again. An input edit
+invalidates its preview. No message is sent by preview, import or approval.
+
+The signed-admin routes are POST `/api/dashboard/buyers-found/import/preview`
+with the items body and POST `/api/dashboard/buyers-found/import/commit` with
+`{ "preview_id": "...", "bulk_approve": false }`. Preview ids are tied to the
+admin and consumed after a successful import. They do not replace session auth.
+
+### Drop box
+
 - Endpoint: `POST /api/assistant/finds` on the dashboard's origin.
 - Header: `Authorization: Bearer <agent token>` from the existing admin pairing flow.
   A newly paired token includes `assistant_finds:write`; older tokens without that
@@ -87,3 +113,6 @@ store and blocks all external requests. Screenshots under
 `docs/screens/buyers-found-local/` are synthetic, not production evidence.
 The proof loads the dashboard's actual dark theme and checks contrast for both
 populated and empty states at desktop and phone widths.
+`node scripts/verify-buyer-import-ui.js` exercises file/paste preview and explicit
+import using synthetic local records. Its screenshots live under
+`docs/screens/buyer-import-local/` and are never real buyer evidence.

@@ -3,10 +3,15 @@
 const crypto = require('crypto');
 const finds = require('./assistant-finds');
 const pairing = require('../security/dashboard-pairing');
+const imports = require('./buyer-find-import');
 const REQUESTS_PER_HOUR = 12;
 
 function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString() }) {
   const requests = new Map();
+  const previews = new Map();
+  function expirePreviews(at) {
+    for (const [id, entry] of previews) if (entry.expires <= at) previews.delete(id);
+  }
   function agentOnly(req, res, next) {
     try {
       const match = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
@@ -46,7 +51,37 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
   app.get('/api/dashboard/buyers-found', requireAdmin, (req, res) => {
     try {
       res.set('Cache-Control', 'no-store');
-      res.json(finds.listFinds(db.readDBStrict(), { now: now() }));
+      res.json({ ...finds.listFinds(db.readDBStrict(), { now: now() }), capabilities: { can_import: true } });
+    } catch (error) { failure(res, error); }
+  });
+  app.post('/api/dashboard/buyers-found/import/preview', requireAdmin, (req, res) => {
+    try {
+      const at = now();
+      expirePreviews(Date.parse(at));
+      if (previews.size >= 20) return res.status(429).json({ code: 'find_preview_limit' });
+      const plan = imports.prepareImport(db.readDBStrict(), req.body, { now: at });
+      const id = crypto.randomUUID();
+      previews.set(id, { plan, actor: req.currentUser.id, expires: Date.parse(at) + 300000 });
+      res.set('Cache-Control', 'no-store').json({ preview_id: id, ...plan.summary });
+    } catch (error) { failure(res, error); }
+  });
+  app.post('/api/dashboard/buyers-found/import/commit', requireAdmin, (req, res) => {
+    try {
+      const body = req.body;
+      if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.preview_id !== 'string' ||
+          typeof body.bulk_approve !== 'boolean' || Object.keys(body).some(key => !['preview_id', 'bulk_approve'].includes(key))) {
+        return res.status(400).json({ code: 'find_import_request_invalid' });
+      }
+      const at = now();
+      expirePreviews(Date.parse(at));
+      const preview = previews.get(body.preview_id);
+      if (!preview || preview.actor !== req.currentUser.id) return res.status(409).json({ code: 'find_preview_required' });
+      const result = imports.commitImport(db.readDBStrict(), preview.plan, {
+        now: at, operatorId: req.currentUser.id, createId: () => 'BF' + crypto.randomUUID(), bulkApprove: body.bulk_approve
+      });
+      db.writeDB(result.store);
+      previews.delete(body.preview_id);
+      res.set('Cache-Control', 'no-store').json(result.summary);
     } catch (error) { failure(res, error); }
   });
   app.patch('/api/dashboard/buyers-found/:id', requireAdmin, (req, res) => {
