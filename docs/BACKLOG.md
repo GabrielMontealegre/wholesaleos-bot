@@ -19,8 +19,10 @@ Mark the status here as part of each item's PR.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
 > 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): line-ending-neutral comp-grid fingerprint; architect verified the old hash was the CRLF form of the same unchanged rule file.
 > 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) DONE ([PR #246](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/246)): architect verified network-free that notices with eight address wordings are kept (unknown wording kept as `unlabeled`), the loan date never becomes the sale date, and the real notice corpus produces 0 after-sale records.
-> 8. [#250](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/250) read-only status report:
->    production screenshots of every screen (personal data redacted) and counts per market. Do first.
+> 8. [#250](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/250) DONE ([PR #254](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/254)):
+>    36 redacted production screenshots and a six-market read-only count report. Per-market saved-lead
+>    counts and seven-day source-success history were not exposed by the existing summaries and were
+>    reported as not measured, not zero. No batch or production write.
 > 9. Backlog items in this order (architect, 2026-10-06, second update): B-00a, B-00b, B-10 (contact
 >    from the app), B-09 (buyer database), B-19 (match engine), B-20 (agent desk for Muse or Claude),
 >    B-18 (WholesaleOS panel in Chrome), B-21 (free statewide data, Texas and Florida first), B-16
