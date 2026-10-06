@@ -10,7 +10,7 @@ Mark the status here as part of each item's PR.
 
 ---
 
-> **Priority order right now (architect, 2026-10-05):** work the open `codex-task` issues in
+> **Priority order right now (architect, 2026-10-06):** work the open `codex-task` issues in
 > exactly this order, then the backlog items:
 > 1. [#233](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/233) DONE ([PR #236](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/236)): signed session required across `/api`; anonymous lead reads denied in production; `/health` 200; signed-in dashboard still hydrated Dallas rows and opened a card.
 > 2. [#234](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/234) DONE ([PR #237](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/237)): server voice-token and outbound-call routes return 410; Call controls open `tel:` links without logging a completed call. Full suite 117 passed, 0 failed, 0 skipped. Deployed `/health` 200; Dialer showed the phone link without a call. A transient saved-leads 502 appeared during reload; source rows subsequently hydrated.
@@ -18,8 +18,11 @@ Mark the status here as part of each item's PR.
 > 4. [#224](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/224) DONE ([PR #240](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/240)): shared sale-origin allow-list; hearing and unlabeled event dates remain raw and cannot become a sale date. Full suite: 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated 291 Dallas source rows and opened a card. No batch.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
 > 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): line-ending-neutral comp-grid fingerprint; architect verified the old hash was the CRLF form of the same unchanged rule file.
-> 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) BLOCKER IN PROGRESS: retain source-backed active notice rows with an unrecognized address label as unverified; keep them outside after-sale; record non-property exclusions. Fix and full-suite verification are in progress.
-> 8. B-00a, then B-00b, then the rest of B-05 and below.
+> 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) DONE ([PR #246](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/246)): architect verified network-free that notices with eight address wordings are kept (unknown wording kept as `unlabeled`), the loan date never becomes the sale date, and the real notice corpus produces 0 after-sale records.
+> 8. Backlog items in this order: B-00a, B-00b, B-09 (buyer database, expanded), B-16 (land),
+>    B-06, B-07, B-08, B-17 (deal summary and buyer first look), then the rest of B-05, B-10,
+>    B-11, B-12, B-13, B-14, B-15. Parts marked "waits on Gabriel" are built switched off;
+>    everything else in the item ships normally.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
@@ -402,7 +405,76 @@ Acceptance
   average price — all from records with sources.
 - Add third-party auction buyers from B-05.
 - Buyers tab: ranked list, filter by area and price; "buyers within a mile of this deal" on a lead card.
-- No contact actions in this item. No buyer without a sourced purchase record.
+- No contact actions in this item. No buyer without a source.
+- Expanded 2026-10-06 (D-021). The buyer database is a core asset:
+  - Non-disclosure states (Texas): buyers come from recorded deeds (grantee, recording date, instrument,
+    parcel) with no price. Repeat grantees and companies rank first. Land buyers from B-16 join the same list.
+  - Sign-up source: a public "Get deals first" form (name, email and/or phone, buy box: areas, price range,
+    property types including land and acreage). Consent is recorded per channel (email, text, call) with
+    the exact consent wording and a timestamp. Rate-limited, bot-protected, behind no login, and it never
+    shows any other buyer's data.
+  - Operator-added source: a buyer met in a Facebook group, on a call or at a meetup, entered by hand with a
+    source note or link and consent "not opted in".
+  - Each buyer record: buy box, consent per channel, first-look tier, deals offered, responses, last contact,
+    and every source. Duplicates across sources merge into one buyer with all sources kept.
+  - Still no sending in this item.
+
+---
+
+## B-16 · Land lane, Dallas–Fort Worth first · TODO
+
+Goal: find vacant-land owners who may sell, in places where builders and developers are buying (D-020).
+
+Acceptance
+- Parcels: vacant and acreage parcels from county appraisal district public data (published bulk files or
+  the public search), registered as county source profiles with allowlisted hosts, at most 1 request per
+  second. Fields, each with provenance: parcel id, acreage, land-use code, owner, mailing address, deed date
+  (years owned), exemptions, and tax status where the county tax office publishes delinquency.
+- Seller signals, each sourced and used for sorting only: absentee or out-of-state owner, owned 10+ years,
+  tax delinquent, estate or heirs in the owner name, no homestead exemption.
+- Demand map ("where land is wanted"), each a sourced and dated signal: utility district (MUD) applications
+  on tceq.texas.gov, building permits from official city open-data portals, recorded subdivision plats, and
+  recorded acreage or lot deeds to builders and developers. Per area, show the signals with dates and links.
+  No score without the listed evidence.
+- Land buyers: grantees of recorded acreage or lot deeds in the last 24 months (builders, developers, land
+  funds, repeat companies) go into the buyer database (B-09) with the deed as the source.
+- Value: no automatic land values in Texas (D-001). Land comps come from the operator's browser (B-11) or
+  from disclosure states. Appraised value is never a comp. The land offer formula waits on Gabriel.
+- A "Land" view: parcels with their seller signals and the nearest demand signals, all with sources. No
+  contact actions in this item.
+- First counties: Dallas and Ellis (profiles exist), then Kaufman and Collin (active MUD filings). Adding a
+  county is a profile entry, never new county-named code (D-019).
+- Tests: forged, stale, wrong-host and missing-source records rejected with a reason; pure scorers have no
+  network, clock or writes (spied); no county name outside profile data.
+
+---
+
+## B-17 · Deal summary and buyer first look · TODO (sending parts wait on Gabriel)
+
+Goal: when a deal is under contract, the app writes a summary without the address, offers it first to
+matching buyers, then prepares group posts for the operator (D-021).
+
+Acceptance
+- Deal summary with no street address and no seller data: area (ZIP or neighborhood), beds, baths, sq ft,
+  year and lot (land: acreage, zoning, road frontage, utilities), asking price, ARV with its comp list (each
+  comp sourced; 2 comps labeled preliminary per D-005), repairs labeled as an estimate, operator-added photos
+  only, the written equitable-interest disclosure for Texas deals (Occupations Code §1101.0045), and a link
+  to the B-09 sign-up form. Built only from sourced facts; if ARV is missing it does not generate and says why.
+- Share page: a read-only, expiring public link per summary, showing the summary only. The operator can turn
+  it off. No address, no seller name, no internal fields.
+- First look: rank buyers whose buy box matches. The operator picks up to 20. Email goes from the operator's
+  own mail (prefilled draft). Text goes only to buyers with text consent and only after the Texas texting
+  decision (A-017). Every offer is logged on the buyer and the deal.
+- Group posts: a group directory (name, link, county or national, whether deal posts are allowed, the
+  group's rules, last posted date). After the first-look window (operator setting, default 24 hours), the
+  app prepares one post per allowed group, worded differently, and enforces a minimum gap between posts to the
+  same group. The operator posts them, or the operator's own assistant (for example Meta Muse) posts with
+  approval on each post. The app never posts and never stores social logins (A-016).
+- Replies: the operator records who responded. A responder who gives consent becomes a buyer with that
+  consent recorded.
+- Tests: no address or seller data in any summary or share page (negative test with a full record); the
+  Texas disclosure is present on every Texas summary; missing ARV blocks generation; consent gates on every
+  channel; the 20-cap; the share link expires.
 
 ---
 
@@ -422,7 +494,9 @@ Acceptance
   human-sounding messages (templates; no AI sending) and shows tap-to-send links (`sms:` with the
   prefilled body) for the operator's phone; each tap is logged. No automated sending, no texting to
   numbers marked Do not call or Wrong person.
-- Tests: log immutability, actor required, 20-cap, blocked numbers excluded.
+- Texas texting gate (A-017): texting a Texas number stays switched off until Gabriel records his
+  SB 140 decision. Build it with the switch off; the card shows "Texting is off for Texas numbers".
+- Tests: log immutability, actor required, 20-cap, blocked numbers excluded, Texas switch off by default.
 
 ---
 

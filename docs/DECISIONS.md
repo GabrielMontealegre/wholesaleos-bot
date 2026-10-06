@@ -26,6 +26,8 @@ corrects them during review.
 | D-017 | 2026-09-30 | **Presentation**: professional, plain English, not crowded. |
 | D-018 | 2026-10-01 | **"Ready to reach out" replaces "call ready".** A lead is ready when we know enough to contact the owner by any channel (verified address + owner identity, not proven to belong to someone else, not do-not-contact). A phone number is a route, not a gate: the card shows the best route (call → text → email → mail/visit → find-a-phone links). Unknown dates show a caution instead of locking the lead. Full rules: AGENTS.md §5 Contact. |
 | D-019 | 2026-10-01 | **No county names as labels.** Never call anything "the Dallas adapter" in code names, UI, reports, PR titles or tests. Sources are county profiles in one generic system; the county appears only as data ("Dallas County notice"). |
+| D-020 | 2026-10-06 | **Land is a first-class deal type**, starting in Dallas–Fort Worth. Same truth rules as houses: sourced parcels, sourced demand signals, no invented values. Land buyers (builders, developers, funds) go in the same buyer database. |
+| D-021 | 2026-10-06 | **The buyer database is a core asset.** Every buyer has a source and a consent status per channel. Good-fit buyers get a first look at a deal before it is posted publicly; then it can go to groups. |
 
 ## Architect decisions (Gabriel may veto)
 
@@ -47,6 +49,8 @@ corrects them during review.
 | A-013 | 2026-10-02 | A sale date comes only from a labeled sale field (sale date, date of sale, trustee/foreclosure sale date, auction date, or the "Date, Time, and Place of Sale" section), read by one shared helper. No "first date in the text" fallback anywhere. After-sale records carry `sale_date_origin` and `property_address_origin`; an address in servicer, mortgagee, trustee, attorney, courthouse or "whose address is" context is never a property (issue #229; extends A-006 and A-010). |
 | A-014 | 2026-10-03 | Every `/api` route requires a signed dashboard session by default. The only exceptions sit in one allowlist, each with a reason: login and session endpoints, local-helper routes that check their own agent token, and signed provider webhooks. Existing admin-only routes stay admin-only. No cross-origin wildcard (issue #233). |
 | A-015 | 2026-10-03 | Extends A-012: the server never places phone calls either. Calls go from the operator's own phone (`tel:` links). The Twilio dialer stays off until Gabriel enables a paid provider (D-012) and decides on call recording and the automated greeting (issue #234). |
+| A-016 | 2026-10-06 | WholesaleOS never stores or uses Gabriel's logins for Facebook, Skool or other social sites, and the server never automates them. Posting and messaging happen in the operator's own account, by the operator or the operator's own assistant (for example Meta Muse) with approval on each action. The app prepares the text and logs what was done (extends A-001, D-007). |
+| A-017 | 2026-10-06 | Texas SB 140 (effective 2025-09-01) makes texts "telephone solicitations": registration with the Texas Secretary of State ($200 fee and $10,000 security) unless an exemption applies, and $500–$1,500 per violation. No texting to Texas numbers (sellers or buyers) is switched on until Gabriel records his decision (registered, or an exemption confirmed by a lawyer). Every Texas deal summary carries the written equitable-interest disclosure (Occupations Code §1101.0045). |
 
 ## Open questions
 
