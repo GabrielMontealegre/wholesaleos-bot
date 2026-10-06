@@ -257,6 +257,8 @@ or city limits (ETJ) status, access, and taxes. Confirm a title company will clo
   Muse live and "10 ways to automate" video (§7), the Dispositions course videos (§6).
 - Skool and YouTube extraction needs a LOCAL session on Gabriel's PC (his signed-in Chrome; YouTube often
   blocks cloud servers). A cloud session can't do it.
+- Facebook buyer research (who really buys, what they ask for, outreach rules, and the 76 target metros
+  from the demand index): `docs/knowledge/FACEBOOK_BUYERS.md`.
 
 ## 10. Where to start land (architect research, 2026-10-06)
 
