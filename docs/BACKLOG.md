@@ -23,7 +23,10 @@ Mark the status here as part of each item's PR.
 >    36 redacted production screenshots and a six-market read-only count report. Per-market saved-lead
 >    counts and seven-day source-success history were not exposed by the existing summaries and were
 >    reported as not measured, not zero. No batch or production write.
-> 9. Backlog items in this order (architect, 2026-10-06, second update): B-00a, B-00b, B-10 (contact
+> 9. [#255](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/255) DONE ([PR #258](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/258)):
+>    the SMS loading screenshot was premature. The existing read completed to "No SMS conversations yet"
+>    and "Twilio not configured"; the report and captures were corrected without changing send behavior.
+> 10. Backlog items in this order (architect, 2026-10-06, second update): B-00a, B-00b, B-10 (contact
 >    from the app), B-09 (buyer database), B-19 (match engine), B-20 (agent desk for Muse or Claude),
 >    B-18 (WholesaleOS panel in Chrome), B-21 (free statewide data, Texas and Florida first), B-16
 >    (land), B-06, B-07, B-08, B-17 (deal summary and first look), then the rest of B-05, B-11, B-12,
