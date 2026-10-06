@@ -160,6 +160,19 @@ or city limits (ETJ) status, access, and taxes. Confirm a title company will clo
   rules (real comps, sourced phones, no automatic texting/calling; batches of up to 20, approved by
   Gabriel).
 
+- Assistant options checked 2026-10-06:
+  - **Claude in Chrome:** generally available since 2026-08-26 and included in paid Claude plans. It works
+    in Gabriel's own Chrome with his own logins, and works outside the US.
+  - **Meta Muse:** launched 2026-09-08 and US-only. It has a free tier plus $20 and $100 plans, and a
+    small-business version from 2026-09-29 that connects to Facebook Pages, Instagram and ad accounts.
+    Its approval system covers types of action, so on "Always allow" the model writes the content alone;
+    in late September it gave a Marketplace buyer a user's home address. It has no public API.
+  - **OpenAI:** it retired its Atlas browser in August 2026 and moved its agent into the ChatGPT app.
+  - **Gemini:** 3.5 Flash has a free tier with low rate limits, and 3.1 Pro is paid only. Google may use and
+    human-review free-tier prompts. Gemini 4 is expected late 2026.
+- Facebook removed group posting for outside tools in April 2024 and limits accounts that post the same
+  text in many groups. Vary the wording and space out posts.
+
 ## 8. Compliance notes (not legal advice)
 
 - Automated texting needs carrier registration (A2P 10DLC) and consent rules; AI voice calls count as
@@ -173,6 +186,12 @@ or city limits (ETJ) status, access, and taxes. Confirm a title company will clo
 - Surplus funds after an auction may belong to the former owner; recovering them is regulated.
 - Title companies: before the first contract, confirm one will close an assignment for a non-resident
   individual with a US bank account and no LLC.
+
+- Texas SB 140 (effective 2025-09-01): texts count as telephone solicitations. Registration with the
+  Secretary of State unless an exemption applies; $500–$1,500 per violation. Gabriel's lawyer cleared his
+  plan (D-023).
+- Texas wholesaling: Occupations Code §1101.0045 requires written disclosure of the contract (equitable)
+  interest to buyers, and to sellers since 2024 (SB 1577).
 
 ## 9. Where things live
 
@@ -203,3 +222,17 @@ Candidate counties (B-16 ranks them with public data before building each one):
 
 Sources: kxan.com 2025 county estimates; wfaa.com North Texas growth; tceq.texas.gov district filings;
 trerc.tamu.edu rural land prices; Texas Tax Code §23.55.
+
+## 11. Free data map (architect research, 2026-10-06)
+
+| Need | Free source | Notes |
+|---|---|---|
+| Owners and mailing addresses, Texas | TxGIO StratMap statewide land parcels | From appraisal districts, about yearly; no sale prices |
+| Owners and sale prices, Florida | Florida Department of Revenue tax-roll files | Statewide, yearly; sale prices allow automatic comps |
+| Statewide parcels elsewhere | New York, Wisconsin, Washington, North Carolina programs | California may withhold owner names |
+| Where land is wanted | TCEQ utility-district filings, city permits, plats | Texas; other states have similar filings |
+| Regional land price context | Texas A&M Real Estate Research Center | Context only, never a comp |
+| Distress | County notices, tax lists, probate, code cases | Already in the app's county profiles |
+| Phones | None in government records | Possible numbers come from the operator's browser, always labeled |
+
+America.gov (2026-09-29) is a federal services portal, not a property-records source.

@@ -186,6 +186,9 @@ If two readings both satisfy 1–4, pick the more conservative one that still de
 After each merge: deploy, then verify without writes:
 - `/health` returns 200; the dashboard loads; leads hydrate; a lead card opens.
 - The item's own read-only check (listed in its acceptance criteria).
+- Screenshots: desktop (1366 wide) and phone (400 wide) of every screen the item changed, with owner
+  names, phones, emails and street addresses blurred. Commit them under `docs/screens/` and link them in
+  the PR, so Gabriel can see progress screen by screen.
 - If something fails: revert the merge commit, redeploy, confirm `/health`, mark the item BLOCKED,
   open a `needs-architect` issue with the evidence.
 

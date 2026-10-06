@@ -19,11 +19,14 @@ Mark the status here as part of each item's PR.
 > 5. [#225](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/225) DONE ([PR #241](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/241)): whitespace-neutral supersession comparison and regression test. Full suite 112 passed, 0 failed, 7 environment skips. Railway deploy succeeded; `/health` 200 and signed-in dashboard hydrated source rows and an expanded lead card. No batch.
 > 6. [#230](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/230) DONE ([PR #242](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/242)): line-ending-neutral comp-grid fingerprint; architect verified the old hash was the CRLF form of the same unchanged rule file.
 > 7. [#243](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243) DONE ([PR #246](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/246)): architect verified network-free that notices with eight address wordings are kept (unknown wording kept as `unlabeled`), the loan date never becomes the sale date, and the real notice corpus produces 0 after-sale records.
-> 8. Backlog items in this order (architect, 2026-10-06): B-00a, B-00b, B-10 (contact from the app,
->    moved up per D-023), B-09 (buyer database), B-18 (WholesaleOS panel in Chrome and the
->    opportunity inbox), B-16 (land, all major growth counties), B-06, B-07, B-08, B-17 (deal
->    summary and first look), then the rest of B-05, B-11, B-12, B-13, B-14, B-15. Parts marked
->    "waits on Gabriel" are built switched off; everything else in the item ships normally.
+> 8. [#250](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/250) read-only status report:
+>    production screenshots of every screen (personal data redacted) and counts per market. Do first.
+> 9. Backlog items in this order (architect, 2026-10-06, second update): B-00a, B-00b, B-10 (contact
+>    from the app), B-09 (buyer database), B-19 (match engine), B-20 (agent desk for Muse or Claude),
+>    B-18 (WholesaleOS panel in Chrome), B-21 (free statewide data, Texas and Florida first), B-16
+>    (land), B-06, B-07, B-08, B-17 (deal summary and first look), then the rest of B-05, B-11, B-12,
+>    B-13, B-14, B-15. Parts marked "waits on Gabriel" are built switched off; everything else in the
+>    item ships normally.
 >
 > #223 is DONE ([PR #232](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/232)). A new `codex-task` labeled
 > BLOCKER goes ahead of everything that has no code pushed yet. End every run with a Run log
@@ -449,7 +452,8 @@ Acceptance
   values, regional averages and list prices are never comps.
 - A "Land" view: parcels with their seller signals and the nearest demand signals, all with sources. No
   contact actions in this item.
-- Counties (D-024): rank the playbook §10 candidates with public data: Census county population
+- Counties (D-024, D-027): nationwide, state by state as B-21 adds statewide data. Within a state, rank
+  the playbook §10 candidates with public data: Census county population
   estimates (Vintage 2025), TCEQ district filings, and permit and plat counts where published. Publish the
   ranking with sources in the PR. Then add counties in ranked order, starting with those that publish free
   appraisal data. Adding a county is a profile entry, never new county-named code (D-019).
@@ -485,6 +489,90 @@ Acceptance
 - Tests: no address or seller data in any summary or share page (negative test with a full record); the
   Texas disclosure is present on every Texas summary; missing ARV blocks generation; consent gates on every
   channel; the 20-cap; the share link expires.
+
+---
+
+## B-19 · Match engine: every deal against every buyer, with reasons · TODO
+
+Goal: WholesaleOS matches sellers' properties and land to the right buyers by itself (D-021, D-027). This
+replaces the placeholder Deal Matching page, which uses a made-up score and no comps.
+
+Acceptance
+- Pure matcher (no network, clock or writes; spied). Input: deals (houses and land, each with sourced facts
+  and value status) and buyers (B-09 sources: deed purchases, sign-ups, publicly posted wants).
+- A buyer's buy box comes from evidence:
+  - what they actually bought (area, type, size, price where public, how recently, how often);
+  - what they said on the sign-up form;
+  - what they posted they want.
+  - Each criterion keeps its source.
+- Output per deal: ranked buyers with plain reasons ("bought 3 houses within 1 mile in the last 12
+  months"; "posted 'need lots in Kaufman County' on 2026-10-04"). No raw scores on screen; order only.
+- Value gates: a match can rank without a value, but it shows "Value not verified" until the deal has a
+  verified or preliminary ARV (D-005) or a land estimate (A-018). No invented numbers.
+- Output per buyer: the deals that fit them. Both views on the Deal Matching page. The old client-side
+  score is removed.
+- Tests: forged buyer evidence ignored; stale purchases age out by a stated window; no match on mismatched
+  type, area or price; land and houses both covered; identical results for identical inputs.
+
+---
+
+## B-20 · Agent desk: tasks for Muse or Claude, and a drop box for what they find · TODO
+
+Goal: Gabriel's AI assistant (Meta Muse or Claude in Chrome, D-026) does the social legwork in Gabriel's
+accounts, and WholesaleOS stays the brain and the database. No outside API is needed: the assistant reads
+a page and fills a form, which both can do.
+
+Acceptance
+- Assistant access: a separate "assistant" sign-in with its own limited permissions (reuse the existing
+  agent/pairing token mechanism). It can read the agent desk and write to the drop box, nothing else.
+  Gabriel can revoke it from Settings.
+- Agent desk (read): today's task list:
+  - deal summaries to post (B-17 share links, no addresses);
+  - matched buyers to message, with a drafted message each (B-19);
+  - groups to scan by county (group directory, B-17);
+  - seller batches Gabriel approved (B-10).
+  - Each task carries its rules: daily caps, the Texas disclosure line, "never share an address or
+    Gabriel's personal details".
+- Drop box (write only): the assistant posts what it found:
+  - a buyer (name, profile or contact it published, what they want, where);
+  - a public want;
+  - a possible seller;
+  - a reply to one of our posts.
+  - Every item requires a source link and the capture time.
+  - Rate-limited and size-limited. It never returns stored data.
+  - Items land in the opportunity inbox (B-18) as "found by assistant, unverified" and go through the
+    same sorter and matcher. An assistant's report never counts as a verified fact by itself.
+- Task results: the assistant marks a task done, skipped or failed, with a note and link. Everything is
+  logged on the lead or buyer timeline (B-10).
+- Seller texts and calls: the desk only shows a seller batch after Gabriel approves it (up to 20,
+  D-007). Buyer and public-want messages follow D-022 and D-026.
+- Tests: wrong or missing token refused; read endpoints refuse writes and the drop box refuses reads;
+  missing source link rejected; caps enforced; no personal data in logs.
+
+---
+
+## B-21 · Free statewide data, Texas and Florida first · TODO
+
+Goal: cover every county of a state at once from free official statewide files, starting with Texas and
+Florida, where Gabriel has phone numbers (D-027).
+
+Acceptance
+- Texas: the TxGIO StratMap statewide land-parcel layer (free, from appraisal districts: owner, mailing
+  address, land use, values; refreshed about yearly per county). It is registered as a statewide source
+  profile with allowlisted hosts. Texas has no sale prices.
+- Florida: the Department of Revenue statewide tax-roll files (owner, mailing address, land use, recent sale
+  price and date), published yearly. Florida sales feed automatic comps through the strict grid and B-09
+  buyers with prices.
+  - Florida as an automatic-comp market waits on Gabriel (open question). Until then, use it for
+    leads, land and buyers only.
+- Each record keeps its state file name, row reference and file date. Old values are superseded with
+  an audit trail, never overwritten silently.
+- Bulk files are downloaded at most once per release, at the source's own pace. Stop on 401, 403 or 429.
+  Never scrape behind a login.
+- Next states by free statewide data (New York, Wisconsin, Washington, North Carolina) are added the same
+  way, one profile each. California county data may lack owner names; mark it.
+- Tests: fixture slices of each file; wrong-host and stale-file rejection; row references preserved;
+  no county or state names in generic code.
 
 ---
 
@@ -545,8 +633,7 @@ Acceptance
 - Calls: the `tel:` link plus a one-tap outcome log (no answer, left voicemail, talked, wrong number,
   do not call). Email: a prefilled draft that opens in Gabriel's own email, logged when opened.
 - People who publicly posted a matching want (D-022) can be in a batch, with the post link shown.
-- If Gabriel has no US number to text from, the open question in DECISIONS decides how texts go out.
-  Never build a paid sender without his decision.
+- Gabriel calls and texts from his own Texas and Florida numbers (D-028), so no paid sender is needed.
 - Tests: log immutability, actor required, 20-cap, blocked numbers excluded, every send logged.
 
 ---
@@ -643,3 +730,11 @@ Acceptance
 - Tabs: Leads, After the sale, Buyers (Title later).
 - Mobile width works; no horizontal scroll; no internal field names visible.
 - Map with color-coded deal quality is a separate follow-up item (add it to this backlog when done).
+- Found in the architect's screenshots of main on 2026-10-06 (local test copy):
+  - Deal Desk shows internal labels (AUTO-RUN, CALL_READY, MAIL_READY, SALE_PASSED,
+    DATE_UNKNOWN_REVERIFY). Use plain words.
+  - Outline buttons are unreadable (dark text on dark): the "By Buyer" and "By Buy Box" tabs, and two
+    top-bar buttons next to "+ Add Lead".
+  - The header shows "Admin · undefined".
+  - Outreach Hub says "Run scrape to find real buyers", which is legacy wording.
+  - Deal Matching stays on "Loading matches..." (replaced by B-19).
