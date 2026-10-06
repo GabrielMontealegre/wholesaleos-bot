@@ -28,6 +28,10 @@ corrects them during review.
 | D-019 | 2026-10-01 | **No county names as labels.** Never call anything "the Dallas adapter" in code names, UI, reports, PR titles or tests. Sources are county profiles in one generic system; the county appears only as data ("Dallas County notice"). |
 | D-020 | 2026-10-06 | **Land is a first-class deal type**, starting in Dallas–Fort Worth. Same truth rules as houses: sourced parcels, sourced demand signals, no invented values. Land buyers (builders, developers, funds) go in the same buyer database. |
 | D-021 | 2026-10-06 | **The buyer database is a core asset.** Every buyer has a source and a consent status per channel. Good-fit buyers get a first look at a deal before it is posted publicly; then it can go to groups. |
+| D-022 | 2026-10-06 | **Contact people who publicly posted a matching want.** When someone posts in a Facebook group (or similar) that they are looking for a property or land that matches a deal, Gabriel may contact them one-to-one, himself, from his own account or at the contact they published, even if they never contacted us. Up to 20 per batch, logged; stop at the first "no". |
+| D-023 | 2026-10-06 | **Texas texting cleared by Gabriel's lawyer** (reported by Gabriel). A-017's Texas texting switch may be on. Unchanged: Gabriel chooses each batch of up to 20, no automatic sending, Do-Not-Call respected, the §1101.0045 disclosure on every Texas deal summary. Contact from the app (call, text, email) is a top priority. |
+| D-024 | 2026-10-06 | **Land starts in all the major growth counties, not one.** Texas metro growth rings first (Dallas–Fort Worth, Houston, Austin, San Antonio), then the Charlotte ring. Order comes from public growth data (B-16). Land is treated as a wholesale deal. |
+| D-025 | 2026-10-06 | **WholesaleOS inside the browser for Facebook, Zillow and Redfin, never Skool.** What Gabriel reads there can be saved into WholesaleOS and sorted into opportunities. Muse is Gabriel's personal assistant; Gabriel does the outreach himself. |
 
 ## Architect decisions (Gabriel may veto)
 
@@ -51,10 +55,14 @@ corrects them during review.
 | A-015 | 2026-10-03 | Extends A-012: the server never places phone calls either. Calls go from the operator's own phone (`tel:` links). The Twilio dialer stays off until Gabriel enables a paid provider (D-012) and decides on call recording and the automated greeting (issue #234). |
 | A-016 | 2026-10-06 | WholesaleOS never stores or uses Gabriel's logins for Facebook, Skool or other social sites, and the server never automates them. Posting and messaging happen in the operator's own account, by the operator or the operator's own assistant (for example Meta Muse) with approval on each action. The app prepares the text and logs what was done (extends A-001, D-007). |
 | A-017 | 2026-10-06 | Texas SB 140 (effective 2025-09-01) makes texts "telephone solicitations": registration with the Texas Secretary of State ($200 fee and $10,000 security) unless an exemption applies, and $500–$1,500 per violation. No texting to Texas numbers (sellers or buyers) is switched on until Gabriel records his decision (registered, or an exemption confirmed by a lawyer). Every Texas deal summary carries the written equitable-interest disclosure (Occupations Code §1101.0045). |
+| A-018 | 2026-10-06 | Land offer method (Gabriel may veto). Infill lot: the land buyer's price is the lowest of recent lot comps, builder math (new-home value − build cost − ~10% selling cost − builder profit) and ~20% of new-home value. Acreage: per-acre comps only. Our offer = buyer's price − fee. Regional averages, appraised values and list prices are context, never comps. Shown only when every input is sourced, labeled "land estimate". |
+| A-019 | 2026-10-06 | The "WholesaleOS browser" (D-025) is a WholesaleOS side panel in Gabriel's own Chrome (an extension), not a browser running on our server. A server browser would put his logins on our server, and Facebook locks accounts and Zillow and Redfin block visits from data-center servers. The panel runs only on facebook.com, zillow.com and redfin.com. It never reads or stores passwords and saves only what Gabriel clicks to save. It never scrolls, opens, posts or messages by itself. Saved items are sorted by fixed rules first; an AI sorter is an optional paid switch, off until Gabriel turns it on. Facebook names and posts are contact data: never in logs or aggregate reports. |
 
 ## Open questions
 
 (Agents add questions here only if they cannot open a `needs-architect` GitHub issue.)
+
+- 2026-10-06 (Gabriel): Do you call and text US sellers from a US phone number? If not, decide whether the app may send the batches you approve (up to 20) through a paid US number, which changes A-012 and D-012.
 
 ## Agent assumptions (ASSUMED)
 

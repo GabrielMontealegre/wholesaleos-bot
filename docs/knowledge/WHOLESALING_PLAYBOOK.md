@@ -4,7 +4,7 @@ What we've learned from Gabriel's courses (Wholesailors Real Estate — Maximili
 Real Estate — Flip with Rick), public YouTube channels (FlipWithRick, MaximilianDier,
 HoldMyHandWholesale, ZachGinnOfficial) and live calls. Written in our own words as working rules,
 not copies of course material. Agents use it for scripts, offer math and product decisions; it's also
-the seed of Gabriel's future "wholesaling Bible". Last updated 2026-10-05 by the architect.
+the seed of Gabriel's future "wholesaling Bible". Last updated 2026-10-06 by the architect.
 
 Product rules live in `AGENTS.md` and `docs/DECISIONS.md`. Where this file and those differ, they win.
 
@@ -77,6 +77,49 @@ push back when they learn you're assigning.
   60% openers.
 - There's also a "luxury land" level-2 course (Wholesailors) not yet extracted.
 
+## 4b. Land as a wholesale deal (architect research, 2026-10-06)
+
+Land goes through the same pipeline as a house: lead → ready to reach out → contract → assign or double
+close. What changes is who buys it and how it's valued.
+
+**Three land plays, best first for wholesaling**
+1. **Infill lots in cities**, sold to small and custom builders. Use the §4 rules (house on each side,
+   paved road, rectangular, near new construction, not on a busy road).
+2. **Edge acreage in growth corridors**, sold to developers, national builders and land bankers. Look
+   for land near fresh development signals: new utility-district (MUD) filings at TCEQ, building
+   permits, new subdivision plats, recent deeds to builders. It needs road frontage, water and sewer
+   nearby, and to sit outside the flood zone. Builders state their own minimum sizes.
+3. **Rural land to end buyers**, often owner-financed. That's land flipping, not wholesaling; parked.
+
+**Seller signals:** absentee or out-of-state owner, inherited (estate or heirs in the name), tax
+delinquent, owned 10+ years, several co-owners, no homestead exemption.
+
+**Red flags to check before an offer:** flood zone or wetlands; no legal access (landlocked); no
+water or sewer nearby; deed restrictions; back taxes or liens; Texas agricultural-valuation rollback
+tax when the use changes (Tax Code §23.55); utility-district or improvement-district taxes; pipeline or
+power-line easements; mineral rights already sold off (common in Texas, buyers ask); odd shapes.
+
+**Value**
+- Infill lot: the lowest of (a) recent lot sales nearby, (b) builder math (new-home value − build cost
+  − ~10% selling cost − builder profit), (c) about 20% of the finished new-home value (§4).
+- Acreage: recent per-acre sales of similar land nearby.
+- Texas doesn't publish sale prices, so land comps come from the operator's own browser (Zillow/Redfin
+  sold lots, land listing sites) or a local agent.
+- Context only, never a comp: the Texas A&M Real Estate Research Center publishes free regional
+  averages. Q2 2026: statewide $5,218/acre; Gulf Coast–Brazos $11,369; Northeast Texas $8,604;
+  Austin–Waco–Hill Country $8,040; South Texas $6,225. Appraised values and list prices are never
+  comps either.
+
+**Offer:** the land buyer's price comes from the value above; your offer = that − your fee (A-018).
+Course openers on stale land listings: 50–60% of list.
+
+**Who buys land:** national builders with Texas land teams (D.R. Horton, Lennar, LGI Homes and
+others) and their lot developers, regional developers, land bankers, custom builders for infill, and
+other land investors. Recent deed records show who is actually buying in each area.
+
+**Before assigning:** title search, survey or plat, flood map, written utility availability, zoning
+or city limits (ETJ) status, access, and taxes. Confirm a title company will close the assignment.
+
 ## 5. Finding leads
 
 - **Government lists beat aggregators on timing:** pre-foreclosure filings (lis pendens in judicial
@@ -141,3 +184,22 @@ push back when they learn you're assigning.
   novation language).
 - Not yet extracted: Gov List Millionaire (68 modules), Pre-Foreclosure Millionaire (64), Luxury Land L2,
   the Muse training-pack PDFs (downloads need Gabriel's OK).
+
+## 10. Where to start land (architect research, 2026-10-06)
+
+Evidence: Census Bureau 2025 county estimates (released 2026). Five of the ten US counties that added
+the most people were in Texas: Harris, Collin, Montgomery, Fort Bend, Williamson. Two of the ten
+fastest-growing by percentage: Kaufman (+5.67%, to 209,235) and Liberty (+4.36%). TCEQ shows 2025–26
+utility-district filings in Kaufman, Ellis and Collin counties.
+
+Candidate counties (B-16 ranks them with public data before building each one):
+- **Dallas–Fort Worth:** Collin, Denton, Kaufman, Rockwall, Ellis, Johnson, Parker, Hunt (edge acreage);
+  Dallas and Tarrant (infill lots).
+- **Houston:** Fort Bend, Montgomery, Liberty, Waller, Brazoria (edge); Harris (infill and edge).
+- **Austin:** Williamson, Hays, Bastrop, Caldwell (edge); Travis (infill).
+- **San Antonio:** Comal, Guadalupe, Medina (edge); Bexar (infill).
+- **Later:** the Charlotte ring (Mecklenburg, Union, Cabarrus, Iredell, Gaston; North Carolina publishes
+  sale prices, so land comps can be automatic) and Detroit land-bank lots (Wayne).
+
+Sources: kxan.com 2025 county estimates; wfaa.com North Texas growth; tceq.texas.gov district filings;
+trerc.tamu.edu rural land prices; Texas Tax Code §23.55.

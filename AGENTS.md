@@ -9,6 +9,8 @@ Companion files (read them at the start of every run):
 
 - `docs/BACKLOG.md` — the ordered work queue. Work it top to bottom.
 - `docs/DECISIONS.md` — decisions Gabriel and the architect have made, plus your logged assumptions.
+- `docs/knowledge/WHOLESALING_PLAYBOOK.md` — what we learned from Gabriel's courses and research (offer
+  math, land, scripts, dispo). Use it for wording and defaults; this file and DECISIONS.md win on conflicts.
 
 ---
 
