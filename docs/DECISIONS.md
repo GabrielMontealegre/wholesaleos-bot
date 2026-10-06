@@ -91,6 +91,8 @@ corrects them during review.
 
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)
 
+ASSUMED: #271 authorizes the signed admin's explicit already-approved checkbox as an exception to #260's individual approval assumption. Only newly created, explicitly classified end buyers receive it; unknown/out-of-market/partner/caution/non-buyer records stay pending and duplicates preserve existing approvals. Previews live in bounded memory (20 at once), belong to the admin, expire after five minutes and are consumed on successful import — because explicit operator intent and preserving existing decisions outrank automatic approval or stale-preview reuse — 2026-10-06.
+
 ASSUMED: #260's 2026-10-06 update supersedes its original 25-item cap with 50; 8 KiB per item, 256 KiB per request and 12 requests per paired token per hour bound the drop box. Counts use UTC calendar days and Monday-based weeks — because the update sets the batch size and deterministic limits satisfy the unchanged safety rules — 2026-10-06 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274.
 
 ASSUMED: #260 requires dashboard approval even for finds described as previously approved; the agent cannot assert approval. An approved unknown-category buyer may match known criteria, while partner/caution/non-buyer categories remain outside end-buyer matching. An email/phone duplicate associates the supplied find with the existing buyer and keeps its prior fields; the association is shown for review — because D-035 and data preservation outrank automatic verification or merging away source data — 2026-10-06 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274.

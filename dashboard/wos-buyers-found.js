@@ -6,6 +6,12 @@
   var notice = '';
   var filters = { status: '', deal_type: '', area: '', approval: '' };
   var drafts = {};
+  var importOpen = false;
+  var importJson = '';
+  var importPreview = null;
+  var importBusy = false;
+  var importApprove = false;
+  var importMessage = '';
   var statusLabels = { new: 'Not contacted', messaged: 'Messaged', emailed: 'Emailed', commented: 'Commented', replied: 'Replied', not_a_fit: 'Not a fit' };
   var approvalLabels = { pending: 'Pending approval', approved: 'Approved', rejected: 'Rejected' };
   var boxLabels = { state: 'State', areas: 'Areas', zips: 'ZIP codes', types: 'Property types', price_min: 'Minimum price', price_max: 'Maximum price',
@@ -21,6 +27,26 @@
     return '<option value="">' + first + '</option>' + Object.keys(values).map(function (key) {
       return '<option value="' + esc(key) + '"' + (chosen === key ? ' selected' : '') + '>' + esc(values[key]) + '</option>';
     }).join('');
+  }
+  function importPanel() {
+    if (!data || !data.capabilities || !data.capabilities.can_import) return '';
+    if (!importOpen) return '<div class="bf-actions"><button type="button" data-import-action="open">Import buyers</button></div>';
+    var counts = importPreview && importPreview.counts;
+    var reasons = { find_url_invalid: 'Source or profile link is missing or invalid.', find_field_required: 'Required information is missing.',
+      find_field_invalid: 'A field is invalid or too long.', find_item_invalid: 'Unsupported fields or item format.', find_type_invalid: 'Platform or property type is unsupported.',
+      find_buy_box_invalid: 'Buy-box criteria are invalid.', find_capture_date_invalid: 'Capture date is invalid.', find_contact_invalid: 'Published contact is invalid or conflicts.',
+      find_classification_invalid: 'Buyer category is invalid.', find_item_too_large: 'Item exceeds the size limit.' };
+    return '<section class="bf-import"><style>.bf-import{padding:16px 0;border-bottom:1px solid #334155}.bf-import label{color:#e2e8f0!important;margin:8px 0}.bf-import input[type=file]{width:100%}.bf-import .bf-import-check{display:flex;gap:8px;align-items:center}.bf-import-check input{width:auto}.bf-import textarea{min-height:140px}.bf-import ul{padding-left:20px;font-size:13px}.bf-import p{margin:10px 0}.bf-import input::placeholder{color:#a8b7ca!important}</style>' +
+      '<h3>Import buyers</h3><label>JSON file<input type="file" accept=".json,application/json" data-import-file' + (importBusy ? ' disabled' : '') + '></label>' +
+      '<label>Or paste JSON<textarea data-import-json maxlength="262144"' + (importBusy ? ' disabled' : '') + '>' + esc(importJson) + '</textarea></label>' +
+      '<div class="bf-actions"><button type="button" data-import-action="preview"' + (importBusy ? ' disabled' : '') + '>Preview</button>' +
+      '<button type="button" data-import-action="cancel"' + (importBusy ? ' disabled' : '') + '>Cancel</button></div>' +
+      (counts ? '<div data-import-preview><p><b>' + esc(counts.new_items) + ' new | ' + esc(counts.duplicates) + ' duplicates | ' + esc(counts.rejected) + ' invalid</b></p>' +
+        '<ul>' + (importPreview.rejected || []).map(function (entry) { return '<li>Item ' + esc(entry.item) + ': ' + esc(reasons[entry.reason] || 'Invalid item.') + '</li>'; }).join('') + '</ul>' +
+        '<label class="bf-import-check"><input type="checkbox" data-import-approve' + (importApprove ? ' checked' : '') + (importBusy ? ' disabled' : '') + '>These were already approved by me</label>' +
+        '<p class="bf-muted">' + esc(counts.bulk_approval_eligible) + ' new end buyers eligible for approval. Partners, caution records and non-buyers stay pending. Existing approvals stay unchanged.</p>' +
+        '<div class="bf-actions"><button type="button" data-import-action="commit"' + (importBusy || counts.new_items + counts.duplicates === 0 ? ' disabled' : '') + '>Import</button></div></div>' : '') +
+      '<p class="bf-muted">Nothing is saved until you click Import.</p><p role="status">' + esc(importMessage) + '</p></section>';
   }
   function card(item, editedDraft) {
     var contacts = [item.email, item.phone].filter(Boolean).map(function (value) { return '<span>' + esc(value) + ' (published by them)</span>'; }).join('<br>');
@@ -75,6 +101,7 @@
       '<label>Property type<br><select data-filter="deal_type">' + options({ house: 'House', land: 'Land' }, filters.deal_type, 'All types') + '</select></label>' +
       '<label>State or metro<br><input data-filter="area" value="' + esc(filters.area) + '" placeholder="State or metro"></label></div>' +
       '<div class="bf-message' + (error ? ' bf-error' : '') + '" role="status">' + esc(error || notice) + '</div>' +
+      importPanel() +
       (payload ? (shown.length ? '<div class="bf-grid">' + shown.map(function (item) { return card(item, drafts[item.id]); }).join('') + '</div>' : '<p>' + (items.length ? 'No buyers match these filters.' : 'No buyers found yet. Public-post finds from your assistant will appear here.') + '</p>') : '<p>' + (error ? 'Buyer finds are unavailable.' : 'Loading buyer finds...') + '</p>') + '</div>';
   }
   function paint() {
@@ -95,13 +122,58 @@
   if (typeof document === 'undefined') return;
   document.addEventListener('input', function (event) {
     if (event.target.matches('#wos-buyers-found textarea[data-draft]')) drafts[event.target.dataset.draft] = event.target.value;
+    if (event.target.matches('#wos-buyers-found [data-import-json]')) {
+      importJson = event.target.value; importPreview = null; importApprove = false;
+      var previewRegion = document.querySelector('#wos-buyers-found [data-import-preview]');
+      if (previewRegion) previewRegion.remove();
+    }
   });
   document.addEventListener('change', function (event) {
+    if (event.target.matches('#wos-buyers-found [data-import-approve]')) { importApprove = event.target.checked; return; }
+    if (event.target.matches('#wos-buyers-found [data-import-file]')) {
+      var file = event.target.files[0];
+      importPreview = null; importApprove = false;
+      if (!file) return;
+      if (file.size > 262144) { importMessage = 'File exceeds 256 KiB.'; paint(); return; }
+      importBusy = true; importJson = ''; importMessage = 'Reading file...'; paint();
+      file.text().then(function (value) { importJson = value; importMessage = 'File loaded. Preview it before importing.'; })
+        .catch(function () { importMessage = 'Could not read this file.'; })
+        .finally(function () { importBusy = false; paint(); });
+      return;
+    }
     if (!event.target.matches('#wos-buyers-found [data-filter]')) return;
     filters[event.target.dataset.filter] = event.target.value;
     paint();
   });
   document.addEventListener('click', function (event) {
+    var importButton = event.target.closest('#wos-buyers-found [data-import-action]');
+    if (importButton) {
+      if (importBusy) return;
+      var action = importButton.dataset.importAction;
+      if (action === 'open') { importOpen = true; paint(); return; }
+      if (action === 'cancel') { importOpen = false; importJson = ''; importPreview = null; importApprove = false; importMessage = ''; paint(); return; }
+      var importBody;
+      if (action === 'preview') {
+        try { importBody = JSON.parse(importJson); } catch (_) { importMessage = 'Invalid JSON. Check the file format.'; importPreview = null; paint(); return; }
+        importApprove = false; importPreview = null;
+      } else {
+        if (!importPreview) return;
+        importBody = { preview_id: importPreview.preview_id, bulk_approve: importApprove };
+      }
+      importBusy = true; importMessage = action === 'preview' ? 'Checking items...' : 'Importing...'; paint();
+      fetch('/api/dashboard/buyers-found/import/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(importBody) })
+        .then(function (response) {
+          if (!response.ok) throw new Error(response.status === 409 ? 'Preview expired. Preview this file again.' : response.status === 413 ? 'Import exceeds the size limit.' : 'Request refused. Check the file and your admin session.');
+          return response.json();
+        }).then(function (result) {
+          if (action === 'preview') { importPreview = result; importMessage = 'Preview only. Nothing has been saved.'; }
+          else { importPreview = null; importJson = ''; importApprove = false; importOpen = false;
+            notice = 'Imported ' + result.created + ' new, ' + result.duplicates + ' duplicates, ' + result.rejected + ' invalid, ' + result.approved + ' approved.';
+            return load(); }
+        }).catch(function (caught) { importPreview = null; importMessage = caught.message; })
+        .finally(function () { importBusy = false; paint(); });
+      return;
+    }
     var button = event.target.closest('#wos-buyers-found button[data-action]');
     if (!button) return;
     var article = button.closest('[data-id]');
