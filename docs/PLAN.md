@@ -36,3 +36,20 @@ Progress is reported in every update (golden path, issue #264). Status on 2026-1
 | Facebook groups, Xome, Auction.com, Redfin | User's browser | Logins, bot blocks, site terms (A-019) |
 | Messages, posts, sending | Gabriel | D-026, D-033: the assistant drafts, Gabriel sends |
 | Paid comps and skip tracing | Later | D-004, D-012 |
+
+## How the tabs work (Gabriel's design, 2026-10-07)
+
+Separate tabs, **one engine**: every tab reads and writes the same records, so a change in one shows everywhere (D-037). Each item opens **one card with all the information and comps, and every action is on that card** (#283). Every term has a **(?)** (#285). Everything sorts and filters by **state, county and city** (#269).
+
+| Tab | What it's for | What gets in |
+|---|---|---|
+| **Dashboard** (home) | Gabriel's day at a glance | Today's Deals on top, then counts that open their lists |
+| **Today's Deals** | Gabriel's to-do: checked deals of every kind | Own leads, JV deals, auctions (Xome/Auction.com/HUD/HomePath), by-owner. Each has our comps, our ARV, the buyer's max, the spread, the deadline and a verdict (D-042) |
+| **JV** | Other wholesalers' deals we can sell to our buyers | **Only when a deal passes the JV rules AND an approved buyer matches** (any state). It has an expiration date and a status pipeline (D-043) |
+| **Leads** | Our own seller leads (county notices, auctions, court records) | Every lead gets a use (D-040), with the Deal Check on its card (#275) |
+| **Buyers** | Every buyer: approved, pending, partners | From Facebook, Craigslist, public records (B-09), manual. Buy box, outreach status, "leads that fit" |
+| **Title Companies** | Who will close for Gabriel's situation | `data/title-companies.json`: fit for Gabriel, contacts, answers when called (B-22) |
+| **Outreach** | Everyone to contact today: sellers, deal holders, buyers | Batches of ≤ 20 that Gabriel approves; every contact logged on the timeline (D-007, D-008, D-029) |
+| **Deals pipeline** | Each deal's stage from found to closed | The golden path (#264): found → checked → contract → buyer → closed |
+
+Flow: the morning run and the server find items → they arrive **pending** in Today's Deals / Buyers → Gabriel approves → JV deals with a matched buyer appear in **JV** → outreach from the card → the deal moves through the pipeline → closed.
