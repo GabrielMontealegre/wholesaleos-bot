@@ -6,6 +6,8 @@ corrects them during review.
 
 ## Gabriel's decisions
 
+ASSUMED: integrate current main's documentation-only updates by normal merge rather than rebasing with dirty unrelated generated artifacts; preserve both those files and all newer decisions. Honor Gabriel's explicit one-item #283 run order; no buyer deletion or email send is included in read-only verification — AGENTS sections 3 and 5 — 2026-10-06.
+
 | ID | Date | Decision |
 |---|---|---|
 | D-001 | 2026-09-26 | **Texas is parked, not abandoned.** Texas sale prices are not public. No new Texas comp machinery beyond the operator-browser lane and the paid-comp switch (off). Texas leads still get ranking, cards, links, phones, CRM. |
