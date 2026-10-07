@@ -53,3 +53,17 @@ Separate tabs, **one engine**: every tab reads and writes the same records, so a
 | **Deals pipeline** | Each deal's stage from found to closed | The golden path (#264): found → checked → contract → buyer → closed |
 
 Flow: the morning run and the server find items → they arrive **pending** in Today's Deals / Buyers → Gabriel approves → JV deals with a matched buyer appear in **JV** → outreach from the card → the deal moves through the pipeline → closed.
+
+## Doing everything in the dashboard (not in the chat)
+
+| You want to… | Where in the dashboard | Ready? |
+|---|---|---|
+| See and approve buyers | Buyers found (Import, Approve, Copy message, Open profile) | ✅ now |
+| See checked deals and JVs with comps, buyer max, room, expiry | Today's Deals + JV tab | next (#283) |
+| Understand any term | (?) tooltips + glossary | next (#285) |
+| Comps and strategy on any lead | Deal Check on the card | soon (#275) |
+| Email holders and buyers | Card → Draft email → Gmail draft → Send (your click) | soon (#288) |
+| Make the JV agreement | JV card → Generate JV agreement | soon (#288) |
+| See what the automatic searches did | Runs panel | soon (#288) |
+| Pick a title company | Title Companies tab | later (B-22) |
+| Software finds deals by itself | Server jobs (county auctions, sales data, deed-record buyers) + Chrome panel | later (#277, B-09, B-21, B-18) |

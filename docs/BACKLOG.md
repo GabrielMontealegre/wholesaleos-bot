@@ -85,6 +85,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 >     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
 >     Gabriel's priority, right after the #269 slice in progress; includes the JV tab, D-043, and
 >     [#285](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/285) help tooltips), then
+>     [#288](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/288) (email drafts/send from the card, JV agreement generator, runs panel), then
 >     [#269](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/269) (usability floor: junk leads, wrong links, fake
 >     matches, clickable links/rows/counts, plain English; Gabriel can't use the app until this lands), then
 >     [#275](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/275) (Deal Check panel on every lead + every lead gets a use + Texas
