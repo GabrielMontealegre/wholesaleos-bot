@@ -8,16 +8,6 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-06 — #283 IN PROGRESS: Today/JV implementation and shared #285 help
-foundation completed locally. Final full suite: 127 passed, 0 failed, 0 skipped;
-per-file durations in `docs/test-results/issue-283.txt`. Actual-theme synthetic
-desktop/phone proof covers complete cards, buyer/comp details and accessible help.
-Release and read-only production verification pending. No production import,
-approval, contact, confirmation or batch. Ten vetted deals/day remains a target,
-not a claimed acquisition result. Broad legacy help coverage remains open in #285.
-Current main's D-046/D-047 and updated order are retained. This run honors Gabriel's
-explicit one-item request for #283; it does not delete any buyer records.
-
 2026-10-06 — #269 IN PROGRESS: first ordered safety slice deployed in
 [PR #282](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/282), merge
 `adfd6d0`. PR #280 was reverted after live Pipeline contrast failed; the scoped
