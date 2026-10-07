@@ -1,6 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
+const operationalEligibility = require('./operational-lead-eligibility');
+const leadOperations = require('./lead-operations-state');
 const fs = require('fs');
 const path = require('path');
 const db = require('../../db');
@@ -1324,6 +1326,7 @@ function buildDossier(input) {
     created_at: created,
     updated_at: created,
     source_kind: source.source_kind || 'unknown',
+    free_contact_routes: Array.isArray(source.free_contact_routes) ? source.free_contact_routes.slice() : [],
     refs: {
       analyzer_job_id: cleanText(source.analyzer_job_id || source.job_id),
       scout_job_id: cleanText(source.scout_job_id),
@@ -1410,6 +1413,7 @@ function priorityScore(dossier) {
 function mergeDossier(existing, incoming) {
   if (!existing) return incoming;
   const workflow = existing.workflow || {};
+  incoming = Object.assign({}, incoming, { free_contact_routes: incoming.free_contact_routes && incoming.free_contact_routes.length ? incoming.free_contact_routes : existing.free_contact_routes || [] });
   const existingProperty = existing.property || {};
   const incomingProperty = incoming.property || {};
   const sourceUrl = cleanText(existingProperty.canonical_source_url || existingProperty.source_url || incomingProperty.canonical_source_url || incomingProperty.source_url);
@@ -1508,6 +1512,7 @@ function publicDossier(dossier) {
   const sourceUrl = cleanText(property.canonical_source_url || property.source_url);
   const urlIdentity = addressFromKnownPropertyUrl(sourceUrl, cleanText(property.source_title));
   const repairedProperty = Object.assign({}, property);
+  const sourceConflict = operationalEligibility.sourceConflict(dossier);
   const viewAddress = propertyIdentity.canonicalAddress({
     normalized_address: repairedProperty.full_address,
     source_url: sourceUrl,
@@ -1515,7 +1520,7 @@ function publicDossier(dossier) {
     state: repairedProperty.state || urlIdentity.state,
     zip: repairedProperty.zip || urlIdentity.zip
   });
-  if (viewAddress && viewAddress !== cleanText(repairedProperty.full_address)) {
+  if (!sourceConflict && viewAddress && viewAddress !== cleanText(repairedProperty.full_address)) {
     repairedProperty.full_address = viewAddress;
     repairedProperty.city = repairedProperty.city || urlIdentity.city;
     repairedProperty.state = repairedProperty.state || urlIdentity.state;
@@ -1538,6 +1543,9 @@ function publicDossier(dossier) {
     address_candidate: cleanText(repairedProperty.full_address)
   }, sourceUrl);
   const repairedContact = Object.assign({}, dossier.contact || {});
+  const provenPhone = leadOperations.provenPhoneRoute(dossier);
+  const phoneDigits = provenPhone ? cleanText(provenPhone.value).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'') : '';
+  repairedContact.call_allowed = !sourceConflict && phoneDigits.length === 10 && cleanText(provenPhone.evidence_text).replace(/\D/g,'').includes(phoneDigits) && phoneDigits === cleanText(repairedContact.phone).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
   if ((!repairedContact.phone && !repairedContact.email) && viewFacts.source_contact_path) {
     repairedContact.target = 'Public Contact Form';
     repairedContact.source_url = cleanText((viewFacts.source_contact_path || {}).source_url);
@@ -1584,6 +1592,11 @@ function publicDossier(dossier) {
     preview_only: true,
     should_ingest: false
   });
+  if (sourceConflict) {
+    viewDossier.property = Object.assign({}, viewDossier.property, { source_proof_status: 'Source/Address Conflict', source_address_conflict_warning: 'Link points to a different property' });
+    viewDossier.workflow = Object.assign({}, viewDossier.workflow, { outcome: 'Research More' });
+    viewDossier.contact = Object.assign({}, viewDossier.contact, { call_allowed: false, outreach_allowed: false, warning: 'Link points to a different property' });
+  }
   viewDossier.deal_intelligence = Object.assign({}, dossier.deal_intelligence || {}, classifyDeal(viewDossier, null));
   viewDossier.call_script = dossier.call_script && dossier.call_script.opening_line ? dossier.call_script : scriptForDealType(viewDossier);
   if (viewDossier.workflow && viewDossier.workflow.outcome === 'Call Today' && viewDossier.contact && viewDossier.contact.target === 'Manual Lookup Needed') {
@@ -1616,8 +1629,8 @@ function listDossiers(options = {}) {
   let dossiers = readStore(options.storePath)
     .filter((dossier) => dossier && dossier.parked_duplicate !== true)
     .filter((dossier) => !(dossier.workflow && dossier.workflow.outcome === 'Bad Lead') || options.includeBad === true)
-    .filter((dossier) => matchesFilter(dossier, options.filter))
-    .map(publicDossier);
+    .map(publicDossier)
+    .filter((dossier) => matchesFilter(dossier, options.filter));
   if (options.dallasOnly === true) {
     dossiers = dossiers.filter((dossier) => /\bDallas\b/i.test(evidenceTextForDossier(dossier, null)) || /\b752\d{2}\b/.test(evidenceTextForDossier(dossier, null)));
   }
