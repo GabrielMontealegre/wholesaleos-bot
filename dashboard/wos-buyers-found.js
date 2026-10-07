@@ -30,14 +30,14 @@
   }
   function importPanel() {
     if (!data || !data.capabilities || !data.capabilities.can_import) return '';
-    if (!importOpen) return '<div class="bf-actions"><button type="button" data-import-action="open">Import buyers</button><span>Also accepts kind: deal records; deals stay pending.</span></div>';
+    if (!importOpen) return '<div class="bf-actions"><button type="button" data-import-action="open">Import buyers</button></div>';
     var counts = importPreview && importPreview.counts;
     var reasons = { find_url_invalid: 'Source or profile link is missing or invalid.', find_field_required: 'Required information is missing.',
       find_field_invalid: 'A field is invalid or too long.', find_item_invalid: 'Unsupported fields or item format.', find_type_invalid: 'Platform or property type is unsupported.',
       find_buy_box_invalid: 'Buy-box criteria are invalid.', find_capture_date_invalid: 'Capture date is invalid.', find_contact_invalid: 'Published contact is invalid or conflicts.',
       find_classification_invalid: 'Buyer category is invalid.', find_item_too_large: 'Item exceeds the size limit.' };
     return '<section class="bf-import"><style>.bf-import{padding:16px 0;border-bottom:1px solid #334155}.bf-import label{color:#e2e8f0!important;margin:8px 0}.bf-import input[type=file]{width:100%}.bf-import .bf-import-check{display:flex;gap:8px;align-items:center}.bf-import-check input{width:auto}.bf-import textarea{min-height:140px}.bf-import ul{padding-left:20px;font-size:13px}.bf-import p{margin:10px 0}.bf-import input::placeholder{color:#a8b7ca!important}</style>' +
-      '<h3>Import buyers or deals</h3><label>JSON file<input type="file" accept=".json,application/json" data-import-file' + (importBusy ? ' disabled' : '') + '></label>' +
+      '<h3>Import buyers</h3><label>JSON file<input type="file" accept=".json,application/json" data-import-file' + (importBusy ? ' disabled' : '') + '></label>' +
       '<label>Or paste JSON<textarea data-import-json maxlength="262144"' + (importBusy ? ' disabled' : '') + '>' + esc(importJson) + '</textarea></label>' +
       '<div class="bf-actions"><button type="button" data-import-action="preview"' + (importBusy ? ' disabled' : '') + '>Preview</button>' +
       '<button type="button" data-import-action="cancel"' + (importBusy ? ' disabled' : '') + '>Cancel</button></div>' +

@@ -773,6 +773,7 @@ function mockDeal(overrides) {
   }
   const yesterday = relativeDateIso(-1);
   const inThreeDays = relativeDateIso(3);
+  const ambiguousSlash = usDate('2026-10-09');
   const saleSnapshotPath = path.join(tmpDir, 'sale-date-urgency.json');
   process.env.DEAL_BOARD_SNAPSHOTS_PATH = saleSnapshotPath;
   const saleMarket = { city: 'Dallas', county: 'Dallas', state: 'TX' };
@@ -798,13 +799,13 @@ function mockDeal(overrides) {
   assert.strictEqual(saleRead.rows[0].next_best_action, 'VERIFY_SALE_STATUS_FROM_SOURCE_DOCUMENT');
   assert.strictEqual(fs.readFileSync(saleSnapshotPath, 'utf8'), saleDiskBeforeRead, 'read-time sale repair must not write the snapshot');
   assert.strictEqual(queueService.parseSaleDateIso(inThreeDays), inThreeDays);
-  assert.strictEqual(queueService.parseSaleDateIso(usDate(inThreeDays)), null, 'ambiguous slash dates must not be guessed');
+  assert.strictEqual(queueService.parseSaleDateIso(ambiguousSlash), null, 'ambiguous slash dates must not be guessed');
   assert.strictEqual(queueService.parseSaleDateIso('sale on the first Tuesday'), null);
 
   const salePreview = async () => ({
     free_public_deals: [
       mockDeal({ headline: '101 ISO Sale St, Dallas, TX 75201', normalized_address: '101 ISO Sale St, Dallas, TX 75201', sale_date_or_event_date: inThreeDays }),
-      mockDeal({ headline: '102 US Sale St, Dallas, TX 75201', normalized_address: '102 US Sale St, Dallas, TX 75201', sale_date_or_event_date: usDate(inThreeDays) }),
+      mockDeal({ headline: '102 US Sale St, Dallas, TX 75201', normalized_address: '102 US Sale St, Dallas, TX 75201', sale_date_or_event_date: ambiguousSlash }),
       mockDeal({ headline: '103 Text Sale St, Dallas, TX 75201', normalized_address: '103 Text Sale St, Dallas, TX 75201', sale_date_or_event_date: 'first Tuesday in August' })
     ],
     rejected_generic_count: 0
@@ -818,7 +819,7 @@ function mockDeal(overrides) {
   const textSale = saleBatch.rows.find((row) => row.normalized_address === '103 Text Sale St, Dallas, TX 75201');
   assert.strictEqual(isoSale.sale_date_or_event_date, inThreeDays);
   assert.strictEqual(isoSale.sale_date_iso, inThreeDays);
-  assert.strictEqual(usSale.sale_date_or_event_date, usDate(inThreeDays));
+  assert.strictEqual(usSale.sale_date_or_event_date, ambiguousSlash);
   assert.strictEqual(usSale.sale_date_iso, null, 'ambiguous slash dates stay unparsed');
   assert.strictEqual(textSale.sale_date_or_event_date, 'first Tuesday in August');
   assert.strictEqual(textSale.sale_date_iso, null);
