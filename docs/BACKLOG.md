@@ -8,6 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-06 — #269 IN PROGRESS: first ordered safety slice deployed in
+[PR #282](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/282), merge
+`adfd6d0`. PR #280 was reverted after live Pipeline contrast failed; the scoped
+repair passed actual-theme contrast checks and production desktop/phone checks,
+resolving #281. Full suite: 124 passed, 0 failed, 0 skipped; timing record:
+`docs/test-results/issue-269-safety.txt`. Railway succeeded; `/health` 200;
+`wos-operational-views.js?v=2` served. Pipeline, Outreach Hub, Matching and Review
+rendered at 1366/400 with no current-release console errors. Observed: 12,039
+saved records, 10,664 needing address proof, 0 working properties, 0 link conflicts.
+Held-record counter opens 50 of 10,664 records without writes. No batch, contact,
+evidence confirmation or production data mutation. Screenshots/report:
+[operational safety](screens/2026-10-06-operational-safety/README.md).
+Remaining #269: Dashboard/Deal Finder row and count navigation, broader link/filter
+coverage, sourced property facts and plain labels, All States and Email load states.
+#257 phone navigation works, but its keyboard/focus acceptance remains unverified;
+leave it open. Assumptions: ordered slices, conservative source proof, bounded
+pagination and test-only historical clocks. Next run continues #269, not #275.
+
 2026-10-06 — #271 DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)),
 application merge `0202654`. The signed-admin buyer import accepts file/paste JSON,
 previews redacted counts without writes, and saves only on explicit Import. Optional
