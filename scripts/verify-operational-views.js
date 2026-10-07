@@ -60,6 +60,13 @@ let processOutput='';child.stdout.on('data',data=>{processOutput+=String(data);}
         assert.ok(!(await page.locator('.ops-view').innerText()).includes(junk.address));
         assert.strictEqual(await page.locator('.ops-view button').filter({hasText:/Send/}).count(),0);
         assert.strictEqual(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+        if(pageName==='pipeline'){
+          const ratios=await page.locator('.pipe-header').evaluateAll(elements=>{
+            const luminance=color=>color.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+            return elements.map(element=>{const a=luminance(getComputedStyle(element).color),b=luminance(getComputedStyle(element).backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);});
+          });
+          assert.ok(ratios.length && ratios.every(ratio=>ratio>=4.5),'Pipeline headings must be readable in the actual theme');
+        }
         if(pageName==='matching'||pageName==='review'){
           assert.strictEqual(await page.locator('.ops-record').count(),1);
           assert.ok(!(await page.locator('.ops-view').innerText()).includes('Test Buyer 1'));
