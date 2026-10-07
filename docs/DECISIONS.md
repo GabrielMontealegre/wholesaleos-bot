@@ -6,6 +6,8 @@ corrects them during review.
 
 ## Gabriel's decisions
 
+ASSUMED: integrate current main's documentation-only updates by normal merge rather than rebasing with dirty unrelated generated artifacts; preserve both those files and all newer decisions. Honor Gabriel's explicit one-item #283 run order; no buyer deletion or email send is included in read-only verification — AGENTS sections 3 and 5 — 2026-10-06.
+
 | ID | Date | Decision |
 |---|---|---|
 | D-001 | 2026-09-26 | **Texas is parked, not abandoned.** Texas sale prices are not public. No new Texas comp machinery beyond the operator-browser lane and the paid-comp switch (off). Texas leads still get ranking, cards, links, phones, CRM. |
@@ -97,6 +99,8 @@ corrects them during review.
 ## Agent assumptions (ASSUMED)
 
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)
+
+ASSUMED: #283 imports proposed deals into one reviewed-deal collection shared by Today and JV; explicit operator source/comp review is required before matching or value tiers. Submitted ARV/verdicts remain claims; the unchanged strict grid is recomputed with a six-month window. Literal buyer percentages and known caps produce a conservative buyer ceiling, not MAO. Unknown constraints block matching. Same-day holder confirmation is required to enter JV; contract and signed-JV checks additionally gate introductions. Expiration is computed read-only, retaining history. The ten-per-day number is a visible target, never fabricated inventory; acquisition remains the following backlog work — because source truth, D-035 and D-043 outrank auto-verification or filling a quota — 2026-10-07.
 
 ASSUMED: #269 is delivered in ordered slices, first the P0 display/matching safety paths plus their navigation prerequisites. A property needs the existing structured-source marker and matching source text, not a backfilled normalized address; unknown records remain saved and reachable in a research list. Lists use bounded pages with a full matching total. Test-only clocks pin dated historical scenarios after the UTC day rollover, preserving their assertions and every production date rule — because data truth and deterministic verification outrank treating historical test dates as perpetually upcoming — 2026-10-06 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/282.
 
