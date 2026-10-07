@@ -26,3 +26,20 @@ that became `10/10/2026`, which has one valid reading. Only the incidental raw
 fixture was replaced with fixed `10/09/2026`; null expectations and all product
 date rules stayed unchanged. Focused test passed; final rerun durations are in
 `docs/test-results/issue-283-rollback.txt`.
+
+## Restoration verified
+
+[PR #293](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/293) merge
+`408e661bcdaf77bbb253bdc7ccb1cc480b1fe7ec`: exact Railway status success; health
+200; `wos-buyers-found.js?v=3` restored and Today/JV asset removed. Final rollback
+suite: 124 passed, 0 failed, 0 skipped; county-notice acquisition test 25.46 seconds.
+Application code matches the pre-feature release; only documents and the test
+fixture differ. Existing leads hydrated (12,039 stored, 100 table rows); a card
+opened and closed without editing. Source summary hydrated (301 selected-market
+rows). No console error appeared after rollback; an earlier transient 502 during
+deployment recovered. No production action beyond deploy and reads was performed.
+
+[Restored desktop header](restored-leads-header-1366.png) and
+[restored phone header](restored-leads-header-400.png) are deliberately cropped
+before personal lead details. Original failed-release captures remain explicitly
+labeled above; they must not be presented as a current finished feature.

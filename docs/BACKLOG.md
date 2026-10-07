@@ -15,12 +15,19 @@ Mark the status here as part of each item's PR.
 Today's Deals. The required first-panel order failed, so the application merge is
 being reverted per AGENTS section 7. Actual new inventory: 0 submitted, 0 vetted,
 0 eligible JV; the ten/day goal is unmet. Component-only proof missed the existing
-mount lifecycle. #285 remains open; no production data was written. Assumption:
+mount lifecycle. #285 remains open; no production data was written by this run. Assumption:
 preserve the implementation on its branch; require an actual mount/re-render test
 for the ordered repair. Rollback final suite: 124 passed, 0 failed, 0 skipped;
 durations in `docs/test-results/issue-283-rollback.txt`. One incidental ambiguous
 date fixture was stabilized across midnight without changing null expectations or
-product parsing. Rollback deploy health verification pending.
+product parsing. Rollback [PR #293](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/293)
+merged as `408e661`; exact-commit Railway status success, health 200, prior script
+restored. Signed-in read-only verification: 12,039 records hydrated, 100 lead rows,
+lead card opened/closed. No new console errors after rollback (one earlier deploy
+502 recovered). [Evidence](screens/2026-10-07-today-order-failure/README.md).
+No imports, approvals, contact, confirmations, batches or buyer deletion. One item
+handled this run; #283/#285 remain open. Next independent user-ordered item: #275;
+the #283 repair needs actual full-dashboard mount-order coverage, tracked in #292.
 
 2026-10-06 — #269 IN PROGRESS: first ordered safety slice deployed in
 [PR #282](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/282), merge
