@@ -1593,6 +1593,7 @@ function addBuyer(buyer) {
 
 function matchBuyersToLead(lead) {
   return getBuyers().filter(b => {
+    if (!require('./modules/research/operational-lead-eligibility').matchEligible(lead, b)) return false;
     if (b.assistant_find) return require('./modules/buyers/buyer-fit').fitLead(b, lead).fits;
     if (b.status !== 'Active') return false;
     const priceOk = (!b.maxPrice || (lead.arv||0) * 0.85 <= b.maxPrice) &&
