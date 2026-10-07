@@ -53,6 +53,7 @@ corrects them during review.
 | D-044 | 2026-10-07 | **Every term has a (?) help.** Plain-English tooltips and a glossary for JV, ARV, MAO, comps, strategies, lanes and statuses (#285). |
 | D-045 | 2026-10-07 | **Gabriel is a foreign person for US tax** (not a US citizen or green-card holder). Expect the closing agent to apply FIRPTA withholding (up to 15%) on amounts he receives from US property interests, assignment fees included, unless the agent advises otherwise. He reclaims any excess through a US tax return (ITIN). Get a CPA who works with foreign investors before the first closing. |
 | D-046 | 2026-10-07 | **Email from the dashboard** (amends A-012 for email only). Cards can create Gmail drafts in the connected account, and "Send" sends on Gabriel's explicit click, one email or an approved batch of ≤ 20 (D-029). Nothing is sent automatically. Every draft and send is logged. Buyer emails never include a deal's address before the JV is signed (D-043) (#288). |
+| D-047 | 2026-10-07 | **Delete the test buyers** (Gabriel). The 4 test records in production are exported to a private backup and then deleted, and placeholder or test buyers can't be created again outside test fixtures. Real and assistant-found buyers are never deleted (#262). |
 
 ## Architect decisions (Gabriel may veto)
 
