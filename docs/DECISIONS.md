@@ -6,6 +6,10 @@ corrects them during review.
 
 ## Gabriel's decisions
 
+ASSUMED: replace only the ambiguous-slash fixture's relative date with fixed `10/09/2026` in dashboard-public-deal-queue.test.js. On 2026-10-07 the relative +3-day value became `10/10/2026`, a single-valid-reading date, invalidating the fixture's intent. Null assertions and product resolver stay unchanged — AGENTS section 4 incidental date scaffolding — 2026-10-07.
+
+ASSUMED: #283's first-panel requirement is a release gate; the old public panel's later prepend defeats the new wrapper. Revert PR #291 without touching data, preserve its implementation for an ordered repair, and require actual dashboard mount/hydrate/re-render proof — AGENTS section 7 — 2026-10-07.
+
 | ID | Date | Decision |
 |---|---|---|
 | D-001 | 2026-09-26 | **Texas is parked, not abandoned.** Texas sale prices are not public. No new Texas comp machinery beyond the operator-browser lane and the paid-comp switch (off). Texas leads still get ranking, cards, links, phones, CRM. |

@@ -8,6 +8,20 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-07 — #283 BLOCKED ([#292](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/292)).
+[PR #291](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/291) passed
+127/127 tests, no skips, and merged as `3a0d59e`. Railway succeeded and health was
+200, but read-only live verification found the older source desk inserted before
+Today's Deals. The required first-panel order failed, so the application merge is
+being reverted per AGENTS section 7. Actual new inventory: 0 submitted, 0 vetted,
+0 eligible JV; the ten/day goal is unmet. Component-only proof missed the existing
+mount lifecycle. #285 remains open; no production data was written. Assumption:
+preserve the implementation on its branch; require an actual mount/re-render test
+for the ordered repair. Rollback final suite: 124 passed, 0 failed, 0 skipped;
+durations in `docs/test-results/issue-283-rollback.txt`. One incidental ambiguous
+date fixture was stabilized across midnight without changing null expectations or
+product parsing. Rollback deploy health verification pending.
+
 2026-10-06 — #269 IN PROGRESS: first ordered safety slice deployed in
 [PR #282](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/282), merge
 `adfd6d0`. PR #280 was reverted after live Pipeline contrast failed; the scoped
@@ -83,7 +97,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 >     **First, before anything else: delete the 4 test buyers ([#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) comment, D-047).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
->     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
+>     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) BLOCKED ([#292](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/292): live mount order failed; PR #291 rolled back) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
 >     Gabriel's priority, right after the #269 slice in progress; includes the JV tab, D-043, and
 >     [#285](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/285) help tooltips), then
 >     [#288](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/288) (email drafts/send from the card, JV agreement generator, runs panel), then
