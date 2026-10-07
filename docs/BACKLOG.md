@@ -82,6 +82,8 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 > 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
+>     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
+>     Gabriel's priority, right after the #269 slice in progress), then
 >     [#269](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/269) (usability floor: junk leads, wrong links, fake
 >     matches, clickable links/rows/counts, plain English; Gabriel can't use the app until this lands), then
 >     [#275](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/275) (Deal Check panel on every lead + every lead gets a use + Texas
