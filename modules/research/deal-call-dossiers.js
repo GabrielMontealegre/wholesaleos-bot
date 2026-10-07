@@ -1544,7 +1544,8 @@ function publicDossier(dossier) {
   }, sourceUrl);
   const repairedContact = Object.assign({}, dossier.contact || {});
   const provenPhone = leadOperations.provenPhoneRoute(dossier);
-  repairedContact.call_allowed = !sourceConflict && !!provenPhone && cleanText(provenPhone.value).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'') === cleanText(repairedContact.phone).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+  const phoneDigits = provenPhone ? cleanText(provenPhone.value).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'') : '';
+  repairedContact.call_allowed = !sourceConflict && phoneDigits.length === 10 && cleanText(provenPhone.evidence_text).replace(/\D/g,'').includes(phoneDigits) && phoneDigits === cleanText(repairedContact.phone).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
   if ((!repairedContact.phone && !repairedContact.email) && viewFacts.source_contact_path) {
     repairedContact.target = 'Public Contact Form';
     repairedContact.source_url = cleanText((viewFacts.source_contact_path || {}).source_url);
