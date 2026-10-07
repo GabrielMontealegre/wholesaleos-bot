@@ -80,6 +80,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 > 11. [#260](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/260) DONE ([PR #274](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/274)): approval, structured buy boxes, duplicate correlation and initial lead fits deployed and verified read-only. PR #268 was reverted and replaced after the theme failure tracked in #273. Gabriel's priority: goes next,
 >    ahead of the backlog order in 10.
 > 12. **Golden path order (architect, 2026-10-06, third update; replaces the order in 10).**
+>     **First, before anything else: delete the 4 test buyers ([#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) comment, D-047).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
 >     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
