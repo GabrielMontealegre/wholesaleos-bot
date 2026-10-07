@@ -31,7 +31,6 @@ const dashboardAuth = require('./modules/security/dashboard-auth');
 const dashboardSession = require('./modules/security/dashboard-session');
 const dashboardPairing = require('./modules/security/dashboard-pairing');
 const assistantFindRoutes = require('./modules/buyers/assistant-find-routes');
-const operationalLeads = require('./modules/research/operational-lead-eligibility');
 const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
@@ -1350,7 +1349,6 @@ app.get('/api/leads', (req, res) => {
         if (isDallasLeadForList(enriched)) safe.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(enriched);
         if (isDallasSheriffTaxSaleLeadForList(enriched)) safe.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(enriched);
         safe.lead_quality = quality;
-        safe.operational_eligibility = operationalLeads.classify(lead);
         safe.repair_flags = Array.from(new Set([].concat(safe.repair_flags || [], quality.flags || [])));
         return safe;
       } catch (err) {
@@ -1360,7 +1358,6 @@ app.get('/api/leads', (req, res) => {
           list_serialization_error: err && err.message ? err.message : 'serialization_failed'
         }));
         fallback.lead_quality = fallbackQuality;
-        fallback.operational_eligibility = operationalLeads.classify(lead);
         if (isDallasLeadForList(lead)) fallback.dallas_verified_acquisition = dallasVerifiedAcquisitionStatus(lead);
         if (isDallasSheriffTaxSaleLeadForList(lead)) fallback.sheriff_tax_sale_acquisition = dallasSheriffTaxSaleAcquisitionStatus(lead);
         fallback.repair_flags = Array.from(new Set([].concat(fallback.repair_flags || [], fallbackQuality.flags || [])));
@@ -1370,7 +1367,6 @@ app.get('/api/leads', (req, res) => {
     var intakeStatus = buildLeadIntakeStatus(leads, filtered);
     return res.json({
       leads: safeLeads,
-      operational_counts: operationalLeads.counts(leads),
       total: safeLeads.length,
       totalFiltered: filtered.length,
       totalAll: leads.length,
@@ -1394,34 +1390,6 @@ app.get('/api/leads', (req, res) => {
 app.get('/api/auth/role', requireAuth, (req, res) => {
   const user = req.currentUser;
   res.json({ role: user.role || 'user', isAdmin: user.role === 'admin', userId: user.id, name: user.name });
-});
-
-app.get('/api/dashboard/operational-leads', requireAdmin, (req, res) => {
-  try {
-    const store = db.readDBStrict();
-    if (store.leads !== undefined && !Array.isArray(store.leads)) throw new Error('invalid_store');
-    const all = store.leads || [];
-    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+county$/, '');
-    const scoped = all.filter(row => ['state', 'county', 'city'].every(key => !req.query[key] || normalize(row[key]) === normalize(req.query[key])));
-    const projected = scoped.map(row => ({ ...row, operational_eligibility: operationalLeads.classify(row) }));
-    const lane = String(req.query.lane || 'working');
-    if (!['all', 'working', 'needs_address_proof', 'source_conflict', 'archived', 'callable'].includes(lane)) return res.status(400).json({ code: 'operational_lane_invalid' });
-    let rows = projected.filter(row => lane === 'all' || lane === 'callable' ? lane === 'all' || row.operational_eligibility.callable : row.operational_eligibility.lane === lane);
-    if (req.query.status) rows = rows.filter(row => row.status === req.query.status);
-    const sort = String(req.query.sort || 'priority');
-    rows.sort((a, b) => sort === 'newest' ? String(b.created_at || b.created || '').localeCompare(String(a.created_at || a.created || '')) :
-      sort === 'sale_date' ? (operationalLeads.saleDateForSort(a) || '9999-99-99').localeCompare(operationalLeads.saleDateForSort(b) || '9999-99-99') : Number(b.priority_score || b.hot_score || 0) - Number(a.priority_score || a.hot_score || 0));
-    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
-    const page = rows.slice(offset, offset + limit);
-    const matches = req.query.matches === 'true' ? page.flatMap(row => (store.buyers || []).filter(operationalLeads.buyerEligible).flatMap(buyer => {
-      const reasons = operationalLeads.matchReasons(row, buyer);
-      return reasons.length ? [{ lead_id: row.id, buyer_id: buyer.id, buyer_name: buyer.name, reasons }] : [];
-    })) : [];
-    res.set('Cache-Control', 'no-store').json({ rows: page.map(sanitizeLeadForList), matches,
-      total: rows.length, counts: operationalLeads.counts(scoped), counts_all: operationalLeads.counts(all), offset, limit,
-      next_offset: offset + limit < rows.length ? offset + limit : null });
-  } catch (_) { res.status(503).json({ code: 'operational_store_unavailable' }); }
 });
 
 app.post('/api/research/comp-scout', async (req, res) => {
@@ -2718,7 +2686,7 @@ app.patch('/api/leads/:id/address', (req, res) => {
 app.get('/api/leads/:id', (req, res) => {
   const lead = db.getLeads().find(l => l.id === req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  res.json({ ...withLeadIntelligence(lead), operational_eligibility: operationalLeads.classify(lead) });
+  res.json(withLeadIntelligence(lead));
 });
 
 app.post('/api/leads', (req, res) => {
@@ -2783,7 +2751,7 @@ app.get('/api/buyers', requireAuth, (req, res) => {
       }));
     }
     
-    res.json({ buyers: buyers.map(buyer => ({ ...buyer, matching_eligible: operationalLeads.buyerEligible(buyer) })), total: buyers.length });
+    res.json({ buyers, total: buyers.length });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -5169,14 +5137,13 @@ app.get('/api/buyers/:id/match-deals', async (req, res) => {
     const dbData = db.readDB();
     const buyer = (dbData.buyers || []).find(b => b.id === req.params.id);
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
-    if (!operationalLeads.buyerEligible(buyer)) return res.status(409).json({ code: 'buyer_not_verified', deals: [], total: 0 });
     if (buyer.assistant_find) {
       const fits = require('./modules/buyers/buyer-fit');
       if (!fits.approvedForMatching(buyer)) return res.status(409).json({ code: 'buyer_approval_required', deals: [], total: 0 });
-      const deals = (dbData.leads || []).filter(lead => operationalLeads.matchEligible(lead, buyer)).map(lead => ({ lead, fit: fits.fitLead(buyer, lead) })).filter(item => item.fit.fits);
+      const deals = (dbData.leads || []).map(lead => ({ lead, fit: fits.fitLead(buyer, lead) })).filter(item => item.fit.fits);
       return res.json({ deals: deals.slice(0, 20).map(item => ({ ...item.lead, fit_reasons: item.fit.reasons, fit_unknown: item.fit.unknown })), total: deals.length });
     }
-    const leads = (dbData.leads || []).filter(lead => operationalLeads.matchEligible(lead, buyer));
+    const leads = dbData.leads || [];
     const maxPrice = buyer.maxPrice || 999999999;
     const buyTypes = buyer.buyTypes || [];
     const buyerStates = buyer.states || [];

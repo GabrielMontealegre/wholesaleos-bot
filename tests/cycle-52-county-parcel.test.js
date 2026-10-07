@@ -1,5 +1,4 @@
 'use strict';
-require('./helpers/fixed-clock').installFixedClock('2026-09-26T12:00:00Z');
 
 const assert = require('assert');
 const fs = require('fs');

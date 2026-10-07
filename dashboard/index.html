@@ -681,7 +681,7 @@ function initApp() {
   document.getElementById('nav-fu-count').textContent = pending;
   document.getElementById('bot-status-text').textContent = 'Online · Webhook';
   document.getElementById('user-role-label').textContent = APP.currentUser
-    ? (APP.currentUser.role === 'admin' ? 'Admin' : 'User') + (APP.currentUser.name ? ' · ' + APP.currentUser.name : '')
+    ? (APP.currentUser.role === 'admin' ? 'Admin · ' : '') + APP.currentUser.name
     : 'Locked';
   render();
   checkDailyUpdate();
@@ -3050,13 +3050,11 @@ function dealCallIsWholesaleSafeDossier(dossier, options, seen) {
 function dealCallWorkflowGroup(dossier) {
   var workflow = dossier && dossier.workflow || {};
   var contact = dossier && dossier.contact || {};
-  var property = dossier && dossier.property || {};
   var outcome = commandText(workflow.outcome || '');
-  if (property && /Source\/Address Conflict/.test(property.source_proof_status || '')) return '';
   if (/Called - Interested|Offer Later/i.test(outcome)) return 'Interested / Offer Preparation';
   if (/Needs Follow-Up|Called - No Answer|Left Voicemail/i.test(outcome) || workflow.next_follow_up_at) return 'Follow-Up';
   if (/Need Contact Lookup/i.test(outcome) || contact.target === 'Manual Lookup Needed') return 'Contact Lookup Needed';
-  if (/Call Today/i.test(outcome)) return contact.call_allowed === true ? 'Call Now' : 'Contact Lookup Needed';
+  if (/Call Today/i.test(outcome)) return 'Call Now';
   return '';
 }
 
@@ -3875,7 +3873,6 @@ function dealCallCountForSummary(options) {
     return dealCallIsWholesaleSafeDossier(dossier, options, seen);
   });
   return {
-    callable: rows.filter(function(dossier){return dossier.contact && dossier.contact.call_allowed === true;}).length,
     wholesaleSafe: rows.length,
     research: (DEAL_CALL_DOSSIERS || []).filter(function(dossier){ return /Research More/i.test(commandText((dossier.workflow || {}).outcome)); }).length,
     auction: (DEAL_CALL_DOSSIERS || []).filter(function(dossier){ return /Auction|Bank-Owned|REO/i.test(commandText((dealCallDealIntel(dossier) || {}).deal_type)); }).length,
@@ -3930,7 +3927,7 @@ function renderMorningCallDesk() {
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       dealCallSummaryBox('Market selected', options.marketLabel, 'Build runs use this market.', 'neutral') +
-      dealCallSummaryBox('Actually callable', counts.callable, 'Rows with a sourced phone and no property conflict.', counts.callable > 0 ? 'good' : 'warn') +
+      dealCallSummaryBox('Actually callable', counts.wholesaleSafe, 'Unique wholesale-safe rows.', counts.wholesaleSafe >= 10 ? 'good' : 'warn') +
       dealCallSummaryBox('Manual review', counts.manualReview, 'Blocked sources to repair.', counts.manualReview ? 'warn' : 'neutral') +
       dealCallSummaryBox('Research', counts.research, 'Research More rows.', 'neutral') +
       dealCallSummaryBox('Auction/REO', counts.auction, 'Investor review only unless included.', counts.auction ? 'warn' : 'neutral') +
@@ -9861,7 +9858,7 @@ function renderBot() {
   <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="stat-card"><div class="stat-label">Bot Status</div><div class="stat-value" style="color:#34c759">🟢 Online</div><div class="stat-change">Webhook mode</div></div>
     <div class="stat-card"><div class="stat-label">AI Mode</div><div class="stat-value" style="font-size:16px">Llama 3.3</div><div class="stat-change">Free tier active</div></div>
-    <div class="stat-card"><div class="stat-label">Saved records</div><div class="stat-value">${loadedLeadCount()}</div><div class="stat-change">Full saved-record total</div></div>
+    <div class="stat-card"><div class="stat-label">Leads in DB</div><div class="stat-value">${APP.leads.length}</div><div class="stat-change">From Telegram</div></div>
     <div class="stat-card"><div class="stat-label">Daily Update</div><div class="stat-value" style="font-size:16px">7:00 AM</div><div class="stat-change">MST — Los Cabos</div></div>
   </div>
   <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin-bottom:12px">
@@ -16130,7 +16127,7 @@ function renderBot() {
   <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="stat-card"><div class="stat-label">Bot Status</div><div class="stat-value" style="color:#34c759">🟢 Online</div><div class="stat-change">Webhook mode</div></div>
     <div class="stat-card"><div class="stat-label">AI Mode</div><div class="stat-value" style="font-size:16px">Llama 3.3</div><div class="stat-change">Free tier active</div></div>
-    <div class="stat-card"><div class="stat-label">Saved records</div><div class="stat-value">${loadedLeadCount()}</div><div class="stat-change">Full saved-record total</div></div>
+    <div class="stat-card"><div class="stat-label">Leads in DB</div><div class="stat-value">${APP.leads.length}</div><div class="stat-change">From Telegram</div></div>
     <div class="stat-card"><div class="stat-label">Daily Update</div><div class="stat-value" style="font-size:16px">7:00 AM</div><div class="stat-change">MST — Los Cabos</div></div>
   </div>
   <div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin-bottom:12px">
@@ -29136,6 +29133,5 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-buyers.js?v=1"></script>
 <script src="/dashboard/wos-buyers-found.js?v=3"></script>
 <script src="/dashboard/wos-public-deals.js?v=54"></script>
-<script src="/dashboard/wos-operational-views.js?v=1"></script>
 </body>
 </html>

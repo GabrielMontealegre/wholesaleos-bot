@@ -65,8 +65,6 @@ function provenMailingRoute(deal) {
   return route && cleanText(route.value) && fieldProvenance.routeHasProvenance(route) ? route : null;
 }
 
-function provenPhoneRoute(deal) { return provenRoute(deal, kind => /phone/i.test(kind)); }
-
 function identityKnown(deal) {
   const owner = deal && deal.owner_record && typeof deal.owner_record === 'object' ? deal.owner_record : {};
   return Boolean(
@@ -255,6 +253,5 @@ module.exports = {
   freeContactLanesExhausted,
   identityKnown,
   propertyStateForDeal,
-  provenPhoneRoute,
   rowStateForDeal
 };

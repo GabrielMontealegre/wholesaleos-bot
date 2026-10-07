@@ -14,7 +14,7 @@ const fits = require('../modules/buyers/buyer-fit');
 
 const now = '2026-10-06T12:00:00.000Z';
 const item = {
-  name: 'Fixture Investor', platform: 'facebook', group_name: 'Synthetic Group', group_id: '123',
+  name: 'Synthetic Buyer', platform: 'facebook', group_name: 'Synthetic Group', group_id: '123',
   profile_url: 'https://www.facebook.com/groups/123/user/456/',
   source_url: 'https://www.facebook.com/groups/123/search/?q=buy%20box',
   what_they_buy: 'Houses in the stated area.', deal_type: 'house', states: ['TX'], areas: ['Example metro'],
@@ -81,10 +81,7 @@ const legacyDuplicate = finds.ingest({ buyers: [{ id: 'legacy', email: item.emai
 assert.strictEqual(legacyDuplicate.store.buyers.length, 1);
 assert.strictEqual(legacyDuplicate.store.buyers[0].notes, 'Keep this');
 assert.strictEqual(legacyDuplicate.store.buyers[0].assistant_find.approval, 'pending');
-const lead = { state: 'TX', city: 'Example metro', zip: '75001', property_type: 'SFR', price: 150000,
-  address: '100 Test St, Example metro, TX 75001', source_url: 'https://county.example.gov/notices/TEST.pdf',
-  source_structured_address_verified: true, source_proof_text: 'Property address: 100 Test St, Example metro, TX 75001.',
-  arv: 200000, offer: 100000 };
+const lead = { state: 'TX', city: 'Example metro', zip: '75001', property_type: 'SFR', price: 150000 };
 assert.strictEqual(fits.fitLead(updated.buyers[1], lead).fits, true);
 assert.strictEqual(fits.fitLead(result.store.buyers[1], lead).fits, false);
 assert.strictEqual(fits.fitLead(rejected.buyers[1], lead).fits, false);
