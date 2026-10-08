@@ -8,8 +8,9 @@ const { registerReviewedDealRoutes } = require('../modules/deals/reviewed-deal-r
 const { fixture, now } = require('./reviewed-deals.test');
 (async () => {
   let store = { buyers: [], leads: [{ id:'lead1',state:'FL',reference_id:'LEGACY-ONE',address:'Private fixture address',owner_name:'Private fixture owner',phone:'555-555-9999' }], activities: [] }; let writes=0;
+  let backups=0; let backupFailure=false;
   const original=JSON.stringify(store); const app=express();app.use(express.json());
-  registerRecordActivityRoutes(app,{ db:{readDBStrict:()=>store,writeDB:s=>{store=s;writes++;}},requireAdmin:(req,res,next)=>{if(req.headers['x-fixture-admin']!=='yes')return res.status(401).json({code:'admin_required'});req.currentUser={id:'fixture-admin'};next();},now:()=>now });
+  registerRecordActivityRoutes(app,{ db:{readDBStrict:()=>store,backupReferenceStore:s=>{assert.strictEqual(s,store);backups++;if(backupFailure)throw Error('private backup unavailable');return{id:'private-fixture'};},writeDB:s=>{assert.ok(backups>0);store=s;writes++;}},requireAdmin:(req,res,next)=>{if(req.headers['x-fixture-admin']!=='yes')return res.status(401).json({code:'admin_required'});req.currentUser={id:'fixture-admin'};next();},now:()=>now });
   registerReviewedDealRoutes(app,{ db:{readDBStrict:()=>store,writeDB:s=>{store=s;writes++;}},requireAdmin:(req,res,next)=>{if(req.headers['x-fixture-admin']!=='yes')return res.status(401).json({code:'admin_required'});req.currentUser={id:'fixture-admin'};next();},now:()=>now });
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});const base='http://127.0.0.1:'+server.address().port;
   async function get(route,admin=true){const r=await fetch(base+route,{headers:admin?{'x-fixture-admin':'yes'}:{}});return{status:r.status,body:await r.json()};}
@@ -20,7 +21,12 @@ const { fixture, now } = require('./reviewed-deals.test');
     await get('/api/dashboard/record-activity');assert.strictEqual(JSON.stringify(store),original);assert.strictEqual(writes,0);
     assert.strictEqual((await get('/api/dashboard/record-activity?from=2026-99-99')).status,400);
     assert.strictEqual((await post({confirm:true},false)).status,401);assert.strictEqual((await post({})).status,400);assert.strictEqual(writes,0);
-    assert.strictEqual((await post({confirm:true})).status,200);assert.strictEqual(writes,1);assert.strictEqual(store.leads[0].record_ref,'WOS-FL-0001');
+    const lazyDenied=await fetch(base+'/api/dashboard/record-refs/lead/lead1',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"confirm":true}'});assert.strictEqual(lazyDenied.status,401);
+    const lazyMissing=await fetch(base+'/api/dashboard/record-refs/lead/missing',{method:'POST',headers:{'Content-Type':'application/json','x-fixture-admin':'yes'},body:'{"confirm":true}'});assert.strictEqual(lazyMissing.status,404);assert.strictEqual(writes,0);
+    assert.strictEqual((await post({confirm:true,kinds:['lead']})).status,400,'bulk leads are forbidden');
+    assert.strictEqual((await post({confirm:true,kinds:['buyer','buyer']})).status,400);
+    backupFailure=true; assert.strictEqual((await post({confirm:true})).status,503); assert.strictEqual(writes,0); assert.strictEqual(JSON.stringify(store),original); backupFailure=false;
+    assert.strictEqual((await post({confirm:true})).status,200);assert.strictEqual(writes,1);assert.strictEqual(store.leads[0].record_ref,undefined);
     assert.deepStrictEqual(Object.fromEntries(Object.entries(store.leads[0]).filter(([k])=>k!=='record_ref')),JSON.parse(original).leads[0]);
     await post({confirm:true});assert.strictEqual(writes,1,'repeat assignment is idempotent');
     const plan=imports.prepareImport(store,{items:[{...fixture(),ref:'WOS-FL-0200'},{kind:'interaction',ts:now,who:'Assistant',channel:'manual',dir:'note',with:'Private party',ref:'WOS-FL-0200',summary:'Reported document review, not an evidence confirmation.'}]},{now});
@@ -39,6 +45,10 @@ const { fixture, now } = require('./reviewed-deals.test');
     const readBefore=JSON.stringify(store);await fetch(base+'/api/dashboard/todays-deals/deal1/jv-draft',{headers:{'x-fixture-admin':'yes'}});assert.strictEqual(JSON.stringify(store),readBefore,'draft GET remains read-only');
     const malformed=await fetch(base+'/api/dashboard/record-refs/assign',{method:'POST',headers:{'Content-Type':'application/json','x-fixture-admin':'yes'},body:'{"private":"do-not-echo-contact"'});
     assert.strictEqual(malformed.status,400);assert.ok(!(await malformed.text()).includes('do-not-echo-contact'));assert.strictEqual(JSON.stringify(store),readBefore);
+    store={...store,buyers:Array.from({length:501},(_,i)=>({id:'bounded-'+i}))};
+    const boundedBefore=JSON.stringify(store);const backupsBefore=backups;
+    assert.strictEqual((await post({confirm:true})).status,409);
+    assert.strictEqual(JSON.stringify(store),boundedBefore);assert.strictEqual(backups,backupsBefore);
     console.log('Record routes: admin/no-write reads, explicit idempotent metadata assignment, mixed interaction import and one canonical transition row passed.');
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

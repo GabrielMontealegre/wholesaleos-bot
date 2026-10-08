@@ -36,6 +36,17 @@ function readDBStrict() {
   } catch (_) { throw new Error('database_unavailable'); }
 }
 
+function backupReferenceStore(expected) {
+  if (JSON.stringify(readDBStrict()) !== JSON.stringify(expected)) throw new Error('reference_backup_source_changed');
+  const directory = path.join(DB_DIR, 'private-record-backups');
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  if (process.platform !== 'win32') fs.chmodSync(directory, 0o700);
+  const id = 'record-refs-' + crypto.randomUUID() + '.json';
+  const contents = fs.readFileSync(DB_FILE);
+  fs.writeFileSync(path.join(directory, id), contents, { flag: 'wx', mode: 0o600 });
+  return { id, sha256: crypto.createHash('sha256').update(contents).digest('hex'), bytes: contents.length };
+}
+
 // ── Leads ──────────────────────────────────────────────
 function getLeads() { return readDB().leads || []; }
 
@@ -1527,13 +1538,14 @@ function getLeadActivities(leadId, options) {
 }
 
 function addLeadActivity(leadId, input) {
-  const data = readDB();
+  let data = readDB();
   if (!data.leads) data.leads = [];
   if (!data.activities) data.activities = [];
   var lead = data.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return { error: 'lead_not_found', status: 404 };
   var normalized = normalizeLeadActivity(input);
   if (!normalized.note && !normalized.outcome) return { error: 'activity_requires_note_or_outcome', status: 400 };
+  data = require('./modules/records/record-activity').assignOnAction(data, 'lead', leadId, { now: new Date().toISOString(), operatorId: normalized.created_by });
   var activity = {
     lead_id: leadId,
     activity_id: 'ACT-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
@@ -2362,7 +2374,7 @@ function addEnrichmentHistory(leadId, entry) {
 
 
 module.exports = {
-  readDB, readDBStrict, writeDB,
+  readDB, readDBStrict, writeDB, backupReferenceStore,
   getLeads, addLead, updateLead, leadExists, clearFakeLeads,
   generateLeadReferenceId, updateLeadAssignmentState,
   getLeadActivities, addLeadActivity,

@@ -8,6 +8,21 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-08 -- #297 IN PROGRESS: bounded non-lead reference assignment, private
+backup-before-write, reserved deal numbering above 1030 and single-record lazy
+lead assignment implemented. Production operation remains pending release and
+read-only verification. Pre-operation live counts: 12,039 legacy leads, 4 buyers,
+0 reviewed deals missing references; Activity has 56 retained/projected events.
+No production assignment has occurred in this run yet. Final suite: 132 passed,
+0 failed, 0 skipped; per-file durations in docs/test-results/issue-297.txt
+(actual UI 18.67s; county-notice acquisition 17.34s). The prior UI assertion
+checked hidden text; opening its collapsed details fixed the fixture. Local
+1366/400/412 browser proof passes. Live operation results will replace this
+checkpoint. Assumptions: maximum 500
+assignments, no matching/expiry synchronization, no bulk legacy-lead assignment.
+Gabriel's current order: #297, #294 (Night desk / Android), #299, #288, #285,
+#275 (Section 8 lens), #277, #262, #264; one item per run.
+
 2026-10-07 — #283 IN PROGRESS; references/activity foundation DONE in
 [PR #296](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/296), application
 merge `172c624`. Full suite: 131 passed, 0 failed, 0 skipped; timings in
