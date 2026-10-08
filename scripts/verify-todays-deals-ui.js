@@ -7,7 +7,9 @@ const root = path.resolve(__dirname, '..'); const output = path.join(root, 'docs
 let store = deals.ingest({ buyers: [buyer], leads: [] }, [deals.validate(fixture(), now)], { now, operatorId: 'fixture-admin', createId: () => 'fixture-deal' }).store;
 for (const input of [{ action: 'approve', reviewed_comps: true }, { action: 'status', status: 'vetted' }, { action: 'status', status: 'holder_confirmed', evidence_url: fixture().source_url, checks: { still_available: true } }]) store = deals.update(store, 'fixture-deal', input, { now, operatorId: 'fixture-admin' });
 const saved = JSON.stringify(store); let writes = 0;
-const app = express(); app.use(express.json()); app.use('/dashboard', express.static(path.join(root, 'dashboard')));
+const app = express(); app.use(express.json());
+app.get('/dashboard/glossary.json', (_, res) => setTimeout(() => res.sendFile(path.join(root, 'dashboard/glossary.json')), 250));
+app.use('/dashboard', express.static(path.join(root, 'dashboard')));
 app.get('/', (_, res) => res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNTHETIC DEAL PROOF</title><style>body{background:#080f1e;color:#e2e8f0;margin:0;padding:16px;font:14px Arial}*{box-sizing:border-box}</style><main id="content"></main><script>var APP={page:"todays_deals"};function renderDashboard(){return "<h2>Dashboard</h2>"};function navigate(page){APP.page=page;document.getElementById("content").innerHTML=page==="jv"?renderJV():page==="glossary"?renderGlossary():renderTodaysDeals()}</script><script src="/base-theme.js"></script><script src="/dashboard/wos-theme-a1.js"></script><script src="/dashboard/wos-help.js"></script><script src="/dashboard/wos-todays-deals.js"></script><script>navigate("todays_deals")</script>'));
 app.get('/base-theme.js', (_, res) => { const s = fs.readFileSync(path.join(root, 'dashboard/wos-features.js'), 'utf8'); const start = s.indexOf('(function injectA1Theme(){'); const end = s.indexOf('})();', start); assert.ok(start >= 0 && end > start); res.type('js').send(s.slice(start, end + 5)); });
 app.get('/favicon.ico', (_, res) => res.status(204).end());
@@ -19,8 +21,8 @@ registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s =>
     const context = await browser.newContext(); const base = 'http://127.0.0.1:' + server.address().port; const external = []; const errors = [];
     await context.route('**/*', r => { if (r.request().url().startsWith(base + '/')) return r.continue(); external.push(r.request().url()); return r.abort(); });
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
-    for (const width of [1366, 400]) {
-      await page.setViewportSize({ width, height: 900 }); await page.goto(base);
+    for (const width of [1366, 400, 412]) {
+      await page.setViewportSize({ width, height: width === 412 ? 915 : 900 }); await page.goto(base);
       await page.locator('.td-card').waitFor(); await page.getByRole('button', { name: 'Explain ARV', exact: true }).first().waitFor();
       await page.getByText('Open complete deal card', { exact: true }).click();
       assert.strictEqual(await page.locator('.td-card tbody tr').count(), 3); assert.ok((await page.locator('.td-card').innerText()).includes('$168,250'));
@@ -43,6 +45,6 @@ registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s =>
       await page.screenshot({ path: path.join(output, 'synthetic-glossary-' + width + '.png'), fullPage: true });
     }
     assert.strictEqual(writes, 0); assert.strictEqual(JSON.stringify(store), saved); assert.deepStrictEqual(errors, []); assert.deepStrictEqual(external, []);
-    console.log('Actual-theme UI: Today/JV/card/Glossary at 1366/400, keyboard and tap tooltips, no overflow, errors, writes or external requests.');
-  } finally { if (browser) await browser.close(); await new Promise(r => server.close(r)); }
+    console.log('Actual-theme UI: Today/JV/card/Glossary at 1366/400/412, late glossary, keyboard and tap tooltips, no overflow, errors, writes or external requests.');
+  } finally { if (browser) await browser.close(); server.closeAllConnections(); await new Promise(r => server.close(r)); }
 })().catch(e => { console.error(e.stack); process.exitCode = 1; });

@@ -100,6 +100,8 @@ ASSUMED: #283's first-panel requirement is a release gate; the old public panel'
 
 ## Agent assumptions (ASSUMED)
 
+ASSUMED: deliver #283's architect answer in ordered slices: re-land the reviewed feature and fix only Dashboard mounting first, then reference numbers and append-only activity, then broad legacy help coverage. Keep #283 open until those added criteria pass; close only the resolved #292 finding after read-only live proof. The full-document regression uses the actual HTML/scripts with local read-only data fixtures, blocks every external source/helper run, and asserts ordering across real init/hydrate/render/timer paths — AGENTS sections 2 and 3; architect comment on #283 at 2026-10-07T08:56:49Z — 2026-10-07.
+
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)
 
 ASSUMED: #283 imports proposed deals into one reviewed-deal collection shared by Today and JV; explicit operator source/comp review is required before matching or value tiers. Submitted ARV/verdicts remain claims; the unchanged strict grid is recomputed with a six-month window. Literal buyer percentages and known caps produce a conservative buyer ceiling, not MAO. Unknown constraints block matching. Same-day holder confirmation is required to enter JV; contract and signed-JV checks additionally gate introductions. Expiration is computed read-only, retaining history. The ten-per-day number is a visible target, never fabricated inventory; acquisition remains the following backlog work — because source truth, D-035 and D-043 outrank auto-verification or filling a quota — 2026-10-07.

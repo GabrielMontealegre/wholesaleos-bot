@@ -13,7 +13,7 @@
   function decorate() {
     if (!Object.keys(glossary).length) return;
     var content = document.getElementById('content'); if (!content) return;
-    content.querySelectorAll('h1,h2,h3,h4,th,label,button,.badge,.pill,.stat-label,.bf-stats span,.td-counts span').forEach(function (el) {
+    content.querySelectorAll('h1,h2,h3,h4,th,dt,label,button,.badge,.pill,.stat-label,.bf-stats span,.td-counts span').forEach(function (el) {
       if (el.closest('.wos-help,.wos-glossary') || el.querySelector('.wos-help') || el.dataset.helpDecorated) return;
       var value = el.textContent.trim().toLowerCase();
       var term = Object.keys(glossary).find(function (k) { return value === k.toLowerCase() || value.split(/[^a-z0-9]+/).includes(k.toLowerCase()); }) || Object.keys(aliases).find(function (k) { return value.includes(k); });
