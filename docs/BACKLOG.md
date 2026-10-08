@@ -8,19 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-07 — #283 IN PROGRESS, ordered repair: architect answered #292 and
-authorized re-landing PR #291. The new full-document browser regression test
-reproduced the original failure before repair, then passed actual init, hydration,
-re-render, real mount timer and return at 1366/400. The older source desk now mounts
-after Today's Deals on Dashboard only; Deal Finder stays unchanged. Local proof:
-`docs/screens/today-order-local`. Final suite: 128 passed, 0 failed, 0 skipped;
-durations in `docs/test-results/issue-283-repair.txt` (mount proof 14.72s;
-county-notice acquisition 10.36s). Both cache-version assertions now expect v55,
-without weakening any outcome; delayed-glossary card proof passes too. Release
-and live proof pending. No source,
-readiness or contact gate changes. This run handles that ordered repair only;
-the architect's added reference-number/activity slice and broad #285 coverage
-remain open, so #283 will not be falsely closed after the mounting fix.
+2026-10-07 — #283 IN PROGRESS; ordered mounting repair DONE in
+[PR #295](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/295), application
+merge `a10cd5d`, resolving #292. Full suite: 128 passed, 0 failed, 0 skipped;
+durations `docs/test-results/issue-283-repair.txt` (actual mount test 14.72s,
+county-notice acquisition 10.36s). The actual dashboard test first reproduced the
+original failure, then proved init/hydrate/render/timer/return at 1366/400/412.
+Exact Railway status success; health 200; public bundle v55, help v2, Today v1.
+Live Dashboard: Today's Deals first, source desk second after hydration and return;
+Deal Finder ordering unchanged. Today/JV/Glossary/import forms rendered at all
+three widths; help worked by keyboard/tap. Actual inventory: 0 submitted / 0 vetted
+/ 0 eligible JV, not ten fabricated deals. Existing records hydrated (12,039),
+100 lead rows and a card opened. One rollout HTTP 502 recovered; fresh load had no
+new errors, and A-003 incident [#209](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/209)
+was reopened honestly. [Live evidence](screens/2026-10-07-today-order-repair/README.md).
+No import, approval, contact, confirmation, capture, batch or buyer deletion.
+No source/readiness/comp/auth gate changes. Assumption: ordered slices; #283 stays
+open for stable references + append-only activity next, then broad #285 coverage.
+Known Android header/target problems stay in #294; this run does not claim them fixed.
 
 2026-10-07 — #283 BLOCKED ([#292](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/292)).
 [PR #291](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/291) passed
@@ -118,7 +123,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 >     **First, before anything else: delete the 4 test buyers ([#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) comment, D-047).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
->     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) IN PROGRESS (architect answered #292: ordered mounting repair, then references/activity, then broad help coverage) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
+>     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) IN PROGRESS (mounting repair DONE in PR #295; next references/activity, then broad help coverage) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
 >     Gabriel's priority, right after the #269 slice in progress; includes the JV tab, D-043, and
 >     [#285](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/285) help tooltips), then
 >     [#288](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/288) (email drafts/send from the card, JV agreement generator, runs panel), then
