@@ -8,6 +8,19 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-07 — #283 IN PROGRESS, references/activity foundation. New canonical refs
+and the existing activities table are wired to explicit deal/buyer operations;
+interaction import, card timelines, ref/city/ZIP search and Activity filtering are
+built. No automatic old-record migration, sending or source run. Full-page local
+proof passed at 1366/400/412 without writes/external sources. Large pure test:
+12,039 records assigned uniquely; exhausted namespace fails without mutation.
+Final suite: 131 passed, 0 failed, 0 skipped; per-file timings in
+`docs/test-results/issue-283-record-activity.txt` (actual UI proof 18.97s;
+county-notice acquisition 13.17s). Release/live read-only verification pending. Scope/assumptions:
+`docs/record-activity.md`; existing production refs require a separate explicit
+metadata operation, not a verification write. Broader legacy card/help coverage
+remains open; this slice will not falsely close #283.
+
 2026-10-07 — #283 IN PROGRESS; ordered mounting repair DONE in
 [PR #295](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/295), application
 merge `a10cd5d`, resolving #292. Full suite: 128 passed, 0 failed, 0 skipped;

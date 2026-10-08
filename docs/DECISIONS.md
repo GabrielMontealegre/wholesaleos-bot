@@ -100,6 +100,8 @@ ASSUMED: #283's first-panel requirement is a release gate; the old public panel'
 
 ## Agent assumptions (ASSUMED)
 
+ASSUMED: #283 references/activity ships in an ordered foundation slice: reviewed deals and buyer finds receive immutable refs on explicit import/update; existing aliases/history survive; old records receive no automatic startup/GET backfill. A separate admin metadata-only assignment is explicit and reversible, with no production execution during verification. Unknown state uses reserved XX without inventing geography; four-digit exhaustion/conflicts fail without writes. Use the signed account/agent attribution, keep imported who/direction as reports, and never infer a send, contact outcome, approval or evidence confirmation. The existing activities table is canonical; legacy card history is read-projected, not rewritten. Expiration observations persist on the next explicit write, not a background timer — AGENTS sections 2, 3, 5 and 7; #283 architect addition — 2026-10-07.
+
 ASSUMED: deliver #283's architect answer in ordered slices: re-land the reviewed feature and fix only Dashboard mounting first, then reference numbers and append-only activity, then broad legacy help coverage. Keep #283 open until those added criteria pass; close only the resolved #292 finding after read-only live proof. The full-document regression uses the actual HTML/scripts with local read-only data fixtures, blocks every external source/helper run, and asserts ordering across real init/hydrate/render/timer paths — AGENTS sections 2 and 3; architect comment on #283 at 2026-10-07T08:56:49Z — 2026-10-07.
 
 (Format: `ASSUMED: <what> — because <rule> — <date> — <PR link>`)

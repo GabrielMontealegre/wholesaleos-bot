@@ -5,11 +5,13 @@ const sourceDates = require('../research/normalize-source-date');
 const addresses = require('../research/operational-lead-eligibility');
 const buyerFit = require('../buyers/buyer-fit');
 const limits = require('../buyers/assistant-finds');
+const activity = require('../records/record-activity');
 const PLATFORMS = ['facebook-wholesaler', 'xome', 'auction.com', 'hud', 'homepath', 'craigslist', 'county-auction', 'own-lead'];
 const STAGES = ['found', 'vetted', 'holder_confirmed', 'contract_verified', 'jv_signed', 'buyer_committed', 'closed'];
 const STATUS_LABELS = { found: 'Found', vetted: 'Vetted', holder_confirmed: 'Holder confirmed', contract_verified: 'Contract copy verified', jv_signed: 'JV signed', buyer_committed: 'Buyer committed', closed: 'Closed', expired: 'Expired', dead: 'Dead' };
 const FIELDS = new Set(['kind', 'deal_kind', 'platform', 'source_url', 'address', 'zip', 'city', 'county', 'state', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'property_type', 'latitude', 'longitude', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'comps', 'arv_range', 'arv_tier', 'closing_date', 'auction_date', 'posted_at', 'captured_at', 'holder_contact', 'drafted_message', 'jv_split', 'verdict', 'verdict_reason', 'county_url']);
 const COMP_FIELDS = new Set(['comp_address', 'sold_status', 'sold_price', 'last_list_price', 'sold_date', 'source_url', 'evidence_text', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'property_type', 'latitude', 'longitude', 'price_basis']);
+FIELDS.add('ref');
 function fail(code, status = 400) { const e = new Error(code); e.code = code; e.status = status; throw e; }
 function text(value, max = 300, required = false) {
   if (value == null && !required) return '';
@@ -41,7 +43,7 @@ function validate(item, now) {
     address: text(item.address, 250, true), city: text(item.city, 80, true), county: text(item.county, 80), state: text(item.state, 2, true).toUpperCase(), zip: text(item.zip, 5, true),
     property_type: text(item.property_type, 60), captured_at: instant(item.captured_at, now, true), posted_at: instant(item.posted_at, now),
     closing_date: date(item.closing_date), auction_date: date(item.auction_date), drafted_message: text(item.drafted_message, 600),
-    verdict: text(item.verdict, 20), verdict_reason: text(item.verdict_reason, 300), claimed_arv_tier: text(item.arv_tier, 40) };
+    verdict: text(item.verdict, 20), verdict_reason: text(item.verdict_reason, 300), claimed_arv_tier: text(item.arv_tier, 40), ref: activity.ref(item.ref) };
   if (!/^[A-Z]{2}$/.test(out.state) || !/^\d{5}$/.test(out.zip) || !require('../research/property-identity').isCompleteAddress(out.address)) fail('find_deal_address_invalid');
   for (const k of ['beds', 'baths', 'sqft', 'year_built', 'lot_size', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'jv_split']) out[k] = number(item[k]);
   for (const k of ['latitude', 'longitude']) { out[k] = item[k] == null ? null : item[k]; if (out[k] != null && (typeof out[k] !== 'number' || !Number.isFinite(out[k]) || Math.abs(out[k]) > (k === 'latitude' ? 90 : 180))) fail('find_deal_number_invalid'); }
@@ -70,7 +72,15 @@ function ingest(store, items, { now, operatorId, createId }) {
     if (existing) { results.push({ id: existing.id, result: 'duplicate' }); continue; }
     const id = createId(); deals.push({ ...item, id, approval: 'pending', status: 'found', first_seen_at: now, created_by: operatorId, history: [] }); results.push({ id, result: 'created' });
   }
-  return { store: { ...store, reviewed_deals: deals }, results };
+  let updated = { ...store, reviewed_deals: deals };
+  results.forEach((result, index) => {
+    updated = activity.assign(updated, 'deal', result.id, items[index].ref || '');
+    if (result.result === 'created') {
+      updated = activity.recordEvent(updated, 'deal', result.id, 'found', 'Deal proposal received; facts await review.', { now, operatorId });
+      updated = activity.recordEvent(updated, 'deal', result.id, 'imported', 'Deal imported, pending review.', { now, operatorId });
+    }
+  });
+  return { store: updated, results };
 }
 function compValue(deal, now) {
   const reasons = []; const valid = []; const seen = new Set(); let listTier = false;
@@ -127,7 +137,7 @@ function evaluate(deal, buyers, now) {
     if (['construction', 'flood', 'rehab_tolerance'].some(k => box[k]) || (box.exclusions || []).length) continue;
     const max = ceiling(buyer, value, deal.repair_estimate);
     if (box.price_min != null && (asking == null || asking < box.price_min || max == null || max < box.price_min)) continue;
-    if (max != null) matches.push({ id: buyer.id, name: buyer.name || buyer.assistant_find.name, reasons: fit.reasons, max_price: max, buy_box: box,
+    if (max != null) matches.push({ id: buyer.id, buyer_ref: activity.reference(buyer), name: buyer.name || buyer.assistant_find.name, reasons: fit.reasons, max_price: max, buy_box: box,
       source_url: buyer.source_url || buyer.assistant_find && buyer.assistant_find.source_url || '',
       estimated_spread: asking == null || deal.deal_kind === 'jv' && deal.jv_split == null ? null : { low: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)), high: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)) },
       spread_missing: deal.deal_kind === 'jv' && deal.jv_split == null });
@@ -186,11 +196,33 @@ function update(store, id, input, { now, operatorId }) {
     deal.status = input.status;
   } else fail('find_deal_action_invalid');
   deal.history = (deal.history || []).concat({ action, from, to: action === 'status' ? deal.status : deal.approval, at: now, operator_id: operatorId, reason, evidence_url: evidenceUrl, ...(input.checks ? { checks: { ...input.checks } } : {}) });
-  const rows = store.reviewed_deals.slice(); rows[index] = deal; return { ...store, reviewed_deals: rows };
+  const rows = store.reviewed_deals.slice(); rows[index] = deal;
+  let updated = activity.assign({ ...store, reviewed_deals: rows }, 'deal', id);
+  const type = ({ approve: 'approved', reject: 'rejected', draft: 'message_drafted', status: 'status_change', recheck: 'source_rechecked', availability: 'source_rechecked' })[action];
+  updated = activity.recordEvent(updated, 'deal', id, type, 'Operator recorded ' + (action === 'status' ? input.status : action) + '.', { now, operatorId }, { attribution: 'operator_report', history_origin: 'deal:' + id + ':' + (deal.history.length - 1) });
+  return synchronizeMatchReferences(updated, { now, operatorId });
 }
-function list(store, { now, includeHidden = false, jv = false, state = '', county = '', city = '' }) {
-  const all = (store.reviewed_deals || []).map(d => ({ ...d, evaluation: evaluate(d, store.buyers, now) }));
-  const items = all.filter(d => (!jv || d.evaluation.jv_eligible) && (includeHidden || !['STALE', 'NO'].includes(d.evaluation.verdict)) &&
+function synchronizeMatchReferences(store, context) {
+  let updated = store;
+  for (const deal of store.reviewed_deals || []) {
+    const evaluation = evaluate(deal, store.buyers, context.now);
+    if (evaluation.status === 'expired' && !(updated.activities || []).some(a => a.type === 'expired' && a.deal_id === deal.id && a.expiry_key === evaluation.expires_on)) {
+      updated = activity.recordEvent(updated, 'deal', deal.id, 'expired', 'Workflow expiration observed from the stored deadline.', context, { who:'System', attribution:'derived_workflow', expiry_key:evaluation.expires_on });
+    }
+    for (const match of evaluation.matches) {
+      updated = activity.assign(updated, 'buyer', match.id);
+      updated = activity.registerMatch(updated, deal.id, match.id, context);
+    }
+  }
+  return updated;
+}
+function list(store, { now, includeHidden = false, jv = false, state = '', county = '', city = '', recordId = '' }) {
+  const all = (store.reviewed_deals || []).map(d => {
+    const evaluation = evaluate(d, store.buyers, now);
+    evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
+    return { ...d, email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
+  });
+  const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.evaluation.jv_eligible) && (includeHidden || !['STALE', 'NO'].includes(d.evaluation.verdict)) &&
     (!state || d.state.toLowerCase() === state.toLowerCase()) && (!county || d.county.toLowerCase().includes(county.toLowerCase())) && (!city || d.city.toLowerCase().includes(city.toLowerCase())));
   const rank = { GOOD: 0, POSSIBLE: 1, OVERPRICED: 2, STALE: 3, NO: 4 };
   const spread = d => { const estimate = (d.evaluation.matches[0] || {}).estimated_spread; return estimate ? estimate.low : -Infinity; };
@@ -199,9 +231,9 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
 }
 function jvDraft(deal, evaluation) {
   return ['WORKING JV TERM SHEET - NOT A SIGNED AGREEMENT', 'Title company and counsel must review. This draft establishes no ownership, authority or legal compliance.',
-    'Property: ' + deal.address, 'Holder: __________________', 'Co-holder: __________________', 'Contract interest and assignment authority: __________________',
+    'Record reference: ' + (activity.reference(deal) || 'Not assigned'), 'Property: ' + deal.address, 'Holder: __________________', 'Co-holder: __________________', 'Contract interest and assignment authority: __________________',
     'Owner-of-record / contract signature / assignability / closing date checks: __________________', 'Title company: __________________',
     'Fee split proposed: ' + (deal.jv_split == null ? 'Not supplied' : deal.jv_split * 100 + '% to Gabriel'), 'Fees payable by title only at closing.',
     'Closing / expiration: ' + (evaluation.expires_on || 'Not supplied'), 'Buyer earnest money delivered to title: __________________', 'Signatures, date and title approval: __________________'].join('\n');
 }
-module.exports = { validate, ingest, update, evaluate, list, jvDraft, STAGES, STATUS_LABELS };
+module.exports = { validate, ingest, update, evaluate, list, jvDraft, synchronizeMatchReferences, STAGES, STATUS_LABELS };

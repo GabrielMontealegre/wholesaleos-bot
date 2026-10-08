@@ -2,6 +2,7 @@
 
 const finds = require('./assistant-finds');
 const deals = require('../deals/reviewed-deals');
+const activity = require('../records/record-activity');
 const BULK_APPROVAL_CLASSES = new Set(['end_buyer', 'end_buyer_strict', 'end_buyer_stale']);
 function fail(code, status = 400) { const error = new Error(code); error.code = code; error.status = status; throw error; }
 
@@ -12,7 +13,11 @@ function prepareImport(store, body, { now }) {
   const items = [];
   const rejected = [];
   body.items.forEach((item, index) => {
-    try { items.push(item && item.kind === 'deal' ? deals.validate(item, now) : finds.validateItems({ items: [item] }, now)[0]); }
+    try {
+      if (item && item.kind === 'interaction') items.push(activity.validateInteraction(item, now));
+      else if (item && item.kind === 'deal') items.push(deals.validate(item, now));
+      else { const buyer = item && item.kind === 'buyer' ? Object.fromEntries(Object.entries(item).filter(([k]) => k !== 'kind')) : item; items.push(finds.validateItems({ items: [buyer] }, now)[0]); }
+    }
     catch (error) { rejected.push({ item: index + 1, reason: /^find_[a-z_]+$/.test(error.code || '') ? error.code : 'find_item_invalid' }); }
   });
   let sequence = 0;
@@ -45,7 +50,7 @@ function commitImport(store, plan, { now, operatorId, createId, bulkApprove = fa
 function ingestMixed(store, items, context) {
   let updated = store; const results = [];
   for (const item of items) {
-    const result = item.kind === 'deal' ? deals.ingest(updated, [item], context) : finds.ingest(updated, [item], context);
+    const result = item.kind === 'interaction' ? activity.importInteraction(updated, item, context) : item.kind === 'deal' ? deals.ingest(updated, [item], context) : finds.ingest(updated, [item], context);
     updated = result.store; results.push(result.results[0]);
   }
   return { store: updated, results };

@@ -347,6 +347,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('todays_deals',this)"><span class="nav-icon">◇</span>Today's Deals</div>
       <div class="nav-item" onclick="navigate('jv',this)"><span class="nav-icon">↔</span>JV</div>
       <div class="nav-item" onclick="navigate('glossary',this)"><span class="nav-icon">?</span>Glossary</div>
+      <div class="nav-item" onclick="navigate('record_activity',this)"><span class="nav-icon">::</span>Activity</div>
       <div class="nav-item" onclick="navigate('assignments',this)"><span class="nav-icon">📝</span>Assignments</div>
       <div class="nav-item" onclick="navigate('contracts',this)"><span class="nav-icon">📄</span>Contracts</div>
       <div class="nav-section">System</div>
@@ -733,6 +734,7 @@ function navigate(page, el) {
   if (page === 'todays_deals') document.getElementById('page-title').textContent = "Today's Deals";
   if (page === 'jv') document.getElementById('page-title').textContent = 'JV';
   if (page === 'glossary') document.getElementById('page-title').textContent = 'Glossary';
+  if (page === 'record_activity') document.getElementById('page-title').textContent = 'Activity';
   render();
   // Auto-init tabs
   if (page === 'gmail')  setTimeout(function(){ loadEmailFolder(APP._emailFolder||'inbox'); }, 300);
@@ -768,6 +770,7 @@ function render() {
     todays_deals: function() { return window.renderTodaysDeals(); },
     jv: function() { return window.renderJV(); },
     glossary: function() { return window.renderGlossary(); },
+    record_activity: function() { return window.renderRecordActivity(); },
     assignments: renderAssignments,
     contracts: renderContracts,
     findme_scout: renderFindMeScout,
@@ -29143,9 +29146,10 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-comms.js?v=2"></script>
 <script src="/dashboard/wos-leads-detail.js?v=2"></script>
 <script src="/dashboard/wos-buyers.js?v=1"></script>
-<script src="/dashboard/wos-buyers-found.js?v=4"></script>
+<script src="/dashboard/wos-record-activity.js?v=1"></script>
+<script src="/dashboard/wos-buyers-found.js?v=5"></script>
 <script src="/dashboard/wos-help.js?v=2"></script>
-<script src="/dashboard/wos-todays-deals.js?v=1"></script>
+<script src="/dashboard/wos-todays-deals.js?v=2"></script>
 <script src="/dashboard/wos-public-deals.js?v=55"></script>
 <script src="/dashboard/wos-operational-views.js?v=2"></script>
 </body>

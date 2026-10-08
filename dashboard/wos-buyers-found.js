@@ -6,6 +6,7 @@
   var notice = '';
   var filters = { status: '', deal_type: '', area: '', approval: '' };
   var drafts = {};
+  var selectedId = '';
   var importOpen = false;
   var importJson = '';
   var importPreview = null;
@@ -37,7 +38,7 @@
       find_buy_box_invalid: 'Buy-box criteria are invalid.', find_capture_date_invalid: 'Capture date is invalid.', find_contact_invalid: 'Published contact is invalid or conflicts.',
       find_classification_invalid: 'Buyer category is invalid.', find_item_too_large: 'Item exceeds the size limit.' };
     return '<section class="bf-import"><style>.bf-import{padding:16px 0;border-bottom:1px solid #334155}.bf-import label{color:#e2e8f0!important;margin:8px 0}.bf-import input[type=file]{width:100%}.bf-import .bf-import-check{display:flex;gap:8px;align-items:center}.bf-import-check input{width:auto}.bf-import textarea{min-height:140px}.bf-import ul{padding-left:20px;font-size:13px}.bf-import p{margin:10px 0}.bf-import input::placeholder{color:#a8b7ca!important}</style>' +
-      '<h3>Import buyers or deals</h3><label>JSON file<input type="file" accept=".json,application/json" data-import-file' + (importBusy ? ' disabled' : '') + '></label>' +
+      '<h3>Import buyers, deals or reported interactions</h3><label>JSON / JSONL file<input type="file" accept=".json,.jsonl,application/json" data-import-file' + (importBusy ? ' disabled' : '') + '></label>' +
       '<label>Or paste JSON<textarea data-import-json maxlength="262144"' + (importBusy ? ' disabled' : '') + '>' + esc(importJson) + '</textarea></label>' +
       '<div class="bf-actions"><button type="button" data-import-action="preview"' + (importBusy ? ' disabled' : '') + '>Preview</button>' +
       '<button type="button" data-import-action="cancel"' + (importBusy ? ' disabled' : '') + '>Cancel</button></div>' +
@@ -57,7 +58,8 @@
       return '<div><dt>' + esc(boxLabels[key]) + '</dt><dd>' + esc(Array.isArray(box[key]) ? box[key].join(', ') : box[key]) + '</dd></div>';
     }).join('');
     return '<article class="bf-card" data-id="' + esc(item.id) + '">' +
-      '<div class="bf-card-heading"><h3>' + esc(item.name) + '</h3><span>' + esc(statusLabels[item.status]) + '</span></div>' +
+      '<div class="bf-card-heading"><h3>' + esc(item.record_ref || 'Reference pending') + ' | ' + esc(item.name) + '</h3><span>' + esc(statusLabels[item.status]) + '</span></div>' +
+      (item.email_subject ? '<p>Email subject: ' + esc(item.email_subject) + '</p>' : '') +
       '<p class="bf-muted">Found by assistant from a public post</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
       '<p class="bf-muted">' + esc(buyerKind) + (item.post_age ? ' | Post age: ' + esc(item.post_age) : '') + '</p>' +
       (item.possible_duplicate_of ? '<p>Possible duplicate of ' + esc(item.possible_duplicate_of) + ' (' + esc(item.duplicate_basis) + '). Kept on the existing record.</p>' : '') +
@@ -80,14 +82,13 @@
       '<div class="bf-actions">' + ['messaged', 'emailed', 'commented', 'replied', 'not_a_fit'].map(function (status) {
         return '<button type="button" data-action="status" data-status="' + status + '"' + (status === item.status || (item.approval !== 'approved' && status !== 'not_a_fit') ? ' disabled' : '') + '>Mark ' + esc(statusLabels[status].toLowerCase()) + '</button>';
       }).join('') + '</div>' +
-      ((item.history || []).length ? '<details><summary>Activity</summary>' + item.history.map(function (entry) {
-        return '<p class="bf-muted">' + esc(approvalLabels[entry.to] || statusLabels[entry.to] || entry.to) + ' | ' + esc(entry.at) + ' | ' + esc(entry.operator_id) + ' | ' + esc(entry.channel) + (entry.reason ? ' | ' + esc(entry.reason) : '') + '</p>';
-      }).join('') + '</details>' : '') + '</article>';
+      (root.wosRecordTimeline ? root.wosRecordTimeline('buyer', item.id, item.record_ref) : '') + '</article>';
   }
   function markup(payload) {
     var counts = payload && payload.counts || {};
     var items = payload && payload.items || [];
     var shown = items.filter(function (item) {
+      if (selectedId) return item.id === selectedId;
       return (!filters.status || item.status === filters.status) && (!filters.deal_type || item.deal_type === filters.deal_type) &&
         (filters.approval ? (item.approval || 'pending') === filters.approval : item.approval !== 'rejected') &&
         (!filters.area || [].concat(item.states || [], item.areas || []).join(' ').toLowerCase().includes(filters.area.toLowerCase()));
@@ -101,7 +102,7 @@
       '<label>Property type<br><select data-filter="deal_type">' + options({ house: 'House', land: 'Land' }, filters.deal_type, 'All types') + '</select></label>' +
       '<label>State or metro<br><input data-filter="area" value="' + esc(filters.area) + '" placeholder="State or metro"></label></div>' +
       '<div class="bf-message' + (error ? ' bf-error' : '') + '" role="status">' + esc(error || notice) + '</div>' +
-      importPanel() +
+      (selectedId ? '<button data-clear-record-selection>Show all buyers</button>' : '') + importPanel() +
       (payload ? (shown.length ? '<div class="bf-grid">' + shown.map(function (item) { return card(item, drafts[item.id]); }).join('') + '</div>' : '<p>' + (items.length ? 'No buyers match these filters.' : 'No buyers found yet. Public-post finds from your assistant will appear here.') + '</p>') : '<p>' + (error ? 'Buyer finds are unavailable.' : 'Loading buyer finds...') + '</p>') + '</div>';
   }
   function paint() {
@@ -118,6 +119,7 @@
       .finally(function () { loading = false; paint(); });
   }
   root.renderBuyersFound = function () { setTimeout(load, 0); return '<section id="wos-buyers-found">' + markup(data) + '</section>'; };
+  root.openBuyerFind = function(id) { selectedId=id;root.navigate('buyers_found',null); };
   if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card };
   if (typeof document === 'undefined') return;
   document.addEventListener('input', function (event) {
@@ -142,10 +144,12 @@
       return;
     }
     if (!event.target.matches('#wos-buyers-found [data-filter]')) return;
+    selectedId='';
     filters[event.target.dataset.filter] = event.target.value;
     paint();
   });
   document.addEventListener('click', function (event) {
+    if(event.target.closest('[data-clear-record-selection]')) { selectedId='';paint();return; }
     var importButton = event.target.closest('#wos-buyers-found [data-import-action]');
     if (importButton) {
       if (importBusy) return;
@@ -154,7 +158,7 @@
       if (action === 'cancel') { importOpen = false; importJson = ''; importPreview = null; importApprove = false; importMessage = ''; paint(); return; }
       var importBody;
       if (action === 'preview') {
-        try { importBody = JSON.parse(importJson); } catch (_) { importMessage = 'Invalid JSON. Check the file format.'; importPreview = null; paint(); return; }
+        try { importBody = root.parseRecordImport ? root.parseRecordImport(importJson) : JSON.parse(importJson); } catch (_) { importMessage = 'Invalid JSON or JSONL. Check the file format.'; importPreview = null; paint(); return; }
         importApprove = false; importPreview = null;
       } else {
         if (!importPreview) return;
