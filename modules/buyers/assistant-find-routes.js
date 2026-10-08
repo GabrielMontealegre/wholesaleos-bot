@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const finds = require('./assistant-finds');
 const pairing = require('../security/dashboard-pairing');
 const imports = require('./buyer-find-import');
+const reviewedDeals = require('../deals/reviewed-deals');
 const REQUESTS_PER_HOUR = 12;
 
 function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString() }) {
@@ -40,7 +41,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       const at = now();
       const items = finds.validateItems(req.body, at);
       const result = finds.ingest(db.readDBStrict(), items, {
-        now: at, operatorId: req.currentUser.id, createId: () => 'BF' + crypto.randomUUID()
+        now: at, operatorId: req.currentUser.id, actorLabel: 'Assistant', channel: 'assistant_dropbox', createId: () => 'BF' + crypto.randomUUID()
       });
       db.writeDB(result.store);
       res.set('Cache-Control', 'no-store');
@@ -86,7 +87,8 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
   });
   app.patch('/api/dashboard/buyers-found/:id', requireAdmin, (req, res) => {
     try {
-      const updated = finds.update(db.readDBStrict(), req.params.id, req.body, { now: now(), operatorId: req.currentUser.id });
+      const context = { now: now(), operatorId: req.currentUser.id };
+      const updated = reviewedDeals.synchronizeMatchReferences(finds.update(db.readDBStrict(), req.params.id, req.body, context), context);
       db.writeDB(updated);
       res.json({ ok: true });
     } catch (error) { failure(res, error); }

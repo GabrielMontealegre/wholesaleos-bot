@@ -1,13 +1,14 @@
 'use strict';
 
 const { fitSummary, propertyType } = require('./buyer-fit');
+const activity = require('../records/record-activity');
 const STATUSES = Object.freeze(['new', 'messaged', 'emailed', 'commented', 'replied', 'not_a_fit']);
 const MAX_ITEMS = 50;
 const MAX_ITEM_BYTES = 8192;
 const MAX_REQUEST_BYTES = 256 * 1024;
 const ITEM_FIELDS = new Set(['name', 'platform', 'group_name', 'group_id', 'profile_url', 'source_url',
   'what_they_buy', 'deal_type', 'states', 'areas', 'email', 'phone', 'drafted_message', 'captured_at',
-  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published']);
+  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published', 'ref']);
 const BOX_NUMBERS = ['price_min', 'price_max', 'arv_min', 'arv_max', 'all_in_max', 'beds_min', 'baths_min', 'sqft_min', 'sqft_max', 'year_min'];
 const BOX_TEXT = ['pct_arv', 'construction', 'flood', 'rehab_tolerance', 'funding', 'close_speed', 'capacity'];
 const BOX_FIELDS = new Set(['state', 'areas', 'zips', 'types', 'exclusions', 'wants_sent', ...BOX_NUMBERS, ...BOX_TEXT]);
@@ -127,7 +128,7 @@ function validateItems(body, now) {
       drafted_message: text(item.drafted_message, 600), captured_at: new Date(at).toISOString(),
       classification, buy_box: buyBox(item.buy_box), post_age: text(item.post_age, 100),
       post_url: postUrl(item.post_url, item.platform, groupId),
-      contact_published: { email, phone }
+      contact_published: { email, phone }, ref: activity.ref(item.ref)
     };
   });
 }
@@ -151,7 +152,7 @@ function newFind(item, now) {
     consent: { profile: 'public want posted; not contacted', email: 'public want posted; not contacted', phone: 'public want posted; not contacted' }, history: [] });
 }
 
-function ingest(store, items, { now, operatorId, createId }) {
+function ingest(store, items, { now, operatorId, createId, actorLabel, channel }) {
   const buyers = Array.isArray(store.buyers) ? store.buyers.slice() : [];
   const results = [];
   for (const item of items) {
@@ -174,7 +175,15 @@ function ingest(store, items, { now, operatorId, createId }) {
     });
     results.push({ id, result: 'created' });
   }
-  return { store: Object.assign({}, store, { buyers }), results };
+  let updated = Object.assign({}, store, { buyers });
+  results.forEach((result, index) => {
+    updated = activity.assign(updated, 'buyer', result.id, items[index].ref || '');
+    if (result.result === 'created') {
+      updated = activity.recordEvent(updated, 'buyer', result.id, 'found', 'Buyer find received; not verified or contacted.', { now, operatorId, actorLabel, channel });
+      updated = activity.recordEvent(updated, 'buyer', result.id, 'imported', 'Buyer record imported, pending review.', { now, operatorId, actorLabel, channel });
+    }
+  });
+  return { store: updated, results };
 }
 
 function update(store, id, input, { now, operatorId }) {
@@ -202,12 +211,19 @@ function update(store, id, input, { now, operatorId }) {
     find.status = input.status;
   }
   buyers[index] = Object.assign({}, buyers[index], { assistant_find: find });
-  return Object.assign({}, store, { buyers });
+  let updated = activity.assign(Object.assign({}, store, { buyers }), 'buyer', id);
+  const start = (store.buyers[index].assistant_find.history || []).length;
+  (find.history || []).slice(start).forEach((entry, offset) => {
+    const type = entry.kind === 'approval' ? entry.to : ({ messaged: 'message_sent', emailed: 'email_sent', replied: 'reply_received' })[entry.to] || 'status_change';
+    updated = activity.recordEvent(updated, 'buyer', id, type, 'Operator recorded ' + entry.to + '.', { now, operatorId }, { channel: entry.channel, attribution: 'operator_report', history_origin: 'buyer:' + id + ':' + (start + offset) });
+  });
+  if (draft !== undefined) updated = activity.recordEvent(updated, 'buyer', id, 'message_drafted', 'Draft saved; not sent.', { now, operatorId });
+  return updated;
 }
 
 function listFinds(store, { now }) {
   const items = (store.buyers || []).filter((buyer) => buyer.assistant_find).map((buyer) => ({
-    id: buyer.id, ...buyer.assistant_find,
+    id: buyer.id, ...buyer.assistant_find, record_ref: activity.reference(buyer), email_subject: buyer.record_ref ? '[' + buyer.record_ref + '] Buyer enquiry' : '',
     trust_label: buyer.assistant_find.approval === 'approved' ? 'Verified source - approved by operator' : 'Imported - not verified',
     fits: fitSummary(buyer, store.leads || [])
   })).sort((a, b) => b.first_seen_at.localeCompare(a.first_seen_at) || a.id.localeCompare(b.id));
