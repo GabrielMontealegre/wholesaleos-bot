@@ -1,6 +1,6 @@
 'use strict';
 (function (root) {
-  var payload = null; var missing = null; var message = ''; var loading = false;
+  var payload = null; var missing = null; var reserve = null; var receipt = null; var message = ''; var loading = false;
   var filters = { ref: '', type: '', from: '', to: '' }; var searchSequence = 0; var searchTimer;
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function date(v) { var n = new Date(v); return Number.isFinite(n.getTime()) ? n.toLocaleString('en-US', { month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short' }) : 'Time not recorded'; }
@@ -19,7 +19,17 @@
   function markup() {
     return '<section class="ra-page" id="wos-record-activity"><h2>Activity</h2><div class="ra-filters">' + ['ref','from','to'].map(function(k) { return '<label>' + ({ref:'Reference',from:'From',to:'To'})[k] + '<input data-activity-filter="' + k + '" type="' + (k==='ref'?'text':'date') + '" value="' + esc(filters[k]) + '" maxlength="60"></label>'; }).join('') + '<label>Type<select data-activity-filter="type"><option value="">All activity</option>' + (payload && payload.types || []).map(function(t) { return '<option value="' + esc(t) + '"' + (filters.type===t?' selected':'') + '>' + esc(t.replace(/_/g,' ')) + '</option>'; }).join('') + '</select></label><button data-activity-load>Apply filters</button></div><p role="status">' + esc(message || (loading ? 'Loading activity...' : payload ? 'Showing ' + payload.items.length + ' of ' + payload.total + ' events' : 'Activity not loaded')) + '</p><ul class="ra-timeline">' + rows(payload && payload.items) + '</ul><details><summary>Record references</summary><p>Missing references: ' + esc(missing ? missing.leads + ' leads, ' + missing.buyers + ' buyers, ' + missing.deals + ' deals' : 'Not measured') + '</p><label><input type="checkbox" data-reference-confirm> Assign missing references only; preserve all facts and existing reference aliases.</label><button data-reference-assign disabled>Assign missing references</button><p>References identify records, not proof or approval. XX means the state is not recorded.</p></details></section>';
   }
-  function paint() { var el=document.getElementById('wos-record-activity'); if(el) el.outerHTML=markup(); }
+  function paint() {
+    var el=document.getElementById('wos-record-activity'); if(!el)return;
+    el.outerHTML=markup(); el=document.getElementById('wos-record-activity');
+    var details=el.querySelector('[data-reference-confirm]').closest('details');
+    details.querySelector('label').lastChild.nodeValue=' Assign references to buyers, reviewed deals and matches only. Legacy leads get a reference when you work on them.';
+    details.querySelector('[data-reference-assign]').textContent='Assign buyer, deal and match references';
+    var status=document.createElement('p'); status.dataset.referenceReserve='';
+    status.textContent=reserve ? 'Deal number reserve: '+reserve.reserved+' of '+reserve.namespaces+' namespaces; minimum '+(reserve.minimum==null?'not set':reserve.minimum)+'. Missing match references: '+missing.matches+'.' : 'Deal number reserve: not measured.';
+    details.appendChild(status);
+    if(receipt){var confirmation=document.createElement('p');confirmation.dataset.referenceReceipt='';confirmation.textContent=receipt;details.appendChild(confirmation);}
+  }
   function get(url) { return fetch(url,{cache:'no-store'}).then(function(r) { if(!r.ok) throw new Error('Records unavailable. Check your admin session.'); return r.json(); }); }
   function load() {
     if(loading || !document.getElementById('wos-record-activity')) return;
@@ -27,7 +37,7 @@
     var query={ref:filters.ref,type:filters.type};
     if(filters.from)query.from_ts=new Date(filters.from+'T00:00:00').toISOString();
     if(filters.to)query.to_ts=new Date(filters.to+'T23:59:59.999').toISOString();
-    Promise.all([get('/api/dashboard/record-activity?'+new URLSearchParams(query)),get('/api/dashboard/record-refs')]).then(function(values) { if(signature!==JSON.stringify(filters))return;payload=values[0]; missing=values[1].missing; message=''; }).catch(function(e) { if(signature===JSON.stringify(filters))message=e.message; }).finally(function() { loading=false;if(signature!==JSON.stringify(filters))load();else paint(); });
+    Promise.all([get('/api/dashboard/record-activity?'+new URLSearchParams(query)),get('/api/dashboard/record-refs')]).then(function(values) { if(signature!==JSON.stringify(filters))return;payload=values[0]; missing=values[1].missing; reserve=values[1].deal_reserve; message=''; }).catch(function(e) { if(signature===JSON.stringify(filters))message=e.message; }).finally(function() { loading=false;if(signature!==JSON.stringify(filters))load();else paint(); });
   }
   root.renderRecordActivity = function() { setTimeout(load,0);return markup(); };
   document.addEventListener('toggle',function(e) {
@@ -45,7 +55,7 @@
     if(assign) {
       if(!document.querySelector('[data-reference-confirm]').checked)return;
       assign.disabled=true;
-      fetch('/api/dashboard/record-refs/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})}).then(function(r) { if(!r.ok)throw Error('References not assigned. No facts were changed.');return r.json(); }).then(function(data) { message=data.assigned+' references assigned.';load(); }).catch(function(err) { message=err.message;paint(); });return;
+      fetch('/api/dashboard/record-refs/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})}).then(function(r) { if(!r.ok)throw Error('References not assigned. No facts were changed.');return r.json(); }).then(function(data) { receipt=data.assigned+' references assigned: '+data.counts.buyer+' buyers, '+data.counts.deal+' deals, '+data.counts.match+' matches. Legacy leads and facts unchanged. '+(data.backup?'Private backup created ('+data.backup.bytes+' bytes).':'No write or backup was needed.');load(); }).catch(function(err) { message=err.message;paint(); });return;
     }
     var open=e.target.closest('[data-search-record]');
     if(open) {

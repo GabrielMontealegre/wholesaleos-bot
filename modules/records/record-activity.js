@@ -3,6 +3,23 @@
 const crypto = require('crypto');
 const eligibility = require('../research/operational-lead-eligibility');
 const COLLECTIONS = { deal: 'reviewed_deals', lead: 'leads', buyer: 'buyers', match: 'record_matches' };
+const DEFAULT_ASSIGN_KINDS = ['buyer', 'deal', 'match'];
+const DEAL_REFERENCE_FLOOR = 1030;
+const STATE_CODES = 'AL AK AZ AR CA CO CT DE FL GA HI IA ID IL IN KS KY LA MA MD ME MI MN MO MS MT NC ND NE NH NJ NM NV NY OH OK OR PA RI SC SD TN TX UT VA VT WA WI WV WY DC AS GU MP PR VI XX'.split(' ');
+function referenceSequences(store) {
+  const sequences = { ...(store.record_reference_sequences || {}) };
+  for (const value of Object.values(sequences)) if (!Number.isSafeInteger(value) || value < 0 || value > 9999) fail('find_ref_sequence_invalid', 409);
+  for (const code of STATE_CODES) sequences['WOS-' + code] = Math.max(DEAL_REFERENCE_FLOOR, Number(sequences['WOS-' + code] || 0));
+  for (const prefix of Object.keys(sequences)) if (/^WOS-[A-Z]{2}$/.test(prefix)) sequences[prefix] = Math.max(DEAL_REFERENCE_FLOOR, Number(sequences[prefix] || 0));
+  return sequences;
+}
+function sequenceFloorStatus(store) {
+  const sequences = store.record_reference_sequences || {};
+  const prefixes = new Set(STATE_CODES.map(state => 'WOS-' + state));
+  Object.keys(sequences).filter(prefix => /^WOS-[A-Z]{2}$/.test(prefix)).forEach(prefix => prefixes.add(prefix));
+  const values = [...prefixes].map(prefix => sequences[prefix]);
+  return { namespaces: prefixes.size, reserved: values.filter(value => Number.isSafeInteger(value) && value >= DEAL_REFERENCE_FLOOR).length, minimum: values.every(value => Number.isSafeInteger(value)) ? Math.min(...values) : null };
+}
 const TYPES = ['found', 'imported', 'approved', 'rejected', 'status_change', 'message_drafted', 'message_sent', 'email_drafted', 'email_sent', 'reply_received', 'bounce', 'call_note', 'jv_generated', 'document_added', 'expired', 'interaction_reported', 'reference_assigned', 'source_rechecked'];
 function fail(code, status = 400) { const e = new Error(code); e.code = code; e.status = status; throw e; }
 function text(v, max = 2000) { if (v == null) return ''; if (typeof v !== 'string' || v.length > max || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(v)) fail('find_activity_invalid'); return v.trim(); }
@@ -20,13 +37,14 @@ function assign(store, kind, id, requested = '') {
   const all = records(store); const used = new Set(all.filter(r => r.kind !== kind || String(r.record.id) !== String(id)).map(r => canonicalLegacy(r.kind,r.record)).filter(Boolean));
   const legacy = canonicalLegacy(kind,record);
   if (legacy && supplied && legacy !== supplied) fail('find_ref_conflict',409);
-  let number = [...used].reduce((n, r) => r.startsWith(prefix + '-') ? Math.max(n, Number(r.slice(prefix.length + 1))) : n, Number((store.record_reference_sequences || {})[prefix] || 0));
+  const sequences = referenceSequences(store);
+  let number = [...used].reduce((n, r) => r.startsWith(prefix + '-') ? Math.max(n, Number(r.slice(prefix.length + 1))) : n, Number(sequences[prefix] || (prefix.startsWith('WOS-') ? DEAL_REFERENCE_FLOOR : 0)));
   const next = supplied || legacy || prefix + '-' + String(number + 1).padStart(4, '0');
   if (used.has(next)) fail('find_ref_conflict', 409);
   if (!supplied && !legacy && number >= 9999) fail('find_ref_exhausted', 409);
-  const issuedPrefix = next.slice(0,next.lastIndexOf('-')); number = Math.max(Number((store.record_reference_sequences || {})[issuedPrefix] || 0),Number(next.slice(-4)));
+  const issuedPrefix = next.slice(0,next.lastIndexOf('-')); number = Math.max(Number(sequences[issuedPrefix] || 0),Number(next.slice(-4)));
   rows[index] = { ...record, record_ref: next };
-  return { ...store, [key]: rows, record_reference_sequences: { ...(store.record_reference_sequences || {}), [issuedPrefix]: number } };
+  return { ...store, [key]: rows, record_reference_sequences: { ...sequences, [issuedPrefix]: number } };
 }
 function actor(store, operatorId) { if (!operatorId) fail('find_activity_actor_required'); return (store.users || []).find(u => u.id === operatorId)?.name || String(operatorId); }
 function append(store, entry, { now, operatorId, actorLabel, channel }) {
@@ -43,28 +61,55 @@ function recordEvent(store, kind, id, type, summary, context, extra = {}) {
   const links = kind === 'buyer' ? { buyer_id: id, buyer_ref: reference(record) } : kind === 'match' ? { match_id: id, match_ref: reference(record), deal_id:record.deal_id,buyer_id:record.buyer_id,deal_ref: record.deal_ref, buyer_ref: record.buyer_ref } : { deal_id: id, deal_ref: reference(record), ...(kind === 'lead' ? { lead_id: id } : {}) };
   return append(store, { ...links, type, summary, ...extra }, context);
 }
-function assignMissing(store, context) {
-  const used = new Set(); const sequences = { ...(store.record_reference_sequences || {}) };
+function assignOnAction(store, kind, id, context) {
+  const updated = assign(store, kind, id);
+  return updated === store ? store : recordEvent(updated, kind, id, 'reference_assigned', 'Reference assigned; facts and workflow unchanged.', context);
+}
+function assertBoundedReferenceChanges(before, after) {
+  const mutable = new Set(['buyers', 'reviewed_deals', 'record_matches', 'record_reference_sequences', 'activities', 'record_activity_sequence']);
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (!mutable.has(key) && JSON.stringify(before[key]) !== JSON.stringify(after[key])) fail('find_ref_preservation_failed', 409);
+  }
+  for (const key of ['buyers', 'reviewed_deals', 'record_matches']) {
+    const old = before[key] || []; const current = after[key] || [];
+    if (old.length !== current.length) fail('find_ref_preservation_failed', 409);
+    old.forEach((row, index) => {
+      const { record_ref: previousRef, ...facts } = row;
+      const { record_ref: currentRef, ...currentFacts } = current[index];
+      if (JSON.stringify(facts) !== JSON.stringify(currentFacts) || previousRef && previousRef !== currentRef) fail('find_ref_preservation_failed', 409);
+    });
+  }
+  const history = before.activities || []; const currentHistory = after.activities || [];
+  if (JSON.stringify(currentHistory.slice(0, history.length)) !== JSON.stringify(history) || currentHistory.slice(history.length).some(row => row.type !== 'reference_assigned' || row.lead_id)) fail('find_ref_preservation_failed', 409);
+}
+function assignMissing(store, context, kinds = DEFAULT_ASSIGN_KINDS) {
+  if (!Array.isArray(kinds) || !kinds.length || new Set(kinds).size !== kinds.length || kinds.some(kind => !COLLECTIONS[kind])) fail('find_ref_kinds_invalid');
+  const selected = new Set(kinds);
+  const used = new Set(); const sequences = referenceSequences(store);
   const all = records(store);
   for (const { kind, record } of all) if (record.record_ref || canonicalLegacy(kind,record)) {
     const value = ref(record.record_ref || canonicalLegacy(kind,record)); if (used.has(value)) fail('find_ref_conflict', 409); used.add(value);
     const prefix = value.slice(0, value.lastIndexOf('-')); sequences[prefix] = Math.max(Number(sequences[prefix] || 0), Number(value.slice(-4)));
   }
   const result = { ...store, record_reference_sequences: sequences }; const additions = []; let count = 0;
+  const counts = Object.fromEntries(kinds.map(kind => [kind, 0]));
   let sequence = (store.activities || []).reduce((n, a) => Math.max(n, Number(a.record_sequence || 0)), Number(store.record_activity_sequence || 0));
   const who = actor(store, context.operatorId);
-  for (const [kind, key] of Object.entries(COLLECTIONS)) result[key] = (store[key] || []).map(record => {
+  for (const [kind, key] of Object.entries(COLLECTIONS)) {
+    if (!selected.has(kind)) continue;
+    result[key] = (store[key] || []).map(record => {
     if (!record.id || record.record_ref) return record;
     const prefix = namespace(kind, record); const legacy = canonicalLegacy(kind,record); const next = Number(sequences[prefix] || 0) + 1;
     if (!legacy && next > 9999) fail('find_ref_exhausted', 409);
-    const value = legacy || prefix + '-' + String(next).padStart(4, '0'); if (!legacy) sequences[prefix] = next; count++; sequence++;
+    const value = legacy || prefix + '-' + String(next).padStart(4, '0'); if (!legacy) sequences[prefix] = next; count++; counts[kind]++; sequence++;
     const links = kind === 'buyer' ? { buyer_id: record.id, buyer_ref: value } : kind === 'match' ? { match_id: record.id, match_ref: value, deal_ref: record.deal_ref, buyer_ref: record.buyer_ref } : { deal_id: record.id, deal_ref: value, ...(kind === 'lead' ? { lead_id: record.id } : {}) };
     additions.push({ activity_id:'LOG-'+sequence,record_sequence:sequence,ts:context.now,created_at:context.now,created_by:context.operatorId,who,operator_id:context.operatorId,type:'reference_assigned',channel:'dashboard',deal_ref:'',buyer_ref:'',match_ref:'',summary:'Reference assigned; facts and workflow unchanged.',note:'Reference assigned; facts and workflow unchanged.',...links });
     return { ...record, record_ref: value };
-  });
-  if (!count) return { store, count: 0 };
+    });
+  }
+  if (!count) return { store: JSON.stringify(sequences) === JSON.stringify(store.record_reference_sequences || {}) ? store : result, count: 0, counts };
   result.activities = (store.activities || []).concat(additions); result.record_activity_sequence = sequence;
-  return { store: result, count };
+  return { store: result, count, counts };
 }
 function matchId(dealId, buyerId) { return crypto.createHash('sha256').update(JSON.stringify([String(dealId), String(buyerId)])).digest('hex'); }
 function matchReference(store, dealId, buyerId) { return (store.record_matches || []).find(m => m.id === matchId(dealId, buyerId))?.record_ref || ''; }
@@ -122,4 +167,4 @@ function search(store, query) {
   const q = text(query, 80).toLowerCase(); if (q.length < 2) return [];
   return records(store).filter(({ record: r }) => [reference(r), r.reference_id, r.lead_reference_id, r.city, r.zip, r.assistant_find?.areas?.join(' ')].some(v => String(v || '').toLowerCase().includes(q))).slice(0, 50).map(({ kind, record: r }) => ({ kind, id: r.id, ref: reference(r), deal_id:r.deal_id || '', city: r.city || '', zip: r.zip || '', label: kind === 'buyer' ? r.name : kind === 'match' ? 'Buyer criteria match' : kind === 'lead' && !eligibility.verifiedPropertyAddress(r) ? 'Stored record - address needs source proof' : r.address || r.normalized_address || 'Address not established', assistant_find: !!r.assistant_find }));
 }
-module.exports = { TYPES, ref, reference, assign, assignMissing, recordEvent, append, matchReference, registerMatch, validateInteraction, importInteraction, listActivity, search };
+module.exports = { TYPES, ref, reference, assign, assignOnAction, assignMissing, assertBoundedReferenceChanges, sequenceFloorStatus, recordEvent, append, matchReference, registerMatch, validateInteraction, importInteraction, listActivity, search };

@@ -6,6 +6,15 @@ corrects them during review.
 
 ## Gabriel's decisions
 
+ASSUMED: #297's explicit bulk reference operation is capped at 500 assignments,
+defaults to buyers/reviewed deals/existing matches, and does not evaluate new
+matches or expiry. Every deal namespace reserves 1030; supplied reserved references
+remain valid. Legacy leads receive a reference only on a validated explicit
+single-record action; GETs stay read-only. A private byte-for-byte database backup
+and executable fact/history preservation check precede the bulk write -- because
+the architect's 2026-10-08 comment and Gabriel's authorization permit metadata
+only, not 12,039 lead assignments or workflow changes -- 2026-10-08.
+
 ASSUMED: replace only the ambiguous-slash fixture's relative date with fixed `10/09/2026` in dashboard-public-deal-queue.test.js. On 2026-10-07 the relative +3-day value became `10/10/2026`, a single-valid-reading date, invalidating the fixture's intent. Null assertions and product resolver stay unchanged — AGENTS section 4 incidental date scaffolding — 2026-10-07.
 
 ASSUMED: #283's first-panel requirement is a release gate; the old public panel's later prepend defeats the new wrapper. Revert PR #291 without touching data, preserve its implementation for an ordered repair, and require actual dashboard mount/hydrate/re-render proof — AGENTS section 7 — 2026-10-07.
