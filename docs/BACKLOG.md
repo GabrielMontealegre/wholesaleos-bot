@@ -8,20 +8,30 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-08 -- #297 IN PROGRESS: bounded non-lead reference assignment, private
-backup-before-write, reserved deal numbering above 1030 and single-record lazy
-lead assignment implemented. Production operation remains pending release and
-read-only verification. Pre-operation live counts: 12,039 legacy leads, 4 buyers,
-0 reviewed deals missing references; Activity has 56 retained/projected events.
-No production assignment has occurred in this run yet. Final suite: 132 passed,
-0 failed, 0 skipped; per-file durations in docs/test-results/issue-297.txt
-(actual UI 18.67s; county-notice acquisition 17.34s). The prior UI assertion
-checked hidden text; opening its collapsed details fixed the fixture. Local
-1366/400/412 browser proof passes. Live operation results will replace this
-checkpoint. Assumptions: maximum 500
-assignments, no matching/expiry synchronization, no bulk legacy-lead assignment.
-Gabriel's current order: #297, #294 (Night desk / Android), #299, #288, #285,
-#275 (Section 8 lens), #277, #262, #264; one item per run.
+2026-10-08 -- #297 DONE ([PR #302](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/302)),
+application merge `9e511ca`. Final suite: 132 passed, 0 failed, 0 skipped;
+per-file durations in docs/test-results/issue-297.txt (actual UI 18.67s,
+county-notice acquisition 17.34s). A prior new UI assertion checked collapsed
+text; opening its details fixed the fixture. git diff --check clean; no secret
+pattern hits. Current-main integration added architect documentation only.
+Exact Railway deployment succeeded; health 200 after one rollout 502;
+record bundle v2 served, 12,039 leads hydrated, 100 rows and a lead card opened,
+zero release console errors. Exactly ONE authorized reference operation ran:
+private byte-for-byte backup 67,308,046 bytes, then 4 buyers assigned / 0 deals /
+0 matches / 0 legacy leads touched. Missing refs before/after: buyers 4 -> 0,
+deals 0 -> 0, matches 0 -> 0, legacy leads 12,039 -> 12,039. All 57 state/territory/
+unknown namespaces reserved, minimum 1030. Activity total 56 -> 60, only four
+reference-assigned additions. Executable guard preserves facts, aliases,
+approvals, eligibility, contact outcomes and prior history. Live count-only
+reference receipts fit 1366/400/412, including 412 x 915 Android-oriented proof:
+[screenshots](screens/2026-10-08-bounded-reference/README.md).
+No acquisition/enrichment batch, source request, import, approval, outreach,
+contact outcome, capture or evidence confirmation. No new deals or comps.
+Assumptions: 500 cap; no matching/expiry synchronization; lazy single-record
+lead action only. No blocked item. Overall first-deal readiness is not advanced
+by assigning references; PLAN.md's approximate 35% baseline is not re-measured.
+Next item/run per Gabriel: #294 (Night desk / Android), then #299, #288, #285,
+#275 (Section 8 lens), #277, #262, #264.
 
 2026-10-07 — #283 IN PROGRESS; references/activity foundation DONE in
 [PR #296](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/296), application
