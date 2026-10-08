@@ -8,18 +8,23 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-07 — #283 IN PROGRESS, references/activity foundation. New canonical refs
-and the existing activities table are wired to explicit deal/buyer operations;
-interaction import, card timelines, ref/city/ZIP search and Activity filtering are
-built. No automatic old-record migration, sending or source run. Full-page local
-proof passed at 1366/400/412 without writes/external sources. Large pure test:
-12,039 records assigned uniquely; exhausted namespace fails without mutation.
-Final suite: 131 passed, 0 failed, 0 skipped; per-file timings in
-`docs/test-results/issue-283-record-activity.txt` (actual UI proof 18.97s;
-county-notice acquisition 13.17s). Release/live read-only verification pending. Scope/assumptions:
-`docs/record-activity.md`; existing production refs require a separate explicit
-metadata operation, not a verification write. Broader legacy card/help coverage
-remains open; this slice will not falsely close #283.
+2026-10-07 — #283 IN PROGRESS; references/activity foundation DONE in
+[PR #296](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/296), application
+merge `172c624`. Full suite: 131 passed, 0 failed, 0 skipped; timings in
+`docs/test-results/issue-283-record-activity.txt` (actual UI 18.97s, county-notice
+acquisition 13.17s). Exact Railway status success, health 200, record bundle v1,
+buyer v5 and Today v2 served. Live read-only: Activity shows 39 retained historical
+events; approval filter 26; city search 9 stored-record/buyer results; selected
+buyer history opens. New views fit 1366/400/412; 12,039 saved records hydrate,
+100 lead rows/card open, Today remains first; no current-release console errors.
+[Evidence](screens/2026-10-07-record-activity/README.md). No assignment, import,
+approval, draft generation, contact, confirmation, capture, batch or source run.
+Existing canonical-reference application is BLOCKED pending bounded authorization
+in [#297](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/297): 12,039
+leads and 30 buyers missing, 0 reviewed deals. No hidden backfill. Large local
+fixture assigns 12,039 uniquely; namespace exhaustion/conflict preserves input.
+Assumptions/scope: `docs/record-activity.md`; broader legacy card/help wiring
+remains independent. #283 stays open; this is traceability, not new vetted inventory.
 
 2026-10-07 — #283 IN PROGRESS; ordered mounting repair DONE in
 [PR #295](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/295), application
