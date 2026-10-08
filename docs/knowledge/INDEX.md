@@ -10,6 +10,7 @@ Short map of where things live, so any agent or person reads only what it needs.
 | `docs/DECISIONS.md` | Every decision (D-xxx Gabriel, A-xxx architect) |
 | `docs/knowledge/WHOLESALING_PLAYBOOK.md` | Offer math, seller calls, land, dispo, compliance, courses |
 | `docs/knowledge/FACEBOOK_BUYERS.md` | Who really buys, scams, good practices, buyer sources, smart rails, 76 target metros |
+| `docs/knowledge/SECTION8_S8TRACKER.md` | Section 8 buy-and-hold method (S8Tracker / Academia Sección 8): S8 investors as a buyer segment, the Section 8 cash-flow lens for deal cards |
 | `data/title-companies.json` | Investor-friendly title companies and closing attorneys, with fit for Gabriel |
 | `data/market-demand-index.json` | County ranking (Census-based) used to pick markets |
 | `docs/assistant-buyers-found.md` | Buyer import format (dashboard Import button) |
