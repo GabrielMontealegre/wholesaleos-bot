@@ -189,6 +189,10 @@ After each merge: deploy, then verify without writes:
 - Screenshots: desktop (1366 wide) and phone (400 wide) of every screen the item changed, with owner
   names, phones, emails and street addresses blurred. Commit them under `docs/screens/` and link them in
   the PR, so Gabriel can see progress screen by screen.
+- New UI also gets a 412 x 915 Android-oriented check and screenshot (#294),
+  alongside the existing desktop/400-wide proof. Broader legacy mobile repairs
+  remain in that item's scope; do not hide known off-screen controls with a
+  page-level overflow-only assertion.
 - If something fails: revert the merge commit, redeploy, confirm `/health`, mark the item BLOCKED,
   open a `needs-architect` issue with the evidence.
 

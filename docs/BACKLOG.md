@@ -8,6 +8,20 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-07 — #283 IN PROGRESS, ordered repair: architect answered #292 and
+authorized re-landing PR #291. The new full-document browser regression test
+reproduced the original failure before repair, then passed actual init, hydration,
+re-render, real mount timer and return at 1366/400. The older source desk now mounts
+after Today's Deals on Dashboard only; Deal Finder stays unchanged. Local proof:
+`docs/screens/today-order-local`. Final suite: 128 passed, 0 failed, 0 skipped;
+durations in `docs/test-results/issue-283-repair.txt` (mount proof 14.72s;
+county-notice acquisition 10.36s). Both cache-version assertions now expect v55,
+without weakening any outcome; delayed-glossary card proof passes too. Release
+and live proof pending. No source,
+readiness or contact gate changes. This run handles that ordered repair only;
+the architect's added reference-number/activity slice and broad #285 coverage
+remain open, so #283 will not be falsely closed after the mounting fix.
+
 2026-10-07 — #283 BLOCKED ([#292](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/292)).
 [PR #291](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/291) passed
 127/127 tests, no skips, and merged as `3a0d59e`. Railway succeeded and health was
@@ -104,7 +118,7 @@ This run handled #260 only. Current item 12 puts #271 and #269 before #262/#264.
 >     **First, before anything else: delete the 4 test buyers ([#262](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/262) comment, D-047).**
 >     First do #260 (Buyers tab, with approval and correlation; DONE in PR #274; #268 reverted), then
 >     [#271](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/271) DONE ([PR #279](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/279)): signed-admin buyer import with no-write preview and explicit bulk approval, then
->     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) BLOCKED ([#292](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/292): live mount order failed; PR #291 rolled back) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
+>     [#283](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/283) IN PROGRESS (architect answered #292: ordered mounting repair, then references/activity, then broad help coverage) (Today's Deals: vetted deals first on the dashboard + deal pipeline;
 >     Gabriel's priority, right after the #269 slice in progress; includes the JV tab, D-043, and
 >     [#285](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/285) help tooltips), then
 >     [#288](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/288) (email drafts/send from the card, JV agreement generator, runs panel), then
