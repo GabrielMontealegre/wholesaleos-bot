@@ -12,6 +12,7 @@ Short map of where things live, so any agent or person reads only what it needs.
 | `docs/knowledge/FACEBOOK_BUYERS.md` | Who really buys, scams, good practices, buyer sources, smart rails, 76 target metros |
 | `docs/knowledge/SECTION8_S8TRACKER.md` | Section 8 buy-and-hold method (S8Tracker / Academia Sección 8): S8 investors as a buyer segment, the Section 8 cash-flow lens for deal cards |
 | `docs/knowledge/DEAL_ENGINE_TRANCHI.md` | What Tranchi AI does (tax-deed, probate, foreclosure scanning ranked by spread), what is risky (AI voice calls, auctions), and our bigger compliant deal engine + group scoring |
+| `docs/knowledge/JV_CHECKLIST.md` | JV deals: what the holder wants, questions before showing a buyer, red flags, what the buyer sees when, must-have agreement clauses (D-048) |
 | `data/title-companies.json` | Investor-friendly title companies and closing attorneys, with fit for Gabriel |
 | `data/market-demand-index.json` | County ranking (Census-based) used to pick markets |
 | `docs/assistant-buyers-found.md` | Buyer import format (dashboard Import button) |
