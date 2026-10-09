@@ -42,11 +42,11 @@
       '<label>Or paste JSON<textarea data-import-json maxlength="262144"' + (importBusy ? ' disabled' : '') + '>' + esc(importJson) + '</textarea></label>' +
       '<div class="bf-actions"><button type="button" data-import-action="preview"' + (importBusy ? ' disabled' : '') + '>Preview</button>' +
       '<button type="button" data-import-action="cancel"' + (importBusy ? ' disabled' : '') + '>Cancel</button></div>' +
-      (counts ? '<div data-import-preview><p><b>' + esc(counts.new_items) + ' new | ' + esc(counts.duplicates) + ' duplicates | ' + esc(counts.rejected) + ' invalid</b></p>' +
+      (counts ? '<div data-import-preview><p><b>' + esc(counts.new_items) + ' new | ' + esc(counts.updates || 0) + ' updates | ' + esc(counts.duplicates) + ' duplicates | ' + esc(counts.rejected) + ' invalid</b></p>' +
         '<ul>' + (importPreview.rejected || []).map(function (entry) { return '<li>Item ' + esc(entry.item) + ': ' + esc(reasons[entry.reason] || 'Invalid item.') + '</li>'; }).join('') + '</ul>' +
         '<label class="bf-import-check"><input type="checkbox" data-import-approve' + (importApprove ? ' checked' : '') + (importBusy ? ' disabled' : '') + '>These were already approved by me</label>' +
         '<p class="bf-muted">' + esc(counts.bulk_approval_eligible) + ' new end buyers eligible for approval. Partners, caution records and non-buyers stay pending. Existing approvals stay unchanged.</p>' +
-        '<div class="bf-actions"><button type="button" data-import-action="commit"' + (importBusy || counts.new_items + counts.duplicates === 0 ? ' disabled' : '') + '>Import</button></div></div>' : '') +
+        '<div class="bf-actions"><button type="button" data-import-action="commit"' + (importBusy || counts.new_items + counts.duplicates + (counts.updates || 0) === 0 ? ' disabled' : '') + '>Import</button></div></div>' : '') +
       '<p class="bf-muted">Nothing is saved until you click Import.</p><p role="status">' + esc(importMessage) + '</p></section>';
   }
   function card(item, editedDraft) {
@@ -172,7 +172,7 @@
         }).then(function (result) {
           if (action === 'preview') { importPreview = result; importMessage = 'Preview only. Nothing has been saved.'; }
           else { importPreview = null; importJson = ''; importApprove = false; importOpen = false;
-            notice = 'Imported ' + result.created + ' new, ' + result.duplicates + ' duplicates, ' + result.rejected + ' invalid, ' + result.approved + ' approved.';
+            notice = 'Imported ' + result.created + ' new, ' + (result.updated || 0) + ' updates, ' + result.duplicates + ' duplicates, ' + result.rejected + ' invalid, ' + result.approved + ' approved.';
             return load(); }
         }).catch(function (caught) { importPreview = null; importMessage = caught.message; })
         .finally(function () { importBusy = false; paint(); });

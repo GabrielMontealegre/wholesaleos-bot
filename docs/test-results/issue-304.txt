@@ -1,0 +1,450 @@
+Node runtime: C:\Users\criss\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe
+PASSED actionable-lead-reconnection.test.js (1.70s)
+actionable lead reconnection tests passed
+PASSED active-notice-address-origin.test.js (0.84s)
+active notice address origins passed
+PASSED address-link-audit-classification.test.js (0.12s)
+address-link-audit-classification: all assertions passed
+PASSED after-sale-frozen-chain.test.js (6.56s)
+after-sale frozen chain passed: {"extracted":3,"active":0,"needs_data":3,"post_sale_proposed":0,"rejected":{},"accepted":0,"invalidated":0}
+PASSED after-sale-proof-origin.test.js (0.19s)
+after-sale origin proof passed; frozen documents=5; before={"any_date":4,"any_street":3}; after={"labeled_date":1,"labeled_property":3}
+PASSED api-session-gate.test.js (27.19s)
+api-session-gate: ok (252 API registrations behind the gate)
+PASSED assistant-buyer-finds.test.js (1.10s)
+assistant buyer finds: validation, token auth, write-only dropbox, caps, dedupe, operator history and privacy passed
+PASSED b02-safety-cleanup.test.js (0.17s)
+B-02 safety cleanup tests passed
+PASSED b02-server-call-disabled.test.js (0.15s)
+server calling disabled; phone links render; no call provider or logging invoked
+PASSED b02-server-send-disabled.test.js (0.27s)
+server sending disabled; previews and stored lead state unchanged
+PASSED b04a-date-supersession-audit.test.js (0.63s)
+B-04a date supersession audit tests passed
+PASSED b04b-event-date-origin.test.js (0.63s)
+B-04b event-date origin tests passed
+PASSED b04c-state-rules-and-profiles.test.js (0.13s)
+B-04c state rules and source profiles passed
+PASSED b04d-source-kinds-equivalence.test.js (0.59s)
+B-04d source kinds and row equivalence passed
+PASSED b04e-registry-routing-equivalence.test.js (0.69s)
+B-04e regional routing and transport equivalence passed
+PASSED b04f-official-source-routing-equivalence.test.js (0.64s)
+B-04f official-source routing equivalence passed
+PASSED b04g-primary-source-profile-equivalence.test.js (0.67s)
+B-04g primary source profile equivalence passed
+PASSED b05a-post-sale-candidates.test.js (0.20s)
+B-05a past-notice segregation passed
+PASSED b05b-post-sale-outcome.test.js (0.12s)
+B-05b conservative outcome classifier passed
+PASSED b05c-post-sale-snapshot-lane.test.js (1.81s)
+B-05c separate persistent post-sale snapshot lane passed
+PASSED b05d-past-only-proof-row.test.js (0.66s)
+past-only proof row tests passed
+PASSED blocked-inventory-breakdown.test.js (0.65s)
+blocked inventory breakdown tests passed
+(node:30120) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED bounded-record-refs.test.js (0.21s)
+Bounded references: non-lead default, preserved facts/history, all-state floor, reserved imports, lazy single-lead action and private backup passed.
+PASSED business-entity-owner-resolution.test.js (0.17s)
+business entity owner resolution tests passed
+PASSED buyer-find-import.test.js (0.65s)
+buyer import: shared validation, no-write preview, admin ownership, expiry, approval exclusions, dedupe and privacy passed
+PASSED buyer-match-deal-update.test.js (0.24s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+Buyer ranges/checks, geographic candidates, conservative ceiling, update-by-ref audit, concurrency, review reset, unsafe/stale inputs and purity passed.
+PASSED ca-los-angeles-tax-default-acquisition-adapter.test.js (0.94s)
+ca-los-angeles-tax-default-acquisition-adapter.test.js passed
+(node:32464) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED ca-tax-default-notice-acquisition-adapter.test.js (0.74s)
+ca-tax-default-notice-acquisition-adapter.test.js passed
+(node:34664) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED call-ready-deal-packet.test.js (0.28s)
+call-ready deal packet tests passed
+PASSED canonical-legacy-readback.test.js (0.35s)
+canonical legacy readback tests passed
+PASSED canonical-opportunity-kernel.test.js (0.33s)
+canonical opportunity kernel tests passed
+PASSED census-zip-resolution.test.js (0.11s)
+census zip resolution tests passed
+PASSED comp-grid-fingerprint.test.js (0.14s)
+comp-grid fingerprint: LF and CRLF agree; content change fails
+PASSED contact-first-property-detail-discovery.test.js (0.36s)
+contact-first property detail discovery tests passed
+PASSED contact-route-roles-adversarial.test.js (0.11s)
+{
+  "matrix": [
+    {
+      "case_name": "owner official record",
+      "role": "owner",
+      "eligibility": "SELLER_CONTACT_ELIGIBLE",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "owner operator-confirmed screenshot",
+      "role": "owner",
+      "eligibility": "SELLER_CONTACT_ELIGIBLE",
+      "role_basis": "route_type_operator_confirmed_owner"
+    },
+    {
+      "case_name": "occupant official record",
+      "role": "occupant",
+      "eligibility": "SELLER_CONTACT_ELIGIBLE",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "seller-stated contact",
+      "role": "owner",
+      "eligibility": "SELLER_CONTACT_ELIGIBLE",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "attorney",
+      "role": "attorney",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "trustee",
+      "role": "trustee",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "servicer",
+      "role": "servicer",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "bank lender",
+      "role": "lender",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "escrow",
+      "role": "escrow",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "auction company",
+      "role": "auction_company",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "registered agent",
+      "role": "registered_agent",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "government office",
+      "role": "government_office",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "taxpayer",
+      "role": "taxpayer",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "unknown",
+      "role": "unknown",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "role_not_supported_by_route_evidence"
+    },
+    {
+      "case_name": "owner type with trustee evidence",
+      "role": "trustee",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "institutional_evidence_overrides_route_type"
+    },
+    {
+      "case_name": "owner phone type with servicer evidence",
+      "role": "servicer",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "institutional_evidence_overrides_route_type"
+    },
+    {
+      "case_name": "operator-confirmed type with attorney evidence",
+      "role": "attorney",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "institutional_evidence_overrides_route_type"
+    },
+    {
+      "case_name": "owner-sounding URL and label only",
+      "role": "unknown",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "role_not_supported_by_route_evidence"
+    },
+    {
+      "case_name": "owner label with government evidence",
+      "role": "government_office",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "source_stated_evidence"
+    },
+    {
+      "case_name": "high-confidence official record without role evidence",
+      "role": "unknown",
+      "eligibility": "RESEARCH_ONLY",
+      "role_basis": "role_not_supported_by_route_evidence"
+    }
+  ]
+}
+contact route role adversarial tests passed
+PASSED contact-route-roles.test.js (0.19s)
+contact route role tests passed
+PASSED contact-workflow-control.test.js (2.04s)
+{"outcome_state_table":{"reached_zero":"NEEDS_COMPS","reached_three":"TITLE_NEEDED","left_message_zero":"CALL_READY","left_message_three":"CALL_READY","follow_up_zero":"CALL_READY","follow_up_three":"CALL_READY","wrong_number_zero":"NEEDS_CONTACT_SEARCH","wrong_number_three":"NEEDS_CONTACT_SEARCH","not_interested_zero":"CLOSED_NOT_INTERESTED","not_interested_three":"CLOSED_NOT_INTERESTED"},"wrong_number_exhausted":"NEEDS_SKIP_TRACE","repeated_attempts":2,"final_counts":{"CALL_READY":5,"OUTREACH_READY":0,"MAIL_READY":0,"NEEDS_CONTACT_SEARCH":2,"NEEDS_SKIP_TRACE":1,"NEEDS_COMPS":1,"TITLE_NEEDED":1,"CLOSED_NOT_INTERESTED":2,"BLOCKED":0}}
+contact workflow control tests passed
+PASSED cycle-27-phone-route.test.js (0.29s)
+cycle 27 phone route tests passed
+PASSED cycle-28-property-identity.test.js (0.64s)
+Cycle 28 property identity and seller-phone gates passed.
+PASSED cycle-29-secure-login.test.js (0.22s)
+cycle-29-secure-login: ok
+cycle-29 session note: identity transport is now an expiring signed server session.
+PASSED cycle-30-local-comp-capture.test.js (19.92s)
+{"data_kind":"SYNTHETIC_TEST_ONLY","local_browser_launches":4,"pages_visited":1,"five_fixture_cards":5,"captured_regions":4,"upload_count":5,"pending_proposals_count_as_comps":false,"confirmed_three_comp_readiness":"YES","far_comp_counted":2,"active_price_is_comp":false,"external_requests":0,"snapshot_unchanged":true,"saved_leads_unchanged":true,"synthetic_run_log":"C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-b02\\exports\\cycle-30-comp-capture\\2026-10-09T01-30-44-290Z.json","synthetic_screenshot":"C:\\Users\\criss\\.codex\\visualizations\\2026\\06\\11\\019eb5c5-45e9-7903-8cf6-322eb1ccf255\\wholesaleos-b02\\exports\\cycle-30-comp-capture\\synthetic-sold-card.png"}
+cycle 30 local comp capture tests passed
+PASSED cycle-31-local-helper.test.js (0.53s)
+cycle-31-local-helper: ok
+PASSED cycle-31-scraper-credential.test.js (4.68s)
+cycle-31-scraper-credential: ok
+PASSED cycle-31-session-security.test.js (12.00s)
+cycle-31-session-security: ok
+PASSED cycle-32-local-config-path.test.js (0.23s)
+cycle-32-local-config-path: ok
+PASSED cycle-33-1-labelled-date-prefix.test.js (0.16s)
+Cycle 33.1 labelled date-prefix recovery tests passed.
+PASSED cycle-33-subject-address-recovery.test.js (0.20s)
+Cycle 33 stored subject-address recovery tests passed.
+PASSED cycle-34-comp-proposal-fallback.test.js (20.46s)
+{"source_results":[{"source":"zillow","source_url":"http://127.0.0.1:50201/fixture/zillow-sold-results.html","url_kind":"sold_results","page_state":"loaded","cards_detected":3,"cards_with_price":2,"cards_with_date":2,"cards_with_address":2,"candidates_built":0,"discards":[{"reason_code":"MISSING_SOLD_DATE","count":1},{"reason_code":"MISSING_SOLD_PRICE","count":1},{"reason_code":"MISSING_ADDRESS","count":1}],"screenshots":0,"proposals":0,"outcome_code":"CARDS_MISSING_REQUIRED_FIELDS"},{"source":"redfin","source_url":"http://127.0.0.1:50201/fixture/redfin-sold-results.html","url_kind":"sold_results","page_state":"loaded","cards_detected":1,"cards_with_price":1,"cards_with_date":1,"cards_with_address":1,"candidates_built":1,"discards":[],"screenshots":1,"proposals":1,"outcome_code":"PROPOSALS_CREATED"},{"source":"realtor","source_url":"http://127.0.0.1:50201/fixture/realtor-sold-results.html","url_kind":"sold_results","page_state":"loaded","cards_detected":2,"cards_with_price":2,"cards_with_date":2,"cards_with_address":2,"candidates_built":2,"discards":[],"screenshots":2,"proposals":2,"outcome_code":"PROPOSALS_CREATED"}],"blocked_path":[{"source":"zillow","source_url":"http://127.0.0.1:50201/fixture/blocked.html","url_kind":"blocked","page_state":"blocked","cards_detected":0,"cards_with_price":0,"cards_with_date":0,"cards_with_address":0,"candidates_built":0,"discards":[{"reason_code":"HTTP_403","count":1}],"screenshots":0,"proposals":0,"outcome_code":"BLOCKED_STOPPED"},{"source":"redfin","source_url":"http://127.0.0.1:50201/fixture/blocked.html","url_kind":"blocked","page_state":"blocked","cards_detected":0,"cards_with_price":0,"cards_with_date":0,"cards_with_address":0,"candidates_built":0,"discards":[{"reason_code":"HTTP_403","count":1}],"screenshots":0,"proposals":0,"outcome_code":"BLOCKED_STOPPED"}],"proposals":3,"external_requests":0}
+cycle 34 comp proposal fallback tests passed
+PASSED cycle-37-single-property-dossier.test.js (0.34s)
+{"fixture_count":20,"fixtures":["01 baseline is property NEEDS_COMPS","02 unconfirmed subject fields stay excluded","03 one field confirmation applies only that field","04 a second missing fact remains blocking","05 all explicitly confirmed subject facts make the grid ready","06 three unconfirmed comps count as zero","07 one confirmed comp keeps NEEDS_COMPS","08 two confirmed comps keep NEEDS_COMPS","09 three qualifying comps make PROPERTY_READY","10 value readiness never unlocks contact","11 distance over one mile is rejected","12 wrong property type is rejected","13 stale sale is rejected","14 missing comp similarity cannot silently pass","15 quarantined duplicate is excluded from targeting","16 distress date and source remain verbatim","17 money labels are distinct and honest","18 room to offer stays UNKNOWN without typed debt","19 all operator research links remain clickable","20 ready_to_offer never becomes YES and safety flags survive"],"final_property_state":"PROPERTY_READY","final_contact_state":"LOCKED"}
+cycle-37-single-property-dossier: 20/20 ok
+PASSED cycle-38-research-queue-alias.test.js (5.62s)
+cycle-38-research-queue-alias.test.js passed (T1-T8)
+PASSED cycle-39-snapshot-mount-race.test.js (0.13s)
+cycle-39-snapshot-mount-race.test.js passed (R1-R9)
+PASSED cycle-40-capture-mode-routing.test.js (0.77s)
+cycle-40-capture-mode-routing: ok
+PASSED cycle-41-search-to-detail.test.js (0.88s)
+cycle-41-search-to-detail: ok
+PASSED cycle-43-helper-freshness.test.js (0.36s)
+cycle-43-helper-freshness: ok
+PASSED cycle-44-county-appraisal.test.js (0.95s)
+cycle-44-county-appraisal: 15 checks passed
+PASSED cycle-45-apply.test.js (1.24s)
+cycle-45 county appraisal preview/apply: PASS
+PASSED cycle-46-county-match-audit.test.js (4.95s)
+cycle-46 county match audit E1-E17: PASS
+PASSED cycle-47-property-identity.test.js (0.82s)
+cycle-47 property identity F1-F14: PASS
+PASSED cycle-48-notice-extraction.test.js (1.06s)
+cycle-48 notice extraction G1-G16: PASS
+PASSED cycle-49-discovery-layer.test.js (0.96s)
+cycle-49 discovery layer H1-H15: PASS
+PASSED cycle-50-date-normalization-and-links.test.js (0.91s)
+PASS cycle-50-date-normalization-and-links (K1-K16)
+PASSED cycle-52-county-parcel.test.js (1.22s)
+cycle-52 county parcel: N1-N12 PASS
+PASSED cycle-53-pr1-hardening.test.js (0.87s)
+cycle-53 PR1 hardening: Q1-Q8 PASS
+PASSED cycle-53-texas-closeout.test.js (0.61s)
+cycle-53 texas closeout: P1-P6 and P8-P13 PASS; P7 waived, numeric dates remain quarantined
+PASSED cycle-54a-source-date-proof.test.js (0.93s)
+cycle 54A source-date proof fixtures passed
+PASSED dallas-craigslist-owner-acquisition-adapter.test.js (0.57s)
+Dallas Craigslist owner acquisition adapter tests passed
+PASSED dallas-foreclosure-acquisition-adapter.test.js (15.81s)
+Warning: TT: undefined function: 32
+Warning: TT: undefined function: 32
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+Warning: TT: undefined function: 21
+dallas foreclosure acquisition adapter tests passed
+PASSED dallas-foreclosure-document-hunter.test.js (0.45s)
+dallas foreclosure document hunter tests passed
+PASSED dallas-foreclosure-live-source-preview.test.js (1.21s)
+dallas foreclosure live source preview tests passed
+PASSED dallas-foreclosure-publicsearch-input.test.js (0.41s)
+dallas foreclosure publicsearch input tests passed
+PASSED dallas-fsbo-contact-acquisition-adapter.test.js (0.37s)
+Dallas FSBO contact acquisition adapter tests passed
+PASSED dashboard-boxes-filter-guard.test.js (0.12s)
+dashboard boxes filter guard tests passed
+PASSED dashboard-deal-mount-order.test.js (15.03s)
+Dashboard mount order: real init, hydration, re-render, timer and return at 1366/400/412; Deal Finder unchanged; zero writes/external source requests.
+PASSED dashboard-public-deal-queue.test.js (6.70s)
+dashboard public deal queue tests passed
+(node:10764) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED deal-help.test.js (0.12s)
+Shared glossary terms, tooltip IDs and glossary page passed; browser proof checks keyboard/tap behavior.
+PASSED disclosure-state-comp-resolution.test.js (0.17s)
+disclosure state comp resolution tests passed
+PASSED discover-public-parcel-apis.test.js (0.18s)
+public parcel API discovery tests passed
+PASSED distress-evidence-model.test.js (0.21s)
+distress evidence model tests passed
+PASSED document-reextraction-pass.test.js (0.73s)
+document re-extraction pass tests passed
+(node:33092) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED enrichment-ledger-snapshot-persistence.test.js (1.18s)
+enrichment ledger snapshot persistence tests passed
+(node:40740) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED enrichment-ledger.test.js (0.14s)
+enrichment ledger tests passed
+PASSED enrichment-scheduler.test.js (0.17s)
+enrichment scheduler tests passed
+PASSED evidence-packet-throughput.test.js (0.37s)
+evidence packet throughput: real source identity, unrelated-address exclusion, independent readiness and immutability passed
+PASSED executable-work-orders.test.js (0.27s)
+executable work orders tests passed
+PASSED export-free-public-deal-board.test.js (0.29s)
+export free public deal board tests passed
+(node:27720) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED free-public-contact-comp-hunter.test.js (0.32s)
+free public contact + comp hunter tests passed
+(node:27680) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED free-public-deal-board.test.js (0.40s)
+free public deal board tests passed
+(node:144) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED fresh-lead-batch-engine.test.js (0.63s)
+fresh lead batch engine tests passed
+PASSED fresh-lead-no-auto-ingest-env-diagnostics.test.js (0.33s)
+fresh lead no-auto-ingest and env diagnostics tests passed
+PASSED fresh-lead-source-enrichment.test.js (0.17s)
+fresh lead source enrichment tests passed
+PASSED gemini-specialist-workers.test.js (0.35s)
+gemini specialist worker tests passed
+PASSED government-catalog-discovery.test.js (0.16s)
+government catalog discovery tests passed
+PASSED lead-address-dossier-dedup.test.js (0.35s)
+lead address and dossier dedup tests passed
+PASSED lead-lifecycle-status.test.js (0.13s)
+lead lifecycle status tests passed
+PASSED lead-operations-queue.test.js (0.77s)
+lead operations queue tests passed
+PASSED listing-radar-acquisition-adapter.test.js (0.26s)
+listing radar acquisition adapter tests passed
+PASSED live-provider-readiness.test.js (0.18s)
+live provider readiness tests passed
+PASSED manual-evidence-packet.test.js (0.42s)
+{"sample_mode":{"Dallas":["dallas-subject","dallas-2","dallas-3"],"San Antonio":["san-antonio-1","san-antonio-2"],"Houston":[],"Detroit":[],"San Diego":["san-diego-1","san-diego-2"],"Los Angeles":["los-angeles-1","los-angeles-2"]},"outbound_research_requests":0}
+manual evidence packet tests passed
+PASSED manual-value-source-unlock.test.js (0.93s)
+{"baseline":"NEEDS_COMPS","confirmed_three":"PROPERTY_READY","counts":{"LIKELY":1,"TIGHT":1,"NONE":1,"UNKNOWN":1}}
+manual value source unlock tests passed
+PASSED market-comp-policy.test.js (0.15s)
+market comp policy tests passed
+PASSED market-demand-index.test.js (0.29s)
+{"ranks":[["48003",1],["48001",2],["48005",3]],"unknown_density":{"status":"UNKNOWN","value":null,"source":"U.S. Census 2025 County Population Estimates + U.S. Census 2025 County Gazetteer","evidence_date":"2025-07-01","unknown_reason":"population_or_land_area_missing"}}
+market demand index tests passed
+PASSED marketplace-mobile-shell.test.js (14.01s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+Marketplace shell: 10 pages, six widths, real controls/forms, theme writer isolation, search, no writes/external requests/errors.
+PASSED mi-land-bank-acquisition-adapter.test.js (1.27s)
+mi-land-bank-acquisition-adapter.test.js passed
+(node:40468) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED ocr-notice-extraction.test.js (0.23s)
+ocr notice extraction tests passed
+PASSED operational-lead-eligibility.test.js (0.28s)
+Operational safety: address proof, venue/OCR/forged rejection, wrong links, sourced phone, DNC, buyer/value gates, counts, raw-date sorting and read-only dossier correction passed.
+PASSED opportunity-execution-spine.test.js (0.37s)
+opportunity execution spine tests passed
+PASSED opportunity-work-orders.test.js (0.30s)
+opportunity work orders tests passed
+PASSED paid-provider-fallback-registry.test.js (0.12s)
+paid provider fallback registry tests passed
+PASSED property-candidate.test.js (0.21s)
+property-candidate tests passed
+PASSED property-detail-query-planner.test.js (0.16s)
+property-detail query planner tests passed
+PASSED property-leverage-dossier.test.js (0.72s)
+{
+  "property_without_contact": "PROPERTY_READY",
+  "positive_thin_equity": "UNKNOWN",
+  "large_equity": "UNKNOWN",
+  "tx_property_state": "NEEDS_COMPS"
+}
+PASSED provenance.test.js (0.13s)
+provenance tests passed
+PASSED public-parcel-owner-lookup.test.js (0.16s)
+public parcel owner lookup tests passed
+PASSED public-record-browser-lookup.test.js (0.32s)
+public record browser lookup tests passed
+(node:36772) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED railway-no-listing-egress.test.js (0.88s)
+{"before":{"row_count":3,"contact_verified_count":3,"call_ready_count":3,"outreach_ready_count":0,"listing_host_contact_verified_count":3,"listing_radar_accepted_count":0,"listing_radar_rejected_count":0},"after":{"row_count":3,"contact_verified_count":0,"call_ready_count":0,"outreach_ready_count":0,"listing_host_contact_verified_count":0,"listing_radar_accepted_count":0,"listing_radar_rejected_count":0,"listing_radar_skip_code":"LISTING_EGRESS_DISABLED"}}
+railway-no-listing-egress: E1-E16 ok
+PASSED record-activity-routes.test.js (1.10s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+Record routes: admin/no-write reads, explicit idempotent metadata assignment, mixed interaction import and one canonical transition row passed.
+PASSED record-activity-ui.test.js (16.14s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+Full-page record UI: references, card timelines, Activity filters, shared search and JSONL at 1366/400/412; no writes, external sources or page errors.
+PASSED record-activity.test.js (0.23s)
+Record metadata: stable references, conflicts/exhaustion, immutable history, reported interactions, redacted read model and purity passed.
+PASSED reviewed-deal-routes.test.js (0.74s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+Reviewed-deal routes: admin guards, no-write reads/previews/drafts, owned import, pending-only deal saves, explicit writes passed.
+PASSED reviewed-deals.test.js (0.24s)
+Reviewed deals: strict comps, pending/approved, ceilings/spread, JV rules, expiration/history, unsafe input and purity passed.
+PASSED run-tests-node-resolution.test.js (3.30s)
+run-tests-node-resolution: all assertions passed
+PASSED screenshot-comp-evidence.test.js (0.30s)
+screenshot comp evidence tests passed
+(node:34648) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED search-provider-fallback.test.js (0.32s)
+search provider fallback tests passed
+PASSED search-snippet-evidence-conversion.test.js (0.35s)
+search snippet evidence conversion tests passed
+PASSED selected-deal-packet-service.test.js (0.31s)
+selected deal packet service tests passed
+PASSED serper-free-query-mode.test.js (0.16s)
+serper free query mode tests passed
+PASSED serper-provider-execution-diagnostics.test.js (0.18s)
+serper provider execution diagnostics tests passed
+PASSED server-call-ready-preview.test.js (0.32s)
+server call-ready preview tests passed
+PASSED server-free-public-deal-board-preview.test.js (1.04s)
+server free public deal board preview tests passed
+(node:4000) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED source-acquisition-engine.test.js (0.36s)
+source-acquisition-engine tests passed
+PASSED source-evidence-recovery.test.js (0.18s)
+source evidence recovery tests passed
+PASSED tx-bexar-county-free-lookup-profile.test.js (0.13s)
+Bexar county free lookup profile tests passed
+PASSED tx-county-foreclosure-adapter.test.js (1.20s)
+tx county foreclosure adapter tests passed
+(node:39984) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASSED zillow-fsbo-direct-detail-discovery.test.js (0.28s)
+zillow fsbo direct detail discovery tests passed
+SUMMARY passed=134 failed=0 skipped=0 total=134

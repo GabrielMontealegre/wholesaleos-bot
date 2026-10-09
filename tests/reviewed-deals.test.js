@@ -13,7 +13,8 @@ function build() { return deals.ingest({ buyers: [buyer], leads: [{ id: 'keep' }
 function action(store, input, time = now) { return deals.update(store, 'deal1', input, { now: time, operatorId: 'operator' }); }
 const original = build(); const saved = JSON.stringify(original);
 assert.strictEqual(deals.evaluate(original.reviewed_deals[0], [buyer], now).value.tier, 'Not established');
-assert.strictEqual(deals.evaluate(original.reviewed_deals[0], [buyer], now).matches.length, 0, 'pending deals cannot match');
+assert.strictEqual(deals.evaluate(original.reviewed_deals[0], [buyer], now).matches.length, 1, 'pending deals can show approved geographic buyer candidates (#304)');
+assert.strictEqual(deals.evaluate(original.reviewed_deals[0], [buyer], now).jv_eligible, false, 'geographic matches do not approve a pending deal');
 assert.throws(() => action(original, { action: 'approve' }), /review_required/);
 let store = action(original, { action: 'approve', reviewed_comps: true });
 let evaluation = deals.evaluate(store.reviewed_deals[0], [buyer], now);

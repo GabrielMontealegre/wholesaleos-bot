@@ -12,6 +12,8 @@ const STATUS_LABELS = { found: 'Found', vetted: 'Vetted', holder_confirmed: 'Hol
 const FIELDS = new Set(['kind', 'deal_kind', 'platform', 'source_url', 'address', 'zip', 'city', 'county', 'state', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'property_type', 'latitude', 'longitude', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'comps', 'arv_range', 'arv_tier', 'closing_date', 'auction_date', 'posted_at', 'captured_at', 'holder_contact', 'drafted_message', 'jv_split', 'verdict', 'verdict_reason', 'county_url']);
 const COMP_FIELDS = new Set(['comp_address', 'sold_status', 'sold_price', 'last_list_price', 'sold_date', 'source_url', 'evidence_text', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'property_type', 'latitude', 'longitude', 'price_basis']);
 FIELDS.add('ref');
+FIELDS.add('title_company');
+const UPDATE_FIELDS = new Set(['comps','latitude','longitude','jv_split','closing_date','title_company','holder_contact','verdict_reason']);
 function fail(code, status = 400) { const e = new Error(code); e.code = code; e.status = status; throw e; }
 function text(value, max = 300, required = false) {
   if (value == null && !required) return '';
@@ -43,7 +45,7 @@ function validate(item, now) {
     address: text(item.address, 250, true), city: text(item.city, 80, true), county: text(item.county, 80), state: text(item.state, 2, true).toUpperCase(), zip: text(item.zip, 5, true),
     property_type: text(item.property_type, 60), captured_at: instant(item.captured_at, now, true), posted_at: instant(item.posted_at, now),
     closing_date: date(item.closing_date), auction_date: date(item.auction_date), drafted_message: text(item.drafted_message, 600),
-    verdict: text(item.verdict, 20), verdict_reason: text(item.verdict_reason, 300), claimed_arv_tier: text(item.arv_tier, 40), ref: activity.ref(item.ref) };
+    verdict: text(item.verdict, 20), verdict_reason: text(item.verdict_reason, 300), title_company: text(item.title_company, 160), claimed_arv_tier: text(item.arv_tier, 40), ref: activity.ref(item.ref) };
   if (!/^[A-Z]{2}$/.test(out.state) || !/^\d{5}$/.test(out.zip) || !require('../research/property-identity').isCompleteAddress(out.address)) fail('find_deal_address_invalid');
   for (const k of ['beds', 'baths', 'sqft', 'year_built', 'lot_size', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'jv_split']) out[k] = number(item[k]);
   for (const k of ['latitude', 'longitude']) { out[k] = item[k] == null ? null : item[k]; if (out[k] != null && (typeof out[k] !== 'number' || !Number.isFinite(out[k]) || Math.abs(out[k]) > (k === 'latitude' ? 90 : 180))) fail('find_deal_number_invalid'); }
@@ -65,7 +67,59 @@ function validate(item, now) {
   });
   return out;
 }
+function validateDealUpdate(store, input, now) {
+  const metadata = new Set(['kind','ref','source_url','captured_at','evidence_text']);
+  if (!input || typeof input !== 'object' || Array.isArray(input) || input.kind !== 'deal_update' || Object.keys(input).some(k => !metadata.has(k) && !UPDATE_FIELDS.has(k))) fail('find_deal_update_invalid');
+  if (Buffer.byteLength(JSON.stringify(input)) > limits.MAX_ITEM_BYTES) fail('find_item_too_large',413);
+  const reference = activity.ref(input.ref);
+  if (!reference || !/^WOS-/.test(reference)) fail('find_deal_reference_required');
+  const records = (store.reviewed_deals || []).filter(d => activity.reference(d) === reference);
+  if (!records.length) fail('find_deal_not_found',404);
+  if (records.length !== 1) fail('find_deal_reference_ambiguous',409);
+  const original = records[0];
+  const keys = Object.keys(input).filter(k => UPDATE_FIELDS.has(k));
+  if (!keys.length) fail('find_deal_update_empty');
+  const base = Object.fromEntries(Object.entries(original).filter(([k]) => FIELDS.has(k)));
+  base.kind = 'deal'; base.ref = reference;
+  base.comps = (original.comps || []).map(c => Object.fromEntries(Object.entries(c).filter(([k]) => COMP_FIELDS.has(k))));
+  const supplied = Object.fromEntries(keys.map(k => [k,input[k]]));
+  if (input.holder_contact) supplied.holder_contact = { ...original.holder_contact, ...input.holder_contact };
+  const validated = validate({ ...base, ...supplied },now);
+  return { kind:'deal_update', ref:reference, source_url:url(input.source_url,true), captured_at:instant(input.captured_at,now,true),
+    evidence_text:text(input.evidence_text,600,true), ...Object.fromEntries(keys.map(k => [k,validated[k]])) };
+}
+function applyDealUpdate(store, input, context) {
+  const patch = validateDealUpdate(store,input,context.now);
+  const index = store.reviewed_deals.findIndex(d => activity.reference(d) === patch.ref);
+  const original = store.reviewed_deals[index]; const deal = { ...original };
+  const changes = [];
+  for (const key of UPDATE_FIELDS) {
+    if (!Object.hasOwn(patch,key) || JSON.stringify(original[key] ?? null) === JSON.stringify(patch[key])) continue;
+    changes.push({ field:key, old_value:original[key] ?? null, new_value:patch[key] }); deal[key] = patch[key];
+  }
+  if (!changes.length) return { store, results:[{id:deal.id,result:'duplicate'}] };
+  if (changes.some(c => Date.parse(original.field_provenance?.[c.field]?.captured_at || '') > Date.parse(patch.captured_at))) fail('find_deal_update_stale',409);
+  if (changes.some(c => c.field === 'comps')) {
+    for (const [field,value] of [['approval','pending'],['evidence_reviewed_at',''],['evidence_reviewed_by','']]) {
+      if (deal[field] !== value) changes.push({field,old_value:deal[field] ?? null,new_value:value});
+    }
+    deal.approval='pending'; deal.evidence_reviewed_at=''; deal.evidence_reviewed_by='';
+  }
+  const provenance = { source_kind:'operator_submitted_source',source_url:patch.source_url,captured_at:patch.captured_at,evidence_text:patch.evidence_text };
+  deal.field_provenance = { ...original.field_provenance };
+  for (const change of changes.filter(c => UPDATE_FIELDS.has(c.field))) deal.field_provenance[change.field] = { ...provenance };
+  deal.history = (original.history || []).concat({action:'facts_updated',at:context.now,operator_id:context.operatorId,changes, ...provenance});
+  const rows=store.reviewed_deals.slice();rows[index]=deal;
+  const updated=activity.recordEvent({...store,reviewed_deals:rows},'deal',deal.id,'document_added','Source-backed deal update: '+changes.map(c=>c.field.replace(/_/g,' ')).join(', ')+'.',context,
+    {changes, ...provenance, history_origin:'deal:'+deal.id+':'+(deal.history.length-1)});
+  return {store:updated,results:[{id:deal.id,result:'updated'}]};
+}
 function ingest(store, items, { now, operatorId, createId }) {
+  if (items.some(item=>item.kind==='deal_update')) {
+    let updated=store; const results=[];
+    for (const item of items) { const result=item.kind==='deal_update'?applyDealUpdate(updated,item,{now,operatorId}):ingest(updated,[item],{now,operatorId,createId});updated=result.store;results.push(...result.results); }
+    return {store:updated,results};
+  }
   const deals = (store.reviewed_deals || []).slice(); const results = [];
   for (const item of items) {
     const existing = deals.find(d => d.source_url === item.source_url && addresses.subjectAddress({ address: d.address }).toLowerCase() === item.address.toLowerCase());
@@ -108,41 +162,62 @@ function compValue(deal, now) {
 }
 function ceiling(buyer, value, repairs) {
   const box = buyer.assistant_find && buyer.assistant_find.buy_box || {};
-  const percent = String(box.pct_arv || '').trim().match(/^(\d{1,2}(?:\.\d+)?)\s*%$/);
+  const percent = percentageRule(box.pct_arv);
+  if (!value.range || box.pct_arv && (!percent || repairs == null) || box.all_in_max > 0 && repairs == null) return null;
   const bounds = [box.price_max, buyer.maxPrice].filter(n => typeof n === 'number' && Number.isFinite(n) && n > 0);
   if (repairs != null && box.all_in_max > 0) bounds.push(box.all_in_max - repairs);
-  if (percent && repairs != null && value.range) bounds.push(value.range.low * Number(percent[1]) / 100 - repairs);
+  if (percent && repairs != null && value.range) bounds.push(value.range.low * percent.low / 100 - repairs);
   if (!bounds.length) return null;
   const max = Math.min(...bounds); return max > 0 ? Math.round(max) : null;
+}
+function percentageRule(input) {
+  const match = String(input || '').trim().match(/^(\d{1,2}(?:\.\d+)?)\s*%?\s*(?:[-\u2013]\s*(\d{1,2}(?:\.\d+)?))?\s*%$/);
+  if (!match) return null;
+  const low = Number(match[1]); const high = Number(match[2] || match[1]);
+  return low > 0 && high >= low && high < 100 ? { low, high, label: low === high ? low + '% of ARV' : low + '-' + high + '% of ARV (low end used)' } : null;
+}
+function buyerChecks(box, deal) {
+  const checks = [];
+  for (const [field, label] of [['construction','Construction'],['flood','Flood requirement'],['rehab_tolerance','Rehab tolerance']]) {
+    if (box[field]) checks.push(label + ': ' + box[field] + ' - confirm');
+  }
+  for (const note of box.exclusions || []) checks.push('Buyer excludes ' + note + ': confirm');
+  const requestedFlood = String(box.flood || '').trim().match(/^(?:flood\s*(?:zone\s*)?|zone\s*)?(X|AE|A|VE|V)$/i);
+  const actualFlood = String(deal.flood_zone || '').trim().toUpperCase();
+  return { checks, conflict: !!(requestedFlood && /^(X|AE|A|VE|V)$/.test(actualFlood) && requestedFlood[1].toUpperCase() !== actualFlood) };
 }
 function evaluate(deal, buyers, now) {
   const value = compValue(deal, now); const asking = deal.asking_price > 0 ? deal.asking_price : deal.starting_bid > 0 ? deal.starting_bid : null;
   const matches = [];
   for (const buyer of buyers || []) {
-    if (deal.approval !== 'approved') continue;
     if (!addresses.buyerEligible(buyer)) continue;
     if (!buyer.assistant_find && buyer.approval !== 'approved') continue;
     const normalized = buyer.assistant_find ? buyer : { ...buyer, assistant_find: { approval: 'approved', classification: 'end_buyer', states: buyer.states || (buyer.state ? [buyer.state] : []), areas: buyer.cities || [], buy_box: { types: buyer.buyTypes || [], price_max: buyer.maxPrice } } };
     const box = normalized.assistant_find.buy_box || {};
-    if (box.pct_arv && !/^(?:[1-9]\d?(?:\.\d+)?)\s*%$/.test(String(box.pct_arv).trim())) continue;
+    const percentage = percentageRule(box.pct_arv);
+    if (box.pct_arv && !percentage) continue;
     if (!(box.state || normalized.assistant_find.states && normalized.assistant_find.states.length) || !(box.areas && box.areas.length || normalized.assistant_find.areas && normalized.assistant_find.areas.length || box.zips && box.zips.length)) continue;
     // Geography/type fit is separate from the ceiling; above-ceiling deals remain negotiable.
     const geographic = { ...normalized, assistant_find: { ...normalized.assistant_find, buy_box: { ...box } } };
     delete geographic.assistant_find.buy_box.price_min; delete geographic.assistant_find.buy_box.price_max;
     const fit = buyerFit.fitLead(geographic, { state: deal.state, city: deal.city, county: deal.county, zip: deal.zip, property_type: deal.property_type });
-    if (!fit.fits || fit.unknown.length) continue;
+    if (!fit.fits || fit.unknown.some(reason => reason !== 'Property type not known')) continue;
+    const checkItems = fit.unknown.map(reason => reason + ' - confirm');
     const numericCriteria = [['beds_min', 'beds', 'min'], ['baths_min', 'baths', 'min'], ['sqft_min', 'sqft', 'min'], ['sqft_max', 'sqft', 'max'], ['year_min', 'year_built', 'min']];
-    if (numericCriteria.some(([k, fact, direction]) => box[k] != null && (deal[fact] == null || (direction === 'min' ? deal[fact] < box[k] : deal[fact] > box[k])))) continue;
-    if (box.arv_min != null && (!value.range || value.range.low < box.arv_min) || box.arv_max != null && (!value.range || value.range.high > box.arv_max)) continue;
-    if (['construction', 'flood', 'rehab_tolerance'].some(k => box[k]) || (box.exclusions || []).length) continue;
+    if (numericCriteria.some(([k, fact, direction]) => box[k] != null && deal[fact] != null && (direction === 'min' ? deal[fact] < box[k] : deal[fact] > box[k]))) continue;
+    numericCriteria.forEach(([k, fact]) => { if (box[k] != null && deal[fact] == null) checkItems.push(fact.replace(/_/g,' ') + ' not known - confirm buyer requirement'); });
+    if (value.range && (box.arv_min != null && value.range.low < box.arv_min || box.arv_max != null && value.range.high > box.arv_max)) continue;
+    if (!value.range && (box.arv_min != null || box.arv_max != null)) checkItems.push('ARV requirement - after comps review');
+    const notes = buyerChecks(box, deal); if (notes.conflict) continue; checkItems.push(...notes.checks);
     const max = ceiling(buyer, value, deal.repair_estimate);
-    if (box.price_min != null && (asking == null || asking < box.price_min || max == null || max < box.price_min)) continue;
-    if (max != null) matches.push({ id: buyer.id, buyer_ref: activity.reference(buyer), name: buyer.name || buyer.assistant_find.name, reasons: fit.reasons, max_price: max, buy_box: box,
+    if (box.price_min != null && (asking != null && asking < box.price_min || max != null && max < box.price_min)) continue;
+    if (max == null) checkItems.push('Buyer maximum - after comps review and repair estimate');
+    matches.push({ id: buyer.id, buyer_ref: activity.reference(buyer), name: buyer.name || buyer.assistant_find.name, reasons: fit.reasons.concat(percentage ? percentage.label : []), check_items: checkItems, max_price: max, buy_box: box,
       source_url: buyer.source_url || buyer.assistant_find && buyer.assistant_find.source_url || '',
-      estimated_spread: asking == null || deal.deal_kind === 'jv' && deal.jv_split == null ? null : { low: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)), high: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)) },
+      estimated_spread: max == null || asking == null || deal.deal_kind === 'jv' && deal.jv_split == null ? null : { low: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)), high: Math.round((max - asking) * (deal.deal_kind === 'jv' ? deal.jv_split : 1)) },
       spread_missing: deal.deal_kind === 'jv' && deal.jv_split == null });
   }
-  matches.sort((a, b) => b.max_price - a.max_price || a.id.localeCompare(b.id));
+  matches.sort((a, b) => (b.max_price ?? -Infinity) > (a.max_price ?? -Infinity) ? 1 : (b.max_price ?? -Infinity) < (a.max_price ?? -Infinity) ? -1 : a.id.localeCompare(b.id));
   const deadline = deal.closing_date || deal.auction_date;
   const posted = deal.posted_at ? Date.parse(deal.posted_at) : NaN;
   const expiry = deal.closing_date || (Number.isFinite(posted) ? new Date(posted + 14 * 86400000).toISOString().slice(0, 10) : '');
@@ -151,16 +226,16 @@ function evaluate(deal, buyers, now) {
   const fresh = Number.isFinite(posted) && Date.parse(now) - posted <= 14 * 86400000 && posted <= Date.parse(now) && (!deal.closing_date || days >= 7);
   const checked = deal.rechecked_at && deal.rechecked_at.slice(0, 10) === now.slice(0, 10);
   const confirmed = deal.holder_confirmed_at && deal.holder_confirmed_at.slice(0, 10) === now.slice(0, 10);
-  const best = matches[0]; const priceFits = asking != null && best && asking <= best.max_price * 1.1;
+  const best = matches[0]; const priceFits = asking != null && best && best.max_price != null && asking <= best.max_price * 1.1;
   const jvReasons = [];
   if (deal.approval !== 'approved') jvReasons.push('Approval required');
   if (!fresh) jvReasons.push('Posted within 14 days and at least 7 days to closing required');
   if (!checked || !confirmed) jvReasons.push('Today\'s recheck and holder availability confirmation required');
   if (!value.range || deal.repair_estimate == null) jvReasons.push('Reviewed comps and a repair estimate required');
-  if (!best) jvReasons.push('Approved buyer with known area and price rule required');
+  if (!best || best.max_price == null) jvReasons.push('Approved buyer with known area and calculated price rule required');
   if (!priceFits) jvReasons.push('Asking must fit the buyer ceiling or be within 10% to negotiate');
   if (expired || ['dead', 'closed'].includes(deal.status)) jvReasons.push('Deal is no longer active');
-  const verdict = expired ? 'STALE' : deal.status === 'dead' || deal.approval === 'rejected' ? 'NO' : !value.range || !best || asking == null || deal.repair_estimate == null ? 'POSSIBLE' : asking <= best.max_price ? 'GOOD' : asking <= best.max_price * 1.1 ? 'POSSIBLE' : 'OVERPRICED';
+  const verdict = expired ? 'STALE' : deal.status === 'dead' || deal.approval === 'rejected' ? 'NO' : !value.range || !best || best.max_price == null || asking == null || deal.repair_estimate == null ? 'POSSIBLE' : asking <= best.max_price ? 'GOOD' : asking <= best.max_price * 1.1 ? 'POSSIBLE' : 'OVERPRICED';
   const introduction_allowed = !!(deal.approval === 'approved' && !expired && deal.status !== 'dead' && checked && confirmed && deal.contract_verified_at && deal.jv_signed_at && !jvReasons.length);
   return { value, matches, asking, deadline, days_to_deadline: days, expires_on: expiry, status: expired && !['dead', 'closed'].includes(deal.status) ? 'expired' : deal.status,
     verdict, verdict_reason: expired ? 'Deadline has passed' : !value.range ? 'Review at least two recent comparable sales' : !best ? 'No approved buyer price rule matches yet' : asking == null ? 'Asking price not supplied' : deal.repair_estimate == null ? 'Repair estimate not supplied' : verdict === 'GOOD' ? 'Asking fits the recorded buyer ceiling' : verdict === 'OVERPRICED' ? 'Asking exceeds the buyer ceiling by more than 10%' : 'Negotiate within 10% of the buyer ceiling',
@@ -168,10 +243,15 @@ function evaluate(deal, buyers, now) {
     next_action: expired ? 'Keep for history; verify whether a new deal exists.' : deal.approval !== 'approved' ? 'Review the source and comps, then approve or reject.' : !value.range ? 'Review the comparable sales.' : deal.deal_kind === 'jv' && !confirmed ? 'Ask the holder whether it is still available.' : !deal.contract_verified_at ? 'Review the contract copy and owner-of-record evidence.' : !deal.jv_signed_at && deal.deal_kind === 'jv' ? 'Have title review the JV terms before signing.' : 'Review the matched buyer and the next recorded stage.' };
 }
 function update(store, id, input, { now, operatorId }) {
-  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message'].includes(k))) fail('find_deal_update_invalid');
+  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message','jv_split'].includes(k))) fail('find_deal_update_invalid');
   const index = (store.reviewed_deals || []).findIndex(d => d.id === id); if (index < 0) fail('find_deal_not_found', 404);
   const deal = { ...store.reviewed_deals[index] }; const from = deal.status; const action = input.action;
   const reason = text(input.reason, 300); const evidenceUrl = url(input.evidence_url);
+  if (action === 'terms') {
+    if (deal.deal_kind !== 'jv' || !evidenceUrl || !reason || input.jv_split == null) fail('find_deal_terms_required');
+    return applyDealUpdate(store,{kind:'deal_update',ref:activity.reference(deal),source_url:evidenceUrl,captured_at:now,evidence_text:reason,jv_split:input.jv_split},{now,operatorId}).store;
+  }
+  if (Object.hasOwn(input,'jv_split')) fail('find_deal_update_invalid');
   if (action === 'approve') { if (input.reviewed_comps !== true) fail('find_deal_review_required', 409); deal.approval = 'approved'; deal.evidence_reviewed_at = now; deal.evidence_reviewed_by = operatorId; }
   else if (action === 'reject') deal.approval = 'rejected';
   else if (action === 'recheck') { if (!evidenceUrl) fail('find_deal_evidence_required'); deal.rechecked_at = now; deal.recheck_url = evidenceUrl; }
@@ -188,7 +268,7 @@ function update(store, id, input, { now, operatorId }) {
     if (input.status !== 'dead' && deal.approval !== 'approved') fail('find_deal_approval_required', 409);
     const required = { holder_confirmed: ['still_available'], contract_verified: ['seller_signature', 'assignable', 'closing_date', 'title_company', 'owner_record_matches'], jv_signed: ['signed', 'contract_interest', 'title_pays_fees'], buyer_committed: ['emd_at_title'], closed: ['title_closed'] }[input.status] || [];
     if (required.length && (!evidenceUrl || !input.checks || Object.keys(input.checks).some(k => !required.includes(k)) || required.some(k => input.checks[k] !== true))) fail('find_deal_checks_required', 409);
-    if (input.status === 'vetted' && (!state.value.range || !state.matches.length || deal.repair_estimate == null)) fail('find_deal_vetting_required', 409);
+    if (input.status === 'vetted' && (!state.value.range || !state.matches.some(m=>m.max_price!=null) || deal.repair_estimate == null)) fail('find_deal_vetting_required', 409);
     if (input.status === 'holder_confirmed') { deal.holder_confirmed_at = now; deal.rechecked_at = now; deal.recheck_url = evidenceUrl; }
     if (input.status === 'contract_verified') deal.contract_verified_at = now;
     if (input.status === 'jv_signed') deal.jv_signed_at = now;
@@ -227,7 +307,7 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
   const rank = { GOOD: 0, POSSIBLE: 1, OVERPRICED: 2, STALE: 3, NO: 4 };
   const spread = d => { const estimate = (d.evaluation.matches[0] || {}).estimated_spread; return estimate ? estimate.low : -Infinity; };
   items.sort((a, b) => rank[a.evaluation.verdict] - rank[b.evaluation.verdict] || (spread(b) > spread(a) ? 1 : spread(b) < spread(a) ? -1 : 0) || (a.evaluation.deadline || '9999').localeCompare(b.evaluation.deadline || '9999') || a.id.localeCompare(b.id));
-  return { items: items.slice(0, 100), counts: { total: all.length, shown: items.length, vetted_today: all.filter(d => d.approval === 'approved' && d.evidence_reviewed_at && d.evidence_reviewed_at.slice(0, 10) === now.slice(0, 10) && d.evaluation.value.range && d.evaluation.matches.length && !['STALE', 'NO'].includes(d.evaluation.verdict)).length, daily_target: 10, jv: all.filter(d => d.evaluation.jv_eligible).length }, status_labels: STATUS_LABELS };
+  return { items: items.slice(0, 100), counts: { total: all.length, shown: items.length, vetted_today: all.filter(d => d.approval === 'approved' && d.evidence_reviewed_at && d.evidence_reviewed_at.slice(0, 10) === now.slice(0, 10) && d.evaluation.value.range && d.repair_estimate != null && d.evaluation.matches.some(m=>m.max_price!=null) && !['STALE', 'NO'].includes(d.evaluation.verdict)).length, daily_target: 10, jv: all.filter(d => d.evaluation.jv_eligible).length }, status_labels: STATUS_LABELS };
 }
 function jvDraft(deal, evaluation) {
   return ['WORKING JV TERM SHEET - NOT A SIGNED AGREEMENT', 'Title company and counsel must review. This draft establishes no ownership, authority or legal compliance.',
@@ -236,4 +316,4 @@ function jvDraft(deal, evaluation) {
     'Fee split proposed: ' + (deal.jv_split == null ? 'Not supplied' : deal.jv_split * 100 + '% to Gabriel'), 'Fees payable by title only at closing.',
     'Closing / expiration: ' + (evaluation.expires_on || 'Not supplied'), 'Buyer earnest money delivered to title: __________________', 'Signatures, date and title approval: __________________'].join('\n');
 }
-module.exports = { validate, ingest, update, evaluate, list, jvDraft, synchronizeMatchReferences, STAGES, STATUS_LABELS };
+module.exports = { validate, validateDealUpdate, ingest, update, evaluate, list, jvDraft, synchronizeMatchReferences, percentageRule, STAGES, STATUS_LABELS };

@@ -8,6 +8,20 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-08 -- #304 matcher + update-by-reference slice IN PROGRESS, ready for release.
+Full suite: 134 passed, 0 failed, 0 skipped; 600s per file; exact durations in
+docs/test-results/issue-304.txt (county-notice acquisition 15.81s; marketplace
+UI 14.01s; new matcher/update test 0.24s). Conservative percentage ranges;
+notes become checks, explicit flood conflicts still exclude; geographic
+candidates do not approve a deal or invent a ceiling. Explicit deal_update
+supports eight whitelisted fields with provenance, old/new audit, preview
+concurrency protection and comp-change review reset. Card JV share is explicit;
+unchecked comp review/incomplete terms show inline errors with zero requests.
+Comp grid, date/contact/auth gates, dependencies and source routing unchanged.
+No production data writes. Live BUY-0005 / WOS-FL-1012 proof pending deploy.
+Broader #304 tab audit is not claimed complete. Next: #288 email fallback, then
+#299 Daily Brief/Log; then #285, #275, #277, #262, #264, #303, #301.
+
 2026-10-08 -- #294 IN PROGRESS: marketplace/mobile core slice DONE in
 [PR #305](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/305), merge
 `85d9a15`. Exact Railway commit deployment succeeded; health 200; marketplace

@@ -15,7 +15,7 @@ const before = JSON.stringify(original);
 const input = { items: [item, { ...item, profile_url: 'https://www.facebook.com/groups/123/user/457/' },
   { ...item, source_url: 'https://private.example.test/' }] };
 const plan = imports.prepareImport(original, input, { now });
-assert.deepStrictEqual(plan.summary.counts, { new_items: 1, duplicates: 1, rejected: 1, bulk_approval_eligible: 1 });
+assert.deepStrictEqual(plan.summary.counts, { new_items: 1, updates: 0, duplicates: 1, rejected: 1, bulk_approval_eligible: 1 });
 assert.strictEqual(JSON.stringify(original), before);
 for (const value of [item.name, item.email, item.profile_url, 'private.example.test']) assert.ok(!JSON.stringify(plan.summary).includes(value));
 assert.throws(() => imports.prepareImport(original, { items: Array(51).fill(item) }, { now }), /find_item_limit/);
@@ -85,7 +85,7 @@ assert.strictEqual(sideEffects, 0);
     assert.strictEqual((await request('commit', commit, 'different-admin')).status, 409);
     assert.strictEqual((await request('commit', { ...commit, actor: 'forged' })).status, 400);
     const saved = await request('commit', commit);
-    assert.deepStrictEqual(saved.body, { created: 1, duplicates: 1, rejected: 1, approved: 1 });
+    assert.deepStrictEqual(saved.body, { created: 1, updated: 0, duplicates: 1, rejected: 1, approved: 1 });
     assert.strictEqual(writes, 1);
     assert.strictEqual(store.buyers[0].assistant_find.history[0].operator_id, 'admin');
     assert.strictEqual((await request('commit', commit)).status, 409);
