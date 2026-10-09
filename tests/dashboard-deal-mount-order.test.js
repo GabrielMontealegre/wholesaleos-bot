@@ -56,7 +56,9 @@ async function proveDashboardOrder({ screenshots = false } = {}) {
     }
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: width === 412 ? 915 : 900 }); await page.goto(base + '/dashboard/');
+      if(width<901)await page.getByRole('button',{name:'Open navigation menu',exact:true}).click();
       await page.getByRole('button', { name: 'Sign out', exact: true }).waitFor();
+      if(width<901)await page.getByRole('button',{name:'Close navigation menu',exact:true}).click();
       await assertOrder('real init at ' + width);
       const beforeHydrate = leadReads;
       await page.evaluate(async () => { await loadLeadsFromAPI({ background: true }); });

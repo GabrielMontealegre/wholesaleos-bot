@@ -4,6 +4,7 @@
 // Remove script tag from index.html to revert to default theme
 (function(){
 'use strict';
+if (document.body && document.body.dataset.wosDesign === 'marketplace') return;
 var css = [
 '/* ── WOS THEME A1: NAVY + GOLD ─────────────────── */'
 ,'body { background: #080f1e !important; color: #94a3b8 !important; }'

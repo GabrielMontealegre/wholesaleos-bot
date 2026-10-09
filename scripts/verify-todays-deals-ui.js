@@ -10,7 +10,7 @@ const saved = JSON.stringify(store); let writes = 0;
 const app = express(); app.use(express.json());
 app.get('/dashboard/glossary.json', (_, res) => setTimeout(() => res.sendFile(path.join(root, 'dashboard/glossary.json')), 250));
 app.use('/dashboard', express.static(path.join(root, 'dashboard')));
-app.get('/', (_, res) => res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNTHETIC DEAL PROOF</title><style>body{background:#080f1e;color:#e2e8f0;margin:0;padding:16px;font:14px Arial}*{box-sizing:border-box}</style><main id="content"></main><script>var APP={page:"todays_deals"};function renderDashboard(){return "<h2>Dashboard</h2>"};function navigate(page){APP.page=page;document.getElementById("content").innerHTML=page==="jv"?renderJV():page==="glossary"?renderGlossary():renderTodaysDeals()}</script><script src="/base-theme.js"></script><script src="/dashboard/wos-theme-a1.js"></script><script src="/dashboard/wos-help.js"></script><script src="/dashboard/wos-todays-deals.js"></script><script>navigate("todays_deals")</script>'));
+app.get('/', (_, res) => res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>SYNTHETIC DEAL PROOF</title><link rel="stylesheet" href="/dashboard/wos-marketplace.css"><style>body{margin:0;padding:16px}*{box-sizing:border-box}</style><body data-wos-design="marketplace"><div id="app"><main id="content"></main></div><script>var APP={page:"todays_deals"};function renderDashboard(){return "<h2>Dashboard</h2>"};function navigate(page){APP.page=page;document.getElementById("content").innerHTML=page==="jv"?renderJV():page==="glossary"?renderGlossary():renderTodaysDeals()}</script><script src="/base-theme.js"></script><script src="/dashboard/wos-theme-a1.js"></script><script src="/dashboard/wos-help.js"></script><script src="/dashboard/wos-todays-deals.js"></script><script>navigate("todays_deals")</script>'));
 app.get('/base-theme.js', (_, res) => { const s = fs.readFileSync(path.join(root, 'dashboard/wos-features.js'), 'utf8'); const start = s.indexOf('(function injectA1Theme(){'); const end = s.indexOf('})();', start); assert.ok(start >= 0 && end > start); res.type('js').send(s.slice(start, end + 5)); });
 app.get('/favicon.ico', (_, res) => res.status(204).end());
 registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s => { store = s; writes++; } }, requireAdmin: (req, res, next) => { req.currentUser = { id: 'fixture-admin' }; next(); }, now: () => now });
@@ -23,8 +23,9 @@ registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s =>
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: width === 412 ? 915 : 900 }); await page.goto(base);
-      await page.locator('.td-card').waitFor(); await page.getByRole('button', { name: 'Explain ARV', exact: true }).first().waitFor();
-      await page.getByText('Open complete deal card', { exact: true }).click();
+      await page.locator('.td-card').waitFor();
+      await page.getByRole('button', { name: 'Open deal', exact: true }).click();
+      await page.getByRole('button', { name: 'Explain ARV', exact: true }).first().waitFor();
       assert.strictEqual(await page.locator('.td-card tbody tr').count(), 3); assert.ok((await page.locator('.td-card').innerText()).includes('$168,250'));
       await page.getByText('Open buyer: Fixture Investor - $168,250', { exact: true }).click();
       assert.ok((await page.locator('.td-card').innerText()).includes('No buyer introduction'));
@@ -33,9 +34,9 @@ registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s =>
       await help.press('Escape'); await help.click(); assert.strictEqual(await help.getAttribute('aria-expanded'), 'true'); await help.click();
       const terms = await page.locator('[data-help-term]').evaluateAll(els => els.map(e => e.dataset.helpTerm)); const glossary = JSON.parse(fs.readFileSync(path.join(root, 'dashboard/glossary.json'))); assert.ok(terms.every(t => glossary[t]));
       assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-      const contrast = await page.locator('.td-card h3').evaluate(e => ({ color: getComputedStyle(e).color, background: getComputedStyle(e.closest('.td-card')).backgroundColor }));
-      assert.strictEqual(contrast.background, 'rgb(12, 20, 34)');
-      assert.strictEqual(await page.locator('.td-filters label').first().evaluate(e => getComputedStyle(e).color), 'rgb(226, 232, 240)');
+      const contrast = await page.locator('.td-card h3:visible').evaluate(e => ({ color: getComputedStyle(e).color, background: getComputedStyle(e.closest('.td-card')).backgroundColor }));
+      assert.strictEqual(contrast.background, 'rgb(255, 255, 255)');
+      assert.strictEqual(await page.locator('.td-filters label').first().evaluate(e => getComputedStyle(e).color), 'rgb(23, 23, 23)');
       await page.getByRole('heading', { name: /Today's Deals/ }).click();
       await page.screenshot({ path: path.join(output, 'synthetic-deal-' + width + '.png'), fullPage: true });
       await page.evaluate(() => navigate('jv')); await page.locator('.td-card').waitFor(); assert.strictEqual(await page.locator('.td-card').count(), 1);

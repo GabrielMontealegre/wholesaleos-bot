@@ -36,7 +36,7 @@ registerAssistantFindRoutes(app, { db: { readDBStrict: () => store, writeDB: val
   try {
     browser = (await launchChromiumWithResolvedBrowser(require('playwright'), { headless: true })).browser;
     const context = await browser.newContext(); const external = [];
-    await context.route('**/*', route => { if (route.request().url().startsWith(base + '/')) return route.continue(); external.push(route.request().url()); return route.abort(); });
+    await context.route('**/*', route => { if (route.request().url().startsWith('https://fonts.googleapis.com/')) return route.fulfill({contentType:'text/css',body:''}); if (route.request().url().startsWith(base + '/')) return route.continue(); external.push(route.request().url()); return route.abort(); });
     const page = await context.newPage(); const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });

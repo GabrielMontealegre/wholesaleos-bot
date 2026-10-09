@@ -1,0 +1,482 @@
+[
+  {
+    "page": "dashboard",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 360,
+    "bodyWidth": 360,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "dashboard",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 393,
+    "bodyWidth": 393,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "dashboard",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 400,
+    "bodyWidth": 400,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "dashboard",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 412,
+    "bodyWidth": 412,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "dashboard",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 1366,
+    "bodyWidth": 1366,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "dashboard",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "todays_deals",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "jv",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "findme_scout",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "buyers_found",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "leads",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "pipeline",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "gmail",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "settings",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  },
+  {
+    "page": "record_activity",
+    "width": 1920,
+    "bodyWidth": 1920,
+    "bad": [],
+    "small": [],
+    "background": "rgb(247, 248, 250)"
+  }
+]

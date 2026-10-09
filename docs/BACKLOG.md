@@ -8,6 +8,18 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-08 -- #294 IN PROGRESS: marketplace/mobile usability release prepared.
+Full suite: 133 passed, 0 failed, 0 skipped; 600s per-file ceiling,
+durations in docs/test-results/issue-294.txt. County-notice acquisition 11.97s;
+actual marketplace UI proof 11.21s. Ten screens checked at 360/393/400/412/1366/1920;
+real hit-area bounds, forms, search, card navigation and no-write assertions.
+Default light palette follows the latest architect comment, superseding Night desk.
+Backend, auth, dependencies and stored records unchanged. No production operation.
+Release/live verification pending; do not treat local fictional screenshots as live inventory.
+Remaining #294 slices: iPhone/WebKit, optional dark toggle, holder-photo intake;
+buyer legitimacy grading belongs to #262 and is not invented here.
+Next authorized order: #304, #288, #299, #285, #275, #277, #262, #264, #303, #301.
+
 2026-10-08 -- #297 DONE ([PR #302](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/302)),
 application merge `9e511ca`. Final suite: 132 passed, 0 failed, 0 skipped;
 per-file durations in docs/test-results/issue-297.txt (actual UI 18.67s,
