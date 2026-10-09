@@ -84,6 +84,10 @@ async function prove({ screenshots = false } = {}) {
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
           assert.strictEqual(await page.locator('.td-card tbody tr').count(),3);
+          await page.locator('[data-deal-action="approve"]').click();
+          assert.ok((await page.locator('[data-deal-error]').innerText()).includes('Nothing was saved.'),'unchecked review must show an inline error without a request');
+          await page.locator('[data-deal-action="terms"]').click();
+          assert.ok((await page.locator('[data-deal-error]').innerText()).includes('holder'),'terms require a source and verbatim operator note');
           await page.locator('[data-deal-back]').click();
         }
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

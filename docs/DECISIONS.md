@@ -164,3 +164,23 @@ ASSUMED: B-05c stores proven-past notice candidates in a separate preview-only m
 ASSUMED: B-05d suppresses only the source-proof fallback for an exact document URL represented by an after-sale candidate, including a mixed document; active property candidates and unrelated proof documents remain — because one document must not create an extra address-less active row when its past notice is already retained in the after-sale lane — 2026-10-02 — https://github.com/GabrielMontealegre/wholesaleos-bot/pull/228 — **architect: confirmed**
 
 ASSUMED: Issue #243 recognizes additional explicit property-address phrases for active notice extraction but leaves the existing three-origin after-sale allowlist unchanged; a complete unlabeled address remains a review candidate with no verified normalized address — because retaining source data must not bypass the stricter property-proof and contact gates — 2026-10-05 — https://github.com/GabrielMontealegre/wholesaleos-bot/issues/243
+
+ASSUMED: #304 exposes approved geographic buyer candidates on pending deals;
+this is a criteria match, never deal approval, contact authority or offer readiness.
+Unknown ceilings/spreads remain null. Percentage ranges use their low end.
+Unstructured notes remain checks; only an explicit recognized flood requirement
+and a different explicit deal flood zone exclude on that note. Known numeric/type
+conflicts still exclude; unknown facts remain checks. Vetted/JV counts still
+require reviewed value and a calculable ceiling -- AGENTS truth precedence and
+the architect's #304 matcher comment -- 2026-10-08.
+
+ASSUMED: #304 uses explicit kind deal_update by an existing unique deal reference,
+not silent duplicate upserts. Its eight whitelisted fields are validated through
+the existing deal/comp validator; source URL, captured time and evidence text
+are mandatory. A preview version protects concurrent edits, and older per-field
+evidence cannot overwrite newer evidence. Changed comps reset approval/review,
+not historical signed stages; same comps and non-comp updates preserve review.
+One append-only activity carries changed old/new values and provenance. Existing
+bulk buyer approval never approves a deal update. Card terms require a real
+operator note/URL; release verification performs no import or terms write --
+AGENTS data preservation and #304 update-by-ref acceptance -- 2026-10-08.
