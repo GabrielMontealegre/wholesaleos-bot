@@ -26,7 +26,7 @@ async function prove({screenshots=false}={}) {
     for(const width of [1366,400,412]) {
       await page.setViewportSize({width,height:width===412?915:900});await page.goto(base+'/dashboard/');await page.locator('.td-card').waitFor();
       assert.ok((await page.locator('.td-card').innerText()).includes('WOS-FL-1031'));
-      await page.evaluate(()=>navigate('todays_deals',null));await page.getByText('Open complete deal card',{exact:true}).click();
+      await page.evaluate(()=>navigate('todays_deals',null));await page.getByRole('button',{name:'Open deal',exact:true}).click();
       const deal=page.locator('.td-card');assert.ok((await deal.innerText()).includes('WOS-FL-1031'));assert.ok((await deal.innerText()).includes('[WOS-FL-1031] Deal enquiry'));
       await deal.locator('details[data-record-timeline] summary').click();await deal.getByText('Operator recorded vetted.',{exact:true}).waitFor();
       await page.getByText('Open buyer: Fixture buyer - $168,250',{exact:true}).click();assert.ok((await deal.innerText()).includes('M-0001'));assert.ok((await deal.innerText()).includes('BUY-0001'));
@@ -41,6 +41,7 @@ async function prove({screenshots=false}={}) {
       if(screenshots && !await page.locator('[data-reference-assign]').isVisible())await page.getByText('Record references',{exact:true}).click();
       if(screenshots)await page.locator('[data-reference-reserve]').scrollIntoViewIfNeeded();
       if(screenshots)await page.screenshot({path:path.join(output,'synthetic-activity-'+width+'.png'),fullPage:true});
+      if(width<901)await page.getByRole('button',{name:'Search references, cities and ZIP codes',exact:true}).click();
       await page.locator('#global-search').fill('BUY-0001');await page.locator('#modal-content [data-search-record]').waitFor();
       await page.locator('#modal-content [data-search-record]').click();await page.locator('.bf-card').waitFor();assert.strictEqual(await page.locator('.bf-card').count(),1);
       await page.locator('.bf-card details[data-record-timeline] summary').click();await page.getByText('Fixture reported interaction; no contact or confirmation.',{exact:true}).waitFor();

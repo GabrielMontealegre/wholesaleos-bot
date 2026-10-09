@@ -43,6 +43,7 @@ let processOutput='';child.stdout.on('data',data=>{processOutput+=String(data);}
     const token=sessions.issueSession({userId:'fixture-admin',role:'admin',scope:'dashboard'},{secret}).token;
     await context.addCookies([{name:'wos_session',value:token,url:base,httpOnly:true,sameSite:'Lax'}]);
     const external=[];await context.route('**/*',route=>{
+      if(route.request().url().startsWith('https://fonts.googleapis.com/'))return route.fulfill({contentType:'text/css',body:''});
       if(route.request().url().startsWith(base+'/'))return route.continue();
       if(route.request().url()==='http://127.0.0.1:8797/helper/status')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,running:false,paired:false})});
       external.push(route.request().url());return route.abort();

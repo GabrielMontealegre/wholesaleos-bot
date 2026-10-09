@@ -43,6 +43,7 @@ app.patch('/api/dashboard/buyers-found/:id', (req, res) => {
     const context = await browser.newContext();
     const external = [];
     await context.route('**/*', (route) => {
+      if (route.request().url().startsWith('https://fonts.googleapis.com/')) return route.fulfill({contentType:'text/css',body:''});
       if (route.request().url().startsWith(base + '/')) return route.continue();
       external.push(route.request().url());
       return route.abort();

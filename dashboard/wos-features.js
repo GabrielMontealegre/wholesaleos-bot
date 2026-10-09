@@ -1,6 +1,7 @@
 (function() {
 // ── A1 THEME: NAVY + GOLD ─────────────────────────────────────────────
 (function injectA1Theme(){
+  if(document.body && document.body.dataset.wosDesign === 'marketplace') return;
   if(document.getElementById('wosA1Theme')) return;
   var st=document.createElement('style');
   st.id='wosA1Theme';

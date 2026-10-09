@@ -1,0 +1,15 @@
+'use strict';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const css = fs.readFileSync(path.join(__dirname, '../dashboard/wos-marketplace.css'), 'utf8');
+const expected = { bg:'#f7f8fa',card:'#ffffff','card-2':'#f2f4f7',line:'#e6e8ec',ink:'#171717',muted:'#5f6672',primary:'#39486f','primary-ink':'#ffffff',good:'#1f7a55','good-bg':'#e3f1ea',warn:'#9a6b00','warn-bg':'#fbf1da',danger:'#c0392b','danger-bg':'#fbe6e3' };
+for (const [key,value] of Object.entries(expected)) assert.ok(css.includes('--'+key+': '+value+';'), 'exact architect token '+key);
+const luminance = color => color.slice(1).match(/../g).map(value => parseInt(value,16)/255).map(value => value<=0.04045 ? value/12.92 : ((value+0.055)/1.055)**2.4).reduce((sum,value,index)=>sum+value*[0.2126,0.7152,0.0722][index],0);
+const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+0.05)/(Math.min(luminance(a),luminance(b))+0.05);
+for (const [foreground,background] of [['ink','card'],['ink','bg'],['muted','card-2'],['primary-ink','primary'],['good','good-bg'],['ink','warn-bg'],['danger','danger-bg']]) assert.ok(contrast(expected[foreground],expected[background])>=4.5, foreground+'/'+background+' must pass AA');
+assert.ok(contrast(expected.warn,expected['warn-bg'])<4.5, 'pin the unsafe warning pair so it is never silently approved');
+const js = fs.readFileSync(path.join(__dirname, '../dashboard/wos-marketplace.js'), 'utf8');
+assert.ok(!/\b(?:fetch|XMLHttpRequest|WebSocket)\b/.test(js), 'presentation must not add network acquisition');
+assert.ok(!/localStorage|sessionStorage|\.value\s*=/.test(js), 'theme never writes stored preferences or field values');
+require('../scripts/verify-marketplace-ui').prove().catch(error => { console.error(error.stack); process.exitCode=1; });

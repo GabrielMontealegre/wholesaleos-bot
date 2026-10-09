@@ -6,6 +6,18 @@ corrects them during review.
 
 ## Gabriel's decisions
 
+ASSUMED: #294 follows the newer 2026-10-08 marketplace design comment: light is
+the default; Night desk/light-toggle persistence is phase 2. Exact approved
+tokens are preserved. Amber-on-amber measures 4.176:1, so warning chips use ink
+text and retain amber border/background; no palette value is changed. Missing
+photos use a labeled neutral placeholder. Buyer legitimacy stays at its existing
+sourced trust label until #262 defines grades; do not invent Gold/Silver/Bronze.
+Compact JV titles withhold the subject street address until the recorded signed
+stage, and calculated room is labeled before fees/split, not an offer. All new
+behavior is presentation/view navigation; backend gates and field values stay
+unchanged -- AGENTS section 3 truth/contrast precedence and latest #294 comment --
+2026-10-08.
+
 ASSUMED: #297's explicit bulk reference operation is capped at 500 assignments,
 defaults to buyers/reviewed deals/existing matches, and does not evaluate new
 matches or expiry. Every deal namespace reserves 1030; supplied reserved references

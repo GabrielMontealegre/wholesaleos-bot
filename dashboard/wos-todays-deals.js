@@ -1,6 +1,6 @@
 'use strict';
 (function (root) {
-  var data = null; var loading = false; var error = ''; var filters = { state: '', county: '', city: '', hidden: false }; var active = '';
+  var data = null; var loading = false; var error = ''; var filters = { state: '', county: '', city: '', hidden: false, price_min: '', price_max: '', beds_min: '', kind: '', verdict: '' }; var active = ''; var previousHidden = false;
   var checks = { holder_confirmed: ['still_available'], contract_verified: ['seller_signature', 'assignable', 'closing_date', 'title_company', 'owner_record_matches'], jv_signed: ['signed', 'contract_interest', 'title_pays_fees'], buyer_committed: ['emd_at_title'], closed: ['title_closed'] };
   var labels = { still_available: 'Holder said it is still available today', seller_signature: 'Seller signature reviewed', assignable: 'Assignment rights reviewed', closing_date: 'Closing date reviewed', title_company: 'Title company reviewed', owner_record_matches: 'Owner of record matches the contract', signed: 'JV signed', contract_interest: 'Contract interest reviewed', title_pays_fees: 'Title pays fees at closing', emd_at_title: 'Earnest money received at title', title_closed: 'Title confirmed closing' };
   var stages = ['found', 'vetted', 'holder_confirmed', 'contract_verified', 'jv_signed', 'buyer_committed', 'closed'];
@@ -11,8 +11,14 @@
   function link(u, label) { if (!/^https:\/\//.test(u || '')) return ''; return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(label) + '</a>'; }
   function card(d) {
     var e = d.evaluation; var best = e.matches[0]; var next = stages[stages.indexOf(d.status) + 1];
-    return '<article class="td-card" data-deal-id="' + esc(d.id) + '"><p>' + esc(d.record_ref || 'Reference pending') + '</p><div class="td-heading"><h3>' + esc(d.address) + '</h3><span>' + esc(e.verdict) + tip('Verdict') + '</span></div>' +
+    var signed = d.deal_kind !== 'jv' || ['jv_signed','buyer_committed','closed'].includes(d.status);
+    var location = [d.city, d.state, d.zip].filter(Boolean).join(', ') || 'Location not supplied';
+    var title = signed ? d.address : location;
+    var room = best && e.asking != null ? best.max_price - e.asking : null;
+    var facts = [d.beds == null ? 'Beds unknown' : d.beds + ' beds', d.baths == null ? 'Baths unknown' : d.baths + ' baths', d.sqft == null ? 'Size unknown' : d.sqft + ' sq ft', d.year_built == null ? 'Year unknown' : d.year_built, e.value.tier === 'Not established' ? 'Value not established' : e.value.tier + ' value'].map(function(value) { return '<span>' + esc(value) + '</span>'; }).join('');
+    return '<article class="td-card' + (active === d.id ? ' td-open-view' : '') + '" data-deal-id="' + esc(d.id) + '"><div class="td-summary"><div class="td-property-media"><span aria-hidden="true">\u2302</span><p>' + esc(location) + '</p><small>Photo not supplied</small></div><p class="td-reference">' + esc(d.record_ref || 'Reference pending') + '</p><div class="td-heading"><h3>' + esc(title) + '</h3><span>' + esc(e.verdict) + tip('Verdict') + '</span></div><p class="td-asking">' + money(e.asking) + '</p><div class="td-fact-chips">' + facts + '</div><dl class="td-compact-math"><div><dt>ARV</dt><dd>' + range(e.value.range) + '</dd></div><div><dt>Buyer max</dt><dd>' + money(best && best.max_price) + '</dd></div><div><dt>Room</dt><dd class="' + (room != null && room >= 10000 ? 'td-room-good' : '') + '">' + money(room) + '</dd></div></dl><small>Room is before fees and any JV split; not an offer.</small><p>' + esc(d.deal_kind === 'jv' ? 'JV' : d.deal_kind.replace('_', ' ')) + ' | ' + esc(e.verdict_reason) + '</p><button type="button" data-deal-open>Open deal</button></div><div class="td-detail"><button type="button" data-deal-back>Back to results</button><p>' + esc(d.record_ref || 'Reference pending') + '</p><div class="td-heading"><h3>' + esc(title) + '</h3><span>' + esc(e.verdict) + tip('Verdict') + '</span></div>' +
       (d.email_subject ? '<p>Email subject: ' + esc(d.email_subject) + '</p>' : '') +
+      (!signed ? '<p>Property address is withheld until the JV is signed.</p>' : '') +
       '<p>' + esc(e.verdict_reason) + '</p><dl class="td-math"><div><dt>Our ARV ' + tip('ARV') + '</dt><dd>' + range(e.value.range) + ' (' + esc(e.value.tier) + ')</dd></div><div><dt>Holder\'s claimed ARV</dt><dd>' + money(d.claimed_arv) + '</dd></div><div><dt>Buyer max ' + tip('Buyer max') + '</dt><dd>' + money(best && best.max_price) + '</dd></div><div><dt>Asking / starting bid</dt><dd>' + money(e.asking) + '</dd></div><div><dt>Estimated spread ' + tip('Spread') + '</dt><dd>' + (best && !best.spread_missing ? range(best.estimated_spread) : 'Split or price rule not supplied') + '</dd></div><div><dt>Deadline ' + tip('Deadline') + '</dt><dd>' + esc(e.deadline || 'Not stated') + (e.days_to_deadline == null ? '' : ' (' + esc(e.days_to_deadline) + ' days)') + '</dd></div></dl>' +
       '<p>' + esc(d.deal_kind === 'jv' ? 'JV' : d.deal_kind.replace('_', ' ')) + tip('JV') + ' | ' + esc(d.approval) + tip('Approval') + ' | ' + esc((data.status_labels || {})[e.status] || e.status) + tip('JV status') + '</p><p>Next: ' + esc(e.next_action) + '</p>' +
       (d.state === 'FL' ? '<p class="td-caution">Only your own contract interest can be marketed; fees are paid by the title company at closing. Florida foreclosure owners: review foreclosure-rescue requirements with counsel.</p>' : '') +
@@ -29,12 +35,19 @@
       (next && e.status !== 'expired' && !['closed', 'dead'].includes(d.status) ? '<fieldset><legend>Next recorded step: ' + esc((data.status_labels || {})[next]) + '</legend>' + (checks[next] || []).map(function (k) { return '<label><input type="checkbox" data-check="' + k + '"> ' + labels[k] + '</label>'; }).join('') + '<button data-deal-action="status" data-status="' + next + '">Record next step</button></fieldset>' : '') +
       '<button data-deal-action="status" data-status="dead">Mark deal dead</button><p>Nothing is contacted, confirmed or signed until you explicitly record the real action.</p>' +
       (root.wosRecordTimeline ? root.wosRecordTimeline('deal', d.id, d.record_ref) : '') +
-      (d.deal_kind === 'jv' && !e.jv_eligible ? '<p>Not in JV tab: ' + esc(e.jv_reasons.join('; ')) + '</p>' : '') + '</details></article>';
+      (d.deal_kind === 'jv' && !e.jv_eligible ? '<p>Not in JV tab: ' + esc(e.jv_reasons.join('; ')) + '</p>' : '') + '</details></div>' + (active === d.id ? '<div class="td-card-footer"><button type="button" data-deal-action="copy">Copy message</button>' + link(d.source_url,'Open source') + '<button type="button" data-review-steps>Review steps</button></div>' : '') + '</article>';
   }
   function markup(jv) {
-    var counts = data && data.counts || {}; var items = (data && data.items || []).filter(function (d) { return (!filters.record_id || d.id === filters.record_id) && (!jv || d.evaluation.jv_eligible); });
+    var counts = data && data.counts || {}; var items = (data && data.items || []).filter(function (d) {
+      if ((filters.record_id && d.id !== filters.record_id) || (jv && !d.evaluation.jv_eligible)) return false;
+      if (filters.kind && d.deal_kind !== filters.kind || filters.verdict && d.evaluation.verdict !== filters.verdict) return false;
+      if (filters.price_min && (d.evaluation.asking == null || d.evaluation.asking < Number(filters.price_min))) return false;
+      if (filters.price_max && (d.evaluation.asking == null || d.evaluation.asking > Number(filters.price_max))) return false;
+      if (filters.beds_min && (d.beds == null || d.beds < Number(filters.beds_min))) return false;
+      return true;
+    });
     return '<section id="wos-todays-deals" class="td-page"><h2>' + (jv ? 'JV' : 'Today\'s Deals') + tip(jv ? 'JV' : 'Today’s Deals') + '</h2><p>' + esc(error) + '</p><div class="td-counts"><span>Vetted today: ' + esc(counts.vetted_today == null ? 'Not measured' : counts.vetted_today) + ' / 10 ' + tip('Daily target') + '</span><span>Eligible JV: ' + esc(counts.jv == null ? 'Not measured' : counts.jv) + tip('JV') + '</span><span>Submitted: ' + esc(counts.total == null ? 'Not measured' : counts.total) + tip('Import') + '</span></div>' +
-      '<div class="td-filters">' + ['state', 'county', 'city'].map(function (k) { return '<label>' + k[0].toUpperCase() + k.slice(1) + '<input data-deal-filter="' + k + '" value="' + esc(filters[k]) + '" maxlength="80"></label>'; }).join('') + '<label><input type="checkbox" data-deal-filter="hidden"' + (filters.hidden ? ' checked' : '') + '> Include expired and rejected</label><button data-deal-reload>Apply filters</button><button data-open-deal-import>Import buyers or deals</button><button data-open-glossary>Glossary</button></div>' +
+      '<details class="td-filter-bar" open><summary>Filters</summary><div class="td-filters">' + ['state', 'county', 'city'].map(function (k) { return '<label>' + k[0].toUpperCase() + k.slice(1) + '<input data-deal-filter="' + k + '" value="' + esc(filters[k]) + '" maxlength="80"></label>'; }).join('') + ['price_min','price_max','beds_min'].map(function(k) { return '<label>' + ({price_min:'Minimum price',price_max:'Maximum price',beds_min:'Minimum bedrooms'})[k] + '<input type="number" min="0" data-deal-filter="' + k + '" value="' + esc(filters[k]) + '"></label>'; }).join('') + '<label>Deal kind<select data-deal-filter="kind"><option value="">All kinds</option>' + Array.from(new Set((data && data.items || []).map(function(d) { return d.deal_kind; }))).map(function(k) { return '<option value="' + esc(k) + '"' + (filters.kind===k?' selected':'') + '>' + esc(k==='jv'?'JV':k.replace(/[_-]/g,' ')) + '</option>'; }).join('') + '</select></label><label>Verdict<select data-deal-filter="verdict"><option value="">All verdicts</option>' + ['GOOD','POSSIBLE','NO'].map(function(k) { return '<option' + (filters.verdict===k?' selected':'') + '>' + k + '</option>'; }).join('') + '</select></label><label><input type="checkbox" data-deal-filter="hidden"' + (filters.hidden ? ' checked' : '') + '> Include expired and rejected</label><button data-deal-reload>Apply filters</button><button data-open-deal-import>Import buyers or deals</button><button data-open-glossary>Glossary</button></div></details>' +
       '<p>' + (loading ? 'Loading deals...' : !items.length ? jv ? 'No JV deal meets all freshness, evidence and approved-buyer rules yet.' : 'No deals submitted yet. The daily target is not met; nothing is generated to fill it.' : 'Showing ' + items.length + ' of ' + counts.shown) + '</p><div class="td-grid">' + items.map(card).join('') + '</div></section>';
   }
   function isJV() { return typeof APP !== 'undefined' && APP.page === 'jv'; }
@@ -46,10 +59,13 @@
   }
   root.renderTodaysDeals = function () { setTimeout(load, 0); return markup(false); };
   root.renderJV = function () { setTimeout(load, 0); return markup(true); };
-  root.openReviewedDeal = function(id) { filters.record_id=id;filters.hidden=true;active=id;root.navigate('todays_deals',null); };
+  root.openReviewedDeal = function(id) { if(!filters.record_id)previousHidden=filters.hidden;filters.record_id=id;filters.hidden=true;active=id;root.navigate('todays_deals',null); };
   var dashboard = root.renderDashboard; root.renderDashboard = function () { return root.renderTodaysDeals() + dashboard(); };
   document.addEventListener('change', function (e) { if (e.target.matches('[data-deal-filter]')) { filters.record_id=''; filters[e.target.dataset.dealFilter] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; } });
   document.addEventListener('click', function (e) {
+    var open = e.target.closest('[data-deal-open]'); if(open) { root.openReviewedDeal(open.closest('[data-deal-id]').dataset.dealId); return; }
+    if(e.target.closest('[data-deal-back]')) { filters.record_id='';filters.hidden=previousHidden;active='';root.navigate('todays_deals',null);return; }
+    if(e.target.closest('[data-review-steps]')) { var fieldset=e.target.closest('[data-deal-id]').querySelector('fieldset');if(fieldset)fieldset.scrollIntoView({block:'start'});return; }
     var generate=e.target.closest('[data-jv-generate]');
     if(generate) {
       generate.disabled=true;var id=generate.closest('[data-deal-id]').dataset.dealId;
