@@ -8,14 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-08 -- #294 IN PROGRESS: marketplace/mobile usability release prepared.
+2026-10-08 -- #294 IN PROGRESS: marketplace/mobile core slice DONE in
+[PR #305](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/305), merge
+`85d9a15`. Exact Railway commit deployment succeeded; health 200; marketplace
+v1 and Today v3 served. Read-only live checks: 12,039 records hydrated,
+100 lead rows, a lead card opened and closed. Ten screens checked at 1366/400/412;
+phone control bounds and 44px hit targets passed; no current-release console errors.
+Three desktop Leads actions remain in the existing horizontal scroll wrapper,
+accessible by scrolling (not claimed as zero offscreen controls). Broader table
+scroll guidance remains in #294. Production header-only before/after screenshots
+exclude personal data; full local images are labeled fictional test data.
+Actual Today counts: one submitted (WOS-FL-1012), zero vetted today, zero eligible JV.
 Full suite: 133 passed, 0 failed, 0 skipped; 600s per-file ceiling,
 durations in docs/test-results/issue-294.txt. County-notice acquisition 11.97s;
 actual marketplace UI proof 11.21s. Ten screens checked at 360/393/400/412/1366/1920;
 real hit-area bounds, forms, search, card navigation and no-write assertions.
 Default light palette follows the latest architect comment, superseding Night desk.
 Backend, auth, dependencies and stored records unchanged. No production operation.
-Release/live verification pending; do not treat local fictional screenshots as live inventory.
+No production data written; do not treat local fictional screenshots as live inventory.
 Remaining #294 slices: iPhone/WebKit, optional dark toggle, holder-photo intake;
 buyer legitimacy grading belongs to #262 and is not invented here.
 Next authorized order: #304, #288, #299, #285, #275, #277, #262, #264, #303, #301.

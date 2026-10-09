@@ -1,0 +1,387 @@
+{
+  "commit": "85d9a15b951c94c5fdb52a6e6ef9ba5ddd524ea7",
+  "measurements": [
+    {
+      "page": "dashboard",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Dashboard",
+      "width": 1366
+    },
+    {
+      "page": "dashboard",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Dashboard",
+      "width": 400
+    },
+    {
+      "page": "dashboard",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Dashboard",
+      "width": 412
+    },
+    {
+      "page": "todays_deals",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Today's Deals",
+      "width": 1366
+    },
+    {
+      "page": "todays_deals",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Today's Deals",
+      "width": 400
+    },
+    {
+      "page": "todays_deals",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Today's Deals",
+      "width": 412
+    },
+    {
+      "page": "jv",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "JV",
+      "width": 1366
+    },
+    {
+      "page": "jv",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "JV",
+      "width": 400
+    },
+    {
+      "page": "jv",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "JV",
+      "width": 412
+    },
+    {
+      "page": "findme_scout",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Deal Finder",
+      "width": 1366
+    },
+    {
+      "page": "findme_scout",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Deal Finder",
+      "width": 400
+    },
+    {
+      "page": "findme_scout",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Deal Finder",
+      "width": 412
+    },
+    {
+      "page": "buyers_found",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Buyers found",
+      "width": 1366
+    },
+    {
+      "page": "buyers_found",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Buyers found",
+      "width": 400
+    },
+    {
+      "page": "buyers_found",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Buyers found",
+      "width": 412
+    },
+    {
+      "page": "leads",
+      "bad": [
+        {
+          "id": "",
+          "left": 1641,
+          "right": 1700,
+          "tag": "BUTTON"
+        },
+        {
+          "id": "",
+          "left": 1641,
+          "right": 1700,
+          "tag": "BUTTON"
+        },
+        {
+          "id": "",
+          "left": 1641,
+          "right": 1700,
+          "tag": "BUTTON"
+        }
+      ],
+      "body": 1366,
+      "small": [],
+      "title": "Leads",
+      "width": 1366
+    },
+    {
+      "page": "leads",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Leads",
+      "width": 400
+    },
+    {
+      "page": "leads",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Leads",
+      "width": 412
+    },
+    {
+      "page": "pipeline",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Pipeline",
+      "width": 1366
+    },
+    {
+      "page": "pipeline",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Pipeline",
+      "width": 400
+    },
+    {
+      "page": "pipeline",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Pipeline",
+      "width": 412
+    },
+    {
+      "page": "gmail",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Email",
+      "width": 1366
+    },
+    {
+      "page": "gmail",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Email",
+      "width": 400
+    },
+    {
+      "page": "gmail",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Email",
+      "width": 412
+    },
+    {
+      "page": "settings",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Settings",
+      "width": 1366
+    },
+    {
+      "page": "settings",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Settings",
+      "width": 400
+    },
+    {
+      "page": "settings",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Settings",
+      "width": 412
+    },
+    {
+      "page": "record_activity",
+      "bad": [],
+      "body": 1366,
+      "small": [],
+      "title": "Activity",
+      "width": 1366
+    },
+    {
+      "page": "record_activity",
+      "bad": [],
+      "body": 400,
+      "small": [],
+      "title": "Activity",
+      "width": 400
+    },
+    {
+      "page": "record_activity",
+      "bad": [],
+      "body": 412,
+      "small": [],
+      "title": "Activity",
+      "width": 412
+    }
+  ],
+  "note": "Three desktop lead-table actions lie in an existing horizontal overflow:auto wrapper and are accessible by scrolling; phone control bounds pass. Header-only screenshots exclude record bodies.",
+  "screenshots": [
+    {
+      "page": "dashboard",
+      "width": 1366
+    },
+    {
+      "page": "dashboard",
+      "width": 400
+    },
+    {
+      "page": "dashboard",
+      "width": 412
+    },
+    {
+      "page": "todays_deals",
+      "width": 1366
+    },
+    {
+      "page": "todays_deals",
+      "width": 400
+    },
+    {
+      "page": "todays_deals",
+      "width": 412
+    },
+    {
+      "page": "jv",
+      "width": 1366
+    },
+    {
+      "page": "jv",
+      "width": 400
+    },
+    {
+      "page": "jv",
+      "width": 412
+    },
+    {
+      "page": "findme_scout",
+      "width": 1366
+    },
+    {
+      "page": "findme_scout",
+      "width": 400
+    },
+    {
+      "page": "findme_scout",
+      "width": 412
+    },
+    {
+      "page": "buyers_found",
+      "width": 1366
+    },
+    {
+      "page": "buyers_found",
+      "width": 400
+    },
+    {
+      "page": "buyers_found",
+      "width": 412
+    },
+    {
+      "page": "leads",
+      "width": 1366
+    },
+    {
+      "page": "leads",
+      "width": 400
+    },
+    {
+      "page": "leads",
+      "width": 412
+    },
+    {
+      "page": "pipeline",
+      "width": 1366
+    },
+    {
+      "page": "pipeline",
+      "width": 400
+    },
+    {
+      "page": "pipeline",
+      "width": 412
+    },
+    {
+      "page": "gmail",
+      "width": 1366
+    },
+    {
+      "page": "gmail",
+      "width": 400
+    },
+    {
+      "page": "gmail",
+      "width": 412
+    },
+    {
+      "page": "settings",
+      "width": 1366
+    },
+    {
+      "page": "settings",
+      "width": 400
+    },
+    {
+      "page": "settings",
+      "width": 412
+    },
+    {
+      "page": "record_activity",
+      "width": 1366
+    },
+    {
+      "page": "record_activity",
+      "width": 400
+    },
+    {
+      "page": "record_activity",
+      "width": 412
+    }
+  ]
+}
