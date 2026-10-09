@@ -8,7 +8,15 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-08 -- #304 matcher + update-by-reference slice IN PROGRESS, ready for release.
+2026-10-08 -- #304 requested matcher + update-by-reference group DONE in
+[PR #306](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/306), merge
+`8999b0f`. Exact Railway deployment succeeded; health 200; Today v4 and buyer
+v6 served. ACTUAL WOS-FL-1012 detail visibly matches BUY-0005 at 1366/400/412;
+rehab/structural notes are checks, max price remains unknown. All three comps
+still reject as strict_grid_distance_not_applied; no ARV was invented.
+Actual counts: 1 submitted, 0 vetted today, 0 eligible JV. 12,039 records
+hydrated, 100 lead rows and a lead card opened/closed. Console errors: zero.
+Privacy-safe live buyer-reference crops contain no buyer name/contact/address.
 Full suite: 134 passed, 0 failed, 0 skipped; 600s per file; exact durations in
 docs/test-results/issue-304.txt (county-notice acquisition 15.81s; marketplace
 UI 14.01s; new matcher/update test 0.24s). Conservative percentage ranges;
@@ -18,9 +26,12 @@ supports eight whitelisted fields with provenance, old/new audit, preview
 concurrency protection and comp-change review reset. Card JV share is explicit;
 unchecked comp review/incomplete terms show inline errors with zero requests.
 Comp grid, date/contact/auth gates, dependencies and source routing unchanged.
-No production data writes. Live BUY-0005 / WOS-FL-1012 proof pending deploy.
+No production data writes, import, approval, terms save, outreach or confirmation.
 Broader #304 tab audit is not claimed complete. Next: #288 email fallback, then
 #299 Daily Brief/Log; then #285, #275, #277, #262, #264, #303, #301.
+Overall first-deal readiness is not re-scored; PLAN's approximate 35% baseline
+is not a measured completion percentage. BUY-0005 matching is real progress,
+not a completed valuation or closed deal. #288 is the next active item.
 
 2026-10-08 -- #294 IN PROGRESS: marketplace/mobile core slice DONE in
 [PR #305](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/305), merge
