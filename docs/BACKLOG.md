@@ -8,6 +8,20 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-08 -- #288 mailbox-read slice IN PROGRESS. App Password preference,
+real Inbox/replies and Sent, localized folders, admin-only Test connection,
+honest status and text-only MIME display implemented. Two pinned maintained
+mail clients; Node minimum 20+. No send/draft/write/label/activity job enabled.
+Final full suite: 135 passed, 0 failed, 0 skipped; 600s per-file limit;
+county-notice acquisition 10.23s, mailbox tests 3.93s, full UI 14.27s.
+Two self-review fixes: missing-label status and constructor slot cleanup.
+No existing safety assertion changed. Final results in
+docs/test-results/issue-288-email-read.txt; read-only live verification pending.
+No production email/credential read during building, no variable/billing change,
+batch, capture, outreach, evidence confirmation or database mutation.
+Assumption and trace: docs/email-mailbox-read.md, DECISIONS.md. Next after this
+slice: #299 Daily Brief/Log in Gabriel's order; wider #288 send/draft work remains.
+
 2026-10-08 -- #304 requested matcher + update-by-reference group DONE in
 [PR #306](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/306), merge
 `8999b0f`. Exact Railway deployment succeeded; health 200; Today v4 and buyer

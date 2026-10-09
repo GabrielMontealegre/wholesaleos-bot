@@ -188,3 +188,14 @@ One append-only activity carries changed old/new values and provenance. Existing
 bulk buyer approval never approves a deal update. Card terms require a real
 operator note/URL; release verification performs no import or terms write --
 AGENTS data preservation and #304 update-by-ref acceptance -- 2026-10-08.
+
+ASSUMED: #288 is split into a mailbox-read release first. Configured App Password
+is preferred over the known expired Google login; absent App Password, Google
+login remains available. Inbox/replies, Sent and connection checks perform only
+admin read-only operations; missing labels are reported, never created. MIME
+HTML is displayed as plain text. No send, draft APPEND, deletion, activity sync
+or scheduler is enabled. D-046's explicit-send phase remains later work.
+Maintained clients imapflow 2.3.0 / mailparser 3.9.37 are pinned and require
+Node 20+, so engines follows that minimum; prior dependencies unchanged.
+This avoids a hand-written protocol/parser and fabricated connection claims --
+AGENTS truth/security precedence and #288's phased acceptance -- 2026-10-08.
