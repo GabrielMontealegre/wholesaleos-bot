@@ -8,7 +8,18 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-08 -- #288 mailbox-read slice IN PROGRESS. App Password preference,
+2026-10-08 -- #288 mailbox-read slice DONE in
+[PR #311](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/311), merge
+`5354556`. Exact Railway deploy succeeded; health 200; Email reader v1 served.
+ACTUAL Email/Settings: Connected (App Password); Test connection succeeded;
+30 Inbox and 30 Sent rows displayed (page counts, not mailbox totals or a
+claim of 30 seller replies). No contents/identities copied into reports.
+Desktop/400/412: no page overflow, Test target 44px high, no error message.
+One startup saved-leads HTTP502 recovered on a fresh load; 12,039 records,
+100 lead rows and card opening confirmed; zero fresh-load console errors.
+Unauthenticated and identity-only email test requests returned 401.
+Privacy-safe status crops: docs/screens/2026-10-08-email-read/.
+App Password preference,
 real Inbox/replies and Sent, localized folders, admin-only Test connection,
 honest status and text-only MIME display implemented. Two pinned maintained
 mail clients; Node minimum 20+. No send/draft/write/label/activity job enabled.
@@ -16,8 +27,9 @@ Final full suite: 135 passed, 0 failed, 0 skipped; 600s per-file limit;
 county-notice acquisition 10.23s, mailbox tests 3.93s, full UI 14.27s.
 Two self-review fixes: missing-label status and constructor slot cleanup.
 No existing safety assertion changed. Final results in
-docs/test-results/issue-288-email-read.txt; read-only live verification pending.
-No production email/credential read during building, no variable/billing change,
+docs/test-results/issue-288-email-read.txt; read-only live verification passed.
+No live mail accessed during building; verification read metadata only.
+No credential exposed, variable/billing change,
 batch, capture, outreach, evidence confirmation or database mutation.
 Assumption and trace: docs/email-mailbox-read.md, DECISIONS.md. Next after this
 slice: #299 Daily Brief/Log in Gabriel's order; wider #288 send/draft work remains.
