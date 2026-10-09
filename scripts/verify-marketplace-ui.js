@@ -30,6 +30,9 @@ function createFixtureApp() {
   app.get('/api/dashboard/record-refs', (_, res) => res.json({ missing: { leads: 0, buyers: 0, deals: 0, matches: 0 }, deal_reserve: records.sequenceFloorStatus(store) }));
   app.get('/api/dashboard/research-queue/current', (_, res) => res.json({ ok: true, market: { city: 'Fixture city', county: 'Fixture county', state: 'FL' }, rows: [], batches: [], auto_run: { enabled: false }, preview_only: true, not_a_saved_lead: true, manual_evidence_packet: { items: [{ queue_key: 'fixture-packet', address: '100 Example St, Example City, FL 00000', address_state: 'needs_source_proof', subject_address_verified_for_research: false, preview_only: true, not_a_saved_lead: true, packet: {}, discovery: { call_ready: false, call_blocked_reason: 'Synthetic research-only fixture', gap_ledger: [], questions: [{ field: 'condition_detail', wording: 'What condition is the property in?', why: 'Fixture question', useful_answer: 'Recorded answer only', follow_up: 'Fixture follow-up' }] } }] } }));
   app.get('/api/gmail/inbox', (_, res) => res.json({ messages: [], connected: false, error: 'Fixture email is not connected' }));
+  app.get('/api/gmail/test',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)'}));
+  app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
+  app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
   app.get('/api/*', (_, res) => res.json([]));
   app.get('/favicon.ico', (_, res) => res.status(204).end());
   app.get('/dashboard/', (_, res) => res.type('html').send(fs.readFileSync(path.join(root, 'dashboard/index.html'), 'utf8').replace('<title>Montsan REI', '<title>SYNTHETIC LOCAL FIXTURE - Montsan REI').replace('<body data-wos-design="marketplace">','<body data-wos-design="marketplace"><div style="position:fixed;bottom:0;right:0;padding:4px 8px;background:var(--primary);color:var(--primary-ink);font:12px Arial;z-index:10001;pointer-events:none;">LOCAL TEST DATA</div>')));
@@ -74,6 +77,16 @@ async function prove({ screenshots = false } = {}) {
         if (['dashboard','todays_deals','jv'].includes(name)) await page.locator('.td-card').first().waitFor();
         if (name === 'buyers_found') await page.locator('.bf-card').first().waitFor();
         if (name === 'record_activity') await page.locator('[data-reference-reserve]').waitFor({ state: 'attached' });
+        if (name === 'gmail') {
+          await page.locator('[data-email-message]').waitFor();
+          await page.locator('[data-email-test]').click();
+          await page.locator('[data-email-status]').filter({hasText:'Connected (App Password)'}).waitFor();
+          assert.strictEqual(await page.locator('#email-reader img').count(),0,'mail subject HTML cannot execute');
+          await page.locator('[data-email-message]').click();
+          await page.getByText('Fixture text <script>alert(1)</script>',{exact:true}).waitFor();
+          assert.strictEqual(await page.locator('#email-reader script').count(),0,'message body is text only');
+          await page.locator('[data-email-back]').click();
+        }
         if (name === 'dashboard') {
           await page.locator('.wos-discovery-value').waitFor({state:'attached'});
           await page.locator('.wos-discovery-value').scrollIntoViewIfNeeded();

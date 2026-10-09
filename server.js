@@ -3518,85 +3518,7 @@ function getGmailTransport() {
   return { oauth2, user };
 }
 
-app.get('/api/gmail/test', async (req, res) => {
-  const vars = { clientId: !!process.env.GMAIL_CLIENT_ID, clientSecret: !!process.env.GMAIL_CLIENT_SECRET, refreshToken: !!process.env.GMAIL_REFRESH_TOKEN, user: process.env.GMAIL_USER };
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.json({ ok: false, vars, error: 'Missing variables' });
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    const profile = await gmail.users.getProfile({ userId: 'me' });
-    res.json({ ok: true, email: profile.data.emailAddress, messagesTotal: profile.data.messagesTotal, vars });
-  } catch(e) { res.json({ ok: false, error: e.message, vars }); }
-});
-
-app.get('/api/gmail/inbox', async (req, res) => {
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    const list = await gmail.users.messages.list({ userId: 'me', maxResults: 20, labelIds: ['INBOX'] });
-    const messages = await Promise.all((list.data.messages||[]).map(async (m) => {
-      const msg = await gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From','Subject','Date'] });
-      const headers = msg.data.payload.headers;
-      const get = (name) => (headers.find(h=>h.name===name)||{value:''}).value;
-      return { id: m.id, threadId: msg.data.threadId, from: get('From'), subject: get('Subject'), date: get('Date'), snippet: msg.data.snippet, unread: (msg.data.labelIds||[]).includes('UNREAD') };
-    }));
-    res.json({ messages });
-  } catch(e) { res.status(503).json({ error: e.message }); }
-});
-
-app.get('/api/gmail/message/:id', async (req, res) => {
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.status(503).json({ error: 'Gmail not configured' });
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    const msg = await gmail.users.messages.get({ userId: 'me', id: req.params.id, format: 'full' });
-    const headers = msg.data.payload.headers;
-    const get = (name) => (headers.find(h=>h.name===name)||{value:''}).value;
-
-    // Recursively extract body from potentially nested multipart messages
-    function extractBody(payload) {
-      if (!payload) return '';
-      // Direct body data (non-multipart)
-      if (payload.body && payload.body.data) {
-        const decoded = Buffer.from(payload.body.data, 'base64').toString('utf-8');
-        if (payload.mimeType === 'text/html') {
-          // Strip HTML tags for plain text display
-          return decoded.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                        .replace(/<br\s*\/?>/gi, '\n')
-                        .replace(/<\/p>/gi, '\n\n')
-                        .replace(/<\/div>/gi, '\n')
-                        .replace(/<[^>]+>/g, '')
-                        .replace(/&nbsp;/g, ' ')
-                        .replace(/&amp;/g, '&')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .replace(/&quot;/g, '"')
-                        .replace(/\n{3,}/g, '\n\n')
-                        .trim();
-        }
-        return decoded;
-      }
-      // Multipart: recurse into parts, prefer text/plain
-      if (payload.parts && payload.parts.length) {
-        const plainPart = payload.parts.find(p => p.mimeType === 'text/plain');
-        if (plainPart) return extractBody(plainPart);
-        const htmlPart = payload.parts.find(p => p.mimeType === 'text/html');
-        if (htmlPart) return extractBody(htmlPart);
-        // Recurse into nested multipart (multipart/alternative, multipart/related, etc.)
-        for (const part of payload.parts) {
-          const result = extractBody(part);
-          if (result) return result;
-        }
-      }
-      return '';
-    }
-
-    const body = extractBody(msg.data.payload) || '(No readable content in this email)';
-    res.json({ id: msg.data.id, threadId: msg.data.threadId, from: get('From'), subject: get('Subject'), date: get('Date'), body });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+require('./modules/email/mailbox-reader').registerMailboxReads(app, { requireAdmin });
 
 app.post('/api/gmail/send', serverSendDisabled);
 
@@ -3621,30 +3543,6 @@ app.post('/api/gmail/delete-bulk', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// Get messages list by folder
-app.get('/api/gmail/messages', async (req, res) => {
-  try {
-    const cfg = getGmailTransport();
-    if (!cfg) return res.json({ messages: [], error: 'Gmail not configured' });
-    const folder = req.query.folder || 'inbox';
-    const limit = parseInt(req.query.limit) || 20;
-    const labelMap = { inbox: 'INBOX', sent: 'SENT', drafts: 'DRAFT', starred: 'STARRED' };
-    const label = labelMap[folder] || 'INBOX';
-    const gmail = google.gmail({ version: 'v1', auth: cfg.oauth2 });
-    const listRes = await gmail.users.messages.list({ userId: 'me', labelIds: [label], maxResults: limit });
-    const messages = listRes.data.messages || [];
-    // Fetch metadata for each message
-    const details = await Promise.all(messages.slice(0,limit).map(async m => {
-      try {
-        const msg = await gmail.users.messages.get({ userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From','To','Subject','Date'] });
-        const get = (name) => (msg.data.payload.headers.find(h=>h.name===name)||{value:''}).value;
-        const isRead = !msg.data.labelIds.includes('UNREAD');
-        return { id: m.id, from: get('From'), to: get('To'), subject: get('Subject'), date: get('Date'), snippet: msg.data.snippet, read: isRead };
-      } catch(e) { return { id: m.id, subject: '(error loading)', snippet: e.message, read: true }; }
-    }));
-    res.json({ ok: true, messages: details });
-  } catch(e) { res.json({ ok: false, messages: [], error: e.message }); }
-});
 
 app.post('/api/gmail/reply', serverSendDisabled);
 
