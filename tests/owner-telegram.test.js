@@ -13,6 +13,7 @@ async function main(){
  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});try{const base='http://127.0.0.1:'+server.address().port;assert.equal((await fetch(base+'/api/notify/telegram',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"text":"Fixture"}'})).status,403);
  const headers={'x-fixture-role':'admin','Content-Type':'application/json'};const count=calls;assert.equal((await fetch(base+'/api/notify/telegram/status',{headers})).status,200);assert.equal((await fetch(base+'/api/notify/telegram/brief',{headers})).status,200);assert.equal(calls,count,'read-only checks must not send');
  assert.equal((await fetch(base+'/api/notify/telegram',{method:'POST',headers,body:JSON.stringify({text:'Fixture',chat_id:'other-recipient'})})).status,400);
+ const daily=await fetch(base+'/api/daily-summary',{method:'POST',headers,body:'{}'});assert.equal((await daily.json()).success,true,'legacy success field reports actual mock delivery');
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
  console.log('Owner Telegram: fixed recipient, missing config, cap/rate, safe failures/logs, incoming direction, admin and no-send GETs passed.');
 }
