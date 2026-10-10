@@ -20,8 +20,14 @@ errors. Legacy hot-alert failure reporting is sanitized; its scoring/behavior
 otherwise remains unchanged. No caller confirmation of a contact or deal is
 inferred from an imported report or notification receipt.
 
-Focused mock tests cover missing config, fixed recipient, limit/cap, upstream
+Mock tests cover missing config, fixed recipient, limit/cap, upstream
 failure/redaction, explicit direction, admin access/no-send GETs, preview quiet,
 post-persistence callback, duplicate quiet and failure isolation. Existing import
-and send-disabled focused suites passed. Full suite and remaining edge coverage
-are pending, so the PR stays draft and must not merge/deploy yet.
+and send-disabled suites passed. Full suite: 141 passed, 0 failed, 0 skipped,
+600s/file; durations in docs/test-results/issue-307-telegram.txt. Notification
+links use exact record references and the existing signed admin search/open path;
+malformed/ambiguous refs cannot open another card. Real-document proof covers
+1366/400/412. Display caps never become false aggregate totals. Closed/declined
+records are suppressed, future/tied interactions cannot invent a reply, and the
+brief omits private identities. Live verification remains read-only, with no
+delivery claim from merely configured variables.

@@ -8,6 +8,17 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307D release gates GREEN in PR #316, live verification pending.
+Full suite 141 passed, 0 failed, 0 skipped, 600s/file; exact durations:
+docs/test-results/issue-307-telegram.txt. Owner-only sender/admin route, quiet
+read-only diagnostics, reply-import failure isolation/idempotence, UTC-7 schedule
+under unchanged enable guard, real reviewed value/counts, closed-record suppression,
+privacy and tested card deep links at 1366/400/412. No live send or import.
+No comp/contact/date/auth safety rule or dependency changed. #315 architect
+answer received: #301 is re-scoped government-first and back in the queue;
+Brock & Scott remains disabled. Publisher terms/access verdicts must be recorded.
+Current order: finish #307, #301 government slice1, #299, #313.
+
 2026-10-10 -- #310 already DONE. #301 first-publisher permission hold #315
 still OPEN with no architect answer; no source access/ingestion repeated.
 #307 sliceD advanced in draft PR #316: fixed-owner sender, capped admin notify

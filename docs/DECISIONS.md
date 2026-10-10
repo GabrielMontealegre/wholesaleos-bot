@@ -221,3 +221,18 @@ Use restriction on copying/redistribution. No finding of an explicit automation
 ban is made. Obtain written permission or choose an expressly permitted source;
 architect/legal choice recorded in #315. Do not reinterpret the restriction or
 contact the publisher automatically -- AGENTS sections3/5/10 -- 2026-10-10.
+
+ASSUMED: #307D preserves the existing background-ingestion enable guard for
+scheduled owner briefings; it does not turn on collection or change variables.
+Read-only diagnostics distinguish configured from delivery-tested and expose
+the schedule guard honestly. Owner notifications are not seller/buyer outreach;
+the destination is fixed in existing configuration. No real send is used as a
+release test. A committed import cannot be reported failed because its alert
+failed, and duplicate imports cannot notify again -- #307 acceptance and AGENTS
+truth/security precedence -- 2026-10-10.
+
+Architect #315 answer, 2026-10-10: #301 slice1 may proceed government-primary
+sources first (NC court access check, then official county notice sources).
+Only the first private publisher stays blocked; do not block the entire kind.
+Every enabled publisher needs terms URL/date/clause/verdict, plus access checks;
+unclear restrictions/login/CAPTCHA are recorded and skipped, never bypassed.
