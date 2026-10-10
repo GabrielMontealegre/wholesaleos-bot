@@ -199,3 +199,16 @@ Maintained clients imapflow 2.3.0 / mailparser 3.9.37 are pinned and require
 Node 20+, so engines follows that minimum; prior dependencies unchanged.
 This avoids a hand-written protocol/parser and fabricated connection claims --
 AGENTS truth/security precedence and #288's phased acceptance -- 2026-10-08.
+
+ASSUMED: #310 enables D-051 only in operator-reviewed deal value evaluation.
+The shared grid accepts a service-supplied reviewed/count context, never a stored
+row or imported comp flag. Official/screenshot callers without that context keep
+their one-mile default and existing rural exception. Both passes use the same
+rejection/provenance logic; only distance-only failures enter the wider pass.
+Comp exclusions bind the full submitted-fact fingerprint and require an admin's
+written reason; a changed comp or stale card is rejected. Existing exclusions
+and append-only history survive updates; no real exclusion or approval is made
+during verification. Any wider-area price band is Preliminary; Texas last-list
+prices remain explicitly labeled, never promoted to recorded sales -- because
+D-051 authorizes only this distance exception, and data truth outranks a larger
+comp count -- 2026-10-10.

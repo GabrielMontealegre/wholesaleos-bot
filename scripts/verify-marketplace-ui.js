@@ -10,13 +10,15 @@ const records = require('../modules/records/record-activity');
 const { fixture, now } = require('../tests/reviewed-deals.test');
 const root = path.resolve(__dirname, '..');
 const pages = ['dashboard','todays_deals','jv','findme_scout','buyers_found','leads','pipeline','gmail','settings','record_activity'];
-function createFixtureApp() {
+function createFixtureApp({wider=false}={}) {
   const context = { now, operatorId: 'fixture-admin' };
   let store = { users: [{ id: 'fixture-admin', name: 'SYNTHETIC ADMIN' }], leads: [], buyers: [], activities: [] };
   const buyer = finds.validateItems({ items: [{ name: 'Fixture buyer', platform: 'manual', source_url: 'https://records.example.test/buyer', profile_url: 'https://records.example.test/buyer', what_they_buy: 'Fixture houses', deal_type: 'house', states: ['FL'], areas: ['Tampa'], classification: 'end_buyer', captured_at: now, buy_box: { types: ['house'], pct_arv: '75%', price_max: 200000 } }] }, now)[0];
   store = finds.ingest(store, [buyer], { ...context, createId: () => 'fixture-buyer' }).store;
   store = finds.update(store, 'fixture-buyer', { approval: 'approved' }, context);
-  store = deals.ingest(store, [deals.validate(fixture(), now)], { ...context, createId: () => 'fixture-deal' }).store;
+  const proposal=fixture();
+  if(wider){proposal.comps[1].latitude=proposal.latitude+0.022;proposal.comps[2].latitude=proposal.latitude+0.032;}
+  store = deals.ingest(store, [deals.validate(proposal, now)], { ...context, createId: () => 'fixture-deal' }).store;
   for (const input of [{ action: 'approve', reviewed_comps: true }, { action: 'status', status: 'vetted' }, { action: 'status', status: 'holder_confirmed', evidence_url: fixture().source_url, checks: { still_available: true } }]) store = deals.update(store, 'fixture-deal', input, context);
   const frozen = JSON.stringify(store); let writes = 0;
   const app = express(); app.use(express.json());
@@ -39,8 +41,8 @@ function createFixtureApp() {
   app.use('/dashboard', express.static(path.join(root, 'dashboard')));
   return { app, assertUnchanged() { assert.strictEqual(writes, 0); assert.strictEqual(JSON.stringify(store), frozen); } };
 }
-async function prove({ screenshots = false } = {}) {
-  const fixtureApp = createFixtureApp();
+async function prove({ screenshots = false,wider=false } = {}) {
+  const fixtureApp = createFixtureApp({wider});
   const server = await new Promise(resolve => { const s = fixtureApp.app.listen(0, '127.0.0.1', () => resolve(s)); });
   const base = 'http://127.0.0.1:' + server.address().port;
   let browser; const report = []; const errors = []; const external = [];
@@ -97,6 +99,9 @@ async function prove({ screenshots = false } = {}) {
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
           assert.strictEqual(await page.locator('.td-card tbody tr').count(),3);
+          if(wider){assert.strictEqual(await page.locator('[data-wider-comp]').count(),2);assert.ok((await page.locator('[data-wider-area-label]').innerText()).includes('up to 2.5 miles'));assert.ok((await page.locator('.td-math').innerText()).includes('Preliminary'));}
+          await page.locator('[data-deal-action="exclude_comp"]').first().click();
+          assert.ok((await page.locator('[data-deal-error]').innerText()).includes('written reason'),'an empty exclusion must not send a request');
           await page.locator('[data-deal-action="approve"]').click();
           assert.ok((await page.locator('[data-deal-error]').innerText()).includes('Nothing was saved.'),'unchecked review must show an inline error without a request');
           await page.locator('[data-deal-action="terms"]').click();

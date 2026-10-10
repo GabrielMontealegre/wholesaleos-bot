@@ -8,6 +8,18 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #310 IN PROGRESS, tested and release prepared. D-051 keeps one
+mile as default; a thin reviewed pool can admit up to 2.5 miles with all other
+rules intact and a Preliminary ceiling. Fingerprinted admin exclusions require
+a reason, survive updates and append history/Activity; no submitted sale erased.
+Full suite: 137 passed, 0 failed, 0 skipped; 600s/file; exact durations in
+docs/test-results/issue-310.txt. Config-object expectation gains only D-051's
+two constants; normalized fingerprint repinned, safety assertions retained.
+No source, batch, import, confirmation, contact, variable or billing operation.
+Read-only live verification pending. ASSUMED scope/trace:
+docs/reviewed-wider-area-comps.md and DECISIONS.md.
+Gabriel's current order is #310 -> #307 (D, A, B, C slices) -> #299.
+
 2026-10-08 -- #288 mailbox-read slice DONE in
 [PR #311](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/311), merge
 `5354556`. Exact Railway deploy succeeded; health 200; Email reader v1 served.

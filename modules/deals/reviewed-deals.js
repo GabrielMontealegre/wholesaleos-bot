@@ -6,6 +6,8 @@ const addresses = require('../research/operational-lead-eligibility');
 const buyerFit = require('../buyers/buyer-fit');
 const limits = require('../buyers/assistant-finds');
 const activity = require('../records/record-activity');
+const crypto = require('node:crypto');
+const compConfig = require('../research/strict-comp-grid-config');
 const PLATFORMS = ['facebook-wholesaler', 'xome', 'auction.com', 'hud', 'homepath', 'craigslist', 'county-auction', 'own-lead'];
 const STAGES = ['found', 'vetted', 'holder_confirmed', 'contract_verified', 'jv_signed', 'buyer_committed', 'closed'];
 const STATUS_LABELS = { found: 'Found', vetted: 'Vetted', holder_confirmed: 'Holder confirmed', contract_verified: 'Contract copy verified', jv_signed: 'JV signed', buyer_committed: 'Buyer committed', closed: 'Closed', expired: 'Expired', dead: 'Dead' };
@@ -136,13 +138,18 @@ function ingest(store, items, { now, operatorId, createId }) {
   });
   return { store: updated, results };
 }
+function compReviewKey(comp) {
+  return crypto.createHash('sha256').update(JSON.stringify(Object.fromEntries([...COMP_FIELDS].sort().map(k=>[k,comp[k] ?? null])))).digest('hex');
+}
 function compValue(deal, now) {
-  const reasons = []; const valid = []; const seen = new Set(); let listTier = false;
+  const reasons = []; const valid = []; const seen = new Set(); const distanceOnly = [];
   const row = { normalized_address: deal.address, latitude: deal.latitude, longitude: deal.longitude, property_kind: deal.property_type, living_area: deal.sqft, beds: deal.beds, baths: deal.baths, year_built: deal.year_built, lot_size: deal.lot_size };
   const cutoff = new Date(now); cutoff.setUTCMonth(cutoff.getUTCMonth() - 6);
-  for (const original of deal.comps || []) {
-    const c = { ...original, living_area: original.sqft, property_kind: original.property_type, similarity_basis: 'operator-reviewed strict property grid', source_kind: 'public_web_page', sold_price: original.price_basis === 'texas_last_list_price' ? original.last_list_price : original.sold_price };
+  for (const [submittedIndex,original] of (deal.comps || []).entries()) {
+    const c = { ...original, submitted_index:submittedIndex, living_area: original.sqft, property_kind: original.property_type, similarity_basis: 'operator-reviewed strict property grid', source_kind: 'public_web_page', sold_price: original.price_basis === 'texas_last_list_price' ? original.last_list_price : original.sold_price };
+    const exclusion = (deal.comp_exclusions || []).find(e=>e.comp_key===compReviewKey(original) && e.reason && e.operator_id && e.at);
     let reason = deal.evidence_reviewed_at && deal.evidence_reviewed_by ? '' : 'Operator comp review required';
+    if (exclusion) reason = 'Operator excluded: ' + exclusion.reason;
     const key = c.comp_address.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (!reason && seen.has(key)) reason = 'Duplicate comp';
     if (!reason && (!c.sold_date || c.sold_date < cutoff.toISOString().slice(0, 10) || c.sold_date > now.slice(0, 10))) reason = 'Sale must be within six months';
@@ -152,12 +159,34 @@ function compValue(deal, now) {
     if (!reason && subject.number === comp.number && subject.street === comp.street && subject.city === comp.city && subject.state === comp.state) reason = 'Subject cannot be its own comp';
     if (!reason && require('../research/address-derived-research-links').classifyStoredAddressLink(c.source_url, c.comp_address).status === 'MISMATCH') reason = 'Comp source links to a different property';
     if (!reason && c.price_basis === 'texas_last_list_price' && deal.state !== 'TX') reason = 'List-price tier is Texas only';
-    if (!reason) reason = grid.rejectReason(c, row, { now_iso: now, today_iso: now });
+    if (!reason) {
+      const options = { now_iso: now, today_iso: now };
+      const result = grid.evaluateStrictCompGrid(c,row,options);
+      c.comp_grid=result; c.distance_miles=result.distance_miles; c.area='standard';
+      reason = grid.rejectReason(c, row, options);
+      if (['rural_exception_requires_operator_review','comp_outside_one_mile'].includes(reason) && result.distance_miles > compConfig.max_distance_miles && result.distance_miles <= compConfig.expanded_max_distance_miles &&
+          result.criteria.filter(k=>k.criterion!=='distance').every(k=>k.status==='APPLIED_PASS' || k.status==='NOT_APPLIED' && ['year_built','lot_size'].includes(k.criterion))) {
+        distanceOnly.push({candidate:c,original,key}); continue;
+      }
+    }
     if (reason) { reasons.push({ address: original.comp_address, reason }); continue; }
-    seen.add(key); valid.push(c); if (c.price_basis === 'texas_last_list_price') listTier = true;
+    seen.add(key); valid.push(c);
   }
+  const standardCount=valid.length;
+  for (const item of distanceOnly) {
+    const options={now_iso:now,today_iso:now, ...(standardCount<compConfig.expanded_requires_fewer_than?{expanded_area_review:{standard_pass_count:standardCount,reviewed_by:deal.evidence_reviewed_by,reviewed_at:deal.evidence_reviewed_at}}:{})};
+    const result=grid.evaluateStrictCompGrid(item.candidate,row,options);
+    const candidate={...item.candidate,comp_grid:result,distance_miles:result.distance_miles,area:result.area};
+    const reason=seen.has(item.key)?'Duplicate comp':grid.rejectReason(candidate,row,options);
+    if(reason){reasons.push({address:item.original.comp_address,reason});continue;}
+    seen.add(item.key);valid.push(candidate);
+  }
+  const wider=valid.some(c=>c.area==='wider');
+  const listTier=valid.some(c=>c.price_basis==='texas_last_list_price');
   const prices = valid.map(c => c.sold_price).sort((a, b) => a - b);
-  return { tier: prices.length < 2 ? 'Not established' : listTier ? 'Texas list-price' : prices.length >= 3 ? 'Verified' : 'Preliminary',
+  return { tier: prices.length < 2 ? 'Not established' : wider ? 'Preliminary' : listTier ? 'Texas list-price' : prices.length >= 3 ? 'Verified' : 'Preliminary',
+    price_basis_label:listTier?'Texas last list prices - not recorded sales':null,
+    wider_area_used:wider, area_label:wider?'Wider area: up to 2.5 miles':null,standard_comp_count:standardCount,
     range: prices.length < 2 ? null : { low: prices[0], high: prices[prices.length - 1] }, comps: valid, rejected: reasons };
 }
 function ceiling(buyer, value, repairs) {
@@ -243,7 +272,7 @@ function evaluate(deal, buyers, now) {
     next_action: expired ? 'Keep for history; verify whether a new deal exists.' : deal.approval !== 'approved' ? 'Review the source and comps, then approve or reject.' : !value.range ? 'Review the comparable sales.' : deal.deal_kind === 'jv' && !confirmed ? 'Ask the holder whether it is still available.' : !deal.contract_verified_at ? 'Review the contract copy and owner-of-record evidence.' : !deal.jv_signed_at && deal.deal_kind === 'jv' ? 'Have title review the JV terms before signing.' : 'Review the matched buyer and the next recorded stage.' };
 }
 function update(store, id, input, { now, operatorId }) {
-  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message','jv_split'].includes(k))) fail('find_deal_update_invalid');
+  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message','jv_split','comp_index','comp_key'].includes(k))) fail('find_deal_update_invalid');
   const index = (store.reviewed_deals || []).findIndex(d => d.id === id); if (index < 0) fail('find_deal_not_found', 404);
   const deal = { ...store.reviewed_deals[index] }; const from = deal.status; const action = input.action;
   const reason = text(input.reason, 300); const evidenceUrl = url(input.evidence_url);
@@ -252,6 +281,17 @@ function update(store, id, input, { now, operatorId }) {
     return applyDealUpdate(store,{kind:'deal_update',ref:activity.reference(deal),source_url:evidenceUrl,captured_at:now,evidence_text:reason,jv_split:input.jv_split},{now,operatorId}).store;
   }
   if (Object.hasOwn(input,'jv_split')) fail('find_deal_update_invalid');
+  if (action === 'exclude_comp') {
+    const comp=deal.comps && deal.comps[input.comp_index];
+    if(!Number.isInteger(input.comp_index)||input.comp_index<0||!comp||!reason)fail('find_deal_comp_exclusion_invalid');
+    const key=compReviewKey(comp);if(input.comp_key!==key)fail('find_deal_comp_changed',409);
+    const exclusion={comp_key:key,reason,at:now,operator_id:operatorId,source_url:comp.source_url};
+    deal.comp_exclusions=(deal.comp_exclusions||[]).filter(e=>e.comp_key!==key).concat(exclusion);
+    deal.history=(deal.history||[]).concat({action,at:now,operator_id:operatorId,...exclusion});
+    const rows=store.reviewed_deals.slice();rows[index]=deal;
+    return activity.recordEvent({...store,reviewed_deals:rows},'deal',id,'document_added','Operator excluded a submitted comp: '+reason,{now,operatorId},{comp_key:key,reason,source_url:comp.source_url,history_origin:'deal:'+id+':'+(deal.history.length-1)});
+  }
+  if (Object.hasOwn(input,'comp_index') || Object.hasOwn(input,'comp_key'))fail('find_deal_update_invalid');
   if (action === 'approve') { if (input.reviewed_comps !== true) fail('find_deal_review_required', 409); deal.approval = 'approved'; deal.evidence_reviewed_at = now; deal.evidence_reviewed_by = operatorId; }
   else if (action === 'reject') deal.approval = 'rejected';
   else if (action === 'recheck') { if (!evidenceUrl) fail('find_deal_evidence_required'); deal.rechecked_at = now; deal.recheck_url = evidenceUrl; }
@@ -300,7 +340,7 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
   const all = (store.reviewed_deals || []).map(d => {
     const evaluation = evaluate(d, store.buyers, now);
     evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
-    return { ...d, email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
+    return { ...d, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
   });
   const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.evaluation.jv_eligible) && (includeHidden || !['STALE', 'NO'].includes(d.evaluation.verdict)) &&
     (!state || d.state.toLowerCase() === state.toLowerCase()) && (!county || d.county.toLowerCase().includes(county.toLowerCase())) && (!city || d.city.toLowerCase().includes(city.toLowerCase())));
