@@ -8,6 +8,30 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 D status + A1 conversation/reminder slices released in
+[PR #318](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/318) and
+[PR #319](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/319).
+Application main 46b639a; exact Railway success, health200. Actual home:
+"12 waiting or due; showing 13 of 13 open conversations." Reminders precede
+Today and the public desk; three deal cards hydrated. Leads show 12,039 saved,
+100 loaded; card opened/closed read-only. Desktop1366 and phones400/412:
+no overflow/off-screen conversation controls; no fresh-load console errors.
+Final suite143 passed,0 failed,0 skipped (600s/file); conversations0.20s,
+admin-route0.58s, mount16.62s, mobile14.49s, record-UI16.17s, county-notice10.71s.
+Durations: docs/test-results/issue-307-conversations-final.txt. D suite141 green.
+Live status-only D crops committed; A1 synthetic desktop/phone crops committed
+and explicitly fictional. A1 live count-header screenshot API returned
+"Unable to capture screenshot" twice despite valid bounds: live pixel-artifact
+gap is recorded, not presented as a product error or fictional live proof.
+Telegram configured; delivery untested; scheduled briefing OFF under existing
+background guard. No setting enabled. #307 remains IN PROGRESS: A2 (Gmail
+thread linkage, paired dropbox kind, per-kind email approval/templates and
+brief integration), B stages and C dry-run/reversible triage remain. No new
+deal/value/contact evidence, send, import, batch, confirmation, source access,
+variable or billing operation. No overall completion percentage re-measured.
+Next: finish #307; then #301 government-first, Florida/North Carolina first
+per Gabriel/#315; then #299, #313. ASSUMED A1/A2 split/cadence in DECISIONS.md.
+
 2026-10-10 -- #307D verified live: PR #318, merge 0fc00a3; exact Railway
 success and health200. Settings reports "Telegram configured - delivery not
 tested" and "Scheduled daily briefing is disabled by the existing background

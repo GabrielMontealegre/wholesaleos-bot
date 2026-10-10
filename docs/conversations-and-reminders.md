@@ -35,3 +35,10 @@ source, date, reachability, contact outcome, approval, readiness or auth rule ch
 This is an ordered A1 slice, not all of #307. Gmail thread synchronization,
 email-kind approval counters/templates and the paired dropbox's new-kind extension
 remain A2 work. No production import/message/send is used for verification.
+
+Released PR #319, application merge 46b639a. Full final suite143 passed,
+no failures/skips. Live read-only check:13 open reports,12 waiting/due;
+correct mount order, no400/412 overflow, no fresh console errors, Leads/card
+hydration confirmed. No reported interaction was created for the proof.
+Synthetic crops are labeled fictional. The browser screenshot tool could not
+save the live header crop; the live pixel-artifact gap is explicit in BACKLOG.
