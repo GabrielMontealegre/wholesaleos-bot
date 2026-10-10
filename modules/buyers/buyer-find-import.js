@@ -7,6 +7,14 @@ const conversations = require('../records/conversations');
 const BULK_APPROVAL_CLASSES = new Set(['end_buyer', 'end_buyer_strict', 'end_buyer_stale']);
 function fail(code, status = 400) { const error = new Error(code); error.code = code; error.status = status; throw error; }
 
+function validateAgentItems(body, now) {
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
+  if (Buffer.byteLength(JSON.stringify(body)) > finds.MAX_REQUEST_BYTES) fail('find_request_too_large', 413);
+  if (!Array.isArray(body.items) || !body.items.length || body.items.length > finds.MAX_ITEMS) fail('find_item_limit');
+  return body.items.map(item => item?.kind === 'conversation' ? conversations.validate(item,now) :
+    item?.kind === 'interaction' ? activity.validateInteraction(item,now) : finds.validateItems({items:[item]},now)[0]);
+}
+
 function prepareImport(store, body, { now }) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'items')) fail('find_request_invalid');
   if (Buffer.byteLength(JSON.stringify(body)) > finds.MAX_REQUEST_BYTES) fail('find_request_too_large', 413);
@@ -63,4 +71,4 @@ function ingestMixed(store, items, context) {
   }
   return { store: updated, results };
 }
-module.exports = { prepareImport, commitImport, BULK_APPROVAL_CLASSES };
+module.exports = { prepareImport, commitImport, validateAgentItems, ingestMixed, BULK_APPROVAL_CLASSES };

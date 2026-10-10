@@ -32,9 +32,14 @@ conversations.list reads that collection and activities with injected now;
 conversation-routes and wos-conversations consume the read model. No comp,
 source, date, reachability, contact outcome, approval, readiness or auth rule changes.
 
-This is an ordered A1 slice, not all of #307. Gmail thread synchronization,
-email-kind approval counters/templates and the paired dropbox's new-kind extension
-remain A2 work. No production import/message/send is used for verification.
+This is not all of #307. Gmail thread synchronization and email-kind approval
+counters/templates remain A2 work. The paired write-only dropbox now accepts
+conversation and interaction reports alongside unchanged buyer inputs, using
+the admin import's shared validators/merge. Authentication, scope, caps and
+result-only responses stay unchanged. Mixed failures write nothing. Newly
+appended interactions reach the existing owner-alert hook after persistence;
+duplicates stay quiet and hook failure cannot misreport a successful import.
+No production import/message/send is used for verification.
 
 Released PR #319, application merge 46b639a. Full final suite143 passed,
 no failures/skips. Live read-only check:13 open reports,12 waiting/due;
