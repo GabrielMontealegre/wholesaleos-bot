@@ -8,6 +8,32 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 conversation briefing + Settings Preview briefing released
+in [PR #322](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/322),
+application main4002bd0. Exact Railway success, health200. Authenticated live
+preview GET works; served owner-channel v2. ACTUAL legacy-activity fallback:
+incoming threads7,followups due8,pending buyers8/deals2,reviewed deals with
+calculated buyer ceiling0. Explicit-conversation projection fixture-tested,
+not claimed observed on production. Telegram configured/delivery untested;
+scheduled briefing OFF, unchanged guard. No send/import/batch/confirmation.
+Fresh browser tab solved interaction deadlines; direct API navigation still
+client-blocked, normal Settings GET works with no filter/auth weakening.
+Live400/412: no overflow,44px button inside viewport,preview present; no fresh
+console errors. Leads100 rows hydrated,card opened/closed. Viewport restored.
+Local synthetic desktop/phone crops committed. Live screenshot command timed
+out (CDP Page.captureScreenshot); pixel-artifact gap explicitly retained.
+Final suite146 passed,0 failed,0 skipped,600s/file; brief0.19s,preview0.09s,
+mobile15.51s,county-notice10.29s. Timings:
+docs/test-results/issue-307-brief-preview-release.txt. Initial unrelated
+capture failure not reproduced isolated/subsequent suites; assertion untouched,
+cause not established. Source/auth/comp/readiness code unchanged; exports preserved.
+#321 architect verification accepted and now our live hydration also checked.
+#307 remains IN PROGRESS: Gmail linkage/email approvals/templates,JV stages,
+triage remain. Next finish #307; then government NC/Charlotte,Florida,TX terms
+first (#301/#315),B-21 FL sales (NC needs own source),B-09 deed-backed buyers,
+#299,#288,#313. No overall completion percentage re-measured. Conservative
+brief fallback assumption logged in DECISIONS; no source/gate/dependency change.
+
 2026-10-10 -- #321 resolved by architect independent authenticated Chrome
 read-only check: dashboard/Today load and deal-card opening verified; Leads
 hydration not re-checked this import-only release. No writes/sends. #320 release
