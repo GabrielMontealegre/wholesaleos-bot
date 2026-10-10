@@ -12,7 +12,9 @@ Mark the status here as part of each item's PR.
 assistant dropbox now shares conversation/interaction validation and atomic
 merge with admin import. Same pairing scope,12/hour,50 items,body caps; result
 IDs/statuses only. Reply hook after persistence, duplicate quiet, failure isolated.
-Focused negative route proof passed; full suite/release/live gates pending.
+Focused negative route proof passed; final suite144 passed,0 failed,0 skipped,
+600s/file. Durations: docs/test-results/issue-307-agent-reports.txt.
+Release/live gates pending in PR #320; #307 is not fully DONE.
 No live import, message, batch or evidence confirmation. #307 remains open.
 Gabriel's updated order: finish #307; #301 government foreclosure records
 (NC court/Charlotte, Florida counties, then Texas clerks), each terms checked;
