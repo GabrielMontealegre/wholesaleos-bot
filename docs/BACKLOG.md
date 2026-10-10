@@ -8,6 +8,21 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #310 remains DONE/closed, no new findings. Current main refreshed
+to 1cbc687. #301 slice1 first publisher BLOCKED on commercial-use permission:
+[needs-architect #315](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/315).
+First-party list exposes the expected fields, but Terms of Use restricts copying
+and redistribution to personal noncommercial use without written approval.
+This is not an explicit robots-ban finding or a claim that all NC data is blocked.
+No list rows captured/ingested, pagination, county enrichment, source enablement,
+production batch or outreach. No new deals claimed. Independent #307 sliceD
+is IN PROGRESS: pure briefing builder implemented, focused test passes; no
+network/clock/write side effects. It ignores legacy raw ARV/spread fields and
+future interactions, uses injected UTC-7 local days, and omits private identities.
+Transport/schedule integration, broader negative tests and
+full-suite/release gates remain pending. Order: #301 permission hold -> #307 ->
+#299 -> #313. No overall completion percentage re-measured.
+
 2026-10-10 -- #310 DONE in [PR #314](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/314),
 merge `a1897de`. Exact Railway deployment succeeded; health 200; Today v5.
 Live WOS-FL-1012: three exclusion controls, zero wider comps, value Not established;

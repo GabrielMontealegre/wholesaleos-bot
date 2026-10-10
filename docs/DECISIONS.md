@@ -214,3 +214,10 @@ during verification. Any wider-area price band is Preliminary; Texas last-list
 prices remain explicitly labeled, never promoted to recorded sales -- because
 D-051 authorizes only this distance exception, and data truth outranks a larger
 comp count -- 2026-10-10.
+
+ASSUMED: #301's first publisher is disabled pending permission to reuse its
+material commercially. Public visibility alone does not resolve the Terms of
+Use restriction on copying/redistribution. No finding of an explicit automation
+ban is made. Obtain written permission or choose an expressly permitted source;
+architect/legal choice recorded in #315. Do not reinterpret the restriction or
+contact the publisher automatically -- AGENTS sections3/5/10 -- 2026-10-10.
