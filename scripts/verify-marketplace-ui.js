@@ -35,6 +35,7 @@ function createFixtureApp({wider=false}={}) {
   app.get('/api/gmail/inbox', (_, res) => res.json({ messages: [], connected: false, error: 'Fixture email is not connected' }));
   app.get('/api/gmail/test',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)'}));
   app.get('/api/dashboard/operator-channel-status',(_,res)=>res.json({configured:true,status:'Telegram configured - delivery not tested',schedule:{enabled:false}}));
+  app.get('/api/dashboard/operator-brief',(_,res)=>res.json({text:'SYNTHETIC BRIEFING <script>not executable</script>'}));
   app.get('/api/dashboard/conversations',(_,res)=>res.json({total:1,waiting_count:1,items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['manual'],what_they_said:'Fixture reply',next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'Fixture draft',thread_url:'https://www.messenger.com/t/123',source_kind:'imported_report'}]}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
   app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
@@ -82,7 +83,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
         if (['dashboard','todays_deals','jv'].includes(name)) await page.locator('.td-card').first().waitFor();
         if (name === 'buyers_found') await page.locator('.bf-card').first().waitFor();
         if (name === 'record_activity') await page.locator('[data-reference-reserve]').waitFor({ state: 'attached' });
-        if(name==='settings'){await page.locator('[data-owner-channel-status]').filter({hasText:'delivery not tested'}).waitFor();assert.ok((await page.locator('[data-owner-channel-schedule]').innerText()).includes('disabled'));await page.locator('[data-owner-channel-refresh]').click();}
+        if(name==='settings'){await page.locator('[data-owner-channel-status]').filter({hasText:'delivery not tested'}).waitFor();assert.ok((await page.locator('[data-owner-channel-schedule]').innerText()).includes('disabled'));await page.locator('[data-owner-channel-refresh]').click();await page.locator('[data-owner-brief-preview]').click();await page.locator('[data-owner-brief-text]').filter({hasText:'SYNTHETIC BRIEFING'}).waitFor();assert.strictEqual(await page.locator('#owner-channel-panel script').count(),0,'briefing must be escaped text');}
         if (name === 'gmail') {
           await page.locator('[data-email-message]').waitFor();
           await page.locator('[data-email-test]').click();

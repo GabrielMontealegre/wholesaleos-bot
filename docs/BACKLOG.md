@@ -8,6 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #321 resolved by architect independent authenticated Chrome
+read-only check: dashboard/Today load and deal-card opening verified; Leads
+hydration not re-checked this import-only release. No writes/sends. #320 release
+verification accepted; no product rollback required. #307 briefing integration
+IN PROGRESS: explicit conversation records use the shared pure read model,
+uncapped totals/capped lists, redacted refs/channel-only summaries and unlinked
+counts; legacy activity fallback preserved until reports exist. No new clock,
+network, write, send or schedule enablement. Settings Preview briefing uses
+the existing admin GET only; escaped text, failed-response redaction and
+duplicate-read guard proven. Final suite146 passed,0 failed,0 skipped,600s/file;
+timings docs/test-results/issue-307-brief-preview-release.txt. An initial
+unchanged comp-capture test returned local_capture_error instead of unknown-page;
+it passed isolated and in subsequent full runs without assertion/code changes.
+Cause not established. Release/live gates pending; #307 is still not DONE.
+Order stays #307; government NC/Charlotte, Florida, then TX (#301/#315);
+B-21 FL sales (NC requires its own source); B-09 deed-backed buyers; #299;
+#288; #313. Gmail linkage/email approvals, JV stages and triage remain #307.
+
 2026-10-10 -- #307 paired conversation/interaction import implemented and
 merged in [PR #320](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/320),
 application main286926b. Final suite144 passed,0 failed,0 skipped,600s/file;

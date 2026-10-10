@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('fs');
+const {buildOperatorBrief}=require('../modules/agents/operator-brief');
+const {list}=require('../modules/records/conversations');
+const now='2026-10-10T12:00:00Z';
+const base={person:'PRIVATE FIXTURE PERSON',role:'partner',refs:[],channels:['manual'],status:'to_send',captured_at:now,what_they_said:'PRIVATE REPLY',ready_message:'PRIVATE DRAFT',thread_url:'https://www.messenger.com/t/123',next_step:'PRIVATE NEXT STEP'};
+const store={conversations:[{...base,id:'unlinked'},{...base,id:'closed',person:'Closed fixture',status:'closed'},{...base,id:'hot',person:'Hot fixture',refs:['BUY-0001'],status:'hot',last_in:now}],activities:[]};
+const before=JSON.stringify(store);const shared=list(store,{now});const b=buildOperatorBrief(store,{now});assert.equal(b.conversation_summary.total,shared.total);assert.equal(b.conversation_summary.waiting_count,shared.waiting_count);assert.equal(b.conversation_summary.unlinked_count,1);assert.equal(b.incoming_count,1);assert.ok(b.text.includes('waiting or due: 2'));
+assert.ok(!JSON.stringify(buildOperatorBrief({conversations:[{...base,status:'hot',last_in:now,channels:['PRIVATE CHANNEL']} ]},{now})).includes('PRIVATE CHANNEL'),'a malformed stored channel cannot leak arbitrary text');
+for(const value of ['PRIVATE FIXTURE PERSON','PRIVATE REPLY','PRIVATE DRAFT','PRIVATE NEXT STEP','messenger.com','Closed fixture','Hot fixture'])assert.ok(!JSON.stringify(b).includes(value));
+const many={conversations:Array.from({length:150},(_,i)=>({...base,id:'c'+i,person:'Private '+i,refs:['BUY-'+String(i+1).padStart(4,'0')],status:'hot',last_in:now})),activities:[]};const m=buildOperatorBrief(many,{now});assert.equal(m.incoming_count,150);assert.equal(m.incoming.length,10);assert.equal(m.conversation_summary.total,150);assert.ok(m.text.includes('150 (showing 10)'));
+const old=buildOperatorBrief({conversations:[{...base,refs:['BUY-0001'],status:'hot',last_in:'2026-10-01T12:00:00Z',last_out:'2026-10-08T12:00:00Z'}]},{now});assert.equal(old.incoming_count,0);assert.equal(old.followup_count,1);
+const closed=buildOperatorBrief({...store,buyers:[{record_ref:'BUY-0001',assistant_find:{status:'not_a_fit'}}]},{now});assert.equal(closed.incoming_count,0);
+const saved={fetch:global.fetch,now:Date.now,write:fs.writeFileSync};let calls=0;try{const deny=()=>{calls++;throw Error('side effect');};global.fetch=deny;Date.now=deny;fs.writeFileSync=deny;buildOperatorBrief(store,{now});}finally{global.fetch=saved.fetch;Date.now=saved.now;fs.writeFileSync=saved.write;}assert.equal(calls,0);assert.equal(JSON.stringify(store),before);
+console.log('Conversation briefing: shared totals, unlinked/closed/older replies, uncapped counts, capped display, privacy and purity passed.');
