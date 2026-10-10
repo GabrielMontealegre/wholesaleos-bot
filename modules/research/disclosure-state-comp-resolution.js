@@ -208,6 +208,7 @@ function evaluateStrictCompGrid(candidate, row, options = {}) {
   const criteria = [];
   let firstRejection = '';
   let warning = '';
+  let area = 'standard';
   const reject = (reason) => { if (!firstRejection) firstRejection = reason; };
 
   const floor = Number(options.min_market_sale_price || DEFAULT_MIN_MARKET_SALE_PRICE) || DEFAULT_MIN_MARKET_SALE_PRICE;
@@ -260,6 +261,12 @@ function evaluateStrictCompGrid(candidate, row, options = {}) {
   } else if (ruralReviewApproved(row, options) && miles <= config.rural_operator_max_distance_miles) {
     warning = `Rural comp exception approved by operator; distance ${miles.toFixed(2)} miles exceeds the standard one-mile grid.`;
     criteria.push(criterion('distance', 'APPLIED_PASS', 'operator_approved_rural_exception', Number(miles.toFixed(3)), Number(miles.toFixed(3)), `operator-reviewed <=${config.rural_operator_max_distance_miles} miles`));
+  } else if (!(options.rural_exception_review || row && row.rural_comp_review) &&
+    options.expanded_area_review && cleanText(options.expanded_area_review.reviewed_by) && isoDate(options.expanded_area_review.reviewed_at) &&
+    Number.isInteger(options.expanded_area_review.standard_pass_count) && options.expanded_area_review.standard_pass_count >= 0 &&
+    options.expanded_area_review.standard_pass_count < strictCompGridConfig.expanded_requires_fewer_than && miles <= strictCompGridConfig.expanded_max_distance_miles) {
+    area = 'wider';
+    criteria.push(criterion('distance', 'APPLIED_PASS', 'operator_reviewed_wider_area', Number(miles.toFixed(3)), Number(miles.toFixed(3)), `reviewed <=${strictCompGridConfig.expanded_max_distance_miles} miles; fewer than ${strictCompGridConfig.expanded_requires_fewer_than} standard comps`));
   } else {
     const reason = miles <= config.rural_operator_max_distance_miles ? 'rural_exception_requires_operator_review' : 'comp_outside_one_mile';
     criteria.push(criterion('distance', reason === 'rural_exception_requires_operator_review' ? 'OPERATOR_REVIEW_REQUIRED' : 'APPLIED_FAIL', reason, Number(miles.toFixed(3)), Number(miles.toFixed(3)), `<=${config.max_distance_miles} mile`));
@@ -313,6 +320,7 @@ function evaluateStrictCompGrid(candidate, row, options = {}) {
     rejected_reason: firstRejection || null,
     distance_miles: miles == null ? null : Number(miles.toFixed(3)),
     rural_exception_warning: warning || null,
+    area,
     criteria
   };
 }

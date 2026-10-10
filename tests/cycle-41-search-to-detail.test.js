@@ -319,7 +319,7 @@ async function main() {
     assert.strictEqual(soldRun.run.proposals, 1);
     assert.strictEqual(soldRun.run.captures_submitted, 1);
     assert.deepStrictEqual(soldCaptured.uploads, [{ source_url: soldCardUrl, evidence_type: 'sold_comp' }]);
-    assert.deepStrictEqual(gridConfig, { max_distance_miles: 1, max_living_area_variance_ratio: 0.20, max_bedroom_difference: 1,
+    assert.deepStrictEqual(gridConfig, { max_distance_miles: 1, expanded_max_distance_miles: 2.5, expanded_requires_fewer_than: 3, max_living_area_variance_ratio: 0.20, max_bedroom_difference: 1,
       max_bathroom_difference: 1, max_year_built_difference: 15, max_lot_size_variance_ratio: 0.30,
       rural_operator_max_distance_miles: 5, minimum_verified_comps: 3 });
 

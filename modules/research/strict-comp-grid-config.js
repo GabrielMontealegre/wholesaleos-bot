@@ -2,6 +2,8 @@
 
 module.exports = Object.freeze({
   max_distance_miles: 1,
+  expanded_max_distance_miles: 2.5,
+  expanded_requires_fewer_than: 3,
   max_living_area_variance_ratio: 0.20,
   max_bedroom_difference: 1,
   max_bathroom_difference: 1,
