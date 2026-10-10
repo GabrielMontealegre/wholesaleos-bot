@@ -17,14 +17,19 @@ function link(v) {
   return u.href;
 }
 function validate(input,now) {
-  const allowed=['kind','person','role','refs','channels','last_in','last_out','what_they_said','next_step','due_date','status','ready_message','thread_url','captured_at'];
+  const allowed=['kind','person','role','refs','channels','last_in','last_out','what_they_said','next_step','due_date','status','ready_message','thread_url','captured_at','email_message_ids'];
   if(!input||Array.isArray(input)||input.kind!=='conversation'||Object.keys(input).some(k=>!allowed.includes(k))||Buffer.byteLength(JSON.stringify(input))>8192)fail('find_conversation_invalid');
   const person=text(input.person,120);const refs=input.refs||[],channels=input.channels||[];
   if(!person||!['holder','buyer','partner'].includes(input.role)||!Array.isArray(refs)||refs.length>10||!Array.isArray(channels)||!channels.length||channels.length>4||channels.some(c=>!CHANNELS.includes(c))||!STATUSES.includes(input.status))fail('find_conversation_invalid');
   const captured_at=timestamp(input.captured_at,now);if(!captured_at)fail('find_conversation_date_invalid');
   const due_date=text(input.due_date,10);if(due_date&&(!/^\d{4}-\d{2}-\d{2}$/.test(due_date)||!Number.isFinite(Date.parse(due_date))||new Date(due_date).toISOString().slice(0,10)!==due_date))fail('find_conversation_date_invalid');
   const canonicalRefs=[...new Set(refs.map(r=>records.ref(r)))].sort();if(canonicalRefs.some(r=>!r))fail('find_conversation_invalid');
-  return {kind:'conversation',person,role:input.role,refs:canonicalRefs,channels:[...new Set(channels)].sort(),last_in:timestamp(input.last_in,now),last_out:timestamp(input.last_out,now),what_they_said:text(input.what_they_said,1000),next_step:text(input.next_step,1000),due_date,status:input.status,ready_message:text(input.ready_message,4000),thread_url:link(input.thread_url),captured_at};
+  const extra={};
+  if(input.email_message_ids!==undefined){
+    if(!channels.includes('email')||!Array.isArray(input.email_message_ids)||input.email_message_ids.length>10||input.email_message_ids.some(v=>typeof v!=='string'||v.length>254||!/^<[^<>\s@]+@[^<>\s@]+>$/.test(v)))fail('find_conversation_email_anchor_invalid');
+    extra.email_message_ids=[...new Set(input.email_message_ids)].sort();
+  }
+  return {kind:'conversation',person,role:input.role,refs:canonicalRefs,channels:[...new Set(channels)].sort(),last_in:timestamp(input.last_in,now),last_out:timestamp(input.last_out,now),what_they_said:text(input.what_they_said,1000),next_step:text(input.next_step,1000),due_date,status:input.status,ready_message:text(input.ready_message,4000),thread_url:link(input.thread_url),captured_at,...extra};
 }
 function key(person,refs) { return crypto.createHash('sha256').update(JSON.stringify([person.trim().toLowerCase(),refs])).digest('hex'); }
 function upsert(store,input,context) {

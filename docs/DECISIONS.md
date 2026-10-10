@@ -252,3 +252,15 @@ then. Totals precede display caps; only refs and allowlisted channels, never
 names/message bodies, enter its aggregate summaries. No schedule switch or
 real send is used as verification -- data truth/privacy and conservative
 compatibility under AGENTS sections3/5, D-050 -- 2026-10-10.
+
+ASSUMED: #307 email linkage is first exposed as an explicit, admin-only,
+read-only inbox preview (latest30 headers). It connects only exact reported
+Message-ID anchors or supported Gmail thread IDs, including header chains;
+overlapping anchors are ambiguous, never guessed from person/subject/ref text.
+Opaque Gmail browser IDs are not decoded. No anchors means no mailbox request.
+Mail subjects remain subjects, reported next steps are not inferred, and old
+drafts are withheld after a newer reply. The optional email_message_ids field
+uses the existing audited conversation import; preview does not save reports,
+send alerts, enable a schedule, or satisfy contact/value gates. Full persistent
+Gmail synchronization and email approvals/templates remain later #307 work --
+AGENTS sections2/3/5 and D-050 -- 2026-10-10.

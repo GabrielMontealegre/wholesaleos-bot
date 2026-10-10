@@ -8,6 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 exact linked-mail preview IN PROGRESS. Existing admin and
+paired conversation import accepts optional bounded Message-ID anchors;
+pure header/thread graph refuses ambiguous/name/subject guesses and future
+mail. Explicit admin GET checks latest30 Inbox headers, no anchors means
+zero mailbox requests. Store is unchanged; old drafts withheld after newer
+mail; subjects labeled separately from reported words. Dashboard check is
+explicit, never on load; synthetic six-width proof passes, screenshots at
+docs/screens/2026-10-10-mailbox-preview/. Final suite148 passed,0 failed,0
+skipped (600s/file), including self-sent/unknown mail exclusion; all durations
+in docs/test-results/issue-307-mailbox-preview.txt. Release/live gates pending.
+No send/import/batch/confirmation or schedule
+enablement. ASSUMED read-only first slice logged; persistent Gmail sync,
+approval counters/templates,JV stages,triage remain. #307 is NOT DONE.
+Latest Gabriel order: finish #307; #304 round2 bugs1-7 as one small PR;
+#301/#315 government NC Charlotte,FL,TX terms first, one property/event timeline;
+B-21 FL statewide sales; B-09 deed-backed cash buyers; #299 + #304 menu8-11;
+#288 sends/packages/JV; #313 photos. No overall completion percentage re-measured.
+
 2026-10-10 -- #307 conversation briefing + Settings Preview briefing released
 in [PR #322](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/322),
 application main4002bd0. Exact Railway success, health200. Authenticated live

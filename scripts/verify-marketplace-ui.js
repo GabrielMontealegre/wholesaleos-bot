@@ -37,6 +37,7 @@ function createFixtureApp({wider=false}={}) {
   app.get('/api/dashboard/operator-channel-status',(_,res)=>res.json({configured:true,status:'Telegram configured - delivery not tested',schedule:{enabled:false}}));
   app.get('/api/dashboard/operator-brief',(_,res)=>res.json({text:'SYNTHETIC BRIEFING <script>not executable</script>'}));
   app.get('/api/dashboard/conversations',(_,res)=>res.json({total:1,waiting_count:1,items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['manual'],what_they_said:'Fixture reply',next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'Fixture draft',thread_url:'https://www.messenger.com/t/123',source_kind:'imported_report'}]}));
+  app.get('/api/dashboard/conversations/email-preview',(_,res)=>res.json({total:1,waiting_count:1,email_preview:{preview_only:true,scanned_messages:3,matched_messages:1,unlinked_messages:1,ambiguous_messages:1,invalid_messages:0},items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['email'],what_they_said:'Reported fixture text',email_subject:'SYNTHETIC EMAIL <script>not executable</script>',email_evidence:{captured_at:now},next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'',thread_url:'https://mail.google.com/mail/u/0/#inbox/123456789abcdef0'}]}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
   app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
   app.get('/api/*', (_, res) => res.json([]));
@@ -99,6 +100,11 @@ async function prove({ screenshots = false,wider=false } = {}) {
           assert.ok((await page.locator('#wos-conversations').innerText()).includes('Fixture reply'));
           await page.waitForFunction(()=>{const e=document.querySelector('#wos-conversations');return e&&e.parentElement?.firstElementChild===e;});
           assert.strictEqual(await page.evaluate(()=>document.querySelector('#content')?.firstElementChild?.id),'wos-conversations','reminders must precede Today');
+          await page.locator('[data-conversation-email-preview]').click();
+          await page.locator('[data-conversation-email-status]').filter({hasText:'3 checked, 1 exactly linked, 1 unlinked, 1 ambiguous'}).waitFor();
+          await page.getByText('Latest linked email subject: SYNTHETIC EMAIL <script>not executable</script>',{exact:true}).waitFor();
+          assert.strictEqual(await page.locator('#wos-conversations script').count(),0,'email subject cannot execute');
+          assert.strictEqual(await page.locator('[data-conversation-copy]').count(),0,'old draft withheld after a new linked reply');
           await page.locator('.wos-discovery-value').waitFor({state:'attached'});
           await page.locator('.wos-discovery-value').scrollIntoViewIfNeeded();
         }
@@ -144,7 +150,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
             await page.locator('#owner-channel-panel').screenshot({path:path.join(statusOutput,'local-status-'+width+'.png')});
           }
           if(name==='dashboard') {
-            const conversationOutput=path.join(root,'docs/screens/2026-10-10-conversations');
+            const conversationOutput=path.join(root,'docs/screens/2026-10-10-mailbox-preview');
             fs.mkdirSync(conversationOutput,{recursive:true});
             await page.locator('#wos-conversations').screenshot({path:path.join(conversationOutput,'local-conversations-'+width+'.png')});
           }
