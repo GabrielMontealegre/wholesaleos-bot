@@ -7,7 +7,7 @@ function buildOperatorBrief(store,{now,timeZone='America/Mazatlan'}={}){
  const latest=new Map();
  for(const a of store.activities||[]){const ref=a.buyer_ref||a.deal_ref||a.match_ref;const at=Date.parse(a.ts||a.created_at||'');if(!REF.test(ref||'')||!Number.isFinite(at)||at>current)continue;
   const direction=a.direction||({'reply_received':'in','message_sent':'out','email_sent':'out'})[a.type];if(!['in','out'].includes(direction))continue;
-  const key=ref+'|'+(a.channel||'unknown');const previous=latest.get(key);if(!previous||previous.at<at)latest.set(key,{ref,channel:a.channel||'unknown',direction,at});
+  const key=ref+'|'+(a.channel||'unknown');const previous=latest.get(key);if(!previous||previous.at<at)latest.set(key,{ref,channel:a.channel||'unknown',direction,at});else if(previous.at===at&&previous.direction!==direction)latest.set(key,{...previous,direction:'ambiguous'});
  }
  const incoming=[...latest.values()].filter(a=>a.direction==='in').sort((a,b)=>b.at-a.at).slice(0,10);
  const localAge=a=>(Date.parse(today+'T00:00:00Z')-Date.parse(dayAt(a.at,timeZone)+'T00:00:00Z'))/86400000;
