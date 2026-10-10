@@ -35,8 +35,8 @@ async function sendHotLeadAlert(lead, scoreResult) {
     await bot.sendMessage(chatId, msg);
     return { sent: true };
   } catch(e) {
-    console.error('[hot-alert] telegram error:', e.message);
-    return { sent: false, error: e.message };
+    console.error('[hot-alert] telegram send failed');
+    return { sent: false, error: 'telegram_send_failed' };
   }
 }
 

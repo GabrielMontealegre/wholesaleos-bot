@@ -7,7 +7,7 @@ const imports = require('./buyer-find-import');
 const reviewedDeals = require('../deals/reviewed-deals');
 const REQUESTS_PER_HOUR = 12;
 
-function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString() }) {
+function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {}, now = () => new Date().toISOString(), onIncomingInteractions=()=>{} }) {
   const requests = new Map();
   const previews = new Map();
   function expirePreviews(at) {
@@ -77,11 +77,13 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       expirePreviews(Date.parse(at));
       const preview = previews.get(body.preview_id);
       if (!preview || preview.actor !== req.currentUser.id) return res.status(409).json({ code: 'find_preview_required' });
-      const result = imports.commitImport(db.readDBStrict(), preview.plan, {
+      const original=db.readDBStrict();
+      const result = imports.commitImport(original, preview.plan, {
         now: at, operatorId: req.currentUser.id, createId: () => 'BF' + crypto.randomUUID(), bulkApprove: body.bulk_approve
       });
       db.writeDB(result.store);
       previews.delete(body.preview_id);
+      try{Promise.resolve(onIncomingInteractions((result.store.activities||[]).slice((original.activities||[]).length))).catch(()=>{});}catch{}
       res.set('Cache-Control', 'no-store').json(result.summary);
     } catch (error) { failure(res, error); }
   });

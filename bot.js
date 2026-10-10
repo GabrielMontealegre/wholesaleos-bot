@@ -248,16 +248,11 @@ async function runNationwideScan(chatId=null) {
   return [];
 }
 
-// Daily 7AM briefing (MST)
-cron.schedule('0 14 * * *', async () => {
-  if (!OWNER_ID) return;
-  const stats = db.getStats(), events = db.getUpcomingEvents(3);
-  const unread = db.getNotifications(true).length;
-  let text = `Good morning Gabriel! 🌅\n\n📊 <b>Today's Summary</b>\nLeads: ${stats.total_leads} | Pipeline: $${stats.fees_pipeline.toLocaleString()}\n${unread > 0 ? `🔔 ${unread} new notifications` : '✅ All caught up'}\n\n`;
-  if (events.length) { text += '<b>Upcoming:</b>\n'; events.forEach(e => { text += `${e.date} — ${e.title}\n`; }); }
-  text += '\n/leads [County] [State] [count] to find deals\n/scan for auto nationwide scan';
-  send(OWNER_ID, text);
-});
+// Daily operator briefing uses the same reviewed data as the server.
+const operatorTelegram=require('./modules/agents/owner-telegram').createOwnerTelegram({log:entry=>console.log('[telegram]',entry.result,entry.ref)});
+cron.schedule('0 7 * * *', async () => {
+  try{await operatorTelegram.daily(db.readDBStrict(),{now:new Date().toISOString()});}catch{console.error('[telegram] daily briefing failed');}
+}, {timezone:'America/Mazatlan'});
 // SCAN CRON DISABLED — was generating fake AI leads 4x/week
 // cron.schedule('0 13 * * 1,2,4,6', async () => { ... });
 });

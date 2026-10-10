@@ -2740,7 +2740,8 @@ app.delete('/api/leads/:id', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Buyers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env } });
+const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegram({log:entry=>logger.info({result:entry.result,ref:entry.ref},'[telegram] owner alert')});
+assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
 
@@ -5165,28 +5166,7 @@ app.put('/api/buyers/:id/trust', (req, res) => {
 });
 
 // 7. DAILY SUMMARY → Telegram
-app.post('/api/daily-summary', async (req, res) => {
-  try {
-    const dbData = db.readDB();
-    const leads  = dbData.leads  || [];
-    const buyers = dbData.buyers || [];
-    const today  = new Date().toISOString().split('T')[0];
-    const newLeads = leads.filter(l => l.created === today);
-    const topDeals = leads.filter(l => l.spread > 0).sort((a,b) => b.spread-a.spread).slice(0,5);
-    const summary = [
-      '📊 *WholesaleOS Daily Summary — ' + today + '*','',
-      '📥 New leads today: *' + newLeads.length + '*',
-      '📦 Total leads: *' + leads.length + '*',
-      '👥 Active buyers: *' + buyers.filter(b=>b.status==='Active').length + '*','',
-      '🏆 Top 5 deals by spread:',
-      ...topDeals.map((l,i) => (i+1)+'. ' + l.state + ' | $' + (l.spread||0).toLocaleString() + ' spread | ' + (l.type||'SFR'))
-    ].join('\n');
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.BOT_OWNER_ID) {
-      await fetch('https://api.telegram.org/bot' + process.env.TELEGRAM_BOT_TOKEN + '/sendMessage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ chat_id: process.env.BOT_OWNER_ID, text: summary, parse_mode:'Markdown' }) });
-    }
-    res.json({ success: true, summary });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
+require('./modules/agents/owner-telegram').registerOwnerTelegram(app, {db,requireAdmin,service:ownerTelegram,backgroundEnabled:ENABLE_BACKGROUND_INGESTION});
 
 // logger.info('✅ Buyers CRM extended routes registered (7 endpoints)');
 // ============================================================
@@ -6244,32 +6224,11 @@ app.get('/api/leads/sources', function(req, res) {
   });
   logger.info('[skip-trace] 3AM cron + route registered');
 
-// ── Telegram 7AM daily summary ──────────────────────────────────────────
+// Telegram briefing retains the existing background-enable guard.
 if (ENABLE_BACKGROUND_INGESTION) {
-cron.schedule('0 7 * * *', async function() {
-  try {
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.BOT_OWNER_ID) return;
-    var TelegramBot = require('node-telegram-bot-api');
-    var tgBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
-    var dbData = db.readDB ? db.readDB() : { leads: [] };
-    var leads = dbData.leads || [];
-    var total = leads.length;
-    var today = new Date().toISOString().split('T')[0];
-    var todayLeads = leads.filter(function(l){ return (l.created||l.createdAt||'').startsWith(today); }).length;
-    var withPhone = leads.filter(function(l){ return l.phone && l.phone.length > 7; }).length;
-    var withArv = leads.filter(function(l){ return l.arv && l.arv > 0; }).length;
-    var highPrio = leads.filter(function(l){ return l.priority === 'HIGH'; }).length;
-    var msg = 'WholesaleOS Daily Summary — ' + today + '\n\n' +
-      'Total Leads: ' + total.toLocaleString() + '\n' +
-      'New Today: ' + todayLeads + '\n' +
-      'High Priority: ' + highPrio + '\n' +
-      'With Phone: ' + withPhone + '\n' +
-      'With ARV: ' + withArv + '\n\n' +
-      'Dashboard: https://wholesaleos-bot-production.up.railway.app/dashboard/';
-    await tgBot.sendMessage(process.env.BOT_OWNER_ID, msg);
-    logger.info('[telegram] 7AM summary sent');
-  } catch(e){ logger.error('[telegram] 7AM cron error: ' + e.message); }
-}, { timezone: 'UTC' });
+  cron.schedule('0 7 * * *', async function(){
+    try{await ownerTelegram.daily(db.readDBStrict(),{now:new Date().toISOString()});}catch{logger.warn('[telegram] daily briefing failed');}
+  }, {timezone:'America/Mazatlan'});
 }
 
 
