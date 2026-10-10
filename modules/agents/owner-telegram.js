@@ -18,8 +18,12 @@ function createOwnerTelegram({env=process.env,fetchImpl=(...args)=>global.fetch(
  return {status,send,incoming,daily};
 }
 function registerOwnerTelegram(app,{db,requireAdmin,service,now=()=>new Date().toISOString(),backgroundEnabled=false}){
- app.get('/api/notify/telegram/status',requireAdmin,(req,res)=>res.set('Cache-Control','no-store').json({...service.status(),schedule:{enabled:backgroundEnabled&&service.status().configured,hour:7,time_zone:'America/Mazatlan'}}));
- app.get('/api/notify/telegram/brief',requireAdmin,(req,res)=>{try{res.set('Cache-Control','no-store').json(buildOperatorBrief(db.readDBStrict(),{now:now()}));}catch{res.status(503).json({code:'telegram_brief_unavailable'});}});
+ const status=(req,res)=>res.set('Cache-Control','no-store').json({...service.status(),schedule:{enabled:backgroundEnabled&&service.status().configured,hour:7,time_zone:'America/Mazatlan'}});
+ const brief=(req,res)=>{try{res.set('Cache-Control','no-store').json(buildOperatorBrief(db.readDBStrict(),{now:now()}));}catch{res.status(503).json({code:'telegram_brief_unavailable'});}};
+ app.get('/api/notify/telegram/status',requireAdmin,status);
+ app.get('/api/notify/telegram/brief',requireAdmin,brief);
+ app.get('/api/dashboard/operator-channel-status',requireAdmin,status);
+ app.get('/api/dashboard/operator-brief',requireAdmin,brief);
  app.post('/api/notify/telegram',requireAdmin,async(req,res)=>{const b=req.body;if(!b||Array.isArray(b)||Object.keys(b).some(k=>!['text','ref'].includes(k)))return res.status(400).json({code:'telegram_input_invalid'});const result=await service.send(b.text,b.ref||'');res.status(result.code==='telegram_input_invalid'?400:result.code==='telegram_rate_limited'?429:result.code==='telegram_send_failed'?503:200).json(result);});
  app.post('/api/daily-summary',requireAdmin,async(req,res)=>{try{const result=await service.daily(db.readDBStrict(),{now:now()});res.json({success:result.sent,...result});}catch{res.status(503).json({code:'telegram_brief_unavailable'});}});
 }

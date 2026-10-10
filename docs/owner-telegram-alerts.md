@@ -31,3 +31,9 @@ malformed/ambiguous refs cannot open another card. Real-document proof covers
 records are suppressed, future/tied interactions cannot invent a reply, and the
 brief omits private identities. Live verification remains read-only, with no
 delivery claim from merely configured variables.
+
+Read-diagnostic follow-up: browser navigation to the notification-named GET
+was blocked client-side before a response. The same handlers are also available
+as /api/dashboard/operator-channel-status and /api/dashboard/operator-brief.
+They keep identical requireAdmin/no-store/no-send behavior. Original routes and
+mutation protection are retained. No browser filter or authentication is weakened.
