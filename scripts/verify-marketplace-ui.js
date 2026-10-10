@@ -34,6 +34,7 @@ function createFixtureApp({wider=false}={}) {
   app.get('/api/dashboard/research-queue/current', (_, res) => res.json({ ok: true, market: { city: 'Fixture city', county: 'Fixture county', state: 'FL' }, rows: [], batches: [], auto_run: { enabled: false }, preview_only: true, not_a_saved_lead: true, manual_evidence_packet: { items: [{ queue_key: 'fixture-packet', address: '100 Example St, Example City, FL 00000', address_state: 'needs_source_proof', subject_address_verified_for_research: false, preview_only: true, not_a_saved_lead: true, packet: {}, discovery: { call_ready: false, call_blocked_reason: 'Synthetic research-only fixture', gap_ledger: [], questions: [{ field: 'condition_detail', wording: 'What condition is the property in?', why: 'Fixture question', useful_answer: 'Recorded answer only', follow_up: 'Fixture follow-up' }] } }] } }));
   app.get('/api/gmail/inbox', (_, res) => res.json({ messages: [], connected: false, error: 'Fixture email is not connected' }));
   app.get('/api/gmail/test',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)'}));
+  app.get('/api/dashboard/operator-channel-status',(_,res)=>res.json({configured:true,status:'Telegram configured - delivery not tested',schedule:{enabled:false}}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
   app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
   app.get('/api/*', (_, res) => res.json([]));
@@ -80,6 +81,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
         if (['dashboard','todays_deals','jv'].includes(name)) await page.locator('.td-card').first().waitFor();
         if (name === 'buyers_found') await page.locator('.bf-card').first().waitFor();
         if (name === 'record_activity') await page.locator('[data-reference-reserve]').waitFor({ state: 'attached' });
+        if(name==='settings'){await page.locator('[data-owner-channel-status]').filter({hasText:'delivery not tested'}).waitFor();assert.ok((await page.locator('[data-owner-channel-schedule]').innerText()).includes('disabled'));await page.locator('[data-owner-channel-refresh]').click();}
         if (name === 'gmail') {
           await page.locator('[data-email-message]').waitFor();
           await page.locator('[data-email-test]').click();
@@ -128,7 +130,14 @@ async function prove({ screenshots = false,wider=false } = {}) {
         assert.ok(measured.bodyWidth <= width, name + ' page overflow at ' + width);
         assert.deepStrictEqual(measured.bad, [], name + ' controls outside viewport at ' + width);
         assert.deepStrictEqual(measured.small, [], name + ' controls below 44px at ' + width);
-        if (screenshots && [400,412,1366].includes(width)) await page.screenshot({ path: path.join(output, name + '-' + width + '.png'), fullPage: true });
+        if (screenshots && [400,412,1366].includes(width)) {
+          await page.screenshot({ path: path.join(output, name + '-' + width + '.png'), fullPage: true });
+          if(name==='settings') {
+            const statusOutput=path.join(root,'docs/screens/2026-10-10-owner-status');
+            fs.mkdirSync(statusOutput,{recursive:true});
+            await page.locator('#owner-channel-panel').screenshot({path:path.join(statusOutput,'local-status-'+width+'.png')});
+          }
+        }
       }
     }
     fixtureApp.assertUnchanged(); assert.deepStrictEqual(errors, []); assert.deepStrictEqual(external, []);

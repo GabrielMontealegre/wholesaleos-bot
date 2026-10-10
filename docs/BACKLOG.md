@@ -8,6 +8,19 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307D Settings status follow-up: normal authenticated dashboard
+GET presents configuration and the unchanged schedule guard, with a read-only
+refresh control. Direct navigation was blocked on both diagnostic paths; no
+cause based solely on path wording is asserted. Local actual-document proof:
+six widths, no writes/external requests/errors, >=44px controls. Separate
+negative proof: import quiet, escaped status text, failed response redacted and
+truthful, GET only. Status-only fictional crops:
+docs/screens/2026-10-10-owner-status/. Final-state suite: 141 passed, 0 failed,
+0 skipped, 600s/file; timings in docs/test-results/issue-307-settings-status.txt.
+Live release gates pending; #307 remains IN PROGRESS, A/B/C not delivered.
+Order: finish #307, #301 government-first per #315, #299, #313.
+No messages, imports, batches, confirmations, variables or billing changes.
+
 2026-10-10 -- #307D application PR #316 merged as e862582; exact deployment
 and health200 confirmed. Diagnostic navigation under /api/notify was blocked
 client-side, so the diagnostic verification gate is not claimed passed yet.

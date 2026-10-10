@@ -1,4 +1,4 @@
-# Owner Telegram alerts (#307 slice D, draft)
+# Owner Telegram alerts (#307 slice D)
 
 Reads: operator-brief builds from activities and reviewed-deals.evaluate, not
 legacy lead.arv/spread/phone counts. Its clock is injected; local days use
@@ -9,11 +9,11 @@ only to configured BOT_OWNER_ID, limits text to 3500 and attempts to 30/hour.
 Admin notify POST cannot supply another recipient. Read-only status/brief GETs
 never send. Daily-summary now requires admin and uses the same service.
 Server/bot daily schedules use 07:00 America/Mazatlan and retain their existing
-background-enable guard; no setting or process is enabled by this draft.
+background-enable guard; no setting or process is enabled by this item.
 Only newly appended incoming reports trigger after the import database write.
 Duplicate import produces no new alert; callback failure cannot roll back or
-misreport an already successful import. No current production path is changed
-until this draft merges. No live notification test is authorized for verification.
+misreport an already successful import. Core application released in PR #316;
+read-only aliases released in PR #317. No live notification test is authorized for verification.
 
 Logs/responses never expose the Telegram token, raw message, chat ID or upstream
 errors. Legacy hot-alert failure reporting is sanitized; its scoring/behavior
@@ -37,3 +37,12 @@ was blocked client-side before a response. The same handlers are also available
 as /api/dashboard/operator-channel-status and /api/dashboard/operator-brief.
 They keep identical requireAdmin/no-store/no-send behavior. Original routes and
 mutation protection are retained. No browser filter or authentication is weakened.
+
+Direct API navigation was also blocked on the neutral alias, so the cause is not
+proven to be the original path wording. Settings now reads the existing authenticated
+GET through the normal application path and displays configuration and schedule
+status. Its refresh control sends no message; missing/invalid/error responses show
+status unavailable rather than a fabricated connection. The unchanged schedule
+guard is shown explicitly. Local actual-document tests cover six widths, refresh,
+no writes and no external requests. Only status-panel crops are committed; full
+Settings screens can contain private company information.
