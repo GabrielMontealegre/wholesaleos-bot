@@ -8,7 +8,9 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-10 -- #307 exact linked-mail preview IN PROGRESS. Existing admin and
+2026-10-10 -- #307 exact linked-mail preview released in
+[PR #323](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/323),
+application maineaf7ef7; exact Railway success, health200. Existing admin and
 paired conversation import accepts optional bounded Message-ID anchors;
 pure header/thread graph refuses ambiguous/name/subject guesses and future
 mail. Explicit admin GET checks latest30 Inbox headers, no anchors means
@@ -17,9 +19,16 @@ mail; subjects labeled separately from reported words. Dashboard check is
 explicit, never on load; synthetic six-width proof passes, screenshots at
 docs/screens/2026-10-10-mailbox-preview/. Final suite148 passed,0 failed,0
 skipped (600s/file), including self-sent/unknown mail exclusion; all durations
-in docs/test-results/issue-307-mailbox-preview.txt. Release/live gates pending.
-No send/import/batch/confirmation or schedule
-enablement. ASSUMED read-only first slice logged; persistent Gmail sync,
+in docs/test-results/issue-307-mailbox-preview.txt; pure preview2.86s,UI0.09s,
+mobile19.28s,county-notice11.01s. Actual live action:
+"No exact email thread or message anchors recorded. Nothing was fetched."
+Normal Dashboard13 open conversations/12 waiting or due; served conversations
+v2. Live1366/400/412: no overflow,44px button inside viewport. Leads100 hydrated,
+card opened/closed read-only, no console errors; unauthenticated preview401.
+Viewport reset and temporary tab closed. Live header-only screenshot timed out
+in Page.captureScreenshot; synthetic pixels are NOT claimed as live proof.
+No send/import/batch/confirmation,mailbox fetch or schedule enablement.
+ASSUMED read-only first slice logged; persistent Gmail sync,
 approval counters/templates,JV stages,triage remain. #307 is NOT DONE.
 Latest Gabriel order: finish #307; #304 round2 bugs1-7 as one small PR;
 #301/#315 government NC Charlotte,FL,TX terms first, one property/event timeline;

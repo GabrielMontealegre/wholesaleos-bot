@@ -50,3 +50,20 @@ User order after #307: #304 round2 bugs1-7, government-source property timelines
 Verification uses synthetic mail and read-only live UI only. No actual email
 link/import, send, contact outcome, evidence confirmation or batch is used.
 Local screenshots are explicitly synthetic, not live production evidence.
+
+## Verified Release
+
+PR #323 merged as eaf7ef7; exact Railway success and health200. Final full suite
+148 passed,0 failed,0 skipped,600s/file; timings committed in
+docs/test-results/issue-307-mailbox-preview.txt. Existing assertions unchanged.
+Pure projection2.86s,UI0.09s,mobile19.28s,county-notice acquisition11.01s.
+
+Actual authenticated button result: "No exact email thread or message anchors
+recorded. Nothing was fetched." No real mailbox matching is claimed; the exact
+match paths are fixture-tested. Dashboard13 open/12 waiting or due; v2 served;
+desktop1366/phones400/412 no overflow,44px button inside viewport. Leads100 rows
+hydrate; one card opens/closes; no fresh errors. Unauthenticated preview401.
+Header-only live screenshot capture timed out; synthetic proof remains labeled.
+No production import,send,batch,confirmation,mailbox fetch,settings change.
+Verification tab closed and viewport restored. #307 remains open for the
+remaining scope above; this is not completion of the whole communication flow.
