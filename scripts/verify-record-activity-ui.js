@@ -48,7 +48,9 @@ async function prove({screenshots=false}={}) {
       if(screenshots)await page.screenshot({path:path.join(output,'synthetic-buyer-'+width+'.png'),fullPage:true});
       const parsed=await page.evaluate(()=>parseRecordImport('{"ts":"2026-10-07T12:00:00Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Reported note"}\n{"ts":"2026-10-07T12:00:01Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Second reported note"}'));
       assert.strictEqual(parsed.items.length,2);assert.ok(parsed.items.every(i=>i.kind==='interaction'));
-      await page.evaluate(()=>navigate('dashboard',null));await page.waitForTimeout(3200);assert.strictEqual(await page.locator('#content').evaluate(e=>e.firstElementChild.id),'wos-todays-deals');
+      await page.evaluate(()=>navigate('dashboard',null));await page.waitForTimeout(3200);
+      assert.strictEqual(await page.locator('#content').evaluate(e=>e.firstElementChild.id),'wos-conversations','D-050 reminders precede Today');
+      assert.strictEqual(await page.locator('#content').evaluate(e=>e.children[1].id),'wos-todays-deals','Today remains immediately after reminders');
     }
     assert.deepStrictEqual(errors,[]);assert.strictEqual(writes,0);assert.strictEqual(JSON.stringify(store),original);
     console.log('Full-page record UI: references, card timelines, Activity filters, shared search and JSONL at 1366/400/412; no writes, external sources or page errors.');

@@ -20,7 +20,7 @@ function sequenceFloorStatus(store) {
   const values = [...prefixes].map(prefix => sequences[prefix]);
   return { namespaces: prefixes.size, reserved: values.filter(value => Number.isSafeInteger(value) && value >= DEAL_REFERENCE_FLOOR).length, minimum: values.every(value => Number.isSafeInteger(value)) ? Math.min(...values) : null };
 }
-const TYPES = ['found', 'imported', 'approved', 'rejected', 'status_change', 'message_drafted', 'message_sent', 'email_drafted', 'email_sent', 'reply_received', 'bounce', 'call_note', 'jv_generated', 'document_added', 'expired', 'interaction_reported', 'reference_assigned', 'source_rechecked'];
+const TYPES = ['found', 'imported', 'approved', 'rejected', 'status_change', 'message_drafted', 'message_sent', 'email_drafted', 'email_sent', 'reply_received', 'bounce', 'call_note', 'jv_generated', 'document_added', 'expired', 'interaction_reported', 'reference_assigned', 'source_rechecked', 'conversation_updated'];
 function fail(code, status = 400) { const e = new Error(code); e.code = code; e.status = status; throw e; }
 function text(v, max = 2000) { if (v == null) return ''; if (typeof v !== 'string' || v.length > max || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(v)) fail('find_activity_invalid'); return v.trim(); }
 function ref(v) { v = text(v, 20).toUpperCase(); if (v && !/^(?:WOS-[A-Z]{2}|BUY|M)-\d{4}$/.test(v)) fail('find_ref_invalid'); return v; }

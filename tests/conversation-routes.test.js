@@ -1,0 +1,6 @@
+'use strict';
+const assert=require('node:assert/strict');const express=require('express');const {registerConversationRoutes}=require('../modules/records/conversation-routes');
+async function main(){let writes=0;const store={conversations:[],activities:[]};const app=express();const admin=(req,res,next)=>{if(req.headers['x-fixture-admin']!=='yes')return res.status(403).json({code:'admin_required'});next();};
+registerConversationRoutes(app,{db:{readDBStrict:()=>store,writeDB:()=>writes++},requireAdmin:admin,now:()=> '2026-10-10T12:00:00Z'});
+const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});try{const url='http://127.0.0.1:'+server.address().port+'/api/dashboard/conversations';assert.equal((await fetch(url)).status,403);const r=await fetch(url,{headers:{'x-fixture-admin':'yes'}});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal((await r.json()).total,0);assert.equal(writes,0);}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}console.log('Conversation read route: admin-only, no-store, no writes passed.');}
+main().catch(e=>{console.error(e.stack);process.exitCode=1;});
