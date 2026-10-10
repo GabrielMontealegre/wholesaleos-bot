@@ -82,6 +82,26 @@ content.innerHTML='<div class="ra-page"><h2>Record search</h2><button data-searc
       }).catch(function() { if(seq===searchSequence && oldSearch)oldSearch(query); });
     },250);
   };
+  var linkedRef=new URLSearchParams(location.search).get('record_ref');
+  if(/^(?:WOS-[A-Z]{2}|BUY|M)-\d{4}$/.test(linkedRef||'')) {
+    var openedLink=false;
+    var linkObserver=new MutationObserver(openLinkedRecord);
+    function openLinkedRecord(){
+      if(openedLink||!root.APP||!root.APP.unlocked||root.APP.currentUser?.role!=='admin')return;
+      openedLink=true;linkObserver.disconnect();
+      get('/api/dashboard/record-search?q='+encodeURIComponent(linkedRef)).then(function(data){
+        var matches=(data.items||[]).filter(function(item){return item.ref===linkedRef;});
+        if(matches.length!==1){if(root.toast)root.toast('Record link is missing or ambiguous.','error');return;}
+        var item=matches[0];
+        if(item.kind==='deal')root.openReviewedDeal(item.id);
+        else if(item.kind==='match')root.openReviewedDeal(item.deal_id);
+        else if(item.kind==='buyer'&&item.assistant_find)root.openBuyerFind(item.id);
+        else if(item.kind==='lead')root.openLeadModal(item.id);
+        else root.navigate('buyers',null);
+      }).catch(function(){if(root.toast)root.toast('Record link unavailable. Check your admin session.','error');});
+    }
+    linkObserver.observe(document.body,{childList:true,subtree:true});openLinkedRecord();
+  }
   var oldRef=root.getDealRefId;
   if(oldRef)root.getDealRefId=function(lead) { return lead.record_ref || oldRef(lead); };
   var oldAssign=root.assignRefIds;

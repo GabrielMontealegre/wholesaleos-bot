@@ -8,6 +8,46 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307D release gates GREEN in PR #316, live verification pending.
+Full suite 141 passed, 0 failed, 0 skipped, 600s/file; exact durations:
+docs/test-results/issue-307-telegram.txt. Owner-only sender/admin route, quiet
+read-only diagnostics, reply-import failure isolation/idempotence, UTC-7 schedule
+under unchanged enable guard, real reviewed value/counts, closed-record suppression,
+privacy and tested card deep links at 1366/400/412. No live send or import.
+No comp/contact/date/auth safety rule or dependency changed. #315 architect
+answer received: #301 is re-scoped government-first and back in the queue;
+Brock & Scott remains disabled. Publisher terms/access verdicts must be recorded.
+Current order: finish #307, #301 government slice1, #299, #313.
+
+2026-10-10 -- #310 already DONE. #301 first-publisher permission hold #315
+still OPEN with no architect answer; no source access/ingestion repeated.
+#307 sliceD advanced in draft PR #316: fixed-owner sender, capped admin notify
+route, read-only status/brief routes, daily-summary replacement, 7AM UTC-7
+schedule under unchanged background guard, and after-commit incoming-report hook.
+Import preview/duplicates stay quiet; notification failure cannot fail a committed
+import. Logs contain only sent/failed + validated ref; upstream errors sanitized.
+Focused briefing/sender/import/existing-import/send-disabled tests PASS;
+server/bot syntax checks PASS. Full suite, remaining briefing edge cases/direct
+card link and self-review/deploy gates STILL PENDING: DO NOT MERGE this draft.
+No live Telegram test, import, batch, outreach, credential/variable/billing change.
+Next: finish #307D release gates, then #307 A/B/C, #299, #313. No percentage
+re-measured. No new production release this run.
+
+2026-10-10 -- #310 remains DONE/closed, no new findings. Current main refreshed
+to 1cbc687. #301 slice1 first publisher BLOCKED on commercial-use permission:
+[needs-architect #315](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/315).
+First-party list exposes the expected fields, but Terms of Use restricts copying
+and redistribution to personal noncommercial use without written approval.
+This is not an explicit robots-ban finding or a claim that all NC data is blocked.
+No list rows captured/ingested, pagination, county enrichment, source enablement,
+production batch or outreach. No new deals claimed. Independent #307 sliceD
+is IN PROGRESS: pure briefing builder implemented, focused test passes; no
+network/clock/write side effects. It ignores legacy raw ARV/spread fields and
+future interactions, uses injected UTC-7 local days, and omits private identities.
+Transport/schedule integration, broader negative tests and
+full-suite/release gates remain pending. Order: #301 permission hold -> #307 ->
+#299 -> #313. No overall completion percentage re-measured.
+
 2026-10-10 -- #310 DONE in [PR #314](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/314),
 merge `a1897de`. Exact Railway deployment succeeded; health 200; Today v5.
 Live WOS-FL-1012: three exclusion controls, zero wider comps, value Not established;

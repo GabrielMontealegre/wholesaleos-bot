@@ -1,0 +1,9 @@
+'use strict';
+const assert=require('node:assert/strict');const {createFixtureApp}=require('../scripts/verify-marketplace-ui');const {launchChromiumWithResolvedBrowser}=require('../modules/research/playwright-browser-resolver');
+async function main(){const fixture=createFixtureApp();const server=await new Promise(resolve=>{const s=fixture.app.listen(0,'127.0.0.1',()=>resolve(s));});let browser;
+ try{const base='http://127.0.0.1:'+server.address().port;browser=(await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true})).browser;const context=await browser.newContext();const external=[];
+ await context.route('**/*',route=>{const url=route.request().url();if(url.startsWith(base+'/'))return route.continue();if(url.startsWith('https://fonts.googleapis.com/'))return route.fulfill({contentType:'text/css',body:''});if(new URL(url).pathname==='/helper/status')return route.fulfill({json:{paired:false}});external.push(new URL(url).hostname);return route.abort();});
+ const page=await context.newPage();for(const width of [1366,400,412]){await page.setViewportSize({width,height:915});await page.goto(base+'/dashboard/?record_ref=WOS-FL-1031');await page.locator('.td-open-view').waitFor({timeout:15000});assert.ok((await page.locator('.td-open-view').innerText()).includes('WOS-FL-1031'));}
+ await page.goto(base+'/dashboard/?record_ref=not-a-reference');await page.locator('.td-card').first().waitFor();assert.equal(await page.locator('.td-open-view').count(),0);fixture.assertUnchanged();assert.deepEqual(external,[]);console.log('Notification card links: exact ref opens at1366/400/412, malformed ref ignored, fixture unchanged, no external requests.');
+ }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}
+main().catch(e=>{console.error(e.stack);process.exitCode=1;});
