@@ -8,6 +8,14 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307D application PR #316 merged as e862582; exact deployment
+and health200 confirmed. Diagnostic navigation under /api/notify was blocked
+client-side, so the diagnostic verification gate is not claimed passed yet.
+Same admin/no-store/no-send handlers gain explicit dashboard read aliases;
+no client filter or credential is changed. Full alias regression run in progress,
+docs/test-results/issue-307-read-alias.txt. No live send/import/batch/outreach.
+Government-first #301 scope from #315 is retained; private publisher stays disabled.
+
 2026-10-10 -- #307D release gates GREEN in PR #316, live verification pending.
 Full suite 141 passed, 0 failed, 0 skipped, 600s/file; exact durations:
 docs/test-results/issue-307-telegram.txt. Owner-only sender/admin route, quiet
