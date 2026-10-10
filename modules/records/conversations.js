@@ -1,7 +1,7 @@
 'use strict';
 const crypto = require('crypto');
 const records = require('./record-activity');
-const { dayAt } = require('../agents/operator-brief');
+const { dayAt } = require('./calendar-day');
 const STATUSES = ['hot', 'to_send', 'follow_up', 'waiting_on_deal', 'closed'];
 const CHANNELS = ['facebook', 'email', 'phone', 'manual'];
 function fail(code, status=400) { const e=new Error(code);e.code=code;e.status=status;throw e; }
@@ -73,6 +73,6 @@ function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
     items.push({id:row.id,person:row.person,role:row.role,refs:row.refs,channels:row.channels,last_in,last_out,what_they_said:latestSummary||'',next_step:row.next_step||'',ready_message:row.ready_message||'',thread_url:link(row.thread_url),status,due_date,overdue:!!due_date&&due_date<today,source_kind:row.source_kind,source_url:row.thread_url||null,evidence_text:latestSummary||'',captured_at:row.captured_at||[last_in,last_out].filter(Boolean).sort().at(-1)||null});
   }
   items.sort((a,b)=>(b.status==='hot')-(a.status==='hot')||Number(b.overdue)-Number(a.overdue)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
-  return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};
+  return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};
 }
 module.exports={validate,upsert,list,STATUSES};

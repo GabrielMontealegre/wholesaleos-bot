@@ -245,3 +245,10 @@ A1. Unknown person roles and drafts are not inferred. Day0 is the first outgoing
 Day2/Day5 then weekly are anchored to reported sends; overdue dates stay overdue
 until another report, rather than advancing merely because time passed --
 AGENTS sections2/3/5 and D-050 -- 2026-10-10.
+
+ASSUMED: #307's owner briefing reads the shared conversation model once explicit
+conversation reports exist, while retaining legacy activity projection until
+then. Totals precede display caps; only refs and allowlisted channels, never
+names/message bodies, enter its aggregate summaries. No schedule switch or
+real send is used as verification -- data truth/privacy and conservative
+compatibility under AGENTS sections3/5, D-050 -- 2026-10-10.

@@ -46,3 +46,20 @@ status unavailable rather than a fabricated connection. The unchanged schedule
 guard is shown explicitly. Local actual-document tests cover six widths, refresh,
 no writes and no external requests. Only status-panel crops are committed; full
 Settings screens can contain private company information.
+
+Conversation briefing integration: when explicit conversation reports exist,
+the briefing uses conversations.list for open/waiting/incoming/due/unlinked
+counts, sharing the dashboard's closed/older-reply/cadence semantics. Totals
+are computed before display limits. Only canonical refs and allowlisted channel
+names enter its incoming/follow-up summaries; names, messages, next-step text
+and thread URLs are excluded. Unlinked conversations are counted, not given
+invented refs. Until explicit reports exist, the legacy activity projection is
+retained unchanged. calendar-day holds the same injected-clock UTC-7 formatter
+to avoid a circular dependency; operator-brief still exports dayAt for callers.
+No real send is used for verification; the schedule guard remains unchanged.
+
+Settings has an explicit Preview briefing control using that existing admin GET.
+It never requests a brief automatically or sends one. Text is escaped/wrapped;
+failed/invalid/oversized responses show unavailable without echoing raw errors.
+The control is also the supported read-only inspection path when direct API
+page navigation is blocked by the browser client. No client filter is weakened.
