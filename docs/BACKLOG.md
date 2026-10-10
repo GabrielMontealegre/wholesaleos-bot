@@ -8,6 +8,24 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 paired conversation/interaction import implemented and
+merged in [PR #320](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/320),
+application main286926b. Final suite144 passed,0 failed,0 skipped,600s/file;
+timings docs/test-results/issue-307-agent-reports.txt. Existing assertions,
+pairing scope/auth/caps, comp/readiness gates and UI unchanged. Atomic mixed
+failure, duplicate quiet, after-write hook/failure isolation and privacy proven.
+Exact Railway deploy success; public health200/dashboard200; unauthenticated
+conversation GET401. Authenticated live hydration/card verification BLOCKED by
+browser-control CDP deadlines, not a demonstrated product failure:
+[needs-architect #321](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/321).
+Do not claim the live gate passed or the full #307 DONE. No production import,
+message, batch, contact, confirmation, variable or billing operation.
+Next: recover read-only verification; finish independent #307 Gmail/approval,
+JV stages and triage work. Then Gabriel's order: #301 government NC/Charlotte,
+Florida counties, Texas clerks (terms first); B-21 Florida DOR strict-grid
+sales; B-09 deed-backed cash buyers; #299; #288; #313. No overall readiness
+percentage re-measured. No new architecture assumption or dependency.
+
 2026-10-10 -- #307 paired-report slice IN PROGRESS: existing write-only
 assistant dropbox now shares conversation/interaction validation and atomic
 merge with admin import. Same pairing scope,12/hour,50 items,body caps; result
