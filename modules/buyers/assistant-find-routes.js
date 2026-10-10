@@ -39,11 +39,13 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
   app.post('/api/assistant/finds', agentOnly, (req, res) => {
     try {
       const at = now();
-      const items = finds.validateItems(req.body, at);
-      const result = finds.ingest(db.readDBStrict(), items, {
+      const items = imports.validateAgentItems(req.body, at);
+      const original = db.readDBStrict();
+      const result = imports.ingestMixed(original, items, {
         now: at, operatorId: req.currentUser.id, actorLabel: 'Assistant', channel: 'assistant_dropbox', createId: () => 'BF' + crypto.randomUUID()
       });
       db.writeDB(result.store);
+      try{Promise.resolve(onIncomingInteractions((result.store.activities||[]).slice((original.activities||[]).length))).catch(()=>{});}catch{}
       res.set('Cache-Control', 'no-store');
       res.json({ results: result.results });
     } catch (error) { failure(res, error); }

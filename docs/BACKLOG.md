@@ -8,6 +8,18 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 paired-report slice IN PROGRESS: existing write-only
+assistant dropbox now shares conversation/interaction validation and atomic
+merge with admin import. Same pairing scope,12/hour,50 items,body caps; result
+IDs/statuses only. Reply hook after persistence, duplicate quiet, failure isolated.
+Focused negative route proof passed; full suite/release/live gates pending.
+No live import, message, batch or evidence confirmation. #307 remains open.
+Gabriel's updated order: finish #307; #301 government foreclosure records
+(NC court/Charlotte, Florida counties, then Texas clerks), each terms checked;
+B-21 Florida Department of Revenue files and strict-grid sales; B-09 real cash
+buyers with deed proof; #299 daily brief; #288 dashboard send/packages/JV;
+#313 photos. Source price records never bypass the strict grid or self-exclusion.
+
 2026-10-10 -- #307 D status + A1 conversation/reminder slices released in
 [PR #318](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/318) and
 [PR #319](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/319).
