@@ -1,0 +1,33 @@
+'use strict';
+const assert=require('node:assert/strict');
+const conversation=require('../modules/records/conversations');
+const imports=require('../modules/buyers/buyer-find-import');
+const now='2026-10-10T12:00:00Z',context={now,operatorId:'fixture-admin'};
+const report={kind:'conversation',person:'SYNTHETIC CONTACT',role:'partner',refs:[],channels:['manual'],status:'to_send',captured_at:'2026-10-09T12:00:00Z',next_step:'Review fixture',ready_message:'Fixture draft',thread_url:'https://www.messenger.com/t/123'};
+let store={users:[],buyers:[{id:'fixture-buyer',record_ref:'BUY-0001'}],activities:[]};const original=JSON.stringify(store);
+const plan=imports.prepareImport(store,{items:[report]},{now});assert.equal(JSON.stringify(store),original,'preview is pure');
+store=imports.commitImport(store,plan,{...context,createId:()=> 'unused'}).store;
+let result=conversation.list(store,{now});assert.equal(result.total,1);assert.deepEqual(result.items[0].refs,[]);assert.equal(result.items[0].person,report.person);
+const twice=conversation.upsert(store,report,context);assert.equal(twice.store,store,'duplicate quiet');
+const updated=conversation.upsert(store,{...report,status:'waiting_on_deal',captured_at:now},context).store;assert.equal(updated.conversations[0].history.length,2);assert.equal(updated.buyers,store.buyers);assert.equal(updated.activities.length,store.activities.length+1);
+assert.throws(()=>conversation.upsert(store,{...report,ready_message:'Conflict'},context),/find_conversation_conflict/);
+assert.throws(()=>conversation.upsert(store,{...report,refs:['BUY-9999']},context),/find_conversation_ref_unknown/);
+for(const extra of [{captured_at:'2026-10-11T00:00:00Z'},{last_in:'2026-02-30T00:00:00Z'},{due_date:'2026-02-30'},{thread_url:'https://mail.google.com@evil.example.test/'},{thread_url:'javascript:alert(1)'},{auto_send:true}])assert.throws(()=>conversation.validate({...report,...extra},now));
+const activity=(ts,direction,id)=>({ts,direction,activity_id:id,with:'Fixture person',buyer_ref:'BUY-0001',channel:'email',summary:'Fixture summary'});
+const past={...store,conversations:[],activities:[activity('2026-10-05T12:00:00Z','in','a'),activity('2026-10-06T12:00:00Z','out','b')]};
+result=conversation.list(past,{now});assert.notEqual(result.items[0].status,'hot');assert.equal(result.items[0].due_date,'2026-10-08');assert.equal(result.items[0].overdue,true);
+const hot={...past,activities:past.activities.concat(activity('2026-10-10T11:00:00Z','in','c'))};assert.equal(conversation.list(hot,{now}).items[0].status,'hot');
+const future={...past,activities:past.activities.concat(activity('2026-10-11T11:00:00Z','in','future'))};assert.notEqual(conversation.list(future,{now}).items[0].status,'hot');
+const tied={...past,activities:[activity('2026-10-06T12:00:00Z','in','a'),activity('2026-10-06T12:00:00Z','out','b')]};assert.notEqual(conversation.list(tied,{now}).items[0].status,'hot');
+for(const [count,expected] of [[1,'2026-10-03'],[2,'2026-10-06'],[3,'2026-10-13'],[4,'2026-10-20']]) {
+  const activities=Array.from({length:count},(_,i)=>activity('2026-10-0'+(i+1)+'T12:00:00Z','out','out'+i));
+  assert.equal(conversation.list({...past,activities},{now}).items[0].due_date,expected);
+}
+assert.equal(conversation.list({...store,conversations:[{...store.conversations[0],status:'closed'}]},{now}).total,0);
+const multiClosed={...past,conversations:[{id:'closed-fixture',person:'Fixture person',refs:['BUY-0001','WOS-FL-1012'],channels:['manual'],status:'closed'}]};
+assert.equal(conversation.list(multiClosed,{now}).total,0,'an old other-channel event cannot resurrect a closed multi-reference conversation');
+assert.throws(()=>conversation.upsert({...store,buyers:store.buyers.concat({id:'duplicate-ref',record_ref:'BUY-0001'})},{...report,refs:['BUY-0001']},context),/find_conversation_ref_unknown/);
+assert.equal(conversation.list({...hot,buyers:[{record_ref:'BUY-0001',assistant_find:{status:'not_a_fit'}}]},{now}).total,0);
+assert.equal(conversation.list({...past,activities:past.activities.slice().reverse()},{now}).items[0].due_date,conversation.list(past,{now}).items[0].due_date,'order independent');
+const before=JSON.stringify(past);const fetch=global.fetch;global.fetch=()=>{throw Error('network forbidden')};try{conversation.list(past,{now});conversation.validate(report,now);}finally{global.fetch=fetch;}assert.equal(JSON.stringify(past),before);
+console.log('Conversations: pure reported records, unlinked, append-only upserts, stale/duplicate/conflict guards, unsafe/future rejection, older/tied reply, closed suppression and Day0/2/5/weekly cadence passed.');

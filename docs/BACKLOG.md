@@ -8,6 +8,23 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307D verified live: PR #318, merge 0fc00a3; exact Railway
+success and health200. Settings reports "Telegram configured - delivery not
+tested" and "Scheduled daily briefing is disabled by the existing background
+setting." No ingestion setting enabled. Live status crops at1366/400/412;
+phone overflow0, refresh >=44px. Signed deal link WOS-FL-1012 opened; Leads
+displayed 12,039 saved/100 loaded and a lead card opened read-only. Initial
+lead502 recovered; warm load had no new console errors. All141 tests passed,
+no skips/failures. No message/import/batch/contact/confirmation operation.
+#307 A1 IN PROGRESS: reported conversation records, append-only import/upsert,
+pure activity projection, Day0/2/5/weekly reminders and home panel before Today.
+Final suite 143 passed, 0 failed, 0 skipped, 600s/file; full durations:
+docs/test-results/issue-307-conversations-final.txt. Original first-position
+assertions updated only as D-050 explicitly requires; privacy/no-write checks
+retained. Release/live gates pending; do not claim all A or #307 DONE.
+Next remains #307 A2/B/C, #301 government-first (Florida/North Carolina first,
+#315), #299, #313. No overall golden-path percentage re-measured.
+
 2026-10-10 -- #307D Settings status follow-up: normal authenticated dashboard
 GET presents configuration and the unchanged schedule guard, with a read-only
 refresh control. Direct navigation was blocked on both diagnostic paths; no

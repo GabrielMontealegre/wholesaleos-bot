@@ -236,3 +236,12 @@ sources first (NC court access check, then official county notice sources).
 Only the first private publisher stays blocked; do not block the entire kind.
 Every enabled publisher needs terms URL/date/clause/verdict, plus access checks;
 unclear restrictions/login/CAPTCHA are recorded and skipped, never bypassed.
+
+ASSUMED: #307A is delivered in ordered slices. A1 adds reported conversation
+records through the existing admin preview/commit import, read-only activity
+projection and home reminders. Gmail synchronization, paired dropbox extension
+and per-kind email approvals/templates remain A2; there is no send control in
+A1. Unknown person roles and drafts are not inferred. Day0 is the first outgoing,
+Day2/Day5 then weekly are anchored to reported sends; overdue dates stay overdue
+until another report, rather than advancing merely because time passed --
+AGENTS sections2/3/5 and D-050 -- 2026-10-10.

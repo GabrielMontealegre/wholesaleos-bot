@@ -35,6 +35,7 @@ function createFixtureApp({wider=false}={}) {
   app.get('/api/gmail/inbox', (_, res) => res.json({ messages: [], connected: false, error: 'Fixture email is not connected' }));
   app.get('/api/gmail/test',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)'}));
   app.get('/api/dashboard/operator-channel-status',(_,res)=>res.json({configured:true,status:'Telegram configured - delivery not tested',schedule:{enabled:false}}));
+  app.get('/api/dashboard/conversations',(_,res)=>res.json({total:1,waiting_count:1,items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['manual'],what_they_said:'Fixture reply',next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'Fixture draft',thread_url:'https://www.messenger.com/t/123',source_kind:'imported_report'}]}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));
   app.get('/api/gmail/message/:id',(_,res)=>res.json({id:'fixture-message',subject:'Fixture reply',body:'Fixture text <script>alert(1)</script>',date:now,from:'fixture@example.test'}));
   app.get('/api/*', (_, res) => res.json([]));
@@ -93,6 +94,10 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-email-back]').click();
         }
         if (name === 'dashboard') {
+          await page.locator('.cv-row').waitFor();
+          assert.ok((await page.locator('#wos-conversations').innerText()).includes('Fixture reply'));
+          await page.waitForFunction(()=>{const e=document.querySelector('#wos-conversations');return e&&e.parentElement?.firstElementChild===e;});
+          assert.strictEqual(await page.evaluate(()=>document.querySelector('#content')?.firstElementChild?.id),'wos-conversations','reminders must precede Today');
           await page.locator('.wos-discovery-value').waitFor({state:'attached'});
           await page.locator('.wos-discovery-value').scrollIntoViewIfNeeded();
         }
@@ -136,6 +141,11 @@ async function prove({ screenshots = false,wider=false } = {}) {
             const statusOutput=path.join(root,'docs/screens/2026-10-10-owner-status');
             fs.mkdirSync(statusOutput,{recursive:true});
             await page.locator('#owner-channel-panel').screenshot({path:path.join(statusOutput,'local-status-'+width+'.png')});
+          }
+          if(name==='dashboard') {
+            const conversationOutput=path.join(root,'docs/screens/2026-10-10-conversations');
+            fs.mkdirSync(conversationOutput,{recursive:true});
+            await page.locator('#wos-conversations').screenshot({path:path.join(conversationOutput,'local-conversations-'+width+'.png')});
           }
         }
       }
