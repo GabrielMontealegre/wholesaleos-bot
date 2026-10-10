@@ -8,7 +8,16 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-10 -- #310 IN PROGRESS, tested and release prepared. D-051 keeps one
+2026-10-10 -- #310 DONE in [PR #314](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/314),
+merge `a1897de`. Exact Railway deployment succeeded; health 200; Today v5.
+Live WOS-FL-1012: three exclusion controls, zero wider comps, value Not established;
+all three comps still reject strict_grid_distance_not_applied. Coordinates must
+come from the assistant's sourced update, not this verification. No real import,
+approval, exclusion or confirmation. New controls fit 1366/400/412, >=44px;
+12,039 saved records, 100 lead rows, card opened/closed. Startup lead502 recovered.
+Local fictional wider cards show Preliminary; live crops contain input label only.
+Full suite 137/137, no failures/skips; county-notice18.13s, wider-unit0.24s,
+wider-UI11.92s. D-051 keeps one
 mile as default; a thin reviewed pool can admit up to 2.5 miles with all other
 rules intact and a Preliminary ceiling. Fingerprinted admin exclusions require
 a reason, survive updates and append history/Activity; no submitted sale erased.
@@ -16,9 +25,11 @@ Full suite: 137 passed, 0 failed, 0 skipped; 600s/file; exact durations in
 docs/test-results/issue-310.txt. Config-object expectation gains only D-051's
 two constants; normalized fingerprint repinned, safety assertions retained.
 No source, batch, import, confirmation, contact, variable or billing operation.
-Read-only live verification pending. ASSUMED scope/trace:
+Read-only live verification passed. ASSUMED scope/trace:
 docs/reviewed-wider-area-comps.md and DECISIONS.md.
 Gabriel's current order is #310 -> #307 (D, A, B, C slices) -> #299.
+No overall first-deal completion percentage was re-measured. #307 is next;
+#299 is not started in this run. No blocked item or new architect decision needed.
 
 2026-10-08 -- #288 mailbox-read slice DONE in
 [PR #311](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/311), merge
