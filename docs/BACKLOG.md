@@ -8,14 +8,21 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-11 -- continuous #307 email templates/policy BUILT/TESTED on
-item/307-email-template-approvals. Four-kind explicit reviewed library,
+2026-10-11 -- continuous #307 email templates/policy DONE in
+[PR #329](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/329),
+application main5ee48f1; exact Railway success,health200. Four-kind explicit reviewed library,
 append-only/stale-version saves, actual approved-send receipt policy, kind/
 digest ambiguity exclusion, no fake sends. Pure/local routes/UI proof passed,
 1366/400/412 with44px/no overflow. Prior158 green runs preserved; final
 SUMMARY passed=158 failed=0 skipped=0 total=158,600s/file. TemplateUI4.67s,
 pure0.18s,mobile17.87s,county-notice10.95s; final timings in
-docs/test-results/issue-307-email-template-approvals.txt. Release/live pending.
+docs/test-results/issue-307-email-template-approvals.txt. Actual live Today3,
+Email template1; explicit Load GET displays all four kinds with0 approved sends
+recorded/20 remaining,empty subject/body,review unchecked. No real save or send.
+Live1366/400/412: controls44px,within viewport,no overflow. Leads100; waited for
+actual modal visibility,card opens/closes; console0. Viewport restored/temp tab
+closed. Count-only live screenshot timed out; synthetic PNGs labeled separately,
+not claimed live. All code/functionality checks pass; live pixel artifact gap retained.
 Actual per-
 message Send approval/delivery integration remains #288; no send or production
 template save enabled by verification. Existing assertions unchanged; source/
