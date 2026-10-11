@@ -8,7 +8,9 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-10 -- #307 JV stage DATA FOUNDATION IN PROGRESS. D-048 stages,
+2026-10-10 -- #307 JV stage DATA FOUNDATION DONE in
+[PR #326](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/326),
+application main0eae4df; exact Railway success,health200. D-048 stages,
 append-only operator reports, sourced holder terms, blind teaser and signed-date/
 contract-copy/current-terms guards for full-package previews. Existing legacy
 statuses/history remain; no UI redesign or Send enabled. Focused synthetic
@@ -16,13 +18,21 @@ service/routes passed after correcting new fixture/error expectations.
 Suite152 passed,0 failed,0 skipped (600s/file); focused proof rerun on final
 code after history/reference hardening. Service0.34s,routes1.20s,county-notice
 17.18s; all durations docs/test-results/issue-307-jv-stage-data.txt.
-Release/live gates pending. Existing assertions unchanged; unrelated
+Live signed-in Today3 cards,no loading placeholder; Leads100 rows,card opens
+and closes,zero console errors. Both new preview GETs unauthenticated401.
+Normal Today's Deals read succeeds; direct API-tab navigation is client-blocked,
+not bypassed. Actual stage counts are not displayed by the legacy UI yet;
+stage writes/packages proven in synthetic service,not fabricated production
+reports. No UI changes/screenshots required in this data foundation.
+Existing assertions unchanged; unrelated
 exports/logs preserved. No production reports/sends/confirmations/batches.
 Latest Gabriel order: finish #307 JV stages, templates/approvals, triage;
 #325 dark/right-menu/clock/Gmail/JV UX; #288 send/packages/JV generator;
 #304 bugs1-7/12 then8-11; government property/timeline engine; FL free comps;
 deed-backed buyers; #299 Dashboard/email brief; #313 photos; #303 map;
-#275 Deal Check with Black Diamonds. #307 remains OPEN; no overall readiness
+#275 Deal Check with Black Diamonds. Next #307 slice: operator stage controls
+and signed-evidence amendment/review,then templates/approvals and lead triage.
+#307 remains OPEN; no overall readiness
 percentage claimed. Assumption logged in DECISIONS.
 
 2026-10-10 -- #307 persistent Gmail linking milestone DONE in
