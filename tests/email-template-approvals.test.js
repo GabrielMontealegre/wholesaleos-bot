@@ -1,0 +1,37 @@
+'use strict';
+const assert=require('node:assert/strict');const fs=require('node:fs');
+const templates=require('../modules/email/template-approvals');
+const context={now:'2026-10-11T12:00:00.000Z',operatorId:'synthetic-admin'};
+const seed={leads:[{id:'unchanged'}],buyers:[{id:'unchanged'}],reviewed_deals:[{id:'unchanged'}],conversations:[{id:'unchanged'}]};
+function input(store=seed){return {kind:'holder_jv_reply',subject:'Synthetic holder reply',body:'Synthetic text\nNo actual deal claim.',version:templates.list(store,context).items[0].version,reviewed:true};}
+const before=JSON.stringify(seed);const result=templates.save(seed,input(),context);assert.equal(result.saved,true);
+assert.equal(result.store.email_template_history.length,1);assert.equal(result.store.activities.length,1);
+assert.equal(templates.list(result.store,context).items[0].approved_send_count,0,'template review is never a delivery');
+assert.equal(templates.list(result.store,context).items[0].template.source_kind,'operator_input');
+for(const key of ['leads','buyers','reviewed_deals','conversations'])assert.deepEqual(result.store[key],seed[key]);assert.equal(JSON.stringify(seed),before);
+assert.throws(()=>templates.save(result.store,input(),context),/changed/);
+assert.equal(templates.save(result.store,input(result.store),context).store,result.store,'duplicate template review is quiet');
+assert.throws(()=>templates.save(seed,{...input(),reviewed:false},context),/review_required/);
+assert.throws(()=>templates.save(seed,{...input(),approved_send_count:20},context),/review_required/);
+assert.throws(()=>templates.save(seed,{...input(),subject:'Header\r\nBcc: private@example.test'},context),/text_invalid/);
+assert.throws(()=>templates.save(seed,input(),{...context,operatorId:''}),/text_invalid/);
+assert.throws(()=>templates.save(seed,input(),{...context,now:'2026-02-30T00:00:00Z'}),/clock_invalid/);
+const edited=templates.save(result.store,{...input(result.store),body:'Edited synthetic text.'},context).store;
+assert.equal(edited.email_template_history.length,2);assert.equal(edited.email_template_history[0].body,input().body);
+assert.equal(templates.list(JSON.parse(JSON.stringify(edited)),context).items[0].template.body,'Edited synthetic text.');
+assert.ok(!JSON.stringify(edited.activities).includes('Edited synthetic text.'),'activity never carries a private template body');
+const wrong=JSON.parse(JSON.stringify(edited));wrong.email_template_history.at(-1).source_kind='ai_generated';assert.equal(templates.list(wrong,context).items[0].invalid_history,true);assert.throws(()=>templates.save(wrong,input(wrong),context),/history_invalid/);
+const proof={email_draft_approvals:[],email_delivery_receipts:[]};
+for(let i=0;i<20;i++){const digest=String(i).padStart(64,'0');proof.email_draft_approvals.push({id:'approval-'+i,kind:'holder_jv_reply',source_kind:'operator_input',reviewed:true,operator_id:'synthetic-admin',approved_at:context.now,message_digest:digest});proof.email_delivery_receipts.push({kind:'holder_jv_reply',approval_id:'approval-'+i,source_kind:'smtp_delivery',status:'accepted',sent_at:context.now,message_digest:digest,message_id:'<message-'+i+'@example.test>'});}
+const policy=templates.policy(proof,'holder_jv_reply',context.now);assert.equal(policy.approved_send_count,20);assert.equal(policy.full_preview_required,false);assert.equal(policy.explicit_send_required,true);assert.equal(policy.automatic_send_allowed,false);
+assert.equal(templates.policy({...proof,email_delivery_receipts:proof.email_delivery_receipts.slice(0,19)},'holder_jv_reply',context.now).full_preview_required,true);
+assert.equal(templates.policy({...proof,email_delivery_receipts:proof.email_delivery_receipts.concat(proof.email_delivery_receipts[0])},'holder_jv_reply',context.now).approved_send_count,20,'duplicate Message-ID counts once');
+for(const patch of [{source_kind:'imported_report'},{status:'failed'},{sent_at:'2026-10-12T00:00:00Z'},{message_digest:'f'.repeat(64)},{approval_id:'missing'}])assert.equal(templates.policy({...proof,email_delivery_receipts:[{...proof.email_delivery_receipts[0],...patch}]},'holder_jv_reply',context.now).approved_send_count,0);
+assert.equal(templates.policy(proof,'buyer_teaser',context.now).approved_send_count,0,'kinds never share their first-20 count');
+assert.throws(()=>templates.policy({email_draft_approvals:{}},'buyer_teaser',context.now),/store_invalid/);assert.throws(()=>templates.policy({email_delivery_receipts:{}},'buyer_teaser',context.now),/store_invalid/,'malformed receipts are unavailable, not a fabricated zero');
+const conflict={email_draft_approvals:[proof.email_draft_approvals[0],{...proof.email_draft_approvals[0],id:'other-kind',kind:'buyer_teaser'}],email_delivery_receipts:[proof.email_delivery_receipts[0],{...proof.email_delivery_receipts[0],kind:'buyer_teaser',approval_id:'other-kind'}]};
+assert.equal(templates.policy(conflict,'holder_jv_reply',context.now).approved_send_count,0);assert.equal(templates.policy(conflict,'buyer_teaser',context.now).approved_send_count,0,'a contradictory Message-ID is not two approved sends');
+assert.ok(!JSON.stringify(templates.policy(proof,'holder_jv_reply',context.now)).includes('@example.test'),'aggregate policy has no recipients or message identifiers');
+const old={fetch:global.fetch,write:fs.writeFileSync,clock:Date.now};let calls=0;try{const forbidden=()=>{calls++;throw Error('side effect');};global.fetch=forbidden;fs.writeFileSync=forbidden;Date.now=forbidden;templates.list(seed,context);templates.save(seed,input(),context);templates.policy(proof,'holder_jv_reply',context.now);}finally{global.fetch=old.fetch;fs.writeFileSync=old.write;Date.now=old.clock;}assert.equal(calls,0);
+console.log('Email templates: explicit review, append-only edits, stale/forged/header/future guards, actual approved delivery policy, kind isolation, duplicate quiet, preservation/privacy and purity passed.');
+module.exports={context,seed,input};
