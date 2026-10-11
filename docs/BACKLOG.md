@@ -8,7 +8,9 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-10 -- #307 persistent Gmail linking IN PROGRESS. Explicit Inbox
+2026-10-10 -- #307 persistent Gmail linking milestone DONE in
+[PR #324](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/324),
+application maindc4d7b3; exact Railway success,health200. Explicit Inbox
 person/role/ref association and exact server-read Message-ID; append-only
 metadata receipts feed reminders/brief and survive imports/reloads. Dashboard
 save re-fetches latest30, re-reads current store, refuses ambiguous/closed/self/
@@ -19,7 +21,17 @@ auth/server/dependency change; existing assertions unchanged, two fake GET-only
 route registrars gain inert post() scaffolding. Synthetic desktop400/412 link
 and Dashboard proof at docs/screens/2026-10-10-mailbox-persistence/.
 Final suite150 passed,0 failed,0 skipped,600s/file; all durations in
-docs/test-results/issue-307-persistent-mailbox.txt. Release/live gates pending.
+docs/test-results/issue-307-persistent-mailbox.txt; persistence4.11s,UI0.23s,
+mobile23.86s,county-notice12.77s. Served conversationsv3/emailv2. Actual Inbox30
+messages,Connected(App Password); opened message form has empty person/role.
+Live1366/400/412: all form controls44px,inside viewport,no overflow.
+Read-only reply check still reports no exact anchors/nothing fetched;
+Save linked replies disabled. No actual link/sync performed or seed invented.
+Initial startup Leads request502 at2026-10-11T00:49:29.827Z; subsequent one
+fresh load100 Leads/card open-close,zero fresh errors. Incident recorded on
+existing #209; cause unestablished,not claimed fixed. Live header screenshot
+timed out in Page.captureScreenshot; synthetic screenshots are not live proof.
+Viewport restored/verification tab closed. No production save/confirmation.
 No production link/sync/save/send/batch/contact/confirmation test. ASSUMED explicit
 operator action, no scheduler, logged in DECISIONS. After this milestone:
 #307 email templates/approvals,JV stages,lead triage; then #304 round2 bugs1-7;

@@ -57,3 +57,23 @@ Live verification never submits either save action or creates a conversation.
 It observes form/buttons, existing records, service health and console only.
 #307 remains open for email templates/approvals, then JV stages and lead triage;
 #304 round2 visible bugs1-7 follows #307, then the user's recorded source order.
+
+## Verified release
+
+PR #324 merged as dc4d7b3; exact Railway success,health200. Final150 passed,
+0 failed,0 skipped,600s/file; all durations committed. Persistence4.11s,
+UI0.23s,mobile23.86s,county-notice12.77s. No existing assertions changed.
+
+Actual live Inbox30 messages,Connected(App Password); opened message renders
+blank person/role and Save conversation link. No form submitted. Both changed
+surfaces served conversationsv3/emailv2; form controls44px and horizontally
+inside1366/400/412 viewports with no overflow. Existing reply check reports
+no exact anchors/nothing fetched; save disabled. No real link/receipt seeded.
+Persistence/duplicate/concurrent/negative behavior is synthetic-service-tested,
+not claimed tested by writing to production.
+
+One startup Leads GET502 logged at2026-10-11T00:49:29.827Z; one subsequent fresh
+load100 Leads/card open-close,zero fresh console errors. Recorded in existing
+incident #209; cause unknown,not claimed fixed. Header-only live screenshot
+capture timed out; labeled synthetic screenshots remain separate from live proof.
+Viewport restored and temporary tab closed. No send/batch/contact/confirmation.
