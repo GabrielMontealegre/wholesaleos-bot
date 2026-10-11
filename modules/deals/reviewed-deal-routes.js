@@ -1,6 +1,7 @@
 'use strict';
 const deals = require('./reviewed-deals');
 const activity = require('../records/record-activity');
+const jvWorkflow = require('./jv-workflow');
 function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Date().toISOString() }) {
   function failure(res, e) { const known = /^find_deal_[a-z_]+$/.test(e.code || ''); res.status(known ? e.status || 400 : 503).json({ code: known ? e.code : 'deal_store_unavailable' }); }
   app.get('/api/dashboard/todays-deals', requireAdmin, (req, res) => {
@@ -8,6 +9,26 @@ function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Dat
   });
   app.patch('/api/dashboard/todays-deals/:id', requireAdmin, (req, res) => {
     try { const result = deals.update(db.readDBStrict(), req.params.id, req.body, { now: now(), operatorId: req.currentUser.id }); db.writeDB(result); res.json({ ok: true }); } catch (e) { failure(res, e); }
+  });
+  app.post('/api/dashboard/todays-deals/:id/jv-stage', requireAdmin, (req,res) => {
+    try {
+      res.set('Cache-Control','no-store');
+      if(Buffer.byteLength(JSON.stringify(req.body||{}))>8192)return res.status(413).json({code:'find_deal_jv_request_too_large'});
+      const store=db.readDBStrict();const deal=(store.reviewed_deals||[]).find(d=>d.id===req.params.id);
+      if(!deal||deal.deal_kind!=='jv')return res.status(404).json({code:'find_deal_not_found'});
+      const context={now:now(),operatorId:req.currentUser.id};
+      const result=jvWorkflow.record(store,deal.id,req.body,context,deals.evaluate(deal,store.buyers,context.now));
+      db.writeDB(result);res.json({ok:true,stage:jvWorkflow.view(result.reviewed_deals.find(d=>d.id===deal.id),context.now).stage});
+    } catch(e){failure(res,e);}
+  });
+  for(const kind of ['buyer-teaser','full-package'])app.get('/api/dashboard/todays-deals/:id/'+kind,requireAdmin,(req,res)=>{
+    try {
+      res.set('Cache-Control','no-store');
+      const store=db.readDBStrict();const deal=(store.reviewed_deals||[]).find(d=>d.id===req.params.id);
+      if(!deal||deal.deal_kind!=='jv')return res.status(404).json({code:'find_deal_not_found'});
+      const current=now();const evaluation=deals.evaluate(deal,store.buyers,current);
+      res.json(kind==='buyer-teaser'?jvWorkflow.teaser(deal,evaluation,req.query.buyer_id):jvWorkflow.fullPackage(deal,evaluation,req.query.buyer_id,current));
+    } catch(e){failure(res,e);}
   });
   app.get('/api/dashboard/todays-deals/:id/jv-draft', requireAdmin, (req, res) => {
     try { const store = db.readDBStrict(); const deal = (store.reviewed_deals || []).find(d => d.id === req.params.id); if (!deal || deal.deal_kind !== 'jv') return res.status(404).json({ code: 'find_deal_not_found' }); res.set('Cache-Control', 'no-store').attachment('jv-term-sheet.txt').type('text/plain').send(deals.jvDraft(deal, deals.evaluate(deal, store.buyers, now()))); } catch (e) { failure(res, e); }
