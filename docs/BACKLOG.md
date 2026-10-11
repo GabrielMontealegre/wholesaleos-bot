@@ -8,6 +8,22 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-11 -- #307 JV stage controls BUILT/TESTED on item/307-jv-stage-controls.
+Canonical nine-stage bar/history and explicit next-action form, sourced holder
+terms and GET-only blind teaser/signed package previews built. Actual synthetic
+browser/service proof traverses all stages; desktop1366/400/412 has no overflow
+or sub44px controls. Empty/unticked/stale writes refuse; reload preserves history;
+previews do not record sends. No existing assertion changed. Full suite:
+SUMMARY passed=154 failed=0 skipped=0 total=154,600s/file; UI8.84s,
+terms0.59s,workflow0.74s,routes2.69s,mobile23.43s,county-notice41.05s.
+All durations docs/test-results/issue-307-jv-stage-controls.txt.
+Release/live gates pending. Signing amendment/re-review, templates/approvals and
+triage remain; #307 is not DONE. Latest Gabriel order remains #307, #325, #288,
+#304 round2, government property/timeline engine, FL comps, deed buyers,
+#299/#313/#303/#275. No production write, message, capture, batch or confirmation.
+ASSUMED reuse server checks/current term updater, explicit UTC-7 action time;
+global design changes stay #325. Unrelated exports/logs preserved.
+
 2026-10-10 -- #307 JV stage DATA FOUNDATION DONE in
 [PR #326](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/326),
 application main0eae4df; exact Railway success,health200. D-048 stages,

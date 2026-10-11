@@ -44,7 +44,7 @@ function view(deal,now) {
   const history=events(deal,now);const current=['dead','closed'].includes(deal.status)?deal.status:history.at(-1)?.to||'found';
   const signed=signature(deal,now);const terminal=['dead','closed'].includes(current);
   return {stage:current,label:LABELS[current],next_stage:terminal?null:STAGES[STAGES.indexOf(current)+1]||null,
-    stages:STAGES.map(stage=>({stage,label:LABELS[stage],recorded:stage==='found'||history.some(e=>e.to===stage)})),
+    stages:STAGES.map(stage=>({stage,label:LABELS[stage],recorded:stage==='found'||history.some(e=>e.to===stage),required_checks:[...(CHECKS[stage]||[])]})),
     events:history,history_invalid:deal.jv_workflow_events!=null&&(!Array.isArray(deal.jv_workflow_events)||history.length!==deal.jv_workflow_events.length),legacy_status:deal.status||null,signed_date:signed?.signed_date||null,contract_copy_verified:!!signed,
     full_package_evidence_ready:!!signed&&!terminal,active:history.length>0&&!terminal,
     blocking_reason:signed?'':history.some(e=>e.to==='jv_signed')?'Signed evidence or holder terms changed; review required.':'A signing date and verified contract copy are required before sharing the full package.'};

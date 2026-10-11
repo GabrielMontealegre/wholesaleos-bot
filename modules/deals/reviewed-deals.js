@@ -276,15 +276,17 @@ function evaluate(deal, buyers, now) {
     next_action: expired ? 'Keep for history; verify whether a new deal exists.' : deal.approval !== 'approved' ? 'Review the source and comps, then approve or reject.' : !value.range ? 'Review the comparable sales.' : deal.deal_kind === 'jv' && !confirmed ? 'Ask the holder whether it is still available.' : !deal.contract_verified_at ? 'Review the contract copy and owner-of-record evidence.' : !deal.jv_signed_at && deal.deal_kind === 'jv' ? 'Have title review the JV terms before signing.' : 'Review the matched buyer and the next recorded stage.' };
 }
 function update(store, id, input, { now, operatorId }) {
-  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message','jv_split','comp_index','comp_key'].includes(k))) fail('find_deal_update_invalid');
+  const holderFields = ['jv_split','contract_price','holder_fee','closing_date','title_company','emd'];
+  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['action', 'status', 'reason', 'reviewed_comps', 'checks', 'evidence_url', 'drafted_message',...holderFields,'comp_index','comp_key'].includes(k))) fail('find_deal_update_invalid');
   const index = (store.reviewed_deals || []).findIndex(d => d.id === id); if (index < 0) fail('find_deal_not_found', 404);
   const deal = { ...store.reviewed_deals[index] }; const from = deal.status; const action = input.action;
   const reason = text(input.reason, 300); const evidenceUrl = url(input.evidence_url);
   if (action === 'terms') {
-    if (deal.deal_kind !== 'jv' || !evidenceUrl || !reason || input.jv_split == null) fail('find_deal_terms_required');
-    return applyDealUpdate(store,{kind:'deal_update',ref:activity.reference(deal),source_url:evidenceUrl,captured_at:now,evidence_text:reason,jv_split:input.jv_split},{now,operatorId}).store;
+    const terms = Object.fromEntries(holderFields.filter(k=>Object.hasOwn(input,k)).map(k=>[k,input[k]]));
+    if (deal.deal_kind !== 'jv' || !evidenceUrl || !reason || !Object.keys(terms).length) fail('find_deal_terms_required');
+    return applyDealUpdate(store,{kind:'deal_update',ref:activity.reference(deal),source_url:evidenceUrl,captured_at:now,evidence_text:reason,...terms},{now,operatorId}).store;
   }
-  if (Object.hasOwn(input,'jv_split')) fail('find_deal_update_invalid');
+  if (holderFields.some(k=>Object.hasOwn(input,k))) fail('find_deal_update_invalid');
   if (action === 'exclude_comp') {
     const comp=deal.comps && deal.comps[input.comp_index];
     if(!Number.isInteger(input.comp_index)||input.comp_index<0||!comp||!reason)fail('find_deal_comp_exclusion_invalid');
