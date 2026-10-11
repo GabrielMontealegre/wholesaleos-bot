@@ -61,7 +61,9 @@ async function prove({screenshots=false}={}) {
     await page.locator('[data-jv-terms] summary').click();await page.locator('[data-jv-command="terms"]').click();
     assert.ok((await page.locator('[data-jv-terms-result]').innerText()).includes('Nothing was saved'));assert.equal(writes,1);
     await page.locator('[data-jv-field="terms_source"]').fill('https://records.example.test/changed-terms');await page.locator('[data-jv-field="terms_evidence"]').fill('Synthetic changed contract price.');await page.locator('[data-jv-field="contract_price"]').fill('146000');
-    await page.locator('[data-jv-command="terms"]').click();await page.waitForFunction(()=>document.querySelector('[data-jv-field="contract_price"]')?.value==='146000');
+    const termsSaved=page.waitForResponse(r=>r.request().method()==='PATCH'&&new URL(r.url()).pathname==='/api/dashboard/todays-deals/deal');
+    await page.locator('[data-jv-command="terms"]').click();assert.equal((await termsSaved).status(),200);
+    await page.waitForFunction(()=>document.querySelector('[data-jv-field="contract_price"]')?.value==='146000'&&document.querySelector('[data-jv-field="terms_source"]')?.value==='');
     assert.equal(store.reviewed_deals[0].contract_price,146000);assert.equal(writes,2);
     // A stale server rejection keeps the user's entered evidence, not a success message.
     await page.route('**/jv-stage',route=>route.fulfill({status:409,json:{code:'find_deal_jv_transition_invalid'}}));

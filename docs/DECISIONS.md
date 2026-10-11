@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #307 signing re-review appends a separate operator report tied to the
+current holder terms and a stale-card version. It requires the original real
+signed stage, all signing checks, raw signing-date proof and current contract/JV
+document URLs. It never changes a stage, erases prior signing history or asserts
+that anything was sent. Missing terms and malformed reviews remain locked;
+production verification makes no real review -- AGENTS truth/preservation and
+D-048 -- 2026-10-11.
+
 ASSUMED: #307 JV controls reuse the canonical server stage/check schema and the
 existing source-backed term updater. Preview is GET-only and never asserts a
 send. Action time is entered explicitly in Gabriel's UTC-7 zone; no stage,

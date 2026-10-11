@@ -8,6 +8,21 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-11 -- autonomous continuation authorized through usage limit. #307
+signing re-review BUILT/TESTED on item/307-jv-signing-review. Pure append-only
+review with original-signing/current-terms/version/source/date/check guards;
+admin route,explicit UI and synthetic1366/400/412 proof pass. No stage/history
+overwrite,no actual production review or send. Contrast defect found by image
+inspection fixed and pinned; global #325 design unchanged. Initial suite155/1
+failure in earlier UI reload wait; isolated pass, then actual PATCH/reloaded-card
+synchronization fixed with all assertions retained. Logs preserved. Final
+SUMMARY passed=156 failed=0 skipped=0 total=156,600s/file; reviewUI4.34s,
+review0.31s,prior stageUI5.00s,mobile15.28s,county-notice10.71s; all durations
+docs/test-results/issue-307-jv-signing-review.txt. Release/live gates pending.
+After this: #307 email templates/approvals then triage; #325,#288,
+#304,government property timeline engine,FL sales/deed buyers,brief/photos/map/
+Deal Check. Existing assertions unchanged; assumptions logged; exports preserved.
+
 2026-10-11 -- #307 usable JV stage controls DONE in
 [PR #327](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/327),
 application mainf78eaa5; exact Railway success,health200.
