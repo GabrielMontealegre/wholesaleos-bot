@@ -264,3 +264,12 @@ uses the existing audited conversation import; preview does not save reports,
 send alerts, enable a schedule, or satisfy contact/value gates. Full persistent
 Gmail synchronization and email approvals/templates remain later #307 work --
 AGENTS sections2/3/5 and D-050 -- 2026-10-10.
+
+ASSUMED: #307 persistent Gmail linkage is explicit, not an automatic scheduler.
+An operator names the person/role/known refs for an exact server-read message;
+later exact replies are saved by a separate explicit action. Missing/ambiguous
+associations are never guessed from email names or subjects. Append-only
+server-owned metadata receipts, not message bodies, feed existing reminders
+and the shared brief; old imports preserve them. No contact outcome, lead fact
+or send is asserted. Production release verification creates no link or receipt
+and does not press either save action -- AGENTS sections3/5/7,D-050 -- 2026-10-10.
