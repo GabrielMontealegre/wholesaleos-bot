@@ -8,6 +8,25 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 persistent Gmail linking IN PROGRESS. Explicit Inbox
+person/role/ref association and exact server-read Message-ID; append-only
+metadata receipts feed reminders/brief and survive imports/reloads. Dashboard
+save re-fetches latest30, re-reads current store, refuses ambiguous/closed/self/
+future/unknown identity; duplicates quiet and message identity conflicts refuse.
+No guessed Gmail account0 URL; absent browser link stays absent. Mail bodies,
+senders and people are excluded from aggregate logs. No source/comp/readiness/
+auth/server/dependency change; existing assertions unchanged, two fake GET-only
+route registrars gain inert post() scaffolding. Synthetic desktop400/412 link
+and Dashboard proof at docs/screens/2026-10-10-mailbox-persistence/.
+Final suite150 passed,0 failed,0 skipped,600s/file; all durations in
+docs/test-results/issue-307-persistent-mailbox.txt. Release/live gates pending.
+No production link/sync/save/send/batch/contact/confirmation test. ASSUMED explicit
+operator action, no scheduler, logged in DECISIONS. After this milestone:
+#307 email templates/approvals,JV stages,lead triage; then #304 round2 bugs1-7;
+#301/#315 government NC Charlotte,FL,TX terms first, one property/event timeline;
+B-21 FL sales; B-09 deed-backed cash buyers; #299/#304 menu8-11; #288; #313.
+No overall completion percentage re-measured; #307 remains OPEN.
+
 2026-10-10 -- #307 exact linked-mail preview released in
 [PR #323](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/323),
 application maineaf7ef7; exact Railway success, health200. Existing admin and

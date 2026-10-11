@@ -1,0 +1,33 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+async function main(){
+  const handlers={},timers=[],calls=[],panel={outerHTML:''};let responseOk=true;
+  const doc={head:{appendChild(){}},createElement:()=>({}),querySelector:()=>panel,addEventListener:(t,fn)=>{handlers[t]=fn;}};
+  const root={renderSettings:()=>'',renderGmail:()=>''};
+  const fetch=async(url,options)=>{calls.push({url,method:options?.method||'GET',body:options?.body});return {ok:responseOk,json:async()=>url.includes('/message/')?{id:'fixture-mail',subject:'SYNTHETIC SUBJECT',body:'SYNTHETIC BODY',from:'fixture@example.test'}:options?.method==='POST'?{ok:responseOk,secret:'never-display'}:{ok:true,messages:[]}};};
+  vm.runInNewContext(fs.readFileSync('dashboard/wos-email-reader.js','utf8'),{window:root,document:doc,setTimeout:fn=>timers.push(fn),fetch});
+  root.renderGmail();await timers.shift()();assert.ok(calls.every(c=>c.method==='GET'));
+  const target={closest:s=>s==='[data-email-message]'?{dataset:{emailMessage:'fixture-mail'}}:null};await handlers.click({target});assert.ok(panel.outerHTML.includes('Save conversation link'));assert.ok(panel.outerHTML.includes('Choose a role'));
+  const elements={person:{value:' Explicit person '},role:{value:'partner'},refs:{value:'BUY-0001, WOS-FL-1031'},next_step:{value:'Review reply'}};
+  const submit=()=>handlers.submit({preventDefault(){},target:{matches:()=>true,elements}});
+  await submit();const post=calls.find(c=>c.method==='POST');assert.equal(post.url,'/api/dashboard/conversations/email-link');assert.deepEqual(JSON.parse(post.body),{message_id:'fixture-mail',person:'Explicit person',role:'partner',refs:['BUY-0001','WOS-FL-1031'],next_step:'Review reply'});assert.ok(panel.outerHTML.includes('Conversation link saved'));assert.ok(!panel.outerHTML.includes('never-display'));
+  responseOk=false;await submit();assert.ok(panel.outerHTML.includes('Save result unavailable'));assert.ok(!panel.outerHTML.includes('never-display'));
+  elements.role.value='';const count=calls.length;await submit();assert.equal(calls.length,count,'missing operator role sends nothing');
+  assert.ok(calls.every(c=>c.method==='GET'||c.url==='/api/dashboard/conversations/email-link'),'no send or mailbox write route');
+  const cvHandlers={},cvPanel={outerHTML:''},cvCalls=[],cvTimers=[];
+  const plain={items:[],total:0,waiting_count:0};
+  const matched={...plain,email_preview:{preview_only:true,scanned_messages:1,matched_messages:1,unlinked_messages:0}};
+  const cvDoc={head:{appendChild(){}},createElement:()=>({}),querySelector:()=>cvPanel,addEventListener:(t,fn)=>{cvHandlers[t]=fn;}};
+  const cvRoot={renderDashboard:()=>''};
+  const cvFetch=async(url,options)=>{cvCalls.push({url,method:options?.method||'GET',body:options?.body});return {ok:true,json:async()=>url.endsWith('email-sync')?{ok:true,saved_messages:1,duplicate_messages:0}:url.endsWith('email-preview')?matched:plain};};
+  vm.runInNewContext(fs.readFileSync('dashboard/wos-conversations.js','utf8'),{window:cvRoot,document:cvDoc,URL,setTimeout:fn=>cvTimers.push(fn),fetch:cvFetch});
+  cvRoot.renderDashboard();await cvTimers.shift()();assert.ok(cvCalls.every(c=>c.method==='GET'));
+  const flush=()=>new Promise(resolve=>setImmediate(resolve));
+  const click=s=>cvHandlers.click({target:{closest:q=>q===s?{}:null}});
+  click('[data-conversation-email-save]');await flush();assert.ok(cvCalls.every(c=>c.method==='GET'),'no matched preview means no save');
+  click('[data-conversation-email-preview]');await flush();assert.ok(cvCalls.every(c=>c.method==='GET'));
+  click('[data-conversation-email-save]');await flush();assert.deepEqual(cvCalls.filter(c=>c.method==='POST'),[{url:'/api/dashboard/conversations/email-sync',method:'POST',body:'{}'}]);
+  assert.ok(cvPanel.outerHTML.includes('1 replies saved'));assert.ok(cvPanel.outerHTML.includes('No email sent'));
+  console.log('Persistent email UI: explicit person/role/ref only, quiet rendering, one guarded link POST, no mailbox/send routes, uncertain-response honesty and private error redaction passed.');
+}
+main().catch(e=>{console.error(e.stack);process.exitCode=1;});

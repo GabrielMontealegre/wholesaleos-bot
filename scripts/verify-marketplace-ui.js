@@ -93,6 +93,8 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-email-message]').click();
           await page.getByText('Fixture text <script>alert(1)</script>',{exact:true}).waitFor();
           assert.strictEqual(await page.locator('#email-reader script').count(),0,'message body is text only');
+          await page.locator('[data-email-link-form]').waitFor();
+          assert.strictEqual(await page.locator('[data-email-link-form] select').inputValue(),'','operator role is never inferred');
           await page.locator('[data-email-back]').click();
         }
         if (name === 'dashboard') {
@@ -105,6 +107,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.getByText('Latest linked email subject: SYNTHETIC EMAIL <script>not executable</script>',{exact:true}).waitFor();
           assert.strictEqual(await page.locator('#wos-conversations script').count(),0,'email subject cannot execute');
           assert.strictEqual(await page.locator('[data-conversation-copy]').count(),0,'old draft withheld after a new linked reply');
+          assert.ok(await page.locator('[data-conversation-email-save]').isEnabled(),'matched preview offers an explicit save, never an automatic write');
           await page.locator('.wos-discovery-value').waitFor({state:'attached'});
           await page.locator('.wos-discovery-value').scrollIntoViewIfNeeded();
         }
@@ -150,9 +153,14 @@ async function prove({ screenshots = false,wider=false } = {}) {
             await page.locator('#owner-channel-panel').screenshot({path:path.join(statusOutput,'local-status-'+width+'.png')});
           }
           if(name==='dashboard') {
-            const conversationOutput=path.join(root,'docs/screens/2026-10-10-mailbox-preview');
+            const conversationOutput=path.join(root,'docs/screens/2026-10-10-mailbox-persistence');
             fs.mkdirSync(conversationOutput,{recursive:true});
             await page.locator('#wos-conversations').screenshot({path:path.join(conversationOutput,'local-conversations-'+width+'.png')});
+          }
+          if(name==='gmail'){
+            await page.locator('[data-email-message]').click();
+            const mailOutput=path.join(root,'docs/screens/2026-10-10-mailbox-persistence');fs.mkdirSync(mailOutput,{recursive:true});
+            await page.locator('[data-email-link-form]').screenshot({path:path.join(mailOutput,'local-email-link-'+width+'.png')});
           }
         }
       }

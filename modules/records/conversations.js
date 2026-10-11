@@ -2,6 +2,7 @@
 const crypto = require('crypto');
 const records = require('./record-activity');
 const { dayAt } = require('./calendar-day');
+const {savedReplies}=require('./mailbox-reply-evidence');
 const STATUSES = ['hot', 'to_send', 'follow_up', 'waiting_on_deal', 'closed'];
 const CHANNELS = ['facebook', 'email', 'phone', 'manual'];
 function fail(code, status=400) { const e=new Error(code);e.code=code;e.status=status;throw e; }
@@ -40,7 +41,7 @@ function upsert(store,input,context) {
     if(previous.captured_at===item.captured_at&&JSON.stringify(previous.report)!==JSON.stringify(item))fail('find_conversation_conflict',409);
     return {store,results:[{id,result:'duplicate'}]};
   }
-  const row={id,...item,source_kind:'imported_report',recorded_at:context.now,recorded_by:context.operatorId,report:item,history:(previous?.history||[]).concat({report:item,recorded_at:context.now,operator_id:context.operatorId})};
+  const row={id,...item,source_kind:'imported_report',recorded_at:context.now,recorded_by:context.operatorId,report:item,history:(previous?.history||[]).concat({report:item,recorded_at:context.now,operator_id:context.operatorId}),...(previous?.mailbox_replies?{mailbox_replies:previous.mailbox_replies}:{})};
   if(index<0)rows.push(row);else rows[index]=row;
   const updated=records.append({...store,conversations:rows},{type:'conversation_updated',summary:'Conversation report imported; not an independently verified outreach action.'},context);
   return {store:updated,results:[{id,result:previous?'updated':'created'}]};
@@ -50,6 +51,7 @@ function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
   if(!Number.isFinite(Date.parse(now)))fail('find_conversation_date_invalid');const today=dayAt(now,timeZone);
   const closed=new Set([...(store.reviewed_deals||[]).filter(r=>['closed','dead'].includes(r.status)),...(store.buyers||[]).filter(r=>r.assistant_find?.status==='not_a_fit')].map(records.reference));
   const rows=new Map((store.conversations||[]).map(r=>[key(r.person,r.refs),{...r,channels:[...r.channels],events:[]}]));
+  for(const row of rows.values())for(const reply of savedReplies(row,now))row.events.push({at:reply.date,direction:'in',summary:'',id:'mailbox:'+reply.key,mailbox:reply});
   for(const a of store.activities||[]) {
     const at=a.ts||a.created_at;const direction=a.direction||({reply_received:'in',email_sent:'out',message_sent:'out'})[a.type];const ref=a.deal_ref||a.buyer_ref||a.match_ref;
     if(!['in','out'].includes(direction)||!CHANNELS.includes(a.channel)||!Number.isFinite(Date.parse(at))||Date.parse(at)>Date.parse(now)||!ref)continue;
@@ -75,7 +77,9 @@ function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
     const offset=sent===1?2:sent===2?5:5+7*(sent-2);
     const due_date=hot?today:row.due_date||(anchor?addDays(dayAt(anchor,timeZone),offset):'');
     const latestSummary=ins[0]&&(!row.last_in||Date.parse(ins[0].at)>Date.parse(row.last_in))?ins[0].summary:row.what_they_said;
-    items.push({id:row.id,person:row.person,role:row.role,refs:row.refs,channels:row.channels,last_in,last_out,what_they_said:latestSummary||'',next_step:row.next_step||'',ready_message:row.ready_message||'',thread_url:link(row.thread_url),status,due_date,overdue:!!due_date&&due_date<today,source_kind:row.source_kind,source_url:row.thread_url||null,evidence_text:latestSummary||'',captured_at:row.captured_at||[last_in,last_out].filter(Boolean).sort().at(-1)||null});
+    const mail=ins[0]?.mailbox;
+    const newMail=mail&&(!row.last_in||Date.parse(mail.date)>Date.parse(row.last_in));
+    items.push({id:row.id,person:row.person,role:row.role,refs:row.refs,channels:row.channels,last_in,last_out,what_they_said:newMail?'':latestSummary||'',next_step:row.next_step||'',ready_message:newMail?'':row.ready_message||'',thread_url:link(row.thread_url),status,due_date,overdue:!!due_date&&due_date<today,source_kind:row.source_kind,source_url:row.thread_url||null,evidence_text:latestSummary||'',captured_at:row.captured_at||[last_in,last_out].filter(Boolean).sort().at(-1)||null,...(newMail?{email_subject:mail.subject,email_evidence:{...mail,persisted:true}}:{})});
   }
   items.sort((a,b)=>(b.status==='hot')-(a.status==='hot')||Number(b.overdue)-Number(a.overdue)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
   return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};

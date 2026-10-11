@@ -48,14 +48,14 @@ function testProjection(){
   try{preview(store,[mail],{now});hasAnchors(store);}finally{global.fetch=oldFetch;fs.writeFileSync=oldWrite;Date.now=oldDate;for(const [mod,key,fn]of originals)mod[key]=fn;}
 }
 async function testRoutes(){
-  const handlers={};const app={get(path,...args){handlers[path]=args;}};let reads=0,writes=0,calls=0;
+  const handlers={};const app={get(path,...args){handlers[path]=args;},post(){}};let reads=0,writes=0,calls=0;
   const db={readDBStrict(){reads++;return store;},writeDB(){writes++;throw Error('write forbidden');}};
   const reader={async list(folder,limit){calls++;assert.equal(folder,'inbox');assert.equal(limit,30);return {ok:true,messages:[mail]};}};
   const admin=()=>{};registerConversationRoutes(app,{db,requireAdmin:admin,now:()=>now,mailboxReader:reader});
   const route=handlers['/api/dashboard/conversations/email-preview'];assert.equal(route[0],admin);
   function response(){return {headers:{},statusCode:200,set(k,v){this.headers[k]=v;return this;},status(n){this.statusCode=n;return this;},json(v){this.body=v;return this;}};}
   const res=response();await route[1]({},res);assert.equal(res.statusCode,200);assert.equal(res.headers['Cache-Control'],'no-store');assert.equal(res.body.email_preview.matched_messages,1);assert.equal(calls,1);assert.equal(writes,0);
-  const noAnchor={};registerConversationRoutes({get(p,...h){noAnchor[p]=h.at(-1);}},{db:{readDBStrict:()=>({conversations:[]})},requireAdmin:admin,now:()=>now,mailboxReader:{list(){throw Error('must not fetch');}}});
+  const noAnchor={};registerConversationRoutes({get(p,...h){noAnchor[p]=h.at(-1);},post(){}},{db:{readDBStrict:()=>({conversations:[]})},requireAdmin:admin,now:()=>now,mailboxReader:{list(){throw Error('must not fetch');}}});
   const empty=response();await noAnchor['/api/dashboard/conversations/email-preview']({},empty);assert.equal(empty.statusCode,200);assert.equal(empty.body.email_preview.scanned_messages,0);assert.ok(empty.body.email_preview.status.includes('Nothing was fetched'));
   reader.list=async()=>{throw Error('private-secret@example.test');};const failed=response();await route[1]({},failed);assert.equal(failed.statusCode,503);assert.ok(!JSON.stringify(failed.body).includes('private-secret'));
   let release;reader.list=()=>new Promise(resolve=>{release=resolve;});const pending=route[1]({},response());const busy=response();await route[1]({},busy);assert.equal(busy.statusCode,429);release({ok:true,messages:[]});await pending;
