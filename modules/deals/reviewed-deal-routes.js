@@ -30,6 +30,17 @@ function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Dat
       res.json(kind==='buyer-teaser'?jvWorkflow.teaser(deal,evaluation,req.query.buyer_id):jvWorkflow.fullPackage(deal,evaluation,req.query.buyer_id,current));
     } catch(e){failure(res,e);}
   });
+  app.post('/api/dashboard/todays-deals/:id/jv-signature-review',requireAdmin,(req,res)=>{
+    try {
+      res.set('Cache-Control','no-store');
+      if(Buffer.byteLength(JSON.stringify(req.body||{}))>8192)return res.status(413).json({code:'find_deal_jv_request_too_large'});
+      const store=db.readDBStrict();const deal=(store.reviewed_deals||[]).find(d=>d.id===req.params.id);
+      if(!deal||deal.deal_kind!=='jv')return res.status(404).json({code:'find_deal_not_found'});
+      const context={now:now(),operatorId:req.currentUser.id};
+      const result=jvWorkflow.recordSignatureReview(store,deal.id,req.body,context,deals.evaluate(deal,store.buyers,context.now));
+      db.writeDB(result);res.json({ok:true,review_recorded:true});
+    }catch(e){failure(res,e);}
+  });
   app.get('/api/dashboard/todays-deals/:id/jv-draft', requireAdmin, (req, res) => {
     try { const store = db.readDBStrict(); const deal = (store.reviewed_deals || []).find(d => d.id === req.params.id); if (!deal || deal.deal_kind !== 'jv') return res.status(404).json({ code: 'find_deal_not_found' }); res.set('Cache-Control', 'no-store').attachment('jv-term-sheet.txt').type('text/plain').send(deals.jvDraft(deal, deals.evaluate(deal, store.buyers, now()))); } catch (e) { failure(res, e); }
   });

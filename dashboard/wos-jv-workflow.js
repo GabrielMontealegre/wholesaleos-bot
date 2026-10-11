@@ -26,7 +26,7 @@
     var selected = buyers.filter(function (b) { return !chosen || b.id === chosen.buyer_id; });
     var options = '<option value="">Choose a matched buyer</option>' + selected.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.buyer_ref || b.name || 'Matched buyer') + '</option>'; }).join('');
     var needsBuyer = ['buyer_teaser','buyer_interested','full_package','emd_at_title','assigned','closed'].includes(model.next_stage);
-    var html = '<section class="jvw" data-jv-workspace data-next-disabled="' + disabled + '"><h4>JV progress</h4><ol class="jvw-stages" aria-label="Recorded JV stages">' + model.stages.map(function (s) {
+    var html = '<section class="jvw" data-jv-workspace data-next-disabled="' + disabled + '" data-review-version="' + esc(model.review_version) + '"><h4>JV progress</h4><ol class="jvw-stages" aria-label="Recorded JV stages">' + model.stages.map(function (s) {
       return '<li' + (s.stage === model.stage ? ' aria-current="step"' : '') + '>' + esc(s.label) + '<small>' + (s.recorded ? 'Recorded' : 'Not recorded') + '</small></li>';
     }).join('') + '</ol><p>Current stage: <strong>' + esc(model.label) + '</strong></p>' + (reason ? '<p class="jvw-caution">' + esc(reason) + '</p>' : '') +
       (model.events.some(function (e) { return e.to === 'jv_signed'; }) && !model.full_package_evidence_ready ? '<p class="jvw-caution">' + esc(model.blocking_reason) + ' Full package remains locked.</p>' : '') +
@@ -44,6 +44,17 @@
     html += '<div class="jvw-previews"><label>Preview for matched buyer<select data-jv-preview-buyer>' + options + '</select></label><div class="td-actions">' +
       '<button type="button" data-jv-command="buyer-teaser" title="Read a blind teaser; this does not send it">Preview blind teaser</button>' +
       '<button type="button" data-jv-command="full-package" title="Read the full package only after current signed evidence is recorded"' + (!model.full_package_evidence_ready ? ' disabled' : '') + '>Preview full package</button></div><div data-jv-preview-result role="status"></div></div>';
+    if (model.review_required && !model.signature_reviews_invalid && !model.history_invalid && !terminal) {
+      var signing=model.stages.find(function(s){return s.stage==='jv_signed';});
+      html += '<form data-jv-review-form><h4>Re-review signed documents</h4><p>Current holder terms need new document review. The original signing record stays intact; this does not sign or send anything.</p><fieldset><legend>Review every signing requirement again</legend>' +
+        (signing.required_checks||[]).map(function(key){return '<label><input type="checkbox" data-jv-check="'+esc(key)+'"> '+esc(labels[key]||key.replace(/_/g,' '))+'</label>';}).join('') + '</fieldset>' +
+        field('Actual date on the signed agreement (for example October 10, 2026)','signed_date_text','') + field('Verified contract copy URL','contract_source_url','','url') +
+        field('Signed JV agreement URL','agreement_source_url','','url') + field('When the review happened (your time, UTC-7)','happened_at','','datetime-local') +
+        field('Message/document URL supporting this review','source_url','','url') + field('What you verified for these holder terms','evidence_text','') +
+        '<button type="submit" title="Record your new document review without replacing any signing history"'+(deal.approval!=='approved'||deal.evaluation.status==='expired'?' disabled':'')+'>Save signed-document review</button><p data-jv-stage-result role="status"></p></form>';
+    }
+    if ((model.signature_reviews||[]).length) html += '<details><summary>Signed-document reviews ('+model.signature_reviews.length+')</summary>'+model.signature_reviews.slice(-5).map(function(review){return '<p>Operator review - '+esc(time(review.happened_at))+' - '+esc(review.operator_id)+'</p><p>'+esc(review.evidence_text)+'</p>';}).join('')+'</details>';
+    if (model.signature_reviews_invalid) html += '<p class="jvw-caution">Recorded signing reviews need investigation. Full package remains locked.</p>';
     if (!terminal && !model.history_invalid) {
       html += '<form data-jv-stage-form><h4>Record an action that happened</h4><label>Outcome<select data-jv-stage><option value="' + esc(model.next_stage) + '">' + esc(current ? current.label : 'Next stage') + '</option><option value="dead">Dead - record why</option></select></label>' +
         '<div data-jv-next-fields><fieldset><legend>Required checks</legend>' + ((current && current.required_checks) || []).map(function (key) {
@@ -69,6 +80,8 @@
     find_deal_jv_terminal:'This deal is no longer active.', find_deal_date_unproven:'Use a spelled-out or ISO closing date.', find_deal_jv_history_invalid:'The stage history needs review.',
     find_deal_jv_source_invalid:'Use the actual HTTPS source or document URL.'
   };
+  messages.find_deal_jv_review_stale='Holder terms or signing history changed. Refresh the card and review the current documents before saving.';
+  messages.find_deal_jv_review_without_signing='Record the actual signed JV stage first; a review cannot replace it.';
   function request(url, method, body) {
     return fetch(url, {method:method, headers:{'Content-Type':'application/json'}, ...(body ? {body:JSON.stringify(body)} : {})}).then(function (response) {
       return response.json().catch(function () { return {}; }).then(function (value) {
@@ -85,10 +98,12 @@
     form.querySelector('button[type="submit"]').disabled = !dead && form.closest('[data-jv-workspace]').dataset.nextDisabled === 'true';
   });
   document.addEventListener('submit', function (event) {
-    var form = event.target.closest('[data-jv-stage-form]'); if (!form) return; event.preventDefault();
+    var form = event.target.closest('[data-jv-stage-form],[data-jv-review-form]'); if (!form) return; event.preventDefault();
+    var isReview=form.hasAttribute('data-jv-review-form');
     var workspace = form.closest('[data-jv-workspace]'); var button = form.querySelector('button[type="submit"]'); if (button.disabled) return;
-    var status = form.querySelector('[data-jv-stage-result]'); var stage = form.querySelector('[data-jv-stage]').value;
-    var body = {action:'jv_stage', stage:stage, happened_at:get(form,'happened_at'), source_url:get(form,'source_url'), evidence_text:get(form,'evidence_text'), checks:{}};
+    var status = form.querySelector('[data-jv-stage-result]'); var stage = isReview?'jv_signed':form.querySelector('[data-jv-stage]').value;
+    var body = {action:isReview?'jv_signature_review':'jv_stage', happened_at:get(form,'happened_at'), source_url:get(form,'source_url'), evidence_text:get(form,'evidence_text'), checks:{}};
+    if(isReview)body.review_version=workspace.dataset.reviewVersion;else body.stage=stage;
     if (!body.happened_at || !body.source_url || !body.evidence_text) {status.textContent='Enter the actual time, source URL and what happened. Nothing was saved.';return;}
     var instant = new Date(body.happened_at + '-07:00');
     if (!Number.isFinite(instant.getTime())) {status.textContent='Enter the actual action date and time. Nothing was saved.';return;}
@@ -103,7 +118,7 @@
       }
     }
     button.disabled=true;status.textContent='Saving recorded action...';
-    request(endpoint(workspace,'jv-stage'),'POST',body).then(function () {saved(workspace);}).catch(function (error) {status.textContent=error.message;}).finally(function () {button.disabled=false;});
+    request(endpoint(workspace,isReview?'jv-signature-review':'jv-stage'),'POST',body).then(function () {saved(workspace);}).catch(function (error) {status.textContent=error.message;}).finally(function () {button.disabled=false;});
   });
   document.addEventListener('click', function (event) {
     var button=event.target.closest('[data-jv-command]'); if (!button || button.disabled) return;

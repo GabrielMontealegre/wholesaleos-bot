@@ -15,6 +15,26 @@ function source(value) { let u;try{u=new URL(text(value,2048));}catch(_){fail('j
 function time(value,now) { text(value,40);if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value.slice(0,10)||Date.parse(value)>Date.parse(now))fail('jv_event_date_invalid',400);return new Date(value).toISOString(); }
 function positive(value) { return typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=1e9; }
 function termsKey(deal) { return crypto.createHash('sha256').update(JSON.stringify(TERMS.map(k=>[k,deal[k]??null]))).digest('hex'); }
+function holderTermsValid(deal) { return positive(deal.contract_price)&&typeof deal.title_company==='string'&&!!deal.title_company.trim()&&!!dates.normalizeSourceDate(deal.closing_date).iso&&
+  (positive(deal.holder_fee)||typeof deal.jv_split==='number'&&deal.jv_split>0&&deal.jv_split<=1)&&typeof deal.emd==='number'&&Number.isFinite(deal.emd)&&deal.emd>=0; }
+function reviewVersion(deal) { return crypto.createHash('sha256').update(JSON.stringify([termsKey(deal),deal.jv_workflow_events||[],deal.jv_signature_reviews||[],deal.approval,deal.status])).digest('hex'); }
+function reviews(deal,now) {
+  if(deal.jv_signature_reviews!=null&&!Array.isArray(deal.jv_signature_reviews))return null;
+  const signed=events(deal,now).find(e=>e.to==='jv_signed');const out=[];let previous=signed?.happened_at;
+  for(const review of deal.jv_signature_reviews||[]) {
+    try {
+      if(!signed||review.source_kind!=='operator_input'||review.contract_copy_verified!==true||!/^[a-f0-9]{64}$/.test(review.terms_key||'')) return null;
+      if(!review.holder_terms||termsKey(review.holder_terms)!==review.terms_key)return null;
+      text(review.operator_id,128);text(review.evidence_text);
+      const at=time(review.happened_at,now);time(review.recorded_at,now);
+      if(at<previous||Date.parse(at)>Date.parse(review.recorded_at)||!review.checks||Array.isArray(review.checks)||Object.keys(review.checks).some(k=>!CHECKS.jv_signed.includes(k))||CHECKS.jv_signed.some(k=>review.checks[k]!==true))return null;
+      source(review.source_url);source(review.contract_source_url);source(review.agreement_source_url);
+      const date=dates.normalizeSourceDate(review.signed_date_text).iso;if(!date||date>at.slice(0,10))return null;
+      previous=at;out.push(review);
+    }catch(_){return null;}
+  }
+  return out;
+}
 function events(deal,now) {
   let prior='found', previous='';const out=[];
   if(deal.jv_workflow_events!=null&&!Array.isArray(deal.jv_workflow_events))return out;
@@ -31,9 +51,11 @@ function events(deal,now) {
   return out;
 }
 function signature(deal,now) {
+  if(!holderTermsValid(deal))return null;
   const history=events(deal,now);
   if(!Array.isArray(deal.jv_workflow_events)||history.length!==deal.jv_workflow_events.length)return null;
-  const event=history.find(e=>e.to==='jv_signed');
+  const reviewed=reviews(deal,now);if(!reviewed)return null;
+  const event=reviewed.at(-1)||history.find(e=>e.to==='jv_signed');
   if(!event||event.terms_key!==termsKey(deal))return null;
   const signed=dates.normalizeSourceDate(event.signed_date_text).iso;
   if(!signed||signed>event.happened_at.slice(0,10)||signed>now.slice(0,10)||event.contract_copy_verified!==true)return null;
@@ -43,11 +65,35 @@ function signature(deal,now) {
 function view(deal,now) {
   const history=events(deal,now);const current=['dead','closed'].includes(deal.status)?deal.status:history.at(-1)?.to||'found';
   const signed=signature(deal,now);const terminal=['dead','closed'].includes(current);
+  const reviewed=reviews(deal,now);
   return {stage:current,label:LABELS[current],next_stage:terminal?null:STAGES[STAGES.indexOf(current)+1]||null,
     stages:STAGES.map(stage=>({stage,label:LABELS[stage],recorded:stage==='found'||history.some(e=>e.to===stage),required_checks:[...(CHECKS[stage]||[])]})),
     events:history,history_invalid:deal.jv_workflow_events!=null&&(!Array.isArray(deal.jv_workflow_events)||history.length!==deal.jv_workflow_events.length),legacy_status:deal.status||null,signed_date:signed?.signed_date||null,contract_copy_verified:!!signed,
     full_package_evidence_ready:!!signed&&!terminal,active:history.length>0&&!terminal,
+    review_required:history.some(e=>e.to==='jv_signed')&&!signed&&!terminal,review_version:reviewVersion(deal),signature_reviews:reviewed||[],signature_reviews_invalid:!reviewed,
     blocking_reason:signed?'':history.some(e=>e.to==='jv_signed')?'Signed evidence or holder terms changed; review required.':'A signing date and verified contract copy are required before sharing the full package.'};
+}
+function recordSignatureReview(store,id,input,context,evaluation) {
+  const allowed=['action','review_version','happened_at','source_url','evidence_text','checks','signed_date_text','contract_source_url','agreement_source_url'];
+  if(!input||Array.isArray(input)||Object.keys(input).some(k=>!allowed.includes(k))||input.action!=='jv_signature_review')fail('jv_request_invalid',400);
+  const original=(store.reviewed_deals||[]).find(d=>d.id===id);if(!original||original.deal_kind!=='jv')fail('not_found',404);
+  text(context.operatorId,128);const state=view(original,context.now);
+  if(state.history_invalid||state.signature_reviews_invalid)fail('jv_history_invalid');
+  if(!state.events.some(e=>e.to==='jv_signed'))fail('jv_review_without_signing');
+  if(['dead','closed','expired'].includes(evaluation.status)||['dead','closed'].includes(state.stage))fail('jv_terminal');
+  if(original.approval!=='approved')fail('approval_required');
+  if(!holderTermsValid(original))fail('jv_holder_terms_required');
+  if(input.review_version!==reviewVersion(original))fail('jv_review_stale');
+  const at=time(input.happened_at,context.now);const previous=state.signature_reviews.at(-1)||state.events.find(e=>e.to==='jv_signed');
+  if(at<previous.happened_at)fail('jv_event_stale');
+  if(!input.checks||Array.isArray(input.checks)||Object.keys(input.checks).some(k=>!CHECKS.jv_signed.includes(k))||CHECKS.jv_signed.some(k=>input.checks[k]!==true))fail('jv_checks_required');
+  const signed=dates.normalizeSourceDate(input.signed_date_text).iso;if(!signed||signed>at.slice(0,10))fail('jv_signed_date_unproven');
+  const review={source_kind:'operator_input',operator_id:context.operatorId,happened_at:at,recorded_at:context.now,source_url:source(input.source_url),evidence_text:text(input.evidence_text),
+    signed_date_text:text(input.signed_date_text,80),contract_source_url:source(input.contract_source_url),agreement_source_url:source(input.agreement_source_url),
+    contract_copy_verified:true,checks:{...input.checks},terms_key:termsKey(original),holder_terms:Object.fromEntries(TERMS.map(k=>[k,original[k]??null]))};
+  const rows=store.reviewed_deals.map(d=>d.id===id?{...d,jv_signature_reviews:(d.jv_signature_reviews||[]).concat(review)}:d);
+  return activity.recordEvent({...store,reviewed_deals:rows},'deal',id,'document_added','Operator re-reviewed signed JV evidence for current holder terms.',context,
+    {attribution:'operator_report',happened_at:at,source_kind:'operator_input',source_url:review.source_url,jv_signature_review:true});
 }
 function buyer(evaluation,id) { const found=(evaluation.matches||[]).filter(b=>b.id===id);if(found.length!==1)fail('jv_buyer_not_matched');return found[0]; }
 function teaser(deal,evaluation,buyerId) {
@@ -91,7 +137,7 @@ function record(store,id,input,context,evaluation) {
   if(input.stage!=='dead'&&original.approval!=='approved')fail('approval_required');
   const event={...evidence,from:state.stage,to:input.stage,checks:{...input.checks}};
   if(input.stage==='holder_interested') {
-    if(!positive(original.contract_price)||!original.closing_date||!original.title_company||!(positive(original.holder_fee)||original.jv_split>0&&original.jv_split<=1)||original.emd==null)fail('jv_holder_terms_required');
+    if(!holderTermsValid(original))fail('jv_holder_terms_required');
     event.holder_terms=Object.fromEntries(TERMS.map(k=>[k,original[k]??null]));
   }
   const selected=state.events.find(e=>e.to==='buyer_interested')?.buyer_id;
@@ -102,6 +148,7 @@ function record(store,id,input,context,evaluation) {
   if(input.stage==='buyer_interested') {if(!positive(input.buyer_price))fail('jv_buyer_price_required');event.buyer_price=input.buyer_price;}
   else if(Object.hasOwn(input,'buyer_price'))fail('jv_request_invalid',400);
   if(input.stage==='jv_signed') {
+    if(!holderTermsValid(original))fail('jv_holder_terms_required');
     const signed=dates.normalizeSourceDate(input.signed_date_text).iso;if(!signed||signed>at.slice(0,10))fail('jv_signed_date_unproven');
     event.signed_date_text=text(input.signed_date_text,80);event.contract_copy_verified=true;
     event.contract_source_url=source(input.contract_source_url);event.agreement_source_url=source(input.agreement_source_url);event.terms_key=termsKey(original);
@@ -114,4 +161,4 @@ function record(store,id,input,context,evaluation) {
   return activity.recordEvent({...store,reviewed_deals:rows},'deal',id,'status_change','Operator recorded JV stage: '+LABELS[input.stage]+'.',context,
     {attribution:'operator_report',jv_stage:input.stage,happened_at:at,source_kind:'operator_input',source_url:evidence.source_url});
 }
-module.exports={STAGES,LABELS,CHECKS,view,record,teaser,fullPackage};
+module.exports={STAGES,LABELS,CHECKS,view,record,recordSignatureReview,teaser,fullPackage};
