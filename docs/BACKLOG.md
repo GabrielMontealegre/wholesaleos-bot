@@ -9,7 +9,8 @@ Mark the status here as part of each item's PR.
 (Newest first. Date — items done — items blocked — assumptions.)
 
 2026-10-11 -- autonomous continuation authorized through usage limit. #307
-signing re-review BUILT/TESTED on item/307-jv-signing-review. Pure append-only
+signing re-review DONE in [PR #328](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/328),
+application main8d6965e; exact Railway success,health200. Pure append-only
 review with original-signing/current-terms/version/source/date/check guards;
 admin route,explicit UI and synthetic1366/400/412 proof pass. No stage/history
 overwrite,no actual production review or send. Contrast defect found by image
@@ -18,7 +19,15 @@ failure in earlier UI reload wait; isolated pass, then actual PATCH/reloaded-car
 synchronization fixed with all assertions retained. Logs preserved. Final
 SUMMARY passed=156 failed=0 skipped=0 total=156,600s/file; reviewUI4.34s,
 review0.31s,prior stageUI5.00s,mobile15.28s,county-notice10.71s; all durations
-docs/test-results/issue-307-jv-signing-review.txt. Release/live gates pending.
+docs/test-results/issue-307-jv-signing-review.txt. Actual live Today3 cards,
+JV2/Today7; first JVFound,nine stages,package locked,all checks unticked.
+Re-review form correctly absent without real changed signing data; positive
+conditional path is synthetic proof,not claimed observed in production.
+Live1366/400/412 no overflow; checklist legend rgb23/23/23 (readable).
+Leads100; initial opening immediately after navigation left modal hidden,
+then one post-hydration click opened it. Cause unknown/not claimed fixed;
+card closes,console0. Viewport restored,temporary tab closed. No production
+review,terms,stage,preview,send,batch,capture/contact/confirmation action.
 After this: #307 email templates/approvals then triage; #325,#288,
 #304,government property timeline engine,FL sales/deed buyers,brief/photos/map/
 Deal Check. Existing assertions unchanged; assumptions logged; exports preserved.
