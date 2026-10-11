@@ -8,6 +8,7 @@ const limits = require('../buyers/assistant-finds');
 const activity = require('../records/record-activity');
 const crypto = require('node:crypto');
 const compConfig = require('../research/strict-comp-grid-config');
+const jvWorkflow = require('./jv-workflow');
 const PLATFORMS = ['facebook-wholesaler', 'xome', 'auction.com', 'hud', 'homepath', 'craigslist', 'county-auction', 'own-lead'];
 const STAGES = ['found', 'vetted', 'holder_confirmed', 'contract_verified', 'jv_signed', 'buyer_committed', 'closed'];
 const STATUS_LABELS = { found: 'Found', vetted: 'Vetted', holder_confirmed: 'Holder confirmed', contract_verified: 'Contract copy verified', jv_signed: 'JV signed', buyer_committed: 'Buyer committed', closed: 'Closed', expired: 'Expired', dead: 'Dead' };
@@ -15,7 +16,8 @@ const FIELDS = new Set(['kind', 'deal_kind', 'platform', 'source_url', 'address'
 const COMP_FIELDS = new Set(['comp_address', 'sold_status', 'sold_price', 'last_list_price', 'sold_date', 'source_url', 'evidence_text', 'beds', 'baths', 'sqft', 'year_built', 'lot_size', 'property_type', 'latitude', 'longitude', 'price_basis']);
 FIELDS.add('ref');
 FIELDS.add('title_company');
-const UPDATE_FIELDS = new Set(['comps','latitude','longitude','jv_split','closing_date','title_company','holder_contact','verdict_reason']);
+for (const field of ['contract_price','holder_fee','emd']) FIELDS.add(field);
+const UPDATE_FIELDS = new Set(['comps','latitude','longitude','jv_split','closing_date','title_company','holder_contact','verdict_reason','contract_price','holder_fee','emd']);
 function fail(code, status = 400) { const e = new Error(code); e.code = code; e.status = status; throw e; }
 function text(value, max = 300, required = false) {
   if (value == null && !required) return '';
@@ -49,7 +51,7 @@ function validate(item, now) {
     closing_date: date(item.closing_date), auction_date: date(item.auction_date), drafted_message: text(item.drafted_message, 600),
     verdict: text(item.verdict, 20), verdict_reason: text(item.verdict_reason, 300), title_company: text(item.title_company, 160), claimed_arv_tier: text(item.arv_tier, 40), ref: activity.ref(item.ref) };
   if (!/^[A-Z]{2}$/.test(out.state) || !/^\d{5}$/.test(out.zip) || !require('../research/property-identity').isCompleteAddress(out.address)) fail('find_deal_address_invalid');
-  for (const k of ['beds', 'baths', 'sqft', 'year_built', 'lot_size', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'jv_split']) out[k] = number(item[k]);
+  for (const k of ['beds', 'baths', 'sqft', 'year_built', 'lot_size', 'asking_price', 'starting_bid', 'claimed_arv', 'claimed_rehab', 'repair_estimate', 'jv_split', 'contract_price', 'holder_fee', 'emd']) out[k] = number(item[k]);
   for (const k of ['latitude', 'longitude']) { out[k] = item[k] == null ? null : item[k]; if (out[k] != null && (typeof out[k] !== 'number' || !Number.isFinite(out[k]) || Math.abs(out[k]) > (k === 'latitude' ? 90 : 180))) fail('find_deal_number_invalid'); }
   if (out.jv_split != null && (out.jv_split <= 0 || out.jv_split > 1)) fail('find_deal_number_invalid');
   out.claimed_arv_range = item.arv_range == null ? null : { low: number(item.arv_range.low), high: number(item.arv_range.high) };
@@ -216,6 +218,8 @@ function buyerChecks(box, deal) {
   return { checks, conflict: !!(requestedFlood && /^(X|AE|A|VE|V)$/.test(actualFlood) && requestedFlood[1].toUpperCase() !== actualFlood) };
 }
 function evaluate(deal, buyers, now) {
+  const workflow = deal.deal_kind === 'jv' ? jvWorkflow.view(deal,now) : null;
+  if (workflow && ['dead','closed'].includes(workflow.stage) && deal.status !== workflow.stage) deal = { ...deal, status:workflow.stage };
   const value = compValue(deal, now); const asking = deal.asking_price > 0 ? deal.asking_price : deal.starting_bid > 0 ? deal.starting_bid : null;
   const matches = [];
   for (const buyer of buyers || []) {
@@ -340,7 +344,7 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
   const all = (store.reviewed_deals || []).map(d => {
     const evaluation = evaluate(d, store.buyers, now);
     evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
-    return { ...d, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
+    return { ...d, jv_workflow:d.deal_kind === 'jv' ? jvWorkflow.view(d,now) : null, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
   });
   const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.evaluation.jv_eligible) && (includeHidden || !['STALE', 'NO'].includes(d.evaluation.verdict)) &&
     (!state || d.state.toLowerCase() === state.toLowerCase()) && (!county || d.county.toLowerCase().includes(county.toLowerCase())) && (!city || d.city.toLowerCase().includes(city.toLowerCase())));

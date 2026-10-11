@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: #307 JV stages are split into data foundation then workspace actions.
+D-048 supplies the authoritative stage order; #325's different visual step labels
+must not infer extra actions. Existing legacy statuses/history remain intact,
+never auto-migrated into signed or contacted facts. New full-package previews
+require the explicit raw signing date, verified contract-copy report and current
+terms fingerprint, independently of the legacy introduction label. No live
+reports or sends are made during release verification. Gabriel's latest order
+is JV stages, email templates/approvals, triage; then #325 dark UX, #288 send,
+#304 bugs1-7/12 then8-11, government property timelines, FL sales/deed-backed
+buyers, briefs/photos/map/Deal Check -- AGENTS sections2/3/5, D-048 and Gabriel's
+updated order -- 2026-10-10.
+
 Decisions that agents must follow. Gabriel's decisions outrank architect decisions; both outrank
 agent assumptions. Agents append `ASSUMED` entries at the bottom; the architect promotes or
 corrects them during review.

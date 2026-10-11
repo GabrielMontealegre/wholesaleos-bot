@@ -8,6 +8,23 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-10 -- #307 JV stage DATA FOUNDATION IN PROGRESS. D-048 stages,
+append-only operator reports, sourced holder terms, blind teaser and signed-date/
+contract-copy/current-terms guards for full-package previews. Existing legacy
+statuses/history remain; no UI redesign or Send enabled. Focused synthetic
+service/routes passed after correcting new fixture/error expectations.
+Suite152 passed,0 failed,0 skipped (600s/file); focused proof rerun on final
+code after history/reference hardening. Service0.34s,routes1.20s,county-notice
+17.18s; all durations docs/test-results/issue-307-jv-stage-data.txt.
+Release/live gates pending. Existing assertions unchanged; unrelated
+exports/logs preserved. No production reports/sends/confirmations/batches.
+Latest Gabriel order: finish #307 JV stages, templates/approvals, triage;
+#325 dark/right-menu/clock/Gmail/JV UX; #288 send/packages/JV generator;
+#304 bugs1-7/12 then8-11; government property/timeline engine; FL free comps;
+deed-backed buyers; #299 Dashboard/email brief; #313 photos; #303 map;
+#275 Deal Check with Black Diamonds. #307 remains OPEN; no overall readiness
+percentage claimed. Assumption logged in DECISIONS.
+
 2026-10-10 -- #307 persistent Gmail linking milestone DONE in
 [PR #324](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/324),
 application maindc4d7b3; exact Railway success,health200. Explicit Inbox
