@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #307 JV controls reuse the canonical server stage/check schema and the
+existing source-backed term updater. Preview is GET-only and never asserts a
+send. Action time is entered explicitly in Gabriel's UTC-7 zone; no stage,
+signature or check is automatic. Legacy history/status and split-only editing
+remain compatible; signature amendment/re-review is the next bounded slice,
+not a silent overwrite. #325 owns the global theme/menu/clock consolidation --
+AGENTS truth/data preservation and D-048 -- 2026-10-11.
+
 ASSUMED: #307 JV stages are split into data foundation then workspace actions.
 D-048 supplies the authoritative stage order; #325's different visual step labels
 must not infer extra actions. Existing legacy statuses/history remain intact,
