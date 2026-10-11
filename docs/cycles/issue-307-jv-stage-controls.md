@@ -59,3 +59,11 @@ teaser/package read-only behavior, reload persistence and stale-error preservati
 Screenshots in `docs/screens/2026-10-10-jv-stage-controls/` are labeled synthetic
 proof, not production reports or evidence of real signed contracts.
 Full-suite and deployed read-only results are recorded in BACKLOG after completion.
+
+Released as PR #327, application main `f78eaa5`. Exact Railway success and
+health200. Full suite154 passed,0 failed,0 skipped,600s/file; timings committed.
+Live JV card: nine stages,Found,explicit empty/unticked form,locked package,
+no legacy stage buttons; JV1/Today6. Desktop1366/400/412 workflow bounds and
+44px controls pass; Leads100/card open-close; console clean. No real reports,
+terms,previews,sends or confirmations made. Live stage-bar screenshot command
+timed out; synthetic artifacts are not claimed as live pixel proof.

@@ -8,7 +8,9 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
-2026-10-11 -- #307 JV stage controls BUILT/TESTED on item/307-jv-stage-controls.
+2026-10-11 -- #307 usable JV stage controls DONE in
+[PR #327](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/327),
+application mainf78eaa5; exact Railway success,health200.
 Canonical nine-stage bar/history and explicit next-action form, sourced holder
 terms and GET-only blind teaser/signed package previews built. Actual synthetic
 browser/service proof traverses all stages; desktop1366/400/412 has no overflow
@@ -17,7 +19,16 @@ previews do not record sends. No existing assertion changed. Full suite:
 SUMMARY passed=154 failed=0 skipped=0 total=154,600s/file; UI8.84s,
 terms0.59s,workflow0.74s,routes2.69s,mobile23.43s,county-notice41.05s.
 All durations docs/test-results/issue-307-jv-stage-controls.txt.
-Release/live gates pending. Signing amendment/re-review, templates/approvals and
+Actual live: Today3 cards before opening; first JV card has one workspace,
+nine stages,Found recorded,explicit form,full-package preview disabled,
+zero legacy stage buttons. All checks unticked; action time and evidence URL
+empty. Served JV1/Today6. Live1366/400/412: no page overflow or sub44px
+workflow controls; workspace inside viewport. Leads100/card opens-closes;
+zero console errors. Temporary viewport reset and verification tab closed.
+Live stage-bar screenshot timed out in Page.captureScreenshot; no live pixel
+artifact claimed. Committed synthetic screenshots remain labeled separately.
+No production Save/Approve/Preview/Send/Confirm action was pressed.
+Signing amendment/re-review, templates/approvals and
 triage remain; #307 is not DONE. Latest Gabriel order remains #307, #325, #288,
 #304 round2, government property/timeline engine, FL comps, deed buyers,
 #299/#313/#303/#275. No production write, message, capture, batch or confirmation.
