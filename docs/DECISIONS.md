@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED: #307's email-template slice saves explicitly reviewed operator-input
+text, with append-only revisions, separately from actual email approval/delivery.
+The first20 policy counts only unique, unambiguous accepted SMTP Message-IDs
+matched to exact reviewed draft digests. Template saves/imported interactions
+never count as sends. No send/SMTP/IMAP writer or automatic personalization is
+added. #288 must compose through current JV privacy guards, obtain the required
+exact-message approval and persist real transport receipts; template approval
+is not permission to disclose an unsigned JV address. Explicit Send is always
+required,even after20. Literal templates remain visible/editable,not guessed
+from inbox text -- AGENTS truth/no hidden automation,D-046/D-050 -- 2026-10-11.
+
 ASSUMED: #307 signing re-review appends a separate operator report tied to the
 current holder terms and a stale-card version. It requires the original real
 signed stage, all signing checks, raw signing-date proof and current contract/JV
