@@ -8,6 +8,34 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 hover-help release IN PROGRESS; label/control explanations
+replace question buttons, keyboard/hover/focus-scroll/Escape and touch hold.
+Normal explicit actions preserved; held/cancelled/stale-DOM clicks and review
+checkbox activation suppressed. Prototype/HTML/dynamic-title/disabled negatives
+pass. Focused proof found pointer/scroll overriding the focused explanation;
+corrected,not asserted away. Only old help-button selector/click-toggle assertions
+changed intentionally per owner decision; all value/privacy/write/layout assertions
+retained. Full SUMMARY passed=162 failed=0 skipped=0 total=162,600s/file;
+helpUI16.09s,glossary0.44s,mobile37.92s,wideUI33.22s,county-notice19.04s.
+All timings issue-325-hover-help.txt; synthetic1366/400/412 screenshots reviewed.
+No backend,data,auth,comp,source,dependency or provider change. Release/live gate
+pending. #325 remains OPEN for card clocks and email/buyer/JV workspace; #288 Send
+later. Triage production move remains BLOCKED #331; no record moved/deleted.
+
+2026-10-12 -- #325 Night desk shell DONE in [PR #332](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/332),
+main4c4c4cf; exact Railway success after3m44s,health200. Final161/0/0,
+600s/file,timings below. Live JS/CSSv1,dark11/13/18,readable header241/244/248,
+six right-menu groups,sidebarright1146 at1366;Today9submitted,100Leads/card
+opens-closes,console0. Phone400 drawer100..400,Android412112..412,gear44px,
+no overflow;Settings gear navigates,Escape closes. Light switch visible and
+unchecked; no live preference change. Privacy-safe live menu screenshots emitted
+in chat; committed PNGs explicitly synthetic. No real write/send/batch/contact/
+confirmation or Railway setting change. Viewport restored. #325 stays OPEN.
+Continuing hover/long-press help; focused keyboard/hover/Escape, late glossary,
+normal click, cancelled/stale-DOM gesture and checkbox-confirmation negatives
+pass. No helper restart/capture or source acquisition. Full-suite gate pending.
+Production triage move remains BLOCKED #331; no record was moved or deleted.
+
 2026-10-12 -- #325 Night desk shell/right navigation IN PROGRESS. Owner dark
 default with optional light preference,right grouped existing menu/phone drawer,
 Settings gear; no backend/data/auth/comp/source/dependency change. Visual
