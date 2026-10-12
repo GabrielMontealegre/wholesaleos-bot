@@ -8,6 +8,27 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- Run summary: #325 recorded reviewed-deal clocks DONE in
+[PR #337](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/337),
+application main86983241db2b547e9d9a0712344d0ffada27264f. Exact Railway
+SUCCESS in1m03s;health200. Full164passed/0failed/0skipped,600s/file;
+clockUI4.15s,pure0.18s,county-notice15.46s; every duration committed.
+Live clockv1/Todayv8,all8fields,owner-time prose,no raw ISO instants or action
+controls. First card:addedOct10 6:31AM,sourcecapturedOct10 6:31AM,2days since
+added,deadline/timeleftUnknown. Unknown was not filled in. Desktop1366 and
+400/412 clocks/text fit;100Leads,explicit Open Lead opens/closes,console0.
+Privacy-safe live timestamp crop emitted in chat; committed images are labeled
+synthetic. Temporary viewport reset. No Send/contact/confirmation/capture/batch,
+helper action,data mutation or Railway setting change. Unrelated generated
+changes remain untouched; checkout is not claimed clean.
+Completed this continuous work: #330 read-only triage,#332 Night desk/right
+navigation,#333 hover help,#337 reviewed-deal clocks. #325/#307 remain OPEN.
+Production triage move BLOCKED #331:park1912 exceeds1705;no architect answer
+yet,no lead moved/deleted. Existing #209 intermittent502 is not claimed fixed.
+Next in owner order: #325 saved-lead/property clocks (trace raw source dates,
+not copied dates/import timestamps),then Gmail/buyer/JV workspace;#288 Send
+later. Assumptions recorded in DECISIONS;no new overall readiness% measured.
+
 2026-10-12 -- #325 reviewed-deal clocks IN PROGRESS. UI-only home/Today/JV
 summary and open card: added versus source capture, owner UTC-7 calendar
 deadline/time left, recorded operator action, stage age or Unknown and next step.

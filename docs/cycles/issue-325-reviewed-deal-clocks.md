@@ -50,3 +50,19 @@ Full suite SUMMARY passed=164 failed=0 skipped=0 total=164,600s/file.
 All durations: docs/test-results/issue-325-reviewed-deal-clocks.txt.
 ClockUI4.15s,pure0.18s,hover7.85s,mobile16.09s,wider-areaUI16.77s,
 county-notice15.46s. Release/live gate pending; no existing assertion changed.
+
+## Release verification
+
+PR #337 merged as86983241db2b547e9d9a0712344d0ffada27264f. Exact Railway
+deployment7025556899 SUCCESS:22:42:04Z ->22:43:07Z (1m03s),health200.
+Live serves clockv1/Todayv8;all8fields in summary/open card,no raw ISO instants,
+no controls. First real card has2days since added and Unknown deadline/time left.
+No date was invented to improve this. Clock/text fits1366/400/412.
+100Leads hydrate; explicit Open Lead opens/closes;zero fresh console errors.
+Phone-menu visibility and off-screen full-row native click required fresh state
+inspection; the existing explicit Open Lead button worked. These were control
+issues,not code changes or fictional product fixes. Viewport restored.
+Privacy-safe live timestamp crop emitted inline; repository PNGs remain synthetic.
+No production write,Send/contact/confirmation,capture,batch,helper action or
+Railway setting change. #325 remains open for saved-lead/property clocks and
+Gmail/buyer/JV layouts. #331 still blocks production triage moves.
