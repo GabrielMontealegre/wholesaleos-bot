@@ -93,6 +93,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-email-message]').click();
           await page.getByText('Fixture text <script>alert(1)</script>',{exact:true}).waitFor();
           assert.strictEqual(await page.locator('#email-reader script').count(),0,'message body is text only');
+          await page.locator('.email-link summary').click();
           await page.locator('[data-email-link-form]').waitFor();
           assert.strictEqual(await page.locator('[data-email-link-form] select').inputValue(),'','operator role is never inferred');
           await page.locator('[data-email-back]').click();

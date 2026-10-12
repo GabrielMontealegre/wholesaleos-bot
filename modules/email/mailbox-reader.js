@@ -31,20 +31,48 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
     const gmail=oauth();const labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};let label=labels[folder];
     if(!label){const data=await gmail.users.labels.list({userId:'me'});label=(data.data.labels||[]).find(l=>l.name===FOLDERS[folder])?.id;if(!label)fail('email_folder_unavailable',404);}
     const rows=await gmail.users.messages.list({userId:'me',maxResults:limit,labelIds:[label]});const messages=[];
-    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:(msg.labelIds||[]).includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',read:!(msg.labelIds||[]).includes('UNREAD')});}
+    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:(msg.labelIds||[]).includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',read:!(msg.labelIds||[]).includes('UNREAD')});}
     return {ok:true,mode,status:'Connected (Google login)',messages};
   }
   async function message(value) {
     const mode=provider();
-    if(mode==='app_password')return imap(async c=>{const p=decode(value);const allowed=await c.list();if(p.box!=='INBOX'&&!allowed.some(b=>b.path===p.box&&(Object.values(FOLDERS).includes(b.path)||Object.values(FOLDERS).includes(b.specialUse))))fail('email_message_invalid',400);const lock=await c.getMailboxLock(p.box,{readOnly:true});try{if(String(c.mailbox.uidValidity)!==p.validity)fail('email_message_stale',409);const header=await c.fetchOne(p.uid,{uid:true,envelope:true,size:true,flags:true},{uid:true});if(!header)fail('email_message_missing',404);if(header.size>MAX_BYTES)fail('email_message_too_large',413);const m=await c.fetchOne(p.uid,{source:true},{uid:true});if(!m?.source||m.source.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(m.source,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});return {...metadata(header,p.box,p.validity),body:String(parsed.text||'(No readable text)').slice(0,MAX_BYTES),in_reply_to:parsed.inReplyTo||'',mode};}finally{lock.release();}});
-    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(m.labelIds||[]).includes('SENT')?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',in_reply_to:parsed.inReplyTo||'',mode};
+    if(mode==='app_password')return (await messages([value]))[0];
+    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {source_kind:'connected_mailbox',id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(m.labelIds||[]).includes('SENT')?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',in_reply_to:parsed.inReplyTo||'',mode};
   }
-  return {test,list,message};
+  async function messages(values) {
+    if(!Array.isArray(values)||!values.length||values.length>30||values.some(v=>typeof v!=='string'||!v||v.length>1000)||new Set(values).size!==values.length)fail('email_thread_invalid',400);
+    const mode=provider();let bytes=0;const output=[];
+    function keep(row){bytes+=Buffer.byteLength(row.body||'');if(bytes>8*1024*1024)fail('email_thread_too_large',413);output.push(row);}
+    if(mode==='app_password')return imap(async c=>{
+      const parsed=values.map(decode),first=parsed[0];
+      if(parsed.some(p=>p.box!==first.box||p.validity!==first.validity))fail('email_thread_invalid',400);
+      const allowed=await c.list();if(first.box!=='INBOX'&&!allowed.some(b=>b.path===first.box&&(Object.values(FOLDERS).includes(b.path)||Object.values(FOLDERS).includes(b.specialUse))))fail('email_message_invalid',400);
+      const lock=await c.getMailboxLock(first.box,{readOnly:true});
+      try{
+        if(String(c.mailbox.uidValidity)!==first.validity)fail('email_message_stale',409);
+        for(const p of parsed){
+          const header=await c.fetchOne(p.uid,{uid:true,envelope:true,size:true,flags:true},{uid:true});
+          if(!header)fail('email_message_missing',404);if(header.size>MAX_BYTES)fail('email_message_too_large',413);
+          const m=await c.fetchOne(p.uid,{source:true},{uid:true});if(!m?.source||m.source.length>MAX_BYTES)fail('email_message_too_large',413);
+          const content=await parse(m.source,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});
+          keep({...metadata(header,p.box,p.validity),body:String(content.text||'(No readable text)').slice(0,MAX_BYTES),in_reply_to:content.inReplyTo||'',mode});
+        }
+        return output;
+      }finally{lock.release();}
+    });
+    for(const value of values)keep(await message(value));return output;
+  }
+  return {test,list,message,messages};
 }
-function registerMailboxReads(app,{requireAdmin,reader=createMailboxReader()}) {
-  const safeError=(res,e)=>res.status(e.status||503).json({ok:false,code:/^email_[a-z_]+$/.test(e.code||'')?e.code:'email_connection_failed',error:'Email unavailable. Check the connection in Settings.',messages:[]});
+function registerMailboxReads(app,{requireAdmin,reader=createMailboxReader(),db,now=()=>new Date().toISOString()}) {
+  const safeError=(res,e)=>{if(typeof res.set==='function')res.set('Cache-Control','no-store');return res.status(e.status||503).json({ok:false,code:/^email_[a-z_]+$/.test(e.code||'')?e.code:'email_connection_failed',error:'Email unavailable. Check the connection in Settings.',messages:[]});};
+  const view=messages=>require('./thread-view').annotate(messages,db?db.readDBStrict():{},{now:now()});
   app.get('/api/gmail/test',requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(await reader.test());}catch(e){safeError(res,e);}});
-  for(const route of ['/api/gmail/inbox','/api/gmail/messages'])app.get(route,requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(await reader.list(route.endsWith('inbox')?'inbox':req.query.folder,req.query.limit));}catch(e){safeError(res,e);}});
-  app.get('/api/gmail/message/:id',requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(await reader.message(req.params.id));}catch(e){safeError(res,e);}});
+  for(const route of ['/api/gmail/inbox','/api/gmail/messages'])app.get(route,requireAdmin,async(req,res)=>{try{const result=await reader.list(route.endsWith('inbox')?'inbox':req.query.folder,req.query.limit);res.set('Cache-Control','no-store').json({...result,messages:view(result.messages)});}catch(e){safeError(res,e);}});
+  app.get('/api/gmail/message/:id',requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(view([await reader.message(req.params.id)])[0]);}catch(e){safeError(res,e);}});
+  app.get('/api/gmail/thread',requireAdmin,async(req,res)=>{
+    res.set('Cache-Control','no-store');
+    try{const raw=req.query.ids;if(typeof raw!=='string'||raw.length>16000)fail('email_thread_invalid',400);let ids;try{ids=JSON.parse(raw);}catch{fail('email_thread_invalid',400);}if(!Array.isArray(ids)||!ids.length||ids.length>30||ids.some(v=>typeof v!=='string'||!v||v.length>1000)||new Set(ids).size!==ids.length)fail('email_thread_invalid',400);res.json({ok:true,messages:view(await reader.messages(ids))});}catch(e){safeError(res,e);}
+  });
 }
 module.exports={createMailboxReader,registerMailboxReads};
