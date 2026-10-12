@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #325 ships ordered UI-only slices. The latest owner comment supersedes
+#294's light default; prior light tokens remain as an optional switch. Move
+existing nav nodes to the right/groups, preserving identity, routes and role
+visibility; add a Settings gear shortcut without replacing auth/admin pages.
+The explicit local UI preference contains no credentials. Hover help/clocks and
+email/buyer/JV redesign follow separately; D-048 canonical stages remain, and
+actual Send waits for #288 -- AGENTS sections2/3/5 and the #325 owner design
+comment, 2026-10-12.
+
 ASSUMED: #307C is split at the required read-only dry-run gate. The original
 9,000 archive range applies to proposed new moves, excluding existing archives;
 all archived rows still reconcile in the full report. Unknown/ambiguous source
