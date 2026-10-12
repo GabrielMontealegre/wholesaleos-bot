@@ -8,6 +8,42 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 Night desk shell/right navigation IN PROGRESS. Owner dark
+default with optional light preference,right grouped existing menu/phone drawer,
+Settings gear; no backend/data/auth/comp/source/dependency change. Visual
+review found old dark header/light sidebar-counter contrast defects; fixed and
+pinned. Switch stays visibly in menu header; existing routes/role nodes retained.
+Initial159passed/2failed/0skipped (same outdated light-default assertion in two
+suites) preserved. Only existing assertion changed: verify-marketplace-ui.js144
+default247/248/250 ->11/13/18,explicit #325 owner decision; all safety/layout
+assertions retained. Isolated10page/6width proof passes. Final SUMMARY
+passed=161 failed=0 skipped=0 total=161,600s/file; shell9.63s,mobile19.02s,
+wide-areaUI23.36s,county-notice14.45s; all timings issue-325-desk-shell.txt.
+Synthetic1366/400/412 screenshots reviewed. Release/live checks pending;
+#325 remains OPEN for hover help,clocks,email/buyer/JV UX; #288 Send later.
+
+2026-10-12 -- #307C diagnostic released in [PR #330](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/330),
+application mainf1074dd. Exact Railway success/health200;160passed/0failed/0skipped,
+600s/file,timings below. Actual full-store GET:12039 total;keep0,park1912,
+archive10127 (1375already archived);NEW archive8752. Reasons:old tax8752,
+no approved buyer market1887,already archived1375,address proof25. All reconcile.
+Production move BLOCKED [#331](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/331):
+park exceeds1705. No move/apply/undo/batch/repair/delete/contact/confirmation.
+Live1366/400/412 panel fits44px/no overflow;100Leads,desktopcard opens/closes.
+Privacy-safe live desktop/400 screenshots emitted in chat; committed PNGs remain
+explicitly synthetic (native screenshots not saved as repository files).
+Initial saved-leads502 at14:55:40.039Z,then hydration succeeds. Clean fresh console
+NOT claimed: additional fresh-tab verification hit CDP dispatch timeouts.
+Incident recorded on #209; browser tool failure not attributed to product code.
+Later recovered via the supported same-tab binding: fresh normal load100Leads,
+card opens/closes,zero fresh console errors. This completes the fresh-load check;
+the earlier502 remains an incident,not claimed fixed.
+Healthy code not reverted solely for control failure,per #321 architect guidance;
+fresh-console follow-up remains open. Temporary viewport reset attempted; fresh
+tab closed before original-tab dispatch timeout. No overall readiness% re-measured.
+Next independent #325: dark/optional-light,right navigation/gear,then tooltips,
+clocks and Gmail/buyer/JV workspace;#288Send later. Preserve latest owner order.
+
 2026-10-12 -- #307C read-only triage diagnostic IN PROGRESS; pure classification,
 admin GET report/IDs-only needs-comps and explicit Leads panel built. Full suite
 SUMMARY passed=160 failed=0 skipped=0 total=160,600s/file. TriageUI9.42s,

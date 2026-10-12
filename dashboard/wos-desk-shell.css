@@ -1,0 +1,48 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0d12; --card: #14171f; --card-2: #1c222c; --line: #394250;
+  --ink: #f1f4f8; --muted: #afb8c7;
+  --primary: #5bd6a3; --primary-ink: #07130c;
+  --link: #7eb8ff; --selection: #163255; --selection-ink: #9dccff;
+  --good: #5bd6a3; --good-bg: #153b2c;
+  --warn: #f4d179; --warn-bg: #392e12;
+  --danger: #ff929b; --danger-bg: #402029;
+  --accent: var(--link); --info: var(--link); --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.2); --scrim: rgba(0,0,0,.6);
+}
+:root[data-wos-scheme="light"] {
+  color-scheme: light;
+  --bg: #f7f8fa; --card: #ffffff; --card-2: #f2f4f7; --line: #e6e8ec;
+  --ink: #171717; --muted: #5f6672;
+  --primary: #167346; --primary-ink: #ffffff;
+  --link: #244c9c; --selection: #e8eefb; --selection-ink: #244c9c;
+  --good: #1f7a55; --good-bg: #e3f1ea;
+  --warn: #9a6b00; --warn-bg: #fbf1da;
+  --danger: #c0392b; --danger-bg: #fbe6e3;
+  --shadow: 0 1px 3px rgba(16,24,40,.08); --scrim: rgba(16,24,40,.45);
+}
+body[data-wos-design="marketplace"] #app .sidebar { order: 2; border-right: 0; border-left: 1px solid var(--line); }
+body[data-wos-design="marketplace"] #app .main { order: 1; }
+body[data-wos-design="marketplace"] #app .marketplace-topnav { display: none; }
+body[data-wos-design="marketplace"] #app .topbar-title { flex: 1; }
+body[data-wos-design="marketplace"] #app :is(.topbar-title,.marketplace-brand) { color: var(--ink) !important; }
+body[data-wos-design="marketplace"] #app :is(.sidebar-sub,.stat-mini-label) { color: var(--muted) !important; }
+body[data-wos-design="marketplace"] #app :is(.stat-mini-card,.bot-status,.nav-badge) { background: var(--card-2) !important; color: var(--ink) !important; }
+body[data-wos-design="marketplace"] #app .stat-mini-value { color: var(--ink) !important; }
+body[data-wos-design="marketplace"] #app .marketplace-tools { grid-template-columns: repeat(2,minmax(0,1fr)); }
+body[data-wos-design="marketplace"] #app .marketplace-tools button[onclick*="signOutDashboard"] { grid-column: 1 / -1; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app :is(button,summary,[role="button"]) { color: var(--link) !important; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app :is(.btn-dark,.btn-primary,[data-deal-open]) { color: var(--primary-ink) !important; background: var(--primary) !important; }
+body[data-wos-design="marketplace"] #app :is(a,.td-page a,.ops-view a,.btn-blue) { color: var(--link) !important; }
+body[data-wos-design="marketplace"] #app .btn-blue { background: var(--card) !important; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app .nav-item.active { color: var(--selection-ink) !important; background: var(--selection) !important; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app :is([data-deal-action="approve"],[data-template-form] button[type="submit"]) { color: var(--primary-ink) !important; background: var(--primary) !important; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app :is(.btn-red,.btn-danger,.bf-error,.ops-error) { color: var(--danger) !important; background: var(--danger-bg) !important; }
+[data-wos-scheme] body[data-wos-design="marketplace"] #app button:disabled { color: var(--muted) !important; background: var(--card-2) !important; }
+body[data-wos-design="marketplace"] #app .topbar .desk-settings { width: 44px; height: 44px; padding: 0; flex: 0 0 44px; font-size: 24px !important; color: var(--link) !important; }
+body[data-wos-design="marketplace"] #app .desk-scheme { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px; color: var(--ink); }
+body[data-wos-design="marketplace"] #app .desk-scheme input { accent-color: var(--primary); }
+@media(max-width:900px) {
+  body[data-wos-design="marketplace"] #app .topbar { grid-template-columns: 44px minmax(0,1fr) 44px 44px; }
+  body[data-wos-design="marketplace"] #app .sidebar.mobile-open { inset: 0 0 0 auto; width: min(300px,100%); height: 100dvh; box-shadow: -4px 0 30px rgba(0,0,0,.4); }
+}

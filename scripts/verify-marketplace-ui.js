@@ -141,7 +141,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
           return { width: innerWidth, bodyWidth: document.documentElement.scrollWidth, bad, small, background: getComputedStyle(document.body).backgroundColor };
         });
         report.push({ page: name, ...measured });
-        assert.strictEqual(measured.background, 'rgb(247, 248, 250)');
+        assert.strictEqual(measured.background, 'rgb(11, 13, 18)', '#325 owner decision: Night desk is the default; light is optional');
         assert.ok(measured.bodyWidth <= width, name + ' page overflow at ' + width);
         assert.deepStrictEqual(measured.bad, [], name + ' controls outside viewport at ' + width);
         assert.deepStrictEqual(measured.small, [], name + ' controls below 44px at ' + width);
