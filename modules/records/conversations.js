@@ -5,6 +5,7 @@ const { dayAt } = require('./calendar-day');
 const {savedReplies}=require('./mailbox-reply-evidence');
 const STATUSES = ['hot', 'to_send', 'follow_up', 'waiting_on_deal', 'closed'];
 const CHANNELS = ['facebook', 'email', 'phone', 'manual'];
+const ROLES = Object.freeze(['holder', 'buyer', 'partner', 'seller', 'title', 'attorney', 'lender', 'agent', 'other']);
 function fail(code, status=400) { const e=new Error(code);e.code=code;e.status=status;throw e; }
 function text(v,max) { if(v==null)return '';if(typeof v!=='string'||v.length>max||/[\x00-\x1f]/.test(v))fail('find_conversation_invalid');return v.trim(); }
 function timestamp(v,now) {
@@ -21,7 +22,7 @@ function validate(input,now) {
   const allowed=['kind','person','role','refs','channels','last_in','last_out','what_they_said','next_step','due_date','status','ready_message','thread_url','captured_at','email_message_ids'];
   if(!input||Array.isArray(input)||input.kind!=='conversation'||Object.keys(input).some(k=>!allowed.includes(k))||Buffer.byteLength(JSON.stringify(input))>8192)fail('find_conversation_invalid');
   const person=text(input.person,120);const refs=input.refs||[],channels=input.channels||[];
-  if(!person||!['holder','buyer','partner'].includes(input.role)||!Array.isArray(refs)||refs.length>10||!Array.isArray(channels)||!channels.length||channels.length>4||channels.some(c=>!CHANNELS.includes(c))||!STATUSES.includes(input.status))fail('find_conversation_invalid');
+  if(!person||!ROLES.includes(input.role)||!Array.isArray(refs)||refs.length>10||!Array.isArray(channels)||!channels.length||channels.length>4||channels.some(c=>!CHANNELS.includes(c))||!STATUSES.includes(input.status))fail('find_conversation_invalid');
   const captured_at=timestamp(input.captured_at,now);if(!captured_at)fail('find_conversation_date_invalid');
   const due_date=text(input.due_date,10);if(due_date&&(!/^\d{4}-\d{2}-\d{2}$/.test(due_date)||!Number.isFinite(Date.parse(due_date))||new Date(due_date).toISOString().slice(0,10)!==due_date))fail('find_conversation_date_invalid');
   const canonicalRefs=[...new Set(refs.map(r=>records.ref(r)))].sort();if(canonicalRefs.some(r=>!r))fail('find_conversation_invalid');
@@ -84,4 +85,4 @@ function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
   items.sort((a,b)=>(b.status==='hot')-(a.status==='hot')||Number(b.overdue)-Number(a.overdue)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
   return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};
 }
-module.exports={validate,upsert,list,STATUSES};
+module.exports={validate,upsert,list,STATUSES,ROLES};

@@ -3521,7 +3521,7 @@ function getGmailTransport() {
   return { oauth2, user };
 }
 
-require('./modules/email/mailbox-reader').registerMailboxReads(app, { requireAdmin });
+require('./modules/email/mailbox-reader').registerMailboxReads(app, { requireAdmin, db });
 
 app.post('/api/gmail/send', serverSendDisabled);
 

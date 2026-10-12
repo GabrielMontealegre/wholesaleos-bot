@@ -4,9 +4,46 @@ Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered su
 Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
 Mark the status here as part of each item's PR.
 
+## Current Owner Order (2026-10-12)
+
+Gabriel's latest order supersedes older ordering in run logs and item12:
+1. Finish #325 against its mockup comments: Gmail-style Inbox/roles, clean buyer
+   cards, JV workspace/composer. Actual Send remains gated until #288 is ready.
+2. #304 round2 bugs1-16, including lead clicks, alerts, gear and login message.
+3. #288 explicit Send, packages and JV agreement generator; then #336 texting.
+4. #331 reversible triage apply/undo. Revised bounds AUTHORIZED: new archive
+   8500-9000,park1800-2000,keep0-110;1375 existing archived unchanged.
+   Private backup/dry-run diff/one-click exact undo required; only lane/status/
+   reason change, no fact edit/delete/contact. Buyer-market reactivation needs
+   a recorded event. Counts outside bounds stop the apply, never tune rules.
+5. #301/#315 government property/event records; #335 records-request tracker.
+6. B-21 Florida public sales, then B-09 deed-backed cash buyers.
+7. #299 brief,#313 photos,#303 map,#275 Black Diamonds/Deal Check.
+
+One bounded slice per PR, full tests, self-review, deploy/read-only verification.
+No production email link/send/confirmation or triage apply as a release test.
+
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-12 -- #325 Inbox workspace IN PROGRESS: left folders/roles,separate
+WOS notes,middle exact-thread rows,oldest-first plain-text reading/composer;
+phone full reading pane,dark mockup colors,explicit role chips,UTC-7 times.
+No subject/from-name role guesses; conflicting/missing/future/wrong-source links
+stay unlinked. Read-only selected-folder latest30 scope is visible; one bounded
+IMAP connection/lock,UID and size guards retained. Send disabled; no mailbox
+flag/label/send writer. Explicit old conversation-link save stays guarded.
+Initial168/0/0 preserved; self-review fixed ephemeral draft loss and expired-login
+note clearing. Final168passed/0failed/0skipped,600s/file; InboxUI5.21s,
+threadread4.18s,pure0.19s,UIstate0.11s,mailbox2.38s,mobile17.90s,
+county-notice12.73s; all timings/synthetic1366/400/412 screenshots committed.
+Only existing proof change: open collapsed Link to a person before asserting
+the same blank role chooser. Release/live gate pending. No real email/save/send,
+contact,confirmation,batch,capture/provider/config/data change during proof.
+Latest owner order above recorded. #331 now AUTHORIZED for a later independent
+apply/undo slice with revised bounds/backup; no apply or undo has been run.
+Next #325 clean buyer cards,then JV workspace; #304 and #288/#336 follow.
 
 2026-10-12 -- Run summary: #325 recorded reviewed-deal clocks DONE in
 [PR #337](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/337),

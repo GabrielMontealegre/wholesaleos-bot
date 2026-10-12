@@ -1,5 +1,18 @@
 # Decisions
 
+ASSUMED: #325 Inbox is an ordered read-only workspace slice before #288 Send.
+The mockup's missing role types extend the explicit conversation-role allowlist;
+legacy holder/partner display as JV partner. Roles are not inferred from senders,
+subjects or Gmail folder names. Exact mailbox headers/thread anchors plus stored
+operator/imported-report linkage supply role context; conflicting links remain
+unlinked for review. Closed historical links may label mail without reopening a
+conversation. Threads cover the latest30 messages in the selected folder, not
+unseen cross-folder history, and say so. A selected thread uses one read-only
+IMAP lock/connection with sequential bounded reads; no seen/star/label change.
+WOS notes remain reported next steps, not real email. Send stays explicitly
+disabled until its guarded slice; no live link/save/send during verification --
+AGENTS sections2/3/5, D-046/D-050 and #325 mockup comment -- 2026-10-12.
+
 ASSUMED: #325 clocks ship as ordered presentation-only slices, reviewed deals
 first. Server-stamped first_seen_at means added to WholesaleOS, not the source
 event date; captured_at remains separately labeled. Only the existing reviewed
