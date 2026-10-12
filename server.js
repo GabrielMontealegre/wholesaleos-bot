@@ -2627,6 +2627,7 @@ app.post('/api/leads/validate-fix', (req, res) => {
 // GET /api/leads/:id/validate — validate single lead address
 
 // GET /api/leads/hot — must be BEFORE /api/leads/:id
+require('./modules/leads/triage-routes').registerLeadTriageRoutes(app, { db, requireAdmin });
 app.get('/api/leads/hot', function(req, res) {
   try {
     var leads = db.getLeads ? db.getLeads() : [];

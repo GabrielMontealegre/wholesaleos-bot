@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED: #307C is split at the required read-only dry-run gate. The original
+9,000 archive range applies to proposed new moves, excluding existing archives;
+all archived rows still reconcile in the full report. Unknown/ambiguous source
+events prevent an old-tax archive but never become fresh dates. Upcoming dates
+count only for explicit sale origins within twelve months. Only an explicit
+source-backed address-repair receipt counts as an attempt; no existing producer
+was found, so placeholder/counter history cannot invent one. Geography uses
+existing approved-buyer provenance and fit logic, without price/type exclusions.
+No apply/undo or production move in this slice -- AGENTS truth/preservation,
+D-049 and #307's dry-run-before-bounded-move contract -- 2026-10-12.
+
 ASSUMED: #307's email-template slice saves explicitly reviewed operator-input
 text, with append-only revisions, separately from actual email approval/delivery.
 The first20 policy counts only unique, unambiguous accepted SMTP Message-IDs
