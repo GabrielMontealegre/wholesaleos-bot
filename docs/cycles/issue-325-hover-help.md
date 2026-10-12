@@ -47,3 +47,15 @@ explanation; both were corrected and pinned, not asserted away.
 
 Screenshots are synthetic, under2026-10-12-hover-help and todays-deals-local.
 This does not complete #325's clocks or email/buyer/JV layouts. Send remains #288.
+
+## Release result
+
+PR #333 merged as a0da759e524a7f2c24bcf5a4ddf864f466087151; exact Railway
+commit status SUCCESS and health200. Full162passed/0failed/0skipped at600s/file;
+all durations in docs/test-results/issue-325-hover-help.txt.
+Live serves help v3, zero separate question buttons. Read-only Our ARV focus
+shows: "After-repair value: what the repaired property may sell for, supported
+by comparable sales." Escape hides it. Tooltip fits1366/400/412;
+100Leads hydrate, actual card opens/closes, fresh console has zero errors.
+Viewport reset. No production action/confirmation/send/contact/capture/batch.
+Synthetic screenshots are not presented as live captures.

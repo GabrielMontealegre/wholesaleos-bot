@@ -1,5 +1,18 @@
 # Decisions
 
+ASSUMED: #325 clocks ship as ordered presentation-only slices, reviewed deals
+first. Server-stamped first_seen_at means added to WholesaleOS, not the source
+event date; captured_at remains separately labeled. Only the existing reviewed
+deal's normalized closing/auction projection is a displayed deadline. No preview
+sale-date copies or source-date parsing are added. Owner time is fixed UTC-7,
+calendar days are derived and never affect a gate. Actions are labeled recorded
+reports, not proof that contact/closing occurred; a preset stage without a matching
+recorded transition has unknown age. Missing clock facts remain Unknown despite
+the general empty-field hiding preference, because the owner's explicit clock
+requirement and data truth take precedence. Saved-lead/property clocks follow;
+no acquisition/contact action is triggered -- AGENTS sections2/3/5 and #325
+owner comment -- 2026-10-12.
+
 ASSUMED: #325 replaces separate help buttons with existing-label hover/focus and
 touch hold. The full glossary remains; short definitions are informational, not
 evidence. Unknown labels receive conservative generic context, not guessed domain
