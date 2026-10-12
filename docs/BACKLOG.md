@@ -8,6 +8,18 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #307C read-only triage diagnostic IN PROGRESS; pure classification,
+admin GET report/IDs-only needs-comps and explicit Leads panel built. Full suite
+SUMMARY passed=160 failed=0 skipped=0 total=160,600s/file. TriageUI9.42s,
+pure1.03s,mobile30.16s,county-notice19.79s; all durations in
+docs/test-results/issue-307-lead-triage.txt. Full-index synthetic1366/400/412
+proof,44px,expired login clearing,zero browser writes/external calls; counts
+2keep/2park/3archive reconcile7 and preserve bytes. Existing assertions unchanged.
+No apply/undo/repair/deletion/batch built or run; real dry-run counts pending
+release. Bounds apply to new moves,not existing archives; unknown dates never
+prove freshness or address repair. Assumptions logged. #307 stays OPEN;
+next independent item #325 if production move is outside authorized bounds.
+
 2026-10-11 -- continuous #307 email templates/policy DONE in
 [PR #329](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/329),
 application main5ee48f1; exact Railway success,health200. Four-kind explicit reviewed library,
