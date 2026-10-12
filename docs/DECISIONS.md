@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #325 replaces separate help buttons with existing-label hover/focus and
+touch hold. The full glossary remains; short definitions are informational, not
+evidence. Unknown labels receive conservative generic context, not guessed domain
+facts; person/property-name headings are excluded from term inference. Native
+dynamic titles and disabled states remain untouched. Long/cancelled/stale-target
+holds consume their action click, never an operator confirmation; normal explicit
+clicks retain behavior -- AGENTS truth/no hidden automation and owner #325
+hover/long-press decision -- 2026-10-12.
+
 ASSUMED: #325 ships ordered UI-only slices. The latest owner comment supersedes
 #294's light default; prior light tokens remain as an optional switch. Move
 existing nav nodes to the right/groups, preserving identity, routes and role

@@ -25,13 +25,13 @@ registerReviewedDealRoutes(app, { db: { readDBStrict: () => store, writeDB: s =>
       await page.setViewportSize({ width, height: width === 412 ? 915 : 900 }); await page.goto(base);
       await page.locator('.td-card').waitFor();
       await page.getByRole('button', { name: 'Open deal', exact: true }).click();
-      await page.getByRole('button', { name: 'Explain ARV', exact: true }).first().waitFor();
+      await page.locator('[data-help-term="ARV"]:visible').first().waitFor();
       assert.strictEqual(await page.locator('.td-card tbody tr').count(), 3); assert.ok((await page.locator('.td-card').innerText()).includes('$168,250'));
       await page.getByText('Open buyer: Fixture Investor - $168,250', { exact: true }).click();
       assert.ok((await page.locator('.td-card').innerText()).includes('No buyer introduction'));
-      const help = page.getByRole('button', { name: 'Explain ARV', exact: true }).first(); await help.focus();
+      const help = page.locator('[data-help-term="ARV"]:visible').first(); await help.focus();
       assert.strictEqual(await help.getAttribute('aria-describedby') != null, true); assert.strictEqual(await page.locator('#' + await help.getAttribute('aria-describedby')).isVisible(), true);
-      await help.press('Escape'); await help.click(); assert.strictEqual(await help.getAttribute('aria-expanded'), 'true'); await help.click();
+      await help.press('Escape'); assert.strictEqual(await page.locator('#wos-live-tooltip').isVisible(),false); await help.hover(); assert.strictEqual(await page.locator('#wos-live-tooltip').isVisible(),true); assert.strictEqual(await page.locator('.wos-help-button').count(),0); await help.press('Escape');
       const terms = await page.locator('[data-help-term]').evaluateAll(els => els.map(e => e.dataset.helpTerm)); const glossary = JSON.parse(fs.readFileSync(path.join(root, 'dashboard/glossary.json'))); assert.ok(terms.every(t => glossary[t]));
       assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       const contrast = await page.locator('.td-card h3:visible').evaluate(e => ({ color: getComputedStyle(e).color, background: getComputedStyle(e.closest('.td-card')).backgroundColor }));
