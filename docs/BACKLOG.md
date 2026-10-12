@@ -8,6 +8,33 @@ Mark the status here as part of each item's PR.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 reviewed-deal clocks IN PROGRESS. UI-only home/Today/JV
+summary and open card: added versus source capture, owner UTC-7 calendar
+deadline/time left, recorded operator action, stage age or Unknown and next step.
+No imported timestamp becomes source-event evidence; no gate/write/automation.
+Full SUMMARY passed=164 failed=0 skipped=0 total=164,600s/file;
+clockUI4.15s,pure0.18s,hover7.85s,mobile16.09s,wider-areaUI16.77s,
+county-notice15.46s. All durations issue-325-reviewed-deal-clocks.txt;
+synthetic1366/400/412 screenshots reviewed. No existing assertion changed;
+backend/server/DB/comp/auth/source/dependency diff empty. Release/live gate
+pending. Saved-lead/property clocks and email/buyer/JV layouts remain #325.
+Triage move BLOCKED #331; no lead moved/deleted. Assumption: unknown clock
+facts stay visible; operational timestamps are not distress proof.
+
+2026-10-12 -- #325 hover help DONE in [PR #333](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/333),
+application main a0da759e524a7f2c24bcf5a4ddf864f466087151. Exact Railway
+SUCCESS, health200. Full162passed/0failed/0skipped,600s/file; all durations
+in issue-325-hover-help.txt. Live help script v3; zero question buttons;
+Our ARV label shows the comparable-sales explanation, Escape hides it.
+Tooltip fits desktop1366 and phones400/412. Actual100Leads/card opens-closes,
+fresh console0; viewport restored. One pre-hydration selector miss and a CDP
+input timeout recovered after refreshing browser state, not product fixes.
+Committed screenshots are explicitly synthetic; no live screenshot file claimed.
+No production write, Send, contact, confirmation, capture, batch or helper action.
+#325 remains OPEN. Next ordered slice: recorded clocks on reviewed deal cards,
+then saved-lead/property clocks and email/buyer/JV layouts; #288 Send later.
+Triage move remains BLOCKED #331 (park1912 exceeds1705); no lead moved/deleted.
+
 2026-10-12 -- #325 hover-help release IN PROGRESS; label/control explanations
 replace question buttons, keyboard/hover/focus-scroll/Escape and touch hold.
 Normal explicit actions preserved; held/cancelled/stale-DOM clicks and review
