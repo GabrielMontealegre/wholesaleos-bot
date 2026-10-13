@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #341's live approval action-color defect is corrected immediately in
+a separate CSS-only follow-up, with computed-style tests and full release gates.
+The guarded buyer/deal workspace remains available; no approval is performed and
+the slice is not marked complete until the visual correction is live. This avoids
+an availability rollback for a presentation-only cascade defect; auth, handlers,
+records and safety gates are unchanged -- data/operational safety precedes style,
+AGENTS3 -- 2026-10-13. A functional or data failure still requires AGENTS7 rollback.
+
 D-056 -- Gabriel via #341, issued2026-10-13 UTC: usability first. Menu returns
 to LEFT, superseding #325's right-side choice. Pause new features until Gabriel
 signs off on the complete P0 shell/action center/Approvals/bell/clickable-card UI.
