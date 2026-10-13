@@ -1,0 +1,40 @@
+'use strict';
+(function(root){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function time(v,data,clock){return v&&clock?clock.formatTime(v,data.now):'';}
+  function markup(data,{clock,error='',busy=false}={}){
+    const head='<header class="today-heading"><div><h2>Today</h2>'+(data?'<p>Checked '+esc(time(data.now,data,clock))+'</p>':'')+'</div><button type="button" data-today-refresh'+(busy?' disabled':'')+' title="Reload recorded work; no collection or messages">Refresh</button></header>';
+    if(!data)return '<section id="wos-today-workspace" class="today-workspace">'+head+'<p role="status">'+esc(error||'Loading your recorded work...')+'</p></section>';
+    const kpis=[['replies','Replies waiting'],['approvals','Approvals'],['followups','Follow-ups due'],['deadlines','Deadlines this week']];
+    const rows=data.actions.map(a=>'<li><div><strong>'+esc(a.label)+'</strong>'+(a.ref?'<span>'+esc(a.ref)+'</span>':'')+(a.due_date&&clock?'<small>Due '+esc(clock.formatDate(a.due_date))+'</small>':'')+'</div><button type="button" data-today-action="'+esc(a.key)+'" title="Open the recorded '+esc(a.kind)+'; nothing is sent or approved">'+esc(a.action_label)+'</button></li>').join('');
+    const best=data.best_deals.map(d=>'<li><button type="button" data-today-deal="'+esc(d.id)+'" title="Open the reviewed deal; this is not an offer"><strong>'+esc(d.ref||d.location)+'</strong><span>'+esc(d.location)+'</span><span>$'+esc(d.spread.toLocaleString('en-US'))+' estimated spread before closing costs</span><small>'+esc(d.value_tier)+' value | Deadline '+esc(clock?clock.formatDate(d.deadline):'')+'</small></button></li>').join('');
+    const recent=data.last_24h.map(e=>'<li><div><strong title="'+esc(e.reported?'Recorded report; not proof that an email was delivered.':'Verified deployment record; linked pull request.')+'">'+esc(e.label)+'</strong>'+(e.ref?'<span>'+esc(e.ref)+'</span>':'')+'<small>'+esc(time(e.at,data,clock))+'</small></div>'+(e.source_url?'<a href="'+esc(e.source_url)+'" target="_blank" rel="noopener noreferrer">Open release</a>':e.ref?'<a href="/dashboard/?record_ref='+encodeURIComponent(e.ref)+'">Open record</a>':'<button type="button" data-today-history>Open activity</button>')+'</li>').join('');
+    return '<section id="wos-today-workspace" class="today-workspace">'+head+
+      '<div class="today-kpis">'+kpis.map(([key,label])=>'<button type="button" data-today-filter="'+key+'"><span>'+label+'</span><strong>'+esc(data.counts[key])+'</strong></button>').join('')+'</div>'+
+      '<div class="today-main"><section class="today-actions"><h3>Your action queue <span>'+data.actions.length+'</span></h3><ul class="today-list">'+(rows||'<li>No recorded work needs your action today.</li>')+'<li data-today-empty hidden>No work in this category.</li></ul></section>'+
+      '<div class="today-columns"><section><h3>Best reviewed deals</h3><p class="today-caution">Diamond and Gold grades are awaiting their grading definition.</p><ul class="today-best">'+(best||'<li>No reviewed deals have a positive calculated spread and a current deadline.</li>')+'</ul></section>'+
+      '<section><h3>Last 24 hours</h3><button type="button" data-today-history title="Open the complete recorded activity log">Open activity</button><ul class="today-list today-recent">'+(recent||'<li>No recorded activity in the last 24 hours.</li>')+'</ul></section></div></div>'+
+      '<footer class="today-coverage">Email activity: recorded reports, not delivery proof. Records-request and routine-result feeds are not connected.</footer><p role="status" data-today-status>'+esc(error)+'</p></section>';
+  }
+  const api={markup};if(typeof module!=='undefined'&&module.exports){module.exports=api;return;}
+  let data=null,busy=false,error='',checked=0,filter='';
+  function paint(){const el=document.getElementById('wos-today-workspace');if(el){el.outerHTML=markup(data,{clock:root.wosCardClock,error,busy});applyFilter();}}
+  function applyFilter(){const el=document.getElementById('wos-today-workspace');if(!el||!data)return;let shown=0;el.querySelectorAll('[data-today-action]').forEach(b=>{const a=data.actions.find(a=>a.key===b.dataset.todayAction);const fits=!filter||filter==='replies'&&a.kind==='conversation'&&a.conversation.status==='hot'||filter==='approvals'&&a.label.includes('approval')||filter==='followups'&&a.label==='Follow-up due'||filter==='deadlines'&&a.label==='Deadline within seven days';b.closest('li').hidden=!fits;if(fits)shown++;});el.querySelector('[data-today-empty]').hidden=!filter||shown>0;el.querySelectorAll('[data-today-filter]').forEach(b=>b.setAttribute('aria-pressed',String(filter===b.dataset.todayFilter)));}
+  async function load(force=false){if(busy||!document.getElementById('wos-today-workspace')||!force&&checked&&Date.now()-checked<30000)return;busy=true;error='';paint();try{const r=await fetch('/api/dashboard/today-workspace'),v=await r.json();if(!r.ok||v.source_kind!=='derived_workflow'||!Array.isArray(v.actions)||!Array.isArray(v.best_deals)||!Array.isArray(v.last_24h)||!v.counts)throw Error();data=v;checked=Date.now();}catch{data=null;checked=0;error='Today is unavailable. Check your login, then refresh.';}finally{busy=false;paint();}}
+  root.renderDashboard=function(){setTimeout(()=>load(),0);return markup(data,{clock:root.wosCardClock,error,busy})+'<details class="today-tools"><summary>Conversation tools</summary>'+root.renderConversationTools()+'</details>';};
+  function openConversation(c){
+    const old=document.getElementById('today-conversation-dialog');if(old)old.remove();const dialog=document.createElement('dialog');dialog.id='today-conversation-dialog';dialog.className='today-dialog';
+    dialog.innerHTML='<button type="button" data-today-close aria-label="Close conversation">Close</button><h2>Recorded conversation</h2>'+root.wosConversationCards.render(c,{clock:root.wosCardClock,roleChip:root.wosRoleChip,roleColor:root.wosRoleColor,now:data.now,today:data.today});
+    document.body.appendChild(dialog);dialog.showModal();dialog.addEventListener('close',()=>dialog.remove());
+  }
+  document.addEventListener('click',e=>{
+    if(e.target.closest('[data-today-refresh]')){load(true);return;}
+    const f=e.target.closest('[data-today-filter]');if(f){filter=filter===f.dataset.todayFilter?'':f.dataset.todayFilter;applyFilter();document.querySelector('.today-actions')?.scrollIntoView({block:'start'});return;}
+    if(e.target.closest('[data-today-close]')){document.getElementById('today-conversation-dialog')?.close();return;}
+    if(e.target.closest('[data-today-history]')){root.navigate('record_activity',null);return;}
+    const d=e.target.closest('[data-today-deal]');if(d){root.openReviewedDeal(d.dataset.todayDeal);return;}
+    const b=e.target.closest('[data-today-action]');if(!b||!data)return;const a=data.actions.find(a=>a.key===b.dataset.todayAction);if(!a)return;
+    if(a.kind==='conversation')openConversation(a.conversation);else if(a.kind==='deal')root.openReviewedDeal(a.record_id);else if(a.kind==='buyer')root.openBuyerFind(a.record_id);
+  });
+  root.wosTodayWorkspace=api;
+})(typeof window==='undefined'?{}:window);
