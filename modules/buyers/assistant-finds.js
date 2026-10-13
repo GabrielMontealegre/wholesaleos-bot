@@ -222,10 +222,11 @@ function update(store, id, input, { now, operatorId }) {
 }
 
 function listFinds(store, { now }) {
+  const dealViews=require('./deal-fit-view').build(store,{now});
   const items = (store.buyers || []).filter((buyer) => buyer.assistant_find).map((buyer) => ({
     id: buyer.id, ...buyer.assistant_find, record_ref: activity.reference(buyer), email_subject: buyer.record_ref ? '[' + buyer.record_ref + '] Buyer enquiry' : '',
     trust_label: buyer.assistant_find.approval === 'approved' ? 'Verified source - approved by operator' : 'Imported - not verified',
-    fits: fitSummary(buyer, store.leads || [])
+    fits: fitSummary(buyer, store.leads || []), deal_fit:dealViews.get(buyer.id)
   })).sort((a, b) => b.first_seen_at.localeCompare(a.first_seen_at) || a.id.localeCompare(b.id));
   const week = new Date(now);
   week.setUTCHours(0, 0, 0, 0);

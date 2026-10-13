@@ -105,13 +105,13 @@ assert.strictEqual(finds.validateItems({ items: [{ ...item, platform: 'craigslis
 assert.throws(() => finds.update(updated, 'fixture-1', { verified: true }, context), /find_update_invalid/);
 assert.throws(() => finds.update(updated, 'missing', { status: 'new' }, context), /find_not_found/);
 assert.deepStrictEqual(finds.listFinds(updated, { now }).counts, { total: 1, new_today: 1, messaged_this_week: 1 });
-const html = ui.card({ ...finds.listFinds(updated, { now }).items[0], name: '<script>bad()</script>' });
+const html = ui.detailedCard({ ...finds.listFinds(updated, { now }).items[0], name: '<script>bad()</script>' });
 assert.ok(!html.includes('<script>bad()'));
 assert.ok(html.includes('&lt;script&gt;bad()'));
 assert.ok(html.includes('published by them') && html.includes('not verified'));
 assert.ok(ui.markup({ items: [], counts: { total: 0 } }).includes('No buyers found yet'));
 assert.ok(ui.card(finds.listFinds(result.store, { now }).items[0]).includes('Pending approval'));
-assert.ok(ui.card(finds.listFinds(updated, { now }).items[0]).includes('Leads that fit this buy box:'));
+assert.ok(ui.detailedCard(finds.listFinds(updated, { now }).items[0]).includes('Leads that fit this buy box:'));
 let unexpected = 0;
 const savedFetch = global.fetch;
 const savedNow = Date.now;

@@ -27,6 +27,20 @@ No production email link/send/confirmation or triage apply as a release test.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 clean buyer cards IN PROGRESS. Compact name/area/buy-box/
+reviewed-deal-count/status/last contact report list; old source/contact/approval/
+draft/status/history remains on open card with matched deals and near misses.
+Canonical evaluator reused once per deal; no new matcher/gate/writer. Price/value/
+geography/terminal reasons and notes-as-checks preserved; unsigned JV street
+addresses excluded from this projection. Saved-lead fits stay separate.
+Initial170/0/0 preserved; exact final170passed/0failed/0skipped,600s/file;
+buyerUI7.20s,pure0.57s,mobile24.59s,wider-area24.10s,county-notice12.76s.
+Every timing and synthetic1366/400/412 image recorded. Two existing pure UI
+calls switch to detailedCard,their original safety assertions unchanged.
+No source/comp/auth/dependency or mutation change. Release/live gate pending.
+Next #325 JV workspace/composer; #304 bugs1-16 next in owner order; #288/#336
+Send after that. #331 bounds authorized for separate backed-up reversible slice.
+
 2026-10-12 -- Run summary: #325 Gmail-style Inbox read workspace DONE in
 [PR #338](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/338),
 application main5d99d84c41df46c34d083f304714b30a139457ee. Exact Railway
