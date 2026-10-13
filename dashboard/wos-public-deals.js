@@ -2603,7 +2603,7 @@
       section.id = 'wos-public-deals';
       section.style.cssText = 'margin:12px;padding:14px 16px;border:1px solid #d1d5db;border-radius:12px;background:#f9fafb;font-family:inherit;';
     }
-    var today = page === 'dashboard' ? document.getElementById('wos-today-workspace') || document.getElementById('wos-todays-deals') : null;
+    var today = page === 'dashboard' ? document.getElementById('wos-todays-deals') : null;
     var anchor = today && today.parentNode === host ? today.nextSibling : host.firstChild;
     if (section.parentNode !== host || anchor !== section) {
       host.insertBefore(section, anchor);

@@ -18,7 +18,6 @@ async function prove({ screenshots = false } = {}) {
     const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: 915 }); await page.goto(base + '/dashboard/');
-      await page.evaluate(()=>navigate('todays_deals',null));
       await page.locator('.td-summary .wos-card-clock').waitFor();
       const clock = page.locator('.td-summary .wos-card-clock').first();
       for (const label of ['Added to WholesaleOS', 'Source captured', 'Days since added', 'Closing date', 'Time left', 'Last recorded action', 'Current stage', 'Next step']) assert.ok((await clock.innerText()).includes(label));

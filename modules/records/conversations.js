@@ -48,7 +48,7 @@ function upsert(store,input,context) {
   return {store:updated,results:[{id,result:previous?'updated':'created'}]};
 }
 function addDays(day,n) { return new Date(Date.parse(day+'T00:00:00Z')+n*86400000).toISOString().slice(0,10); }
-function project(store,{now,timeZone='America/Mazatlan'}={}) {
+function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
   if(!Number.isFinite(Date.parse(now)))fail('find_conversation_date_invalid');const today=dayAt(now,timeZone);
   const refCounts=new Map();
   for(const collection of ['leads','buyers','reviewed_deals','record_matches'])for(const row of store[collection]||[])try{const ref=records.reference(row);if(ref)refCounts.set(ref,(refCounts.get(ref)||0)+1);}catch{}
@@ -87,10 +87,6 @@ function project(store,{now,timeZone='America/Mazatlan'}={}) {
   }
   items.sort((a,b)=>(b.status==='hot')-(a.status==='hot')||Number(b.overdue)-Number(a.overdue)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
   for(const row of items)row.linked_deals=knownDeals.filter(deal=>row.refs.includes(deal.ref)&&knownDeals.filter(other=>other.ref===deal.ref).length===1);
-  return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items};
+  return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};
 }
-function list(store,options={}) {
-  const view=project(store,options);
-  return {...view,items:view.items.slice(0,Math.min(100,Math.max(1,Number(options.limit)||50)))};
-}
-module.exports={validate,upsert,list,project,STATUSES,ROLES};
+module.exports={validate,upsert,list,STATUSES,ROLES};
