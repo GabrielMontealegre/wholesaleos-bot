@@ -16,7 +16,7 @@ async function prove({screenshots=false}={}) {
    if(new URL(url).pathname==='/helper/status')return route.fulfill({json:{paired:false}});
    if(url.startsWith(base+'/'))return route.continue();external.push(new URL(url).hostname);return route.abort();});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
-  for(const width of [1366,400,412]){await page.setViewportSize({width,height:915});await page.goto(base+'/dashboard/');await page.locator('[data-conversation-id=overdue]').waitFor();
+  for(const width of [1366,400,412]){await page.setViewportSize({width,height:915});await page.goto(base+'/dashboard/');await page.getByText('Conversation tools',{exact:true}).click();await page.locator('[data-conversation-id=overdue]').waitFor();
    assert.deepEqual(await page.locator('.cv-row').evaluateAll(els=>els.map(el=>el.dataset.conversationId)),['overdue','today','later']);
    const text=await page.locator('#wos-conversations').innerText();assert.ok(text.includes('Oct 8, 12:27 PM'));assert.ok(!text.includes('2026-10-08'));assert.ok(!text.includes('Draft message not supplied'));assert.ok(!text.includes('Reported conversation'));
    assert.equal(await page.locator('[data-conversation-id=overdue] .cv-primary').count(),1);assert.equal(await page.locator('[data-conversation-id=today] .cv-primary').count(),1);assert.equal(await page.locator('[data-conversation-id=later] .cv-primary').count(),0);

@@ -90,7 +90,8 @@ async function prove({ screenshots = false,wider=false } = {}) {
       }
       for (const name of pages) {
         await page.evaluate(name => navigate(name, null), name);
-        if (['dashboard','todays_deals','jv'].includes(name)) await page.locator('.td-card').first().waitFor();
+        if (['todays_deals','jv'].includes(name)) await page.locator('.td-card').first().waitFor();
+        if(name==='dashboard')await page.locator('[data-today-action]').first().waitFor();
         if (name === 'buyers_found') await page.locator('.bf-card').first().waitFor();
         if (name === 'record_activity') await page.locator('[data-reference-reserve]').waitFor({ state: 'attached' });
         if(name==='settings'){await page.locator('[data-owner-channel-status]').filter({hasText:'delivery not tested'}).waitFor();assert.ok((await page.locator('[data-owner-channel-schedule]').innerText()).includes('disabled'));await page.locator('[data-owner-channel-refresh]').click();await page.locator('[data-owner-brief-preview]').click();await page.locator('[data-owner-brief-text]').filter({hasText:'SYNTHETIC BRIEFING'}).waitFor();assert.strictEqual(await page.locator('#owner-channel-panel script').count(),0,'briefing must be escaped text');}
@@ -108,10 +109,12 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('[data-email-back]').click();
         }
         if (name === 'dashboard') {
+          await page.getByText('Conversation tools',{exact:true}).scrollIntoViewIfNeeded();
+          assert.ok(await page.evaluate(()=>{const root=document.querySelector('#wos-today-workspace'),recent=root.querySelector('.today-recent'),target=document.querySelector('.today-tools>summary'),r=target.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return root.getBoundingClientRect().bottom>=recent.getBoundingClientRect().bottom-1&&(hit===target||target.contains(hit));}),'Today content stays inside its root and cannot cover the disclosure click target');
+          await page.getByText('Conversation tools',{exact:true}).click();
           await page.locator('.cv-row').waitFor();
           assert.ok((await page.locator('#wos-conversations').innerText()).includes('Fixture reply'));
-          await page.waitForFunction(()=>{const e=document.querySelector('#wos-conversations');return e&&e.parentElement?.firstElementChild===e;});
-          assert.strictEqual(await page.evaluate(()=>document.querySelector('#content')?.firstElementChild?.id),'wos-conversations','reminders must precede Today');
+          assert.strictEqual(await page.evaluate(()=>document.querySelector('#content')?.firstElementChild?.id),'wos-today-workspace','D-056 Today is the single home action center');
           await page.locator('[data-conversation-email-preview]').click();
           await page.locator('[data-conversation-email-status]').filter({hasText:'3 checked, 1 exactly linked, 1 unlinked, 1 ambiguous'}).waitFor();
           await page.getByText('Latest linked email subject: SYNTHETIC EMAIL <script>not executable</script>',{exact:true}).waitFor();

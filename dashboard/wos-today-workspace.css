@@ -9,4 +9,6 @@
 .today-tools>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--accent)}
 #wos-today-workspace .today-kpis button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:88px}
 #wos-today-workspace .today-kpis strong{font-size:24px;color:var(--good)!important;margin:0}
+/* Tabler's scoped document-root height must not constrain a content section. */
+#wos-today-workspace{height:auto}
 @media(max-width:700px){.today-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.today-main{grid-template-columns:minmax(0,1fr);gap:24px}.today-list li{gap:10px}.today-list button,.today-list a{flex-shrink:1;font-size:13px}.today-heading h2{font-size:24px}}
