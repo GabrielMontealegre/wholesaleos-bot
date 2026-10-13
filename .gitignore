@@ -93,3 +93,4 @@ deal-board-jobs.json
 deal-board-auto-run.json
 # Private reference-operation backups must never enter version control.
 **/private-record-backups/
+/dashboard/vendor/tabler-1.6.1/package.tgz

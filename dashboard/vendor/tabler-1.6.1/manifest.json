@@ -1,0 +1,11 @@
+{
+  "name": "@tabler/core",
+  "version": "1.6.1",
+  "license": "MIT",
+  "source_url": "https://registry.npmjs.org/@tabler/core/-/core-1.6.1.tgz",
+  "integrity": "sha512-lgmR9gcxRp5JlLxcmRi9Rz85JrEvH6Bz71KnlcPVSa97wtwQNjgSs3g3fxwbAlulHyRMghhIV04QUuW3pqDsIg==",
+  "source_css_sha256": "370a2d4e608ae518351d10528fc7dbe19b354ae5062c51b2a9cb294850d65403",
+  "scoped_css_sha256": "4e9009c4553e1ed3c014fb95d5415c852d762002554b1c04c82914a96cf76cf4",
+  "scope": ".wos-kit",
+  "runtime_network": false
+}

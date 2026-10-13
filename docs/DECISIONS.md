@@ -1,5 +1,19 @@
 # Decisions
 
+Architect answers on#344/#347/#349,2026-10-13: use stored-fact interim grades
+without changing canonical value/offer readiness; re-release Today behind a
+default-off flag and verify exact-head dashboard200 before enabling; buyer/deal
+and changed-comp approvals satisfy the current P0 contract, with missing draft/
+request producers deferred. Sources are those issue comments, not guessed data.
+
+ASSUMED: pinned Tabler1.6.1 is scoped to rebuilt component roots via a generated
+CSSOM stylesheet; original assets/license/hashes are retained. Reuse existing
+proven mobile drawer handlers rather than impose conflicting kit layout
+classes on legacy pages. No runtime CDN, framework migration, auth or backend
+change. Remaining P0 screens adopt the same kit boundary as rebuilt -- data
+safety/architecture consistency and #341's permitted conflict alternative,
+AGENTS3 -- 2026-10-13.
+
 ASSUMED: #341's live approval action-color defect is corrected immediately in
 a separate CSS-only follow-up, with computed-style tests and full release gates.
 The guarded buyer/deal workspace remains available; no approval is performed and

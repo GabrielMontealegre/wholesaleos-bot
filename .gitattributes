@@ -1,0 +1,2 @@
+# Preserve pinned distribution and generated hash bytes on every platform.
+dashboard/vendor/tabler-1.6.1/** -text
