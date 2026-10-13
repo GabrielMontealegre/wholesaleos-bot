@@ -1,5 +1,20 @@
 # Decisions
 
+ASSUMED: #347's flag is a compiled UI rollout flag, not an auth/data gate.
+First release stays OFF; its exact deployed /dashboard,health and assets must
+pass before a separate tested activation commit. No production data/settings
+write or Railway variable is used. Immutable release metadata sits outside
+mutable data; original failed-deploy cause remains unproven -- #347 and AGENTS
+truth/deploy precedence -- 2026-10-13.
+
+ASSUMED: #344's room criterion uses the existing evaluator's calculated
+estimated share (JV split already applied), not a larger invented gross profit.
+Interim grades label all stored evaluations; the best reviewed list remains
+conservatively restricted to current reviewed value-backed positive-share
+Diamond/Gold records. Grade never changes offer/readiness/contact permissions.
+The real test fixture6625 is Gold for missing room>=10000 -- AGENTS3 value
+truth,existing canonical math and #344 -- 2026-10-13.
+
 Architect answers on#344/#347/#349,2026-10-13: use stored-fact interim grades
 without changing canonical value/offer readiness; re-release Today behind a
 default-off flag and verify exact-head dashboard200 before enabling; buyer/deal
