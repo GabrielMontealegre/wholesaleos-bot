@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const cards=require('../dashboard/wos-conversation-cards'),clock=require('../dashboard/wos-card-clock');
+const conversations=require('../modules/records/conversations');
+const now='2026-10-12T19:00:00Z',today='2026-10-12';
+const rows=[{id:'later',due_date:'2026-10-15'},{id:'today',due_date:today},{id:'overdue',due_date:'2026-10-09'},{id:'undated',overdue:true},{id:'invalid',due_date:'2026-02-30'}];
+assert.deepEqual(cards.order(rows,today).map(r=>r.id),['overdue','today','later','invalid','undated']);
+assert.equal(cards.rank(rows[3],today),2);assert.equal(cards.rank(rows[4],today),2);
+const row={id:'fixture',person:'<script>not executable</script>',role:'buyer',refs:['WOS-FL-1030'],status:'follow_up',channels:['manual'],source_kind:'imported_report',last_in:'2026-10-08T19:27:00Z',last_out:'',due_date:'2026-10-10',thread_url:'',ready_message:'',what_they_said:'',next_step:'',linked_deals:[{id:'deal',ref:'WOS-FL-1030'}]};
+const html=cards.render(row,{clock,now,today});
+assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));
+assert.ok(html.includes('Oct 8, 12:27 PM'));assert.ok(!html.includes(row.last_in));assert.ok(!html.includes('Due: 2026-'));
+for(const missing of ['Draft message not supplied','Conversation link not supplied','They said:','Next:','Last outgoing:'])assert.ok(!html.includes(missing));
+assert.equal((html.match(/class="cv-primary"/g)||[]).length,1);assert.ok(html.includes('Open deal'));
+assert.ok(!cards.render({...row,linked_deals:[]},{clock,now,today}).includes('Open deal'),'a WOS ref alone never invents a linked deal');
+assert.ok(!cards.render({...row,thread_url:'javascript:alert(1)',linked_deals:[]},{clock,now,today}).includes('cv-primary'));
+const forgedRole=cards.render({...row,source_kind:'ai_generated'},{clock,now,today,roleChip:role=>role==='buyer'?'CLAIMED BUYER':'ROLE UNKNOWN',roleColor:role=>role==='buyer'?'#34d399':''});
+assert.ok(forgedRole.includes('ROLE UNKNOWN'));assert.ok(!forgedRole.includes('CLAIMED BUYER'));assert.ok(!forgedRole.includes('#34d399'));
+const reply=cards.render({...row,thread_url:'https://www.messenger.com/t/123',ready_message:'<img src=x>'},{clock,now,today});
+assert.equal((reply.match(/class="cv-primary"/g)||[]).length,1);assert.ok(reply.includes('>Reply</a>'));assert.ok(!reply.includes('>Open deal</a>'));assert.ok(reply.includes('&lt;img'));
+const store={reviewed_deals:[{id:'deal',record_ref:'WOS-FL-1030'}],conversations:[row]};
+const bytes=JSON.stringify(store);assert.deepEqual(conversations.list(store,{now}).items[0].linked_deals,[{id:'deal',ref:'WOS-FL-1030'}]);
+assert.deepEqual(conversations.list({...store,reviewed_deals:store.reviewed_deals.concat({id:'duplicate',record_ref:'WOS-FL-1030'})},{now}).items[0].linked_deals,[]);
+assert.deepEqual(conversations.list({...store,leads:[{id:'lead',record_ref:'WOS-FL-1030'}]},{now}).items[0].linked_deals,[],'cross-collection duplicate refs never imply a unique deal');
+let calls=0;const originals=[global.fetch,fs.writeFileSync,Date.now];try{const forbidden=()=>{calls++;throw Error('side effect');};global.fetch=fs.writeFileSync=Date.now=forbidden;cards.order(rows,today);cards.render(row,{clock,now,today});conversations.list(store,{now});}finally{[global.fetch,fs.writeFileSync,Date.now]=originals;}
+assert.equal(calls,0);assert.equal(JSON.stringify(store),bytes);
+console.log('Conversation cards: urgency from real dates, human times, empty-line hiding, one safe primary action, no inferred deal/role/contact, duplicate refs, escaping and purity passed.');
