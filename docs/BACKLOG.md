@@ -27,6 +27,27 @@ No production email link/send/confirmation or triage apply as a release test.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- Run summary: #325 Gmail-style Inbox read workspace DONE in
+[PR #338](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/338),
+application main5d99d84c41df46c34d083f304714b30a139457ee. Exact Railway
+SUCCESS in1m08s;health200. Initial168/0/0 retained; final168passed/0failed/
+0skipped,600s/file,all durations committed. InboxUI5.21s,threadread4.18s,
+pure0.19s,UIstate0.11s,mailbox2.38s,mobile17.90s,county-notice12.73s.
+Live emailv3/inboxCSSv1/rolesv1;Connected(App Password). Inbox30messages/
+30threads;Sent30messages/25threads. All are unlinked(no exact stored role
+anchors),not guessed from names. One real single-message and one two-message
+Sent thread read successfully; no message contents/contact details in report.
+Green Send disabled,no raw ISO display times,no rendered mail images. Desktop
+3panes;phone400/412 full reading/text fit,no overflow.100Leads/explicit Open
+Lead opens/closes,fresh console0. Viewport restored. Privacy-safe live role-menu
+crop emitted inline; committed screenshots explicitly synthetic. No real save/
+link/send/contact/confirmation/batch/capture/helper/provider/config change.
+Latest owner order recorded above. #331 revised bounds AUTHORIZED,apply/undo
+not yet built/run;no records moved/deleted. #325 remains IN PROGRESS: clean
+buyer cards next,then JV workspace/composer;Send activation waits for #288.
+#304 bugs1-16 follows;then #288/#336,#331,government/records requests,FL
+comps/deed buyers,brief/photos/map/Deal Check. No new overall readiness% measured.
+
 2026-10-12 -- #325 Inbox workspace IN PROGRESS: left folders/roles,separate
 WOS notes,middle exact-thread rows,oldest-first plain-text reading/composer;
 phone full reading pane,dark mockup colors,explicit role chips,UTC-7 times.

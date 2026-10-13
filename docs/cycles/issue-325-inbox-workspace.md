@@ -65,3 +65,20 @@ SUMMARY passed=168 failed=0 skipped=0 total=168,600s/file.
 Threadread4.18s,pureview0.19s,UIstate0.11s,InboxUI5.21s,mailbox2.38s,
 mobile17.90s,county-notice12.73s. Every timing in issue-325-inbox-workspace.txt.
 Synthetic screenshots: docs/screens/2026-10-12-inbox-workspace. Release/live pending.
+
+## Release verification
+
+PR #338 merged as5d99d84c41df46c34d083f304714b30a139457ee; deployment
+7026598079 SUCCESS23:54:24Z ->23:55:32Z (1m08s),health200.
+Live serves emailv3/inboxCSSv1/rolesv1. Connected(App Password),Inbox30messages
+in30threads,Sent30messages in25threads. No exact stored role links: all unlinked,
+never guessed. One real single-message and one exact-linked two-message Sent
+thread render without error; oldest-first ordering pinned by synthetic proof.
+Send disabled and primary green; no raw ISO time prose/no mail image rendering.
+Desktop3pane tracks164/354.5/551.5px;phone400 reading16..380,41216..392,
+bodytext fits,no overflow,list hidden while reading.100Leads/card opens/closes,
+fresh console0. Viewport restored. First body wait hit the browser's short wait
+limit; fresh state showed the successful completed read,not a code failure.
+Privacy-safe role-menu crop emitted inline; repository PNGs remain synthetic.
+No link/save/send/contact/confirmation/batch/capture/helper/config action.
+#325 remains open for clean buyers and JV workspace; #288 actual Send remains.
