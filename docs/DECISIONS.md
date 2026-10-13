@@ -415,3 +415,15 @@ server-owned metadata receipts, not message bodies, feed existing reminders
 and the shared brief; old imports preserve them. No contact outcome, lead fact
 or send is asserted. Production release verification creates no link or receipt
 and does not press either save action -- AGENTS sections3/5/7,D-050 -- 2026-10-10.
+
+ASSUMED: D-056 Today reads the existing uncapped conversation projection and
+reviewed-deal evaluator, with one strict admin GET and no side effects. Existing
+home stacks are replaced; standalone workflows/source evidence and explicit
+conversation tools remain accessible. Spread divided by days-to-deadline plus
+one is a reporting-only urgency sort over known positive reviewed spread,
+never a new value, offer or eligibility gate. Missing Black Diamond/Gold grade
+contract is isolated in #344; no grades are invented. Missing records-request
+and routine feeds are displayed as not connected, never as completed work.
+Recorded email activity is labeled reported, not delivered. Release history
+is a small source-linked record of already verified deployments, not hidden
+network automation -- AGENTS sections3/5 and D-056 -- 2026-10-13.

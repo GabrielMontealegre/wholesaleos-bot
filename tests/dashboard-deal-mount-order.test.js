@@ -46,13 +46,13 @@ async function proveDashboardOrder({ screenshots = false } = {}) {
     async function assertOrder(phase) {
       await page.waitForFunction(() => {
         const host = document.getElementById('content');
-        return host && host.querySelector('#wos-todays-deals') && host.querySelector('#wos-public-deals');
+        return host && host.querySelector('#wos-today-workspace') && host.querySelector('#wos-public-deals');
       });
       const order = await page.locator('#content').evaluate(e => [...e.children].map(c => c.id));
-      assert.strictEqual(order[0], 'wos-conversations', phase + ': D-050 reminders precede Today');
-      assert.strictEqual(order[1], 'wos-todays-deals', phase + ': Today follows reminders');
-      assert.strictEqual(order[2], 'wos-public-deals', phase + ': public source desk follows Today');
-      assert.strictEqual(await page.locator('#wos-todays-deals').count(), 1);
+      assert.strictEqual(order[0], 'wos-today-workspace', phase + ': D-056 Today action center is first');
+      assert.strictEqual(order[1], 'wos-public-deals', phase + ': public source desk follows Today');
+      assert.strictEqual(await page.locator('#wos-today-workspace').count(), 1);
+      assert.strictEqual(await page.locator('#wos-todays-deals').count(), 0, 'legacy Today inventory no longer stacks on home');
       assert.strictEqual(await page.locator('#wos-public-deals').count(), 1);
     }
     for (const width of [1366, 400, 412]) {
