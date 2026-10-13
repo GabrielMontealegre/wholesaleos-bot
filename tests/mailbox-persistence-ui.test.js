@@ -20,6 +20,7 @@ async function main(){
   const cvDoc={head:{appendChild(){}},createElement:()=>({}),querySelector:()=>cvPanel,addEventListener:(t,fn)=>{cvHandlers[t]=fn;}};
   const cvRoot={renderDashboard:()=>''};
   const cvFetch=async(url,options)=>{cvCalls.push({url,method:options?.method||'GET',body:options?.body});return {ok:true,json:async()=>url.endsWith('email-sync')?{ok:true,saved_messages:1,duplicate_messages:0}:url.endsWith('email-preview')?matched:plain};};
+  vm.runInNewContext(fs.readFileSync('dashboard/wos-conversation-cards.js','utf8'),{window:cvRoot,URL});
   vm.runInNewContext(fs.readFileSync('dashboard/wos-conversations.js','utf8'),{window:cvRoot,document:cvDoc,URL,setTimeout:fn=>cvTimers.push(fn),fetch:cvFetch});
   cvRoot.renderDashboard();await cvTimers.shift()();assert.ok(cvCalls.every(c=>c.method==='GET'));
   const flush=()=>new Promise(resolve=>setImmediate(resolve));

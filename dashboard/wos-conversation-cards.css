@@ -1,0 +1,9 @@
+body[data-wos-design="marketplace"] #app .cv-row {border-left:3px solid var(--role-color,#8a93a8);padding-left:14px;margin-block:14px;color:var(--ink,#e6e9f2)}
+.cv-heading,.cv-times {display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.cv-heading h3 {margin:0}
+.cv-times {font-size:12px;color:var(--muted,#8a93a8)}
+.cv-age {font-size:12px;padding:3px 8px;border:1px solid var(--border,#242a3a);border-radius:4px}
+.cv-overdue {color:var(--danger,#ef4444)}
+body[data-wos-design="marketplace"] #app .cv-row .cv-primary {background:var(--role-color,#3b82f6);color:#071018!important;text-decoration:none;padding:8px 14px;border:0;border-radius:4px;font-weight:600}
+.cv-row summary {cursor:pointer;margin-block:12px}
+.cv-row textarea {font:inherit;color:var(--ink,#e6e9f2);background:var(--panel,#12151d);border:1px solid var(--border,#242a3a)}

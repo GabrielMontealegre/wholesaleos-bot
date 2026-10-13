@@ -27,6 +27,35 @@ No production email link/send/confirmation or triage apply as a release test.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 Dashboard waiting-card hygiene IN PROGRESS. Human owner-time
+labels,empty-line hiding,source hover notes,recorded role colors,overdue/today/
+rest order,and one sourced Reply/Open deal action. Globally unique deal id/ref
+projection only;no prefix guessing,unknown/wrong-origin roles neutral. Existing
+reminder/count/mailbox preview/sync handlers unchanged. Two old VM fixtures only
+load the new pure helper;no assertion changed. Initial/final174passed/0failed/
+0skipped retained,600s/file;cardUI10.76s,pure1.04s,mobile16.30s,
+wider-area16.78s,county-notice11.54s. All timings and synthetic1366/400/412
+screenshots recorded. Full-index proof denies writes/external requests.
+Release/live gate pending. #325 stays open for exact JV conversation/template
+integration;actual Send remains#288/#336. No production reply/send/copy/save/
+sync/approval/contact/confirmation/batch/capture/helper/config/data mutation.
+
+2026-10-12 -- Run summary: #325 JV workspace foundation DONE in
+[PR #340](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/340),
+main99feb2713d6c26f8644933be7b246333eb0b1a56. Exact Railway SUCCESS54s,
+health200. Final172passed/0failed/0skipped,600s/file;initial171/1 locator
+failure preserved. JVUI5.31s,pure0.64s,mount15.84s,mobile17.94s,
+wider-area19.14s,county-notice11.02s;all timings/synthetic1366/400/412
+images committed. Live deskJS/CSSv1,Todayv9;0Active/0Ready/9Near misses.
+Retained records,not newly qualified deals. Open:1workspace,9real stages,
+1canonical draft,unsigned subject address withheld;Send/template disabled.
+Phone40037..359,41237..371,no overflow.100Leads/card opens/closes,
+console0,viewport reset. No production save/send/contact/approval/evidence/
+batch/capture/helper/config/data mutation. #325 remains IN PROGRESS: latest
+architect waiting-card hygiene next,then exact JV conversation/template
+integration. Actual Send remains #288/#336 after #304 in owner order.
+No overall readiness percentage measured;unrelated generated dirt preserved.
+
 2026-10-12 -- #325 JV workspace foundation IN PROGRESS. Active recorded JVs,
 Ready for buyer and Near misses use exclusive read projections; visibility no
 longer means permission. Canonical eligibility/share/privacy/stage gates stay

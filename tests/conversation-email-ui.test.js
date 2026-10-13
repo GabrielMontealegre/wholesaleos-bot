@@ -7,6 +7,7 @@ async function main(){
   const root={renderDashboard:()=>'<p>Old dashboard preserved</p>'};
   const doc={head:{appendChild(){}},createElement:()=>({}),querySelector:()=>panel,addEventListener:(type,fn)=>{handler=fn;}};
   const read=async(url,opts)=>{calls.push([url,opts?.method||'GET']);return {ok,json:async()=>url.endsWith('email-preview')?payload:plain};};
+  vm.runInNewContext(fs.readFileSync('dashboard/wos-conversation-cards.js','utf8'),{window:root,URL});
   vm.runInNewContext(fs.readFileSync('dashboard/wos-conversations.js','utf8'),{window:root,document:doc,URL,setTimeout:fn=>timers.push(fn),fetch:read});
   assert.equal(calls.length,0);assert.ok(root.renderDashboard().includes('Old dashboard preserved'));assert.equal(calls.length,0);
   await timers.shift()();assert.deepEqual(calls,[['/api/dashboard/conversations','GET']],'load never checks mailbox');

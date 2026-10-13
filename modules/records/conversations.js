@@ -50,6 +50,9 @@ function upsert(store,input,context) {
 function addDays(day,n) { return new Date(Date.parse(day+'T00:00:00Z')+n*86400000).toISOString().slice(0,10); }
 function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
   if(!Number.isFinite(Date.parse(now)))fail('find_conversation_date_invalid');const today=dayAt(now,timeZone);
+  const refCounts=new Map();
+  for(const collection of ['leads','buyers','reviewed_deals','record_matches'])for(const row of store[collection]||[])try{const ref=records.reference(row);if(ref)refCounts.set(ref,(refCounts.get(ref)||0)+1);}catch{}
+  const knownDeals=(store.reviewed_deals||[]).flatMap(deal=>{try{const ref=records.reference(deal);return typeof deal.id==='string'&&/^WOS-[A-Z]{2}-\d{4}$/.test(ref||'')&&refCounts.get(ref)===1?[{id:deal.id,ref}]:[];}catch{return [];}});
   const closed=new Set([...(store.reviewed_deals||[]).filter(r=>['closed','dead'].includes(r.status)),...(store.buyers||[]).filter(r=>r.assistant_find?.status==='not_a_fit')].map(records.reference));
   const rows=new Map((store.conversations||[]).map(r=>[key(r.person,r.refs),{...r,channels:[...r.channels],events:[]}]));
   for(const row of rows.values())for(const reply of savedReplies(row,now))row.events.push({at:reply.date,direction:'in',summary:'',id:'mailbox:'+reply.key,mailbox:reply});
@@ -83,6 +86,7 @@ function list(store,{now,timeZone='America/Mazatlan',limit=50}={}) {
     items.push({id:row.id,person:row.person,role:row.role,refs:row.refs,channels:row.channels,last_in,last_out,what_they_said:newMail?'':latestSummary||'',next_step:row.next_step||'',ready_message:newMail?'':row.ready_message||'',thread_url:link(row.thread_url),status,due_date,overdue:!!due_date&&due_date<today,source_kind:row.source_kind,source_url:row.thread_url||null,evidence_text:latestSummary||'',captured_at:row.captured_at||[last_in,last_out].filter(Boolean).sort().at(-1)||null,...(newMail?{email_subject:mail.subject,email_evidence:{...mail,persisted:true}}:{})});
   }
   items.sort((a,b)=>(b.status==='hot')-(a.status==='hot')||Number(b.overdue)-Number(a.overdue)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
+  for(const row of items)row.linked_deals=knownDeals.filter(deal=>row.refs.includes(deal.ref)&&knownDeals.filter(other=>other.ref===deal.ref).length===1);
   return {today,total:items.length,waiting_count:items.filter(r=>r.status==='hot'||r.status==='to_send'||r.due_date&&r.due_date<=today).length,incoming_count:items.filter(r=>r.status==='hot').length,followup_count:items.filter(r=>r.status!=='hot'&&r.due_date&&r.due_date<=today).length,unlinked_count:items.filter(r=>!r.refs.length).length,items:items.slice(0,Math.min(100,Math.max(1,Number(limit)||50)))};
 }
 module.exports={validate,upsert,list,STATUSES,ROLES};

@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: #325 waiting-card hygiene uses the existing owner-time formatter,
+sorts displayed rows by real due date (overdue,today,rest), hides empty source/
+draft lines, and puts source attribution in hover text. Roles/colors come only
+from recorded role metadata. Reply opens the existing recorded thread; otherwise
+Open deal needs an exact globally unique reviewed-deal ref, not a WOS-prefix
+guess. Unknown/ambiguous links get no invented action. linked_deals is a read-only
+id/ref projection, never persisted; mailbox sync/copy handlers and reminders
+remain unchanged. No actual reply/send/sync as release proof -- AGENTS truth/
+privacy precedence and latest #325 architect comment -- 2026-10-12.
+
 ASSUMED: #325's JV workspace ships in ordered slices: first keep recorded active
 JVs visible separately from current buyer readiness, show partner/buyer/money
 and the canonical next stage, and retain the existing guarded progress controls.
