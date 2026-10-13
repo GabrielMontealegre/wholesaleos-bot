@@ -4,7 +4,7 @@
   var key='wos_ui_scheme',scheme='dark';
   try{if(root.localStorage.getItem(key)==='light')scheme='light';}catch(_){}
   document.documentElement.dataset.wosScheme=scheme;
-  var groups=[['Today',['dashboard','todays_deals','jv']],['Find',['leads']],['People',['buyers_found','gmail','followups']],['Close',['pipeline','contracts']]];
+  var groups=[['Today',['dashboard','todays_deals','approvals','jv']],['Find',['leads']],['People',['buyers_found','gmail','followups']],['Close',['pipeline','contracts']]];
   function install(){
     var header=document.querySelector('.topbar'),menu=document.querySelector('.sidebar-nav');if(!header||!menu)return;
     // Move existing navigation nodes, retaining their handlers, badges and identity.

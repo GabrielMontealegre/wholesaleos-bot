@@ -1,0 +1,62 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const workspace=require('../modules/records/approval-workspace');
+const finds=require('../modules/buyers/assistant-finds'),deals=require('../modules/deals/reviewed-deals');
+const sample=require('./reviewed-deals.test'),clock=require('../dashboard/wos-card-clock');
+const ui=require('../dashboard/wos-approvals');
+const now=sample.now,context={now,operatorId:'fixture-admin'};
+function fixture(){
+  let store={leads:[{id:'private-lead',owner_name:'PRIVATE OWNER',phone:'PRIVATE PHONE'}],buyers:[],reviewed_deals:[],activities:[]};
+  const item=finds.validateItems({items:[{name:'SYNTHETIC REVIEW BUYER',platform:'manual',source_url:'https://records.example.test/buyer',what_they_buy:'House',deal_type:'house',classification:'end_buyer',states:['FL'],areas:['Tampa'],captured_at:now,buy_box:{types:['house'],pct_arv:'75%',price_max:200000}}]},now)[0];
+  store=finds.ingest(store,[item],{...context,createId:()=> 'approval-buyer'}).store;
+  return deals.ingest(store,[deals.validate(sample.fixture(),now)],{...context,createId:()=> 'approval-deal'}).store;
+}
+const store=fixture(),frozen=JSON.stringify(store),view=workspace.build(store,{now});
+assert.deepEqual(view.counts,{buyers:1,deals:1,email_drafts:null,records_requests:null});assert.equal(JSON.stringify(store),frozen);
+assert.equal(view.deals[0].evaluation.value.tier,'Not established');
+const buyerInput={kind:'buyer',id:view.buyers[0].id,version:view.buyers[0].version,decision:'approve',reviewed_source:true};
+const dealInput={kind:'deal',id:view.deals[0].id,version:view.deals[0].version,decision:'approve',reviewed_comps:true};
+for(const input of [{...buyerInput,reviewed_source:false},{...dealInput,reviewed_comps:false}])assert.throws(()=>workspace.decide(store,input,context),e=>e.code==='approval_review_required'&&e.status===409);
+for(const input of [{...buyerInput,operator_id:'forged'},{...buyerInput,source_url:'https://evil.example'},{...buyerInput,reviewed_source:'true'},{...dealInput,comps:sample.fixture().comps},{...dealInput,version:'z'.repeat(64)}])assert.throws(()=>workspace.decide(store,input,context),/approval_request_invalid/);
+assert.throws(()=>workspace.decide(store,{...buyerInput,decision:'reject',reason:''},context),/approval_reason_required/);
+assert.throws(()=>workspace.decide(store,{...buyerInput,id:'missing'},context),e=>e.code==='approval_record_not_found'&&e.status===404);
+const changed={...store,buyers:store.buyers.map(b=>({...b,assistant_find:{...b.assistant_find,buy_box:{...b.assistant_find.buy_box,price_max:123000}}}))};assert.throws(()=>workspace.decide(changed,buyerInput,context),e=>e.code==='approval_changed'&&e.status===409);
+const duplicate={...store,buyers:store.buyers.concat(store.buyers[0])};assert.throws(()=>workspace.decide(duplicate,buyerInput,context),/approval_changed/);
+const stale={...store,reviewed_deals:store.reviewed_deals.map(d=>({...d,closing_date:'2026-10-01'}))};assert.equal(workspace.build(stale,{now}).counts.deals,0);assert.throws(()=>workspace.decide(stale,{...dealInput,version:workspace.version(stale.reviewed_deals[0])},context),/approval_changed/);
+const closed={...store,reviewed_deals:store.reviewed_deals.map(d=>({...d,status:'closed'}))};assert.equal(workspace.build(closed,{now}).counts.deals,0);
+let accepted=workspace.decide(store,buyerInput,context);assert.equal(accepted.buyers[0].assistant_find.approval,'approved');assert.equal(workspace.build(accepted,{now}).counts.buyers,0);assert.deepEqual(accepted.leads,store.leads);assert.equal(JSON.stringify(store),frozen);
+accepted=workspace.decide(accepted,dealInput,context);assert.equal(accepted.reviewed_deals[0].evidence_reviewed_by,'fixture-admin');assert.equal(deals.evaluate(accepted.reviewed_deals[0],accepted.buyers,now).value.tier,'Verified');assert.equal(deals.evaluate(accepted.reviewed_deals[0],accepted.buyers,now).ready_to_offer,'UNKNOWN');assert.equal(workspace.build(accepted,{now}).counts.deals,0);
+assert.throws(()=>workspace.decide(accepted,dealInput,context),/approval_changed/);
+const rejected=workspace.decide(store,{...dealInput,decision:'reject',reason:'Operator supplied rejection'},context);assert.equal(rejected.reviewed_deals.length,1);assert.equal(rejected.reviewed_deals[0].approval,'rejected');assert.deepEqual(rejected.leads,store.leads);
+const empty={...store,reviewed_deals:store.reviewed_deals.map(d=>({...d,comps:[]}))};const approvedEmpty=workspace.decide(empty,{...dealInput,version:workspace.version(empty.reviewed_deals[0])},context);assert.equal(deals.evaluate(approvedEmpty.reviewed_deals[0],[],now).value.range,null,'approval cannot invent value');
+const forgedDto=workspace.build({...store,buyers:store.buyers.map(b=>({...b,assistant_find:{...b.assistant_find,id:'forged-id',version:'forged-version',record_ref:'forged-ref'}}))},{now});assert.equal(forgedDto.buyers[0].id,'approval-buyer');assert.equal(forgedDto.buyers[0].record_ref,store.buyers[0].record_ref);assert.match(forgedDto.buyers[0].version,/^[a-f0-9]{64}$/);
+const saved={fetch:global.fetch,clock:Date.now,write:fs.writeFileSync};let calls=0;try{const deny=()=>{calls++;throw Error('side effect');};global.fetch=deny;Date.now=deny;fs.writeFileSync=deny;workspace.build(store,{now});workspace.decide(store,buyerInput,context);}finally{global.fetch=saved.fetch;Date.now=saved.clock;fs.writeFileSync=saved.write;}assert.equal(calls,0);
+const html=ui.markup({...view,buyers:[{...view.buyers[0],name:'<script>attack</script>',source_url:'javascript:attack()'}]},{clock});assert.ok(!html.includes('<script>attack'));assert.ok(!html.includes('javascript:attack'));assert.ok(!html.includes(sample.fixture().address),'unsigned JV address withheld');assert.ok(!html.includes('PRIVATE OWNER'));assert.ok(!html.includes('2026-10-07T12:00'));assert.ok(html.includes('data-approval-reviewed disabled'));
+const dealHtml=ui.markup(view,{group:'deals',clock});assert.ok(dealHtml.includes('Submitted comp 1'));assert.ok(!dealHtml.includes(sample.fixture().address),'actual pending-deal render withholds unsigned JV address');
+assert.ok(!dealHtml.includes(sample.fixture().latitude+', '+sample.fixture().longitude),'unsigned subject coordinates are withheld too');
+assert.ok(ui.markup(view,{group:'email_drafts',clock}).includes('not connected'));assert.ok(!ui.markup(view,{group:'email_drafts',clock}).includes('Approve draft'));
+const many={...store,buyers:Array.from({length:125},(_,i)=>({...store.buyers[0],id:'many-'+i,record_ref:'BUY-'+String(i+1).padStart(4,'0')}))};assert.equal(workspace.build(many,{now}).buyers.length,125);assert.equal(workspace.build(many,{now}).counts.buyers,125);
+const handlers={};let current=fixture(),writes=0,reads=0;
+const guard=(req,res,next)=>{if(!req.authorized)return res.status(401).json({code:'admin_required'});req.currentUser={id:'fixture-admin'};next();};
+const db={readDBStrict(){reads++;return current;},writeDB(next){writes++;current=next;}};
+workspace.registerApprovalWorkspace({get:(path,admin,handler)=>{assert.equal(admin,guard);handlers['GET '+path]={admin,handler};},post:(path,admin,handler)=>{assert.equal(admin,guard);handlers['POST '+path]={admin,handler};}},{db,requireAdmin:guard,now:()=>now});
+function request(method,body,authorized=true,path='/api/dashboard/approvals'){
+  const res={statusCode:200,headers:{},set(k,v){this.headers[k]=v;return this;},status(n){this.statusCode=n;return this;},json(v){this.body=v;return this;}},req={body,authorized};const route=handlers[method+' '+path];route.admin(req,res,()=>route.handler(req,res));return res;
+}
+assert.equal(request('GET',null,false).statusCode,401);assert.equal(request('POST',buyerInput,false).statusCode,401);assert.equal(reads,0);assert.equal(writes,0);
+const counters=request('GET',null,true,'/api/dashboard/approvals/counts');assert.deepEqual(counters.body,{buyers:1,deals:1});assert.equal(counters.headers['Cache-Control'],'no-store');
+assert.equal(request('POST',{...buyerInput,reviewed_source:false}).statusCode,409);assert.equal(writes,0);
+assert.equal(request('POST',{...buyerInput,extra:'x'.repeat(9000)}).statusCode,413);assert.equal(writes,0);
+assert.equal(request('POST',buyerInput).statusCode,200);assert.equal(writes,1);assert.equal(current.buyers[0].assistant_find.approval,'approved');assert.deepEqual(current.leads,store.leads);
+assert.equal(request('POST',buyerInput).statusCode,409);assert.equal(writes,1,'stale/repeated decision writes nothing');
+db.readDBStrict=()=>{throw Error('PRIVATE TOKEN');};const unavailable=request('GET');assert.equal(unavailable.statusCode,503);assert.deepEqual(unavailable.body,{code:'approval_store_unavailable'});
+console.log('Approvals: pure full pending counts, unchanged value/match services, mandatory explicit reviews, stale/duplicate/terminal/forged/missing/reject guards, immutable inputs/leads, retained rejected rows, operator attribution, no invented value/offer, DTO identity ownership and safe human-time markup passed.');
+module.exports={fixture,now};
+(async()=>{
+  const vm=require('node:vm'),source=fs.readFileSync('dashboard/wos-approvals.js','utf8');let signouts=0,resolveOld,resolveCounts;const timers=[],events={},panel={outerHTML:''},badge={textContent:'?',title:''};
+  const root={wosCardClock:clock,signOutDashboard(){signouts++;}},doc={readyState:'loading',addEventListener(name,fn){events[name]=fn;},getElementById(id){return id==='wos-approvals'?panel:id==='nav-approval-count'?badge:null;},querySelectorAll(){return [];}};
+  vm.runInNewContext(source,{window:root,document:doc,URL,setTimeout:fn=>timers.push(fn),fetch:url=>new Promise(resolve=>{if(url.endsWith('/counts'))resolveCounts=resolve;else resolveOld=resolve;})});
+  root.renderApprovals();const pending=timers.shift()();root.signOutDashboard();resolveOld({ok:true,json:async()=>view});await pending;assert.ok(!panel.outerHTML.includes('SYNTHETIC REVIEW BUYER'));assert.equal(badge.textContent,'?');assert.equal(signouts,1);
+  const oldCounts=events.DOMContentLoaded();root.signOutDashboard();resolveCounts({ok:true,json:async()=>({buyers:999,deals:999})});await oldCounts;assert.equal(badge.textContent,'?','cancelled previous-session count cannot reappear');
+  console.log('Approval routes/admin401/no-store/413/review409/idempotence and cancelled-session private response/count clearing passed.');
+})().catch(error=>{console.error(error.stack);process.exitCode=1;});

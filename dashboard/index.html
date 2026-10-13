@@ -350,6 +350,7 @@ tr.selected td{background:#f0f6ff}
       <div class="nav-item" onclick="navigate('buyers',this)"><span class="nav-icon">👥</span>Buyers<span class="nav-badge green" id="nav-buyer-count" style="display:none">0</span></div>
       <div class="nav-item" onclick="navigate('buyers_found',this)"><span class="nav-icon">▤</span>Buyers found</div>
       <div class="nav-item" onclick="navigate('todays_deals',this)"><span class="nav-icon">◇</span>Today's Deals</div>
+      <div class="nav-item" id="nav-approvals" onclick="navigate('approvals',this)"><span class="nav-icon">✓</span>Approvals<span class="nav-badge" id="nav-approval-count" title="Approval count unavailable">?</span></div>
       <div class="nav-item" onclick="navigate('jv',this)"><span class="nav-icon">↔</span>JV</div>
       <div class="nav-item" onclick="navigate('glossary',this)"><span class="nav-icon">?</span>Glossary</div>
       <div class="nav-item" onclick="navigate('record_activity',this)"><span class="nav-icon">::</span>Activity</div>
@@ -737,6 +738,7 @@ function navigate(page, el) {
   document.getElementById('page-title').textContent = titles[page] || page;
   if (page === 'buyers_found') document.getElementById('page-title').textContent = 'Buyers found';
   if (page === 'todays_deals') document.getElementById('page-title').textContent = "Today's Deals";
+  if (page === 'approvals') document.getElementById('page-title').textContent = 'Approvals';
   if (page === 'jv') document.getElementById('page-title').textContent = 'JV';
   if (page === 'glossary') document.getElementById('page-title').textContent = 'Glossary';
   if (page === 'record_activity') document.getElementById('page-title').textContent = 'Activity';
@@ -773,6 +775,7 @@ function render() {
     buyers: renderBuyers,
     buyers_found: function() { return window.renderBuyersFound(); },
     todays_deals: function() { return window.renderTodaysDeals(); },
+    approvals: function() { return window.renderApprovals(); },
     jv: function() { return window.renderJV(); },
     glossary: function() { return window.renderGlossary(); },
     record_activity: function() { return window.renderRecordActivity(); },
@@ -29172,6 +29175,8 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-owner-channel.js?v=2"></script>
 <script src="/dashboard/wos-conversation-cards.js?v=1"></script>
 <script src="/dashboard/wos-conversations.js?v=4"></script>
-<script src="/dashboard/wos-desk-shell.js?v=2"></script>
+<link rel="stylesheet" href="/dashboard/wos-approvals.css?v=1">
+<script src="/dashboard/wos-approvals.js?v=1"></script>
+<script src="/dashboard/wos-desk-shell.js?v=3"></script>
 </body>
 </html>
