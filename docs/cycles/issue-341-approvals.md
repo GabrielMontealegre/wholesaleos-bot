@@ -85,3 +85,22 @@ access. Existing model/auth/source tests remain unchanged.
 Known legacy startup Telegram toast is not a new delivery event; working bell
 slice4 must replace hardcoded announcements with recorded notification data.
 No claim that this page fixes that older toast or the#209 startup incident.
+
+## Live foundation and visual correction
+
+PR348 merged22d0502da6d5730ba698d0a36d822f9a418d4bee. Exact Railway deploy
+7043396278 succeeded16:07:06Z after7m42s;health200. Fresh live33nav,
+JS1/shell3,28pending=13buyers+15deals. Both full-record openers work.
+Review controls remain unchecked; a disclosure enables but does not check.
+100lead openers hydrate; no new console errors from the fresh load.
+No production decision,source click,review assertion or evidence confirmation.
+
+Live computed styles exposed a cosmetic override: shared shell's important
+button selector outranked the page's one-ID selector. The correction uses the
+same scheme/body/app scope plus the specific workspace ID, changes no handlers,
+bumps CSS only to2, and asserts actual computed green/red colors in the full
+browser proof at every size. Existing behavioral assertions are unchanged.
+
+Correction full suite: SUMMARY passed=176 failed=0 skipped=0 total=176,
+600s/file. Approval UI17.83s/unit0.38s,shell45.29s,mount19.46s,county-notice
+12.58s. Complete timings in docs/test-results/issue-341-approval-colors.txt.

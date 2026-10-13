@@ -29,7 +29,13 @@ Slice2 Today release BLOCKED on
 Exact rollback#346 is healthy;do not claim the new Today view is live.
 Grade contract separately BLOCKED on
 [#344](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/344).
-Independent slice3 Approvals proceeds locally;non-P0 features stay PAUSED.
+Slice3 buyer/deal Approvals foundation merged in#348, exact deployment healthy;
+visual action-color correction in progress before this slice is signed off.
+Email draft/records-request approval feeds BLOCKED on
+[#349](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/349).
+Non-P0 features
+stay PAUSED. Added architect acceptance: shared filters are slice6; the first-run
+guide and clean card facts remain in the same final Gabriel sign-off.
 
 ### Paused Previous Order
 
@@ -53,6 +59,15 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 -- #341 Approvals foundation#348 main22d0502da6d5730ba698d0a36d822f9a418d4bee;
+Railway7043396278 SUCCESS16:07:06Z from15:59:24Z (7m42s),health200.
+Live33nav,approvals JS1/shell3,28pending=13buyers+15deals; both full-record
+openers work,13review controls initially unchecked/disabled,disclosure enables
+without checking. Leads100; no new console errors since fresh reload. No real
+approval/rejection/review checkbox/source click. Cosmetic action colors still
+overridden by shared shell CSS: correcting specificity and adding real computed-
+color assertions,not calling the slice complete. Today#347/grades#344 blocked.
 
 2026-10-13 -- #341 independent Approvals slice: implemented and self-reviewed;
 SUMMARY passed=176 failed=0 skipped=0 total=176,600s/file. Approval UI15.26s,
