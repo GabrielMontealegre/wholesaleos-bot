@@ -27,6 +27,21 @@ No production email link/send/confirmation or triage apply as a release test.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- #325 JV workspace foundation IN PROGRESS. Active recorded JVs,
+Ready for buyer and Near misses use exclusive read projections; visibility no
+longer means permission. Canonical eligibility/share/privacy/stage gates stay
+unchanged; invalid histories cannot label active/ready. Open deal adds current/
+next stage,money/partner/buyer and relocates the single existing saved draft;
+nine real D-048 stages retained. Send/template controls disabled. Initial full
+run171passed/1failed/0skipped: broad /JV/ heading locator also matched Active
+JVs; exact page-heading locator fixed,original empty-inventory assertion intact.
+Final172passed/0failed/0skipped,600s/file;JVUI5.31s,pure0.64s,mount15.84s,
+mobile17.94s,wider-area19.14s,county-notice11.02s;all timings preserved.
+Release/live gate pending. New1366/400/412 full-index proof denies
+writes/external requests. Exact conversation/template integration and the latest
+architect Dashboard waiting-card findings remain #325 work,not claimed complete.
+No production save/send/approval/confirmation/batch/capture/helper/config action.
+
 2026-10-12 -- Run summary: #325 Inbox workspace DONE in#338 and clean sourced
 buyer cards DONE in [PR #339](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/339),
 buyer application mainc762b2de591b67f728736be259f22f08d195fd9c. Exact Railway
