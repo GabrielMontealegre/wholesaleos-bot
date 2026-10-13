@@ -13,6 +13,12 @@ Keep other features PAUSED until Gabriel signs off on the complete P0 UI.
 No new Send/texting/triage/source/comps/buyer acquisition while this gate is open.
 Ordered UI sub-PRs remain permitted for live inspection; do not claim parent DONE.
 
+Owner update2026-10-13: use pinned locally vendored MIT Tabler components, no
+runtime CDN/framework rewrite. Finish all P0 slices including cascading filters
+and name-first cards. Only after Gabriel sign-off: importer for37free county
+lists/replies,then#351A public comps (Florida B-21,thenNC). #351B waits for
+Gabriel's approval. Other older feature ordering remains paused.
+
 Gabriel's direct confirmed order:
 1. Left shell,no inner sidebar scroll,user menu.
 2. Dashboard Today: action queue,best deals,last24hours.
@@ -27,11 +33,11 @@ Slice2 Today release BLOCKED on
 [#347](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/347):
 #345 had176/0/0 and local click-through/screens,but Railway deployment failed.
 Exact rollback#346 is healthy;do not claim the new Today view is live.
-Grade contract separately BLOCKED on
+Grade contract answered on
 [#344](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/344).
 Slice3 buyer/deal Approvals foundation merged in#348, exact deployment healthy;
-visual action-color correction in progress before this slice is signed off.
-Email draft/records-request approval feeds BLOCKED on
+visual action-color correction#350 deployed/verified. Tabler foundation local.
+Email draft/records-request approval feeds deferred per answer on
 [#349](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/349).
 Non-P0 features
 stay PAUSED. Added architect acceptance: shared filters are slice6; the first-run
@@ -59,6 +65,18 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 -- Run checkpoint: #348 Approvals + #350 color correction live on
+047eb08ecf572d8b06cb8f1394dea279e0dba6ad;exact deploy7047625637 healthy63s.
+Full176/0/0;actual28pending=13buyers+15deals,correctgreen/red,0checked.
+No real decisions. Read #344/#347/#349 architect answers and Tabler directive.
+Interim grade now specified; missing approval types deferred, not a P0 blocker.
+Scoped pinned Tabler1.6.1 foundation local; focused actual UI proof passed;
+final177passed/0failed/0skipped,600s/file. Shell35.11s,approval UI15.36s,
+mobile22.07s,mount16.48s,kit0.12s. Release/live verification pending.
+Initial phone/style collisions fixed without weakened
+click assertions. Today packaging risk traced,root failure still not proven;
+default-off re-release follows foundation. Non-P0 work paused for sign-off.
 
 2026-10-13 -- #341 Approvals foundation#348 main22d0502da6d5730ba698d0a36d822f9a418d4bee;
 Railway7043396278 SUCCESS16:07:06Z from15:59:24Z (7m42s),health200.

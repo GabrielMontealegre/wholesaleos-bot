@@ -1,6 +1,6 @@
 'use strict';
 (function(root){
-  const groups=[['buyers','Buyers'],['deals','Deals'],['email_drafts','Email drafts'],['records_requests','Records requests']];
+  const groups=[['buyers','Buyers'],['deals','Deals']];
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function link(value,label){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?'<a href="'+esc(u.href)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>':'';}catch{return '';}}
   function money(n){return typeof n==='number'&&Number.isFinite(n)?'$'+n.toLocaleString('en-US',{maximumFractionDigits:0}):'';}
