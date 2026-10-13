@@ -40,7 +40,7 @@
     }
     var tools = sidebar.querySelector('.marketplace-tools');
     if (!tools) { tools = document.createElement('div'); tools.className = 'marketplace-tools'; sidebar.appendChild(tools); }
-    header.querySelectorAll('button[onclick*="showAIChat"],button[onclick*="signOutDashboard"],button[onclick*="openAddLead"],#guide-btn,.notif-bell').forEach(function (element) { tools.appendChild(element); });
+    header.querySelectorAll('button[onclick*="showAIChat"],button[onclick*="signOutDashboard"],button[onclick*="openAddLead"],#guide-btn').forEach(function (element) { tools.appendChild(element); });
     sidebar.querySelectorAll('.nav-item').forEach(function (item) { item.setAttribute('role', 'button'); item.tabIndex = 0; });
     var menu = header.querySelector('.mobile-menu-btn'); if (menu) menu.setAttribute('aria-label', 'Open navigation menu');
   }
@@ -85,7 +85,7 @@
     if(event.key==='Tab' && mobile.matches) {
       var openDrawer=document.querySelector('.sidebar.mobile-open');
       if(openDrawer) {
-        var stops=Array.from(openDrawer.querySelectorAll('button,a,input,select,textarea,[tabindex="0"]')).filter(function(element){return element.getClientRects().length&&!element.disabled;});
+        var stops=Array.from(openDrawer.querySelectorAll('button,a,input,select,textarea,summary,[tabindex="0"]')).filter(function(element){return element.getClientRects().length&&!element.disabled;});
         if(stops.length && event.shiftKey && (document.activeElement===stops[0] || !openDrawer.contains(document.activeElement))){event.preventDefault();stops[stops.length-1].focus();}
         else if(stops.length && !event.shiftKey && (document.activeElement===stops[stops.length-1] || !openDrawer.contains(document.activeElement))){event.preventDefault();stops[0].focus();}
       }

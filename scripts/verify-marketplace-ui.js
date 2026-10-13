@@ -10,7 +10,7 @@ const records = require('../modules/records/record-activity');
 const { fixture, now } = require('../tests/reviewed-deals.test');
 const root = path.resolve(__dirname, '..');
 const pages = ['dashboard','todays_deals','jv','findme_scout','buyers_found','leads','pipeline','gmail','settings','record_activity'];
-function createFixtureApp({wider=false}={}) {
+function createFixtureApp({wider=false,seedLead=false}={}) {
   const context = { now, operatorId: 'fixture-admin' };
   let store = { users: [{ id: 'fixture-admin', name: 'SYNTHETIC ADMIN' }], leads: [], buyers: [], activities: [] };
   const buyer = finds.validateItems({ items: [{ name: 'Fixture buyer', platform: 'manual', source_url: 'https://records.example.test/buyer', profile_url: 'https://records.example.test/buyer', what_they_buy: 'Fixture houses', deal_type: 'house', states: ['FL'], areas: ['Tampa'], classification: 'end_buyer', captured_at: now, buy_box: { types: ['house'], pct_arv: '75%', price_max: 200000 } }] }, now)[0];
@@ -20,11 +20,12 @@ function createFixtureApp({wider=false}={}) {
   if(wider){proposal.comps[1].latitude=proposal.latitude+0.022;proposal.comps[2].latitude=proposal.latitude+0.032;}
   store = deals.ingest(store, [deals.validate(proposal, now)], { ...context, createId: () => 'fixture-deal' }).store;
   for (const input of [{ action: 'approve', reviewed_comps: true }, { action: 'status', status: 'vetted' }, { action: 'status', status: 'holder_confirmed', evidence_url: fixture().source_url, checks: { still_available: true } }]) store = deals.update(store, 'fixture-deal', input, context);
+  if(seedLead)store.leads=[{id:'fixture-lead',record_ref:'WOS-FL-1040',address:'100 Example St',city:'Tampa',state:'FL',source:'manual',source_kind:'operator_input',status:'new',row_state:'LOCKED',contact_state:'LOCKED',address_state:'needs_source_proof',preview_only:true,not_a_saved_lead:true,createdAt:now}];
   const frozen = JSON.stringify(store); let writes = 0;
   const app = express(); app.use(express.json());
   app.use((req, res, next) => { if (!['GET','HEAD'].includes(req.method)) { writes++; return res.status(405).json({ code: 'fixture_read_only' }); } next(); });
   app.get('/api/auth/session', (_, res) => res.json({ authenticated: true, role: 'admin' }));
-  app.get('/api/leads', (_, res) => res.json({ leads: [], totalAll: 0, totalFiltered: 0 }));
+  app.get('/api/leads', (_, res) => res.json({ leads: store.leads, totalAll: store.leads.length, totalFiltered: store.leads.length }));
   app.get('/api/buyers', (_, res) => res.json({ buyers: store.buyers }));
   app.get('/api/dashboard/buyers-found', (_, res) => res.json(finds.listFinds(store, { now })));
   app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query })));
@@ -70,8 +71,10 @@ async function prove({ screenshots = false,wider=false } = {}) {
       assert.strictEqual(await page.locator('#wosA1Theme,#wos-theme-a1').count(), 0, 'retired theme writers must not run');
       if (width < 901) {
         await page.getByRole('button',{name:'Open navigation menu',exact:true}).click();
-        await page.getByRole('button',{name:'Sign out',exact:true}).waitFor();
         assert.ok(await page.getByRole('button',{name:'Close navigation menu',exact:true}).evaluate(element=>element===document.activeElement));
+        await page.getByRole('button',{name:'User menu',exact:true}).click();
+        await page.getByRole('button',{name:'Sign out',exact:true}).waitFor();
+        await page.getByRole('button',{name:'User menu',exact:true}).click();
         await page.getByRole('button',{name:'Close navigation menu',exact:true}).press('Escape');
         assert.ok(!await page.locator('.sidebar').isVisible());
         await page.getByRole('button', { name: 'Search references, cities and ZIP codes', exact: true }).click();
