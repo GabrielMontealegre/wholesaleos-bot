@@ -27,6 +27,25 @@ No production email link/send/confirmation or triage apply as a release test.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
+2026-10-12 -- Run summary: #325 Inbox workspace DONE in#338 and clean sourced
+buyer cards DONE in [PR #339](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/339),
+buyer application mainc762b2de591b67f728736be259f22f08d195fd9c. Exact Railway
+SUCCESS1m12s,health200. Initial/final170/0/0 preserved,600s/file;buyerUI7.20s,
+pure0.57s,mobile24.59s,wider-area24.10s,county-notice12.76s;all timings and
+labeled synthetic1366/400/412 images committed. Live buyerv7/CSSv1:40 compact
+cards,0 input/textarea/link contact controls on list;40 show0 reviewed-deal
+matches,31Unknown last contact reports. Zero matches reported plainly,not
+replaced with saved-lead geography counts. Open retains2approval controls,
+1history control;source-capture prose not raw ISO. Phone open40016..380,
+41216..392,list41216..392,all fit/no overflow.100Leads/explicit card opens/
+closes,fresh console0,viewport restored. No real approval/save/status/copy/
+send/contact/confirmation/batch/capture/helper/provider/config/data mutation.
+#325 remains IN PROGRESS: JV workspace/composer next,then owner #304 bugs1-16,
+#288/#336 Send,#331 reversible authorized triage,government/records requests,
+FL comps/deed buyers,brief/photos/map/Deal Check. No new readiness% measured.
+Unrelated generated files preserved;no clean-worktree claim. Latest owner
+order/authorized #331 bounds remain at the top;no move has been run.
+
 2026-10-12 -- #325 clean buyer cards IN PROGRESS. Compact name/area/buy-box/
 reviewed-deal-count/status/last contact report list; old source/contact/approval/
 draft/status/history remains on open card with matched deals and near misses.

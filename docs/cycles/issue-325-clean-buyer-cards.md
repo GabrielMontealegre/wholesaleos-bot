@@ -35,3 +35,17 @@ corrected singular match copy and removed raw source-capture ISO prose. Exact
 final SUMMARY passed=170 failed=0 skipped=0 total=170,600s/file; buyerUI7.20s,
 pure0.57s,mobile24.59s,wider-area24.10s,county-notice12.76s. Every duration in
 issue-325-clean-buyer-cards.txt. Release/live verification pending.
+
+## Release verification
+
+PR #339 merged asc762b2de591b67f728736be259f22f08d195fd9c. Deployment
+7027108827 SUCCESS00:35:08Z ->00:36:20Z onOct13UTC (Oct12 owner time),1m12s;
+health200. Live buyerv7/CSSv1.40compact cards,zero contact/action form controls
+on list;all40have0reviewed-deal matches,31Unknown contact reports. Zero is not
+worked around with saved-lead counts. Open retains2approval and1history controls;
+source captured time uses human prose. Phone400/412 open fits;412list fits;
+100Leads,explicit card opens/closes,console0. Viewport restored. Initial short
+browser wait ended before hydration; fresh state confirmed40cards,no product
+error. No approval/save/status/copy/send/contact/confirmation/batch/capture/
+helper/provider/config/data action. Screenshots committed are synthetic,not
+private production buyer identities. #325 still needs JV workspace/composer.
