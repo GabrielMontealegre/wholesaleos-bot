@@ -7,7 +7,7 @@ for(const state of [undefined,false,'true',1]){
   vm.runInNewContext(bundle,{window,fetch:()=>{calls++;throw Error('no network');},setTimeout:()=>{calls++;},document:new Proxy({},{get(){calls++;throw Error('no DOM access');}})});
   assert.equal(window.renderDashboard,original);assert.equal(calls,0);assert.ok(window.wosTodayWorkspace);
 }
-const window={};vm.runInNewContext(flag,{window});assert.equal(window.wosDashboardFeatures.todayActionCenter,false);assert.ok(Object.isFrozen(window.wosDashboardFeatures));
+const window={};vm.runInNewContext(flag,{window});assert.equal(window.wosDashboardFeatures.todayActionCenter,true,'activation only after staged exact-head dashboard200; invalid/off flags still preserve baseline');assert.ok(Object.isFrozen(window.wosDashboardFeatures));
 const route=fs.readFileSync(path.resolve(__dirname,'../modules/records/conversation-routes.js'),'utf8');
 assert.ok(route.includes("require('../agents/verified-ui-releases.json')"));assert.ok(!route.includes('data/verified-ui-releases'));
 assert.ok(fs.existsSync(path.resolve(__dirname,'../modules/agents/verified-ui-releases.json')));

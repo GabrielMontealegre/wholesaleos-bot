@@ -2,16 +2,16 @@
 
 ## Latest Run Summary
 
-2026-10-13: #348/#350 Approvals and#352 scoped pinned Tabler foundation live;
-mainac570ebd703ebdb722c4e343ba905355d7bbac37,exact deploymenthealthy78s,
-health/dashboard200.177passed/0failed/0skipped. Live28pending=13buyers+15deals,
-normal lead drawer,0new console errors,no real decisions. Local1366/1920/400/
-412 proof passed; live browser resize was ineffective,not claimed as live phone.
-Architect#349 resolved/closed. #344/#347 answers read. Guarded Today restoration
-and interim grades local,default OFF;focused ON fixture proofs passed,full suite
-181passed/0failed/0skipped,600s/file;release pending. Best-list values remain
-canonical; fixture6625 correctly Gold.
-Next: finish guarded release/exact-head verification,then controlled activation,
+2026-10-13: #348/#350 Approvals and#352 scoped pinned Tabler foundation live.
+#353 guarded Today staged OFF on mainb31b8ff;exact deployment7049150037 healthy
+in56s,health/dashboard200,served flag false.181passed/0failed/0skipped.
+Authenticated lead drawer opens;100 hydrated rows,0new console errors.
+Today activation local: Tabler scoped100% root height caused activity overflow;
+narrow height:auto correction passes normal clicks at six widths. Final full
+suite181passed/0failed/0skipped,600s/file;activation release pending.
+No activation live claim yet. Original failed-deploy cause
+remains unproven. Architect#349 resolved;#344/#347 answers implemented.
+Next: complete activation full suite/release/read-only live clicks,then
 bell,row/card hygiene,filters/name-first presentation,final Gabriel sign-off.
 County importer and#351A remain paused;#351B still requires Gabriel approval.
 

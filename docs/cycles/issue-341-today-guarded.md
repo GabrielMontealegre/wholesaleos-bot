@@ -69,7 +69,11 @@ All durations in docs/test-results/issue-341-today-guarded.txt. Final overview
 screenshots are fresh normal loads after two paint frames; existing flow
 assertions unchanged,focused proof rerun. Screenshot-only capture assertions
 check visible shell; no product code or source assertion changed after suite.
-No new PR or deploy yet.
+PR #353 merged as b31b8ff68962bdddfb74573ac4c356803ee68b12. Exact Railway
+deployment7049150037 succeeded in56s. Health/dashboard200, served flag false;
+authenticated100 lead rows and normal drawer open/close,0new console errors.
+Today correctly absent while OFF. See issue-341-today-activation.md for the
+subsequent separately tested activation; no original deployment-cause claim.
 Flag OFF is not a claim that the new Today UI is live. Subsequent activation
 requires exact-head dashboard/health/asset/read-only checks. Other P0 slices
 and Gabriel sign-off remain. Non-P0 tasks stay paused.
