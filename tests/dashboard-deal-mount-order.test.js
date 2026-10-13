@@ -81,7 +81,7 @@ async function proveDashboardOrder({ screenshots = false } = {}) {
       assert.strictEqual(await page.locator('#wos-public-deals').count(), 0, 'no old desk on the standalone Today tab');
       if (screenshots) await page.screenshot({ path: path.join(output, 'today-' + width + '.png'), fullPage: true });
       await page.evaluate(() => navigate('jv', null));
-      await page.getByRole('heading', { name: /JV/ }).waitFor();
+      await page.getByRole('heading', { name: 'JV', exact: true }).waitFor();
       assert.strictEqual(await page.locator('.td-card').count(), 0, 'no invented JV deal in empty inventory');
       if (screenshots) await page.screenshot({ path: path.join(output, 'jv-' + width + '.png'), fullPage: true });
       await page.evaluate(() => navigate('dashboard', null));

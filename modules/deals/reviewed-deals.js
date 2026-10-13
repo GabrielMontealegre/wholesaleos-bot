@@ -346,9 +346,11 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
   const all = (store.reviewed_deals || []).map(d => {
     const evaluation = evaluate(d, store.buyers, now);
     evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
-    return { ...d, jv_workflow:d.deal_kind === 'jv' ? jvWorkflow.view(d,now) : null, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
+    const row = { ...d, jv_workflow:d.deal_kind === 'jv' ? jvWorkflow.view(d,now) : null, comp_review_keys:(d.comps||[]).map(compReviewKey), email_subject: d.record_ref ? '[' + d.record_ref + '] Deal enquiry' : '', evaluation };
+    row.jv_section = require('./jv-list-view').section(row);
+    return row;
   });
-  const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.evaluation.jv_eligible) && (includeHidden || !['STALE', 'NO'].includes(d.evaluation.verdict)) &&
+  const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.deal_kind === 'jv') && (includeHidden || (jv ? !['closed','dead'].includes(d.jv_workflow.stage) && d.approval !== 'rejected' : !['STALE', 'NO'].includes(d.evaluation.verdict))) &&
     (!state || d.state.toLowerCase() === state.toLowerCase()) && (!county || d.county.toLowerCase().includes(county.toLowerCase())) && (!city || d.city.toLowerCase().includes(city.toLowerCase())));
   const rank = { GOOD: 0, POSSIBLE: 1, OVERPRICED: 2, STALE: 3, NO: 4 };
   const spread = d => { const estimate = (d.evaluation.matches[0] || {}).estimated_spread; return estimate ? estimate.low : -Infinity; };

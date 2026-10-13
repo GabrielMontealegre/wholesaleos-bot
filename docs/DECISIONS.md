@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: #325's JV workspace ships in ordered slices: first keep recorded active
+JVs visible separately from current buyer readiness, show partner/buyer/money
+and the canonical next stage, and retain the existing guarded progress controls.
+Invalid history never labels a record active or ready. Closed/dead/rejected
+records remain under the existing explicit hidden-record filter. Near misses
+remain visible with canonical reasons; visibility grants no sharing permission.
+The existing nine D-048 stages win over the mockup's ten visual segments. This
+slice relocates the existing single saved-draft control without changing its
+explicit save route; the exact linked conversation/template integration follows before
+closing #325. #288/#336 own actual Send. Section counts say loaded because the
+existing response cap is100 -- AGENTS sections2/3/5,D-048,#325 mockup -- 2026-10-12.
+
 ASSUMED: #325 clean buyer-card counts are reviewed-deal candidates from the
 unchanged canonical evaluator, not the old saved-lead geography count. Match
 requires known comparable value/buyer maximum/asking and an active record;

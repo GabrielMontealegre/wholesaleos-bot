@@ -1,0 +1,13 @@
+body[data-wos-design="marketplace"] #app .jv-desk {border-block:1px solid #242a3a;padding-block:16px;margin-block:16px;color:#e6e9f2}
+.jv-now {border-left:3px solid #a78bfa;padding-left:12px}
+.jv-money {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.jv-money dd {font-family:monospace;font-size:18px!important}
+.jv-money small {font-size:12px}
+.jv-people {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;border-block:1px solid #242a3a;padding-block:16px}
+.jv-people>section {min-width:0}
+.jv-people>section:first-child {border-left:3px solid #a78bfa;padding-left:12px}
+.jv-people>section:last-child {border-left:3px solid #34d399;padding-left:12px}
+body[data-wos-design="marketplace"] #app .jv-next-message button:first-child {background:#22c55e!important;color:#07130b!important}
+body[data-wos-design="marketplace"] #app .td-jv-section {margin-block:24px}
+body[data-wos-design="marketplace"] #app .td-open-view .jv-money {grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:700px){.jv-money,body[data-wos-design="marketplace"] #app .td-open-view .jv-money {grid-template-columns:repeat(2,minmax(0,1fr))}.jv-people {grid-template-columns:minmax(0,1fr)}}

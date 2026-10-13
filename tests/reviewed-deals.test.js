@@ -26,7 +26,7 @@ assert.throws(() => action(store, { action: 'status', status: 'jv_signed' }), /t
 store = action(store, { action: 'status', status: 'holder_confirmed', evidence_url: fixture().source_url, checks: { still_available: true } });
 evaluation = deals.evaluate(store.reviewed_deals[0], [buyer], now); assert.strictEqual(evaluation.jv_eligible, true); assert.strictEqual(evaluation.introduction_allowed, false);
 assert.strictEqual(deals.list(store, { now, jv: true }).items.length, 1);
-assert.strictEqual(deals.list(store, { now: '2026-10-08T12:00:00Z', jv: true }).items.length, 0, 'same-day availability cannot carry forward');
+assert.strictEqual(deals.list(store, { now: '2026-10-08T12:00:00Z', jv: true }).items[0].jv_section, 'near_miss', 'expired same-day availability remains visible but never carries buyer readiness forward');
 assert.throws(() => action(store, { action: 'availability', evidence_url: fixture().source_url, checks: { still_available: false } }), /checks_required/);
 const renewed = action(store, { action: 'availability', evidence_url: fixture().source_url, checks: { still_available: true } }, '2026-10-08T12:00:00Z');
 assert.strictEqual(deals.list(renewed, { now: '2026-10-08T12:00:00Z', jv: true }).items.length, 1);
