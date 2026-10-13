@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: #325 clean buyer-card counts are reviewed-deal candidates from the
+unchanged canonical evaluator, not the old saved-lead geography count. Match
+requires known comparable value/buyer maximum/asking and an active record;
+price/value/geography near misses are kept separate with sourced reasons.
+Canonical buyer notes remain check items, not exclusions. Pending/AI-ineligible
+buyers never receive matches. This view does not authorize an introduction,
+offer or marketing; existing JV privacy and contact gates still apply. Last
+contact is labeled an operator status report, never derived from source capture
+or a preset status. List is compact; all old source/contact/approval/draft/history
+controls stay on the open card -- AGENTS truth/preservation and #325 mockup --
+2026-10-12.
+
 ASSUMED: #325 Inbox is an ordered read-only workspace slice before #288 Send.
 The mockup's missing role types extend the explicit conversation-role allowlist;
 legacy holder/partner display as JV partner. Roles are not inferred from senders,

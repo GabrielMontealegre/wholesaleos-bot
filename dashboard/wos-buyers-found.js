@@ -49,7 +49,20 @@
         '<div class="bf-actions"><button type="button" data-import-action="commit"' + (importBusy || counts.new_items + counts.duplicates + (counts.updates || 0) === 0 ? ' disabled' : '') + '>Import</button></div></div>' : '') +
       '<p class="bf-muted">Nothing is saved until you click Import.</p><p role="status">' + esc(importMessage) + '</p></section>';
   }
-  function card(item, editedDraft) {
+  function money(value){return typeof value==='number'&&Number.isFinite(value)?'$'+value.toLocaleString('en-US',{maximumFractionDigits:0}):'';}
+  function sourceTime(value){return root.wosCardClock?root.wosCardClock.formatTime(value,new Date().toISOString()):'Unknown';}
+  function contactTime(item){return item.deal_fit&&item.deal_fit.last_contact_at&&root.wosCardClock?root.wosCardClock.formatTime(item.deal_fit.last_contact_at,new Date().toISOString()):'Unknown';}
+  function matchLabel(view){return view?view.count+(view.count===1?' deal matches':' deals match'):'Deal matches not measured';}
+  function card(item,editedDraft){
+    if(selectedId===item.id)return detailedCard(item,editedDraft);
+    var box=item.buy_box||{},view=item.deal_fit,criteria=[];
+    if(box.price_min!=null||box.price_max!=null)criteria.push([money(box.price_min),money(box.price_max)].filter(Boolean).join(' - '));
+    if(Array.isArray(box.types)&&box.types.length)criteria.push(box.types.join(', '));
+    if(box.pct_arv)criteria.push(box.pct_arv+' of after-repair value');
+    if(box.rehab_tolerance)criteria.push(box.rehab_tolerance);
+    return '<article class="bf-card bf-compact" data-id="'+esc(item.id)+'"><h3>'+esc(item.name)+'</h3><p>'+esc([].concat(item.states||[],item.areas||[],box.zips||[]).join(', ')||'Area not stated')+'</p><p class="bf-buy-box-line">'+esc(criteria.join(' | ')||'Buy box not stated')+'</p><span class="bf-match-badge">'+esc(matchLabel(view))+'</span><p>Last contact report: '+esc(contactTime(item))+'</p><div class="bf-compact-status"><span>'+esc(approvalLabels[item.approval||'pending'])+'</span><span>'+esc(statusLabels[item.status]||'Not recorded')+'</span></div><button type="button" data-buyer-open="'+esc(item.id)+'">Open buyer</button></article>';
+  }
+  function detailedCard(item, editedDraft) {
     var contacts = [item.email, item.phone].filter(Boolean).map(function (value) { return '<span>' + esc(value) + ' (published by them)</span>'; }).join('<br>');
     var box = item.buy_box || {};
     var fits = item.fits || {};
@@ -60,15 +73,16 @@
     return '<article class="bf-card" data-id="' + esc(item.id) + '">' +
       '<div class="bf-card-heading"><h3>' + esc(item.record_ref || 'Reference pending') + ' | ' + esc(item.name) + '</h3><span>' + esc(statusLabels[item.status]) + '</span></div>' +
       (item.email_subject ? '<p>Email subject: ' + esc(item.email_subject) + '</p>' : '') +
-      '<p class="bf-muted">Found by assistant from a public post</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
+      '<p class="bf-muted">Submitted buyer record</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
       '<p class="bf-muted">' + esc(buyerKind) + (item.post_age ? ' | Post age: ' + esc(item.post_age) : '') + '</p>' +
       (item.possible_duplicate_of ? '<p>Possible duplicate of ' + esc(item.possible_duplicate_of) + ' (' + esc(item.duplicate_basis) + '). Kept on the existing record.</p>' : '') +
       '<p><b>' + esc(item.group_name) + '</b> · ' + esc(item.deal_type) + '</p>' +
       '<p>' + esc(item.what_they_buy) + '</p><p class="bf-muted">' + esc([].concat(item.states || [], item.areas || []).join(', ') || 'Area not stated') + '</p>' +
       (contacts ? '<p>' + contacts + '</p>' : '') +
-      '<p class="bf-muted">Captured ' + esc(item.captured_at) + ' · <a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">Source search</a></p>' +
+      '<p class="bf-muted">Captured ' + esc(sourceTime(item.captured_at)) + ' · <a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">Source search</a></p>' +
       (item.post_url ? '<p><a href="' + esc(item.post_url) + '" target="_blank" rel="noopener noreferrer">Original post</a></p>' : '') +
       '<details><summary>Buy box</summary>' + (boxRows ? '<dl class="bf-box">' + boxRows + '</dl>' : '<p>No structured criteria supplied.</p>') + '</details>' +
+      '<h4>Reviewed deals that match</h4>'+dealRows(item.deal_fit&&item.deal_fit.matches,false)+'<h4>Near misses</h4>'+dealRows(item.deal_fit&&item.deal_fit.near_misses,true)+'<p>Last contact report: '+esc(contactTime(item))+'</p>'+
       '<p><b>Leads that fit this buy box: ' + esc(fits.count == null ? 'Not measured' : fits.count) + '</b></p>' +
       '<details><summary>Fit reasons</summary><p>' + esc(fits.approval_required ? 'Approval required for matching. Partners stay outside end-buyer matching.' : fits.scope || 'Fit not measured.') + '</p>' +
       Object.keys(fits.reasons || {}).map(function (reason) { return '<p>' + esc(reason) + ': ' + esc(fits.reasons[reason]) + '</p>'; }).join('') +
@@ -84,6 +98,7 @@
       }).join('') + '</div>' +
       (root.wosRecordTimeline ? root.wosRecordTimeline('buyer', item.id, item.record_ref) : '') + '</article>';
   }
+  function dealRows(rows,near){return Array.isArray(rows)&&rows.length?rows.map(function(d){return '<div class="bf-deal-row"><button type="button" data-buyer-deal="'+esc(d.id)+'">'+esc(d.ref||'Open deal')+' - '+esc([d.city,d.state,d.zip].filter(Boolean).join(', '))+'</button><p>'+esc(near?d.reason:money(d.asking)+' asking | '+money(d.buyer_max)+' buyer maximum')+'</p>'+(d.checks||[]).map(function(check){return '<p>Check: '+esc(check)+'</p>';}).join('')+'</div>';}).join(''):'<p>'+(near?'No price/value near misses in the reviewed-deal candidates.':'No reviewed deals match this buyer yet.')+'</p>';}
   function markup(payload) {
     var counts = payload && payload.counts || {};
     var items = payload && payload.items || [];
@@ -120,7 +135,7 @@
   }
   root.renderBuyersFound = function () { setTimeout(load, 0); return '<section id="wos-buyers-found">' + markup(data) + '</section>'; };
   root.openBuyerFind = function(id) { selectedId=id;root.navigate('buyers_found',null); };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card, detailedCard: detailedCard };
   if (typeof document === 'undefined') return;
   document.addEventListener('input', function (event) {
     if (event.target.matches('#wos-buyers-found textarea[data-draft]')) drafts[event.target.dataset.draft] = event.target.value;
@@ -149,6 +164,8 @@
     paint();
   });
   document.addEventListener('click', function (event) {
+    var openBuyer=event.target.closest('[data-buyer-open]');if(openBuyer){selectedId=openBuyer.dataset.buyerOpen;paint();return;}
+    var openDeal=event.target.closest('[data-buyer-deal]');if(openDeal&&root.openReviewedDeal){root.openReviewedDeal(openDeal.dataset.buyerDeal);return;}
     if(event.target.closest('[data-clear-record-selection]')) { selectedId='';paint();return; }
     var importButton = event.target.closest('#wos-buyers-found [data-import-action]');
     if (importButton) {
