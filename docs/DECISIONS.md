@@ -1,5 +1,17 @@
 # Decisions
 
+D-056 -- Gabriel via #341, issued2026-10-13 UTC: usability first. Menu returns
+to LEFT, superseding #325's right-side choice. Pause new features until Gabriel
+signs off on the complete P0 shell/action center/Approvals/bell/clickable-card UI.
+Source: https://github.com/GabrielMontealegre/wholesaleos-bot/issues/341.
+
+ASSUMED: #341 may ship ordered,fully tested UI sub-PRs for read-only live
+inspection; its parent remains open and no paused feature resumes until the
+required Gabriel sign-off. Preserve all legacy routes behind More rather than
+delete their nodes/handlers/counts. Unimplemented P0 pages are not represented
+as functioning links in the shell foundation -- AGENTS sections2/3/5, D-056
+and #341's acceptance/sign-off wording -- 2026-10-12 owner day.
+
 ASSUMED: #325 waiting-card hygiene uses the existing owner-time formatter,
 sorts displayed rows by real due date (overdue,today,rest), hides empty source/
 draft lines, and puts source attribution in hover text. Roles/colors come only

@@ -4,7 +4,25 @@ Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered su
 Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
 Mark the status here as part of each item's PR.
 
-## Current Owner Order (2026-10-12)
+## Current Owner Order (D-056, GitHub 2026-10-13)
+
+P0 [#341](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/341)
+supersedes the order below. UI FIRST: full-height LEFT menu, actionable Today,
+Approvals,working bell,clickable rows/cards,human times and clean fields.
+Keep other features PAUSED until Gabriel signs off on the complete P0 UI.
+No new Send/texting/triage/source/comps/buyer acquisition while this gate is open.
+Ordered UI sub-PRs remain permitted for live inspection; do not claim parent DONE.
+
+Gabriel's direct confirmed order:
+1. Left shell,no inner sidebar scroll,user menu.
+2. Dashboard Today: action queue,best deals,last24hours.
+3. Approvals page.
+4. Working bell notifications.
+5. Every row clickable,human dates,hide empty fields.
+Every slice gets actual navigation/row/button click-through,1366x768/1920x1080/
+412x915 screenshots in the PR,full tests,merge,deploy,read-only live clicks.
+
+### Paused Previous Order
 
 Gabriel's latest order supersedes older ordering in run logs and item12:
 1. Finish #325 against its mockup comments: Gmail-style Inbox/roles, clean buyer
@@ -26,6 +44,36 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-12 -- #341 P0 slice1 left shell IN PROGRESS. Fixed full-height left
+menu,nine primary destinations plus More;all original nodes/handlers/badges/
+role hiding retained. Theme/sign-out under bottom Account;large legacy tiles
+hidden;existing bell/search/gear in header. Left phone drawer above overlay,
+keyboard/focus retained. Full-index clicks every nav,More close,gear,user menu,
+theme,bell click/Enter and a locked synthetic lead drawer. Screenshots1366x768,
+1920x1080,400,412x915;no inner sidebar/nav scroll,no lost nodes,no writes/
+external calls/errors. Initial172passed/2failed kept:old sign-out/focus fixture
+steps corrected without assertion changes. Final174/0/0,600s/file;desk47.29s,
+mount18.25s,mobile24.04s,wider-area23.42s,county-notice11.13s,all timings
+recorded. Release/live gate pending. No other feature work.
+Then Today action center,Approvals,bell data,all-row/date/filler cleanup in
+Gabriel's exact order. Parent remains open until his sign-off.
+
+2026-10-12 -- Run summary: #325 waiting-card hygiene DONE in
+[PR #342](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/342),
+maind42441a065d0d3299f02d9b94d965bc88bda080a. Exact Railway SUCCESS40s,
+health200. Initial/final174/0/0 retained,600s/file;cardUI10.76s,pure1.04s,
+mobile16.30s,wider-area16.78s,county-notice11.54s;all timings and synthetic
+1366/400/412 images committed. Live cv4/cards1/CSS1/roles2:13cards,8overdue
+then5today,0raw system dates/empty filler,max1primary/card. Only1actual primary
+link,0recorded-role chips: missing context stays unknown,not guessed. This does
+NOT complete an actionable Dashboard. Phone40016..380,41216..392,no overflow;
+100Leads/card opens/closes,console0,viewport reset. No real reply/send/copy/save/
+sync/approval/contact/confirmation/batch/capture/helper/config/data mutation.
+NEW owner D-056/#341:LEFT menu and full P0 usability first;other features PAUSED
+until Gabriel sign-off. #325 stays open,now folded into that UI work. Next P0
+shell/navigation slice,then action center/Approvals/bell/rows with shared UI.
+No overall readiness percentage measured;unrelated generated files preserved.
 
 2026-10-12 -- #325 Dashboard waiting-card hygiene IN PROGRESS. Human owner-time
 labels,empty-line hiding,source hover notes,recorded role colors,overdue/today/
