@@ -22,13 +22,6 @@ Gabriel's direct confirmed order:
 Every slice gets actual navigation/row/button click-through,1366x768/1920x1080/
 412x915 screenshots in the PR,full tests,merge,deploy,read-only live clicks.
 
-Slice2 independent Today foundation IN PROGRESS. Queue/KPIs/history and
-reviewed-deal openers proceed. Black Diamond/Gold grade mapping BLOCKED only
-on [#344](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/344):
-no existing grade contract; do not fabricate ratings or build paused #275.
-Records-request/routine-result source feeds remain honestly not connected.
-Parent stays OPEN; this is not full slice2 acceptance or Gabriel sign-off.
-
 ### Paused Previous Order
 
 Gabriel's latest order supersedes older ordering in run logs and item12:
@@ -51,47 +44,6 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
-
-2026-10-13 -- #341 slice2 independent Today foundation TESTED, release/live gate
-pending. Single home action center,uncapped canonical reported conversations,
-buyer/deal approval and deadline openers,4 filtered counts,up to5 positive
-reviewed-spread/current-deadline deals,recorded last24h and3 verified prior
-release records. No invented grades/delivery/jobs;#344 grade contract OPEN.
-Records-request/routine feeds not connected;not full slice2 acceptance.
-Source desk and explicit Conversation tools/standalone workflows retained.
-Final176/0/0,600s/file;initial172/4/intermediate175/1 logs retained. TodayUI
-26.08s,pure0.35s,desk36.94s,mount17.61s,mobile19.94s,wider-area23.83s,
-public-evidence7.19s,county-notice21.89s;all durations committed. Old home/
-version/disclosure scaffolding fixed with safety assertions intact;new UI
-shim await corrected so final actual browser test runs. Synthetic screenshots
-1366x768/1920x1080/400/412x915,all new action/filter/refresh/history/dialog
-clicks plus existing all32nav/bell/gear/account/locked lead proof,zero writes/
-external calls/errors. Core auth/value/comp/contact/readiness/dependencies/
-source routing unchanged. ParentOPEN/other features PAUSED;Gabriel sign-off
-still required. Known#209startup502 not claimed fixed. Assumption:reporting-
-only spread/deadline urgency,source-linked static release subset. No clean-
-tree claim;unrelated generated files preserved.
-
-2026-10-13 -- Run summary: #341 P0 slice1 DONE in
-[PR #343](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/343),
-main6de4f8a44d29c3febde9746a62e84ec807808959. Exact Railway SUCCESS43s,
-health200. Final174/0/0,600s/file;initial172/2 old Account/focus fixture
-steps retained. Desk47.29s,mount18.25s,mobile24.04s,wider-area23.42s,
-county-notice11.13s;all durations/screenshots1366x768/1920x1080/400/412x915
-committed and required three images embedded in PR. Local all32nav/More/
-Account/theme/bell/gear/locked lead clicks,zero writes/external calls.
-Live LEFT0..224/full768 and1080,no sidebar/nav inner scroll,9core+23More,
-Accountbottom760,tiles hidden,bellheader. All9core views open;More close,
-Account controls,bell click/Enter,Settings work. AndroidLEFT0..300/full915,
-no scroll,normal Account tap.100Leads/card opens/closes. StartupHTTP502 at
-06:54:17.474Z logged in#209;fresh reload100leads/NO new console entries;
-incident remains open,not claimed fixed. No real sign-out/theme change,
-send/mark-read/save/approval/confirmation/batch/capture/source/helper/config/
-data mutation. Private mockup login-walled;written version3 specs used,
-no visual-comparison claim. Parent#341OPEN:1of5ordered slices live,not
-overall system readiness. Next slice2 Today action center,then Approvals,
-bell data,all-row/date/filler cleanup. Other features PAUSED until Gabriel
-sign-off. Unrelated generated files preserved;no clean-tree claim.
 
 2026-10-12 -- #341 P0 slice1 left shell IN PROGRESS. Fixed full-height left
 menu,nine primary destinations plus More;all original nodes/handlers/badges/

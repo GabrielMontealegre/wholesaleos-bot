@@ -16,7 +16,6 @@ async function prove({screenshots=false}={}) {
   app.get('/api/auth/session',(_,res)=>res.json({authenticated:true,role:'admin'}));app.get('/api/leads',(_,res)=>res.json({leads:[],totalAll:0,totalFiltered:0}));app.get('/api/buyers',(_,res)=>res.json({buyers:store.buyers}));
   const deps={db:{readDBStrict:()=>store,writeDB:()=>{writes++;throw Error('write forbidden');}},requireAdmin:(req,res,next)=>{req.currentUser={id:'fixture-admin'};next();},now:()=>now};
   registerAssistantFindRoutes(app,deps);registerReviewedDealRoutes(app,deps);registerRecordActivityRoutes(app,deps);
-  require('../modules/agents/today-workspace').registerTodayWorkspace(app,deps);
   app.get('/api/dashboard/research-queue/current',(_,res)=>res.json({ok:true,market:{city:'Fixture City',county:'Fixture County',state:'FL'},rows:[],batches:[],auto_run:{enabled:false}}));
   app.get('/api/*',(_,res)=>res.json([]));app.get('/favicon.ico',(_,res)=>res.status(204).end());app.use('/dashboard',express.static(path.join(root,'dashboard')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});const base='http://127.0.0.1:'+server.address().port;let browser;
@@ -25,7 +24,7 @@ async function prove({screenshots=false}={}) {
     await browserContext.route('**/*',route=>{const u=route.request().url();if(u.startsWith(base+'/'))return route.continue();if(new URL(u).pathname==='/helper/status')return route.fulfill({json:{paired:false}});return route.abort();});
     const page=await browserContext.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));const output=path.join(root,'docs/screens/record-activity-local');if(screenshots)fs.mkdirSync(output,{recursive:true});
     for(const width of [1366,400,412]) {
-      await page.setViewportSize({width,height:width===412?915:900});await page.goto(base+'/dashboard/');await page.evaluate(()=>navigate('todays_deals',null));await page.locator('.td-card').waitFor();
+      await page.setViewportSize({width,height:width===412?915:900});await page.goto(base+'/dashboard/');await page.locator('.td-card').waitFor();
       assert.ok((await page.locator('.td-card').innerText()).includes('WOS-FL-1031'));
       await page.evaluate(()=>navigate('todays_deals',null));await page.getByRole('button',{name:'Open deal',exact:true}).click();
       const deal=page.locator('.td-card');assert.ok((await deal.innerText()).includes('WOS-FL-1031'));assert.ok((await deal.innerText()).includes('[WOS-FL-1031] Deal enquiry'));
@@ -50,8 +49,8 @@ async function prove({screenshots=false}={}) {
       const parsed=await page.evaluate(()=>parseRecordImport('{"ts":"2026-10-07T12:00:00Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Reported note"}\n{"ts":"2026-10-07T12:00:01Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Second reported note"}'));
       assert.strictEqual(parsed.items.length,2);assert.ok(parsed.items.every(i=>i.kind==='interaction'));
       await page.evaluate(()=>navigate('dashboard',null));await page.waitForTimeout(3200);
-      assert.strictEqual(await page.locator('#content').evaluate(e=>e.firstElementChild.id),'wos-today-workspace','D-056 Today is the single home action center');
-      assert.strictEqual(await page.locator('#content').evaluate(e=>e.children[1].id),'wos-public-deals','source evidence remains after Today');
+      assert.strictEqual(await page.locator('#content').evaluate(e=>e.firstElementChild.id),'wos-conversations','D-050 reminders precede Today');
+      assert.strictEqual(await page.locator('#content').evaluate(e=>e.children[1].id),'wos-todays-deals','Today remains immediately after reminders');
     }
     assert.deepStrictEqual(errors,[]);assert.strictEqual(writes,0);assert.strictEqual(JSON.stringify(store),original);
     console.log('Full-page record UI: references, card timelines, Activity filters, shared search and JSONL at 1366/400/412; no writes, external sources or page errors.');
