@@ -10,7 +10,7 @@ const records = require('../modules/records/record-activity');
 const { fixture, now } = require('../tests/reviewed-deals.test');
 const root = path.resolve(__dirname, '..');
 const pages = ['dashboard','todays_deals','jv','findme_scout','buyers_found','leads','pipeline','gmail','settings','record_activity'];
-function createFixtureApp({wider=false,seedLead=false}={}) {
+function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
   const context = { now, operatorId: 'fixture-admin' };
   let store = { users: [{ id: 'fixture-admin', name: 'SYNTHETIC ADMIN' }], leads: [], buyers: [], activities: [] };
   const buyer = finds.validateItems({ items: [{ name: 'Fixture buyer', platform: 'manual', source_url: 'https://records.example.test/buyer', profile_url: 'https://records.example.test/buyer', what_they_buy: 'Fixture houses', deal_type: 'house', states: ['FL'], areas: ['Tampa'], classification: 'end_buyer', captured_at: now, buy_box: { types: ['house'], pct_arv: '75%', price_max: 200000 } }] }, now)[0];
@@ -21,6 +21,9 @@ function createFixtureApp({wider=false,seedLead=false}={}) {
   store = deals.ingest(store, [deals.validate(proposal, now)], { ...context, createId: () => 'fixture-deal' }).store;
   for (const input of [{ action: 'approve', reviewed_comps: true }, { action: 'status', status: 'vetted' }, { action: 'status', status: 'holder_confirmed', evidence_url: fixture().source_url, checks: { still_available: true } }]) store = deals.update(store, 'fixture-deal', input, context);
   if(seedLead)store.leads=[{id:'fixture-lead',record_ref:'WOS-FL-1040',address:'100 Example St',city:'Tampa',state:'FL',source:'manual',source_kind:'operator_input',status:'new',row_state:'LOCKED',contact_state:'LOCKED',address_state:'needs_source_proof',preview_only:true,not_a_saved_lead:true,createdAt:now}];
+  if(todayProof){
+    store={...store,buyers:store.buyers.concat({...store.buyers[0],id:'fixture-pending-buyer',record_ref:'BUY-0020',assistant_find:{...store.buyers[0].assistant_find,approval:'pending'}}),reviewed_deals:store.reviewed_deals.map(d=>({...d,closing_date:'2026-10-10'})).concat({...store.reviewed_deals[0],id:'fixture-pending-deal',record_ref:'WOS-FL-1041',approval:'pending',closing_date:'2026-10-11'})};
+  }
   const frozen = JSON.stringify(store); let writes = 0;
   const app = express(); app.use(express.json());
   app.use((req, res, next) => { if (!['GET','HEAD'].includes(req.method)) { writes++; return res.status(405).json({ code: 'fixture_read_only' }); } next(); });
@@ -32,11 +35,14 @@ function createFixtureApp({wider=false,seedLead=false}={}) {
   app.get('/api/dashboard/record-activity', (_, res) => res.json({ ...records.listActivity(store), types: records.TYPES }));
   app.get('/api/dashboard/record-search',(req,res)=>res.json({items:records.search(store,String(req.query.q||''))}));
   app.get('/api/dashboard/record-refs', (_, res) => res.json({ missing: { leads: 0, buyers: 0, deals: 0, matches: 0 }, deal_reserve: records.sequenceFloorStatus(store) }));
+  require('../modules/records/approval-workspace').registerApprovalWorkspace(app,{db:{readDBStrict:()=>store,writeDB:()=>{throw Error('fixture_write_forbidden');}},requireAdmin:(_,__,next)=>next(),now:()=>now});
   app.get('/api/dashboard/research-queue/current', (_, res) => res.json({ ok: true, market: { city: 'Fixture city', county: 'Fixture county', state: 'FL' }, rows: [], batches: [], auto_run: { enabled: false }, preview_only: true, not_a_saved_lead: true, manual_evidence_packet: { items: [{ queue_key: 'fixture-packet', address: '100 Example St, Example City, FL 00000', address_state: 'needs_source_proof', subject_address_verified_for_research: false, preview_only: true, not_a_saved_lead: true, packet: {}, discovery: { call_ready: false, call_blocked_reason: 'Synthetic research-only fixture', gap_ledger: [], questions: [{ field: 'condition_detail', wording: 'What condition is the property in?', why: 'Fixture question', useful_answer: 'Recorded answer only', follow_up: 'Fixture follow-up' }] } }] } }));
   app.get('/api/gmail/inbox', (_, res) => res.json({ messages: [], connected: false, error: 'Fixture email is not connected' }));
   app.get('/api/gmail/test',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)'}));
   app.get('/api/dashboard/operator-channel-status',(_,res)=>res.json({configured:true,status:'Telegram configured - delivery not tested',schedule:{enabled:false}}));
   app.get('/api/dashboard/operator-brief',(_,res)=>res.json({text:'SYNTHETIC BRIEFING <script>not executable</script>'}));
+  if(todayProof)app.get('/dashboard/wos-feature-flags.js',(_,res)=>res.type('js').send('window.wosDashboardFeatures={todayActionCenter:true};'));
+  app.get('/api/dashboard/today-workspace',(_,res)=>res.json(require('../modules/agents/today-workspace').buildTodayWorkspace({...store,conversations:[{id:'fixture-conversation',person:'SYNTHETIC CONTACT',role:'buyer',refs:['BUY-0001'],channels:['manual'],last_in:now,last_out:'',status:'hot',what_they_said:'Fixture reply',thread_url:'',source_kind:'imported_report',captured_at:now}]},{now})));
   app.get('/api/dashboard/conversations',(_,res)=>res.json({total:1,waiting_count:1,items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['manual'],what_they_said:'Fixture reply',next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'Fixture draft',thread_url:'https://www.messenger.com/t/123',source_kind:'imported_report'}]}));
   app.get('/api/dashboard/conversations/email-preview',(_,res)=>res.json({total:1,waiting_count:1,email_preview:{preview_only:true,scanned_messages:3,matched_messages:1,unlinked_messages:1,ambiguous_messages:1,invalid_messages:0},items:[{person:'SYNTHETIC CONTACT',refs:['BUY-0001'],status:'hot',channels:['email'],what_they_said:'Reported fixture text',email_subject:'SYNTHETIC EMAIL <script>not executable</script>',email_evidence:{captured_at:now},next_step:'Review fixture',due_date:'2026-10-10',last_in:now,last_out:'',ready_message:'',thread_url:'https://mail.google.com/mail/u/0/#inbox/123456789abcdef0'}]}));
   app.get('/api/gmail/messages',(_,res)=>res.json({ok:true,mode:'app_password',status:'Connected (App Password)',messages:[{id:'fixture-message',subject:'Fixture reply <img src=x onerror=alert(1)>',from:'fixture@example.test',date:now,unread:true}]}));

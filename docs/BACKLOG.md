@@ -1,5 +1,20 @@
 # Backlog
 
+## Latest Run Summary
+
+2026-10-13: #348/#350 Approvals and#352 scoped pinned Tabler foundation live;
+mainac570ebd703ebdb722c4e343ba905355d7bbac37,exact deploymenthealthy78s,
+health/dashboard200.177passed/0failed/0skipped. Live28pending=13buyers+15deals,
+normal lead drawer,0new console errors,no real decisions. Local1366/1920/400/
+412 proof passed; live browser resize was ineffective,not claimed as live phone.
+Architect#349 resolved/closed. #344/#347 answers read. Guarded Today restoration
+and interim grades local,default OFF;focused ON fixture proofs passed,full suite
+181passed/0failed/0skipped,600s/file;release pending. Best-list values remain
+canonical; fixture6625 correctly Gold.
+Next: finish guarded release/exact-head verification,then controlled activation,
+bell,row/card hygiene,filters/name-first presentation,final Gabriel sign-off.
+County importer and#351A remain paused;#351B still requires Gabriel approval.
+
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
 Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
 Mark the status here as part of each item's PR.
