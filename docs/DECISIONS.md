@@ -415,3 +415,14 @@ server-owned metadata receipts, not message bodies, feed existing reminders
 and the shared brief; old imports preserve them. No contact outcome, lead fact
 or send is asserted. Production release verification creates no link or receipt
 and does not press either save action -- AGENTS sections3/5/7,D-050 -- 2026-10-10.
+
+ASSUMED: D-056 Approvals adds a narrow workflow adapter over existing buyer/deal
+approval services, not new value/match/readiness rules. Source disclosure never
+checks consent automatically. New explicit decisions require review, a current
+row fingerprint, and a rejection reason; changed/ambiguous/terminal rows refuse.
+Counts and membership share one projection. No writer exists for pending email
+drafts/records requests, so their counts are null/not connected, not fabricated
+zeroes or approved templates mislabeled as drafts. Unsigned JV address and
+subject coordinates stay withheld; stored data remains intact. Sign-out only
+adds UI cache cancellation before the unchanged auth action. No production
+decision is used as a test -- AGENTS sections3/5,D-043,D-056 -- 2026-10-13.

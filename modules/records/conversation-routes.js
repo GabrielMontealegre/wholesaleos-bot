@@ -1,6 +1,7 @@
 'use strict';
 const conversations=require('./conversations');
 function registerConversationRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString(),mailboxReader}) {
+  require('./approval-workspace').registerApprovalWorkspace(app,{db,requireAdmin,now});
   require('../email/template-approvals').registerRoutes(app,{db,requireAdmin,now});
   const reader=()=>mailboxReader||require('../email/mailbox-reader').createMailboxReader();
   app.get('/api/dashboard/conversations',requireAdmin,(req,res)=>{

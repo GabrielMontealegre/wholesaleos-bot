@@ -22,6 +22,15 @@ Gabriel's direct confirmed order:
 Every slice gets actual navigation/row/button click-through,1366x768/1920x1080/
 412x915 screenshots in the PR,full tests,merge,deploy,read-only live clicks.
 
+Slice1 LEFT shell DONE in#343 and verified again after recovery#346.
+Slice2 Today release BLOCKED on
+[#347](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/347):
+#345 had176/0/0 and local click-through/screens,but Railway deployment failed.
+Exact rollback#346 is healthy;do not claim the new Today view is live.
+Grade contract separately BLOCKED on
+[#344](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/344).
+Independent slice3 Approvals proceeds locally;non-P0 features stay PAUSED.
+
 ### Paused Previous Order
 
 Gabriel's latest order supersedes older ordering in run logs and item12:
@@ -44,6 +53,40 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 -- #341 independent Approvals slice: implemented and self-reviewed;
+SUMMARY passed=176 failed=0 skipped=0 total=176,600s/file. Approval UI15.26s,
+unit0.32s,shell41.65s,mount17.75s,notice acquisition14.34s. Synthetic full-index
+proof covers review/decision/stale/session guards at1366/1920/400/412 widths.
+Release and read-only live verification pending; no real approval/rejection.
+Today remains BLOCKED#347,grade contract#344; non-P0 work stays paused.
+Assumed buyer/deal queues delegate existing decision writers; missing email-draft
+and records-request feeds show Not connected, never an invented zero or action.
+
+2026-10-13 -- Run summary: #341 Today foundation#345 tested176/0/0,600s/file,
+then mergea9978c05dea6b7b9a2d8f5129f9a2b4f633544fb failed Railway deployment
+7040842658:14:13:00Z start,14:21:51Z failure,8m51s. New Today AND unchanged
+shell assets502;health200 did not establish exact-head rollout. Cause UNKNOWN,
+not labeled a UI/storage defect without provider logs. AGENTS7 exact rollback
+[#346](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/346) merged;
+main873f94f0bb18dd331e190e22764ac192db95bfd0 entire tree identical to known-
+good6de4f8a. Recovery deployment7041200650 SUCCESS14:29:30Z,110s from14:27:40Z;
+health200,fresh live LEFT0/32nav,public55/shell2,100Leads/card opens/closes,
+no new errors after reload;26historical error-buffer entries retained,not
+claimed fixed. Fresh recovery174/0/0,600s/file:desk38.04s,mount19.21s,
+mobile24.44s,recordUI16.69s,clock3.97s,county-notice24.07s,all durations
+in issue-341-today-rollback.txt. Rollback restoration was not delayed for a
+rerun:exact prior174/0/0 tree equivalence was verified before merge,then fresh
+full suite confirmed. Original Today code/images/3 test logs remain on#345's
+branch;no lost saved data. Deployment question#347 OPEN;provider web logs need
+operator login in Codex browser,separate from CLI auth;requested once,no
+credential asked for or entered. #344 grades OPEN. Only Today release BLOCKED;
+slice3 Approvals next locally. ParentOPEN:1of5UI slices verified,not overall
+SaaS readiness;all other features PAUSED until Gabriel sign-off. No batch,
+capture,source fetch,outreach,approval,confirmation,sync/save,helper restart,
+Railway setting/variable/billing/service change or data mutation. Dirty
+generated exports preserved;no clean-tree claim. Recovery log/checkpoint rides
+the next P0 PR,not a standalone extra deployment.
 
 2026-10-12 -- #341 P0 slice1 left shell IN PROGRESS. Fixed full-height left
 menu,nine primary destinations plus More;all original nodes/handlers/badges/
