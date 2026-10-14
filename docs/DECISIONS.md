@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-056 bell uses existing stored alerts plus the canonical Today work
+queue, not new job/message writers. An explicit Mark read changes only existing
+notification read flags; opening a row does not post, zero IDs never posts, due
+work cannot be dismissed via read status, duplicate IDs fail closed. Missing
+delivery/job producers stay missing; no new Telegram/outbound action is needed
+for a read-only UI release. Reuse routes/retention/auth and direct UI openers
+instead of guess record links or rewrite backend -- AGENTS3/5,D-056 --2026-10-13.
+
 ASSUMED: #347's flag is a compiled UI rollout flag, not an auth/data gate.
 First release stays OFF; its exact deployed /dashboard,health and assets must
 pass before a separate tested activation commit. No production data/settings

@@ -58,3 +58,16 @@ not counted as a suite result. No production write or prohibited action.
 After green: self-review, draft PR, ready, merge commit, exact deploy success,
 health/dashboard200 and normal authenticated Today/Approvals/lead clicks.
 Parent #341 and non-P0 pause remain until all slices and Gabriel sign-off.
+
+## Verified live
+
+PR354 merge f63ca341d83199b9b83c41f2e799b7a733942808; exact deployment7050422722
+SUCCESS21:23:07Z. Health/dashboard/flag GET200,flagv2=true,CSSv3. Authenticated
+Today:5replies,28approvals,8followups,0deadlines;41actions,20activity entries,
+0qualifying best deals. Exactly one Today;root contains activity. Approvals,
+buyer navigation,100leads/drawer visible open-close,conversation dialog and
+tools disclosure normal clicks passed;0new console errors. No real writes,
+approval/rejection/review checks,contact/capture/batch/helper actions.
+Local required screenshots passed; live viewport1280x720,not live phone proof.
+GitHub deployment record timestamps do not establish provider build duration;
+no invented duration.344/347 closed;original345 failure cause still unproven.
