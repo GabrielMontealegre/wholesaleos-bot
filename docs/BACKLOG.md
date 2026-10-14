@@ -2,17 +2,17 @@
 
 ## Latest Run Summary
 
-2026-10-13: #348/#350 Approvals and#352 scoped pinned Tabler foundation live.
-#353 guarded Today staged OFF on mainb31b8ff;exact deployment7049150037 healthy
-in56s,health/dashboard200,served flag false.181passed/0failed/0skipped.
-Authenticated lead drawer opens;100 hydrated rows,0new console errors.
-Today activation local: Tabler scoped100% root height caused activity overflow;
-narrow height:auto correction passes normal clicks at six widths. Final full
-suite181passed/0failed/0skipped,600s/file;activation release pending.
-No activation live claim yet. Original failed-deploy cause
-remains unproven. Architect#349 resolved;#344/#347 answers implemented.
-Next: complete activation full suite/release/read-only live clicks,then
-bell,row/card hygiene,filters/name-first presentation,final Gabriel sign-off.
+2026-10-13: #354 Today activation live on mainf63ca341d83199b9b83c41f2e799b7a733942808.
+Exact Railway deployment7050422722 SUCCESS,health/dashboard200,flagv2=true.
+181passed/0failed/0skipped,600s/file;normal clicks at six local widths.
+Live replies5,approvals28,followups8,deadlines0;41actions,20activity entries,
+0qualifying best deals. Exactly one Today;activity contained. Approvals,lead
+drawer,conversation and disclosure clicks passed;0new console errors,no writes.
+#348/#350 Approvals and#352 pinned Tabler foundation remain live.
+Architect#344/#347/#349 closed with evidence;original #345 failure cause unproven.
+Bell slice local,final183passed/0failed/0skipped,600s/file;release pending.
+No bell live claim yet. Next: finish bell release/read-only verification,then
+row/card hygiene,filters/name-first presentation,final Gabriel sign-off.
 County importer and#351A remain paused;#351B still requires Gabriel approval.
 
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
@@ -44,12 +44,10 @@ Every slice gets actual navigation/row/button click-through,1366x768/1920x1080/
 412x915 screenshots in the PR,full tests,merge,deploy,read-only live clicks.
 
 Slice1 LEFT shell DONE in#343 and verified again after recovery#346.
-Slice2 Today release BLOCKED on
-[#347](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/347):
-#345 had176/0/0 and local click-through/screens,but Railway deployment failed.
-Exact rollback#346 is healthy;do not claim the new Today view is live.
-Grade contract answered on
-[#344](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/344).
+Slice2 Today DONE in#354 after#353 OFF-stage200 proof. Mainf63ca34 healthy,
+exactly one live Today;181/0/0 and read-only clicks verified. Original#345
+failed;#346 rolled back safely. Root provider cause remains unproven.
+Architect recovery/grade contracts#347/#344 satisfied and closed.
 Slice3 buyer/deal Approvals foundation merged in#348, exact deployment healthy;
 visual action-color correction#350 deployed/verified. Tabler foundation local.
 Email draft/records-request approval feeds deferred per answer on
@@ -80,6 +78,15 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 -- #354 activation verified on f63ca34, exact deployment7050422722
+success21:23:07Z;health/dashboard200.181/0/0,600s/file;Today UI28.15s,
+phone21.90s,mount14.82s,unchanged capture fixtures374.83s/492.51s.
+Live5replies/28approvals/8followups/0deadlines;41actions/20activity/0best.
+Lead drawer,Approvals,conversation and tools normal clicks;0new errors,no writes.
+Tabler root-height overflow corrected narrowly;synthetic required sizes pass.
+Live viewport1280x720,not claimed as live phone. Architect344/347/349 closed;
+parent341 remains OPEN. Bell in progress;non-P0 paused for Gabriel sign-off.
 
 2026-10-13 -- Run checkpoint: #348 Approvals + #350 color correction live on
 047eb08ecf572d8b06cb8f1394dea279e0dba6ad;exact deploy7047625637 healthy63s.

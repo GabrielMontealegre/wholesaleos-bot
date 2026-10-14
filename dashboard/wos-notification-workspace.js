@@ -1,0 +1,32 @@
+'use strict';
+(function(root){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function project(response,work){
+    if(!Array.isArray(response?.notifications)||work?.source_kind!=='derived_workflow'||!Array.isArray(work.actions))throw Error('notification_read_invalid');
+    if(work.actions.some(a=>!a||typeof a.key!=='string'||typeof a.label!=='string'))throw Error('notification_read_invalid');
+    const seen=new Set(),items=[];
+for(const n of response.notifications){if(!n||typeof n.id!=='string'||!/^(?:N\d{1,20}|[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12})$/i.test(n.id)||seen.has(n.id))throw Error('notification_read_invalid');seen.add(n.id);items.push({id:n.id,title:typeof n.title==='string'?n.title:'Recorded notification',message:typeof n.message==='string'?n.message:'',read:n.read===true,created:typeof n.created==='string'?n.created:'',type:typeof n.type==='string'?n.type:''});}
+    return {items,unread:items.filter(n=>!n.read).length,actions:work.actions,now:work.now};
+  }
+  function markup(data,{mode='unread',error='',busy=false,clock}={}){
+    const command=(label,attr,disabled=false)=>'<button type="button" class="btn" '+attr+(disabled?' disabled':'')+'>'+label+'</button>';
+    const items=data?(mode==='work'?data.actions:data.items.filter(n=>mode==='all'||!n.read)):[];
+    const rows=items.map(n=>mode==='work'?'<li><strong>'+esc(n.label)+'</strong>'+(n.ref?'<span>'+esc(n.ref)+'</span>':'')+command('Open Today','data-bell-today')+'</li>':'<li><strong>'+esc(n.title)+'</strong>'+(n.message?'<span>'+esc(n.message)+'</span>':'')+(clock&&n.created?'<small>'+esc(clock.formatTime(n.created,data.now))+'</small>':'')+'<small title="Stored notification, not independent verification of a property or contact">Recorded notification</small><div>'+command('Open activity','data-bell-activity')+(!n.read?command('Mark read','data-bell-read="'+esc(n.id)+'"',busy):'')+'</div></li>').join('');
+    return '<header><h2>Notifications</h2>'+command('&#215;','data-bell-close aria-label="Close notifications" title="Close notifications"')+'</header><nav aria-label="Notification views">'+[['unread','Unread'],['all','All'],['work','Work queue']].map(([key,label])=>command(label,'data-bell-view="'+key+'" aria-pressed="'+(mode===key)+'"')).join('')+'</nav><div class="bell-commands">'+command('Refresh','data-bell-refresh',busy)+command('Mark all alerts read','data-bell-read-all',busy||mode==='work'||!data?.unread)+'</div><p role="status">'+esc(error||(busy?'Loading recorded notifications...':''))+'</p><ul>'+rows+'</ul>'+(!items.length&&!busy?'<p>'+esc(data?'No items in this view.':'Not loaded.')+'</p>':'')+'<footer>Stored alerts and recorded work; not delivery confirmation.</footer>';
+  }
+  const api={project,markup};if(typeof module!=='undefined'&&module.exports){module.exports=api;return;}
+  root.wosNotificationWorkspace=api;
+  let data=null,mode='unread',open=false,busy=false,error='',sequence=0;
+function paint(){const panel=document.getElementById('notif-panel');if(!panel)return;panel.classList.add('wos-kit','card');panel.classList.toggle('open',open);panel.dataset.bsTheme=document.documentElement.dataset.wosScheme==='light'?'light':'dark';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Notifications');panel.innerHTML=markup(data,{mode,error,busy,clock:root.wosCardClock});const bell=document.getElementById('notif-bell-btn');bell?.setAttribute('aria-expanded',String(open));bell?.setAttribute('aria-controls','notif-panel');const badge=document.getElementById('notif-count-badge');if(badge){badge.textContent=data?String(data.unread):'';badge.style.display=data?.unread?'flex':'none';}}
+  async function load(){if(busy)return;const ticket=++sequence;busy=true;error='';paint();try{const responses=await Promise.all([fetch('/api/notifications'),fetch('/api/dashboard/today-workspace')]);if(ticket!==sequence)return;if(responses.some(r=>!r.ok))throw Error();const [notifications,work]=await Promise.all(responses.map(r=>r.json()));if(ticket!==sequence)return;data=project(notifications,work);}catch{if(ticket===sequence){data=null;error='Notifications are unavailable. Check your login, then refresh.';}}finally{if(ticket===sequence){busy=false;paint();}}}
+  async function read(ids){if(busy||!data||!ids.length||ids.some(id=>!data.items.some(n=>n.id===id&&!n.read)))return;const ticket=++sequence;busy=true;error='';paint();try{const response=await fetch('/api/notifications/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})});if(ticket!==sequence)return;if(!response.ok){if([401,403].includes(response.status))data=null;throw Error();}const result=await response.json();if(ticket!==sequence)return;if(result?.ok!==true)throw Error();data={...data,items:data.items.map(n=>ids.includes(n.id)?{...n,read:true}:n),unread:data.unread-ids.length};}catch{if(ticket===sequence)error='Read status could not be saved. Refresh before trying again.';}finally{if(ticket===sequence){busy=false;paint();}}}
+  function close(){open=false;paint();document.getElementById('notif-bell-btn')?.focus();}
+  root.loadNotifications=load;
+  root.toggleNotifications=function(){open=!open;paint();if(open)load();};
+  root.readNotification=id=>read([id]);
+  root.markAllRead=()=>read(data?.items.filter(n=>!n.read).map(n=>n.id)||[]);
+  const signout=root.signOutDashboard;if(signout)root.signOutDashboard=function(){++sequence;data=null;busy=false;open=false;error='Dashboard login required.';paint();return signout.apply(this,arguments);};
+  document.addEventListener('click',e=>{const panel=document.getElementById('notif-panel');if(e.target.closest('[data-bell-close]'))close();else if(e.target.closest('[data-bell-refresh]'))load();else if(e.target.closest('[data-bell-view]')){mode=e.target.closest('[data-bell-view]').dataset.bellView;paint();}else if(e.target.closest('[data-bell-read-all]'))root.markAllRead();else if(e.target.closest('[data-bell-read]'))read([e.target.closest('[data-bell-read]').dataset.bellRead]);else if(e.target.closest('[data-bell-today]')){close();root.navigate('dashboard',null);}else if(e.target.closest('[data-bell-activity]')){close();root.navigate('record_activity',null);}else if(open&&!panel?.contains(e.target)&&!document.getElementById('notif-bell-btn')?.contains(e.target))close();});
+  document.addEventListener('keydown',e=>{if(open&&e.key==='Escape'){e.preventDefault();close();}});
+  paint();
+})(typeof window==='undefined'?{}:window);
