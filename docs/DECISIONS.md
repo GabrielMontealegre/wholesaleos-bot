@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED: D-056 buyer contact time is labeled Last contact report, not an
+inferred channel/reply status. The existing projection supplies only an
+attributed history timestamp. Hide absent optional card fields, retain unknown
+match status and all provenance cautions; card navigation reuses the existing
+detail opener without writes -- AGENTS3 truth and conservative UI --2026-10-13.
+
+ASSUMED: GitHub#341 being CLOSED alone does not replace Gabriel's required
+final P0 sign-off. Its comments contain no such acceptance and remaining UI
+criteria are not complete. Continue only P0 slices and keep source/comps
+features paused -- direct owner order and D-056 --2026-10-13.
+
 ASSUMED: D-056 bell uses existing stored alerts plus the canonical Today work
 queue, not new job/message writers. An explicit Mark read changes only existing
 notification read flags; opening a row does not post, zero IDs never posts, due

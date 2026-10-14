@@ -2,17 +2,31 @@
 
 ## Latest Run Summary
 
-2026-10-13: #354 Today activation live on mainf63ca341d83199b9b83c41f2e799b7a733942808.
-Exact Railway deployment7050422722 SUCCESS,health/dashboard200,flagv2=true.
-181passed/0failed/0skipped,600s/file;normal clicks at six local widths.
+2026-10-13 owner day: D-056 buyer-card navigation/name-first sub-slice built
+from main11fb5db. Final183passed/0failed/0skipped,600s/file; buyer UI53.43s,
+unit1.43s,Today33.40s,kit0.35s. Whole-card/Enter/Space/match badge/Open buyer/
+back/matching-deal navigation verified at1366/1920/400/412 with synthetic data,
+zero writes/external calls. Eight list/detail screenshots attached to the slice.
+Backend,auth,matching,readiness,ingestion and approval code unchanged.
+Release/live verification pending. Property/deal presentation,cascading filters
+and first-run guide remain P0; paused features stay paused for final sign-off.
+
+2026-10-13 owner day: #355 bell live on main11fb5dbf51776c6adcb15ad8240cc3b81845dfa1.
+Exact deployment7054436730 SUCCESS01:34:00Z;health/dashboard/JS/CSSv1 all200.
+183passed/0failed/0skipped,600s/file. Live0stored alerts/unread,41work items;
+normal views/GET refresh/Today/close/Escape/focus and lead drawer;0new errors.
+No real alert marked read or business/evidence/contact/source action.
+#354 Today activation remains live;normal clicks at six local widths.
 Live replies5,approvals28,followups8,deadlines0;41actions,20activity entries,
 0qualifying best deals. Exactly one Today;activity contained. Approvals,lead
 drawer,conversation and disclosure clicks passed;0new console errors,no writes.
 #348/#350 Approvals and#352 pinned Tabler foundation remain live.
 Architect#344/#347/#349 closed with evidence;original #345 failure cause unproven.
-Bell slice local,final183passed/0failed/0skipped,600s/file;release pending.
-No bell live claim yet. Next: finish bell release/read-only verification,then
-row/card hygiene,filters/name-first presentation,final Gabriel sign-off.
+Bell DONE as the stored-alert/work-queue UI foundation, not new alert producers.
+Next: card/row hygiene and name-first presentation,shared cascading filters,
+then final Gabriel sign-off. GitHub341 now CLOSED; no explicit final sign-off
+was found in its comments. Remaining P0 criteria still gate paused features.
+Buyer-card navigation/name-first sub-slice IN PROGRESS,183/0/0; release pending.
 County importer and#351A remain paused;#351B still requires Gabriel approval.
 
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
@@ -49,7 +63,9 @@ exactly one live Today;181/0/0 and read-only clicks verified. Original#345
 failed;#346 rolled back safely. Root provider cause remains unproven.
 Architect recovery/grade contracts#347/#344 satisfied and closed.
 Slice3 buyer/deal Approvals foundation merged in#348, exact deployment healthy;
-visual action-color correction#350 deployed/verified. Tabler foundation local.
+visual action-color correction#350 deployed/verified. Tabler foundation LIVE#352.
+Slice4 bell UI DONE#355: stored alerts plus canonical work, exact deploy healthy,
+183/0/0, normal views/GET refresh/close/focus/Today and lead drawer verified.
 Email draft/records-request approval feeds deferred per answer on
 [#349](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/349).
 Non-P0 features
@@ -78,6 +94,15 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 owner day -- #355 bell verified on11fb5db, exact deployment7054436730
+SUCCESS2026-10-14T01:34:00Z (45s status interval).183/0/0,600s/file;
+bell UI10.41s,unit0.15s. Live0stored/unread,41canonical work;views,GETrefresh,
+OpenToday,Escape/focus and100lead rows/drawer passed,0new errors.
+No real Mark read,approval,evidence,contact,capture,batch or source action.
+Assumption: existing alert writers plus canonical work, no invented producer.
+Next P0 slice: buyer card navigation/name-first; property presentation,
+cascading filters and first-run guide remain. No paused feature resumed.
 
 2026-10-13 -- #354 activation verified on f63ca34, exact deployment7050422722
 success21:23:07Z;health/dashboard200.181/0/0,600s/file;Today UI28.15s,
