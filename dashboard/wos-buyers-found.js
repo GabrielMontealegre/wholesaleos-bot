@@ -51,7 +51,7 @@
   }
   function money(value){return typeof value==='number'&&Number.isFinite(value)?'$'+value.toLocaleString('en-US',{maximumFractionDigits:0}):'';}
   function sourceTime(value){return root.wosCardClock?root.wosCardClock.formatTime(value,new Date().toISOString()):'Unknown';}
-  function contactTime(item){return item.deal_fit&&item.deal_fit.last_contact_at&&root.wosCardClock?root.wosCardClock.formatTime(item.deal_fit.last_contact_at,new Date().toISOString()):'Unknown';}
+  function contactTime(item){return item.deal_fit&&item.deal_fit.last_contact_at&&root.wosCardClock?root.wosCardClock.formatTime(item.deal_fit.last_contact_at,new Date().toISOString()):'';}
   function matchLabel(view){return view?view.count+(view.count===1?' deal matches':' deals match'):'Deal matches not measured';}
   function card(item,editedDraft){
     if(selectedId===item.id)return detailedCard(item,editedDraft);
@@ -60,7 +60,8 @@
     if(Array.isArray(box.types)&&box.types.length)criteria.push(box.types.join(', '));
     if(box.pct_arv)criteria.push(box.pct_arv+' of after-repair value');
     if(box.rehab_tolerance)criteria.push(box.rehab_tolerance);
-    return '<article class="bf-card bf-compact" data-id="'+esc(item.id)+'"><h3>'+esc(item.name)+'</h3><p>'+esc([].concat(item.states||[],item.areas||[],box.zips||[]).join(', ')||'Area not stated')+'</p><p class="bf-buy-box-line">'+esc(criteria.join(' | ')||'Buy box not stated')+'</p><span class="bf-match-badge">'+esc(matchLabel(view))+'</span><p>Last contact report: '+esc(contactTime(item))+'</p><div class="bf-compact-status"><span>'+esc(approvalLabels[item.approval||'pending'])+'</span><span>'+esc(statusLabels[item.status]||'Not recorded')+'</span></div><button type="button" data-buyer-open="'+esc(item.id)+'">Open buyer</button></article>';
+    var areas=[].concat(item.states||[],item.areas||[],box.zips||[]).join(', '),last=contactTime(item);
+    return '<article class="bf-card bf-compact" data-id="'+esc(item.id)+'" data-buyer-card-open="'+esc(item.id)+'" tabindex="0" aria-label="Open buyer '+esc(item.name)+'"><h3>'+esc(item.name)+'</h3>'+(areas?'<p>'+esc(areas)+'</p>':'')+(criteria.length?'<p class="bf-buy-box-line">'+esc(criteria.join(' | '))+'</p>':'')+(view?'<button type="button" class="bf-match-badge" data-buyer-open="'+esc(item.id)+'" title="Open the recorded matching deals">'+esc(matchLabel(view))+'</button>':'<span class="bf-match-badge">Deal matches not measured</span>')+(last?'<p>Last contact report: '+esc(last)+'</p>':'')+'<div class="bf-compact-status"><span>'+esc(approvalLabels[item.approval||'pending'])+'</span>'+(statusLabels[item.status]?'<span>'+esc(statusLabels[item.status])+'</span>':'')+'</div><button type="button" data-buyer-open="'+esc(item.id)+'">Open buyer</button></article>';
   }
   function detailedCard(item, editedDraft) {
     var contacts = [item.email, item.phone].filter(Boolean).map(function (value) { return '<span>' + esc(value) + ' (published by them)</span>'; }).join('<br>');
@@ -71,7 +72,7 @@
       return '<div><dt>' + esc(boxLabels[key]) + '</dt><dd>' + esc(Array.isArray(box[key]) ? box[key].join(', ') : box[key]) + '</dd></div>';
     }).join('');
     return '<article class="bf-card" data-id="' + esc(item.id) + '">' +
-      '<div class="bf-card-heading"><h3>' + esc(item.record_ref || 'Reference pending') + ' | ' + esc(item.name) + '</h3><span>' + esc(statusLabels[item.status]) + '</span></div>' +
+      '<div class="bf-card-heading"><h3>' + esc(item.name) + '</h3>'+(statusLabels[item.status]?'<span>' + esc(statusLabels[item.status]) + '</span>':'')+'</div>'+(item.record_ref?'<p class="bf-muted">'+esc(item.record_ref)+'</p>':'') +
       (item.email_subject ? '<p>Email subject: ' + esc(item.email_subject) + '</p>' : '') +
       '<p class="bf-muted">Submitted buyer record</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
       '<p class="bf-muted">' + esc(buyerKind) + (item.post_age ? ' | Post age: ' + esc(item.post_age) : '') + '</p>' +
@@ -82,7 +83,7 @@
       '<p class="bf-muted">Captured ' + esc(sourceTime(item.captured_at)) + ' · <a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">Source search</a></p>' +
       (item.post_url ? '<p><a href="' + esc(item.post_url) + '" target="_blank" rel="noopener noreferrer">Original post</a></p>' : '') +
       '<details><summary>Buy box</summary>' + (boxRows ? '<dl class="bf-box">' + boxRows + '</dl>' : '<p>No structured criteria supplied.</p>') + '</details>' +
-      '<h4>Reviewed deals that match</h4>'+dealRows(item.deal_fit&&item.deal_fit.matches,false)+'<h4>Near misses</h4>'+dealRows(item.deal_fit&&item.deal_fit.near_misses,true)+'<p>Last contact report: '+esc(contactTime(item))+'</p>'+
+      '<h4>Reviewed deals that match</h4>'+dealRows(item.deal_fit&&item.deal_fit.matches,false)+'<h4>Near misses</h4>'+dealRows(item.deal_fit&&item.deal_fit.near_misses,true)+(contactTime(item)?'<p>Last contact report: '+esc(contactTime(item))+'</p>':'')+
       '<p><b>Leads that fit this buy box: ' + esc(fits.count == null ? 'Not measured' : fits.count) + '</b></p>' +
       '<details><summary>Fit reasons</summary><p>' + esc(fits.approval_required ? 'Approval required for matching. Partners stay outside end-buyer matching.' : fits.scope || 'Fit not measured.') + '</p>' +
       Object.keys(fits.reasons || {}).map(function (reason) { return '<p>' + esc(reason) + ': ' + esc(fits.reasons[reason]) + '</p>'; }).join('') +
@@ -137,6 +138,12 @@
   root.openBuyerFind = function(id) { selectedId=id;root.navigate('buyers_found',null); };
   if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card, detailedCard: detailedCard };
   if (typeof document === 'undefined') return;
+  document.addEventListener('keydown', function (event) {
+    if (!event.target.matches('#wos-buyers-found [data-buyer-card-open]') || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    selectedId = event.target.dataset.buyerCardOpen;
+    paint();
+  });
   document.addEventListener('input', function (event) {
     if (event.target.matches('#wos-buyers-found textarea[data-draft]')) drafts[event.target.dataset.draft] = event.target.value;
     if (event.target.matches('#wos-buyers-found [data-import-json]')) {
@@ -165,6 +172,8 @@
   });
   document.addEventListener('click', function (event) {
     var openBuyer=event.target.closest('[data-buyer-open]');if(openBuyer){selectedId=openBuyer.dataset.buyerOpen;paint();return;}
+    var buyerCard = event.target.closest('#wos-buyers-found [data-buyer-card-open]');
+    if (buyerCard && !event.target.closest('button,a,input,select,textarea,summary,[role="button"]')) { selectedId=buyerCard.dataset.buyerCardOpen;paint();return; }
     var openDeal=event.target.closest('[data-buyer-deal]');if(openDeal&&root.openReviewedDeal){root.openReviewedDeal(openDeal.dataset.buyerDeal);return;}
     if(event.target.closest('[data-clear-record-selection]')) { selectedId='';paint();return; }
     var importButton = event.target.closest('#wos-buyers-found [data-import-action]');

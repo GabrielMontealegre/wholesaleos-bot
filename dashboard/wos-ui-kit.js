@@ -2,13 +2,16 @@
 (function(root){
   function enhance(){
     const theme=document.documentElement.dataset.wosScheme==='light'?'light':'dark';
-    for(const node of document.querySelectorAll('.sidebar,.topbar,#wos-approvals,#wos-today-workspace')){
+    for(const node of document.querySelectorAll('.sidebar,.topbar,#wos-approvals,#wos-today-workspace,#wos-buyers-found')){
       node.classList.add('wos-kit');
       if(node.dataset.bsTheme!==theme)node.dataset.bsTheme=theme;
     }
     document.querySelectorAll('.sidebar .nav-item').forEach(n=>n.classList.add('nav-link'));
     const today=document.getElementById('wos-today-workspace');
     today?.querySelectorAll('button').forEach(n=>n.classList.add('btn'));
+    const buyers=document.getElementById('wos-buyers-found');
+    buyers?.querySelectorAll('.bf-card').forEach(n=>n.classList.add('card','card-body'));
+    buyers?.querySelectorAll('button').forEach(n=>n.classList.add('btn'));
     const page=document.getElementById('wos-approvals');if(!page)return;
     if(!page.querySelector('[data-approval-coverage]')){
       const coverage=document.createElement('small');coverage.dataset.approvalCoverage='true';

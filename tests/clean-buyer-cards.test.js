@@ -21,6 +21,16 @@ function run(){
   assert.equal(JSON.stringify(store),frozen);
   const item={id:buyer.id,name:'<script>bad</script>',email:'PRIVATE CONTACT EMAIL',phone:'PRIVATE PHONE',email_subject:'PRIVATE SUBJECT',record_ref:'BUY-0001',approval:'approved',status:'new',states:['FL'],areas:['Tampa'],buy_box:buyer.assistant_find.buy_box,deal_fit:model,history:[]};
   const html=ui.card(item);assert.ok(html.includes('&lt;script&gt;'));for(const value of [item.email,item.phone,item.email_subject,item.record_ref,'Source search','Approval reason'])assert.ok(!html.includes(value));assert.ok(html.includes('1 deal matches'));assert.ok(ui.detailedCard({...item,holder_contact:{},drafted_message:''}).includes('PRIVATE CONTACT EMAIL'));
+  assert.ok(html.includes('data-buyer-card-open="fixture-buyer"'));
+  assert.ok(html.includes('tabindex="0"'));
+  assert.ok(!html.includes('Last contact report:'),'No invented contact history');
+  const empty=ui.card({...item,areas:[],states:[],buy_box:{},status:'',deal_fit:undefined});
+  assert.ok(!empty.includes('<p>Unknown</p>'));assert.ok(!empty.includes('Buy box not supplied'));
+  assert.ok(empty.includes('Deal matches not measured'));assert.ok(!empty.includes('0 deal matches'));
+  assert.ok(ui.card({...item,deal_fit:{...model,count:0}}).includes('0 deals match'),'Known zero remains visible');
+  const detail=ui.detailedCard({...item,drafted_message:''});
+  assert.ok(detail.indexOf('<h3>')<detail.indexOf('BUY-0001'),'Name precedes reference');
+  assert.ok(detail.includes('PRIVATE CONTACT EMAIL'),'Explicit detail view still carries supplied contact information');
  }finally{global.fetch=oldFetch;Date.now=oldNow;fs.writeFileSync=oldWrite;}
  console.log('Clean buyer cards: reviewed-deal counts not source-lead counts,canonical price/value/approval/AI/area/terminal guards,reported-only contact clock,JV privacy,plain compact list and pure projection passed.');
 }
