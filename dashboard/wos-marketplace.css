@@ -131,3 +131,10 @@ body[data-wos-design="marketplace"] .wos-help [role="tooltip"] { background: var
   body[data-wos-design="marketplace"] #app .td-open-view .td-card-footer { position: sticky; bottom: 0; z-index: 5; background: var(--card); border-top: 1px solid var(--line); }
   body[data-wos-design="marketplace"] #app .td-open-view .td-detail { padding-bottom: 96px; }
 }
+#wos-todays-deals.wos-kit{height:auto;color:var(--ink)}
+#wos-todays-deals .td-card{height:auto;color:var(--ink);background:var(--card)}
+#wos-todays-deals .td-card h3,#wos-todays-deals .td-card h4{color:var(--ink)!important}
+#wos-todays-deals [data-deal-card-open]{cursor:pointer}
+#wos-todays-deals [data-deal-card-open]:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+#wos-todays-deals [data-deal-matches]{min-height:44px;max-width:100%;white-space:normal;margin-block:10px;border:1px solid var(--line);background:var(--card-2);color:var(--ink)}
+#wos-todays-deals .td-holder{font-size:14px;color:var(--ink)}

@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+Next P0 property/deal presentation IN PROGRESS onitem/341-property-presentation.
+Focused four-size proof passed: address/holder first,source dates,canonical
+6625JVshare rather than13250gross,whole-card/keyboard/buyer-list navigation,
+unknown value/split,known zero baths,unsigned privacy,no automatic reviews.
+Full final184passed/0failed/0skipped,600s/file;card UI15.50s,Today52.75s,
+kit0.51s. Release/live verification pending; no production data action.
+
+2026-10-13 owner day: #356 buyer navigation LIVE on maind6f21e6a3f5e62e58ddc4b2b48aadebd25d8315a.
+Exact deployment7055520878 SUCCESS02:48:31Z after02:47:45Z (46s status interval).
+183passed/0failed/0skipped,600s/file; buyer UI53.43s/unit1.43s. Live40visible
+buyer cards and40match-count openers; whole-card/Enter/name-first detail/history/
+back/match-section navigation passed. Inspected record0matches,not inferred.
+Leads100/drawer and1Today passed;0new console errors. Eight synthetic list/detail
+screenshots at1366/1920/400/412. No production write/approval/import/contact/
+capture/evidence/source action. Remaining P0: property/deal presentation next,
+then shared filters and first-run guide. Non-P0 remains paused for sign-off.
+
 2026-10-13 owner day: D-056 buyer-card navigation/name-first sub-slice built
 from main11fb5db. Final183passed/0failed/0skipped,600s/file; buyer UI53.43s,
 unit1.43s,Today33.40s,kit0.35s. Whole-card/Enter/Space/match badge/Open buyer/
@@ -26,7 +43,7 @@ Bell DONE as the stored-alert/work-queue UI foundation, not new alert producers.
 Next: card/row hygiene and name-first presentation,shared cascading filters,
 then final Gabriel sign-off. GitHub341 now CLOSED; no explicit final sign-off
 was found in its comments. Remaining P0 criteria still gate paused features.
-Buyer-card navigation/name-first sub-slice IN PROGRESS,183/0/0; release pending.
+Buyer-card navigation/name-first sub-slice DONE#356,183/0/0,live verified.
 County importer and#351A remain paused;#351B still requires Gabriel approval.
 
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
@@ -94,6 +111,14 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-13 owner day -- #356 buyer navigation released/verified,d6f21e6,
+deployment7055520878 SUCCESS02:48:31Z,46s status interval,health/dashboard/assets
+200.183/0/0,600s/file.40visible cards,normal whole-card/Enter/count/detail/back;
+100leads/drawer and1Today,0new errors. No real approval/import/mark-read/contact/
+capture/batch/helper/evidence/source action. ASSUMED: known contact timestamp
+only,no inferred channel/reply; issue close alone not final P0 sign-off.
+Next property/deal presentation; filters and guide remain,non-P0 paused.
 
 2026-10-13 owner day -- #355 bell verified on11fb5db, exact deployment7054436730
 SUCCESS2026-10-14T01:34:00Z (45s status interval).183/0/0,600s/file;

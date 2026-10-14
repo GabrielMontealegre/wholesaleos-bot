@@ -48,6 +48,14 @@ additional read-only opener. Approval/provenance/JV assertions are unchanged.
 
 ## Release Gate
 
+Released#356,maind6f21e6a3f5e62e58ddc4b2b48aadebd25d8315a. Exact deployment7055520878
+SUCCESS2026-10-14T02:48:31Z from02:47:45Z (46s status interval);health/dashboard/
+buyerJSv8/CSSv2/kitJSv3 all200. Live40visible buyer cards/count openers; whole-card,
+Enter,name-first detail/history/two approval controls,Back/match-section opener
+passed. Inspected record0matches,not fabricated. Leads100/drawer and1Today
+passed;0new errors. No real production write/approval/import/mark-read/contact/
+capture/batch/helper/evidence/source action. Local four-size proof,live1280x720.
+
 Full suite: `docs/test-results/issue-341-buyer-navigation-final.txt`.
 SUMMARY passed=183 failed=0 skipped=0 total=183,600s per file.
 Buyer UI53.43s,unit1.43s,Today33.40s,kit0.35s; unchanged capture suites

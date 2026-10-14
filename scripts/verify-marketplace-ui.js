@@ -125,7 +125,7 @@ async function prove({ screenshots = false,wider=false } = {}) {
           await page.locator('.wos-discovery-value').scrollIntoViewIfNeeded();
         }
         if (name === 'todays_deals') {
-          assert.strictEqual(await page.locator('.td-summary button:not(.wos-help-button)').count(),1,'help icons are read-only, not workflow commands');
+          assert.strictEqual(await page.locator('.td-summary button:not(.wos-help-button)').count(),2,'open deal and matching-buyer list are read-only navigation; help is not a workflow command');
           assert.ok(!(await page.locator('.td-summary').innerText()).includes(fixture().address),'unsigned JV address must not leak on the compact card');
           await page.locator('[data-deal-open]').click();
           assert.ok(await page.locator('.td-open-view .td-detail').isVisible());
