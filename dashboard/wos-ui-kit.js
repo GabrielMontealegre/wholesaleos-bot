@@ -2,7 +2,7 @@
 (function(root){
   function enhance(){
     const theme=document.documentElement.dataset.wosScheme==='light'?'light':'dark';
-    for(const node of document.querySelectorAll('.sidebar,.topbar,#wos-approvals,#wos-today-workspace,#wos-buyers-found')){
+    for(const node of document.querySelectorAll('.sidebar,.topbar,#wos-approvals,#wos-today-workspace,#wos-buyers-found,#wos-todays-deals')){
       node.classList.add('wos-kit');
       if(node.dataset.bsTheme!==theme)node.dataset.bsTheme=theme;
     }
@@ -12,6 +12,9 @@
     const buyers=document.getElementById('wos-buyers-found');
     buyers?.querySelectorAll('.bf-card').forEach(n=>n.classList.add('card','card-body'));
     buyers?.querySelectorAll('button').forEach(n=>n.classList.add('btn'));
+    const deals=document.getElementById('wos-todays-deals');
+    deals?.querySelectorAll('.td-card').forEach(n=>n.classList.add('card','card-body'));
+    deals?.querySelectorAll('button').forEach(n=>n.classList.add('btn'));
     const page=document.getElementById('wos-approvals');if(!page)return;
     if(!page.querySelector('[data-approval-coverage]')){
       const coverage=document.createElement('small');coverage.dataset.approvalCoverage='true';

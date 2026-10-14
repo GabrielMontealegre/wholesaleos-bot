@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: D-056 card Room reads the existing canonical estimated_spread.low,
+after the recorded JV split; never the larger gross max-minus-asking or a
+fallback when split/value is missing. Label derived/before-costs/not-offer.
+Buyer counts retain the existing approved geographic-match meaning; opening
+them does not approve a deal or authorize contact. Holder remains Holder,
+not inferred Owner -- AGENTS3/5,existing evaluator and prior#344 --2026-10-13.
+
 ASSUMED: D-056 buyer contact time is labeled Last contact report, not an
 inferred channel/reply status. The existing projection supplies only an
 attributed history timestamp. Hide absent optional card fields, retain unknown
