@@ -479,6 +479,24 @@ and the shared brief; old imports preserve them. No contact outcome, lead fact
 or send is asserted. Production release verification creates no link or receipt
 and does not press either save action -- AGENTS sections3/5/7,D-050 -- 2026-10-10.
 
+D-057 -- Architect answer#358, confirmed2026-10-15: county ranking may use
+Census Reporter API ACS2024 five-year tables B01003/B25077, once per state in
+a build/refresh script, maximum1request/second, stop on4xx/5xx. Preserve per-row
+source URL, table IDs, vintage and retrieval date; label Census ACS2024 (via
+Census Reporter). No Census key, PEP substitution or page-load data collection.
+Score0-100 uses population, median value120k-350k, disclosure, nonjudicial
+foreclosure and approved county buyers with explanatory components; missing
+data remains unranked at the bottom. Lead evidence/readiness stay independent.
+Proceed after the Leads zero-count fix. Also hide unmeasured deal summary
+metrics, keep phone Filters collapsed, move Import/Glossary outside filters.
+This supersedes the ACS-source block below, not the lead-safety invariants.
+
+ASSUMED: #341 count fallback accepts only nonnegative safe integer counts
+(including numeric strings); zero is authoritative. Missing or invalid counts
+fall back to existing total/loaded compatibility paths, never to stale prior
+filter counts. No API filter, eligibility, stored data or gate change --
+AGENTS sections3/4/5 and the reproduced count defect --2026-10-15.
+
 ASSUMED: #341 shared filters ship in ordered UI slices. The first exposes exact
 State/County/City filters on Today's Deals and JV, counts before the display cap,
 per-tab location persistence and bookmarks, and the full official county directory.
