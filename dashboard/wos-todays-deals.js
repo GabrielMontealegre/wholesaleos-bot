@@ -1,6 +1,25 @@
 'use strict';
 (function (root) {
   var data = null; var loading = false; var error = ''; var filters = { state: '', county: '', city: '', hidden: false, price_min: '', price_max: '', beds_min: '', kind: '', verdict: '' }; var active = ''; var previousHidden = false; var matchFocus = '';
+  var countyCatalog = null, catalogRequested = false, locationTab = '', locationRows = [], locations = {}, requestVersion = 0;
+  function locationSelection() { return locations[locationTab] || {state:'',county:'',city:''}; }
+  function enterLocationTab(tab) {
+    if (locationTab !== tab) { locationTab = tab; locationRows = []; data = null; requestVersion++; loading = false; }
+    if (!locations[tab] && root.wosListFilters) {
+      try { locations[tab] = root.wosListFilters.restore(tab, root.localStorage, root.location.hash); }
+      catch (_) { locations[tab] = root.wosListFilters.normalize({}); }
+    }
+    if (!catalogRequested) {
+      catalogRequested = true;
+      fetch('/api/dashboard/filter-counties').then(function(r){if(!r.ok)throw Error('catalog_unavailable');return r.json();}).then(function(value){if(value.schema_version!==1||!Array.isArray(value.states)||!Array.isArray(value.counties))throw Error('catalog_invalid');countyCatalog=value;}).catch(function(){catalogRequested=false;}).finally(paint);
+    }
+  }
+  function updateLocation(field, value) {
+    filters.record_id=''; active=''; matchFocus='';
+    locations[locationTab] = root.wosListFilters.change(locationSelection(), field, value);
+    try { root.wosListFilters.persist(locationTab, locationSelection(), root.localStorage, root.history, root.location); } catch (_) {}
+    data = null; loading = false; load(); paint();
+  }
   var checks = { holder_confirmed: ['still_available'], contract_verified: ['seller_signature', 'assignable', 'closing_date', 'title_company', 'owner_record_matches'], jv_signed: ['signed', 'contract_interest', 'title_pays_fees'], buyer_committed: ['emd_at_title'], closed: ['title_closed'] };
   var labels = { still_available: 'Holder said it is still available today', seller_signature: 'Seller signature reviewed', assignable: 'Assignment rights reviewed', closing_date: 'Closing date reviewed', title_company: 'Title company reviewed', owner_record_matches: 'Owner of record matches the contract', signed: 'JV signed', contract_interest: 'Contract interest reviewed', title_pays_fees: 'Title pays fees at closing', emd_at_title: 'Earnest money received at title', title_closed: 'Title confirmed closing' };
   var stages = ['found', 'vetted', 'holder_confirmed', 'contract_verified', 'jv_signed', 'buyer_committed', 'closed'];
@@ -57,27 +76,50 @@
       return true;
     });
     return '<section id="wos-todays-deals" class="td-page"><h2>' + (jv ? 'JV' : 'Today\'s Deals') + tip(jv ? 'JV' : 'Today’s Deals') + '</h2><p>' + esc(error) + '</p><div class="td-counts"><span>Vetted today: ' + esc(counts.vetted_today == null ? 'Not measured' : counts.vetted_today) + ' / 10 ' + tip('Daily target') + '</span><span>Eligible JV: ' + esc(counts.jv == null ? 'Not measured' : counts.jv) + tip('JV') + '</span><span>Submitted: ' + esc(counts.total == null ? 'Not measured' : counts.total) + tip('Import') + '</span></div>' +
-      '<details class="td-filter-bar" open><summary>Filters</summary><div class="td-filters">' + ['state', 'county', 'city'].map(function (k) { return '<label>' + k[0].toUpperCase() + k.slice(1) + '<input data-deal-filter="' + k + '" value="' + esc(filters[k]) + '" maxlength="80"></label>'; }).join('') + ['price_min','price_max','beds_min'].map(function(k) { return '<label>' + ({price_min:'Minimum price',price_max:'Maximum price',beds_min:'Minimum bedrooms'})[k] + '<input type="number" min="0" data-deal-filter="' + k + '" value="' + esc(filters[k]) + '"></label>'; }).join('') + '<label>Deal kind<select data-deal-filter="kind"><option value="">All kinds</option>' + Array.from(new Set((data && data.items || []).map(function(d) { return d.deal_kind; }))).map(function(k) { return '<option value="' + esc(k) + '"' + (filters.kind===k?' selected':'') + '>' + esc(k==='jv'?'JV':k.replace(/[_-]/g,' ')) + '</option>'; }).join('') + '</select></label><label>Verdict<select data-deal-filter="verdict"><option value="">All verdicts</option>' + ['GOOD','POSSIBLE','NO'].map(function(k) { return '<option' + (filters.verdict===k?' selected':'') + '>' + k + '</option>'; }).join('') + '</select></label><label><input type="checkbox" data-deal-filter="hidden"' + (filters.hidden ? ' checked' : '') + '> Include expired and rejected</label><button data-deal-reload>Apply filters</button><button data-open-deal-import>Import buyers or deals</button><button data-open-glossary>Glossary</button></div></details>' +
+      '<details class="td-filter-bar" open><summary>Filters</summary>' + (root.wosListFilters ? root.wosListFilters.render({catalog:countyCatalog,selection:locationSelection(),rows:locationRows,tab:locationTab}) : '') + '<div class="td-filters">' + ['price_min','price_max','beds_min'].map(function(k) { return '<label>' + ({price_min:'Minimum price',price_max:'Maximum price',beds_min:'Minimum bedrooms'})[k] + '<input type="number" min="0" data-deal-filter="' + k + '" value="' + esc(filters[k]) + '"></label>'; }).join('') + '<label>Deal kind<select data-deal-filter="kind"><option value="">All kinds</option>' + Array.from(new Set((data && data.items || []).map(function(d) { return d.deal_kind; }))).map(function(k) { return '<option value="' + esc(k) + '"' + (filters.kind===k?' selected':'') + '>' + esc(k==='jv'?'JV':k.replace(/[_-]/g,' ')) + '</option>'; }).join('') + '</select></label><label>Verdict<select data-deal-filter="verdict"><option value="">All verdicts</option>' + ['GOOD','POSSIBLE','NO'].map(function(k) { return '<option' + (filters.verdict===k?' selected':'') + '>' + k + '</option>'; }).join('') + '</select></label><label><input type="checkbox" data-deal-filter="hidden"' + (filters.hidden ? ' checked' : '') + '> Include expired and rejected</label><button data-deal-reload>Apply filters</button><button data-open-deal-import>Import buyers or deals</button><button data-open-glossary>Glossary</button></div></details>' +
       '<p>' + (loading ? 'Loading deals...' : !items.length ? jv ? 'No JV records match these filters.' : 'No deals submitted yet. The daily target is not met; nothing is generated to fill it.' : 'Showing ' + items.length + ' of ' + counts.shown) + '</p>' + (jv ? [['active','Active JVs'],['ready','Ready for buyer'],['near_miss','Near misses']].map(function(group) { var rows=items.filter(function(d){return d.jv_section===group[0];});return '<section class="td-jv-section" data-jv-section="'+group[0]+'"><h3>'+group[1]+' ('+rows.length+' loaded)</h3>'+(rows.length?'<div class="td-grid">'+rows.map(card).join('')+'</div>':'<p>No records in this group.</p>')+'</section>';}).join('') : '<div class="td-grid">' + items.map(card).join('') + '</div>') + '</section>';
   }
   function isJV() { return typeof APP !== 'undefined' && APP.page === 'jv'; }
-  function paint() { var el = document.getElementById('wos-todays-deals'); if (el) { el.outerHTML = markup(isJV()); if(matchFocus && active===matchFocus){var target=document.querySelector('#wos-todays-deals .td-open-view [data-matched-buyers]');if(target){matchFocus='';target.focus({preventScroll:true});target.scrollIntoView({block:'start'});}} } }
+  function paint() { var el = document.getElementById('wos-todays-deals'); if (el) { var priorFilters=el.querySelector('.td-filter-bar');var expanded=priorFilters?priorFilters.open:null;el.outerHTML = markup(isJV());var nextFilters=document.querySelector('#wos-todays-deals .td-filter-bar');if(nextFilters&&expanded!==null){nextFilters.open=expanded;nextFilters.dataset.mobileInitialized='true';} if(matchFocus && active===matchFocus){var target=document.querySelector('#wos-todays-deals .td-open-view [data-matched-buyers]');if(target){matchFocus='';target.focus({preventScroll:true});target.scrollIntoView({block:'start'});}} } }
   function load() {
     if (loading || !document.getElementById('wos-todays-deals')) return;
     loading = true; error = ''; var params = new URLSearchParams(filters); params.set('jv', String(isJV()));
-    fetch('/api/dashboard/todays-deals?' + params).then(function (r) { if (!r.ok) throw new Error('Deals unavailable. Check your admin session.'); return r.json(); }).then(function (v) { data = v; }).catch(function (e) { data = null; error = e.message; }).finally(function () { loading = false; paint(); });
+    var version = ++requestVersion;
+    if (root.wosListFilters) {
+      params.set('location_exact','true');
+      var selection = filters.record_id ? {} : locationSelection();
+      ['state','county','city'].forEach(function(field){params.set(field,selection[field]||'');});
+    }
+    fetch('/api/dashboard/todays-deals?' + params).then(function (r) { if (!r.ok) throw new Error('Deals unavailable. Check your admin session.'); return r.json(); }).then(function (v) { if(version!==requestVersion)return;data = v;locationRows = Array.isArray(v.location_counts) ? v.location_counts : (v.items || []); }).catch(function (e) { if(version!==requestVersion)return;data = null; error = e.message; }).finally(function () { if(version!==requestVersion)return;loading = false; paint(); });
   }
-  root.renderTodaysDeals = function () { setTimeout(load, 0); return markup(false); };
-  root.renderJV = function () { setTimeout(load, 0); return markup(true); };
+  root.renderTodaysDeals = function () { enterLocationTab('todays_deals');setTimeout(load, 0); return markup(false); };
+  root.renderJV = function () { enterLocationTab('jv');setTimeout(load, 0); return markup(true); };
+  var priorInit=root.initApp;
+  if(priorInit)root.initApp=function(){
+    var result=priorInit.apply(this,arguments);
+    if(root.wosListFilters && typeof APP!=='undefined' && APP.currentUser){
+      var tab=root.wosListFilters.initialTab(root.location.hash,root.location.search);
+      if(tab)root.navigate(tab,document.querySelector('.sidebar .nav-item[onclick="navigate(\''+tab+'\',this)"]'));
+    }
+    return result;
+  };
+  var priorSignOut=root.signOutDashboard;
+  if(priorSignOut)root.signOutDashboard=function(){requestVersion++;data=null;locationRows=[];loading=false;active='';matchFocus='';return priorSignOut.apply(this,arguments);};
   document.addEventListener('wos-jv-saved', function () { load(); });
   root.openReviewedDeal = function(id,options) { if(!filters.record_id)previousHidden=filters.hidden;filters.record_id=id;filters.hidden=true;active=id;matchFocus=options&&options.matches?id:'';root.navigate('todays_deals',null); };
   var dashboard = root.renderDashboard; root.renderDashboard = function () { return root.renderTodaysDeals() + dashboard(); };
   var clockStyle = document.createElement('style');
   clockStyle.textContent = '.wos-card-clock{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px 16px;border-block:1px solid var(--line,#42516a);padding-block:12px;margin-block:12px}.wos-card-clock>div{min-width:0}.wos-card-clock dt{font-size:12px;color:var(--muted,#afb8c7)}.wos-card-clock dd{margin:2px 0 0;overflow-wrap:anywhere;font-size:13px;color:var(--ink,#f1f4f8)}.wos-card-clock .wos-clock-urgent dt,.wos-card-clock .wos-clock-urgent dd{color:var(--danger,#ff929b)!important}';
   document.head.appendChild(clockStyle);
+  var filterStyle = document.createElement('style');
+  filterStyle.textContent = '.wos-location-filters{display:flex;flex-wrap:wrap;gap:12px;padding-block:16px}.wos-location-filters>label{flex:1 1 200px;min-width:0}.wos-location-filters select{display:block;width:100%;min-height:44px;box-sizing:border-box;background:var(--card,#14171f);color:var(--ink,#f1f4f8);border:1px solid var(--line,#637891);border-radius:4px;padding:8px}.wos-filter-chips{display:flex;flex-wrap:wrap;gap:8px;width:100%}.wos-filter-chips button{min-height:44px}.wos-location-filters small{color:var(--muted,#afb8c7);line-height:1.5}.wos-location-filters select:disabled{opacity:.6}';
+  document.head.appendChild(filterStyle);
+  document.addEventListener('change',function(e){if(e.target.matches('#wos-todays-deals [data-list-filter]'))updateLocation(e.target.dataset.listFilter,e.target.value);});
   document.addEventListener('change', function (e) { if (e.target.matches('[data-deal-filter]')) { filters.record_id=''; filters[e.target.dataset.dealFilter] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; } });
   document.addEventListener('keydown',function(e){if(!e.target.matches('#wos-todays-deals [data-deal-card-open]')||!['Enter',' '].includes(e.key))return;e.preventDefault();root.openReviewedDeal(e.target.closest('[data-deal-id]').dataset.dealId);});
   document.addEventListener('click', function (e) {
+    var removeFilter=e.target.closest('#wos-todays-deals [data-list-filter-remove]');if(removeFilter){updateLocation(removeFilter.dataset.listFilterRemove,'');return;}
+    if(e.target.closest('#wos-todays-deals [data-list-filter-clear]')){updateLocation('state','');return;}
     var matches=e.target.closest('[data-deal-matches]');if(matches){root.openReviewedDeal(matches.closest('[data-deal-id]').dataset.dealId,{matches:true});return;}
     var card=e.target.closest('#wos-todays-deals [data-deal-card-open]');if(card&&!e.target.closest('button,a,input,select,textarea,summary,[role="button"]')){root.openReviewedDeal(card.closest('[data-deal-id]').dataset.dealId);return;}
     var open = e.target.closest('[data-deal-open]'); if(open) { root.openReviewedDeal(open.closest('[data-deal-id]').dataset.dealId); return; }

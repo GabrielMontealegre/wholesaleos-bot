@@ -31,7 +31,8 @@ function createFixtureApp({wider=false,seedLead=false,todayProof=false}={}) {
   app.get('/api/leads', (_, res) => res.json({ leads: store.leads, totalAll: store.leads.length, totalFiltered: store.leads.length }));
   app.get('/api/buyers', (_, res) => res.json({ buyers: store.buyers }));
   app.get('/api/dashboard/buyers-found', (_, res) => res.json(finds.listFinds(store, { now })));
-  app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query })));
+  app.get('/api/dashboard/todays-deals', (req, res) => res.json(deals.list(store, { now, ...req.query, locationExact:req.query.location_exact==='true' })));
+  require('../modules/records/county-filter-catalog').registerCountyFilterCatalog(app,{requireAdmin:(_,__,next)=>next()});
   app.get('/api/dashboard/record-activity', (_, res) => res.json({ ...records.listActivity(store), types: records.TYPES }));
   app.get('/api/dashboard/record-search',(req,res)=>res.json({items:records.search(store,String(req.query.q||''))}));
   app.get('/api/dashboard/record-refs', (_, res) => res.json({ missing: { leads: 0, buyers: 0, deals: 0, matches: 0 }, deal_reserve: records.sequenceFloorStatus(store) }));

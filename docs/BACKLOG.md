@@ -2,49 +2,32 @@
 
 ## Latest Run Summary
 
-Next P0 property/deal presentation IN PROGRESS onitem/341-property-presentation.
-Focused four-size proof passed: address/holder first,source dates,canonical
-6625JVshare rather than13250gross,whole-card/keyboard/buyer-list navigation,
-unknown value/split,known zero baths,unsigned privacy,no automatic reviews.
-Full final184passed/0failed/0skipped,600s/file;card UI15.50s,Today52.75s,
-kit0.51s. Release/live verification pending; no production data action.
+2026-10-14: P0 buyer and property-card slices DONE#356/#357, main
+cdc4c3083edf0c329dd4c411af4747fc09ae5e80. Exact deployment7056126229
+SUCCESS03:33:25Z from03:32:42Z (43s status interval);health/dashboard/assets200.
+Final184passed/0failed/0skipped,600s/file; new property UI15.50s,Today52.75s,
+phone41.64s. Buyer release separately183/0/0,live verified40visible buyer cards.
+Property check17cards/source/count/share labels,0empty photo blocks; whole-card/
+Enter/back/buyer-section focus worked,review boxes stayed unchecked. Leads100/
+drawer passed. Final normal Today navigation plus bounded cold reload each1Today,
+0new captured errors. In-app webview became unavailable overnight; completed in
+the currently open Chrome dashboard. Stale tab initially showed legacy content;
+cold reload did not reproduce it,no bootstrap defect/root-cause/fix claimed.
+Sixteen synthetic buyer/deal list/detail screenshots across1366/1920/400/412.
+Canonical share shown,not gross; no real approval/import/contact/evidence/source/
+capture/batch/helper/config/business-data action. All backend gates unchanged.
 
-2026-10-13 owner day: #356 buyer navigation LIVE on maind6f21e6a3f5e62e58ddc4b2b48aadebd25d8315a.
-Exact deployment7055520878 SUCCESS02:48:31Z after02:47:45Z (46s status interval).
-183passed/0failed/0skipped,600s/file; buyer UI53.43s/unit1.43s. Live40visible
-buyer cards and40match-count openers; whole-card/Enter/name-first detail/history/
-back/match-section navigation passed. Inspected record0matches,not inferred.
-Leads100/drawer and1Today passed;0new console errors. Eight synthetic list/detail
-screenshots at1366/1920/400/412. No production write/approval/import/contact/
-capture/evidence/source action. Remaining P0: property/deal presentation next,
-then shared filters and first-run guide. Non-P0 remains paused for sign-off.
-
-2026-10-13 owner day: D-056 buyer-card navigation/name-first sub-slice built
-from main11fb5db. Final183passed/0failed/0skipped,600s/file; buyer UI53.43s,
-unit1.43s,Today33.40s,kit0.35s. Whole-card/Enter/Space/match badge/Open buyer/
-back/matching-deal navigation verified at1366/1920/400/412 with synthetic data,
-zero writes/external calls. Eight list/detail screenshots attached to the slice.
-Backend,auth,matching,readiness,ingestion and approval code unchanged.
-Release/live verification pending. Property/deal presentation,cascading filters
-and first-run guide remain P0; paused features stay paused for final sign-off.
-
-2026-10-13 owner day: #355 bell live on main11fb5dbf51776c6adcb15ad8240cc3b81845dfa1.
-Exact deployment7054436730 SUCCESS01:34:00Z;health/dashboard/JS/CSSv1 all200.
-183passed/0failed/0skipped,600s/file. Live0stored alerts/unread,41work items;
-normal views/GET refresh/Today/close/Escape/focus and lead drawer;0new errors.
-No real alert marked read or business/evidence/contact/source action.
-#354 Today activation remains live;normal clicks at six local widths.
-Live replies5,approvals28,followups8,deadlines0;41actions,20activity entries,
-0qualifying best deals. Exactly one Today;activity contained. Approvals,lead
-drawer,conversation and disclosure clicks passed;0new console errors,no writes.
-#348/#350 Approvals and#352 pinned Tabler foundation remain live.
-Architect#344/#347/#349 closed with evidence;original #345 failure cause unproven.
-Bell DONE as the stored-alert/work-queue UI foundation, not new alert producers.
-Next: card/row hygiene and name-first presentation,shared cascading filters,
-then final Gabriel sign-off. GitHub341 now CLOSED; no explicit final sign-off
-was found in its comments. Remaining P0 criteria still gate paused features.
-Buyer-card navigation/name-first sub-slice DONE#356,183/0/0,live verified.
-County importer and#351A remain paused;#351B still requires Gabriel approval.
+Next P0: shared county/filter foundation,then rollout across lists,remaining
+legacy detail hygiene and first-run guide. Other features remain PAUSED pending
+final Gabriel sign-off. GitHub341 closed alone is not treated as that sign-off.
+Location filter rollout IN PROGRESS: Today's Deals/JV exact cascade,full pre-cap
+county counts,51 states/DC and3144 county identities,per-tab location bookmarks.
+Ranking portion BLOCKED [#358](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/358):
+current Census API requires a key; cached ACS file is HTML. No invented rank or
+PEP-as-ACS substitution. Alphabetical unranked directory,unknowns null. Other
+list rollouts and type/stage/tier/deadline filters remain P0 work,not DONE.
+Assumptions: timestamp-only contact report; Holder not inferred Owner; canonical
+share,not a fallback gross; missing source/value/split stays unestablished.
 
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
 Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
