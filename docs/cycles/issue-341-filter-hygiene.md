@@ -26,5 +26,13 @@ to the glossary;only their placement moves. No business writer is added.
 Full suite189passed/0failed/0skipped,600s/file;new proof7.10s,mount14.55s,
 shared filters12.45s,Today28.36s,county-notice fixture15.17s. Full per-file
 durations in `docs/test-results/issue-341-filter-hygiene-final.txt`.
-Merge and exact deploy/live verification pending. Ranking is separately BLOCKED#358
+Released#364, main8f0ae54853f73d962ac161e33795194b507598e5. Exact deployment
+7096135333 SUCCESS2026-10-15T15:00:28Z,98s after in-progress. Health/dashboard/
+v12 asset200. Live Deals/JV22cards each;measured0 retained,no Not measured;
+tools outside Filters,Glossary/Buyers found navigate normally without writes.
+Actual browser412x915 and400x915:Filters initially collapsed,open/close works,
+tools fit. Viewport reset to1280x585. Leads100visible rows,drawer open/close,
+original source-confidence sort restored;0new console errors. No production
+business write,batch,capture,helper,contact,evidence or Railway-setting action.
+Ranking is separately BLOCKED#358
 after its approved source returned403 on request1. Draft#363 is not shipped here.

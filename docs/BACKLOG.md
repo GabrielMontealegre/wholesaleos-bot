@@ -2,19 +2,29 @@
 
 ## Latest Run Summary
 
-2026-10-15: Leads count fix DONE in#362,mainf5bbe1a;exact deploy7095575960
-SUCCESS14:40:18Z,health/dashboard200,fix served.188passed/0failed/0skipped.
-Live Wyoming0rows/0shown;Clear100visible rows,drawer open/close,0console errors.
-No production data changed. County ranking BLOCKED#358: approved Census Reporter
-first state request returned403;stopped after1request,no retry/artifact written.
-Unfinished local model/parser/refresh checkpoint is DRAFT#363,not integrated or
-releasable. Source-access question posted#358;no bypass or invented rank.
-Independent architect-requested P0 filter hygiene IN PROGRESS: hide unmeasured
-metrics (retain real0),phone collapsed initially,Import/Glossary outside filters.
-Focused actual-dashboard proof passed1366/1920/400/412,no writes/external calls.
-Full gate189passed/0failed/0skipped,600s/file. New proof7.10s,mount14.55s,
-Today28.36s. Merge/deploy/live verification pending. Other features stay paused
-until full P0 Gabriel sign-off;no overall completion percentage is claimed.
+2026-10-15: Leads zero-count fix DONE in #362; live zero-result filter and
+clear/drawer verified, 188 passed / 0 failed / 0 skipped. Architect-requested
+filter hygiene DONE in #364: hide unmeasured metrics, retain measured zero,
+phone Filters collapsed, Import/Glossary outside Filters. Final suite:
+189 passed / 0 failed / 0 skipped, 600s/file; new proof 7.10s, mount 14.55s,
+Today 28.36s. Main 8f0ae54853f73d962ac161e33795194b507598e5; exact deployment
+7096135333 SUCCESS 2026-10-15T15:00:28Z (98s after in-progress).
+Health/dashboard/v12 asset 200. Live Deals/JV each 22 cards; moved tools
+navigate normally; measured zero remains visible, no Not measured filler.
+Actual phone 412x915 and 400x915: collapsed/openable filters, fitting tools.
+Viewport reset; Leads 100 visible rows, drawer open/close, original sort restored,
+0 new console errors. Eight synthetic screenshots committed. No business writes,
+batch, capture, helper, contact, evidence or Railway-setting actions.
+
+County ranking BLOCKED #358: approved Census Reporter returned HTTP403 on
+request1; stopped immediately, no retry/workaround/data artifact. Unfinished
+parser/model/refresh is DRAFT #363, not integrated or releasable. Architect
+source-access decision requested in #358; no invented rank or historical
+weight equivalence claimed. Next independent P0: shared Leads location cascade,
+then remaining list/filter/detail/guide work. Other features remain paused until
+Gabriel's complete P0 sign-off. No overall completion percentage is inferred.
+Post-release notes checkpointed on item/341-lead-location-cascade to ride its
+next implementation PR, avoiding a documentation-only production deployment.
 
 ### Earlier Run Summary
 
@@ -126,6 +136,15 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-15 -- #362 Leads zero counts released/live verified (188/0/0);
+#364 filter hygiene released/live verified (189/0/0), main8f0ae54, exact
+deploy7096135333 SUCCESS15:00:28Z. Live Deals/JV22 each, phone412/400 filters
+and tools checked, Leads100/drawer, original sort restored, 0console errors.
+Ranking BLOCKED#358 on approved-source403/request1, unreleased draft#363;
+no source workaround or production data write. ASSUMED hide all unmeasured
+summary fields while retaining actual0, documented in DECISIONS. Next P0
+shared Leads cascade; no final owner sign-off or source expansion claimed.
 
 2026-10-14 -- #359 location filters released/verified,main72fbaca,exact deploy
 7080991586 SUCCESS00:56:54Z,93s status interval.186/0/0,600s/file. Live22deal

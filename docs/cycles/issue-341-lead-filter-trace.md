@@ -1,5 +1,13 @@
 # Next P0 slice: Leads shared location filters
 
+Current checkpoint2026-10-15: the count prerequisite below is DONE in#362,
+188/0/0 and live zero/clear verified. Independent filter hygiene#364 is DONE,
+189/0/0,exact main8f0ae54 deployment healthy/live verified. Shared Leads
+location cascade is not built yet. Ranking remains BLOCKED#358 after the
+approved Census Reporter endpoint returned403 on request1;draft#363 is not
+integrated. The original trace/line references below are historical,retained
+for continuity,not an instruction to repeat the completed zero-count fix.
+
 Trace-only checkpoint after verified release#359, main72fbaca. No Leads product
 change, migration, source operation or production write has been made here.
 
