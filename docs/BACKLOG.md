@@ -2,16 +2,22 @@
 
 ## Latest Run Summary
 
-2026-10-15: P0 Leads zero-count fix IN PROGRESS on
-`item/341-lead-location-filters`. All four hydration paths and summary readers
+2026-10-15: P0 Leads zero-count fix DONE in PR#362, mainf5bbe1a.
+Exact deploy7095575960 SUCCESS14:40:18Z;health/dashboard200,fix served.
+Live Wyoming0rows/0shown;Clear100visible rows,drawer opened/closed,0new console
+errors. All four hydration paths and summary readers
 preserve explicit zero rather than substitute the overall total. Focused tests
 execute the real assignment/loader code, including stale-response and legacy
 array cases. Synthetic browser proof passed1366/1920/400/412 with zero writes
 or external requests; screenshots under `docs/screens/2026-10-15-lead-zero-counts/`.
 Full release suite188passed/0failed/0skipped,600s/file. New unit0.13s/browser2.98s;
-county-notice fixture19.81s. Merge/deploy/live verification pending; no release claimed yet.
-Architect answer#358 unblocks county ranking via Census Reporter, not a Census
-key or PEP-as-ACS. Ranking follows this count fix; other features remain paused
+county-notice fixture19.81s. No production business data changed.
+Architect answer#358 approved Census Reporter,not a Census key or PEP-as-ACS.
+Ranking is BLOCKED again: first approved state request returned403;refresh
+stopped after1request,no retry,no artifact written. Local parser/model and
+bounded refresh are unfinished/unreleased;no rank is claimed. Report on#358.
+Independent next P0: architect-requested summary/filter action cleanup.
+Other features remain paused
 pending full P0 owner sign-off. No batch, capture, contact or data mutation.
 
 ### Previous Verified Release
