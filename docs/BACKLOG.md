@@ -2,36 +2,34 @@
 
 ## Latest Run Summary
 
-2026-10-14: P0 buyer and property-card slices DONE#356/#357, main
-cdc4c3083edf0c329dd4c411af4747fc09ae5e80. Exact deployment7056126229
-SUCCESS03:33:25Z from03:32:42Z (43s status interval);health/dashboard/assets200.
-Final184passed/0failed/0skipped,600s/file; new property UI15.50s,Today52.75s,
-phone41.64s. Buyer release separately183/0/0,live verified40visible buyer cards.
-Property check17cards/source/count/share labels,0empty photo blocks; whole-card/
-Enter/back/buyer-section focus worked,review boxes stayed unchecked. Leads100/
-drawer passed. Final normal Today navigation plus bounded cold reload each1Today,
-0new captured errors. In-app webview became unavailable overnight; completed in
-the currently open Chrome dashboard. Stale tab initially showed legacy content;
-cold reload did not reproduce it,no bootstrap defect/root-cause/fix claimed.
-Sixteen synthetic buyer/deal list/detail screenshots across1366/1920/400/412.
-Canonical share shown,not gross; no real approval/import/contact/evidence/source/
-capture/batch/helper/config/business-data action. All backend gates unchanged.
+2026-10-14: P0 shared location filters for Today's Deals and JV DONE in
+[#359](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/359).
+Main72fbaca0ae90e4a02df7c34df95338b5a97c2e1e; exact deployment7080991586
+SUCCESS2026-10-15T00:56:54Z (93s from in-progress status). Health/dashboard/new
+assets200. Final full suite186passed/0failed/0skipped,600s/file;filters20.09s,
+mount15.64s,Activity22.63s,Today37.08s. Earlier184/2 and185/1 reports retained;
+intermittent local startup/file-read cause is not claimed fixed,follow-up#360.
 
-Next P0: shared county/filter foundation,then rollout across lists,remaining
-legacy detail hygiene and first-run guide. Other features remain PAUSED pending
-final Gabriel sign-off. GitHub341 closed alone is not treated as that sign-off.
-Location filter rollout IN PROGRESS: Today's Deals/JV exact cascade,full pre-cap
-county counts,51 states/DC and3144 county identities,per-tab location bookmarks.
-Draft [#359](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/359),
-final186passed/0failed/0skipped,600s/file. Filters20.09s,auth6.27s,mount15.64s,
-Activity22.63s,Today37.08s. Earlier184/2 and185/1 reports retained; intermittent
-local startup/file-read cause remains unproven. Release/read-only check next.
-Ranking portion BLOCKED [#358](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/358):
-current Census API requires a key; cached ACS file is HTML. No invented rank or
-PEP-as-ACS substitution. Alphabetical unranked directory,unknowns null. Other
-list rollouts and type/stage/tier/deadline filters remain P0 work,not DONE.
-Assumptions: timestamp-only contact report; Holder not inferred Owner; canonical
-share,not a fallback gross; missing source/value/split stays unestablished.
+Live desktop1280x585:22 deal cards;50 states+DC;Florida5,Tampa1;dependent fields
+reset correctly and clearing restored22. JV Pinellas1;bookmark reload restored
+JV and county;clearing restored22. Today1,Leads100,drawer opened/closed,0new
+console errors. Chrome reconnected; delayed control events were checked against
+actual DOM state. Eight synthetic desktop/phone screenshots in PR. No business,
+source,approval,evidence,contact,capture,batch,helper or Railway-setting action.
+
+County rankings BLOCKED [#358](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/358):
+ACS cache is HTML,current API requires a key. Directory is explicitly alphabetical;
+ACS/value/rank null,not invented. Test-startup follow-up#360 is not a claim of a
+production fix. Next independent P0: preserve explicit zero-result Leads counts,
+then shared filters on Leads and remaining lists,
+broader filter types,detail hygiene and first-run guide. Other features stay
+PAUSED until Gabriel signs off on the complete P0. Issue341 closure alone is not
+that sign-off. No percent-complete or business readiness is inferred from tests.
+The next slice is trace-only in `docs/cycles/issue-341-lead-filter-trace.md`:
+actual committed count assignments reproduced filtered0 becoming12039 in a
+synthetic,network-free VM. No Leads code changed yet. Verified release notes and
+immutable release metadata are checkpointed on `item/341-lead-location-filters`
+to ride its next P0 PR,avoiding an extra documentation-only production deploy.
 
 Work top to bottom per `AGENTS.md` §2. One item = one PR (split into ordered sub-PRs if large).
 Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
@@ -98,6 +96,22 @@ No production email link/send/confirmation or triage apply as a release test.
 ## Run log
 
 (Newest first. Date — items done — items blocked — assumptions.)
+
+2026-10-14 -- #359 location filters released/verified,main72fbaca,exact deploy
+7080991586 SUCCESS00:56:54Z,93s status interval.186/0/0,600s/file. Live22deal
+cards,FL5/Tampa1,clear22;JV Pinellas1,bookmark reload and clear22;Today1,Leads100/
+drawer,0new errors. Four-size synthetic proofs. No business-data action. Ranking
+BLOCKED#358;unproven test-startup follow-up#360. Next independent P0 Leads filters;
+other features paused. ASSUMED:unranked alphabetical geography is usable without
+pretending missing ACS data or buyer coverage is known.
+
+2026-10-13 owner day -- #357 property-card navigation released/verified,main
+cdc4c3083edf0c329dd4c411af4747fc09ae5e80,deploy7056126229 SUCCESS03:33:25Z,
+43s status interval.184/0/0.17card/source/match/share labels,no empty photos;
+whole-card/Enter/back/match-section focus passed,review boxes unchecked.
+Today1,Leads100/drawer,0new errors after normal navigation/cold reload. Synthetic
+four-size proofs;no business-data action. ASSUMED:canonical our share,not gross;
+missing price/source/split stays unestablished. No bootstrap cause/fix claimed.
 
 2026-10-13 owner day -- #356 buyer navigation released/verified,d6f21e6,
 deployment7055520878 SUCCESS02:48:31Z,46s status interval,health/dashboard/assets
