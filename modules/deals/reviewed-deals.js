@@ -342,7 +342,7 @@ function synchronizeMatchReferences(store, context) {
   }
   return updated;
 }
-function list(store, { now, includeHidden = false, jv = false, state = '', county = '', city = '', recordId = '' }) {
+function list(store, { now, includeHidden = false, jv = false, state = '', county = '', city = '', recordId = '', locationExact = false }) {
   const all = (store.reviewed_deals || []).map(d => {
     const evaluation = evaluate(d, store.buyers, now);
     evaluation.matches = evaluation.matches.map(m => ({ ...m, match_ref: activity.matchReference(store, d.id, m.id) }));
@@ -350,12 +350,20 @@ function list(store, { now, includeHidden = false, jv = false, state = '', count
     row.jv_section = require('./jv-list-view').section(row);
     return row;
   });
-  const items = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.deal_kind === 'jv') && (includeHidden || (jv ? !['closed','dead'].includes(d.jv_workflow.stage) && d.approval !== 'rejected' : !['STALE', 'NO'].includes(d.evaluation.verdict))) &&
+  const eligible = all.filter(d => (!recordId || d.id === recordId) && (!jv || d.deal_kind === 'jv') && (includeHidden || (jv ? !['closed','dead'].includes(d.jv_workflow.stage) && d.approval !== 'rejected' : !['STALE', 'NO'].includes(d.evaluation.verdict))));
+  const items = eligible.filter(d => locationExact ? require('../../dashboard/wos-list-filters').matches(d, {state, county, city}) :
     (!state || d.state.toLowerCase() === state.toLowerCase()) && (!county || d.county.toLowerCase().includes(county.toLowerCase())) && (!city || d.city.toLowerCase().includes(city.toLowerCase())));
+  const locationCounts = new Map();
+  if (locationExact) for (const row of eligible) {
+    const location = {state: row.state, county: row.county, city: row.city};
+    const key = JSON.stringify(location);
+    if (!locationCounts.has(key)) locationCounts.set(key, {...location, count: 0});
+    locationCounts.get(key).count++;
+  }
   const rank = { GOOD: 0, POSSIBLE: 1, OVERPRICED: 2, STALE: 3, NO: 4 };
   const spread = d => { const estimate = (d.evaluation.matches[0] || {}).estimated_spread; return estimate ? estimate.low : -Infinity; };
   items.sort((a, b) => rank[a.evaluation.verdict] - rank[b.evaluation.verdict] || (spread(b) > spread(a) ? 1 : spread(b) < spread(a) ? -1 : 0) || (a.evaluation.deadline || '9999').localeCompare(b.evaluation.deadline || '9999') || a.id.localeCompare(b.id));
-  return { items: items.slice(0, 100), counts: { total: all.length, shown: items.length, vetted_today: all.filter(d => d.approval === 'approved' && d.evidence_reviewed_at && d.evidence_reviewed_at.slice(0, 10) === now.slice(0, 10) && d.evaluation.value.range && d.repair_estimate != null && d.evaluation.matches.some(m=>m.max_price!=null) && !['STALE', 'NO'].includes(d.evaluation.verdict)).length, daily_target: 10, jv: all.filter(d => d.evaluation.jv_eligible).length }, status_labels: STATUS_LABELS };
+  return { items: items.slice(0, 100), ...(locationExact ? {location_counts: Array.from(locationCounts.values())} : {}), counts: { total: all.length, shown: items.length, vetted_today: all.filter(d => d.approval === 'approved' && d.evidence_reviewed_at && d.evidence_reviewed_at.slice(0, 10) === now.slice(0, 10) && d.evaluation.value.range && d.repair_estimate != null && d.evaluation.matches.some(m=>m.max_price!=null) && !['STALE', 'NO'].includes(d.evaluation.verdict)).length, daily_target: 10, jv: all.filter(d => d.evaluation.jv_eligible).length }, status_labels: STATUS_LABELS };
 }
 function jvDraft(deal, evaluation) {
   return ['WORKING JV TERM SHEET - NOT A SIGNED AGREEMENT', 'Title company and counsel must review. This draft establishes no ownership, authority or legal compliance.',

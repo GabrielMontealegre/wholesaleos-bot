@@ -74,6 +74,17 @@ All strict-grid, unsigned-address, provenance and review assertions are retained
 
 ## Release Gate
 
+DONE#357,maincdc4c3083edf0c329dd4c411af4747fc09ae5e80. Exact deployment7056126229
+SUCCESS2026-10-14T03:33:25Z from03:32:42Z (43s status interval);health/dashboard/
+dealJSv10/kitJSv4/marketplaceCSSv2 all200. Initial live17cards,17source/count/share
+labels,0empty photos;whole-card/Enter/back and buyer-section focus passed,review
+boxes unchecked. Leads100/drawer passed. Final Today check completed later on
+2026-10-14 in the currently open Chrome dashboard after the in-app webview became
+unavailable: normal navigation and one bounded cold reload each rendered1Today,
+0new captured errors. A stale pre-navigation tab showed legacy content; cold
+reload did not reproduce it. No bootstrap defect/fix claimed, no code changed
+for browser-tool timeouts. No production business/evidence/contact/source action.
+
 Full final suite600s/file: `docs/test-results/issue-341-deal-navigation-final.txt`.
 SUMMARY passed=184 failed=0 skipped=0 total=184. New card UI15.50s,Today52.75s,
 kit0.51s,mount17.10s,phone41.64s; unchanged capture41.96s/44.65s and

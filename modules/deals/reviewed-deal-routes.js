@@ -3,9 +3,10 @@ const deals = require('./reviewed-deals');
 const activity = require('../records/record-activity');
 const jvWorkflow = require('./jv-workflow');
 function registerReviewedDealRoutes(app, { db, requireAdmin, now = () => new Date().toISOString() }) {
+  require('../records/county-filter-catalog').registerCountyFilterCatalog(app, {requireAdmin});
   function failure(res, e) { const known = /^find_deal_[a-z_]+$/.test(e.code || ''); res.status(known ? e.status || 400 : 503).json({ code: known ? e.code : 'deal_store_unavailable' }); }
   app.get('/api/dashboard/todays-deals', requireAdmin, (req, res) => {
-    try { res.set('Cache-Control', 'no-store').json(deals.list(db.readDBStrict(), { now: now(), includeHidden: req.query.hidden === 'true', jv: req.query.jv === 'true', state: String(req.query.state || '').slice(0, 2), county: String(req.query.county || '').slice(0, 80), city: String(req.query.city || '').slice(0, 80), recordId: String(req.query.record_id || '').slice(0, 128) })); } catch (e) { failure(res, e); }
+    try { res.set('Cache-Control', 'no-store').json(deals.list(db.readDBStrict(), { now: now(), includeHidden: req.query.hidden === 'true', jv: req.query.jv === 'true', state: String(req.query.state || '').slice(0, 2), county: String(req.query.county || '').slice(0, 80), city: String(req.query.city || '').slice(0, 80), locationExact: req.query.location_exact === 'true', recordId: String(req.query.record_id || '').slice(0, 128) })); } catch (e) { failure(res, e); }
   });
   app.patch('/api/dashboard/todays-deals/:id', requireAdmin, (req, res) => {
     try { const result = deals.update(db.readDBStrict(), req.params.id, req.body, { now: now(), operatorId: req.currentUser.id }); db.writeDB(result); res.json({ ok: true }); } catch (e) { failure(res, e); }

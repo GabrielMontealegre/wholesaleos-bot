@@ -479,6 +479,19 @@ and the shared brief; old imports preserve them. No contact outcome, lead fact
 or send is asserted. Production release verification creates no link or receipt
 and does not press either save action -- AGENTS sections3/5/7,D-050 -- 2026-10-10.
 
+ASSUMED: #341 shared filters ship in ordered UI slices. The first exposes exact
+State/County/City filters on Today's Deals and JV, counts before the display cap,
+per-tab location persistence and bookmarks, and the full official county directory.
+County ranking remains BLOCKED in #358: current Census API guidance requires a key,
+and the cached ACS response is HTML. No credential lookup/signup or unapproved data
+request is performed. Gazetteer/PEP establish identities only; they are not relabeled
+ACS, median values are null, and no score is invented. Alphabetical unranked counties
+are explicitly labeled. Buyer-coverage scoring, other list rollouts and full type/
+stage/tier/deadline filtering remain later P0 slices, not claimed delivered here.
+No legal table, market score, source routing, contact/value gate or stored fact
+changes -- data truth and independent progress under AGENTS sections2/3/5/10 --
+2026-10-14.
+
 ASSUMED: D-056 Approvals adds a narrow workflow adapter over existing buyer/deal
 approval services, not new value/match/readiness rules. Source disclosure never
 checks consent automatically. New explicit decisions require review, a current
