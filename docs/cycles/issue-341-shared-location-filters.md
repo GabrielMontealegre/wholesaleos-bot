@@ -58,7 +58,8 @@ readiness, provenance, quarantine, contact or offer rule changes.
 - County identities: cached-source generator is the only artifact writer;
   admin-only catalog GET uses mtime/size cache; browser consumes public geography
   metadata, never source evidence. No import-time FS write/network.
-- Selection: shared pure UMD model is used by the browser and exact API filter.
+- Selection: the shared UMD component's pure matching function is used by the
+  browser and exact API filter; browser persistence is explicit and injected.
   Per-tab localStorage and URL hash store location selection only, never secrets.
   State changes clear county/city; county changes clear city. A failed storage
   write is nonfatal. Old in-flight responses cannot repaint a newer selection.
@@ -95,6 +96,12 @@ could not load Today. Both passed unchanged when isolated; their affected files
 have an empty diff against main. No assertion or health timeout was weakened.
 Initial report retained; another complete run at the final state is required
 before release. A focused final bookmarked-startup/mobile proof also passed.
+Second full run:185passed/1failed/0skipped; API session and Activity passed.
+The unchanged mount-order proof timed out42.34s, then also timed out in isolation;
+an instrumented local run of that same exported proof passed with no captured
+page error or HTTP failure. This is not claimed fixed or attributed to a proven
+cause. Preserve both reports and perform one final quiet full run with no
+concurrent repository edits/commits. Any remaining failure keeps the PR draft.
 
 Remaining P0: same component on Leads/Buyers/Approvals/Map, broader filter types,
 source-backed rankings (#358), remaining detail hygiene and first-run guide.
