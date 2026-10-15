@@ -34,5 +34,10 @@ the helper. Stale loader responses still return before any count write.
 Full suite:188passed/0failed/0skipped,600s/file. New unit0.13s/browser2.98s;
 county-notice fixture19.81s;mount14.92s;shared filters9.98s;Today26.35s.
 Complete per-file durations: `docs/test-results/issue-341-lead-zero-counts-final.txt`.
-Exact deploy/live results will be recorded before completion.
+Released in PR#362, mainf5bbe1a10b7dd88523070e32497ecfc31ac47733.
+Exact deployment7095575960 SUCCESS2026-10-15T14:40:18Z (218s after in-progress).
+Health/dashboard200 and deployed helper function served. Live normal Leads:
+100 visible rows;Wyoming filter0rows/0leads shown;Clear restored100rows and
+empty State selection;drawer opened/closed;0new console errors. No business
+write, batch, capture, helper, contact, evidence or Railway-setting action.
 County ranking is the next independent P0 slice under architect decision D-057.
