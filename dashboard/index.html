@@ -10686,6 +10686,17 @@ function addListeners() {
   }
 }
 
+function leadCountOrFallback() {
+  for (var i = 0; i < arguments.length; i++) {
+    var value = arguments[i];
+    if (typeof value !== 'number' && typeof value !== 'string') continue;
+    if (typeof value === 'string' && !value.trim()) continue;
+    var count = Number(value);
+    if (Number.isSafeInteger(count) && count >= 0) return count;
+  }
+  return 0;
+}
+
 // Full sync from Railway database — runs on init and every 30s
 async function loadLeadsFromAPI() {
   try {
@@ -10694,7 +10705,8 @@ async function loadLeadsFromAPI() {
     if (leadsRes.ok) {
       const data = await leadsRes.json();
       const leads = data.leads || data || [];
-      APP._leadsTotalAll = Number(data.totalAll || data.totalFiltered || leads.length || 0);
+      APP._leadsTotalAll = leadCountOrFallback(data.totalAll, data.totalFiltered, leads.length);
+      APP._leadsTotalFiltered = leadCountOrFallback(data.totalFiltered, APP._leadsTotalAll, leads.length);
       if (leads.length > 0) {
         APP.leads = leads;
         APP.filtered = leads;
@@ -16950,7 +16962,8 @@ async function loadLeadsFromAPI() {
     if (leadsRes.ok) {
       const data = await leadsRes.json();
       const leads = data.leads || data || [];
-      APP._leadsTotalAll = Number(data.totalAll || data.totalFiltered || leads.length || 0);
+      APP._leadsTotalAll = leadCountOrFallback(data.totalAll, data.totalFiltered, leads.length);
+      APP._leadsTotalFiltered = leadCountOrFallback(data.totalFiltered, APP._leadsTotalAll, leads.length);
       if (leads.length > 0) {
         APP.leads = leads;
         save('leads', APP.leads);
@@ -20900,7 +20913,7 @@ function assignRefIds(leads) { return leads.map(function(l){ if(!l.ref_id) l.ref
 
 function loadedLeadCount() {
   var leads = Array.isArray(APP.leads) ? APP.leads : [];
-  var total = Number(APP._leadsTotalAll || 0);
+  var total = leadCountOrFallback(APP._leadsTotalAll);
   return total > leads.length ? total : leads.length;
 }
 
@@ -21277,7 +21290,8 @@ function loadMatchingData() {
     var buyboxPayload = res[2] && Object.prototype.hasOwnProperty.call(res[2], 'buyboxes') ? res[2].buyboxes : res[2];
     APP.buyboxes=Array.isArray(buyboxPayload)?buyboxPayload:[];
     APP.buyboxRecommendations=res[3].recommendations||res[3]||[];
-    APP._leadsTotalAll=Number((res[1]&&(res[1].totalAll||res[1].totalFiltered))||ls.length||0);
+    APP._leadsTotalAll=leadCountOrFallback(res[1]&&res[1].totalAll,res[1]&&res[1].totalFiltered,ls.length);
+    APP._leadsTotalFiltered=leadCountOrFallback(res[1]&&res[1].totalFiltered,APP._leadsTotalAll,ls.length);
     APP._leadIntakeStatus = res[1] && res[1].intake_status ? res[1].intake_status : APP._leadIntakeStatus;
     if(ls.length){APP.leads=assignRefIds(ls);APP.filtered=APP.leads;}
     updateLeadsBadge();
@@ -21388,8 +21402,8 @@ loadLeadsFromAPI=async function(options){
     var ld=await lr.json();
     if (loadSeq !== APP._leadApiLoadSeq) return;
     var leads=Array.isArray(ld&&ld.leads)?ld.leads:(Array.isArray(ld)?ld:[]);
-    APP._leadsTotalAll=Number((ld&&(ld.totalAll||ld.totalFiltered))||leads.length||0);
-    APP._leadsTotalFiltered=Number((ld&&ld.totalFiltered)||APP._leadsTotalAll||leads.length||0);
+    APP._leadsTotalAll=leadCountOrFallback(ld&&ld.totalAll,ld&&ld.totalFiltered,leads.length);
+    APP._leadsTotalFiltered=leadCountOrFallback(ld&&ld.totalFiltered,APP._leadsTotalAll,leads.length);
     APP._leadApiOffset=Number((ld&&ld.offset)||requestedOffset||0);
     APP._leadApiLimit=Number((ld&&ld.limit)||APP._leadApiLimit||300);
     APP._leadApiHasMore=!!(ld&&ld.has_more);
@@ -26313,14 +26327,14 @@ function renderLeads() {
   var opts = [50,100,150,200,250].map(function(n){
     return '<option value="' + n + '"' + (n === perPage ? ' selected' : '') + '>' + n + ' per page</option>';
   }).join('');
-  var safeTotal = Number(APP._leadsTotalAll || baseTotal || total || 0);
-  var safeFiltered = Number(APP._leadsTotalFiltered || safeTotal || total || 0);
+  var safeTotal = leadCountOrFallback(APP._leadsTotalAll, baseTotal, total);
+  var safeFiltered = leadCountOrFallback(APP._leadsTotalFiltered, safeTotal, total);
   var safeOffset = Number(APP._leadApiOffset || 0);
   var safeLimit = Number(APP._leadApiLimit || baseLeads.length || 300);
   var safePage = Math.floor(safeOffset / Math.max(1, safeLimit)) + 1;
   var safePages = Math.max(1, Math.ceil(safeFiltered / Math.max(1, safeLimit)));
   var safePageText = regionalModeLabel() + ': showing safe page of ' + total.toLocaleString() + ' from ' + safeTotal.toLocaleString() + ' total.';
-  if (safeFiltered && safeFiltered !== safeTotal) safePageText += ' Filtered pool ' + safeFiltered.toLocaleString() + '.';
+  if (safeFiltered !== safeTotal) safePageText += ' Filtered pool ' + safeFiltered.toLocaleString() + '.';
   var pager = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;flex-wrap:wrap">' +
     '<button onclick="leadsPrevPage()" ' + (page === 0 && APP._leadApiPrevOffset == null ? 'disabled' : '') + ' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Prev</button>' +
     '<span style="font-size:12px;color:#86868b">' + leadQueueSafeText(safePageText) + ' Safe page ' + safePage + ' of ' + safePages + ' | View ' + (page + 1) + ' of ' + totalPages + '</span>' +

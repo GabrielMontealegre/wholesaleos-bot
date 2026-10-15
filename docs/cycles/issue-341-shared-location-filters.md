@@ -112,3 +112,15 @@ Remaining P0: same component on Leads/Buyers/Approvals/Map, broader filter types
 source-backed rankings (#358), remaining detail hygiene and first-run guide.
 Other features stay paused until Gabriel signs off. Live verification pending
 the gated release; do not treat local screenshots as production proof.
+
+LIVE VERIFIED in#359:main72fbaca0ae90e4a02df7c34df95338b5a97c2e1e,exact deploy
+7080991586 SUCCESS2026-10-15T00:56:54Z,93s status interval. Health/dashboard/assets
+200,served deal script?v=11/shared?v=1. Chrome1280x585:22cards;FL5,county/city
+cascade,Tampa1,3chips;county removal reset city/restored5;clear22. JV Pinellas1,
+bookmark reload reopened JV with selection;clear22. Today1,Leads100/drawer
+opened/closed,0new captured errors. Browser extension reconnected; a few delayed
+CDP input responses were checked against actual DOM outcomes,not bypassed with
+forced input or mistaken for a product defect. No real approval,confirmation,
+source visit,contact,capture,batch,helper or setting action. Final PR comment is
+the deployed evidence;this documentation rides the next P0 PR to avoid an extra
+docs-only deploy. Ranking still blocked#358;startup follow-up#360 is unproven.
