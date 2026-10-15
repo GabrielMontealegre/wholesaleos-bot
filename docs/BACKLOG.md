@@ -22,6 +22,10 @@ legacy detail hygiene and first-run guide. Other features remain PAUSED pending
 final Gabriel sign-off. GitHub341 closed alone is not treated as that sign-off.
 Location filter rollout IN PROGRESS: Today's Deals/JV exact cascade,full pre-cap
 county counts,51 states/DC and3144 county identities,per-tab location bookmarks.
+Draft [#359](https://github.com/GabrielMontealegre/wholesaleos-bot/pull/359),
+final186passed/0failed/0skipped,600s/file. Filters20.09s,auth6.27s,mount15.64s,
+Activity22.63s,Today37.08s. Earlier184/2 and185/1 reports retained; intermittent
+local startup/file-read cause remains unproven. Release/read-only check next.
 Ranking portion BLOCKED [#358](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/358):
 current Census API requires a key; cached ACS file is HTML. No invented rank or
 PEP-as-ACS substitution. Alphabetical unranked directory,unknowns null. Other

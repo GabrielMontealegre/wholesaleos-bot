@@ -102,6 +102,11 @@ an instrumented local run of that same exported proof passed with no captured
 page error or HTTP failure. This is not claimed fixed or attributed to a proven
 cause. Preserve both reports and perform one final quiet full run with no
 concurrent repository edits/commits. Any remaining failure keeps the PR draft.
+Final quiet full run completed:186passed/0failed/0skipped,600s per file.
+Filters UI20.09s/unit0.64s; auth6.27s,mount15.64s,Activity22.63s,
+Today37.08s,shell41.46s,phone24.47s,unchanged county-notice fixture10.99s.
+All three previously failing checks passed in this complete run. This is green
+gate evidence, not a claim that the intermittent startup/file-read cause is fixed.
 
 Remaining P0: same component on Leads/Buyers/Approvals/Map, broader filter types,
 source-backed rankings (#358), remaining detail hygiene and first-run guide.
