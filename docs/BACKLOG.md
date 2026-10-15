@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-15: Leads count fix DONE in#362,mainf5bbe1a;exact deploy7095575960
+SUCCESS14:40:18Z,health/dashboard200,fix served.188passed/0failed/0skipped.
+Live Wyoming0rows/0shown;Clear100visible rows,drawer open/close,0console errors.
+No production data changed. County ranking BLOCKED#358: approved Census Reporter
+first state request returned403;stopped after1request,no retry/artifact written.
+Unfinished local model/parser/refresh checkpoint is DRAFT#363,not integrated or
+releasable. Source-access question posted#358;no bypass or invented rank.
+Independent architect-requested P0 filter hygiene IN PROGRESS: hide unmeasured
+metrics (retain real0),phone collapsed initially,Import/Glossary outside filters.
+Focused actual-dashboard proof passed1366/1920/400/412,no writes/external calls.
+Full gate189passed/0failed/0skipped,600s/file. New proof7.10s,mount14.55s,
+Today28.36s. Merge/deploy/live verification pending. Other features stay paused
+until full P0 Gabriel sign-off;no overall completion percentage is claimed.
+
+### Earlier Run Summary
+
 2026-10-15: P0 Leads zero-count fix IN PROGRESS on
 `item/341-lead-location-filters`. All four hydration paths and summary readers
 preserve explicit zero rather than substitute the overall total. Focused tests

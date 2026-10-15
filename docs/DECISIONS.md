@@ -491,6 +491,14 @@ Proceed after the Leads zero-count fix. Also hide unmeasured deal summary
 metrics, keep phone Filters collapsed, move Import/Glossary outside filters.
 This supersedes the ACS-source block below, not the lead-safety invariants.
 
+ASSUMED: #358's independent P0 hygiene hides any unmeasured summary metric,
+including Submitted, rather than substitute a0 or show Not measured. Real0
+is still rendered. Import/Glossary remain the same navigation actions outside
+the filter details. Initial phone collapse is explicit in the renderer and
+existing user-expanded state survives repaint -- architect answer#358,
+AGENTS sections3/5/11 --2026-10-15. County ranking hit first-request403 and
+stopped;only a blocked draft checkpoint exists in#363,no source workaround.
+
 ASSUMED: #341 count fallback accepts only nonnegative safe integer counts
 (including numeric strings); zero is authoritative. Missing or invalid counts
 fall back to existing total/loaded compatibility paths, never to stale prior
