@@ -18,12 +18,20 @@ expanded, both real conversation entry points open/close, real recent Deal found
 opens its exact deal (not Buyers),100Leads/address-cell drawer opens/closes,
 0console errors,viewport restored. Best0 is honest; eligible Best click is
 synthetic-only proof. Live screenshots contain references/counts, no owner/contact
-or street details. A IN PROGRESS on item/366-a-panel-hygiene: presentation-only
+or street details. A DONE in PR#368: presentation-only
 X/top-overlay Esc,full-height/easy-hit More/account,tighter cards/lists,bounded
 lead row scroll with contained column headers,no floating MODE toolbar.
 Focused proof1366/1920/400/412 passed;final full192passed/0failed/0skipped,
 600s/file,new panel9.39s/shell29.19s/county-notice11.46s. Initial191/1 report
-retained;existing close hook restored without altering old tests. Release/live pending.
+retained;existing close hook restored without altering old tests. Mainffa3dd0d6a1f1cd05c6e70af1d2959900de1194b;
+exact deploy7108050258 SUCCESS2026-10-16T00:51:38Z,60s. Health/dashboard200;
+shellJS4/CSS3/hygiene1 served. Live1366/412:More full height/top-right X,account
+X,centered conversation X/Esc,lead drawer X/Esc,bell X/Esc,100Leads,actual last-row
+click scrolls only bounded list with header retained,MODE static,no page overflow.
+Old tab logged one502 at00:51:27Z,before deploy success;fresh post-deploy tabs
+at both widths hydrate100rows with0console errors. Viewport restored.
+G NEXT on item/366-g-lead-geography;not implemented/released yet. D and A are
+2of10 letters live,not an overall software-completion percentage.
 Live baseline conversation opener worked; no blanket claim that every link was
 broken. Best-deal list was legitimately empty; never fabricate a qualifying deal.
 C and B are NOT live; explicitly notify Gabriel after each is actually verified.
@@ -159,6 +167,14 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-15: #366A released in#368;mainffa3dd0,deploy7108050258 success60s,
+health/dashboard200,192passed/0failed/0skipped. Live1366/412 More/account and
+conversation/lead/bell X/Esc,centered dialog,list-scoped scroll/header,MODEstatic,
+100Leads. One pre-success502 retained as transient observation;fresh tabs0errors.
+Live More screenshots reviewed before publication;no owner/contact/street data.
+No operational writes. G next; C/B NOT LIVE; ranking PAUSED. Post-release proof
+rides G to avoid a docs-only deploy.
 
 2026-10-15: #366D released in#367;main90aca25,exact deploy7107648066 success,
 health/dashboard200,191passed/0failed/0skipped. Live1366/412 groupedOverdue8,
