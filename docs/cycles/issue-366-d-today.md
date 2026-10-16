@@ -42,7 +42,15 @@ clock toUTC noon,restored afterward;all existing assertions remain unchanged.
 Final full rerun: SUMMARY passed=191 failed=0 skipped=0 total=191,600s/file.
 New browser12.41s/unit0.25s;queue7.25s;existing marketplace23.86s/wider21.73s;
 county-notice adapter12.16s. Initial failed report retained,not overwritten.
-Release/live proof pending.
+Released PR#367,main90aca250eac4724c0d64a6832620e94c4bf3aee2.
+Exact deployment7107648066 succeeded2026-10-16T00:22:30Z,45s after in_progress.
+Health/dashboard200;served Today3,Deals13. Live1366/412:40actions,8overdue
+collapse/expand,both recorded conversation entry points open and Esc/Close work,
+actual recent Deal found opens exact deal rather than Buyers. Leads100 hydrate,
+address cell opens drawer,Close lead dismisses;0console errors;viewport restored.
+Live Best0 remains legitimate;no eligible live Best click claimed.
+Screens live-today-1366.jpg/live-today-412.jpg contain only counts/references.
+No production writes,batch,capture,contact,evidence confirmation or helper action.
 
 Baseline live: conversation button opened correctly in this session. Best list
 had no eligible current deals; report that honestly, never seed a real row.
