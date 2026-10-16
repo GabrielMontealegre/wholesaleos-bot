@@ -14,6 +14,15 @@ Module._load = function patchedLoad(request, parent, isMain) {
 };
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wholesaleos-queue-'));
+// Keep initial collection and the daily-progress assertion on one fixture day.
+// A real UTC midnight between them otherwise correctly makes address_rows_today 0.
+const ActualDate = Date;
+const fixtureClock = new ActualDate();
+fixtureClock.setUTCHours(12, 0, 0, 0);
+global.Date = class extends ActualDate {
+  constructor(...args) { super(...(args.length ? args : [fixtureClock.getTime()])); }
+  static now() { return fixtureClock.getTime(); }
+};
 process.env.DB_PATH = path.join(tmpDir, 'db.json');
 process.env.DEAL_BOARD_SNAPSHOTS_PATH = path.join(tmpDir, 'deal-board-snapshots.json');
 fs.writeFileSync(process.env.DB_PATH, JSON.stringify({ leads: [] }, null, 2));
@@ -609,6 +618,7 @@ function mockDeal(overrides) {
   assert.ok(latestWithDaily.daily.batches_today >= 1);
   assert.ok(latestWithDaily.daily.address_rows_today >= 1);
   assert.strictEqual(typeof latestWithDaily.daily.ocr_address_rows_today, 'number');
+  global.Date = ActualDate;
 
   // 3d) Snapshot integrity repair applies to persisted rows, not just new
   // preview output. Reads return a repaired copy; the next batch persists it.
@@ -1516,6 +1526,7 @@ function mockDeal(overrides) {
 
   console.log('dashboard public deal queue tests passed');
 })().catch((error) => {
+  global.Date = ActualDate;
   console.error(error);
   process.exit(1);
 });

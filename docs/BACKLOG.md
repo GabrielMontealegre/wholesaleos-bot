@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
+one PR per letter, live1366/412 click-through for each. County ranking PAUSED,
+including draft#363/data-source follow-ups, until this P0 work is live.
+D IN PROGRESS on item/366-d-today-links: exact typed recent-record targets,
+direct deal opens not hidden by old UI filters, shared recorded-conversation
+opener, overdue grouping with honest counts and empty states. Focused synthetic
+proof passed1366/1920/400/412, no writes/external requests. Final full gate
+191passed/0failed/0skipped,600s/file;new browser12.41s/unit0.25s;county-notice
+adapter12.16s. Initial188/3 report retained;cached-target fix and fixture-only
+midnight clock correction passed unchanged assertions. Release/live proof pending.
+Live baseline conversation opener worked; no blanket claim that every link was
+broken. Best-deal list was legitimately empty; never fabricate a qualifying deal.
+C and B are NOT live; explicitly notify Gabriel after each is actually verified.
+
+### Previous Verified Work
+
 2026-10-15: Leads count fix DONE in#362,mainf5bbe1a;exact deploy7095575960
 SUCCESS14:40:18Z,health/dashboard200,fix served.188passed/0failed/0skipped.
 Live Wyoming0rows/0shown;Clear100visible rows,drawer open/close,0console errors.
@@ -9,11 +25,13 @@ No production data changed. County ranking BLOCKED#358: approved Census Reporter
 first state request returned403;stopped after1request,no retry/artifact written.
 Unfinished local model/parser/refresh checkpoint is DRAFT#363,not integrated or
 releasable. Source-access question posted#358;no bypass or invented rank.
-Independent architect-requested P0 filter hygiene IN PROGRESS: hide unmeasured
+Independent architect-requested P0 filter hygiene DONE in#364: hide unmeasured
 metrics (retain real0),phone collapsed initially,Import/Glossary outside filters.
 Focused actual-dashboard proof passed1366/1920/400/412,no writes/external calls.
 Full gate189passed/0failed/0skipped,600s/file. New proof7.10s,mount14.55s,
-Today28.36s. Merge/deploy/live verification pending. Other features stay paused
+Today28.36s. Main8f0ae54853f73d962ac161e33795194b507598e5;exact deploy7096135333
+SUCCESS2026-10-15T15:00:28Z,health/dashboard200. Live Deals/JV22,phone412/400,
+Leads100/drawer,0console errors. Other features stay paused
 until full P0 Gabriel sign-off;no overall completion percentage is claimed.
 
 ### Earlier Run Summary
@@ -66,6 +84,11 @@ Status values: TODO · IN PROGRESS · DONE (PR link) · BLOCKED (issue link).
 Mark the status here as part of each item's PR.
 
 ## Current Owner Order (D-056, GitHub 2026-10-13)
+
+Owner update2026-10-15 supersedes the slice order below: #366 D -> A -> G -> C
+-> F -> B -> E -> I -> H -> J, one PR per letter, live click-through1366/412.
+Notify Gabriel when C and B are live for his #341 sign-off. County ranking
+stays paused throughout this priority work. Full #366 criteria live in its issue.
 
 P0 [#341](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/341)
 supersedes the order below. UI FIRST: full-height LEFT menu, actionable Today,
