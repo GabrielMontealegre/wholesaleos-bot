@@ -1,0 +1,12 @@
+body[data-wos-design="marketplace"] .panel-dismiss{position:sticky!important;top:0!important;right:0!important;float:right;z-index:5;display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px!important;height:44px!important;min-height:44px;min-width:44px;box-sizing:border-box;padding:0!important;border:1px solid var(--line)!important;border-radius:6px!important;background:var(--card)!important;color:var(--ink)!important;font:24px/1 var(--font)!important;cursor:pointer}
+body[data-wos-design="marketplace"] .panel-hygiene-overlay>div:first-child{box-sizing:border-box;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
+body[data-wos-design="marketplace"] #app .content{padding:16px}
+body[data-wos-design="marketplace"] #app :is(.td-card,.bf-card,.approval-card){padding:14px!important}
+body[data-wos-design="marketplace"] #app .td-summary .td-property-media{margin:-14px -14px 12px}
+body[data-wos-design="marketplace"] #app :is(.td-grid,.bf-grid){gap:12px}
+body[data-wos-design="marketplace"] #app :is(.today-list>li,.cv-row,#notif-panel li){padding-block:10px}
+body[data-wos-design="marketplace"] #app #wosFilterToggleBar{position:static!important;z-index:auto!important;padding:8px!important;margin-bottom:8px!important}
+body[data-wos-design="marketplace"] #app #lead-queue-table-shell{min-height:0!important;max-height:65dvh;overflow:auto!important;overscroll-behavior:contain}
+body[data-wos-design="marketplace"] #app #lead-queue-table-shell th{position:sticky;top:0;z-index:1}
+#notif-panel.open>header{position:sticky;top:-16px;z-index:2;background:var(--card);padding-block:8px}
+dialog.today-dialog{margin:auto}
