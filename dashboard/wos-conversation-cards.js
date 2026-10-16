@@ -5,7 +5,7 @@
  function rank(row,today){const due=day(row.due_date),current=day(today);return due&&current&&due<current?0:due&&current&&due===current?1:2;}
  function order(rows,today){return rows.slice().sort((a,b)=>rank(a,today)-rank(b,today)||(day(a.due_date)||'9999').localeCompare(day(b.due_date)||'9999')||String(a.id||'').localeCompare(String(b.id||'')));}
  function thread(value){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&['facebook.com','www.facebook.com','messenger.com','www.messenger.com','mail.google.com'].includes(url.hostname)?url.href:'';}catch{return '';}}
- function render(row,{clock,roleChip,roleColor,now,today}={}){
+ function render(row,{clock,roleChip,roleColor,now,today,openRecorded=false}={}){
   const recordedRole=['imported_report','operator_input','reported_interaction'].includes(row.source_kind)?row.role:'not_recorded';
   const role=roleChip?roleChip(recordedRole):'<span class="wos-role-chip">Role not recorded</span>';
   const color=roleColor?roleColor(recordedRole):'';
@@ -21,7 +21,7 @@
    (row.next_step?'<p>Next: '+esc(row.next_step)+'</p>':'')+
    '<div class="cv-times">'+(due?'<span>Due: '+esc(clock?clock.formatDate(due):'Unknown')+'</span>':'')+(row.last_in?'<span>Last incoming: '+esc(time(row.last_in))+'</span>':'')+(row.last_out?'<span>Last outgoing: '+esc(time(row.last_out))+'</span>':'')+'</div>'+
    (row.ready_message?'<details><summary>Draft message</summary><label>Unsent draft<textarea readonly data-conversation-draft>'+esc(row.ready_message)+'</textarea></label><button type="button" data-conversation-copy title="Copy the unsent draft; nothing is sent">Copy message</button></details>':'')+
-   primary+'</article>';
+   (openRecorded&&typeof row.id==='string'&&row.id?'<button type="button" data-conversation-open="'+esc(row.id)+'">Open conversation</button>':'')+primary+'</article>';
  }
  const api={order,render,rank};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.wosConversationCards=api;
 })(typeof window==='undefined'?{}:window);

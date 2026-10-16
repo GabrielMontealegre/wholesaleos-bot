@@ -1,5 +1,19 @@
 # Decisions
 
+Owner order #366,2026-10-15: D,A,G,C,F,B,E,I,H,J,one PR per letter and live
+1366/412 click-through. Pause county ranking; notify Gabriel when C and B are
+actually live so he can inspect/sign off #341. No premature sign-off assumed.
+
+ASSUMED: #366D recent-record buttons use a unique server-resolved kind/id,
+never reference-prefix inference or a generic buyer-page fallback. Missing or
+ambiguous targets open Activity. Explicit deal navigation ignores existing UI
+price/type/verdict filters only for that exact requested record, preserving
+backend admission, evaluation and original filters on Back. Overdue starts
+collapsed, keeps its actual count, and preserves expansion on refresh. Queue
+membership and readiness are unchanged. An empty live Best list cannot be
+seeded for proof: exercise its handler with synthetic fixtures and report the
+live empty state plus real recorded-deal opening -- AGENTS3/5,#366D --2026-10-15.
+
 ASSUMED: D-056 card Room reads the existing canonical estimated_spread.low,
 after the recorded JV split; never the larger gross max-minus-asking or a
 fallback when split/value is missing. Label derived/before-costs/not-offer.

@@ -69,6 +69,7 @@
   function markup(jv) {
     var counts = data && data.counts || {}; var items = (data && data.items || []).filter(function (d) {
       if ((filters.record_id && d.id !== filters.record_id) || (jv && d.deal_kind !== 'jv')) return false;
+      if (filters.record_id) return true;
       if (filters.kind && d.deal_kind !== filters.kind || filters.verdict && d.evaluation.verdict !== filters.verdict) return false;
       if (filters.price_min && (d.evaluation.asking == null || d.evaluation.asking < Number(filters.price_min))) return false;
       if (filters.price_max && (d.evaluation.asking == null || d.evaluation.asking > Number(filters.price_max))) return false;
@@ -111,7 +112,7 @@
   var priorSignOut=root.signOutDashboard;
   if(priorSignOut)root.signOutDashboard=function(){requestVersion++;data=null;locationRows=[];loading=false;active='';matchFocus='';return priorSignOut.apply(this,arguments);};
   document.addEventListener('wos-jv-saved', function () { load(); });
-  root.openReviewedDeal = function(id,options) { if(!filters.record_id)previousHidden=filters.hidden;filters.record_id=id;filters.hidden=true;active=id;matchFocus=options&&options.matches?id:'';root.navigate('todays_deals',null); };
+  root.openReviewedDeal = function(id,options) { if(!filters.record_id)previousHidden=filters.hidden;filters.record_id=id;filters.hidden=true;active=id;matchFocus=options&&options.matches?id:'';requestVersion++;if(!data||!(data.items||[]).some(function(d){return d.id===id;}))data=null;loading=false;root.navigate('todays_deals',null); };
   var dashboard = root.renderDashboard; root.renderDashboard = function () { return root.renderTodaysDeals() + dashboard(); };
   var clockStyle = document.createElement('style');
   clockStyle.textContent = '.wos-card-clock{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px 16px;border-block:1px solid var(--line,#42516a);padding-block:12px;margin-block:12px}.wos-card-clock>div{min-width:0}.wos-card-clock dt{font-size:12px;color:var(--muted,#afb8c7)}.wos-card-clock dd{margin:2px 0 0;overflow-wrap:anywhere;font-size:13px;color:var(--ink,#f1f4f8)}.wos-card-clock .wos-clock-urgent dt,.wos-card-clock .wos-clock-urgent dd{color:var(--danger,#ff929b)!important}';
