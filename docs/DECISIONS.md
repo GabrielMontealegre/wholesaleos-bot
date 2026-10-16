@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #366A bounds the existing lead table's row-scroller and keeps column
+headers sticky only inside it; the old MODE toolbar flows normally rather than
+floating over content. Preserve all diagnostic/filter sections instead of hiding
+them to force a viewport fit. Letter G owns replacing regional modes/checkboxes.
+Overlay hygiene delegates dismissal to existing modal/notification/native dialog
+closures or removes only an existing legacy overlay; no save/send action or login
+screen is included. Escape closes only the highest overlay; no backend rewrite
+or form auto-save -- AGENTS3/5 and #366A scope --2026-10-15.
+
 Owner order #366,2026-10-15: D,A,G,C,F,B,E,I,H,J,one PR per letter and live
 1366/412 click-through. Pause county ranking; notify Gabriel when C and B are
 actually live so he can inspect/sign off #341. No premature sign-off assumed.

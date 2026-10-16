@@ -5,13 +5,25 @@
 2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
 one PR per letter, live1366/412 click-through for each. County ranking PAUSED,
 including draft#363/data-source follow-ups, until this P0 work is live.
-D IN PROGRESS on item/366-d-today-links: exact typed recent-record targets,
+D DONE in PR#367: exact typed recent-record targets,
 direct deal opens not hidden by old UI filters, shared recorded-conversation
 opener, overdue grouping with honest counts and empty states. Focused synthetic
 proof passed1366/1920/400/412, no writes/external requests. Final full gate
 191passed/0failed/0skipped,600s/file;new browser12.41s/unit0.25s;county-notice
 adapter12.16s. Initial188/3 report retained;cached-target fix and fixture-only
-midnight clock correction passed unchanged assertions. Release/live proof pending.
+midnight clock correction passed unchanged assertions. Main90aca250eac4724c0d64a6832620e94c4bf3aee2;
+exact deploy7107648066 SUCCESS2026-10-16T00:22:30Z,45s after in_progress.
+Health/dashboard200,new assets served. Live1366/412:40actions,Overdue8 collapsed/
+expanded, both real conversation entry points open/close, real recent Deal found
+opens its exact deal (not Buyers),100Leads/address-cell drawer opens/closes,
+0console errors,viewport restored. Best0 is honest; eligible Best click is
+synthetic-only proof. Live screenshots contain references/counts, no owner/contact
+or street details. A IN PROGRESS on item/366-a-panel-hygiene: presentation-only
+X/top-overlay Esc,full-height/easy-hit More/account,tighter cards/lists,bounded
+lead row scroll with contained column headers,no floating MODE toolbar.
+Focused proof1366/1920/400/412 passed;final full192passed/0failed/0skipped,
+600s/file,new panel9.39s/shell29.19s/county-notice11.46s. Initial191/1 report
+retained;existing close hook restored without altering old tests. Release/live pending.
 Live baseline conversation opener worked; no blanket claim that every link was
 broken. Best-deal list was legitimately empty; never fabricate a qualifying deal.
 C and B are NOT live; explicitly notify Gabriel after each is actually verified.
@@ -147,6 +159,14 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-15: #366D released in#367;main90aca25,exact deploy7107648066 success,
+health/dashboard200,191passed/0failed/0skipped. Live1366/412 groupedOverdue8,
+40actions,both conversation paths,real typed recent-deal link,Leads100/drawer,
+0errors. Live screenshots docs/screens/2026-10-15-366-d/live-today-*.jpg.
+No production write/batch/capture/contact/confirmation/helper or settings change.
+A next;C/Bnotlive;county ranking paused. Post-release evidence rides A to avoid
+a docs-only production deployment.
 
 (Newest first. Date — items done — items blocked — assumptions.)
 
