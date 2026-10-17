@@ -11,9 +11,10 @@
       const script=document.createElement('script');script.src='https://browser.sentry-cdn.com/10.22.0/bundle.min.js';script.crossOrigin='anonymous';
       script.onload=()=>{
         if(!root.APP?.unlocked||root.APP.currentUser?.role!=='admin'||!root.Sentry)return;
-        root.Sentry.init({dsn,defaultIntegrations:false,integrations:[],sendDefaultPii:false,autoSessionTracking:false,tracesSampleRate:0,enableLogs:false,beforeSend:root.wosErrorPrivacy.sanitizeEvent,beforeSendTransaction:()=>null,beforeBreadcrumb:()=>null});
-        root.addEventListener('error',event=>{if(root.APP?.unlocked)root.Sentry.captureException(event.error||new Error('Browser error'));});
-        root.addEventListener('unhandledrejection',event=>{if(root.APP?.unlocked)root.Sentry.captureException(event.reason);});
+        try{root.Sentry.init({dsn,defaultIntegrations:false,integrations:[],sendDefaultPii:false,autoSessionTracking:false,tracesSampleRate:0,enableLogs:false,beforeSend:root.wosErrorPrivacy.sanitizeEvent,beforeSendTransaction:()=>null,beforeBreadcrumb:()=>null});}catch{return;}
+        function capture(error){if(root.APP?.unlocked&&root.APP.currentUser?.role==='admin'){try{root.Sentry.captureException(error);}catch{}}}
+        root.addEventListener('error',event=>capture(event.error||new Error('Browser error')));
+        root.addEventListener('unhandledrejection',event=>capture(event.reason));
       };
       document.head.appendChild(script);
     }catch{/* Monitoring must never block the dashboard. */}
