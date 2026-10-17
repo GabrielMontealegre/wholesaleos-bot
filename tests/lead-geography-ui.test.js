@@ -7,7 +7,7 @@ async function prove(){
   const fixture=createFixtureApp({seedLead:true});
   const server=await new Promise(resolve=>{const s=fixture.app.listen(0,'127.0.0.1',()=>resolve(s));});
   const base='http://127.0.0.1:'+server.address().port;
-  const writes=[],external=[],errors=[],requests=[];let browser;
+  const writes=[],external=[],errors=[],requests=[];let browser,page;
   const rows=[['FL','Northville'],['FL','Northville'],['FL','Southville'],['TX','Northville']].map(([state,city],i)=>({
     id:'geography-'+i,record_ref:'WOS-'+state+'-'+(1040+i),address:(100+i)+' Example St',city,county:'Example',state,
     source:'manual',source_kind:'operator_input',status:'new',row_state:'LOCKED',contact_state:'LOCKED',address_state:'needs_source_proof',
@@ -28,13 +28,14 @@ async function prove(){
         const query=Object.fromEntries(url.searchParams);requests.push(query);
         const selected=rows.filter(row=>geography.matches(row,geography.selection(query)));
         const offset=Number(query.offset)||0,limit=Number(query.limit)||2;
+        await new Promise(resolve=>setTimeout(resolve,75));
         return route.fulfill({json:{leads:selected.slice(offset,offset+limit),totalAll:4,totalFiltered:selected.length,offset,limit,
           has_more:offset+limit<selected.length,next_offset:offset+limit<selected.length?offset+limit:null,
           prev_offset:offset>0?Math.max(0,offset-limit):null,location_counts:geography.counts(rows)}});
       }
       return route.continue();
     });
-    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+    page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
     for(const width of [1366,400,412]){
       await page.setViewportSize({width,height:width===1366?768:915});await page.goto(base+'/dashboard/');
       await page.waitForFunction(()=>APP.currentUser&&APP._leadsTotalFiltered===4&&!APP._leadsLoading);
@@ -51,10 +52,16 @@ async function prove(){
       await page.getByRole('button',{name:'Next',exact:true}).click();
       await page.waitForFunction(()=>APP._leadApiOffset===2&&APP.leads.some(row=>row.state==='TX'));
       await state.selectOption('TX');await page.waitForFunction(()=>APP._leadsTotalFiltered===1&&APP.leads[0]?.state==='TX');
-      await county.selectOption('Example');await city.selectOption('Northville');
+      await county.selectOption('Example');
+      await page.waitForFunction(()=>!APP._leadsLoading&&getLeadToolbarFilters().county==='Example');
+      await county.locator('option[value="Example"][selected]').waitFor({state:'attached'});
+      await city.selectOption('Northville');
       await page.waitForFunction(()=>getLeadToolbarFilters().city==='Northville'&&APP._leadsTotalFiltered===1);
       await state.selectOption('FL');await page.waitForFunction(()=>APP._leadsTotalFiltered===3&&getLeadToolbarFilters().county===''&&getLeadToolbarFilters().city==='');
-      await county.selectOption('Example');await city.selectOption('Southville');
+      await county.selectOption('Example');
+      await page.waitForFunction(()=>!APP._leadsLoading&&getLeadToolbarFilters().county==='Example');
+      await county.locator('option[value="Example"][selected]').waitFor({state:'attached'});
+      await city.selectOption('Southville');
       await page.waitForFunction(()=>APP._leadsTotalFiltered===1&&APP.leads[0]?.city==='Southville');
       await state.selectOption('WY');await page.waitForFunction(()=>APP._leadsTotalFiltered===0&&APP.leads.length===0);
       assert.equal(await page.evaluate(()=>APP._leadsTotalAll),4);
@@ -76,6 +83,10 @@ async function prove(){
     }
     fixture.assertUnchanged();assert.deepEqual(writes,[]);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
     console.log('Leads geography real dashboard1366/400/412: All states/server Next, cascade reset, off-page city facets, real zero recovery,18px checkbox/44px target,address-first drawer,zero writes/external requests passed.');
+  }catch(error){
+    console.error('Geography fixture requests: '+JSON.stringify(requests.slice(-12)));
+    if(page)console.error('Geography fixture state: '+JSON.stringify(await page.evaluate(()=>({width:innerWidth,filters:getLeadToolbarFilters(),total:APP._leadsTotalFiltered,loading:APP._leadsLoading,error:APP._leadsError}))));
+    throw error;
   }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 prove().catch(error=>{console.error(error.stack);process.exitCode=1;});

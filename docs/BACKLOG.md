@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-17 G PR #377, head e05f3eb: initial hosted run 39053360502 finished
+196 passed / 1 failed / 0 skipped,197 total. County-notice acquisition248.87s.
+Only lead-geography-ui failed at county-to-city selection (61.44s,file line55),
+not the earlier startup wait. Local delayed-response reproduction passed;
+the fixture now explicitly waits for county response completion and the newly
+rendered selected county option before city selection. Assertions unchanged;
+synthetic request/state diagnostics retained for any recurrence. Full rerun
+required; no merge/deploy. Initial report: docs/test-results/issue-366-g-initial.txt.
+
 2026-10-17 resumed: current thread turn_context confirms gpt-6.1-sol Medium.
 The previous defaults-only check did not establish the thread's effort and was
 an incorrect basis for repeated stops; use current-thread metadata going forward.
