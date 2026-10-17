@@ -2,6 +2,18 @@
 
 ## Latest Run Summary
 
+2026-10-17 G second hosted report 39054821139:196 passed/1 failed/0 skipped,
+197 total; same new browser fixture,33.62s. Exact local reproduction now uses
+isolated Playwright1.44.0, matching package.json/CI (old local runtime1.62.1).
+Observed cause: old Playwright selected a disabled county control with only the
+empty option and returned []; the later enabled control retained no selection.
+The fixture now waits for an enabled control containing the intended option and
+asserts the returned selection, before checking unchanged functional outcomes.
+Pinned1.44 browser proof PASS1366/400/412, including delayed responses and both
+checkbox targets. No package/dependency manifest change. Prior run39054519901
+was cancelled by concurrency after the select-all target fix, not counted green.
+Final hosted rerun required. No merge/deploy. C trace is separate/uncommitted.
+
 2026-10-17 G PR #377, head e05f3eb: initial hosted run 39053360502 finished
 196 passed / 1 failed / 0 skipped,197 total. County-notice acquisition248.87s.
 Only lead-geography-ui failed at county-to-city selection (61.44s,file line55),

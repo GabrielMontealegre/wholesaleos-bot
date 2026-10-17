@@ -8,6 +8,14 @@ its two-row page size and explicitly requesting page one. The old fixture raced
 the initial 300-row request: all four synthetic rows loaded successfully while
 the test waited for two. Existing product loading/count guards stay unchanged.
 
+Cloud runs39053360502 and39054821139 each finished196/1/0. The new browser
+fixture's county selection also raced a disabled control. Exact local diagnosis
+with the pinned Playwright1.44.0 reproduced selectOption returning[] while the
+old1.62.1 runtime waited automatically. Explicit enabled/option readiness and a
+returned-selection assertion fix the fixture without changing product behavior
+or weakening the cascade checks. Pinned local1366/400/412 proof passes; final
+cloud gate remains required. Dependencies and timeout remain unchanged.
+
 ## Existing Writers And Readers
 
 - `dashboard/index.html:21366` builds the active `/api/leads` request. It always

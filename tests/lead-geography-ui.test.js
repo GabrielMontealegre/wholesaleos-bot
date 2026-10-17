@@ -36,6 +36,13 @@ async function prove(){
       return route.continue();
     });
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+    async function selectLocation(field,value){
+      await page.waitForFunction(({field,value})=>{
+        const control=document.querySelector('#leadGeography [data-list-filter="'+field+'"]');
+        return control&&!control.disabled&&[...control.options].some(option=>option.value===value);
+      },{field,value});
+      assert.deepEqual(await page.locator('#leadGeography [data-list-filter="'+field+'"]').selectOption(value),[value]);
+    }
     for(const width of [1366,400,412]){
       await page.setViewportSize({width,height:width===1366?768:915});await page.goto(base+'/dashboard/');
       await page.waitForFunction(()=>APP.currentUser&&APP._leadsTotalFiltered===4&&!APP._leadsLoading);
@@ -43,7 +50,6 @@ async function prove(){
       await page.waitForFunction(()=>APP._leadsTotalFiltered===4&&APP.leads.length===2);
       const state=page.locator('#leadGeography [data-list-filter="state"]');
       const county=page.locator('#leadGeography [data-list-filter="county"]');
-      const city=page.locator('#leadGeography [data-list-filter="city"]');
       await state.locator('option[value="TX"]').waitFor({state:'attached'});
       assert.equal(await page.locator('#regionalCommandBar').count(),0);
       assert.equal(await page.locator('#lfState,#lfCounty').count(),0);
@@ -51,21 +57,21 @@ async function prove(){
       assert.equal((await page.locator('#lead-queue-table-shell th').allTextContents())[1],'ADDRESS');
       await page.getByRole('button',{name:'Next',exact:true}).click();
       await page.waitForFunction(()=>APP._leadApiOffset===2&&APP.leads.some(row=>row.state==='TX'));
-      await state.selectOption('TX');await page.waitForFunction(()=>APP._leadsTotalFiltered===1&&APP.leads[0]?.state==='TX');
-      await county.selectOption('Example');
+      await selectLocation('state','TX');await page.waitForFunction(()=>APP._leadsTotalFiltered===1&&APP.leads[0]?.state==='TX');
+      await selectLocation('county','Example');
       await page.waitForFunction(()=>!APP._leadsLoading&&getLeadToolbarFilters().county==='Example');
       await county.locator('option[value="Example"][selected]').waitFor({state:'attached'});
-      await city.selectOption('Northville');
+      await selectLocation('city','Northville');
       await page.waitForFunction(()=>getLeadToolbarFilters().city==='Northville'&&APP._leadsTotalFiltered===1);
-      await state.selectOption('FL');await page.waitForFunction(()=>APP._leadsTotalFiltered===3&&getLeadToolbarFilters().county===''&&getLeadToolbarFilters().city==='');
-      await county.selectOption('Example');
+      await selectLocation('state','FL');await page.waitForFunction(()=>APP._leadsTotalFiltered===3&&getLeadToolbarFilters().county===''&&getLeadToolbarFilters().city==='');
+      await selectLocation('county','Example');
       await page.waitForFunction(()=>!APP._leadsLoading&&getLeadToolbarFilters().county==='Example');
       await county.locator('option[value="Example"][selected]').waitFor({state:'attached'});
-      await city.selectOption('Southville');
+      await selectLocation('city','Southville');
       await page.waitForFunction(()=>APP._leadsTotalFiltered===1&&APP.leads[0]?.city==='Southville');
-      await state.selectOption('WY');await page.waitForFunction(()=>APP._leadsTotalFiltered===0&&APP.leads.length===0);
+      await selectLocation('state','WY');await page.waitForFunction(()=>APP._leadsTotalFiltered===0&&APP.leads.length===0);
       assert.equal(await page.evaluate(()=>APP._leadsTotalAll),4);
-      await state.selectOption('');await page.waitForFunction(()=>APP._leadsTotalFiltered===4&&APP.leads.length===2);
+      await selectLocation('state','');await page.waitForFunction(()=>APP._leadsTotalFiltered===4&&APP.leads.length===2);
       const checkbox=page.locator('#lead-queue-table-shell .lead-cb').first();await checkbox.check();
       assert.ok(await checkbox.isChecked());
       const selectedText=await page.locator('#bulk-toolbar').innerText();
