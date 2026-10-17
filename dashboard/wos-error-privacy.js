@@ -3,7 +3,8 @@
   const types=new Set(['Error','TypeError','ReferenceError','SyntaxError','RangeError','URIError','EvalError','AggregateError']);
   const files=new Set(['server.js','wos-error-tracking.js','wos-error-privacy.js','wos-today-workspace.js','wos-todays-deals.js','wos-public-deals.js','wos-desk-shell.js','wos-buyers-found.js','wos-notification-workspace.js','wos-list-filters.js','wos-panel-hygiene.js','wos-conversations.js','wos-record-activity.js']);
   function number(v){return Number.isSafeInteger(v)&&v>=0&&v<10000000?v:undefined;}
-  function sanitizeEvent(event){
+  function sanitizeEvent(event,hint){
+    if(hint)hint.attachments=[];
     if(!event||event.type&&event.type!=='error')return null;
     const clean={level:'error',message:'Application error; free-text details withheld for privacy'};
     if(typeof event.event_id==='string'&&/^[a-f0-9]{32}$/i.test(event.event_id))clean.event_id=event.event_id;

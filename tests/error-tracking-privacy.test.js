@@ -7,6 +7,7 @@ const raw=secrets.join(' '),event={message:raw,user:{name:raw,email:raw,ip_addre
 const before=JSON.stringify(event),clean=privacy.sanitizeEvent(event),out=JSON.stringify(clean);
 for(const secret of secrets)assert.ok(!out.includes(secret));
 assert.equal(JSON.stringify(event),before);assert.equal(clean.exception.values[0].type,'Error');
+const hint={attachments:[{filename:'private.txt',data:raw}]};privacy.sanitizeEvent(event,hint);assert.deepEqual(hint.attachments,[]);
 assert.deepEqual(clean.exception.values[0].stacktrace.frames,[{filename:'application.js',lineno:12,colno:4},{filename:'server.js',lineno:90,colno:1}]);
 assert.equal(privacy.sanitizeEvent({type:'transaction',message:raw}),null);
 assert.equal(privacy.validDsn('https://abc123@o1.ingest.sentry.io/123'),'https://abc123@o1.ingest.sentry.io/123');
