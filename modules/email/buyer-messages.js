@@ -59,7 +59,9 @@ function registerRoutes(app, { db, requireAdmin, now = () => new Date().toISOStr
   const active = new Set();
   function error(res, e) {
     const known = /^buyer_email_[a-z_]+$/.test(e.code || '');
-    res.status(known ? e.status || 400 : 409).json({ code: known ? e.code : 'buyer_email_deal_not_ready' });
+    const deal = /^find_deal_[a-z_]+$/.test(e.code || '');
+    res.status(known ? e.status || 400 : deal ? 409 : 503)
+      .json({ code: known ? e.code : deal ? 'buyer_email_deal_not_ready' : 'buyer_email_unavailable' });
   }
   app.get('/api/dashboard/buyers-found/:id/email', requireAdmin, (req, res) => {
     try {

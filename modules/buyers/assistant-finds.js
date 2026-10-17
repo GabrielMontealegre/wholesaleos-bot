@@ -179,7 +179,9 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
     if (index >= 0) {
       buyers[index] = Object.assign({}, buyers[index], {
         assistant_find: Object.assign({}, buyers[index].assistant_find || newFind(item, now), { last_seen_at: now,
-          ...(item.buyer_type && item.buyer_type !== 'unknown' && buyers[index].assistant_find?.buyer_type_source?.source_kind !== 'operator_input'
+          ...(['platform_uid', 'reference'].includes(duplicate.basis) && item.buyer_type && item.buyer_type !== 'unknown' &&
+            buyers[index].assistant_find?.buyer_type_source?.source_kind !== 'operator_input' &&
+            (!buyers[index].assistant_find?.buyer_type_source?.captured_at || item.captured_at >= buyers[index].assistant_find.buyer_type_source.captured_at)
             ? { buyer_type: item.buyer_type, buyer_type_source: item.buyer_type_source } : {}),
           ...(!['platform_uid', 'reference'].includes(duplicate.basis) ? { possible_duplicate_of: buyers[index].id, duplicate_basis: duplicate.basis } : {}) })
       });

@@ -19,10 +19,15 @@ assert.equal(store.buyers[0].assistant_find.buyer_type_source.source_kind,'assis
 assert.equal(types.view(store.buyers[0].assistant_find).verify_purchase,true);
 assert.equal(types.view({approval:'approved'}).kind,'unknown');
 assert.equal(types.normalize('made up investor type'),null);
+const contactRepeat = finds.ingest(store,finds.validateItems({items:[{...input,buyer_type:'flipper'}]},now),context).store;
+assert.equal(contactRepeat.buyers[0].assistant_find.buyer_type,'acquisitions','contact-only possible duplicates do not replace source facts');
 assert.throws(()=>finds.validateItems({items:[{...input,buyer_type:{verified:true}}]},now),/buyer_type_invalid/);
 store = finds.update(store,'buyer',{approval:'approved'},context);
 store = finds.update(store,'buyer',{buyer_type:'Flipper'},context);
 const ref = store.buyers[0].record_ref;
+const assistantTyped={...store,buyers:store.buyers.map(row=>({...row,assistant_find:{...row.assistant_find,buyer_type:'institutional',buyer_type_source:{source_kind:'assistant_report',captured_at:now}}}))};
+const staleType=finds.ingest(assistantTyped,finds.validateItems({items:[{...input,ref,buyer_type:'builder',captured_at:'2026-10-06T12:00:00Z'}]},now),context).store;
+assert.equal(staleType.buyers[0].assistant_find.buyer_type,'institutional','older reported type never replaces newer evidence');
 const repeated = finds.ingest(store,finds.validateItems({items:[{...input,ref,buy_box:{price_max:999999},buyer_type:'landlord'}]},now),context).store;
 assert.equal(repeated.buyers.length,1);
 assert.equal(repeated.buyers[0].assistant_find.buyer_type,'flipper','operator type cannot be replaced by an assistant import');
