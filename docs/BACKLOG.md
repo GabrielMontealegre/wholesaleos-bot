@@ -2,6 +2,43 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366C PR#378 first full hosted report39076265482:196 passed,
+3 failed,0 skipped,199 total; acquisition273.00s. New unit/UI suites pass.
+Old compact-contact absence contradicts C's explicit public-contact requirement;
+only those two absence checks become presence. Two existing browser proofs now
+select Matching deals/Messages before unchanged visibility/timeline assertions.
+Focused corrections pass0.54s/10.29s/18.11s. Final full rerun required; PR stays
+draft, no merge/deploy. Earlier revision runs cancelled, not counted green.
+
+2026-10-17 #366C IN PROGRESS, not released: reported buyer types/provenance,
+operator override persistence, reference dedupe, real import time, pending-deal
+feed validation, compact contact/criteria cards and three-section workspace.
+Admin-only canonical buyer email preview/draft/reviewed Send implemented;
+one recipient, <=20 teasers, current existing JV gates, durable non-retrying
+uncertain attempts and per-record acceptance logs. No live email or import.
+New unit and actual dashboard1366/400/412 checks pass; the latter caught/fixed
+a selector collision with Email's Open deal handler. Six existing focused
+suites and real-server session gate pass unchanged (only additive auth tests).
+Full hosted suite, self-review and live proof remain release gates. No C sign-off.
+
+2026-10-17 #366G DONE: PR #377 merged as
+d9a64dd6fd4682b6adf018e45331d9c50c49fc55. Hosted run39056128233:
+197 passed / 0 failed / 0 skipped (600s per file; job10m44s;
+county-notice acquisition253.16s). Exact Railway deployment7143682195
+succeeded18:13:47Z,2m11s after start; post-success /health200.
+Live1366/400/412: address-cell drawer opens/closes (X/Escape), normal18px
+checkboxes with44px targets, no phone page overflow, console0errors.
+All states recovers12039 total /10664 filtered; crossed server page1 to2.
+Illinois8983 -> Cook8981 -> ALSIP32; parent resets children. Texas has2
+records but no populated county facet; missing facts were not invented.
+Real Anderson County zero-result screenshots contain no private records:
+docs/screens/2026-10-17-366-g/live-empty-{1366,400,412}.png.
+Assets confirmed: marketplace.css?v=3,list-filters.js?v=2. No business
+writes/outreach/captures/batches/settings changes. D/A/G verified live:
+3of10 requested UI letters, not a claim about whole-product completion.
+Next: #366C buyer workspace, trace prepared on item/366-c-buyer-workspace;
+not built/released yet. Carry proof in that branch, no docs-only deploy.
+
 2026-10-17 G second hosted report 39054821139:196 passed/1 failed/0 skipped,
 197 total; same new browser fixture,33.62s. Exact local reproduction now uses
 isolated Playwright1.44.0, matching package.json/CI (old local runtime1.62.1).

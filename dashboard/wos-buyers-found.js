@@ -4,9 +4,14 @@
   var loading = false;
   var error = '';
   var notice = '';
-  var filters = { status: '', deal_type: '', area: '', approval: '' };
+  var filters = { status: '', deal_type: '', area: '', approval: '', buyer_type: '' };
   var drafts = {};
   var selectedId = '';
+  var section = 'box';
+  var messageState = {};
+  var messageReads = {};
+  var buyerTypes = { flipper:'Flipper',landlord:'Landlord / rental investor',institutional:'Institutional / hedge fund',
+    acquisitions:'Acquisitions company',wholesaler:'Wholesaler / middleman',builder:'Builder',land_buyer:'Land buyer',unknown:'Type not stated' };
   var importOpen = false;
   var importJson = '';
   var importPreview = null;
@@ -31,7 +36,7 @@
   }
   function importPanel() {
     if (!data || !data.capabilities || !data.capabilities.can_import) return '';
-    if (!importOpen) return '<div class="bf-actions"><button type="button" data-import-action="open">Import buyers</button><span>Also accepts kind: deal records; deals stay pending.</span></div>';
+    if (!importOpen) return '<div class="bf-actions"><button type="button" data-import-action="open">Import buyers</button></div>';
     var counts = importPreview && importPreview.counts;
     var reasons = { find_url_invalid: 'Source or profile link is missing or invalid.', find_field_required: 'Required information is missing.',
       find_field_invalid: 'A field is invalid or too long.', find_item_invalid: 'Unsupported fields or item format.', find_type_invalid: 'Platform or property type is unsupported.',
@@ -53,6 +58,15 @@
   function sourceTime(value){return root.wosCardClock?root.wosCardClock.formatTime(value,new Date().toISOString()):'Unknown';}
   function contactTime(item){return item.deal_fit&&item.deal_fit.last_contact_at&&root.wosCardClock?root.wosCardClock.formatTime(item.deal_fit.last_contact_at,new Date().toISOString()):'';}
   function matchLabel(view){return view?view.count+(view.count===1?' deal matches':' deals match'):'Deal matches not measured';}
+  function contacts(item) {
+    return '<div class="bf-contact">'+(item.phone?'<span>'+esc(item.phone)+'</span>':'')+
+      (item.email?'<span>'+esc(item.email)+'</span>':'<span class="bf-email-missing">Email missing</span>')+'</div>';
+  }
+  function typeChip(item) {
+    var view=item.buyer_type_view||{},kind=view.kind||item.buyer_type||'unknown';
+    return '<span class="bf-type">'+esc(buyerTypes[kind]||buyerTypes.unknown)+'</span>'+
+      (view.verify_purchase||['institutional','acquisitions'].includes(kind)?'<span class="bf-caution">Verify they close</span>':'');
+  }
   function card(item,editedDraft){
     if(selectedId===item.id)return detailedCard(item,editedDraft);
     var box=item.buy_box||{},view=item.deal_fit,criteria=[];
@@ -60,11 +74,14 @@
     if(Array.isArray(box.types)&&box.types.length)criteria.push(box.types.join(', '));
     if(box.pct_arv)criteria.push(box.pct_arv+' of after-repair value');
     if(box.rehab_tolerance)criteria.push(box.rehab_tolerance);
+    if(box.beds_min!=null)criteria.push(box.beds_min+'+ beds');
+    if(box.baths_min!=null)criteria.push(box.baths_min+'+ baths');
+    criteria=criteria.concat((box.exclusions||[]).map(function(value){return 'Check: '+value;}));
     var areas=[].concat(item.states||[],item.areas||[],box.zips||[]).join(', '),last=contactTime(item);
-    return '<article class="bf-card bf-compact" data-id="'+esc(item.id)+'" data-buyer-card-open="'+esc(item.id)+'" tabindex="0" aria-label="Open buyer '+esc(item.name)+'"><h3>'+esc(item.name)+'</h3>'+(areas?'<p>'+esc(areas)+'</p>':'')+(criteria.length?'<p class="bf-buy-box-line">'+esc(criteria.join(' | '))+'</p>':'')+(view?'<button type="button" class="bf-match-badge" data-buyer-open="'+esc(item.id)+'" title="Open the recorded matching deals">'+esc(matchLabel(view))+'</button>':'<span class="bf-match-badge">Deal matches not measured</span>')+(last?'<p>Last contact report: '+esc(last)+'</p>':'')+'<div class="bf-compact-status"><span>'+esc(approvalLabels[item.approval||'pending'])+'</span>'+(statusLabels[item.status]?'<span>'+esc(statusLabels[item.status])+'</span>':'')+'</div><button type="button" data-buyer-open="'+esc(item.id)+'">Open buyer</button></article>';
+    return '<article class="bf-card bf-compact" data-id="'+esc(item.id)+'" data-buyer-card-open="'+esc(item.id)+'" tabindex="0" aria-label="Open buyer '+esc(item.name)+'"><h3>'+esc(item.name)+'</h3>'+contacts(item)+'<div class="bf-chips">'+typeChip(item)+'</div>'+(areas?'<p>'+esc(areas)+'</p>':'')+(criteria.length?'<div class="bf-chips">'+criteria.map(function(value){return '<span>'+esc(value)+'</span>';}).join('')+'</div>':'')+(view?'<button type="button" class="bf-match-badge" data-buyer-open="'+esc(item.id)+'" data-buyer-section="matches" title="Open the recorded matching deals">'+esc(matchLabel(view))+'</button>':'<span class="bf-match-badge">Deal matches not measured</span>')+(last?'<p>Last contact report: '+esc(last)+'</p>':'')+'<div class="bf-compact-status"><span>'+esc(approvalLabels[item.approval||'pending'])+'</span>'+(statusLabels[item.status]?'<span>'+esc(statusLabels[item.status])+'</span>':'')+'</div><button type="button" data-buyer-open="'+esc(item.id)+'">Open buyer</button></article>';
   }
   function detailedCard(item, editedDraft) {
-    var contacts = [item.email, item.phone].filter(Boolean).map(function (value) { return '<span>' + esc(value) + ' (published by them)</span>'; }).join('<br>');
+    var publishedContacts = [item.email, item.phone].filter(Boolean).map(function (value) { return '<span>' + esc(value) + ' (published by them)</span>'; }).join('<br>');
     var box = item.buy_box || {};
     var fits = item.fits || {};
     var buyerKind = String(item.classification || 'unknown').replace(/_/g, ' ');
@@ -73,33 +90,44 @@
     }).join('');
     return '<article class="bf-card" data-id="' + esc(item.id) + '">' +
       '<div class="bf-card-heading"><h3>' + esc(item.name) + '</h3>'+(statusLabels[item.status]?'<span>' + esc(statusLabels[item.status]) + '</span>':'')+'</div>'+(item.record_ref?'<p class="bf-muted">'+esc(item.record_ref)+'</p>':'') +
+      contacts(item)+'<div class="bf-chips">'+typeChip(item)+'</div>'+
+      '<div class="bf-actions"><button type="button" data-buyer-compose="buyer_buy_box"'+(!item.email||item.approval!=='approved'?' disabled':'')+'>Email this buyer</button><button type="button" data-buyer-section="matches">Send matching deals</button></div>'+
+      '<div class="bf-tabs" role="tablist" aria-label="Buyer workspace">'+[['box','Buy box'],['matches','Matching deals'],['messages','Messages']].map(function(tab){return '<button type="button" role="tab" aria-selected="'+(section===tab[0])+'" data-buyer-section="'+tab[0]+'">'+tab[1]+'</button>';}).join('')+'</div>'+
+      '<section class="bf-workspace-section"'+(section!=='box'?' hidden':'')+'><label>Buyer type<select data-edit-buyer-type>'+options(buyerTypes,item.buyer_type_view&&item.buyer_type_view.kind||item.buyer_type||'unknown','Choose type')+'</select></label><button type="button" data-action="type">Save buyer type</button>'+
       (item.email_subject ? '<p>Email subject: ' + esc(item.email_subject) + '</p>' : '') +
       '<p class="bf-muted">Submitted buyer record</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
       '<p class="bf-muted">' + esc(buyerKind) + (item.post_age ? ' | Post age: ' + esc(item.post_age) : '') + '</p>' +
       (item.possible_duplicate_of ? '<p>Possible duplicate of ' + esc(item.possible_duplicate_of) + ' (' + esc(item.duplicate_basis) + '). Kept on the existing record.</p>' : '') +
       '<p><b>' + esc(item.group_name) + '</b> · ' + esc(item.deal_type) + '</p>' +
       '<p>' + esc(item.what_they_buy) + '</p><p class="bf-muted">' + esc([].concat(item.states || [], item.areas || []).join(', ') || 'Area not stated') + '</p>' +
-      (contacts ? '<p>' + contacts + '</p>' : '') +
+      (publishedContacts ? '<p>' + publishedContacts + '</p>' : '') +
       '<p class="bf-muted">Captured ' + esc(sourceTime(item.captured_at)) + ' · <a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">Source search</a></p>' +
       (item.post_url ? '<p><a href="' + esc(item.post_url) + '" target="_blank" rel="noopener noreferrer">Original post</a></p>' : '') +
       '<details><summary>Buy box</summary>' + (boxRows ? '<dl class="bf-box">' + boxRows + '</dl>' : '<p>No structured criteria supplied.</p>') + '</details>' +
-      '<h4>Reviewed deals that match</h4>'+dealRows(item.deal_fit&&item.deal_fit.matches,false)+'<h4>Near misses</h4>'+dealRows(item.deal_fit&&item.deal_fit.near_misses,true)+(contactTime(item)?'<p>Last contact report: '+esc(contactTime(item))+'</p>':'')+
+      '<div class="bf-actions"><label>Approval reason (optional)<input data-reason maxlength="300" placeholder="Optional reason"></label><button type="button" data-action="approval" data-approval="approved"'+(item.approval==='approved'?' disabled':'')+'>Approve</button><button type="button" data-action="approval" data-approval="rejected"'+(item.approval==='rejected'?' disabled':'')+'>Reject</button></div></section>'+
+      '<section class="bf-workspace-section"'+(section!=='matches'?' hidden':'')+'><h4>Reviewed deals that match</h4>'+dealRows(item.deal_fit&&item.deal_fit.matches,false)+'<button type="button" data-buyer-compose="buyer_teaser"'+(!item.email||item.approval!=='approved'?' disabled':'')+'>Preview selected deals in one email</button><p class="bf-muted">Only current, approved deals with reviewed value and confirmed availability can be shared.</p><h4>Near misses</h4>'+dealRows(item.deal_fit&&item.deal_fit.near_misses,true)+(contactTime(item)?'<p>Last contact report: '+esc(contactTime(item))+'</p>':'')+
       '<p><b>Leads that fit this buy box: ' + esc(fits.count == null ? 'Not measured' : fits.count) + '</b></p>' +
       '<details><summary>Fit reasons</summary><p>' + esc(fits.approval_required ? 'Approval required for matching. Partners stay outside end-buyer matching.' : fits.scope || 'Fit not measured.') + '</p>' +
       Object.keys(fits.reasons || {}).map(function (reason) { return '<p>' + esc(reason) + ': ' + esc(fits.reasons[reason]) + '</p>'; }).join('') +
       Object.keys(fits.unknown || {}).map(function (reason) { return '<p class="bf-muted">' + esc(reason) + ': ' + esc(fits.unknown[reason]) + '</p>'; }).join('') + '</details>' +
-      '<label>Approval reason (optional)<input data-reason maxlength="300" placeholder="Optional reason"></label>' +
-      '<div class="bf-actions"><button type="button" data-action="approval" data-approval="approved"' + (item.approval === 'approved' ? ' disabled' : '') + '>Approve</button>' +
-      '<button type="button" data-action="approval" data-approval="rejected"' + (item.approval === 'rejected' ? ' disabled' : '') + '>Reject</button></div>' +
+      '</section><section class="bf-workspace-section"'+(section!=='messages'?' hidden':'')+'>'+emailPanel(item)+
       '<label>Draft message<textarea maxlength="600" data-draft="' + esc(item.id) + '">' + esc(editedDraft == null ? item.drafted_message : editedDraft) + '</textarea></label>' +
       '<div class="bf-actions"><button type="button" data-action="save">Save draft</button><button type="button" data-action="copy">Copy message</button>' +
       '<a href="' + esc(item.profile_url) + '" target="_blank" rel="noopener noreferrer">Open profile</a></div>' +
       '<div class="bf-actions">' + ['messaged', 'emailed', 'commented', 'replied', 'not_a_fit'].map(function (status) {
         return '<button type="button" data-action="status" data-status="' + status + '"' + (status === item.status || (item.approval !== 'approved' && status !== 'not_a_fit') ? ' disabled' : '') + '>Mark ' + esc(statusLabels[status].toLowerCase()) + '</button>';
       }).join('') + '</div>' +
-      (root.wosRecordTimeline ? root.wosRecordTimeline('buyer', item.id, item.record_ref) : '') + '</article>';
+      (root.wosRecordTimeline ? root.wosRecordTimeline('buyer', item.id, item.record_ref) : '') + '</section></article>';
   }
-  function dealRows(rows,near){return Array.isArray(rows)&&rows.length?rows.map(function(d){return '<div class="bf-deal-row"><button type="button" data-buyer-deal="'+esc(d.id)+'">'+esc(d.ref||'Open deal')+' - '+esc([d.city,d.state,d.zip].filter(Boolean).join(', '))+'</button><p>'+esc(near?d.reason:money(d.asking)+' asking | '+money(d.buyer_max)+' buyer maximum')+'</p>'+(d.checks||[]).map(function(check){return '<p>Check: '+esc(check)+'</p>';}).join('')+'</div>';}).join(''):'<p>'+(near?'No price/value near misses in the reviewed-deal candidates.':'No reviewed deals match this buyer yet.')+'</p>';}
+  function dealRows(rows,near){return Array.isArray(rows)&&rows.length?rows.map(function(d){return '<div class="bf-deal-row">'+(!near?'<label class="bf-deal-select"><input type="checkbox" data-buyer-email-deal="'+esc(d.id)+'"'+(!d.teaser_ready?' disabled':'')+'>Include in email'+(!d.teaser_ready?' (availability review needed)':'')+'</label>':'')+'<button type="button" data-buyer-deal="'+esc(d.id)+'">'+esc(d.ref||'Open deal')+' - '+esc([d.city,d.state,d.zip].filter(Boolean).join(', '))+'</button><p>'+esc(near?d.reason:money(d.asking)+' asking | '+money(d.buyer_max)+' buyer maximum')+'</p>'+(d.checks||[]).map(function(check){return '<p>Check: '+esc(check)+'</p>';}).join('')+'</div>';}).join(''):'<p>'+(near?'No price/value near misses in the reviewed-deal candidates.':'No reviewed deals match this buyer yet.')+'</p>';}
+  function emailPanel(item) {
+    var state=messageState[item.id]||{},preview=state.preview;
+    return '<div class="bf-email-panel"><h4>Buyer email</h4><p role="status">'+esc(state.error||state.notice||'Choose Email this buyer, or select matching deals. Nothing is sent automatically.')+'</p>'+
+      (preview?'<p>To: '+esc(preview.to)+'</p><h4>'+esc(preview.subject)+'</h4><pre class="bf-email-preview">'+esc(preview.body)+'</pre>'+
+        '<label class="bf-deal-select"><input type="checkbox" data-email-reviewed'+(state.reviewed?' checked':'')+'>I reviewed this entire email and its recipient.</label><div class="bf-actions"><button type="button" data-buyer-email="draft"'+(state.busy?' disabled':'')+'>Save reviewed draft</button><button type="button" data-buyer-email="send"'+(!state.draftId||!preview.configured||state.busy?' disabled':'')+'>Send email</button></div>'+
+        (!preview.configured?'<p>Email sending is not connected. Check Settings &gt; Email.</p>':''):'')+
+      (state.messages||[]).map(function(message){return '<details><summary>'+esc(message.subject)+' - '+esc(message.status==='accepted'?'Accepted by mail server':message.status==='unknown'||message.status==='sending'?'Delivery uncertain - check Sent before doing anything else':'Draft, not sent')+'</summary><p>'+esc(sourceTime(message.sent_at||message.created_at))+'</p><pre class="bf-email-preview">'+esc(message.body)+'</pre></details>';}).join('')+'</div>';
+  }
   function markup(payload) {
     var counts = payload && payload.counts || {};
     var items = payload && payload.items || [];
@@ -107,6 +135,7 @@
       if (selectedId) return item.id === selectedId;
       return (!filters.status || item.status === filters.status) && (!filters.deal_type || item.deal_type === filters.deal_type) &&
         (filters.approval ? (item.approval || 'pending') === filters.approval : item.approval !== 'rejected') &&
+        (!filters.buyer_type || (item.buyer_type_view&&item.buyer_type_view.kind||item.buyer_type||'unknown') === filters.buyer_type) &&
         (!filters.area || [].concat(item.states || [], item.areas || []).join(' ').toLowerCase().includes(filters.area.toLowerCase()));
     });
     return '<style>.bf-page{max-width:1180px;color:#202124}.bf-stats,.bf-filters,.bf-actions,.bf-card-heading{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.bf-stats{padding:12px 0;border-bottom:1px solid #ddd}.bf-stats b{font-size:20px}.bf-filters{padding:16px 0}.bf-page label{font-size:12px;display:block}.bf-page select,.bf-page input,.bf-page textarea{box-sizing:border-box;padding:9px;border:1px solid #c9cdd2;border-radius:5px;background:#fff;color:#202124;font:inherit;max-width:100%}.bf-page input{width:200px}.bf-page textarea{display:block;width:100%;min-height:110px;resize:vertical;margin-top:6px}.bf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px}.bf-card{min-width:0;border:1px solid #d8dce1;border-radius:8px;padding:16px;background:#fff;overflow-wrap:anywhere}.bf-card-heading{justify-content:space-between}.bf-card h3{font-size:16px;margin:0}.bf-card p{font-size:13px;line-height:1.5;margin:10px 0}.bf-muted{color:#62676e}.bf-actions{margin:12px 0;gap:8px}.bf-actions button,.bf-actions a{font:inherit;font-size:12px;padding:8px 10px;border:1px solid #c9cdd2;border-radius:5px;background:#fff;color:#184b80;cursor:pointer;text-decoration:none}.bf-actions button:disabled{opacity:.5;cursor:default}.bf-message{padding:8px 0;font-size:13px}.bf-error{color:#a32222}</style>' +
@@ -116,7 +145,9 @@
       '<div class="bf-filters"><label>Approval<br><select data-filter="approval">' + options(approvalLabels, filters.approval, 'Pending and approved') + '</select></label>' +
       '<label>Status<br><select data-filter="status">' + options(statusLabels, filters.status, 'All statuses') + '</select></label>' +
       '<label>Property type<br><select data-filter="deal_type">' + options({ house: 'House', land: 'Land' }, filters.deal_type, 'All types') + '</select></label>' +
+      '<label>Buyer type<br><select data-filter="buyer_type">'+options(buyerTypes,filters.buyer_type,'All buyer types')+'</select></label>'+
       '<label>State or metro<br><input data-filter="area" value="' + esc(filters.area) + '" placeholder="State or metro"></label></div>' +
+      '<p class="bf-muted">'+esc(payload&&payload.last_import_at?'Last imported '+sourceTime(payload.last_import_at):'Import time not recorded')+'</p>'+
       '<div class="bf-message' + (error ? ' bf-error' : '') + '" role="status">' + esc(error || notice) + '</div>' +
       (selectedId ? '<button data-clear-record-selection>Show all buyers</button>' : '') + importPanel() +
       (payload ? (shown.length ? '<div class="bf-grid">' + shown.map(function (item) { return card(item, drafts[item.id]); }).join('') + '</div>' : '<p>' + (items.length ? 'No buyers match these filters.' : 'No buyers found yet. Public-post finds from your assistant will appear here.') + '</p>') : '<p>' + (error ? 'Buyer finds are unavailable.' : 'Loading buyer finds...') + '</p>') + '</div>';
@@ -124,6 +155,18 @@
   function paint() {
     var target = document.getElementById('wos-buyers-found');
     if (target) target.innerHTML = markup(data);
+  }
+  function readMessages(id) {
+    var ticket=(messageReads[id]||0)+1;messageReads[id]=ticket;
+    return fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email',{cache:'no-store'})
+      .then(function(response){if(!response.ok)throw new Error('Could not load buyer email history.');return response.json();})
+      .then(function(result){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.messages=result.messages;})
+      .catch(function(caught){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.error=caught.message;})
+      .finally(function(){
+        if(messageReads[id]!==ticket||selectedId!==id)return;
+        var panel=document.querySelector('#wos-buyers-found .bf-email-panel');
+        if(panel)panel.outerHTML=emailPanel({id:id});
+      });
   }
   function load() {
     if (loading || !document.getElementById('wos-buyers-found')) return;
@@ -135,13 +178,14 @@
       .finally(function () { loading = false; paint(); });
   }
   root.renderBuyersFound = function () { setTimeout(load, 0); return '<section id="wos-buyers-found">' + markup(data) + '</section>'; };
-  root.openBuyerFind = function(id) { selectedId=id;root.navigate('buyers_found',null); };
+  root.openBuyerFind = function(id) { selectedId=id;section='box';root.navigate('buyers_found',null); };
   if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card, detailedCard: detailedCard };
   if (typeof document === 'undefined') return;
   document.addEventListener('keydown', function (event) {
     if (!event.target.matches('#wos-buyers-found [data-buyer-card-open]') || !['Enter', ' '].includes(event.key)) return;
     event.preventDefault();
     selectedId = event.target.dataset.buyerCardOpen;
+    section='box';
     paint();
   });
   document.addEventListener('input', function (event) {
@@ -153,6 +197,10 @@
     }
   });
   document.addEventListener('change', function (event) {
+    if(event.target.matches('#wos-buyers-found [data-email-reviewed]')) {
+      if(messageState[selectedId])messageState[selectedId].reviewed=event.target.checked;
+      return;
+    }
     if (event.target.matches('#wos-buyers-found [data-import-approve]')) { importApprove = event.target.checked; return; }
     if (event.target.matches('#wos-buyers-found [data-import-file]')) {
       var file = event.target.files[0];
@@ -171,9 +219,34 @@
     paint();
   });
   document.addEventListener('click', function (event) {
-    var openBuyer=event.target.closest('[data-buyer-open]');if(openBuyer){selectedId=openBuyer.dataset.buyerOpen;paint();return;}
+    var openBuyer=event.target.closest('[data-buyer-open]');if(openBuyer){selectedId=openBuyer.dataset.buyerOpen;section=openBuyer.dataset.buyerSection||'box';paint();return;}
+    var tab=event.target.closest('#wos-buyers-found [data-buyer-section]');if(tab){section=tab.dataset.buyerSection;paint();if(section==='messages')readMessages(selectedId);return;}
+    var compose=event.target.closest('#wos-buyers-found [data-buyer-compose]');
+    if(compose){
+      var ids=[].map.call(document.querySelectorAll('#wos-buyers-found [data-buyer-email-deal]:checked'),function(input){return input.dataset.buyerEmailDeal;});
+      var kind=compose.dataset.buyerCompose,id=selectedId;
+      if(kind==='buyer_teaser'&&!ids.length){error='Select at least one shareable deal first.';paint();return;}
+      section='messages';error='';messageState[id]={busy:true,notice:'Preparing a preview. Nothing sent.'};paint();
+      fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,deal_ids:kind==='buyer_teaser'?ids:[]})})
+        .then(function(response){if(!response.ok)throw new Error('Preview refused. Check approval, published email and current deal availability.');return response.json();})
+        .then(function(result){messageState[id]={preview:result};})
+        .catch(function(caught){messageState[id]={error:caught.message};}).finally(function(){paint();readMessages(id);});return;
+    }
+    var emailButton=event.target.closest('#wos-buyers-found [data-buyer-email]');
+    if(emailButton){
+      var id=selectedId,state=messageState[id]||{},preview=state.preview,review=document.querySelector('#wos-buyers-found [data-email-reviewed]');
+      if(!preview||state.busy)return;
+      if(!review||!review.checked){state.error='Review the entire email and tick the review box first.';paint();return;}
+      var action=emailButton.dataset.buyerEmail;
+      if(action==='send'&&!state.draftId)return;
+      state.busy=true;state.error='';paint();
+      fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(action==='draft'?{kind:preview.kind,deal_ids:preview.deal_ids,version:preview.version}:{draft_id:state.draftId,reviewed:true})})
+        .then(function(response){if(!response.ok)throw new Error(action==='send'?'Send not confirmed. Check Sent before trying anything else.':'Draft changed or expired. Prepare a new preview.');return response.json();})
+        .then(function(result){state.reviewed=false;if(action==='draft'){state.draftId=result.id;state.notice='Draft saved. Nothing sent.';}else{state.preview=null;state.draftId=null;state.notice='Accepted by mail server. Delivery is not confirmed.';}})
+        .catch(function(caught){state.error=caught.message;}).finally(function(){state.busy=false;paint();readMessages(id);});return;
+    }
     var buyerCard = event.target.closest('#wos-buyers-found [data-buyer-card-open]');
-    if (buyerCard && !event.target.closest('button,a,input,select,textarea,summary,[role="button"]')) { selectedId=buyerCard.dataset.buyerCardOpen;paint();return; }
+    if (buyerCard && !event.target.closest('button,a,input,select,textarea,summary,[role="button"]')) { selectedId=buyerCard.dataset.buyerCardOpen;section='box';paint();return; }
     var openDeal=event.target.closest('[data-buyer-deal]');if(openDeal&&root.openReviewedDeal){root.openReviewedDeal(openDeal.dataset.buyerDeal);return;}
     if(event.target.closest('[data-clear-record-selection]')) { selectedId='';paint();return; }
     var importButton = event.target.closest('#wos-buyers-found [data-import-action]');
@@ -208,21 +281,21 @@
     if (!button) return;
     var article = button.closest('[data-id]');
     var id = article.dataset.id;
-    var draft = article.querySelector('textarea').value;
+    var draft = article.querySelector('textarea')&&article.querySelector('textarea').value;
     if (button.dataset.action === 'copy') {
       navigator.clipboard.writeText(draft).then(function () { notice = 'Message copied. You choose whether to send it.'; error = ''; paint(); })
         .catch(function () { error = 'Clipboard unavailable. Select the draft text to copy it.'; paint(); });
       return;
     }
     button.disabled = true;
-    var body = button.dataset.action === 'save' ? { drafted_message: draft } : button.dataset.action === 'approval' ?
+    var body = button.dataset.action === 'type' ? {buyer_type:article.querySelector('[data-edit-buyer-type]').value} : button.dataset.action === 'save' ? { drafted_message: draft } : button.dataset.action === 'approval' ?
       { approval: button.dataset.approval, reason: article.querySelector('[data-reason]').value } : { status: button.dataset.status };
     fetch('/api/dashboard/buyers-found/' + encodeURIComponent(id), {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     }).then(function (response) {
       if (!response.ok) throw new Error('Change was not saved. Check your session and try again.');
       if (body.drafted_message !== undefined) delete drafts[id];
-      notice = body.approval ? 'Approval saved.' : body.status ? 'Status saved.' : 'Draft saved.';
+      notice = body.buyer_type ? 'Buyer type saved. Approval is unchanged.' : body.approval ? 'Approval saved.' : body.status ? 'Status saved.' : 'Draft saved.';
       return load();
     }).catch(function (caught) { error = caught.message; paint(); });
   });

@@ -6,6 +6,23 @@ that a public-post find is a real buyer. Open **Buyers found** to filter the res
 edit/copy a draft, open the profile, and record what Gabriel actually did.
 Changing a status records history; it never sends a message or verifies a buyer.
 
+Cards show published contacts, areas, reported buyer type and criteria. Missing
+email remains a task. Open a buyer for Buy box, Matching deals and Messages.
+Type edits are operator input, not proof that someone closes purchases.
+
+**Email this buyer** prepares a buy-box enquiry for an approved buyer with a
+published email. **Send matching deals** lets you choose shareable reviewed deals
+for ONE blind email. Preview the entire message and recipient, tick the review
+box, save its draft, then tick the review box again and press **Send email**.
+No email is sent by opening a card, previewing, saving a draft or approving a
+buyer. Existing value/availability gates still apply. Private addresses, seller
+details and holder contacts are not included. The draft is local to WholesaleOS,
+not a claim that a Gmail draft has been created. No attachments are supported.
+
+An accepted email means Gmail accepted it, not that it was delivered or read.
+If the result is uncertain, check Gmail Sent before considering another message.
+That same draft cannot retry automatically. No workflow stage is advanced by send.
+
 ## Assistant integration
 
 ### Import from the dashboard
@@ -41,12 +58,18 @@ admin and consumed after a successful import. They do not replace session auth.
 - Body: `{ "items": [ ... ] }`. Up to 50 items, 8 KiB each, 256 KiB total.
   Up to 12 requests per token per hour; a 429 gives `Retry-After`.
 - Response: `{ "results": [{ "id": "...", "result": "created" }] }`.
-  A repeated platform/UID returns `duplicate` and updates only last-seen time.
+  A repeated reference or platform/UID returns `duplicate`; approval, buy box,
+  contact history and edited drafts remain unchanged. An assistant-reported
+  buyer type may refresh only when Gabriel has not overridden it.
   Otherwise normalized email, then normalized phone, can associate a possible
   duplicate with the existing record, without creating a second buyer. Existing
   buyer data is retained and the association is shown for review.
   Operator status, history and edited drafts stay unchanged. No contact fields
   are returned. This endpoint cannot read finds or update their workflow status.
+- `kind: buyer` is optional for buyer imports; `kind: deal` uses the same strict
+  pending-deal validator as the dashboard import. It never approves a deal.
+- Last imported shows the last actual buyer import recorded by this version.
+  Older stores show that the import time is not recorded, never a fabricated time.
 - Reads and status/draft edits use the signed, admin-only dashboard session, not
   the agent token. Existing pairing permissions elsewhere are unchanged.
 

@@ -97,6 +97,7 @@ function registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions = {
       res.json({ ok: true });
     } catch (error) { failure(res, error); }
   });
+  require('../email/buyer-messages').registerRoutes(app, { db, requireAdmin, now });
   // Do not echo parser errors: they can contain the submitted contact data.
   app.use(['/api/assistant/finds', '/api/dashboard/buyers-found'], (error, req, res, next) => {
     if (res.headersSent) return next(error);

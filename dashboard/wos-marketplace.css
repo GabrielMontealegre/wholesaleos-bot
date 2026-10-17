@@ -86,6 +86,19 @@ body[data-wos-design="marketplace"] #app .sidebar-logo-text { font-size: 16px !i
 body[data-wos-design="marketplace"] #app .nav-icon { color: inherit !important; }
 body[data-wos-design="marketplace"] #app :is(.td-grid,.bf-grid) { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
 body[data-wos-design="marketplace"] #app :is(.td-card,.bf-card) { border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+body[data-wos-design="marketplace"] #app .bf-card { padding: 12px; }
+.bf-contact { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
+.bf-chips, .bf-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.bf-chips span { font-size: 12px; padding: 3px 6px; border: 1px solid var(--line, #334155); border-radius: 4px; }
+.bf-caution, .bf-email-missing { color: #fbbf24; }
+.bf-tabs { border-bottom: 1px solid var(--line, #334155); padding-bottom: 8px; }
+.bf-tabs button { min-height: 44px; background: transparent; color: inherit; border: 1px solid var(--line, #334155); border-radius: 4px; padding: 8px 12px; cursor: pointer; }
+.bf-tabs [aria-selected="true"] { border-color: #5da5ef; color: #93c5fd; }
+.bf-workspace-section[hidden] { display: none !important; }
+.bf-page .bf-deal-select { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.bf-page .bf-deal-select input { width: 18px; height: 18px; flex: 0 0 18px; }
+.bf-email-preview { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.5; }
+.bf-workspace-section { min-width: 0; }
 body[data-wos-design="marketplace"] #app .td-summary .td-property-media { aspect-ratio: 4 / 3; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--card-2); margin: -20px -20px 16px; border-radius: var(--radius) var(--radius) 0 0; }
 body[data-wos-design="marketplace"] #app .td-property-media > span { font-size: 48px; color: var(--muted); }
 body[data-wos-design="marketplace"] #app .td-reference { color: var(--muted); font-size: 12px !important; }

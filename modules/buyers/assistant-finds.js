@@ -2,13 +2,14 @@
 
 const { fitSummary, propertyType } = require('./buyer-fit');
 const activity = require('../records/record-activity');
+const buyerType = require('./buyer-type');
 const STATUSES = Object.freeze(['new', 'messaged', 'emailed', 'commented', 'replied', 'not_a_fit']);
 const MAX_ITEMS = 50;
 const MAX_ITEM_BYTES = 8192;
 const MAX_REQUEST_BYTES = 256 * 1024;
 const ITEM_FIELDS = new Set(['name', 'platform', 'group_name', 'group_id', 'profile_url', 'source_url',
   'what_they_buy', 'deal_type', 'states', 'areas', 'email', 'phone', 'drafted_message', 'captured_at',
-  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published', 'ref']);
+  'uid', 'buy_box', 'classification', 'post_age', 'post_url', 'contact_published', 'ref', 'buyer_type']);
 const BOX_NUMBERS = ['price_min', 'price_max', 'arv_min', 'arv_max', 'all_in_max', 'beds_min', 'baths_min', 'sqft_min', 'sqft_max', 'year_min'];
 const BOX_TEXT = ['pct_arv', 'construction', 'flood', 'rehab_tolerance', 'funding', 'close_speed', 'capacity'];
 const BOX_FIELDS = new Set(['state', 'areas', 'zips', 'types', 'exclusions', 'wants_sent', ...BOX_NUMBERS, ...BOX_TEXT]);
@@ -119,6 +120,8 @@ function validateItems(body, now) {
     const phone = text(published.phone || item.phone, 40);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail('find_contact_invalid');
     if (phone && !/^[+\d().\-\s]{7,40}$/.test(phone)) fail('find_contact_invalid');
+    const type = buyerType.normalize(item.buyer_type);
+    if (!type) fail('find_buyer_type_invalid');
     return {
       name: text(item.name, 120, true), platform: item.platform, uid: profile.uid,
       group_name: text(item.group_name, 200, item.platform === 'facebook'), group_id: groupId,
@@ -128,7 +131,11 @@ function validateItems(body, now) {
       drafted_message: text(item.drafted_message, 600), captured_at: new Date(at).toISOString(),
       classification, buy_box: buyBox(item.buy_box), post_age: text(item.post_age, 100),
       post_url: postUrl(item.post_url, item.platform, groupId),
-      contact_published: { email, phone }, ref: activity.ref(item.ref)
+      contact_published: { email, phone }, ref: activity.ref(item.ref),
+      buyer_type: type, buyer_type_source: type === 'unknown' ? null : {
+        source_kind: 'assistant_report', source_url: item.post_url || source.url,
+        evidence_text: item.buyer_type, captured_at: new Date(at).toISOString()
+      }
     };
   });
 }
@@ -136,6 +143,17 @@ function validateItems(body, now) {
 function normalizedEmail(value) { return String(value || '').trim().toLowerCase(); }
 function normalizedPhone(value) { const digits = String(value || '').replace(/\D/g, ''); return digits.length === 11 && digits[0] === '1' ? digits.slice(1) : digits; }
 function duplicateIndex(buyers, item) {
+  if (item.ref) {
+    const referenced = buyers.map((buyer, index) => ({ buyer, index }))
+      .filter(({ buyer }) => activity.reference(buyer) === item.ref);
+    if (referenced.length > 1) fail('find_ref_conflict', 409);
+    if (referenced.length === 1) {
+      const match = referenced[0];
+      const old = match.buyer.assistant_find;
+      if (!old || old.uid && item.uid && (old.uid !== item.uid || old.platform !== item.platform)) fail('find_ref_conflict', 409);
+      return { index: match.index, basis: 'reference' };
+    }
+  }
   const exact = buyers.findIndex((buyer) => item.uid && buyer.assistant_find && buyer.assistant_find.platform === item.platform && buyer.assistant_find.uid === item.uid);
   if (exact >= 0) return { index: exact, basis: 'platform_uid' };
   for (const [field, normalize] of [['email', normalizedEmail], ['phone', normalizedPhone]]) {
@@ -161,7 +179,11 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
     if (index >= 0) {
       buyers[index] = Object.assign({}, buyers[index], {
         assistant_find: Object.assign({}, buyers[index].assistant_find || newFind(item, now), { last_seen_at: now,
-          ...(duplicate.basis !== 'platform_uid' ? { possible_duplicate_of: buyers[index].id, duplicate_basis: duplicate.basis } : {}) })
+          ...(['platform_uid', 'reference'].includes(duplicate.basis) && item.buyer_type && item.buyer_type !== 'unknown' &&
+            buyers[index].assistant_find?.buyer_type_source?.source_kind !== 'operator_input' &&
+            (!buyers[index].assistant_find?.buyer_type_source?.captured_at || item.captured_at >= buyers[index].assistant_find.buyer_type_source.captured_at)
+            ? { buyer_type: item.buyer_type, buyer_type_source: item.buyer_type_source } : {}),
+          ...(!['platform_uid', 'reference'].includes(duplicate.basis) ? { possible_duplicate_of: buyers[index].id, duplicate_basis: duplicate.basis } : {}) })
       });
       results.push({ id: buyers[index].id, result: 'duplicate' });
       continue;
@@ -175,7 +197,7 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
     });
     results.push({ id, result: 'created' });
   }
-  let updated = Object.assign({}, store, { buyers });
+  let updated = Object.assign({}, store, { buyers, buyer_find_last_import_at: now });
   results.forEach((result, index) => {
     updated = activity.assign(updated, 'buyer', result.id, items[index].ref || '');
     if (result.result === 'created') {
@@ -188,7 +210,9 @@ function ingest(store, items, { now, operatorId, createId, actorLabel, channel }
 
 function update(store, id, input, { now, operatorId }) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || !Object.keys(input).length ||
-      Object.keys(input).some((key) => !['status', 'drafted_message', 'approval', 'reason', 'channel'].includes(key))) fail('find_update_invalid');
+      Object.keys(input).some((key) => !['status', 'drafted_message', 'approval', 'reason', 'channel', 'buyer_type'].includes(key))) fail('find_update_invalid');
+  const type = input.buyer_type === undefined ? undefined : buyerType.normalize(input.buyer_type);
+  if (type === null) fail('find_buyer_type_invalid');
   if (input.status !== undefined && !STATUSES.includes(input.status)) fail('find_status_invalid');
   if (input.approval !== undefined && !['approved', 'rejected'].includes(input.approval)) fail('find_approval_invalid');
   const reason = text(input.reason, 300);
@@ -199,6 +223,13 @@ function update(store, id, input, { now, operatorId }) {
   const index = buyers.findIndex((buyer) => buyer.id === id && buyer.assistant_find);
   if (index < 0) fail('find_not_found', 404);
   const find = Object.assign({}, buyers[index].assistant_find);
+  if (type !== undefined) {
+    find.buyer_type = type;
+    find.buyer_type_source = { source_kind: 'operator_input', source_url: null,
+      evidence_text: type, captured_at: now, operator_id: operatorId };
+    find.history = (find.history || []).concat({ kind: 'buyer_type', from: buyers[index].assistant_find.buyer_type || 'unknown',
+      to: type, at: now, operator_id: operatorId, channel: 'dashboard' });
+  }
   if (input.approval !== undefined && input.approval !== find.approval) {
     find.history = (find.history || []).concat({ kind: 'approval', from: find.approval || 'pending', to: input.approval, reason, at: now, operator_id: operatorId, channel: 'dashboard' });
     find.approval = input.approval;
@@ -214,7 +245,7 @@ function update(store, id, input, { now, operatorId }) {
   let updated = activity.assign(Object.assign({}, store, { buyers }), 'buyer', id);
   const start = (store.buyers[index].assistant_find.history || []).length;
   (find.history || []).slice(start).forEach((entry, offset) => {
-    const type = entry.kind === 'approval' ? entry.to : ({ messaged: 'message_sent', emailed: 'email_sent', replied: 'reply_received' })[entry.to] || 'status_change';
+    const type = entry.kind === 'approval' ? entry.to : entry.kind === 'buyer_type' ? 'status_change' : ({ messaged: 'message_sent', emailed: 'email_sent', replied: 'reply_received' })[entry.to] || 'status_change';
     updated = activity.recordEvent(updated, 'buyer', id, type, 'Operator recorded ' + entry.to + '.', { now, operatorId }, { channel: entry.channel, attribution: 'operator_report', history_origin: 'buyer:' + id + ':' + (start + offset) });
   });
   if (draft !== undefined) updated = activity.recordEvent(updated, 'buyer', id, 'message_drafted', 'Draft saved; not sent.', { now, operatorId });
@@ -226,13 +257,16 @@ function listFinds(store, { now }) {
   const items = (store.buyers || []).filter((buyer) => buyer.assistant_find).map((buyer) => ({
     id: buyer.id, ...buyer.assistant_find, record_ref: activity.reference(buyer), email_subject: buyer.record_ref ? '[' + buyer.record_ref + '] Buyer enquiry' : '',
     trust_label: buyer.assistant_find.approval === 'approved' ? 'Verified source - approved by operator' : 'Imported - not verified',
+    buyer_type_view: buyerType.view(buyer.assistant_find),
     fits: fitSummary(buyer, store.leads || []), deal_fit:dealViews.get(buyer.id)
   })).sort((a, b) => b.first_seen_at.localeCompare(a.first_seen_at) || a.id.localeCompare(b.id));
   const week = new Date(now);
   week.setUTCHours(0, 0, 0, 0);
   week.setUTCDate(week.getUTCDate() - ((week.getUTCDay() + 6) % 7));
   const weekStart = week.getTime();
-  return { items, counts: {
+  return { items, last_import_at: typeof store.buyer_find_last_import_at === 'string' &&
+    Number.isFinite(Date.parse(store.buyer_find_last_import_at)) && store.buyer_find_last_import_at <= now
+    ? store.buyer_find_last_import_at : null, counts: {
     total: items.length,
     new_today: items.filter((item) => item.first_seen_at.slice(0, 10) === now.slice(0, 10)).length,
     messaged_this_week: items.filter((item) => (item.history || []).some((event) => event.to === 'messaged' && Date.parse(event.at) >= weekStart && event.at <= now)).length
