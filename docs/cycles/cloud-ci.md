@@ -15,3 +15,10 @@ A reviewed lockfile is a reproducibility follow-up, not an implicit upgrade.
 Cloud execution must pass on the actual PR head before merge. Main gets its own
 post-merge run. CI does not automatically change Railway's deployment settings
 or GitHub branch protection. No batch or production data verification is run.
+
+First hosted run39016329965:191passed/2failed/0skipped of193. All product
+assertions passed. One temp cleanup failed ENOTEMPTY after its15 checks;
+bounded fs.rmSync retries cover the Windows filesystem race. Node-missing
+fixture now reapplies its explicit environment inside child PowerShell because
+startup may restore standard install paths. Existing assertions unchanged.
+Initial report retained;next full hosted run is still required,not waived.

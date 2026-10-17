@@ -221,7 +221,7 @@ async function run() {
     assert.equal(ranked.top_five[0].equity_signal, 'LIKELY_EQUITY');
     console.log('cycle-44-county-appraisal: 15 checks passed');
   } finally {
-    if (path.resolve(temp).startsWith(path.resolve(os.tmpdir()) + path.sep)) fs.rmSync(temp, { recursive: true, force: true });
+    if (path.resolve(temp).startsWith(path.resolve(os.tmpdir()) + path.sep)) fs.rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
