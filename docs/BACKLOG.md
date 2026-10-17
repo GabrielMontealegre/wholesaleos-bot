@@ -7,8 +7,12 @@ then#366 D,A,G,C,F,B,E,I,H,J,then#370,#369,#361,#351. D/A already live;do not
 repeat them. County ranking remains paused. Existing paused heartbeat renamed
 WholesaleOS autopilot,ACTIVE,every2hours;no duplicate. Heartbeat API cannot pin
 model/effort;prompt fails closed if medium/standard cannot be established.
-Cloud CI IN PROGRESS;one PR,actual hosted run required before merge. Sentry
-NOT implemented/enabled yet. No settings or business data changed.
+Cloud CI PR#371 IN PROGRESS;actual hosted run39016329965 required before merge.
+Sentry implementation IN PROGRESS on a separate branch: OFF without valid DSN,
+strict shared event allowlist,admin config,server/global errors and dashboard
+errors,SDK10.22.0 pinned. Privacy unit/fake-browser checks pass;actual-SDK
+custom-transport and full suite will run in cloud. No DSN enabled or telemetry
+sent. No settings or business data changed. G and later work not advanced yet.
 
 2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
 one PR per letter, live1366/412 click-through for each. County ranking PAUSED,

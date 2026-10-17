@@ -3,6 +3,7 @@
 // Serves dashboard at /dashboard/ and API at /api/
 
 require('dotenv').config();
+const errorTracking = require('./modules/observability/error-tracking').createErrorTracking();
 const express = require('express');
 const path    = require('path');
 const db      = require('./db');
@@ -36,6 +37,7 @@ const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
 const app  = express();
+app.use(errorTracking.http);
 // NOTE: Railway proxy requires trust proxy = 1
 app.set('trust proxy', 1);
 
@@ -78,17 +80,19 @@ function allowLegacyListingRoute(routeName, res) {
 }
 
 process.on('uncaughtException', function(err) {
+  errorTracking.capture(err);
   var payload = err && err.stack ? err.stack : err;
   try { logger.fatal({ event: 'uncaughtException', error: payload }); }
   catch (logErr) { console.error('[uncaughtException]', payload, logErr && logErr.message ? logErr.message : logErr); }
-  process.exit(1);
+  if(errorTracking.enabled)errorTracking.flush().finally(()=>process.exit(1));else process.exit(1);
 });
 
 process.on('unhandledRejection', function(reason) {
+  errorTracking.capture(reason);
   var payload = reason && reason.stack ? reason.stack : reason;
   try { logger.fatal({ event: 'unhandledRejection', error: payload }); }
   catch (logErr) { console.error('[unhandledRejection]', payload, logErr && logErr.message ? logErr.message : logErr); }
-  process.exit(1);
+  if(errorTracking.enabled)errorTracking.flush().finally(()=>process.exit(1));else process.exit(1);
 });
 
 function getCompAgent() {
@@ -3318,6 +3322,9 @@ app.post('/api/deals/send', (req, res) => {
 });
 
 // Ã¢ÂÂÃ¢ÂÂ API: Auth / Users Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+app.get('/api/dashboard/error-tracking-config', requireAdmin, (req,res) => {
+  res.set('Cache-Control','no-store').json(errorTracking.config());
+});
 app.get('/api/auth/session', (req, res) => {
   const pin = dashboardAuth.adminPinStatus(process.env);
   const configured = dashboardSession.isConfigured({ env: process.env });
@@ -6647,6 +6654,7 @@ app.get('/api/leads/:id/matching-buyers', (req, res) => {
   } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
 });
 
+app.use(errorTracking.error);
 app.listen(PORT, () => {
   logger.info('WholesaleOS server running on port ' + PORT);
   // Phase 3B: restore queued enrichment jobs from db.json after restart
