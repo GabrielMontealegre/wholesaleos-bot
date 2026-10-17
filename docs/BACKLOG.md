@@ -7,12 +7,33 @@ then#366 D,A,G,C,F,B,E,I,H,J,then#370,#369,#361,#351. D/A already live;do not
 repeat them. County ranking remains paused. Existing paused heartbeat renamed
 WholesaleOS autopilot,ACTIVE,every2hours;no duplicate. Heartbeat API cannot pin
 model/effort;prompt fails closed if medium/standard cannot be established.
-Cloud CI PR#371 IN PROGRESS;actual hosted run39016329965 required before merge.
-Sentry implementation IN PROGRESS on a separate branch: OFF without valid DSN,
-strict shared event allowlist,admin config,server/global errors and dashboard
-errors,SDK10.22.0 pinned. Privacy unit/fake-browser checks pass;actual-SDK
-custom-transport and full suite will run in cloud. No DSN enabled or telemetry
-sent. No settings or business data changed. G and later work not advanced yet.
+Cloud CI DONE in PR #371, main b2a1f6f16b1c3ae888ffd21fe47269c3fd4baf18.
+Hosted run 39017755016: 193 passed, 0 failed, 0 skipped; 600s per file.
+County-notice acquisition 159.27s; appraisal fixture 0.24s; runtime resolver 4.53s.
+Initial runs 191/2 and 192/1 are not waived: child-process environment isolation
+and asynchronous temporary cleanup fixed scaffolding without changing assertions.
+Exact Railway deployment 7137172001 succeeded 08:42:30Z (43s), health 200.
+Live 1366/412: 100 leads, real drawer open/close, no console errors; safe Today
+screenshots retained here. No production business writes or settings changes.
+
+Sentry MERGED in PR #373, main 24b607b49b9668db2250f3d3f5be1d82a8411c56.
+Hosted run 39017862529: 195 passed, 0 failed, 0 skipped; 600s per file.
+Privacy test 0.09s; actual SDK custom-transport test 0.49s; acquisition 262.09s.
+Actual SDK envelope excludes seeded private data and scope attachments, zero
+test telemetry network. Exact deployment 7137223068 succeeded 08:49:57Z (2m50s).
+The authenticated live config reports enabled=true: a DSN was already present.
+No DSN/account/plan/variable was added or changed. Do not call production OFF.
+Monitoring remains OFF when DSN is absent; no deliberate production test error.
+Final live proof PASS at 1366x768 and 412x915: both local scripts served,
+SDK absent on the locked screen and present after login; 100 leads hydrate,
+real drawer opens/closes, no page overflow at 412, zero console errors.
+Old Chrome tab became stale; a fresh tab restored control and Gabriel unlocked
+it. Viewport restored, inspected private-data-free Today screenshots retained.
+Main cloud run 39018663111: 195 passed, 0 failed, 0 skipped; acquisition
+253.83s, privacy 0.08s, actual SDK 0.54s. G trace prepared,
+but its product changes have NOT been implemented; next is G, then C/F/B/E/I/H/J.
+C and B are NOT live. County ranking stays paused. No batch, capture, helper,
+contact, evidence confirmation or business-data mutation was performed.
 
 2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
 one PR per letter, live1366/412 click-through for each. County ranking PAUSED,
