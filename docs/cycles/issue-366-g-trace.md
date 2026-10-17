@@ -1,6 +1,12 @@
 # Leads Geography: Trace Before Implementation
 
-Status: trace only. Do not describe G as built, tested or released.
+Status: implementation in progress; not released. Focused unit/real-route and
+browser checks pass. Full cloud suite and post-deploy verification still required.
+
+The browser proof now waits for authenticated startup hydration before setting
+its two-row page size and explicitly requesting page one. The old fixture raced
+the initial 300-row request: all four synthetic rows loaded successfully while
+the test waited for two. Existing product loading/count guards stay unchanged.
 
 ## Existing Writers And Readers
 

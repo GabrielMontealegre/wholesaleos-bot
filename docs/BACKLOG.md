@@ -2,6 +2,31 @@
 
 ## Latest Run Summary
 
+2026-10-17 resumed: current thread turn_context confirms gpt-6.1-sol Medium.
+The previous defaults-only check did not establish the thread's effort and was
+an incorrect basis for repeated stops; use current-thread metadata going forward.
+G remains IN PROGRESS, not released. The browser timeout is diagnosed: startup
+requested limit=300 and loaded all four synthetic rows with no page errors while
+the test expected two. Wait for startup, then explicitly request limit=2; desktop
+and 412 browser proof now pass. Adding 400 proof, then full hosted suite/release.
+No business data writes or settings changes. Other pending work is preserved.
+
+2026-10-17 14:07Z heartbeat checkpoint: no further implementation performed.
+Usage available; no previous test process remains running. Medium/standard
+execution cannot be verified; saved app defaults show Low, not Medium. The
+heartbeat guard remains in force, and its tooling cannot pin effort itself.
+G is now UNCOMMITTED IN PROGRESS on item/366-g-lead-geography, not trace-only:
+shared geography request/filter/facets, address-first rendering and normal
+checkbox changes plus two new test files. Unit/real-route and existing zero-count
+checks pass. New synthetic browser proof is NOT green: first wait targeted a
+hidden native option; attached-state correction applied; latest run times out
+at tests/lead-geography-ui.test.js:41 waiting for initial 4-row hydration.
+Do not merge or call G verified. A subsequent local test command omitted NODE_PATH
+and reported missing existing csv-parse/express; that is environment setup, not
+a reason to edit assertions. Restore the documented NODE_PATH before resuming.
+No G PR/release, no new production action in this heartbeat; unrelated files kept.
+The earlier statement below that G was trace-only describes the release checkpoint.
+
 2026-10-17 owner order: automation,cloud full-suite CI,opt-in scrubbed Sentry,
 then#366 D,A,G,C,F,B,E,I,H,J,then#370,#369,#361,#351. D/A already live;do not
 repeat them. County ranking remains paused. Existing paused heartbeat renamed

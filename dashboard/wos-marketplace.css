@@ -138,3 +138,10 @@ body[data-wos-design="marketplace"] .wos-help [role="tooltip"] { background: var
 #wos-todays-deals [data-deal-card-open]:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 #wos-todays-deals [data-deal-matches]{min-height:44px;max-width:100%;white-space:normal;margin-block:10px;border:1px solid var(--line);background:var(--card-2);color:var(--ink)}
 #wos-todays-deals .td-holder{font-size:14px;color:var(--ink)}
+#leadGeography{flex:1 1 100%;min-width:0}
+#leadGeography .wos-location-filters{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+#leadGeography label{display:flex;flex-direction:column;gap:4px;flex:1 1 160px;min-width:0;font-size:12px}
+#leadGeography select{width:100%;min-width:0;min-height:44px}
+#leadGeography .wos-filter-chips{display:contents}
+#leadGeography button{min-height:44px}
+body[data-wos-design="marketplace"] #app #lead-queue-table-shell input[type="checkbox"]{width:18px;min-width:18px;height:18px;min-height:18px;flex:0 0 18px}
