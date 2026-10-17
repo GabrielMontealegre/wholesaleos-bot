@@ -3,11 +3,18 @@
   var state={folder:'inbox',role:'',messages:[],notes:[],status:'Not checked',error:'',body:null,thread:[],busy:false,linkStatus:'',reply:''};
   var sequence=0;
   var folders=[['inbox','Inbox / replies'],['sent','Sent'],['drafts','Drafts'],['starred','Starred'],['notes','WOS notes']];
-  var roleFilters=[['','All roles'],['buyer','Buyers'],['seller','Sellers / owners'],['jv','JV partners'],['title','Title companies'],['attorney','Attorneys'],['lender','Lenders'],['agent','Agents'],['other','Other'],['unlinked','Not linked']];
+  var roleFilters=[['','All roles'],['buyer','Buyers'],['seller','Sellers / owners'],['jv','JV partners'],['title','Title'],['attorney','Attorneys'],['lender','Lenders'],['agent','Agents'],['other','Other'],['unlinked','Not linked']];
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function role(m){var value=m&&m.conversation&&m.conversation.role;return ['holder','buyer','partner','seller','title','attorney','lender','agent','other'].includes(value)?value:'';}
   function category(value){return value==='holder'||value==='partner'?'jv':value;}
-  function chip(value){return root.wosRoleChip?root.wosRoleChip(value):'<span class="wos-role-chip">Link to a person</span>';}
+  function chip(value){return value&&root.wosRoleChip?root.wosRoleChip(value):'';}
+  function sender(message){
+    if(typeof message.sender_name==='string'&&message.sender_name.trim())return message.sender_name;
+    if(message.direction==='out'&&message.source_kind==='connected_mailbox')return 'You';
+    // A legacy plain header name is still source text, not a name guessed from an email.
+    if(typeof message.from==='string'&&message.from.trim()&&!/[@<>\r\n]/.test(message.from))return message.from;
+    return 'Sender name not supplied';
+  }
   function time(value){var at=Date.parse(value);if(!Number.isFinite(at))return 'Unknown';var iso=new Date(at).toISOString();return root.wosCardClock?root.wosCardClock.formatTime(iso,new Date().toISOString()):new Intl.DateTimeFormat('en-US',{timeZone:'Etc/GMT+7',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(at));}
   function groups(){
     var map=new Map();
@@ -23,7 +30,7 @@
   function paint(){var el=document.querySelector('#email-reader');if(el)el.outerHTML=markup();var panel=document.querySelector('#email-connection');if(panel&&!el)panel.outerHTML=statusPanel();}
   function threadRows(){
     var visible=groups().filter(g=>!state.role||(state.role==='unlinked'?!role(g.latest):category(role(g.latest))===state.role));
-    return visible.map(g=>'<button type="button" class="email-thread-row'+(g.items.some(m=>m.unread===true||m.read===false)?' email-unread':'')+'" data-email-message="'+esc(g.latest.id)+'"'+(state.busy?' disabled':'')+' aria-pressed="'+(state.body&&state.body.id===g.latest.id?'true':'false')+'"><span class="email-row-top"><span>'+esc(g.latest.from||'Sender not supplied')+'</span><time>'+esc(time(g.latest.date))+'</time></span>'+chip(role(g.latest))+'<strong>'+esc(g.latest.subject||'(No subject)')+'</strong><span class="email-snippet">'+esc(g.latest.snippet||'')+'</span><small>'+g.items.length+' message'+(g.items.length===1?'':'s')+' in this folder'+(g.latest.link_status==='ambiguous'?' - link needs review':'')+'</small></button>').join('')+(!visible.length&&!state.busy&&!state.error?'<p class="email-empty">No messages in this view.</p>':'');
+    return visible.map(g=>'<button type="button" class="email-thread-row'+(g.items.some(m=>m.unread===true||m.read===false)?' email-unread':'')+'" data-email-message="'+esc(g.latest.id)+'"'+(state.busy?' disabled':'')+' aria-pressed="'+(state.body&&state.body.id===g.latest.id?'true':'false')+'"><span class="email-row-top"><span class="email-sender" title="'+esc(g.latest.from||'')+'">'+esc(sender(g.latest))+'</span><time>'+esc(time(g.latest.date))+'</time></span><span class="email-subject-line">'+chip(role(g.latest))+'<strong>'+esc(g.latest.subject||'(No subject)')+'</strong></span><span class="email-snippet">'+esc(g.latest.snippet||'')+'</span>'+(g.items.length>1?'<small>'+g.items.length+' messages</small>':'')+(g.latest.link_status==='ambiguous'?'<small>Link needs review</small>':'')+'</button>').join('')+(!visible.length&&!state.busy&&!state.error?'<p class="email-empty">No messages in this view.</p>':'');
   }
   function reading(){
     if(!state.body)return '<p class="email-empty">Select a conversation.</p>';
@@ -34,7 +41,13 @@
   }
   function markup(){
     var notes=state.folder==='notes';
-    return '<section id="email-reader" class="email-workspace'+(state.body?' email-open':'')+'"><header class="email-head"><h2>Inbox</h2>'+statusPanel()+'</header><div class="email-panes"><nav class="email-folders" aria-label="Email folders">'+folders.map(([k,l])=>'<button type="button" data-email-folder="'+k+'" aria-pressed="'+(state.folder===k)+'"'+(state.busy?' disabled':'')+'>'+l+'</button>').join('')+'<details><summary>Gmail labels</summary>'+[['buyers','Buyers'],['jv_deals','JV Deals'],['lead_alerts','Lead Alerts'],['title','Title'],['templates','Templates'],['bounced','Bounced'],['billing','Billing']].map(([k,l])=>'<button type="button" data-email-folder="'+k+'"'+(state.busy?' disabled':'')+'>'+l+'</button>').join('')+'</details><hr><h3>Roles</h3>'+roleFilters.map(([k,l])=>'<button type="button" data-email-role="'+k+'" aria-pressed="'+(state.role===k)+'">'+l+'</button>').join('')+'</nav><section class="email-thread-list" aria-label="'+(notes?'WholesaleOS notes':'Email conversations')+'"><h3>'+esc(notes?'WOS notes':folders.find(f=>f[0]===state.folder)?.[1]||'Gmail label')+'</h3><small>'+ (notes?'Reported next steps - not mailbox messages':'Latest 30 messages in this folder')+'</small>'+(state.busy?'<p role="status">Loading email...</p>':'')+(notes?state.notes.filter(n=>!state.role||category(n.role)===state.role).map(n=>'<article class="email-note">'+chip(n.role)+'<h4>'+esc(n.person)+'</h4><p>'+esc(n.next_step||'No next step recorded')+'</p><small>'+esc(time(n.captured_at))+'</small></article>').join('')||'<p>No recorded notes.</p>':threadRows())+'</section><section class="email-reading" aria-label="Open email conversation">'+(notes?'<p class="email-empty">Notes are separate from real email.</p>':reading())+'</section></div></section>';
+    return '<section id="email-reader" class="email-workspace'+(state.body?' email-open':'')+'"><header class="email-head"><h2>Email</h2>'+statusPanel()+'</header><div class="email-panes">'+navigation()+'<section class="email-thread-list" aria-label="'+(notes?'WholesaleOS notes':'Email conversations')+'"><h3>'+esc(notes?'WOS notes':folders.find(f=>f[0]===state.folder)?.[1]||'Gmail label')+'</h3><small>'+ (notes?'Reported next steps - not mailbox messages':'Latest 30 messages in this folder')+'</small>'+(state.busy?'<p role="status">Loading email...</p>':'')+'<div class="email-thread-scroll">'+(notes?state.notes.filter(n=>!state.role||category(n.role)===state.role).map(n=>'<article class="email-note">'+chip(n.role)+'<h4>'+esc(n.person)+'</h4><p>'+esc(n.next_step||'No next step recorded')+'</p><small>'+esc(time(n.captured_at))+'</small></article>').join('')||'<p>No recorded notes.</p>':threadRows())+'</div></section><section class="email-reading" aria-label="Open email conversation">'+(notes?'<p class="email-empty">Notes are separate from real email.</p>':reading())+'</section></div></section>';
+  }
+  function navigation(){
+    var extra=folders.slice(2).concat([['buyers','Gmail: Buyers'],['jv_deals','Gmail: JV Deals'],['lead_alerts','Gmail: Lead Alerts'],['title','Gmail: Title'],['templates','Gmail: Templates'],['bounced','Gmail: Bounced'],['billing','Gmail: Billing']]);
+    return '<nav class="email-folders" aria-label="Email folders">'+folders.slice(0,2).map(([k,l])=>'<button type="button" data-email-folder="'+k+'" aria-pressed="'+(state.folder===k&&!state.role)+'"'+(state.busy?' disabled':'')+'>'+(k==='inbox'?'Inbox':l)+'</button>').join('')+
+      roleFilters.slice(1).map(([k,l])=>'<button type="button" data-email-role="'+k+'" aria-pressed="'+(state.role===k)+'">'+l+'</button>').join('')+
+      '<label class="email-extra-label">Other folders<select aria-label="Other email folders" data-email-extra-folder'+(state.busy?' disabled':'')+'><option value="">More</option>'+extra.map(([k,l])=>'<option value="'+k+'"'+(state.folder===k?' selected':'')+'>'+l+'</option>').join('')+'</select></label></nav>';
   }
   async function request(path){
     var ticket=++sequence;state.busy=true;state.error='';paint();
@@ -49,6 +62,7 @@
   }
   root.renderGmail=function(){++sequence;state.busy=false;state.messages=[];state.notes=[];state.body=null;state.thread=[];state.reply='';setTimeout(load,0);return markup();};
   document.addEventListener('input',function(e){if(e.target.matches('[data-email-reply]'))state.reply=typeof e.target.value==='string'?e.target.value.slice(0,4000):'';});
+  document.addEventListener('change',async function(e){if(e.target.matches('[data-email-extra-folder]')&&e.target.value&&!state.busy){state.folder=e.target.value;state.role='';await load();}});
   document.addEventListener('submit',async function(e){
     if(!e.target.matches('[data-email-link-form]'))return;e.preventDefault();if(state.busy||!state.body)return;
     var f=e.target.elements,body={message_id:state.body.id,person:f.person.value.trim(),role:f.role.value,refs:f.refs.value.split(',').map(s=>s.trim()).filter(Boolean),next_step:f.next_step.value.trim()};

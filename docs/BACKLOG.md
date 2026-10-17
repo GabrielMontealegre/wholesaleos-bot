@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366F IN PROGRESS: bounded Gmail-style panes, fixed reachable
+Inbox/Sent/roles, secondary folders in native chooser, single-line actual
+header names, subject/snippet/time/role, no repeated unlinked pill. No new
+mailbox requests, role inference or sending. New full-dashboard1366/400/412
+layout proof and existing mailbox/thread/state/inbox/linking checks pass.
+Full hosted200-file gate and live read-only proof pending. C UI is released;
+its separate feed reconciliation remains BLOCKED on#379. No #341 sign-off.
+
 2026-10-17 #366C UI RELEASED in PR#378, main
 927147fd6b2555c2a02d10cecff5a72659045fef. Exact hosted39077424156:
 199 passed/0 failed/0 skipped,600s/file,job9m59s; acquisition231.60s,

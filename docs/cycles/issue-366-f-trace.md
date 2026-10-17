@@ -1,7 +1,8 @@
 # Email Layout: Trace Before Implementation
 
-Status: trace only; F is not built/released. Based on origin/main927147f after
-C PR#378. Finish exact C deployment/read-only proof before F implementation.
+Status: locally implemented, NOT released. Based on origin/main927147f after
+C PR#378. C exact deploy/live proof completed; feed reconciliation alone is
+BLOCKED on#379 and does not block this independent read-only layout slice.
 
 ## Existing Writers And Readers
 
@@ -44,3 +45,23 @@ open/back, long senders/subjects, unknown/ambiguous role, empty/unavailable
 mailbox, stale responses, keyboard navigation and no page overflow or clipped
 controls. Reads/open/filter never issue POST or send mail. Do not test live
 link/save/send actions. Existing mailbox/thread/auth/privacy assertions stay.
+
+## Implementation
+
+Bounded viewport flex/grid; fixed folder choices, independently scrolling list
+and reading body. Secondary physical folders/notes use a native chooser so
+44px controls remain reachable at1366x768 and400/412x915 without folder scroll.
+Sender-name DTO is ephemeral mailbox header data; annotate preserves it via
+the existing spread, and the UI escapes it. Bad/missing header parsing yields
+an empty name, never a failed inbox, a guessed name or raw error. No new fetch.
+Unlinked rows omit the repeated link pill; the small explicit linking form in
+the reading pane remains. Thread evidence, directions, roles, auth and Send
+guards are unchanged. Assets inbox CSS2/reader JS4.
+
+New inbox-load-layout test proves IMAP/Gmail source names, parser failure
+redaction, actual full-dashboard1366/400/412 reachability/independent scrolling,
+long-name fit, unknown role/name, thread/back and zero writes/external requests.
+Existing mailbox/thread/state and inbox/linking proofs pass. The inbox browser
+driver now selects notes/physical labels from the chooser; every original
+assertion, including missing-label failure clearing and disabled Send, stays.
+Full hosted suite and exact deployment/read-only proof are pending.
