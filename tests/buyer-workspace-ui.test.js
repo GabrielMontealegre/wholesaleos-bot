@@ -25,7 +25,10 @@ async function prove() {
       if(url.origin!==base){external.push(url.hostname);return route.abort();}
       if(url.pathname==='/api/dashboard/error-tracking-config')return route.fulfill({json:{enabled:false,dsn:''}});
       if(url.pathname==='/api/dashboard/buyers-found')return route.fulfill({json:{items:[fixtureBuyer,{...fixtureBuyer,id:'missing-email',name:'LOCAL TEST DATA - No email',email:'',phone:'',buyer_type_view:{kind:'unknown',verify_purchase:false},deal_fit:{count:0,matches:[],near_misses:[]}}],counts:{total:2,new_today:2,messaged_this_week:0},capabilities:{can_import:true},last_import_at:'2026-10-17T12:00:00Z'}});
-      if(url.pathname==='/api/dashboard/buyers-found/example-buyer/email')return route.fulfill({json:{configured:true,messages:[]}});
+      if(url.pathname==='/api/dashboard/buyers-found/example-buyer/email'){
+        await new Promise(resolve=>setTimeout(resolve,75));
+        return route.fulfill({json:{configured:true,messages:[]}});
+      }
       if(req.method()!=='GET'&&req.method()!=='HEAD'){
         requests.push({path:url.pathname,body:req.postDataJSON()});
         if(url.pathname.endsWith('/email/preview'))return route.fulfill({json:{...req.postDataJSON(),to:'buyer@example.test',subject:'Synthetic preview',body:'Example City FL 33000\nAsking: 150000\nValue: Preliminary [240000,250000] (2 reviewed comps)',version:'fixture-version',configured:true}});

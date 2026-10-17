@@ -9,6 +9,7 @@
   var selectedId = '';
   var section = 'box';
   var messageState = {};
+  var messageReads = {};
   var buyerTypes = { flipper:'Flipper',landlord:'Landlord / rental investor',institutional:'Institutional / hedge fund',
     acquisitions:'Acquisitions company',wholesaler:'Wholesaler / middleman',builder:'Builder',land_buyer:'Land buyer',unknown:'Type not stated' };
   var importOpen = false;
@@ -123,7 +124,7 @@
     var state=messageState[item.id]||{},preview=state.preview;
     return '<div class="bf-email-panel"><h4>Buyer email</h4><p role="status">'+esc(state.error||state.notice||'Choose Email this buyer, or select matching deals. Nothing is sent automatically.')+'</p>'+
       (preview?'<p>To: '+esc(preview.to)+'</p><h4>'+esc(preview.subject)+'</h4><pre class="bf-email-preview">'+esc(preview.body)+'</pre>'+
-        '<label class="bf-deal-select"><input type="checkbox" data-email-reviewed>I reviewed this entire email and its recipient.</label><div class="bf-actions"><button type="button" data-buyer-email="draft"'+(state.busy?' disabled':'')+'>Save reviewed draft</button><button type="button" data-buyer-email="send"'+(!state.draftId||!preview.configured||state.busy?' disabled':'')+'>Send email</button></div>'+
+        '<label class="bf-deal-select"><input type="checkbox" data-email-reviewed'+(state.reviewed?' checked':'')+'>I reviewed this entire email and its recipient.</label><div class="bf-actions"><button type="button" data-buyer-email="draft"'+(state.busy?' disabled':'')+'>Save reviewed draft</button><button type="button" data-buyer-email="send"'+(!state.draftId||!preview.configured||state.busy?' disabled':'')+'>Send email</button></div>'+
         (!preview.configured?'<p>Email sending is not connected. Check Settings &gt; Email.</p>':''):'')+
       (state.messages||[]).map(function(message){return '<details><summary>'+esc(message.subject)+' - '+esc(message.status==='accepted'?'Accepted by mail server':message.status==='unknown'||message.status==='sending'?'Delivery uncertain - check Sent before doing anything else':'Draft, not sent')+'</summary><p>'+esc(sourceTime(message.sent_at||message.created_at))+'</p><pre class="bf-email-preview">'+esc(message.body)+'</pre></details>';}).join('')+'</div>';
   }
@@ -156,10 +157,11 @@
     if (target) target.innerHTML = markup(data);
   }
   function readMessages(id) {
+    var ticket=(messageReads[id]||0)+1;messageReads[id]=ticket;
     return fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email',{cache:'no-store'})
       .then(function(response){if(!response.ok)throw new Error('Could not load buyer email history.');return response.json();})
-      .then(function(result){messageState[id]=Object.assign({},messageState[id],{messages:result.messages});})
-      .catch(function(caught){messageState[id]=Object.assign({},messageState[id],{error:caught.message});}).finally(paint);
+      .then(function(result){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.messages=result.messages;})
+      .catch(function(caught){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.error=caught.message;}).finally(paint);
   }
   function load() {
     if (loading || !document.getElementById('wos-buyers-found')) return;
@@ -190,6 +192,10 @@
     }
   });
   document.addEventListener('change', function (event) {
+    if(event.target.matches('#wos-buyers-found [data-email-reviewed]')) {
+      if(messageState[selectedId])messageState[selectedId].reviewed=event.target.checked;
+      return;
+    }
     if (event.target.matches('#wos-buyers-found [data-import-approve]')) { importApprove = event.target.checked; return; }
     if (event.target.matches('#wos-buyers-found [data-import-file]')) {
       var file = event.target.files[0];
@@ -231,7 +237,7 @@
       state.busy=true;state.error='';paint();
       fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(action==='draft'?{kind:preview.kind,deal_ids:preview.deal_ids,version:preview.version}:{draft_id:state.draftId,reviewed:true})})
         .then(function(response){if(!response.ok)throw new Error(action==='send'?'Send not confirmed. Check Sent before trying anything else.':'Draft changed or expired. Prepare a new preview.');return response.json();})
-        .then(function(result){if(action==='draft'){state.draftId=result.id;state.notice='Draft saved. Nothing sent.';}else{state.preview=null;state.draftId=null;state.notice='Accepted by mail server. Delivery is not confirmed.';}})
+        .then(function(result){state.reviewed=false;if(action==='draft'){state.draftId=result.id;state.notice='Draft saved. Nothing sent.';}else{state.preview=null;state.draftId=null;state.notice='Accepted by mail server. Delivery is not confirmed.';}})
         .catch(function(caught){state.error=caught.message;}).finally(function(){state.busy=false;paint();readMessages(id);});return;
     }
     var buyerCard = event.target.closest('#wos-buyers-found [data-buyer-card-open]');
