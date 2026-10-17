@@ -1,0 +1,51 @@
+name: Full test suite
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-suite-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-suite:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+      # This repository has no lockfile. Do not pretend npm ci is reproducible yet.
+      - name: Install declared dependencies without lifecycle scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install the pinned Playwright Chromium build
+        run: node node_modules/playwright/cli.js install chromium
+      - name: Run every test with per-file timings
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          & ./scripts/run-tests.ps1 -TimeoutSeconds 600 2>&1 | Tee-Object -FilePath artifacts/full-suite.txt
+          $result = $LASTEXITCODE
+          $summary = Get-Content artifacts/full-suite.txt | Where-Object { $_ -match '^SUMMARY ' } | Select-Object -Last 1
+          if (-not $summary) { throw 'Full suite produced no summary' }
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ('```text' + "`n" + $summary + "`n" + '```')
+          if ($result -ne 0) { exit $result }
+      - name: Retain test results, including failures and environment skips
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: full-suite-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/full-suite.txt
+          if-no-files-found: warn
+          retention-days: 14
