@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/dashboard/wos-marketplace.css?v=2">
+<link rel="stylesheet" href="/dashboard/wos-marketplace.css?v=3">
 <link rel="stylesheet" href="/dashboard/wos-desk-shell.css?v=3">
 <style>
 /* ── Reset & Base ── */
@@ -21372,12 +21372,11 @@ function buildLeadApiUrl(offset) {
   params.set('limit', String(APP._leadApiLimit || 300));
   params.set('offset', String(Math.max(0, Number.isFinite(resolvedOffset) ? resolvedOffset : 0)));
   params.set('sort', leadApiSortParam(filters.sort || 'priority'));
-  var mode = typeof window.regionalMode === 'function' ? String(window.regionalMode()).toLowerCase() : 'national';
-  params.set('operational_mode', mode);
-  if (mode === 'dfw') params.set('metro', 'DFW');
+  params.set('geography', '1');
   if (APP._regionalQueue === 'weak_repair') params.set('queue', 'weak_repair');
   if (filters.state) params.set('state', filters.state);
   if (filters.county) params.set('county', filters.county);
+  if (filters.city) params.set('city', filters.city);
   if (filters.source) params.set('source_type', filters.source);
   if (filters.workflow) params.set('workflow', filters.workflow);
   if (APP._dallasVerifiedOnly) params.set('dallas_verified', '1');
@@ -21401,6 +21400,7 @@ loadLeadsFromAPI=async function(options){
     if(!lr.ok) throw new Error('HTTP '+lr.status);
     var ld=await lr.json();
     if (loadSeq !== APP._leadApiLoadSeq) return;
+    APP._leadLocationCounts = Array.isArray(ld && ld.location_counts) ? ld.location_counts : [];
     var leads=Array.isArray(ld&&ld.leads)?ld.leads:(Array.isArray(ld)?ld:[]);
     APP._leadsTotalAll=leadCountOrFallback(ld&&ld.totalAll,ld&&ld.totalFiltered,leads.length);
     APP._leadsTotalFiltered=leadCountOrFallback(ld&&ld.totalFiltered,APP._leadsTotalAll,leads.length);
@@ -21654,9 +21654,9 @@ function renderBulkActionsBar(){
     var addressTone = item.addressStatus === 'Research Ready' ? 'good' : (item.addressStatus === 'Needs Address Review' ? 'warn' : 'bad');
     var compTone = item.compStatus === 'Ready For Review' ? 'good' : (item.compStatus === 'Comps Needed' ? 'warn' : 'bad');
     return '<div style="border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:start">' +
-      '<div style="min-width:0"><div style="font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase">' + leadQueueSafeText(ref) + '</div>' +
-      '<div style="font-size:13px;color:#111827;font-weight:900;line-height:1.3;margin-top:2px;word-break:break-word">' + leadQueueSafeText(address) + '</div>' +
-      '<div style="font-size:11px;color:#64748b;margin-top:3px">' + leadQueueSafeText(location || 'Location needs review') + '</div></div>' +
+      '<div style="min-width:0"><div style="font-size:13px;color:#111827;font-weight:900;line-height:1.3;word-break:break-word">' + leadQueueSafeText(address) + '</div>' +
+      '<div style="font-size:11px;color:#64748b;margin-top:3px">' + leadQueueSafeText(location || 'Location needs review') + '</div>' +
+      '<div style="font-size:10px;color:#64748b;margin-top:3px">' + leadQueueSafeText(ref) + '</div></div>' +
       '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">' +
         selectedLeadStatusPill(item.addressStatus, addressTone) +
         selectedLeadStatusPill(item.sourceStatus, item.sourceUrl ? 'good' : 'warn') +
@@ -26333,7 +26333,7 @@ function renderLeads() {
   var safeLimit = Number(APP._leadApiLimit || baseLeads.length || 300);
   var safePage = Math.floor(safeOffset / Math.max(1, safeLimit)) + 1;
   var safePages = Math.max(1, Math.ceil(safeFiltered / Math.max(1, safeLimit)));
-  var safePageText = regionalModeLabel() + ': showing safe page of ' + total.toLocaleString() + ' from ' + safeTotal.toLocaleString() + ' total.';
+  var safePageText = 'Showing ' + total.toLocaleString() + ' loaded leads from ' + safeTotal.toLocaleString() + ' total.';
   if (safeFiltered !== safeTotal) safePageText += ' Filtered pool ' + safeFiltered.toLocaleString() + '.';
   var pager = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;flex-wrap:wrap">' +
     '<button onclick="leadsPrevPage()" ' + (page === 0 && APP._leadApiPrevOffset == null ? 'disabled' : '') + ' style="padding:5px 12px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">Prev</button>' +
@@ -26352,9 +26352,9 @@ function renderLeads() {
     var address = leadQueueAddress(lead);
     var sourceDetail = leadQueueSourceDetail(lead);
     return '<tr style="cursor:pointer;border-bottom:1px solid #f5f5f7;background:' + (isSelected ? '#e8f0fe' : 'transparent') + '" data-lead-id="' + leadQueueAttr(id) + '" data-open-workspace="1" data-open-lead-modal="1" onclick="openLeadModal(this.dataset.leadId)">' +
-      '<td style="padding:9px 8px;width:34px;text-align:center"><input type="checkbox" class="lead-cb" data-id="' + leadQueueAttr(id) + '" ' + (isSelected ? 'checked ' : '') + 'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:15px;height:15px;cursor:pointer"></td>' +
-      '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">' + leadQueueSafeText(rid) + '</span></td>' +
+      '<td style="padding:0;width:44px;text-align:center"><label aria-label="Select lead" onclick="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;padding:0;margin:0"><input type="checkbox" class="lead-cb" data-id="' + leadQueueAttr(id) + '" ' + (isSelected ? 'checked ' : '') + 'onclick="event.stopPropagation()" onchange="toggleLeadSelection(this.dataset.id,this.checked)" style="width:18px;height:18px;cursor:pointer"></label></td>' +
       '<td style="padding:9px 8px;font-size:12px;font-weight:700;color:#1d1d1f;max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText(address.split(',')[0] || address) + '</td>' +
+      '<td style="padding:9px 12px;font-size:10px;white-space:nowrap"><span style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">' + leadQueueSafeText(rid) + '</span></td>' +
       '<td style="padding:9px 8px;font-size:12px">' + leadQueueSafeText(leadQueueState(lead)) + '</td>' +
       '<td title="' + leadQueueAttr(sourceDetail) + '" style="padding:9px 8px;font-size:11px;color:#374151;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><div style="font-weight:800;color:#1f2937">' + leadQueueSafeText(leadQueueTypeSource(lead)) + '</div><div style="font-size:9px;color:#86868b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + leadQueueSafeText([leadQueueCounty(lead), leadQueueState(lead)].filter(Boolean).join(', ') || sourceDetail) + '</div></td>' +
       '<td style="padding:9px 8px;font-size:11px;font-weight:700;color:#1a1a2e">' + leadQueueSafeText(leadQueuePriority(lead)) + '</td>' +
@@ -26366,24 +26366,14 @@ function renderLeads() {
     '</tr>';
   }).join('');
 
-  var headers = ['REF','ADDRESS','STATE','TYPE/SOURCE','PRIORITY','QUALITY','WORKFLOW','COMP','CONTACT',''].map(function(header){
+  var headers = ['ADDRESS','REF','STATE','TYPE/SOURCE','PRIORITY','QUALITY','WORKFLOW','COMP','CONTACT',''].map(function(header){
     return '<th style="padding:9px 8px;text-align:left;font-size:11px;color:#86868b">' + header + '</th>';
   }).join('');
   var quarantineNotice = quarantined.length ? '<div style="border:1px solid #f59e0b66;background:#fffbeb;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:10px">' + quarantined.length.toLocaleString() + ' placeholder/blank-address lead(s) hidden from the active queue. They were not deleted.</div>' : '';
   var dallasQueueNotice = APP._dallasSheriffOnly
     ? '<div style="border:1px solid #f59e0b66;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Auction Soon: Dallas sheriff/tax-sale leads must have source proof, sale/tax timing, real property evidence, and medium/high confidence. Weak rows are excluded.</div>'
     : (APP._dallasVerifiedOnly ? '<div style="border:1px solid #10b98166;background:#ecfdf5;color:#047857;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">Distress Verified: Dallas leads must have property-level source proof, distress, timing or amount evidence, and medium/high confidence. Weak courthouse rows are excluded.</div>' : '');
-  var modeFilters = getLeadToolbarFilters();
-  var regionalNotice = '<div style="border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;margin-bottom:10px">' +
-    regionalModeLabel() + ': ' +
-    (window.regionalMode() === 'dallas' ? 'Dallas County only. National courthouse rows are isolated from this workflow.' :
-     window.regionalMode() === 'dfw' ? 'DFW counties only: Dallas, Tarrant, Collin, Denton.' :
-     window.regionalMode() === 'texas' ? 'All Texas leads only.' :
-     'National Intake: all regions and states.') +
-    (window.regionalMode() === 'national' && modeFilters.state ? ' Filtered to ' + leadQueueSafeText(WOS_STATE_NAMES[String(modeFilters.state).toUpperCase()] || modeFilters.state) + '.' : '') +
-    (APP._regionalQueue === 'weak_repair' ? ' Needs Research queue is active.' : '') +
-    (APP._operatorQueue === 'comps_needed' ? ' Comps Needed queue is active.' : '') +
-  '</div>';
+  var regionalNotice = '';
   var loadWarning = APP._leadsError ? '<div style="border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:10px">Failed to refresh leads: ' + leadQueueSafeText(APP._leadsError) + '</div>' : '';
   setTimeout(leadQueueQuarantineDomRows, 0);
 
@@ -26408,7 +26398,7 @@ function renderLeads() {
     pager +
     '<div id="lead-queue-table-shell" style="min-height:360px;overflow-x:auto;border:1px solid #f0f0f0;border-radius:10px;background:#fff">' +
       '<table style="width:100%;border-collapse:collapse">' +
-        '<thead><tr style="background:#f5f5f7"><th style="padding:9px 8px;width:34px;text-align:center"><input id="select-all-visible-leads" type="checkbox" onchange="toggleSelectAllVisibleLeads(this.checked)" style="width:15px;height:15px;cursor:pointer"></th>' + headers + '</tr></thead>' +
+        '<thead><tr style="background:#f5f5f7"><th style="padding:0;width:44px;text-align:center"><label aria-label="Select all visible leads" style="display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;padding:0;margin:0"><input id="select-all-visible-leads" type="checkbox" onchange="toggleSelectAllVisibleLeads(this.checked)" style="width:18px;height:18px;cursor:pointer"></label></th>' + headers + '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table>' +
     '</div>' +
@@ -28173,18 +28163,12 @@ function getLeadToolbarFilters(){
   if (!APP._leadToolbarFilters) {
     try { APP._leadToolbarFilters = JSON.parse(localStorage.getItem('montsan_lead_toolbar_filters') || '{}') || {}; }
     catch(e) { APP._leadToolbarFilters = {}; }
-    if (!localStorage.getItem('montsan_lead_toolbar_filters') && window.regionalMode() === 'dallas') {
-      APP._leadToolbarFilters.state = 'TX';
-      APP._leadToolbarFilters.county = 'Dallas';
-    }
   }
   APP._leadToolbarFilters.sort = APP._leadToolbarFilters.sort || 'priority';
   return APP._leadToolbarFilters;
 }
 function readLeadToolbarFiltersFromDom(){
   var filters = getLeadToolbarFilters();
-  filters.state = (document.getElementById("lfState")||{}).value || "";
-  filters.county = (document.getElementById("lfCounty")||{}).value || "";
   filters.source = (document.getElementById("lfSource")||{}).value || "";
   filters.type = (document.getElementById("lfType")||{}).value || "";
   filters.workflow = (document.getElementById("lfWorkflow")||{}).value || "";
@@ -28205,9 +28189,8 @@ function leadMatchesToolbarFilters(l,filters){
     var compLabel = typeof leadQueueCompStatus === 'function' ? leadQueueCompStatus(l) : '';
     if (!/comp/i.test(compLabel) || !/need/i.test(compLabel)) return false;
   }
-  return leadMatchesRegionalMode(l) &&
-    leadMatchesState(l,filters.state) &&
-    leadMatchesCounty(l,filters.county) &&
+  var locationMatches = window.wosListFilters ? window.wosListFilters.matches({state:l.state,county:l.county,city:l.city || l.property_city},filters) : leadMatchesState(l,filters.state) && leadMatchesCounty(l,filters.county);
+  return locationMatches &&
     leadMatchesSource(l,filters.source) &&
     leadMatchesType(l,filters.type) &&
     leadMatchesWorkflow(l,filters.workflow) &&
@@ -28302,27 +28285,43 @@ function addToolbarButtons(){
   // Toolbar is rendered canonically by renderLeads().
 }
 function renderRegionalModeControls(){
-  var active = window.regionalMode();
-  var order = ['dallas','dfw','texas','national'];
-  return "<div id='regionalCommandBar' style='display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#0b1120;border:1px solid #1f2937;border-radius:8px;padding:6px 8px;margin-right:4px;'>" +
-    "<span style='font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:900;letter-spacing:.05em;'>Mode</span>" +
-    order.map(function(mode){
-      var cfg = REGIONAL_COMMAND[mode];
-      var isActive = active === mode;
-      return "<button type='button' onclick='setOperationalMode(\""+mode+"\")' style='font-size:11px;padding:5px 9px;border:1px solid "+(isActive?"#f59e0b":"#334155")+";border-radius:999px;background:"+(isActive?"#f59e0b":"#111827")+";color:"+(isActive?"#111827":"#e5e7eb")+";font-weight:900;cursor:pointer;'>"+cfg.label.replace(" Mode","")+"</button>";
-    }).join("") +
-  "</div>";
+  if (!APP._leadCountyCatalogRequested) {
+    APP._leadCountyCatalogRequested = true;
+    fetch('/api/dashboard/filter-counties').then(function(response){if(!response.ok)throw Error('directory_unavailable');return response.json();}).then(function(catalog){
+      if(catalog.schema_version!==1 || !Array.isArray(catalog.states) || !Array.isArray(catalog.counties))throw Error('directory_invalid');
+      APP._leadCountyCatalog = catalog;
+    }).catch(function(){APP._leadCountyCatalogError=true;}).finally(function(){if(APP.page==='leads' && typeof render==='function')render();});
+  }
+  var catalog = APP._leadCountyCatalog || {states:Object.keys(WOS_STATE_NAMES).map(function(code){return {code:code,name:WOS_STATE_NAMES[code]};}),counties:[]};
+  return window.wosListFilters ? '<div id="leadGeography">' + window.wosListFilters.render({catalog:catalog,selection:getLeadToolbarFilters(),rows:APP._leadLocationCounts || [],tab:'leads',note:false}) +
+    (APP._leadCountyCatalogError ? '<small>County directory unavailable.</small>' : '') + '</div>' : '';
 }
+
+function changeLeadLocation(field,value){
+  var filters=getLeadToolbarFilters();
+  var next=field==='clear' ? {state:'',county:'',city:''} : window.wosListFilters.change(filters,field,value);
+  Object.assign(filters,next);
+  APP._dallasVerifiedOnly=false; APP._dallasSheriffOnly=false;
+  saveLeadToolbarState(); APP._leadApiOffset=0;
+  if(typeof _leadsPage!=='undefined')_leadsPage=0;
+  loadLeadsFromAPI({offset:0,resetPage:true});
+}
+document.addEventListener('change',function(event){
+  var el=event.target;
+  if(el.closest && el.closest('[data-list-filters="leads"]') && el.dataset.listFilter)changeLeadLocation(el.dataset.listFilter,el.value);
+});
+document.addEventListener('click',function(event){
+  var el=event.target.closest && event.target.closest('[data-list-filter-remove],[data-list-filter-clear]');
+  if(!el || !el.closest('[data-list-filters="leads"]'))return;
+  changeLeadLocation(el.hasAttribute('data-list-filter-clear')?'clear':el.dataset.listFilterRemove,'');
+});
 
 function activeLeadFilterChips() {
   var filters = getLeadToolbarFilters();
   var chips = [];
-  var mode = window.regionalMode();
-  var modeText = regionalModeLabel().replace(' Mode', ' mode');
-  if (mode === 'national' && filters.state) modeText += ' - filtered to ' + (WOS_STATE_NAMES[String(filters.state).toUpperCase()] || filters.state);
-  chips.push(['Market', modeText]);
   if (filters.state) chips.push(['State', WOS_STATE_NAMES[String(filters.state).toUpperCase()] || filters.state]);
   if (filters.county) chips.push(['County', filters.county]);
+  if (filters.city) chips.push(['City', filters.city]);
   if (filters.source) chips.push(['Source', filters.source]);
   if (filters.workflow) chips.push(['Workflow', filters.workflow]);
   if (APP._regionalQueue === 'weak_repair') chips.push(['Queue', 'Needs Research']);
@@ -28378,6 +28377,10 @@ window.renderLeadActionToolbar = function(){
   if (typeof APP === "undefined" || APP.page !== "leads") return "";
   setTimeout(syncLeadFilterControls,0);
   var activeFilterBar = filterBar.replace("display:none", "display:" + (APP._leadFilterBarOpen ? "flex" : "none"));
+  var parsedFilterBar=document.createElement('template');
+  parsedFilterBar.innerHTML=activeFilterBar;
+  ['lfState','lfCounty'].forEach(function(id){var control=parsedFilterBar.content.querySelector('#'+id);if(control)control.parentElement.remove();});
+  activeFilterBar=parsedFilterBar.innerHTML;
   return "<div id='wosFilterToggleBar' style='position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;'>" +
     renderRegionalModeControls() +
     filterToggleBtns() +
@@ -28481,7 +28484,7 @@ window.applyLeadFilters = function(){
   return window.applyLeadToolbarFilters();
 };
 window.clearLeadFilters = function(){
-  APP._leadToolbarFilters = {state:"",county:"",source:"",type:"",workflow:"",age:"",priority:"",sort:"priority"};
+  APP._leadToolbarFilters = {state:"",county:"",city:"",source:"",type:"",workflow:"",age:"",priority:"",sort:"priority"};
   APP._dallasVerifiedOnly = false;
   APP._dallasSheriffOnly = false;
   APP._regionalQueue = '';
@@ -29037,8 +29040,8 @@ if(document.readyState==="loading"){
     var skipTraceMessage = skipTraceUrl ? '' : '<div style="font-size:11px;color:#94a3b8;font-weight:800;line-height:1.45">Skip trace needs an owner or usable address.</div>';
     return '<div style="width:min(560px,96vw);height:96vh;max-height:96vh;background:#07111f;color:#e5e7eb;border:1px solid #d4af37;border-right:none;border-radius:14px 0 0 14px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #1f2937;background:#0b1220">' +
-        '<div style="min-width:0"><div style="font-size:10px;color:#d4af37;font-weight:900;text-transform:uppercase;letter-spacing:.04em">' + compactLeadText(ref) + '</div>' +
-        '<div style="font-size:18px;color:#fff;font-weight:900;line-height:1.2;margin-top:4px">' + compactLeadText(address) + '</div>' +
+        '<div style="min-width:0"><div style="font-size:18px;color:#fff;font-weight:900;line-height:1.2">' + compactLeadText(address || 'Address missing') + '</div>' +
+        '<div style="font-size:11px;color:#94a3b8;margin-top:4px">' + compactLeadText([leadQueueCounty(lead),leadQueueState(lead),ref].filter(Boolean).join(' | ')) + '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><span style="font-size:10px;background:#172033;border:1px solid #334155;border-radius:999px;padding:4px 7px;font-weight:800">' + compactLeadText(sourceType) + '</span><span style="font-size:10px;background:#172033;border:1px solid #334155;border-radius:999px;padding:4px 7px;font-weight:800">' + compactLeadText(amount) + '</span>' + qualityBadge + '</div></div>' +
         '<button type="button" onclick="closeModal()" aria-label="Close lead" title="Close" style="width:34px;height:34px;border-radius:999px;border:1px solid #334155;background:#111827;color:#fff;font-size:18px;font-weight:900;cursor:pointer;line-height:1">X</button>' +
       '</div>' +
@@ -29180,7 +29183,7 @@ function wosRealPullState(stateCode, cardEl) {
 <script src="/dashboard/wos-role-chips.js?v=2"></script>
 <script src="/dashboard/wos-jv-workflow.js?v=2"></script>
 <script src="/dashboard/wos-jv-desk.js?v=1"></script>
-<script src="/dashboard/wos-list-filters.js?v=1"></script>
+<script src="/dashboard/wos-list-filters.js?v=2"></script>
 <script src="/dashboard/wos-todays-deals.js?v=13"></script>
 <script src="/dashboard/wos-public-deals.js?v=56"></script>
 <script src="/dashboard/wos-operational-views.js?v=2"></script>

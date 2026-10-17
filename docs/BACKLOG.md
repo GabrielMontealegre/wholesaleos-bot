@@ -2,17 +2,84 @@
 
 ## Latest Run Summary
 
+2026-10-17 G second hosted report 39054821139:196 passed/1 failed/0 skipped,
+197 total; same new browser fixture,33.62s. Exact local reproduction now uses
+isolated Playwright1.44.0, matching package.json/CI (old local runtime1.62.1).
+Observed cause: old Playwright selected a disabled county control with only the
+empty option and returned []; the later enabled control retained no selection.
+The fixture now waits for an enabled control containing the intended option and
+asserts the returned selection, before checking unchanged functional outcomes.
+Pinned1.44 browser proof PASS1366/400/412, including delayed responses and both
+checkbox targets. No package/dependency manifest change. Prior run39054519901
+was cancelled by concurrency after the select-all target fix, not counted green.
+Final hosted rerun required. No merge/deploy. C trace is separate/uncommitted.
+
+2026-10-17 G PR #377, head e05f3eb: initial hosted run 39053360502 finished
+196 passed / 1 failed / 0 skipped,197 total. County-notice acquisition248.87s.
+Only lead-geography-ui failed at county-to-city selection (61.44s,file line55),
+not the earlier startup wait. Local delayed-response reproduction passed;
+the fixture now explicitly waits for county response completion and the newly
+rendered selected county option before city selection. Assertions unchanged;
+synthetic request/state diagnostics retained for any recurrence. Full rerun
+required; no merge/deploy. Initial report: docs/test-results/issue-366-g-initial.txt.
+
+2026-10-17 resumed: current thread turn_context confirms gpt-6.1-sol Medium.
+The previous defaults-only check did not establish the thread's effort and was
+an incorrect basis for repeated stops; use current-thread metadata going forward.
+G remains IN PROGRESS, not released. The browser timeout is diagnosed: startup
+requested limit=300 and loaded all four synthetic rows with no page errors while
+the test expected two. Wait for startup, then explicitly request limit=2; desktop
+and 412 browser proof now pass. Adding 400 proof, then full hosted suite/release.
+No business data writes or settings changes. Other pending work is preserved.
+
+2026-10-17 14:07Z heartbeat checkpoint: no further implementation performed.
+Usage available; no previous test process remains running. Medium/standard
+execution cannot be verified; saved app defaults show Low, not Medium. The
+heartbeat guard remains in force, and its tooling cannot pin effort itself.
+G is now UNCOMMITTED IN PROGRESS on item/366-g-lead-geography, not trace-only:
+shared geography request/filter/facets, address-first rendering and normal
+checkbox changes plus two new test files. Unit/real-route and existing zero-count
+checks pass. New synthetic browser proof is NOT green: first wait targeted a
+hidden native option; attached-state correction applied; latest run times out
+at tests/lead-geography-ui.test.js:41 waiting for initial 4-row hydration.
+Do not merge or call G verified. A subsequent local test command omitted NODE_PATH
+and reported missing existing csv-parse/express; that is environment setup, not
+a reason to edit assertions. Restore the documented NODE_PATH before resuming.
+No G PR/release, no new production action in this heartbeat; unrelated files kept.
+The earlier statement below that G was trace-only describes the release checkpoint.
+
 2026-10-17 owner order: automation,cloud full-suite CI,opt-in scrubbed Sentry,
 then#366 D,A,G,C,F,B,E,I,H,J,then#370,#369,#361,#351. D/A already live;do not
 repeat them. County ranking remains paused. Existing paused heartbeat renamed
 WholesaleOS autopilot,ACTIVE,every2hours;no duplicate. Heartbeat API cannot pin
 model/effort;prompt fails closed if medium/standard cannot be established.
-Cloud CI PR#371 IN PROGRESS;actual hosted run39016329965 required before merge.
-Sentry implementation IN PROGRESS on a separate branch: OFF without valid DSN,
-strict shared event allowlist,admin config,server/global errors and dashboard
-errors,SDK10.22.0 pinned. Privacy unit/fake-browser checks pass;actual-SDK
-custom-transport and full suite will run in cloud. No DSN enabled or telemetry
-sent. No settings or business data changed. G and later work not advanced yet.
+Cloud CI DONE in PR #371, main b2a1f6f16b1c3ae888ffd21fe47269c3fd4baf18.
+Hosted run 39017755016: 193 passed, 0 failed, 0 skipped; 600s per file.
+County-notice acquisition 159.27s; appraisal fixture 0.24s; runtime resolver 4.53s.
+Initial runs 191/2 and 192/1 are not waived: child-process environment isolation
+and asynchronous temporary cleanup fixed scaffolding without changing assertions.
+Exact Railway deployment 7137172001 succeeded 08:42:30Z (43s), health 200.
+Live 1366/412: 100 leads, real drawer open/close, no console errors; safe Today
+screenshots retained here. No production business writes or settings changes.
+
+Sentry MERGED in PR #373, main 24b607b49b9668db2250f3d3f5be1d82a8411c56.
+Hosted run 39017862529: 195 passed, 0 failed, 0 skipped; 600s per file.
+Privacy test 0.09s; actual SDK custom-transport test 0.49s; acquisition 262.09s.
+Actual SDK envelope excludes seeded private data and scope attachments, zero
+test telemetry network. Exact deployment 7137223068 succeeded 08:49:57Z (2m50s).
+The authenticated live config reports enabled=true: a DSN was already present.
+No DSN/account/plan/variable was added or changed. Do not call production OFF.
+Monitoring remains OFF when DSN is absent; no deliberate production test error.
+Final live proof PASS at 1366x768 and 412x915: both local scripts served,
+SDK absent on the locked screen and present after login; 100 leads hydrate,
+real drawer opens/closes, no page overflow at 412, zero console errors.
+Old Chrome tab became stale; a fresh tab restored control and Gabriel unlocked
+it. Viewport restored, inspected private-data-free Today screenshots retained.
+Main cloud run 39018663111: 195 passed, 0 failed, 0 skipped; acquisition
+253.83s, privacy 0.08s, actual SDK 0.54s. G trace prepared,
+but its product changes have NOT been implemented; next is G, then C/F/B/E/I/H/J.
+C and B are NOT live. County ranking stays paused. No batch, capture, helper,
+contact, evidence confirmation or business-data mutation was performed.
 
 2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
 one PR per letter, live1366/412 click-through for each. County ranking PAUSED,
@@ -30,12 +97,20 @@ expanded, both real conversation entry points open/close, real recent Deal found
 opens its exact deal (not Buyers),100Leads/address-cell drawer opens/closes,
 0console errors,viewport restored. Best0 is honest; eligible Best click is
 synthetic-only proof. Live screenshots contain references/counts, no owner/contact
-or street details. A IN PROGRESS on item/366-a-panel-hygiene: presentation-only
+or street details. A DONE in PR#368: presentation-only
 X/top-overlay Esc,full-height/easy-hit More/account,tighter cards/lists,bounded
 lead row scroll with contained column headers,no floating MODE toolbar.
 Focused proof1366/1920/400/412 passed;final full192passed/0failed/0skipped,
 600s/file,new panel9.39s/shell29.19s/county-notice11.46s. Initial191/1 report
-retained;existing close hook restored without altering old tests. Release/live pending.
+retained;existing close hook restored without altering old tests. Mainffa3dd0d6a1f1cd05c6e70af1d2959900de1194b;
+exact deploy7108050258 SUCCESS2026-10-16T00:51:38Z,60s. Health/dashboard200;
+shellJS4/CSS3/hygiene1 served. Live1366/412:More full height/top-right X,account
+X,centered conversation X/Esc,lead drawer X/Esc,bell X/Esc,100Leads,actual last-row
+click scrolls only bounded list with header retained,MODE static,no page overflow.
+Old tab logged one502 at00:51:27Z,before deploy success;fresh post-deploy tabs
+at both widths hydrate100rows with0console errors. Viewport restored.
+G NEXT on item/366-g-lead-geography;not implemented/released yet. D and A are
+2of10 letters live,not an overall software-completion percentage.
 Live baseline conversation opener worked; no blanket claim that every link was
 broken. Best-deal list was legitimately empty; never fabricate a qualifying deal.
 C and B are NOT live; explicitly notify Gabriel after each is actually verified.
@@ -171,6 +246,14 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-15: #366A released in#368;mainffa3dd0,deploy7108050258 success60s,
+health/dashboard200,192passed/0failed/0skipped. Live1366/412 More/account and
+conversation/lead/bell X/Esc,centered dialog,list-scoped scroll/header,MODEstatic,
+100Leads. One pre-success502 retained as transient observation;fresh tabs0errors.
+Live More screenshots reviewed before publication;no owner/contact/street data.
+No operational writes. G next; C/B NOT LIVE; ranking PAUSED. Post-release proof
+rides G to avoid a docs-only deploy.
 
 2026-10-15: #366D released in#367;main90aca25,exact deploy7107648066 success,
 health/dashboard200,191passed/0failed/0skipped. Live1366/412 groupedOverdue8,

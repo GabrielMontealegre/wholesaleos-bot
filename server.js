@@ -33,6 +33,7 @@ const dashboardSession = require('./modules/security/dashboard-session');
 const dashboardPairing = require('./modules/security/dashboard-pairing');
 const assistantFindRoutes = require('./modules/buyers/assistant-find-routes');
 const operationalLeads = require('./modules/research/operational-lead-eligibility');
+const leadLocationFacets = require('./modules/research/lead-location-facets');
 const listingEgressGuard = require('./modules/security/listing-egress-guard');
 const scraperApiClient = require('./modules/research/scraper-api-client');
 const multer = require('multer');
@@ -1291,9 +1292,17 @@ app.get('/api/leads', (req, res) => {
     // Phase 2B: exclude archived leads by default (pass ?archived=true to see them)
     const showArchived = req.query.archived === 'true';
     if (!showArchived) filtered = filtered.filter(l => l.archived !== true);
+    const sharedGeography = req.query.geography === '1';
+    const locationCounts = sharedGeography ? leadLocationFacets.counts(filtered) : undefined;
+    if (sharedGeography) {
+      let selection;
+      try { selection = leadLocationFacets.selection(req.query); }
+      catch (_) { return res.status(400).json({ok: false, error: 'lead_location_filter_invalid'}); }
+      filtered = filtered.filter(lead => leadLocationFacets.matches(lead, selection));
+    }
     var regionalMode = String(operational_mode || region_mode || mode || '').trim().toLowerCase();
-    if (regionalMode) filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, regionalMode); });
-    if (String(metro || '').trim().toLowerCase() === 'dfw') filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'dfw'); });
+    if (!sharedGeography && regionalMode) filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, regionalMode); });
+    if (!sharedGeography && String(metro || '').trim().toLowerCase() === 'dfw') filtered = filtered.filter(function(lead) { return leadMatchesRegionalModeForList(lead, 'dfw'); });
     if (String(queue || '').trim().toLowerCase() === 'weak_repair') {
       filtered = filtered.filter(function(lead) {
         var quality = classifyLeadQualityForList(lead);
@@ -1301,9 +1310,9 @@ app.get('/api/leads', (req, res) => {
       });
     }
     if (status)      filtered = filtered.filter(l => l.status === status);
-    if (county)      filtered = filtered.filter(l => leadMatchesCountyNameForList(l, county));
+    if (county && !sharedGeography) filtered = filtered.filter(l => leadMatchesCountyNameForList(l, county));
     if (category)    filtered = filtered.filter(l => (l.category||'').toLowerCase().includes(category.toLowerCase()));
-    if (state)       filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
+    if (state && !sharedGeography) filtered = filtered.filter(l => (l.state||'').toUpperCase() === state.toUpperCase());
     if (source_type) filtered = filtered.filter(l => leadSourceTypeText(l).toLowerCase().includes(source_type.toLowerCase()));
     if (workflow)    filtered = filtered.filter(l => [l.workflow_state, l.assignment_state, l.status].filter(Boolean).join(' ').toLowerCase().includes(String(workflow).toLowerCase()));
     if (/^(1|true|yes)$/i.test(String(dallas_verified || ''))) {
@@ -1385,7 +1394,8 @@ app.get('/api/leads', (req, res) => {
       next_offset: requestedOffset + requestedLimit < filtered.length ? requestedOffset + requestedLimit : null,
       prev_offset: requestedOffset > 0 ? Math.max(0, requestedOffset - requestedLimit) : null,
       list_sanitized: true,
-      intake_status: intakeStatus
+      intake_status: intakeStatus,
+      location_counts: locationCounts
     });
   } catch (err) {
     console.error('[api/leads] failed to build list response:', err);

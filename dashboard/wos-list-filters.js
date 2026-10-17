@@ -46,14 +46,14 @@
     const route = new URLSearchParams(String(hash || '').replace(/^#/, '')).get('filters');
     return !new URLSearchParams(search || '').has('record_ref') && ['todays_deals','jv'].includes(route) ? route : '';
   }
-  function render({catalog, selection, rows, tab}) {
+  function render({catalog, selection, rows, tab, note}) {
     const value = normalize(selection), counties = catalog ? catalog.counties.filter(c => c.state === value.state) : [];
     const cities = [...new Set(rows.filter(row => value.state && value.county && matches(row, {...value, city: ''})).map(row => text(row.city)).filter(Boolean))].sort();
     function select(field, values, disabled) {
       const label = field[0].toUpperCase() + field.slice(1);
       const selected = value[field];
       if (selected && !values.some(v => v.value === selected)) values = [{value: selected, label: selected + ' (no loaded records)'}, ...values];
-      return '<label>' + label + '<select class="form-select" data-list-filter="' + field + '"' + (disabled ? ' disabled' : '') + ' aria-label="' + label + '"><option value="">All ' + label.toLowerCase() + (field === 'city' ? ' locations' : field === 'county' ? ' locations' : 's') + '</option>' + values.map(v => '<option value="' + esc(v.value) + '"' + (v.empty ? ' data-empty="true" style="color:#9aa5b5"' : '') + (selected === v.value ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('') + '</select></label>';
+      return '<label>' + label + '<select class="form-select" data-list-filter="' + field + '"' + (disabled ? ' disabled' : '') + ' aria-label="' + label + '"><option value="">' + ({state:'All states',county:'All counties',city:'All cities'})[field] + '</option>' + values.map(v => '<option value="' + esc(v.value) + '"' + (v.empty ? ' data-empty="true" style="color:#9aa5b5"' : '') + (selected === v.value ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('') + '</select></label>';
     }
     return '<div class="wos-location-filters" data-list-filters="' + esc(tab) + '">' +
       select('state', (catalog ? catalog.states : []).map(s => ({value:s.code,label:s.name})), !catalog) +
@@ -61,7 +61,7 @@
       select('city', cities.map(city => ({value:city,label:city})), !value.county) +
       '<div class="wos-filter-chips">' + fields.filter(field => value[field]).map(field => '<button type="button" class="btn" data-list-filter-remove="' + field + '" aria-label="Remove ' + field + ' filter">' + esc(value[field]) + ' &times;</button>').join('') +
       '<button type="button" class="btn" data-list-filter-clear>Clear location filters</button></div>' +
-      '<small>' + (catalog ? 'County rankings unavailable; alphabetical until source data is established. Counts exclude hidden deals unless included.' : 'County directory unavailable. Other deal filters remain usable.') + '</small></div>';
+      (note === false ? '' : '<small>' + (catalog ? 'County rankings unavailable; alphabetical until source data is established. Counts exclude hidden deals unless included.' : 'County directory unavailable. Other deal filters remain usable.') + '</small>') + '</div>';
   }
   return {normalize, change, matches, restore, persist, initialTab, render};
 });

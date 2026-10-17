@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: #366G uses the existing shared geography matcher and county directory,
+with full-store aggregate location facets before pagination. geography=1 opts the
+dashboard out of legacy regional restrictions; old API consumers keep their
+existing behavior. Explicit location changes clear legacy county-only quality
+shortcuts, retain other deliberate filters, and never change stored rows or
+readiness. Missing location facts stay missing -- AGENTS3/5,#366G --2026-10-17.
+
 ASSUMED: owner2026-10-17 authorizes cloud CI and opt-in scrubbed Sentry before
 the existing#366 order;no new Sentry DSN/account/paid plan or production variable
 change is authorized. CI reuses the Windows PowerShell runner and pinned browser;

@@ -36,7 +36,14 @@ retention assertion. Failed report preserved. Final full suite192passed/0failed/
 0skipped,600s/file;panel9.39s,shell29.19s,county-notice11.46s. All old assertions
 unchanged. Global margin reset also put native dialogs top-left; scoped auto
 margin restores centering, pinned by a geometric browser assertion.
-Release/live verification pending.
+Released PR#368,mainffa3dd0d6a1f1cd05c6e70af1d2959900de1194b.
+Exact deploy7108050258 success2026-10-16T00:51:38Z,60s. Health/dashboard200;
+shellJS4/CSS3/hygiene1 served. Live1366/412 More full height/X,account X,
+centered conversation X/Esc,lead X/Esc,bell X/Esc,100Leads,last-row click scrolls
+bounded list with header retained,MODE static,no page overflow. Old tab502 at
+00:51:27Z predates success;fresh post-deploy tabs hydrate100with0errors.
+Viewport restored. Live More screenshots inspected before publishing;no private
+row fields. No source/capture/contact/confirmation/business data writes.
 
 This branch carries D's verified post-release screenshots/report to avoid a
 separate docs-only production deployment. C and B remain NOT LIVE.
