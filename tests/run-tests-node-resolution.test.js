@@ -26,6 +26,9 @@ const POWERSHELL = path.join(process.env.SystemRoot || 'C:\\Windows',
 function runResolver(env) {
   const script = [
     '$ErrorActionPreference = "Stop"',
+    // Windows PowerShell startup can restore standard install environment paths.
+    // Reapply this case's environment inside the child so "missing" is hermetic.
+    ...Object.entries(env).map(([key,value]) => "[Environment]::SetEnvironmentVariable('" + key.replace(/'/g,"''") + "','" + String(value).replace(/'/g,"''") + "','Process')"),
     extractResolver(),
     'try { Resolve-NodeExecutable } catch { "THREW: " + $_.Exception.Message }'
   ].join('\n');
