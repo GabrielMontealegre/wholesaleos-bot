@@ -1,7 +1,14 @@
 # Leads Geography: Trace Before Implementation
 
-Status: implementation in progress; not released. Focused unit/real-route and
-browser checks pass. Full cloud suite and post-deploy verification still required.
+Status: DONE. PR #377 merged as d9a64dd6fd4682b6adf018e45331d9c50c49fc55.
+Final hosted run39056128233 passed197/197, zero failures/skips. Exact Railway
+deployment7143682195 succeeded18:13:47Z; post-success health200.
+Live1366/400/412 verification completed: full-store cascade IL8983/Cook8981/
+ALSIP32, real server page boundary, All states restored12039total/10664filtered,
+address-cell drawer X/Escape,18px checkbox/44px target, console0errors.
+Privacy-safe real empty-filter screenshots: docs/screens/2026-10-17-366-g/.
+They show an actual zero-result selection, not fabricated populated records.
+Final timings: docs/test-results/issue-366-g-final.txt. No production data writes.
 
 The browser proof now waits for authenticated startup hydration before setting
 its two-row page size and explicitly requesting page one. The old fixture raced
@@ -13,8 +20,8 @@ fixture's county selection also raced a disabled control. Exact local diagnosis
 with the pinned Playwright1.44.0 reproduced selectOption returning[] while the
 old1.62.1 runtime waited automatically. Explicit enabled/option readiness and a
 returned-selection assertion fix the fixture without changing product behavior
-or weakening the cascade checks. Pinned local1366/400/412 proof passes; final
-cloud gate remains required. Dependencies and timeout remain unchanged.
+or weakening the cascade checks. Pinned local1366/400/412 proof and the final
+cloud gate now pass. Dependencies and timeout remain unchanged.
 
 ## Existing Writers And Readers
 

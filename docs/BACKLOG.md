@@ -2,6 +2,24 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366G DONE: PR #377 merged as
+d9a64dd6fd4682b6adf018e45331d9c50c49fc55. Hosted run39056128233:
+197 passed / 0 failed / 0 skipped (600s per file; job10m44s;
+county-notice acquisition253.16s). Exact Railway deployment7143682195
+succeeded18:13:47Z,2m11s after start; post-success /health200.
+Live1366/400/412: address-cell drawer opens/closes (X/Escape), normal18px
+checkboxes with44px targets, no phone page overflow, console0errors.
+All states recovers12039 total /10664 filtered; crossed server page1 to2.
+Illinois8983 -> Cook8981 -> ALSIP32; parent resets children. Texas has2
+records but no populated county facet; missing facts were not invented.
+Real Anderson County zero-result screenshots contain no private records:
+docs/screens/2026-10-17-366-g/live-empty-{1366,400,412}.png.
+Assets confirmed: marketplace.css?v=3,list-filters.js?v=2. No business
+writes/outreach/captures/batches/settings changes. D/A/G verified live:
+3of10 requested UI letters, not a claim about whole-product completion.
+Next: #366C buyer workspace, trace prepared on item/366-c-buyer-workspace;
+not built/released yet. Carry proof in that branch, no docs-only deploy.
+
 2026-10-17 G second hosted report 39054821139:196 passed/1 failed/0 skipped,
 197 total; same new browser fixture,33.62s. Exact local reproduction now uses
 isolated Playwright1.44.0, matching package.json/CI (old local runtime1.62.1).
