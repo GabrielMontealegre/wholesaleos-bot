@@ -42,6 +42,7 @@ async function prove(){
       assert.equal(await page.locator('.email-sender').filter({hasText:'Sender name not supplied'}).count(),1,'an email local part is not a person name');
       const before=await page.evaluate(()=>{const nav=document.querySelector('.email-folders'),list=document.querySelector('.email-thread-scroll'),last=document.querySelector('[data-email-extra-folder]');return{navTop:nav.getBoundingClientRect().top,lastBottom:last.getBoundingClientRect().bottom,listHeight:list.clientHeight,listScrollHeight:list.scrollHeight};});
       assert.ok(before.lastBottom<=height&&before.listHeight>100&&before.listScrollHeight>before.listHeight,JSON.stringify(before));
+      assert.equal(await page.locator('[data-email-extra-folder]').evaluate(el=>getComputedStyle(el).paddingLeft),'4px','native chooser leaves room for its label, not the kit arrow gutter');
       await page.locator('.email-thread-row').last().scrollIntoViewIfNeeded();
       assert.equal(await page.locator('.email-folders').evaluate(el=>el.getBoundingClientRect().top),before.navTop,'only message list scrolls');
       assert.equal(await page.locator('.email-thread-scroll').evaluate(el=>el.scrollTop>0),true);
