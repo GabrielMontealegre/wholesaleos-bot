@@ -41,7 +41,7 @@ email/phone absence on compact cards; #366C explicitly requires their presence.
 The two contact checks now assert presence; subject/ref/admin-control absence,
 JV-address privacy and every matching/provenance assertion remain unchanged.
 scripts/verify-clean-buyer-cards.js:11-14 now clicks Matching deals after opening
-Buy box; scripts/verify-record-activity-ui.js:44 clicks Messages before Activity.
+Buy box; scripts/verify-record-activity-ui.js:48 clicks Messages before Activity.
 Those retain every old visibility/navigation/timeline/no-write assertion.
 New browser proof caught the selector collision; no force clicks or weaker gates.
 
@@ -63,6 +63,10 @@ the explicitly replaced compact-contact absence expectation and two old
 long-scroll proof paths. Focused corrected proofs pass: unit0.54s, card
 navigation10.29s, timeline18.11s. Initial report is retained, not waived.
 Earlier runs39075900603/39076006582 were cancelled on newer revisions, not green.
+Self-review also narrowed asynchronous history refresh to its own email panel:
+it cannot erase a selected deal or collapse the separate Activity timeline.
+Explicit review is preserved across reads, reset after draft save, and must be
+ticked again before Send. Delayed-read browser and timeline proofs pass.
 Full final hosted suite: pending; merge only when every file is green,600s/file.
 Verification after deploy: pending exact deployment + read-only1366/400/412
 click-through. No preview POST, draft, send, import, approval or other production

@@ -27,7 +27,7 @@ async function prove() {
       if(url.pathname==='/api/dashboard/buyers-found')return route.fulfill({json:{items:[fixtureBuyer,{...fixtureBuyer,id:'missing-email',name:'LOCAL TEST DATA - No email',email:'',phone:'',buyer_type_view:{kind:'unknown',verify_purchase:false},deal_fit:{count:0,matches:[],near_misses:[]}}],counts:{total:2,new_today:2,messaged_this_week:0},capabilities:{can_import:true},last_import_at:'2026-10-17T12:00:00Z'}});
       if(url.pathname==='/api/dashboard/buyers-found/example-buyer/email'){
         await new Promise(resolve=>setTimeout(resolve,75));
-        return route.fulfill({json:{configured:true,messages:[]}});
+        return route.fulfill({json:{configured:true,messages:[{subject:'LOCAL history fixture',status:'draft',created_at:'2026-10-17T12:00:00Z',body:'Synthetic draft, not sent.'}]}});
       }
       if(req.method()!=='GET'&&req.method()!=='HEAD'){
         requests.push({path:url.pathname,body:req.postDataJSON()});
@@ -59,7 +59,11 @@ async function prove() {
       await page.getByRole('button',{name:'2 deals match',exact:true}).click();
       assert.equal(await page.getByRole('tab',{name:'Matching deals',exact:true}).getAttribute('aria-selected'),'true');
       assert.ok(!await page.locator('[data-edit-buyer-type]').isVisible(),'buy box is not a long scroll above matches');
+      await page.getByRole('tab',{name:'Messages',exact:true}).click();
+      await page.getByRole('tab',{name:'Matching deals',exact:true}).click();
       await page.locator('[data-buyer-email-deal="deal-1"]').check();await page.locator('[data-buyer-email-deal="deal-2"]').check();
+      await page.locator('.bf-email-panel summary').filter({hasText:'LOCAL history fixture'}).waitFor({state:'attached'});
+      assert.equal(await page.locator('[data-buyer-email-deal="deal-1"]').isChecked(),true,'a delayed email read must not erase selected deals');
       await page.getByRole('button',{name:'Preview selected deals in one email',exact:true}).click();
       await page.getByRole('heading',{name:'Synthetic preview',exact:true}).waitFor();
       assert.deepEqual(requests[0].body.deal_ids,['deal-1','deal-2']);

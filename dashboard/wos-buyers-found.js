@@ -161,7 +161,12 @@
     return fetch('/api/dashboard/buyers-found/'+encodeURIComponent(id)+'/email',{cache:'no-store'})
       .then(function(response){if(!response.ok)throw new Error('Could not load buyer email history.');return response.json();})
       .then(function(result){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.messages=result.messages;})
-      .catch(function(caught){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.error=caught.message;}).finally(paint);
+      .catch(function(caught){if(messageReads[id]!==ticket)return;var state=messageState[id]||(messageState[id]={});state.error=caught.message;})
+      .finally(function(){
+        if(messageReads[id]!==ticket||selectedId!==id)return;
+        var panel=document.querySelector('#wos-buyers-found .bf-email-panel');
+        if(panel)panel.outerHTML=emailPanel({id:id});
+      });
   }
   function load() {
     if (loading || !document.getElementById('wos-buyers-found')) return;
