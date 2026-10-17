@@ -4,6 +4,10 @@ const { simpleParser } = require('mailparser');
 const { google } = require('googleapis');
 const FOLDERS = { inbox:'INBOX',sent:'\\Sent',drafts:'\\Drafts',starred:'\\Flagged',buyers:'WOS/Buyers',jv_deals:'WOS/JV Deals',lead_alerts:'WOS/Lead Alerts',title:'WOS/Title',templates:'WOS/Templates',bounced:'WOS/Bounced',billing:'WOS/Billing' };
 const MAX_BYTES = 2 * 1024 * 1024;
+function senderName(values) {
+  return Array.isArray(values) ? values.map(value => typeof value?.name === 'string' &&
+    value.name.length <= 200 && !/[\x00-\x1f]/.test(value.name) ? value.name.trim() : '').filter(Boolean).join(', ') : '';
+}
 function fail(code,status=503) { const e=new Error(code);e.code=code;e.status=status;throw e; }
 function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser,googleImpl=google}={}) {
   let active=0;
@@ -23,7 +27,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
   function id(box,uid,validity){return 'imap:'+Buffer.from(JSON.stringify({box,uid,validity:String(validity)})).toString('base64url');}
   function decode(value) {try {if(value.length>1000||!value.startsWith('imap:'))throw Error();const p=JSON.parse(Buffer.from(value.slice(5),'base64url').toString());if(typeof p.box!=='string'||p.box.length>200||!Number.isSafeInteger(p.uid)||p.uid<1||!/^\d+$/.test(p.validity))throw Error();return p;}catch{fail('email_message_invalid',400);}}
   function addresses(values){return (values||[]).map(a=>[a.name,a.address&&'<'+a.address+'>'].filter(Boolean).join(' ')).join(', ');}
-  function metadata(m,box,validity){const from=m.envelope?.from||[];const own=from.some(a=>typeof a.address==='string'&&a.address.toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {id:id(box,m.uid,validity),threadId:'',message_id:m.envelope?.messageId||'',in_reply_to:m.envelope?.inReplyTo||'',direction:own?'out':from.some(a=>a.address)?'in':'unknown',from:addresses(from),to:addresses(m.envelope?.to),subject:m.envelope?.subject||'(No subject)',date:m.envelope?.date?.toISOString()||'',read:m.flags?.has('\\Seen')||false,unread:!m.flags?.has('\\Seen'),snippet:'',source_kind:'connected_mailbox'};}
+  function metadata(m,box,validity){const from=m.envelope?.from||[];const own=from.some(a=>typeof a.address==='string'&&a.address.toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {id:id(box,m.uid,validity),threadId:'',message_id:m.envelope?.messageId||'',in_reply_to:m.envelope?.inReplyTo||'',direction:own?'out':from.some(a=>a.address)?'in':'unknown',from:addresses(from),sender_name:senderName(from),to:addresses(m.envelope?.to),subject:m.envelope?.subject||'(No subject)',date:m.envelope?.date?.toISOString()||'',read:m.flags?.has('\\Seen')||false,unread:!m.flags?.has('\\Seen'),snippet:'',source_kind:'connected_mailbox'};}
   async function test() {const mode=provider();if(mode==='app_password')return imap(async c=>{await c.list();return {ok:true,mode,status:'Connected (App Password)'};});await oauth().users.getProfile({userId:'me'});return {ok:true,mode,status:'Connected (Google login)'};}
   async function list(folder='inbox',limit=30) {
     if(!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);limit=Math.min(50,Math.max(1,Number.isInteger(Number(limit))?Number(limit):30));const mode=provider();
@@ -32,6 +36,14 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
     if(!label){const data=await gmail.users.labels.list({userId:'me'});label=(data.data.labels||[]).find(l=>l.name===FOLDERS[folder])?.id;if(!label)fail('email_folder_unavailable',404);}
     const rows=await gmail.users.messages.list({userId:'me',maxResults:limit,labelIds:[label]});const messages=[];
     for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:(msg.labelIds||[]).includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',read:!(msg.labelIds||[]).includes('UNREAD')});}
+    for(const message of messages){
+      if(typeof message.from==='string'&&message.from.length<=4096&&!/[\r\n]/.test(message.from)){
+        try {
+          const headers=await parse(Buffer.from('From: '+message.from+'\r\n\r\n'),{skipImageLinks:true,skipTextToHtml:true});
+          message.sender_name=senderName(headers?.from?.value);
+        } catch (_) { message.sender_name=''; }
+      }else message.sender_name='';
+    }
     return {ok:true,mode,status:'Connected (Google login)',messages};
   }
   async function message(value) {

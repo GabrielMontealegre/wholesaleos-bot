@@ -1,5 +1,16 @@
 # Decisions
 
+ASSUMED: #366F keeps Inbox/Sent and the requested role filters fixed; secondary
+physical Gmail folders/labels and recorded notes stay reachable in one native
+Other folders chooser rather than a clipped or internally scrolling folder
+column. Role filtering remains local to the actual bounded mailbox response,
+never a claim of all-mail search. Sender names come only from structured IMAP
+headers or the existing MIME parser for Gmail headers, not a conversation's
+private record name or an email local part. Unknown names/roles remain unknown.
+F changes layout/readability only; existing read-only locks, thread evidence,
+link/save guards and disabled generic Reply Send remain -- #366F,AGENTS3/5,
+D-056 --2026-10-17.
+
 ASSUMED: #366C sends only a buyer buy-box enquiry or the existing canonical
 blind JV teaser, to one approved buyer's published email after preview, saved
 draft and a separate reviewed Send click. No arbitrary recipients, attachments,

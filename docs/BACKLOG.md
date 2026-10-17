@@ -2,6 +2,31 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366F IN PROGRESS: bounded Gmail-style panes, fixed reachable
+Inbox/Sent/roles, secondary folders in native chooser, single-line actual
+header names, subject/snippet/time/role, no repeated unlinked pill. No new
+mailbox requests, role inference or sending. New full-dashboard1366/400/412
+layout proof and existing mailbox/thread/state/inbox/linking checks pass.
+Full hosted200-file gate and live read-only proof pending. C UI is released;
+its separate feed reconciliation remains BLOCKED on#379. No #341 sign-off.
+
+2026-10-17 #366C UI RELEASED in PR#378, main
+927147fd6b2555c2a02d10cecff5a72659045fef. Exact hosted39077424156:
+199 passed/0 failed/0 skipped,600s/file,job9m59s; acquisition231.60s,
+new buyer UI4.33s/unit0.22s, old card UI5.29s/unit0.20s,timeline14.24s.
+Railway7147113210 success23:14:03Z,44s; post-success health200.
+Live1366/400/412: contacts/type controls, match badge/section navigation,
+Buy box/Matching deals/Messages, truthful empty type filter and restore,
+100Leads/address drawer, no page overflow, console0errors; JS9/CSS4.
+No preview/draft/send/import/approval/capture/batch or business write.
+Screenshots use real empty filters to avoid publishing private contacts.
+The actual feed/match gap is NOT resolved:68 total/23 new today/0 messaged
+this week; all68 badges0 deals match; Import time not recorded. Authoritative
+assistant exports absent locally. Feed-reconciliation portion BLOCKED on
+needs-architect#379; no invented counts or forced positive matching.
+Next independent item F, trace ready on item/366-f-email-layout. C UI can be
+inspected, but no complete C/#341 sign-off is inferred. B is not yet live.
+
 2026-10-17 #366C PR#378 first full hosted report39076265482:196 passed,
 3 failed,0 skipped,199 total; acquisition273.00s. New unit/UI suites pass.
 Old compact-contact absence contradicts C's explicit public-contact requirement;

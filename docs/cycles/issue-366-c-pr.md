@@ -67,10 +67,18 @@ Self-review also narrowed asynchronous history refresh to its own email panel:
 it cannot erase a selected deal or collapse the separate Activity timeline.
 Explicit review is preserved across reads, reset after draft save, and must be
 ticked again before Send. Delayed-read browser and timeline proofs pass.
-Full final hosted suite: pending; merge only when every file is green,600s/file.
-Verification after deploy: pending exact deployment + read-only1366/400/412
-click-through. No preview POST, draft, send, import, approval or other production
-write will be used as proof. Synthetic SMTP clients prove send behavior locally.
+Full final hosted run39077424156 on exact62d9c7fefc5de60652eb0ad6a91045033182c8a1:
+SUMMARY passed=199 failed=0 skipped=0 total=199;600s/file;job9m59s.
+Buyer UI4.33s/unit0.22s, clean-card UI5.29s/unit0.20s, timeline14.24s,
+county-notice acquisition231.60s. All199 durations retained in the final artifact.
+Verification after deploy: main927147fd6b2555c2a02d10cecff5a72659045fef,
+exact Railway7147113210 success23:14:03Z (44s),health200. Live1366/400/412
+contacts/type controls, section and match-badge navigation, empty filter/recovery,
+100Leads/drawer, no page overflow, console0errors, JS9/CSS4. No preview POST,
+draft, send, import, approval or other production write. Synthetic SMTP clients
+prove send behavior locally. Actual68 buyers all show0 matches; import time
+unknown, authoritative exports absent. That feed-reconciliation portion is
+BLOCKED on #379, not claimed fixed by the UI release. Full C sign-off is not inferred.
 
 Screenshots (synthetic records, no private contacts):
 ![Buyer list](https://raw.githubusercontent.com/GabrielMontealegre/wholesaleos-bot/item/366-c-buyer-workspace/docs/screens/2026-10-17-366-c/synthetic-list-1366.png)
