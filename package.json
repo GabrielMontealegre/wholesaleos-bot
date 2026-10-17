@@ -9,6 +9,7 @@
     "postinstall": "npx playwright install --with-deps chromium || npx playwright install chromium || true"
   },
   "dependencies": {
+    "@sentry/node": "10.22.0",
     "node-telegram-bot-api": "^0.64.0",
     "groq-sdk": "^0.3.3",
     "@anthropic-ai/sdk": "^0.24.0",
