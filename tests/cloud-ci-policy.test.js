@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const workflow=fs.readFileSync(path.join(__dirname,'../.github/workflows/full-suite.yml'),'utf8');
+assert.match(workflow,/pull_request:/);assert.match(workflow,/push:\s+branches: \[main\]/);
+assert.match(workflow,/contents: read/);assert.doesNotMatch(workflow,/pull_request_target|secrets\.|write-all/);
+assert.match(workflow,/runs-on: windows-2022/);assert.match(workflow,/node-version: '20'/);
+assert.match(workflow,/npm install --ignore-scripts --no-audit --no-fund/);
+assert.match(workflow,/node node_modules\/playwright\/cli.js install chromium/);
+assert.match(workflow,/run-tests.ps1 -TimeoutSeconds 600/);
+assert.match(workflow,/if \(\$result -ne 0\) \{ exit \$result \}/);
+assert.match(workflow,/if: always\(\)/);assert.match(workflow,/artifacts\/full-suite.txt/);
+for(const action of workflow.matchAll(/uses: ([^\s]+)/g))assert.match(action[1],/@[a-f0-9]{40}$/,'official actions pinned to full commits');
+console.log('Cloud CI: PR/main triggers, full runner,600s,nonzero exit,read-only token,pinned actions and retained reports passed.');

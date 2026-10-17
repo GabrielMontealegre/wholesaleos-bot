@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: owner2026-10-17 authorizes cloud CI and opt-in scrubbed Sentry before
+the existing#366 order;no new Sentry DSN/account/paid plan or production variable
+change is authorized. CI reuses the Windows PowerShell runner and pinned browser;
+no lockfile exists,so use npm install --ignore-scripts transparently rather than
+pretend npm ci works or churn dependency ranges. Full hosted gate,not CLEAN merge
+state,is evidence. Heartbeat tooling cannot pin effort;never claim it did and
+skip autonomous implementation if medium/standard cannot be established.
+
 ASSUMED: #366A bounds the existing lead table's row-scroller and keeps column
 headers sticky only inside it; the old MODE toolbar flows normally rather than
 floating over content. Preserve all diagnostic/filter sections instead of hiding
