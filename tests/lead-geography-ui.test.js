@@ -72,6 +72,9 @@ async function prove(){
       assert.ok(selectedText.indexOf('100 Example St')<selectedText.indexOf('WOS-FL-1040'),'selected card leads with the address');
       assert.equal(Math.round((await checkbox.boundingBox()).width),18);
       assert.ok((await checkbox.locator('..').boundingBox()).width>=44);
+      const selectAll=page.locator('#select-all-visible-leads');
+      assert.equal(Math.round((await selectAll.boundingBox()).width),18);
+      assert.ok((await selectAll.locator('..').boundingBox()).width>=44);
       assert.ok(!await page.getByRole('button',{name:'Close lead',exact:true}).isVisible());
       await page.locator('#lead-queue-table-shell tbody tr').first().locator('td').nth(1).click();
       await page.getByRole('button',{name:'Close lead',exact:true}).waitFor();await page.getByRole('button',{name:'Close lead',exact:true}).click();
