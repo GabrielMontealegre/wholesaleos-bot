@@ -45,6 +45,7 @@ async function prove({screenshots=false}={}) {
       if(width<901)await page.getByRole('button',{name:'Search references, cities and ZIP codes',exact:true}).click();
       await page.locator('#global-search').fill('BUY-0001');await page.locator('#modal-content [data-search-record]').waitFor();
       await page.locator('#modal-content [data-search-record]').click();await page.locator('.bf-card').waitFor();assert.strictEqual(await page.locator('.bf-card').count(),1);
+      await page.getByRole('tab',{name:'Messages',exact:true}).click();
       await page.locator('.bf-card details[data-record-timeline] summary').click();await page.getByText('Fixture reported interaction; no contact or confirmation.',{exact:true}).waitFor();
       if(screenshots)await page.screenshot({path:path.join(output,'synthetic-buyer-'+width+'.png'),fullPage:true});
       const parsed=await page.evaluate(()=>parseRecordImport('{"ts":"2026-10-07T12:00:00Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Reported note"}\n{"ts":"2026-10-07T12:00:01Z","who":"Assistant","channel":"manual","dir":"note","with":"Fixture","ref":"BUY-0001","summary":"Second reported note"}'));

@@ -36,8 +36,14 @@ two-deal one-message preview, review checkbox, draft then explicit Send.
 api-session-gate adds unauthenticated/agent-token/non-admin401/403 for all new
 actions. Prior assertions are unchanged. Six impacted existing suites pass.
 
-Existing assertions changed: none. New browser proof diagnostic captured the
-selector collision; no force click, weaker assertion or product gate change.
+Existing assertions changed: tests/clean-buyer-cards.test.js:23 formerly required
+email/phone absence on compact cards; #366C explicitly requires their presence.
+The two contact checks now assert presence; subject/ref/admin-control absence,
+JV-address privacy and every matching/provenance assertion remain unchanged.
+scripts/verify-clean-buyer-cards.js:11-14 now clicks Matching deals after opening
+Buy box; scripts/verify-record-activity-ui.js:44 clicks Messages before Activity.
+Those retain every old visibility/navigation/timeline/no-write assertion.
+New browser proof caught the selector collision; no force clicks or weaker gates.
 
 Decisions used: D-046, D-050, D-043, D-005, D-011, D-056; ASSUMED entry logged.
 
@@ -51,7 +57,13 @@ the reported59-versus81 feed gap is NOT claimed resolved by a live sync.
 No new dependency, credentials, variables, readiness/comp/approval gates or
 business-data migration. County ranking stays paused.
 
-Full hosted suite: pending; merge only after every file is green,600s/file.
+First complete hosted run39076265482:196 passed/3 failed/0 skipped,199 total,
+11m57s job; new buyer UI4.27s, unit0.25s, acquisition273.00s. Failures were
+the explicitly replaced compact-contact absence expectation and two old
+long-scroll proof paths. Focused corrected proofs pass: unit0.54s, card
+navigation10.29s, timeline18.11s. Initial report is retained, not waived.
+Earlier runs39075900603/39076006582 were cancelled on newer revisions, not green.
+Full final hosted suite: pending; merge only when every file is green,600s/file.
 Verification after deploy: pending exact deployment + read-only1366/400/412
 click-through. No preview POST, draft, send, import, approval or other production
 write will be used as proof. Synthetic SMTP clients prove send behavior locally.

@@ -20,7 +20,11 @@ function run(){
   const future=view.build({...store,buyers:[{...buyer,assistant_find:{...buyer.assistant_find,history:[{kind:'outreach',to:'emailed',at:'2027-01-01T00:00:00Z',operator_id:'fixture-admin'}]}}]},{now}).get(buyer.id);assert.equal(future.last_contact_at,null);
   assert.equal(JSON.stringify(store),frozen);
   const item={id:buyer.id,name:'<script>bad</script>',email:'PRIVATE CONTACT EMAIL',phone:'PRIVATE PHONE',email_subject:'PRIVATE SUBJECT',record_ref:'BUY-0001',approval:'approved',status:'new',states:['FL'],areas:['Tampa'],buy_box:buyer.assistant_find.buy_box,deal_fit:model,history:[]};
-  const html=ui.card(item);assert.ok(html.includes('&lt;script&gt;'));for(const value of [item.email,item.phone,item.email_subject,item.record_ref,'Source search','Approval reason'])assert.ok(!html.includes(value));assert.ok(html.includes('1 deal matches'));assert.ok(ui.detailedCard({...item,holder_contact:{},drafted_message:''}).includes('PRIVATE CONTACT EMAIL'));
+  const html=ui.card(item);assert.ok(html.includes('&lt;script&gt;'));
+  // #366C explicitly moves the supplied/published contacts onto the compact card.
+  for(const value of [item.email,item.phone])assert.ok(html.includes(value));
+  for(const value of [item.email_subject,item.record_ref,'Source search','Approval reason'])assert.ok(!html.includes(value));
+  assert.ok(html.includes('1 deal matches'));assert.ok(ui.detailedCard({...item,holder_contact:{},drafted_message:''}).includes('PRIVATE CONTACT EMAIL'));
   assert.ok(html.includes('data-buyer-card-open="fixture-buyer"'));
   assert.ok(html.includes('tabindex="0"'));
   assert.ok(!html.includes('Last contact report:'),'No invented contact history');

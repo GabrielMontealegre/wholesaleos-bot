@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366C PR#378 first full hosted report39076265482:196 passed,
+3 failed,0 skipped,199 total; acquisition273.00s. New unit/UI suites pass.
+Old compact-contact absence contradicts C's explicit public-contact requirement;
+only those two absence checks become presence. Two existing browser proofs now
+select Matching deals/Messages before unchanged visibility/timeline assertions.
+Focused corrections pass0.54s/10.29s/18.11s. Final full rerun required; PR stays
+draft, no merge/deploy. Earlier revision runs cancelled, not counted green.
+
 2026-10-17 #366C IN PROGRESS, not released: reported buyer types/provenance,
 operator override persistence, reference dedupe, real import time, pending-deal
 feed validation, compact contact/criteria cards and three-section workspace.

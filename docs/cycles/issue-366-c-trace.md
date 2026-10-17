@@ -46,7 +46,15 @@ module treats data-email-deal as Open deal everywhere. Buyer checkboxes now use
 their own data-buyer-email-deal namespace. The same unchanged click/check
 assertions pass; no force clicks or page-state injection was added.
 
-Full hosted suite and live read-only proof are still required before completion.
+First complete hosted run39076265482:196/3/0,199 total. The three old UI
+expectations conflict with the requested C design: compact contacts were hidden
+before; matching deals and timeline lived in one long detail instead of sections.
+The contact absence checks intentionally become presence checks under #366C;
+every subject/ref/admin-control absence, JV privacy and gate assertion stays.
+Old browser proofs now click Matching deals/Messages before the unchanged
+visibility and click assertions. Focused unit/card/timeline proofs pass.
+Report: docs/test-results/issue-366-c-initial/full-suite.txt. Final full hosted
+suite and live read-only proof are still required before completion.
 
 ## Acceptance
 
