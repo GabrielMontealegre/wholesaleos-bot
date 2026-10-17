@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-17 owner order: automation,cloud full-suite CI,opt-in scrubbed Sentry,
+then#366 D,A,G,C,F,B,E,I,H,J,then#370,#369,#361,#351. D/A already live;do not
+repeat them. County ranking remains paused. Existing paused heartbeat renamed
+WholesaleOS autopilot,ACTIVE,every2hours;no duplicate. Heartbeat API cannot pin
+model/effort;prompt fails closed if medium/standard cannot be established.
+Cloud CI IN PROGRESS;one PR,actual hosted run required before merge. Sentry
+NOT implemented/enabled yet. No settings or business data changed.
+
 2026-10-15: Owner order #366 now controls P0: D, A, G, C, F, B, then E, I, H, J;
 one PR per letter, live1366/412 click-through for each. County ranking PAUSED,
 including draft#363/data-source follow-ups, until this P0 work is live.
