@@ -2,6 +2,25 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366F RELEASED in PR#380, main
+98487b80bb4eef394c89a6063488fcbaa588c34d. Exact hosted39079186579:
+SUMMARY passed=200 failed=0 skipped=0 total=200;600s/file,9m39s;
+acquisition204.45s,new inbox layout3.31s. Full timings retained under
+docs/test-results/issue-366-f-final. Railway7147388051 success23:42:52Z,
+45s after start; post-success health200; inbox CSS2/reader JS4 served.
+Live1366/400/412: fixed choices/secondary chooser reachable, no horizontal
+overflow, Sent loaded30 real messages, a conversation opened/back worked,
+role filter produced a truthful empty view;100Leads and address drawer work.
+Initial transition had one lead502 and mailbox unavailable; subsequent Sent
+loaded Connected (App Password), no later console errors observed. No
+connection-test action, mail link/save/send, batch, capture or business write.
+Known phone polish: Attorneys breaks before its final s. Not hidden by the
+overflow assertion; retain for a narrow follow-up. Live images use empty
+filters only. C feed remains BLOCKED#379; no #341 sign-off inferred.
+Usage checkpoint:89% five-hour usage before final release verification;
+next branch item/366-b-calendar-hub contains release evidence only, not B
+implementation. Continue B, then E,I,H,J after budget is available.
+
 2026-10-17 #366F IN PROGRESS: bounded Gmail-style panes, fixed reachable
 Inbox/Sent/roles, secondary folders in native chooser, single-line actual
 header names, subject/snippet/time/role, no repeated unlinked pill. No new
