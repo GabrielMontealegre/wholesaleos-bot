@@ -1,6 +1,10 @@
 # Buyers: Trace Before Implementation
 
-Status: implemented locally, NOT released. G completed its hosted gate,
+Status: UI RELEASED in PR#378, main927147f; hosted199/199, exact Railway
+7147113210 success23:14:03Z, health200, live1366/400/412 with0console errors.
+Feed reconciliation remains BLOCKED on needs-architect#379:68 live buyers,
+all68 match badges0, unknown import time; no production sync was authorized.
+No complete C/#341 sign-off is inferred. G completed its hosted gate,
 merge, exact deployment and live1366/400/412 checks on2026-10-17.
 This file belongs to the subsequent C PR; no buyer/outreach write is authorized
 as a verification action.
@@ -53,8 +57,10 @@ The contact absence checks intentionally become presence checks under #366C;
 every subject/ref/admin-control absence, JV privacy and gate assertion stays.
 Old browser proofs now click Matching deals/Messages before the unchanged
 visibility and click assertions. Focused unit/card/timeline proofs pass.
-Report: docs/test-results/issue-366-c-initial/full-suite.txt. Final full hosted
-suite and live read-only proof are still required before completion.
+Report: docs/test-results/issue-366-c-initial/full-suite.txt. Final exact-head
+run39077424156 passed199/199 with no skips; all durations are retained in
+docs/test-results/issue-366-c-final/full-suite.txt. Live UI proof completed;
+positive SMTP behavior is proven with injected clients, never a live send.
 
 ## Acceptance
 
