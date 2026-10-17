@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-17 #366C IN PROGRESS, not released: reported buyer types/provenance,
+operator override persistence, reference dedupe, real import time, pending-deal
+feed validation, compact contact/criteria cards and three-section workspace.
+Admin-only canonical buyer email preview/draft/reviewed Send implemented;
+one recipient, <=20 teasers, current existing JV gates, durable non-retrying
+uncertain attempts and per-record acceptance logs. No live email or import.
+New unit and actual dashboard1366/400/412 checks pass; the latter caught/fixed
+a selector collision with Email's Open deal handler. Six existing focused
+suites and real-server session gate pass unchanged (only additive auth tests).
+Full hosted suite, self-review and live proof remain release gates. No C sign-off.
+
 2026-10-17 #366G DONE: PR #377 merged as
 d9a64dd6fd4682b6adf018e45331d9c50c49fc55. Hosted run39056128233:
 197 passed / 0 failed / 0 skipped (600s per file; job10m44s;

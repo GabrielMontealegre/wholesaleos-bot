@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: #366C sends only a buyer buy-box enquiry or the existing canonical
+blind JV teaser, to one approved buyer's published email after preview, saved
+draft and a separate reviewed Send click. No arbitrary recipients, attachments,
+HTML, private deal fields or automatic sends. Reuse D-046/D-050 and the existing
+JV teaser/value/availability gates; preserve old disabled bulk/generic routes.
+Persist sending before SMTP; uncertain attempts stay non-retryable by draft id.
+SMTP acceptance is not delivery, a reply, seller contact or a JV-stage change.
+Source-reported buyer type never changes matching classification/approval; an
+operator override survives imports. Never infer institutional purchase proof.
+Legacy import freshness is unknown until an actual normal import records it;
+release verification must not import a feed to improve counts --2026-10-17.
+
 ASSUMED: #366G uses the existing shared geography matcher and county directory,
 with full-store aggregate location facets before pagination. geography=1 opts the
 dashboard out of legacy regional restrictions; old API consumers keep their

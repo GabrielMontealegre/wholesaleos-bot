@@ -28,7 +28,11 @@ function build(store,{now}){
       else if(candidate.max_price==null)reason='Buyer maximum is not established.';
       else if(evaluation.asking==null)reason='Asking price is not established.';
       else if(evaluation.asking>candidate.max_price)reason='$'+Math.round(evaluation.asking-candidate.max_price).toLocaleString('en-US')+' above the buyer maximum.';
-      if(reason)view.near_misses.push({...row,reason});else{view.count++;view.matches.push(row);}
+      if(reason)view.near_misses.push({...row,reason});else{
+        try { require('../deals/jv-workflow').teaser(deal,evaluation,candidate.id); row.teaser_ready=true; }
+        catch (_) { row.teaser_ready=false; }
+        view.count++;view.matches.push(row);
+      }
     }
   }
   for(const view of result.values()){view.matches=view.matches.slice(0,10);view.near_misses=view.near_misses.slice(0,10);}

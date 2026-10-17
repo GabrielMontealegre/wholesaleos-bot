@@ -1,9 +1,52 @@
 # Buyers: Trace Before Implementation
 
-Status: trace only. C is not built or released. G completed its hosted gate,
+Status: implemented locally, NOT released. G completed its hosted gate,
 merge, exact deployment and live1366/400/412 checks on2026-10-17.
 This file belongs to the subsequent C PR; no buyer/outreach write is authorized
 as a verification action.
+
+## Implementation And Gates
+
+- buyer-type.js is pure: seven reported kinds, Unknown remains unknown; no
+  classification or approval inference. assistant-finds validates and preserves
+  type/provenance; an explicit operator type edit appends history and survives
+  repeated imports. Reference-first dedupe rejects conflicting identities.
+- The existing signed feed now accepts kind:buyer and pending kind:deal through
+  the same validators/writers as admin import. It still cannot approve, send,
+  set status or read the store. No feed was imported in production.
+- buyer_find_last_import_at is written only by ingest; listFinds exposes a valid
+  non-future timestamp or null. No GET/startup sync, fabricated sync time or
+  forced positive match counts. Existing canonical match rules stay unchanged.
+- deal-fit-view adds teaser_ready by calling jv-workflow.teaser, not a second
+  eligibility predicate. The existing ten-row match display cap is unchanged.
+- buyer-messages.js owns admin-only preview/draft/send/history. It binds the
+  published recipient, buyer, selected deals and canonical body to a version;
+  five-minute preview, same operator, fresh reevaluation and explicit review
+  are mandatory. At most20 deal ids, one email. No editable private package.
+- Drafts and SMTP attempts are durable in buyer_email_drafts. Pending/uncertain
+  attempts never auto-retry; accepted draft ids are idempotent. Store the review
+  in email_draft_approvals and only genuine acceptance in email_delivery_receipts.
+  record-activity logs draft/acceptance on buyer and every selected deal without
+  changing any lead, comp, value, contact status, approval or JV stage.
+- SMTP uses existing declared nodemailer and Gmail configuration, TLS enforced,
+  file/URL attachments disabled, logger/debug off. No variable/key change or
+  actual SMTP connection was made by verification. Clients are injected in tests.
+- The buyer UI exposes published contacts, criteria, reported-type filter,
+  compact Buy box/Matching deals/Messages sections, and one reviewed teaser
+  preview. No request is sent automatically on load/open/filter/tab change.
+  Email history reads are GET only. Actual recipient/deal facts are never logged.
+
+Focused new unit and real dashboard1366/400/412 tests pass. Existing buyer finds,
+import, matcher/deal updates, template review, JV workflow and disabled generic
+send suites pass unchanged. Real-server session test adds negative401/403 cases
+for every new email action; prior assertions are unchanged.
+
+The first browser proof exposed an actual selector collision: the old Email
+module treats data-email-deal as Open deal everywhere. Buyer checkboxes now use
+their own data-buyer-email-deal namespace. The same unchanged click/check
+assertions pass; no force clicks or page-state injection was added.
+
+Full hosted suite and live read-only proof are still required before completion.
 
 ## Acceptance
 

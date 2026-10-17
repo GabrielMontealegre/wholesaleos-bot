@@ -154,6 +154,12 @@ async function request(base, method, route, options = {}) {
     const commitPath = '/api/dashboard/buyers-found/import/commit';
     assert.strictEqual((await request(base, 'POST', previewPath, { headers: findHeaders, body: findInput })).status, 401);
     const regularSession = session.issueSession({ userId: 'regular-fixture', role: 'user', scope: 'dashboard' }, { secret }).token;
+    for (const action of ['preview', 'draft', 'send']) {
+      const path = '/api/dashboard/buyers-found/' + findId + '/email/' + action;
+      assert.strictEqual((await request(base, 'POST', path, { body: {} })).status, 401);
+      assert.strictEqual((await request(base, 'POST', path, { headers: findHeaders, body: {} })).status, 401);
+      assert.strictEqual((await request(base, 'POST', path, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` }, body: {} })).status, 403);
+    }
     assert.strictEqual((await request(base, 'POST', previewPath, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` }, body: findInput })).status, 403);
     const dbBeforePreview = fs.readFileSync(dbPath, 'utf8');
     const importPreview = await request(base, 'POST', previewPath, { headers: { Cookie: cookie }, body: findInput });
