@@ -221,7 +221,8 @@ async function run() {
     assert.equal(ranked.top_five[0].equity_signal, 'LIKELY_EQUITY');
     console.log('cycle-44-county-appraisal: 15 checks passed');
   } finally {
-    if (path.resolve(temp).startsWith(path.resolve(os.tmpdir()) + path.sep)) fs.rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    // Yield during cleanup so destroyed read streams can close their Windows handles.
+    if (path.resolve(temp).startsWith(path.resolve(os.tmpdir()) + path.sep)) await fs.promises.rm(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

@@ -22,3 +22,9 @@ bounded fs.rmSync retries cover the Windows filesystem race. Node-missing
 fixture now reapplies its explicit environment inside child PowerShell because
 startup may restore standard install paths. Existing assertions unchanged.
 Initial report retained;next full hosted run is still required,not waived.
+
+Second hosted run39016991114:192passed/1failed/0skipped of193. Node runtime
+isolation passed. The remaining cleanup failure persisted because synchronous
+removal retries block the event loop while destroyed streams still need close
+callbacks. The async test now awaits fs.promises.rm with the same bounded
+retries and workspace guard. Assertions and product code remain unchanged.
