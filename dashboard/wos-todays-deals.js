@@ -91,6 +91,7 @@
     if (loading || !document.getElementById('wos-todays-deals')) return;
     loading = true; error = ''; var params = new URLSearchParams(filters); params.set('jv', String(isJV()));
     var version = ++requestVersion;
+    if(isJV()&&root.wosJVListTools){var extra=root.wosJVListTools.params();params.set('stage',extra.stage);params.set('search',extra.search);}
     if (root.wosListFilters) {
       params.set('location_exact','true');
       var selection = filters.record_id ? {} : locationSelection();
@@ -100,6 +101,8 @@
   }
   root.renderTodaysDeals = function () { enterLocationTab('todays_deals');setTimeout(load, 0); return markup(false); };
   root.renderJV = function () { enterLocationTab('jv');setTimeout(load, 0); return markup(true); };
+  var basePaint=paint;paint=function(){basePaint();if(isJV()&&root.wosJVListTools)root.wosJVListTools.enhance(data);};
+  root.wosReloadJVList=function(){if(!isJV())return;requestVersion++;loading=false;load();};
   var priorInit=root.initApp;
   if(priorInit)root.initApp=function(){
     var result=priorInit.apply(this,arguments);

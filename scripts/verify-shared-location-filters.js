@@ -57,13 +57,13 @@ async function prove({screenshots=false}={}) {
       await page.locator('.td-filter-bar summary').click();assert.equal(await page.locator('[data-list-filter="state"]').isVisible(),false);
       await page.locator('.td-filter-bar summary').click();
       await choose('state','TX',1);await choose('county','Ellis County',1);
-      await page.evaluate(()=>navigate('jv',null));await ready(3);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar summary').click();assert.equal(await page.locator('[data-list-filter="state"]').inputValue(),'');
+      await page.evaluate(()=>navigate('jv',null));await ready(3);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar>summary').click();assert.equal(await page.locator('[data-list-filter="state"]').inputValue(),'');
       await choose('state','FL',2);await choose('county','Pinellas County',1);
       if(screenshots)await page.screenshot({path:path.join(dir,'synthetic-filtered-jv-'+width+'.png')});
       await page.evaluate(()=>navigate('todays_deals',null));await ready(1);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar summary').click();assert.equal(await page.locator('[data-list-filter="state"]').inputValue(),'TX');
       await page.goto(base+'/dashboard/#filters=todays_deals&state=TX&county=Ellis+County');await page.reload();await ready(1);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar summary').click();assert.equal(await page.locator('[data-list-filter="county"]').inputValue(),'Ellis County');
       await page.locator('[data-list-filter-clear]').click();await ready(3);
-      await page.evaluate(()=>navigate('jv',null));await ready(1);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar summary').click();await page.locator('[data-list-filter-clear]').click();await ready(3);
+      await page.evaluate(()=>navigate('jv',null));await ready(1);if(!(await page.locator('.td-filter-bar').evaluate(el=>el.open)))await page.locator('.td-filter-bar>summary').click();await page.locator('[data-list-filter-clear]').click();await ready(3);
     }
     fixtureApp.assertUnchanged();assert.deepEqual(writes,[]);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
     console.log('Shared filters1366/1920/400/412:51 states/DC,county/city cascade,zero-record counties,exact rows,chips,clear,collapse,per-tab storage/bookmarks,zero writes/external calls passed.');

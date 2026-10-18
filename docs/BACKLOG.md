@@ -2,6 +2,35 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366I BLOCKED#383: trace found legacy /api/contracts/fill uses
+hardcoded signer data, inferred closing/earnest amounts and an AI call. New
+profile/signature integration cannot silently endorse those facts or forward
+new personal data. Architect asked to choose deterministic unsigned consumers
+versus retiring/limiting that legacy path. No I product code, settings or
+contracts changed. Continue independent H, then J.
+
+2026-10-18 #366H IN PROGRESS: primary JV location/stage/search, existing advanced
+filters moved intact under closed More with active count. Pure server stage/
+safe-text search runs before100-row cap; unsigned addresses are not searchable;
+canonical eligibility/value/JV gates unchanged. New unit/UI1366/400/412 and old
+geography/filter/evaluation proofs pass; only four exact outer-summary driver
+selectors changed, no assertions. Full207-file gate/live proof pending.
+
+2026-10-18 #366E RELEASED: PR#382,main
+cd5e778338f6c76209651af1e35f7def41dbacbc. Hosted39099486751:
+205 passed/0 failed/0 skipped,600s/file,11m26s; new brief UI8.38s/unit0.30s,
+old safety UI11.63s/unit0.25s,acquisition252.93s. Exact Railway7150348929
+success05:22:40Z,2m; health200 after success; ApprovalsJS/CSS3 served.
+One health502 occurred while deploy was in_progress, not after success.
+Live1366/400/412:24 buyers+24 deals pending unchanged,24 briefs per category;
+all24 pending-deal value briefs correctly not established. Skip changes visible
+count only; Show skipped restores all24, source review remains unchecked,
+44px phone control, no overflow.100Leads/drawer and console0errors.
+Images use clearly labeled local-only skipped state; all skips restored before
+leaving. No approve/reject, source/comp/contact confirmation, send, batch or
+business write. Next I on item/366-i-operator-profile, trace only so far.
+B ready for Gabriel inspection; C feed remains BLOCKED#379; no#341 sign-off.
+
 2026-10-18 #366E IN PROGRESS: three-part pending buyer/deal briefs use existing
 source criteria/evaluation only; value tiers/list-price/wider-area caution and
 canonical split share stay truthful, missing is not invented. Skip for now is
