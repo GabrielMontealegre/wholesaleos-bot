@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #366B Calendar is a read-only projection of existing activity,
+conversation and explicit calendar/deadline records, not a new ingestion or
+reminder writer. Existing conversation rules supply labeled derived due dates;
+natural-language promises are not parsed into commitments. Prepare follow-up
+opens the existing recorded draft for Gabriel, never sends it. Manual local
+events remain local and labeled. Missing/ambiguous identity or date evidence
+does not gain a guessed click target or sale date; no production import is
+performed to populate the screen -- AGENTS3/5/7,#366B --2026-10-18.
+
 ASSUMED: #366F keeps Inbox/Sent and the requested role filters fixed; secondary
 physical Gmail folders/labels and recorded notes stay reachable in one native
 Other folders chooser rather than a clipped or internally scrolling folder

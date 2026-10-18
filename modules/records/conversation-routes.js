@@ -1,6 +1,7 @@
 'use strict';
 const conversations=require('./conversations');
 function registerConversationRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString(),mailboxReader}) {
+  require('./calendar-workspace').registerCalendarWorkspace(app,{db,requireAdmin,now});
   require('./approval-workspace').registerApprovalWorkspace(app,{db,requireAdmin,now});
   require('../agents/today-workspace').registerTodayWorkspace(app,{db,requireAdmin,now,releases:require('../agents/verified-ui-releases.json')});
   require('../email/template-approvals').registerRoutes(app,{db,requireAdmin,now});

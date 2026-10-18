@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366B IN PROGRESS on item/366-b-calendar-hub: traced the missing
+read connection (old Calendar rendered only manual APP.calendar). Additive
+admin/no-store projection joins canonical stored activity, conversations,
+existing derived reminders, source-backed raw sale dates, reported deal dates,
+pending approvals and preserved manual events. No new ingestion or sends.
+Today/month/day/all/type views and event/conversation/prepare links built.
+Negative/purity/unit, route, real-server auth and actual-dashboard1366/400/412
+proof pass. Full hosted gate, self-review and live verification still required.
+C feed remains BLOCKED#379. No sign-off or whole-product completion claimed.
+
 2026-10-17 #366F RELEASED in PR#380, main
 98487b80bb4eef394c89a6063488fcbaa588c34d. Exact hosted39079186579:
 SUMMARY passed=200 failed=0 skipped=0 total=200;600s/file,9m39s;
