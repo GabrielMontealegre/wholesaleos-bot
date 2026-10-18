@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED: #366H Stage/Search narrow the existing eligible JV read pool before
+the display cap, never alter eligibility or stored records. Search covers only
+permitted card fields, not an unsigned subject address. Existing advanced
+filter values remain active under More with a count; phone outer collapse and
+Today layout are retained -- AGENTS3/5,#366H --2026-10-18.
+
 ASSUMED: #366E Skip means hide this exact pending row version for the current
 session, not reject or change business data. A changed version reappears and
 Show skipped reverses it. Approval still requires the existing explicit review

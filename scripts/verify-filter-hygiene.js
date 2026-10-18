@@ -44,9 +44,9 @@ async function prove({screenshots = false} = {}) {
         assert.ok(await page.locator('.td-page-tools [data-open-deal-import]').isVisible());
         if (width <= 412) {
           assert.equal(await page.locator('.td-filter-bar').evaluate(e => e.open), false);
-          await page.locator('.td-filter-bar summary').click();
+          await page.locator('.td-filter-bar>summary').click();
           assert.ok(await page.locator('[data-list-filter="state"]').isVisible());
-          await page.locator('.td-filter-bar summary').click();
+          await page.locator('.td-filter-bar>summary').click();
         }
         const bounds = await page.locator('.td-page-tools').evaluate(e => ({left: e.getBoundingClientRect().left, right: e.getBoundingClientRect().right, overflow: e.scrollWidth > e.clientWidth + 1}));
         assert.ok(bounds.left >= 0 && bounds.right <= width && !bounds.overflow);

@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366I BLOCKED#383: trace found legacy /api/contracts/fill uses
+hardcoded signer data, inferred closing/earnest amounts and an AI call. New
+profile/signature integration cannot silently endorse those facts or forward
+new personal data. Architect asked to choose deterministic unsigned consumers
+versus retiring/limiting that legacy path. No I product code, settings or
+contracts changed. Continue independent H, then J.
+
+2026-10-18 #366H IN PROGRESS: primary JV location/stage/search, existing advanced
+filters moved intact under closed More with active count. Pure server stage/
+safe-text search runs before100-row cap; unsigned addresses are not searchable;
+canonical eligibility/value/JV gates unchanged. New unit/UI1366/400/412 and old
+geography/filter/evaluation proofs pass; only four exact outer-summary driver
+selectors changed, no assertions. Full207-file gate/live proof pending.
+
 2026-10-18 #366E RELEASED: PR#382,main
 cd5e778338f6c76209651af1e35f7def41dbacbc. Hosted39099486751:
 205 passed/0 failed/0 skipped,600s/file,11m26s; new brief UI8.38s/unit0.30s,
