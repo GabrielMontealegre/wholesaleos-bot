@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-18 #370 slice1 IN PROGRESS: browser-only composer dictation and
+tap-only read aloud. Recognition requires processLocally plus an available
+on-device en-US/es-MX pack; no prefixed/cloud fallback, pack install or
+server speech provider. Missing support stays a truthful keyboard/type fallback.
+Final transcript updates only the existing editable draft/input event; no save,
+send or business action is invoked. Read aloud requires localService=true.
+Stop,60s bound, language change, background/signout and removed field cancel.
+New unit and actual-dashboard mock1366/400/412 pass; one initial new-test
+driver missed the compact buyer's Messages tab, corrected without changing
+product gates. Full212-file hosted gate/live read-only proof pending.
+Ask WholesaleOS commands/context await the separate#372 assistant surface;
+this slice does not claim that assistant exists or that voice works on every
+Chrome version. No real microphone, audio, message or production write.
+
 2026-10-18 #366J RELEASED: PR#385,main
 a1656954d5185904b74b003807f83fd0228bf40e. Hosted39120526838:
 210 passed/0 failed/0 skipped,600s/file,11m10s; new UI3.18s/unit0.08s/

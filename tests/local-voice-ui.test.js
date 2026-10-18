@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {createFixtureApp}=require('../scripts/verify-marketplace-ui'),{launchChromiumWithResolvedBrowser}=require('../modules/research/playwright-browser-resolver');
+(async()=>{
+ const fixture=createFixtureApp(),server=await new Promise(resolve=>{const s=fixture.app.listen(0,'127.0.0.1',()=>resolve(s));}),base='http://127.0.0.1:'+server.address().port;let browser;const writes=[],external=[],errors=[];
+ try{browser=(await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true})).browser;const context=await browser.newContext();
+ await context.addInitScript(()=>{
+  window.voiceProof={starts:0,aborts:0,speaks:0,available:'available'};
+  class LocalRecognition{static async available(options){window.voiceProof.options=options;return window.voiceProof.available;}start(){window.voiceProof.starts++;window.voiceProof.active=this;}abort(){window.voiceProof.aborts++;}}
+  LocalRecognition.prototype.processLocally=false;window.SpeechRecognition=LocalRecognition;
+  Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{cancel(){},getVoices:()=>[{lang:'en-US',localService:true}],speak(){window.voiceProof.speaks++;}}});window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;}};
+ });
+ await context.route('**/*',route=>{const r=route.request(),u=new URL(r.url());if(!['GET','HEAD'].includes(r.method())){writes.push(r.method());return route.abort();}if(u.hostname==='fonts.googleapis.com')return route.fulfill({contentType:'text/css',body:''});if(u.pathname==='/helper/status')return route.fulfill({json:{paired:false}});if(u.origin!==base){external.push(u.hostname);return route.abort();}return route.continue();});
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [1366,400,412]){await page.setViewportSize({width,height:width===1366?768:915});await page.goto(base+'/dashboard/');await page.locator('.marketplace-topnav').waitFor({state:'attached'});await page.evaluate(()=>navigate('gmail',null));await page.locator('[data-email-message]').first().click();await page.locator('[data-email-reply]').waitFor();const tools=page.locator('[data-email-reply]').locator('..').locator('.wos-voice-tools');await tools.waitFor();assert.equal(await page.evaluate(()=>voiceProof.starts),0);assert.equal(await page.evaluate(()=>voiceProof.speaks),0);
+  await tools.locator('[data-voice-lang]').selectOption('en-US');await tools.locator('[data-voice-dictate]').click();assert.equal(await page.evaluate(()=>voiceProof.starts),1);assert.equal(await page.evaluate(()=>voiceProof.active.processLocally),true);
+  await page.evaluate(()=>{const r=[{transcript:'Synthetic dictated draft'}];r.isFinal=true;voiceProof.active.onresult({results:[r]});});assert.equal(await page.locator('[data-email-reply]').inputValue(),'Synthetic dictated draft');assert.equal(await page.locator('[data-email-send]').isDisabled(),true,'dictation cannot enable Send');
+  await tools.locator('[data-voice-stop]').click();await tools.locator('[data-voice-read]').click();assert.equal(await page.evaluate(()=>voiceProof.speaks),1);await tools.locator('[data-voice-stop]').click();
+  await tools.locator('[data-voice-lang]').selectOption('es-MX');await page.evaluate(()=>voiceProof.available='unavailable');await tools.locator('[data-voice-dictate]').click();await tools.getByText('On-device Spanish is not installed or supported. Type instead; no language pack or audio was uploaded.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>voiceProof.starts),1);assert.equal(await page.locator('[data-email-reply]').inputValue(),'Synthetic dictated draft');
+  assert.equal(await tools.locator('[data-voice-dictate]').evaluate(e=>e.getBoundingClientRect().height>=44),true);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  if(process.argv.includes('--screenshots')){const dir=path.join(__dirname,'../docs/screens/2026-10-18-370-voice');fs.mkdirSync(dir,{recursive:true});await page.mouse.move(0,0);await page.keyboard.press('Escape');await page.screenshot({path:path.join(dir,'synthetic-voice-'+width+'.png')});}
+  await page.evaluate(()=>navigate('buyers_found',null));await page.getByRole('button',{name:'Open buyer',exact:true}).first().click();await page.getByRole('tab',{name:'Messages',exact:true}).click();await page.locator('[data-draft]').first().waitFor({state:'visible'});await page.locator('.bf-workspace-section:not([hidden]) .wos-voice-tools').waitFor();assert.ok(await page.locator('.wos-voice-tools').count()>0,'buyer drafts use the shared control');
+ }
+ assert.deepEqual(writes,[]);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);fixture.assertUnchanged();console.log('Local voice actual dashboard1366/400/412: mock on-device recognition only, no start/autoplay on load, final text in editable unsent reply, Send stays locked, language fallback/no retry, explicit local read/stop, buyer drafts,44px/no overflow, zero production/audio/network writes passed.');
+ }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+})().catch(e=>{console.error(e);process.exitCode=1;});
