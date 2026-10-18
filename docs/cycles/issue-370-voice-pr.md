@@ -42,6 +42,13 @@ with mocked speech: editable reply, Send stays locked, language fallback,
 local read/Stop, buyer Messages control,44px/no overflow, zero writes/external
 calls. No real microphone/audio used. Initial driver failed to open the buyer
 Messages tab; corrected the new driver, no existing assertion changed.
+Initial hosted39122408018:211 passed/1 failed/0 skipped,212 total. The
+JV driver counted4 disabled buttons instead of3 because the new microphone
+correctly starts disabled on that browser. scripts/verify-jv-desk.js:30/33
+now targets .jv-next-message>.td-actions buttons instead of every descendant
+button. The expected3 and inert-Send assertions are unchanged; the synthetic
+click still targets Send rather than accidentally clicking the new mic.
+No safety assertion was weakened. Complete failed timing report retained.
 
 Self-review: no server/module/dependency, auth, contact, matching, comp,
 readiness or provenance change. ASSUMED local-only policy logged. New UI uses

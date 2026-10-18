@@ -2,6 +2,12 @@
 
 ## Latest Run Summary
 
+2026-10-18 #370 gate checkpoint: initial cloud39122408018 returned211/1/0
+of212. Existing JV driver selected all nested disabled buttons and counted
+the new disabled mic. Narrowed two driver selectors to direct .td-actions;
+expected3 and actual inert-Send behavior unchanged. No product safety fix
+or assertion relaxation. Focused JV proof plus final full suite required.
+
 2026-10-18 #370 slice1 IN PROGRESS: browser-only composer dictation and
 tap-only read aloud. Recognition requires processLocally plus an available
 on-device en-US/es-MX pack; no prefixed/cloud fallback, pack install or
