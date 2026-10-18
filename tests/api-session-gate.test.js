@@ -154,6 +154,11 @@ async function request(base, method, route, options = {}) {
     const commitPath = '/api/dashboard/buyers-found/import/commit';
     assert.strictEqual((await request(base, 'POST', previewPath, { headers: findHeaders, body: findInput })).status, 401);
     const regularSession = session.issueSession({ userId: 'regular-fixture', role: 'user', scope: 'dashboard' }, { secret }).token;
+    const calendarPath = '/api/dashboard/calendar-workspace';
+    assert.strictEqual((await request(base, 'GET', calendarPath)).status, 401);
+    assert.strictEqual((await request(base, 'GET', calendarPath, { headers: findHeaders })).status, 401);
+    assert.strictEqual((await request(base, 'GET', calendarPath, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` } })).status, 403);
+    assert.strictEqual((await request(base, 'GET', calendarPath, { headers: { Cookie: cookie } })).status, 200);
     for (const action of ['preview', 'draft', 'send']) {
       const path = '/api/dashboard/buyers-found/' + findId + '/email/' + action;
       assert.strictEqual((await request(base, 'POST', path, { body: {} })).status, 401);
