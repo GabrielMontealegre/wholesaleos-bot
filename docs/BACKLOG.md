@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-18 #370 composer slice RELEASED: PR#386,main
+3d432f4754b2bf47f3ea96ec5fbc7ceb5e8f96e7. Final hosted39123294146:
+212 passed/0 failed/0 skipped,600s/file,11m14s; voice UI3.98s/unit0.06s,
+JV safety2.88s,acquisition251.46s. Initial211/1/0 report retained; two JV
+driver selectors narrowed to existing direct action buttons, expected3 and
+inert Send unchanged. Railway7154039363 success11:41:19Z,55s; health200;
+voiceJS/CSS1 served. Live1366/400/412 real buyer Messages shows one shared
+toolbar; mic API available (installed pack/capture NOT measured), language
+switch and Stop work, draft length290 unchanged,44px/no overflow. No audio,
+read aloud, save, send, confirmation or business write.100Leads/drawer work;
+console0errors. Screenshots crop only public toolbar, not private draft.
+Email listed28 messages but opening one returned Email unavailable; no live
+email-composer success claimed. Unchanged email read path needs follow-up.
+Ask assistant context/commands remain pending#372; do not close#370 as whole.
+Next: remaining#366 architect UI-copy/help findings before downstream features.
+I/C BLOCKED#383/#379; Drive requires owner reauthorization; no#341 sign-off.
+
 2026-10-18 #370 gate checkpoint: initial cloud39122408018 returned211/1/0
 of212. Existing JV driver selected all nested disabled buttons and counted
 the new disabled mic. Narrowed two driver selectors to direct .td-actions;
