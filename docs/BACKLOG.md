@@ -2,6 +2,42 @@
 
 ## Latest Run Summary
 
+2026-10-18 #370 gate checkpoint: initial cloud39122408018 returned211/1/0
+of212. Existing JV driver selected all nested disabled buttons and counted
+the new disabled mic. Narrowed two driver selectors to direct .td-actions;
+expected3 and actual inert-Send behavior unchanged. No product safety fix
+or assertion relaxation. Focused JV proof plus final full suite required.
+
+2026-10-18 #370 slice1 IN PROGRESS: browser-only composer dictation and
+tap-only read aloud. Recognition requires processLocally plus an available
+on-device en-US/es-MX pack; no prefixed/cloud fallback, pack install or
+server speech provider. Missing support stays a truthful keyboard/type fallback.
+Final transcript updates only the existing editable draft/input event; no save,
+send or business action is invoked. Read aloud requires localService=true.
+Stop,60s bound, language change, background/signout and removed field cancel.
+New unit and actual-dashboard mock1366/400/412 pass; one initial new-test
+driver missed the compact buyer's Messages tab, corrected without changing
+product gates. Full212-file hosted gate/live read-only proof pending.
+Ask WholesaleOS commands/context await the separate#372 assistant surface;
+this slice does not claim that assistant exists or that voice works on every
+Chrome version. No real microphone, audio, message or production write.
+
+2026-10-18 #366J RELEASED: PR#385,main
+a1656954d5185904b74b003807f83fd0228bf40e. Hosted39120526838:
+210 passed/0 failed/0 skipped,600s/file,11m10s; new UI3.18s/unit0.08s/
+routes0.32s,real auth2.40s,acquisition246.23s. Railway7153558215 success
+10:58:31Z,47s; post-success health200,DriveJS/CSS1 served. Live Settings
+and Drive1366/400/412 show Error: invalid_grant (authorization expired or
+revoked), not a missing token or invented sync. Guide and recheck work;
+44px phone button/no overflow. No credentials, scopes or files changed.
+Initial health502 during transition and lead50210:58:40Z are retained;
+fresh post-deploy tab hydrates100Leads/drawer with console0errors.
+Private fields excluded from six checked screenshots. Owner reauthorization
+is required to restore Drive, not needed for independent product work.
+J status UI DONE; I/C BLOCKED#383/#379, no full#341 sign-off. Next#370
+on item/370-on-device-voice: trace reveals ordinary Web Speech can send
+audio to a service; never assume browser-only means on-device/private.
+
 2026-10-18 #366J IN PROGRESS: Settings and Drive share one read-only status
 check with separate missing-variable reasons, safe Google error codes, admin
 and no-store guard,8s timeout/no request retry. UI removes unverified folder

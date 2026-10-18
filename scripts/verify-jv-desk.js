@@ -27,10 +27,10 @@ async function prove({screenshots=false}={}) {
    await page.locator('[data-jv-section=active] [data-deal-open]').click();await page.locator('.td-open-view .jv-desk').waitFor();
    assert.equal(await page.locator('.td-open-view .jvw-stages li').count(),9);
    assert.ok((await page.locator('.td-open-view .jv-now').innerText()).includes('Holder interested'));
-   assert.equal(await page.locator('.td-open-view .jv-next-message button:disabled').count(),3);
+   assert.equal(await page.locator('.td-open-view .jv-next-message>.td-actions button:disabled').count(),3);
    assert.equal(await page.locator('.td-open-view [data-deal-draft]').count(),1,'one canonical saved-draft control, not two divergent composers');
    await page.locator('.td-open-view [data-deal-draft]').fill('SYNTHETIC UNSENT DRAFT');
-   await page.locator('.td-open-view .jv-next-message button').first().dispatchEvent('click');
+   await page.locator('.td-open-view .jv-next-message>.td-actions button').first().dispatchEvent('click');
    assert.equal(await page.locator('.td-open-view [data-deal-draft]').inputValue(),'SYNTHETIC UNSENT DRAFT');
    assert.ok(!(await page.locator('.td-open-view h3').first().innerText()).includes(ready.address));
    const geometry=await page.locator('.td-open-view .jv-desk').evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,overflow:el.scrollWidth>el.clientWidth+1};});

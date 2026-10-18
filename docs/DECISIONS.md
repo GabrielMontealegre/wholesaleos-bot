@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #370 privacy overrides ordinary browser speech fallback. Chrome's
+default recognition can transmit audio to a service, so accept only explicit
+processLocally=true with available installed language support; otherwise type/
+keyboard hint with no privacy promise about the user's keyboard. Never install
+a pack or enable a provider automatically. Read aloud requires a localService
+voice and a tap. Ship reusable composer controls first; assistant commands
+integrate with#372 when its actual data surface exists -- AGENTS3/5,#370 --2026-10-18.
+
 ASSUMED: #366J Connected means only that Google's read-only account check
 accepted the existing Drive authorization, not that backups or folder sync
 occurred. Show only recognized provider reason codes and missing variable
