@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #366 architect copy/help corrections describe navigation and recorded
+workflow only. Today headings use existing reported person/buyer names or the
+same JV-permitted property heading; a reference is metadata, not a guessed name.
+Unknown names stay missing, unsigned street addresses stay withheld. Approval
+counts/targets and all eligibility/sort rules remain canonical. Unmapped sidebar
+pages get no generic fake explanation. Voice toolbar is a sibling of its field
+label, not a nested label inheriting unrelated help -- AGENTS3/5,#366 comments --2026-10-18.
+
 ASSUMED: #370 privacy overrides ordinary browser speech fallback. Chrome's
 default recognition can transmit audio to a service, so accept only explicit
 processLocally=true with available installed language support; otherwise type/

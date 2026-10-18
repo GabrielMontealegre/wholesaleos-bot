@@ -12,6 +12,8 @@ function instant(value,now) {
   return Number.isFinite(n)&&n<=now&&new Date(n).toISOString().slice(0,19)===value.slice(0,19)?n:null;
 }
 function date(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value?value:null;}
+function human(value,fallback){return typeof value==='string'&&value.trim()&&!/^(?:BUY-\d+|WOS-[A-Z]{2}-\d+)$/.test(value.trim())?value.trim().slice(0,180):fallback;}
+function dealHeading(row,now){const location=[row.city,row.state,row.zip].filter(v=>typeof v==='string'&&v.trim()).join(', ');return row.deal_kind==='jv'&&!jv.view(row,now).full_package_evidence_ready?location||'Property details needed':human(row.address,location||'Property details needed');}
 function buildTodayWorkspace(store,{now,timeZone='America/Mazatlan',releases=[]}={}) {
   const clock=instant(now,Infinity);if(clock==null)throw Error('today_clock_invalid');
   const today=dayAt(now,timeZone),cutoff=clock-DAY;
@@ -20,12 +22,12 @@ function buildTodayWorkspace(store,{now,timeZone='America/Mazatlan',releases=[]}
   const reviewed=(store.reviewed_deals||[]).map(d=>{const e=deals.evaluate(d,store.buyers||[],now);return {d,e,g:grade(d,e)};});
   const pendingDeals=reviewed.filter(({d,e})=>d.approval==='pending'&&!['STALE','NO'].includes(e.verdict)&&!['closed','dead','expired'].includes(e.status));
   for(const c of view.items)if(c.status==='hot'||c.status==='to_send'||c.due_date&&c.due_date<=today){
-    actions.push({key:'conversation:'+c.id,kind:'conversation',record_id:c.id,ref:c.refs.join(' / '),label:c.status==='hot'?'Reply waiting':c.status==='to_send'?'Draft needs review':'Follow-up due',due_date:date(c.due_date),recorded_at:c.captured_at,source_kind:c.source_kind,action_label:'Open conversation',conversation:c});
+    actions.push({key:'conversation:'+c.id,kind:'conversation',record_id:c.id,heading:human(c.person,'Recorded conversation'),ref:c.refs.join(' / '),label:c.status==='hot'?'Reply waiting':c.status==='to_send'?'Draft needs review':'Follow-up due',due_date:date(c.due_date),recorded_at:c.captured_at,source_kind:c.source_kind,action_label:'Open conversation',conversation:c});
   }
-  for(const b of pendingBuyers)actions.push({key:'buyer:'+b.id,kind:'buyer',record_id:b.id,ref:activity.reference(b),label:'Buyer needs approval',source_kind:'derived_workflow',action_label:'Review buyer'});
-  for(const {d} of pendingDeals)actions.push({key:'approval:'+d.id,kind:'deal',record_id:d.id,ref:activity.reference(d),label:'Deal needs approval',source_kind:'derived_workflow',action_label:'Review deal'});
+  for(const b of pendingBuyers)actions.push({key:'buyer:'+b.id,kind:'buyer',record_id:b.id,heading:human(b.name,'Buyer name not recorded'),ref:activity.reference(b),label:'Buyer needs approval',source_kind:'derived_workflow',action_label:'Review buyer'});
+  for(const {d} of pendingDeals)actions.push({key:'approval:'+d.id,kind:'deal',record_id:d.id,heading:dealHeading(d,now),ref:activity.reference(d),label:'Deal needs approval',source_kind:'derived_workflow',action_label:'Review deal'});
   const deadlineRows=reviewed.filter(({d,e})=>!['closed','dead','expired'].includes(e.status)&&d.approval!=='rejected'&&date(e.deadline)&&e.deadline>=today&&e.deadline<=new Date(Date.parse(today+'T00:00:00Z')+7*DAY).toISOString().slice(0,10));
-  for(const {d,e} of deadlineRows)actions.push({key:'deadline:'+d.id,kind:'deal',record_id:d.id,ref:activity.reference(d),label:'Deadline within seven days',due_date:e.deadline,source_kind:'derived_workflow',action_label:'Open deal'});
+  for(const {d,e} of deadlineRows)actions.push({key:'deadline:'+d.id,kind:'deal',record_id:d.id,heading:dealHeading(d,now),ref:activity.reference(d),label:'Deadline within seven days',due_date:e.deadline,source_kind:'derived_workflow',action_label:'Open deal'});
   actions.sort((a,b)=>(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.key.localeCompare(b.key));
   // All math and eligibility come from the existing reviewed-deal evaluator.
   const best=reviewed.flatMap(({d,e,g})=>{
