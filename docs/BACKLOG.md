@@ -2,6 +2,32 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366E IN PROGRESS: three-part pending buyer/deal briefs use existing
+source criteria/evaluation only; value tiers/list-price/wider-area caution and
+canonical split share stay truthful, missing is not invented. Skip for now is
+session-only/version-bound and reversible, not a saved rejection. Existing
+source-review/approval backend unchanged. New unit/1366/400/412 checks and old
+approval safety browser suite pass unchanged. Full205-file cloud gate and live
+proof pending. B is released; C feed remains BLOCKED#379. No#341 sign-off.
+
+2026-10-18 #366B RELEASED: PR#381,main
+e537b6357486fc150ef01313b520e7ae7fb0a942. Exact hosted39097933578:
+203 passed/0 failed/0 skipped,600s/file,job11m6s; Calendar unit0.17s,
+routes0.39s,UI8.56s,real-server auth2.42s,acquisition246.29s. Protected
+gate/auth/source/ingestion files unchanged; diff check clean; tests/.tmp absent.
+Railway7150136547 success04:56:24Z,46s; post-success health200,CalendarJS/CSS1.
+Live1366/400/412:264 total,119 Today,13 follow-ups due,2 yesterday-recorded;
+type/day/month/next/prev, event X/Esc, real conversation/Prepare follow-up,
+exact buyer opener,100Leads/address drawer, bounded list and phone filters fit.
+Console0errors; no send/save/approval/confirmation/batch/business write.
+Privacy-safe images deliberately show empty January2099; populated behavior
+checked separately. Known global generic tooltip remains. A post-reset More
+menu restore did not reopen; earlier Calendar entry navigation passed; not
+claimed a new Calendar event failure. Viewport restored; dashboard left open.
+B is ready for Gabriel's inspection; C UI live/feed BLOCKED#379, no#341 sign-off
+inferred. Next independent slice E on item/366-e-approval-brief. Proof/timings
+ride that PR rather than trigger a docs-only deploy.
+
 2026-10-18 #366B IN PROGRESS on item/366-b-calendar-hub: traced the missing
 read connection (old Calendar rendered only manual APP.calendar). Additive
 admin/no-store projection joins canonical stored activity, conversations,

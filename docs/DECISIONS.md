@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: #366E Skip means hide this exact pending row version for the current
+session, not reject or change business data. A changed version reappears and
+Show skipped reverses it. Approval still requires the existing explicit review
+and version gate. Briefs read canonical evaluation only, preserve preliminary/
+list-price labels and split-adjusted share, and never infer a purchase from a
+buyer claim, type or workflow approval -- AGENTS3/5,#366E --2026-10-18.
+
 ASSUMED: #366B Calendar is a read-only projection of existing activity,
 conversation and explicit calendar/deadline records, not a new ingestion or
 reminder writer. Existing conversation rules supply labeled derived due dates;
