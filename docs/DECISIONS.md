@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED: #366J Connected means only that Google's read-only account check
+accepted the existing Drive authorization, not that backups or folder sync
+occurred. Show only recognized provider reason codes and missing variable
+names, never raw provider errors or account details. Setup is owner guidance,
+not an automated grant, credential change or backup -- AGENTS3/5,#366J --2026-10-18.
+
 ASSUMED: #366H Stage/Search narrow the existing eligible JV read pool before
 the display cap, never alter eligibility or stored records. Search covers only
 permitted card fields, not an unsigned subject address. Existing advanced

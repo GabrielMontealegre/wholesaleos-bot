@@ -1,0 +1,5 @@
+.wos-drive-status{max-width:760px;margin-bottom:16px;padding:12px 0;border-bottom:1px solid var(--border,#303541);color:var(--text,#e5e7eb);font-size:14px;line-height:1.5}
+.wos-drive-status header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wos-drive-status h2{margin:0;font-size:18px}.wos-drive-status p{margin:8px 0}.wos-drive-status button{min-height:44px;padding:8px 12px;color:var(--text,#e5e7eb);background:var(--surface,#171b23);border:1px solid var(--border,#303541);border-radius:6px;cursor:pointer}
+.wos-drive-status button:disabled{opacity:.6;cursor:default}.wos-drive-status summary{cursor:pointer;padding:10px 0;min-height:44px;box-sizing:border-box;color:var(--blue,#78b8ff)}
+.wos-drive-status a{color:var(--blue,#78b8ff)}.wos-drive-status code,.wos-drive-status li,.wos-drive-status p{overflow-wrap:anywhere}.wos-drive-status ol{padding-left:22px}.wos-drive-status li{margin:8px 0}.wos-drive-status .drive-state{font-weight:600;color:var(--red,#ff929b)}.wos-drive-status .drive-connected{color:var(--green,#5bd6a3)}

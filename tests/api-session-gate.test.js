@@ -69,6 +69,7 @@ async function request(base, method, route, options = {}) {
     env: Object.assign({}, process.env, {
       PORT: String(port), DB_PATH: dbPath, WOS_ADMIN_PIN: pin, WOS_SESSION_SECRET: secret,
       TWILIO_AUTH_TOKEN: providerToken, RAILWAY_PUBLIC_DOMAIN: '',
+      GMAIL_CLIENT_ID: '', GMAIL_CLIENT_SECRET: '', GDRIVE_REFRESH_TOKEN: '',
       WOS_ENABLE_BACKGROUND_INGESTION: 'false',
       DEAL_BOARD_SNAPSHOTS_PATH: path.join(tmp, 'snapshots.json'),
       DEAL_BOARD_JOBS_PATH: path.join(tmp, 'jobs.json'),
@@ -155,6 +156,14 @@ async function request(base, method, route, options = {}) {
     assert.strictEqual((await request(base, 'POST', previewPath, { headers: findHeaders, body: findInput })).status, 401);
     const regularSession = session.issueSession({ userId: 'regular-fixture', role: 'user', scope: 'dashboard' }, { secret }).token;
     const calendarPath = '/api/dashboard/calendar-workspace';
+    const drivePath = '/api/drive/status';
+    assert.strictEqual((await request(base, 'GET', drivePath)).status, 401);
+    assert.strictEqual((await request(base, 'GET', drivePath, { headers: findHeaders })).status, 401);
+    assert.strictEqual((await request(base, 'GET', drivePath, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` } })).status, 403);
+    const driveStatus = await request(base, 'GET', drivePath, { headers: { Cookie: cookie } });
+    assert.strictEqual(driveStatus.status, 200);
+    assert.strictEqual(driveStatus.headers.get('cache-control'), 'no-store');
+    assert.strictEqual(driveStatus.body.code, 'DRIVE_CONFIGURATION_MISSING');
     assert.strictEqual((await request(base, 'GET', calendarPath)).status, 401);
     assert.strictEqual((await request(base, 'GET', calendarPath, { headers: findHeaders })).status, 401);
     assert.strictEqual((await request(base, 'GET', calendarPath, { headers: { Cookie: `wos_session=${encodeURIComponent(regularSession)}` } })).status, 403);
