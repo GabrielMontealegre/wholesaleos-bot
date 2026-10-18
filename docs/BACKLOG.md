@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366E IN PROGRESS: three-part pending buyer/deal briefs use existing
+source criteria/evaluation only; value tiers/list-price/wider-area caution and
+canonical split share stay truthful, missing is not invented. Skip for now is
+session-only/version-bound and reversible, not a saved rejection. Existing
+source-review/approval backend unchanged. New unit/1366/400/412 checks and old
+approval safety browser suite pass unchanged. Full205-file cloud gate and live
+proof pending. B is released; C feed remains BLOCKED#379. No#341 sign-off.
+
 2026-10-18 #366B RELEASED: PR#381,main
 e537b6357486fc150ef01313b520e7ae7fb0a942. Exact hosted39097933578:
 203 passed/0 failed/0 skipped,600s/file,job11m6s; Calendar unit0.17s,
