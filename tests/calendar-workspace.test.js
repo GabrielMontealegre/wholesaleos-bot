@@ -21,7 +21,7 @@ assert.equal(view.events.filter(e=>e.type==='email_out').length,1,'activity and 
 assert.equal(view.events.filter(e=>e.type==='email_in').length,1);
 const reminder=view.events.find(e=>e.type==='followup');assert.equal(reminder.day,'2026-10-18');assert.equal(reminder.source_kind,'derived_workflow');assert.equal(reminder.derived,true);assert.equal(reminder.reminder_basis,'Reported due date');
 assert.ok(view.events.some(e=>e.type==='closing'&&e.day==='2026-10-29'));assert.ok(view.events.some(e=>e.source_kind==='operator_calendar'));
-assert.ok(view.brief.yesterday_done>=2);assert.ok(view.brief.today_due>=1);
+assert.ok(view.brief.yesterday_done>=2);assert.equal(view.brief.today_due,1,'pending approvals are not people to follow up with');
 assert.ok(!JSON.stringify(view.events).includes('PRIVATE UNSIGNED JV ADDRESS'));assert.ok(!JSON.stringify(view.events).includes('private-holder'));
 assert.equal(visible(view,{mode:'day',selected:'2026-10-17',type:'email_out'}).length,1);
 assert.equal(visible(view,{mode:'month',selected:'2026-10-01'}).length,view.total);
