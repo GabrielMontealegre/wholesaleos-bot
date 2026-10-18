@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366J IN PROGRESS: Settings and Drive share one read-only status
+check with separate missing-variable reasons, safe Google error codes, admin
+and no-store guard,8s timeout/no request retry. UI removes unverified folder
+counts/automatic-sync claims and shows owner-only connection instructions.
+No credentials, permissions, files or backup settings changed. New unit/route/
+actual-dashboard1366/400/412 proofs and real-server auth pass; full210-file
+hosted gate/live verification pending. H proof rides this PR; I/C remain
+BLOCKED#383/#379. Known generic global tooltip remains outside this slice.
+
 2026-10-18 #366H RELEASED: PR#384,main
 aa8190625086ade0210a9e7c3b7c009a3e4d77f0. Hosted39101174087:
 207 passed/0 failed/0 skipped,600s/file,11m29s; new UI4.20s/unit0.36s,

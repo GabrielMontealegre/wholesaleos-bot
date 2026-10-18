@@ -3648,20 +3648,8 @@ function getDriveClient() {
   return google.drive({ version: 'v3', auth: oauth2 });
 }
 
-app.get('/api/drive/status', async (req, res) => {
-  try {
-    const drive = getDriveClient();
-    if (!drive) return res.json({ connected: false, reason: 'GDRIVE_REFRESH_TOKEN not set in Railway Variables' });
-    const about = await drive.about.get({ fields: 'user' });
-    res.json({ connected: true, email: about.data.user.emailAddress });
-  } catch(e) {
-    // Common causes: token expired, wrong scope, revoked access
-    const reason = e.message.includes('invalid_grant') ? 'Refresh token expired Ã¢ÂÂ regenerate at OAuth Playground' :
-                   e.message.includes('insufficientPermissions') ? 'Token missing Drive scope Ã¢ÂÂ re-authorize with https://www.googleapis.com/auth/drive scope' :
-                   e.message.includes('invalid_client') ? 'Invalid Client ID or Secret Ã¢ÂÂ check Railway Variables' :
-                   e.message;
-    res.json({ connected: false, reason });
-  }
+require('./modules/integrations/drive-connection-status').registerDriveStatus(app, {
+  requireAdmin, env: process.env, createClient: getDriveClient
 });
 
 app.post('/api/drive/backup', async (req, res) => {
