@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-18 #388 diagnostic slice IN PROGRESS: mailbox-body errors preserve
+the existing Inbox, show only known safe reason text and do not assert that
+credentials failed.401/403 still clear private content. No server/provider,
+byte-cap, auth, send or writer change; no automatic retry. New route/error
+privacy and real-dashboard1366/400/412 tests pass; initial test driver wrongly
+expected the shared401 login overlay to leave dashboard content visible,
+corrected to verify attached cleared DOM. Full215-file hosted gate pending.
+Root cause of the earlier live read is not inferred or claimed fixed.
+
 2026-10-18 #366 copy/help RELEASED: PR#387, main
 0b07f7d3cfbfa37036180f06e11d3247815a9583. Hosted39125517308:
 214 passed/0 failed/0 skipped,600s/file,11m26s; navigation UI3.25s/unit0.24s,
