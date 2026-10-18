@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366H RELEASED: PR#384,main
+aa8190625086ade0210a9e7c3b7c009a3e4d77f0. Hosted39101174087:
+207 passed/0 failed/0 skipped,600s/file,11m29s; new UI4.20s/unit0.36s,
+old filter4.77s/geography UI9.30s,acquisition252.05s. Railway7150603340
+success05:51:42Z,48s; post-success health200; DealsJS14/toolsJS-CSS1.
+Live1366/400/412:26 JV cards; State/County/City/Stage/Search primary,
+More starts closed and opens existing advanced controls; Closed stage and
+nonmatching search return truthful zero; clearing restores26. Focus survives
+search repaint, phone controls44px/no overflow.100Leads hydrate and address
+drawer opens/closes; console0errors; viewport restored. Screenshots use a
+deliberately empty search, not private cards. No business write, send, batch,
+capture, confirmation or settings change. H DONE; I BLOCKED#383; C feed
+BLOCKED#379. Next independent item J on item/366-j-drive-status.
+
 2026-10-18 #366I BLOCKED#383: trace found legacy /api/contracts/fill uses
 hardcoded signer data, inferred closing/earnest amounts and an AI call. New
 profile/signature integration cannot silently endorse those facts or forward
