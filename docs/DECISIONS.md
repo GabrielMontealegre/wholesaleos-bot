@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: #388 a failed body read does not prove a failed mailbox login. Keep
+the already-read message list and connection label for ordinary read errors;
+clear private content on dashboard401/403 as before. Render only fixed known
+size/stale/missing/invalid/busy explanations, never provider error text. Unknown
+failure stays unknown; no retry, larger byte cap or credential change is a
+diagnostic fix -- AGENTS3/5,#388 --2026-10-18.
+
 ASSUMED: #366 architect copy/help corrections describe navigation and recorded
 workflow only. Today headings use existing reported person/buyer names or the
 same JV-permitted property heading; a reference is metadata, not a guessed name.

@@ -49,10 +49,31 @@
       roleFilters.slice(1).map(([k,l])=>'<button type="button" data-email-role="'+k+'" aria-pressed="'+(state.role===k)+'">'+l+'</button>').join('')+
       '<label class="email-extra-label">Other folders<select aria-label="Other email folders" data-email-extra-folder'+(state.busy?' disabled':'')+'><option value="">More</option>'+extra.map(([k,l])=>'<option value="'+k+'"'+(state.folder===k?' selected':'')+'>'+l+'</option>').join('')+'</select></label></nav>';
   }
-  async function request(path){
+  function readFailure(code){
+    var reasons={
+      email_message_too_large:'This message exceeds the safe reading limit. Open it in Gmail. Your Inbox is still available.',
+      email_thread_too_large:'This conversation is too large. Open it in Gmail. Your Inbox is still available.',
+      email_message_stale:'This message reference is out of date. Reopen Inbox to load current messages.',
+      email_message_missing:'This message is no longer available at this reference. Reopen Inbox to load current messages.',
+      email_message_invalid:'This message reference cannot be opened. Reopen Inbox to load current messages.',
+      email_thread_invalid:'This conversation reference cannot be opened. Reopen Inbox to load current messages.',
+      email_busy:'Email is busy with other reads. Your Inbox is still available; try opening the message later.'
+    };
+    return typeof code==='string'&&Object.prototype.hasOwnProperty.call(reasons,code)?reasons[code]:'The message could not be read. Your Inbox is still available. Check Email status in Settings if this continues.';
+  }
+  async function request(path,options){
     var ticket=++sequence;state.busy=true;state.error='';paint();
     try{var r=await fetch(path),data=await r.json();if(ticket!==sequence)return null;if(!r.ok||data.ok===false){var failure=Error();failure.code=data.code;failure.status=r.status;throw failure;}if(data.status)state.status=data.status;return data;}
-    catch(e){if(ticket!==sequence)return null;state.messages=[];state.notes=[];state.thread=[];state.body=null;state.reply='';if(e.code!=='email_folder_unavailable')state.status=e.status===401||e.status===403?'Dashboard login required':'Not connected';state.error=e.status===401||e.status===403?'Sign in to the dashboard to read email.':e.code==='email_thread_too_large'?'This conversation is too large. Open it in Gmail.':e.code==='email_folder_unavailable'?'This Gmail label is not present. No label was created.':'Email unavailable. Check the connection in Settings.';return null;}
+    catch(e){
+      if(ticket!==sequence)return null;
+      var login=e.status===401||e.status===403,keepList=options&&options.keepList&&!login;
+      if(!keepList){state.messages=[];state.notes=[];}
+      state.thread=[];state.body=null;state.reply='';
+      if(login)state.status='Dashboard login required';
+      else if(!keepList&&e.code!=='email_folder_unavailable')state.status='Not connected';
+      state.error=login?'Sign in to the dashboard to read email.':keepList?readFailure(e.code):e.code==='email_thread_too_large'?'This conversation is too large. Open it in Gmail.':e.code==='email_folder_unavailable'?'This Gmail label is not present. No label was created.':'Email unavailable. Check the connection in Settings.';
+      return null;
+    }
     finally{if(ticket===sequence){state.busy=false;paint();}}
   }
   async function load(){
@@ -82,7 +103,7 @@
     var deal=e.target.closest('[data-email-deal]');if(deal&&root.openReviewedDeal){root.openReviewedDeal(deal.dataset.emailDeal);return;}
     var item=e.target.closest('[data-email-message]');if(item&&!state.busy){
       state.linkStatus='';state.reply='';var group=groups().find(g=>g.items.some(m=>m.id===item.dataset.emailMessage)),ids=group?Array.from(new Set(group.items.map(m=>m.id))):[item.dataset.emailMessage];
-      var data=await request(ids.length>1?'/api/gmail/thread?ids='+encodeURIComponent(JSON.stringify(ids)):'/api/gmail/message/'+encodeURIComponent(ids[0]));
+      var data=await request(ids.length>1?'/api/gmail/thread?ids='+encodeURIComponent(JSON.stringify(ids)):'/api/gmail/message/'+encodeURIComponent(ids[0]),{keepList:true});
       if(data){state.thread=Array.isArray(data.messages)?data.messages:[data];state.body=state.thread.find(m=>m.id===item.dataset.emailMessage)||state.thread[state.thread.length-1]||null;}paint();
     }
   });

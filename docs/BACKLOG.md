@@ -2,6 +2,34 @@
 
 ## Latest Run Summary
 
+2026-10-18 #388 diagnostic slice IN PROGRESS: mailbox-body errors preserve
+the existing Inbox, show only known safe reason text and do not assert that
+credentials failed.401/403 still clear private content. No server/provider,
+byte-cap, auth, send or writer change; no automatic retry. New route/error
+privacy and real-dashboard1366/400/412 tests pass; initial test driver wrongly
+expected the shared401 login overlay to leave dashboard content visible,
+corrected to verify attached cleared DOM. Full215-file hosted gate pending.
+Root cause of the earlier live read is not inferred or claimed fixed.
+
+2026-10-18 #366 copy/help RELEASED: PR#387, main
+0b07f7d3cfbfa37036180f06e11d3247815a9583. Hosted39125517308:
+214 passed/0 failed/0 skipped,600s/file,11m26s; navigation UI3.25s/unit0.24s,
+old help7.16s,voice UI3.97s,county-notice acquisition248.35s.
+Railway7154386545 success12:14:43Z,70s; health200; Help4/Today4/Voice2.
+Live1366/400/412:61 Today actions,48 pending reviews, no reference-only
+action headings; Best link opens Approvals without checking any review.
+Sidebar help describes the actual destination; unknown destinations get no
+generic explanation. Phone navigation works, no overflow. Voice toolbar is
+outside its field label.100Leads hydrate, drawer opens/closes,console0errors;
+temporary Deadline filter cleared and viewport restored. Five privacy-safe
+live screenshots and full report retained; no business writes or audio.
+Run delivered Calendar B, Approvals E, JV filters H, honest Drive status J,
+composer voice controls and copy/help. Calendar is ready for Gabriel's review;
+C feed and I remain BLOCKED#379/#383, no full#341 sign-off inferred.
+Drive reports invalid_grant and needs owner reauthorization. Email read
+failure is filed#388, not claimed fixed; next independent engineering task.
+No outreach, capture, batch, evidence confirmation or secret/settings change.
+
 2026-10-18 #366 copy/help IN PROGRESS: remaining architect findings get
 page-specific sidebar explanations (unknown pages omitted), person/property
 first Today action headings, and plain empty Best copy linking to the actual
