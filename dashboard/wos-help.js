@@ -8,8 +8,12 @@
   root.renderGlossary=function(){return '<section class="wos-glossary"><h2>Glossary</h2>'+Object.keys(glossary).sort().map(key=>'<div><h3>'+esc(key)+'</h3><p>'+esc(glossary[key])+'</p></div>').join('')+'</section>';};
   var aliases={'our arv':'ARV','our comps':'Comps','buyer max':'Buyer max','estimated spread':'Spread','today\'s deals':'Today’s Deals','source':'Open source','approve':'Approval','approval':'Approval','reject':'Approval','pending':'Approval','approved':'Approval','sold':'Comps','price / basis':'Comps','state':'Filters','county':'Filters','city':'Filters','save':'Approval','review':'Approval','total':'Leads','new today':'Daily target'};
   function termFor(text){var value=String(text||'').trim().toLowerCase();return Object.keys(glossary).find(key=>value===key.toLowerCase())||Object.keys(aliases).filter(key=>value===key||value.startsWith(key+':')||value.startsWith(key+' ')).sort((a,b)=>b.length-a.length).map(key=>aliases[key])[0]||'';}
+  var pageHelp={dashboard:'Your day: replies, reviews, deadlines and recent work.',todays_deals:'Deals checked today and their next steps.',jv:'Joint-venture deals and their recorded agreement stages.',leads:'Properties from recorded sources, with their evidence and status.',buyers_found:'People who buy properties, their criteria and matching deals.',gmail:'Your email messages and unsent drafts.',followups:'People and deals waiting for a follow-up.',pipeline:'Deals grouped by their recorded stage.',contracts_lib:'Saved contract documents and their review status.',calendar:'Recorded work, follow-ups and upcoming dates.',drive:'Google Drive authorization status and connection steps.',settings:'Account, connection and workspace settings.'};
+  function pageDescription(el){var item=el.closest('.sidebar .nav-item');if(!item)return null;var match=(item.getAttribute('onclick')||'').match(/\bnavigate\(\s*['"]([a-z_]+)['"]/);return match&&Object.hasOwn(pageHelp,match[1])?pageHelp[match[1]]:'';}
   function bind(el,term){
     if(!el||el.closest('.wos-help-anchor,.wos-glossary,.wos-live-tooltip')||el.dataset.helpTarget||el.matches('input[type="hidden"]'))return;
+    if(el.matches('.sidebar .nav-section'))return;
+    var description=pageDescription(el);if(description==='')return;if(description)el.dataset.helpCopy=description;
     el.dataset.helpTarget='true';if(term&&glossary[term])el.dataset.helpTerm=term;
     el.setAttribute('aria-describedby',((el.getAttribute('aria-describedby')||'')+' wos-live-tooltip').trim());
     if(!el.matches('button,input,select,textarea,a,summary,[role="button"]')&&!el.hasAttribute('tabindex'))el.tabIndex=0;
@@ -23,7 +27,7 @@
     });if(active&&!active.isConnected)hide();
   }
   function target(event){return event.target.closest&&event.target.closest('[data-help-target]');}
-  function explain(el){return sentence(el.getAttribute('title')||glossary[el.dataset.helpTerm]||(el.matches('input,select,textarea')?'Record only information supported by its source.':el.matches('th,dt,.badge,.pill,.nav-badge,.nav-section,.stat-label,.bf-stats span,.td-counts span')?'Recorded workflow information is separate from verified deal evidence.':'Review the recorded evidence before acting.'));}
+  function explain(el){return sentence(el.dataset.helpCopy||el.getAttribute('title')||glossary[el.dataset.helpTerm]||(el.matches('input,select,textarea')?'Record only information supported by its source.':el.matches('th,dt,.badge,.pill,.nav-badge,.nav-section,.stat-label,.bf-stats span,.td-counts span')?'Recorded workflow information is separate from verified deal evidence.':'Review the recorded evidence before acting.'));}
   function show(el){
     if(!el||!el.isConnected)return;if(!bubble){bubble=document.createElement('div');bubble.id='wos-live-tooltip';bubble.className='wos-live-tooltip';bubble.setAttribute('role','tooltip');document.body.appendChild(bubble);}
     active=el;bubble.textContent=explain(el);bubble.hidden=false;bubble.style.left='8px';bubble.style.top='8px';

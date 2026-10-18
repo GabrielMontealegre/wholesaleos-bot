@@ -60,7 +60,7 @@
       if(targets.has(target))return;
       const bar=document.createElement('div');bar.className='wos-voice-tools';
       bar.innerHTML='<div><label>Voice language<select data-voice-lang aria-label="Voice language"><option value="en-US">English</option><option value="es-MX">Espa\u00f1ol</option></select></label>'+(target.readOnly?'':'<button type="button" data-voice-dictate title="Dictate on this device only; review before sending" aria-label="Dictate on this device">\uD83C\uDF99</button>')+'<button type="button" data-voice-read title="Read this draft using an on-device voice only">Read aloud</button><button type="button" data-voice-stop title="Stop dictation and read aloud">Stop</button></div><p role="status" data-voice-status></p>';
-      targets.set(target,bar);bar._voiceTarget=target;target.insertAdjacentElement('afterend',bar);
+      targets.set(target,bar);bar._voiceTarget=target;(target.closest('label')||target).insertAdjacentElement('afterend',bar);
       bar.querySelector('[data-voice-lang]').value=root.navigator.language?.startsWith('es')?'es-MX':'en-US';
       if(!controller.supported()){const b=bar.querySelector('[data-voice-dictate]');if(b){b.disabled=true;bar.querySelector('[data-voice-status]').textContent='On-device dictation is unavailable. Type, or check your keyboard microphone privacy settings.';}}
     });

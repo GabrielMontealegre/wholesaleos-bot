@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366 copy/help IN PROGRESS: remaining architect findings get
+page-specific sidebar explanations (unknown pages omitted), person/property
+first Today action headings, and plain empty Best copy linking to the actual
+approval count. No action membership/count/sort/gate change; unsigned JV
+headings stay location-only. Voice toolbar moved outside its field label to
+avoid nested labels and inherited generic help. New unit/UI1366/400/412,
+existing Today unit, old long-press/confirmation safety and voice UI pass.
+Full214-file cloud gate/live proof pending; caches Help4/Today4/Voice2.
+No source/comp/readiness/contact/auth/writer or production business change.
+
 2026-10-18 #370 composer slice RELEASED: PR#386,main
 3d432f4754b2bf47f3ea96ec5fbc7ceb5e8f96e7. Final hosted39123294146:
 212 passed/0 failed/0 skipped,600s/file,11m14s; voice UI3.98s/unit0.06s,
