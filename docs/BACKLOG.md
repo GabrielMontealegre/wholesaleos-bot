@@ -2,6 +2,21 @@
 
 ## Latest Run Summary
 
+2026-10-18 #366E RELEASED: PR#382,main
+cd5e778338f6c76209651af1e35f7def41dbacbc. Hosted39099486751:
+205 passed/0 failed/0 skipped,600s/file,11m26s; new brief UI8.38s/unit0.30s,
+old safety UI11.63s/unit0.25s,acquisition252.93s. Exact Railway7150348929
+success05:22:40Z,2m; health200 after success; ApprovalsJS/CSS3 served.
+One health502 occurred while deploy was in_progress, not after success.
+Live1366/400/412:24 buyers+24 deals pending unchanged,24 briefs per category;
+all24 pending-deal value briefs correctly not established. Skip changes visible
+count only; Show skipped restores all24, source review remains unchecked,
+44px phone control, no overflow.100Leads/drawer and console0errors.
+Images use clearly labeled local-only skipped state; all skips restored before
+leaving. No approve/reject, source/comp/contact confirmation, send, batch or
+business write. Next I on item/366-i-operator-profile, trace only so far.
+B ready for Gabriel inspection; C feed remains BLOCKED#379; no#341 sign-off.
+
 2026-10-18 #366E IN PROGRESS: three-part pending buyer/deal briefs use existing
 source criteria/evaluation only; value tiers/list-price/wider-area caution and
 canonical split share stay truthful, missing is not invented. Skip for now is
