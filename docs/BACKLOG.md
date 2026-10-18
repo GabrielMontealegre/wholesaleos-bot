@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-18 #388 diagnostic slice RELEASED: PR#389,main
+dbe6d5cce549c5938d9fe750af867240d8ddbaba. Hosted39146438483:
+SUMMARY passed=215 failed=0 skipped=0 total=215;600s/file,11m51s.
+New error proof5.96s,mailbox1.34s,thread1.36s,acquisition254.45s.
+Railway7157743736 success16:59:48Z,48s;health200,reader?v=5 served.
+One ordinary live body read succeeded:30 Inbox rows,1 body,Connected
+(App Password),no alert; same message inspected1366/400/412 with no
+additional read or send. Back restores list;100Leads/drawer work;
+console0errors;viewport restored. Live screenshots show only public
+connection header, not private subjects/bodies/identities. Error behavior
+proven hermetically, not forced on production. Historical cause remains
+unknown;#388 remains open for evidence, no retry loop or secret change.
+No business write, outreach, audio, capture, batch or confirmation.
+Calendar B ready for owner inspection; C/I BLOCKED#379/#383. Drive needs
+owner reauthorization; no full#341 sign-off inferred. County ranking paused.
+
 2026-10-18 #388 diagnostic slice IN PROGRESS: mailbox-body errors preserve
 the existing Inbox, show only known safe reason text and do not assert that
 credentials failed.401/403 still clear private content. No server/provider,
