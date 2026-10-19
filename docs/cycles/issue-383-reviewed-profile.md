@@ -55,6 +55,15 @@ Screenshots in `docs/screens/2026-10-19-366-i/` are **synthetic local evidence**
 not live production proof. No real profile, email, contract, signature or source
 record was saved. Full suite and exact PR head are recorded in the PR once run.
 
+Initial hosted run39325431056:217 passed/1 failed/0 skipped,8m52s job.
+Both new Profile suites passed (UI3.64s/unit0.14s). The sole failure was the
+existing Calendar driver's immediate count after Escape (line40): native close
+events remove a dialog asynchronously. Local reproduction passed without a
+product change. Driver now waits up to3s for detachment before the same zero-node
+assertions; X/Escape and Today-disabled expectations are unchanged. No Calendar
+product code changed. Initial report retained in issue-383-initial. Final full
+suite rerun required; never substitute the local pass for that gate.
+
 ## Release Gate
 
 Do not merge this draft until Chrome control permits the outstanding live UI

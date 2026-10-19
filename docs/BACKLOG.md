@@ -9,7 +9,10 @@ Append-only per-operator versions, review/conflict/image/privacy guards; no
 bank fields, automatic signature, deposit calculation or send. New unit/route
 and actual dashboard1366/400/412 synthetic tests pass; existing buyer-workspace,
 JV routes, template unit/UI and Drive UI focused regressions pass unchanged.
-Full hosted suite and draft PR pending. Chrome control still fails before
+Draft PR394; initial hosted39325431056:217/1/0. Profile UI3.64s/unit0.14s
+passed. Existing Calendar count-after-Escape raced its native close event;
+bounded detach waits added, zero-node assertions unchanged, no Calendar
+product edit. Final full cloud rerun pending. Chrome control still fails before
 dispatch after the owner's 'go'; no further UI merge/deploy until live proof
 can be completed. PR391 exact deploy remains healthy but live UI pending.
 No real profile, import, reconciliation, message, capture, batch, evidence,
