@@ -1,6 +1,7 @@
 'use strict';
 const crypto=require('node:crypto');
 const activity=require('../records/record-activity');
+const profiles=require('../records/operator-profile');
 const KINDS=Object.freeze({holder_jv_reply:'Holder JV reply',buyer_buy_box:'Buyer buy box',buyer_teaser:'Buyer teaser',follow_up:'Follow-up'});
 function fail(code,status=400){const error=new Error('email_template_'+code);error.code=error.message;error.status=status;throw error;}
 function text(value,max,multiline=false){if(typeof value!=='string'||!value.trim()||value.length>max||(multiline?/[\x00-\x08\x0b\x0c\x0e-\x1f]/:/[\x00-\x1f]/).test(value))fail('text_invalid');return value.trim();}
@@ -53,7 +54,12 @@ function save(store,input,{now,operatorId}){
 }
 function registerRoutes(app,{db,requireAdmin,now=()=>new Date().toISOString()}){
   app.get('/api/dashboard/email-templates',requireAdmin,(req,res)=>{
-    try{res.set('Cache-Control','no-store').json(list(db.readDBStrict(),{now:now()}));}catch(_){res.status(503).json({code:'email_template_store_unavailable'});}
+    try{
+      const store=db.readDBStrict(),at=now(),result=list(store,{now:at});
+      const context=profiles.draft(store,req.currentUser.id,{now:at});
+      for(const item of result.items)if(item.template)item.profile_preview={subject:profiles.fill(item.template.subject,context),body:profiles.fill(item.template.body,context),source_kind:'derived_draft',profile_version:context.profile?context.version:null,signature_is_evidence:false};
+      res.set('Cache-Control','no-store').json(result);
+    }catch(_){res.status(503).json({code:'email_template_store_unavailable'});}
   });
   app.post('/api/dashboard/email-templates',requireAdmin,(req,res)=>{
     try{
