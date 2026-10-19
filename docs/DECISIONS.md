@@ -1,5 +1,21 @@
 # Decisions
 
+ASSUMED: #372's failed normal Open Lead click is a product collision,
+not incidental test scaffolding. Put Ask in header layout with an explicit
+phone track; keep the existing click and assertions unchanged. No floating
+launcher may intercept record actions -- AGENTS4/5/6,#325/#341 --2026-10-19.
+
+ASSUMED: D-060/#372 demo uses a single explicit authenticated read snapshot
+of the canonical Today, Calendar, buyer and reviewed-deal projections. Typed
+questions stay in the browser; deterministic English/Spanish commands never
+become server tools or writes. Exact references/unique names only; ambiguity
+does not select a record. Stage names are the recorded JV workflow, not an
+invented generic pipeline. Show loaded/total limits and feed incomplete;
+operator approval or a buy-box match does not prove buyer funds. First-seen
+day is not a refreshed capture date. Voice reuses the on-device-only composer
+controller and still requires a tap to Ask. No paid/provider/draft/send/approval
+slice is implied; #393 follows this demo -- AGENTS3/5,D-060 --2026-10-19.
+
 D-058 -- Architect#379,2026-10-19: assistant routines write local private
 exports only; no producer currently calls /api/assistant/finds. Add a local
 CLI with offline dry-run/counts by reason by default; explicit submit uses

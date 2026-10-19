@@ -2,6 +2,29 @@
 
 ## Latest Run Summary
 
+2026-10-19 #372 gate correction: initial hosted39338143349 at753552e
+returned217/1/0 of218. Ask launcher covered an existing Open Lead action;
+real product regression fixed by putting Ask in the header flow, not by
+forcing clicks or changing the desk-shell assertion. Strengthened header
+geometry checks and the unchanged desk-shell pass locally; screenshots
+regenerated. Full final gate pending. Owner order396,395,profit,375,chat
+keeps this demo parked. Browser inventory works but navigation/focus and
+screenshots still time out; blocker399 records the repeated release gate.
+No auth changes, production writes, merge or deploy.
+
+2026-10-19 #372 read-only demo IN PROGRESS per D-060: one authenticated
+canonical read snapshot, deterministic EN/ES questions kept client-side,
+recorded deal/buyer context and actual Calendar/deal navigation. Always
+Feed incomplete, explicit loaded/total caps, no guessed references, dates,
+stages, offers or buyer funds; unsigned JV street address withheld. Existing
+on-device voice reused, no real audio. Unit/route/purity and actual full UI
+1366/400/412 tests pass; unchanged voice unit/UI regressions pass. Full cloud
+suite/draft PR pending. No existing assertion changed. Profile PR394 remains
+green218/0/0 but held on live browser control, as does prior391 live proof.
+No merge/deploy while that gate remains unavailable. No provider/key, real
+query disclosure, capture, import, confirmation, send or business-data write.
+#393 follows the demo; #369/#361/#351 remain gated on owner sign-off.
+
 2026-10-19 #379 IN PROGRESS: architect answered C/I/demo gates. D-058/059/060
 record the producer, profile/no-money-down and read-only demo decisions.
 Continue C first: local submit CLI reads only the four named private files,

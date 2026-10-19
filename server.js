@@ -2758,6 +2758,7 @@ app.delete('/api/leads/:id', (req, res) => {
 const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegram({log:entry=>logger.info({result:entry.result,ref:entry.ref},'[telegram] owner alert')});
 assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
+require('./modules/agents/ask-workspace').register(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
 require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin });
 

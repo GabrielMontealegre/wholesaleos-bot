@@ -1,7 +1,7 @@
 'use strict';
 (function(root){
   const SELECTOR=[
-    'textarea[data-email-reply]','textarea[data-deal-draft]','textarea[data-draft]','textarea[data-conversation-draft]',
+    'textarea[data-email-reply]','textarea[data-deal-draft]','textarea[data-draft]','textarea[data-conversation-draft]','textarea[data-ask-query]',
     '#wosEmailBody','#wosSmsBody','#wosCallNotes','#email-template-library textarea[name="body"]',
     'textarea[id^="lead-notes-"]','textarea[id^="deal-call-notes-"]','textarea[id^="msg-sms-"]','textarea[id^="msg-email-"]',
     '#evt-notes','#ml-notes','#mb-notes','#email-body','#bulk-sms-body','#ise-body','#iss-body','#intro-email-body',
