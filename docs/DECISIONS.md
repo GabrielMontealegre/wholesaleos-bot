@@ -1,5 +1,10 @@
 # Decisions
 
+ASSUMED: #372's failed normal Open Lead click is a product collision,
+not incidental test scaffolding. Put Ask in header layout with an explicit
+phone track; keep the existing click and assertions unchanged. No floating
+launcher may intercept record actions -- AGENTS4/5/6,#325/#341 --2026-10-19.
+
 ASSUMED: D-060/#372 demo uses a single explicit authenticated read snapshot
 of the canonical Today, Calendar, buyer and reviewed-deal projections. Typed
 questions stay in the browser; deterministic English/Spanish commands never

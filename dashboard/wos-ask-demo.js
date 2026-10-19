@@ -35,7 +35,7 @@
   function open(){if(!actor())return;const existing=document.getElementById('wos-ask-panel');if(existing){existing.focus();return;}const dialog=document.createElement('dialog');dialog.id='wos-ask-panel';dialog.className='wos-ask-panel';document.body.appendChild(dialog);paint();dialog.addEventListener('close',()=>clear());dialog.showModal();load();}
   function ask(q){question=q;response=root.wosAskModel.answer(q,data);paint();}
   function openRecord(kind,id){if(!actor()||!data)return;const rows=data.records.concat(data.people).filter(r=>r.kind===kind&&r.id===id);if(rows.length!==1)return;clear();if(kind==='deal')root.openReviewedDeal(id);else root.openBuyerFind(id);}
-  const bubble=document.createElement('button');bubble.id='wos-ask-open';bubble.type='button';bubble.title='Ask about recorded deals, buyers and work';bubble.setAttribute('aria-label','Open Ask WholesaleOS');bubble.textContent='Ask';bubble.hidden=!actor();document.body.appendChild(bubble);
+  const bubble=document.createElement('button');bubble.id='wos-ask-open';bubble.type='button';bubble.title='Ask about recorded deals, buyers and work';bubble.setAttribute('aria-label','Open Ask WholesaleOS');bubble.textContent='Ask';bubble.hidden=!actor();document.querySelector('.topbar')?.appendChild(bubble);
   document.addEventListener('click',e=>{
     if(e.target.closest('#wos-ask-open'))open();
     if(e.target.closest('[data-ask-close]'))document.getElementById('wos-ask-panel')?.close();

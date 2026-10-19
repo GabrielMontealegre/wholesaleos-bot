@@ -20,6 +20,11 @@ const {view}=require('./ask-workspace.test');
   for(const width of [1366,400,412]){
    const before=reads;await page.setViewportSize({width,height:width===1366?768:915});await page.goto(base+'/dashboard/');await page.locator('.marketplace-topnav').waitFor({state:'attached'});
    await page.getByRole('button',{name:'Open Ask WholesaleOS',exact:true}).waitFor();assert.equal(reads,before,'no snapshot fetch on dashboard load');
+   const entry=page.getByRole('button',{name:'Open Ask WholesaleOS',exact:true});
+   assert.equal(await entry.evaluate(el=>el.parentElement.classList.contains('topbar')),true,'entry stays in the header, never over record actions');
+   const headerBoxes=await page.locator('.topbar').evaluate(el=>Array.from(el.children).map(child=>{const r=child.getBoundingClientRect();return {id:child.id,x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};}).filter(r=>r.width&&r.height));
+   const entryBox=headerBoxes.find(r=>r.id==='wos-ask-open');assert.ok(entryBox&&entryBox.width>=44&&entryBox.height>=44&&entryBox.x>=0&&entryBox.right<=width);
+   for(const box of headerBoxes.filter(r=>r.id!=='wos-ask-open'))assert.ok(entryBox.right<=box.x||entryBox.x>=box.right||entryBox.bottom<=box.y||entryBox.y>=box.bottom,'Ask does not overlap another header control');
    await page.getByRole('button',{name:'Open Ask WholesaleOS',exact:true}).click();await page.locator('[data-ask-status]').filter({hasText:'Recorded snapshot loaded'}).waitFor();assert.equal(reads,before+1);
    assert.ok((await page.locator('#wos-ask-panel').innerText()).includes('Feed incomplete'));
    if(process.argv.includes('--screenshots')){const dir=path.join(__dirname,'../docs/screens/2026-10-19-372-demo');fs.mkdirSync(dir,{recursive:true});await page.mouse.move(0,0);await page.screenshot({path:path.join(dir,'synthetic-ask-home-'+width+'.png')});}

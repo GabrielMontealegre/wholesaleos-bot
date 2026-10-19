@@ -67,6 +67,19 @@ PR is not a dependency, and no Calendar product code is copied or changed.
 Screenshots in `docs/screens/2026-10-19-372-demo/` are synthetic local
 data, not production proof. Full hosted suite required on the draft head.
 No merge/deploy until the live browser control gate is restored; finish
-PR391's pending live proof and PR394's release first. This independent
+PR391's pending live proof. New owner order prioritizes396,395,profit and375
+before this demo; it stays parked rather than leapfrogging them. This independent
 branch starts from main, not the unreleased Profile branch; rebase/retest
 when main advances. Do not treat green CI as live verification.
+
+## Initial Full-Suite Failure And Fix
+
+Hosted39338143349 at753552e:217 passed,1 failed,0 skipped of218.
+The unchanged desk-shell test's normal Open Lead click was intercepted by
+the floating Ask launcher. This was a real product overlap, not a test
+timing problem. Move the launcher into the existing header flow and reserve
+its44px phone grid track. No forced click, hidden overlay or weakened
+existing assertion. New demo geometry checks verify the launcher belongs
+to the header, stays44px/in-bounds and overlaps no other header control.
+The unchanged desk-shell and strengthened demo UI tests pass locally;
+synthetic1366/400/412 screenshots regenerated. Final full suite required.

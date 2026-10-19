@@ -1,4 +1,5 @@
-#wos-ask-open{position:fixed;right:18px;bottom:18px;z-index:500;min-width:52px;min-height:48px;border:1px solid var(--line,#394449);border-radius:8px;background:var(--good,#55d3a4);color:#07130e;font:600 14px Arial;cursor:pointer}
+#wos-ask-open{flex:0 0 44px;width:44px;min-height:44px;border:1px solid var(--line,#394449);border-radius:8px;background:var(--card-2,#20272e);color:var(--link,#81bcff);font:600 14px Arial;cursor:pointer}
+@media(max-width:900px){body[data-wos-design="marketplace"] #app .topbar:has(#wos-ask-open:not([hidden])){grid-template-columns:44px minmax(0,1fr) repeat(4,44px)}}
 .wos-ask-panel{position:fixed;inset:auto 16px 16px auto;margin:0;box-sizing:border-box;width:440px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--line,#394449);border-radius:8px;background:var(--card,#14181e);color:var(--ink,#ecf1f6);font:14px Arial}
 .wos-ask-panel:has(.ask-has-context){width:940px}
 .wos-ask-panel::backdrop{background:rgb(0 0 0 / 45%)}
@@ -12,4 +13,4 @@
 .wos-ask-panel label{display:grid;gap:6px}.wos-ask-panel textarea{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;background:var(--card-2,#20272e);color:inherit;border:1px solid var(--line,#394449);border-radius:6px;padding:10px;font:inherit}
 .wos-ask-panel form>div{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.wos-ask-panel :is(button,textarea,select):focus-visible{outline:2px solid var(--primary,#81bcff);outline-offset:2px}
 .ask-context dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ask-context dd{margin:0;overflow-wrap:anywhere}.ask-stages{padding-left:20px;color:var(--muted,#aab7c2);font-size:12px}.ask-recorded{color:var(--good,#55d3a4)}
-@media(max-width:650px){.ask-has-context{grid-template-columns:minmax(0,1fr)}.ask-context{border-left:0;border-top:1px solid var(--line,#394449)}.wos-ask-panel{inset:auto 8px 8px auto;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}#wos-ask-open{right:12px;bottom:12px}.ask-context dl{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.ask-has-context{grid-template-columns:minmax(0,1fr)}.ask-context{border-left:0;border-top:1px solid var(--line,#394449)}.wos-ask-panel{inset:auto 8px 8px auto;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.ask-context dl{grid-template-columns:minmax(0,1fr)}}
