@@ -2,6 +2,37 @@
 
 ## Latest Run Summary
 
+2026-10-19 release gates checkpoint:396/feed PR398 at e6deff1 is green,
+217 passed/0 failed/0 skipped (hosted39338767722,600s/file,11m58s job,
+659.85s test sum; new shape0.27s,producer0.29s,county-notice250.99s).
+Real assistant wrapper shapes now have synthetic proof, per-file cap and
+explicit truncation; no real input/config read or submission. RELEASE
+BLOCKED399: supported Chrome inventory responds, but existing-tab focus,
+fresh navigation and screenshot operations time out. Health200 at23:20:52Z;
+this is not a demonstrated product/auth failure or permission to bypass
+the live1366/400/412 gate. No merge/deploy, auth/settings change or rollback.
+
+372/demo PR397 corrected at5678942: final hosted39339893701 is218/0/0,
+600s/file,12m13s job,660.98s test sum; demo UI7.10s/unit0.37s,
+unchanged desk-shell29.67s,Calendar8.64s,county-notice250.33s.
+Initial217/1/0 report retained: floating Ask intercepted Open Lead.
+Actual product fix puts Ask in the header; new collision checks and all
+existing desk-shell assertions pass. Synthetic1366/400/412 screenshots
+updated, not mislabeled live. Profile394 remains its separately green
+draft. All three drafts stay unmerged while399 blocks release verification.
+
+Owner priority via393:396,395,profit,375,chat.395 writer/reader trace and
+bounded implementation plan saved in docs/cycles/issue-395-pipeline-trace.md
+and on the issue; Pipeline itself is not implemented. No funds/offer
+contract exists yet; approval or matching must not become funds proof.
+Malformed cost default is not guessed; missing costs/net remain unknown.
+Next independent build is395's explicit pending workflow report contract
+from current main, then the shared money/view slices. County ranking paused.
+One active run confirmed; medium/default tier verified; usage94% primary/
+71% weekly, reset credit untouched. Stop this bounded run at the checkpoint
+instead of beginning another large change with the remaining usage reserve.
+No outreach, capture, batch, evidence confirmation or production business write.
+
 2026-10-19 #372 gate correction: initial hosted39338143349 at753552e
 returned217/1/0 of218. Ask launcher covered an existing Open Lead action;
 real product regression fixed by putting Ask in the header flow, not by

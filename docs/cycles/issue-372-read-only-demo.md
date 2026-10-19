@@ -83,3 +83,10 @@ existing assertion. New demo geometry checks verify the launcher belongs
 to the header, stays44px/in-bounds and overlaps no other header control.
 The unchanged desk-shell and strengthened demo UI tests pass locally;
 synthetic1366/400/412 screenshots regenerated. Final full suite required.
+
+Final hosted39339893701 at567894261e87d513016ced3b082342fbc057e701:
+218 passed,0 failed,0 skipped;600s/file;12m13s job;660.98s summed tests.
+Demo UI7.10s/unit0.37s,unchanged desk-shell29.67s,Calendar8.64s,
+county-notice acquisition250.33s. Both initial and final reports retained
+under docs/test-results. DRAFT only; release blocked399 and parked behind
+the latest owner priorities. No production proof or merge is claimed.

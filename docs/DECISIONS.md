@@ -1,5 +1,24 @@
 # Decisions
 
+Owner priority update via393,2026-10-19:396 feed,395 Pipeline,profit on
+cards,375 offer machine,then chat. Existing demo397 is parked rather than
+released ahead of these. Existing paid/outreach/business-write gates stay.
+
+ASSUMED: #395's Pipeline is an additive attributed workflow, not a second
+saved-lead status writer or a guess from conversation text. Funds/offer
+reports need explicit contracts and exact references. A buyer match or
+approval is not proof of funds; missing cost configuration means unknown
+net, not0. The malformed393 assignment-cost amount is not inferred. Two/
+five-day reminders are review tasks, not automatic messages or closures --
+AGENTS3/4/5,#393/#395 --2026-10-19.
+
+ASSUMED: repeated supported-browser focus/navigation/screenshot timeouts
+do not demonstrate a production defect. Keep pending releases draft, retain
+the exact-head cloud proof, and track the cross-item live gate in399. No
+auth change, cookie/session extraction, unsupported browser-control path,
+speculative rollback or substitution of health200 for click-through proof
+is authorized -- AGENTS4/5/7/10 --2026-10-19.
+
 ASSUMED: #372's failed normal Open Lead click is a product collision,
 not incidental test scaffolding. Put Ask in header layout with an explicit
 phone track; keep the existing click and assertions unchanged. No floating
