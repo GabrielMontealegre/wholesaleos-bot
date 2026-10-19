@@ -1,5 +1,21 @@
 # Decisions
 
+ASSUMED: #396 accepts a file's exact named array with sibling metadata,
+retaining bare arrays and strict items-only wrappers. A wrong/ambiguous
+payload container is rejected; metadata never enters row validation or
+submission. The500-row examination cap is per file, with raw/considered/
+truncated counts. Any truncation remains a file-level preflight error and
+blocks submit before credentials/network; never silently post a partial
+file. The existing10-request run and50-item/byte caps remain unchanged;
+reading more rows does not authorize a larger live run -- AGENTS3/5,#396
+--2026-10-19.
+
+Owner priority update via architect#393,2026-10-19: feed#396 first, then
+Pipeline#395, profit on cards, offer machine#375, then AI/chat. Pause further
+visual rebuilding behind these money-workflow priorities. Existing paid,
+outreach, evidence and owner-sign-off gates remain; a feature request does
+not authorize real submissions, paid calls, offers or messages.
+
 D-058 -- Architect#379,2026-10-19: assistant routines write local private
 exports only; no producer currently calls /api/assistant/finds. Add a local
 CLI with offline dry-run/counts by reason by default; explicit submit uses

@@ -7,6 +7,7 @@ const limits=require('../modules/buyers/assistant-finds');
 const localConfig=require('../modules/security/local-config-path');
 
 const FILES=Object.freeze({'buyers.json':'buyer','land-buyers.json':'buyer','deals.json':'deal','agents.json':null});
+const ARRAY_KEYS=Object.freeze({'buyers.json':'buyers','land-buyers.json':'buyers','deals.json':'deals','agents.json':'agents'});
 const MAX_FILE_BYTES=4*1024*1024;
 const MAX_ROWS=500;
 const MAX_REQUESTS=10;
@@ -38,17 +39,26 @@ function readJson(file,io=fs){
 function readInputs(directory,io=fs){
   const rows=[],issues={},files={};let present=0;
   for(const [name,kind] of Object.entries(FILES)){
-    files[name]={rows:0,rejected:0,missing:false};let value;
+    files[name]={rows:0,rows_considered:0,truncated_count:0,rejected:0,missing:false};let value;
     try{value=readJson(path.join(directory,name),io);present++;}
     catch(error){
       if(error?.code==='ENOENT'){files[name].missing=true;continue;}
       bump(issues,['input_json_invalid','input_file_too_large_or_not_regular'].includes(error?.code)?error.code:'input_file_unreadable');continue;
     }
-    const items=Array.isArray(value)?value:value&&Object.keys(value).length===1&&Array.isArray(value.items)?value.items:null;
+    const key=ARRAY_KEYS[name];let items=null;
+    if(Array.isArray(value))items=value;
+    else if(value&&typeof value==='object'){
+      // Only a file's named payload may have sibling metadata; ambiguous payloads fail closed.
+      if(Object.hasOwn(value,key)){
+        if(Array.isArray(value[key])&&!['items','buyers','deals','agents'].some(k=>k!==key&&Object.hasOwn(value,k)))items=value[key];
+      }else if(Object.keys(value).length===1&&Array.isArray(value.items))items=value.items;
+    }
     if(!items){bump(issues,'input_shape_invalid');continue;}
     files[name].rows=items.length;
-    if(items.length+rows.length>MAX_ROWS){bump(issues,'input_row_limit');continue;}
-    for(const item of items)rows.push({file:name,kind,item});
+    files[name].rows_considered=Math.min(items.length,MAX_ROWS);
+    files[name].truncated_count=Math.max(0,items.length-MAX_ROWS);
+    if(files[name].truncated_count)bump(issues,'input_row_limit');
+    for(const item of items.slice(0,MAX_ROWS))rows.push({file:name,kind,item});
   }
   if(!present&&!Object.keys(issues).length)bump(issues,'input_files_missing');
   return {rows,issues,files};
@@ -132,7 +142,7 @@ async function run(args,{io=fs,env=process.env,now=new Date().toISOString(),fetc
     if(!baseline||typeof baseline!=='object'||Array.isArray(baseline)||['buyers','reviewed_deals'].some(k=>baseline[k]!==undefined&&!Array.isArray(baseline[k])))fail('baseline_invalid');
   }
   const result=plan(readInputs(directory,io),{now,baseline});
-  const report={mode:args.submit?'submit':'dry_run',duplicate_scope:args.baseline?'provided_local_baseline':'input_only_not_live',counts:result.counts,reason_counts:result.reasons,files:result.files,input_errors:result.input_errors};
+  const report={mode:args.submit?'submit':'dry_run',duplicate_scope:args.baseline?'provided_local_baseline':'input_only_not_live',counts:result.counts,reason_counts:result.reasons,files:result.files,input_errors:result.input_errors,truncated_count:Object.values(result.files).reduce((n,f)=>n+f.truncated_count,0)};
   if(!args.submit)return report;
   if(Object.keys(result.input_errors).length){report.stopped_reason='preflight_rejected';return report;}
   if(!result.items.length){report.stopped_reason='nothing_to_submit';return report;}
