@@ -2,6 +2,29 @@
 
 ## Latest Run Summary
 
+2026-10-19 #366I/#383 BUILT, RELEASE HELD: draft PR394 tested head
+f5559cd9577570453a8438645b72c64c446a2a98. Final hosted39327033588:
+SUMMARY passed=218 failed=0 skipped=0 total=218,600s/file,11m57s job
+(659.27s summed test durations).
+Profile UI5.47s/unit0.22s; Calendar8.84s; unchanged county-notice
+acquisition249.09s. Initial217/1/0 report retained; native dialog close
+race fixed only in the Calendar driver with bounded detach waits, same
+zero-node assertions. No Calendar product/gate change or skipped test.
+Private reviewed Profile and canonical unsigned JV/template/buyer-email
+drafts complete with synthetic1366/400/412 screenshots. Existing comp,
+JV signature, readiness, auth and legacy contract modules unchanged.
+Chrome lists tabs but page control still times out, including attached
+tabs after the owner's 'go'; live proof NOT completed. No PR ready,
+merge, deploy or real profile/business write. Production health200 at
+21:12:37Z; PR391's exact deploy remains the last release, live UI pending.
+Final proof retained on checkpoint/2026-10-19-profile-proof to avoid
+moving the tested PR head or an extra Railway deploy. Next: recover live
+verification, finish PR391 read-only proof, release/verify PR394; then
+bounded read-only#372 demo per D-060. #393 is after that demo; no paid AI,
+sends or business automation inferred. #369/#361/#351 remain gated on
+owner sign-off; county ranking paused. No capture, batch, import, message,
+contract generation, contact, evidence confirmation or secret change.
+
 2026-10-19 #366I/#383 IN PROGRESS: private reviewed Profile replaces the
 non-persisting Company Info form. Canonical unsigned JV, buyer email sign-off
 and saved-template previews reuse it, never legacy AI contract fill (#392).
