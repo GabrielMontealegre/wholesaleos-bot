@@ -1,0 +1,19 @@
+#operator-profile{padding:16px 0;border-bottom:1px solid var(--line,#394449);margin-bottom:16px;max-width:760px;min-width:0;color:var(--text,#e6ecea)}
+#operator-profile h2{font-size:18px;margin:0 0 8px}
+#operator-profile p{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+#operator-profile form{display:grid;gap:12px}
+#operator-profile .op-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#operator-profile label{display:grid;gap:6px;font-size:13px;min-width:0}
+#operator-profile input:not([type=checkbox]),#operator-profile textarea{box-sizing:border-box;width:100%;min-height:44px;background:var(--surface,#17211e);color:inherit;border:1px solid var(--line,#394449);border-radius:6px;padding:10px;font:inherit;min-width:0}
+#operator-profile textarea{min-height:88px;resize:vertical}
+#operator-profile .op-review{display:flex;align-items:center;min-height:44px;gap:10px}
+#operator-profile input[type=checkbox]{width:18px;height:18px;flex-shrink:0}
+#operator-profile button{min-height:44px;border:1px solid var(--line,#394449);border-radius:6px;padding:8px 14px;background:var(--surface,#17211e);color:inherit;white-space:normal;font:inherit;cursor:pointer}
+#operator-profile button[type=submit]{background:var(--green,#177b50);color:#fff}
+#operator-profile button:disabled{opacity:.5;cursor:default}
+#operator-profile .op-actions{display:flex;gap:8px;flex-wrap:wrap}
+#operator-profile :is(input,textarea,button):focus-visible{outline:2px solid var(--blue,#69b8f5);outline-offset:2px}
+#operator-profile figure{margin:0;max-width:100%}
+#operator-profile img{max-width:240px;max-height:100px;object-fit:contain;background:#fff}
+#operator-profile figcaption{font-size:12px;margin-top:6px}
+@media(max-width:600px){#operator-profile .op-fields{grid-template-columns:minmax(0,1fr)}}

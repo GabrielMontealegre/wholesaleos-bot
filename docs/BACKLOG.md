@@ -2,6 +2,41 @@
 
 ## Latest Run Summary
 
+2026-10-19 #366I/#383 IN PROGRESS: private reviewed Profile replaces the
+non-persisting Company Info form. Canonical unsigned JV, buyer email sign-off
+and saved-template previews reuse it, never legacy AI contract fill (#392).
+Append-only per-operator versions, review/conflict/image/privacy guards; no
+bank fields, automatic signature, deposit calculation or send. New unit/route
+and actual dashboard1366/400/412 synthetic tests pass; existing buyer-workspace,
+JV routes, template unit/UI and Drive UI focused regressions pass unchanged.
+Draft PR394; initial hosted39325431056:217/1/0. Profile UI3.64s/unit0.14s
+passed. Existing Calendar count-after-Escape raced its native close event;
+bounded detach waits added, zero-node assertions unchanged, no Calendar
+product edit. Final full cloud rerun pending. Chrome control still fails before
+dispatch after the owner's 'go'; no further UI merge/deploy until live proof
+can be completed. PR391 exact deploy remains healthy but live UI pending.
+No real profile, import, reconciliation, message, capture, batch, evidence,
+contact or production business write; no settings/secrets changed.
+
+2026-10-19 #379 producer MERGED#391,mainaba84a38e157f6824ea66fdd2875ab4e78e0aca9.
+Hosted39293978170:216 passed/0failed/0skipped,600s/file,9m56s;
+producer0.20s,existing importer0.32s,county-notice acquisition204.47s.
+Exact Railway7180519527 success17:40:11Z,3m21s;post-success health200.
+CLI --help works locally; no private input/config read or real submit.
+LIVE UI VERIFICATION BLOCKED: Chrome lists the existing dashboard, but CDP
+navigation and DOM reads do not dispatch. Rechecked the same handle after
+timeout, read troubleshooting, tried the existing user tab, no alternate
+browser/control bypass. Requested owner reconnect once; no PIN requested.
+No UI screenshots/lead-opening/console success claimed. This is a verifier
+connection limitation, not evidence that unchanged product UI failed.
+Do not call the complete AGENTS7 release verified until live clicks pass.
+Counts reconciliation still awaits a separately authorized first submit.
+Architect C/I/demo answers logged as D-058/059/060. Separate legacy contract
+repair filed#392 per#383. Next product item is I within D-059, then bounded
+read-only demo per D-060; full#366 sign-off and#369/#361/#351 remain gated.
+No outreach, batch, capture, confirmation, paid action, credentials/settings
+change, private input discovery or production business write occurred.
+
 2026-10-19 #379 IN PROGRESS: architect answered C/I/demo gates. D-058/059/060
 record the producer, profile/no-money-down and read-only demo decisions.
 Continue C first: local submit CLI reads only the four named private files,

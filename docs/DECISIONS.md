@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: #366I/#383 profiles belong to the authenticated operator, not a
+caller-supplied identity. Keep append-only reviewed versions in the existing
+private store; no migration of hardcoded personal defaults. Known profile
+tokens fill derived saved-template previews; saved raw template text and
+review digests remain unchanged. Buyer email sign-offs use the profile and
+invalidate an older saved draft after any profile edit. JV text stays unsigned;
+an image is previewed in Profile, not applied as signature evidence. Legacy
+contract autofill remains outside this integration under D-059/#392. No money
+amount is inferred or computed -- AGENTS3/5,D-059 --2026-10-19.
+
 D-058 -- Architect#379,2026-10-19: assistant routines write local private
 exports only; no producer currently calls /api/assistant/finds. Add a local
 CLI with offline dry-run/counts by reason by default; explicit submit uses
