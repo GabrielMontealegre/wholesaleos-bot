@@ -1,5 +1,36 @@
 # Decisions
 
+D-058 -- Architect#379,2026-10-19: assistant routines write local private
+exports only; no producer currently calls /api/assistant/finds. Add a local
+CLI with offline dry-run/counts by reason by default; explicit submit uses
+the existing signed pending path and preserves operator edits/approvals.
+No PII output, no automatic submit or approval. Fixture-only tests. Read-only
+live reconciliation follows the first separately authorized real submission.
+
+D-059 -- Architect#383 and Gabriel,2026-10-19: profile I is limited to
+storage and canonical reviewed JV/template/email draft consumers. Legacy
+contracts/fill remains unavailable for profile autofill; repair separately.
+Signature presentation is draft-only, never signature evidence. Gabriel
+puts no money down: no earnest money, due-diligence fee or deposit from
+Gabriel. Required deposits are buyer-funded at assignment or blank for
+review; never compute an earnest-money amount automatically.
+
+D-060 -- Architect#390,2026-10-19: released C/B UI satisfies the bounded
+read-only#372 demo prerequisite for the next#370 slice. Show feed incomplete;
+reuse canonical views. No AI provider/key, capture, import, confirmation,
+send, profile/contract fill, paid service or production business write.
+This is not#366 owner sign-off;#369/#361/#351 stay gated. When#369/#375
+open, buyer acquisition and proof-of-funds tracking precede offer volume.
+
+ASSUMED: #379 offline duplicate counts are relative only to supplied input,
+or to an explicit local baseline, never presented as production counts.
+No signed read endpoint exists for all buyer/deal state; do not add one or
+read dashboard secrets to fake a live preview. Agents have no buyer/deal
+contract and are counted as unsupported, never coerced. File-level errors
+block submission; individual rejected rows stay excluded while valid rows
+use the existing pending path. Uncertain responses stop without retry --
+AGENTS3/5,D-058 and existing partial pending-import behavior.
+
 ASSUMED: #388 a failed body read does not prove a failed mailbox login. Keep
 the already-read message list and connection label for ordinary read errors;
 clear private content on dashboard401/403 as before. Render only fixed known

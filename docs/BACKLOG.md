@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-19 #379 IN PROGRESS: architect answered C/I/demo gates. D-058/059/060
+record the producer, profile/no-money-down and read-only demo decisions.
+Continue C first: local submit CLI reads only the four named private files,
+offline default counts with honest input-only/local-baseline duplicate scope,
+explicit signed pending submit, no approvals. Canonical validators/importer
+reused; agents not relabeled, no inferred facts. Fixture-only test passes,
+including no real network/writes, operator-edit preservation, request caps,
+pace and uncertain-response no-retry. Full216-file gate/live check pending.
+New clean non-OneDrive worktree is inside the writable Desktop workspace;
+prior checkout's unrelated edits remain untouched. No real files, config,
+submission, reconciliation, batch, capture, contact or confirmation run.
+After this producer release: I within D-059, then bounded demo per D-060;
+#369/#361/#351 still gated on owner sign-off. County ranking stays paused.
+
 2026-10-18 #388 diagnostic slice IN PROGRESS: mailbox-body errors preserve
 the existing Inbox, show only known safe reason text and do not assert that
 credentials failed.401/403 still clear private content. No server/provider,
