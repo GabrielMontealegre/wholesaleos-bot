@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-19 #396 IN PROGRESS (new owner priority): feed wrapper hotfix
+accepts buyers/land-buyers->buyers, deals->deals, agents->agents with
+metadata ignored; legacy array/items forms kept, unknown/ambiguous shapes
+rejected.500-row cap per file, explicit considered/truncated counts;
+truncation blocks any submission before config/network.10-request/50-row/
+byte budgets and canonical row validation/pending gates unchanged. New
+synthetic fixtures and existing producer regression pass, zero real network
+or writes. No private real input/config read or submission. Full cloud gate
+and draft PR pending. Owner order from#393:396,395,profit,375,chat; broader
+visual rebuild paused. Demo PR397 was already committed before that order
+was read; it is draft, CI39338143349 running, not released. Profile394 green
+but release/live gates still held on browser control. No merge/deploy or
+business writes. Continue396 first, then395 within existing safety gates.
+
 2026-10-19 #379 IN PROGRESS: architect answered C/I/demo gates. D-058/059/060
 record the producer, profile/no-money-down and read-only demo decisions.
 Continue C first: local submit CLI reads only the four named private files,
