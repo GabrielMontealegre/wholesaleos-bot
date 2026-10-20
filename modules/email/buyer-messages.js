@@ -25,19 +25,21 @@ function prepare(store, id, input, { now }) {
   if (!email(recipient)) fail('published_email_required', 409);
   const ids = input.deal_ids || [];
   if (!Array.isArray(ids) || ids.length > MAX_DEALS || new Set(ids).size !== ids.length || ids.some(v => typeof v !== 'string' || !v || v.length > 128) || (input.kind === 'buyer_teaser' ? !ids.length : ids.length)) fail('selection_invalid');
+  const profit = require('../deals/match-profit').build(store, {now});
   const selected = ids.map(id => {
     const rows = (store.reviewed_deals || []).filter(d => d.id === id);
     if (rows.length !== 1) fail('deal_missing', 404);
     const deal = rows[0], evaluation = deals.evaluate(deal, store.buyers || [], now);
     // Reuse the signed-interest/availability/value gates, not the geographic badge.
-    return { deal, teaser: workflow.teaser(deal, evaluation, buyer.id) };
+    return { deal, teaser: workflow.teaser(deal, evaluation, buyer.id), profit:profit.forMatch(deal,evaluation.matches.find(m=>m.id===buyer.id),evaluation) };
   });
   const subject = input.kind === 'buyer_buy_box' ? 'Your current buying criteria' : ids.length + ' property opportunities for your review';
   const body = input.kind === 'buyer_buy_box'
     ? 'Hello,\n\nWhich areas, property types and price ranges are you buying in now? Please share your repair preferences and closing timeline.\n\nThank you.'
     : selected.map(({ teaser }) => teaser.body).join('\n\n--------------------\n\n') + '\n\nThese are research summaries, not an offer or a promise of availability. Please reply if you would like to discuss one.';
   const message = { kind: input.kind, buyer_id: id, deal_ids: ids, to: recipient, subject, body };
-  return { ...message, version: hash([buyer, selected.map(row => row.deal), message]),
+  const profit_review = selected.map(row=>({deal_ref:records.reference(row.deal),profit:row.profit}));
+  return { ...message, profit_review, version: hash([buyer, selected.map(row => row.deal), message, profit_review]),
     policy: templates.policy(store, input.kind, now), preview_only: true, automatic_send_allowed: false };
 }
 function createSender({ env = process.env, mailer } = {}) {

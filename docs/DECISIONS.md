@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: #393's same profit in drafts means an admin-only review panel,
+not private net/cost/source information in the recipient's email. Reuse
+the exact canonical card DTO. Bind its content into the existing preview
+version so changed price reports invalidate a prior review before save or
+send. Existing explicit approval, source gates and SMTP whitelist remain
+unchanged. No live preview/send is authorized by this slice --2026-10-20.
+
 ASSUMED: #393 profit-card slice reuses one canonical pending price report
 for the exact buyer/deal pair. A match ceiling or asking price is never a
 buyer/contract price. Multiple current reports require reconciliation;
