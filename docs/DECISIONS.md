@@ -1,5 +1,13 @@
 # Decisions
 
+OPEN ARCHITECT QUESTION #415,2026-10-20: #412 requires usable generic reply
+Send while keeping APIs unchanged. Current /api/gmail/send,/reply and
+/api/email/send intentionally return410; only buyer-specific reviewed SMTP
+exists. Do not repurpose buyer/package routes or enable a legacy endpoint.
+Recommend a separate bounded#288 exact-thread anchored, reviewed/versioned,
+explicit/idempotent reply transport PR. Only Send is blocked; independent
+read-only Email layout migrates on the shared design system meanwhile.
+
 ASSUMED: #412 starts with an isolated browser-native workspace, one shared
 stylesheet/component system and existing signed-cookie auth/APIs, not a
 React/build-chain rewrite. Explicit /app?preview=1 opts into the new shell;

@@ -2,6 +2,29 @@
 
 ## Latest Run Summary
 
+2026-10-20 #412 foundation DONE/RELEASED: PR414 final head646933a,
+merge/main0d035e09e71b5602caa00c94399a4c9a072d71b4. Hosted39446383940:
+SUMMARY passed=235 failed=0 skipped=0 total=235;600s/file,9m46s test step,
+10m41s job; new tests1.27/.06/.06/5.19s, county-notice207.88s. Exact Railway
+7203827249 success15:28:43Z (109s after merge), post-success health200
+15:30:13Z. /app?preview=1 serves native document/CSP and authenticated
+1366/400/412 shell; one stylesheet, no overflow, native record/account/menu
+drawers, tabs, and all7 classic destinations verified; mobile Email link
+works. Actual lead drawer opens/closes. Leads/Calendar initially hydrated
+slowly, then rendered;0 console errors since verification. Safe empty-view
+live screenshots contain aggregate counts only. Local paint58/45/46ms and
+Lighthouse100; live paint not measured by the DOM-only browser connector.
+No send/logout/capture/batch/confirmation/contact or business write.
+
+Next #412 Email migration on item/412-email-workspace, from released main.
+Working generic reply Send only is BLOCKED on architect#415: current
+/api/gmail/send and /reply deliberately return410, while#412 says keep APIs
+unchanged. Never fake Send or reuse buyer package routes for arbitrary
+recipients. Read-only Email layout/reader work continues independently.
+PR413 stays draft despite234 green. Autopilot retains2-hour/medium/standard
+schedule and quiet notifications; saved priority updated to#412. Overall
+#412 remains OPEN, not falsely closed by the foundation slice.
+
 2026-10-20 #412 foundation LOCAL: isolated native /app?preview=1 shell,
 one token/component stylesheet, pinned local Lucide icons, signed-session
 reuse, recorded Today reads and allowlisted classic navigation. Four new
