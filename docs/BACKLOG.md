@@ -2,6 +2,36 @@
 
 ## Latest Run Summary
 
+2026-10-20 #412 foundation LOCAL: isolated native /app?preview=1 shell,
+one token/component stylesheet, pinned local Lucide icons, signed-session
+reuse, recorded Today reads and allowlisted classic navigation. Four new
+focused files green; actual classic fixture before/after1366/400/412;
+first contentful paint58/45/46ms, Lighthouse13.5.0 accessibility100 at1366
+and412. Default dashboard unchanged; no API/gate/data/auth change and no
+production action. Full-suite/review/PR/deploy/live gates still pending.
+Email rebuild is next after this foundation, not yet claimed fixed.
+PR413 full234 green (0 failures/skips, county-notice298.99s) but remains
+draft/deferred under #412. No duplicate feature release.
+
+2026-10-20 PRIORITY CHANGE: owner/architect#412 is now priority1 ahead
+of new features: design system first, then Email rebuilt on it. PR413
+buyer-source tracking is preserved DRAFT at239a3a2 and will not merge;
+its existing full234-file hosted run39440019044 may finish. No real note
+or confirmation occurred. #375 offer work is deferred, not fabricated as
+technically blocked. Continue on item/412-design-system from main60933f6.
+No new one-off stylesheet layers; trace existing tokens/shell/components
+and remove retired writers as screens migrate. Existing API/data gates stay.
+
+2026-10-20 #393 draft review RELEASED/verified: PR411 head9ae8e2b,
+main60933f62dfbbc47456b89064c0f55b35fda61566,hosted39406565685 SUMMARY
+passed=231 failed=0 skipped=0 total=231;600s/file,10m5s. Exact Railway
+7197335868 success10:27:23Z,health20010:27:54Z. Authenticated buyer
+Messages1366/400/412,served buyers11,no overflow,0 automatic private
+previews,lead drawer works,0 console errors after health. Positive private
+profit interaction is synthetic-only. No production preview/save/send,
+capture,batch,contact,confirmation or business write. Safe status crops
+and full timings retained;no duplicate release needed.
+
 2026-10-20 #393 owner draft profit review LOCAL ONLY: canonical match
 profit DTO beside the recipient preview, explicitly private/not emailed.
 Recipient body/to/subject unchanged; profit content is bound to the same

@@ -1,0 +1,40 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "first_contentful_paint_ms": 57.80000001192093,
+      "horizontalOverflow": false,
+      "brokenIcons": 0,
+      "controlOverflow": 0
+    },
+    {
+      "width": 400,
+      "first_contentful_paint_ms": 45,
+      "horizontalOverflow": false,
+      "brokenIcons": 0,
+      "controlOverflow": 0
+    },
+    {
+      "width": 412,
+      "first_contentful_paint_ms": 46.10000002384186,
+      "horizontalOverflow": false,
+      "brokenIcons": 0,
+      "controlOverflow": 0
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "lighthouse_version": "13.5.0",
+      "score": 100,
+      "failed": []
+    },
+    {
+      "width": 412,
+      "lighthouse_version": "13.5.0",
+      "score": 100,
+      "failed": []
+    }
+  ]
+}
