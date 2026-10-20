@@ -1,7 +1,16 @@
 # Native Email Migration Trace
 
-Status: next ordered slice after released foundation PR414. No native Email
-implementation yet. Keep the classic reader working until preview parity.
+Status: next ordered slice after released foundation PR414. Pure presentation
+model and negative tests are built locally and pass; no native Email screen
+or transport is wired yet. Keep the classic reader working until parity.
+
+email-model.js groups only connected-mailbox rows on existing server thread
+keys, keeps mixed threads in People, quarantines conflicting message refs
+for an explicit unavailable count, preserves unread across duplicate refs,
+and requires timed role provenance. Names never come from splitting email
+addresses. workspace-email-model.test.js verifies these boundaries with
+denied network/current-clock/storage/import effects. New module is unused
+until the upcoming native controller; no production behavior changed.
 
 ## Existing Contracts
 

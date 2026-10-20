@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: native Email People/Alerts is operational grouping, not evidence a
+sender is human or a verified buyer. Only an exact automated mailbox name on
+a recognized listing domain is an alert. Agents, unknown senders and mixed
+threads stay in People; no message is deleted and unavailable/conflicting
+references remain counted. Server exact thread keys and role provenance are
+authoritative; never guess identity from an email -- AGENTS3/5,#412 --2026-10-20.
+
 OPEN ARCHITECT QUESTION #415,2026-10-20: #412 requires usable generic reply
 Send while keeping APIs unchanged. Current /api/gmail/send,/reply and
 /api/email/send intentionally return410; only buyer-specific reviewed SMTP

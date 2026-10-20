@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+Continuation checkpoint,2026-10-20: item/412-email-workspace holds the
+verified PR414 report/proof (9ce5643) and a new pure Email presentation model.
+Focused workspace-email-model tests pass: server-key grouping, conservative
+automated-listing Alerts, mixed human replies retained in People, no guessed
+name/role, timed provenance, duplicate/conflict/missing/future negatives and
+zero clock/network/storage effects. It is NOT wired into runtime yet; native
+Email UI, full-suite/PR and release gates are pending. Continue from the trace
+in docs/cycles/issue-412-email-trace.md. Send-only#415 remains architect-blocked.
+
 2026-10-20 #412 foundation DONE/RELEASED: PR414 final head646933a,
 merge/main0d035e09e71b5602caa00c94399a4c9a072d71b4. Hosted39446383940:
 SUMMARY passed=235 failed=0 skipped=0 total=235;600s/file,9m46s test step,
