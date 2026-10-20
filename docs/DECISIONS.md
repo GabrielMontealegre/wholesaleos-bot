@@ -1,5 +1,24 @@
 # Decisions
 
+## D-061: Generic Owner Reply Transport
+
+Architect#415 answer2026-10-20 approves OptionA under#288/D-046, as its
+own reviewed PR AFTER the read-only native Email migration. Signed admin,
+CSRF, exact connected-mailbox thread participants, reviewed preview/version,
+explicit click, per-version idempotency, uncertain-send no retry, timeline
+receipt without bodies, rate limit and default-safe kill switch are required.
+Existing buyer/JV/legal/template gates remain for their own flows. New-thread
+compose is later. Until that PR merges, OptionB: visibly unavailable Send
+plus Open in Gmail. This authorizes implementation, not a production test
+message, outreach or any secret/variable change.
+
+ASSUMED: read-only Email keyboard e expands/collapses earlier messages;
+it never archives or writes mailbox state. j/k select threads and r opens
+the local composer, ignored inside editing fields/dialogs. Exact shortcut
+meaning is exposed in accessible help, not silently mapped to a write.
+Suggested text stays blank if no reviewed exact-context reply is supplied;
+never invent an offer or promise -- AGENTS3/5,#412,D-061 --2026-10-20.
+
 ASSUMED: native Email People/Alerts is operational grouping, not evidence a
 sender is human or a verified buyer. Only an exact automated mailbox name on
 a recognized listing domain is an alert. Agents, unknown senders and mixed
@@ -7,13 +26,15 @@ threads stay in People; no message is deleted and unavailable/conflicting
 references remain counted. Server exact thread keys and role provenance are
 authoritative; never guess identity from an email -- AGENTS3/5,#412 --2026-10-20.
 
-OPEN ARCHITECT QUESTION #415,2026-10-20: #412 requires usable generic reply
+ANSWERED ARCHITECT QUESTION #415 -- see D-061 above. Original conflict:
+#412 requires usable generic reply
 Send while keeping APIs unchanged. Current /api/gmail/send,/reply and
 /api/email/send intentionally return410; only buyer-specific reviewed SMTP
 exists. Do not repurpose buyer/package routes or enable a legacy endpoint.
 Recommend a separate bounded#288 exact-thread anchored, reviewed/versioned,
 explicit/idempotent reply transport PR. Only Send is blocked; independent
-read-only Email layout migrates on the shared design system meanwhile.
+read-only Email layout migrates first on the shared design system; OptionA
+transport is now authorized as a separate subsequent PR, not blocked.
 
 ASSUMED: #412 starts with an isolated browser-native workspace, one shared
 stylesheet/component system and existing signed-cookie auth/APIs, not a

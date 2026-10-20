@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-20 #412 native Email LOCAL, pending hosted gate/release: two panes,
+one-pane phone reader, compact folders, People/Alerts, sourced role colors,
+full message scroll (no nested body box), collapsed earlier messages, local
+composer with visible To/Subject/Send/Gmail and preserved unsent edits.
+j/k/r/e are read-only navigation/reply/history controls; X/Escape work.
+Six focused files pass; before/after1366/400/412, paint38/51/55ms and
+Lighthouse98 desktop/100 Android. Production remains PR414, not this code.
+Architect#415 OptionA now APPROVED as D-061: real reply transport is its
+own subsequent PR after this read-only migration. Send stays visibly
+unavailable + Open in Gmail until then; no fake success and no outreach.
+Only existing assertion intent change: shell Email link now opens native
+Email instead of classic; all six other classic destinations still tested.
+Full237-file hosted final-head gate, review/PR and exact live check pending.
+
 Continuation checkpoint,2026-10-20: item/412-email-workspace holds the
 verified PR414 report/proof (9ce5643) and a new pure Email presentation model.
 Focused workspace-email-model tests pass: server-key grouping, conservative

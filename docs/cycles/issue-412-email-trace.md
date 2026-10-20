@@ -1,8 +1,10 @@
 # Native Email Migration Trace
 
-Status: next ordered slice after released foundation PR414. Pure presentation
-model and negative tests are built locally and pass; no native Email screen
-or transport is wired yet. Keep the classic reader working until parity.
+Status: native read-only Email screen is built locally and focused tests
+pass. Full-suite/review/PR/release gates pending. Classic stays unchanged.
+Architect#415 OptionA is approved as D-061: generic reply transport follows
+as a separate PR after this read-only visual migration. It is no longer an
+unanswered blocker. Until then, OptionB is explicit Send unavailable/Gmail.
 
 email-model.js groups only connected-mailbox rows on existing server thread
 keys, keeps mixed threads in People, quarantines conflicting message refs
@@ -10,7 +12,7 @@ for an explicit unavailable count, preserves unread across duplicate refs,
 and requires timed role provenance. Names never come from splitting email
 addresses. workspace-email-model.test.js verifies these boundaries with
 denied network/current-clock/storage/import effects. New module is unused
-until the upcoming native controller; no production behavior changed.
+by the native controller; no production behavior changed before release.
 
 ## Existing Contracts
 
