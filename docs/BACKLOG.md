@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-20 #419 fix LOCAL: restored the isolated read-only native Email
+on item/419-email-folder-race, with separate folder-metadata and body request
+generations. Category changes preserve the in-flight metadata read and busy
+state; old folder/body results still cannot replace a newer view. New delayed
+load test reproduced the live failure before the fix, then passed15 cases
+(1366/400/412 x category/folder/empty/failure/401), no duplicate metadata reads
+or writes. Existing Email UI test passes unchanged. Bundle email-screen?v=2.
+Full238-file hosted gate/review and rollback420/live restoration gates remain
+required. Do not merge this fix before the rollback is verified healthy.
+This is not a new Send transport; D-061 and the next screen remain pending.
+
 2026-10-20 #419: PR417 FAILED its negative live gate; bounded rollback in
 progress. Railway recovered20:56Z; one exact-main build7212445984 deployed
 a5b3cca at22:20:46Z. Health/new asset200 and normal1366/400/412 read-only
@@ -16,6 +27,52 @@ settings, variables, billing or credentials changed. #418's provider pause
 is resolved; the remaining blocker is now this deterministic UI race.
 D-061 transport is approved but waits for the native Email migration's
 successful live gate. PR413 stays draft. Do not start the next screen.
+
+2026-10-20 #412 native Email LOCAL, pending hosted gate/release: two panes,
+one-pane phone reader, compact folders, People/Alerts, sourced role colors,
+full message scroll (no nested body box), collapsed earlier messages, local
+composer with visible To/Subject/Send/Gmail and preserved unsent edits.
+j/k/r/e are read-only navigation/reply/history controls; X/Escape work.
+Six focused files pass; before/after1366/400/412, paint38/51/55ms and
+Lighthouse98 desktop/100 Android. Production remains PR414, not this code.
+Architect#415 OptionA now APPROVED as D-061: real reply transport is its
+own subsequent PR after this read-only migration. Send stays visibly
+unavailable + Open in Gmail until then; no fake success and no outreach.
+Only existing assertion intent change: shell Email link now opens native
+Email instead of classic; all six other classic destinations still tested.
+Full237-file hosted final-head gate, review/PR and exact live check pending.
+
+Continuation checkpoint,2026-10-20: item/412-email-workspace holds the
+verified PR414 report/proof (9ce5643) and a new pure Email presentation model.
+Focused workspace-email-model tests pass: server-key grouping, conservative
+automated-listing Alerts, mixed human replies retained in People, no guessed
+name/role, timed provenance, duplicate/conflict/missing/future negatives and
+zero clock/network/storage effects. It is NOT wired into runtime yet; native
+Email UI, full-suite/PR and release gates are pending. Continue from the trace
+in docs/cycles/issue-412-email-trace.md. Send-only#415 remains architect-blocked.
+
+2026-10-20 #412 foundation DONE/RELEASED: PR414 final head646933a,
+merge/main0d035e09e71b5602caa00c94399a4c9a072d71b4. Hosted39446383940:
+SUMMARY passed=235 failed=0 skipped=0 total=235;600s/file,9m46s test step,
+10m41s job; new tests1.27/.06/.06/5.19s, county-notice207.88s. Exact Railway
+7203827249 success15:28:43Z (109s after merge), post-success health200
+15:30:13Z. /app?preview=1 serves native document/CSP and authenticated
+1366/400/412 shell; one stylesheet, no overflow, native record/account/menu
+drawers, tabs, and all7 classic destinations verified; mobile Email link
+works. Actual lead drawer opens/closes. Leads/Calendar initially hydrated
+slowly, then rendered;0 console errors since verification. Safe empty-view
+live screenshots contain aggregate counts only. Local paint58/45/46ms and
+Lighthouse100; live paint not measured by the DOM-only browser connector.
+No send/logout/capture/batch/confirmation/contact or business write.
+
+Next #412 Email migration on item/412-email-workspace, from released main.
+Working generic reply Send only is BLOCKED on architect#415: current
+/api/gmail/send and /reply deliberately return410, while#412 says keep APIs
+unchanged. Never fake Send or reuse buyer package routes for arbitrary
+recipients. Read-only Email layout/reader work continues independently.
+PR413 stays draft despite234 green. Autopilot retains2-hour/medium/standard
+schedule and quiet notifications; saved priority updated to#412. Overall
+#412 remains OPEN, not falsely closed by the foundation slice.
 
 2026-10-20 #412 foundation LOCAL: isolated native /app?preview=1 shell,
 one token/component stylesheet, pinned local Lucide icons, signed-session
