@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #395 producer accepts only an explicitly named structured JSON
+Pipeline file, never parses pipeline.md or prose outcomes into financial
+facts. Require an explicit local reference baseline for offline exact-ref
+validation; it is not represented as a live production snapshot. Existing
+four default file paths, pending import authority and submit budgets stay
+unchanged. No automatic file discovery or real submit is authorized by
+building this option -- AGENTS3/5,D-058,#395 --2026-10-20.
+
 ASSUMED: #395 slice2 composes existing canonical pending approvals and open
 conversations with typed pending reports, not legacy saved-lead status.
 Each task belongs to exactly one waiting group; totals precede pagination.

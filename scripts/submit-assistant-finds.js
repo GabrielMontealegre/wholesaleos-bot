@@ -17,7 +17,7 @@ function reason(error){return /^find_[a-z_]+$/.test(error?.code||'')?error.code:
 function bump(map,key,n=1){map[key]=(map[key]||0)+n;}
 function options(argv){
   const out={submit:false};let mode=null;
-  const values={'--input-dir':'directory','--baseline':'baseline','--config':'config'};
+  const values={'--input-dir':'directory','--baseline':'baseline','--config':'config','--pipeline-file':'pipelineFile'};
   for(let i=0;i<argv.length;i++){
     const flag=argv[i];
     if(flag==='--help'){out.help=true;continue;}
@@ -36,21 +36,23 @@ function readJson(file,io=fs){
   if(Buffer.byteLength(raw)>MAX_FILE_BYTES)fail('input_file_too_large_or_not_regular');
   try{return JSON.parse(raw.toString('utf8'));}catch{fail('input_json_invalid');}
 }
-function readInputs(directory,io=fs){
+function readInputs(directory,io=fs,pipelineFile){
   const rows=[],issues={},files={};let present=0;
-  for(const [name,kind] of Object.entries(FILES)){
+  const entries=Object.entries(FILES).map(([name,kind])=>({name,kind,file:path.join(directory,name),key:ARRAY_KEYS[name]}));
+  if(pipelineFile)entries.push({name:'pipeline_file',kind:'pipeline_item',file:path.resolve(pipelineFile),key:'pipeline_items'});
+  for(const {name,kind,file,key} of entries){
     files[name]={rows:0,rows_considered:0,truncated_count:0,rejected:0,missing:false};let value;
-    try{value=readJson(path.join(directory,name),io);present++;}
+    try{value=readJson(file,io);present++;}
     catch(error){
-      if(error?.code==='ENOENT'){files[name].missing=true;continue;}
+      if(error?.code==='ENOENT'){files[name].missing=true;if(name==='pipeline_file')bump(issues,'pipeline_file_missing');continue;}
       bump(issues,['input_json_invalid','input_file_too_large_or_not_regular'].includes(error?.code)?error.code:'input_file_unreadable');continue;
     }
-    const key=ARRAY_KEYS[name];let items=null;
+    let items=null;
     if(Array.isArray(value))items=value;
     else if(value&&typeof value==='object'){
       // Only a file's named payload may have sibling metadata; ambiguous payloads fail closed.
       if(Object.hasOwn(value,key)){
-        if(Array.isArray(value[key])&&!['items','buyers','deals','agents'].some(k=>k!==key&&Object.hasOwn(value,k)))items=value[key];
+        if(Array.isArray(value[key])&&!['items','buyers','deals','agents','pipeline_items'].some(k=>k!==key&&Object.hasOwn(value,k)))items=value[key];
       }else if(Object.keys(value).length===1&&Array.isArray(value.items))items=value.items;
     }
     if(!items){bump(issues,'input_shape_invalid');continue;}
@@ -135,13 +137,14 @@ async function submit(chunks,session,{fetchImpl=global.fetch,sleep=ms=>new Promi
   return out;
 }
 async function run(args,{io=fs,env=process.env,now=new Date().toISOString(),fetchImpl=global.fetch,sleep}={}){
+  if(args.pipelineFile&&!args.baseline)fail('pipeline_baseline_required');
   const directory=path.resolve(args.directory||path.join(__dirname,'../exports/assistant'));
   let baseline={};
   if(args.baseline){
     try{baseline=readJson(path.resolve(args.baseline),io);}catch{fail('baseline_unreadable');}
-    if(!baseline||typeof baseline!=='object'||Array.isArray(baseline)||['buyers','reviewed_deals'].some(k=>baseline[k]!==undefined&&!Array.isArray(baseline[k])))fail('baseline_invalid');
+    if(!baseline||typeof baseline!=='object'||Array.isArray(baseline)||['buyers','reviewed_deals','leads','record_matches','activities','conversations','pipeline_reports'].some(k=>baseline[k]!==undefined&&!Array.isArray(baseline[k])))fail('baseline_invalid');
   }
-  const result=plan(readInputs(directory,io),{now,baseline});
+  const result=plan(readInputs(directory,io,args.pipelineFile),{now,baseline});
   const report={mode:args.submit?'submit':'dry_run',duplicate_scope:args.baseline?'provided_local_baseline':'input_only_not_live',counts:result.counts,reason_counts:result.reasons,files:result.files,input_errors:result.input_errors,truncated_count:Object.values(result.files).reduce((n,f)=>n+f.truncated_count,0)};
   if(!args.submit)return report;
   if(Object.keys(result.input_errors).length){report.stopped_reason='preflight_rejected';return report;}
@@ -152,11 +155,11 @@ async function run(args,{io=fs,env=process.env,now=new Date().toISOString(),fetc
 async function main(argv=process.argv.slice(2),dependencies={}){
   try{
     const args=options(argv);
-    if(args.help){console.log('node scripts/submit-assistant-finds.js [--input-dir DIR] [--baseline FILE] [--dry-run | --submit] [--config FILE]\nDefault: offline counts only. Submit requires existing paired config; newly created records stay pending. No approvals or outreach.');return 0;}
+    if(args.help){console.log('node scripts/submit-assistant-finds.js [--input-dir DIR] [--baseline FILE] [--pipeline-file FILE] [--dry-run | --submit] [--config FILE]\nDefault: offline counts only. Pipeline input requires a supplied local reference baseline and structured pipeline_item rows; prose is never inferred. Submit requires existing paired config; newly created records stay pending. No approvals or outreach.');return 0;}
     const report=await run(args,dependencies);console.log(JSON.stringify(report));
     return report.stopped_reason||report.submission?.stopped_reason||report.counts.rejected||Object.keys(report.input_errors).length?1:0;
   }catch(error){
-    const allowed=['arguments_invalid','clock_invalid','baseline_unreadable','baseline_invalid','request_item_too_large','request_budget_exceeded','pairing_config_unreadable','pairing_config_invalid','pairing_config_missing','dashboard_origin_refused'];
+    const allowed=['arguments_invalid','clock_invalid','baseline_unreadable','baseline_invalid','pipeline_baseline_required','request_item_too_large','request_budget_exceeded','pairing_config_unreadable','pairing_config_invalid','pairing_config_missing','dashboard_origin_refused'];
     console.log(JSON.stringify({ok:false,reason:allowed.includes(error?.code)?error.code:'local_submit_failed'}));return 1;
   }
 }

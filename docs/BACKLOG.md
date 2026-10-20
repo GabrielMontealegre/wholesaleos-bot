@@ -2,6 +2,31 @@
 
 ## Latest Run Summary
 
+2026-10-20 #395 slice3 LOCAL ONLY: explicit --pipeline-file JSON input
+through existing submit CLI, required local --baseline for exact refs,
+offline default, same canonical pending-only validators and request budgets.
+No prose parsing or implicit discovery. New producer negatives plus named
+file and existing submit regressions pass, zero real network/writes.
+One attempted test filename was incorrect; actual submit-assistant-finds
+regression then passed. Full222-file hosted gate/review/PR/release remain
+pending; do not call this slice released. Current live remains PR404 below.
+
+2026-10-20 #395 slice2 RELEASED/verified: PR404 tested head534151d,
+merge/main a8c31b113564310da7b81c2c5c14e534da9cbb11. Hosted39364544769
+SUMMARY passed=221 failed=0 skipped=0 total=221,600s/file,11m43s job;
+Pipeline UI12.57s/unit0.18s/Calendar UI7.61s/countynotice252.00s.
+Exact Railway7190950708 success03:42:24Z (46s);health20003:42:50Z.
+Live1366/400/412:Today->Pipeline,all7 tabs,50/23 paging,conversation
+X/Escape,existing buyer review,Calendar and hydrated Open Lead/drawer;
+phone list319px with fixed controls, no horizontal overflow.0 post-deploy
+console errors.73 recorded items/13 due, all73 waiting on Gabriel; other
+groups0, no supporting reports submitted. Aggregate-only live crops and
+synthetic populated screenshots retained. Initial reload restored a buyer
+view; exact nav/label and in-flight-read driver adjustments completed all
+checks; no product failure. No business write, contact, capture or approval.
+Whole395 remains OPEN: next ordered slice connects explicit typed producer
+input, then bounded operator review. No raw prose converted into facts.
+
 2026-10-20 #395 slice1 RELEASED/verified: PR403 merge/main
 dce4005a4518b233c423846d2c21ffbcc6d1294c. Exact tested head0b81504;
 full cloud39361375354:219 passed,0 failed,0 skipped,600s/file,
