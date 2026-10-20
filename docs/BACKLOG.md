@@ -2,6 +2,34 @@
 
 ## Latest Run Summary
 
+2026-10-20 #393 profit-card slice RELEASED/verified: PR410 head7a3e2de,
+merge/mainf4ac70bc119259d03e2f5489f25f621751612f70. Hosted39400583804:
+SUMMARY passed=229 failed=0 skipped=0 total=229;600s/file,10m23s job;
+new UI3.36s/unit0.29s/unchanged county-notice211.11s. Exact Railway
+7196407158 success09:37:46Z (47s after merge);health20009:38:32Z.
+Authenticated1366/400/412: served profit1/buyers10/deals15, deal source
+disclosures/open/back/matched-buyer details,80 buyer cards/open/matching
+tab, hydrated100 lead buttons and opening/closing a lead drawer. No
+horizontal overflow; new paragraphs fit their containers. Actual26 deal
+summaries and80 buyer cards all show unknown net; no prices/funds invented.
+First live buyer has no matching rows; populated dollar/match proof is
+synthetic only. One lead GET50209:37:51Z during restart; later hydration
+works and0 console errors after health. Hover tooltip removed from safe
+profit-only screenshots; no private identities included. No contact,
+capture,batch,report/review,confirmation or production business write.
+
+Continuation: item/393-draft-profit-review holds this release report and
+evidence without a docs-only deployment. Next bounded slice is owner-only
+draft profit review, reusing the exact match-profit DTO and binding the
+reviewed internal figures to stale-preview checks. Do not put private net,
+costs or source text into recipient email body. Trace found the canonical
+path in modules/email/buyer-messages.js prepare/draft/send and the buyer
+Messages emailPanel. Existing buyer-workspace.test.js protects blind-teaser
+privacy, current source/availability gates, recipient and explicit send.
+No new draft implementation or real preview/send action has happened.
+#395 legacy file compatibility still awaits architect#409. Next money work
+continues before offer machine#375, then chat. Goal remains unfinished.
+
 2026-10-20 #393 profit cards IN PROGRESS: one shared pure report-to-match
 projection, same existing money calculator on reviewed-deal and buyer-fit
 DTOs, compact/deal/match/buyer cards. Missing prices/costs remain unknown;
