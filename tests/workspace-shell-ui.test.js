@@ -30,7 +30,6 @@ async function prove() {
           throw Error('Unexpected write');
         }
         if (url.pathname === '/api/auth/session') return route.fulfill({ json: { authenticated: auth, role } });
-        if (url.pathname === '/api/gmail/messages') return route.fulfill({ json: { ok: true, messages: [] } });
         if (url.pathname === '/api/dashboard/today-workspace') {
           reads++;
           return route.fulfill({ status: auth ? fail ? 503 : 200 : 401, json: auth && !fail ? today : { code: 'unavailable' } });
@@ -74,14 +73,8 @@ async function prove() {
       assert.equal(layout.scrollParents, 0);
       assert.deepEqual(layout.sheets, ['/dashboard/workspace/design-system.css']);
       assert(layout.firstPaint !== null && layout.firstPaint < 2000, 'Fixture first contentful paint <2s');
-      // Email intentionally migrates to the shared native shell in #412.
-      if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-      await page.locator((width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/app?preview=1&view=email"]').click();
-      await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
-      assert(await page.locator('.ws-mail').isVisible());
-      await page.goto('https://fixture.test/app?preview=1');
-      await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
-      for (const key of ['leads', 'deals', 'buyers', 'calendar', 'pipeline', 'approvals']) {
+      // Every visible navigation target resolves to an allowlisted classic view.
+      for (const key of ['email', 'leads', 'deals', 'buyers', 'calendar', 'pipeline', 'approvals']) {
         if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
         const selector = (width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/dashboard/?workspace=' + key + '"]';
         await page.locator(selector).click();
@@ -112,7 +105,7 @@ async function prove() {
       assert.deepEqual(errors, []);
       await page.close();
     }
-    console.log('workspace-shell-ui: real shell1366/400/412; native Email and six classic nav targets, tabs, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
+    console.log('workspace-shell-ui: real shell 1366/400/412; all seven classic nav targets, tabs, rows, X/Escape, explicit refresh, 401 clearing, role guard, first paint <2s and zero writes/external calls passed');
   } finally { await browser.close(); }
 }
 prove().catch(error => { console.error(error.stack); process.exitCode = 1; });

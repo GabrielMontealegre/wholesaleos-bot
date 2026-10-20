@@ -3,8 +3,6 @@
   var c = root.WOSComponents, nav = root.WOSWorkspaceNavigation, auth = root.WOSDashboardAuth;
   var app = {}, generation = 0, current = null, pageSize = 25, helpTimer = null, detailWidget = null;
   var host = document.getElementById('workspace-root');
-  var screen = new URLSearchParams(root.location.search).get('view') === 'email' ? 'email' : 'today', emailScreen = null;
-  document.title = 'WholesaleOS | ' + (screen === 'email' ? 'Email' : 'Today');
   var groups = [
     ['Today', [['today', 'Today', 'layout-dashboard', 'Your recorded actions and activity'], ['email', 'Email', 'mail', 'Read messages in your current Email workspace']]],
     ['Find', [['leads', 'Leads', 'house', 'Source records and property evidence'], ['deals', 'Deals', 'handshake', 'Reviewed properties and matching buyers']]],
@@ -15,8 +13,8 @@
   function navigation() {
     return '<nav class="ws-nav" aria-label="Main navigation">' + groups.map(function (group) {
       return '<section class="ws-nav-group"><h2>' + c.escape(group[0]) + '</h2>' + group[1].map(function (item) {
-        return '<a href="' + (item[0] === 'today' ? '/app?preview=1' : item[0] === 'email' ? '/app?preview=1&view=email' : nav.href(item[0])) + '"' +
-          (item[0] === screen ? ' aria-current="page"' : '') + ' data-help="' + c.escape(item[3]) + '">' +
+        return '<a href="' + (item[0] === 'today' ? '/app?preview=1' : nav.href(item[0])) + '"' +
+          (item[0] === 'today' ? ' aria-current="page"' : '') + ' data-help="' + c.escape(item[3]) + '">' +
           c.icon(item[2]) + '<span>' + c.escape(item[1]) + '</span></a>';
       }).join('') + '</section>';
     }).join('') + '</nav>';
@@ -24,7 +22,6 @@
 
   function clearPrivate() {
     generation++;
-    if (emailScreen) { emailScreen.destroy(); emailScreen = null; }
     current = null;
     detailWidget = null;
     clearTimeout(helpTimer);
@@ -69,7 +66,7 @@
       '<div class="ws-sidebar-footer"><a class="ws-button" href="/dashboard/">Classic dashboard</a></div></aside>' +
       '<div class="ws-workspace"><header class="ws-topbar">' +
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
-      '<h1>' + (screen === 'email' ? 'Email' : 'Today') + '</h1><div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
+      '<h1>Today</h1><div class="ws-topbar-actions">' + c.button({ label: 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
       '<a class="ws-button ws-button--icon" href="' + nav.href('settings') + '" aria-label="Settings" data-help="Open your current settings">' + c.icon('settings') + '</a>' +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"></div><main class="ws-content" id="today-content" aria-busy="true">' +
@@ -162,11 +159,6 @@
   }
 
   async function load() {
-    if (screen === 'email') {
-      if (!app.unlocked) return;
-      if (!emailScreen) emailScreen = root.WOSEmailScreen.create({ host: document.getElementById('today-content'), onUnauthorized: function () { locked('Your session expired. Unlock to continue.'); } });
-      return emailScreen.refresh();
-    }
     var sequence = ++generation, content = document.getElementById('today-content');
     if (!content || !app.unlocked) return;
     var refresh = document.getElementById('refresh');

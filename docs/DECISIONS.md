@@ -1,40 +1,17 @@
 # Decisions
 
-## D-061: Generic Owner Reply Transport
+ASSUMED: apply AGENTS7 literally to PR417's live initial-load/category race:
+revert that merge only, restore the last verified product tree, and fix/test
+the race in a separate PR. No stored business data is changed or deleted;
+feature source/proof remains recoverable in Git and the preserved branch.
+Provider incidentJUA1PC5H is resolved; it is not the current blocker --2026-10-20.
 
-Architect#415 answer2026-10-20 approves OptionA under#288/D-046, as its
-own reviewed PR AFTER the read-only native Email migration. Signed admin,
-CSRF, exact connected-mailbox thread participants, reviewed preview/version,
-explicit click, per-version idempotency, uncertain-send no retry, timeline
-receipt without bodies, rate limit and default-safe kill switch are required.
-Existing buyer/JV/legal/template gates remain for their own flows. New-thread
-compose is later. Until that PR merges, OptionB: visibly unavailable Send
-plus Open in Gmail. This authorizes implementation, not a production test
-message, outreach or any secret/variable change.
-
-ASSUMED: read-only Email keyboard e expands/collapses earlier messages;
-it never archives or writes mailbox state. j/k select threads and r opens
-the local composer, ignored inside editing fields/dialogs. Exact shortcut
-meaning is exposed in accessible help, not silently mapped to a write.
-Suggested text stays blank if no reviewed exact-context reply is supplied;
-never invent an offer or promise -- AGENTS3/5,#412,D-061 --2026-10-20.
-
-ASSUMED: native Email People/Alerts is operational grouping, not evidence a
-sender is human or a verified buyer. Only an exact automated mailbox name on
-a recognized listing domain is an alert. Agents, unknown senders and mixed
-threads stay in People; no message is deleted and unavailable/conflicting
-references remain counted. Server exact thread keys and role provenance are
-authoritative; never guess identity from an email -- AGENTS3/5,#412 --2026-10-20.
-
-ANSWERED ARCHITECT QUESTION #415 -- see D-061 above. Original conflict:
-#412 requires usable generic reply
-Send while keeping APIs unchanged. Current /api/gmail/send,/reply and
-/api/email/send intentionally return410; only buyer-specific reviewed SMTP
-exists. Do not repurpose buyer/package routes or enable a legacy endpoint.
-Recommend a separate bounded#288 exact-thread anchored, reviewed/versioned,
-explicit/idempotent reply transport PR. Only Send is blocked; independent
-read-only Email layout migrates first on the shared design system; OptionA
-transport is now authorized as a separate subsequent PR, not blocked.
+D-061 remains APPROVED by architect#415,2026-10-20: generic signed-admin,
+CSRF-protected, exact-thread reviewed/versioned/idempotent owner replies,
+uncertain-send no retry, receipt, rate cap and kill switch in their own PR
+AFTER the read-only Email migration is live. No production send is authorized.
+Existing buyer/JV/legal/template gates remain. The rollback does not revoke
+this decision; implementation is waiting on a failed live prerequisite.
 
 ASSUMED: #412 starts with an isolated browser-native workspace, one shared
 stylesheet/component system and existing signed-cookie auth/APIs, not a

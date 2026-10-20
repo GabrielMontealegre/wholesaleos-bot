@@ -42,11 +42,6 @@
     return '<span class="ws-badge ws-badge--' + tone(color) + '">' + escape(label) + '</span>';
   }
 
-  function roleBadge(value) {
-    var roles = { buyer: 'Buyer', seller: 'Seller', holder: 'JV partner', partner: 'JV partner', title: 'Title', attorney: 'Attorney', lender: 'Lender', agent: 'Agent', other: 'Other' };
-    return Object.hasOwn(roles, value) ? '<span class="ws-badge ws-role--' + value + '">' + roles[value] + '</span>' : badge('Not linked', 'neutral');
-  }
-
   function card(options) {
     var o = options || {};
     return '<article class="ws-card"><h3>' + escape(o.title) + '</h3>' +
@@ -189,7 +184,7 @@
     sync();
   }
 
-  return { escape: escape, icon: icon, button: button, badge: badge, roleBadge: roleBadge, card: card, listRow: listRow,
+  return { escape: escape, icon: icon, button: button, badge: badge, card: card, listRow: listRow,
     tabs: tabs, empty: empty, skeleton: skeleton, drawer: drawer, composer: composer,
     bindDialog: bindDialog, bindTabs: bindTabs, bindComposer: bindComposer };
 });

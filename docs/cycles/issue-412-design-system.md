@@ -81,26 +81,6 @@ rebuild on this shared system is next; no new feature work precedes it. The
 current default dashboard retains legacy styling until each screen migrates.
 No stored data migration and no production preview/send/confirmation occurs.
 
-## Released And Verified
-
-PR414 final head646933abe34b15c51208e7f76470b2762e99353f; merge/main
-0d035e09e71b5602caa00c94399a4c9a072d71b4. Hosted run39446383940:
-SUMMARY passed=235 failed=0 skipped=0 total=235,600s/file. Test step9m46s;
-job10m41s. New files1.27s/.06s/.06s/5.19s; county-notice207.88s. Full
-per-file artifact retained under docs/test-results/issue-412-design-system.
-
-Exact Railway deployment7203827249 success2026-10-20T15:28:43Z,109s after
-merge. Post-success health200 at15:30:13Z; preview document200 and CSP.
-Authenticated1366/400/412: native shell and one stylesheet, no horizontal
-overflow, record/account/menu X controls, tabs, all7 classic nav destinations
-render, mobile Email link works and8 menu links fit44px. Classic lead drawer
-opens/closes. Leads and Calendar had slow initial classic hydration, then
-rendered on observation; not claimed instantaneous.0 console errors since
-the post-success verification boundary. Live paint could not be measured by
-the connector's DOM-only scope; only the synthetic paint numbers are claimed.
-
-Privacy-safe live-best-deals-{1366,400,412}.jpg contain no record identities,
-only aggregate counts and the actual empty best-deals state. No production
-send, logout, capture, batch, approval, confirmation or business write.
-Default classic dashboard remains unchanged. Email itself is not yet fixed;
-next ordered slice continues, with generic reply Send isolated on#415.
+Verification after deploy: pending exact SHA, health200 and authenticated
+read-only1366/400/412 click-through of preview plus classic fallback/lead
+hydration. No send, logout, capture, batch, approval or business write.
