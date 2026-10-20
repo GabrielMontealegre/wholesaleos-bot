@@ -3,6 +3,7 @@ const records=require('../records/record-activity');
 const fit=require('./buyer-fit');
 const eligibility=require('../research/operational-lead-eligibility');
 function build(store,{now}){
+  const profit=require('../deals/match-profit').build(store,{now});
   const result=new Map((store.buyers||[]).map(b=>[b.id,{count:0,matches:[],near_misses:[],last_contact_at:null}]));
   for(const buyer of store.buyers||[]){
     const reports=(buyer.assistant_find?.history||[]).filter(e=>e.kind==='outreach'&&['messaged','emailed','commented','replied'].includes(e.to)&&typeof e.operator_id==='string'&&e.operator_id&&typeof e.at==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(e.at)&&Number.isFinite(Date.parse(e.at))&&Date.parse(e.at)<=Date.parse(now));
@@ -21,7 +22,7 @@ function build(store,{now}){
     }
     for(const candidate of evaluation.matches){
       const view=result.get(candidate.id);if(!view)continue;
-      const row={id:deal.id,ref:records.reference(deal),city:deal.city||'',state:deal.state||'',zip:deal.zip||'',asking:evaluation.asking,buyer_max:candidate.max_price,checks:candidate.check_items||[]};
+      const row={id:deal.id,ref:records.reference(deal),city:deal.city||'',state:deal.state||'',zip:deal.zip||'',asking:evaluation.asking,buyer_max:candidate.max_price,checks:candidate.check_items||[],profit:profit.forMatch(deal,candidate,evaluation)};
       let reason='';
       if(['closed','dead','expired'].includes(evaluation.status))reason='This deal is no longer active.';
       else if(!evaluation.value.range)reason='Comparable-sale value is not established.';
