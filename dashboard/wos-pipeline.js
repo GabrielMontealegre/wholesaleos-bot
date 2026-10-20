@@ -198,6 +198,7 @@ window.wosPipelineRefresh = function() {
 };
 
 function _findPipelineContainer() {
+  if (document.getElementById('wos-pipeline-workspace')) return null;
   // Try to find pipeline section in the SPA
   var selectors = ['#pipelineContent','#pipeline-content','.pipeline-content','[data-section="pipeline"]'];
   for (var i=0; i<selectors.length; i++) {

@@ -56,18 +56,18 @@ let processOutput='';child.stdout.on('data',data=>{processOutput+=String(data);}
       for(const [nav,pageName] of [['Pipeline','pipeline'],['Outreach Hub','outreach'],['Matching','matching'],['Review Queue','review']]){
         if(width===400)await page.locator('.mobile-menu-btn').click();
         await page.locator(".nav-item[onclick=\"navigate('"+pageName+"',this)\"]").click();
+        if(pageName==='pipeline'){
+          await page.getByText('No recorded work in this view. Unreported work and unverified funds are not assumed complete.',{exact:true}).waitFor();
+          assert.equal(await page.locator('#wos-pipeline-workspace button').filter({hasText:/Send/}).count(),0);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+          await page.screenshot({path:path.join(output,pageName+'-'+width+'.png'),fullPage:true});
+          continue;
+        }
         await page.locator('.ops-view').waitFor();
         await page.getByText('Showing 2 of 2 Properties with address proof.',{exact:true}).waitFor();
         assert.ok(!(await page.locator('.ops-view').innerText()).includes(junk.address));
         assert.strictEqual(await page.locator('.ops-view button').filter({hasText:/Send/}).count(),0);
         assert.strictEqual(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-        if(pageName==='pipeline'){
-          const ratios=await page.locator('.pipe-header').evaluateAll(elements=>{
-            const luminance=color=>color.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
-            return elements.map(element=>{const a=luminance(getComputedStyle(element).color),b=luminance(getComputedStyle(element).backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);});
-          });
-          assert.ok(ratios.length && ratios.every(ratio=>ratio>=4.5),'Pipeline headings must be readable in the actual theme');
-        }
         if(pageName==='matching'||pageName==='review'){
           assert.strictEqual(await page.locator('.ops-record').count(),1);
           assert.ok(!(await page.locator('.ops-view').innerText()).includes('Test Buyer 1'));

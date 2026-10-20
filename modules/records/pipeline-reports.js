@@ -83,7 +83,7 @@ function project(store,{now,timeZone='America/Mazatlan',policies={}}={}){
   items.sort((a,b)=>(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id));
   return {source_kind:'derived_workflow',read_only:true,now,today,reported_only:true,groups:LABELS,items,counts:Object.fromEntries(Object.keys(REASONS).map(k=>[k,items.filter(r=>r.group===k).length])),coverage:{...coverage,conflicting_report_ids:conflicts.size,total_revisions:(store.pipeline_reports||[]).length,projected_reports:items.length,funds:'No proof-of-funds verification contract; reports never establish confirmed funding'}};
 }
-function register(app,{db,requireAdmin,now=()=>new Date().toISOString()}){
-  app.get('/api/dashboard/pipeline-workspace',requireAdmin,(req,res)=>{res.set('Cache-Control','no-store');try{res.json(project(db.readDBStrict(),{now:now()}));}catch{res.status(503).json({code:'pipeline_workspace_unavailable'});}});
+function register(app,{db,requireAdmin,now=()=>new Date().toISOString(),buildView=project,readOptions=()=>({})}){
+  app.get('/api/dashboard/pipeline-workspace',requireAdmin,(req,res)=>{res.set('Cache-Control','no-store');try{const options=readOptions(req);res.json(buildView(db.readDBStrict(),{now:now(),...options}));}catch(error){if(error.code==='pipeline_query_invalid')return res.status(400).json({code:'pipeline_query_invalid'});res.status(503).json({code:'pipeline_workspace_unavailable'});}});
 }
 module.exports={validate,upsert,project,register,REASONS,LABELS,AMOUNTS};

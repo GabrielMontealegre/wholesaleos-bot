@@ -21,6 +21,7 @@
       '<div class="today-main"><section class="today-actions"><h3>Your action queue <span>'+data.actions.length+'</span></h3><button type="button" data-today-approval-page>Open approvals</button>'+overdue+'<ul class="today-list">'+(rows(groups.current)||(!data.actions.length?'<li>No recorded work needs your action today.</li>':''))+'</ul><p data-today-empty hidden>No work in this category.</p></section>'+
       '<div class="today-columns"><section><h3>Best deals today</h3><ul class="today-best">'+(best||'<li>No deals ready to send today. <button type="button" data-today-approval-page>Check Approvals'+(Number.isSafeInteger(data.counts.approvals)&&data.counts.approvals>=0?' ('+data.counts.approvals+')':'')+'</button></li>')+'</ul></section>'+
       '<section><h3>Last 24 hours</h3><button type="button" data-today-history title="Open the complete recorded activity log">Open activity</button><ul class="today-list today-recent">'+(recent||'<li>No recorded activity in the last 24 hours.</li>')+'</ul></section></div></div>'+
+      (data.pipeline_summary?'<p><button type="button" data-today-pipeline title="Open recorded approvals, conversations and Pipeline reports; no action is taken">Open Pipeline: '+esc(data.pipeline_summary.open)+' recorded items / '+esc(data.pipeline_summary.due)+' due for review</button></p>':'')+
       '<footer class="today-coverage">Email activity: recorded reports, not delivery proof. Records-request and routine-result feeds are not connected.</footer><p role="status" data-today-status>'+esc(error)+'</p></section>';
   }
   const api={markup,groupActions};if(typeof module!=='undefined'&&module.exports){module.exports=api;return;}
@@ -47,6 +48,7 @@
     else root.navigate('record_activity',null);
   }
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-today-pipeline]')){root.navigate('pipeline',null);return;}
     if(e.target.closest('[data-today-approval-page]')){root.navigate('approvals',null);return;}
     if(e.target.closest('[data-today-refresh]')){load(true);return;}
     const f=e.target.closest('[data-today-filter]');if(f){filter=filter===f.dataset.todayFilter?'':f.dataset.todayFilter;applyFilter();document.querySelector('.today-actions')?.scrollIntoView({block:'start'});return;}

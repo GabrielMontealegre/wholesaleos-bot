@@ -10,6 +10,7 @@ const { resolveSourceSaleDate } = require('../research/resolve-source-sale-date'
 const origins = require('../research/sale-date-origin');
 const jv = require('../deals/jv-workflow');
 const eligibility = require('../research/operational-lead-eligibility');
+const pipeline = require('./pipeline-reports');
 
 const TYPES = Object.freeze({ email_in:'Email received',email_out:'Email sent',call:'Call report',offer:'Offer report',deadline:'Deadline',closing:'Closing date',followup:'Follow-up',approval:'Approval',note:'Note' });
 function text(v, max=1000) { return typeof v === 'string' ? v.replace(/[\x00-\x1f]/g,' ').trim().slice(0,max) : ''; }
@@ -99,6 +100,8 @@ function buildCalendarWorkspace(store,{now,timeZone='America/Mazatlan'}={}) {
     const pending=t.kind==='buyer'?r.assistant_find?.approval==='pending':t.kind==='deal'&&r.approval==='pending';
     if(pending){const at=instant(r.assistant_find?.first_seen_at||r.first_seen_at||r.captured_at,Date.parse(now));if(at)add('approval:'+digest([t.kind,t.id]),{type:'approval',at,day:dayAt(at,timeZone),state:'pending',title:'Approval waiting',summary:'Review the record before approving it.',source_kind:'derived_workflow',source_field:'approval',captured_at:at,derived:true},t);}
   }
+  let reportView;try{reportView=pipeline.project(store,{now,timeZone});}catch{counts.pipeline_unavailable=1;}
+  for(const item of reportView?.items||[]){if(item.group==='closed'||!item.due_date)continue;const target=refs.get(item.target.ref);if(!target||target.kind!==item.target.kind||target.id!==item.target.id)continue;add('pipeline:'+item.id,{type:'followup',day:item.due_date,at:null,state:'due',title:'Pipeline report review',summary:item.next_action,source_kind:'derived_workflow',source_field:'pipeline_reports',source_url:item.provenance.source_url,captured_at:item.provenance.captured_at,reported:true,derived:true,review_status:'pending',reminder_basis:'Pending workflow report; not confirmed funds or an offer'},target);}
   for(const e of store.calendar||[]){const day=date(e.date);if(!day)continue;const type=({call:'call',close:'closing',follow:'followup',offer:'offer',deadline:'deadline'})[e.type]||'note';add('manual:'+digest(e.id||e),{type,day,at:null,state:'scheduled',title:text(e.title,160)||'Manual event',summary:e.notes,source_id:text(e.id,128),source_kind:'operator_calendar',source_field:'calendar',captured_at:null,reported:true},null);}
   events.sort((a,b)=>a.day.localeCompare(b.day)||(a.at||'').localeCompare(b.at||'')||a.key.localeCompare(b.key));
   return {now,today,yesterday,time_zone:timeZone,source_kind:'derived_workflow',types:TYPES,total:events.length,events,conversations:projected.items,coverage:{email:'Saved linked receipts and recorded reports only; no mailbox fetched',reminders:'Existing conversation rules; no reminders saved or messages sent',...counts},brief:{yesterday_done:events.filter(e=>e.day===yesterday&&e.state==='recorded').length,today_due:events.filter(e=>e.type==='followup'&&e.state==='due'&&e.day<=today).length}};
