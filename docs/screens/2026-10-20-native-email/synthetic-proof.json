@@ -1,0 +1,35 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "first_contentful_paint_ms": 37.5,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 400,
+      "first_contentful_paint_ms": 51.39999997615814,
+      "sendFits": true,
+      "overflow": false
+    },
+    {
+      "width": 412,
+      "first_contentful_paint_ms": 54.69999998807907,
+      "sendFits": true,
+      "overflow": false
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "score": 98,
+      "lighthouse_version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 100,
+      "lighthouse_version": "13.5.0"
+    }
+  ]
+}
