@@ -1,0 +1,7 @@
+.match-profit { border-top: 1px solid var(--border, #3d4544); margin-top: 8px; padding-top: 8px; overflow-wrap: anywhere; }
+.match-profit p { margin: 4px 0; }
+.match-profit dl { margin: 4px 0; }
+.match-profit dt { color: var(--text-muted, #a6aeaa); }
+.match-profit dd { margin: 0 0 6px; }
+.match-profit a, .match-profit summary { min-height: 44px; display: inline-flex; align-items: center; }
+.match-profit summary { cursor: pointer; }

@@ -2,6 +2,29 @@
 
 ## Latest Run Summary
 
+2026-10-20 #393 profit cards IN PROGRESS: one shared pure report-to-match
+projection, same existing money calculator on reviewed-deal and buyer-fit
+DTOs, compact/deal/match/buyer cards. Missing prices/costs remain unknown;
+criteria ceiling/asking never substitutes. Source disclosures, explicit
+path/share, losses retained, funds unknown. Synthetic1366/400/412 passes.
+New fixture issues corrected only in new tests: query boolean conversion,
+exact nested summary selector, first-seen metadata and opening the compact
+buyer before its tabs. No existing assertion changed. Full suite/PR/exact
+deploy/live checks pending. Draft-owner profit view remains next slice.
+
+2026-10-20 #395 buyer-context slice RELEASED/verified: PR408 head470a104,
+merge/main01df261b47634d1bcbdf9a8a423e87d4ba16a6ff. Hosted39396482742
+SUMMARY passed=227 failed=0 skipped=0 total=227,600s/file,12m6s job;
+UI3.16s/unit0.34s/unchanged county-notice250.17s. Exact Railway7195806883
+success09:05:59Z (56s after merge);health20009:06:21Z. Authenticated
+1366/400/412 Today/Pipeline50+23 pages/conversation/Calendar/lead drawers;
+scriptv3,no overflow,0 later console errors. Populated buyer criteria is
+synthetic-only: current pages have0 typed reports. No report manufactured.
+Reference-export compatibility BLOCKED on architect#409: named legacy
+files absent at the three known checkout locations; canonical structured
+JSON producer works, no unproven Markdown parsing claimed. Continue the
+independent money-card priority. No contact/capture/batch/business write.
+
 2026-10-20 #395 slice4 RELEASED/verified: PR407 head d46de38, merge/main
 1b96399d2d969a2730de9aafcf9ecbc4b1cca972. Hosted39393399325 SUMMARY
 passed=225 failed=0 skipped=0 total=225,600s/file,12m12s job;review

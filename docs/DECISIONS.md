@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #393 profit-card slice reuses one canonical pending price report
+for the exact buyer/deal pair. A match ceiling or asking price is never a
+buyer/contract price. Multiple current reports require reconciliation;
+flagged, hidden, terminal, malformed or future evidence yields unknown.
+No installed cost default is guessed and no report/review establishes
+funds. Existing matching, spread, readiness and ordering remain unchanged.
+Draft-owner profit review is the next bounded slice; never place private
+net/cost information in recipient email text -- AGENTS3/5,#393 --2026-10-20.
+
 ASSUMED: #395's buyer max means the existing approved matcher's criteria
 ceiling for the exact linked buyer/deal, not an agreed buyer price. Reuse
 reviewed-deals.evaluate without changing it; retain unknown when no current
