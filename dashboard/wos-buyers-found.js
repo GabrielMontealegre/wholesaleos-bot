@@ -96,6 +96,7 @@
       '<section class="bf-workspace-section"'+(section!=='box'?' hidden':'')+'><label>Buyer type<select data-edit-buyer-type>'+options(buyerTypes,item.buyer_type_view&&item.buyer_type_view.kind||item.buyer_type||'unknown','Choose type')+'</select></label><button type="button" data-action="type">Save buyer type</button>'+
       (item.email_subject ? '<p>Email subject: ' + esc(item.email_subject) + '</p>' : '') +
       '<p class="bf-muted">Submitted buyer record</p><p>' + esc(item.trust_label || 'Imported - not verified') + ' | ' + esc(approvalLabels[item.approval || 'pending']) + '</p>' +
+      (root.wosBuyerEvidence ? root.wosBuyerEvidence.markup(item) : '') +
       '<p class="bf-muted">' + esc(buyerKind) + (item.post_age ? ' | Post age: ' + esc(item.post_age) : '') + '</p>' +
       (item.possible_duplicate_of ? '<p>Possible duplicate of ' + esc(item.possible_duplicate_of) + ' (' + esc(item.duplicate_basis) + '). Kept on the existing record.</p>' : '') +
       '<p><b>' + esc(item.group_name) + '</b> · ' + esc(item.deal_type) + '</p>' +
@@ -182,6 +183,7 @@
   root.openBuyerFind = function(id) { selectedId=id;section='box';root.navigate('buyers_found',null); };
   if (typeof module !== 'undefined' && module.exports) module.exports = { markup: markup, card: card, detailedCard: detailedCard };
   if (typeof document === 'undefined') return;
+  document.addEventListener('wos-buyer-evidence-recorded',function(){data=null;load();});
   document.addEventListener('keydown', function (event) {
     if (!event.target.matches('#wos-buyers-found [data-buyer-card-open]') || !['Enter', ' '].includes(event.key)) return;
     event.preventDefault();

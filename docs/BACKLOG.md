@@ -2,6 +2,34 @@
 
 ## Latest Run Summary
 
+2026-10-20 #375 prerequisite IN PROGRESS: append-only, signed-admin-only
+buyer source notes for buying intent/proof receipt. Exact buyer/version,
+explicit source/capture/validity and human source check; expiry/stale/
+conflict/corrupt notes never become verified funds or deal commitment.
+No default validity, bank account/balance fields, source fetching or
+matching/pricing/readiness changes. Actual dashboard1366/400/412 fixture
+record/flag, no-load-write,44px/fitted controls, stale/network uncertainty
+without retries pass. Signed API auth/negative tests pass after fixing
+only the new fixture's missing base-URL declaration. No existing assertion
+changed. Full234-file gate/PR/exact deploy/live checks pending; no real note.
+
+2026-10-20 #393 private draft profit RELEASED/verified: PR411 head9ae8e2b,
+merge/main60933f62dfbbc47456b89064c0f55b35fda61566. Hosted39406565685
+SUMMARY passed=231 failed=0 skipped=0 total=231;600s/file,10m5s;
+new UI2.56s/unit0.31s/unchanged county-notice222.49s. Exact Railway
+7197335868 success10:27:23Z (56s);health20010:27:54Z. Authenticated
+1366/400/412 buyer list/open/Messages;served buyers11,no overflow,0
+automatic private previews. Actual lead drawer opens/closes;0 console
+errors after health. Positive profit/review is synthetic-only: no real
+preview/save/send manufactured. Safe status-only crops and all timings
+retained. No capture,batch,contact,confirmation or business write.
+
+Next: #375 buyer-evidence tracking prerequisite (D-060), before offer
+volume. Track explicit operator-reported buying-intent/proof receipts
+with source and validity, never bank verification or deal commitment.
+Existing matching/comp/funds/readiness gates remain unchanged. No real
+financial document, confirmation or outreach authorized. #409 still open.
+
 2026-10-20 #393 owner draft profit review LOCAL ONLY: canonical match
 profit DTO beside the recipient preview, explicitly private/not emailed.
 Recipient body/to/subject unchanged; profit content is bound to the same

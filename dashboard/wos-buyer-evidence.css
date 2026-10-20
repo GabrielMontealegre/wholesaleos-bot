@@ -1,0 +1,8 @@
+.buyer-evidence { border-top: 1px solid var(--border, #3d4544); margin-top: 8px; padding-top: 8px; overflow-wrap: anywhere; }
+.buyer-evidence > div { margin-bottom: 8px; }
+.buyer-evidence label { display: block; margin: 8px 0; }
+.buyer-evidence input:not([type=checkbox]), .buyer-evidence textarea, .buyer-evidence select { box-sizing: border-box; width: 100%; min-height: 44px; color: inherit; background: var(--card, #14171f); border: 1px solid var(--border, #3d4544); border-radius: 4px; padding: 8px; }
+.buyer-evidence label:has(input[type=checkbox]) { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.buyer-evidence input[type=checkbox] { flex: 0 0 auto; width: 18px; height: 18px; }
+.buyer-evidence button, .buyer-evidence a, .buyer-evidence summary { min-height: 44px; display: inline-flex; align-items: center; }
+.buyer-evidence summary { cursor: pointer; }

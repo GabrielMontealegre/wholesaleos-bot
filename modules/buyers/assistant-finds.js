@@ -254,10 +254,12 @@ function update(store, id, input, { now, operatorId }) {
 
 function listFinds(store, { now }) {
   const dealViews=require('./deal-fit-view').build(store,{now});
+  let evidence;try{evidence=require('./buyer-evidence-notes').project(store,{now});}catch{evidence=new Map();}
   const items = (store.buyers || []).filter((buyer) => buyer.assistant_find).map((buyer) => ({
     id: buyer.id, ...buyer.assistant_find, record_ref: activity.reference(buyer), email_subject: buyer.record_ref ? '[' + buyer.record_ref + '] Buyer enquiry' : '',
     trust_label: buyer.assistant_find.approval === 'approved' ? 'Verified source - approved by operator' : 'Imported - not verified',
     buyer_type_view: buyerType.view(buyer.assistant_find),
+    evidence_tracking:evidence.get(buyer.id)||{can_record:false,buyer_confirmed:false,funds_verified:false,kinds:{},unavailable:true},
     fits: fitSummary(buyer, store.leads || []), deal_fit:dealViews.get(buyer.id)
   })).sort((a, b) => b.first_seen_at.localeCompare(a.first_seen_at) || a.id.localeCompare(b.id));
   const week = new Date(now);
