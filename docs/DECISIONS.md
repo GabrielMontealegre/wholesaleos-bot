@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: a provider-wide build pause before any new deployment exists is
+an external RELEASE BLOCKED state, not a failed application verification.
+Keep the last verified healthy deployment; do not revert working source or
+change provider settings to manufacture a deploy. Retry the exact merged
+SHA once the workspace resumes builds (Railway says paused triggers are
+not replayed), then perform every live gate before calling it released --
+AGENTS3/7, public Railway incidentJUA1PC5H --2026-10-20.
+
 ## D-061: Generic Owner Reply Transport
 
 Architect#415 answer2026-10-20 approves OptionA under#288/D-046, as its

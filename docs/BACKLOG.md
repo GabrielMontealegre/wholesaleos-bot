@@ -2,6 +2,27 @@
 
 ## Latest Run Summary
 
+2026-10-20 20:32Z #412 Email MERGED, release BLOCKED by Railway's public
+build incident JUA1PC5H ([release blocker #418](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/418)),
+not by a failing test or an application crash.
+PR417 head9c98ed0 merged as a5b3cca723a805f00614440cf8e0912fdf131331.
+Hosted39457975776: SUMMARY passed=237 failed=0 skipped=0 total=237;
+600s/file, test step9m45s, job10m39s; county-notice215.41s,
+Email model0.07s/UI3.44s/shell5.59s. Main CI39491016047 also succeeded.
+After more than10m no deployment exists for this SHA; Railway shows
+"Deploys have been paused temporarily" and the active version is still
+PR414/0d035e0. Public health200 is the OLD version, not release proof.
+The new native Email asset returns404; live Email verification is pending.
+Railway says triggers during this incident must be triggered again when
+builds resume. Do not redeploy the old active version or change settings,
+plan, billing or variables. Resume an exact-main deployment only after the
+workspace's build pause lifts, then verify1366/400/412 before calling DONE.
+No rollback: new code never ran and the old production version is healthy.
+No send, capture, batch, contact, evidence confirmation or business write.
+Separate next branch item/415-reviewed-thread-replies has a writer/reader
+trace only; implementation waits for this required live dependency. D-061
+is APPROVED, not an unanswered architecture question. PR413 stays draft.
+
 2026-10-20 #412 native Email LOCAL, pending hosted gate/release: two panes,
 one-pane phone reader, compact folders, People/Alerts, sourced role colors,
 full message scroll (no nested body box), collapsed earlier messages, local
