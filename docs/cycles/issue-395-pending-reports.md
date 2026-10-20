@@ -96,3 +96,10 @@ admin GET/no-store/x-user-id401/generic503 and zero read writes are verified.
 One initial new-test variable declaration was corrected; no existing test
 assertion changes. Full suite600s/file and the normal read-only release gate
 are required. UI and producer acceptance remain pending subsequent slices.
+
+Self-review correction: a malformed explicitly supplied cost range must
+remain unknown, even when a valid estimated policy exists. Do not silently
+substitute the estimate for bad evidence. Added a direct calculator negative
+case; the importer already rejected malformed ranges. Fixture cleanup also
+checks the real resolved temp parent/name before its bounded recursive delete.
+No existing assertion or production safety gate is weakened.

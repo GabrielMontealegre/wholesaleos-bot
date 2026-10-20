@@ -47,6 +47,7 @@ try{
  assert.deepEqual(money.calculate({...prices,buyer_price:amount(140000)}).net_fee,amount(-12000,-11000));assert.equal(money.calculate({...prices,our_share:null}).our_net,null);
  assert.equal(money.calculate({...prices,costs:null,state:'FL'}).net_fee,null,'no guessed state costs');
  const policy=money.calculate({...prices,costs:null,state:'FL'},{FL:{assignment:{range:amount(500,1000),label:'Fixture configured estimate'}}});assert.equal(policy.costs_basis,'configured_estimate');assert.deepEqual(policy.net_fee,amount(49000,59500));
+ const invalidCost=money.calculate({...prices,costs:amount(-1),state:'FL'},{FL:{assignment:{range:amount(500,1000),label:'Fixture estimate'}}});assert.equal(invalidCost.net_fee,null,'invalid supplied cost never falls back to a configured estimate');assert.equal(invalidCost.costs_basis,'not_recorded');assert.equal(invalidCost.estimate_label,null);
  assert.equal(effects,0);
  console.log('Pipeline contracts: pending-only typed reports, fixed reasons, sourced prices, exact references, stale/conflict/forgery/date rejection, immutable revisions/closed reasons, unsigned privacy,2/5-day review-only reminders, unchanged importer approvals/gates, pure net ranges/missing/loss/split/config and zero network/clock/writes passed.');
 }finally{global.fetch=originals.fetch;http.get=originals.hg;http.request=originals.hr;https.get=originals.sg;https.request=originals.sr;fs.writeFileSync=originals.write;fs.mkdirSync=originals.mkdir;global.Date=originals.Date;}
