@@ -7,3 +7,15 @@
 #wos-pipeline-workspace .pipeline-groups button span{min-width:0;flex:1}
 #wos-pipeline-workspace .pipeline-groups button strong{flex:none;white-space:nowrap;overflow-wrap:normal}
 @media(max-width:600px){#wos-pipeline-workspace{height:calc(100dvh - 92px)}#wos-pipeline-workspace .pipeline-groups{gap:4px;margin:8px 0}#wos-pipeline-workspace .pipeline-heading p{font-size:12px;margin:4px 0}}
+#pipeline-review-dialog{position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(680px,calc(100vw - 24px));height:min(760px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);overflow:hidden;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+#pipeline-review-dialog[open]{display:flex;flex-direction:column}.pipeline-review-body{flex:1;min-height:0;overflow:auto;padding:2px;overscroll-behavior:contain}.pipeline-review-heading,#pipeline-review-dialog>footer{flex:none}
+#pipeline-review-dialog::backdrop{background:rgba(0,0,0,.72)}
+#pipeline-review-dialog h2{font-size:20px;margin:0 48px 12px 0}#pipeline-review-dialog h3{font-size:16px;overflow-wrap:anywhere}
+.pipeline-review-heading{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}#pipeline-review-dialog .pipeline-review-heading h2{margin:0;min-width:0;flex:1}
+#pipeline-review-dialog :is(p,dd,a){overflow-wrap:anywhere}#pipeline-review-dialog a{color:var(--link);display:inline-flex;min-height:44px;align-items:center}
+#pipeline-review-dialog button{min-height:44px;border:1px solid var(--line);border-radius:6px;background:var(--card-2);color:var(--link);padding:8px 12px;font:inherit;cursor:pointer}
+#pipeline-review-dialog [data-review-close]{position:absolute;right:8px;top:8px;min-width:44px}
+#pipeline-review-dialog dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}#pipeline-review-dialog dd{margin:0}#pipeline-review-dialog dt{color:var(--muted)}
+#pipeline-review-dialog label{display:block;margin:12px 0 8px}.pipeline-source-check{min-height:44px;display:flex!important;align-items:center;gap:8px}
+#pipeline-review-dialog textarea{box-sizing:border-box;width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--card-2);color:var(--ink);font:inherit;resize:vertical}#pipeline-review-dialog [role=alert]{color:var(--danger)}
+#pipeline-review-dialog :focus-visible{outline:2px solid var(--primary);outline-offset:2px}

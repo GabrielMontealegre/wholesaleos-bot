@@ -2,6 +2,34 @@
 
 ## Latest Run Summary
 
+2026-10-20 #395 slice4 IN PROGRESS: explicit admin-only report review and
+correction flags as separate append-only operator receipts. Imported
+revisions stay pending; no funds, offer, price agreement, readiness or
+business close is established. Exact revision/target/review versions,
+source checkbox, required correction note, quiet duplicates, stale/forged/
+future/unlinked/unsigned refusal. Existing counts and Calendar dates stay
+unchanged. Synthetic1366/400/412:source/note no-post negatives,review/flag,
+X/Escape,centered fixed heading/body-only scroll,44px and auth clearing
+pass. Route fixture initially missed a local origin declaration; corrected.
+Scroll proof now uses a valid long source excerpt instead of assuming a
+short fixture overflows. No existing assertion changed. Full225-file cloud
+gate, PR and exact-deploy read-only proof pending; no real report action.
+
+2026-10-20 #395 slice3 RELEASED/verified: PR405 tested head81d412f,
+merge/main d1034fbe849093c7c1aba506ccb59399aa99b67d. Hosted39366412430
+SUMMARY passed=222 failed=0 skipped=0 total=222,600s/file,9m39s job;
+new producer0.19s/unchanged county-notice201.06s. Exact Railway7191209997
+success04:02:41Z (53s);health20004:02:53Z. Authenticated Today->Pipeline,
+50/73 rows and lead/drawer checks at actual1366/400/412, no horizontal
+overflow and0 later console errors. Aggregate-only screenshots retained.
+No real private input/baseline/config read, submit, approval, capture,
+contact, batch or production business write. Previous404's live proof and
+221/0/0 report are now committed in main via405.
+Whole395 stays OPEN. Next: bounded operator report-review controls, never
+funds verification or automatic deal closing. Current main is d1034fb;
+release proof checkpoint is on item/395-pipeline-review to avoid a
+documentation-only production deployment. No new product code on that branch.
+
 2026-10-20 #395 slice3 LOCAL ONLY: explicit --pipeline-file JSON input
 through existing submit CLI, required local --baseline for exact refs,
 offline default, same canonical pending-only validators and request budgets.
