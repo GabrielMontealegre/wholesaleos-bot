@@ -2,6 +2,28 @@
 
 ## Latest Run Summary
 
+2026-10-20 #395 slice4 RELEASED/verified: PR407 head d46de38, merge/main
+1b96399d2d969a2730de9aafcf9ecbc4b1cca972. Hosted39393399325 SUMMARY
+passed=225 failed=0 skipped=0 total=225,600s/file,12m12s job;review
+routes0.51s/UI5.46s/unit0.24s/countynotice249.31s. Exact Railway7195346036
+success08:40:30Z (60s after merge);health20008:40:56Z. Authenticated
+1366/400/412 Today/Pipeline7 groups/50+23 pages/conversation X/Calendar/
+lead drawers;script v2+reviewv1,no overflow,0 later console errors.
+Both current pages have0 report-review buttons, so populated review/flag
+flow is synthetic-only evidence; no live report manufactured or reviewed.
+No contact,capture,batch,approval,confirmation or business write.
+
+2026-10-20 #395 final buyer-context gap IN PROGRESS: typed rows name the
+exact linked buyer and show the canonical matcher's sourced criteria
+ceiling, separately from reported/agreed buyer price. No matcher, strict
+grid, price, funds or readiness rule changes. Pending/unsupported/future/
+stale/hidden or missing-source criteria stay unknown. Ceiling never enters
+money/net. Initial fixture used a synthetic-name buyer, correctly excluded
+by the existing policy; replaced only fixture scaffolding with Fixture
+Investor and added an explicit synthetic exclusion assertion. Pure and
+actual-dashboard1366/400/412 proofs pass;full227-file cloud/PR/release gate
+pending. Whole395 remains OPEN until the remaining acceptance audit passes.
+
 2026-10-20 #395 slice4 IN PROGRESS: explicit admin-only report review and
 correction flags as separate append-only operator receipts. Imported
 revisions stay pending; no funds, offer, price agreement, readiness or

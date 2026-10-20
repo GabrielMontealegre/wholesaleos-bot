@@ -2,6 +2,7 @@
 const reports=require('./pipeline-reports'),approvals=require('./approval-workspace'),conversations=require('./conversations'),activity=require('./record-activity');
 const jv=require('../deals/jv-workflow'),money=require('../deals/pipeline-money');
 const reportReviews=require('./pipeline-report-review');
+const deals=require('../deals/reviewed-deals');
 function readOptions(req){
  const q=req.query||{},group=q.group||'all',offset=q.offset===undefined?'0':q.offset,limit=q.limit===undefined?'50':q.limit;
  if(Object.keys(q).some(k=>!['group','offset','limit'].includes(k))||typeof group!=='string'||group!=='all'&&!Object.hasOwn(reports.LABELS,group)||typeof offset!=='string'||!/^\d{1,6}$/.test(offset)||typeof limit!=='string'||!/^\d{1,2}$/.test(limit)||Number(limit)<1||Number(limit)>50)throw Object.assign(Error('pipeline_query_invalid'),{code:'pipeline_query_invalid'});
@@ -10,6 +11,19 @@ function readOptions(req){
 function build(store,{now,timeZone='America/Mazatlan',group='all',offset=0,limit=50}={}){
  const recorded=reports.project(store,{now,timeZone}),reviews=reportReviews.project(store,{now,items:recorded.items}),pending=approvals.pendingRecords(store,now),threads=conversations.project(store,{now,timeZone});
  const refs=new Map();for(const [key,kind] of [['leads','lead'],['reviewed_deals','deal'],['buyers','buyer'],['record_matches','match']])for(const row of store[key]||[]){const ref=activity.reference(row);if(ref)refs.set(ref,refs.has(ref)?null:{kind,row});}
+ const criteriaCache=new Map();
+ function buyerCriteria(report){
+  if(!report.buyer)return null;
+  const record=refs.get(report.target.ref),buyer=refs.get(report.buyer.ref),key=JSON.stringify([report.target.ref,report.buyer.ref]);
+  if(criteriaCache.has(key))return criteriaCache.get(key);
+  const currentSource=row=>{const stamp=row?.assistant_find?.captured_at||row?.captured_at;if(stamp==null)return true;return typeof stamp==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(stamp)&&Number.isFinite(Date.parse(stamp))&&Date.parse(stamp)<=Date.parse(now)&&new Date(stamp).toISOString().slice(0,19)===stamp.slice(0,19);};
+  let match=null;
+  if(!report.address_withheld&&record?.kind==='deal'&&record.row.id===report.target.id&&buyer?.kind==='buyer'&&buyer.row.id===report.buyer.id&&currentSource(record.row)&&currentSource(buyer.row)){const evaluation=deals.evaluate(record.row,[buyer.row],now);if(!['STALE','NO'].includes(evaluation.verdict)&&!['dead','closed','expired'].includes(evaluation.status))match=evaluation.matches.find(m=>m.id===buyer.row.id);}
+  let source=null;try{const u=new URL(match?.source_url);if(u.protocol==='https:'&&!u.username&&!u.password)source=u.href;}catch{}
+  const maximum=source&&typeof match.max_price==='number'&&Number.isFinite(match.max_price)&&match.max_price>0?match.max_price:null;
+  const result={maximum,source_kind:'derived_workflow',source_url:maximum!==null?source:null,captured_at:now,evidence_text:'Existing approved buyer criteria and current reviewed-deal comps and repairs; not an agreed price or proof of funds.',label:'Derived buyer criteria ceiling; not an agreed price',buyer_status:'Not confirmed; proof of funds not established'};
+  criteriaCache.set(key,result);return result;
+ }
  const target=row=>{const t=refs.get(activity.reference(row));return t&&t.row===row&&typeof row.id==='string'?{kind:t.kind,id:row.id,ref:activity.reference(row),assistant_find:!!row.assistant_find}:null;};
  const heading=row=>row.deal_kind==='jv'&&!jv.view(row,now).full_package_evidence_ready?[row.city,row.state,row.zip].filter(Boolean).join(', ')||'Property details withheld':row.address||'Property address not recorded';
  const blankMoney=()=>money.calculate({});let unlinked=0;
@@ -28,7 +42,7 @@ function build(store,{now,timeZone='America/Mazatlan',group='all',offset=0,limit
  const open=items.filter(r=>r.group!=='closed'),selected=group==='all'?open:items.filter(r=>r.group===group);
  return {source_kind:'derived_workflow',view_kind:'pipeline_workspace',read_only:true,now,today:recorded.today,groups:reports.LABELS,counts,
   summary:{open:open.length,due:open.filter(r=>r.due_date&&r.due_date<=recorded.today).length,pending_reports:recorded.items.filter(r=>r.group!=='closed').length},
-  group,offset,limit,total:selected.length,items:selected.slice(offset,offset+limit),next_offset:offset+limit<selected.length?offset+limit:null,
+  group,offset,limit,total:selected.length,items:selected.slice(offset,offset+limit).map(r=>r.kind==='pipeline_report'?{...r,buyer_criteria:buyerCriteria(r)}:r),next_offset:offset+limit<selected.length?offset+limit:null,
   coverage:{...recorded.coverage,...reviews.coverage,unlinked_tasks:unlinked,conversations:'Existing recorded open conversations',approvals:'Existing canonical pending-review rules',funds:'No approval, match or report proves funds',offers:'Conversation messages are not inferred offers',money:'No agreed buyer price or total costs inferred from a match ceiling'}};
 }
 module.exports={build,readOptions};
