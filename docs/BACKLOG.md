@@ -2,6 +2,32 @@
 
 ## Latest Run Summary
 
+2026-10-20 #396 RELEASED: PR398 merge/main7a60404a579af9c78653fd91f41fa06f055003c8.
+Exact head e6deff1 hosted39338767722:217/0/0,600s/file,11m58s job;
+new shapes0.27s/producer0.29s/county-notice250.99s. Railway7190067124
+success02:36:47Z (47s); health200 at02:36:59Z. Supported Chrome responds
+again; owner unlocked the verification tab before/after the server restart.
+Post-deploy1366/400/412:100 visible leads hydrate, drawer opens/closes,
+Today fits. Aggregate-only screenshot crops retained, no private fields.
+One02:36:56Z lead502 during transition is retained; subsequent checks had
+no later errors.391's pending baseline proof is also complete. No real
+assistant files/config, submission, approval or production business write.
+
+2026-10-20 #395 slice1 IN PROGRESS from current main: pending-only typed
+pipeline reports via existing signed importer; fixed wait/close reasons,
+exact refs, immutable revisions, explicit source/time, no inferred funds
+proof or offer. Admin read projection and pure injected-cost net calculator;
+missing costs/prices stay unknown, losses stay negative, split is explicit.
+Two/five-day reminders only propose review; no automatic close or contact.
+New unit and loopback route tests pass; initial new-route fixture had an
+undeclared local origin, corrected without changing product assertions.
+Existing producer regression passes unmodified. Full suite gate pending.
+This is the foundation, NOT the completed Pipeline screen: CLI inputs,
+operator review controls and shared Pipeline/Today/Calendar UI are next
+ordered slices. No new UI, business action, source/gate/dependency change.
+Profile394 and demo397 remain draft behind the owner's money-workflow order.
+County ranking stays paused. No whole#395 completion or owner sign-off claimed.
+
 2026-10-19 #396 IN PROGRESS (new owner priority): feed wrapper hotfix
 accepts buyers/land-buyers->buyers, deals->deals, agents->agents with
 metadata ignored; legacy array/items forms kept, unknown/ambiguous shapes

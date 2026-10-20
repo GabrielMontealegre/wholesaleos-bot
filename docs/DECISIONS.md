@@ -1,5 +1,20 @@
 # Decisions
 
+ASSUMED: #395 ships in ordered reviewable slices. First establishes a typed
+pending workflow report and pure money/read projection; then producer,
+operator review and shared Pipeline/Today/Calendar screens. Existing signed
+import authority carries reports only, never confirms funds or offers.
+Each revision is retained and pending; a reported closed outcome does not
+close the underlying lead/deal. Two/five-day due dates are review tasks;
+no automatic closure or message -- AGENTS2/3/4/5,#393/#395 --2026-10-20.
+
+ASSUMED: #393's malformed assignment-cost default is not guessed. Explicit
+reported total costs or an injected labeled per-state/path estimate can
+produce a potential range; missing inputs stay unknown and loss stays
+negative. Partner share must be explicit before showing our share. No buyer
+reply/approval/match/report becomes confirmed funds or an agreed offer.
+This calculator never produces ARV, MAO or a readiness decision --2026-10-20.
+
 ASSUMED: #396 accepts a file's exact named array with sibling metadata,
 retaining bare arrays and strict items-only wrappers. A wrong/ambiguous
 payload container is rejected; metadata never enters row validation or
