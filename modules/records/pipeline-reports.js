@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const activity = require('./record-activity');
 const {dayAt} = require('./calendar-day');
 const jv = require('../deals/jv-workflow');
+const eligibility = require('../research/operational-lead-eligibility');
 const money = require('../deals/pipeline-money');
 const REASONS = Object.freeze({
   proof_of_funds:Object.freeze(['funds_requested','funds_review_needed']),
@@ -68,10 +69,11 @@ function project(store,{now,timeZone='America/Mazatlan',policies={}}={}){
   for(const row of latest.values()){
     const r=row.report;if(conflicts.has(r.report_id))continue;let linked;try{linked=targets(store,r);}catch{coverage.unlinked_reports++;continue;}
     const record=linked.record.row,hidden=linked.record.kind==='deal'&&record.deal_kind==='jv'&&!jv.view(record,now).full_package_evidence_ready;
+    const needsAddressProof=linked.record.kind==='lead'&&!eligibility.verifiedPropertyAddress(record);
     const due=r.waiting_on==='no_reply'?new Date(Date.parse(dayAt(r.offer_sent_at,timeZone)+'T00:00:00Z')+(r.followup_count===0?2:5)*86400000).toISOString().slice(0,10):r.next_date||null;
     const provenance={source_kind:'imported_report',source_url:hidden?null:r.source_url,captured_at:r.captured_at,evidence_text:hidden?'':r.evidence_text};
     items.push({id:row.id,report_id:hidden?null:r.report_id,group:r.waiting_on,reason_code:r.reason_code,review_status:'pending',reported:true,verified:false,
-      name:hidden?[record.city,record.state,record.zip].filter(Boolean).join(', ')||'Property details withheld':record.address||record.normalized_address||'Property address not recorded',address_withheld:hidden,
+      name:hidden?[record.city,record.state,record.zip].filter(Boolean).join(', ')||'Property details withheld':needsAddressProof?'Property address needs source proof':record.address||record.normalized_address||'Property address not recorded',address_withheld:hidden,address_needs_source_proof:needsAddressProof,
       target:{kind:linked.record.kind,id:record.id,ref:r.record_ref},buyer:linked.buyer?{id:linked.buyer.row.id,ref:r.buyer_ref,name:linked.buyer.row.name||'Buyer name not recorded'}:null,
       conversation_id:r.conversation_id||null,due_date:due,overdue:!!due&&due<today,asked_at:r.asked_at||null,offer_sent_at:r.offer_sent_at||null,followup_count:r.followup_count,
       next_step:hidden?'Open the deal to review the pending report.':r.next_step,next_action:r.waiting_on==='no_reply'?(r.followup_count===2?'Review closure; no outcome recorded automatically':'Review follow-up '+(r.followup_count+1)):hidden?'Open the deal to review the pending report.':r.next_step,

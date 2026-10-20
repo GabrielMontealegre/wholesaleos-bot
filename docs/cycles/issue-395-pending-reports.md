@@ -103,3 +103,6 @@ substitute the estimate for bad evidence. Added a direct calculator negative
 case; the importer already rejected malformed ranges. Fixture cleanup also
 checks the real resolved temp parent/name before its bounded recursive delete.
 No existing assertion or production safety gate is weakened.
+Lead headings also reuse the existing verified-property-address predicate;
+an unproven stored venue/address is labeled needs source proof, never promoted
+to a subject address by the workflow report. The raw lead remains unchanged.
