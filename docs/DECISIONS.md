@@ -1,5 +1,18 @@
 # Decisions
 
+ASSUMED: apply AGENTS7 literally to PR417's live initial-load/category race:
+revert that merge only, restore the last verified product tree, and fix/test
+the race in a separate PR. No stored business data is changed or deleted;
+feature source/proof remains recoverable in Git and the preserved branch.
+Provider incidentJUA1PC5H is resolved; it is not the current blocker --2026-10-20.
+
+D-061 remains APPROVED by architect#415,2026-10-20: generic signed-admin,
+CSRF-protected, exact-thread reviewed/versioned/idempotent owner replies,
+uncertain-send no retry, receipt, rate cap and kill switch in their own PR
+AFTER the read-only Email migration is live. No production send is authorized.
+Existing buyer/JV/legal/template gates remain. The rollback does not revoke
+this decision; implementation is waiting on a failed live prerequisite.
+
 ASSUMED: #412 starts with an isolated browser-native workspace, one shared
 stylesheet/component system and existing signed-cookie auth/APIs, not a
 React/build-chain rewrite. Explicit /app?preview=1 opts into the new shell;

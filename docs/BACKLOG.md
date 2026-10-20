@@ -2,6 +2,21 @@
 
 ## Latest Run Summary
 
+2026-10-20 #419: PR417 FAILED its negative live gate; bounded rollback in
+progress. Railway recovered20:56Z; one exact-main build7212445984 deployed
+a5b3cca at22:20:46Z. Health/new asset200 and normal1366/400/412 read-only
+Email/lead checks passed, but clicking Alerts during initial loading cancels
+the folder request and falsely leaves Latest0 messages; independent Sent
+read shows30. No data loss or outbound action. Revert only PR417, restoring
+the exact previously verified0d035e0 product tree, then deploy/verify.
+Failure trace and safe live screenshots preserved on
+item/415-reviewed-thread-replies@a4ee381. Issue419 has the narrow fix/test
+contract. No send, typed draft, capture, batch or business write. No provider
+settings, variables, billing or credentials changed. #418's provider pause
+is resolved; the remaining blocker is now this deterministic UI race.
+D-061 transport is approved but waits for the native Email migration's
+successful live gate. PR413 stays draft. Do not start the next screen.
+
 2026-10-20 #412 foundation LOCAL: isolated native /app?preview=1 shell,
 one token/component stylesheet, pinned local Lucide icons, signed-session
 reuse, recorded Today reads and allowlisted classic navigation. Four new
