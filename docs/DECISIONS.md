@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: #375's proof-of-funds prerequisite first tracks source receipts,
+not bank verification. An admin may record a source checked against the
+exact buyer and an explicitly reviewed validity date, or flag it without
+deleting history. No default validity period, account/balance fields,
+source fetch, buyer commitment or verified funds are inferred. Names,
+references/source/criteria changes require fresh source review; contact
+activity alone does not. Matching, pricing and readiness remain unchanged.
+Actual notes/financial confirmations are not authorized during verification
+-- AGENTS3/5,D-060,#393/#375 --2026-10-20.
+
 ASSUMED: #393's same profit in drafts means an admin-only review panel,
 not private net/cost/source information in the recipient's email. Reuse
 the exact canonical card DTO. Bind its content into the existing preview
