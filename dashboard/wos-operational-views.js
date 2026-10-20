@@ -2,7 +2,7 @@
 (function (root) {
   var payload = null, loading = false, error = '';
   var filters = { lane: 'working', state: '', county: '', city: '', sort: 'priority', offset: 0 };
-  var pages = ['pipeline', 'outreach', 'matching', 'review'];
+  var pages = ['outreach', 'matching', 'review'];
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function safeUrl(value) { try { var u = new URL(value); return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password ? u.href : ''; } catch (_) { return ''; } }
   function sourceLink(row) {
@@ -67,7 +67,7 @@
       .then(function(data){payload=data;error='';root.APP._operationalCounts=data.counts_all;})
       .catch(function(caught){payload=null;error=caught.message;}).finally(function(){loading=false;paint();});
   }
-  var renderers = {pipeline:'renderPipeline',outreach:'renderOutreachHub',matching:'renderMatching',review:'renderReviewQueue'};
+  var renderers = {outreach:'renderOutreachHub',matching:'renderMatching',review:'renderReviewQueue'};
   Object.keys(renderers).forEach(function(page){root[renderers[page]]=function(){setTimeout(load,0);return markup(page,payload);};});
   var oldMatches = root.matchBuyersToLead;
   root.matchBuyersToLead = function(row,buyers){return eligible(row) && Number(row.arv)>0 && Number(row.offer)>0 && oldMatches ? oldMatches(row,(buyers||root.APP.buyers||[]).filter(function(buyer){return buyer.matching_eligible===true;})) : [];};

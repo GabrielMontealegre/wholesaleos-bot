@@ -2,6 +2,27 @@
 
 ## Latest Run Summary
 
+2026-10-20 #395 slice1 RELEASED/verified: PR403 merge/main
+dce4005a4518b233c423846d2c21ffbcc6d1294c. Exact tested head0b81504;
+full cloud39361375354:219 passed,0 failed,0 skipped,600s/file,
+11m40s job; new routes0.45s/unit0.17s/session2.41s/countynotice248.72s.
+Railway7190473317 success03:07:56Z (52s); health200 at03:08:48Z.
+Authenticated report GET:0 recorded reports, all6 groups, no invented
+funds proof. Actual1366/400/412 lead/drawer/Today checks pass,0 later
+console errors. Temporary API tab closed before correct viewport proof.
+
+2026-10-20 #395 slice2 IN PROGRESS: read-only Pipeline using canonical
+approvals/conversations plus pending typed reports; six groups, honest
+unknown amounts/dates, uncapped counts with50-row pages. Today entry and
+Calendar report reminders share projections; no inferred offer/funds or
+automatic close. Existing lead/buyer/deal/conversation workspaces reused.
+Synthetic1366/400/412 clicks,paging,contrast,44px controls,list-only scroll,
+privacy and failed/auth read clearing pass. Calendar immediate DOM-count
+test raced native dialog close events; waits now precede the SAME four
+zero-count assertions. No safety assertion changed. Full cloud gate and
+release/live verification pending. Whole395 remains OPEN; private-file
+producer/review controls remain later slices. No production business write.
+
 2026-10-20 #396 RELEASED: PR398 merge/main7a60404a579af9c78653fd91f41fa06f055003c8.
 Exact head e6deff1 hosted39338767722:217/0/0,600s/file,11m58s job;
 new shapes0.27s/producer0.29s/county-notice250.99s. Railway7190067124

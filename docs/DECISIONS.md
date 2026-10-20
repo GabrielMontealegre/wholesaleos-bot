@@ -1,5 +1,21 @@
 # Decisions
 
+ASSUMED: #395 slice2 composes existing canonical pending approvals and open
+conversations with typed pending reports, not legacy saved-lead status.
+Each task belongs to exactly one waiting group; totals precede pagination.
+A conversation is never mined into an offer or proof of funds. An approval
+alone has no scheduled next date: show unknown, not a fabricated deadline.
+Existing conversation rules and explicit report dates are reused on Calendar.
+No match ceiling substitutes for an agreed buyer price or known total costs.
+The new screen is read-only; review opens existing workspaces, never submits
+or approves anything -- AGENTS3/5,#395 ordered slices --2026-10-20.
+
+ASSUMED: Calendar close/Escape browser assertions must observe detachment
+after the native asynchronous close event, not assume synchronous node
+removal. Add bounded Playwright waits and retain all four zero-count
+assertions and every product close handler -- AGENTS4 test scaffolding
+policy; repeated local immediate-count failures --2026-10-20.
+
 ASSUMED: #395 ships in ordered reviewable slices. First establishes a typed
 pending workflow report and pure money/read projection; then producer,
 operator review and shared Pipeline/Today/Calendar screens. Existing signed
