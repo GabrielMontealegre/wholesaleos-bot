@@ -5,6 +5,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 const navigation = require('../dashboard/workspace/navigation');
 const { registerWorkspacePreview } = require('../modules/ui/workspace-preview');
+const serverSource = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
+assert.equal(serverSource.split("require('./modules/ui/workspace-preview').registerWorkspacePreview(app);").length - 1, 1,
+  'The production server must register the tested preview document route exactly once');
 
 for (const key of ['today', 'email', 'leads', 'deals', 'buyers', 'calendar', 'pipeline', 'approvals', 'settings']) {
   assert(navigation.href(key).startsWith('/dashboard/?workspace='));
