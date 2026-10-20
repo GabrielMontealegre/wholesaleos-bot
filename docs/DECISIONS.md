@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: #395 operator report review is acknowledgment/correction metadata,
+not buyer approval, proof-of-funds verification, an offer, price agreement
+or deal closing. Store append-only receipts separately from immutable
+pending imported revisions. Require the exact current report, source check
+and target/review version; a changed source/reference/target or a later
+review requires a fresh check. Flagging retains the row and its group/date,
+not a fabricated closed outcome. Keep unsigned source details withheld and
+review disabled until existing sharing checks pass. Agents cannot submit
+reviews through the signed assistant importer -- AGENTS3/5,#395 --2026-10-20.
+
 ASSUMED: #395 producer accepts only an explicitly named structured JSON
 Pipeline file, never parses pipeline.md or prose outcomes into financial
 facts. Require an explicit local reference baseline for offline exact-ref

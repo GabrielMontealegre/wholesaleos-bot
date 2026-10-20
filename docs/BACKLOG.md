@@ -2,6 +2,19 @@
 
 ## Latest Run Summary
 
+2026-10-20 #395 slice4 IN PROGRESS: explicit admin-only report review and
+correction flags as separate append-only operator receipts. Imported
+revisions stay pending; no funds, offer, price agreement, readiness or
+business close is established. Exact revision/target/review versions,
+source checkbox, required correction note, quiet duplicates, stale/forged/
+future/unlinked/unsigned refusal. Existing counts and Calendar dates stay
+unchanged. Synthetic1366/400/412:source/note no-post negatives,review/flag,
+X/Escape,centered fixed heading/body-only scroll,44px and auth clearing
+pass. Route fixture initially missed a local origin declaration; corrected.
+Scroll proof now uses a valid long source excerpt instead of assuming a
+short fixture overflows. No existing assertion changed. Full225-file cloud
+gate, PR and exact-deploy read-only proof pending; no real report action.
+
 2026-10-20 #395 slice3 RELEASED/verified: PR405 tested head81d412f,
 merge/main d1034fbe849093c7c1aba506ccb59399aa99b67d. Hosted39366412430
 SUMMARY passed=222 failed=0 skipped=0 total=222,600s/file,9m39s job;
