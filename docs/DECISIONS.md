@@ -1,5 +1,22 @@
 # Decisions
 
+ASSUMED: #412 starts with an isolated browser-native workspace, one shared
+stylesheet/component system and existing signed-cookie auth/APIs, not a
+React/build-chain rewrite. Explicit /app?preview=1 opts into the new shell;
+default /app and /dashboard remain classic until parity. No Railway flag
+change or business API is needed. Real recorded Today work exercises the
+foundation; non-migrated screens remain working classic links, not fake
+pages. Email migrates in the next ordered PR -- AGENTS3/5,#412 --2026-10-20.
+
+Owner priority update via architect#412,2026-10-20: design system and
+usable Email are priority1 before new features, superseding the prior
+money-first visual pause. Design system/shell/shared components first,
+then Email, Today, cards and Pipeline in ordered PRs. Remove old styling
+writers as each screen migrates; no new one-off patch stylesheet layers.
+PR413 buyer-source tracking stays draft/deferred. API/auth/data/money and
+outreach safeguards remain unchanged. Framework choice is technical and
+must be logged, with old dashboard retained until functional parity.
+
 ASSUMED: #393's same profit in drafts means an admin-only review panel,
 not private net/cost/source information in the recipient's email. Reuse
 the exact canonical card DTO. Bind its content into the existing preview

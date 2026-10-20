@@ -168,6 +168,7 @@ app.use(express.text({ limit: '100mb', type: 'text/plain' }));
 // Dashboard API requests are same-origin; no cross-origin wildcard is needed.
 // Ã¢ÂÂÃ¢ÂÂ Serve dashboard static files Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+require('./modules/ui/workspace-preview').registerWorkspacePreview(app);
 // ── API Rate Limiter (express-rate-limit) ──
 // Applied to /api/* only — dashboard and static files are NOT affected
 // Safe limits: 200 requests per 15 minutes per IP
