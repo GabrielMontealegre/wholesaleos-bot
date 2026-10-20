@@ -123,11 +123,12 @@
   function emailPanel(item) {
     var state=messageState[item.id]||{},preview=state.preview;
     return '<div class="bf-email-panel"><h4>Buyer email</h4><p role="status">'+esc(state.error||state.notice||'Choose Email this buyer, or select matching deals. Nothing is sent automatically.')+'</p>'+
-      (preview?'<p>To: '+esc(preview.to)+'</p><h4>'+esc(preview.subject)+'</h4><pre class="bf-email-preview">'+esc(preview.body)+'</pre>'+
+      (preview?'<p>To: '+esc(preview.to)+'</p><h4>'+esc(preview.subject)+'</h4><pre class="bf-email-preview">'+esc(preview.body)+'</pre>'+profitReview(preview.profit_review)+
         '<label class="bf-deal-select"><input type="checkbox" data-email-reviewed'+(state.reviewed?' checked':'')+'>I reviewed this entire email and its recipient.</label><div class="bf-actions"><button type="button" data-buyer-email="draft"'+(state.busy?' disabled':'')+'>Save reviewed draft</button><button type="button" data-buyer-email="send"'+(!state.draftId||!preview.configured||state.busy?' disabled':'')+'>Send email</button></div>'+
         (!preview.configured?'<p>Email sending is not connected. Check Settings &gt; Email.</p>':''):'')+
       (state.messages||[]).map(function(message){return '<details><summary>'+esc(message.subject)+' - '+esc(message.status==='accepted'?'Accepted by mail server':message.status==='unknown'||message.status==='sending'?'Delivery uncertain - check Sent before doing anything else':'Draft, not sent')+'</summary><p>'+esc(sourceTime(message.sent_at||message.created_at))+'</p><pre class="bf-email-preview">'+esc(message.body)+'</pre></details>';}).join('')+'</div>';
   }
+  function profitReview(rows){return Array.isArray(rows)&&rows.length?'<section data-owner-profit-review><h4>Your private profit review</h4><p>Not included in the email above.</p>'+rows.map(function(row){return '<p>'+esc(row.deal_ref||'Deal reference not assigned')+'</p>'+(root.wosMatchProfit?root.wosMatchProfit.markup(row.profit):'<p>Profit review unavailable. Refresh before reviewing this draft.</p>');}).join('')+'</section>':'';}
   function markup(payload) {
     var counts = payload && payload.counts || {};
     var items = payload && payload.items || [];

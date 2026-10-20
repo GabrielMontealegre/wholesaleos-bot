@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-20 #393 owner draft profit review LOCAL ONLY: canonical match
+profit DTO beside the recipient preview, explicitly private/not emailed.
+Recipient body/to/subject unchanged; profit content is bound to the same
+stale-preview version checked before draft save/send. Signed JV fixture
+gates are real, not stubbed. Pure and actual-dashboard1366/400/412 tests
+pass, including unchanged recipient body, exact card amounts, unknown
+funds, rejected client metadata and no network/clock/business writes.
+UI proof permits only synthetic preview requests; save/send stay blocked.
+Existing tests untouched. Full231-file cloud gate, PR and exact-deploy
+read-only verification remain pending; current live is still PR410.
+
 2026-10-20 #393 profit-card slice RELEASED/verified: PR410 head7a3e2de,
 merge/mainf4ac70bc119259d03e2f5489f25f621751612f70. Hosted39400583804:
 SUMMARY passed=229 failed=0 skipped=0 total=229;600s/file,10m23s job;
