@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: #395's buyer max means the existing approved matcher's criteria
+ceiling for the exact linked buyer/deal, not an agreed buyer price. Reuse
+reviewed-deals.evaluate without changing it; retain unknown when no current
+sourced eligible match exists. Hide criteria sources for unsigned JV rows.
+Display derived-as-of provenance and keep all reported money/net and funds
+statuses separate. This closes a display gap, not a new matching or offer
+policy -- AGENTS3/5,#395/#393 --2026-10-20.
+
 ASSUMED: #395 operator report review is acknowledgment/correction metadata,
 not buyer approval, proof-of-funds verification, an offer, price agreement
 or deal closing. Store append-only receipts separately from immutable
