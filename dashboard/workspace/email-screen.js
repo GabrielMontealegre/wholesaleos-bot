@@ -4,7 +4,7 @@
   var extraFolders = { drafts: 'Drafts', starred: 'Starred', buyers: 'WOS/Buyers', jv_deals: 'WOS/JV Deals', lead_alerts: 'WOS/Lead Alerts', title: 'WOS/Title', templates: 'WOS/Templates', bounced: 'WOS/Bounced', billing: 'WOS/Billing' };
   function create(options) {
     var host = options.host, state = { folder: 'inbox', category: 'people', threads: [], unavailable: [], selected: '', body: [], busy: false, error: '', composing: false };
-    var sequence = 0, disposed = false, drafts = new Map();
+    var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map();
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function time(value) { return root.wosCardClock.formatTime(value, now()); }
     function visible() { return state.threads.filter(function (thread) { return thread.category === state.category; }); }
@@ -54,7 +54,7 @@
         '<section id="mail-panel-' + (state.category === 'people' ? 'alerts' : 'people') + '" role="tabpanel" aria-labelledby="mail-' + (state.category === 'people' ? 'alerts' : 'people') + '" hidden></section></div></section>';
       // The tab controller switches the list projection, not a second nested pane.
       host.querySelectorAll('[data-tab]').forEach(function (button) {
-        function select(key) { remember(); sequence++; state.category = key; state.selected = ''; state.body = []; state.composing = false; state.busy = false; paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
+        function select(key) { remember(); sequence++; state.category = key; state.selected = ''; state.body = []; state.composing = false; state.busy = metadataBusy; paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
         button.addEventListener('click', function () { select(button.dataset.tab); });
         button.addEventListener('keydown', function (event) { if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) { event.preventDefault(); select(event.key === 'Home' ? 'people' : event.key === 'End' ? 'alerts' : button.dataset.tab === 'people' ? 'alerts' : 'people'); } });
       });
@@ -64,7 +64,7 @@
       host.querySelectorAll('[data-mail-key]').forEach(function (button) { button.addEventListener('click', function () { open(button.dataset.mailKey); }); });
       host.querySelector('[data-mail-folder-select]').addEventListener('change', function (event) { if (Object.hasOwn(extraFolders, event.target.value)) { remember(); state.folder = event.target.value; state.category = 'people'; load(); } });
       var back = host.querySelector('#mail-back');
-      if (back) back.addEventListener('click', function () { remember(); sequence++; state.busy = false; state.selected = ''; state.body = []; state.composing = false; paint(); var first = host.querySelector('.ws-mail-row'); if (first) first.focus(); });
+      if (back) back.addEventListener('click', function () { remember(); sequence++; state.busy = metadataBusy; state.selected = ''; state.body = []; state.composing = false; paint(); var first = host.querySelector('.ws-mail-row'); if (first) first.focus(); });
       var reply = host.querySelector('#mail-reply');
       if (reply) { reply.setAttribute('aria-keyshortcuts', 'r'); reply.addEventListener('click', function () { remember(); state.composing = true; paint(); host.querySelector('[name="body"]').focus(); }); }
       var form = host.querySelector('.ws-composer');
@@ -81,25 +81,27 @@
         host.querySelector('#mail-close-reply').addEventListener('click', function () { remember(); state.composing = false; paint(); host.querySelector('#mail-reply').focus(); });
       }
     }
-    async function request(url, ticket) {
+    async function request(url, ticket, folderRead) {
       var response = await root.fetch(url, { credentials: 'include', cache: 'no-store' });
-      if (disposed || ticket !== sequence) return null;
+      if (disposed || ticket !== (folderRead ? folderSequence : sequence)) return null;
       if (response.status === 401 || response.status === 403) { destroy(); options.onUnauthorized(); return null; }
       if (!response.ok) throw Error('unavailable');
       var value = await response.json();
-      return disposed || ticket !== sequence ? null : value;
+      return disposed || ticket !== (folderRead ? folderSequence : sequence) ? null : value;
     }
     async function load() {
-      var ticket = ++sequence;
+      // Changing People/Alerts cancels body selection, not this folder's metadata.
+      var ticket = ++folderSequence;
+      sequence++; metadataBusy = true;
       state.threads = []; state.unavailable = []; state.selected = ''; state.body = []; state.composing = false; state.busy = true; state.error = ''; paint();
       try {
-        var value = await request('/api/gmail/messages?folder=' + state.folder + '&limit=30', ticket);
+        var value = await request('/api/gmail/messages?folder=' + state.folder + '&limit=30', ticket, true);
         if (!value) return;
         if (value.ok !== true) throw Error('unavailable');
         var projected = model.list(value.messages, { now: now() });
         state.threads = projected.threads; state.unavailable = projected.unavailable;
-      } catch (_) { if (ticket === sequence && !disposed) state.error = 'Email could not be loaded.'; }
-      finally { if (ticket === sequence && !disposed) { state.busy = false; paint(); } }
+      } catch (_) { if (ticket === folderSequence && !disposed) state.error = 'Email could not be loaded.'; }
+      finally { if (ticket === folderSequence && !disposed) { metadataBusy = false; state.busy = false; paint(); } }
     }
     async function open(key) {
       remember();
@@ -127,7 +129,7 @@
       else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
-    function destroy() { disposed = true; sequence++; drafts.clear(); state.threads = []; state.body = []; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
+    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; drafts.clear(); state.threads = []; state.body = []; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
     document.addEventListener('keydown', keydown);
     root.addEventListener('beforeunload', beforeUnload);
     return { mount: load, refresh: function () { remember(); return load(); }, destroy: destroy };

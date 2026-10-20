@@ -2,6 +2,26 @@
 
 ## Latest Run Summary
 
+2026-10-20 22:52Z #412 read-only Email RELEASED/VERIFIED through PR421,
+main373855d8f27b112301443e7900fcd2c04db7784f. Provider outage418 resolved.
+Original417 failed an early-tab negative live case, so420 restored the exact
+prior product:235/235 green, deployment7212855384 healthy22:44:20Z,
+classic Email/lead drawer and foundation1366/400/412 verified. Then421 fixed
+folder/body request ownership;238/238 green,0 skips,600s/file;11m51s test
+step/12m46s job, county-notice262.63s, new loading test5.03s, Email UI3.91s.
+Exact active Railway24fb22b2-659c-42f2-8852-4481d7090eb6 shows successful
+source373855d in Details; GitHub deployment mirror lagged. Health/v2 asset200
+at22:49:38Z. Live1366/400/412 early Alerts selection stayed Loading, then
+correctly showed30 source messages instead of false0. Inbox/Sent/People,
+real body reading, local empty Reply/disabled Send, X/Back and classic lead
+drawer verified;0 console errors. Safe live screenshots and both full timing
+artifacts preserved. No send, typed draft, handoff, capture, batch, confirmation
+or business write. All safety gates unchanged. #419 fixed; parent412 OPEN.
+Next is approved D-061 exact-thread reply transport on the preserved
+item/415-reviewed-thread-replies branch; trace exists, no transport code yet.
+Run stopped at quota reserve after verification, not by asking what to do.
+PR413 remains draft; next screen waits for owner sign-off/ordered priorities.
+
 2026-10-20 20:32Z #412 Email MERGED, release BLOCKED by Railway's public
 build incident JUA1PC5H ([release blocker #418](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/418)),
 not by a failing test or an application crash.
@@ -22,6 +42,32 @@ No send, capture, batch, contact, evidence confirmation or business write.
 Separate next branch item/415-reviewed-thread-replies has a writer/reader
 trace only; implementation waits for this required live dependency. D-061
 is APPROVED, not an unanswered architecture question. PR413 stays draft.
+
+2026-10-20 #419 fix LOCAL: restored the isolated read-only native Email
+on item/419-email-folder-race, with separate folder-metadata and body request
+generations. Category changes preserve the in-flight metadata read and busy
+state; old folder/body results still cannot replace a newer view. New delayed
+load test reproduced the live failure before the fix, then passed15 cases
+(1366/400/412 x category/folder/empty/failure/401), no duplicate metadata reads
+or writes. Existing Email UI test passes unchanged. Bundle email-screen?v=2.
+Full238-file hosted gate/review and rollback420/live restoration gates remain
+required. Do not merge this fix before the rollback is verified healthy.
+This is not a new Send transport; D-061 and the next screen remain pending.
+
+2026-10-20 #419: PR417 FAILED its negative live gate; bounded rollback in
+progress. Railway recovered20:56Z; one exact-main build7212445984 deployed
+a5b3cca at22:20:46Z. Health/new asset200 and normal1366/400/412 read-only
+Email/lead checks passed, but clicking Alerts during initial loading cancels
+the folder request and falsely leaves Latest0 messages; independent Sent
+read shows30. No data loss or outbound action. Revert only PR417, restoring
+the exact previously verified0d035e0 product tree, then deploy/verify.
+Failure trace and safe live screenshots preserved on
+item/415-reviewed-thread-replies@a4ee381. Issue419 has the narrow fix/test
+contract. No send, typed draft, capture, batch or business write. No provider
+settings, variables, billing or credentials changed. #418's provider pause
+is resolved; the remaining blocker is now this deterministic UI race.
+D-061 transport is approved but waits for the native Email migration's
+successful live gate. PR413 stays draft. Do not start the next screen.
 
 2026-10-20 #412 native Email LOCAL, pending hosted gate/release: two panes,
 one-pane phone reader, compact folders, People/Alerts, sourced role colors,

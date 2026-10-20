@@ -1,5 +1,11 @@
 # Decisions
 
+ASSUMED: PR421's rollback-parent8e2c849 has a byte-identical tree to current
+main506707f (empty git diff). Preserve its exact full-tested head instead of
+force-rebasing merely to copy a merge-only ancestor. GitHub merged cleanly,
+no conflict resolution/product change, and live exact source373855d verified.
+No safety or test gate was waived -- AGENTS3/6 --2026-10-20.
+
 ASSUMED: a provider-wide build pause before any new deployment exists is
 an external RELEASE BLOCKED state, not a failed application verification.
 Keep the last verified healthy deployment; do not revert working source or
@@ -7,6 +13,19 @@ change provider settings to manufacture a deploy. Retry the exact merged
 SHA once the workspace resumes builds (Railway says paused triggers are
 not replayed), then perform every live gate before calling it released --
 AGENTS3/7, public Railway incidentJUA1PC5H --2026-10-20.
+
+ASSUMED: apply AGENTS7 literally to PR417's live initial-load/category race:
+revert that merge only, restore the last verified product tree, and fix/test
+the race in a separate PR. No stored business data is changed or deleted;
+feature source/proof remains recoverable in Git and the preserved branch.
+Provider incidentJUA1PC5H is resolved; it is not the current blocker --2026-10-20.
+
+D-061 remains APPROVED by architect#415,2026-10-20: generic signed-admin,
+CSRF-protected, exact-thread reviewed/versioned/idempotent owner replies,
+uncertain-send no retry, receipt, rate cap and kill switch in their own PR
+AFTER the read-only Email migration is live. No production send is authorized.
+Existing buyer/JV/legal/template gates remain. The rollback does not revoke
+this decision; implementation is waiting on a failed live prerequisite.
 
 ## D-061: Generic Owner Reply Transport
 
