@@ -1,5 +1,22 @@
 # Decisions
 
+ASSUMED: continue D-061 phase2 implementation/tests locally while phase1's
+merged release is blocked by workspace deployment availability (#423), but
+keep its PR draft/unmerged until exact phase1 deployment and read-only
+verification pass. A workspace Limited Access banner alongside fully
+operational public status is not proof of billing trouble or permission
+to change settings. Preserve the healthy running version; no automatic
+deploy retries or false live claim -- AGENTS3/7/10 --2026-10-21.
+
+ASSUMED: source-only reply defaults use a separate signed-admin GET context
+route, only after explicit Reply and enabled status; never persist a preview
+merely to populate fields. User-typed additions are explicit preview input.
+35s client timeout covers response-body reading as well as headers; a lost
+send response is uncertain and cannot auto-retry. Composer keeps uncertainty
+across local close/reopen; durable API attempt gates survive reload/restart.
+No new credentials, sending enablement or production test send --D-061,
+AGENTS3/5 --2026-10-21.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

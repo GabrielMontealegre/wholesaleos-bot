@@ -2,7 +2,29 @@
 
 ## Latest Run Summary
 
-2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
+2026-10-21 02:59Z D-061 phase1 MERGED through PR422, main7b36ed2,
+release BLOCKED on workspace deployment pause (#423). Exact-head cloud
+39533634399: SUMMARY passed=240 failed=0 skipped=0 total=240;600s/file,
+12m13s test step/13m12s job; county-notice284.05s, new policy/API1.13s,
+participants1.11s. More than10m after merge no new deployment exists;
+Railway shows Limited Access / Deploys have been paused temporarily, while
+public status is Fully Operational and service Wait for CI is OFF. Cause
+unknown: do not assume billing or change settings. Active remains verified
+PR421/373855d on24fb22b2-659c-42f2-8852-4481d7090eb6. Old health200 is
+not new release proof. No deployment retry, variable change or rollback.
+Keep415/412 OPEN. Complete exact-main/default-OFF GET + read-only live
+verification when builds resume; no production send/preview is authorized.
+
+Independent phase2 built locally on item/415-reply-composer, NOT released:
+source-only GET reply defaults, exact preview/edit/review/explicit Send,
+receipt-version matching, uncertainty terminal state,35s client timeout and
+session-loss clearing. Default OFF and Open in Gmail remain. New1366/400/412
+synthetic interaction/context tests pass; existing read-only assertions stay
+unchanged (one GET-status fixture stub added). Synthetic before/after images,
+paint35-47ms and Lighthouse98 desktop/100 phone; not live measurements.
+Full242-file final-head gate pending. Do not merge phase2 until422 is live.
+
+2026-10-21 D-061 phase1 implementation on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.
 Pure policy validates source graph, timestamp, RFC anchor, recipients and
@@ -875,6 +897,13 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-21: D-061 API#422 merged7b36ed2 after240/240 exact-head green;
+release blocked#423, no new source ever ran. Old421 remains healthy; no
+rollback or forbidden setting action. Continued independent composer
+implementation/test locally; source-based defaults, preview/review, explicit
+send and durable API receipts, zero real mail.415/412 remain open. No capture,
+batch, confirmation, outreach, production preview/save or business write.
 
 2026-10-15: #366A released in#368;mainffa3dd0,deploy7108050258 success60s,
 health/dashboard200,192passed/0failed/0skipped. Live1366/412 More/account and

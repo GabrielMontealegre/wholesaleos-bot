@@ -4,7 +4,7 @@
   var extraFolders = { drafts: 'Drafts', starred: 'Starred', buyers: 'WOS/Buyers', jv_deals: 'WOS/JV Deals', lead_alerts: 'WOS/Lead Alerts', title: 'WOS/Title', templates: 'WOS/Templates', bounced: 'WOS/Bounced', billing: 'WOS/Billing' };
   function create(options) {
     var host = options.host, state = { folder: 'inbox', category: 'people', threads: [], unavailable: [], selected: '', body: [], busy: false, error: '', composing: false };
-    var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map();
+    var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map(), outcomes = new Map(), replyBinding = null;
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function time(value) { return root.wosCardClock.formatTime(value, now()); }
     function visible() { return state.threads.filter(function (thread) { return thread.category === state.category; }); }
@@ -17,7 +17,7 @@
     function roleChip(role) { return c.roleBadge(role); }
     function remember() {
       var form = host.querySelector('.ws-composer');
-      if (form && state.selected) drafts.set(state.selected, { to: form.elements.to.value, subject: form.elements.subject.value, body: form.elements.body.value });
+      if (form && state.selected) drafts.set(state.selected, { to: form.elements.to.value, cc: form.elements.cc.value, subject: form.elements.subject.value, body: form.elements.body.value });
     }
     function bodyMarkup() {
       if (!chosen()) return c.empty('Select a conversation', 'Choose a message to read it.');
@@ -31,6 +31,7 @@
     }
     function paint() {
       if (disposed) return;
+      if (replyBinding) { replyBinding.destroy(); replyBinding = null; }
       host.classList.add('ws-content--mail');
       host.setAttribute('aria-busy', String(state.busy));
       var thread = chosen(), items = visible();
@@ -49,8 +50,8 @@
         '<div class="ws-mail-reading-actions">' + (thread ? c.button({ label: 'Reply', icon: 'mail', id: 'mail-reply', disabled: !state.body.length || state.busy }) : '') +
         '<a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a></div></header>' +
         '<div class="ws-mail-thread">' + bodyMarkup() + '</div>' +
-        (thread && state.composing ? '<section class="ws-mail-composer" aria-label="Reply composer"><header><h3>Reply</h3>' + c.button({ label: 'Close reply', icon: 'x', iconOnly: true, id: 'mail-close-reply' }) + '</header>' + c.composer('mail-draft') +
-          '<p class="ws-muted">Not sent. Reply sending is unavailable; use Gmail.</p></section>' : '') + '</section>' +
+        (thread && state.composing ? '<section class="ws-mail-composer" aria-label="Reply composer"><header><h3>Reply</h3>' + c.button({ label: 'Close reply', icon: 'x', iconOnly: true, id: 'mail-close-reply' }) + '</header>' + c.composer('mail-draft', { cc: true }) +
+          '<p class="ws-muted" role="status" data-reply-status>Not sent. Reply sending is unavailable; use Gmail.</p></section>' : '') + '</section>' +
         '<section id="mail-panel-' + (state.category === 'people' ? 'alerts' : 'people') + '" role="tabpanel" aria-labelledby="mail-' + (state.category === 'people' ? 'alerts' : 'people') + '" hidden></section></div></section>';
       // The tab controller switches the list projection, not a second nested pane.
       host.querySelectorAll('[data-tab]').forEach(function (button) {
@@ -73,10 +74,12 @@
         var latestBody = state.body[state.body.length - 1];
         form.elements.to.value = draft ? draft.to : thread.latest.direction === 'out' ? latestBody.to || '' : thread.latest.direction === 'in' ? latestBody.from || '' : '';
         form.elements.subject.value = draft ? draft.subject : (/^re:/i.test(thread.latest.subject || '') ? thread.latest.subject : 'Re: ' + (thread.latest.subject || '(No subject)'));
+        form.elements.cc.value = draft ? draft.cc || '' : '';
         form.elements.body.value = draft ? draft.body : '';
         form.elements.to.type = 'text';
         form.querySelector('.ws-check').hidden = true;
-        c.bindComposer(form);
+        replyBinding = root.WOSEmailReply.bind({ form: form, note: host.querySelector('[data-reply-status]'), messageIds: thread.messages.map(function (row) { return row.id; }), threadKey: thread.key, hasDraft: !!draft,
+          terminal: outcomes.get(thread.key), onTerminal: function (value) { outcomes.set(thread.key, value); }, onUnauthorized: function () { destroy(); options.onUnauthorized(); } });
         form.querySelector('footer').insertAdjacentHTML('afterbegin', '<a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a>');
         host.querySelector('#mail-close-reply').addEventListener('click', function () { remember(); state.composing = false; paint(); host.querySelector('#mail-reply').focus(); });
       }
@@ -129,7 +132,7 @@
       else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
-    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; drafts.clear(); state.threads = []; state.body = []; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
+    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); state.threads = []; state.body = []; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
     document.addEventListener('keydown', keydown);
     root.addEventListener('beforeunload', beforeUnload);
     return { mount: load, refresh: function () { remember(); return load(); }, destroy: destroy };
