@@ -3540,6 +3540,7 @@ function getGmailTransport() {
 }
 
 require('./modules/email/mailbox-reader').registerMailboxReads(app, { requireAdmin, db });
+require('./modules/email/reviewed-thread-replies').registerRoutes(app, { requireAdmin, db });
 
 app.post('/api/gmail/send', serverSendDisabled);
 

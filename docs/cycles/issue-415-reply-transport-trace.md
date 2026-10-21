@@ -1,7 +1,8 @@
 # Exact-Thread Reply Transport (D-061)
 
-Status: traced, not implemented or released. Start implementation only after
-PR417's read-only Email migration is live-verified. No real message is authorized.
+Status2026-10-21: phase1 transport/API implemented locally after corrected
+native Email PR421 was live-verified. Phase2 composer binding is not implemented.
+Full-suite/review/release pending. No real message is authorized. Default OFF.
 
 ## Writers And Readers
 

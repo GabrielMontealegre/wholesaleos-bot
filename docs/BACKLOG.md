@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
+exact-thread reply backend, default OFF, no frontend binding or real send.
+Structured source participants now survive IMAP/OAuth metadata/body paths.
+Pure policy validates source graph, timestamp, RFC anchor, recipients and
+operator-typed additions; reviewed exact version/expiry, persisted attempt,
+uncertain/no-retry, receipt-backed idempotency,30/hour and kill switch.
+Signed admin/current-role and strict same-origin JSON/custom-header CSRF;
+linked deal/buyer receipts contain no bodies. Two new hermetic files pass,
+plus unchanged mailbox/thread/conversation regressions. No existing assertion
+changed. Full240-file hosted gate and backend-only release remain pending.
+This is an ordered security-boundary slice, not a claim Send works in the UI.
+Phase2 wires the existing composer to preview/review/Send after this is live;
+no new screen migration or business action is authorized by the implementation.
+
 2026-10-20 22:52Z #412 read-only Email RELEASED/VERIFIED through PR421,
 main373855d8f27b112301443e7900fcd2c04db7784f. Provider outage418 resolved.
 Original417 failed an early-tab negative live case, so420 restored the exact
