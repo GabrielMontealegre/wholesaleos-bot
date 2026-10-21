@@ -48,6 +48,13 @@ late-response cancellation and zero writes/external requests.
 
 Synthetic first contentful paint42.4/43.3/44.4ms at1366/400/412. Lighthouse13.5.0
 accessibility98 desktop and100 phone. These are local fixture results, not live
-provider/mailbox measurements. Focused checks pass; full hosted gate and exact-source live verification are
-pending. Keep draft while Railway423 prevents ordered release verification.
+provider/mailbox measurements. Focused checks pass. Product83d822a passed
+full hosted gate39662951658:240 passed,0 failed,0 skipped,600s/file.
+Test step11m51s/job13m07s; Email UI4.21s/loading5.07s/shell6.47s;
+county-notice257.04s. All per-file timings are in docs/test-results/
+issue-412-email-reading-space/full-suite-39662951658.txt.
+Exact-source live verification remains pending. Keep PR427 draft behind423's
+release prerequisites; the GitHub deployment mirror has no current422 entry
+and the Railway browser status check timed out. Neither mirror lag nor an old
+health200 proves provider recovery or deployment. No duplicate build triggered.
 No send, real draft, production write, capture or confirmation was performed.

@@ -10,9 +10,15 @@ message header and phone reading mode that keeps folders/Back/Reply but
 returns People/Alerts with Back. Errors/loading stay visible. No source
 content, mailbox transport, auth or send gate changed. Synthetic1366/400/412
 before/after proof gives150px more desktop reading height and185px on phones.
-Focused regressions pass; hosted full suite and release remain pending.
+Focused regressions pass; product83d822a hosted gate39662951658 passed
+240/0/0,600s/file,test11m51s/job13m07s. Email UI4.21s/loading5.07s,
+shell6.47s/county-notice257.04s; full per-file timings committed.
+Lighthouse98 desktop/100 phone. Release remains pending.
 Railway423 release prerequisites still apply; do not call this live or start
 the next Deals screen before the corrected Email receives owner sign-off.
+PR427 stays draft. Latest deployment mirror still has no exact422 release,
+and Railway browser control timed out during this run; no successful live
+verification or current provider recovery is claimed. No duplicate build.
 
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
