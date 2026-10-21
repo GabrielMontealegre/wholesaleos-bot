@@ -7,13 +7,20 @@ holds the ordered releases. New pure fixed-rate scenario math covers payments,
 IO transitions, first-year cash flow/returns, coverage and balloon balances;
 no product reader/writer, route, offer, stored value or UI is changed. Explicit
 inputs/assumptions only, missing expenses/costs stay unknown, losses retained.
-Focused tests pass; full hosted gate pending. Remains DRAFT behind424/425.
+Focused tests and full241/241 hosted gate passed on productb7dc6e7,
+run39659500396:0 failures/skips,600s/file,test8m32s/job9m25s; finance0.06s,
+existing match-profit0.25s/reviewed-deals0.14s/county-notice172.85s.
+All per-file timings committed. Remains DRAFT behind424/425.
 This does not complete the Deals screen, source mapping or target-return ceiling.
 Today425 product7f52520 passed243/0/0 hosted39655779023 (11m55s test step),
-documentation head43ffeaf has automatic gate39658025189 in progress. Its
+documentation head43ffeaf also passed243/0/0 in run39658025189. Its
 safe screenshots/timings/checkpoint are preserved on the existing branch.
 Railway18:48Z still showed Limited Access and active421; no duplicate build,
 setting/billing change, message, capture, batch or production write.
+The existing Deals GET already provides canonical evaluated comps, matches,
+profit and exact location counts; future UI must label its100-row cap honestly.
+Gabriel's required Email design sign-off was requested once through the app;
+response pending. Items424/425 remain exempt from that waiting gate per412.
 
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.

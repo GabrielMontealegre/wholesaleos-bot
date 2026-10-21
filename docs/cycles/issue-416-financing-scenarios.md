@@ -81,4 +81,16 @@ Unit coverage: known fixed-rate numbers, independent monthly amortization
 recurrence, zero and tiny interest, IO-only and midyear transitions, retained
 balloon principal, cash purchases, negative cash flow, incomplete expenses/costs,
 conflicting bases, invalid types/ranges/months, scenario-kind dedupe, input
-immutability and zero clock/network/write effects. Full hosted suite pending.
+immutability and zero clock/network/write effects. Full hosted suite passed on
+productb7dc6e753396917eca5a417c888c92e1ac92138f, run39659500396:
+241 passed,0 failed,0 skipped,600s/file. Test step8m32s,job9m25s;
+finance0.06s,unchanged match-profit0.25s/reviewed-deals0.14s/county-notice172.85s.
+All per-file timings are under docs/test-results/issue-416-financing-scenarios/.
+
+Next-screen trace: reviewed-deal-routes.js GET /api/dashboard/todays-deals
+already returns reviewed-deals.list's canonical value/match/profit projection
+and location_counts when location_exact=true. It returns at most100 items;
+the UI must not mislabel that subset as the full count. Existing record-activity
+timeline summaries retain reported attribution and strip message bodies.
+Future briefs must use those sources and respect jv_workflow's withheld-address
+and signed-interest rules. No new reader or route is added by this trace.
