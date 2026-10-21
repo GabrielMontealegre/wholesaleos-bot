@@ -67,16 +67,17 @@
     clearPrivate();
     host.innerHTML = '<div class="ws-shell"><aside class="ws-sidebar"><a class="ws-brand" href="/app?preview=1">WholesaleOS</a>' + navigation() +
       '<div class="ws-sidebar-footer"><a class="ws-button" href="/dashboard/">Classic dashboard</a></div></aside>' +
-      '<div class="ws-workspace"><header class="ws-topbar">' +
+      '<div class="ws-workspace' + (screen === 'email' ? ' ws-workspace--mail' : '') + '"><header class="ws-topbar">' +
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1>' + (screen === 'email' ? 'Email' : 'Today') + '</h1><div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
       '<a class="ws-button ws-button--icon" href="' + nav.href('settings') + '" aria-label="Settings" data-help="Open your current settings">' + c.icon('settings') + '</a>' +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
-      '</div></header><div class="ws-help" id="help"></div><main class="ws-content" id="today-content" aria-busy="true">' +
+      '</div></header><div class="ws-help" id="help"' + (screen === 'email' ? ' hidden' : '') + '></div><main class="ws-content" id="today-content" aria-busy="true">' +
       c.skeleton('Loading recorded work') + '</main></div></div>' +
       c.drawer('mobile-nav', 'Navigation') + c.drawer('account', 'Account') + c.drawer('detail', 'Record');
     var mobile = document.getElementById('mobile-nav'), account = document.getElementById('account');
     mobile.querySelector('[data-dialog-body]').innerHTML = navigation();
+    if (screen === 'email') host.querySelectorAll('[data-help]').forEach(function (element) { element.title = element.dataset.help; });
     account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p><a class="ws-button" href="' + nav.href('settings') + '">Settings</a>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
     var menu = c.bindDialog(mobile), user = c.bindDialog(account);
     detailWidget = c.bindDialog(document.getElementById('detail'));
@@ -91,6 +92,7 @@
   }
 
   function helpIn(event) {
+    if (screen === 'email') return;
     var target = event.target.closest('[data-help]');
     if (!target) return;
     clearTimeout(helpTimer);

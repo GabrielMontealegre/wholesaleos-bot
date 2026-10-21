@@ -15,7 +15,7 @@ async function prove({ screenshots = false, lighthousePath } = {}) {
   app.get('/api/gmail/message/:id', (req, res) => res.json(full(req.params.id)));
   registerWorkspacePreview(app); app.use(fixture.app);
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
-  const base = 'http://127.0.0.1:' + server.address().port, dir = path.resolve(__dirname, '../docs/screens/2026-10-20-native-email');
+  const base = 'http://127.0.0.1:' + server.address().port, dir = process.env.WOS_EMAIL_PROOF_DIR ? path.resolve(process.env.WOS_EMAIL_PROOF_DIR) : path.resolve(__dirname, '../docs/screens/2026-10-20-native-email');
   let browser; const report = { synthetic_only: true, widths: [], accessibility: [] };
   try {
     const portServer = require('node:net').createServer();
@@ -42,12 +42,13 @@ async function prove({ screenshots = false, lighthousePath } = {}) {
       assert(paint !== null && paint < 2000);
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-list-' + width + '.png') });
       await page.locator('.ws-mail-row').click(); await page.locator('.ws-mail-message .ws-mail-body').waitFor();
+      const reader = await page.locator('.ws-mail-thread').evaluate(el => ({ reading_height: el.clientHeight, reading_top: el.getBoundingClientRect().top, body_top: el.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().top }));
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-reader-' + width + '.png') });
       await page.getByRole('button', { name: 'Reply', exact: true }).click();
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-composer-' + width + '.png') });
       const layout = await page.getByRole('button', { name: 'Send', exact: true }).evaluate(el => { const r = el.getBoundingClientRect(); return { sendFits: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, overflow: document.documentElement.scrollWidth > innerWidth }; });
       assert.deepEqual(layout, { sendFits: true, overflow: false });
-      report.widths.push({ width, first_contentful_paint_ms: paint, ...layout });
+      report.widths.push({ width, first_contentful_paint_ms: paint, ...reader, ...layout });
     }
     if (lighthousePath) {
       const lighthouse = (await import(pathToFileURL(path.resolve(lighthousePath)).href)).default;

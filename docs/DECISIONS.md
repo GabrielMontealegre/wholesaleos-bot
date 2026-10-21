@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED: Gabriel's2026-10-21 annotated Email screenshot makes the compact
+reading-space correction the next UI priority before the Deals migration.
+Email-only native hover titles replace its reserved blank help strip; Today
+help is unchanged. On phones an open message keeps Inbox/Sent/More folders,
+Back/Reply/Gmail, while Back restores category tabs and the folder summary.
+Error/loading/unavailable-reference status is never hidden. This changes
+layout only, not message contents, role/source labels, auth or send gates.
+Keep release prerequisites under423 and explicit owner sign-off -- AGENTS3/5/7,
+owner feedback and #412 ordered migrations --2026-10-21.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

@@ -2,6 +2,18 @@
 
 ## Latest Run Summary
 
+2026-10-21 #412 owner Email review: NOT approved; screenshot shows excess
+top chrome and stacked reader controls. Bounded reading-space correction on
+item/412-email-reading-space, isolated from the finance branch. Email uses
+native hover titles instead of a permanently empty help row, a compact
+message header and phone reading mode that keeps folders/Back/Reply but
+returns People/Alerts with Back. Errors/loading stay visible. No source
+content, mailbox transport, auth or send gate changed. Synthetic1366/400/412
+before/after proof gives150px more desktop reading height and185px on phones.
+Focused regressions pass; hosted full suite and release remain pending.
+Railway423 release prerequisites still apply; do not call this live or start
+the next Deals screen before the corrected Email receives owner sign-off.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.
