@@ -2,6 +2,19 @@
 
 ## Latest Run Summary
 
+2026-10-21 #416 independent financing foundation LOCAL while Railway423
+holds the ordered releases. New pure fixed-rate scenario math covers payments,
+IO transitions, first-year cash flow/returns, coverage and balloon balances;
+no product reader/writer, route, offer, stored value or UI is changed. Explicit
+inputs/assumptions only, missing expenses/costs stay unknown, losses retained.
+Focused tests pass; full hosted gate pending. Remains DRAFT behind424/425.
+This does not complete the Deals screen, source mapping or target-return ceiling.
+Today425 product7f52520 passed243/0/0 hosted39655779023 (11m55s test step),
+documentation head43ffeaf has automatic gate39658025189 in progress. Its
+safe screenshots/timings/checkpoint are preserved on the existing branch.
+Railway18:48Z still showed Limited Access and active421; no duplicate build,
+setting/billing change, message, capture, batch or production write.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.

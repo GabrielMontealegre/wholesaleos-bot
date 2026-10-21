@@ -1,5 +1,17 @@
 # Decisions
 
+ASSUMED: build #416's pure financing math as a dormant independent foundation
+while Railway423 blocks424/425. Keep draft/unmerged in their release order;
+no screen migration, store mapping, offer ceiling or product route is added.
+Fixed-rate monthly modeling: interest-only months sit inside the supplied
+amortization years; the remainder amortizes principal. Balloon maturity is
+separate. Year-one returns exclude balloon/refinance/resale and income tax.
+Explicit omitted-option assumptions accompany scenario output; absent expenses
+or closing costs cannot become zero. Optional other_initial_cash accounts for
+upfront repairs/reserves; its omission is labeled, never a source fact.
+Cash-on-cash is not a verified buyer return or offer input -- AGENTS3/5,
+#412 ordered slices/#416 calculator and #402 source-truth requirements --2026-10-21.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

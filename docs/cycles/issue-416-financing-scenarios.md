@@ -1,0 +1,84 @@
+# Financing scenarios foundation (#416)
+
+This is a local, pure calculation foundation for the ordered Deals workspace.
+It is not wired to a route, stored record, card, matcher, offer or sender. Keep
+the PR draft and unmerged behind the #415/#412 release queue. Do not deploy
+this backend-only foundation separately or mark the overall #416 item done.
+
+## Existing writers and readers
+
+- reviewed-deals.js remains the authority for deal facts, verified value and
+  matching. No field, gate or calculation in it changes.
+- pipeline-reports.js and pipeline-report-review.js retain reported price and
+  expense provenance. pipeline-money.js remains the canonical fee/net calculation.
+- match-profit.js continues to project exact buyer/deal reports through those
+  rules. A financing scenario is never an agreed price, verified rent, buyer
+  commitment, payoff, maximum offer or proof of funds.
+- financing-scenarios.js is new and has no product readers or writers. Its only
+  current reader is financing-scenarios.test.js. It has no imports, network,
+  clock, storage or environment dependency.
+
+## Input contract
+
+All money is dollars. Rates and returns are percentage points, so6 means6%.
+Required debt inputs: price, down_payment, annual_rate_percent, term_years.
+Years must represent whole months, from1 through100 years. No numeric strings,
+nonfinite numbers or negative costs are accepted. Cash purchases require no
+loan rate/term. The caller chooses each bank/seller-financing/assumable scenario;
+the module never assumes an actual loan can be assumed or approved.
+
+Optional interest_only_months is inside the supplied amortization term. The
+remaining months repay principal. Omission models zero interest-only months and
+returns that assumption explicitly. The rate is fixed and payments are monthly.
+An all-interest-only schedule retains principal at its end. balloon_year is an
+explicit maturity point, separate from amortization; balance is after that
+month's regular payment. A balloon lump sum is not hidden in regular payments.
+
+Income is either annual_noi, or monthly_rent minus monthly_operating_expenses.
+Supplying both bases is rejected. Missing expenses do not become zero. NOI is
+the caller's scenario input, after all operating expenses and before financing.
+Loan payments are principal/interest only; property taxes and insurance belong
+in operating expenses, not a second subtraction from cash flow.
+
+Cash invested is down payment + explicit closing_costs + other_initial_cash.
+The last field can include repairs/reserves. Omission explicitly models no
+other initial cash; this is an assumption, not a claim those costs are zero.
+Missing closing costs leaves the cash-on-cash return unknown. Zero invested
+cash and zero debt service never produce an infinite return or coverage ratio.
+
+## Outputs and formulas
+
+Outputs are always labeled scenario_calculation, verified:false, is_offer:false.
+monthly_payment and monthly_cash_flow describe the initial payment period.
+amortizing_monthly_payment shows the later payment separately. Yearly cash flow
+uses actual scheduled payments across the first12 months, including a midyear
+interest-only transition. Cash-on-cash and debt-service coverage use that same
+first-year basis. Negative income/cash flow remains negative. These figures
+exclude balloon payoffs, resale, refinancing and income taxes explicitly.
+
+For principalP, monthly r and amortizing countn:
+payment=P*r/(1-(1+r)^(-n)); at0% useP/n.
+Afterk amortizing payments, balance=P*(1-(1+r)^(k-n))/(1-(1+r)^(-n)).
+log1p/expm1 avoid cancellation for tiny rates; nothing rounds until presentation.
+The one-percentage-point reduction comparison changes only the rate, floors
+it at0%, and shows both initial and amortizing monthly payment savings.
+
+CFPB definitions checked2026-10-21:
+- [Interest-only principal remains outstanding](https://www.consumerfinance.gov/ask-cfpb/what-is-an-interest-only-loan-en-101/).
+- [Balloon payment is a separate large maturity payment](https://www.consumerfinance.gov/ask-cfpb/what-is-a-balloon-payment-when-is-one-allowed-en-104/).
+
+## Remaining integration
+
+The Deals screen, sourced input mapping, scenario controls, rate slider, timeline
+brief, questions, state/county filters and authorized target-return ceiling remain
+future ordered slices. They must preserve the existing offer/value/provenance
+rules; this mathematical module authorizes none of them by itself. No UI or
+live screenshot is claimed for this dormant foundation.
+
+## Verification
+
+Unit coverage: known fixed-rate numbers, independent monthly amortization
+recurrence, zero and tiny interest, IO-only and midyear transitions, retained
+balloon principal, cash purchases, negative cash flow, incomplete expenses/costs,
+conflicting bases, invalid types/ranges/months, scenario-kind dedupe, input
+immutability and zero clock/network/write effects. Full hosted suite pending.
