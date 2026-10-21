@@ -1,5 +1,36 @@
 Item: #419 -- restore native read-only Email with correct folder request ownership
 
+## Verified Release, 2026-10-20
+
+PR421 head dce852f6c23fd3dae051d9833edfacc4b6d795ce, merge/main
+373855d8f27b112301443e7900fcd2c04db7784f. Full39508946396:
+SUMMARY passed=238 failed=0 skipped=0 total=238;600s/file,
+11m51s test step,12m46s job. County-notice262.63s, new loading test5.03s,
+Email model0.08s/UI3.91s. All timings stored under
+docs/test-results/issue-419-email-fix. Rollback39508349634 passed235/235,
+county-notice252.61s, timings under docs/test-results/issue-419-rollback.
+
+Rollback420 merged506707f and deployment7212855384 succeeded22:44:20Z;
+health20022:45:06Z, baseline Email/lead and1366/400/412 foundation passed.
+Only then421 merged. Exact active Railway deployment
+24fb22b2-659c-42f2-8852-4481d7090eb6 is successful and Details links source
+373855d; the GitHub deployment mirror had not caught up at verification.
+Health and fixed email-screen?v=2 both200 at22:49:38Z.
+
+Live1366/400/412: select Alerts during initial metadata loading; immediately
+aria-busy true/Loading email, then false/Latest30 messages in this folder,
+not the former false zero. Safe screenshots intentionally show empty Alerts,
+not private People messages: docs/screens/2026-10-20-email-fixed.
+People and Sent each render29 conversations from30 source messages; real
+body opens, empty local Reply fits on Android with360px reading space,
+Send remains disabled, Close/Back work. Actual classic lead drawer opens
+and closes;0 console errors. No typed text, send, Gmail handoff, capture,
+batch, confirmation or business write. Provider settings/secrets unchanged.
+
+The following sections preserve the pre-release contract/history. Its
+rollback prerequisite and this item's live gate are now satisfied. D-061
+is next, not implemented by this release. Parent412 is not closed.
+
 Depends on rollback PR420 being merged and live-verified first. Do not deploy
 over a failed gate or describe the original PR417 as successfully verified.
 

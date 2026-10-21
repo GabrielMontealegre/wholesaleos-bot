@@ -2,6 +2,61 @@
 
 ## Latest Run Summary
 
+2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
+exact-thread reply backend, default OFF, no frontend binding or real send.
+Structured source participants now survive IMAP/OAuth metadata/body paths.
+Pure policy validates source graph, timestamp, RFC anchor, recipients and
+operator-typed additions; reviewed exact version/expiry, persisted attempt,
+uncertain/no-retry, receipt-backed idempotency,30/hour and kill switch.
+Signed admin/current-role and strict same-origin JSON/custom-header CSRF;
+linked deal/buyer receipts contain no bodies. Two new hermetic files pass,
+plus unchanged mailbox/thread/conversation regressions. No existing assertion
+changed. Full240-file hosted gate and backend-only release remain pending.
+This is an ordered security-boundary slice, not a claim Send works in the UI.
+Phase2 wires the existing composer to preview/review/Send after this is live;
+no new screen migration or business action is authorized by the implementation.
+
+2026-10-20 22:52Z #412 read-only Email RELEASED/VERIFIED through PR421,
+main373855d8f27b112301443e7900fcd2c04db7784f. Provider outage418 resolved.
+Original417 failed an early-tab negative live case, so420 restored the exact
+prior product:235/235 green, deployment7212855384 healthy22:44:20Z,
+classic Email/lead drawer and foundation1366/400/412 verified. Then421 fixed
+folder/body request ownership;238/238 green,0 skips,600s/file;11m51s test
+step/12m46s job, county-notice262.63s, new loading test5.03s, Email UI3.91s.
+Exact active Railway24fb22b2-659c-42f2-8852-4481d7090eb6 shows successful
+source373855d in Details; GitHub deployment mirror lagged. Health/v2 asset200
+at22:49:38Z. Live1366/400/412 early Alerts selection stayed Loading, then
+correctly showed30 source messages instead of false0. Inbox/Sent/People,
+real body reading, local empty Reply/disabled Send, X/Back and classic lead
+drawer verified;0 console errors. Safe live screenshots and both full timing
+artifacts preserved. No send, typed draft, handoff, capture, batch, confirmation
+or business write. All safety gates unchanged. #419 fixed; parent412 OPEN.
+Next is approved D-061 exact-thread reply transport on the preserved
+item/415-reviewed-thread-replies branch; trace exists, no transport code yet.
+Run stopped at quota reserve after verification, not by asking what to do.
+PR413 remains draft; next screen waits for owner sign-off/ordered priorities.
+
+2026-10-20 20:32Z #412 Email MERGED, release BLOCKED by Railway's public
+build incident JUA1PC5H ([release blocker #418](https://github.com/GabrielMontealegre/wholesaleos-bot/issues/418)),
+not by a failing test or an application crash.
+PR417 head9c98ed0 merged as a5b3cca723a805f00614440cf8e0912fdf131331.
+Hosted39457975776: SUMMARY passed=237 failed=0 skipped=0 total=237;
+600s/file, test step9m45s, job10m39s; county-notice215.41s,
+Email model0.07s/UI3.44s/shell5.59s. Main CI39491016047 also succeeded.
+After more than10m no deployment exists for this SHA; Railway shows
+"Deploys have been paused temporarily" and the active version is still
+PR414/0d035e0. Public health200 is the OLD version, not release proof.
+The new native Email asset returns404; live Email verification is pending.
+Railway says triggers during this incident must be triggered again when
+builds resume. Do not redeploy the old active version or change settings,
+plan, billing or variables. Resume an exact-main deployment only after the
+workspace's build pause lifts, then verify1366/400/412 before calling DONE.
+No rollback: new code never ran and the old production version is healthy.
+No send, capture, batch, contact, evidence confirmation or business write.
+Separate next branch item/415-reviewed-thread-replies has a writer/reader
+trace only; implementation waits for this required live dependency. D-061
+is APPROVED, not an unanswered architecture question. PR413 stays draft.
+
 2026-10-20 #419 fix LOCAL: restored the isolated read-only native Email
 on item/419-email-folder-race, with separate folder-metadata and body request
 generations. Category changes preserve the in-flight metadata read and busy

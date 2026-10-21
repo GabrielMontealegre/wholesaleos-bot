@@ -1,5 +1,32 @@
 # Decisions
 
+ASSUMED: split D-061 into an independently tested default-OFF transport/API
+slice and a subsequent existing-composer binding. Review the security and
+durable idempotency boundary before enabling any UI path; never describe the
+first slice as working dashboard Send. No actual message is authorized.
+WOS_EMAIL_REPLY_ENABLED must be exactly true and WOS_EMAIL_REPLY_DISABLED
+must not be true; implementation/verification changes neither variable.
+Use signed admin plus fixed same-origin Origin/JSON/custom-header checks
+for route-scoped CSRF, not a new credential or unsigned x-user-id path.
+Exact uniquely linked deal/buyer receipts only; unlinked threads retain a
+private receipt without a guessed entity. New-thread compose/attachments
+and package/template/legal flows stay outside this API -- AGENTS3/5,D-061
+and architect415 --2026-10-21.
+
+ASSUMED: PR421's rollback-parent8e2c849 has a byte-identical tree to current
+main506707f (empty git diff). Preserve its exact full-tested head instead of
+force-rebasing merely to copy a merge-only ancestor. GitHub merged cleanly,
+no conflict resolution/product change, and live exact source373855d verified.
+No safety or test gate was waived -- AGENTS3/6 --2026-10-20.
+
+ASSUMED: a provider-wide build pause before any new deployment exists is
+an external RELEASE BLOCKED state, not a failed application verification.
+Keep the last verified healthy deployment; do not revert working source or
+change provider settings to manufacture a deploy. Retry the exact merged
+SHA once the workspace resumes builds (Railway says paused triggers are
+not replayed), then perform every live gate before calling it released --
+AGENTS3/7, public Railway incidentJUA1PC5H --2026-10-20.
+
 ASSUMED: apply AGENTS7 literally to PR417's live initial-load/category race:
 revert that merge only, restore the last verified product tree, and fix/test
 the race in a separate PR. No stored business data is changed or deleted;

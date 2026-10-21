@@ -69,6 +69,35 @@ WOS_LIGHTHOUSE_PATH. Audit tooling remains outside application dependencies.
 
 ## Review And Release
 
+### Release Checkpoint, 2026-10-20 20:32Z
+
+PR417 merged head9c98ed05e1507fa045506179ad63dcac89bd4f33 with merge
+a5b3cca723a805f00614440cf8e0912fdf131331 at20:19:39Z. Final-head CI
+39457975776 completed successfully: SUMMARY passed=237 failed=0 skipped=0
+total=237;600s/file,9m45s test step,10m39s job. County-notice215.41s;
+Email model0.07s,UI3.44s,shell5.59s. Full per-file timing artifact is under
+docs/test-results/issue-412-native-email. Main CI39491016047 also succeeded.
+
+Deployment is BLOCKED, not verified. More than10m after merge GitHub has no
+Railway deployment for this SHA. The authenticated Railway service displays
+"Deploys have been paused temporarily"; active deployment is still the prior
+PR414. Public /health200 at20:30:23Z belongs to that old healthy version.
+The declared native Email asset is404. Do not call old health a new release.
+
+Public incident: https://status.railway.com/incident/JUA1PC5H . Its20:20UTC
+update resumes Pro/Enterprise while other workspaces wait; deploys triggered
+during the pause must be triggered again after builds resume. The current
+workspace still displays Limited Access / paused. No billing, setting,
+variable or manual deployment action was taken. Public incident screenshot:
+docs/screens/2026-10-20-native-email/railway-build-incident.jpg.
+
+Next: wait for the workspace's build pause to lift, deploy this exact merged
+main once, then authenticated native Email1366/400/412, classic lead card,
+safe screenshots and console check. No send/outreach or business write.
+Keep the old healthy deployment; no bad application version ran to revert.
+The separately approved D-061 transport has a trace only and waits for this
+live migration dependency. PR413 remains deferred.
+
 No server/API/auth, stored business value, provenance/gate, SMTP, provider,
 dependency or Railway setting change. Classical reader remains available.
 No migration/deletion. Self-review covers untrusted headers/body, wrong-origin
