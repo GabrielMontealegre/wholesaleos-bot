@@ -100,4 +100,10 @@ at1366/400/412. The pinned Lighthouse development tool was obtained with pnpm
 dlx outside the repository; no package.json change or production dependency.
 The two new browser-test selector corrections only scoped the text to its drawer
 and excluded legitimate Lucide image icons from the injection assertion.
-Final hosted full-suite evidence for this follow-up is required before release.
+Final hosted full suite passed on product commit7f5252082855091da1e2f9fed781a28a9336d71e:
+run39655779023,243 passed/0 failed/0 skipped,600s/file. Test step11m55s,
+job12m52s; unchanged county-notice255.88s, pending unit0.16s, Today0.29s,
+shell6.72s, Today UI3.27s. Complete per-file timings are preserved in
+docs/test-results/issue-412-today-action-center/full-suite-39655779023.txt.
+Release remains blocked by Railway423;18:48Z service UI still shows the
+temporary capacity pause and active421. PR424 releases before this PR.

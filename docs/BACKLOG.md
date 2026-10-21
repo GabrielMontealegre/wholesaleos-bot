@@ -10,11 +10,19 @@ and reported bounces never claim confirmed current delivery status.
 No new business writer, network source or send/approval control. New pure
 projection and expanded1366/400/412 browser negatives pass with the existing
 dependency runtime. Refreshed Lighthouse13.5.0 accessibility100 desktop/phone;
-synthetic first paint99.2/35.6/87.2ms. Final hosted full suite pending.
+synthetic first paint99.2/35.6/87.2ms. Full243/243 hosted gate passed on
+7f52520 (run39655779023),0 failures/skips,600s/file,test11m55s/job12m52s;
+county-notice255.88s,pending0.16s,Today0.29s,shell6.72s,new UI3.27s.
+All per-file timings are under docs/test-results/issue-412-today-action-center.
 PR424 remains first in the owner order; release waits on
 Railway workspace capacity#423. Model/effort verified from this thread's
 latest context; persisted thread_settings service_tier is default/standard.
 No variable, billing, credential, capture, message or production write.
+Read-only Railway recheck18:48Z still shows Limited Access/Deploys paused
+temporarily and active421/373855d, so no release is claimed. Autopilot's
+saved checkpoint now reflects424 then425 and the correct persisted-tier
+lookup; no repeated implementation-settings blocker. Documentation-only
+proof follows the tested product commit; product source is unchanged.
 
 2026-10-21 #412 Today action center LOCAL on item/412-today-action-center.
 Native Today now presents the existing read-only action projection, existing
