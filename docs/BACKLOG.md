@@ -9,13 +9,16 @@ release BLOCKED on workspace deployment pause (#423). Exact-head cloud
 participants1.11s. More than10m after merge no new deployment exists;
 Railway shows Limited Access / Deploys have been paused temporarily, while
 public status is Fully Operational and service Wait for CI is OFF. Cause
-unknown: do not assume billing or change settings. Active remains verified
+documented as a temporary capacity-priority pause, not unpaid billing:
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+Queued builds resume automatically; do not upgrade or trigger duplicates.
+Active remains verified
 PR421/373855d on24fb22b2-659c-42f2-8852-4481d7090eb6. Old health200 is
 not new release proof. No deployment retry, variable change or rollback.
 Keep415/412 OPEN. Complete exact-main/default-OFF GET + read-only live
 verification when builds resume; no production send/preview is authorized.
 
-Independent phase2 built locally on item/415-reply-composer, NOT released:
+Independent phase2 draftPR424 on item/415-reply-composer, NOT released:
 source-only GET reply defaults, exact preview/edit/review/explicit Send,
 receipt-version matching, uncertainty terminal state,35s client timeout and
 session-loss clearing. Default OFF and Open in Gmail remain. New1366/400/412

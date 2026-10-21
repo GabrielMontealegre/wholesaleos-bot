@@ -8,6 +8,15 @@ operational public status is not proof of billing trouble or permission
 to change settings. Preserve the healthy running version; no automatic
 deploy retries or false live claim -- AGENTS3/7/10 --2026-10-21.
 
+Provider evidence for423: Railway's official deployments reference says the
+exact Limited Access indicator is temporary resource-allocation priority
+for higher tiers, with existing deployments unaffected and queued builds
+processing automatically when capacity returns. Public operational status
+is consistent with this. No upgrade, billing change or duplicate manual
+build; unlike the earlier incident418, no unreplayed-trigger claim applies.
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+--2026-10-21.
+
 ASSUMED: source-only reply defaults use a separate signed-admin GET context
 route, only after explicit Reply and enabled status; never persist a preview
 merely to populate fields. User-typed additions are explicit preview input.
