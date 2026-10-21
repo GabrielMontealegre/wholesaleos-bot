@@ -60,6 +60,8 @@ After screen:
 `docs/screens/2026-10-21-today-action-center/synthetic-today-{1366,400,412}.png`
 and `synthetic-proof.json`.
 
-Hosted PR CI, exact Railway deployment, live verification, and owner screen
-sign-off remain pending. Railway release is independently blocked by workspace
-deploy availability tracked in issue #423. This local candidate is not released.
+Hosted PR full-suite workflow #81 (run 39546559662) passed on candidate head
+ccd924cd22c89bc8d6283280d38609be8f312dee. Exact Railway deployment, live
+verification, and owner screen sign-off remain pending. Railway release is
+independently blocked by workspace deploy availability tracked in issue #423.
+This candidate is not released.

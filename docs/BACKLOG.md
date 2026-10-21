@@ -14,9 +14,10 @@ docs/screens/2026-10-21-today-action-center. Permission-enabled full suite:
 SUMMARY passed=242 failed=0 skipped=0 total=242 (600 seconds per-file cap);
 Dallas foreclosure adapter completed in 17.75 seconds. Synthetic Lighthouse
 13.5.0 accessibility score is 100 at desktop and 412x915 mobile; synthetic
-first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Hosted PR
-CI, exact deployment, live verification and owner screen sign-off remain pending;
-this is not released.
+first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Draft PR
+#425 hosted full-suite workflow #81 (run 39546559662) passed on head
+ccd924cd22c89bc8d6283280d38609be8f312dee. Exact deployment, live verification
+and owner screen sign-off remain pending; this is not released.
 
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
