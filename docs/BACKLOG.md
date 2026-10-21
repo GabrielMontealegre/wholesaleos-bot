@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-21 #412 Today action center LOCAL on item/412-today-action-center.
+Native Today now presents the existing read-only action projection, existing
+reviewed-deal ranking and allowlisted last-24-hour activity together. Actions
+are grouped by canonical overdue/due/review/waiting/upcoming data; waiting days
+are computed only from a recorded last-out timestamp. Best-deal value/spread
+remain existing reviewed estimates with explicit labels. No sends, approvals,
+captures or data writes were added. Focused pure, service, component and
+synthetic1366/400/412 Playwright checks pass; screenshots are under
+docs/screens/2026-10-21-today-action-center. Permission-enabled full suite:
+SUMMARY passed=242 failed=0 skipped=0 total=242 (600 seconds per-file cap);
+Dallas foreclosure adapter completed in 17.75 seconds. Synthetic Lighthouse
+13.5.0 accessibility score is 100 at desktop and 412x915 mobile; synthetic
+first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Hosted PR
+CI, exact deployment, live verification and owner screen sign-off remain pending;
+this is not released.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.

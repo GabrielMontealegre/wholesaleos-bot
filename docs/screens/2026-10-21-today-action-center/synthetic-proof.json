@@ -1,0 +1,26 @@
+{
+  "synthetic_only": true,
+  "widths": [
+    {
+      "width": 1366,
+      "height": 768,
+      "first_contentful_paint_ms": 63.5,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    },
+    {
+      "width": 400,
+      "height": 915,
+      "first_contentful_paint_ms": 61.09999996423721,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "first_contentful_paint_ms": 48.39999997615814,
+      "horizontal_overflow": false,
+      "stylesheet_count": 1
+    }
+  ]
+}
