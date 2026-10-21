@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #416's Hey Gabriel pending panel reads existing saved buyer drafts,
+canonical open conversations and uniquely linked bounce activity. A bounce
+report has no stored resolution, so label it reported and disclose that current
+mailbox delivery status is not connected. Never infer delivery, a resolved
+bounce, why a provider refused a send, or a new contact action. Unknown/sending
+drafts direct the operator to check Sent mail; no retry control is added.
+Use the existing PR425/shared Today system; PR424 still releases first under
+the latest architect412 order -- AGENTS3/5, #412/#416 --2026-10-21.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

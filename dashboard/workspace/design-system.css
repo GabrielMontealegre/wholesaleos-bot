@@ -110,6 +110,12 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-today-header p { color: var(--ws-muted); font-size: var(--ws-type-xs); }
 .ws-today-stats { display: flex; flex-wrap: wrap; gap: var(--ws-space-2); }
 .ws-today-grid { display: grid; grid-template-columns: minmax(320px, 1.3fr) minmax(240px, 1fr) minmax(220px, .9fr); align-items: start; gap: var(--ws-space-4); }
+.ws-pending-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ws-space-3); padding-block: var(--ws-space-3); }
+.ws-pending-grid > section { min-width: 0; }
+.ws-pending-grid header { display: flex; align-items: center; gap: var(--ws-space-2); margin-bottom: var(--ws-space-2); }
+.ws-pending-grid .ws-row-main { overflow-wrap: anywhere; }
+.ws-pending-grid summary { cursor: pointer; padding-block: var(--ws-space-2); }
+.ws-pending-coverage { font-size: var(--ws-type-xs); }
 .ws-today-panel { min-width: 0; border-top: 1px solid var(--ws-line); }
 .ws-today-panel > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: var(--ws-space-2); border-bottom: 1px solid var(--ws-line); }
 .ws-today-panel h2 { font-size: var(--ws-type-base); }
@@ -186,6 +192,7 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
   .ws-help { padding-inline: var(--ws-space-3); min-height: 44px; }
   .ws-content { padding-inline: var(--ws-space-3); }
   .ws-today-grid { grid-template-columns: minmax(0, 1fr); }
+  .ws-pending-grid { grid-template-columns: minmax(0, 1fr); }
   .ws-row-button { gap: var(--ws-space-2); }
   .ws-dialog-body .ws-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ws-mail-panes { grid-template-columns: minmax(0, 1fr); }

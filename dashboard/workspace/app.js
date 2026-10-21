@@ -156,6 +156,25 @@
     return '<li><button type="button" class="ws-today-event" data-row="activity:' + index + '">' + body + c.icon('arrow-up-right') + '</button></li>';
   }
 
+  function pendingPanel(pending) {
+    if (!pending) return '<section class="ws-today-panel ws-today-pending"><header><h2>Hey Gabriel</h2></header>' + c.empty('Pending summary unavailable', 'Refresh recorded work to check pending items.') + '</section>';
+    function pendingRow(item, group, index) {
+      var detail = [item.reason];
+      if (item.due_date) detail.push('Due ' + root.wosCardClock.formatDate(item.due_date));
+      if (item.waiting_since) detail.push('Waiting since ' + time(item.waiting_since));
+      return '<li><button type="button" class="ws-row-button" data-pending-group="' + group + '" data-pending-index="' + index + '" aria-label="Review ' + c.escape(item.heading || item.label) + '">' +
+        '<span class="ws-row-main"><strong>' + c.escape(item.heading || item.label) + '</strong><span>' + c.escape(detail.filter(Boolean).join(' · ')) + '</span></span>' + c.icon('arrow-up-right') + '</button></li>';
+    }
+    return '<section class="ws-today-panel ws-today-pending"><header><h2>Hey Gabriel</h2>' + c.badge('Recorded pending work', 'blue') + '</header><div class="ws-pending-grid">' +
+      [['drafts', 'Drafts not sent'], ['waiting', 'Waiting on others'], ['bounced', 'Bounces reported'], ['reminders', "Don't forget"]].map(function (entry) {
+        var items = Array.isArray(pending[entry[0]]) ? pending[entry[0]] : null;
+        return '<section><header><h3>' + entry[1] + '</h3>' + c.badge(items ? String(items.length) : 'Unavailable', entry[0] === 'bounced' ? 'red' : 'neutral') + '</header>' +
+          (items && items.length ? '<ul class="ws-list">' + items.slice(0, 5).map(function (item, i) { return pendingRow(item, entry[0], i); }).join('') + '</ul>' +
+            (items.length > 5 ? '<details><summary>' + (items.length - 5) + ' more</summary><ul class="ws-list">' + items.slice(5).map(function (item, i) { return pendingRow(item, entry[0], i + 5); }).join('') + '</ul></details>' : '') :
+            '<p class="ws-muted">' + (items ? 'None in the connected records.' : 'Not available.') + '</p>') + '</section>';
+      }).join('') + '</div><p class="ws-muted ws-pending-coverage">Saved drafts and conversation reminders only. Bounces are recorded reports; current mailbox delivery status is not connected.</p></section>';
+  }
+
   function render() {
     var data = current, content = document.getElementById('today-content');
     if (!content || !data) return;
@@ -165,7 +184,7 @@
     content.innerHTML = '<section class="ws-today"><header class="ws-today-header"><div><h2>Today</h2><p>Updated ' + c.escape(time(data.now)) + '</p></div>' +
       '<div class="ws-today-stats">' + c.badge(quantity(data.counts.replies, 'reply waiting', 'replies waiting'), 'blue') + c.badge(quantity(data.counts.approvals, 'approval', 'approvals'), 'neutral') +
       c.badge(quantity(data.counts.followups, 'follow-up due', 'follow-ups due'), 'amber') + c.badge(quantity(data.counts.deadlines, 'deadline this week', 'deadlines this week'), 'neutral') + '</div></header>' +
-      '<div class="ws-today-grid"><section class="ws-today-panel ws-today-queue"><header><h2>Your action queue</h2>' + c.badge(String(actionCount) + ' open', actionCount ? 'blue' : 'neutral') + '</header>' +
+      pendingPanel(data.pending) + '<div class="ws-today-grid"><section class="ws-today-panel ws-today-queue"><header><h2>Your action queue</h2>' + c.badge(String(actionCount) + ' open', actionCount ? 'blue' : 'neutral') + '</header>' +
       (actionCount ? actionGroup('overdue', groups.overdue, 'Overdue') + actionGroup('due_today', groups.due_today, 'Due today') + actionGroup('review', groups.review, 'Needs review') +
         actionGroup('waiting', groups.waiting, 'Waiting on someone else') + actionGroup('upcoming', groups.upcoming, 'Coming up') : c.empty('No open work recorded', 'Replies, approvals, follow-ups and deal deadlines will appear here.')) + '</section>' +
       '<section class="ws-today-panel ws-today-best"><header><h2>Best deals</h2>' + c.badge(String(data.best_deals.length), 'green') + '</header><ul class="ws-list">' +
@@ -179,6 +198,9 @@
         openRecord(list[Number(parts[1])]);
       });
     });
+    content.querySelectorAll('[data-pending-group]').forEach(function (button) {
+      button.addEventListener('click', function () { openRecord(data.pending[button.dataset.pendingGroup][Number(button.dataset.pendingIndex)]); });
+    });
     var more = document.getElementById('more-activity');
     if (more) more.addEventListener('click', function () { pageSize += 25; render(); more = document.getElementById('more-activity'); if (more) more.focus(); });
     content.querySelectorAll('[data-best-deal]').forEach(function (button) {
@@ -190,7 +212,7 @@
     var dialog = document.getElementById('detail'), body = dialog.querySelector('[data-dialog-body]');
     var refs = item.conversation?.refs || [item.ref], links = refs.map(nav.recordHref).filter(Boolean);
     body.innerHTML = '<h3>' + c.escape(item.heading || item.label || 'Recorded item') + '</h3><p>' + c.escape(item.label || item.grade || 'Recorded work') + '</p>' +
-      '<dl class="ws-detail"><div><dt>Source</dt><dd>' + c.escape(item.source_kind === 'recorded_activity' ? 'Recorded activity' : item.source_kind === 'verified_release_record' ? 'Verified release record' : 'Recorded workflow') +
+      (item.reason ? '<p>' + c.escape(item.reason) + '</p>' : '') + '<dl class="ws-detail"><div><dt>Source</dt><dd>' + c.escape(item.source_kind === 'recorded_activity' ? 'Recorded activity' : item.source_kind === 'verified_release_record' ? 'Verified release record' : 'Recorded workflow') +
       '</dd></div><div><dt>Recorded</dt><dd>' + c.escape(time(item.recorded_at || item.at)) + '</dd></div></dl>' +
       links.map(function (href) { return '<a class="ws-button" href="' + href + '">Open full record' + c.icon('arrow-up-right') + '</a>'; }).join('') +
       (!links.length ? '<p class="ws-muted">No unique property or buyer reference is attached. Open the relevant workspace to review the source record.</p>' : '');

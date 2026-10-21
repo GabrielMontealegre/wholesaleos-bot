@@ -4,23 +4,35 @@
     {
       "width": 1366,
       "height": 768,
-      "first_contentful_paint_ms": 63.5,
+      "first_contentful_paint_ms": 99.20000004768372,
       "horizontal_overflow": false,
       "stylesheet_count": 1
     },
     {
       "width": 400,
       "height": 915,
-      "first_contentful_paint_ms": 61.09999996423721,
+      "first_contentful_paint_ms": 35.60000002384186,
       "horizontal_overflow": false,
       "stylesheet_count": 1
     },
     {
       "width": 412,
       "height": 915,
-      "first_contentful_paint_ms": 48.39999997615814,
+      "first_contentful_paint_ms": 87.20000004768372,
       "horizontal_overflow": false,
       "stylesheet_count": 1
+    }
+  ],
+  "accessibility": [
+    {
+      "width": 1366,
+      "score": 100,
+      "lighthouse_version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 100,
+      "lighthouse_version": "13.5.0"
     }
   ]
 }

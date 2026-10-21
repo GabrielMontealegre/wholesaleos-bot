@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-21 #412/#416 Today follow-up LOCAL on the existing PR425 branch:
+added the first-section Hey Gabriel panel for recorded unsent drafts,
+waiting conversations, reported bounces and reminders. Unique existing
+record links only; unknown send outcomes require checking Sent mail,
+and reported bounces never claim confirmed current delivery status.
+No new business writer, network source or send/approval control. New pure
+projection and expanded1366/400/412 browser negatives pass with the existing
+dependency runtime. Refreshed Lighthouse13.5.0 accessibility100 desktop/phone;
+synthetic first paint99.2/35.6/87.2ms. Final hosted full suite pending.
+PR424 remains first in the owner order; release waits on
+Railway workspace capacity#423. Model/effort verified from this thread's
+latest context; persisted thread_settings service_tier is default/standard.
+No variable, billing, credential, capture, message or production write.
+
 2026-10-21 #412 Today action center LOCAL on item/412-today-action-center.
 Native Today now presents the existing read-only action projection, existing
 reviewed-deal ranking and allowlisted last-24-hour activity together. Actions

@@ -6,6 +6,7 @@ const {dayAt}=require('../records/calendar-day');
 const {grade}=require('./interim-deal-grade');
 const jv=require('../deals/jv-workflow');
 const pipeline=require('../records/pipeline-workspace');
+const {buildPending}=require('./today-pending');
 const DAY=86400000;
 function instant(value,now) {
   if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value))return null;
@@ -60,7 +61,8 @@ function buildTodayWorkspace(store,{now,timeZone='America/Mazatlan',releases=[]}
   }
   events.sort((a,b)=>b.at.localeCompare(a.at)||a.key.localeCompare(b.key));
   let pipelineSummary=null;try{pipelineSummary=pipeline.build(store,{now,timeZone,limit:1}).summary;}catch{}
-  return {source_kind:'derived_workflow',now,today,actions,pipeline_summary:pipelineSummary,counts:{replies:view.incoming_count,approvals:pendingBuyers.length+pendingDeals.length,followups:view.followup_count,deadlines:deadlineRows.length},best_deals:best,grade_status:'interim_rules',grade_issue:344,interim_grades:reviewed.map(({d,g})=>({id:d.id,ref:activity.reference(d),...g})),last_24h:events,coverage:{pipeline:pipelineSummary?'recorded_workflow':'unavailable',records_requests:'not_connected',routine_results:'not_connected',email:'recorded_reports_only',releases:'verified_release_records_only'}};
+  const pending=buildPending(store,view.items,{now,today});
+  return {source_kind:'derived_workflow',now,today,actions,pending,pipeline_summary:pipelineSummary,counts:{replies:view.incoming_count,approvals:pendingBuyers.length+pendingDeals.length,followups:view.followup_count,deadlines:deadlineRows.length},best_deals:best,grade_status:'interim_rules',grade_issue:344,interim_grades:reviewed.map(({d,g})=>({id:d.id,ref:activity.reference(d),...g})),last_24h:events,coverage:{pipeline:pipelineSummary?'recorded_workflow':'unavailable',records_requests:'not_connected',routine_results:'not_connected',email:'recorded_reports_only',releases:'verified_release_records_only'}};
 }
 function registerTodayWorkspace(app,{db,requireAdmin,now=()=>new Date().toISOString(),releases=[]}) {
   app.get('/api/dashboard/today-workspace',requireAdmin,(req,res)=>{

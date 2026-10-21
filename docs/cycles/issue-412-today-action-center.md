@@ -65,3 +65,39 @@ ccd924cd22c89bc8d6283280d38609be8f312dee. Exact Railway deployment, live
 verification, and owner screen sign-off remain pending. Railway release is
 independently blocked by workspace deploy availability tracked in issue #423.
 This candidate is not released.
+
+## Hey Gabriel follow-up (#416)
+
+The first Today section now summarizes four recorded categories: drafts not
+sent, waiting on others, reported bounces, and reminders. Each item opens the
+existing details drawer, with exact existing record links when uniquely linked.
+Five rows per category are shown initially; an expandable remaining list retains
+all rows. An unavailable summary never renders as a measured zero.
+
+Writer/reader trace: buyer-messages.js writes buyer_email_drafts statuses
+draft/sending/accepted/unknown and SMTP acceptance receipts. today-pending.js
+reads these without bodies/recipient addresses; accepted, contradictory,
+future, duplicate or unlinked rows do not become pending unsent drafts.
+conversations.js remains the canonical reader of recorded statuses, dates,
+next steps and ready messages and excludes closed conversations. record-activity.js
+stores the existing bounce type; the new projection reads only valid current-or-
+past timestamps and uniquely linked references, deduplicating the latest report
+per record. Bounce summaries/bodies are not copied and resolution is not inferred.
+The admin-only today-workspace GET exposes the additive pending DTO. The existing
+shared app renders it with escaped text and record navigation. No writer changed.
+
+Focused tests cover draft/uncertain/accepted states, missing/future/invalid dates,
+duplicate identities/IDs, unlinked bounces, no body/recipient leakage, no mutation,
+network or clock, plus four category clicks, long-list expansion, escaped unsafe
+text and unavailable summary at1366/400/412. Existing product assertions remain.
+Local dependency resolution uses the existing primary checkout node_modules via
+NODE_PATH. The installed Chromium requires the authorized unsandboxed synthetic
+test launch. No dependency or product policy changed to address that environment.
+
+Updated synthetic screenshots are correctly framed at the top of the page.
+Lighthouse13.5.0 accessibility100 at1366 and412; first paint99.2/35.6/87.2ms
+at1366/400/412. The pinned Lighthouse development tool was obtained with pnpm
+dlx outside the repository; no package.json change or production dependency.
+The two new browser-test selector corrections only scoped the text to its drawer
+and excluded legitimate Lucide image icons from the injection assertion.
+Final hosted full-suite evidence for this follow-up is required before release.
