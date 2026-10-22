@@ -33,6 +33,10 @@ Safety rules enforced by the engine:
   An original loan amount or an amortization estimate is never used or shown (D-011).
   A typical-rate clue is not the owner's rate (D-010).
 - Assessed land and total values only produce a land-share signal, never a price.
+- Land prices come only from a builder's own price or quote (A-018), at least 2 recorded
+  lot sales, or new-construction sales for the 10-15-20 rule (D-032).
+- Only buyers whose target return is met move an exit up the ranking; buyers matched on
+  strategy alone stay listed with "confirm the return".
 - No offer or MAO is produced (B-08 owns the single offer calculator).
 
 `modules/deals/exit-strategy-facts.js` maps a reviewed deal into facts: ARV from the

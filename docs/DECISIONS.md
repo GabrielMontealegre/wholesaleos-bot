@@ -22,7 +22,9 @@ matched on strategy. Wholesale / JV is how the winning exit is sold, not a ranke
 exit. The deal-card block is deferred: reviewed deals carry no rent, taxes or loan
 facts yet, the Deals screen rebuild (#416) is ordered, and the P0 UI gate holds.
 The engine takes no ARV from the A-023 Texas list-price tier or any comp mix holding
-last list prices, because AGENTS 5 (list price is never ARV) outranks A-023 --
+last list prices, because AGENTS 5 (list price is never ARV) outranks A-023. Land
+prices accept only a builder's stated price or quote, at least 2 recorded lot sales, or
+new-construction sales, and only buyers with a met target return affect the ranking --
 AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
 
 ASSUMED: split D-061 into an independently tested default-OFF transport/API

@@ -47,6 +47,12 @@ assert(plex.assumptions.every((item) => item.label && typeof item.value === 'num
 // Without any buyer the rental still ranks first on fee; with no rental buyer the flip buyer leads.
 assert.equal(exits.evaluate(fourplex, { today }).best, 'rental');
 assert.equal(exits.evaluate(fourplex, { today, buyers: [flipper] }).best, 'flip', 'a real matching buyer weighs most');
+// A buyer whose return cannot be checked is listed but never moves an exit up the ranking.
+const unchecked = exits.evaluate(fourplex, { today, buyers: [{ id: 'b-cap-flip', strategy_profile: { strategy: ['flip'], target_return: { basis: 'cap_rate', percent: 8 } } },
+  { id: 'b-silent-flip', strategy_profile: { strategy: ['flip'] } }] });
+assert.equal(unchecked.best, 'rental');
+assert.deepEqual(byKey(unchecked).flip.matching_buyers.map((b) => [b.id, b.return_check, b.rank]), [['b-cap-flip', 'unknown', 1], ['b-silent-flip', 'not_stated', 1]]);
+assert.equal(byKey(unchecked).wholesale_jv.verdict, 'possible', 'no confirmed buyer yet');
 
 // 2. A 2/1 where the rental fails at the flipper price.
 const twoOne = deepFreeze({ property_type: fact('house', 'public_web_page'), units: fact(1, 'public_web_page'), sqft: fact(900, 'public_web_page'),
@@ -156,10 +162,22 @@ assert(!JSON.stringify(exits.evaluate(noAsk, { today })).match(/"(?:mao|offer|ma
 // Land: builder price first (A-018), signals alone are possible, wholetail needs light repairs.
 e = byKey(exits.evaluate({ property_type: fact('vacant land', 'county_record'), builder_price: fact(90000, 'buyer_stated'), asking_price: fact(60000, 'public_web_page') }, { today }));
 assert.equal(e.land.verdict, 'strong'); assert.equal(e.land.fee, 30000); assert.equal(e.flip.applicable, false); assert.equal(e.rental.applicable, false);
+e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comp_count: 3 }), asking_price: fact(50000, 'public_web_page') }, { today }));
+assert.equal(e.land.buyer_max, 65000, 'lot sales minus the ~$5k builders expect'); assert.equal(e.land.verdict, 'strong');
+// A list price, AVM or tax value never becomes a land price; lot value needs real lot sales.
+for (const [name, bad, reason] of [['lot_comps_value', fact(70000, 'list_price', { comp_count: 3 }), 'source_not_allowed'],
+  ['lot_comps_value', fact(70000, 'avm', { comp_count: 3 }), 'source_not_allowed'], ['lot_comps_value', fact(70000, 'lot_sale_comps', { comp_count: 1 }), 'needs_comparable_sales'],
+  ['lot_comps_value', fact(70000, 'lot_sale_comps'), 'needs_comparable_sales'], ['builder_price', fact(90000, 'zestimate'), 'source_not_allowed'],
+  ['builder_price', fact(90000, 'list_price'), 'source_not_allowed'], ['new_home_value', fact(400000, 'list_price'), 'source_not_allowed'],
+  ['new_home_value', fact(400000, 'assessed_value'), 'source_not_allowed']]) {
+  const result = exits.evaluate({ property_type: fact('lot', 'county_record'), asking_price: fact(40000, 'public_web_page'), [name]: bad }, { today });
+  assert.deepEqual(result.rejected_facts, [{ fact: name, reason }], name + ' ' + bad.source_kind);
+  assert.equal(byKey(result).land.buyer_max, null); assert.equal(byKey(result).land.verdict, 'needs_data');
+}
 e = byKey(exits.evaluate({ assessed_land_value: fact(80000, 'county_record'), assessed_total_value: fact(100000, 'county_record'), builder_activity: fact(4, 'county_record') }, { today }));
 assert.equal(e.land.verdict, 'possible'); assert.match(e.land.reason, /80% of the county assessed value.*4 new builds/);
 assert(e.land.numbers.every((n) => n.key !== 'buyer_max'), 'assessed values never become a price');
-e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), new_home_value: fact(400000, 'county_record'), asking_price: fact(40000, 'public_web_page') }, { today }));
+e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), new_home_value: fact(400000, 'new_construction_sales'), asking_price: fact(40000, 'public_web_page') }, { today }));
 assert.equal(e.land.buyer_max, 80000, 'suburban tier sells at 20% (D-032)'); assert.equal(e.land.verdict, 'possible', '10-15-20 rule alone is rough');
 // Only vacant land switches off the house exits; a mobile home on land is still a house.
 for (const type of ['land', 'Vacant Land', 'lot', 'vacant lot', 'lots', 'acreage', 'raw land']) assert.equal(byKey(exits.evaluate({ property_type: fact(type, 'county_record') }, { today })).flip.applicable, false, type);

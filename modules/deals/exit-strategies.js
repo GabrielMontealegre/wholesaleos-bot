@@ -47,9 +47,10 @@ const FACTS = Object.freeze({
   seller_open_to_terms: { type: 'boolean', sources: ['owner_stated'] },
   loan_rate_pct: { type: 'percent', sources: ['owner_stated', 'loan_statement'] },
   loan_payoff: { type: 'money', sources: ['owner_stated', 'payoff_statement'], secret_on_reject: true },
-  builder_price: { type: 'money', max_age_days: 365 },
-  lot_comps_value: { type: 'money', max_age_days: 730 },
-  new_home_value: { type: 'money', max_age_days: 365 },
+  // Land prices (A-018, D-032): a builder's own price, recorded lot sales, new-construction sales.
+  builder_price: { type: 'money', sources: ['buyer_stated', 'builder_quote'], max_age_days: 365 },
+  lot_comps_value: { type: 'money', sources: ['lot_sale_comps'], max_age_days: 730, min_comps: 2 },
+  new_home_value: { type: 'money', sources: ['new_construction_sales'], max_age_days: 365 },
   splittable_lot: { type: 'boolean' },
   builder_activity: { type: 'count', max_age_days: 365, zero: true },
   assessed_land_value: { type: 'money', sources: ['county_record'] },
@@ -113,6 +114,10 @@ function acceptFact(name, fact, today) {
   if (rule.sources && !rule.sources.includes(fact.source_kind)) return { reason: 'source_not_allowed' };
   const accepted = { value: rule.type === 'text' ? fact.value.trim() : fact.value, source_kind: fact.source_kind,
     source_url: url || null, evidence_text: evidence.slice(0, 300), captured_at: fact.captured_at.slice(0, 10) };
+  if (rule.min_comps) {
+    if (!Number.isInteger(fact.comp_count) || fact.comp_count < rule.min_comps) return { reason: 'needs_comparable_sales' };
+    accepted.comp_count = fact.comp_count;
+  }
   if (name === 'arv') {
     // D-005: 3 comps = verified, 2 = preliminary, fewer = no ARV. A claimed tier never beats the count.
     const count = fact.comp_count;
@@ -435,7 +440,8 @@ function targetCheck(profile, exit, { arv, repairs, asking }) {
 // target, then speed, then data certainty (verified > preliminary > rough), then the verdict.
 function compare(a) {
   const order = EXITS.map(([key]) => key);
-  const buyerRank = (exit) => exit.matching_buyers.reduce((best, buyer) => Math.max(best, buyer.rank), 0);
+  // Only a buyer whose target return is met counts; strategy-only matches stay listed but don't rank.
+  const buyerRank = (exit) => exit.matching_buyers.reduce((best, buyer) => buyer.rank >= 2 ? Math.max(best, buyer.rank) : best, 0);
   const atTarget = (exit) => exit.fee != null && exit.fee >= a.target_fee ? 1 : 0;
   return (x, y) => buyerRank(y) - buyerRank(x) || atTarget(y) - atTarget(x) || x.speed - y.speed || y.certainty - x.certainty ||
     VERDICT_ORDER[x.verdict] - VERDICT_ORDER[y.verdict] || (y.fee ?? -Infinity) - (x.fee ?? -Infinity) || order.indexOf(x.key) - order.indexOf(y.key);
