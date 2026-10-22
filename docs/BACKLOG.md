@@ -2,6 +2,30 @@
 
 ## Latest Run Summary
 
+2026-10-22 #429 checkpoint: concurrent architect PR431 discovered before
+merging Codex alternate430. NOTHING merged.430@13d3d1b remains draft,
+hosted39852880114 passed241/0/0, local240/1/0 plus unchanged isolated Pipeline
+pass. Its full embedded-shell alternative is preserved, not combined into431.
+Architect issue429 now hands off431@004df5e; review prefers its explicitly
+allowed classic-label option/root Home fix without changing CSP or auth.
+Remaining431 acceptance gap: no link from classic Home into native Email,
+acknowledged in its body. Add a clearly labeled explicit entry, then actual
+Home->Deals->Email->Deals1366/400/412 screenshots and negative regressions.
+Review finding:431 comment6351465312. Hosted39853806212 is the original
+head's running gate; recheck status, do not assume final modified head green.
+Current local branch item/429-one-shell-navigation preserves this checkpoint;
+do not push/merge a docs-only checkpoint as a substitute for the fix.
+
+D-062 outage merge policy (#423 answer6350507039): up to THREE tested,
+self-reviewed non-sensitive merged-but-unverified items; mark each MERGED -
+deploy pending (Railway builds unavailable), never released.422 currently
+occupies ONE slot;430/431 unmerged occupy none. Order429/431,427,425,424,426.
+Send/call/auth/credentials/migrations stay unmerged until individually
+deployable. One retry authorization remains unconsumed until official Hobby
+restoration/no equivalent live build; no plan/billing/settings/variables.
+428 rotation is owner-controlled; no secret values read or changed. No
+production action, send, capture, batch, confirmation or business write.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.
