@@ -3,14 +3,18 @@
 // Maps a reviewed deal and its evaluation (reviewed-deals.evaluate) into exit-engine facts (#402).
 // Pure. ARV comes only from the reviewed comp grid; the holder's claimed ARV and claimed rehab are
 // never used. Reviewed deals carry no rent, taxes or loan facts yet, so those exits show missing data.
-const TIERS = Object.freeze({ Verified: 'verified', Preliminary: 'preliminary', 'Texas list-price': 'preliminary' });
+// The "Texas list-price" tier is last list prices, not recorded sales; a list price is never ARV
+// (AGENTS 5), so that tier gives the engine no ARV.
+const TIERS = Object.freeze({ Verified: 'verified', Preliminary: 'preliminary' });
 const UNITS = Object.freeze({ house: 1, sfr: 1, 'single family': 1, townhome: 1, condo: 1, duplex: 2, triplex: 3, fourplex: 4, quadplex: 4, '4-plex': 4, '3-plex': 3 });
 
 function fromReviewedDeal(deal, evaluation) {
   const facts = {};
   const source = { source_kind: 'public_web_page', source_url: deal.source_url || null, captured_at: deal.captured_at || '' };
   const value = evaluation && evaluation.value;
-  const tier = value && value.range && TIERS[value.tier];
+  // compValue labels a wider-area mix "Preliminary" even when list-price comps are in it.
+  const listPrices = value && (value.price_basis_label || (value.comps || []).some((comp) => comp.price_basis === 'texas_last_list_price'));
+  const tier = value && value.range && !listPrices && TIERS[value.tier];
   if (tier) {
     const comps = value.comps || [];
     facts.arv = { value: value.range.low, tier, comp_count: comps.length, source_kind: 'comp_grid', source_url: comps[0] ? comps[0].source_url : null,

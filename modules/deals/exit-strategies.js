@@ -174,7 +174,8 @@ function evaluate(inputFacts, options = {}) {
   const value = (key) => facts[key] ? facts[key].value : null;
   const arv = value('arv'), repairs = value('repairs'), asking = value('asking_price'), sqft = value('sqft');
   const propertyType = String(value('property_type') || '').toLowerCase();
-  const land = /\b(land|lot|acre)/.test(propertyType);
+  // Only vacant land or lots; "mobile home on land" still has a house.
+  const land = /^(?:vacant |raw |residential )?(?:land|lots?|acreage|parcel)$/.test(propertyType.trim());
   const units = value('units');
   const arvCertainty = facts.arv ? CERTAINTY[facts.arv.tier] : 0;
   const exits = {};

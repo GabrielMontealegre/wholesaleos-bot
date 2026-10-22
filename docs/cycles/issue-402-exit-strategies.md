@@ -36,7 +36,10 @@ Safety rules enforced by the engine:
 - No offer or MAO is produced (B-08 owns the single offer calculator).
 
 `modules/deals/exit-strategy-facts.js` maps a reviewed deal into facts: ARV from the
-reviewed comp grid (low end of the range), the repair estimate, the asking price or
+reviewed comp grid (low end of the range) only when every counted comp is a recorded
+sale. The "Texas list-price" tier, or any mix containing last list prices, gives no ARV
+here (AGENTS 5: a list price is never ARV; A-023 stays a reviewed-deal grid label). Then
+the repair estimate, the asking price or
 starting bid, type, size and a unit count only for unambiguous types. It never reads
 `claimed_arv` or `claimed_rehab`. `buyersFor()` returns profiles only for the buyers
 `reviewed-deals.evaluate` already matched on approval, area and type.

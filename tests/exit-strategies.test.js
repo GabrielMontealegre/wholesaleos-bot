@@ -161,6 +161,12 @@ assert.equal(e.land.verdict, 'possible'); assert.match(e.land.reason, /80% of th
 assert(e.land.numbers.every((n) => n.key !== 'buyer_max'), 'assessed values never become a price');
 e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), new_home_value: fact(400000, 'county_record'), asking_price: fact(40000, 'public_web_page') }, { today }));
 assert.equal(e.land.buyer_max, 80000, 'suburban tier sells at 20% (D-032)'); assert.equal(e.land.verdict, 'possible', '10-15-20 rule alone is rough');
+// Only vacant land switches off the house exits; a mobile home on land is still a house.
+for (const type of ['land', 'Vacant Land', 'lot', 'vacant lot', 'lots', 'acreage', 'raw land']) assert.equal(byKey(exits.evaluate({ property_type: fact(type, 'county_record') }, { today })).flip.applicable, false, type);
+for (const type of ['mobile home on land', 'house on large lot', 'Lakeland bungalow', 'house']) {
+  e = byKey(exits.evaluate({ ...twoOne, property_type: fact(type, 'county_record') }, { today }));
+  assert.equal(e.flip.applicable, true, type); assert.equal(e.flip.verdict, 'strong', type); assert.equal(e.rental.applicable, true, type);
+}
 e = byKey(exits.evaluate({ ...twoOne, repairs: fact(9000, 'operator_estimate') }, { today }));
 assert.equal(e.wholetail.verdict, 'strong'); assert.equal(e.wholetail.buyer_max, 111000);
 
@@ -215,6 +221,14 @@ assert.equal(mapped.repairs.value, 30000); assert.equal(mapped.units.value, 2); 
 assert(!JSON.stringify(mapped).includes('999999'), 'the holder claim is never ARV');
 assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { tier: 'Not established', range: null, comps: [] } }).arv, undefined);
 assert.equal(adapter.fromReviewedDeal({ ...deal, property_type: '2-4 units' }, reviewed).units, undefined, 'an ambiguous type gives no unit count');
+// Texas last list prices are not recorded sales, so they never become ARV here.
+const listTier = adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { ...reviewed.value, tier: 'Texas list-price', price_basis_label: 'Texas last list prices - not recorded sales' } });
+assert.equal(listTier.arv, undefined);
+const widerMix = { ...reviewed.value, tier: 'Preliminary', comps: [{ source_url: 'https://comps.example.test/1', price_basis: 'recorded_sale' }, { price_basis: 'texas_last_list_price', area: 'wider' }] };
+assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: widerMix }).arv, undefined, 'a wider-area mix with list prices is not ARV');
+assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { ...widerMix, comps: widerMix.comps.slice(0, 1).concat({ price_basis: 'recorded_sale' }) } }).arv.tier, 'preliminary');
+e = byKey(exits.evaluate(listTier, { today }));
+for (const key of ['flip', 'brrrr', 'wholetail', 'novation']) { assert.equal(e[key].verdict, 'needs_data'); assert.equal(e[key].buyer_max, null); }
 const mappedResult = exits.evaluate(mapped, { today, buyers: adapter.buyersFor(reviewed, [{ id: 'buyer-landlord', assistant_find: { strategy_profile: landlord.strategy_profile } }, { id: 'unmatched', assistant_find: { strategy_profile: flipper.strategy_profile } }]) });
 assert.deepEqual(mappedResult.rejected_facts, []);
 assert.equal(byKey(mappedResult).rental.verdict, 'needs_data', 'reviewed deals carry no rent yet');

@@ -20,7 +20,9 @@ profile lives in assistant_find.strategy_profile with its own source; buy_box's
 free-text funding is unchanged, and legacy buyers have no profile, so they are never
 matched on strategy. Wholesale / JV is how the winning exit is sold, not a ranked
 exit. The deal-card block is deferred: reviewed deals carry no rent, taxes or loan
-facts yet, the Deals screen rebuild (#416) is ordered, and the P0 UI gate holds --
+facts yet, the Deals screen rebuild (#416) is ordered, and the P0 UI gate holds.
+The engine takes no ARV from the A-023 Texas list-price tier or any comp mix holding
+last list prices, because AGENTS 5 (list price is never ARV) outranks A-023 --
 AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
 
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
