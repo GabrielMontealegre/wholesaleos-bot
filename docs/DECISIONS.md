@@ -1,5 +1,28 @@
 # Decisions
 
+ASSUMED: #402 exit engine (Claude cloud session, PR pending). Verdicts are
+Strong / Possible / Needs data / No: the issue lists three, and "Needs data" keeps
+missing facts visible instead of guessing (AGENTS 5 truth). The flip buyer price
+uses the D-015/D-031 band (low end of each course range: 70 / 75 / 80 / 83%), not
+the issue's flat 70-75%, because decisions outrank an item; the band constant moves
+to B-08's single offer calculator when that exists. The engine never produces an
+offer or MAO: it reports each end buyer's maximum and our fee at the asking price.
+Rental, BRRRR and wholetail defaults (vacancy 8%, maintenance 8%, management 10%,
+buyer closing 3%, DSCR loan 25% down / 7.5% / 30 years, landlord cap 8%, DSCR 1.25,
+BRRRR refinance 75%, wholetail 80%, selling costs 10%, subject-to rate at most 5%,
+target fee $10,000, lot discount $5,000) are labeled assumptions shown with every
+result and can be changed per call; they are never facts. Rent counts only from HUD
+Small Area FMR, rental comps, an agent, a lease or a rent roll, captured within 12
+months; a payoff counts only when owner-stated or from a payoff statement, and a
+rejected payoff value is never echoed. A buyer's proof-of-funds date is a recorded
+report, not a funds check (#413); it counts as current for 90 days. The buyer
+profile lives in assistant_find.strategy_profile with its own source; buy_box's
+free-text funding is unchanged, and legacy buyers have no profile, so they are never
+matched on strategy. Wholesale / JV is how the winning exit is sold, not a ranked
+exit. The deal-card block is deferred: reviewed deals carry no rent, taxes or loan
+facts yet, the Deals screen rebuild (#416) is ordered, and the P0 UI gate holds --
+AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

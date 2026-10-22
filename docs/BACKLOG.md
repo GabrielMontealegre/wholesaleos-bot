@@ -2,6 +2,19 @@
 
 ## Latest Run Summary
 
+2026-10-22 #402 exit-strategy engine LOCAL (Claude cloud session, label
+claude-building; Codex leaves it alone per #423). Pure calculator scores flip,
+rental (cap rate, cash-on-cash with a DSCR loan, 1% rule), BRRRR, wholetail,
+creative, novation/list, land/builder, small multifamily and wholesale/JV, and
+ranks them by matching buyer, fee at target, speed and data certainty. Every fact
+needs a source; list price/AVM/claimed ARV, unsourced or stale rent and guessed
+payoffs are rejected and never shown. Buyer strategy profile (strategy, deals a
+year, target return, funding, proof-of-funds date) flows through import, re-import,
+operator update and the buyers list. No route, screen, offer, gate or existing
+match changes. Card block deferred (deals carry no rent yet; #416 order; P0 UI
+gate). PR open for review; not merged or deployed (Railway paused, #423).
+Trace: docs/cycles/issue-402-exit-strategies.md.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.
