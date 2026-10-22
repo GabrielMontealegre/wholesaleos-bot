@@ -1,0 +1,17 @@
+{
+  "synthetic_only": true,
+  "results": [
+    {
+      "width": 1366,
+      "score": 100,
+      "failed": [],
+      "version": "13.5.0"
+    },
+    {
+      "width": 412,
+      "score": 100,
+      "failed": [],
+      "version": "13.5.0"
+    }
+  ]
+}

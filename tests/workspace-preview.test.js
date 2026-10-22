@@ -20,12 +20,12 @@ for (const forged of ['WOS-FL-1012&x=1', 'BUY-005', 'https://evil.test', null]) 
 
 const routes = [];
 registerWorkspacePreview({ get: (route, handler) => routes.push({ route, handler }) });
-assert.deepEqual(routes.map(item => item.route), ['/app']);
+assert.deepEqual(routes.map(item => item.route), [['/dashboard', '/dashboard/', '/dashboard/index.html'], '/app']);
 function response(query) {
   const result = { headers: {} };
   const res = { set: (key, value) => { result.headers[key] = value; },
     redirect: (status, target) => Object.assign(result, { status, target }), sendFile: file => { result.file = file; } };
-  routes[0].handler({ query }, res);
+  routes[1].handler({ query }, res);
   return result;
 }
 for (const query of [{}, { preview: 'true' }, { preview: ['1', '1'] }, { preview: { a: '1' } }]) {
@@ -36,6 +36,24 @@ assert(preview.file.endsWith(path.join('workspace', 'index.html')));
 assert.equal(preview.headers['Cache-Control'], 'no-store');
 assert(preview.headers['Content-Security-Policy'].includes("script-src 'self'"));
 assert(!preview.headers['Content-Security-Policy'].includes('unsafe-inline'));
+assert(preview.headers['Content-Security-Policy'].includes("frame-src 'self'"));
+assert(preview.headers['Content-Security-Policy'].includes("frame-ancestors 'none'"));
+assert.equal(response({ record_ref: 'BUY-0005' }).target, '/dashboard/?record_ref=BUY-0005');
+assert.equal(response({ record_ref: '//evil.test' }).target, '/dashboard/');
+assert.equal(response({ workspace: 'email' }).target, '/dashboard/?workspace=email');
+for (const query of [{}, { embedded: 'true' }, { embedded: ['1', '1'] }, { embedded: { a: '1' } }]) {
+  let file;
+  routes[0].handler({ query }, { set() {}, sendFile: value => { file = value; } });
+  assert(file.endsWith(path.join('workspace', 'index.html')), 'Only exact embedded=1 serves the legacy content document');
+}
+let embedded;
+routes[0].handler({ query: { embedded: '1' } }, { set() {}, sendFile: value => { embedded = value; } });
+assert(embedded.endsWith(path.join('dashboard', 'index.html')));
+assert.deepEqual(navigation.route('?workspace=deals'), { key: 'deals', ref: null, native: false });
+assert.deepEqual(navigation.route('?workspace=email&record_ref=BUY-0005'), { key: 'leads', ref: 'BUY-0005', native: false });
+assert.equal(navigation.embeddedHref('__proto__'), null);
+assert.equal(navigation.embeddedHref('deals', '//evil.test'), null);
+assert.equal(navigation.embeddedHref('email'), '/dashboard/?workspace=email&embedded=1');
 
 const source = fs.readFileSync(path.join(__dirname, '../dashboard/workspace/navigation.js'), 'utf8');
 function bridge(search, unlocked) {

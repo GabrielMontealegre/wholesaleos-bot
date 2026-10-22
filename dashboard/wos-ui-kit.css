@@ -1,4 +1,8 @@
 .wos-kit{--tblr-body-bg:var(--bg);--tblr-body-color:var(--ink);--tblr-bg-surface:var(--card);--tblr-border-color:var(--line);--tblr-primary:#5bd6a3;--tblr-link-color:#7eb8ff;--tblr-danger:#ff929b;letter-spacing:0}
 .wos-kit *{letter-spacing:0}
+html[data-wos-embedded="true"] #app > .sidebar,
+html[data-wos-embedded="true"] #app > .sidebar-overlay,
+html[data-wos-embedded="true"] #app > .main > .topbar{display:none!important}
+html[data-wos-embedded="true"] #app > .main{width:100%;min-width:0;margin-left:0}
 .wos-kit .approval-card.card{box-shadow:none;border-radius:8px}
 [data-wos-scheme] body[data-wos-design="marketplace"] #app #wos-approvals .approval-card.card{background:var(--card)!important;color:var(--ink)!important}
