@@ -37,6 +37,7 @@ body[data-wos-design="marketplace"] #app .desk-more>summary { box-sizing:border-
 .desk-more-items { top:8px;bottom:8px;max-height:none;box-sizing:border-box; }
 .desk-more-items>.desk-panel-close,.desk-user-panel>.desk-panel-close { display:block;margin-left:auto;position:sticky;top:0;z-index:2; }
 .desk-more-items .nav-item { width:100%;box-sizing:border-box; }
+.desk-workspace-entry { display:flex;align-items:center;min-height:44px;padding:8px 12px;box-sizing:border-box;color:var(--link);text-decoration:none; }
 .desk-more:not([open])>.desk-more-items,.desk-user-menu:not([open])>.desk-user-panel { display:none; }
 .desk-more:has(.nav-item.active)>summary { color:var(--selection-ink)!important; }
 body[data-wos-design="marketplace"] #app .topbar .notif-bell { flex:0 0 44px; }

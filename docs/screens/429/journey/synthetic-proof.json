@@ -1,0 +1,26 @@
+{
+  "synthetic_only": true,
+  "report": [
+    {
+      "width": 1366,
+      "home": "/dashboard/",
+      "journey": "Home > Deals > Email workspace > Deals > Back to Email",
+      "exact_record": "WOS-FL-1040"
+    },
+    {
+      "width": 400,
+      "home": "/dashboard/",
+      "journey": "Home > Deals > Email workspace > Deals > Back to Email",
+      "exact_record": "WOS-FL-1040"
+    },
+    {
+      "width": 412,
+      "home": "/dashboard/",
+      "journey": "Home > Deals > Email workspace > Deals > Back to Email",
+      "exact_record": "WOS-FL-1040"
+    }
+  ],
+  "writes": [],
+  "errors": [],
+  "external": []
+}
