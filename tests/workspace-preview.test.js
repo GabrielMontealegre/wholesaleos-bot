@@ -51,11 +51,14 @@ const browserHome = home('html');
 assert.equal(browserHome.status, 302);
 assert.equal(browserHome.target, '/dashboard/');
 assert.equal(browserHome.headers['Cache-Control'], 'no-store');
+assert.equal(browserHome.headers.Vary, 'Accept', 'The redirect is marked as varying on Accept');
 assert.equal(statusCalls, 0, 'A browser visit must not compute the status payload');
 for (const accepted of ['json', false]) {
   const api = home(accepted);
   assert.equal(api.target, undefined, 'API clients keep the JSON status');
   assert.equal(api.body.status, 'Online');
+  assert.equal(api.headers.Vary, 'Accept', 'The JSON status is marked as varying on Accept');
+  assert.equal(api.headers['Cache-Control'], 'no-store', 'The JSON status is never cached for a later browser visit');
 }
 assert.equal(statusCalls, 2);
 
