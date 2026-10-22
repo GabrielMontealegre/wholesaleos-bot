@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-22 #432 negotiation planner (Claude cloud session, `claude-building`):
+pure planner `modules/deals/negotiation-planner.js` plus hermetic
+`tests/negotiation-planner.test.js`. Next move (ask seller's number, buyers
+first, open, counter, renegotiate down for defects, hold, walk), #400 part 3
+distress sizing (opening/target/walk-away), buyer asking price and "push a
+little", soft 5-10% counters. No route, UI, storage, send or deploy. PR open for
+review; Codex reviews and merges per AGENTS2 and the #423 deploy pause.
+Assumptions logged in DECISIONS.md.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.

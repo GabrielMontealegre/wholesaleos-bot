@@ -1,5 +1,25 @@
 # Decisions
 
+ASSUMED: #432 negotiation planner (`modules/deals/negotiation-planner.js`) is a
+pure read-only function, not yet wired to a card, route or chat. Choices, all
+the conservative reading of #432/#400 part 3: default buyer max is 70% of value
+under $120k and 75% at or above it, minus repairs (#432 "70/75%"; the B-08
+80-83% bands above $200k are not used until B-08's single calculator exists,
+then the planner takes its band from there and never becomes a second MAO
+source). Minimum fee $10,000, raisable only. Two-signal target uses 55% (low
+end of 55-60%). Value counts only with source_kind sold_comps; when comps are
+supplied their own address/price/date/source prove the count (2 = preliminary,
+D-005). No price at all (either side) until the seller's number was asked.
+Without value or repairs the move is hold_backup with status no_offer (the
+seven #432 codes only). Counters step 5%, 10% only when another offer is on
+the table, never past walk-away or the seller's number, and only after the
+seller answered our last offer (same-day date-only answers are ambiguous, so
+hold). A fast buyer answer = within 24 hours. Buyer numbers need a buyer id, a
+source and a date within 30 days. Defect renegotiation proposes last offer
+minus the new sourced defect costs, capped at walk-away. No deposit from
+Gabriel is ever produced (D-059) -- AGENTS3/5, #432, #400, D-005, D-059
+--2026-10-22.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the
