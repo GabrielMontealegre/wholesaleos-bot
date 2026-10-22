@@ -36,7 +36,7 @@ async function prove() {
           return route.fulfill({ status: auth ? fail ? 503 : 200 : 401, json: auth && !fail ? today : { code: 'unavailable' } });
         }
         if (url.pathname === '/app') return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(__dirname, '../dashboard/workspace/index.html')) });
-        if (url.pathname === '/dashboard/') return route.fulfill({ contentType: 'text/html', body: '<html lang="en"><title>Classic fixture</title><h1>Classic workspace</h1></html>' });
+        if (url.pathname === '/dashboard/') return route.fulfill({ contentType: 'text/html', body: url.searchParams.get('embedded') === '1' ? '<html lang="en"><title>Classic fixture</title><h1>Classic workspace</h1></html>' : fs.readFileSync(path.join(__dirname, '../dashboard/workspace/index.html')) });
         if (url.pathname.startsWith('/dashboard/')) {
           const relative = url.pathname.slice('/dashboard/'.length);
           assert(!relative.includes('..'));
@@ -76,7 +76,7 @@ async function prove() {
       assert(layout.firstPaint !== null && layout.firstPaint < 2000, 'Fixture first contentful paint <2s');
       // Email intentionally migrates to the shared native shell in #412.
       if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-      await page.locator((width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/app?preview=1&view=email"]').click();
+      await page.locator((width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/dashboard/?workspace=email"]').click();
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
       assert(await page.locator('.ws-mail').isVisible());
       await page.goto('https://fixture.test/app?preview=1');

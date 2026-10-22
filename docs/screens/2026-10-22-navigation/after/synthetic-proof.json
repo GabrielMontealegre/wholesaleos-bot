@@ -1,0 +1,32 @@
+{
+  "synthetic_only": true,
+  "results": [
+    {
+      "width": 1366,
+      "first_contentful_paint_ms": 724.8999999761581,
+      "same_shell": true,
+      "top_level_tab_reloads": 0,
+      "back_forward": true,
+      "exact_record": true,
+      "zero_writes": true
+    },
+    {
+      "width": 400,
+      "first_contentful_paint_ms": 69.29999995231628,
+      "same_shell": true,
+      "top_level_tab_reloads": 0,
+      "back_forward": true,
+      "exact_record": true,
+      "zero_writes": true
+    },
+    {
+      "width": 412,
+      "first_contentful_paint_ms": 79,
+      "same_shell": true,
+      "top_level_tab_reloads": 0,
+      "back_forward": true,
+      "exact_record": true,
+      "zero_writes": true
+    }
+  ]
+}

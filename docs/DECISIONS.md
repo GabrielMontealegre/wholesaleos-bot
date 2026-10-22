@@ -1,5 +1,36 @@
 # Decisions
 
+## D-062: Bounded Merges During The Railway Build Outage
+
+Architect#423 answer6350507039,2026-10-22: the Hobby build outage does not
+stop local backlog work. Full-suite-green, self-reviewed non-sensitive items
+may merge as `MERGED - deploy pending (Railway builds unavailable)`; at most
+three merged-but-unverified items may be on main at once. Count already
+merged422 toward that cap. Send/call gates, auth, credentials and migrations
+remain unmerged until individually deployable/verifiable. After recovery,
+one exact-main build then every pending item's read-only1366/400/412 gates;
+revert only a failing item's merge. Never change Railway plan, billing,
+settings or variables. Retain Gabriel's unconsumed one-build retry permission
+until Hobby restoration and no equivalent live build are verified. Order:
+429 navigation,427 Email density,425 Today,424 composer,426 finance.
+
+ASSUMED: #429 uses the shared shell around unchanged same-origin classic
+content until each native screen is approved; Home's content remains the
+legacy dashboard. Only explicit embedded=1 serves the original document.
+The parent can frame only its own origin; the legacy content can be framed
+only by its own origin. Exact-origin AND exact-child-window message checks,
+allowlisted route keys and validated record refs prevent arbitrary routing.
+No API, signed-session, role or send gate changes. Existing non-admin
+canonical entry falls back to its original standalone classic document;
+admin-only native preview remains admin-only. This is compatibility routing,
+not a grant of new authority -- AGENTS3/5,#429 --2026-10-22.
+
+Architect#428 answer6350507659,2026-10-22: credential rotation is performed
+by Gabriel. Never view, print, copy or change secret values or edit Railway
+variables. After recovery AND owner confirmation, verify integration status
+and Gmail/Drive reads without writes; report missing integrations by NAME
+only. Rotation itself needs no code. Do not close428 before owner confirms.
+
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and
 durable idempotency boundary before enabling any UI path; never describe the

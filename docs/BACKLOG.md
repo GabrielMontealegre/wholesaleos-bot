@@ -2,6 +2,29 @@
 
 ## Latest Run Summary
 
+2026-10-22 #429 navigation, PR430: implementation and synthetic proof complete;
+merge only after full local and exact-head hosted suites are green. On merge,
+status is **MERGED - deploy pending (Railway builds unavailable)**, not live
+or owner-approved. One shared header/nav now contains native Email and clearly
+labeled classic content; canonical Home retains the legacy dashboard. Every
+tab/Settings, Home->Deals->Email->Deals, Back/Forward including old preview
+URLs, exact record refs, locked loads, non-admin compatibility and forged
+origin/source/key/ref negatives are covered at1366/400/412, zero business
+writes/external requests. Synthetic FCP725/69/79ms; Lighthouse13.5.0 scores100
+desktop/Android. Before/after proof: docs/screens/2026-10-22-navigation/.
+Full-suite results/timings and self-review are on PR430; no dependency or
+auth-module/API/send-gate changes. D-062 and routing assumption logged.
+
+Deploy-pending ledger ON PR430 MERGE:422 exact-thread backend +430 navigation
+=2/3. Next427 Email density may occupy the third slot only after reconciled
+head gates pass.425 then stays branch/PR-only until verified live items free
+capacity.424 composer/auth-sensitive work stays unmerged until deployable.
+Do not close429 or call a new release verified before exact-source health,
+lead hydration/card and all navigation read-only1366/400/412 checks. Retain
+one unconsumed exact-main retry for official Hobby recovery, no duplicate
+build, Railway plan/settings/variables/billing or secret changes.428 rotation
+is owner-controlled; verify integrations only after owner says complete.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.

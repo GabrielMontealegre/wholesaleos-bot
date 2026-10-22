@@ -34,7 +34,7 @@ async function prove({ screenshots = false, lighthousePath } = {}) {
     if (screenshots) fs.mkdirSync(dir, { recursive: true });
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: width === 1366 ? 768 : 915 });
-      await page.goto(base + '/dashboard/?workspace=email'); await page.locator('[data-email-message]').first().waitFor();
+      await page.goto(base + '/dashboard/?workspace=email&embedded=1'); await page.locator('[data-email-message]').first().waitFor();
       await page.locator('[data-email-message]').first().click(); await page.locator('[data-email-body]').first().waitFor();
       if (screenshots) await page.screenshot({ path: path.join(dir, 'before-reader-' + width + '.png') });
       await page.goto(base + '/app?preview=1&view=email'); await page.locator('.ws-mail-row').first().waitFor();

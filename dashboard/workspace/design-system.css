@@ -98,6 +98,8 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-topbar h1 { font-size: var(--ws-type-title); }
 .ws-help { min-height: 32px; padding: var(--ws-space-1) var(--ws-space-6); color: var(--ws-muted); font-size: var(--ws-type-xs); }
 .ws-content { min-height: 0; overflow-y: auto; padding: 0 var(--ws-space-6) var(--ws-space-6); }
+.ws-content--classic { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.ws-classic-frame { width: 100%; flex: 1; min-height: 0; border: 0; background: var(--ws-bg); }
 .ws-section { padding: var(--ws-space-4) 0; }
 .ws-section-header { display: flex; justify-content: space-between; align-items: center; gap: var(--ws-space-3); margin-bottom: var(--ws-space-3); }
 .ws-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--ws-space-3); }
