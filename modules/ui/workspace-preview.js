@@ -7,10 +7,10 @@ const APP_HOME = '/dashboard/';
 
 function registerAppHome(app, status) {
   app.get('/', (req, res) => {
-    if (req.accepts(['json', 'html']) === 'html') {
-      res.set('Cache-Control', 'no-store');
-      return res.redirect(302, APP_HOME);
-    }
+    // The response depends on Accept, so no cache may reuse the JSON status for a browser visit.
+    res.set('Vary', 'Accept');
+    res.set('Cache-Control', 'no-store');
+    if (req.accepts(['json', 'html']) === 'html') return res.redirect(302, APP_HOME);
     res.json(status());
   });
 }
