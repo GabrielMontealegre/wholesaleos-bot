@@ -33,7 +33,7 @@ const ARV_FORBIDDEN = new Set(['list_price', 'avm', 'zestimate', 'assessed_value
 const RENT_SOURCES = ['hud_small_area_fmr', 'rental_comps', 'agent_report', 'lease', 'rent_roll'];
 // Fact rules: value type, allowed source kinds (null = any sourced kind) and the oldest usable capture.
 const FACTS = Object.freeze({
-  arv: { type: 'money', sources: ['comp_grid'], max_age_days: 183 },
+  arv: { type: 'money', sources: ['comp_grid'], max_age_days: 183, min_comps: 2, comp_max_age_days: 183 },
   repairs: { type: 'money', max_age_days: 365, zero: true },
   asking_price: { type: 'money', max_age_days: 183 },
   property_type: { type: 'text' },
@@ -49,7 +49,7 @@ const FACTS = Object.freeze({
   loan_payoff: { type: 'money', sources: ['owner_stated', 'payoff_statement'], secret_on_reject: true },
   // Land prices (A-018, D-032): a builder's own price, recorded lot sales, new-construction sales.
   builder_price: { type: 'money', sources: ['buyer_stated', 'builder_quote'], max_age_days: 365 },
-  lot_comps_value: { type: 'money', sources: ['lot_sale_comps'], max_age_days: 730, min_comps: 2 },
+  lot_comps_value: { type: 'money', sources: ['lot_sale_comps'], max_age_days: 730, min_comps: 2, comp_max_age_days: 730 },
   new_home_value: { type: 'money', sources: ['new_construction_sales'], max_age_days: 365 },
   splittable_lot: { type: 'boolean' },
   builder_activity: { type: 'count', max_age_days: 365, zero: true },
@@ -116,17 +116,36 @@ function acceptFact(name, fact, today) {
   const accepted = { value: rule.type === 'text' ? fact.value.trim() : fact.value, source_kind: fact.source_kind,
     source_url: url || null, evidence_text: evidence.slice(0, 300), captured_at: fact.captured_at.slice(0, 10) };
   if (rule.min_comps) {
-    if (!Number.isInteger(fact.comp_count) || fact.comp_count < rule.min_comps) return { reason: 'needs_comparable_sales' };
-    accepted.comp_count = fact.comp_count;
+    // The count comes from the comp records themselves, never from a claimed number.
+    const count = recordedSales(fact.comps, fact.value, today, rule.comp_max_age_days);
+    if (count < rule.min_comps) return { reason: name === 'arv' ? 'arv_needs_comparable_sales' : 'needs_comparable_sales' };
+    accepted.comp_count = count;
   }
   if (name === 'arv') {
-    // D-005: 3 comps = verified, 2 = preliminary, fewer = no ARV. A claimed tier never beats the count.
-    const count = fact.comp_count;
-    if (!Number.isInteger(count) || count < 2 || !Object.hasOwn(CERTAINTY, fact.tier)) return { reason: 'arv_needs_comparable_sales' };
-    accepted.comp_count = count;
-    accepted.tier = fact.tier === 'verified' && count < 3 ? 'preliminary' : fact.tier;
+    // D-005: 3 comps = verified, 2 = preliminary. A claimed tier never beats the count; ballpark (D-003) stays ballpark.
+    if (!Object.hasOwn(CERTAINTY, fact.tier)) return { reason: 'arv_needs_comparable_sales' };
+    accepted.tier = fact.tier === 'ballpark' ? 'ballpark' : accepted.comp_count >= 3 ? 'verified' : 'preliminary';
   }
   return { fact: accepted };
+}
+
+// Counts recorded sales: each needs an address, sold price, sold date inside the window and an
+// https source, never a list price, and no address twice. Any bad record, or a value outside the
+// sold-price range, fails the whole set (returns 0).
+function recordedSales(comps, value, today, maxAgeDays) {
+  if (!Array.isArray(comps) || comps.length > 50) return 0;
+  const seen = new Set();
+  for (const comp of comps) {
+    if (!comp || typeof comp !== 'object' || Array.isArray(comp)) return 0;
+    const address = typeof comp.comp_address === 'string' ? comp.comp_address.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    const sold = profiles.dayNumber(comp.sold_date);
+    if (!address || seen.has(address) || !validValue(FACTS.repairs, comp.sold_price) || comp.sold_price === 0 ||
+        sold == null || sold > today || today - sold > maxAgeDays || typeof comp.source_url !== 'string' || !httpsUrl(comp.source_url) ||
+        (comp.price_basis != null && comp.price_basis !== 'recorded_sale')) return 0;
+    seen.add(address);
+  }
+  const prices = comps.map((comp) => comp.sold_price);
+  return value >= Math.min(...prices) && value <= Math.max(...prices) ? comps.length : 0;
 }
 
 function readFacts(input, today) {

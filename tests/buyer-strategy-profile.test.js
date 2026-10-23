@@ -73,6 +73,13 @@ const older = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-19T
 assert.deepEqual(finds.ingest(next, older, context).store.buyers[0].assistant_find.strategy_profile.strategy, ['rental'], 'a stale report never replaces a newer one');
 const sameTime = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-21T12:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);
 assert.deepEqual(finds.ingest(next, sameTime, context).store.buyers[0].assistant_find.strategy_profile.strategy, ['rental'], 'a retry with the same capture time never replaces');
+// A newer report repeating the same profile advances its date, so an older delayed report cannot win later.
+const repeatNewer = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-22T06:00:00.000Z', strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 10 } } }] }, now);
+const refreshed = finds.ingest(next, repeatNewer, context).store;
+assert.equal(refreshed.buyers[0].assistant_find.strategy_profile_source.captured_at, '2026-10-22T06:00:00.000Z');
+assert.equal(refreshed.buyers[0].assistant_find.history.length, next.buyers[0].assistant_find.history.length, 'no audit noise for a repeat');
+const delayed = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-21T18:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);
+assert.deepEqual(finds.ingest(refreshed, delayed, context).store.buyers[0].assistant_find.strategy_profile.strategy, ['rental'], 'a delayed older report never wins');
 const historyLength = next.buyers[0].assistant_find.history.length;
 assert.equal(finds.ingest(next, newer, context).store.buyers[0].assistant_find.history.length, historyLength, 'the same report adds no audit noise');
 const byEmail = finds.validateItems({ items: [{ ...item, profile_url: 'https://www.facebook.com/groups/123/user/999/', email: 'same@example.test', captured_at: '2026-10-21T13:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);
@@ -104,7 +111,7 @@ assert.equal(listed.strategy_profile_view, 'Small multifamily; proof of funds da
 // Stage 6, persisted store -> matching: a JSON round trip keeps the profile and the engine matches it.
 const persisted = JSON.parse(JSON.stringify(finds.update(next, 'buyer-1', { strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-10-15' } }, context)));
 const fact = (value, source_kind, extra = {}) => ({ value, source_kind, source_url: 'https://records.example.test/f', evidence_text: 'fixture', captured_at: '2026-10-01', ...extra });
-const deal = { units: fact(4, 'public_web_page'), arv: fact(360000, 'comp_grid', { tier: 'verified', comp_count: 3 }), repairs: fact(40000, 'operator_estimate'),
+const deal = { units: fact(4, 'public_web_page'), arv: fact(360000, 'comp_grid', { tier: 'verified', comps: [350000, 360000, 370000].map((price, i) => ({ comp_address: (10 + i) + ' Fixture Ave, Example, FL 33601', sold_price: price, sold_date: '2026-09-20', source_url: 'https://records.example.test/s' + i })) }), repairs: fact(40000, 'operator_estimate'),
   asking_price: fact(230000, 'public_web_page'), monthly_rent: fact(4400, 'rent_roll'), annual_taxes: fact(6000, 'county_record'), annual_insurance: fact(4000, 'agent_report') };
 const matched = exits.evaluate(deal, { today, buyers: adapter.buyersFor({ matches: [{ id: 'buyer-1', name: 'Fixture Landlord' }] }, persisted.buyers) });
 assert.deepEqual(matched.exits.find((exit) => exit.key === 'rental').matching_buyers.map((b) => [b.id, b.return_check, b.pof_current]), [['buyer-1', 'meets', true]]);

@@ -17,7 +17,8 @@ function fromReviewedDeal(deal, evaluation) {
   const tier = value && value.range && !listPrices && TIERS[value.tier];
   if (tier) {
     const comps = value.comps || [];
-    facts.arv = { value: value.range.low, tier, comp_count: comps.length, source_kind: 'comp_grid', source_url: comps[0] ? comps[0].source_url : null,
+    facts.arv = { value: value.range.low, tier, source_kind: 'comp_grid', source_url: comps[0] ? comps[0].source_url : null,
+      comps: comps.map((comp) => ({ comp_address: comp.comp_address, sold_price: comp.sold_price, sold_date: comp.sold_date, source_url: comp.source_url, price_basis: comp.price_basis || 'recorded_sale' })),
       evidence_text: comps.length + ' reviewed comparable sales; low end of the range used.', captured_at: deal.evidence_reviewed_at || deal.captured_at || '' };
   }
   if (deal.repair_estimate != null) facts.repairs = { value: deal.repair_estimate, ...source, source_kind: 'reviewed_repair_estimate', evidence_text: 'Repair estimate on the reviewed deal.' };

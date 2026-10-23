@@ -26,10 +26,13 @@ Safety rules enforced by the engine:
 - Every fact needs `source_kind`, a source URL or evidence text, and a capture date
   that is not in the future and not past the fact's age limit. Anything else is
   rejected with a reason and never used. Rejected values are never echoed.
-- ARV counts only from the comp grid with at least 2 sales; 3 = verified, 2 =
-  preliminary even if "verified" is claimed (D-005). List price, AVM, Zestimate,
-  assessed or tax value, auction bid, the holder's claimed ARV and rent estimates are
-  never ARV.
+- ARV counts only from the comp grid with at least 2 comp records attached; each record
+  needs an address, a sold price, a sold date within 6 months, an https source and a
+  recorded-sale basis, with no address twice, and the value must sit inside the sold-price
+  range. The count comes from the records, never a claimed number: 3 = verified,
+  2 = preliminary even if "verified" is claimed (D-005); ballpark (D-003) stays ballpark.
+  List price, AVM, Zestimate, assessed or tax value, auction bid, the holder's claimed ARV
+  and rent estimates are never ARV. Lot-sale values need the same records (2 years).
 - Rent counts only from HUD Small Area FMR, rental comps, an agent, a lease or a rent
   roll. A rent figure is never a comp.
 - A loan payoff counts only when the owner stated it or a payoff statement shows it.
@@ -65,7 +68,9 @@ Writers:
 - `assistant-finds.ingest` new record (`newFind`) stores it unchanged.
 - `assistant-finds.ingest` re-import of the same identity (platform UID or reference)
   replaces it only if the report is strictly newer and the stored profile is not
-  operator-entered; the replaced profile goes into `history` (`kind: strategy_profile`).
+  operator-entered; the replaced profile goes into `history` (`kind: strategy_profile`). A newer
+  report repeating the same profile only advances the source date, so a delayed older report
+  can never win later.
   Contact-only duplicates (email/phone) never rewrite another record.
 - `assistant-finds.update` (PATCH `/api/dashboard/buyers-found/:id`): operator input,
   source `operator_input`, history entry and a `status_change` activity event.

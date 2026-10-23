@@ -179,7 +179,8 @@ function duplicateIndex(buyers, item) {
 function newerProfile(old = {}, item, now, operatorId) {
   const previous = old && old.strategy_profile_source;
   if (!item.strategy_profile || previous && (previous.source_kind === 'operator_input' || item.captured_at <= previous.captured_at)) return {};
-  if (JSON.stringify(old.strategy_profile) === JSON.stringify(item.strategy_profile)) return {};
+  // Same profile, newer report: advance the source date (no audit entry) so an older delayed report can't win later.
+  if (JSON.stringify(old.strategy_profile) === JSON.stringify(item.strategy_profile)) return { strategy_profile_source: item.strategy_profile_source };
   return { strategy_profile: item.strategy_profile, strategy_profile_source: item.strategy_profile_source,
     history: (old.history || []).concat({ kind: 'strategy_profile', to: 'strategy profile updated', field: 'strategy_profile',
       old_value: old.strategy_profile || null, new_value: item.strategy_profile, at: now, operator_id: operatorId,

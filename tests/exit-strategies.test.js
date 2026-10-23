@@ -10,7 +10,11 @@ const adapter = require('../modules/deals/exit-strategy-facts');
 const today = '2026-10-22';
 const fact = (value, source_kind, extra = {}) => ({ value, source_kind, source_url: 'https://records.example.test/fixture',
   evidence_text: 'Synthetic fixture evidence.', captured_at: '2026-10-01', ...extra });
-const arv = (value, tier = 'verified', comp_count = 3) => fact(value, 'comp_grid', { tier, comp_count });
+// Comp records around the value: recorded sales with address, price, date and source.
+const comps = (value, count, extra = {}) => Array.from({ length: count }, (_, i) => ({ comp_address: (100 + i) + ' Fixture St, Example, FL 33601',
+  sold_price: Math.round(value * [1, 0.95, 1.05, 0.98, 1.02][i % 5]), sold_date: '2026-09-1' + i, source_url: 'https://records.example.test/sale/' + i,
+  price_basis: 'recorded_sale', ...extra }));
+const arv = (value, tier = 'verified', count = 3) => fact(value, 'comp_grid', { tier, comps: comps(value, count) });
 const byKey = (result) => Object.fromEntries(result.exits.map((exit) => [exit.key, exit]));
 function deepFreeze(value) { if (value && typeof value === 'object') { Object.values(value).forEach(deepFreeze); Object.freeze(value); } return value; }
 
@@ -143,7 +147,17 @@ for (const kind of ['list_price', 'avm', 'zestimate', 'assessed_value', 'tax_val
   for (const key of ['flip', 'brrrr', 'wholetail', 'novation']) { assert.equal(e[key].verdict, 'needs_data'); assert.equal(e[key].buyer_max, null); }
 }
 // Forged ARV tiers: fewer than 2 comps is no ARV; "verified" with 2 comps is preliminary (D-005).
-for (const forged of [arv(150000, 'verified', 1), arv(150000, 'verified', 2.5), arv(150000, 'certain', 3), { ...arv(150000), comp_count: undefined }, { ...arv(150000), tier: undefined }]) {
+const good = comps(150000, 3);
+for (const forged of [arv(150000, 'verified', 1), arv(150000, 'certain', 3), { ...arv(150000), tier: undefined },
+  { ...arv(150000), comps: undefined, comp_count: 3 }, { ...arv(150000, 'verified', 1), comp_count: 3 }, { ...arv(150000), comps: 'three sales' },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], sold_price: undefined }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], sold_date: '2026-11-01' }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], sold_date: '2026-03-01' }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], source_url: 'http://records.example.test/x' }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], comp_address: '' }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], comp_address: good[0].comp_address.toUpperCase() }] },
+  { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], price_basis: 'texas_last_list_price' }] },
+  { ...arv(150000), value: 200000 }]) {
   assert.deepEqual(exits.evaluate({ arv: forged }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
 }
 const prelim = exits.evaluate({ ...twoOne, arv: arv(150000, 'verified', 2) }, { today });
@@ -172,11 +186,12 @@ assert(!JSON.stringify(exits.evaluate(noAsk, { today })).match(/"(?:mao|offer|ma
 // Land: builder price first (A-018), signals alone are possible, wholetail needs light repairs.
 e = byKey(exits.evaluate({ property_type: fact('vacant land', 'county_record'), builder_price: fact(90000, 'buyer_stated'), asking_price: fact(60000, 'public_web_page') }, { today }));
 assert.equal(e.land.verdict, 'strong'); assert.equal(e.land.fee, 30000); assert.equal(e.flip.applicable, false); assert.equal(e.rental.applicable, false);
-e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comp_count: 3 }), asking_price: fact(50000, 'public_web_page') }, { today }));
+e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comps: comps(70000, 3) }), asking_price: fact(50000, 'public_web_page') }, { today }));
 assert.equal(e.land.buyer_max, 65000, 'lot sales minus the ~$5k builders expect'); assert.equal(e.land.verdict, 'strong');
 // A list price, AVM or tax value never becomes a land price; lot value needs real lot sales.
-for (const [name, bad, reason] of [['lot_comps_value', fact(70000, 'list_price', { comp_count: 3 }), 'source_not_allowed'],
-  ['lot_comps_value', fact(70000, 'avm', { comp_count: 3 }), 'source_not_allowed'], ['lot_comps_value', fact(70000, 'lot_sale_comps', { comp_count: 1 }), 'needs_comparable_sales'],
+for (const [name, bad, reason] of [['lot_comps_value', fact(70000, 'list_price', { comps: comps(70000, 3) }), 'source_not_allowed'],
+  ['lot_comps_value', fact(70000, 'avm', { comps: comps(70000, 3) }), 'source_not_allowed'], ['lot_comps_value', fact(70000, 'lot_sale_comps', { comps: comps(70000, 1) }), 'needs_comparable_sales'],
+  ['lot_comps_value', fact(70000, 'lot_sale_comps', { comp_count: 3 }), 'needs_comparable_sales'],
   ['lot_comps_value', fact(70000, 'lot_sale_comps'), 'needs_comparable_sales'], ['builder_price', fact(90000, 'zestimate'), 'source_not_allowed'],
   ['builder_price', fact(90000, 'list_price'), 'source_not_allowed'], ['new_home_value', fact(400000, 'list_price'), 'source_not_allowed'],
   ['new_home_value', fact(400000, 'assessed_value'), 'source_not_allowed']]) {
@@ -242,9 +257,11 @@ assert.equal(exits.evaluate(fourplex, { today, buyers }).best, plex.best, 'same 
 // Reviewed-deal adapter: ARV only from the reviewed comp grid; claimed ARV and claimed rehab are ignored.
 const deal = { source_url: 'https://deals.example.test/post/1', captured_at: '2026-10-10T12:00:00.000Z', evidence_reviewed_at: '2026-10-11T12:00:00.000Z',
   property_type: 'duplex', sqft: 1800, repair_estimate: 30000, claimed_arv: 999999, claimed_rehab: 1, asking_price: 120000 };
-const reviewed = { asking: 120000, value: { tier: 'Verified', range: { low: 240000, high: 260000 }, comps: [{ source_url: 'https://comps.example.test/1' }, {}, {}] }, matches: [{ id: 'buyer-landlord', buyer_ref: 'BUY-0001', name: 'Fixture Landlord' }] };
+const reviewedComps = comps(250000, 3).map((comp, i) => ({ ...comp, sold_price: [240000, 250000, 260000][i], sqft: 1800, distance_miles: 0.4 }));
+const reviewed = { asking: 120000, value: { tier: 'Verified', range: { low: 240000, high: 260000 }, comps: reviewedComps }, matches: [{ id: 'buyer-landlord', buyer_ref: 'BUY-0001', name: 'Fixture Landlord' }] };
 const mapped = adapter.fromReviewedDeal(deal, reviewed);
-assert.equal(mapped.arv.value, 240000); assert.equal(mapped.arv.tier, 'verified'); assert.equal(mapped.arv.comp_count, 3);
+assert.equal(mapped.arv.value, 240000); assert.equal(mapped.arv.tier, 'verified'); assert.equal(mapped.arv.comps.length, 3);
+assert.deepEqual(Object.keys(mapped.arv.comps[0]).sort(), ['comp_address', 'price_basis', 'sold_date', 'sold_price', 'source_url']);
 assert.equal(mapped.repairs.value, 30000); assert.equal(mapped.units.value, 2); assert.equal(mapped.asking_price.value, 120000);
 assert(!JSON.stringify(mapped).includes('999999'), 'the holder claim is never ARV');
 assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { tier: 'Not established', range: null, comps: [] } }).arv, undefined);
@@ -252,13 +269,13 @@ assert.equal(adapter.fromReviewedDeal({ ...deal, property_type: '2-4 units' }, r
 // Texas last list prices are not recorded sales, so they never become ARV here.
 const listTier = adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { ...reviewed.value, tier: 'Texas list-price', price_basis_label: 'Texas last list prices - not recorded sales' } });
 assert.equal(listTier.arv, undefined);
-const widerMix = { ...reviewed.value, tier: 'Preliminary', comps: [{ source_url: 'https://comps.example.test/1', price_basis: 'recorded_sale' }, { price_basis: 'texas_last_list_price', area: 'wider' }] };
+const widerMix = { ...reviewed.value, tier: 'Preliminary', comps: [reviewedComps[0], { ...reviewedComps[2], price_basis: 'texas_last_list_price', area: 'wider' }] };
 assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: widerMix }).arv, undefined, 'a wider-area mix with list prices is not ARV');
-assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { ...widerMix, comps: widerMix.comps.slice(0, 1).concat({ price_basis: 'recorded_sale' }) } }).arv.tier, 'preliminary');
+assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { ...widerMix, comps: [reviewedComps[0], reviewedComps[2]] } }).arv.tier, 'preliminary');
 e = byKey(exits.evaluate(listTier, { today }));
 for (const key of ['flip', 'brrrr', 'wholetail', 'novation']) { assert.equal(e[key].verdict, 'needs_data'); assert.equal(e[key].buyer_max, null); }
 const mappedResult = exits.evaluate(mapped, { today, buyers: adapter.buyersFor(reviewed, [{ id: 'buyer-landlord', assistant_find: { strategy_profile: landlord.strategy_profile } }, { id: 'unmatched', assistant_find: { strategy_profile: flipper.strategy_profile } }]) });
-assert.deepEqual(mappedResult.rejected_facts, []);
+assert.deepEqual(mappedResult.rejected_facts, []); assert.equal(mappedResult.facts_used.arv.comp_count, 3); assert.equal(mappedResult.facts_used.arv.tier, 'verified');
 assert.equal(byKey(mappedResult).rental.verdict, 'needs_data', 'reviewed deals carry no rent yet');
 assert.deepEqual(adapter.buyersFor(reviewed, []).map((b) => [b.id, b.strategy_profile]), [['buyer-landlord', null]]);
 
