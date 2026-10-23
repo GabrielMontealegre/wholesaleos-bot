@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const navigation = require('../dashboard/workspace/navigation');
-const { registerWorkspacePreview } = require('../modules/ui/workspace-preview');
+const { APP_HOME, registerAppHome, registerWorkspacePreview } = require('../modules/ui/workspace-preview');
 const serverSource = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
 assert.equal(serverSource.split("require('./modules/ui/workspace-preview').registerWorkspacePreview(app);").length - 1, 1,
   'The production server must register the tested preview document route exactly once');
@@ -16,6 +16,52 @@ for (const forged of ['__proto__', 'constructor', '//evil.test', '<script>', 'gm
   assert.equal(navigation.href(forged), null);
 }
 assert.equal(navigation.recordHref('WOS-FL-1012'), '/dashboard/?record_ref=WOS-FL-1012');
+// #429: one home, one shell. Rebuilt screens stay in the shell; every other key is a labeled classic view.
+assert.equal(navigation.home, '/dashboard/');
+assert.equal(APP_HOME, navigation.home, 'Server and shell agree on the single home');
+assert.equal(navigation.navHref('today'), '/app?preview=1');
+assert.equal(navigation.navHref('email'), '/app?preview=1&view=email');
+for (const key of ['today', 'email']) assert.equal(navigation.isClassic(key), false);
+for (const key of ['leads', 'deals', 'buyers', 'calendar', 'pipeline', 'approvals', 'settings']) {
+  assert.equal(navigation.isClassic(key), true);
+  assert.equal(navigation.shellHref(key), null);
+  assert.equal(navigation.navHref(key), navigation.href(key));
+}
+for (const forged of ['__proto__', 'constructor', 'hasOwnProperty', 'toString', '//evil.test', 'gmail', '', null, undefined]) {
+  assert.equal(navigation.shellHref(forged), null);
+  assert.equal(navigation.navHref(forged), null);
+  assert.equal(navigation.isClassic(forged), false);
+}
+assert.equal(serverSource.split("require('./modules/ui/workspace-preview').registerAppHome(app, () => ({").length - 1, 1,
+  'The production server must register the tested home route exactly once');
+assert(!/app\.get\('\/', /.test(serverSource), 'No second root route may bypass the home redirect');
+const homeRoutes = [];
+let statusCalls = 0;
+registerAppHome({ get: (route, handler) => homeRoutes.push({ route, handler }) }, () => { statusCalls++; return { status: 'Online', dashboard: '/dashboard/' }; });
+assert.deepEqual(homeRoutes.map(item => item.route), ['/']);
+function home(accepted) {
+  const result = { headers: {} };
+  const req = { accepts: types => { assert.deepEqual(types, ['json', 'html']); return accepted; } };
+  const res = { set: (key, value) => { result.headers[key] = value; },
+    redirect: (status, target) => Object.assign(result, { status, target }), json: body => { result.body = body; } };
+  homeRoutes[0].handler(req, res);
+  return result;
+}
+const browserHome = home('html');
+assert.equal(browserHome.status, 302);
+assert.equal(browserHome.target, '/dashboard/');
+assert.equal(browserHome.headers['Cache-Control'], 'no-store');
+assert.equal(browserHome.headers.Vary, 'Accept', 'The redirect is marked as varying on Accept');
+assert.equal(statusCalls, 0, 'A browser visit must not compute the status payload');
+for (const accepted of ['json', false]) {
+  const api = home(accepted);
+  assert.equal(api.target, undefined, 'API clients keep the JSON status');
+  assert.equal(api.body.status, 'Online');
+  assert.equal(api.headers.Vary, 'Accept', 'The JSON status is marked as varying on Accept');
+  assert.equal(api.headers['Cache-Control'], 'no-store', 'The JSON status is never cached for a later browser visit');
+}
+assert.equal(statusCalls, 2);
+
 for (const forged of ['WOS-FL-1012&x=1', 'BUY-005', 'https://evil.test', null]) assert.equal(navigation.recordHref(forged), null);
 
 const routes = [];
@@ -65,4 +111,4 @@ wrongRole.root.APP.unlocked = true;
 wrongRole.root.APP.currentUser.role = 'user';
 wrongRole.tick();
 assert.equal(wrongRole.calls.length, 0);
-console.log('workspace-preview: strict opt-in route, CSP, allowed classic views, signed-admin deferred navigation and exact record precedence passed');
+console.log('workspace-preview: one home for browsers, JSON root for clients, labeled classic keys, strict opt-in route, CSP, allowed classic views, signed-admin deferred navigation and exact record precedence passed');

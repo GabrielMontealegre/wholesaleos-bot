@@ -9,6 +9,23 @@ Error/loading/unavailable-reference status is never hidden. This changes
 layout only, not message contents, role/source labels, auth or send gates.
 Keep release prerequisites under423 and explicit owner sign-off -- AGENTS3/5/7,
 owner feedback and #412 ordered migrations --2026-10-21.
+## D-062: Bounded Merges During Railway Build Outage
+
+Architect#423 answer6350507039,2026-10-22: continue backlog work. A full-suite
+green, self-reviewed non-sensitive item may merge as MERGED - deploy pending
+(Railway builds unavailable), at most THREE merged-but-unverified items on
+main, including already-merged422. Send/call gates, auth, credentials and data
+migrations stay unmerged until deployable/verifiable individually. After
+official Hobby recovery/no equivalent live build, retain Gabriel's ONE
+unconsumed exact-main retry; verify every pending item's own read-only gates
+and1366/400/412 screenshots. Revert only an item failing its live gate. Never
+change Railway plan, billing, settings or variables. Order429,427,425,424,426.
+
+Architect#428 answer6350507659: Gabriel performs credential rotation. Never
+view/print/copy/change secret values or edit Railway variables. After builds
+return AND Gabriel confirms rotation, verify configured integration status
+and Gmail/Drive reads without writes; report missing NAME only. No code is
+required for rotation itself; keep428 open until owner confirms completion.
 
 ASSUMED: split D-061 into an independently tested default-OFF transport/API
 slice and a subsequent existing-composer binding. Review the security and

@@ -58,3 +58,22 @@ release prerequisites; the GitHub deployment mirror has no current422 entry
 and the Railway browser status check timed out. Neither mirror lag nor an old
 health200 proves provider recovery or deployment. No duplicate build triggered.
 No send, real draft, production write, capture or confirmation was performed.
+
+## Navigation Reconciliation (2026-10-23 UTC)
+
+Integrated main9f4caaf after PR431's final241/0/0 cloud gate and merge.
+Conflicts retain431's Home/classic labels, settings links and navigationv2,
+alongside this branch's compact Email shell/native hover titles and v5 assets.
+Both D-062 and the original owner layout decision remain in DECISIONS.
+No sensitive route, recipient rule or auth gate is changed by this merge.
+
+Updated preview, Email UI/loading, native shell and actual classic/native
+journey tests pass together. New synthetic proof after navigation integration:
+docs/screens/2026-10-23-email-navigation. Reader heights remain573/695/695px;
+FCP133.4/144.2/92.2ms at1366/400/412. Lighthouse13.5.0 accessibility98/100.
+These are synthetic figures, not live performance or owner sign-off. Original
+before/after density proof is preserved, not overwritten. The updated merge
+head requires a new full hosted suite before eligibility; earlier240/0/0 is
+historical only. Provider recovery is now publicly reported; automatic431
+build a00779c6-f5c4-49e7-916f-cb7bc02cca43 is monitored without duplicate
+deployment. Live422+431 verification precedes this item's release.
