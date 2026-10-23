@@ -56,7 +56,8 @@ const FACTS = Object.freeze({
   assessed_land_value: { type: 'money', sources: ['county_record'] },
   assessed_total_value: { type: 'money', sources: ['county_record'] }
 });
-const CERTAINTY = Object.freeze({ verified: 3, preliminary: 2, rough: 1 });
+// "ballpark" is D-003's label for comps without confirmed bedrooms/baths; it never upgrades.
+const CERTAINTY = Object.freeze({ verified: 3, preliminary: 2, ballpark: 1 });
 const RENT_CERTAINTY = Object.freeze({ lease: 3, rent_roll: 3, rental_comps: 2, agent_report: 2, hud_small_area_fmr: 2 });
 const EXITS = Object.freeze([
   ['flip', 'Fix and flip', 2], ['rental', 'Buy and hold rental', 2], ['brrrr', 'BRRRR', 2], ['wholetail', 'Wholetail', 2],
@@ -382,23 +383,29 @@ function evaluate(inputFacts, options = {}) {
     if (!exit.applicable || !['strong', 'possible'].includes(exit.verdict) || !profiles.STRATEGIES.includes(exit.key)) continue;
     for (const { buyer, profile } of buyers) {
       if (!profile.strategy.includes(exit.key)) continue;
-      const check = targetCheck(profile, exit, { arv, repairs, asking });
+      const check = targetCheck(profile, exit, { arv, repairs, asking, noi });
       if (check.result === 'below') { exit.below_target_buyers = (exit.below_target_buyers || 0) + 1; continue; }
       const pof = profiles.pofCurrent(profile, options.today, a.pof_max_age_days);
       exit.matching_buyers.push({ id: buyer.id, buyer_ref: buyer.buyer_ref || null, name: buyer.name || '', return_check: check.result, return_note: check.note,
-        buyer_price: check.buyer_price == null ? null : round(check.buyer_price), pof_current: pof, deals_per_year: profile.deals_per_year ?? null,
+        buyer_price: check.buyer_price == null ? null : round(check.buyer_price), fee: check.fee == null ? null : round(check.fee),
+        pof_current: pof, deals_per_year: profile.deals_per_year ?? null,
         rank: check.result === 'meets' ? (pof ? 3 : 2) : 1 });
     }
-    exit.matching_buyers.sort((x, y) => y.rank - x.rank || (y.deals_per_year ?? -1) - (x.deals_per_year ?? -1) || String(x.id).localeCompare(String(y.id)));
+    exit.matching_buyers.sort((x, y) => y.rank - x.rank || (y.fee ?? -Infinity) - (x.fee ?? -Infinity) ||
+      (y.deals_per_year ?? -1) - (x.deals_per_year ?? -1) || String(x.id).localeCompare(String(y.id)));
+    // What a confirmed buyer can actually pay, not the exit's generic buyer maximum.
+    const confirmed = exit.matching_buyers.filter((buyer) => buyer.rank >= 2);
+    exit.confirmed_buyer_fee = confirmed.length ? Math.max(...confirmed.map((buyer) => buyer.fee)) : null;
   }
 
   // 9. Wholesale / JV: how we sell whichever exit wins. Not ranked against the others.
   const viable = Object.values(exits).filter((exit) => exit.key !== 'wholesale_jv' && exit.applicable && ['strong', 'possible'].includes(exit.verdict));
   const ranked = viable.sort(compare(a));
   const dispo = make('wholesale_jv');
-  const withBuyer = ranked.find((exit) => exit.matching_buyers.some((buyer) => buyer.rank >= 2));
-  if (withBuyer) Object.assign(dispo, { verdict: withBuyer.verdict, fee: withBuyer.fee, certainty: withBuyer.certainty,
-    reason: 'Assign the contract to a matched ' + withBuyer.label.toLowerCase() + ' buyer.' });
+  const withBuyer = ranked.find((exit) => exit.confirmed_buyer_fee != null);
+  if (withBuyer) Object.assign(dispo, { fee: withBuyer.confirmed_buyer_fee, certainty: withBuyer.certainty,
+    verdict: withBuyer.verdict === 'strong' && withBuyer.confirmed_buyer_fee >= a.target_fee ? 'strong' : 'possible',
+    reason: 'Assign the contract to a matched ' + withBuyer.label.toLowerCase() + ' buyer; their price leaves about ' + usd(withBuyer.confirmed_buyer_fee) + ' (estimate).' });
   else if (ranked.length) Object.assign(dispo, { verdict: 'possible', fee: ranked[0].fee, certainty: ranked[0].certainty,
     reason: 'No matched buyer yet: find a ' + ranked[0].label.toLowerCase() + ' buyer or offer a 50/50 JV to a partner wholesaler.' });
   else dispo.reason = 'No exit works yet with the recorded facts.';
@@ -417,32 +424,39 @@ function evaluate(inputFacts, options = {}) {
   };
 }
 
-// Does the exit give this buyer the return they asked for? Unknown is never a pass.
-function targetCheck(profile, exit, { arv, repairs, asking }) {
+// Does the exit give this buyer the return they asked for, and what would they pay? The fee is
+// that buyer's price minus the asking price, never the exit's generic maximum. Unknown is never a pass.
+function targetCheck(profile, exit, { arv, repairs, asking, noi }) {
   const target = profile.target_return;
   if (!target) return { result: 'not_stated', note: 'Target return not stated - confirm with the buyer.' };
-  if (target.basis === 'pct_arv') {
-    if (arv == null || repairs == null) return { result: 'unknown', note: 'Needs a comps-based ARV to compare.' };
-    const price = arv * target.percent / 100 - repairs;
+  const metrics = exit.metrics || {};
+  let price = null;
+  if (target.basis === 'pct_arv' && arv != null && repairs != null) price = arv * target.percent / 100 - repairs;
+  if (target.basis === 'cap_rate' && metrics.cap_rate != null && noi != null && repairs != null) price = noi / (target.percent / 100) - repairs;
+  if (price != null) {
     if (asking == null) return { result: 'unknown', buyer_price: price, note: 'Asking price unknown.' };
-    return price > asking ? { result: 'meets', buyer_price: price, note: target.percent + '% of ARV minus repairs is above the asking price.' }
+    const label = target.percent + (target.basis === 'pct_arv' ? '% of ARV minus repairs' : '% cap rate');
+    return price > asking ? { result: 'meets', buyer_price: price, fee: price - asking, note: 'At ' + label + ' this buyer pays above the asking price.' }
       : { result: 'below', buyer_price: price };
   }
-  const metrics = exit.metrics || {};
-  const leveraged = (profile.funding || []).includes('dscr');
-  const actual = target.basis === 'cap_rate' ? metrics.cap_rate : leveraged ? metrics.cash_on_cash_dscr : metrics.cash_on_cash_cash;
-  if (actual == null) return { result: 'unknown', note: 'This exit has no ' + profiles.LABELS[target.basis] + ' yet.' };
-  return actual >= target.percent ? { result: 'meets', note: actual + '% ' + profiles.LABELS[target.basis] + ' meets the buyer\'s ' + target.percent + '%.' }
+  if (target.basis !== 'cash_on_cash' || metrics.cash_on_cash_cash == null) {
+    return { result: 'unknown', note: 'This exit has no ' + profiles.LABELS[target.basis] + ' to compare yet.' };
+  }
+  // Cash-on-cash was tested at asking + our target fee, so a pass guarantees at least that fee.
+  if (asking == null) return { result: 'unknown', note: 'Asking price unknown.' };
+  const actual = (profile.funding || []).includes('dscr') ? metrics.cash_on_cash_dscr : metrics.cash_on_cash_cash;
+  return actual >= target.percent ? { result: 'meets', fee: metrics.price - asking, note: actual + '% cash-on-cash at ' + usd(metrics.price) + ' meets the buyer\'s ' + target.percent + '%; fee at least this much.' }
     : { result: 'below' };
 }
 
 // Ranking (#402): a real matching buyer (current proof of funds weighs most), then our fee at
-// target, then speed, then data certainty (verified > preliminary > rough), then the verdict.
+// target, then speed, then data certainty (verified > preliminary > ballpark), then the verdict.
 function compare(a) {
   const order = EXITS.map(([key]) => key);
   // Only a buyer whose target return is met counts; strategy-only matches stay listed but don't rank.
   const buyerRank = (exit) => exit.matching_buyers.reduce((best, buyer) => buyer.rank >= 2 ? Math.max(best, buyer.rank) : best, 0);
-  const atTarget = (exit) => exit.fee != null && exit.fee >= a.target_fee ? 1 : 0;
+  const realized = (exit) => exit.confirmed_buyer_fee != null ? exit.confirmed_buyer_fee : exit.fee;
+  const atTarget = (exit) => realized(exit) != null && realized(exit) >= a.target_fee ? 1 : 0;
   return (x, y) => buyerRank(y) - buyerRank(x) || atTarget(y) - atTarget(x) || x.speed - y.speed || y.certainty - x.certainty ||
     VERDICT_ORDER[x.verdict] - VERDICT_ORDER[y.verdict] || (y.fee ?? -Infinity) - (x.fee ?? -Infinity) || order.indexOf(x.key) - order.indexOf(y.key);
 }

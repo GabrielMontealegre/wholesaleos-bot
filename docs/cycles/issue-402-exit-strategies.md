@@ -16,7 +16,10 @@ and a one-line pitch. `cardLines()` gives "Best exit: ..." and "Also works: ..."
 
 Ranking (#402): a real matching buyer first (target return met and a proof-of-funds
 date within 90 days weighs most), then our fee at target, then speed, then data
-certainty (verified > preliminary > rough), then verdict and fee.
+certainty (verified > preliminary > ballpark, D-003), then verdict and fee. A matched
+buyer's own price sets the fee they support (their % of ARV or cap rate, or at least our
+target fee when their cash-on-cash passes at asking + fee); the wholesale/JV line uses
+that fee, never the exit's generic maximum.
 
 Safety rules enforced by the engine:
 
@@ -61,7 +64,7 @@ Writers:
   (or search URL), evidence text and capture time. The key is absent when not reported.
 - `assistant-finds.ingest` new record (`newFind`) stores it unchanged.
 - `assistant-finds.ingest` re-import of the same identity (platform UID or reference)
-  replaces it only if the report is newer and the stored profile is not
+  replaces it only if the report is strictly newer and the stored profile is not
   operator-entered; the replaced profile goes into `history` (`kind: strategy_profile`).
   Contact-only duplicates (email/phone) never rewrite another record.
 - `assistant-finds.update` (PATCH `/api/dashboard/buyers-found/:id`): operator input,

@@ -71,6 +71,8 @@ assert(timeline.some((row) => row.summary === 'strategy profile updated'));
 assert(!timeline.some((row) => /\[object Object\]/.test(row.summary)));
 const older = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-19T12:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);
 assert.deepEqual(finds.ingest(next, older, context).store.buyers[0].assistant_find.strategy_profile.strategy, ['rental'], 'a stale report never replaces a newer one');
+const sameTime = finds.validateItems({ items: [{ ...item, captured_at: '2026-10-21T12:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);
+assert.deepEqual(finds.ingest(next, sameTime, context).store.buyers[0].assistant_find.strategy_profile.strategy, ['rental'], 'a retry with the same capture time never replaces');
 const historyLength = next.buyers[0].assistant_find.history.length;
 assert.equal(finds.ingest(next, newer, context).store.buyers[0].assistant_find.history.length, historyLength, 'the same report adds no audit noise');
 const byEmail = finds.validateItems({ items: [{ ...item, profile_url: 'https://www.facebook.com/groups/123/user/999/', email: 'same@example.test', captured_at: '2026-10-21T13:00:00.000Z', strategy_profile: { strategy: ['land'] } }] }, now);

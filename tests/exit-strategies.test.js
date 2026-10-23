@@ -36,8 +36,17 @@ assert(e.multifamily.numbers.some((n) => n.key === 'price_per_door' && n.value =
 assert.equal(plex.best, 'rental', 'the landlord with current proof of funds and a met target outranks the flip');
 assert(plex.also_works.includes('flip'));
 assert.deepEqual(e.rental.matching_buyers.map((b) => [b.id, b.return_check, b.pof_current, b.rank]), [['buyer-landlord', 'meets', true, 3]]);
-assert.deepEqual(e.flip.matching_buyers.map((b) => [b.id, b.return_check, b.buyer_price]), [['buyer-flipper', 'meets', 248000]]);
-assert.equal(e.wholesale_jv.verdict, 'strong'); assert.match(e.wholesale_jv.reason, /matched buy and hold rental buyer/);
+assert.deepEqual(e.flip.matching_buyers.map((b) => [b.id, b.return_check, b.buyer_price, b.fee]), [['buyer-flipper', 'meets', 248000, 18000]]);
+// Codex example: an 80%-of-ARV buyer at $248k against a $247k asking supports a $1k fee, not the generic flip fee.
+const thin = exits.evaluate({ ...fourplex, asking_price: fact(247000, 'public_web_page') }, { today, buyers: [flipper] });
+assert.equal(byKey(thin).flip.fee, 11800, 'the generic flipper band still shows its own fee');
+assert.equal(byKey(thin).flip.matching_buyers[0].fee, 1000);
+assert.equal(byKey(thin).wholesale_jv.fee, 1000); assert.equal(byKey(thin).wholesale_jv.verdict, 'possible');
+assert.match(byKey(thin).wholesale_jv.reason, /leaves about \$1,000/);
+assert.equal(e.wholesale_jv.verdict, 'strong'); assert.match(e.wholesale_jv.reason, /matched buy and hold rental buyer; their price leaves about \$53,022/);
+// The landlord wants 9%, so they pay NOI / 9% - repairs = $283,022, not the exit's 8%-cap maximum.
+assert.deepEqual(e.rental.matching_buyers.map((b) => [b.buyer_price, b.fee]), [[283022, 53022]]);
+assert.equal(e.rental.confirmed_buyer_fee, 53022); assert.equal(e.wholesale_jv.fee, 53022);
 assert.match(e.rental.pitch, /rents for \$4,400\/month \(rent roll\).*cap rate.*cash-on-cash.*Estimates, not guarantees\./);
 const lines = exits.cardLines(plex);
 assert.equal(lines.best, 'Best exit: Buy and hold rental ($93,400 fee, estimate)');
@@ -141,8 +150,9 @@ const prelim = exits.evaluate({ ...twoOne, arv: arv(150000, 'verified', 2) }, { 
 assert.equal(prelim.facts_used.arv.tier, 'preliminary');
 assert.match(byKey(prelim).flip.numbers[0].label, /preliminary, 2 sales/);
 assert.equal(byKey(prelim).novation.verdict, 'possible', 'retail listing needs a verified value to be strong');
-// Rough ARV never makes a price-based exit strong.
-assert.equal(byKey(exits.evaluate({ ...twoOne, arv: arv(150000, 'rough', 2) }, { today })).flip.verdict, 'possible');
+// Ballpark ARV (D-003) never makes a price-based exit strong; an unknown tier such as "rough" is rejected.
+assert.equal(byKey(exits.evaluate({ ...twoOne, arv: arv(150000, 'ballpark', 3) }, { today })).flip.verdict, 'possible');
+assert.deepEqual(exits.evaluate({ arv: arv(150000, 'rough', 2) }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
 // Wrong-origin assessed values, unknown facts and stale comps-based ARV are rejected.
 assert.deepEqual(exits.evaluate({ assessed_total_value: fact(100000, 'avm'), made_up: fact(1, 'x'), arv: { ...arv(150000), captured_at: '2026-01-01' } }, { today }).rejected_facts,
   [{ fact: 'arv', reason: 'stale' }, { fact: 'assessed_total_value', reason: 'source_not_allowed' }, { fact: 'made_up', reason: 'unknown_fact' }]);

@@ -173,11 +173,12 @@ function duplicateIndex(buyers, item) {
   return { index: -1 };
 }
 
-// A newer assistant report replaces an older one; an operator-entered profile is never overwritten.
+// Only a strictly newer assistant report replaces a profile (a retry with the same capture time
+// does not); an operator-entered profile is never overwritten.
 // The replaced profile stays in history for audit.
 function newerProfile(old = {}, item, now, operatorId) {
   const previous = old && old.strategy_profile_source;
-  if (!item.strategy_profile || previous && (previous.source_kind === 'operator_input' || item.captured_at < previous.captured_at)) return {};
+  if (!item.strategy_profile || previous && (previous.source_kind === 'operator_input' || item.captured_at <= previous.captured_at)) return {};
   if (JSON.stringify(old.strategy_profile) === JSON.stringify(item.strategy_profile)) return {};
   return { strategy_profile: item.strategy_profile, strategy_profile_source: item.strategy_profile_source,
     history: (old.history || []).concat({ kind: 'strategy_profile', to: 'strategy profile updated', field: 'strategy_profile',
