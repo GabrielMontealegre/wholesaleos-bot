@@ -420,7 +420,19 @@ function evaluate(inputFacts, options = {}) {
   }
 
   // Buyers: strategy plus target return. Only approved, in-area buyers should be passed in.
-  const buyers = (options.buyers || []).map((buyer) => ({ buyer, profile: buyer && buyer.strategy_profile })).filter(({ profile }) => profile && Array.isArray(profile.strategy));
+  // Every profile goes through the shared buyer schema first (same rules as import and operator
+  // edits). An invalid one is listed with its reason and never matched, ranked or given a fee.
+  const buyers = [];
+  const invalidBuyers = [];
+  for (const buyer of options.buyers || []) {
+    if (!buyer || buyer.strategy_profile == null) continue;
+    let profile;
+    try { profile = profiles.validate(buyer.strategy_profile, options.today); } catch (error) {
+      invalidBuyers.push({ id: buyer.id ?? null, buyer_ref: buyer.buyer_ref || null, reason: error.code || 'find_strategy_profile_invalid' });
+      continue;
+    }
+    if (profile.strategy) buyers.push({ buyer, profile });
+  }
   for (const exit of Object.values(exits)) {
     if (!exit.applicable || !['strong', 'possible'].includes(exit.verdict) || !profiles.STRATEGIES.includes(exit.key)) continue;
     for (const { buyer, profile } of buyers) {
@@ -463,7 +475,7 @@ function evaluate(inputFacts, options = {}) {
     label: 'Ways to sell this deal - derived estimates, not offers', derived: true, is_offer: false, today: options.today,
     exits: EXITS.map(([key]) => exits[key]), ranked: ranked.map((exit) => exit.key), best: ranked.length ? ranked[0].key : null,
     also_works: ranked.slice(1).map((exit) => exit.key), dispo: 'wholesale_jv',
-    facts_used: facts, rejected_facts: rejected,
+    facts_used: facts, rejected_facts: rejected, invalid_buyers: invalidBuyers,
     assumptions: Object.keys(a).map((key) => ({ key, label: ASSUMPTION_LABELS[key], value: a[key], changed: a[key] !== DEFAULT_ASSUMPTIONS[key] }))
   };
 }

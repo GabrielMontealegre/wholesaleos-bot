@@ -266,10 +266,38 @@ for (const funding of [['hard_money'], undefined]) {
   const hm = { id: 'b-hm', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cash_on_cash', percent: 5 }, ...(funding ? { funding } : {}) } };
   assert.deepEqual(byKey(exits.evaluate(fourplex, { today, buyers: [hm] })).rental.matching_buyers.map((b) => [b.return_check, b.rank]), [['unknown', 1]]);
 }
-e = byKey(exits.evaluate(fourplex, { today, buyers: [strict, coc, futurePof, stalePof, capFlip, { id: 'b-none' }, null] }));
-assert.deepEqual(e.rental.matching_buyers.map((b) => [b.id, b.pof_current, b.rank]), [['b-future', false, 2], ['b-stale', false, 2]]);
+const withFuture = exits.evaluate(fourplex, { today, buyers: [strict, coc, futurePof, stalePof, capFlip, { id: 'b-none' }, null] });
+e = byKey(withFuture);
+// A future-dated proof of funds fails the shared buyer schema, so that buyer is never matched (stricter than "not current").
+assert.deepEqual(e.rental.matching_buyers.map((b) => [b.id, b.pof_current, b.rank]), [['b-stale', false, 2]]);
+assert.deepEqual(withFuture.invalid_buyers, [{ id: 'b-future', buyer_ref: null, reason: 'find_strategy_profile_pof_date_invalid' }]);
 assert.equal(e.rental.below_target_buyers, 2, 'cash buyer sees unlevered 10.1%, below 12%');
 assert.deepEqual(e.flip.matching_buyers.map((b) => [b.id, b.return_check]), [['b-capflip', 'unknown']], 'an unknown return is never a pass');
+
+// A correctly sourced but invalid profile payload is checked against the shared schema and fails closed:
+// listed in invalid_buyers, never matched, ranked or given a fee (independent review of 7fbf9ea).
+const forgedDeal = { subject_address: subject, arv: arv(200000), repairs: fact(30000, 'operator_estimate'), asking_price: fact(100000, 'public_web_page') };
+const forgedBase = { id: 'b-forged', strategy_profile_source: src };
+const validFlip = { strategy: ['flip'], target_return: { basis: 'pct_arv', percent: 80 }, funding: ['cash'], pof_date: '2026-10-01' };
+const baseline = exits.evaluate(forgedDeal, { today });
+for (const bad of [{ ...validFlip, target_return: { basis: 'pct_arv', percent: 1000 } }, { ...validFlip, target_return: { basis: 'pct_arv', percent: 101 } },
+  { ...validFlip, target_return: { basis: 'pct_arv', percent: -5 } }, { ...validFlip, target_return: { basis: 'pct_arv', percent: NaN } },
+  { ...validFlip, target_return: { basis: 'pct_arv', percent: Infinity } }, { ...validFlip, target_return: { basis: 'pct_arv', percent: '80' } },
+  { ...validFlip, target_return: { basis: 'irr', percent: 10 } }, { ...validFlip, target_return: { basis: 'pct_arv', percent: 80, verified: true } },
+  { ...validFlip, approved: true }, { ...validFlip, strategy: ['wholesale'] }, { ...validFlip, strategy: 'flip' }, { ...validFlip, funding: ['credit_card'] },
+  { ...validFlip, deals_per_year: -1 }, { ...validFlip, deals_per_year: 2.5 }, { ...validFlip, pof_date: '2026-10-23' }, { ...validFlip, pof_date: '2026-02-30' },
+  {}, [], 'flip']) {
+  const result = exits.evaluate(forgedDeal, { today, buyers: [{ ...forgedBase, strategy_profile: bad }] });
+  const r = byKey(result);
+  assert.equal(result.invalid_buyers.length, 1, JSON.stringify(bad));
+  assert.match(result.invalid_buyers[0].reason, /^find_strategy_profile_/);
+  for (const exit of result.exits) { assert.deepEqual(exit.matching_buyers, [], exit.key); assert.equal(exit.confirmed_buyer_fee ?? null, null, exit.key); }
+  assert.equal(r.wholesale_jv.fee, baseline.exits.find((x) => x.key === 'wholesale_jv').fee, 'the wholesale fee never comes from an invalid profile');
+  assert.equal(result.best, baseline.best);
+}
+// The same profile with valid numbers still matches normally.
+const validResult = byKey(exits.evaluate(forgedDeal, { today, buyers: [{ ...forgedBase, strategy_profile: validFlip }] }));
+assert.deepEqual(validResult.flip.matching_buyers.map((b) => [b.id, b.return_check, b.rank, b.buyer_price, b.fee]), [['b-forged', 'meets', 3, 130000, 30000]]);
 
 // Input validation and purity.
 for (const bad of [undefined, '2026-13-01', '2026-02-30', 20261022, '10/22/2026']) assert.throws(() => exits.evaluate({}, { today: bad }), /exit_today_required/);

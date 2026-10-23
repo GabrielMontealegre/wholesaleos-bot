@@ -36,6 +36,10 @@ Safety rules enforced by the engine:
   ARV and lot-sale values also need the sourced, complete subject address (number, street,
   city or ZIP); a comp at the subject's own address fails the set (same number and street,
   and the same city or ZIP, or no locality to tell them apart).
+- Every buyer profile passed to `evaluate` is validated with the shared
+  `buyer-strategy-profile.validate` against the injected `today` (same rules as import and
+  operator edits). An invalid profile is listed in `invalid_buyers` with its reason and is
+  never matched, ranked or given a fee.
 - A buyer profile counts only with a valid source (a kind, non-blank evidence or an https
   URL, and a capture date not after today); the
   source travels on every match as `profile_source`. An unsourced profile stays listed as
