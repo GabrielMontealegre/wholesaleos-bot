@@ -90,7 +90,7 @@ function readArv(input, todayMs, ignored, subjectAddress) {
   if (!subject.number || !subject.street) { ignored.push({ field: 'subject_address', reason: "needed to keep the subject's own sale out of the comps" }); return null; }
   const cutoff = new Date(todayMs); cutoff.setUTCMonth(cutoff.getUTCMonth() - COMP_MONTHS);
   const seen = new Set();
-  const count = arv.comps.filter((c, i) => {
+  const counted = arv.comps.filter((c, i) => {
     const a = text(c?.comp_address) ? canonicalizeAddress(text(c.comp_address)) : null, sold = instant(c?.sold_date);
     const key = a && [a.number, a.street, a.suffix, a.city, a.state].join('|');
     const isSubject = a && a.number === subject.number && a.street === subject.street && a.suffix === subject.suffix &&
@@ -98,18 +98,23 @@ function readArv(input, todayMs, ignored, subjectAddress) {
     const reason = !a?.number || !a.street ? 'comp address missing or incomplete'
       : isSubject ? "the subject's own sale is never its own comp"
       : seen.has(key) ? 'duplicate comp'
+      : typeof c?.sold_status !== 'string' || !/^(?:sold|closed)$/i.test(c.sold_status.trim()) ? 'not a sold or closed sale'
+      : c?.price_basis !== 'recorded_sale' ? 'price is not a recorded sale'
       : !money(c?.sold_price) ? 'sold price missing'
       : sold === null || sold > todayMs + DAY_MS - 1 ? 'sold date missing, ambiguous or in the future'
       : sold < cutoff.getTime() ? `sold more than ${COMP_MONTHS} months ago`
-      : !/^https?:\/\/\S+$/.test(text(c?.source_url)) ? 'source link missing'
+      : !/^https:\/\/\S+$/.test(text(c?.source_url)) ? 'https source link missing'
       : c?.comp_grid?.accepted !== true ? 'not accepted by the strict comp grid' : '';
     if (reason) { ignored.push({ field: `arv.comps[${i}]`, reason }); return false; }
     seen.add(key);
     return true;
-  }).length;
+  });
+  const count = counted.length;
   if (Number.isInteger(arv.comp_count) && arv.comp_count > count)
     ignored.push({ field: 'arv.comp_count', reason: `claimed ${arv.comp_count} comps, only ${count} qualify` });
   if (count < 2) { ignored.push({ field: 'arv', reason: 'fewer than 2 verified sold comps; no value' }); return null; }
+  const prices = counted.map(c => c.sold_price);
+  if (value < Math.min(...prices) || value > Math.max(...prices)) { ignored.push({ field: 'arv', reason: 'value is outside the sold prices of its comps' }); return null; }
   const status = count >= 3 ? 'verified' : 'preliminary';
   if (arv.status && arv.status !== status) ignored.push({ field: 'arv.status', reason: `stated ${arv.status}, ${count} comps make it ${status}` });
   return { value, comp_count: count, status, source_url: text(arv.source_url) || null,

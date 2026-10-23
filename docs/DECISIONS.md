@@ -9,9 +9,12 @@ then the planner takes its band from there and never becomes a second MAO
 source). Minimum fee $10,000, raisable only. Two-signal target uses 55% (low
 end of 55-60%). Value counts only with source_kind sold_comps and an attached
 comps list; a comp counts only when the strict comp grid accepted it
-(comp_grid.accepted, as compValue attaches), it sold within 6 months, it has
-its own address, price and source, and it is not the subject by canonical
-address (2 = preliminary, D-005). A bare comp count is never proof. No price
+(comp_grid.accepted, as compValue attaches) AND its own record says a sold or
+closed recorded sale (sold_status sold/closed, price_basis recorded_sale, the
+#434 contract; the grid flag never overrides Active/list-price evidence), it
+sold within 6 months, it has its own address, price and https source, it is
+not the subject by canonical address, and the value lies inside the comps'
+sold-price range (2 = preliminary, D-005). A bare comp count is never proof. No price
 at all (either side) until the seller's number was asked.
 Without value or repairs the move is hold_backup with status no_offer (the
 seven #432 codes only). Counters step 5%, 10% only when another offer is on

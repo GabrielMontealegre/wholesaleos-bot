@@ -3,9 +3,10 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), http = re
 const planner = require('../modules/deals/negotiation-planner');
 
 const today = '2026-10-22';
-// Comps as the strict comp grid hands them over: accepted, with their own address, price, date and source.
-const comp = (n, extra = {}) => ({ comp_address: `${100 + n} Fixture St`, sold_price: 200000, sold_date: '2026-08-0' + n,
-  source_url: `https://records.example.gov/sales/${n}`, comp_grid: { accepted: true }, ...extra });
+// Comps as the strict comp grid hands them over: accepted recorded sales (same sold/closed + recorded_sale
+// contract as #434), each with its own address, price, date and https source.
+const comp = (n, extra = {}) => ({ comp_address: `${100 + n} Fixture St`, sold_status: 'Sold', price_basis: 'recorded_sale', sold_price: 200000,
+  sold_date: '2026-08-0' + n, source_url: `https://records.example.gov/sales/${n}`, comp_grid: { accepted: true }, ...extra });
 const signal = kind => ({ kind, source_kind: 'county_record', source_url: `https://records.example.gov/${kind}` });
 // Value 200k from 3 sold comps, repairs 30k: default buyer max (75%) = 120k.
 function facts(extra = {}) {
@@ -262,13 +263,29 @@ try {
     [[comp(1), comp(2, { sold_price: null }), comp(3, { comp_address: '' })], /sold price|address/],
     [[comp(1), comp(2, { sold_date: '2026-12-01' }), comp(3, { sold_date: '2001-05-01' })], /future|6 months/],
     [[comp(1), comp(2, { sold_date: '2026-04-21' }), comp(3, { comp_grid: { accepted: false } })], /6 months|strict comp grid/],
-    [[comp(1), comp(2, { comp_grid: undefined }), comp(3, { source_url: '' })], /strict comp grid|source link/]]) {
+    [[comp(1), comp(2, { comp_grid: undefined }), comp(3, { source_url: '' })], /strict comp grid|source link/],
+    [[comp(1), comp(2, { sold_status: 'Active' }), comp(3, { sold_status: 'Pending' })], /not a sold or closed sale/],
+    [[comp(1), comp(2, { sold_status: undefined }), comp(3, { sold_status: '' })], /not a sold or closed sale/],
+    [[comp(1), comp(2, { price_basis: 'list_price' }), comp(3, { price_basis: 'texas_last_list_price' })], /not a recorded sale/],
+    [[comp(1), comp(2, { price_basis: undefined }), comp(3, { source_url: 'http://records.example.gov/sales/3' })], /not a recorded sale|https source/]]) {
     out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comp_count: 3, comps }, buyer_numbers: [buyer(130000)] })));
     assert.equal(out.status, 'no_offer', String(why));
     assert.equal(out.ignored_inputs.filter(i => i.field.startsWith('arv.comps[') && why.test(i.reason)).length, 2, String(why));
   }
   assert.equal(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comps: [comp(1), comp(2, { sold_date: '2026-04-22' })] }, buyer_numbers: [buyer(130000)] })).arv.comp_count, 2,
     'a sale exactly 6 months ago still counts');
+  // Reviewer reproduction: three complete, grid-accepted Active list-price records must never become a verified value.
+  out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comps: [1, 2, 3].map(n => comp(n, { sold_status: 'Active', price_basis: 'list_price', sold_date: '2026-08-01' })) },
+    buyer_numbers: [buyer(130000)] })));
+  assert.equal(out.status, 'no_offer'); assert.equal(out.arv, null); assert.equal(out.next_move.amount, null);
+  assert.equal(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comps: [1, 2, 3].map(n => comp(n, { sold_status: 'closed' })) }, buyer_numbers: [buyer(130000)] })).arv.status, 'verified',
+    'closed counts like sold, in any letter case');
+  // A value above or below every one of its sold prices is not supported by them.
+  for (const value of [260000, 150000]) {
+    out = record(run(facts({ arv: { value, source_kind: 'sold_comps', comps: [comp(1, { sold_price: 190000 }), comp(2), comp(3, { sold_price: 210000 })] }, buyer_numbers: [buyer(130000)] })));
+    assert.equal(out.status, 'no_offer', String(value));
+    assert.ok(out.ignored_inputs.some(i => /outside the sold prices/.test(i.reason)));
+  }
   // the subject's own sale with a different suffix spelling, a sale over 6 months old, and comps the strict grid did not accept are refused above.
   out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comp_count: 2, status: 'verified', comps: [comp(1), comp(2)] }, buyer_numbers: [buyer(130000)] })));
   assert.equal(out.arv.status, 'preliminary');
