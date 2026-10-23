@@ -27,15 +27,17 @@ Safety rules enforced by the engine:
   that is not in the future and not past the fact's age limit. Anything else is
   rejected with a reason and never used. Rejected values are never echoed.
 - ARV counts only from the comp grid with at least 2 comp records attached; each record
-  needs an address, a sold price, a sold date within 6 months, an https source and a
-  recorded-sale basis, with no address twice, and the value must sit inside the sold-price
+  needs an address, a sold or closed status, a sold price, a sold date within 6 months, an
+  https source and an explicit recorded-sale basis, with no address twice, and the value must sit inside the sold-price
   range. The count comes from the records, never a claimed number: 3 = verified,
   2 = preliminary even if "verified" is claimed (D-005); ballpark (D-003) stays ballpark.
   List price, AVM, Zestimate, assessed or tax value, auction bid, the holder's claimed ARV
   and rent estimates are never ARV. Lot-sale values need the same records (2 years).
-  ARV also needs the sourced subject address, and a comp at the subject's own address
-  (same number and street, same city or ZIP) fails the set: its own sale is never a comp.
-- A buyer profile counts only with its source (kind, URL or evidence, capture date); the
+  ARV and lot-sale values also need the sourced, complete subject address (number, street,
+  city or ZIP); a comp at the subject's own address fails the set (same number and street,
+  and the same city or ZIP, or no locality to tell them apart).
+- A buyer profile counts only with a valid source (a kind, non-blank evidence or an https
+  URL, and a capture date not after today); the
   source travels on every match as `profile_source`. An unsourced profile stays listed as
   "confirm with the buyer" and never affects ranking. Cash-on-cash targets are measured
   with the loan for DSCR buyers and without one for cash buyers; hard money is unknown

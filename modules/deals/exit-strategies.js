@@ -116,11 +116,16 @@ function acceptFact(name, fact, today, subject) {
   if (name === 'arv' && ARV_FORBIDDEN.has(fact.source_kind)) return { reason: 'arv_needs_comparable_sales' };
   if (name === 'loan_payoff' && !rule.sources.includes(fact.source_kind)) return { reason: 'payoff_not_stated_by_owner_or_lender' };
   if (rule.sources && !rule.sources.includes(fact.source_kind)) return { reason: 'source_not_allowed' };
+  if (name === 'subject_address') {
+    const parts = canonicalizeAddress(fact.value);
+    if (!parts.number || !parts.street || !(parts.city || parts.zip)) return { reason: 'incomplete_address' };
+  }
   const accepted = { value: rule.type === 'text' ? fact.value.trim() : fact.value, source_kind: fact.source_kind,
     source_url: url || null, evidence_text: evidence.slice(0, 300), captured_at: fact.captured_at.slice(0, 10) };
   if (rule.min_comps) {
     // The count comes from the comp records themselves, never from a claimed number.
-    if (name === 'arv' && !subject) return { reason: 'arv_needs_subject_address' };
+    // Every comp-backed value needs the subject's identity so its own sale can never count.
+    if (!subject) return { reason: name === 'arv' ? 'arv_needs_subject_address' : 'needs_subject_address' };
     const count = recordedSales(fact.comps, fact.value, today, rule.comp_max_age_days, subject);
     if (count < rule.min_comps) return { reason: name === 'arv' ? 'arv_needs_comparable_sales' : 'needs_comparable_sales' };
     accepted.comp_count = count;
@@ -133,8 +138,8 @@ function acceptFact(name, fact, today, subject) {
   return { fact: accepted };
 }
 
-// Counts recorded sales: each needs an address, sold price, sold date inside the window and an
-// https source, never a list price, no address twice and never the subject itself. Any bad record,
+// Counts recorded sales: each needs an address, a sold/closed status, a recorded-sale basis, a sold
+// price, a sold date inside the window and an https source, no address twice and never the subject. Any bad record,
 // or a value outside the sold-price range, fails the whole set (returns 0).
 function recordedSales(comps, value, today, maxAgeDays, subject) {
   if (!Array.isArray(comps) || comps.length > 50) return 0;
@@ -145,18 +150,24 @@ function recordedSales(comps, value, today, maxAgeDays, subject) {
     const sold = profiles.dayNumber(comp.sold_date);
     if (!address || seen.has(address) || !validValue(FACTS.repairs, comp.sold_price) || comp.sold_price === 0 ||
         sold == null || sold > today || today - sold > maxAgeDays || typeof comp.source_url !== 'string' || !httpsUrl(comp.source_url) ||
-        (comp.price_basis != null && comp.price_basis !== 'recorded_sale') || (subject && sameProperty(subject, comp.comp_address))) return 0;
+        comp.price_basis !== 'recorded_sale' || typeof comp.sold_status !== 'string' || !/^(?:sold|closed)$/i.test(comp.sold_status.trim()) ||
+        sameProperty(subject, comp.comp_address)) return 0;
     seen.add(address);
   }
   const prices = comps.map((comp) => comp.sold_price);
   return value >= Math.min(...prices) && value <= Math.max(...prices) ? comps.length : 0;
 }
 
-// Same house: house number and street match, and city or ZIP match. Unparsed text compares whole.
+// Same house: house number and street match, and the city or ZIP matches, or either side lacks
+// the locality needed to tell them apart (treated as the same house, the conservative reading).
+// Unparsed text compares whole.
 function sameProperty(a, b) {
   const x = canonicalizeAddress(a), y = canonicalizeAddress(b);
   if (!x.number || !x.street || !y.number || !y.street) return x.canonical_string === y.canonical_string;
-  return x.number === y.number && x.street === y.street && (x.city && x.city === y.city || x.zip && x.zip === y.zip);
+  if (x.number !== y.number || x.street !== y.street) return false;
+  const cities = x.city && y.city, zips = x.zip && y.zip;
+  if (!cities && !zips) return true;
+  return cities && x.city === y.city || zips && x.zip === y.zip;
 }
 
 function readFacts(input, today) {
@@ -415,7 +426,7 @@ function evaluate(inputFacts, options = {}) {
     for (const { buyer, profile } of buyers) {
       if (!profile.strategy.includes(exit.key)) continue;
       // A profile without a source is not a fact: it stays listed but never counts as confirmed.
-      const source = sourceOf(buyer.strategy_profile_source);
+      const source = sourceOf(buyer.strategy_profile_source, today);
       const check = source ? targetCheck(profile, exit, { arv, repairs, asking, noi }) : { result: 'unsourced', note: 'Buyer profile has no source - confirm it with the buyer.' };
       if (check.result === 'below') { exit.below_target_buyers = (exit.below_target_buyers || 0) + 1; continue; }
       const pof = !!source && profiles.pofCurrent(profile, options.today, a.pof_max_age_days);
@@ -457,10 +468,16 @@ function evaluate(inputFacts, options = {}) {
   };
 }
 
-function sourceOf(source) {
-  if (!source || typeof source !== 'object' || typeof source.source_kind !== 'string' || !source.source_kind ||
-      !(source.source_url || source.evidence_text) || typeof source.captured_at !== 'string' || !source.captured_at) return null;
-  return { source_kind: source.source_kind, source_url: source.source_url || null, evidence_text: source.evidence_text || '', captured_at: source.captured_at };
+// A buyer profile's source needs a kind, real evidence (non-blank text or an https URL) and a
+// capture date that parses and is not after today.
+function sourceOf(source, today) {
+  if (!source || typeof source !== 'object' || Array.isArray(source) || typeof source.source_kind !== 'string' || !source.source_kind.trim()) return null;
+  const url = typeof source.source_url === 'string' && source.source_url ? source.source_url : null;
+  const evidence = typeof source.evidence_text === 'string' ? source.evidence_text.trim() : '';
+  if (url && !httpsUrl(url) || !url && !evidence) return null;
+  const captured = profiles.dayNumber(typeof source.captured_at === 'string' ? source.captured_at.slice(0, 10) : null);
+  if (captured == null || captured > today) return null;
+  return { source_kind: source.source_kind, source_url: url, evidence_text: evidence.slice(0, 300), captured_at: source.captured_at };
 }
 
 // Does the exit give this buyer the return they asked for, and what would they pay? The fee is

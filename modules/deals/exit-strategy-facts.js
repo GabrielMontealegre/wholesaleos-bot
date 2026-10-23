@@ -18,7 +18,8 @@ function fromReviewedDeal(deal, evaluation) {
   if (tier) {
     const comps = value.comps || [];
     facts.arv = { value: value.range.low, tier, source_kind: 'comp_grid', source_url: comps[0] ? comps[0].source_url : null,
-      comps: comps.map((comp) => ({ comp_address: comp.comp_address, sold_price: comp.sold_price, sold_date: comp.sold_date, source_url: comp.source_url, price_basis: comp.price_basis || 'recorded_sale' })),
+      comps: comps.map((comp) => ({ comp_address: comp.comp_address, sold_status: comp.sold_status, sold_price: comp.sold_price, sold_date: comp.sold_date,
+        source_url: comp.source_url, price_basis: comp.price_basis || 'recorded_sale' })),
       evidence_text: comps.length + ' reviewed comparable sales; low end of the range used.', captured_at: deal.evidence_reviewed_at || deal.captured_at || '' };
   }
   if (deal.address) facts.subject_address = { value: deal.address, ...source, evidence_text: 'Subject address on the reviewed deal.' };

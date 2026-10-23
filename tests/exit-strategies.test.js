@@ -13,7 +13,7 @@ const fact = (value, source_kind, extra = {}) => ({ value, source_kind, source_u
 // Comp records around the value: recorded sales with address, price, date and source.
 const comps = (value, count, extra = {}) => Array.from({ length: count }, (_, i) => ({ comp_address: (100 + i) + ' Fixture St, Example, FL 33601',
   sold_price: Math.round(value * [1, 0.95, 1.05, 0.98, 1.02][i % 5]), sold_date: '2026-09-1' + i, source_url: 'https://records.example.test/sale/' + i,
-  price_basis: 'recorded_sale', ...extra }));
+  price_basis: 'recorded_sale', sold_status: 'Sold', ...extra }));
 const arv = (value, tier = 'verified', count = 3) => fact(value, 'comp_grid', { tier, comps: comps(value, count) });
 const subject = fact('900 Subject Rd, Example, FL 33601', 'public_web_page');
 const src = { source_kind: 'assistant_report', source_url: 'https://www.facebook.com/groups/1/posts/2/', evidence_text: 'Buyer post.', captured_at: '2026-10-01T00:00:00.000Z' };
@@ -47,6 +47,14 @@ assert.deepEqual(e.rental.matching_buyers[0].profile_source, src, 'the evidence 
 const unsourced = exits.evaluate(fourplex, { today, buyers: [{ ...flipper, strategy_profile_source: null }, { ...flipper, id: 'half', strategy_profile_source: { source_kind: 'assistant_report', captured_at: '2026-10-01' } }] });
 assert.deepEqual(byKey(unsourced).flip.matching_buyers.map((b) => [b.id, b.return_check, b.rank, b.pof_current]), [['buyer-flipper', 'unsourced', 1, false], ['half', 'unsourced', 1, false]]);
 assert.equal(unsourced.best, 'rental');
+// Weak provenance is not provenance: blank evidence, a bad or future date, an http URL, an empty kind.
+for (const bad of [{ ...src, source_url: null, evidence_text: '   ' }, { ...src, captured_at: 'nonsense' }, { ...src, captured_at: '2026-12-01' },
+  { ...src, source_url: 'http://example.test/post' }, { ...src, source_kind: '  ' }, ['assistant_report']]) {
+  const weak = exits.evaluate(fourplex, { today, buyers: [{ ...landlord, strategy_profile_source: bad }] });
+  assert.deepEqual(byKey(weak).rental.matching_buyers.map((b) => [b.return_check, b.rank]), [['unsourced', 1]], JSON.stringify(bad));
+  assert.equal(byKey(weak).rental.confirmed_buyer_fee, null);
+}
+assert.equal(byKey(exits.evaluate(fourplex, { today, buyers: [{ ...landlord, strategy_profile_source: { ...src, source_url: null } }] })).rental.matching_buyers[0].rank, 3, 'evidence text alone is a source');
 assert.deepEqual(e.flip.matching_buyers.map((b) => [b.id, b.return_check, b.buyer_price, b.fee]), [['buyer-flipper', 'meets', 248000, 18000]]);
 // Codex example: an 80%-of-ARV buyer at $248k against a $247k asking supports a $1k fee, not the generic flip fee.
 const thin = exits.evaluate({ ...fourplex, asking_price: fact(247000, 'public_web_page') }, { today, buyers: [flipper] });
@@ -176,6 +184,24 @@ assert.deepEqual(exits.evaluate(noSubject, { today }).rejected_facts, [{ fact: '
 assert.deepEqual(exits.evaluate({ ...twoOne, subject_address: { ...subject, source_kind: '' } }, { today }).rejected_facts,
   [{ fact: 'arv', reason: 'arv_needs_subject_address' }, { fact: 'subject_address', reason: 'no_source' }]);
 assert.equal(byKey(exits.evaluate({ ...twoOne, subject_address: fact('901 Subject Rd, Example, FL 33601', 'public_web_page') }, { today })).flip.verdict, 'strong', 'a neighbour is a valid comp');
+// A partial subject address can't rule out a self-sale, so it is rejected; so is an unlocated comp at the same number and street.
+assert.deepEqual(exits.evaluate({ ...twoOne, subject_address: fact('900 Subject Rd', 'public_web_page') }, { today }).rejected_facts,
+  [{ fact: 'arv', reason: 'arv_needs_subject_address' }, { fact: 'subject_address', reason: 'incomplete_address' }]);
+assert.deepEqual(exits.evaluate({ ...twoOne, arv: { ...arv(150000), comps: [...comps(150000, 2), { ...ownSale, comp_address: '900 Subject Rd' }] } }, { today }).rejected_facts,
+  [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
+// Every comp must say it sold, with a recorded-sale basis: an active listing never counts.
+for (const patch of [{ sold_status: undefined }, { sold_status: 'Active' }, { sold_status: 'pending' }, { sold_status: '' }, { price_basis: undefined }]) {
+  const listing = { ...comps(150000, 3)[2], ...patch };
+  for (const key of Object.keys(patch)) if (patch[key] === undefined) delete listing[key];
+  assert.deepEqual(exits.evaluate({ ...twoOne, arv: { ...arv(150000), comps: [...comps(150000, 2), listing] } }, { today }).rejected_facts,
+    [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }], JSON.stringify(patch));
+}
+assert.deepEqual(exits.evaluate({ ...twoOne, arv: { ...arv(150000), comps: comps(150000, 3, { sold_status: 'closed' }) } }, { today }).rejected_facts, []);
+// Lot values need the subject too, and the lot's own sale never counts.
+assert.deepEqual(exits.evaluate({ property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comps: comps(70000, 3) }) }, { today }).rejected_facts,
+  [{ fact: 'lot_comps_value', reason: 'needs_subject_address' }]);
+assert.deepEqual(exits.evaluate({ subject_address: subject, lot_comps_value: fact(70000, 'lot_sale_comps', { comps: [...comps(70000, 2), { ...comps(70000, 3)[2], comp_address: subject.value }] }) }, { today }).rejected_facts,
+  [{ fact: 'lot_comps_value', reason: 'needs_comparable_sales' }]);
 const prelim = exits.evaluate({ ...twoOne, arv: arv(150000, 'verified', 2) }, { today });
 assert.equal(prelim.facts_used.arv.tier, 'preliminary');
 assert.match(byKey(prelim).flip.numbers[0].label, /preliminary, 2 sales/);
@@ -202,7 +228,7 @@ assert(!JSON.stringify(exits.evaluate(noAsk, { today })).match(/"(?:mao|offer|ma
 // Land: builder price first (A-018), signals alone are possible, wholetail needs light repairs.
 e = byKey(exits.evaluate({ property_type: fact('vacant land', 'county_record'), builder_price: fact(90000, 'buyer_stated'), asking_price: fact(60000, 'public_web_page') }, { today }));
 assert.equal(e.land.verdict, 'strong'); assert.equal(e.land.fee, 30000); assert.equal(e.flip.applicable, false); assert.equal(e.rental.applicable, false);
-e = byKey(exits.evaluate({ property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comps: comps(70000, 3) }), asking_price: fact(50000, 'public_web_page') }, { today }));
+e = byKey(exits.evaluate({ subject_address: subject, property_type: fact('lot', 'county_record'), lot_comps_value: fact(70000, 'lot_sale_comps', { comps: comps(70000, 3) }), asking_price: fact(50000, 'public_web_page') }, { today }));
 assert.equal(e.land.buyer_max, 65000, 'lot sales minus the ~$5k builders expect'); assert.equal(e.land.verdict, 'strong');
 // A list price, AVM or tax value never becomes a land price; lot value needs real lot sales.
 for (const [name, bad, reason] of [['lot_comps_value', fact(70000, 'list_price', { comps: comps(70000, 3) }), 'source_not_allowed'],
@@ -211,7 +237,7 @@ for (const [name, bad, reason] of [['lot_comps_value', fact(70000, 'list_price',
   ['lot_comps_value', fact(70000, 'lot_sale_comps'), 'needs_comparable_sales'], ['builder_price', fact(90000, 'zestimate'), 'source_not_allowed'],
   ['builder_price', fact(90000, 'list_price'), 'source_not_allowed'], ['new_home_value', fact(400000, 'list_price'), 'source_not_allowed'],
   ['new_home_value', fact(400000, 'assessed_value'), 'source_not_allowed']]) {
-  const result = exits.evaluate({ property_type: fact('lot', 'county_record'), asking_price: fact(40000, 'public_web_page'), [name]: bad }, { today });
+  const result = exits.evaluate({ subject_address: subject, property_type: fact('lot', 'county_record'), asking_price: fact(40000, 'public_web_page'), [name]: bad }, { today });
   assert.deepEqual(result.rejected_facts, [{ fact: name, reason }], name + ' ' + bad.source_kind);
   assert.equal(byKey(result).land.buyer_max, null); assert.equal(byKey(result).land.verdict, 'needs_data');
 }
@@ -282,7 +308,7 @@ const reviewedComps = comps(250000, 3).map((comp, i) => ({ ...comp, sold_price: 
 const reviewed = { asking: 120000, value: { tier: 'Verified', range: { low: 240000, high: 260000 }, comps: reviewedComps }, matches: [{ id: 'buyer-landlord', buyer_ref: 'BUY-0001', name: 'Fixture Landlord' }] };
 const mapped = adapter.fromReviewedDeal(deal, reviewed);
 assert.equal(mapped.arv.value, 240000); assert.equal(mapped.arv.tier, 'verified'); assert.equal(mapped.arv.comps.length, 3);
-assert.deepEqual(Object.keys(mapped.arv.comps[0]).sort(), ['comp_address', 'price_basis', 'sold_date', 'sold_price', 'source_url']);
+assert.deepEqual(Object.keys(mapped.arv.comps[0]).sort(), ['comp_address', 'price_basis', 'sold_date', 'sold_price', 'sold_status', 'source_url']);
 assert.equal(mapped.subject_address.value, deal.address);
 assert.equal(mapped.repairs.value, 30000); assert.equal(mapped.units.value, 2); assert.equal(mapped.asking_price.value, 120000);
 assert(!JSON.stringify(mapped).includes('999999'), 'the holder claim is never ARV');
@@ -299,6 +325,8 @@ for (const key of ['flip', 'brrrr', 'wholetail', 'novation']) { assert.equal(e[k
 const mappedResult = exits.evaluate(mapped, { today, buyers: adapter.buyersFor(reviewed, [{ id: 'buyer-landlord', assistant_find: { strategy_profile: landlord.strategy_profile } }, { id: 'unmatched', assistant_find: { strategy_profile: flipper.strategy_profile } }]) });
 assert.deepEqual(mappedResult.rejected_facts, []); assert.equal(mappedResult.facts_used.arv.comp_count, 3); assert.equal(mappedResult.facts_used.arv.tier, 'verified');
 assert.equal(byKey(mappedResult).rental.verdict, 'needs_data', 'reviewed deals carry no rent yet');
+const unstated = adapter.fromReviewedDeal(deal, { ...reviewed, value: { ...reviewed.value, comps: reviewedComps.map(({ sold_status, ...comp }) => comp) } });
+assert.deepEqual(exits.evaluate(unstated, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }], 'a reviewed comp with no sold status is not a sale');
 assert.deepEqual(adapter.buyersFor(reviewed, []).map((b) => [b.id, b.strategy_profile]), [['buyer-landlord', null]]);
 
 console.log('exit-strategies: 4-plex rental beats flip, 2/1 rental fails at the flipper price, free-and-clear estate lists seller financing; missing/unsourced/stale/future rent, guessed payoff never shown, list-price/AVM/claimed ARV rejected, forged comp tiers, buyer target/proof-of-funds matching, ranking, adapter and zero clock/network/write effects passed');
