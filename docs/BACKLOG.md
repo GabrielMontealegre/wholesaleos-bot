@@ -2,6 +2,30 @@
 
 ## Latest Run Summary
 
+2026-10-22 #429 PR431 REVIEW/FOLLOW-UP: selected Claude's narrow classic-label
+implementation; alternate430 remains draft and is not combined into431.
+Integrated84d46b0 Vary: Accept/no-store correction. Closed the identified
+Home-to-Email acceptance gap with a clearly labeled Email workspace link at
+the top of More tools, retaining every existing classic Email/nav handler.
+Actual synthetic Home->Deals->Email reader->Deals->Back journey passes at
+1366/400/412, with a44px entry target, exact record modal/identity, competing
+view precedence and locked/non-admin mailbox-read negatives. Screenshots:
+docs/screens/429/journey; no writes, external requests or console errors.
+Existing preview and full classic desk-shell regressions pass unchanged.
+Original004df5e hosted39853806212 passed240/0/0, but is NOT the modified
+head's gate. The updated PR requires its own full hosted600s/file suite
+before merge. No merge or live-release claim at this checkpoint.
+
+D-062 outage merge policy (#423 answer6350507039): up to THREE tested,
+self-reviewed non-sensitive merged-but-unverified items; mark each MERGED -
+deploy pending (Railway builds unavailable), never released.422 currently
+occupies ONE slot;430/431 unmerged occupy none. Order429/431,427,425,424,426.
+Send/call/auth/credentials/migrations stay unmerged until individually
+deployable. One retry authorization remains unconsumed until official Hobby
+restoration/no equivalent live build; no plan/billing/settings/variables.
+428 rotation is owner-controlled; no secret values read or changed. No
+production action, send, capture, batch, confirmation or business write.
+
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
 Structured source participants now survive IMAP/OAuth metadata/body paths.
