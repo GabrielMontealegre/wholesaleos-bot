@@ -385,7 +385,7 @@ app.get('/api/provider-readiness', (req, res) => {
     search_provider_readiness: searchProviderWorker.getLiveSearchProviderReadiness()
   });
 });
-app.get('/', (_, res) => res.json({
+require('./modules/ui/workspace-preview').registerAppHome(app, () => ({
   status: 'Montsan REI Bot Ã¢ÂÂ Online',
   dashboard: '/dashboard/',
   leads: db.getLeads().length,
