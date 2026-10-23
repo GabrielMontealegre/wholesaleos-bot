@@ -3,8 +3,9 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), http = re
 const planner = require('../modules/deals/negotiation-planner');
 
 const today = '2026-10-22';
-const comp = (n, extra = {}) => ({ address: `${100 + n} Fixture St`, sold_price: 200000, sold_date: '2026-08-0' + n,
-  source_url: `https://records.example.gov/sales/${n}`, ...extra });
+// Comps as the strict comp grid hands them over: accepted, with their own address, price, date and source.
+const comp = (n, extra = {}) => ({ comp_address: `${100 + n} Fixture St`, sold_price: 200000, sold_date: '2026-08-0' + n,
+  source_url: `https://records.example.gov/sales/${n}`, comp_grid: { accepted: true }, ...extra });
 const signal = kind => ({ kind, source_kind: 'county_record', source_url: `https://records.example.gov/${kind}` });
 // Value 200k from 3 sold comps, repairs 30k: default buyer max (75%) = 120k.
 function facts(extra = {}) {
@@ -158,6 +159,11 @@ try {
   out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10T15:00:00Z' }],
     seller: { stated_number: { value: 110000, captured_at: '2026-10-10T18:30:00Z', source_kind: 'agent_email' } } })));
   assert.equal(out.next_move.code, 'counter', 'a timed answer after the offer is a response');
+  for (const [offer, said] of [['2026-10-10', '2026-10-10T08:00:00Z'], ['2026-10-10T15:00:00Z', '2026-10-10'], ['2026-10-10T15:00:00Z', '2026-10-10T15:00:00Z']]) {
+    out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: offer }],
+      seller: { stated_number: { value: 110000, captured_at: said, source_kind: 'agent_email' } } })));
+    assert.equal(out.next_move.code, 'hold_backup', `${offer} vs ${said} is not a clear answer after our offer`);
+  }
   // Forged offers (future, ambiguous, non-numeric) are not offer history.
   out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-12-01' }, { amount: 80000, date: '10/10/2026' }, { amount: 'x', date: '2026-10-10' }] })));
   assert.equal(out.next_move.code, 'open_offer'); assert.equal(out.seller_side.last_offer, null);
@@ -182,12 +188,50 @@ try {
     new_defects: [defect('Foundation repair', 25000)] })));
   assert.equal(out.seller_side.walk_away.value, 95000, 'buyer number 130k less 25k found after it, less 10k');
   assert.equal(out.next_move.amount, 75000);
-  assert.ok(out.warnings.some(w => /after the best buyer number/.test(w)));
+  assert.ok(out.warnings.some(w => /after that buyer number/.test(w)));
   out = record(run(facts({ buyer_numbers: [buyer(105000, { captured_at: '2026-10-21' })], offers: [{ amount: 100000, date: '2026-10-10' }],
     seller: { stated_number: { value: 100000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
     new_defects: [defect('Foundation repair', 25000)] })));
   assert.equal(out.seller_side.walk_away.value, 95000, 'a buyer number given after the inspection already prices it');
   assert.equal(out.next_move.amount, 75000);
+  // Repairs found on the same day as the buyer number count as not priced in by that buyer.
+  out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 100000, date: '2026-10-10' }],
+    seller: { stated_number: { value: 100000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
+    new_defects: [defect('Foundation repair', 25000, { captured_at: '2026-10-12' })] })));
+  assert.equal(out.seller_side.walk_away.value, 95000);
+  assert.equal(out.next_move.code, 'renegotiate_down_for_defects'); assert.equal(out.next_move.amount, 75000);
+  // A renegotiated price never goes above what the seller already said they would take.
+  out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10' }],
+    seller: { stated_number: { value: 50000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
+    new_defects: [defect('Water heater', 10000)] })));
+  assert.equal(out.next_move.code, 'renegotiate_down_for_defects'); assert.equal(out.next_move.amount, 50000);
+  // Repairs found before our last offer were priced into it: no new cut, but they stay in the repair total.
+  out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10' }],
+    seller: { stated_number: { value: 90000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
+    new_defects: [defect('Roof', 15000, { captured_at: '2026-10-05' })] })));
+  assert.equal(out.next_move.code, 'counter'); assert.equal(out.next_move.amount, 84000);
+  assert.ok(out.next_move.talking_points.some(t => /\$45,000/.test(t)), 'repair total still includes the earlier finding');
+  // Same day as our offer is ambiguous: flagged, not cut automatically.
+  out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10' }],
+    seller: { stated_number: { value: 90000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
+    new_defects: [defect('Roof', 15000, { captured_at: '2026-10-10' })] })));
+  assert.equal(out.next_move.code, 'counter');
+  assert.ok(out.warnings.some(w => /same day as our last offer/.test(w)));
+  // After we re-offer at the lower price, the same findings do not cut it again.
+  out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10' }, { amount: 40000, date: '2026-10-21' }],
+    seller: { stated_number: { value: 80000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
+    new_defects: [defect('Foundation repair', 25000), defect('Roof replacement', 15000)] })));
+  assert.equal(out.next_move.code, 'hold_backup', 'waits for the seller instead of cutting twice');
+  // Our standing offer above a fallen limit is flagged, never left as "at our limit".
+  out = record(run(facts({ buyer_numbers: [buyer(85000)], offers: [{ amount: 100000, date: '2026-10-10' }],
+    seller: { stated_number: { value: 120000, captured_at: '2026-10-14', source_kind: 'seller_call' } } })));
+  assert.equal(out.next_move.code, 'hold_backup'); assert.equal(out.next_move.amount, null);
+  assert.match(out.next_move.reason, /above what the numbers support/);
+  assert.ok(out.warnings.some(w => /above our current limit/.test(w)));
+  // Very high repairs make the opening negative: never offer a zero or negative price.
+  out = record(run(facts({ repairs: { value: 90000, source_kind: 'inspection' }, buyer_numbers: [buyer(80000)],
+    distress_signals: ['vacant', 'taxes_owed', 'code_case'].map(signal) })));
+  assert.equal(out.next_move.code, 'walk'); assert.equal(out.next_move.amount, null);
   // Defects without a source, cost or valid date are ignored.
   out = record(run(facts({ buyer_numbers: [buyer(130000)], offers: [{ amount: 80000, date: '2026-10-10' }],
     seller: { stated_number: { value: 90000, captured_at: '2026-10-11', source_kind: 'seller_call' } },
@@ -211,13 +255,29 @@ try {
   assert.ok(out.warnings.some(w => /Preliminary/.test(w)));
   assert.ok(out.ignored_inputs.some(i => i.field === 'arv.comp_count'));
   walk(out, v => { if (v && v.label === 'derived') assert.equal(v.preliminary, true); });
-  for (const comps of [[comp(1), comp(2, { address: '1 Subject Ln' }), comp(3, { sold_date: '2026-12-01' })],
-    [comp(1), comp(1), comp(2, { sold_date: '08/02/2026' })], [comp(1), comp(2, { sold_price: null }), comp(3, { address: '' })]]) {
+  // Each case keeps one good comp and two that must not count, so a wrongly counted comp would unlock a value.
+  for (const [comps, why] of [
+    [[comp(1), comp(2, { comp_address: '1 Subject Ln' }), comp(3, { comp_address: '1 Subject Lane' })], /own sale/],
+    [[comp(1), comp(1), comp(2, { sold_date: '08/02/2026' })], /duplicate|ambiguous/],
+    [[comp(1), comp(2, { sold_price: null }), comp(3, { comp_address: '' })], /sold price|address/],
+    [[comp(1), comp(2, { sold_date: '2026-12-01' }), comp(3, { sold_date: '2001-05-01' })], /future|6 months/],
+    [[comp(1), comp(2, { sold_date: '2026-04-21' }), comp(3, { comp_grid: { accepted: false } })], /6 months|strict comp grid/],
+    [[comp(1), comp(2, { comp_grid: undefined }), comp(3, { source_url: '' })], /strict comp grid|source link/]]) {
     out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comp_count: 3, comps }, buyer_numbers: [buyer(130000)] })));
-    assert.equal(out.status, 'no_offer', 'own sale, duplicates, future, ambiguous or incomplete comps do not count');
+    assert.equal(out.status, 'no_offer', String(why));
+    assert.equal(out.ignored_inputs.filter(i => i.field.startsWith('arv.comps[') && why.test(i.reason)).length, 2, String(why));
   }
-  out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comp_count: 2, status: 'verified' }, buyer_numbers: [buyer(130000)] })));
+  assert.equal(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comps: [comp(1), comp(2, { sold_date: '2026-04-22' })] }, buyer_numbers: [buyer(130000)] })).arv.comp_count, 2,
+    'a sale exactly 6 months ago still counts');
+  // the subject's own sale with a different suffix spelling, a sale over 6 months old, and comps the strict grid did not accept are refused above.
+  out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comp_count: 2, status: 'verified', comps: [comp(1), comp(2)] }, buyer_numbers: [buyer(130000)] })));
   assert.equal(out.arv.status, 'preliminary');
+  for (const arv of [{ value: 200000, source_kind: 'sold_comps', comp_count: 3, status: 'verified' }, { value: 200000, source_kind: 'sold_comps', comp_count: 3, comps: 'three' }]) {
+    out = record(run(facts({ arv, buyer_numbers: [buyer(130000)] })));
+    assert.equal(out.status, 'no_offer', 'a bare comp count is never proof');
+  }
+  out = record(run(facts({ subject_address: '', buyer_numbers: [buyer(130000)] })));
+  assert.equal(out.status, 'no_offer', "without the subject address its own sale cannot be excluded");
   // Missing repairs or value: no price, still asks first when the seller has not been asked.
   out = record(run(facts({ repairs: null, buyer_numbers: [buyer(130000)] })));
   assert.equal(out.status, 'no_offer'); assert.equal(out.next_move.code, 'hold_backup'); assert.equal(out.next_move.amount, null);
@@ -247,6 +307,11 @@ try {
   assert.equal(run(facts({ buyer_numbers: [buyer(130000)] }), { min_fee: 1000 }).seller_side.walk_away.value, 120000, 'fee below $10k is not accepted');
   out = record(run(facts({ buyer_numbers: [buyer(130000, { proof_of_funds: false })] })));
   assert.ok(out.warnings.some(w => /proof of funds/.test(w)));
+  assert.equal(out.seller_side.walk_away.value, 105000, 'an unfunded number cannot lift the limit above the typical buyer price minus $15k');
+  assert.equal(run(facts({ buyer_numbers: [buyer(190000, { proof_of_funds: false })] })).seller_side.walk_away.value, 105000);
+  assert.equal(run(facts({ buyer_numbers: [buyer(190000)] })).seller_side.walk_away.value, 180000, 'a funded number sets the limit');
+  assert.equal(run(facts({ buyer_numbers: [buyer(190000, { proof_of_funds: false }), buyer(130000, { buyer_id: 'B2' })] })).seller_side.walk_away.value, 120000,
+    'the funded buyer sets the limit when the unfunded one is held back');
 
   // Preliminary value is flagged on every number; a long time on market shows in the talking points.
   out = record(run(facts({ arv: { value: 200000, source_kind: 'sold_comps', comps: [comp(1), comp(2)] }, days_on_market: 120, buyer_numbers: [buyer(130000)] })));
@@ -273,13 +338,15 @@ try {
   // and the seller-facing words never reveal our limit or a buyer's number.
   const deposits = facts({ buyer_numbers: [buyer(130000)], deposit_requested: 5000, earnest_money: 2000, seller: { number_asked: true, wants_deposit: 3000 } });
   out = record(run(deposits));
-  assert.equal(out.deposit, 'No deposit from Gabriel. Any deposit is buyer-funded at assignment (D-059).');
+  assert.equal(out.deposit, planner.NO_DEPOSIT);
+  assert.match(planner.NO_DEPOSIT, /^No deposit from Gabriel\. Any deposit is paid by the end buyer when the contract is assigned\.$/);
   for (const o of outputs) {
     if (!o.ok) continue;
     assert.ok(planner.MOVES.includes(o.next_move.code), o.next_move.code);
-    assert.equal(o.deposit, 'No deposit from Gabriel. Any deposit is buyer-funded at assignment (D-059).');
+    assert.equal(o.deposit, planner.NO_DEPOSIT);
     walk(o, (v, path) => {
       if (/deposit|earnest/i.test(path) && path !== '.deposit') assert.fail(`deposit field ${path}`);
+      if (typeof v === 'string') assert.ok(!/\bD-\d{3}\b/.test(v), `decision id in text at ${path}`);
       if (typeof v === 'string' && path !== '.deposit') {
         assert.ok(!/deposit|earnest/i.test(v), `deposit text at ${path}`);
         assert.ok(!/buyer (pays|will pay)|my buyer/i.test(v), `buyer price talk at ${path}`);

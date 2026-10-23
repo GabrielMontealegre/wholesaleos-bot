@@ -4,8 +4,11 @@
 // (callers pass `today`), no writes, inputs never mutated. Every number it returns
 // is derived from sourced inputs and labeled; it is never an agreed price.
 
+const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
+
 const DAY_MS = 86400000;
 const STALE_DAYS = 30;
+const COMP_MONTHS = 6;
 const ROUND = 500;
 const MIN_FEE = 10000;
 const BUYER_NUMBER_MARGIN = 10000;
@@ -40,7 +43,7 @@ const REPAIR_SOURCES = Object.freeze({
   photo_review: 'photo review', estimate_per_sqft: 'per-square-foot estimate'
 });
 
-const NO_DEPOSIT = 'No deposit from Gabriel. Any deposit is buyer-funded at assignment (D-059).';
+const NO_DEPOSIT = 'No deposit from Gabriel. Any deposit is paid by the end buyer when the contract is assigned.';
 
 const text = v => typeof v === 'string' && v.trim() ? v.trim() : '';
 const money = v => typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 1e9 ? v : null;
@@ -56,6 +59,12 @@ function instant(value) {
   const ms = Date.parse(value);
   if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 10) !== value.slice(0, 10)) return null;
   return ms;
+}
+
+// -1 / 1 when one moment is clearly earlier / later; 0 when they share a day and either is date-only (ambiguous).
+function order(a, b) {
+  if (a.length > 10 && b.length > 10) return Math.sign(Date.parse(a) - Date.parse(b));
+  return a.slice(0, 10) < b.slice(0, 10) ? -1 : a.slice(0, 10) > b.slice(0, 10) ? 1 : 0;
 }
 
 function softPhrase(amount) {
@@ -75,21 +84,31 @@ function readArv(input, todayMs, ignored, subjectAddress) {
   if (kind !== 'sold_comps') { ignored.push({ field: 'arv', reason: 'value is not backed by sold comps' }); return null; }
   const value = money(arv.value);
   if (!value) { ignored.push({ field: 'arv', reason: 'value missing or not a number' }); return null; }
-  let count;
-  if (Array.isArray(arv.comps)) {
-    const subject = text(subjectAddress).toLowerCase(), seen = new Set();
-    count = arv.comps.filter(c => {
-      const address = text(c?.address).toLowerCase(), sold = instant(c?.sold_date);
-      let ok = address && address !== subject && !seen.has(address) && money(c?.sold_price) && sold !== null &&
-        sold <= todayMs && /^https?:\/\/[^\s]+$/.test(text(c?.source_url));
-      if (ok) seen.add(address);
-      return ok;
-    }).length;
-    if (Number.isInteger(arv.comp_count) && arv.comp_count > count)
-      ignored.push({ field: 'arv.comp_count', reason: `claimed ${arv.comp_count} comps, only ${count} carry address, sold price, sold date and source` });
-  } else {
-    count = Number.isInteger(arv.comp_count) && arv.comp_count >= 0 ? arv.comp_count : 0;
-  }
+  // Only comps the strict comp grid accepted count, each proven by its own address, price, date and source.
+  if (!Array.isArray(arv.comps)) { ignored.push({ field: 'arv', reason: 'value has no sold comps attached' }); return null; }
+  const subject = canonicalizeAddress(text(subjectAddress));
+  if (!subject.number || !subject.street) { ignored.push({ field: 'subject_address', reason: "needed to keep the subject's own sale out of the comps" }); return null; }
+  const cutoff = new Date(todayMs); cutoff.setUTCMonth(cutoff.getUTCMonth() - COMP_MONTHS);
+  const seen = new Set();
+  const count = arv.comps.filter((c, i) => {
+    const a = text(c?.comp_address) ? canonicalizeAddress(text(c.comp_address)) : null, sold = instant(c?.sold_date);
+    const key = a && [a.number, a.street, a.suffix, a.city, a.state].join('|');
+    const isSubject = a && a.number === subject.number && a.street === subject.street && a.suffix === subject.suffix &&
+      (!a.city || !subject.city || a.city === subject.city) && (!a.state || !subject.state || a.state === subject.state);
+    const reason = !a?.number || !a.street ? 'comp address missing or incomplete'
+      : isSubject ? "the subject's own sale is never its own comp"
+      : seen.has(key) ? 'duplicate comp'
+      : !money(c?.sold_price) ? 'sold price missing'
+      : sold === null || sold > todayMs + DAY_MS - 1 ? 'sold date missing, ambiguous or in the future'
+      : sold < cutoff.getTime() ? `sold more than ${COMP_MONTHS} months ago`
+      : !/^https?:\/\/\S+$/.test(text(c?.source_url)) ? 'source link missing'
+      : c?.comp_grid?.accepted !== true ? 'not accepted by the strict comp grid' : '';
+    if (reason) { ignored.push({ field: `arv.comps[${i}]`, reason }); return false; }
+    seen.add(key);
+    return true;
+  }).length;
+  if (Number.isInteger(arv.comp_count) && arv.comp_count > count)
+    ignored.push({ field: 'arv.comp_count', reason: `claimed ${arv.comp_count} comps, only ${count} qualify` });
   if (count < 2) { ignored.push({ field: 'arv', reason: 'fewer than 2 verified sold comps; no value' }); return null; }
   const status = count >= 3 ? 'verified' : 'preliminary';
   if (arv.status && arv.status !== status) ignored.push({ field: 'arv.status', reason: `stated ${arv.status}, ${count} comps make it ${status}` });
@@ -163,7 +182,7 @@ function readSeller(seller, todayMs, ignored) {
   let stated = null;
   if (s.stated_number != null) {
     const n = s.stated_number, at = instant(n?.captured_at);
-    if (money(n?.value) && text(n?.source_kind) && at !== null && at <= todayMs + DAY_MS - 1) stated = { value: n.value, at };
+    if (money(n?.value) && text(n?.source_kind) && at !== null && at <= todayMs + DAY_MS - 1) stated = { value: n.value, captured_at: n.captured_at };
     else ignored.push({ field: 'seller.stated_number', reason: 'needs an amount, a source and a valid past date' });
   }
   return { asked: s.number_asked === true || stated !== null, stated };
@@ -176,7 +195,7 @@ function sizing(arv, repairs, distressCount, buyerMax) {
   if (distressCount === 2) return { tier: '2 signals', opening: at(0.50), target: at(0.55),
     basis: { opening: '50% of value minus repairs', target: '55% of value minus repairs (low end of 55-60%)' } };
   return { tier: '0-1 signals', opening: at(0.60), target: buyerMax - LOW_DISTRESS_TARGET_MARGIN,
-    basis: { opening: '60% of value minus repairs', target: 'buyer max minus $20,000' } };
+    basis: { opening: '60% of value minus repairs', target: 'typical buyer price minus $20,000' } };
 }
 
 function plan(facts = {}, options = {}) {
@@ -226,25 +245,32 @@ function plan(facts = {}, options = {}) {
   const totalRepairs = repairs.value + defectTotal;
   const defaultPct = arv.value < 120000 ? 0.70 : 0.75;
   const maxFor = (pct, rep) => arv.value * pct - rep;
-  const buyerMax = maxFor(defaultPct, totalRepairs);
   const pctOf = new Map((Array.isArray(f.buyers) ? f.buyers : [])
     .filter(b => text(b?.buyer_id) && typeof b.arv_pct === 'number' && b.arv_pct >= 0.4 && b.arv_pct <= 0.9)
     .map(b => [text(b.buyer_id), b.arv_pct]));
   const best = buyerNumbers[0] || null;
-  if (best && !best.proof_of_funds) warnings.push('The highest buyer number has no proof of funds yet.');
-  // A buyer number given before a defect was found did not price that defect in.
-  const unpricedByBuyer = best ? defects.filter(d => instant(d.captured_at) > instant(best.captured_at)).reduce((sum, d) => sum + d.cost, 0) : 0;
-  if (unpricedByBuyer) warnings.push('New repairs were found after the best buyer number; confirm the buyer still stands at their number.');
+  const sum = list => list.reduce((total, d) => total + d.cost, 0);
 
-  function ladder(rep, buyerAdjust) {
+  // Walk-away per buyer number: their number less repairs found after it (same day counts as after), less our fee.
+  // A number without proof of funds can never lift the limit above the typical buyer price minus $15,000.
+  function ladder(rep, defectList) {
     const max = maxFor(defaultPct, rep), size = sizing(arv, rep, signals.length, max);
-    const walkAway = best ? best.amount - buyerAdjust - Math.max(BUYER_NUMBER_MARGIN, minFee) : max - Math.max(BUYER_MAX_MARGIN, minFee);
+    const fallback = max - Math.max(BUYER_MAX_MARGIN, minFee);
+    const caps = buyerNumbers.map(n => {
+      const unpriced = sum(defectList.filter(d => order(d.captured_at, n.captured_at) >= 0));
+      const own = n.amount - unpriced - Math.max(BUYER_NUMBER_MARGIN, minFee);
+      return { n, unpriced, held: !n.proof_of_funds && fallback < own, value: n.proof_of_funds ? own : Math.min(own, fallback) };
+    }).sort((a, b) => b.value - a.value);
+    const cap = caps[0] || null, walkAway = cap ? cap.value : fallback;
     const walk = down(walkAway), target = down(Math.min(size.target, walkAway)), opening = down(Math.min(size.opening, size.target, walkAway));
-    return { size, walk, target, opening, buyerMax: max,
-      walkBasis: best ? `best current buyer number (${best.buyer_id})${buyerAdjust ? ' less repairs found after it' : ''} minus ${usd(Math.max(BUYER_NUMBER_MARGIN, minFee))}`
-        : `buyer max minus ${usd(Math.max(BUYER_MAX_MARGIN, minFee))} (no current buyer number)` };
+    return { size, walk, target, opening, buyerMax: max, cap,
+      walkBasis: cap ? `buyer ${cap.n.buyer_id}'s current number${cap.unpriced ? ' less repairs found after it' : ''} minus ${usd(Math.max(BUYER_NUMBER_MARGIN, minFee))}` +
+          (cap.held ? `, held to the typical buyer price minus ${usd(Math.max(BUYER_MAX_MARGIN, minFee))} until proof of funds` : '')
+        : `typical buyer price minus ${usd(Math.max(BUYER_MAX_MARGIN, minFee))} (no current buyer number)` };
   }
-  const L = ladder(totalRepairs, unpricedByBuyer);
+  const L = ladder(totalRepairs, defects);
+  if (L.cap && !L.cap.n.proof_of_funds) warnings.push('The buyer number our limit rests on has no proof of funds yet.');
+  if (L.cap && L.cap.unpriced) warnings.push('New repairs were found after that buyer number; confirm the buyer still stands at their number.');
   const inputs = { value: arv.value, comp_count: arv.comp_count, repairs: repairs.value, new_defects_total: defectTotal,
     distress_signals: signals.length, buyer_max: Math.round(L.buyerMax), best_buyer_number: best ? best.amount : null };
   const seller_side = {
@@ -256,7 +282,7 @@ function plan(facts = {}, options = {}) {
     seller_number: seller.stated ? { value: seller.stated.value, label: 'seller stated' } : null
   };
 
-  const askingRaw = Math.max(buyerMax, L.target + minFee);
+  const askingRaw = Math.max(L.buyerMax, L.target + minFee);
   const buyerRows = [...new Set([...pctOf.keys(), ...buyerNumbers.map(n => n.buyer_id), ...teaser])].sort().map(id => {
     const pct = pctOf.get(id) ?? defaultPct, number = buyerNumbers.find(n => n.buyer_id === id) || null;
     return { buyer_id: id, buyer_max: derived(down(maxFor(pct, totalRepairs)),
@@ -266,8 +292,8 @@ function plan(facts = {}, options = {}) {
   });
   const pushFrom = buyerNumbers.find(n => n.answered_fast && n.amount > L.target) || null;
   const buyer_side = {
-    default_buyer_max: derived(down(buyerMax), `${Math.round(defaultPct * 100)}% of value minus repairs`, inputs, arv),
-    asking_price: derived(up(askingRaw), `higher of buyer max and our target plus ${usd(minFee)} fee`, inputs, arv),
+    default_buyer_max: derived(down(L.buyerMax), `${Math.round(defaultPct * 100)}% of value minus repairs`, inputs, arv),
+    asking_price: derived(up(askingRaw), `higher of the typical buyer price and our target plus ${usd(minFee)} fee`, inputs, arv),
     push_a_little: pushFrom ? { low: derived(up(pushFrom.amount * 1.03), `3% above ${pushFrom.buyer_id}'s fast answer`, inputs, arv),
       high: derived(up(pushFrom.amount * 1.05), `5% above ${pushFrom.buyer_id}'s fast answer`, inputs, arv) } : null,
     buyers: buyerRows
@@ -282,25 +308,39 @@ function plan(facts = {}, options = {}) {
   if (dom !== null && dom >= 30) points.push(`It has been on the market ${dom} days.`);
   const note = `Our limit is ${usd(L.walk)}. Never go above it.`;
 
-  if (L.walk <= 0) {
-    out.next_move = move('walk', 'The value, repairs and buyer price leave no room for a deal. Walk away politely and keep the contact.',
-      { operator_note: 'No positive walk-away price.' });
+  if (L.walk <= 0 || L.opening <= 0 || L.target <= 0) {
+    out.next_move = move('walk', 'The value, repairs and buyer price leave no sensible price. Walk away politely and keep the contact.',
+      { operator_note: 'No positive opening, target or limit.' });
     return out;
   }
 
-  if (lastOffer && defects.length) {
-    const before = ladder(repairs.value, 0);
-    const proposed = down(Math.min(lastOffer.amount - defectTotal, L.walk));
+  const sellerNumber = seller.stated ? seller.stated.value : null;
+  // Only repairs found after our last offer reopen the price; a same-day record is ambiguous and is flagged, not acted on.
+  const sinceOffer = lastOffer ? defects.filter(d => order(d.captured_at, lastOffer.date) > 0) : [];
+  if (lastOffer && defects.some(d => order(d.captured_at, lastOffer.date) === 0))
+    warnings.push('A repair item was recorded the same day as our last offer; confirm whether that offer already covered it.');
+  if (lastOffer && sinceOffer.length) {
+    const newTotal = sum(sinceOffer);
+    const before = ladder(totalRepairs - newTotal, defects.filter(d => !sinceOffer.includes(d)));
+    const proposed = down(Math.min(lastOffer.amount - newTotal, L.walk, sellerNumber ?? Infinity));
     if (proposed <= 0) {
       out.next_move = move('walk', 'The new repairs leave no room at any price. Walk away politely.', { operator_note: note });
       return out;
     }
-    out.renegotiation = { previous_offer: lastOffer.amount, defects, defects_total: defectTotal,
-      previous_target: before.target, new_target: L.target, proposed: derived(proposed, 'last offer minus new repair costs, capped at our limit', inputs, arv) };
+    out.renegotiation = { previous_offer: lastOffer.amount, defects: sinceOffer.map(({ captured_at, ...d }) => d), defects_total: newTotal,
+      previous_target: before.target, new_target: L.target,
+      proposed: derived(proposed, "last offer minus new repair costs, capped at our limit and the seller's number", inputs, arv) };
     out.next_move = move('renegotiate_down_for_defects',
-      'The inspection found work that was not priced in: ' + defects.map(d => `${d.item} (${usd(d.cost)})`).join(', ') +
-      `. That is ${usd(defectTotal)} more in repairs, so the price has to come down.`,
+      'The inspection found work that was not priced in: ' + sinceOffer.map(d => `${d.item} (${usd(d.cost)})`).join(', ') +
+      `. That is ${usd(newTotal)} more in repairs, so the price has to come down.`,
       { amount: proposed, phrase: softPhrase(proposed), talking_points: points, operator_note: note });
+    return out;
+  }
+
+  if (lastOffer && lastOffer.amount > L.walk) {
+    warnings.push(`Our last offer (${usd(lastOffer.amount)}) is above our current limit (${usd(L.walk)}).`);
+    out.next_move = move('hold_backup', 'Our last offer is now above what the numbers support. Do not raise. Confirm a funded buyer ' +
+      'at a higher number before signing, or withdraw the offer.', { operator_note: note });
     return out;
   }
 
@@ -311,7 +351,6 @@ function plan(facts = {}, options = {}) {
     return out;
   }
 
-  const sellerNumber = seller.stated ? seller.stated.value : null;
   if (L.walk < L.size.opening && !(sellerNumber !== null && sellerNumber <= L.walk) && !lastOffer) {
     out.next_move = move('hold_backup', 'The current buyer number does not leave room for our opening. Do not make an offer; ' +
       'stay in touch as a backup and look for more buyers.', { operator_note: note });
@@ -327,7 +366,7 @@ function plan(facts = {}, options = {}) {
     return out;
   }
 
-  const responded = seller.stated && seller.stated.at > lastOffer.at;
+  const responded = seller.stated && order(seller.stated.captured_at, lastOffer.date) > 0;
   if (!responded) {
     out.next_move = move('hold_backup', `Wait for the seller's answer to our last offer (${usd(lastOffer.amount)}). ` +
       'Do not raise against ourselves.', { operator_note: note });
@@ -361,4 +400,4 @@ function plan(facts = {}, options = {}) {
   return out;
 }
 
-module.exports = Object.freeze({ plan, MOVES, DISTRESS_KINDS, NOT_ARV, STALE_DAYS, MIN_FEE, softPhrase });
+module.exports = Object.freeze({ plan, MOVES, DISTRESS_KINDS, NOT_ARV, STALE_DAYS, MIN_FEE, NO_DEPOSIT, softPhrase });
