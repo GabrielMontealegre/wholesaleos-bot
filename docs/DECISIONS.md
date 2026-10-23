@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: missing exact-size live evidence from the Chrome viewport tool is
+not proof of an application regression. Keep the affected acceptance gates
+pending in435 and preserve the healthy exact-source deployment; never claim
+1366/400/412 from actual1280-wide output or silently substitute synthetic
+proof. Independent draft-branch reconciliation/testing may continue, but is
+not a waiver to merge/deploy the next screen or enable sending -- AGENTS3/5/7,
+data truth and conservative behavior; architect question435 --2026-10-23 UTC.
+
 ASSUMED: continue D-061 phase2 implementation/tests locally while phase1's
 merged release is blocked by workspace deployment availability (#423), but
 keep its PR draft/unmerged until exact phase1 deployment and read-only

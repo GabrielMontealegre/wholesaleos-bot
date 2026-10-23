@@ -2,6 +2,31 @@
 
 ## Latest Run Summary
 
+2026-10-23 UTC run: independent existing PRs reconciled with main9f4caaf,
+tested and self-reviewed, NONE merged/deployed this run.427 remote e254d61
+passed241/0/0 (39876284871,13m18s);425 remote9dc3c85 passed244/0/0
+(39906473578,13m13s);424 remote1248de7 passed243/0/0 (39907243516,
+13m21s). All600s/file; every file has a duration in docs/test-results/
+2026-10-23-reconciliation/timings.json. No skipped/unaccounted files.
+Both425 and424 retain431 Home/classic labels/navigationv2 and actual journey
+negatives. Synthetic Today proof254/183.6/233.6ms,Lighthouse100/100;
+composer46.5/57.7/51.1ms,Lighthouse98/100. One overlapping Today screenshot
+run failed unchanged<2s paint; recorded honestly, then one serialized pass;
+only failure diagnostics changed. No existing safety assertion weakened.
+
+Release order remains427,425,424,426. These are independent branch gates,
+NOT a tested combined release; reconcile each with actual preceding main
+before its own release. All remain DRAFT/unmerged. Current production is
+431/9f4caaf via exact automatic a00779c6-f5c4-49e7-916f-cb7bc02cca43;
+health200/partial live navigation passed previously, but required live sizes
+remain pending in needs-architect435 (no answer yet). Do not waive/guess
+viewport sizes or roll back healthy code for missing tool evidence. No new
+native Deals until corrected Email is live and owner-approved.428 rotation
+still needs owner confirmation; no secret value inspected or changed.
+No local test/watch process remains running; no production Preview/Send,
+capture, batch, evidence confirmation, paid/settings action or business write.
+This documentation/timing checkpoint is local-only, not a new gated product.
+
 2026-10-23 independent424 PREPARATION ONLY: reconcile existing reply composer
 with main9f4caaf/navigation431, retaining both script sets and default-OFF
 transport. No production preview, Send or setting change.431/422 is active
