@@ -28,7 +28,8 @@ new-construction sales, and only buyers with a met target return affect the rank
 A matched buyer's fee comes from that buyer's own price; the ARV certainty tiers are
 verified / preliminary / ballpark (D-003). ARV and lot-sale values need the comp records
 themselves (address, sold price, sold date, https source, recorded sale); a claimed count
-never unlocks a value --
+never unlocks a value. ARV needs the sourced subject address and rejects the subject's own
+sale; buyer profiles count only with their source, and hard-money cash-on-cash is not modeled --
 AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
 
 ## D-062: Bounded Merges During Railway Build Outage

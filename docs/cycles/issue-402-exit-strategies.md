@@ -33,6 +33,13 @@ Safety rules enforced by the engine:
   2 = preliminary even if "verified" is claimed (D-005); ballpark (D-003) stays ballpark.
   List price, AVM, Zestimate, assessed or tax value, auction bid, the holder's claimed ARV
   and rent estimates are never ARV. Lot-sale values need the same records (2 years).
+  ARV also needs the sourced subject address, and a comp at the subject's own address
+  (same number and street, same city or ZIP) fails the set: its own sale is never a comp.
+- A buyer profile counts only with its source (kind, URL or evidence, capture date); the
+  source travels on every match as `profile_source`. An unsourced profile stays listed as
+  "confirm with the buyer" and never affects ranking. Cash-on-cash targets are measured
+  with the loan for DSCR buyers and without one for cash buyers; hard money is unknown
+  until that financing is modeled.
 - Rent counts only from HUD Small Area FMR, rental comps, an agent, a lease or a rent
   roll. A rent figure is never a comp.
 - A loan payoff counts only when the owner stated it or a payoff statement shows it.

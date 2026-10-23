@@ -21,6 +21,7 @@ function fromReviewedDeal(deal, evaluation) {
       comps: comps.map((comp) => ({ comp_address: comp.comp_address, sold_price: comp.sold_price, sold_date: comp.sold_date, source_url: comp.source_url, price_basis: comp.price_basis || 'recorded_sale' })),
       evidence_text: comps.length + ' reviewed comparable sales; low end of the range used.', captured_at: deal.evidence_reviewed_at || deal.captured_at || '' };
   }
+  if (deal.address) facts.subject_address = { value: deal.address, ...source, evidence_text: 'Subject address on the reviewed deal.' };
   if (deal.repair_estimate != null) facts.repairs = { value: deal.repair_estimate, ...source, source_kind: 'reviewed_repair_estimate', evidence_text: 'Repair estimate on the reviewed deal.' };
   const asking = evaluation && evaluation.asking;
   if (asking != null) facts.asking_price = { value: asking, ...source, evidence_text: deal.asking_price > 0 ? 'Asking price on the source page.' : 'Starting bid on the source page.' };
@@ -37,7 +38,8 @@ function buyersFor(evaluation, buyers) {
   return ((evaluation && evaluation.matches) || []).map((match) => {
     const buyer = byId.get(match.id);
     return { id: match.id, buyer_ref: match.buyer_ref || null, name: match.name || '',
-      strategy_profile: buyer && buyer.assistant_find && buyer.assistant_find.strategy_profile || null };
+      strategy_profile: buyer && buyer.assistant_find && buyer.assistant_find.strategy_profile || null,
+      strategy_profile_source: buyer && buyer.assistant_find && buyer.assistant_find.strategy_profile_source || null };
   });
 }
 

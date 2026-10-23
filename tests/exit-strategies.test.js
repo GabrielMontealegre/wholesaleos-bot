@@ -15,16 +15,18 @@ const comps = (value, count, extra = {}) => Array.from({ length: count }, (_, i)
   sold_price: Math.round(value * [1, 0.95, 1.05, 0.98, 1.02][i % 5]), sold_date: '2026-09-1' + i, source_url: 'https://records.example.test/sale/' + i,
   price_basis: 'recorded_sale', ...extra }));
 const arv = (value, tier = 'verified', count = 3) => fact(value, 'comp_grid', { tier, comps: comps(value, count) });
+const subject = fact('900 Subject Rd, Example, FL 33601', 'public_web_page');
+const src = { source_kind: 'assistant_report', source_url: 'https://www.facebook.com/groups/1/posts/2/', evidence_text: 'Buyer post.', captured_at: '2026-10-01T00:00:00.000Z' };
 const byKey = (result) => Object.fromEntries(result.exits.map((exit) => [exit.key, exit]));
 function deepFreeze(value) { if (value && typeof value === 'object') { Object.values(value).forEach(deepFreeze); Object.freeze(value); } return value; }
 
 // 1. A 4-plex where the rental beats the flip.
-const fourplex = deepFreeze({ property_type: fact('fourplex', 'public_web_page'), units: fact(4, 'public_web_page'), arv: arv(360000),
+const fourplex = deepFreeze({ subject_address: subject, property_type: fact('fourplex', 'public_web_page'), units: fact(4, 'public_web_page'), arv: arv(360000),
   repairs: fact(40000, 'operator_estimate'), asking_price: fact(230000, 'public_web_page'), monthly_rent: fact(4400, 'rent_roll'),
   annual_taxes: fact(6000, 'county_record'), annual_insurance: fact(4000, 'agent_report') });
-const landlord = { id: 'buyer-landlord', name: 'Fixture Landlord', strategy_profile: { strategy: ['rental', 'multifamily'],
+const landlord = { id: 'buyer-landlord', name: 'Fixture Landlord', strategy_profile_source: src, strategy_profile: { strategy: ['rental', 'multifamily'],
   target_return: { basis: 'cap_rate', percent: 9 }, funding: ['dscr'], deals_per_year: 6, pof_date: '2026-09-01' } };
-const flipper = { id: 'buyer-flipper', name: 'Fixture Flipper', strategy_profile: { strategy: ['flip'], target_return: { basis: 'pct_arv', percent: 80 }, funding: ['hard_money'] } };
+const flipper = { id: 'buyer-flipper', name: 'Fixture Flipper', strategy_profile_source: src, strategy_profile: { strategy: ['flip'], target_return: { basis: 'pct_arv', percent: 80 }, funding: ['hard_money'] } };
 const buyers = deepFreeze([flipper, landlord]);
 const plex = exits.evaluate(fourplex, { today, buyers });
 let e = byKey(plex);
@@ -40,6 +42,11 @@ assert(e.multifamily.numbers.some((n) => n.key === 'price_per_door' && n.value =
 assert.equal(plex.best, 'rental', 'the landlord with current proof of funds and a met target outranks the flip');
 assert(plex.also_works.includes('flip'));
 assert.deepEqual(e.rental.matching_buyers.map((b) => [b.id, b.return_check, b.pof_current, b.rank]), [['buyer-landlord', 'meets', true, 3]]);
+assert.deepEqual(e.rental.matching_buyers[0].profile_source, src, 'the evidence behind a match travels with it');
+// A profile with no source is listed but never confirmed, so it never changes the ranking.
+const unsourced = exits.evaluate(fourplex, { today, buyers: [{ ...flipper, strategy_profile_source: null }, { ...flipper, id: 'half', strategy_profile_source: { source_kind: 'assistant_report', captured_at: '2026-10-01' } }] });
+assert.deepEqual(byKey(unsourced).flip.matching_buyers.map((b) => [b.id, b.return_check, b.rank, b.pof_current]), [['buyer-flipper', 'unsourced', 1, false], ['half', 'unsourced', 1, false]]);
+assert.equal(unsourced.best, 'rental');
 assert.deepEqual(e.flip.matching_buyers.map((b) => [b.id, b.return_check, b.buyer_price, b.fee]), [['buyer-flipper', 'meets', 248000, 18000]]);
 // Codex example: an 80%-of-ARV buyer at $248k against a $247k asking supports a $1k fee, not the generic flip fee.
 const thin = exits.evaluate({ ...fourplex, asking_price: fact(247000, 'public_web_page') }, { today, buyers: [flipper] });
@@ -61,14 +68,14 @@ assert(plex.assumptions.every((item) => item.label && typeof item.value === 'num
 assert.equal(exits.evaluate(fourplex, { today }).best, 'rental');
 assert.equal(exits.evaluate(fourplex, { today, buyers: [flipper] }).best, 'flip', 'a real matching buyer weighs most');
 // A buyer whose return cannot be checked is listed but never moves an exit up the ranking.
-const unchecked = exits.evaluate(fourplex, { today, buyers: [{ id: 'b-cap-flip', strategy_profile: { strategy: ['flip'], target_return: { basis: 'cap_rate', percent: 8 } } },
-  { id: 'b-silent-flip', strategy_profile: { strategy: ['flip'] } }] });
+const unchecked = exits.evaluate(fourplex, { today, buyers: [{ id: 'b-cap-flip', strategy_profile_source: src, strategy_profile: { strategy: ['flip'], target_return: { basis: 'cap_rate', percent: 8 } } },
+  { id: 'b-silent-flip', strategy_profile_source: src, strategy_profile: { strategy: ['flip'] } }] });
 assert.equal(unchecked.best, 'rental');
 assert.deepEqual(byKey(unchecked).flip.matching_buyers.map((b) => [b.id, b.return_check, b.rank]), [['b-cap-flip', 'unknown', 1], ['b-silent-flip', 'not_stated', 1]]);
 assert.equal(byKey(unchecked).wholesale_jv.verdict, 'possible', 'no confirmed buyer yet');
 
 // 2. A 2/1 where the rental fails at the flipper price.
-const twoOne = deepFreeze({ property_type: fact('house', 'public_web_page'), units: fact(1, 'public_web_page'), sqft: fact(900, 'public_web_page'),
+const twoOne = deepFreeze({ subject_address: subject, property_type: fact('house', 'public_web_page'), units: fact(1, 'public_web_page'), sqft: fact(900, 'public_web_page'),
   arv: arv(150000), repairs: fact(25000, 'operator_estimate'), asking_price: fact(70000, 'public_web_page'),
   monthly_rent: fact(1000, 'hud_small_area_fmr'), annual_taxes: fact(2500, 'county_record'), annual_insurance: fact(1500, 'agent_report') });
 const house = exits.evaluate(twoOne, { today, buyers: [landlord] });
@@ -126,7 +133,7 @@ for (const [rent, reason] of [
 
 // Negative: a guessed payoff is never used and never shown, not even in the rejection list.
 for (const kind of ['original_loan_amount', 'estimated', 'amortization_estimate', 'inferred']) {
-  const result = exits.evaluate({ arv: arv(200000), loan_rate_pct: fact(3, 'owner_stated'), loan_payoff: fact(123457, kind) }, { today });
+  const result = exits.evaluate({ subject_address: subject, arv: arv(200000), loan_rate_pct: fact(3, 'owner_stated'), loan_payoff: fact(123457, kind) }, { today });
   assert.deepEqual(result.rejected_facts, [{ fact: 'loan_payoff', reason: 'payoff_not_stated_by_owner_or_lender' }]);
   assert(!JSON.stringify(result).includes('123457'), kind + ' payoff value leaked');
   assert.equal(byKey(result).creative.options.find((o) => o.kind === 'subject_to').verdict, 'needs_data');
@@ -134,10 +141,10 @@ for (const kind of ['original_loan_amount', 'estimated', 'amortization_estimate'
 // A rate from a typical-rate clue is not the owner's rate (D-010 clue only).
 assert.deepEqual(exits.evaluate({ loan_rate_pct: fact(3, 'typical_rate_clue') }, { today }).rejected_facts, [{ fact: 'loan_rate_pct', reason: 'source_not_allowed' }]);
 // Owner-stated rate and payoff are used, labeled with their source.
-e = byKey(exits.evaluate({ arv: arv(200000), loan_rate_pct: fact(3, 'owner_stated'), loan_payoff: fact(90000, 'owner_stated') }, { today }));
+e = byKey(exits.evaluate({ subject_address: subject, arv: arv(200000), loan_rate_pct: fact(3, 'owner_stated'), loan_payoff: fact(90000, 'owner_stated') }, { today }));
 assert.equal(e.creative.options.find((o) => o.kind === 'subject_to').verdict, 'possible');
 assert(e.creative.numbers.some((n) => n.key === 'loan_payoff' && n.label === 'Loan payoff (owner stated)'));
-assert.equal(byKey(exits.evaluate({ arv: arv(200000), loan_rate_pct: fact(7.5, 'owner_stated'), loan_payoff: fact(90000, 'owner_stated') }, { today })).creative.options[1].verdict, 'no');
+assert.equal(byKey(exits.evaluate({ subject_address: subject, arv: arv(200000), loan_rate_pct: fact(7.5, 'owner_stated'), loan_payoff: fact(90000, 'owner_stated') }, { today })).creative.options[1].verdict, 'no');
 
 // Negative: ARV from a list price, an AVM or the holder's claim is never ARV.
 for (const kind of ['list_price', 'avm', 'zestimate', 'assessed_value', 'tax_value', 'auction_bid', 'claimed_arv', 'rent_estimate']) {
@@ -158,17 +165,26 @@ for (const forged of [arv(150000, 'verified', 1), arv(150000, 'certain', 3), { .
   { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], comp_address: good[0].comp_address.toUpperCase() }] },
   { ...arv(150000), comps: [...good.slice(0, 2), { ...good[2], price_basis: 'texas_last_list_price' }] },
   { ...arv(150000), value: 200000 }]) {
-  assert.deepEqual(exits.evaluate({ arv: forged }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
+  assert.deepEqual(exits.evaluate({ subject_address: subject, arv: forged }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
 }
+// The subject's own sale is never one of its comps, and ARV needs the subject address to check that.
+const ownSale = { ...comps(150000, 3)[2], comp_address: '900 Subject Road, Example, FL 33601' };
+assert.deepEqual(exits.evaluate({ ...twoOne, arv: { ...arv(150000), comps: [...comps(150000, 2), ownSale] } }, { today }).rejected_facts,
+  [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
+const noSubject = { ...twoOne }; delete noSubject.subject_address;
+assert.deepEqual(exits.evaluate(noSubject, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_subject_address' }]);
+assert.deepEqual(exits.evaluate({ ...twoOne, subject_address: { ...subject, source_kind: '' } }, { today }).rejected_facts,
+  [{ fact: 'arv', reason: 'arv_needs_subject_address' }, { fact: 'subject_address', reason: 'no_source' }]);
+assert.equal(byKey(exits.evaluate({ ...twoOne, subject_address: fact('901 Subject Rd, Example, FL 33601', 'public_web_page') }, { today })).flip.verdict, 'strong', 'a neighbour is a valid comp');
 const prelim = exits.evaluate({ ...twoOne, arv: arv(150000, 'verified', 2) }, { today });
 assert.equal(prelim.facts_used.arv.tier, 'preliminary');
 assert.match(byKey(prelim).flip.numbers[0].label, /preliminary, 2 sales/);
 assert.equal(byKey(prelim).novation.verdict, 'possible', 'retail listing needs a verified value to be strong');
 // Ballpark ARV (D-003) never makes a price-based exit strong; an unknown tier such as "rough" is rejected.
 assert.equal(byKey(exits.evaluate({ ...twoOne, arv: arv(150000, 'ballpark', 3) }, { today })).flip.verdict, 'possible');
-assert.deepEqual(exits.evaluate({ arv: arv(150000, 'rough', 2) }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
+assert.deepEqual(exits.evaluate({ subject_address: subject, arv: arv(150000, 'rough', 2) }, { today }).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
 // Wrong-origin assessed values, unknown facts and stale comps-based ARV are rejected.
-assert.deepEqual(exits.evaluate({ assessed_total_value: fact(100000, 'avm'), made_up: fact(1, 'x'), arv: { ...arv(150000), captured_at: '2026-01-01' } }, { today }).rejected_facts,
+assert.deepEqual(exits.evaluate({ subject_address: subject, assessed_total_value: fact(100000, 'avm'), made_up: fact(1, 'x'), arv: { ...arv(150000), captured_at: '2026-01-01' } }, { today }).rejected_facts,
   [{ fact: 'arv', reason: 'stale' }, { fact: 'assessed_total_value', reason: 'source_not_allowed' }, { fact: 'made_up', reason: 'unknown_fact' }]);
 
 // Weak rent coverage keeps a rental at Possible and says why.
@@ -214,11 +230,16 @@ e = byKey(exits.evaluate({ ...twoOne, repairs: fact(9000, 'operator_estimate') }
 assert.equal(e.wholetail.verdict, 'strong'); assert.equal(e.wholetail.buyer_max, 111000);
 
 // Buyers: below target, unknown metric, future or stale proof of funds, no profile.
-const strict = { id: 'b-strict', strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 12 } } };
-const coc = { id: 'b-coc', strategy_profile: { strategy: ['rental'], target_return: { basis: 'cash_on_cash', percent: 12 }, funding: ['cash'] } };
-const futurePof = { id: 'b-future', strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-12-01' } };
-const stalePof = { id: 'b-stale', strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-01-01' } };
-const capFlip = { id: 'b-capflip', strategy_profile: { strategy: ['flip'], target_return: { basis: 'cap_rate', percent: 8 } } };
+const strict = { id: 'b-strict', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 12 } } };
+const coc = { id: 'b-coc', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cash_on_cash', percent: 12 }, funding: ['cash'] } };
+const futurePof = { id: 'b-future', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-12-01' } };
+const stalePof = { id: 'b-stale', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-01-01' } };
+const capFlip = { id: 'b-capflip', strategy_profile_source: src, strategy_profile: { strategy: ['flip'], target_return: { basis: 'cap_rate', percent: 8 } } };
+// Hard money (or unstated funding) is not modeled for cash-on-cash yet, so it is unknown, never a pass.
+for (const funding of [['hard_money'], undefined]) {
+  const hm = { id: 'b-hm', strategy_profile_source: src, strategy_profile: { strategy: ['rental'], target_return: { basis: 'cash_on_cash', percent: 5 }, ...(funding ? { funding } : {}) } };
+  assert.deepEqual(byKey(exits.evaluate(fourplex, { today, buyers: [hm] })).rental.matching_buyers.map((b) => [b.return_check, b.rank]), [['unknown', 1]]);
+}
 e = byKey(exits.evaluate(fourplex, { today, buyers: [strict, coc, futurePof, stalePof, capFlip, { id: 'b-none' }, null] }));
 assert.deepEqual(e.rental.matching_buyers.map((b) => [b.id, b.pof_current, b.rank]), [['b-future', false, 2], ['b-stale', false, 2]]);
 assert.equal(e.rental.below_target_buyers, 2, 'cash buyer sees unlevered 10.1%, below 12%');
@@ -255,13 +276,14 @@ assert.equal(effects, 0, 'no clock, network or writes');
 assert.equal(exits.evaluate(fourplex, { today, buyers }).best, plex.best, 'same input, same answer');
 
 // Reviewed-deal adapter: ARV only from the reviewed comp grid; claimed ARV and claimed rehab are ignored.
-const deal = { source_url: 'https://deals.example.test/post/1', captured_at: '2026-10-10T12:00:00.000Z', evidence_reviewed_at: '2026-10-11T12:00:00.000Z',
+const deal = { address: '900 Subject Rd, Example, FL 33601', source_url: 'https://deals.example.test/post/1', captured_at: '2026-10-10T12:00:00.000Z', evidence_reviewed_at: '2026-10-11T12:00:00.000Z',
   property_type: 'duplex', sqft: 1800, repair_estimate: 30000, claimed_arv: 999999, claimed_rehab: 1, asking_price: 120000 };
 const reviewedComps = comps(250000, 3).map((comp, i) => ({ ...comp, sold_price: [240000, 250000, 260000][i], sqft: 1800, distance_miles: 0.4 }));
 const reviewed = { asking: 120000, value: { tier: 'Verified', range: { low: 240000, high: 260000 }, comps: reviewedComps }, matches: [{ id: 'buyer-landlord', buyer_ref: 'BUY-0001', name: 'Fixture Landlord' }] };
 const mapped = adapter.fromReviewedDeal(deal, reviewed);
 assert.equal(mapped.arv.value, 240000); assert.equal(mapped.arv.tier, 'verified'); assert.equal(mapped.arv.comps.length, 3);
 assert.deepEqual(Object.keys(mapped.arv.comps[0]).sort(), ['comp_address', 'price_basis', 'sold_date', 'sold_price', 'source_url']);
+assert.equal(mapped.subject_address.value, deal.address);
 assert.equal(mapped.repairs.value, 30000); assert.equal(mapped.units.value, 2); assert.equal(mapped.asking_price.value, 120000);
 assert(!JSON.stringify(mapped).includes('999999'), 'the holder claim is never ARV');
 assert.equal(adapter.fromReviewedDeal({ ...deal }, { ...reviewed, value: { tier: 'Not established', range: null, comps: [] } }).arv, undefined);

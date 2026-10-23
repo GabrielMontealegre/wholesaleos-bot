@@ -5,6 +5,7 @@
 // Every input fact carries provenance; facts without a source, with a forbidden source, or too old are
 // rejected and never used. Output numbers are derived estimates, never offers, comps or payoffs.
 const profiles = require('../buyers/buyer-strategy-profile');
+const { canonicalizeAddress } = require('../../scripts/lib/address-canonical');
 
 // Default assumptions. Each one is shown on the result so nothing hides inside a number.
 const DEFAULT_ASSUMPTIONS = Object.freeze({
@@ -37,6 +38,8 @@ const FACTS = Object.freeze({
   repairs: { type: 'money', max_age_days: 365, zero: true },
   asking_price: { type: 'money', max_age_days: 183 },
   property_type: { type: 'text' },
+  // The subject's own address: needed so its own sale can never count as one of its comps.
+  subject_address: { type: 'text', max_length: 250 },
   units: { type: 'count' },
   sqft: { type: 'count' },
   monthly_rent: { type: 'money', sources: RENT_SOURCES, max_age_days: 365 },
@@ -89,7 +92,7 @@ function validValue(rule, value) {
   if (rule.type === 'count') return Number.isInteger(value) && value <= 100000 && (value > 0 || rule.zero && value === 0);
   if (rule.type === 'percent') return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
   if (rule.type === 'boolean') return typeof value === 'boolean';
-  return typeof value === 'string' && value.trim().length > 0 && value.length <= 80;
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= (rule.max_length || 80);
 }
 
 function httpsUrl(value) {
@@ -97,7 +100,7 @@ function httpsUrl(value) {
 }
 
 // Accepts one fact or returns the reason it cannot be used. Rejected values are never echoed.
-function acceptFact(name, fact, today) {
+function acceptFact(name, fact, today, subject) {
   const rule = FACTS[name];
   if (!rule) return { reason: 'unknown_fact' };
   if (!fact || typeof fact !== 'object' || Array.isArray(fact) || !validValue(rule, fact.value)) return { reason: 'invalid_value' };
@@ -117,7 +120,8 @@ function acceptFact(name, fact, today) {
     source_url: url || null, evidence_text: evidence.slice(0, 300), captured_at: fact.captured_at.slice(0, 10) };
   if (rule.min_comps) {
     // The count comes from the comp records themselves, never from a claimed number.
-    const count = recordedSales(fact.comps, fact.value, today, rule.comp_max_age_days);
+    if (name === 'arv' && !subject) return { reason: 'arv_needs_subject_address' };
+    const count = recordedSales(fact.comps, fact.value, today, rule.comp_max_age_days, subject);
     if (count < rule.min_comps) return { reason: name === 'arv' ? 'arv_needs_comparable_sales' : 'needs_comparable_sales' };
     accepted.comp_count = count;
   }
@@ -130,9 +134,9 @@ function acceptFact(name, fact, today) {
 }
 
 // Counts recorded sales: each needs an address, sold price, sold date inside the window and an
-// https source, never a list price, and no address twice. Any bad record, or a value outside the
-// sold-price range, fails the whole set (returns 0).
-function recordedSales(comps, value, today, maxAgeDays) {
+// https source, never a list price, no address twice and never the subject itself. Any bad record,
+// or a value outside the sold-price range, fails the whole set (returns 0).
+function recordedSales(comps, value, today, maxAgeDays, subject) {
   if (!Array.isArray(comps) || comps.length > 50) return 0;
   const seen = new Set();
   for (const comp of comps) {
@@ -141,11 +145,18 @@ function recordedSales(comps, value, today, maxAgeDays) {
     const sold = profiles.dayNumber(comp.sold_date);
     if (!address || seen.has(address) || !validValue(FACTS.repairs, comp.sold_price) || comp.sold_price === 0 ||
         sold == null || sold > today || today - sold > maxAgeDays || typeof comp.source_url !== 'string' || !httpsUrl(comp.source_url) ||
-        (comp.price_basis != null && comp.price_basis !== 'recorded_sale')) return 0;
+        (comp.price_basis != null && comp.price_basis !== 'recorded_sale') || (subject && sameProperty(subject, comp.comp_address))) return 0;
     seen.add(address);
   }
   const prices = comps.map((comp) => comp.sold_price);
   return value >= Math.min(...prices) && value <= Math.max(...prices) ? comps.length : 0;
+}
+
+// Same house: house number and street match, and city or ZIP match. Unparsed text compares whole.
+function sameProperty(a, b) {
+  const x = canonicalizeAddress(a), y = canonicalizeAddress(b);
+  if (!x.number || !x.street || !y.number || !y.street) return x.canonical_string === y.canonical_string;
+  return x.number === y.number && x.street === y.street && (x.city && x.city === y.city || x.zip && x.zip === y.zip);
 }
 
 function readFacts(input, today) {
@@ -153,8 +164,9 @@ function readFacts(input, today) {
   const rejected = [];
   if (input == null) return { facts, rejected };
   if (typeof input !== 'object' || Array.isArray(input)) fail('exit_facts_invalid');
+  const subject = input.subject_address == null ? null : acceptFact('subject_address', input.subject_address, today);
   for (const name of Object.keys(input).sort()) {
-    const result = acceptFact(name, input[name], today);
+    const result = name === 'subject_address' ? subject : acceptFact(name, input[name], today, subject && subject.fact ? subject.fact.value : null);
     if (result.fact) facts[name] = result.fact; else rejected.push({ fact: name, reason: result.reason });
   }
   return { facts, rejected };
@@ -402,12 +414,14 @@ function evaluate(inputFacts, options = {}) {
     if (!exit.applicable || !['strong', 'possible'].includes(exit.verdict) || !profiles.STRATEGIES.includes(exit.key)) continue;
     for (const { buyer, profile } of buyers) {
       if (!profile.strategy.includes(exit.key)) continue;
-      const check = targetCheck(profile, exit, { arv, repairs, asking, noi });
+      // A profile without a source is not a fact: it stays listed but never counts as confirmed.
+      const source = sourceOf(buyer.strategy_profile_source);
+      const check = source ? targetCheck(profile, exit, { arv, repairs, asking, noi }) : { result: 'unsourced', note: 'Buyer profile has no source - confirm it with the buyer.' };
       if (check.result === 'below') { exit.below_target_buyers = (exit.below_target_buyers || 0) + 1; continue; }
-      const pof = profiles.pofCurrent(profile, options.today, a.pof_max_age_days);
+      const pof = !!source && profiles.pofCurrent(profile, options.today, a.pof_max_age_days);
       exit.matching_buyers.push({ id: buyer.id, buyer_ref: buyer.buyer_ref || null, name: buyer.name || '', return_check: check.result, return_note: check.note,
         buyer_price: check.buyer_price == null ? null : round(check.buyer_price), fee: check.fee == null ? null : round(check.fee),
-        pof_current: pof, deals_per_year: profile.deals_per_year ?? null,
+        pof_current: pof, deals_per_year: profile.deals_per_year ?? null, profile_source: source,
         rank: check.result === 'meets' ? (pof ? 3 : 2) : 1 });
     }
     exit.matching_buyers.sort((x, y) => y.rank - x.rank || (y.fee ?? -Infinity) - (x.fee ?? -Infinity) ||
@@ -443,6 +457,12 @@ function evaluate(inputFacts, options = {}) {
   };
 }
 
+function sourceOf(source) {
+  if (!source || typeof source !== 'object' || typeof source.source_kind !== 'string' || !source.source_kind ||
+      !(source.source_url || source.evidence_text) || typeof source.captured_at !== 'string' || !source.captured_at) return null;
+  return { source_kind: source.source_kind, source_url: source.source_url || null, evidence_text: source.evidence_text || '', captured_at: source.captured_at };
+}
+
 // Does the exit give this buyer the return they asked for, and what would they pay? The fee is
 // that buyer's price minus the asking price, never the exit's generic maximum. Unknown is never a pass.
 function targetCheck(profile, exit, { arv, repairs, asking, noi }) {
@@ -463,7 +483,10 @@ function targetCheck(profile, exit, { arv, repairs, asking, noi }) {
   }
   // Cash-on-cash was tested at asking + our target fee, so a pass guarantees at least that fee.
   if (asking == null) return { result: 'unknown', note: 'Asking price unknown.' };
-  const actual = (profile.funding || []).includes('dscr') ? metrics.cash_on_cash_dscr : metrics.cash_on_cash_cash;
+  // DSCR buyers are measured with the loan, cash buyers without one; hard money is not modeled yet.
+  const funding = profile.funding || [];
+  const actual = funding.includes('dscr') ? metrics.cash_on_cash_dscr : funding.includes('cash') ? metrics.cash_on_cash_cash : null;
+  if (actual == null) return { result: 'unknown', note: 'Cash-on-cash for ' + (funding.length ? 'hard-money' : 'unstated') + ' funding is not modeled yet.' };
   return actual >= target.percent ? { result: 'meets', fee: metrics.price - asking, note: actual + '% cash-on-cash at ' + usd(metrics.price) + ' meets the buyer\'s ' + target.percent + '%; fee at least this much.' }
     : { result: 'below' };
 }

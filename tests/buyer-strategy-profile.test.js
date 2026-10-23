@@ -111,10 +111,12 @@ assert.equal(listed.strategy_profile_view, 'Small multifamily; proof of funds da
 // Stage 6, persisted store -> matching: a JSON round trip keeps the profile and the engine matches it.
 const persisted = JSON.parse(JSON.stringify(finds.update(next, 'buyer-1', { strategy_profile: { strategy: ['rental'], target_return: { basis: 'cap_rate', percent: 9 }, pof_date: '2026-10-15' } }, context)));
 const fact = (value, source_kind, extra = {}) => ({ value, source_kind, source_url: 'https://records.example.test/f', evidence_text: 'fixture', captured_at: '2026-10-01', ...extra });
-const deal = { units: fact(4, 'public_web_page'), arv: fact(360000, 'comp_grid', { tier: 'verified', comps: [350000, 360000, 370000].map((price, i) => ({ comp_address: (10 + i) + ' Fixture Ave, Example, FL 33601', sold_price: price, sold_date: '2026-09-20', source_url: 'https://records.example.test/s' + i })) }), repairs: fact(40000, 'operator_estimate'),
+const deal = { subject_address: fact('900 Subject Rd, Example, FL 33601', 'public_web_page'), units: fact(4, 'public_web_page'), arv: fact(360000, 'comp_grid', { tier: 'verified', comps: [350000, 360000, 370000].map((price, i) => ({ comp_address: (10 + i) + ' Fixture Ave, Example, FL 33601', sold_price: price, sold_date: '2026-09-20', source_url: 'https://records.example.test/s' + i })) }), repairs: fact(40000, 'operator_estimate'),
   asking_price: fact(230000, 'public_web_page'), monthly_rent: fact(4400, 'rent_roll'), annual_taxes: fact(6000, 'county_record'), annual_insurance: fact(4000, 'agent_report') };
 const matched = exits.evaluate(deal, { today, buyers: adapter.buyersFor({ matches: [{ id: 'buyer-1', name: 'Fixture Landlord' }] }, persisted.buyers) });
-assert.deepEqual(matched.exits.find((exit) => exit.key === 'rental').matching_buyers.map((b) => [b.id, b.return_check, b.pof_current]), [['buyer-1', 'meets', true]]);
+const rentalMatch = matched.exits.find((exit) => exit.key === 'rental').matching_buyers;
+assert.deepEqual(rentalMatch.map((b) => [b.id, b.return_check, b.pof_current]), [['buyer-1', 'meets', true]]);
+assert.equal(rentalMatch[0].profile_source.source_kind, 'operator_input', 'the stored profile source reaches the match');
 // Legacy buyers (no assistant record) have no profile and are never matched on strategy.
 assert.deepEqual(adapter.buyersFor({ matches: [{ id: 'legacy' }] }, [{ id: 'legacy', buyTypes: ['SFR'] }]).map((b) => b.strategy_profile), [null]);
 
