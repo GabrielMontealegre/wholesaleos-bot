@@ -1,5 +1,35 @@
 # Decisions
 
+ASSUMED: #432 negotiation planner (`modules/deals/negotiation-planner.js`) is a
+pure read-only function, not yet wired to a card, route or chat. Choices, all
+the conservative reading of #432/#400 part 3: default buyer max is 70% of value
+under $120k and 75% at or above it, minus repairs (#432 "70/75%"; the B-08
+80-83% bands above $200k are not used until B-08's single calculator exists,
+then the planner takes its band from there and never becomes a second MAO
+source). Minimum fee $10,000, raisable only. Two-signal target uses 55% (low
+end of 55-60%). Value counts only with source_kind sold_comps and an attached
+comps list; a comp counts only when the strict comp grid accepted it
+(comp_grid.accepted, as compValue attaches) AND its own record says a sold or
+closed recorded sale (sold_status sold/closed, price_basis recorded_sale, the
+#434 contract; the grid flag never overrides Active/list-price evidence), it
+sold within 6 months, it has its own address, price and https source, it is
+not the subject by canonical address, and the value lies inside the comps'
+sold-price range (2 = preliminary, D-005). A bare comp count is never proof. No price
+at all (either side) until the seller's number was asked.
+Without value or repairs the move is hold_backup with status no_offer (the
+seven #432 codes only). Counters step 5%, 10% only when another offer is on
+the table, never past walk-away or the seller's number, and only after the
+seller answered our last offer (same-day date-only answers are ambiguous, so
+hold). A fast buyer answer = within 24 hours. Buyer numbers need a buyer id, a
+source and a date within 30 days; a number without proof of funds never lifts
+walk-away above typical buyer price minus $15k, and repairs found on or after
+a buyer's number come off it. Only defects found after our last offer reopen
+the price: last offer minus their cost, capped at walk-away and the seller's
+number; same-day records are flagged, not cut. A standing offer above a fallen
+walk-away is flagged (hold, do not raise). A zero or negative opening or
+target means walk. No deposit from Gabriel is ever produced (D-059) --
+AGENTS3/5, #432, #400, D-005, D-059 --2026-10-22.
+
 ## D-062: Bounded Merges During Railway Build Outage
 
 Architect#423 answer6350507039,2026-10-22: continue backlog work. A full-suite
