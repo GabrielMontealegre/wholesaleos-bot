@@ -88,7 +88,7 @@ async function prove(){
    const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,firstPaint:performance.getEntriesByName('first-contentful-paint')[0]?.startTime||null,styles:Array.from(document.styleSheets).map(s=>new URL(s.href).pathname)}));
    assert.equal(geometry.overflow,false,'no horizontal overflow at '+width);
    assert.deepEqual(geometry.styles,['/dashboard/workspace/design-system.css']);
-   assert(geometry.firstPaint!==null&&geometry.firstPaint<2000,'synthetic first paint under 2s');
+   assert(geometry.firstPaint!==null&&geometry.firstPaint<2000,'synthetic first paint under 2s at '+width+': '+geometry.firstPaint+'ms');
    proof.widths.push({width,height,first_contentful_paint_ms:geometry.firstPaint,horizontal_overflow:geometry.overflow,stylesheet_count:geometry.styles.length});
    if(process.argv.includes('--screenshots')){await page.evaluate(async()=>{document.activeElement?.blur();await new Promise(requestAnimationFrame);window.scrollTo(0,0);document.querySelectorAll('*').forEach(el=>{if(el.scrollTop)el.scrollTop=0;});await new Promise(requestAnimationFrame);});await page.mouse.move(0,0);const dir=path.join(__dirname,'../docs/screens/2026-10-21-today-action-center');fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,'synthetic-today-'+width+'.png')});}
    const originalPending=today.pending;

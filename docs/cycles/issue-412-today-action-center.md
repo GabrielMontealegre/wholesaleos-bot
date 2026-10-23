@@ -66,6 +66,33 @@ verification, and owner screen sign-off remain pending. Railway release is
 independently blocked by workspace deploy availability tracked in issue #423.
 This candidate is not released.
 
+## Current-Main Preparation (2026-10-23)
+
+Reconciled the existing PR425 branch with main9f4caaf (merged PR431). Keep
+the allowlisted Home/classic labels, navigationv2, root cache headers and
+actual classic/native journey coverage. Today's intended panel assertions
+and all431 navigation/Back assertions remain; the only conflicting test line
+was the completion log, now naming both behaviors. No gate or writer changes
+were introduced while resolving the merge. Earlier424-first/outage notes
+below are historical: D-062 now orders427,425,424 after navigation.
+
+Today model/pending/service, shared components, native shell, Today browser
+and actual navigation journey pass together. A separately started screenshot
+proof overlapped the focused run and failed its original first-paint<2s
+assertion. Its actual value was not logged. No threshold was changed; added
+only the measured value/width to that assertion's failure message, then waited
+until BOTH processes ended and made one serialized proof run. It passed:
+synthetic FCP254/183.6/233.6ms at1366/400/412 and Lighthouse13.5.0
+accessibility100 desktop/phone. Concurrency may have contributed, but is not
+claimed as a proven root cause. Refreshed screenshots/JSON retain the original
+proof paths; before-screen artifacts are unchanged. Full updated-head hosted
+suite is still required before eligibility; historical243/0/0 is not reused.
+
+PR425 remains draft/unmerged, not deploy-ready:427 stays ahead in the order;
+live exact-size proof for deployed422/431 is pending in tooling issue435.
+No new Deals migration or owner sign-off is inferred, and no production
+business action, credential/setting change or duplicate deploy is performed.
+
 ## Hey Gabriel follow-up (#416)
 
 The first Today section now summarizes four recorded categories: drafts not

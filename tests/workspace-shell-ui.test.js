@@ -79,16 +79,42 @@ async function prove() {
       await page.locator((width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/app?preview=1&view=email"]').click();
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
       assert(await page.locator('.ws-mail').isVisible());
+      // #429: Email -> Deals is labeled as the classic view before the click, and Back returns to Email in the shell.
+      if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+      const navScope = page.locator(width === 1366 ? '.ws-sidebar' : '#mobile-nav');
+      assert.equal(await navScope.getByRole('link', { name: 'Email', exact: true }).getAttribute('aria-current'), 'page');
+      const clipped = await navScope.locator('.ws-nav-note').evaluateAll(notes => notes.filter(note => {
+        const box = note.getBoundingClientRect(), frame = note.closest('nav').getBoundingClientRect();
+        return box.right > frame.right + 1 || note.scrollWidth > note.clientWidth + 1;
+      }).length);
+      assert.equal(clipped, 0, 'Every Classic view label fits inside the navigation');
+      await navScope.getByRole('link', { name: 'Deals - classic view', exact: true }).click();
+      await page.getByRole('heading', { name: 'Classic workspace', exact: true }).waitFor();
+      await page.goBack();
+      await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
+      assert.equal(new URL(page.url()).searchParams.get('view'), 'email');
       await page.goto('https://fixture.test/app?preview=1');
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
-      for (const key of ['leads', 'deals', 'buyers', 'calendar', 'pipeline', 'approvals']) {
+      const labels = await page.locator('.ws-sidebar .ws-nav a').evaluateAll(links => links.map(link => [link.getAttribute('href'), link.getAttribute('aria-label') || link.textContent.trim()]));
+      assert.deepEqual(labels, [['/app?preview=1', 'Today'], ['/app?preview=1&view=email', 'Email'],
+        ['/dashboard/?workspace=leads', 'Leads - classic view'], ['/dashboard/?workspace=deals', 'Deals - classic view'],
+        ['/dashboard/?workspace=buyers', 'Buyers - classic view'], ['/dashboard/?workspace=calendar', 'Calendar - classic view'],
+        ['/dashboard/?workspace=pipeline', 'Pipeline - classic view'], ['/dashboard/?workspace=approvals', 'Approvals - classic view']]);
+      assert.equal(await page.locator('.ws-sidebar-footer a').getAttribute('href'), '/dashboard/');
+      assert.equal(await page.getByRole('link', { name: 'Settings - classic view', exact: true }).first().getAttribute('href'), '/dashboard/?workspace=settings');
+      for (const [key, name] of [['leads', 'Leads'], ['deals', 'Deals'], ['buyers', 'Buyers'], ['calendar', 'Calendar'], ['pipeline', 'Pipeline'], ['approvals', 'Approvals']]) {
         if (width !== 1366) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
         const selector = (width === 1366 ? '.ws-sidebar ' : '#mobile-nav ') + 'a[href="/dashboard/?workspace=' + key + '"]';
+        assert.equal(await page.locator(selector).getAttribute('aria-label'), name + ' - classic view');
+        assert((await page.locator(selector).innerText()).includes('Classic view'), 'The classic label is visible, not only announced');
         await page.locator(selector).click();
         assert.equal(new URL(page.url()).searchParams.get('workspace'), key);
-        await page.goto('https://fixture.test/app?preview=1');
+        await page.goBack();
         await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
+        assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, '/app?preview=1', 'Back returns to the shell screen');
       }
+      const drawer = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+      assert.equal(drawer, false, 'Classic labels add no horizontal overflow');
       fail = true;
       await page.getByRole('button', { name: 'Refresh recorded work', exact: true }).click();
       await page.getByRole('heading', { name: 'Recorded work is unavailable', exact: true }).waitFor();
@@ -112,7 +138,7 @@ async function prove() {
       assert.deepEqual(errors, []);
       await page.close();
     }
-    console.log('workspace-shell-ui: real shell1366/400/412; native Email and six classic nav targets, Today panels, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
+    console.log('workspace-shell-ui: real shell1366/400/412; native Email, labeled classic targets with Back, Today panels, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
   } finally { await browser.close(); }
 }
 prove().catch(error => { console.error(error.stack); process.exitCode = 1; });

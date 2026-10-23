@@ -93,6 +93,7 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-nav a { display: flex; gap: var(--ws-space-3); align-items: center; min-height: 44px; padding: var(--ws-space-2); color: var(--ws-text); text-decoration: none; border-radius: 4px; }
 .ws-nav a:hover, .ws-nav a[aria-current="page"] { background: var(--ws-raised); }
 .ws-nav a[aria-current="page"] { box-shadow: inset 3px 0 var(--ws-green); }
+.ws-nav-note { margin-left: auto; color: var(--ws-muted); font-size: var(--ws-type-xs); white-space: nowrap; }
 .ws-sidebar-footer { margin-top: auto; }
 .ws-workspace { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .ws-topbar { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: var(--ws-space-3); padding: var(--ws-space-2) var(--ws-space-6); border-bottom: 1px solid var(--ws-line); }
@@ -195,6 +196,8 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
   .ws-pending-grid { grid-template-columns: minmax(0, 1fr); }
   .ws-row-button { gap: var(--ws-space-2); }
   .ws-dialog-body .ws-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-dialog-body .ws-nav a { flex-wrap: wrap; row-gap: 0; }
+  .ws-dialog-body .ws-nav-note { flex-basis: 100%; margin-left: calc(20px + var(--ws-space-3)); }
   .ws-mail-panes { grid-template-columns: minmax(0, 1fr); }
   .ws-mail-list { border: 0; padding: 0; }
   .ws-mail-reading { display: none; padding: 0; }

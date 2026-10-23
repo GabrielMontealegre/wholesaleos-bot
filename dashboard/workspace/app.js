@@ -15,11 +15,19 @@
   function navigation() {
     return '<nav class="ws-nav" aria-label="Main navigation">' + groups.map(function (group) {
       return '<section class="ws-nav-group"><h2>' + c.escape(group[0]) + '</h2>' + group[1].map(function (item) {
-        return '<a href="' + (item[0] === 'today' ? '/app?preview=1' : item[0] === 'email' ? '/app?preview=1&view=email' : nav.href(item[0])) + '"' +
-          (item[0] === screen ? ' aria-current="page"' : '') + ' data-help="' + c.escape(item[3]) + '">' +
-          c.icon(item[2]) + '<span>' + c.escape(item[1]) + '</span></a>';
+        return link(item[0], item[1], item[2], item[3]);
       }).join('') + '</section>';
     }).join('') + '</nav>';
+  }
+
+  // Screens not rebuilt yet open their classic view; the label says so before the click (#429).
+  function link(key, label, icon, help) {
+    var classic = nav.isClassic(key);
+    return '<a href="' + nav.navHref(key) + '"' +
+      (key === screen ? ' aria-current="page"' : '') +
+      (classic ? ' aria-label="' + c.escape(label + ' - classic view') + '"' : '') +
+      ' data-help="' + c.escape(classic ? help + '. Opens the classic view, which looks different until this screen is rebuilt.' : help) + '">' +
+      c.icon(icon) + '<span>' + c.escape(label) + '</span>' + (classic ? '<small class="ws-nav-note" aria-hidden="true">Classic view</small>' : '') + '</a>';
   }
 
   function clearPrivate() {
@@ -39,7 +47,7 @@
       '<form id="login"><label for="pin">Dashboard PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
       c.button({ label: 'Unlock', icon: 'check', tone: 'green', id: 'unlock' }) +
       '<p role="alert" class="ws-error" id="login-error">' + c.escape(message || '') + '</p></form>' +
-      '<a href="/dashboard/">Open classic dashboard</a></main>';
+      '<a href="' + nav.home + '">Open classic dashboard</a></main>';
     var form = document.getElementById('login');
     async function login(event) {
       event.preventDefault();
@@ -66,18 +74,18 @@
   function shell() {
     clearPrivate();
     host.innerHTML = '<div class="ws-shell"><aside class="ws-sidebar"><a class="ws-brand" href="/app?preview=1">WholesaleOS</a>' + navigation() +
-      '<div class="ws-sidebar-footer"><a class="ws-button" href="/dashboard/">Classic dashboard</a></div></aside>' +
+      '<div class="ws-sidebar-footer"><a class="ws-button" href="' + nav.home + '" data-help="The app always opens here">Home - classic dashboard</a></div></aside>' +
       '<div class="ws-workspace"><header class="ws-topbar">' +
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
       '<h1>' + (screen === 'email' ? 'Email' : 'Today') + '</h1><div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
-      '<a class="ws-button ws-button--icon" href="' + nav.href('settings') + '" aria-label="Settings" data-help="Open your current settings">' + c.icon('settings') + '</a>' +
+      '<a class="ws-button ws-button--icon" href="' + nav.navHref('settings') + '" aria-label="Settings - classic view" data-help="Open your current settings in the classic view">' + c.icon('settings') + '</a>' +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"></div><main class="ws-content" id="today-content" aria-busy="true">' +
       c.skeleton('Loading recorded work') + '</main></div></div>' +
       c.drawer('mobile-nav', 'Navigation') + c.drawer('account', 'Account') + c.drawer('detail', 'Record');
     var mobile = document.getElementById('mobile-nav'), account = document.getElementById('account');
     mobile.querySelector('[data-dialog-body]').innerHTML = navigation();
-    account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p><a class="ws-button" href="' + nav.href('settings') + '">Settings</a>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
+    account.querySelector('[data-dialog-body]').innerHTML = '<p>Admin session</p><a class="ws-button" href="' + nav.navHref('settings') + '">Settings - classic view</a>' + c.button({ label: 'Sign out', icon: 'log-out', id: 'signout' });
     var menu = c.bindDialog(mobile), user = c.bindDialog(account);
     detailWidget = c.bindDialog(document.getElementById('detail'));
     document.getElementById('menu-open').addEventListener('click', menu.open);

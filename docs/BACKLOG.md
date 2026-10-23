@@ -2,6 +2,20 @@
 
 ## Latest Run Summary
 
+2026-10-23 independent425 PREPARATION: reconciled existing Today branch with
+current main9f4caaf, preserving431 navigation/Home/classic labels and the
+actual classic/native journey test. No new item or duplicate branch.427
+remains ahead in the release order, tested241/0/0 on e254d61; local checkpoint
+94daaaa preserves partial live proof.431/422 exact source is active/healthy,
+but required live sizes remain blocked by Chrome viewport issue435. No merge
+or deployment of425 is authorized by this local integration. Earlier424-first
+notes below are historical; D-062 order429,427,425,424,426 now governs.
+Focused model/pending/service/components/shell/Today/journey passes. One
+overlapping screenshot proof failed the unchanged<2s paint assertion; the
+serialized run after both jobs ended passed254/183.6/233.6ms and Lighthouse
+100/100. Only failure diagnostics changed, not the threshold. Full updated
+cloud head is still pending; no earlier243/0/0 substitution or release claim.
+
 2026-10-21 #412/#416 Today follow-up LOCAL on the existing PR425 branch:
 added the first-section Hey Gabriel panel for recorded unsent drafts,
 waiting conversations, reported bounces and reminders. Unique existing
@@ -40,6 +54,29 @@ first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Draft PR
 #425 hosted full-suite workflow #81 (run 39546559662) passed on head
 ccd924cd22c89bc8d6283280d38609be8f312dee. Exact deployment, live verification
 and owner screen sign-off remain pending; this is not released.
+2026-10-22 #429 PR431 REVIEW/FOLLOW-UP: selected Claude's narrow classic-label
+implementation; alternate430 remains draft and is not combined into431.
+Integrated84d46b0 Vary: Accept/no-store correction. Closed the identified
+Home-to-Email acceptance gap with a clearly labeled Email workspace link at
+the top of More tools, retaining every existing classic Email/nav handler.
+Actual synthetic Home->Deals->Email reader->Deals->Back journey passes at
+1366/400/412, with a44px entry target, exact record modal/identity, competing
+view precedence and locked/non-admin mailbox-read negatives. Screenshots:
+docs/screens/429/journey; no writes, external requests or console errors.
+Existing preview and full classic desk-shell regressions pass unchanged.
+Original004df5e hosted39853806212 passed240/0/0, but is NOT the modified
+head's gate. The updated PR requires its own full hosted600s/file suite
+before merge. No merge or live-release claim at this checkpoint.
+
+D-062 outage merge policy (#423 answer6350507039): up to THREE tested,
+self-reviewed non-sensitive merged-but-unverified items; mark each MERGED -
+deploy pending (Railway builds unavailable), never released.422 currently
+occupies ONE slot;430/431 unmerged occupy none. Order429/431,427,425,424,426.
+Send/call/auth/credentials/migrations stay unmerged until individually
+deployable. One retry authorization remains unconsumed until official Hobby
+restoration/no equivalent live build; no plan/billing/settings/variables.
+428 rotation is owner-controlled; no secret values read or changed. No
+production action, send, capture, batch, confirmation or business write.
 
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
