@@ -2,6 +2,30 @@
 
 ## Latest Run Summary
 
+2026-10-23 checkpoint:431 MERGED and exact source9f4caaf DEPLOYED, but
+responsive live acceptance remains PENDING (tooling issue435), not DONE.
+Final431 hosted39873996904 passed241/0/0; automatic Railway deployment
+a00779c6-f5c4-49e7-916f-cb7bc02cca43 Details reports Active/success and
+links9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Hobby recovery is public.
+Health/nativeEmail200. Signed-admin reply status: disabled,configured,
+automatic send false,cap30. NO manual build; retry authorization UNCONSUMED.
+Partial live root/classic Deals/More Email/native Email29rows/labeled Deals/
+Back works. Leads hydrate. Required live1366/400/412 is NOT established:
+viewport.set reports success but DOM remains1280x551; screenshots1280x551
+and1265x545. Safe content-masked screenshots preserved; raw images never
+written. No rollout rollback for a tool limitation masquerading as app failure.
+435 is needs-architect; keep429/423 open until complete live proof.428 remains
+owner-controlled rotation, not verified complete. No secret/settings change.
+
+Next427 reconciled head e254d61fc9b803206a6ee874db12db141715e5da passed
+updated hosted39876284871/job120162564792:241/0/0,600s/file,13m18s job.
+New synthetic1366/400/412 proof retains573/695/695px reader and98/100
+Lighthouse. PR427 stays DRAFT/unmerged pending prior live gate435; no owner
+Email sign-off. This checkpoint is local-only documentation/proof, not a new
+product head or release. Continue independent existing425 preparation while
+435 is unresolved; no new native Deals or sensitive-item merge. No local
+test/watch job remains running. tests/.tmp absent; no dependency change.
+
 2026-10-23 UTC #429 PR431 MERGED - deploy pending/live checks pending.
 Exact614e4c8 passed hosted39873996904:241/0/0,600s/file,job12m47s,
 test11m42s. Merge9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Official
