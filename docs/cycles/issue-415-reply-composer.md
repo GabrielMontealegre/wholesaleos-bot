@@ -73,3 +73,25 @@ After dependency423 resolves and full gate is green: merge commit, exact
 deployment, health200, signed GET flags OFF and live1366/400/412 Email/lead
 hydration clean console. Do not click Preview or Send, type a draft, hand off
 to Gmail, change flags or touch business data during live verification.
+
+## Current-Main Preparation (2026-10-23 UTC)
+
+Integrated main9f4caaf/PR431 into this existing draft branch. The HTML conflict
+retains componentsv3, navigationv2, email-replyv1, email-screenv3 and appv3,
+plus current shared stylesheetv3. Both D-061 and D-062 decisions are retained.
+No context/send/security implementation changed in this reconciliation.
+
+Focused source-context, reply-security, mailbox-participant, preview-route,
+composer, Email UI/loading, native-shell and actual classic/native journey
+tests pass together. Refreshed --reply synthetic proof uses local stubbed
+GET/context and POST/preview only, with NO send route or real provider. Existing
+fixture data remains unchanged. FCP46.5/57.7/51.1ms at1366/400/412; Send fits,
+no horizontal overflow, Lighthouse13.5.0 accessibility98desktop/100phone.
+These are synthetic screenshots, not a production send or live acceptance.
+
+Updated final-head full hosted suite is required before eligibility; historical
+242/0/0 is not substituted. Keep424 DRAFT/unmerged:427 then425 precede it in
+the latest order, and deployed422/431 still lacks required exact-size live
+proof under tooling issue435. Default-off kill switch, explicit reviewed
+version, idempotency, uncertain/no-retry and existing legal/package gates stay
+unchanged. No new credential/setting, business write or outreach authorization.
