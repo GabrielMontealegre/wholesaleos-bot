@@ -94,3 +94,18 @@ the UI must not mislabel that subset as the full count. Existing record-activity
 timeline summaries retain reported attribution and strip message bodies.
 Future briefs must use those sources and respect jv_workflow's withheld-address
 and signed-interest rules. No new reader or route is added by this trace.
+
+## Current-Main Preparation (2026-10-23 UTC)
+
+Integrated main9f4caaf/PR431 into the existing dormant foundation branch.
+Only BACKLOG/DECISIONS conflicted; both histories and the latest D-062 order
+are retained. Calculator and its test are byte-identical to prior remote head.
+The source search over server.js/modules/dashboard still finds no runtime
+import of financing-scenarios. No activation, route, source mapping, UI,
+offer input, rate assumption or financial decision is added by integration.
+
+Focused finance, existing match-profit/reviewed-deal projections and strict
+workspace-preview tests pass. Full updated-head cloud gate remains required;
+do not substitute historical241/0/0. Keep DRAFT/unmerged behind427/425/424,
+with no standalone deploy. Prior live viewport evidence is pending435 and
+corrected Email has no owner sign-off. No production action or setting change.

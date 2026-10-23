@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-23 UTC426 PREPARATION ONLY: existing dormant financing PR reconciled
+with main9f4caaf; only documentation conflicts, math/test bytes unchanged.
+No route, runtime reader, UI, stored mapping or target-return/offer gate is
+activated. Keep DRAFT/unmerged after427/425/424, no standalone deployment.
+Those independent reconciled heads passed241/244/243 files respectively,
+0 failures/skips, and are not a tested combined release.431/422 exact source
+is active and healthy; required live viewport proof remains pending435.
+Earlier pause/ordering comments below are historical, not current provider
+state. No owner Email approval or new Deals screen is inferred.
+
 2026-10-21 #416 independent financing foundation LOCAL while Railway423
 holds the ordered releases. New pure fixed-rate scenario math covers payments,
 IO transitions, first-year cash flow/returns, coverage and balloon balances;
@@ -21,6 +31,29 @@ The existing Deals GET already provides canonical evaluated comps, matches,
 profit and exact location counts; future UI must label its100-row cap honestly.
 Gabriel's required Email design sign-off was requested once through the app;
 response pending. Items424/425 remain exempt from that waiting gate per412.
+2026-10-22 #429 PR431 REVIEW/FOLLOW-UP: selected Claude's narrow classic-label
+implementation; alternate430 remains draft and is not combined into431.
+Integrated84d46b0 Vary: Accept/no-store correction. Closed the identified
+Home-to-Email acceptance gap with a clearly labeled Email workspace link at
+the top of More tools, retaining every existing classic Email/nav handler.
+Actual synthetic Home->Deals->Email reader->Deals->Back journey passes at
+1366/400/412, with a44px entry target, exact record modal/identity, competing
+view precedence and locked/non-admin mailbox-read negatives. Screenshots:
+docs/screens/429/journey; no writes, external requests or console errors.
+Existing preview and full classic desk-shell regressions pass unchanged.
+Original004df5e hosted39853806212 passed240/0/0, but is NOT the modified
+head's gate. The updated PR requires its own full hosted600s/file suite
+before merge. No merge or live-release claim at this checkpoint.
+
+D-062 outage merge policy (#423 answer6350507039): up to THREE tested,
+self-reviewed non-sensitive merged-but-unverified items; mark each MERGED -
+deploy pending (Railway builds unavailable), never released.422 currently
+occupies ONE slot;430/431 unmerged occupy none. Order429/431,427,425,424,426.
+Send/call/auth/credentials/migrations stay unmerged until individually
+deployable. One retry authorization remains unconsumed until official Hobby
+restoration/no equivalent live build; no plan/billing/settings/variables.
+428 rotation is owner-controlled; no secret values read or changed. No
+production action, send, capture, batch, confirmation or business write.
 
 2026-10-21 D-061 phase1 LOCAL on item/415-reviewed-thread-replies: additive
 exact-thread reply backend, default OFF, no frontend binding or real send.
