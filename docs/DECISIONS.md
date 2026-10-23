@@ -31,7 +31,9 @@ themselves (address, sold price, sold date, https source, recorded sale); a clai
 never unlocks a value. ARV needs the sourced subject address and rejects the subject's own
 sale (lot values too; a partial subject address is rejected); every comp must say sold or
 closed; buyer profiles count only with a valid source and a payload that passes the shared
-buyer schema (invalid ones fail closed), and hard-money cash-on-cash is not modeled --
+buyer schema (invalid ones fail closed), and hard-money cash-on-cash is not modeled. Comps
+must be distinct properties by canonical address identity (fail closed when a missing unit or
+locality makes that ambiguous) --
 AGENTS 3 precedence, D-005, D-010, D-011, D-015, D-031, D-032, A-018 -- 2026-10-22.
 
 ## D-062: Bounded Merges During Railway Build Outage

@@ -116,10 +116,7 @@ function acceptFact(name, fact, today, subject) {
   if (name === 'arv' && ARV_FORBIDDEN.has(fact.source_kind)) return { reason: 'arv_needs_comparable_sales' };
   if (name === 'loan_payoff' && !rule.sources.includes(fact.source_kind)) return { reason: 'payoff_not_stated_by_owner_or_lender' };
   if (rule.sources && !rule.sources.includes(fact.source_kind)) return { reason: 'source_not_allowed' };
-  if (name === 'subject_address') {
-    const parts = canonicalizeAddress(fact.value);
-    if (!parts.number || !parts.street || !(parts.city || parts.zip)) return { reason: 'incomplete_address' };
-  }
+  if (name === 'subject_address' && !propertyIdentity(fact.value)) return { reason: 'incomplete_address' };
   const accepted = { value: rule.type === 'text' ? fact.value.trim() : fact.value, source_kind: fact.source_kind,
     source_url: url || null, evidence_text: evidence.slice(0, 300), captured_at: fact.captured_at.slice(0, 10) };
   if (rule.min_comps) {
@@ -143,31 +140,41 @@ function acceptFact(name, fact, today, subject) {
 // or a value outside the sold-price range, fails the whole set (returns 0).
 function recordedSales(comps, value, today, maxAgeDays, subject) {
   if (!Array.isArray(comps) || comps.length > 50) return 0;
-  const seen = new Set();
+  const home = propertyIdentity(subject);
+  const seen = [];
   for (const comp of comps) {
     if (!comp || typeof comp !== 'object' || Array.isArray(comp)) return 0;
-    const address = typeof comp.comp_address === 'string' ? comp.comp_address.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    // D-005 counts distinct properties, not spellings: "St", "Street" and "St." are one house.
+    const identity = propertyIdentity(comp.comp_address);
     const sold = profiles.dayNumber(comp.sold_date);
-    if (!address || seen.has(address) || !validValue(FACTS.repairs, comp.sold_price) || comp.sold_price === 0 ||
+    if (!identity || !home || seen.some((other) => sameProperty(other, identity)) || !validValue(FACTS.repairs, comp.sold_price) || comp.sold_price === 0 ||
         sold == null || sold > today || today - sold > maxAgeDays || typeof comp.source_url !== 'string' || !httpsUrl(comp.source_url) ||
         comp.price_basis !== 'recorded_sale' || typeof comp.sold_status !== 'string' || !/^(?:sold|closed)$/i.test(comp.sold_status.trim()) ||
-        sameProperty(subject, comp.comp_address)) return 0;
-    seen.add(address);
+        sameProperty(home, identity)) return 0;
+    seen.push(identity);
   }
   const prices = comps.map((comp) => comp.sold_price);
   return value >= Math.min(...prices) && value <= Math.max(...prices) ? comps.length : 0;
 }
 
-// Same house: house number and street match, and the city or ZIP matches, or either side lacks
-// the locality needed to tell them apart (treated as the same house, the conservative reading).
-// Unparsed text compares whole.
-function sameProperty(a, b) {
-  const x = canonicalizeAddress(a), y = canonicalizeAddress(b);
-  if (!x.number || !x.street || !y.number || !y.street) return x.canonical_string === y.canonical_string;
+// A property identity needs a house number, a street and a city or ZIP; anything less can't be
+// told apart from its neighbours, so it is not usable (fails closed).
+function propertyIdentity(text) {
+  if (typeof text !== 'string' || !text.trim()) return null;
+  const parts = canonicalizeAddress(text);
+  return parts.number && parts.street && (parts.city || parts.zip) ? parts : null;
+}
+
+// Could these be the same property? Used for both subject exclusion and comp de-duplication.
+// Different only when proven different: house number, street, suffix, directional, unit, ZIP or
+// city that both sides state and that differ. Anything one side leaves out counts as possibly the
+// same (fails closed): "101 Fixture St" and "101 Fixture Street Apt 2" are possibly one house.
+function sameProperty(x, y) {
   if (x.number !== y.number || x.street !== y.street) return false;
-  const cities = x.city && y.city, zips = x.zip && y.zip;
-  if (!cities && !zips) return true;
-  return cities && x.city === y.city || zips && x.zip === y.zip;
+  for (const field of ['suffix', 'directional', 'unit']) if (x[field] && y[field] && x[field] !== y[field]) return false;
+  // ZIP decides when both have one; otherwise the city does.
+  if (x.zip && y.zip) return x.zip === y.zip;
+  return !(x.city && y.city && x.city !== y.city);
 }
 
 function readFacts(input, today) {

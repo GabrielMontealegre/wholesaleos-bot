@@ -34,8 +34,11 @@ Safety rules enforced by the engine:
   List price, AVM, Zestimate, assessed or tax value, auction bid, the holder's claimed ARV
   and rent estimates are never ARV. Lot-sale values need the same records (2 years).
   ARV and lot-sale values also need the sourced, complete subject address (number, street,
-  city or ZIP); a comp at the subject's own address fails the set (same number and street,
-  and the same city or ZIP, or no locality to tell them apart).
+  city or ZIP). Comps count as distinct properties, not spellings: every comp needs a
+  number, street and city or ZIP, and two addresses are the same property unless a field
+  both state proves otherwise (house number, street, suffix, directional, unit, ZIP, or city
+  when either lacks a ZIP). "St", "Street" and "St." are one house; a missing unit or ZIP
+  counts as possibly the same. A duplicate, or a comp that may be the subject, fails the set.
 - Every buyer profile passed to `evaluate` is validated with the shared
   `buyer-strategy-profile.validate` against the injected `today` (same rules as import and
   operator edits). An invalid profile is listed in `invalid_buyers` with its reason and is

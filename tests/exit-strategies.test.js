@@ -202,6 +202,48 @@ assert.deepEqual(exits.evaluate({ property_type: fact('lot', 'county_record'), l
   [{ fact: 'lot_comps_value', reason: 'needs_subject_address' }]);
 assert.deepEqual(exits.evaluate({ subject_address: subject, lot_comps_value: fact(70000, 'lot_sale_comps', { comps: [...comps(70000, 2), { ...comps(70000, 3)[2], comp_address: subject.value }] }) }, { today }).rejected_facts,
   [{ fact: 'lot_comps_value', reason: 'needs_comparable_sales' }]);
+// D-005 counts distinct properties, not spellings of one (independent review of ecdab32).
+const sale = (comp_address, extra = {}) => ({ comp_address, sold_status: 'Sold', price_basis: 'recorded_sale', sold_price: 200000, sold_date: '2026-09-01',
+  source_url: 'https://records.example.test/sale/' + encodeURIComponent(comp_address), ...extra });
+const compSet = (addresses, name = 'arv') => exits.evaluate({ subject_address: subject, [name]: name === 'arv'
+  ? fact(200000, 'comp_grid', { tier: 'verified', comps: addresses.map((a) => sale(a)) })
+  : fact(200000, 'lot_sale_comps', { comps: addresses.map((a) => sale(a)) }) }, { today });
+const oneHouse = ['101 Fixture St, Example, FL 33601', '101 Fixture Street, Example, FL 33601', '101 Fixture St., Example, FL'];
+assert.deepEqual(compSet(oneHouse).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }], 'three spellings of one house are not three comps');
+assert.equal(compSet(oneHouse).facts_used.arv, undefined);
+assert.deepEqual(compSet(oneHouse, 'lot_comps_value').rejected_facts, [{ fact: 'lot_comps_value', reason: 'needs_comparable_sales' }]);
+const third = '300 Other Ave, Example, FL 33601';
+for (const [label, pair] of [
+  ['St vs Street', ['101 Fixture St, Example, FL 33601', '101 Fixture Street, Example, FL 33601']],
+  ['ZIP on one side only', ['101 Fixture St, Example, FL 33601', '101 Fixture St, Example, FL']],
+  ['no ZIP either side', ['101 Fixture St, Example, FL', '101 Fixture Street, Example, FL']],
+  ['unit on one side only', ['101 Fixture St Apt 2, Example, FL 33601', '101 Fixture St, Example, FL 33601']],
+  ['same unit, two spellings', ['101 Fixture St Apt 2, Example, FL 33601', '101 Fixture Street, Unit 2, Example, FL 33601']],
+  ['directional on one side only', ['101 N Fixture St, Example, FL 33601', '101 Fixture St, Example, FL 33601']]]) {
+  for (const name of ['arv', 'lot_comps_value']) {
+    assert.equal(compSet([...pair, third], name).rejected_facts.length, 1, label + ' ' + name);
+  }
+}
+for (const [label, pair] of [
+  ['different units', ['101 Fixture St Apt 1, Example, FL 33601', '101 Fixture St Apt 2, Example, FL 33601']],
+  ['different ZIP', ['101 Fixture St, Example, FL 33601', '101 Fixture St, Other, FL 33602']],
+  ['different city, no ZIPs', ['101 Fixture St, Example, FL', '101 Fixture St, Other, FL']],
+  ['different suffix', ['101 Fixture St, Example, FL 33601', '101 Fixture Ave, Example, FL 33601']],
+  ['different directional', ['101 N Fixture St, Example, FL 33601', '101 S Fixture St, Example, FL 33601']],
+  ['different house number', ['101 Fixture St, Example, FL 33601', '103 Fixture St, Example, FL 33601']]]) {
+  const result = compSet([...pair, third]);
+  assert.deepEqual(result.rejected_facts, [], label);
+  assert.equal(result.facts_used.arv.comp_count, 3, label); assert.equal(result.facts_used.arv.tier, 'verified', label);
+  assert.deepEqual(compSet([...pair, third], 'lot_comps_value').rejected_facts, [], label + ' lot');
+}
+// A comp with no locality can't be told apart from its neighbours, so the set fails closed.
+assert.deepEqual(compSet(['101 Fixture St', '102 Fixture St, Example, FL 33601', third]).rejected_facts, [{ fact: 'arv', reason: 'arv_needs_comparable_sales' }]);
+// Subject units: another unit in the subject's building is a different property; an unstated unit is not.
+const condo = fact('900 Subject Rd Apt 1, Example, FL 33601', 'public_web_page');
+const withSubject = (s, address) => exits.evaluate({ subject_address: s, arv: fact(200000, 'comp_grid', { tier: 'verified', comps: [address, '102 Fixture St, Example, FL 33601', third].map((a) => sale(a)) }) }, { today });
+assert.deepEqual(withSubject(condo, '900 Subject Rd Apt 2, Example, FL 33601').rejected_facts, [], 'a neighbouring unit is a valid comp');
+assert.equal(withSubject(condo, '900 Subject Road, Example, FL 33601').rejected_facts.length, 1, 'same building, unit not stated: possibly the subject');
+assert.equal(withSubject(condo, '900 Subject Rd #1, Example, FL').rejected_facts.length, 1, 'the subject unit itself');
 const prelim = exits.evaluate({ ...twoOne, arv: arv(150000, 'verified', 2) }, { today });
 assert.equal(prelim.facts_used.arv.tier, 'preliminary');
 assert.match(byKey(prelim).flip.numbers[0].label, /preliminary, 2 sales/);
