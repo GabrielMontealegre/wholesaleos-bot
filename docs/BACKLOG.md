@@ -2,6 +2,21 @@
 
 ## Latest Run Summary
 
+2026-10-24 architect435 APPROVED and technical gate completed for431/422.
+Exact active Railwaya00779c6/source9f4caaf Details verified. Public root/
+classic/native Email9 live checks pass at true1366x768,400x915,412x915 with
+pinned Playwright1.44.0/Chromium1117; health200 and signed-out boundary intact.
+Existing-session Chrome journey passes at actual894x577: Home,Deals,explicit
+Email entry,list/full body,labeledDeals,Back. Default-OFF reply flags intact.
+Same9f4caaf synthetic actual-app journey passes all3 sizes,locked/nonadmin,
+exact identity,zero writes/external/errors. Safe proof under
+docs/screens/2026-10-24-pr431-approved-proof; no cookie/credential transfer.
+Owner phone screenshot is non-blocking per435; compact Email owner sign-off
+is still pending, not implied. Resume ordered427 final gate/release,then425,
+424,426. Earlier viewport BLOCKED notes below are historical, now superseded.
+No product dependency/lockfile change, manual build,send,capture,batch,
+confirmation,settings/secret or business-data write occurred.
+
 2026-10-23 checkpoint:431 MERGED and exact source9f4caaf DEPLOYED, but
 responsive live acceptance remains PENDING (tooling issue435), not DONE.
 Final431 hosted39873996904 passed241/0/0; automatic Railway deployment
