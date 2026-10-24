@@ -38,14 +38,14 @@
         '<header class="ws-mail-toolbar"><div class="ws-mail-folders" role="group" aria-label="Email folders">' + ['inbox', 'sent'].map(function (folder) {
           return '<button type="button" class="ws-button" data-mail-folder="' + folder + '" aria-pressed="' + (state.folder === folder) + '">' + (folder === 'inbox' ? 'Inbox' : 'Sent') + '</button>';
         }).join('') + '<select aria-label="Other email folders" data-mail-folder-select><option value="">More folders</option>' + Object.keys(extraFolders).map(function (key) { return '<option value="' + key + '"' + (key === state.folder ? ' selected' : '') + '>' + extraFolders[key] + '</option>'; }).join('') + '</select></div>' + c.tabs('mail', [{ key: 'people', label: 'People' }, { key: 'alerts', label: 'Alerts' }], state.category) + '</header>' +
-        '<p class="ws-mail-status" role="status">' + c.escape(state.error || (state.busy ? 'Loading email...' : 'Latest ' + state.threads.reduce(function (sum, row) { return sum + row.messages.length; }, 0) + ' messages in this folder')) +
+        '<p class="ws-mail-status" role="status" data-mail-status-important="' + Boolean(state.error || state.busy || state.unavailable.length) + '">' + c.escape(state.error || (state.busy ? 'Loading email...' : 'Latest ' + state.threads.reduce(function (sum, row) { return sum + row.messages.length; }, 0) + ' messages in this folder')) +
         (state.unavailable.length ? ' / ' + state.unavailable.length + ' references need a refresh' : '') + '</p>' +
         '<div class="ws-mail-panes"><section class="ws-mail-list" id="mail-panel-' + state.category + '" role="tabpanel" aria-labelledby="mail-' + state.category + '" aria-label="Email conversations">' +
         items.map(function (row) { return '<button type="button" class="ws-mail-row' + (row.unread ? ' ws-mail-row--unread' : '') + '" data-mail-key="' + c.escape(row.key) + '" aria-pressed="' + (row.key === state.selected) + '">' +
           '<span class="ws-mail-row-top"><strong>' + c.escape(row.sender) + '</strong><time>' + c.escape(time(row.latest.date)) + '</time></span><span class="ws-mail-subject">' + c.escape(row.latest.subject || '(No subject)') + '</span><span>' + roleChip(row.role) + (row.messages.length > 1 ? ' ' + row.messages.length + ' messages' : '') + '</span></button>'; }).join('') +
         (!items.length && !state.busy ? c.empty(state.error ? 'Email unavailable' : 'No conversations in this view', state.error ? 'Use Refresh or open Gmail.' : 'Check the other view or folder.') : '') +
         '</section><section class="ws-mail-reading" aria-label="Open conversation">' +
-        '<header class="ws-mail-reading-head">' + (thread ? c.button({ label: 'Back to messages', icon: 'chevron-down', id: 'mail-back' }) + '<h2>' + c.escape(thread.latest.subject || '(No subject)') + '</h2>' + roleChip(thread.role) : '') +
+        '<header class="ws-mail-reading-head">' + (thread ? c.button({ label: 'Back to messages', icon: 'chevron-down', iconOnly: true, id: 'mail-back' }) + '<div class="ws-mail-heading"><h2>' + c.escape(thread.latest.subject || '(No subject)') + '</h2>' + roleChip(thread.role) + '</div>' : '') +
         '<div class="ws-mail-reading-actions">' + (thread ? c.button({ label: 'Reply', icon: 'mail', id: 'mail-reply', disabled: !state.body.length || state.busy }) : '') +
         '<a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a></div></header>' +
         '<div class="ws-mail-thread">' + bodyMarkup() + '</div>' +
@@ -64,6 +64,7 @@
       host.querySelectorAll('[data-mail-key]').forEach(function (button) { button.addEventListener('click', function () { open(button.dataset.mailKey); }); });
       host.querySelector('[data-mail-folder-select]').addEventListener('change', function (event) { if (Object.hasOwn(extraFolders, event.target.value)) { remember(); state.folder = event.target.value; state.category = 'people'; load(); } });
       var back = host.querySelector('#mail-back');
+      if (back) back.title = 'Back to messages';
       if (back) back.addEventListener('click', function () { remember(); sequence++; state.busy = metadataBusy; state.selected = ''; state.body = []; state.composing = false; paint(); var first = host.querySelector('.ws-mail-row'); if (first) first.focus(); });
       var reply = host.querySelector('#mail-reply');
       if (reply) { reply.setAttribute('aria-keyshortcuts', 'r'); reply.addEventListener('click', function () { remember(); state.composing = true; paint(); host.querySelector('[name="body"]').focus(); }); }

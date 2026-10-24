@@ -1,5 +1,27 @@
 # Decisions
 
+## Architect Decision: Live Viewport Proof (435)
+
+Issue435 comment6388258726,2026-10-24: required live viewport proof equals
+exact-size pinned Playwright checks on the deployed SHA for unauthenticated
+screens and health, plus truthful-size existing signed-in Chrome observations
+and an exact-size synthetic actual-app journey against that same source.
+Required public sizes1366x768,400x915,412x915 must be measured and included in
+screenshot filenames. Never transfer cookies/credentials to authenticate the
+headless browser. Owner phone screenshots are helpful but NON-BLOCKING.
+Mask private names,phones,emails,street addresses before persisting images.
+No rollback of healthy source solely for viewport tooling limitations.
+After this evidence, complete431/422 live checks and continue427,then backlog.
+
+ASSUMED: Gabriel's2026-10-21 annotated Email screenshot makes the compact
+reading-space correction the next UI priority before the Deals migration.
+Email-only native hover titles replace its reserved blank help strip; Today
+help is unchanged. On phones an open message keeps Inbox/Sent/More folders,
+Back/Reply/Gmail, while Back restores category tabs and the folder summary.
+Error/loading/unavailable-reference status is never hidden. This changes
+layout only, not message contents, role/source labels, auth or send gates.
+Keep release prerequisites under423 and explicit owner sign-off -- AGENTS3/5/7,
+owner feedback and #412 ordered migrations --2026-10-21.
 ## D-062: Bounded Merges During Railway Build Outage
 
 Architect#423 answer6350507039,2026-10-22: continue backlog work. A full-suite

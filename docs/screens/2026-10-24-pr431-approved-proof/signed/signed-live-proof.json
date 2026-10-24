@@ -1,0 +1,77 @@
+{
+  "source_sha": "9f4caafe2fd82f858b2e125f27d62bdfe69b6e22",
+  "deployment_id": "a00779c6-f5c4-49e7-916f-cb7bc02cca43",
+  "deployment_details": "Active / Deployment successful; GitHub source link exact SHA observed",
+  "signed_in": true,
+  "credential_transfer": false,
+  "journey": [
+    "root to classic Home",
+    "classic Deals",
+    "More tools explicit Email workspace",
+    "native Email list and full body",
+    "labeled Deals classic destination",
+    "browser Back to Email"
+  ],
+  "reply_status": {
+    "enabled": false,
+    "configured": true,
+    "automatic_send_allowed": false,
+    "max_per_hour": 30
+  },
+  "screenshots": [
+    {
+      "label": "deals-menu",
+      "dom": {
+        "width": 894,
+        "height": 577
+      },
+      "image": {
+        "width": 894,
+        "height": 577
+      },
+      "file": "deals-menu-dom894x577-image894x577.png",
+      "redacted_regions": 1
+    },
+    {
+      "label": "deals-more-email-entry",
+      "dom": {
+        "width": 894,
+        "height": 577
+      },
+      "image": {
+        "width": 894,
+        "height": 577
+      },
+      "file": "deals-more-email-entry-dom894x577-image894x577.png",
+      "redacted_regions": 1
+    },
+    {
+      "label": "native-email-list",
+      "dom": {
+        "width": 894,
+        "height": 577
+      },
+      "image": {
+        "width": 894,
+        "height": 577
+      },
+      "file": "native-email-list-dom894x577-image894x577.png",
+      "redacted_regions": 1
+    },
+    {
+      "label": "native-email-reader",
+      "dom": {
+        "width": 894,
+        "height": 577
+      },
+      "image": {
+        "width": 894,
+        "height": 577
+      },
+      "file": "native-email-reader-dom894x577-image894x577.png",
+      "redacted_regions": 1
+    }
+  ],
+  "phone_confirmation": "non-blocking; not received",
+  "production_writes": 0
+}
