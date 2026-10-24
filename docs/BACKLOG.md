@@ -2,6 +2,32 @@
 
 ## Latest Run Summary
 
+2026-10-24 PR424 D-061 composer DONE/RELEASED technically, default OFF.
+Final7fb1627 cloud40128437151/job120974771738 passed246/0/0,600s/file,
+13m54s,all246 timings accounted for. Merge/currentmain3d19945330db68ea980fc69acbffd5bde065b203
+automatically deployed Railwaya268bd00-558d-4a8d-987d-d5f1291f7f9b;
+Active/successful Details source link matches exact SHA. Public12 exact-size
+root/classic/Email/Today checks pass1366x768,400x915,412x915,health200;
+unsigned identity header status401. Existing signed Chrome894x577 reads
+30messages and a full323-character selected body; empty Reply makes Preview
+and Send visibly disabled,unavailable status/Gmail retained. Signed GETflags:
+enabledfalse/configuredtrue/automatic_send_allowedfalse/cap30. No typed
+draft,real preview/send or settings/secrets/business writes.0 console errors.
+Recovered one stale browser input tab without credentials/owner action;
+fresh actual894x521 classic25cards hydrate/Open deal workbench opens.
+Same merge source pinned synthetic reply1366/400/412 acceptance/uncertainty/
+session negatives pass. Candidate tree identical; synthetic before/after
+FCP52.1/36/34.5ms,Lighthouse98/100,Send/status fit. Not live timing.
+Proof docs/screens/2026-10-24-pr424-release; prior427/425 proofs committed.
+
+OWNER FEEDBACK2026-10-24: corrected live Email still needs another layout
+adjustment; NOT approved. Asked which space/width/controls remain problematic
+and requested a marked screenshot. No new native Deals migration until that
+bounded correction is live and approved. Preserve dormant426 (no standalone
+deploy),deferred413/430,county ranking pause and Claude433/434 ownership.
+Stop new releases at verification reserve; no running local job or test remains.
+This latest proof-only checkpoint does not alter released product source.
+
 2026-10-24 PR425 Today action center DONE/RELEASED (technical gates).
 Final07d86a4 hosted40126530095/job120969066010 passed244/0/0,600s/file,
 13m46s job,all244 timings accounted for. Exact merge5b8b89ec77e3563329b0719f04e81fe62cc36a7b
