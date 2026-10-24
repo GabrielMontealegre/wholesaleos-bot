@@ -22,4 +22,16 @@ assert.deepEqual(groups.upcoming.map(x=>x.index),[4,6]);
 const invalidToday=model.groupActions(actions,'invalid');
 assert.deepEqual(invalidToday.upcoming.map(x=>x.index),[0,1,4,6]);
 assert.deepEqual(invalidToday.waiting.map(x=>x.index),[3]);
+const recordedReplies = [
+ {kind:'conversation',label:'Reply waiting',urgency:'upcoming'},
+ {kind:'conversation',label:'Draft needs review'},
+ {kind:'conversation',label:'Reply waiting',due_date:'2026-10-20'},
+ {kind:'conversation',label:'Draft needs review',due_date:today},
+ {kind:'conversation',label:'Unknown status',urgency:'review'}
+];
+const replyGroups=model.groupActions(recordedReplies,today);
+assert.deepEqual(replyGroups.review.map(x=>x.index),[0,1]);
+assert.deepEqual(replyGroups.overdue.map(x=>x.index),[2]);
+assert.deepEqual(replyGroups.due_today.map(x=>x.index),[3]);
+assert.deepEqual(replyGroups.upcoming.map(x=>x.index),[4]);
 console.log('Today model: strict dates, canonical urgency precedence, malformed-data fallback and stable original-row indexes passed.');

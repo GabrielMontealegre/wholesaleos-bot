@@ -22,7 +22,7 @@
       var urgency = '';
       if (useToday && due && due < today) urgency = 'overdue';
       else if (useToday && due === today) urgency = 'due_today';
-      else if (!urgency && (action.kind === 'buyer' || action.label === 'Deal needs approval' || action.label === 'Buyer needs approval')) urgency = 'review';
+      else if (!urgency && (action.kind === 'buyer' || ['Deal needs approval', 'Buyer needs approval', 'Reply waiting', 'Draft needs review'].indexOf(action.label) !== -1)) urgency = 'review';
       else if (!urgency && action.label === 'Waiting on someone else') urgency = 'waiting';
       if (!urgency) urgency = 'upcoming';
       groups[urgency].push({ action: action, index: index });

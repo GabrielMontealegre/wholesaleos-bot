@@ -2,6 +2,25 @@
 
 ## Latest Run Summary
 
+2026-10-24 PR427 compact Email DONE/RELEASED (technical gates); owner design
+approval remains pending, so no new native Deals migration. Final348c67a
+hosted40124274140 passed241/0/0,600s/file,13m36s job. Merge/current-main
+bc6151ff50979e2d082ff34a429f3b6ead68d2e3 deployed automatically as
+af5c5186-44a1-4359-8402-5f37044b2774; authoritative Details shows successful
+and links this exact SHA. No manual retry consumed. Public root/classic/Email
+9 checks at measured1366x768,400x915,412x915 pass; health200, signed-out
+boundary intact. Existing signed Chrome at actual894x577:30 messages,
+full6318-character body, folders/People/Alerts/Back, classic25 hydrated cards
+and Open deal work;0 console errors. Mail panes now start at128px.
+Same deployed source synthetic Email proof: reader573/695/695px,
+FCP160.1/45.1/33.3ms, Lighthouse98/100. These are SYNTHETIC timings,
+not live performance. Evidence docs/screens/2026-10-24-pr427-release.
+No send, typed draft, capture, batch, confirmation, setting/secret or business
+write. Next existing PR425 reconciles with this main, preserving427 Email,
+navigationv2,today-modelv1 and cachev6; actual changed-head full gate required.
+Prior435 blockers/outage/draft notes below are historical, not current state.
+
+Historical preparation notes (superseded by the latest release summary below):
 2026-10-23 independent425 PREPARATION: reconciled existing Today branch with
 current main9f4caaf, preserving431 navigation/Home/classic labels and the
 actual classic/native journey test. No new item or duplicate branch.427
@@ -54,6 +73,74 @@ first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Draft PR
 #425 hosted full-suite workflow #81 (run 39546559662) passed on head
 ccd924cd22c89bc8d6283280d38609be8f312dee. Exact deployment, live verification
 and owner screen sign-off remain pending; this is not released.
+
+2026-10-24 architect435 APPROVED and technical gate completed for431/422.
+Exact active Railwaya00779c6/source9f4caaf Details verified. Public root/
+classic/native Email9 live checks pass at true1366x768,400x915,412x915 with
+pinned Playwright1.44.0/Chromium1117; health200 and signed-out boundary intact.
+Existing-session Chrome journey passes at actual894x577: Home,Deals,explicit
+Email entry,list/full body,labeledDeals,Back. Default-OFF reply flags intact.
+Same9f4caaf synthetic actual-app journey passes all3 sizes,locked/nonadmin,
+exact identity,zero writes/external/errors. Safe proof under
+docs/screens/2026-10-24-pr431-approved-proof; no cookie/credential transfer.
+Owner phone screenshot is non-blocking per435; compact Email owner sign-off
+is still pending, not implied. Resume ordered427 final gate/release,then425,
+424,426. Earlier viewport BLOCKED notes below are historical, now superseded.
+No product dependency/lockfile change, manual build,send,capture,batch,
+confirmation,settings/secret or business-data write occurred.
+
+2026-10-23 checkpoint:431 MERGED and exact source9f4caaf DEPLOYED, but
+responsive live acceptance remains PENDING (tooling issue435), not DONE.
+Final431 hosted39873996904 passed241/0/0; automatic Railway deployment
+a00779c6-f5c4-49e7-916f-cb7bc02cca43 Details reports Active/success and
+links9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Hobby recovery is public.
+Health/nativeEmail200. Signed-admin reply status: disabled,configured,
+automatic send false,cap30. NO manual build; retry authorization UNCONSUMED.
+Partial live root/classic Deals/More Email/native Email29rows/labeled Deals/
+Back works. Leads hydrate. Required live1366/400/412 is NOT established:
+viewport.set reports success but DOM remains1280x551; screenshots1280x551
+and1265x545. Safe content-masked screenshots preserved; raw images never
+written. No rollout rollback for a tool limitation masquerading as app failure.
+435 is needs-architect; keep429/423 open until complete live proof.428 remains
+owner-controlled rotation, not verified complete. No secret/settings change.
+
+Next427 reconciled head e254d61fc9b803206a6ee874db12db141715e5da passed
+updated hosted39876284871/job120162564792:241/0/0,600s/file,13m18s job.
+New synthetic1366/400/412 proof retains573/695/695px reader and98/100
+Lighthouse. PR427 stays DRAFT/unmerged pending prior live gate435; no owner
+Email sign-off. This checkpoint is local-only documentation/proof, not a new
+product head or release. Continue independent existing425 preparation while
+435 is unresolved; no new native Deals or sensitive-item merge. No local
+test/watch job remains running. tests/.tmp absent; no dependency change.
+
+2026-10-23 UTC #429 PR431 MERGED - deploy pending/live checks pending.
+Exact614e4c8 passed hosted39873996904:241/0/0,600s/file,job12m47s,
+test11m42s. Merge9f4caafe2fd82f858b2e125f27d62bdfe69b6e22. Official
+Railway status23:22Z reports Hobby recovery. Automatic build
+a00779c6-f5c4-49e7-916f-cb7bc02cca43 started from431; monitor the SAME
+handle, no duplicate/manual deployment. Retry authorization UNCONSUMED.
+422 and431 remain unverified until exact-source/live1366/400/412 gates.
+Keep429/423 open for verification;428 owner-controlled rotation remains open.
+Next PR427 is reconciled with this main, retaining classic labels/home/entry
+and Email density; full updated-head gate required, no sign-off claimed.
+
+2026-10-21 #412 owner Email review: NOT approved; screenshot shows excess
+top chrome and stacked reader controls. Bounded reading-space correction on
+item/412-email-reading-space, isolated from the finance branch. Email uses
+native hover titles instead of a permanently empty help row, a compact
+message header and phone reading mode that keeps folders/Back/Reply but
+returns People/Alerts with Back. Errors/loading stay visible. No source
+content, mailbox transport, auth or send gate changed. Synthetic1366/400/412
+before/after proof gives150px more desktop reading height and185px on phones.
+Focused regressions pass; product83d822a hosted gate39662951658 passed
+240/0/0,600s/file,test11m51s/job13m07s. Email UI4.21s/loading5.07s,
+shell6.47s/county-notice257.04s; full per-file timings committed.
+Lighthouse98 desktop/100 phone. Release remains pending.
+Railway423 release prerequisites still apply; do not call this live or start
+the next Deals screen before the corrected Email receives owner sign-off.
+PR427 stays draft. Latest deployment mirror still has no exact422 release,
+and Railway browser control timed out during this run; no successful live
+verification or current provider recovery is claimed. No duplicate build.
 2026-10-22 #429 PR431 REVIEW/FOLLOW-UP: selected Claude's narrow classic-label
 implementation; alternate430 remains draft and is not combined into431.
 Integrated84d46b0 Vary: Accept/no-store correction. Closed the identified

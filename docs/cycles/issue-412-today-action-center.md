@@ -1,5 +1,33 @@
 # #412 Today Action Center
 
+## Ordered-Main Reconciliation (2026-10-24)
+
+PR427 is now technically released/verified on mainbc6151f. Reconcile this
+existing PR425 with that exact main; no duplicate branch/feature. Keep both
+Today action/pending sections and Email compact header/reader/error behavior.
+Resolve index cache keys to app/CSSv6, componentsv3, Emailv5, today-modelv1, navigationv2;
+retain all existing assertions and the full431 actual navigation proof.
+The merge conflicts in BACKLOG/DECISIONS retain both histories and add the
+current427 release report instead of silently discarding prior evidence.
+No API, send/auth gate, dependency/lockfile or stored-data writer changes.
+Full changed-head suite and fresh synthetic/live release gates are required;
+previous9dc3c85 cloud244/0/0 is historical, not this merge head's gate.
+
+Self-review also found recorded undated Reply waiting/Draft needs review rows
+fell into Coming up despite the server's review group. Add those two canonical
+labels to the review classification; overdue/due-today still take precedence,
+and a forged urgency on an unknown label remains ignored. Additive negatives
+preserve all original assertions. Bump componentsv3 for the added amber tone,
+so an old cached component bundle cannot silently discard its new semantic tone.
+
+Reconciled focused nine-file regression run passed (model/pending/service,
+components/shell/Today/Email/loading/actual navigation), followed by the new
+model negatives. Serialized pinned1.44.0 synthetic Today proof at1366/400/412
+passes: FCP223/117.9/46.4ms, one stylesheet/no horizontal overflow,
+Lighthouse13.5.0 accessibility100/100. No external calls or writes. These
+are local fixture results, not deployed Today performance. Final full hosted
+gate remains required before merge; no release claim for425.
+
 ## Scope
 
 The native Today screen now places the existing action queue, reviewed best deals,
