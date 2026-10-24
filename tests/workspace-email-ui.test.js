@@ -22,6 +22,7 @@ async function prove() {
         if (url.origin !== 'https://fixture.test') { external.push(url.origin); return route.abort(); }
         if (req.method() !== 'GET') { writes.push(url.pathname); return route.abort(); }
         if (url.pathname === '/api/auth/session') return route.fulfill({ json: { authenticated: true, role: 'admin' } });
+        if (url.pathname === '/api/dashboard/email/thread-replies/status') return route.fulfill({ json: { enabled: false, configured: true, automatic_send_allowed: false } });
         if (url.pathname === '/api/gmail/messages') return route.fulfill({ status: unauthorized ? 401 : 200, json: { ok: !unauthorized, messages: url.searchParams.get('folder') === 'sent' ? [] : rows } });
         if (url.pathname === '/api/gmail/thread' || url.pathname.startsWith('/api/gmail/message/')) {
           bodyReads++;

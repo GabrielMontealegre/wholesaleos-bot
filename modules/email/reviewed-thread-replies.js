@@ -33,6 +33,18 @@ function registerRoutes(app, { db, requireAdmin, env = process.env, reader = cre
   const base = '/api/dashboard/email/thread-replies';
   const noStore = (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); };
   app.get(base + '/status', noStore, requireAdmin, (req, res) => res.json(status()));
+  app.get(base + '/context', noStore, requireAdmin, async (req, res) => {
+    try {
+      if (!enabled()) policy.fail('disabled', 503);
+      if (!sender.configured()) policy.fail('not_configured', 503);
+      if (!req.query || Object.keys(req.query).some(k => !['message_ids', 'thread_key'].includes(k)) || typeof req.query.message_ids !== 'string' || req.query.message_ids.length > 35000) policy.fail('request_invalid');
+      const ids = policy.ids(JSON.parse(req.query.message_ids));
+      const messages = await reader.messages(ids), store = db.readDBStrict();
+      operator(store, req.currentUser.id);
+      const ctx = policy.context(messages, store, { now: now(), own: env.GMAIL_USER, message_ids: ids, thread_key: req.query.thread_key });
+      res.json({ message_ids: ctx.message_ids, thread_key: ctx.thread_key, to: ctx.to, cc: ctx.cc, participants: ctx.participants, subject: ctx.subject });
+    } catch (e) { error(res, e); }
+  });
   app.post(base + '/preview', noStore, requireAdmin, guard, async (req, res) => {
     res.set('Cache-Control', 'no-store');
     try {
@@ -64,7 +76,7 @@ function registerRoutes(app, { db, requireAdmin, env = process.env, reader = cre
       if (preview.status === 'accepted') {
         const receipts = (Array.isArray(initial.thread_reply_receipts) ? initial.thread_reply_receipts : []).filter(r => r.id === preview.id && r.version === preview.version && r.source_kind === 'smtp_delivery' && r.status === 'accepted' && r.message_id === preview.message_id && r.thread_key === preview.thread_key && policy.hash([r.to, r.cc]) === policy.hash([preview.to, preview.cc]) && Number.isFinite(Date.parse(r.sent_at)) && Date.parse(r.sent_at) >= Date.parse(preview.attempted_at) && Date.parse(r.sent_at) <= Date.parse(now()));
         if (receipts.length !== 1) policy.fail('receipt_unavailable', 409);
-        return res.json({ status: 'accepted', already_sent: true, message_id: preview.message_id });
+        return res.json({ status: 'accepted', already_sent: true, preview_id: preview.id, version: preview.version, message_id: preview.message_id });
       }
       if (preview.status !== 'preview') policy.fail('send_uncertain', 409);
       if (!policy.fresh(preview, now())) policy.fail('preview_expired', 409);
@@ -92,7 +104,7 @@ function registerRoutes(app, { db, requireAdmin, env = process.env, reader = cre
       let updated = { ...latest, thread_reply_receipts: (latest.thread_reply_receipts || []).concat(receipt), thread_reply_previews: policy.history(latest).map(p => p.id === preview.id ? { ...p, status: 'accepted', sent_at: sentAt } : p) };
       for (const link of preview.links) updated = activity.recordEvent(updated, link.kind, link.id, 'email_sent', 'Reply accepted by mail server; delivery not confirmed.', { now: sentAt, operatorId: req.currentUser.id }, { channel: 'email', attribution: 'smtp_accepted', reply_receipt: receipt });
       db.writeDB(updated);
-      res.json({ status: 'accepted', already_sent: false, message_id: messageId, sent_at: sentAt });
+      res.json({ status: 'accepted', already_sent: false, preview_id: preview.id, version: preview.version, message_id: messageId, sent_at: sentAt });
     } catch (e) {
       if (attempted && preview) try { const latest = db.readDBStrict(); db.writeDB({ ...latest, thread_reply_previews: policy.history(latest).map(p => p.id === preview.id && p.status === 'sending' ? { ...p, status: 'unknown' } : p) }); } catch { /* Persisted sending state also blocks retries. */ }
       error(res, e, attempted);

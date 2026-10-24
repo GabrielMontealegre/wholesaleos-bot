@@ -1,5 +1,40 @@
 # Decisions
 
+Historical pre-answer435 assumption (superseded by architect decision below):
+ASSUMED: missing exact-size live evidence from the Chrome viewport tool is
+not proof of an application regression. Keep the affected acceptance gates
+pending in435 and preserve the healthy exact-source deployment; never claim
+1366/400/412 from actual1280-wide output or silently substitute synthetic
+proof. Independent draft-branch reconciliation/testing may continue, but is
+not a waiver to merge/deploy the next screen or enable sending -- AGENTS3/5/7,
+data truth and conservative behavior; architect question435 --2026-10-23 UTC.
+
+ASSUMED: continue D-061 phase2 implementation/tests locally while phase1's
+merged release is blocked by workspace deployment availability (#423), but
+keep its PR draft/unmerged until exact phase1 deployment and read-only
+verification pass. A workspace Limited Access banner alongside fully
+operational public status is not proof of billing trouble or permission
+to change settings. Preserve the healthy running version; no automatic
+deploy retries or false live claim -- AGENTS3/7/10 --2026-10-21.
+
+Provider evidence for423: Railway's official deployments reference says the
+exact Limited Access indicator is temporary resource-allocation priority
+for higher tiers, with existing deployments unaffected and queued builds
+processing automatically when capacity returns. Public operational status
+is consistent with this. No upgrade, billing change or duplicate manual
+build; unlike the earlier incident418, no unreplayed-trigger claim applies.
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+--2026-10-21.
+
+ASSUMED: source-only reply defaults use a separate signed-admin GET context
+route, only after explicit Reply and enabled status; never persist a preview
+merely to populate fields. User-typed additions are explicit preview input.
+35s client timeout covers response-body reading as well as headers; a lost
+send response is uncertain and cannot auto-retry. Composer keeps uncertainty
+across local close/reopen; durable API attempt gates survive reload/restart.
+No new credentials, sending enablement or production test send --D-061,
+AGENTS3/5 --2026-10-21.
+
 ASSUMED: #416's Hey Gabriel pending panel reads existing saved buyer drafts,
 canonical open conversations and uniquely linked bounce activity. A bounce
 report has no stored resolution, so label it reported and disclose that current

@@ -2,6 +2,89 @@
 
 ## Latest Run Summary
 
+2026-10-24 PR425 Today action center DONE/RELEASED (technical gates).
+Final07d86a4 hosted40126530095/job120969066010 passed244/0/0,600s/file,
+13m46s job,all244 timings accounted for. Exact merge5b8b89ec77e3563329b0719f04e81fe62cc36a7b
+is Active/successful Railway30578f86-9af4-4438-9dea-0ac7298e44f2; Details
+links exact source, automatic build/no manual retry. Under approved435:
+12 public root/classic/Email/Today checks at true1366x768,400x915,412x915
+pass,health200/signed-out boundary/zero write attempts. Existing Chrome
+actual894x577 shows73 actions,9 pending rows,3 urgency groups; pending and
+action drawers open/close withX/Escape,exact record links remain. Empty
+best-deal/activity panels stay honest, no fabricated data. Classic25 cards
+hydrate/Open deal works; compact Email30rows/full6318-char body retains
+128px pane top. No console errors. Same merge source pinned synthetic
+Today1366/400/412 click-through passes; candidate product tree identical,
+synthetic FCP223/117.9/46.4ms/Lighthouse100/100 (not live timing).
+Proof docs/screens/2026-10-24-pr425-release;427 live evidence is on main.
+Owner compact Email design approval still pending before native Deals.
+Next existing424 reconciles source-only reviewed composer; default OFF,
+no real preview/send or credential/settings/business-data write authorized.
+
+Historical preparation (superseded by the current release summary):
+2026-10-23 UTC run: independent existing PRs reconciled with main9f4caaf,
+tested and self-reviewed, NONE merged/deployed this run.427 remote e254d61
+passed241/0/0 (39876284871,13m18s);425 remote9dc3c85 passed244/0/0
+(39906473578,13m13s);424 remote1248de7 passed243/0/0 (39907243516,
+13m21s). All600s/file; every file has a duration in docs/test-results/
+2026-10-23-reconciliation/timings.json. No skipped/unaccounted files.
+Both425 and424 retain431 Home/classic labels/navigationv2 and actual journey
+negatives. Synthetic Today proof254/183.6/233.6ms,Lighthouse100/100;
+composer46.5/57.7/51.1ms,Lighthouse98/100. One overlapping Today screenshot
+run failed unchanged<2s paint; recorded honestly, then one serialized pass;
+only failure diagnostics changed. No existing safety assertion weakened.
+
+Release order remains427,425,424,426. These are independent branch gates,
+NOT a tested combined release; reconcile each with actual preceding main
+before its own release. All remain DRAFT/unmerged. Current production is
+431/9f4caaf via exact automatic a00779c6-f5c4-49e7-916f-cb7bc02cca43;
+health200/partial live navigation passed previously, but required live sizes
+remain pending in needs-architect435 (no answer yet). Do not waive/guess
+viewport sizes or roll back healthy code for missing tool evidence. No new
+native Deals until corrected Email is live and owner-approved.428 rotation
+still needs owner confirmation; no secret value inspected or changed.
+No local test/watch process remains running; no production Preview/Send,
+capture, batch, evidence confirmation, paid/settings action or business write.
+This documentation/timing checkpoint is local-only, not a new gated product.
+
+2026-10-23 independent424 PREPARATION ONLY: reconcile existing reply composer
+with main9f4caaf/navigation431, retaining both script sets and default-OFF
+transport. No production preview, Send or setting change.431/422 is active
+and healthy, but required responsive live proof remains pending435.427
+tested e254d61 remains first;425 reconciled9dc3c85 full cloud gate is running.
+424 stays DRAFT/unmerged behind those checks; no sensitive-item outage waiver.
+Historical capacity-pause notes below do not describe current provider state.
+All nine focused reply/security/mailbox/UI/navigation files pass together.
+Serialized local stub-only composer proof passes1366/400/412; FCP46.5/57.7/
+51.1ms,Lighthouse98/100. No send route is used. Full updated-head cloud gate
+is required; no previous242/0/0 substitution. No production action occurred.
+
+2026-10-21 02:59Z D-061 phase1 MERGED through PR422, main7b36ed2,
+release BLOCKED on workspace deployment pause (#423). Exact-head cloud
+39533634399: SUMMARY passed=240 failed=0 skipped=0 total=240;600s/file,
+12m13s test step/13m12s job; county-notice284.05s, new policy/API1.13s,
+participants1.11s. More than10m after merge no new deployment exists;
+Railway shows Limited Access / Deploys have been paused temporarily, while
+public status is Fully Operational and service Wait for CI is OFF. Cause
+documented as a temporary capacity-priority pause, not unpaid billing:
+https://docs.railway.com/deployments/reference#deployments-paused---limited-access
+Queued builds resume automatically; do not upgrade or trigger duplicates.
+Active remains verified
+PR421/373855d on24fb22b2-659c-42f2-8852-4481d7090eb6. Old health200 is
+not new release proof. No deployment retry, variable change or rollback.
+Keep415/412 OPEN. Complete exact-main/default-OFF GET + read-only live
+verification when builds resume; no production send/preview is authorized.
+
+Independent phase2 draftPR424 on item/415-reply-composer, NOT released:
+source-only GET reply defaults, exact preview/edit/review/explicit Send,
+receipt-version matching, uncertainty terminal state,35s client timeout and
+session-loss clearing. Default OFF and Open in Gmail remain. New1366/400/412
+synthetic interaction/context tests pass; existing read-only assertions stay
+unchanged (one GET-status fixture stub added). Synthetic before/after images,
+paint35-47ms and Lighthouse98 desktop/100 phone; not live measurements.
+Full242-file final-head gate pending. Do not merge phase2 until422 is live.
+
+
 2026-10-24 PR427 compact Email DONE/RELEASED (technical gates); owner design
 approval remains pending, so no new native Deals migration. Final348c67a
 hosted40124274140 passed241/0/0,600s/file,13m36s job. Merge/current-main
@@ -1038,6 +1121,13 @@ One bounded slice per PR, full tests, self-review, deploy/read-only verification
 No production email link/send/confirmation or triage apply as a release test.
 
 ## Run log
+
+2026-10-21: D-061 API#422 merged7b36ed2 after240/240 exact-head green;
+release blocked#423, no new source ever ran. Old421 remains healthy; no
+rollback or forbidden setting action. Continued independent composer
+implementation/test locally; source-based defaults, preview/review, explicit
+send and durable API receipts, zero real mail.415/412 remain open. No capture,
+batch, confirmation, outreach, production preview/save or business write.
 
 2026-10-15: #366A released in#368;mainffa3dd0,deploy7108050258 success60s,
 health/dashboard200,192passed/0failed/0skipped. Live1366/412 More/account and
