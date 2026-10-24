@@ -6,7 +6,10 @@ const deals=require('../modules/deals/reviewed-deals');
 const samples=require('./reviewed-deals.test');
 const ui=require('../dashboard/wos-today-workspace');
 const clock=require('../dashboard/wos-card-clock');
+const {dayAt}=require('../modules/records/calendar-day');
 const now=samples.now;
+const today=dayAt(now,'America/Mazatlan');
+const shiftDay=(day,n)=>new Date(Date.parse(day+'T18:00:00Z')+n*86400000).toISOString().slice(0,10);
 const store={buyers:[{id:'buyer-pending',record_ref:'BUY-0010',assistant_find:{approval:'pending'}}],reviewed_deals:[],activities:[
  {activity_id:'log1',ts:now,type:'email_sent',buyer_ref:'BUY-0010',summary:'PRIVATE MAIL BODY'},
  {activity_id:'log1',ts:now,type:'email_sent',buyer_ref:'BUY-0010'},
@@ -14,6 +17,16 @@ const store={buyers:[{id:'buyer-pending',record_ref:'BUY-0010',assistant_find:{a
  {ts:'2026-02-30T12:00:00Z',type:'found'}],conversations:Array.from({length:125},(_,i)=>({id:'conversation-'+i,person:'SYNTHETIC '+i,role:'not_recorded',refs:['BUY-'+String(i+1).padStart(4,'0')],channels:['manual'],last_in:now,status:'hot',thread_url:'',source_kind:'imported_report'}))};
 const frozen=JSON.stringify(store),view=buildTodayWorkspace(store,{now});
 assert.equal(view.counts.replies,125);assert.equal(view.actions.filter(a=>a.kind==='conversation').length,125,'no internal 100-row cap can hide replies');assert.equal(view.counts.approvals,1);assert.equal(view.actions.length,126);
+const waitingStore={buyers:[],reviewed_deals:[],activities:[],conversations:[
+ {id:'waiting',person:'Synthetic waiting contact',role:'seller',refs:[],channels:['manual'],last_in:shiftDay(today,-5)+'T18:00:00Z',last_out:shiftDay(today,-1)+'T18:00:00Z',status:'waiting_on_deal',captured_at:shiftDay(today,-1)+'T18:00:00Z'},
+ {id:'reply',person:'Synthetic reply contact',role:'seller',refs:[],channels:['manual'],last_in:now,status:'follow_up',captured_at:now},
+ {id:'due',person:'Synthetic due contact',role:'seller',refs:[],channels:['manual'],status:'to_send',due_date:today,captured_at:now},
+ {id:'overdue',person:'Synthetic overdue contact',role:'seller',refs:[],channels:['manual'],status:'follow_up',due_date:shiftDay(today,-1),captured_at:now}
+]};
+const urgencyView=buildTodayWorkspace(waitingStore,{now});
+assert.equal(urgencyView.actions.find(a=>a.heading==='Synthetic waiting contact').urgency,'waiting');assert.equal(urgencyView.actions.find(a=>a.heading==='Synthetic waiting contact').waiting_days,1,'waiting duration uses the recorded outgoing date');
+assert.equal(urgencyView.actions.find(a=>a.heading==='Synthetic reply contact').urgency,'due_today','a reply with no recorded due date uses the canonical same-day due date');
+assert.equal(urgencyView.actions.find(a=>a.heading==='Synthetic due contact').urgency,'due_today');assert.equal(urgencyView.actions.find(a=>a.heading==='Synthetic overdue contact').urgency,'overdue');
 assert.equal(conversations.list(store,{now,limit:999}).items.length,100,'public conversation cap unchanged');
 assert.equal(conversations.project(store,{now}).items.length,125);
 assert.equal(view.last_24h.length,1);assert.equal(view.last_24h[0].label,'Outgoing email reported');assert.equal(view.coverage.email,'recorded_reports_only');assert.ok(!JSON.stringify(view.last_24h).includes('PRIVATE MAIL BODY'));assert.equal(JSON.stringify(store),frozen);

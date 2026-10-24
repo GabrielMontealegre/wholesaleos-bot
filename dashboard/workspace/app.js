@@ -118,45 +118,103 @@
   function time(value) { return value ? root.wosCardClock.formatTime(value, current && current.now) : 'Not recorded'; }
   function count(value) { return Number.isSafeInteger(value) && value >= 0 ? String(value) : 'Unknown'; }
 
-  function row(item, kind, index) {
-    return c.listRow({ key: kind + ':' + index, title: item.heading || item.label || 'Recorded item',
-      detail: kind === 'activity' ? time(item.at) : item.recorded_at ? time(item.recorded_at) : 'Recorded date not available',
-      status: item.label || item.grade || '', tone: kind === 'actions' ? 'blue' : 'neutral' });
+  function money(value) { return typeof value === 'number' && Number.isFinite(value) ? '$' + Math.round(value).toLocaleString('en-US') : ''; }
+  function quantity(value, singular, plural) { var n = Number.isSafeInteger(value) && value >= 0 ? String(value) : 'Unknown'; return n + ' ' + (n === '1' ? singular : plural); }
+  function urgencyLabel(group) { return ({ overdue: 'Overdue', due_today: 'Due today', review: 'Needs review', waiting: 'Waiting', upcoming: 'Coming up' })[group] || 'Recorded'; }
+  function urgencyTone(group) { return ({ overdue: 'red', due_today: 'amber', review: 'neutral', waiting: 'blue', upcoming: 'neutral' })[group] || 'neutral'; }
+
+  function actionRow(entry, group) {
+    var item = entry.action, index = entry.index;
+    var detail = [item.label, item.action_label].filter(Boolean);
+    if (item.recorded_at) detail.push('Recorded ' + time(item.recorded_at));
+    if (item.due_date) detail.push('Due ' + root.wosCardClock.formatDate(item.due_date));
+    if (item.waiting_days != null) detail.push('Waiting ' + item.waiting_days + (item.waiting_days === 1 ? ' day' : ' days'));
+    else if (item.label === 'Waiting on someone else') detail.push('Waiting time not recorded');
+    var label = item.heading || item.label || 'Recorded item';
+    return '<li><button type="button" class="ws-today-action ws-today-action--' + group + '" data-row="actions:' + index + '" aria-label="Open ' + c.escape(label + ', ' + (item.action_label || 'record')) + '">' +
+      '<span class="ws-today-action-main"><strong>' + c.escape(label) + '</strong><span>' + c.escape(detail.join(' · ')) + '</span>' +
+      (item.ref ? '<small>' + c.escape(item.ref) + '</small>' : '') + '</span>' + c.badge(urgencyLabel(group), urgencyTone(group)) + c.icon('arrow-up-right') + '</button></li>';
+  }
+
+  function actionGroup(group, entries, title) {
+    if (!entries.length) return '';
+    return '<section class="ws-today-group" data-urgency-group="' + group + '"><header><h3>' + title + '</h3>' + c.badge(String(entries.length), urgencyTone(group)) + '</header><ul class="ws-list">' +
+      entries.map(function (entry) { return actionRow(entry, group); }).join('') + '</ul></section>';
+  }
+
+  function bestDeal(item) {
+    var facts = [];
+    if (money(item.asking)) facts.push('<span>Asking ' + c.escape(money(item.asking)) + '</span>');
+    if (item.value_range && money(item.value_range.low) && money(item.value_range.high)) {
+      facts.push('<span>Reviewed value ' + c.escape(money(item.value_range.low)) + ' to ' + c.escape(money(item.value_range.high)) + ' (' + count(item.comp_count) + ' comps)</span>');
+    }
+    if (money(item.spread)) facts.push('<span>Estimated spread ' + c.escape(money(item.spread)) + ' before closing costs</span>');
+    if (Number.isSafeInteger(item.buyer_count) && item.buyer_count >= 0) facts.push('<span>' + count(item.buyer_count) + ' approved buyers match</span>');
+    if (item.deadline) facts.push('<span>Deadline ' + c.escape(root.wosCardClock.formatDate(item.deadline)) + '</span>');
+    var heading = item.heading || item.location || 'Property details needed', href = nav.recordHref(item.ref);
+    var body = '<strong class="ws-today-deal-heading">' + c.escape(heading) + '</strong><span class="ws-today-deal-facts">' + facts.join('') + '</span>';
+    return '<li>' + (href ? '<a class="ws-today-deal" href="' + c.escape(href) + '" aria-label="Open best deal: ' + c.escape(heading) + '">' + body + '</a>' :
+      '<button type="button" class="ws-today-deal" data-best-deal="' + c.escape(item.id || '') + '" aria-label="Review best deal: ' + c.escape(heading) + '">' + body + '</button>') + '</li>';
+  }
+
+  function activityRow(item, index) {
+    var when = time(item.at);
+    var title = item.label || 'Recorded activity';
+    var body = '<span><strong>' + c.escape(title) + '</strong><small>' + c.escape(when || 'Recorded time not available') +
+      (item.ref ? ' · ' + c.escape(item.ref) : '') + '</small></span>' + c.badge(item.source_kind === 'verified_release_record' ? 'Verified release' : 'Reported activity', 'green');
+    if (item.source_url) return '<li><a class="ws-today-event" href="' + c.escape(item.source_url) + '" target="_blank" rel="noopener noreferrer">' + body + '</a></li>';
+    return '<li><button type="button" class="ws-today-event" data-row="activity:' + index + '">' + body + c.icon('arrow-up-right') + '</button></li>';
+  }
+
+  function pendingPanel(pending) {
+    if (!pending) return '<section class="ws-today-panel ws-today-pending"><header><h2>Hey Gabriel</h2></header>' + c.empty('Pending summary unavailable', 'Refresh recorded work to check pending items.') + '</section>';
+    function pendingRow(item, group, index) {
+      var detail = [item.reason];
+      if (item.due_date) detail.push('Due ' + root.wosCardClock.formatDate(item.due_date));
+      if (item.waiting_since) detail.push('Waiting since ' + time(item.waiting_since));
+      return '<li><button type="button" class="ws-row-button" data-pending-group="' + group + '" data-pending-index="' + index + '" aria-label="Review ' + c.escape(item.heading || item.label) + '">' +
+        '<span class="ws-row-main"><strong>' + c.escape(item.heading || item.label) + '</strong><span>' + c.escape(detail.filter(Boolean).join(' · ')) + '</span></span>' + c.icon('arrow-up-right') + '</button></li>';
+    }
+    return '<section class="ws-today-panel ws-today-pending"><header><h2>Hey Gabriel</h2>' + c.badge('Recorded pending work', 'blue') + '</header><div class="ws-pending-grid">' +
+      [['drafts', 'Drafts not sent'], ['waiting', 'Waiting on others'], ['bounced', 'Bounces reported'], ['reminders', "Don't forget"]].map(function (entry) {
+        var items = Array.isArray(pending[entry[0]]) ? pending[entry[0]] : null;
+        return '<section><header><h3>' + entry[1] + '</h3>' + c.badge(items ? String(items.length) : 'Unavailable', entry[0] === 'bounced' ? 'red' : 'neutral') + '</header>' +
+          (items && items.length ? '<ul class="ws-list">' + items.slice(0, 5).map(function (item, i) { return pendingRow(item, entry[0], i); }).join('') + '</ul>' +
+            (items.length > 5 ? '<details><summary>' + (items.length - 5) + ' more</summary><ul class="ws-list">' + items.slice(5).map(function (item, i) { return pendingRow(item, entry[0], i + 5); }).join('') + '</ul></details>' : '') :
+            '<p class="ws-muted">' + (items ? 'None in the connected records.' : 'Not available.') + '</p>') + '</section>';
+      }).join('') + '</div><p class="ws-muted ws-pending-coverage">Saved drafts and conversation reminders only. Bounces are recorded reports; current mailbox delivery status is not connected.</p></section>';
   }
 
   function render() {
     var data = current, content = document.getElementById('today-content');
     if (!content || !data) return;
-    var actions = data.actions.slice(0, pageSize), events = data.last_24h.slice(0, pageSize);
+    var groups = root.WOSTodayModel.groupActions(data.actions, data.today), events = data.last_24h.slice(0, pageSize);
     content.setAttribute('aria-busy', 'false');
-    content.innerHTML = '<section class="ws-section"><div class="ws-section-header"><h2>Recorded work</h2>' + c.badge('Workflow summary', 'neutral') + '</div>' +
-      '<div class="ws-stats">' + [['replies', 'replies'], ['approvals', 'approvals'], ['followups', 'follow-ups'], ['deadlines', 'deadlines']].map(function (entry) {
-        return '<span><strong>' + count(data.counts[entry[0]]) + '</strong> ' + entry[1] + '</span>';
-      }).join('') + '</div>' + c.tabs('today', [{ key: 'actions', label: 'Actions' }, { key: 'deals', label: 'Best deals' }, { key: 'activity', label: 'Last 24 hours' }], 'actions') +
-      '<section id="today-panel-actions" role="tabpanel" aria-labelledby="today-actions"><ul class="ws-list">' + actions.map(function (item, i) { return row(item, 'actions', i); }).join('') + '</ul>' +
-      (actions.length ? '' : c.empty('No actions recorded', 'Open Leads or Email to review your recorded work.')) +
-      (data.actions.length > actions.length ? c.button({ label: 'Show more actions', id: 'more-actions', icon: 'chevron-down' }) : '') + '</section>' +
-      '<section id="today-panel-deals" role="tabpanel" aria-labelledby="today-deals" hidden><ul class="ws-list">' + data.best_deals.map(function (item, i) { return row(item, 'deals', i); }).join('') + '</ul>' +
-      (data.best_deals.length ? '' : c.empty('No best deals recorded', 'Open Deals to review property evidence and buyer matches.')) + '</section>' +
-      '<section id="today-panel-activity" role="tabpanel" aria-labelledby="today-activity" hidden><ul class="ws-list">' + events.map(function (item, i) { return row(item, 'activity', i); }).join('') + '</ul>' +
-      (events.length ? '' : c.empty('No activity recorded in the last 24 hours', 'Recorded actions will appear here.')) +
-      (data.last_24h.length > events.length ? c.button({ label: 'Show more activity', id: 'more-activity', icon: 'chevron-down' }) : '') + '</section></section>';
-    c.bindTabs(content.querySelector('[role="tablist"]'));
+    var actionCount = data.actions.length;
+    content.innerHTML = '<section class="ws-today"><header class="ws-today-header"><div><h2>Today</h2><p>Updated ' + c.escape(time(data.now)) + '</p></div>' +
+      '<div class="ws-today-stats">' + c.badge(quantity(data.counts.replies, 'reply waiting', 'replies waiting'), 'blue') + c.badge(quantity(data.counts.approvals, 'approval', 'approvals'), 'neutral') +
+      c.badge(quantity(data.counts.followups, 'follow-up due', 'follow-ups due'), 'amber') + c.badge(quantity(data.counts.deadlines, 'deadline this week', 'deadlines this week'), 'neutral') + '</div></header>' +
+      pendingPanel(data.pending) + '<div class="ws-today-grid"><section class="ws-today-panel ws-today-queue"><header><h2>Your action queue</h2>' + c.badge(String(actionCount) + ' open', actionCount ? 'blue' : 'neutral') + '</header>' +
+      (actionCount ? actionGroup('overdue', groups.overdue, 'Overdue') + actionGroup('due_today', groups.due_today, 'Due today') + actionGroup('review', groups.review, 'Needs review') +
+        actionGroup('waiting', groups.waiting, 'Waiting on someone else') + actionGroup('upcoming', groups.upcoming, 'Coming up') : c.empty('No open work recorded', 'Replies, approvals, follow-ups and deal deadlines will appear here.')) + '</section>' +
+      '<section class="ws-today-panel ws-today-best"><header><h2>Best deals</h2>' + c.badge(String(data.best_deals.length), 'green') + '</header><ul class="ws-list">' +
+      (data.best_deals.map(bestDeal).join('') || '<li>' + c.empty('No reviewed deals are ready yet', 'Deals appear here after review and buyer-match checks.') + '</li>') + '</ul></section>' +
+      '<section class="ws-today-panel ws-today-activity"><header><h2>Last 24 hours</h2>' + c.badge(String(data.last_24h.length), 'neutral') + '</header><ul class="ws-list">' +
+      (events.map(activityRow).join('') || '<li>' + c.empty('No activity recorded in the last 24 hours', 'Recorded changes will appear here.') + '</li>') +
+      (data.last_24h.length > events.length ? '<li>' + c.button({ label: 'Show more activity', id: 'more-activity', icon: 'chevron-down' }) + '</li>' : '') + '</ul></section></div></section>';
     content.querySelectorAll('[data-row]').forEach(function (button) {
       button.addEventListener('click', function () {
-        var parts = button.dataset.row.split(':'), list = parts[0] === 'actions' ? data.actions : parts[0] === 'deals' ? data.best_deals : data.last_24h;
+        var parts = button.dataset.row.split(':'), list = parts[0] === 'actions' ? data.actions : data.last_24h;
         openRecord(list[Number(parts[1])]);
       });
     });
-    ['more-actions', 'more-activity'].forEach(function (name) {
-      var button = document.getElementById(name);
-      if (button) button.addEventListener('click', function () {
-        var active = content.querySelector('[aria-selected="true"]').dataset.tab;
-        pageSize += 25;
-        render();
-        document.querySelector('[data-tab="' + active + '"]').click();
-        document.querySelector('[data-tab="' + active + '"]').focus();
-      });
+    content.querySelectorAll('[data-pending-group]').forEach(function (button) {
+      button.addEventListener('click', function () { openRecord(data.pending[button.dataset.pendingGroup][Number(button.dataset.pendingIndex)]); });
+    });
+    var more = document.getElementById('more-activity');
+    if (more) more.addEventListener('click', function () { pageSize += 25; render(); more = document.getElementById('more-activity'); if (more) more.focus(); });
+    content.querySelectorAll('[data-best-deal]').forEach(function (button) {
+      button.addEventListener('click', function () { var deal = data.best_deals.find(function (item) { return item.id === button.dataset.bestDeal; }); if (deal) openRecord(deal); });
     });
   }
 
@@ -164,7 +222,7 @@
     var dialog = document.getElementById('detail'), body = dialog.querySelector('[data-dialog-body]');
     var refs = item.conversation?.refs || [item.ref], links = refs.map(nav.recordHref).filter(Boolean);
     body.innerHTML = '<h3>' + c.escape(item.heading || item.label || 'Recorded item') + '</h3><p>' + c.escape(item.label || item.grade || 'Recorded work') + '</p>' +
-      '<dl class="ws-detail"><div><dt>Source</dt><dd>' + c.escape(item.source_kind === 'recorded_activity' ? 'Recorded activity' : item.source_kind === 'verified_release_record' ? 'Verified release record' : 'Recorded workflow') +
+      (item.reason ? '<p>' + c.escape(item.reason) + '</p>' : '') + '<dl class="ws-detail"><div><dt>Source</dt><dd>' + c.escape(item.source_kind === 'recorded_activity' ? 'Recorded activity' : item.source_kind === 'verified_release_record' ? 'Verified release record' : 'Recorded workflow') +
       '</dd></div><div><dt>Recorded</dt><dd>' + c.escape(time(item.recorded_at || item.at)) + '</dd></div></dl>' +
       links.map(function (href) { return '<a class="ws-button" href="' + href + '">Open full record' + c.icon('arrow-up-right') + '</a>'; }).join('') +
       (!links.length ? '<p class="ws-muted">No unique property or buyer reference is attached. Open the relevant workspace to review the source record.</p>' : '');

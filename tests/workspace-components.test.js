@@ -29,6 +29,8 @@ assert.throws(() => c.icon('../x'), /Unknown icon/);
 assert.throws(() => c.drawer('"bad', 'Title'), /Invalid component id/);
 assert.throws(() => c.tabs('work', [{ key: 'a', label: 'A' }], 'missing'), /selected/);
 assert.throws(() => c.tabs('work', [{ key: 'a' }, { key: 'a' }], 'a'), /Duplicate/);
+assert(c.badge('Due today', 'amber').includes('ws-badge--amber'));
+assert(!c.badge('Due today', 'amber" onclick="attack()').includes('onclick="attack()'));
 assert(c.composer('message').includes(' disabled'));
 assert(!c.composer('message').includes('type="submit"'));
 assert(c.drawer('detail', 'Record').includes('Close Record'));

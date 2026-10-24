@@ -1,5 +1,14 @@
 # Decisions
 
+ASSUMED: #416's Hey Gabriel pending panel reads existing saved buyer drafts,
+canonical open conversations and uniquely linked bounce activity. A bounce
+report has no stored resolution, so label it reported and disclose that current
+mailbox delivery status is not connected. Never infer delivery, a resolved
+bounce, why a provider refused a send, or a new contact action. Unknown/sending
+drafts direct the operator to check Sent mail; no retry control is added.
+Use the existing PR425/shared Today system. Historical424-first order is
+superseded by D-062:427,425,424,426 -- AGENTS3/5,#412/#416 --2026-10-24.
+
 ## Architect Decision: Live Viewport Proof (435)
 
 Issue435 comment6388258726,2026-10-24: required live viewport proof equals
@@ -893,3 +902,12 @@ zeroes or approved templates mislabeled as drafts. Unsigned JV address and
 subject coordinates stay withheld; stored data remains intact. Sign-out only
 adds UI cache cancellation before the unchanged auth action. No production
 decision is used as a test -- AGENTS sections3/5,D-043,D-056 -- 2026-10-13.
+
+ASSUMED: The #412 Today action queue derives overdue/due-today ordering only from
+the canonical projected due_date; a waiting-on-someone-else group requires the
+recorded waiting_on_deal status, and elapsed waiting days require last_out.
+Missing timestamps stay unmeasured. A recorded message remains reported activity,
+not proof of delivery. Queue and best-deal actions only open their existing
+record; they never send, approve, capture or change business data. Existing
+reviewed-deal evaluation remains the sole source of displayed value/spread --
+AGENTS sections3/5 and #412/#416 read-only Today scope -- 2026-10-21.

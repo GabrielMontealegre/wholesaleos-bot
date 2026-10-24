@@ -2,6 +2,78 @@
 
 ## Latest Run Summary
 
+2026-10-24 PR427 compact Email DONE/RELEASED (technical gates); owner design
+approval remains pending, so no new native Deals migration. Final348c67a
+hosted40124274140 passed241/0/0,600s/file,13m36s job. Merge/current-main
+bc6151ff50979e2d082ff34a429f3b6ead68d2e3 deployed automatically as
+af5c5186-44a1-4359-8402-5f37044b2774; authoritative Details shows successful
+and links this exact SHA. No manual retry consumed. Public root/classic/Email
+9 checks at measured1366x768,400x915,412x915 pass; health200, signed-out
+boundary intact. Existing signed Chrome at actual894x577:30 messages,
+full6318-character body, folders/People/Alerts/Back, classic25 hydrated cards
+and Open deal work;0 console errors. Mail panes now start at128px.
+Same deployed source synthetic Email proof: reader573/695/695px,
+FCP160.1/45.1/33.3ms, Lighthouse98/100. These are SYNTHETIC timings,
+not live performance. Evidence docs/screens/2026-10-24-pr427-release.
+No send, typed draft, capture, batch, confirmation, setting/secret or business
+write. Next existing PR425 reconciles with this main, preserving427 Email,
+navigationv2,today-modelv1 and cachev6; actual changed-head full gate required.
+Prior435 blockers/outage/draft notes below are historical, not current state.
+
+Historical preparation notes (superseded by the latest release summary below):
+2026-10-23 independent425 PREPARATION: reconciled existing Today branch with
+current main9f4caaf, preserving431 navigation/Home/classic labels and the
+actual classic/native journey test. No new item or duplicate branch.427
+remains ahead in the release order, tested241/0/0 on e254d61; local checkpoint
+94daaaa preserves partial live proof.431/422 exact source is active/healthy,
+but required live sizes remain blocked by Chrome viewport issue435. No merge
+or deployment of425 is authorized by this local integration. Earlier424-first
+notes below are historical; D-062 order429,427,425,424,426 now governs.
+Focused model/pending/service/components/shell/Today/journey passes. One
+overlapping screenshot proof failed the unchanged<2s paint assertion; the
+serialized run after both jobs ended passed254/183.6/233.6ms and Lighthouse
+100/100. Only failure diagnostics changed, not the threshold. Full updated
+cloud head is still pending; no earlier243/0/0 substitution or release claim.
+
+2026-10-21 #412/#416 Today follow-up LOCAL on the existing PR425 branch:
+added the first-section Hey Gabriel panel for recorded unsent drafts,
+waiting conversations, reported bounces and reminders. Unique existing
+record links only; unknown send outcomes require checking Sent mail,
+and reported bounces never claim confirmed current delivery status.
+No new business writer, network source or send/approval control. New pure
+projection and expanded1366/400/412 browser negatives pass with the existing
+dependency runtime. Refreshed Lighthouse13.5.0 accessibility100 desktop/phone;
+synthetic first paint99.2/35.6/87.2ms. Full243/243 hosted gate passed on
+7f52520 (run39655779023),0 failures/skips,600s/file,test11m55s/job12m52s;
+county-notice255.88s,pending0.16s,Today0.29s,shell6.72s,new UI3.27s.
+All per-file timings are under docs/test-results/issue-412-today-action-center.
+PR424 remains first in the owner order; release waits on
+Railway workspace capacity#423. Model/effort verified from this thread's
+latest context; persisted thread_settings service_tier is default/standard.
+No variable, billing, credential, capture, message or production write.
+Read-only Railway recheck18:48Z still shows Limited Access/Deploys paused
+temporarily and active421/373855d, so no release is claimed. Autopilot's
+saved checkpoint now reflects424 then425 and the correct persisted-tier
+lookup; no repeated implementation-settings blocker. Documentation-only
+proof follows the tested product commit; product source is unchanged.
+
+2026-10-21 #412 Today action center LOCAL on item/412-today-action-center.
+Native Today now presents the existing read-only action projection, existing
+reviewed-deal ranking and allowlisted last-24-hour activity together. Actions
+are grouped by canonical overdue/due/review/waiting/upcoming data; waiting days
+are computed only from a recorded last-out timestamp. Best-deal value/spread
+remain existing reviewed estimates with explicit labels. No sends, approvals,
+captures or data writes were added. Focused pure, service, component and
+synthetic1366/400/412 Playwright checks pass; screenshots are under
+docs/screens/2026-10-21-today-action-center. Permission-enabled full suite:
+SUMMARY passed=242 failed=0 skipped=0 total=242 (600 seconds per-file cap);
+Dallas foreclosure adapter completed in 17.75 seconds. Synthetic Lighthouse
+13.5.0 accessibility score is 100 at desktop and 412x915 mobile; synthetic
+first contentful paint is 63.5/61.1/48.4 ms at 1366/400/412 widths. Draft PR
+#425 hosted full-suite workflow #81 (run 39546559662) passed on head
+ccd924cd22c89bc8d6283280d38609be8f312dee. Exact deployment, live verification
+and owner screen sign-off remain pending; this is not released.
+
 2026-10-24 architect435 APPROVED and technical gate completed for431/422.
 Exact active Railwaya00779c6/source9f4caaf Details verified. Public root/
 classic/native Email9 live checks pass at true1366x768,400x915,412x915 with
