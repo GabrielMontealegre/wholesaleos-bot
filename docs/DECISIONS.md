@@ -1,5 +1,6 @@
 # Decisions
 
+Historical pre-answer435 assumption (superseded by architect decision below):
 ASSUMED: missing exact-size live evidence from the Chrome viewport tool is
 not proof of an application regression. Keep the affected acceptance gates
 pending in435 and preserve the healthy exact-source deployment; never claim
@@ -33,6 +34,38 @@ send response is uncertain and cannot auto-retry. Composer keeps uncertainty
 across local close/reopen; durable API attempt gates survive reload/restart.
 No new credentials, sending enablement or production test send --D-061,
 AGENTS3/5 --2026-10-21.
+
+ASSUMED: #416's Hey Gabriel pending panel reads existing saved buyer drafts,
+canonical open conversations and uniquely linked bounce activity. A bounce
+report has no stored resolution, so label it reported and disclose that current
+mailbox delivery status is not connected. Never infer delivery, a resolved
+bounce, why a provider refused a send, or a new contact action. Unknown/sending
+drafts direct the operator to check Sent mail; no retry control is added.
+Use the existing PR425/shared Today system. Historical424-first order is
+superseded by D-062:427,425,424,426 -- AGENTS3/5,#412/#416 --2026-10-24.
+
+## Architect Decision: Live Viewport Proof (435)
+
+Issue435 comment6388258726,2026-10-24: required live viewport proof equals
+exact-size pinned Playwright checks on the deployed SHA for unauthenticated
+screens and health, plus truthful-size existing signed-in Chrome observations
+and an exact-size synthetic actual-app journey against that same source.
+Required public sizes1366x768,400x915,412x915 must be measured and included in
+screenshot filenames. Never transfer cookies/credentials to authenticate the
+headless browser. Owner phone screenshots are helpful but NON-BLOCKING.
+Mask private names,phones,emails,street addresses before persisting images.
+No rollback of healthy source solely for viewport tooling limitations.
+After this evidence, complete431/422 live checks and continue427,then backlog.
+
+ASSUMED: Gabriel's2026-10-21 annotated Email screenshot makes the compact
+reading-space correction the next UI priority before the Deals migration.
+Email-only native hover titles replace its reserved blank help strip; Today
+help is unchanged. On phones an open message keeps Inbox/Sent/More folders,
+Back/Reply/Gmail, while Back restores category tabs and the folder summary.
+Error/loading/unavailable-reference status is never hidden. This changes
+layout only, not message contents, role/source labels, auth or send gates.
+Keep release prerequisites under423 and explicit owner sign-off -- AGENTS3/5/7,
+owner feedback and #412 ordered migrations --2026-10-21.
 ## D-062: Bounded Merges During Railway Build Outage
 
 Architect#423 answer6350507039,2026-10-22: continue backlog work. A full-suite
@@ -904,3 +937,12 @@ zeroes or approved templates mislabeled as drafts. Unsigned JV address and
 subject coordinates stay withheld; stored data remains intact. Sign-out only
 adds UI cache cancellation before the unchanged auth action. No production
 decision is used as a test -- AGENTS sections3/5,D-043,D-056 -- 2026-10-13.
+
+ASSUMED: The #412 Today action queue derives overdue/due-today ordering only from
+the canonical projected due_date; a waiting-on-someone-else group requires the
+recorded waiting_on_deal status, and elapsed waiting days require last_out.
+Missing timestamps stay unmeasured. A recorded message remains reported activity,
+not proof of delivery. Queue and best-deal actions only open their existing
+record; they never send, approve, capture or change business data. Existing
+reviewed-deal evaluation remains the sole source of displayed value/spread --
+AGENTS sections3/5 and #412/#416 read-only Today scope -- 2026-10-21.

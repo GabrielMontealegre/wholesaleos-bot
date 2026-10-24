@@ -8,7 +8,7 @@
   var ICONS = new Set(['menu', 'x', 'house', 'mail', 'users', 'handshake', 'bell',
     'settings', 'search', 'log-out', 'arrow-up-right', 'refresh-cw', 'check', 'send',
     'calendar-days', 'list-checks', 'layout-dashboard', 'layers', 'chevron-down']);
-  var TONES = new Set(['neutral', 'green', 'blue', 'red']);
+  var TONES = new Set(['neutral', 'green', 'blue', 'red', 'amber']);
 
   function escape(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {

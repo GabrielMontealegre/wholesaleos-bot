@@ -9,7 +9,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
   let baseline = false;
   if (reply) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-screen.js'].map(file => [file, execFileSync('git', ['show', '7b36ed2d76e4a55069020df0c0cafe1921f37fae:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-screen.js'].map(file => [file, execFileSync('git', ['show', '5b8b89ec77e3563329b0719f04e81fe62cc36a7b:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
       if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : 'js').send(files.get(file));
@@ -29,7 +29,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
   app.get('/api/gmail/message/:id', (req, res) => res.json(full(req.params.id)));
   registerWorkspacePreview(app); app.use(fixture.app);
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
-  const base = 'http://127.0.0.1:' + server.address().port, dir = path.resolve(__dirname, reply ? '../docs/screens/2026-10-21-reply-composer' : '../docs/screens/2026-10-20-native-email');
+  const base = 'http://127.0.0.1:' + server.address().port, dir = process.env.WOS_EMAIL_PROOF_DIR ? path.resolve(process.env.WOS_EMAIL_PROOF_DIR) : path.resolve(__dirname, reply ? '../docs/screens/2026-10-21-reply-composer' : '../docs/screens/2026-10-20-native-email');
   let browser; const report = { synthetic_only: true, widths: [], accessibility: [] };
   try {
     const portServer = require('node:net').createServer();
@@ -60,6 +60,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
       assert(paint !== null && paint < 2000);
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-list-' + width + '.png') });
       await page.locator('.ws-mail-row').click(); await page.locator('.ws-mail-message .ws-mail-body').waitFor();
+      const reader = await page.locator('.ws-mail-thread').evaluate(el => ({ reading_height: el.clientHeight, reading_top: el.getBoundingClientRect().top, body_top: el.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().top }));
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-reader-' + width + '.png') });
       await page.getByRole('button', { name: 'Reply', exact: true }).click();
       if (reply) {
@@ -71,7 +72,11 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-composer-' + width + '.png') });
       const layout = await page.getByRole('button', { name: 'Send', exact: true }).evaluate(el => { const r = el.getBoundingClientRect(); return { sendFits: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, overflow: document.documentElement.scrollWidth > innerWidth }; });
       assert.deepEqual(layout, { sendFits: true, overflow: false });
-      report.widths.push({ width, first_contentful_paint_ms: paint, ...layout });
+      if (reply) {
+        const status = await page.locator('[data-reply-status]').evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, viewport: innerHeight }; });
+        assert(status.top >= 0 && status.bottom <= status.viewport, 'Reply outcome text must fit at ' + width + ': ' + JSON.stringify(status));
+      }
+      report.widths.push({ width, first_contentful_paint_ms: paint, ...reader, ...layout });
     }
     if (lighthousePath) {
       const lighthouse = (await import(pathToFileURL(path.resolve(lighthousePath)).href)).default;

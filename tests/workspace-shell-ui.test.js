@@ -47,9 +47,9 @@ async function prove() {
       });
       await page.goto('https://fixture.test/app?preview=1');
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).waitFor();
-      assert((await page.locator('.ws-stats').innerText()).includes('0 replies'));
-      assert((await page.locator('.ws-stats').innerText()).includes('Unknown follow-ups'));
-      assert((await page.locator('.ws-row-main').first().innerText()).includes('10:18 AM'));
+      assert((await page.locator('.ws-today-stats').innerText()).includes('0 replies waiting'));
+      assert((await page.locator('.ws-today-stats').innerText()).includes('Unknown follow-ups due'));
+      assert.match((await page.locator('.ws-today-action-main').first().innerText()), /\d{1,2}:\d{2} (AM|PM)/);
       if (width !== 1366) {
         await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
         assert(await page.getByRole('dialog', { name: 'Navigation', exact: true }).isVisible());
@@ -58,9 +58,9 @@ async function prove() {
       await page.getByRole('button', { name: /Synthetic source-supported property/ }).click();
       assert.equal(await page.getByRole('link', { name: 'Open full record', exact: true }).getAttribute('href'), '/dashboard/?record_ref=WOS-FL-1012');
       await page.getByRole('button', { name: 'Close Record', exact: true }).click();
-      await page.getByRole('tab', { name: 'Best deals', exact: true }).click();
-      assert(await page.getByRole('heading', { name: 'No best deals recorded', exact: true }).isVisible());
-      await page.getByRole('tab', { name: 'Last 24 hours', exact: true }).click();
+      assert(await page.getByRole('heading', { name: 'Best deals', exact: true }).isVisible());
+      assert(await page.getByRole('heading', { name: 'Last 24 hours', exact: true }).isVisible());
+      assert(await page.getByRole('heading', { name: 'No reviewed deals are ready yet', exact: true }).isVisible());
       await page.getByRole('button', { name: /Record imported/ }).click();
       assert(await page.getByText('No unique property or buyer reference is attached.', { exact: false }).isVisible());
       await page.keyboard.press('Escape');
@@ -138,7 +138,7 @@ async function prove() {
       assert.deepEqual(errors, []);
       await page.close();
     }
-    console.log('workspace-shell-ui: real shell1366/400/412; native Email, labeled classic nav targets with Back to the shell (#429), tabs, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
+    console.log('workspace-shell-ui: real shell1366/400/412; native Email, labeled classic targets with Back, Today panels, rows, X/Escape, explicit refresh,401 clearing, role guard, first paint<2s and zero writes/external calls passed');
   } finally { await browser.close(); }
 }
 prove().catch(error => { console.error(error.stack); process.exitCode = 1; });

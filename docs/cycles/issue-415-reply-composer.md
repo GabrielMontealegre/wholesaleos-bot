@@ -1,5 +1,36 @@
 Item: #415 / D-061 phase2 -- exact reviewed reply composer
 
+## Current Ordered Reconciliation (2026-10-24)
+
+Prior427/425 technical release gates now complete on main5b8b89e. Merge
+this existing424 branch with that source, preserving compact Email/body
+request ownership and Today/navigation behavior. Keep componentsv4 (Cc plus
+amber tone),navigationv2,email-replyv1,Emailv6,today-modelv1,app/CSSv6.
+The proof-script conflict retains BOTH WOS_EMAIL_PROOF_DIR and --reply;
+all density/send/context/security assertions remain. Docs retain historical
+evidence and add current release status;435 is answered/closed,not blocked.
+Reply before-images now use exact last-live5b8b89e instead of old422 so
+the comparison does not misattribute already-released Email density to424.
+No writer/send/auth/policy changes while resolving the merge. Previous1248de7
+243/0/0 is historical; this actual ordered source needs its own full gate,
+before/after screenshots/accessibility and exact live default-OFF checks.
+No production Preview/Send,typed draft or flag/secret change is authorized.
+
+Ten focused files pass on the reconciled source: reply context/security,
+mailbox participants,preview route,reply composer,Email UI/loading,shell,
+Today and actual classic/native navigation. All original assertions retained.
+Serialized pinned1.44.0 synthetic --reply before/after at1366/400/412 passes
+with no provider/send route: FCP52.1/36/34.5ms,reader573/695/695px,Send fits,
+no overflow and Lighthouse13.5.0=98/100. New proof is isolated under
+docs/screens/2026-10-24-reply-composer. Those timings are synthetic; real
+preview/send remains unauthorized. Full changed-head hosted gate pending.
+
+Screenshot review prompted an additional outcome-text geometry assertion:
+the whole reply status, not just Send, must fit the viewport. Serialized
+1366/400/412 --reply proof passes this stronger check without a CSS change;
+no clipping failure or invented product regression is claimed. The original
+Send-fit and zero-write/external assertions remain unchanged.
+
 ## Change And Dependency
 
 Bind the existing native Email composer to the independently tested reply
