@@ -1,5 +1,11 @@
 # Decisions
 
+Owner2026-10-24: live compact Email still needs another layout adjustment.
+Technical427/425/424 releases are not design approval; keep new native Deals
+migration gated. Request the remaining space/width/control detail or marked
+screenshot before changing the layout further. Existing D-061 transport stays
+default OFF; no production Preview/Send or settings change is authorized.
+
 Historical pre-answer435 assumption (superseded by architect decision below):
 ASSUMED: missing exact-size live evidence from the Chrome viewport tool is
 not proof of an application regression. Keep the affected acceptance gates
