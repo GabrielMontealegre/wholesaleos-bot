@@ -1,8 +1,69 @@
-# D-063 B: Folder Count Contract (Local Preparation Only)
+# D-063 B: Active-Folder Message Snapshots
 
-No runtime import,provider request,route,UI integration,full-suite eligibility,
-PR or release is claimed. Current live447 is untouched. This pure projection
-is a tested preparation for a later bounded active-folder count slice.
+Candidate implementation on the existing local branch from verified3d41e6d.
+No release or live count claim until the final-head full gate and exact-source
+deployment proof. The former pure-only checkpoint is historical,not current.
+
+## Writer / Reader Trace
+
+- Existing FOLDERS remains the only mailbox registry. createMailboxReader.list
+  now returns the exact selected path/UIDVALIDITY or resolved Gmail label ID
+  as folder_scope. It makes no extra requests for this metadata.
+- folderSummary is a separate explicit read:one optional summary in flight,
+  active IMAP<2 admission reserves an interactive slot under the existing cap3.
+  IMAP gets a readOnly lock and explicit STATUS messages/unseen/UIDVALIDITY;
+  never SELECT.unseen. Gmail resolves an existing label and gets its message
+  counts,with retry:false,timeout and AbortSignal. No body reads or fanout.
+- A fixed12-second whole-operation deadline closes the count-only IMAP client
+  or aborts OAuth. Stage checks refuse new commands after late completions.
+  Cleanup releases the counter/lock. No logout wait can extend this deadline.
+- GET /api/gmail/folder-summary uses the same requireAdmin middleware,no-store,
+  exact allowlisted folder query and sanitized failures. No new auth/send/write
+  surface. Metadata advertises actual method availability;old injected readers
+  return false. Only successful capable metadata starts one native count GET.
+- Native layout validates provider/path/UID/folder/message scope,own fields,
+  integer consistency,capture time after load/nonfuture/under60seconds. Unknown
+  counts remain absent;confirmed0 is0. Snapshot status is explicitly messages;
+  the loaded grouped-conversation denominator remains untouched.
+- The async result updates only its dedicated text span. It cannot call paint,
+  replace the reader/composer,reset drafts,rebind a review or mutate outcomes.
+  Folder tickets discard obsolete results;refresh/session destruction clears
+  snapshot and expiry timer. A local60-second expiry only clears text;it does
+  not call a provider or automatically retry. Current global401 locking stays
+  authoritative,including late responses;no auth guard was weakened.
+- Other readers:thread-view annotation,body/snippet/attachment contracts,
+  D061 digest/reply transport,persistent records and classic UI are unchanged.
+  Cache layoutmodelv4/Emailv13;all other asset versions remain unchanged.
+
+## Tests / Assertion Changes
+
+New pure projection/provider/route and1366/400/412 native tests cover real0,
+unknown unread,path/UID/label/date/type/count refusal,SELECT sequence refusal,
+constructor/timeout cleanup and late-stage refusal,one-request concurrency,
+reserved interactive reads,401/403/429 no retries,guard/no-store,old readers,
+immediate metadata hydration,no extra body reads,late counts preserving the
+exact synthetic composer DOM/draft,obsolete-folder snapshots,late401 clearing
+drafts and separate message-vs-conversation counts. Providers are fixtures;
+no production draft or write is used. Existing assertions are retained.
+
+Two new test authoring corrections were required:desktop folders use the
+visible rail while phones use the drawer;the existing global auth guard must
+lock on401,not ignore an obsolete response. No product auth change was made.
+One restricted-shell localhost test failed transport,then passed with approved
+localhost access. This is not a product failure or a full-suite green claim.
+
+The existing reply test retains every assertion and adds delayed snapshots
+after a checked review and an uncertain synthetic send;both retain the exact
+form node and terminal state,with no additional send. Local count expiry is
+explicitly invoked in the synthetic test and makes no request. The new route's
+middleware is exercised over localhost:unsigned identity-only401,nonadmin403,
+admin200/no-store. Constructor failures and OAuth cancellation release slots.
+
+Candidate UI proof uses exact live3d41e6d as its baseline. Pinned1.44.0/
+Chromium1117 synthetic1366/400/412 paint49.8/46.2/41.9ms,reading heights
+645/740/740 and Lighthouse13.5.0 accessibility98/98. Zero fixture writes,
+external requests or console errors. These are SYNTHETIC,not live timings.
+Safe screenshots/report:docs/screens/2026-10-25-folder-snapshots.
 
 ## Source Evidence Checked2026-10-25
 
@@ -29,7 +90,7 @@ Inherited fields,arrays disguised as source objects and callback coercion are
 also refused. Only explicit own provider fields are evidence. The targeted
 pure test passes;no full integrated gate or runtime consumer is claimed.
 
-## Next Wiring / Acceptance
+## Ordered Acceptance / Remaining Release Gates
 
 1. Preserve immediate message hydration. A count request must not repaint or
    reset an active reply draft/review/uncertain outcome. Prefer one separately

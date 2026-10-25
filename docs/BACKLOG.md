@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-25 folder snapshots candidate IN PROGRESS on existing local
+item/412-folder-count-contract from3d41e6d. Source-bound metadata scope,
+separate guarded/no-store count GET,12s cancellation/reserved concurrency and
+status-only native update implemented. New pure/provider/route/3size late-draft/
+obsolete-folder/late401 negatives pass;existing focused mailbox regressions
+pass. Full final-head gate,self-review,exactdeploy/live proof still required;
+do not call folder totals/cursors or whole412 done. No production writes.
+
 2026-10-25 run checkpoint:446 snippets and447 reader manifests individually
 released/verified;current live/main3d41e6d and safe proof commits preserved.
 Next folder-count preparation remains LOCAL ONLY/unwired;pure negative tests

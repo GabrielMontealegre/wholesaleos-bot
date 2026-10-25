@@ -9,7 +9,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
   let baseline = false;
   if (reply || readingLayout) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-model.js', 'mail-layout-model.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', '327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-model.js', 'mail-layout-model.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', '3d41e6d4160d625c9d99d35868ea7dc44f620658:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
       if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : file.endsWith('.css') ? 'css' : 'js').send(files.get(file));
@@ -27,7 +27,8 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
   const row = (id, patch = {}) => ({ id, date: at, source_kind: 'connected_mailbox', thread_key: thread, from: 'Synthetic Person <person@example.test>', sender_name: 'Synthetic Person', subject: 'Property details and next steps', direction: 'in', link_status: 'linked', conversation: { role: 'buyer', role_source_kind: 'operator_input', role_recorded_at: at }, ...patch });
   const messages = [row('earlier'), row('latest', { date: '2026-10-20T12:01:00Z' }), row('alert', { from: 'alerts@redfin.com', sender_name: 'Synthetic listing alert', thread_key: 'b'.repeat(64), subject: 'New listing alert', conversation: null, link_status: 'unlinked' })];
   const full = id => ({ ...messages.find(m => m.id === id), body: id === 'earlier' ? 'Earlier source text. Please send the recorded property information.' : 'Thanks for the update.\n\nI am reviewing the property details.\n\n' + 'Source text continues in the full-height reading pane. '.repeat(60) + '\n\nFINAL SOURCE LINE - not clipped.' });
-  app.get('/api/gmail/messages', (req, res) => res.json({ ok: true, messages: req.query.folder === 'sent' ? [] : messages }));
+  app.get('/api/gmail/messages', (req, res) => res.json({ ok: true, messages: req.query.folder === 'sent' ? [] : messages, folder_summary_available:true, folder_scope:{folder:req.query.folder,origin:'imap_status',scope_id:req.query.folder==='sent'?'Sent':'INBOX',uid_validity:'7'} }));
+  app.get('/api/gmail/folder-summary', (req,res)=>res.json({ok:true,summary:{folder:req.query.folder,source_kind:'connected_mailbox',origin:'imap_status',scope_id:req.query.folder==='sent'?'Sent':'INBOX',uid_validity:'7',captured_at:new Date().toISOString(),scope:'messages',total_messages:req.query.folder==='sent'?0:200,unread_messages:req.query.folder==='sent'?0:12}}));
   app.get('/api/gmail/thread', (req, res) => res.json({ ok: true, messages: JSON.parse(req.query.ids).map(full) }));
   app.get('/api/gmail/message/:id', (req, res) => res.json(full(req.params.id)));
   registerWorkspacePreview(app); app.use(fixture.app);
@@ -55,6 +56,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
       await page.goto(base + (baseline ? '/app?preview=1&view=email' : '/dashboard/?workspace=email'));
       if (baseline) await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
       await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().waitFor();
+      if(screenshots&&baseline)await page.screenshot({path:path.join(dir,'before-list-'+width+'.png')});
       await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().click(); await page.locator(baseline ? '.ws-mail-message .ws-mail-body' : '[data-email-body]').first().waitFor();
       if (reply) await page.getByRole('button', { name: 'Reply', exact: true }).click();
       if (screenshots) await page.screenshot({ path: path.join(dir, 'before-reader-' + width + '.png') });

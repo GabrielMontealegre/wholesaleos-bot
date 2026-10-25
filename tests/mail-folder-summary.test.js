@@ -34,4 +34,4 @@ assert.equal(gmailLabel({ ...label, messagesTotal: 0, messagesUnread: 0 }, gmail
 assert.equal(gmailLabel({ ...label, messagesUnread: null }, gmail).unread_messages, null);
 assert.equal(gmailLabel(label, { ...gmail, labelId: 'INBOX/other' }), null);
 assert.equal(raw.messages, 200); assert.equal(label.resultSizeEstimate, 999); assert.equal(effects, 0);
-console.log('mail-folder-summary PREPARATION ONLY: source-bound STATUS/label message counts,real zero,unknown/stale UID/wrong scope/malformed/sequence/estimate negatives and no clock/network/writes passed;no runtime route/UI wiring');
+console.log('mail-folder-summary: source-bound STATUS/label message counts,real zero,unknown/stale UID/wrong scope/malformed/sequence/estimate negatives and no clock/network/writes passed');

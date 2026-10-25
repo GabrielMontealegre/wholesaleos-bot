@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-063B active-folder counts are optional timestamped MESSAGE snapshots,
+not grouped conversation totals or a cursor. Fetch separately after metadata
+hydration,with one bounded read/no retries and reserved interactive capacity.
+Late results update only status text,never repaint/rebind a draft/review;global
+401 locking remains unchanged. Unknown/stale/unavailable counts stay absent.
+Local expiry clears text without provider polling -- D-063,source truth and
+preserved acquisition/reply workflow --2026-10-25.
+
 ASSUMED: D-063B attachment manifests first expose only allowlisted metadata
 from an already explicit bounded MIME read. No download/content/base64/headers
 or unopened-list presence is implied. Unknown arrays/fields stay unknown;real
