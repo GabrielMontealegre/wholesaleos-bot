@@ -62,3 +62,45 @@ model,workspace-email-loading and workspace-mailbox-chrome. Fixtures must come
 through actual annotation/adapter contracts, not invented response fields.
 No B provider behavior is assumed from this note; verify official SDK/API
 contracts before implementation. No C switch is enabled or send tested here.
+
+## 2026-10-25 Post-445 Snippet Trace / Next Bounded Contract
+
+445 independently completes the read-state truth prerequisite: provider flags/
+labels are now tri-state with origin, including body responses;native grouping
+preserves unknown. It does NOT deliver folder totals or the remaining B pieces.
+
+Next snippet slice can avoid any new provider load: an already explicit open()
+in email-screen reads at most30 exact IDs through the existing body routes.
+After validation, Back retains metadata but discards state.body;this is the
+only existing point where a session-local opened-message excerpt could be kept.
+load(),category/search cancellation,folderSequence/sequence and destroy() must
+invalidate it;no storage/logging or background/bulk body reads are justified.
+Keep source provenance separate from derived display truncation and search.
+
+Important prerequisite from the actual writer: mailbox-reader's parse paths
+currently collapse absent text into literal '(No readable text)'. A new excerpt
+consumer MUST NOT infer actual source text merely because body is a string or
+because it differs from that sentinel. Add an explicit parser/provider-origin
+availability contract at the writer,then carry it through annotate,exact-ID
+body validation and a pure bounded excerpt projection. Preserve current body
+display compatibility;never promote a fallback/subject/draft into a snippet.
+
+The explicit open() response currently validates IDs,uniqueness,source_kind and
+body type,not a complete metadata/body identity fingerprint. Any retained
+excerpt needs matching source ID,folder/UIDVALIDITY,canonical metadata identity,
+request ownership and session lifetime;wrong/late/forged/conflicting response
+must withhold it. The reply draft Map must never be an excerpt source.
+
+Provider contracts verified2026-10-25: ImapFlow Fetching Messages documents
+BODY.PEEK source reads and encoded/charset-sensitive partial bodyParts. Do not
+assume a truncated raw MIME prefix is readable text or issue commands inside
+the active fetch generator. Gmail Message.snippet is provider preview text,
+not a total or attachment manifest. Official references:
+https://imapflow.com/docs/guides/fetching-messages/
+https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages
+
+This is trace/preparation ONLY,no snippet implementation/test/release claim.
+Next run should implement one bounded source-backed snippet piece with real
+adapter/annotation fixtures,placeholder/malformed/oversize/stale/wrong-ID/
+session/401 negatives and unchanged provider request-count assertions. Keep
+unopened IMAP previews unavailable instead of secretly fetching50 bodies.
