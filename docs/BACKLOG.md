@@ -2,6 +2,24 @@
 
 ## Latest Run Summary
 
+2026-10-25 D-063B read-state prerequisite445 DONE/VERIFIED: tested5c54245
+cloud40196573234/job121178621729=249/0/0,600s/file,13m47s job,sum772.72s
+NOT wall. Exact merged/currentmain74dfd395649c86b7bff416f63b0d88cd5efa2e81
+automaticRailway5caaadc7-677c-44d5-9444-1a753ba46f18 Active/successful,
+authoritativeDetails source link verified. Public12true3sizes health200/
+unsignedidentity401;exact merge-source pinned5size journey passed. Existing
+signed Chrome1038x503:metadata/body parity readfalse/unreadtrue/originimap_flags,
+sourceconnected;3085charbody,list49loadedthreads,modelcachev2,rail56x447 with
+identical scroll dimensions;emptyPreview/Senddisabled/finalunavailable status,
+all controls fit/Close restores,classic19cards/Open deal/Back pass,0consoleerrors.
+SignedGETenabledfalse/configuredtrue/automaticfalse/cap30. No totals inferred from loaded
+rows;no additional automatic requests/providerwriters/settings/businesswrites.
+Unknown/malformed states proven hermetically,not forged in production. No CSS/
+layout change or new-screen performance claim. Proof docs/screens/2026-10-25-pr445-release.
+Whole412/designapproval/B totals/snippets/attachments/cursors/search remain
+OPEN;next separately bounded sourced snippets,not C/nativeDeals. Old666ed87
+CI40196486177 concurrency-cancelled after sparse-label negative fix,not failure.
+
 2026-10-25 D-063B read-state prerequisite IN PROGRESS,not released. Branch
 item/412-mail-read-state from currentddab0a8 preserves444 release proof.
 IMAP/Gmail missing/malformed flags/labels now remain unknown with null origin;
