@@ -47,6 +47,10 @@ async function prove() {
         assert(containment.scroll[1] <= containment.client[1], 'Folder rail must stay fixed, not hide filters in an inner scrollbox');
         assert(containment.controls.every(c => c.width >= 44 && c.height >= 44 && c.inside), 'Every visible rail command fits with a44px target');
       }
+      if (process.env.WOS_MAILBOX_PROOF_DIR) {
+        fs.mkdirSync(process.env.WOS_MAILBOX_PROOF_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.WOS_MAILBOX_PROOF_DIR, 'synthetic-list-' + width + 'x' + height + '.png') });
+      }
       for (const control of await page.locator('.ws-mail-unavailable').all()) {
         assert.equal(await control.getAttribute('title'), 'Not available yet: open in Gmail');
         assert(await control.locator('button').isDisabled());
@@ -88,6 +92,7 @@ async function prove() {
       await page.getByLabel('Message', { exact: true }).fill('LOCAL SYNTHETIC DRAFT');
       const composeFit = await page.locator('.ws-mail-composer').evaluate(el => [...el.querySelectorAll('input:not([type="checkbox"]),textarea,button,[data-reply-status]')].filter(e => e.getClientRects().length).map(e => { const r = e.getBoundingClientRect(); return { label: e.getAttribute('aria-label') || e.name || 'status', fits: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight }; }));
       assert(composeFit.every(c => c.fits), 'All composer fields,close,commands and status fit the real viewport: ' + JSON.stringify(composeFit));
+      if (process.env.WOS_MAILBOX_PROOF_DIR) await page.screenshot({ path: path.join(process.env.WOS_MAILBOX_PROOF_DIR, 'synthetic-composer-' + width + 'x' + height + '.png') });
       assert(await page.getByRole('button', { name: 'Send', exact: true }).isDisabled());
       assert.equal(bodyReads, before, 'Context toggles do not refetch mail or create a preview');
       await page.keyboard.press('Escape');
