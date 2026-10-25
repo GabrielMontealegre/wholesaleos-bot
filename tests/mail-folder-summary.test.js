@@ -18,6 +18,8 @@ for (const patch of [{ path: 'Other' }, { uidValidity: 8n }, { uidValidity: 0 },
   { messages: undefined }, { messages: '200' }, { messages: -1 }, { messages: Infinity }, { messages: Number.MAX_SAFE_INTEGER + 1 },
   { unseen: 201 }, { exists: 200 }]) assert.equal(imapStatus({ ...raw, ...patch }, imap), null);
 assert.equal(imapStatus({ path: 'INBOX', uidValidity: 7n, exists: 200, unseen: 12 }, imap), null, 'SELECT first-unseen sequence never becomes an unread count');
+assert.equal(imapStatus(Object.create(raw), imap), null, 'Inherited values are not source fields');
+assert.equal(imapStatus({ ...raw }, { ...imap, folder: { toString: deny } }), null, 'No coercion executes a supplied callback');
 for (const patch of [{ observedAt: '' }, { observedAt: '2026-02-30T18:00:00Z' }, { observedAt: '10/25/2026' }, { path: '\0INBOX' }, { folder: '../inbox' }]) assert.equal(imapStatus(raw, { ...imap, ...patch }), null);
 const gmail = { folder: 'inbox', labelId: 'INBOX', observedAt };
 const label = { id: 'INBOX', messagesTotal: 200, messagesUnread: 12, threadsTotal: 150, threadsUnread: 10, resultSizeEstimate: 999 };
@@ -25,6 +27,7 @@ const result = gmailLabel(label, gmail);
 assert.equal(result.origin, 'gmail_label_counts'); assert.equal(result.total_messages, 200); assert.equal(result.unread_messages, 12); assert.equal(result.scope, 'messages'); assert.equal(result.uid_validity, null);
 for (const patch of [{ id: 'SENT' }, { messagesTotal: undefined }, { messagesTotal: '200' }, { messagesTotal: -1 }, { messagesUnread: 201 }]) assert.equal(gmailLabel({ ...label, ...patch }, gmail), null);
 assert.equal(gmailLabel({ id: 'INBOX', resultSizeEstimate: 200, threadsTotal: 200 }, gmail), null, 'Estimates and thread totals cannot substitute for message totals');
+assert.equal(gmailLabel(Object.create(label), gmail), null);
 assert.equal(gmailLabel({ ...label, messagesTotal: 0, messagesUnread: 0 }, gmail).total_messages, 0);
 assert.equal(gmailLabel({ ...label, messagesUnread: null }, gmail).unread_messages, null);
 assert.equal(gmailLabel(label, { ...gmail, labelId: 'INBOX/other' }), null);

@@ -11,7 +11,7 @@ function uid(value) {
 }
 function count(value) { return Number.isSafeInteger(value) && value >= 0 ? value : null; }
 function optionsValid(options) {
-  return options && /^[a-z_]{1,32}$/.test(options.folder || '') && instant(options.observedAt) !== null;
+  return options && typeof options.folder === 'string' && /^[a-z_]{1,32}$/.test(options.folder) && instant(options.observedAt) !== null;
 }
 function snapshot(options, origin, scopeId, validity, total, unread) {
   if (!optionsValid(options) || count(total) === null) return null;
@@ -23,15 +23,16 @@ function snapshot(options, origin, scopeId, validity, total, unread) {
 }
 function imapStatus(raw, options) {
   if (!optionsValid(options) || !raw || typeof raw !== 'object' || Object.hasOwn(raw, 'exists') ||
+      !['path', 'uidValidity', 'messages'].every(key => Object.hasOwn(raw, key)) ||
       typeof options.path !== 'string' || !options.path || options.path.length > 200 || /[\x00-\x1f\x7f]/.test(options.path) ||
       raw.path !== options.path || !uid(options.uidValidity) || uid(raw.uidValidity) !== uid(options.uidValidity)) return null;
   // SELECT's mailbox.unseen is a sequence number. Only a STATUS response with
   // an explicit messages count may supply this snapshot.
-  return snapshot(options, 'imap_status', options.path, uid(raw.uidValidity), raw.messages, raw.unseen);
+  return snapshot(options, 'imap_status', options.path, uid(raw.uidValidity), raw.messages, Object.hasOwn(raw, 'unseen') ? raw.unseen : null);
 }
 function gmailLabel(raw, options) {
-  if (!optionsValid(options) || !raw || typeof raw !== 'object' || typeof options.labelId !== 'string' ||
+  if (!optionsValid(options) || !raw || typeof raw !== 'object' || !['id', 'messagesTotal'].every(key => Object.hasOwn(raw, key)) || typeof options.labelId !== 'string' ||
       !/^[a-zA-Z0-9_-]{1,200}$/.test(options.labelId) || raw.id !== options.labelId) return null;
-  return snapshot(options, 'gmail_label_counts', options.labelId, null, raw.messagesTotal, raw.messagesUnread);
+  return snapshot(options, 'gmail_label_counts', options.labelId, null, raw.messagesTotal, Object.hasOwn(raw, 'messagesUnread') ? raw.messagesUnread : null);
 }
 module.exports = { imapStatus, gmailLabel };
