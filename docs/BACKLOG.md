@@ -2,6 +2,25 @@
 
 ## Latest Run Summary
 
+2026-10-25 repair444 DONE/VERIFIED: testedc2a9b49 cloud40192129550/
+job121165162664=248/0/0,600s/file,13m47s job;769.22s per-file sum NOT wall.
+Merged/currentmainddab0a8acf7097f5b9992e8ef4db4a6a2509be18 automatically deployed
+1d8e39bd-22a3-4f73-a4d0-999d820c81f6 Active/successful; authoritative Details
+links exact source. Public12 true1366x768/400x915/412x915 root/classic/Email/
+Today checks pass,health200,unsignedidentity401. Exact merge-source pinned
+five-size mailbox test passes,including1038x503/1366x600. Actual signedChrome
+1038x503/image1038x503:49loadedrows,rail56x447/scroll56x447,all foldercommands
+>=44px,Mail labels opens full role drawer,full3085char reader,bottom Reply.
+Empty composer fields/buttons/status fit;Preview/Send disabled;Close restores
+source. Local unmatched search0/clear49;classic19 Open deal actions remain.
+Signed GET enabledfalse/configuredtrue/automaticfalse/cap30;0consoleerrors.
+No real preview/send,draft typing,auth transfer,settings or business writes.
+Screenshots opaque-mask source and composer inputs before disk.442 corrected;
+441 remains historically failed and443 verified rollback is retained.412 OPEN,
+owner design approval outstanding before native Deals. NEXT D-063B separately
+traced read-only sourced metadata;C/default-OFF writer boundaries unchanged.
+Proof docs/screens/2026-10-25-pr444-release. No manual build/retry consumed.
+
 2026-10-25 repair442 IN PROGRESS on item/442-mail-rail-containment from
 verifiedrollbackd78f77f. New red1038x503 regression reproduced oldrail failure;
 fixed systemfolders + reachable Maillabels drawer eliminate inner scroll;
