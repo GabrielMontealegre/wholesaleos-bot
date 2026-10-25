@@ -3,6 +3,7 @@ const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 const { google } = require('googleapis');
 const { manifest } = require('./attachment-manifest');
+const { imapStatus, gmailLabel } = require('./folder-summary');
 const FOLDERS = { inbox:'INBOX',sent:'\\Sent',drafts:'\\Drafts',starred:'\\Flagged',buyers:'WOS/Buyers',jv_deals:'WOS/JV Deals',lead_alerts:'WOS/Lead Alerts',title:'WOS/Title',templates:'WOS/Templates',bounced:'WOS/Bounced',billing:'WOS/Billing' };
 const MAX_BYTES = 2 * 1024 * 1024;
 function textOrigin(value, max, origin) {
@@ -26,15 +27,38 @@ function participantFields({ from = [], to = [], cc = [] } = {}) {
   return { from_addresses: values(from), to_addresses: values(to), cc_addresses: values(cc) };
 }
 function fail(code,status=503) { const e=new Error(code);e.code=code;e.status=status;throw e; }
-function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser,googleImpl=google}={}) {
-  let active=0;
+function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser,googleImpl=google,now=()=>new Date().toISOString()}={}) {
+  let active=0, summaryActive=false;
+  const imapOptions=()=>({host:'imap.gmail.com',port:993,secure:true,auth:{user:env.GMAIL_USER,pass:env.GMAIL_APP_PASSWORD.replace(/\s/g,'')},logger:false,emitLogs:false,connectionTimeout:15000,greetingTimeout:10000,socketTimeout:20000,tls:{rejectUnauthorized:true}});
   function provider() { if(env.GMAIL_USER&&env.GMAIL_APP_PASSWORD)return 'app_password';if(env.GMAIL_USER&&env.GMAIL_CLIENT_ID&&env.GMAIL_CLIENT_SECRET&&env.GMAIL_REFRESH_TOKEN)return 'google_login';fail('email_not_configured'); }
   async function imap(fn) {
     if(active>=3)fail('email_busy',429);active++;
     let client;
-    try {client=new Client({host:'imap.gmail.com',port:993,secure:true,auth:{user:env.GMAIL_USER,pass:env.GMAIL_APP_PASSWORD.replace(/\s/g,'')},logger:false,emitLogs:false,connectionTimeout:15000,greetingTimeout:10000,socketTimeout:20000,tls:{rejectUnauthorized:true}});client.on('error',()=>{});await client.connect();return await fn(client);} finally {try{if(client)await client.logout();}catch{try{client.close();}catch{}}active--;}
+    try {client=new Client(imapOptions());client.on('error',()=>{});await client.connect();return await fn(client);} finally {try{if(client)await client.logout();}catch{try{client.close();}catch{}}active--;}
   }
-  function oauth() {const auth=new googleImpl.auth.OAuth2(env.GMAIL_CLIENT_ID,env.GMAIL_CLIENT_SECRET);auth.setCredentials({refresh_token:env.GMAIL_REFRESH_TOKEN});return googleImpl.gmail({version:'v1',auth});}
+  function oauth(policy) {
+    const auth=new googleImpl.auth.OAuth2(env.GMAIL_CLIENT_ID,env.GMAIL_CLIENT_SECRET);
+    if(policy) {
+      if(typeof auth.transporter?.request!=='function')fail('email_folder_summary_unavailable');
+      const request=auth.transporter.request.bind(auth.transporter);
+      // The API request options do not reach OAuth token refreshes. Bound the
+      // private auth client's transport too,including any late API dispatch.
+      auth.transporter.request=async input=>{
+        policy.check();
+        try {const result=await request({...input,...policy.options});policy.check();return result;}
+        catch(error) {
+          policy.check();
+          const status=Number(error.response?.status||error.status||error.code);
+          // Do not let the OAuth client's auth-error recovery retry a refresh,
+          // or confuse provider permissions with our signed admin session.
+          if(status===401||status===403)fail('email_folder_summary_provider_auth');
+          if(status===429)fail('email_folder_summary_unavailable',429);
+          throw error;
+        }
+      };
+    }
+    auth.setCredentials({refresh_token:env.GMAIL_REFRESH_TOKEN});return googleImpl.gmail({version:'v1',auth});
+  }
   async function boxPath(client,folder) {
     if(!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);
     if(folder==='inbox')return 'INBOX';
@@ -46,9 +70,63 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
   function addresses(values){return (values||[]).map(a=>[a.name,a.address&&'<'+a.address+'>'].filter(Boolean).join(' ')).join(', ');}
   function metadata(m,box,validity){const from=m.envelope?.from||[];const own=from.some(a=>typeof a.address==='string'&&a.address.toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {id:id(box,m.uid,validity),threadId:'',message_id:m.envelope?.messageId||'',in_reply_to:m.envelope?.inReplyTo||'',direction:own?'out':from.some(a=>a.address)?'in':'unknown',from:addresses(from),sender_name:senderName(from),to:addresses(m.envelope?.to),cc:addresses(m.envelope?.cc),...participantFields(m.envelope),subject:m.envelope?.subject||'(No subject)',date:m.envelope?.date?.toISOString()||'',...readState(m.flags,'imap_flags'),snippet:'',source_kind:'connected_mailbox'};}
   async function test() {const mode=provider();if(mode==='app_password')return imap(async c=>{await c.list();return {ok:true,mode,status:'Connected (App Password)'};});await oauth().users.getProfile({userId:'me'});return {ok:true,mode,status:'Connected (Google login)'};}
+  async function folderSummary(folder='inbox') {
+    if(typeof folder!=='string'||!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);
+    // Counts are optional background reads. Keep one IMAP slot for explicit
+    // message reads and never queue/retry a second summary.
+    if(summaryActive||active>=2)fail('email_busy',429);
+    const mode=provider(), controller=new AbortController();
+    summaryActive=true;
+    if(mode==='app_password')active++;
+    let client,timer,expired=false;
+    const check=()=>{if(expired)fail('email_folder_summary_timeout',504);};
+    const close=()=>{try{client?.close();}catch{}};
+    const options={timeout:12000,retry:false,signal:controller.signal};
+    try {
+      const task=(async()=>{
+        if(mode==='app_password') {
+          client=new Client({...imapOptions(),disableAutoIdle:true});client.on('error',()=>{});
+          await client.connect();check();
+          const box=await boxPath(client,folder);check();
+          const lock=await client.getMailboxLock(box,{readOnly:true});
+          try {
+            check();const validity=client.mailbox?.uidValidity;
+            const raw=await client.status(box,{messages:true,unseen:true,uidValidity:true});check();
+            return imapStatus(raw,{folder,path:box,uidValidity:validity,observedAt:now()});
+          } finally {lock.release();}
+        }
+        const gmail=oauth({check,options}), labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};
+        let labelId=labels[folder];
+        if(!labelId) {
+          const result=await gmail.users.labels.list({userId:'me'},options);check();
+          labelId=(result.data?.labels||[]).find(label=>label.name===FOLDERS[folder])?.id;
+          if(!labelId)fail('email_folder_unavailable',404);
+        }
+        if(typeof labelId!=='string'||!/^[a-zA-Z0-9_-]{1,200}$/.test(labelId))fail('email_folder_summary_unavailable');
+        const result=await gmail.users.labels.get({userId:'me',id:labelId},options);check();
+        return gmailLabel(result.data,{folder,labelId,observedAt:now()});
+      })();
+      const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{
+        expired=true;controller.abort();close();
+        const error=new Error('email_folder_summary_timeout');error.code=error.message;error.status=504;reject(error);
+      },12000);});
+      const summary=await Promise.race([task,deadline]);
+      if(!summary)fail('email_folder_summary_unavailable');
+      return {ok:true,mode,summary};
+    } catch(error) {
+      if(expired)fail('email_folder_summary_timeout',504);
+      const status=Number(error.response?.status||error.status||error.code);
+      if(status===401||status===403)fail('email_folder_summary_provider_auth');
+      if(/^email_[a-z_]+$/.test(error.code||''))throw error;
+      fail('email_folder_summary_unavailable',status===429?status:503);
+    } finally {
+      clearTimeout(timer);expired=true;controller.abort();close();
+      summaryActive=false;if(mode==='app_password')active--;
+    }
+  }
   async function list(folder='inbox',limit=30) {
     if(!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);limit=Math.min(50,Math.max(1,Number.isInteger(Number(limit))?Number(limit):30));const mode=provider();
-    if(mode==='app_password')return imap(async c=>{const box=await boxPath(c,folder);const lock=await c.getMailboxLock(box,{readOnly:true});try{const messages=[];const total=c.mailbox.exists;if(total)for await(const m of c.fetch(Math.max(1,total-limit+1)+':'+total,{uid:true,envelope:true,flags:true,size:true}))messages.push(metadata(m,box,c.mailbox.uidValidity));return {ok:true,mode,status:'Connected (App Password)',messages:messages.reverse()};}finally{lock.release();}});
+    if(mode==='app_password')return imap(async c=>{const box=await boxPath(c,folder);const lock=await c.getMailboxLock(box,{readOnly:true});try{const messages=[];const total=c.mailbox.exists;if(total)for await(const m of c.fetch(Math.max(1,total-limit+1)+':'+total,{uid:true,envelope:true,flags:true,size:true}))messages.push(metadata(m,box,c.mailbox.uidValidity));return {ok:true,mode,status:'Connected (App Password)',messages:messages.reverse(),folder_scope:{folder,origin:'imap_status',scope_id:box,uid_validity:String(c.mailbox.uidValidity)}};}finally{lock.release();}});
     const gmail=oauth();const labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};let label=labels[folder];
     if(!label){const data=await gmail.users.labels.list({userId:'me'});label=(data.data.labels||[]).find(l=>l.name===FOLDERS[folder])?.id;if(!label)fail('email_folder_unavailable',404);}
     const rows=await gmail.users.messages.list({userId:'me',maxResults:limit,labelIds:[label]});const messages=[];
@@ -63,7 +141,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
         } catch (_) { message.sender_name=''; }
       }else message.sender_name='';
     }
-    return {ok:true,mode,status:'Connected (Google login)',messages};
+    return {ok:true,mode,status:'Connected (Google login)',messages,folder_scope:{folder,origin:'gmail_label_counts',scope_id:label,uid_validity:null}};
   }
   async function message(value) {
     const mode=provider();
@@ -93,13 +171,21 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
     });
     for(const value of values)keep(await message(value));return output;
   }
-  return {test,list,message,messages};
+  return {test,list,message,messages,folderSummary};
 }
 function registerMailboxReads(app,{requireAdmin,reader=createMailboxReader(),db,now=()=>new Date().toISOString()}) {
   const safeError=(res,e)=>{if(typeof res.set==='function')res.set('Cache-Control','no-store');return res.status(e.status||503).json({ok:false,code:/^email_[a-z_]+$/.test(e.code||'')?e.code:'email_connection_failed',error:'Email unavailable. Check the connection in Settings.',messages:[]});};
   const view=messages=>require('./thread-view').annotate(messages,db?db.readDBStrict():{},{now:now()});
   app.get('/api/gmail/test',requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(await reader.test());}catch(e){safeError(res,e);}});
-  for(const route of ['/api/gmail/inbox','/api/gmail/messages'])app.get(route,requireAdmin,async(req,res)=>{try{const result=await reader.list(route.endsWith('inbox')?'inbox':req.query.folder,req.query.limit);res.set('Cache-Control','no-store').json({...result,messages:view(result.messages)});}catch(e){safeError(res,e);}});
+  for(const route of ['/api/gmail/inbox','/api/gmail/messages'])app.get(route,requireAdmin,async(req,res)=>{try{const result=await reader.list(route.endsWith('inbox')?'inbox':req.query.folder,req.query.limit);res.set('Cache-Control','no-store').json({...result,folder_summary_available:typeof reader.folderSummary==='function',messages:view(result.messages)});}catch(e){safeError(res,e);}});
+  app.get('/api/gmail/folder-summary',requireAdmin,async(req,res)=>{
+    res.set('Cache-Control','no-store');
+    try {
+      if(Object.keys(req.query).some(key=>key!=='folder')||typeof req.query.folder!=='string'||!Object.hasOwn(FOLDERS,req.query.folder))fail('email_folder_invalid',400);
+      if(typeof reader.folderSummary!=='function')fail('email_folder_summary_unavailable');
+      res.json(await reader.folderSummary(req.query.folder));
+    } catch(error) {safeError(res,error);}
+  });
   app.get('/api/gmail/message/:id',requireAdmin,async(req,res)=>{try{res.set('Cache-Control','no-store').json(view([await reader.message(req.params.id)])[0]);}catch(e){safeError(res,e);}});
   app.get('/api/gmail/thread',requireAdmin,async(req,res)=>{
     res.set('Cache-Control','no-store');

@@ -62,7 +62,12 @@ Real-MIME positive screenshots are SYNTHETIC,not private files or live phones.
 Separate prior-main app baseline/current shared reader1366/400/412:
 FCP48.8/41.3/26.1ms,reader645/740/740px,Lighthouse13.5.0 app accessibility98/98,
 zero external/writes/errors. Not authenticated live timing or a claim that
-Lighthouse inspected a real private attachment. Full final-head/live gates pending.
+Lighthouse inspected a real private attachment. Final534c7b2 full40218600583
+passes253/0/0,600s/file;exact merge3d41e6d/automatic68257cb1 Active/source
+verified. Public12true3sizes health200/unsigned401 and same-merge3size
+attachment/5size chrome pass. Actualsigned1038x559 source confirms manifest
+origin/knownempty0/strict allowlist;UI withholds empty claim,full4795charbody,
+disabledemptyReply and0consoleerrors. Safe proof ../screens/2026-10-25-pr447-release.
 
 Official MailParser contract checked2026-10-25:
 https://nodemailer.com/extras/mailparser -- simpleParser buffers attachments;

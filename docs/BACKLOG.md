@@ -2,6 +2,45 @@
 
 ## Latest Run Summary
 
+2026-10-25 folder snapshots candidate IN PROGRESS on existing local
+item/412-folder-count-contract from3d41e6d. Source-bound metadata scope,
+separate guarded/no-store count GET,12s cancellation/reserved concurrency and
+status-only native update implemented. New pure/provider/route/3size late-draft/
+obsolete-folder/late401 negatives pass;existing focused mailbox regressions
+pass. Full final-head gate,self-review,exactdeploy/live proof still required;
+do not call folder totals/cursors or whole412 done. No production writes.
+
+2026-10-25 run checkpoint:446 snippets and447 reader manifests individually
+released/verified;current live/main3d41e6d and safe proof commits preserved.
+Next folder-count preparation remains LOCAL ONLY/unwired;pure negative tests
+pass,no provider request/PR/CI/deployment for counts. Usage59% at final release
+checkpoint;retain room for required verification/rollback before starting the
+larger provider/API/composer-sensitive count integration. No jobs running.
+
+2026-10-25 next folder-count contract PREPARATION ONLY on local
+item/412-folder-count-contract from verified3d41e6d with447 proof preserved.
+Pure source-bound STATUS/label projection and hermetic sequence/UID/scope/
+estimate/count/clock negatives pass. No runtime reader/route/UI request,PR or
+deployment;do not call folder totals delivered. Trace specifies one bounded
+active-folder snapshot without blocking hydration/repainting drafts;no fanout,
+no message/thread denominator mixing. Full wiring/gates remain next work.
+
+2026-10-25 attachment-reader447 DONE/VERIFIED: tested534c7b2 full40218600583/
+job121245038216=253/0/0,600s/file,12m6s job,sum671.80s NOTwall. Exact
+merged/currentmain3d41e6d4160d625c9d99d35868ea7dc44f620658 automaticRailway
+68257cb1-7929-4930-8291-814a1131436d Active/successful,Details exactsource.
+Public12true1366/400/412 GETshealth200,unsignedidentity401;exactmerge-source
+attachment3size/chrome5size pass. Signed1038x559 metadata/bodyGET verifies
+parsed_mime_metadata origin,0parts confirmed,strict primitive-key shape;UI
+correctly hides knownempty manifests,4795charbody/no defaultcomposer,49rows,
+layoutmodelv3/Emailv12. EmptyPreview/Senddisabled/finalunavailable/Gmailstatus,
+allcontrolsfit,0consoleerrors. Real-MIME positive file display is SYNTHETIC,
+not a live private-file claim. Classic19Open deal/Back passed;signedGET stays
+disabled/configured/cap30/automaticfalse. No actualfiles opened/downloaded,no new provider
+requests/content/base64/headers/storage/writers/sends/settings/businesswrites.
+Proof/all253timings docs/screens/2026-10-25-pr447-release. Other B totals/
+cursors/labels/search and unopened-list metadata remain separate;412 OPEN.
+
 2026-10-25 explicit-reader attachment slice IN PROGRESS on
 item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
 Only metadata from existing MIME read;no new provider calls/download API/file

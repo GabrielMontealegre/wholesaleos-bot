@@ -8,6 +8,7 @@
     var host = options.host, state = { folder: 'inbox', category: 'primary', messages: [], threads: [], unavailable: [], selected: '', body: [], busy: false, error: '', composing: false, query: '', role: '', contextOpen: false };
     var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map(), outcomes = new Map(), replyBinding = null;
     var selectedRows = new Set(), openedSnippets = new Map();
+    var folderCount=null, countExpiry=null;
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function time(value) { return root.wosCardClock.formatTime(value, now()); }
     function projection() { return layout.project(state.messages, { now: now(), category: state.category, query: state.query, role: state.role, openedSnippets: openedSnippets }); }
@@ -52,6 +53,12 @@
       var form = host.querySelector('.ws-composer');
       if (form && state.selected) drafts.set(state.selected, { to: form.elements.to.value, cc: form.elements.cc.value, subject: form.elements.subject.value, body: form.elements.body.value });
     }
+    function countStatus() {
+      var target=host.querySelector('[data-mail-folder-count]');
+      if(!target)return;
+      target.textContent=folderCount?' / Folder snapshot: '+folderCount.total_messages.toLocaleString('en-US')+' messages'+(folderCount.unread_messages===null?'':', '+folderCount.unread_messages.toLocaleString('en-US')+' unread'):'';
+      target.title=folderCount?'Provider snapshot captured '+time(folderCount.captured_at):'';
+    }
     function bodyMarkup() {
       if (!chosen()) return c.empty('Select a conversation', 'Choose a message to read it.');
       if (!state.body.length) return state.busy ? c.skeleton('Loading conversation') : c.empty('Message unavailable', 'Refresh the folder or open it in Gmail.');
@@ -83,7 +90,7 @@
         c.button({ label: 'Refresh mailbox', icon: 'refresh-cw', iconOnly: true, id: 'mail-refresh' }) + '<span class="ws-mail-selection" aria-live="polite"></span><span class="ws-mail-range"' + (state.busy || state.error ? ' hidden' : '') + ' title="Only loaded threads; the full folder total is unavailable">' + view.range.start + '-' + view.range.end + ' of ' + view.range.total + ' loaded</span>' +
         unavailable('Newer mail unavailable', 'chevron-left') + unavailable('Older mail unavailable', 'chevron-right') + '</div>' + c.tabs('mail', categories, state.category) + '</header>' +
         '<p class="ws-mail-status" role="status" data-mail-status-important="' + Boolean(state.error || state.busy || state.unavailable.length) + '">' + c.escape(state.error || (state.busy ? 'Loading email...' : 'Latest ' + state.threads.reduce(function (sum, row) { return sum + row.messages.length; }, 0) + ' messages in this folder')) +
-        (state.unavailable.length ? ' / ' + state.unavailable.length + ' references need a refresh' : '') + '</p>' +
+        (state.unavailable.length ? ' / ' + state.unavailable.length + ' references need a refresh' : '') + '<span data-mail-folder-count></span></p>' +
         '<div class="ws-mail-panes"><section class="ws-mail-list" id="mail-panel-' + state.category + '" role="tabpanel" aria-labelledby="mail-' + state.category + '" aria-label="Email conversations">' +
         items.map(rowMarkup).join('') +
         (!items.length && !state.busy ? c.empty(state.error ? 'Email unavailable' : 'No conversations in this view', state.error ? 'Use Refresh or open Gmail.' : 'Check the other view or folder.') : '') +
@@ -96,6 +103,7 @@
           '<p class="ws-muted" role="status" data-reply-status>Not sent. Reply sending is unavailable; use Gmail.</p></section>' : '') + '</section>' +
         contextMarkup(thread) + categories.filter(function (item) { return item.key !== state.category; }).map(function (item) { return '<section id="mail-panel-' + item.key + '" role="tabpanel" aria-labelledby="mail-' + item.key + '" hidden></section>'; }).join('') + '</div></div>' + c.drawer('mail-folder-dialog', 'Mail folders') + '</section>';
       // The tab controller switches the list projection, not a second nested pane.
+      countStatus();
       host.querySelectorAll('[data-tab]').forEach(function (button) {
         function select(key) { remember(); sequence++; openedSnippets.clear(); state.category = key; state.role = ''; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
         button.addEventListener('click', function () { select(button.dataset.tab); });
@@ -160,7 +168,8 @@
     async function load() {
       // Changing People/Alerts cancels body selection, not this folder's metadata.
       var ticket = ++folderSequence;
-      sequence++; metadataBusy = true;
+      sequence++; metadataBusy = true;folderCount=null;clearTimeout(countExpiry);
+      var countScope=null, startedAt=now(), folder=state.folder;
       openedSnippets.clear();
       selectedRows.clear(); state.messages = []; state.threads = []; state.unavailable = []; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = true; state.error = ''; paint();
       try {
@@ -169,8 +178,21 @@
         if (value.ok !== true) throw Error('unavailable');
         var projected = model.list(value.messages, { now: now() });
         state.messages = value.messages; state.threads = projected.threads; state.unavailable = projected.unavailable;
+        if(value.folder_summary_available===true&&value.folder_scope)countScope=value.folder_scope;
       } catch (_) { if (ticket === folderSequence && !disposed) state.error = 'Email could not be loaded.'; }
       finally { if (ticket === folderSequence && !disposed) { metadataBusy = false; state.busy = false; paint(); } }
+      // Paint the list first. A late summary may change only this status span,
+      // never replace or rebind a reader, draft, review or uncertain outcome.
+      if(countScope&&ticket===folderSequence&&!disposed)readCount(ticket,folder,countScope,startedAt);
+    }
+    async function readCount(ticket,folder,scope,startedAt) {
+      try {
+        var value=await request('/api/gmail/folder-summary?folder='+encodeURIComponent(folder),ticket,true);
+        if(!value||value.ok!==true||disposed||ticket!==folderSequence||folder!==state.folder)return;
+        folderCount=layout.folderSummary(value.summary,scope,{folder:folder,now:now(),startedAt:startedAt});
+        countStatus();
+        if(folderCount)countExpiry=setTimeout(function(){if(!disposed&&ticket===folderSequence){folderCount=null;countStatus();}},Math.max(1,60000-(Date.parse(now())-Date.parse(folderCount.captured_at))));
+      } catch (_) { /* Optional source counts never hide already-loaded messages. */ }
     }
     async function open(key) {
       remember();
@@ -204,7 +226,7 @@
       else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
-    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
+    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false;folderCount=null;clearTimeout(countExpiry); if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
     document.addEventListener('keydown', keydown);
     root.addEventListener('beforeunload', beforeUnload);
     return { mount: load, refresh: function () { remember(); return load(); }, search: function (query) {
