@@ -25,6 +25,9 @@ binds the returned exact label ID. Real0 stays0;missing unread stays null. The
 DTO carries connected source/origin/scope ID/captured time/message scope. It
 does NOT establish a folder allowlist itself:the future reader must use its
 existing FOLDERS registry and admin boundary. It has no clock/network/writes.
+Inherited fields,arrays disguised as source objects and callback coercion are
+also refused. Only explicit own provider fields are evidence. The targeted
+pure test passes;no full integrated gate or runtime consumer is claimed.
 
 ## Next Wiring / Acceptance
 

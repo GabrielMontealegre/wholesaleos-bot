@@ -2,6 +2,13 @@
 
 ## Latest Run Summary
 
+2026-10-25 run checkpoint:446 snippets and447 reader manifests individually
+released/verified;current live/main3d41e6d and safe proof commits preserved.
+Next folder-count preparation remains LOCAL ONLY/unwired;pure negative tests
+pass,no provider request/PR/CI/deployment for counts. Usage59% at final release
+checkpoint;retain room for required verification/rollback before starting the
+larger provider/API/composer-sensitive count integration. No jobs running.
+
 2026-10-25 next folder-count contract PREPARATION ONLY on local
 item/412-folder-count-contract from verified3d41e6d with447 proof preserved.
 Pure source-bound STATUS/label projection and hermetic sequence/UID/scope/
