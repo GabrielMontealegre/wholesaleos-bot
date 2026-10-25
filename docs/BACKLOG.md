@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-25 run checkpoint:445 release complete;clean retained branch includes
+safe proof/all249 timings. Usage75% at completion;retain release-verification
+reserve instead of starting another merge/deployment. Next snippet writer/
+reader trace expanded in docs/cycles/issue-412-mail-data-trace.md: existing
+explicit body reads only,parser availability provenance before excerpt cache,
+no50-body metadata fetch. No snippet implementation or additional CI claimed.
+No local jobs remain;do not rerun unchanged445 gates. Parent412 remains OPEN.
+
 2026-10-25 D-063B read-state prerequisite445 DONE/VERIFIED: tested5c54245
 cloud40196573234/job121178621729=249/0/0,600s/file,13m47s job,sum772.72s
 NOT wall. Exact merged/currentmain74dfd395649c86b7bff416f63b0d88cd5efa2e81
