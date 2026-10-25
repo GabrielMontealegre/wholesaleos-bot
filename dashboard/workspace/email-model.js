@@ -49,6 +49,18 @@
     return 'Sender name not recorded';
   }
 
+  function unreadState(message) {
+    var read = message.read, unread = message.unread;
+    if (typeof read === 'boolean' && typeof unread === 'boolean' && read === unread) return null;
+    if (typeof unread === 'boolean') return unread;
+    return typeof read === 'boolean' ? !read : null;
+  }
+
+  function groupedUnread(messages) {
+    var states = messages.map(unreadState);
+    return states.includes(true) ? true : states.every(function (value) { return value === false; }) ? false : null;
+  }
+
   function list(messages, options) {
     var now = instant(options && options.now);
     if (now === null) throw new TypeError('email_view_clock_invalid');
@@ -76,7 +88,8 @@
       }
       duplicateCount += entries.length - 1;
       var entry = Object.assign({}, entries[0]);
-      entry.message = Object.assign({}, entry.message, { unread: entries.some(function (item) { return item.message.unread === true || item.message.read === false; }) });
+      var unread = groupedUnread(entries.map(function (item) { return item.message; }));
+      entry.message = Object.assign({}, entry.message, { unread: unread, read: unread === null ? null : !unread });
       var key = /^[a-f0-9]{64}$/.test(entry.message.thread_key || '') ? entry.message.thread_key : 'isolated:' + entry.index;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(entry);
@@ -87,7 +100,7 @@
       var latest = entries[entries.length - 1].message;
       threads.push({ key: key, messages: entries.map(function (entry) { return entry.message; }), latest: latest,
         category: entries.every(function (entry) { return category(entry.message).kind === 'alerts'; }) ? 'alerts' : 'people',
-        sender: sender(latest), role: role(latest, options), unread: entries.some(function (entry) { return entry.message.unread === true || entry.message.read === false; }) });
+        sender: sender(latest), role: role(latest, options), unread: groupedUnread(entries.map(function (entry) { return entry.message; })) });
     });
     threads.sort(function (a, b) { return instant(b.latest.date) - instant(a.latest.date) || a.key.localeCompare(b.key); });
     return { threads: threads, unavailable: unavailable, duplicate_count: duplicateCount,
