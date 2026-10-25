@@ -9,7 +9,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
   let baseline = false;
   if (reply || readingLayout) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-screen.js', 'design-system.css'].map(file => [file, execFileSync('git', ['show', '3d19945330db68ea980fc69acbffd5bde065b203:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', '32c0c2acb31770c9dfb72d454ff306eb8ba69a4d:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
       if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : file.endsWith('.css') ? 'css' : 'js').send(files.get(file));
@@ -58,7 +58,8 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
       if (reply) await page.getByRole('button', { name: 'Reply', exact: true }).click();
       if (screenshots) await page.screenshot({ path: path.join(dir, 'before-reader-' + width + '.png') });
       baseline = false;
-      await page.goto(base + '/app?preview=1&view=email'); await page.locator('.ws-mail-row').first().waitFor();
+      await page.goto(base + '/app?preview=1&view=email'); await page.locator('#today-content[aria-busy="false"]').waitFor();
+      await page.getByRole('tab', { name: 'Buyers', exact: true }).click(); await page.locator('.ws-mail-row').first().waitFor();
       if (readingLayout) assert.equal(await page.locator('.ws-composer').count(), 0);
       const paint = await page.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime || null);
       assert(paint !== null && paint < 2000);

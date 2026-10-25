@@ -8,4 +8,6 @@ assets: no CDN, client dependency, network request to a listing site or build
 step. components.js maintains an explicit icon allowlist. The asset safety
 test rejects scripts, event handlers, foreign objects and external references.
 
-Only the 19 included icons may be referenced. No building-2 asset is shipped.
+Only the included icons may be referenced through the explicit allowlist.
+Gmail chrome adds unmodified inbox,star,folder,chevron-left,chevron-right from
+the same pinned1.60.0 upstream tag. No building-2 asset is shipped.

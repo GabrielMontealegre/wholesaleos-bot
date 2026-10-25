@@ -73,11 +73,12 @@
 
   function shell() {
     clearPrivate();
-    host.innerHTML = '<div class="ws-shell"><aside class="ws-sidebar"><a class="ws-brand" href="/app?preview=1">WholesaleOS</a>' + navigation() +
-      '<div class="ws-sidebar-footer"><a class="ws-button" href="' + nav.home + '" data-help="The app always opens here">Home - classic dashboard</a></div></aside>' +
+    host.innerHTML = '<div class="ws-shell' + (screen === 'email' ? ' ws-shell--mail' : '') + '"><aside class="ws-sidebar"><a class="ws-brand" href="/app?preview=1" aria-label="WholesaleOS">' + (screen === 'email' ? 'W' : 'WholesaleOS') + '</a>' + navigation() +
+      '<div class="ws-sidebar-footer"><a class="ws-button" href="' + nav.home + '" data-help="The app always opens here">' + (screen === 'email' ? c.icon('house') + '<span class="ws-sr-only">Home - classic dashboard</span>' : 'Home - classic dashboard') + '</a></div></aside>' +
       '<div class="ws-workspace' + (screen === 'email' ? ' ws-workspace--mail' : '') + '"><header class="ws-topbar">' +
       c.button({ label: 'Open navigation', icon: 'menu', iconOnly: true, id: 'menu-open' }).replace('ws-button--icon', 'ws-button--icon ws-mobile-menu') +
-      '<h1>' + (screen === 'email' ? 'Email' : 'Today') + '</h1><div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
+      '<h1' + (screen === 'email' ? ' class="ws-sr-only"' : '') + '>' + (screen === 'email' ? 'Email' : 'Today') + '</h1>' +
+      (screen === 'email' ? '<form class="ws-mail-search" role="search"><label class="ws-sr-only" for="mail-search">Search loaded mail</label>' + c.icon('search') + '<input id="mail-search" type="search" maxlength="300" placeholder="Search loaded mail" autocomplete="off" title="Searches the messages currently loaded; global mail, lead and buyer search is not connected"></form>' : '') + '<div class="ws-topbar-actions">' + c.button({ label: screen === 'email' ? 'Refresh email' : 'Refresh recorded work', icon: 'refresh-cw', iconOnly: true, id: 'refresh', help: 'Reload recorded work without running a batch' }) +
       '<a class="ws-button ws-button--icon" href="' + nav.navHref('settings') + '" aria-label="Settings - classic view" data-help="Open your current settings in the classic view">' + c.icon('settings') + '</a>' +
       c.button({ label: 'Account', icon: 'users', iconOnly: true, id: 'account-open' }) +
       '</div></header><div class="ws-help" id="help"' + (screen === 'email' ? ' hidden' : '') + '></div><main class="ws-content" id="today-content" aria-busy="true">' +
@@ -97,6 +98,11 @@
       locked();
     });
     document.getElementById('refresh').addEventListener('click', load);
+    var mailSearch = document.getElementById('mail-search');
+    if (mailSearch) {
+      mailSearch.form.addEventListener('submit', function (event) { event.preventDefault(); });
+      mailSearch.addEventListener('input', function () { if (emailScreen) mailSearch.setCustomValidity(emailScreen.search(mailSearch.value) ? '' : 'Use a single-line search up to 300 characters.'); });
+    }
   }
 
   function helpIn(event) {

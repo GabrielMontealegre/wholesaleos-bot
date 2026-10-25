@@ -36,21 +36,26 @@ async function prove() {
         return route.fulfill({ contentType: relative.endsWith('.css') ? 'text/css' : relative.endsWith('.svg') ? 'image/svg+xml' : 'text/javascript', body: fs.readFileSync(path.join(__dirname, '../dashboard', relative)) });
       });
       await page.goto('https://fixture.test/app?preview=1&view=email');
-      await page.locator('.ws-mail-row').first().waitFor();
-      assert.equal(await page.locator('.ws-mail-row').count(), 2, 'People default excludes automated listing alert, not the real replies');
+      await page.locator('#today-content[aria-busy="false"]').waitFor();
+      assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('.ws-mail-row').count(), 0, 'Recorded buyer conversations belong to Buyers, not an invented Primary identity');
+      await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
+      assert.equal(await page.locator('.ws-mail-row').count(), 2, 'Buyers retains the two sourced human threads and excludes the automated listing alert');
       assert.equal(bodyReads, 0, 'No message body fetched on load');
       assert.equal(await page.locator('.ws-composer').count(), 0, 'The default mail view never reserves an empty reply box');
       assert(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'List owns the main-area width, not half of a split pane');
       assert.equal(await page.locator('#help').isVisible(), false, 'Email reserves no blank help strip');
       assert(await page.locator('#refresh').getAttribute('title'), 'Help remains available on the control');
       const listTop = await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top);
-      assert(listTop <= (width === 1366 ? 132 : 180), 'Folder chrome must not push the list down: ' + listTop);
+      assert(listTop <= (width === 1366 ? 180 : 196), 'Search, real list tools and category chrome remain bounded: ' + listTop);
       await page.locator('#refresh').hover();
       assert.equal(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top), listTop, 'Hover help cannot shift the list');
       await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
       assert((await page.locator('.ws-mail-row').innerText()).includes('Synthetic alert'));
-      await page.getByRole('tab', { name: 'Alerts', exact: true }).press('ArrowLeft');
-      assert.equal(await page.getByRole('tab', { name: 'People', exact: true }).getAttribute('aria-selected'), 'true');
+      await page.getByRole('tab', { name: 'Alerts', exact: true }).press('Home');
+      assert.equal(await page.getByRole('tab', { name: 'Primary', exact: true }).getAttribute('aria-selected'), 'true');
+      await page.getByRole('tab', { name: 'Primary', exact: true }).press('ArrowRight');
+      assert.equal(await page.getByRole('tab', { name: 'Buyers', exact: true }).getAttribute('aria-selected'), 'true');
       await page.locator('.ws-mail-row').first().click();
       await page.getByText('LATEST SYNTHETIC TEXT', { exact: false }).waitFor();
       assert.equal(await page.locator('.ws-mail-list').isVisible(), false, 'Opened message replaces the list on desktop and phone');
@@ -65,9 +70,11 @@ async function prove() {
       const bodyTop = await page.locator('.ws-mail-message .ws-mail-body').evaluate(el => el.getBoundingClientRect().top);
       assert(bodyTop <= (width === 1366 ? 340 : 410), 'Message starts near the top even with a long subject: ' + bodyTop);
       assert.equal(await page.getByRole('button', { name: 'Back to messages', exact: true }).getAttribute('title'), 'Back to messages');
-      assert(await page.getByRole('button', { name: 'Inbox', exact: true }).isVisible());
-      assert(await page.getByLabel('Other email folders', { exact: true }).isVisible());
-      if (width !== 1366) assert.equal(await page.getByRole('tab', { name: 'Alerts', exact: true }).isVisible(), false, 'Phone category tabs return with Back, not above the open message');
+      if (width === 1366) {
+        assert(await page.locator('.ws-mail-rail').getByRole('button', { name: 'Inbox', exact: true }).isVisible());
+        assert(await page.locator('.ws-mail-rail').getByLabel('Other email folders', { exact: true }).isVisible());
+      }
+      assert.equal(await page.getByRole('tab', { name: 'Alerts', exact: true }).isVisible(), false, 'Gmail reading mode replaces the category/list controls at every size');
       assert.equal(reading.ownScroll, 'auto');
       assert(!['auto', 'scroll'].includes(reading.bodyOverflow), 'Message text has no nested scrollbox');
       assert(await page.locator('.ws-mail-reading-head .ws-role--buyer').isVisible());
@@ -104,10 +111,20 @@ async function prove() {
       assert(await page.locator('.ws-mail-status').isVisible(), 'Compact reading mode never hides an error');
       assert.equal(await page.locator('.ws-mail-row').count(), 2);
       assert.equal(await page.locator('.ws-mail-body').count(), 0);
-      await page.getByRole('button', { name: 'Sent', exact: true }).click();
+      async function chooseFolder(name) {
+        if (width === 1366) return page.locator('.ws-mail-rail').getByRole('button', { name, exact: true }).click();
+        if (!await page.locator('#mail-folders-open').isVisible()) await page.getByRole('button', { name: 'Back to messages', exact: true }).click();
+        await page.getByRole('button', { name: 'Mail folders', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Mail folders', exact: true });
+        assert(await dialog.getByLabel('Other email folders', { exact: true }).isVisible());
+        await dialog.getByRole('button', { name, exact: true }).click();
+      }
+      await chooseFolder('Sent');
       await page.getByRole('heading', { name: 'No conversations in this view', exact: true }).waitFor();
       failBody = false;
-      await page.getByRole('button', { name: 'Inbox', exact: true }).click();
+      await chooseFolder('Inbox');
+      await page.locator('#today-content[aria-busy="false"]').waitFor();
+      await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
       await page.locator('.ws-mail-row').first().waitFor();
       delay = {}; delay.promise = new Promise(resolve => { delay.resolve = resolve; });
       await page.locator('.ws-mail-row').first().click();
