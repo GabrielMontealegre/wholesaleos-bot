@@ -7,7 +7,7 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   var ICONS = new Set(['menu', 'x', 'house', 'mail', 'users', 'handshake', 'bell',
     'settings', 'search', 'log-out', 'arrow-up-right', 'refresh-cw', 'check', 'send',
-    'calendar-days', 'list-checks', 'layout-dashboard', 'layers', 'chevron-down']);
+    'calendar-days', 'list-checks', 'layout-dashboard', 'layers', 'chevron-down', 'inbox', 'star', 'folder', 'chevron-left', 'chevron-right']);
   var TONES = new Set(['neutral', 'green', 'blue', 'red', 'amber']);
 
   function escape(value) {
