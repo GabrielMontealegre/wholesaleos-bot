@@ -32,6 +32,7 @@ async function prove() {
       await requested.promise;
       await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
       assert.equal(await page.locator('#today-content').getAttribute('aria-busy'), 'true', 'Changing category must not pretend the outstanding folder read completed');
+      assert.equal(await page.locator('.ws-mail-range').isVisible(), false, 'Unknown pending counts are not displayed as zero');
       if (scenario === 'folder') {
         if (width !== 1366) await page.getByRole('button', { name: 'Mail folders', exact: true }).click();
         await page.getByRole('button', { name: 'Sent', exact: true }).click();
@@ -57,9 +58,11 @@ async function prove() {
           assert(!(await page.locator('body').innerText()).includes('Synthetic alert'));
           assert.deepEqual(reads, ['inbox', 'sent']);
         } else if (scenario === 'empty') {
+          assert.equal(await page.locator('.ws-mail-range').isVisible(), true, 'A source-confirmed empty folder may show zero loaded');
           assert.equal(await page.locator('.ws-mail-status').innerText(), 'Latest 0 messages in this folder');
           assert.equal(await page.locator('.ws-mail-row').count(), 0);
         } else {
+          assert.equal(await page.locator('.ws-mail-range').isVisible(), false, 'Failed source reads do not fabricate an empty count');
           assert.equal(await page.locator('.ws-mail-status').innerText(), 'Email could not be loaded.');
           assert.equal(await page.locator('.ws-mail-row').count(), 0);
         }

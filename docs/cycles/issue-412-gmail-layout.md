@@ -161,3 +161,10 @@ tab's navigation timed out. Do not infer production failure or revive435's
 resolved viewport block. No merge/deploy should start until signed read-only
 verification is available and budget reserve sufficient. No source rollback,
 auth/cookie transfer, provider-setting change or production test write.
+
+D-063 self-review additionally found that pending/failed metadata could show
+an empty loaded range before source confirmation. Hide that range while busy
+or errored; keep real source-confirmed empty0 visible. All three-size delayed/
+failed/empty/401 loading scenarios pass with added assertions. This final source
+correction supersedes the earlier99fe999 CI head; concurrency cancellation of
+that older run is not a test failure or proof for the changed final head.
