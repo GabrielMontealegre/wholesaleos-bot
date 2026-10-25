@@ -58,6 +58,15 @@
       return state.body.map(function (message, index) {
         var header = '<strong>' + c.escape(message.from || 'Sender not recorded') + '</strong><time>' + c.escape(time(message.date)) + '</time>';
         var content = '<p class="ws-mail-body">' + c.escape(message.body || '(No readable text)') + '</p>';
+        var metadata = chosen().messages.find(function (row) { return row.id === message.id; });
+        var attachments = layout.attachmentManifest(metadata, message, { now: now() });
+        if (attachments && attachments.length) content += '<section class="ws-mail-attachments" aria-label="Message attachments"><h3>Attachments</h3><ul>' + attachments.map(function (part) {
+          return '<li>' + c.badge(part.filename || 'Name not recorded', 'neutral') + '<p class="ws-muted">' + c.escape([
+            part.content_type ? 'Reported type: ' + part.content_type : 'Type not recorded',
+            part.size_bytes === null ? 'Size not recorded' : part.size_bytes.toLocaleString('en-US') + ' bytes',
+            part.disposition === 'inline' || part.related === true ? 'Inline content' : ''
+          ].filter(Boolean).join(' | ')) + '</p></li>';
+        }).join('') + '</ul></section>';
         return index === state.body.length - 1 ? '<article class="ws-mail-message"><header>' + header + '</header>' + content + '</article>' :
           '<details class="ws-mail-earlier"><summary aria-keyshortcuts="e">' + header + c.icon('chevron-down') + '</summary>' + content + '</details>';
       }).join('');
