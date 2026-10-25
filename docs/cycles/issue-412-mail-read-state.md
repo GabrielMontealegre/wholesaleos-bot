@@ -37,7 +37,12 @@ list/body parity, read-only locks, exact unchanged metadata/body request counts,
 and blocked external network. Existing duplicate-known-unread assertion remains.
 Projection adds unknown/conflicting/partial thread negatives and purity checks.
 No existing assertion removed or weakened. Email model cache version2 only;
-no layout/control/CSS changes. Full final-head and deploy proof pending.
+no layout/control/CSS changes. Final5c54245 full249/0/0 hosted40196573234,
+600s/file;exact merge74dfd39 and automatic5caaadc7 Active/source verified.
+Public12true3sizes and same-merge pinned5size native journey pass. Signed
+actual1038x503 list/body preserve provider-origin/read parity;full reader and
+disabled empty reply remain usable. Unknown/malformed cases tested only in
+hermetic fixtures. Complete safe proof: ../screens/2026-10-25-pr445-release.
 
 ASSUMED: establish truthful per-message state before computing per-folder
 totals, because D-063B/AGENTS data truth outrank a fabricated count. B snippets,

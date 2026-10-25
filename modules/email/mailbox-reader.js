@@ -4,6 +4,10 @@ const { simpleParser } = require('mailparser');
 const { google } = require('googleapis');
 const FOLDERS = { inbox:'INBOX',sent:'\\Sent',drafts:'\\Drafts',starred:'\\Flagged',buyers:'WOS/Buyers',jv_deals:'WOS/JV Deals',lead_alerts:'WOS/Lead Alerts',title:'WOS/Title',templates:'WOS/Templates',bounced:'WOS/Bounced',billing:'WOS/Billing' };
 const MAX_BYTES = 2 * 1024 * 1024;
+function textOrigin(value, max, origin) {
+  return typeof value === 'string' && value.trim() && value.length <= max && Buffer.byteLength(value) <= max &&
+    !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value) ? origin : null;
+}
 function readState(values, origin) {
   const items = origin === 'imap_flags' && values instanceof Set ? [...values] : origin === 'gmail_label_ids' && Array.isArray(values) ? Array.from(values) : null;
   if (!items || items.some(value => typeof value !== 'string' || !value || /[\x00-\x1f\x7f]/.test(value))) {
@@ -47,7 +51,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
     const gmail=oauth();const labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};let label=labels[folder];
     if(!label){const data=await gmail.users.labels.list({userId:'me'});label=(data.data.labels||[]).find(l=>l.name===FOLDERS[folder])?.id;if(!label)fail('email_folder_unavailable',404);}
     const rows=await gmail.users.messages.list({userId:'me',maxResults:limit,labelIds:[label]});const messages=[];
-    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Cc','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:Array.isArray(msg.labelIds)&&msg.labelIds.includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),cc:get('Cc'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',...readState(msg.labelIds,'gmail_label_ids')});}
+    for(const row of rows.data.messages||[]){const msg=(await gmail.users.messages.get({userId:'me',id:row.id,format:'metadata',metadataHeaders:['From','To','Cc','Subject','Date','Message-ID','In-Reply-To']})).data;const get=k=>(msg.payload?.headers||[]).find(h=>h.name.toLowerCase()===k.toLowerCase())?.value||'';messages.push({source_kind:'connected_mailbox',id:msg.id,threadId:msg.threadId,message_id:get('Message-ID'),in_reply_to:get('In-Reply-To'),direction:Array.isArray(msg.labelIds)&&msg.labelIds.includes('SENT')?'out':get('From')?'in':'unknown',from:get('From'),to:get('To'),cc:get('Cc'),subject:get('Subject'),date:get('Date'),snippet:msg.snippet||'',snippet_origin:textOrigin(msg.snippet,4096,'gmail_provider_snippet'),...readState(msg.labelIds,'gmail_label_ids')});}
     for(const message of messages){
       Object.assign(message, participantFields());
       if([message.from,message.to,message.cc].every(value=>typeof value==='string'&&value.length<=4096&&!/[\r\n]/.test(value))){
@@ -63,7 +67,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
   async function message(value) {
     const mode=provider();
     if(mode==='app_password')return (await messages([value]))[0];
-    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {source_kind:'connected_mailbox',id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(Array.isArray(m.labelIds)&&m.labelIds.includes('SENT'))?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',cc:parsed.cc?.text||'',...participantFields({from:parsed.from?.value,to:parsed.to?.value,cc:parsed.cc?.value}),...readState(m.labelIds,'gmail_label_ids'),subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',in_reply_to:parsed.inReplyTo||'',mode};
+    if(!/^[a-zA-Z0-9_-]{1,200}$/.test(value))fail('email_message_invalid',400);const m=(await oauth().users.messages.get({userId:'me',id:value,format:'raw'})).data;const raw=Buffer.from(m.raw||'','base64url');if(raw.length>MAX_BYTES)fail('email_message_too_large',413);const parsed=await parse(raw,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});const own=(parsed.from?.value||[]).some(a=>String(a.address).toLowerCase()===String(env.GMAIL_USER).toLowerCase());return {source_kind:'connected_mailbox',id:m.id,threadId:m.threadId,message_id:parsed.messageId||'',direction:own||(Array.isArray(m.labelIds)&&m.labelIds.includes('SENT'))?'out':parsed.from?.value?.length?'in':'unknown',from:parsed.from?.text||'',to:parsed.to?.text||'',cc:parsed.cc?.text||'',...participantFields({from:parsed.from?.value,to:parsed.to?.value,cc:parsed.cc?.value}),...readState(m.labelIds,'gmail_label_ids'),subject:parsed.subject||'',date:parsed.date?.toISOString()||'',body:parsed.text||'(No readable text)',body_origin:textOrigin(parsed.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:parsed.inReplyTo||'',mode};
   }
   async function messages(values) {
     if(!Array.isArray(values)||!values.length||values.length>30||values.some(v=>typeof v!=='string'||!v||v.length>1000)||new Set(values).size!==values.length)fail('email_thread_invalid',400);
@@ -81,7 +85,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
           if(!header)fail('email_message_missing',404);if(header.size>MAX_BYTES)fail('email_message_too_large',413);
           const m=await c.fetchOne(p.uid,{source:true},{uid:true});if(!m?.source||m.source.length>MAX_BYTES)fail('email_message_too_large',413);
           const content=await parse(m.source,{skipImageLinks:true,skipTextToHtml:true,maxHtmlLengthToParse:MAX_BYTES});
-          keep({...metadata(header,p.box,p.validity),body:String(content.text||'(No readable text)').slice(0,MAX_BYTES),in_reply_to:content.inReplyTo||'',mode});
+          keep({...metadata(header,p.box,p.validity),body:String(content.text||'(No readable text)').slice(0,MAX_BYTES),body_origin:textOrigin(content.text,MAX_BYTES,'parsed_mime_text'),in_reply_to:content.inReplyTo||'',mode});
         }
         return output;
       }finally{lock.release();}

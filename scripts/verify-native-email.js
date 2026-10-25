@@ -9,7 +9,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
   let baseline = false;
   if (reply || readingLayout) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', 'd78f77f2ced1ebf6a3929056656b166151ed2a34:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-model.js', 'mail-layout-model.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', '74dfd395649c86b7bff416f63b0d88cd5efa2e81:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
       if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : file.endsWith('.css') ? 'css' : 'js').send(files.get(file));
@@ -53,6 +53,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
       await page.setViewportSize({ width, height: width === 1366 ? 768 : 915 });
       baseline = reply || readingLayout;
       await page.goto(base + (baseline ? '/app?preview=1&view=email' : '/dashboard/?workspace=email'));
+      if (baseline) await page.getByRole('tab', { name: 'Buyers', exact: true }).click();
       await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().waitFor();
       await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().click(); await page.locator(baseline ? '.ws-mail-message .ws-mail-body' : '[data-email-body]').first().waitFor();
       if (reply) await page.getByRole('button', { name: 'Reply', exact: true }).click();
