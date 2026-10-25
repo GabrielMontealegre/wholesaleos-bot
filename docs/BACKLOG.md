@@ -6,7 +6,9 @@
 item/412-gmail-mailbox-chrome wires loaded-only search/five sourced categories,
 folder rail/drawer,dense rows,local selection and collapsible sourced context.
 Focused tests and pinned synthetic1366/400/412 proof pass;FCP56.6/47.3/65.5ms,
-Lighthouse98/98,zero external/writes. Full final-head gate remains pending.
+Lighthouse98/98,zero external/writes. Draft441 finala4dbae6 hosted40151794301/
+job121044673698 passed248/0/0,600s/file,13m45s;all248 timings preserved.
+No merge/deployment:439 still unanswered. This is not whole-Gmail approval.
 Affected439 commands/Compose/pagination need architect scope; no fake actions,
 no native Deals. See docs/cycles/issue-412-gmail-layout.md for trace/assertion
 changes and separate440 release proof. No local test process remains running.

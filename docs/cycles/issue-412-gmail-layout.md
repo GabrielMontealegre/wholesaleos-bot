@@ -118,3 +118,14 @@ These are SYNTHETIC, not a live release or actual Gmail reference comparison.
 Whole Gmail acceptance, full final-head suite, affected439 scope, exact deploy,
 approved mixed live proof and owner approval remain outstanding. Do not merge
 this candidate merely because a focused suite passes. No native Deals yet.
+
+Final product checkpoint a4dbae657b50bf04cfdca7e43f5e4008487c1c2a is remote
+draft PR441. Exact hosted40151794301/job121044673698 finished248passed,
+0failed,0skipped,600s/file,13m45s job. All248 sanitized timing rows preserved;
+their768.01s sum is NOT wall time. New chrome test7.54s/model0.11s. Review
+confirms no backend/auth/CSP/send service changes and unchanged source/draft/
+request gates. Architect439 remains unanswered; keep DRAFT/UNMERGED despite
+green CI. No new deployment. This following evidence checkpoint is LOCAL-ONLY
+documentation, not another tested product head or an instruction to rerun CI.
+PR attachment tool was attempted for440/441 but reports chat attachment limit
+100; no unrelated attachment was removed. GitHub PRs and evidence remain intact.
