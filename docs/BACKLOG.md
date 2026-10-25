@@ -2,6 +2,21 @@
 
 ## Latest Run Summary
 
+2026-10-25 rollback443 DONE/VERIFIED: tested1186d10 cloud40189589041/
+job121157540722=247/0/0,600s/file,13m29s; exact merged/currentmaind78f77f2ced1ebf6a3929056656b166151ed2a34
+automaticRailway2cefb141-a0be-4b5e-bc9b-c1e9d9df7332 Active/successful,
+Details links exact source. Product tree matches healthy32c0c2a. Pinned
+public12root/classic/Email/Today1366x768/400x915/412x915 pass,health200,
+unsignedidentity401,no authtransfer/writes. Same merge-source synthetic3size
+original Email/body/draft/session journey passes. SignedChrome1038x503:
+restored30rows/no failedrail,full3085-char body/replacingreader/bottomReply,
+emptyPreview/Edit/Senddisabled,GETstatusenabledfalse/configuredtrue/cap30/
+automaticfalse;classic19cards/OpenDeal work,0consoleerrors. DOM1038x503/
+image1023x496 named truthfully,PII masked before disk. No real preview/send/
+draft typing/settings/business writes. Proof docs/screens/2026-10-25-pr441-rollback.
+442/412 OPEN;441 failed live gate,not accepted. NEXT bounded short-height
+rail/drawer/44px/composer-status repair within approved D-063A;B/C still later.
+
 2026-10-25 PR441 LIVE VERIFICATION FAILED442 after exact mergeded1ee8c
 automatically deployed563cd3de-8826-4c7d-90b8-9026b63c139b Active/source
 verified. Health/auth/public12 checks and same-merge synthetic3sizes passed,
