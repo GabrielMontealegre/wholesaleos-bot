@@ -1,5 +1,16 @@
 # Decisions
 
+2026-10-25: #442 short-window containment is verified repaired by PR444 on
+exact main ddab0a8, automatic deployment1d8e39bd-22a3-4f73-a4d0-999d820c81f6.
+Fixed system folders never use inner scrolling; long labels remain available
+through the explicit Mail labels drawer. Only <=650px explicit composer focus
+temporarily replaces the source pane; Close restores it. Original tall-viewport
+reader-height assertions remain unchanged. Five-size synthetic plus truthful
+1038x503 signed live checks supplement approved #435 mixed proof. PR441's
+failure and verified rollback443 remain history, not relabeled success. D-063A
+technical release is not whole412/design approval; B then capability-gated C
+remain separate. No send/auth/backend/settings/business-data change.
+
 ## D-063: Phased Gmail Capability Boundaries
 
 Architect439 comment6392281483 (2026-10-25) approves A -> B -> C and permits
