@@ -138,3 +138,26 @@ guide/cheat-sheet source evidence and candidate gap matrix now recorded in
 `docs/screens/2026-10-25-gmail-mailbox-chrome/gmail-reference.md`. Browser public
 reference navigation failed twice; no screenshot/phone comparison is claimed.
 This local documentation adds no product change or rerun/deploy permission.
+
+## Architect Answer and A-Gate Update
+
+439 comment6392281483 APPROVED A->B->C on2026-10-25 and explicitly allows
+441 to finish gates/merge/release under read-only A. D-063 records exact B/C
+boundaries and all default-OFF/idempotency/audit/Undo/rate/send restrictions.
+The previous scope hold is superseded, not a reason to keep waiting forever.
+
+Existing unsupported Compose/star/pager controls now render disabled icons
+with native wrapper tooltips "Not available yet: open in Gmail". The star
+does not claim source state or persist changes. Existing per-thread Gmail
+fallback remains; no provider mutation, default send or automatic request.
+Negative tests cover every disabled control, including the hidden phone folder
+dialog. Initial assertion used visibility-filtered getByRole for hidden clones;
+changed only to its direct button locator, preserving the disabled invariant.
+Cache versions increment for the changed Email/CSS assets. A new full suite
+must prove this changed product; old a4dbae6 green is not borrowed.
+
+Before merging, browser3 inventory is available but a fresh production Email
+tab's navigation timed out. Do not infer production failure or revive435's
+resolved viewport block. No merge/deploy should start until signed read-only
+verification is available and budget reserve sufficient. No source rollback,
+auth/cookie transfer, provider-setting change or production test write.

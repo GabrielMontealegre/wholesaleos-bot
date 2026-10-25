@@ -30,6 +30,10 @@ async function prove() {
       assert.equal(await page.getByRole('tab').count(), 5);
       assert.equal(await page.locator('.ws-mail-row').count(), 2);
       assert.equal(bodyReads, 0);
+      for (const control of await page.locator('.ws-mail-unavailable').all()) {
+        assert.equal(await control.getAttribute('title'), 'Not available yet: open in Gmail');
+        assert(await control.locator('button').isDisabled());
+      }
       await page.locator('.ws-mail-row').filter({ hasText: 'Fixture a' }).click();
       await page.locator('.ws-mail-body').waitFor();
       await page.getByRole('button', { name: 'Conversation context', exact: true }).click();

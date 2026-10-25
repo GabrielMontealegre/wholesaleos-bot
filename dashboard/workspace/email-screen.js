@@ -19,10 +19,13 @@
       return 'https://mail.google.com/mail/u/0/#' + folder + (/^[a-f0-9]{8,64}$/i.test(key || '') ? '/' + key : '');
     }
     function roleChip(role) { return c.roleBadge(role); }
+    function unavailable(label, icon) {
+      return '<span class="ws-mail-unavailable" title="Not available yet: open in Gmail">' + c.button({ label: label, icon: icon, iconOnly: true, disabled: true, help: 'Not available yet: open in Gmail' }) + '</span>';
+    }
     function folderMarkup() {
       var folders = [['inbox', 'Inbox', 'inbox'], ['starred', 'Starred', 'star'], ['sent', 'Sent', 'send'], ['drafts', 'Drafts', 'mail'], ['bounced', 'Bounces', 'mail']];
       var labels = [['buyer', 'Buyers'], ['seller', 'Sellers / owners'], ['jv', 'JV partners'], ['title', 'Title'], ['attorney', 'Attorneys'], ['lender', 'Lenders'], ['agent', 'Agents']];
-      return '<div class="ws-mail-compose-entry">' + c.button({ label: 'Compose', icon: 'mail', disabled: true, help: 'New-message composition is not connected. Use Gmail.' }) + '</div>' +
+      return '<div class="ws-mail-compose-entry">' + unavailable('Compose', 'mail') + '</div>' +
         '<div role="group" aria-label="Email folders">' + folders.map(function (folder) { return '<button type="button" class="ws-mail-folder" data-mail-folder="' + folder[0] + '" aria-pressed="' + (state.folder === folder[0]) + '" title="' + folder[1] + '">' + c.icon(folder[2]) + '<span>' + folder[1] + '</span></button>'; }).join('') +
         '<label class="ws-mail-extra"><span class="ws-sr-only">Other email folders</span><select aria-label="Other email folders" data-mail-folder-select><option value="">More folders</option>' + Object.keys(extraFolders).map(function (key) { return '<option value="' + key + '"' + (key === state.folder ? ' selected' : '') + '>' + extraFolders[key] + '</option>'; }).join('') + '</select></label></div>' +
         '<h3 class="ws-mail-label-heading" title="Filters only the messages currently loaded">Labels in loaded mail</h3><div role="group" aria-label="Recorded person roles">' + labels.map(function (entry) {
@@ -32,7 +35,7 @@
     function rowMarkup(row) {
       var role = roleNames[row.role] || 'Role not recorded';
       return '<div class="ws-mail-row-wrap"><input type="checkbox" data-mail-select="' + c.escape(row.key) + '" aria-label="Select conversation from ' + c.escape(row.sender) + '"' + (selectedRows.has(row.key) ? ' checked' : '') + '>' +
-        '<span class="ws-mail-star" role="img" aria-label="Star state unavailable" title="Star state and changes are not connected">' + c.icon('star') + '</span>' +
+        '<span class="ws-mail-star">' + unavailable('Star state and changes unavailable', 'star') + '</span>' +
         '<button type="button" class="ws-mail-row' + (row.unread ? ' ws-mail-row--unread' : '') + '" data-mail-key="' + c.escape(row.key) + '" aria-pressed="' + (row.key === state.selected) + '" title="' + c.escape(role) + '">' +
         '<strong class="ws-mail-sender">' + c.escape(row.sender) + (row.messages.length > 1 ? '<small> ' + row.messages.length + '</small>' : '') + '</strong>' +
         '<span class="ws-mail-subject">' + c.escape(row.latest.subject || '(No subject)') + (row.snippet ? ' <span class="ws-mail-snippet"> - ' + c.escape(row.snippet) + '</span>' : '') + '</span><time>' + c.escape(time(row.latest.date)) + '</time></button></div>';
@@ -68,7 +71,7 @@
         '<aside class="ws-mail-rail" aria-label="Mail folders and labels">' + folderMarkup() + '</aside><div class="ws-mail-canvas"><header class="ws-mail-toolbar"><div class="ws-mail-list-tools">' +
         c.button({ label: 'Mail folders', icon: 'folder', iconOnly: true, id: 'mail-folders-open' }) + '<label class="ws-mail-select-all" title="Select conversations in this loaded view"><input type="checkbox" id="mail-select-all" aria-label="Select all loaded conversations"' + (!items.length ? ' disabled' : '') + '></label>' +
         c.button({ label: 'Refresh mailbox', icon: 'refresh-cw', iconOnly: true, id: 'mail-refresh' }) + '<span class="ws-mail-selection" aria-live="polite"></span><span class="ws-mail-range" title="Only loaded threads; the full folder total is unavailable">' + view.range.start + '-' + view.range.end + ' of ' + view.range.total + ' loaded</span>' +
-        c.button({ label: 'Newer mail unavailable', icon: 'chevron-left', iconOnly: true, disabled: true, help: 'Mailbox pagination is not connected' }) + c.button({ label: 'Older mail unavailable', icon: 'chevron-right', iconOnly: true, disabled: true, help: 'Mailbox pagination is not connected' }) + '</div>' + c.tabs('mail', categories, state.category) + '</header>' +
+        unavailable('Newer mail unavailable', 'chevron-left') + unavailable('Older mail unavailable', 'chevron-right') + '</div>' + c.tabs('mail', categories, state.category) + '</header>' +
         '<p class="ws-mail-status" role="status" data-mail-status-important="' + Boolean(state.error || state.busy || state.unavailable.length) + '">' + c.escape(state.error || (state.busy ? 'Loading email...' : 'Latest ' + state.threads.reduce(function (sum, row) { return sum + row.messages.length; }, 0) + ' messages in this folder')) +
         (state.unavailable.length ? ' / ' + state.unavailable.length + ' references need a refresh' : '') + '</p>' +
         '<div class="ws-mail-panes"><section class="ws-mail-list" id="mail-panel-' + state.category + '" role="tabpanel" aria-labelledby="mail-' + state.category + '" aria-label="Email conversations">' +

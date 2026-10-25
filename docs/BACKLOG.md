@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-25 architect439 comment6392281483 APPROVES phased A->B->C;441 may
+finish gates and release under read-only A. D-063 records the full boundary.
+Unsupported existing controls now use truly disabled icons and exact Gmail
+fallback tooltips;no provider writer/send gate changes. This CHANGED product
+needs a new exact full suite;old248green only proves a4dbae6. Preflight browser
+inventory works but fresh production-tab navigation times out at CDP; do not
+merge/start deployment without available signed verification and quota reserve.
+This is not the superseded435 viewport-size blocker or a product regression.
+
 2026-10-25 next Gmail chrome slice PREPARED,not merged/deployed/approved.
 item/412-gmail-mailbox-chrome wires loaded-only search/five sourced categories,
 folder rail/drawer,dense rows,local selection and collapsible sourced context.

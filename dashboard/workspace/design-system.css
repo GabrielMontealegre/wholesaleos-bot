@@ -191,6 +191,8 @@ h3 { font-size: var(--ws-type-base); line-height: 1.4; }
 .ws-mail-row-wrap { display: grid; grid-template-columns: 24px 24px minmax(0, 1fr); align-items: center; min-height: 44px; border-bottom: 1px solid var(--ws-line); }
 .ws-mail-row-wrap:hover { background: var(--ws-surface); }
 .ws-mail-star { opacity: .45; }
+.ws-mail-unavailable { display: inline-flex; }
+.ws-mail-star .ws-button { min-width: 20px; width: 20px; min-height: 20px; height: 20px; padding: 0; border: 0; background: transparent; }
 .ws-mail-row { display: grid; grid-template-columns: minmax(100px, 170px) minmax(0, 1fr) auto; align-items: center; gap: var(--ws-space-3); width: 100%; padding: var(--ws-space-2); min-height: 44px; text-align: left; background: transparent; border: 0; }
 .ws-mail-sender { min-width: 0; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .ws-mail-row--unread .ws-mail-sender { font-weight: 700; }
