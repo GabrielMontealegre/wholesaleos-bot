@@ -168,3 +168,14 @@ or errored; keep real source-confirmed empty0 visible. All three-size delayed/
 failed/empty/401 loading scenarios pass with added assertions. This final source
 correction supersedes the earlier99fe999 CI head; concurrency cancellation of
 that older run is not a test failure or proof for the changed final head.
+
+Final9a5b3e84efdc806ff0bbbfe498ac2ccf883f5c31 cloud40155677969/job121056598346
+TERMINAL SUCCESS248/0/0,600s/file,14m12s job; all248 timing rows in
+phase-a-final-timings.json. Per-file sum788.34s NOT wall time. Mailbox chrome
+7.73s/loading6.75s. Prior40155479079 cancelled by workflow concurrency,not
+suite failure. No local jobs remain. Stop new merge/deploy at primary92%
+verification reserve; production browser control also needs reconnection.
+Owner async request made,keep PIN private. Architecture hold is ANSWERED.
+No manual deployment/settings/auth transfer/outreach or business-data write.
+This subsequent LOCAL-ONLY evidence commit does not change tested product or
+authorize a docs-only CI rerun. PR441 is ready-for-review but UNMERGED.

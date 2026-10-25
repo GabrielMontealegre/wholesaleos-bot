@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-25 phase-A final441 ready-for-review,UNMERGED/UNDEPLOYED.
+Architect439 APPROVED A->B->C; D-063 recorded. Final remote9a5b3e84efdc806ff0bbbfe498ac2ccf883f5c31
+hosted40155677969/job121056598346 passed248/0/0,600s/file,14m12s job.
+All248 timings preserved;788.34s per-file sum is NOT wall time. Earlier99fe999
+run40155479079 was concurrency-CANCELLED after source-count correction,not
+a test failure. New pending/failed ranges hidden;source-confirmed empty0 stays.
+Focused disabled-icon/title and loading negatives pass. No jobs remain.
+Primary92%: NO new merge/deploy at verification reserve. Browser discovery
+works but fresh production-tab Page.navigate times out; owner asked to reconnect
+extension/leave dashboard unlocked,never share PIN. No new deployment attempted.
+Scope is ANSWERED439,not the old435 viewport problem. Need recovered signed
+browser and quota before exact merge/automaticdeploy/approvedmixedproof.
+Final icon-layout synthetic99fe999 FCP60.9/35.2/34ms,Lighthouse98/98 stored
+outside repo .wholesaleos-release-proof/pr441-final-synthetic;not final9a5 live
+or same-SHA proof. Repeat bounded synthetic on eventual exact merged source.
+Parent412 OPEN/unapproved;next B data then C capability-gated writes perD063.
+
 2026-10-25 architect439 comment6392281483 APPROVES phased A->B->C;441 may
 finish gates and release under read-only A. D-063 records the full boundary.
 Unsupported existing controls now use truly disabled icons and exact Gmail
