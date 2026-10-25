@@ -109,7 +109,8 @@ workspace-preview tests pass. Full updated-head cloud gate remains required;
 do not substitute historical241/0/0. Keep DRAFT/unmerged behind427/425/424,
 with no standalone deploy. Prior live viewport evidence is pending435 and
 corrected Email has no owner sign-off. No production action or setting change.
-# Current-Main Preparation (2026-10-25)
+
+## Current-Main Preparation (2026-10-25)
 
 Existing426 reconciled with main3d19945 after verified427/425/424. Only
 documentation conflicts; calculator and test bytes remain unchanged. The
@@ -118,4 +119,3 @@ no native Deals migration,finance UI/route or stored-data consumer is enabled.
 Keep this PR draft/unmerged and never trigger a standalone finance deployment.
 Updated head requires its own full600s/file gate; prior5373890/242 green is
 historical. Gmail candidate440/capability question439 remain separate work.
-
