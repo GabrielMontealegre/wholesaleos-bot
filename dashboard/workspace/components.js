@@ -8,7 +8,7 @@
   var ICONS = new Set(['menu', 'x', 'house', 'mail', 'users', 'handshake', 'bell',
     'settings', 'search', 'log-out', 'arrow-up-right', 'refresh-cw', 'check', 'send',
     'calendar-days', 'list-checks', 'layout-dashboard', 'layers', 'chevron-down']);
-  var TONES = new Set(['neutral', 'green', 'blue', 'red']);
+  var TONES = new Set(['neutral', 'green', 'blue', 'red', 'amber']);
 
   function escape(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
@@ -97,10 +97,11 @@
       '</header><div class="ws-dialog-body" data-dialog-body></div></dialog>';
   }
 
-  function composer(componentId) {
+  function composer(componentId, options) {
     var name = id(componentId);
     return '<form class="ws-composer" id="' + name + '"><label for="' + name + '-to">To</label>' +
       '<input id="' + name + '-to" name="to" type="email" required autocomplete="off">' +
+      (options && options.cc ? '<label for="' + name + '-cc">Cc</label><input id="' + name + '-cc" name="cc" type="text" autocomplete="off">' : '') +
       '<label for="' + name + '-subject">Subject</label><input id="' + name + '-subject" name="subject" required>' +
       '<label for="' + name + '-body">Message</label><textarea id="' + name + '-body" name="body" rows="8" required></textarea>' +
       '<footer><label class="ws-check"><input type="checkbox" name="reviewed">I reviewed this message</label>' +
@@ -187,6 +188,7 @@
       }
     });
     sync();
+    return { sync: sync };
   }
 
   return { escape: escape, icon: icon, button: button, badge: badge, roleBadge: roleBadge, card: card, listRow: listRow,
