@@ -44,7 +44,7 @@ async function main() {
     check(await imap.message(listed.messages[0].id), read, 'imap_flags'); assert.deepEqual(calls, ['metadata', 'header', 'body']);
   }
   const oauth = createMailboxReader({ env: { GMAIL_USER: 'operator@example.test', GMAIL_CLIENT_ID: 'synthetic', GMAIL_CLIENT_SECRET: 'synthetic', GMAIL_REFRESH_TOKEN: 'synthetic' }, googleImpl });
-  for (const [value, read] of [[[], true], [['INBOX'], true], [['UNREAD'], false], [undefined, null], [null, null], ['UNREAD', null], [[null], null], [['INBOX', 'bad\nlabel'], null]]) {
+  for (const [value, read] of [[[], true], [['INBOX'], true], [['UNREAD'], false], [undefined, null], [null, null], ['UNREAD', null], [[null], null], [Array(1), null], [['INBOX', 'bad\nlabel'], null]]) {
     labels = value; calls = [];
     check((await oauth.list('inbox')).messages[0], read, 'gmail_label_ids'); assert.deepEqual(calls, ['list', 'metadata']);
     check(await oauth.message('source1'), read, 'gmail_label_ids'); assert.deepEqual(calls, ['list', 'metadata', 'raw']);

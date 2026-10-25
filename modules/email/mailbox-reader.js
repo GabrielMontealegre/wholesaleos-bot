@@ -5,7 +5,7 @@ const { google } = require('googleapis');
 const FOLDERS = { inbox:'INBOX',sent:'\\Sent',drafts:'\\Drafts',starred:'\\Flagged',buyers:'WOS/Buyers',jv_deals:'WOS/JV Deals',lead_alerts:'WOS/Lead Alerts',title:'WOS/Title',templates:'WOS/Templates',bounced:'WOS/Bounced',billing:'WOS/Billing' };
 const MAX_BYTES = 2 * 1024 * 1024;
 function readState(values, origin) {
-  const items = origin === 'imap_flags' && values instanceof Set ? [...values] : origin === 'gmail_label_ids' && Array.isArray(values) ? values : null;
+  const items = origin === 'imap_flags' && values instanceof Set ? [...values] : origin === 'gmail_label_ids' && Array.isArray(values) ? Array.from(values) : null;
   if (!items || items.some(value => typeof value !== 'string' || !value || /[\x00-\x1f\x7f]/.test(value))) {
     return { read: null, unread: null, read_state_origin: null };
   }
