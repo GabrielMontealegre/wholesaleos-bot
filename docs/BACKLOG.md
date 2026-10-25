@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-25 D-063B read-state prerequisite IN PROGRESS,not released. Branch
+item/412-mail-read-state from currentddab0a8 preserves444 release proof.
+IMAP/Gmail missing/malformed flags/labels now remain unknown with null origin;
+valid states retain provider origin through actual annotate and native grouping.
+No added provider calls/writes/counts/layout/CSS changes. New hermetic adapter/
+projection negatives and existing mailbox/thread/participant/layout tests pass;
+full final-head gate and exact live verification pending. B snippets,attachment
+manifests,totals,cursors and search remain later separately bounded work.
+
 2026-10-25 repair444 DONE/VERIFIED: testedc2a9b49 cloud40192129550/
 job121165162664=248/0/0,600s/file,13m47s job;769.22s per-file sum NOT wall.
 Merged/currentmainddab0a8acf7097f5b9992e8ef4db4a6a2509be18 automatically deployed

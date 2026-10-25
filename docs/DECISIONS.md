@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-063B starts with a small read-state provenance prerequisite before
+folder totals. Already-returned IMAP flags/Gmail label IDs are the only evidence;
+absent/malformed values remain null, not inferred read/unread. Native grouping
+requires all members known read to say read; a confirmed unread member remains
+unread. This adds no request, cache persistence, mailbox writer or count. Other
+B snippets/attachments/cursors/search remain ordered separate pieces -- D-063,
+AGENTS data truth and the documented provider flag gap --2026-10-25.
+
 2026-10-25: #442 short-window containment is verified repaired by PR444 on
 exact main ddab0a8, automatic deployment1d8e39bd-22a3-4f73-a4d0-999d820c81f6.
 Fixed system folders never use inner scrolling; long labels remain available
