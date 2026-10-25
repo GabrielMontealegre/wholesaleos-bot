@@ -39,6 +39,8 @@ async function prove() {
       await page.locator('.ws-mail-row').first().waitFor();
       assert.equal(await page.locator('.ws-mail-row').count(), 2, 'People default excludes automated listing alert, not the real replies');
       assert.equal(bodyReads, 0, 'No message body fetched on load');
+      assert.equal(await page.locator('.ws-composer').count(), 0, 'The default mail view never reserves an empty reply box');
+      assert(await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'List owns the main-area width, not half of a split pane');
       assert.equal(await page.locator('#help').isVisible(), false, 'Email reserves no blank help strip');
       assert(await page.locator('#refresh').getAttribute('title'), 'Help remains available on the control');
       const listTop = await page.locator('.ws-mail-list').evaluate(el => el.getBoundingClientRect().top);
@@ -51,6 +53,10 @@ async function prove() {
       assert.equal(await page.getByRole('tab', { name: 'People', exact: true }).getAttribute('aria-selected'), 'true');
       await page.locator('.ws-mail-row').first().click();
       await page.getByText('LATEST SYNTHETIC TEXT', { exact: false }).waitFor();
+      assert.equal(await page.locator('.ws-mail-list').isVisible(), false, 'Opened message replaces the list on desktop and phone');
+      assert(await page.locator('.ws-mail-reading').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1), 'Opened reader owns the full main-area width');
+      assert.equal(await page.locator('.ws-composer').count(), 0, 'Opening a thread does not open a composer');
+      assert(await page.locator('.ws-mail-reply-actions').evaluate(el => el.getBoundingClientRect().top >= document.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().bottom), 'Reply follows the source thread rather than occupying header space');
       assert.equal(await page.locator('.ws-mail-earlier[open]').count(), 0);
       assert.equal(await page.locator('.ws-mail-body img').count(), 0, 'Source HTML is text only');
       const reading = await page.locator('.ws-mail-thread').evaluate(el => ({ height: el.clientHeight, ownScroll: getComputedStyle(el).overflowY, bodyOverflow: getComputedStyle(el.querySelector('.ws-mail-body')).overflowY }));
@@ -90,6 +96,7 @@ async function prove() {
       assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'LOCAL ONLY REPLY');
       await page.getByRole('button', { name: 'Close reply', exact: true }).click();
       await page.getByRole('button', { name: 'Back to messages', exact: true }).click();
+      assert(await page.locator('.ws-mail-list').isVisible(), 'Back restores the full-width list');
       assert(await page.getByRole('tab', { name: 'Alerts', exact: true }).isVisible(), 'Back restores the phone category controls');
       failBody = true;
       await page.locator('.ws-mail-row').first().click();

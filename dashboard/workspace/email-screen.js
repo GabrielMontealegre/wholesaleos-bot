@@ -47,9 +47,9 @@
         (!items.length && !state.busy ? c.empty(state.error ? 'Email unavailable' : 'No conversations in this view', state.error ? 'Use Refresh or open Gmail.' : 'Check the other view or folder.') : '') +
         '</section><section class="ws-mail-reading" aria-label="Open conversation">' +
         '<header class="ws-mail-reading-head">' + (thread ? c.button({ label: 'Back to messages', icon: 'chevron-down', iconOnly: true, id: 'mail-back' }) + '<div class="ws-mail-heading"><h2>' + c.escape(thread.latest.subject || '(No subject)') + '</h2>' + roleChip(thread.role) + '</div>' : '') +
-        '<div class="ws-mail-reading-actions">' + (thread ? c.button({ label: 'Reply', icon: 'mail', id: 'mail-reply', disabled: !state.body.length || state.busy }) : '') +
-        '<a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a></div></header>' +
-        '<div class="ws-mail-thread">' + bodyMarkup() + '</div>' +
+        '<div class="ws-mail-reading-actions"><a class="ws-button" href="' + gmail() + '" target="_blank" rel="noopener noreferrer">Open in Gmail' + c.icon('arrow-up-right') + '</a></div></header>' +
+        '<div class="ws-mail-thread">' + bodyMarkup() +
+        (thread && !state.composing ? '<footer class="ws-mail-reply-actions">' + c.button({ label: 'Reply', icon: 'mail', id: 'mail-reply', disabled: !state.body.length || state.busy }) + '</footer>' : '') + '</div>' +
         (thread && state.composing ? '<section class="ws-mail-composer" aria-label="Reply composer"><header><h3>Reply</h3>' + c.button({ label: 'Close reply', icon: 'x', iconOnly: true, id: 'mail-close-reply' }) + '</header>' + c.composer('mail-draft', { cc: true }) +
           '<p class="ws-muted" role="status" data-reply-status>Not sent. Reply sending is unavailable; use Gmail.</p></section>' : '') + '</section>' +
         '<section id="mail-panel-' + (state.category === 'people' ? 'alerts' : 'people') + '" role="tabpanel" aria-labelledby="mail-' + (state.category === 'people' ? 'alerts' : 'people') + '" hidden></section></div></section>';
