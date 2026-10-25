@@ -57,11 +57,17 @@ async function run(){
     await page.waitForFunction(()=>document.querySelector('[data-mail-folder-count]').textContent.includes('0 messages, 0 unread'));
     await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await waitPending(4);await pending[3].finish({status:429,json:{ok:false}});
     await page.waitForTimeout(30);assert.equal(await page.locator('.ws-mail-row').count(),1);assert.equal(await page.locator('[data-mail-folder-count]').innerText(),'');assert.equal(pending.length,4,'No automatic retries after rate limits');
-    capability=false;await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await page.waitForTimeout(50);assert.equal(pending.length,4,'Legacy/unsupported metadata makes no summary request');
-    capability=true;await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await waitPending(5);
+    await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await waitPending(5);
+    await page.locator('.ws-mail-row').click();await page.locator('.ws-mail-body').waitFor();await page.getByRole('button',{name:'Reply',exact:true}).click();
+    await page.locator('.ws-composer textarea').fill('Synthetic draft survives provider-only authorization failure.');await page.locator('.ws-composer').evaluate(form=>{form.dataset.identity='provider-error-form';});
+    await pending[4].finish({status:503,json:{ok:false,code:'email_folder_summary_provider_auth'}});await page.waitForTimeout(30);
+    assert.equal(await page.locator('.ws-composer').getAttribute('data-identity'),'provider-error-form');assert.equal(await page.locator('.ws-composer textarea').inputValue(),'Synthetic draft survives provider-only authorization failure.');
+    await page.getByRole('button',{name:'Close reply',exact:true}).click();await page.getByRole('button',{name:'Back to messages',exact:true}).click();
+    capability=false;await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await page.waitForTimeout(50);assert.equal(pending.length,5,'Legacy/unsupported metadata makes no summary request');
+    capability=true;await page.getByRole('button',{name:'Refresh mailbox',exact:true}).click();await waitPending(6);
     await page.locator('.ws-mail-row').click();await page.locator('.ws-mail-body').waitFor();await page.getByRole('button',{name:'Reply',exact:true}).click();
     await page.locator('.ws-composer textarea').fill('Synthetic draft must be discarded on a late unauthorized response.');
-    await pending[4].finish({status:401,json:{ok:false}});
+    await pending[5].finish({status:401,json:{ok:false}});
     await page.waitForFunction(()=>!document.querySelector('.ws-mail-row'));assert.equal(await page.locator('.ws-composer').count(),0);
     assert.deepEqual(forbidden,[]);assert.deepEqual(errors,[]);await page.close();
   }}finally{await browser.close();}

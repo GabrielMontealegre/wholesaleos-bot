@@ -17,7 +17,7 @@ const reader=createMailboxReader({env,Client,now});
 const oauthEnv={GMAIL_USER:'operator@example.test',GMAIL_CLIENT_ID:'synthetic',GMAIL_CLIENT_SECRET:'synthetic',GMAIL_REFRESH_TOKEN:'synthetic'};
 let label={id:'INBOX',messagesTotal:15,messagesUnread:2},failure=null,googleCalls=[],hangGoogle=false;
 function requestOptions(options){assert.equal(options.timeout,12000);assert.equal(options.retry,false);assert.equal(options.signal.aborted,false);}
-const googleImpl={auth:{OAuth2:class{setCredentials(){}}},gmail(){return {users:{labels:{
+const googleImpl={auth:{OAuth2:class{constructor(){this.transporter={request:async()=>{throw Error('Unexpected transport');}};}setCredentials(){}}},gmail(){return {users:{labels:{
   async list(query,options){googleCalls.push('labels');requestOptions(options);return {data:{labels:[{name:'WOS/Buyers',id:'Label_7'}]}};},
   async get(query,options){googleCalls.push(query.id);requestOptions(options);if(failure)throw failure;if(hangGoogle)await new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(Error('synthetic abort')),{once:true}));return {data:label};}
 }}};}};
@@ -41,7 +41,7 @@ async function main(){
   assert.equal((await oauth.folderSummary('buyers')).summary.unread_messages,null);assert.deepEqual(googleCalls,['labels','Label_7']);
   label={id:'Wrong',messagesTotal:1};await assert.rejects(oauth.folderSummary('inbox'),/summary_unavailable/);
   for(const status of [401,403,429,500]){failure={response:{status},message:'never return synthetic secret'};googleCalls=[];
-    await assert.rejects(oauth.folderSummary('inbox'),error=>error.status===(status===500?503:status));assert.deepEqual(googleCalls,['INBOX']);}
+    await assert.rejects(oauth.folderSummary('inbox'),error=>error.status===(status===429?429:503));assert.deepEqual(googleCalls,['INBOX']);}
   failure=null;
   // Accelerate only the summary's fixed deadline; no provider or real timers
   // are retried. Resolving a late stage must not start the next command.

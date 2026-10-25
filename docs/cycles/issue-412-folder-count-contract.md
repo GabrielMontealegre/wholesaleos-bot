@@ -65,6 +65,24 @@ Chromium1117 synthetic1366/400/412 paint49.8/46.2/41.9ms,reading heights
 external requests or console errors. These are SYNTHETIC,not live timings.
 Safe screenshots/report:docs/screens/2026-10-25-folder-snapshots.
 
+## Review Corrections Before Merge
+
+PR448 automated review found two valid issues in initialf943f2a;neither head
+was merged/deployed. Upstream Gmail401/403 is now a sanitized non-session503,
+so optional provider permission failure cannot clear a valid app session/draft.
+Actual requireAdmin401/403 still locks normally;429 stops without retry.
+
+The installed OAuth2Client refresh transport does not inherit API options and
+normally enables token retries. The summary-only auth instance now wraps that
+transport with the same AbortSignal/deadline/retry:false and stage checks.
+Provider auth/rate errors become terminal sanitized errors before OAuth's
+auth-error retry logic. No credentials/scopes/settings or other OAuth readers
+change. A REAL installed OAuth2Client with synthetic transport proves token
+and label calls share policy;401/403/429 never refresh/retry,and a deliberately
+late token completion cannot dispatch a label request after expiry. Native
+three-size provider503 retains the exact draft while genuine session401 clears
+it. The final modified head needs its own full gate;old green is not reused.
+
 ## Source Evidence Checked2026-10-25
 
 - Installed ImapFlow2.3.0 StatusObject: path,messages,unseen,uidValidity.

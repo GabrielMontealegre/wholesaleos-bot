@@ -36,7 +36,29 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
     let client;
     try {client=new Client(imapOptions());client.on('error',()=>{});await client.connect();return await fn(client);} finally {try{if(client)await client.logout();}catch{try{client.close();}catch{}}active--;}
   }
-  function oauth() {const auth=new googleImpl.auth.OAuth2(env.GMAIL_CLIENT_ID,env.GMAIL_CLIENT_SECRET);auth.setCredentials({refresh_token:env.GMAIL_REFRESH_TOKEN});return googleImpl.gmail({version:'v1',auth});}
+  function oauth(policy) {
+    const auth=new googleImpl.auth.OAuth2(env.GMAIL_CLIENT_ID,env.GMAIL_CLIENT_SECRET);
+    if(policy) {
+      if(typeof auth.transporter?.request!=='function')fail('email_folder_summary_unavailable');
+      const request=auth.transporter.request.bind(auth.transporter);
+      // The API request options do not reach OAuth token refreshes. Bound the
+      // private auth client's transport too,including any late API dispatch.
+      auth.transporter.request=async input=>{
+        policy.check();
+        try {const result=await request({...input,...policy.options});policy.check();return result;}
+        catch(error) {
+          policy.check();
+          const status=Number(error.response?.status||error.status||error.code);
+          // Do not let the OAuth client's auth-error recovery retry a refresh,
+          // or confuse provider permissions with our signed admin session.
+          if(status===401||status===403)fail('email_folder_summary_provider_auth');
+          if(status===429)fail('email_folder_summary_unavailable',429);
+          throw error;
+        }
+      };
+    }
+    auth.setCredentials({refresh_token:env.GMAIL_REFRESH_TOKEN});return googleImpl.gmail({version:'v1',auth});
+  }
   async function boxPath(client,folder) {
     if(!Object.hasOwn(FOLDERS,folder))fail('email_folder_invalid',400);
     if(folder==='inbox')return 'INBOX';
@@ -73,7 +95,7 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
             return imapStatus(raw,{folder,path:box,uidValidity:validity,observedAt:now()});
           } finally {lock.release();}
         }
-        const gmail=oauth(), labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};
+        const gmail=oauth({check,options}), labels={inbox:'INBOX',sent:'SENT',drafts:'DRAFT',starred:'STARRED'};
         let labelId=labels[folder];
         if(!labelId) {
           const result=await gmail.users.labels.list({userId:'me'},options);check();
@@ -93,9 +115,10 @@ function createMailboxReader({env=process.env,Client=ImapFlow,parse=simpleParser
       return {ok:true,mode,summary};
     } catch(error) {
       if(expired)fail('email_folder_summary_timeout',504);
-      if(/^email_[a-z_]+$/.test(error.code||''))throw error;
       const status=Number(error.response?.status||error.status||error.code);
-      fail('email_folder_summary_unavailable',[401,403,429].includes(status)?status:503);
+      if(status===401||status===403)fail('email_folder_summary_provider_auth');
+      if(/^email_[a-z_]+$/.test(error.code||''))throw error;
+      fail('email_folder_summary_unavailable',status===429?status:503);
     } finally {
       clearTimeout(timer);expired=true;controller.abort();close();
       summaryActive=false;if(mode==='app_password')active--;
