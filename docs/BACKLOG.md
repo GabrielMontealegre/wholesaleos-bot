@@ -2,6 +2,46 @@
 
 ## Latest Run Summary
 
+2026-10-25 independent426 PREPARATION: reconcile existing dormant calculator
+with current verified main3d19945 after427/425/424 technical releases.
+Only documentation conflicts; financing source/test unchanged. No runtime
+reader,route,stored mapping,value/offer gate or standalone deployment.
+Owner now requires Gmail structure under4126389032123,NOT approval; current
+Gmail foundation candidate440 and capability STOP439 are independent and are
+not bundled into426. Keep426 DRAFT/unmerged pending its updated full gate and
+an eventual authorized runtime consumer. Prior242/0/0 is not this head's gate.
+Historical preparation notes below are superseded by this summary.
+
+2026-10-23 UTC426 PREPARATION ONLY: existing dormant financing PR reconciled
+with main9f4caaf; only documentation conflicts, math/test bytes unchanged.
+No route, runtime reader, UI, stored mapping or target-return/offer gate is
+activated. Keep DRAFT/unmerged after427/425/424, no standalone deployment.
+Those independent reconciled heads passed241/244/243 files respectively,
+0 failures/skips, and are not a tested combined release.431/422 exact source
+is active and healthy; required live viewport proof remains pending435.
+Earlier pause/ordering comments below are historical, not current provider
+state. No owner Email approval or new Deals screen is inferred.
+
+2026-10-21 #416 independent financing foundation LOCAL while Railway423
+holds the ordered releases. New pure fixed-rate scenario math covers payments,
+IO transitions, first-year cash flow/returns, coverage and balloon balances;
+no product reader/writer, route, offer, stored value or UI is changed. Explicit
+inputs/assumptions only, missing expenses/costs stay unknown, losses retained.
+Focused tests and full241/241 hosted gate passed on productb7dc6e7,
+run39659500396:0 failures/skips,600s/file,test8m32s/job9m25s; finance0.06s,
+existing match-profit0.25s/reviewed-deals0.14s/county-notice172.85s.
+All per-file timings committed. Remains DRAFT behind424/425.
+This does not complete the Deals screen, source mapping or target-return ceiling.
+Today425 product7f52520 passed243/0/0 hosted39655779023 (11m55s test step),
+documentation head43ffeaf also passed243/0/0 in run39658025189. Its
+safe screenshots/timings/checkpoint are preserved on the existing branch.
+Railway18:48Z still showed Limited Access and active421; no duplicate build,
+setting/billing change, message, capture, batch or production write.
+The existing Deals GET already provides canonical evaluated comps, matches,
+profit and exact location counts; future UI must label its100-row cap honestly.
+Gabriel's required Email design sign-off was requested once through the app;
+response pending. Items424/425 remain exempt from that waiting gate per412.
+
 2026-10-24 PR425 Today action center DONE/RELEASED (technical gates).
 Final07d86a4 hosted40126530095/job120969066010 passed244/0/0,600s/file,
 13m46s job,all244 timings accounted for. Exact merge5b8b89ec77e3563329b0719f04e81fe62cc36a7b
