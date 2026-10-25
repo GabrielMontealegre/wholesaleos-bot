@@ -11,6 +11,39 @@ AGENTS7 requires rollback to previously verified32c0c2a before bounded repair.
 442 records reproduction and recommended accessible drawer-based short-height
 fallback. Historical candidate proof/gates below are NOT release acceptance.
 
+## Bounded 442 Repair After Verified Rollback
+
+443 exact rollbackd78f77f/automatic2cefb141-a0be-4b5e-bc9b-c1e9d9df7332
+was full247/0/0 and435mixed-proof VERIFIED before work on this repair. Branch
+item/442-mail-rail-containment starts from that main and retains rollback proof.
+Only the already-approved D-063A product files are reintroduced; no B/C writer,
+API/auth/source/D-061 gate or business data change.
+
+New actual fixture regression first reproduced the old1038x503 fixed-rail
+failure on reverted441 source. It now runs1366x768/400x915/412x915 PLUS
+1038x503 and1366x600, asserting rail scrollWidth/Height never exceed client,
+all visible commands contained with44px targets,labels reachable through a
+labeled drawer replacement,and every composer input/textarea/X/command/status
+within viewport. Existing source/forged/unlinked/duplicate/empty/failure/401,
+draft and actual navigation assertions remain. The label selector now follows
+the visible rail OR labeled drawer,not an off-screen hidden control.
+
+Fix: fixed system folders remain visible; at heights<=850 the long role filters
+move to the existing X/Escape drawer behind a visible Mail labels icon/tooltip.
+No inner rail scrolling or clipped44px targets. At heights<=650 ONLY explicit
+composer focus hides source text temporarily and reduces gaps/input padding,
+keeping minimum44px controls and full outcome status. Closing/Escape restores
+the complete source reader and local draft. Initial broad850 composer cutoff
+failed the ORIGINAL768px reading-height>=180 assertion; the test was retained
+unchanged and cutoff corrected to650. All six focused suites then pass; no
+safety assertion weakened. Five-size source/label/context/compact-composer tests,
+original Email UI/loading/reply/shell/actual navigation all pass.
+
+Cache CSS/Email versions10. Before comparison uses EXACT healthy rollbackd78f77f
+HTML/app/components/Email/CSS,not failed441 or a pre-opened composer. Full final
+head gate,synthetic snapshots/FCP/accessibility and exact live read-only proof
+still required. 442/412 stay OPEN; no owner approval or full Gmail/B/C completion.
+
 ## Authoritative Scope
 
 Owner/architect6389032123 replaces the compact split-pane layout with Gmail's

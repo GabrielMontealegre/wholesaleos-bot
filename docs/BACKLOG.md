@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-25 repair442 IN PROGRESS on item/442-mail-rail-containment from
+verifiedrollbackd78f77f. New red1038x503 regression reproduced oldrail failure;
+fixed systemfolders + reachable Maillabels drawer eliminate inner scroll;
+short explicit composer(<=650px) fits all fields/commands/status while close
+restores source/draft. Five-size44px/containment and six focused suites pass;
+original768/915 reading-height assertions unchanged. Only D-063A reintroduced,
+no backend/auth/send/data changes. Full final-head gate/live acceptance pending.
+
 2026-10-25 rollback443 DONE/VERIFIED: tested1186d10 cloud40189589041/
 job121157540722=247/0/0,600s/file,13m29s; exact merged/currentmaind78f77f2ced1ebf6a3929056656b166151ed2a34
 automaticRailway2cefb141-a0be-4b5e-bc9b-c1e9d9df7332 Active/successful,
