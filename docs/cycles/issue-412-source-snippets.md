@@ -61,7 +61,13 @@ baseline/current candidate1366/400/412 reading proof:FCP51.5/49.1/27.5ms,
 reader645/740/740px,Lighthouse13.5.0 accessibility98/98,zero external/writes/errors.
 These are SYNTHETIC,not authenticated phone timing or full Gmail acceptance.
 No controls/layout changed;original five-size rail/composer and loading suites
-pass. Full final-head gate and exact deployment/read-only proof still pending.
+pass. Finaldb6c5b2 full40215946479=251/0/0,600s/file;exactmerge327fd7c,
+automaticee6eea25 Active/successful/source verified. Exact merge-source
+synthetic3size snippet/five-size chrome pass. Public12true3sizes health200/
+unsigned401;actualsigned1038x559 open4795charbody/Back500char EXACTsource
+match/searchclear/disabledemptyReply/classic19cards/Back/0errors verified.
+One source observation waited beyond tool deadline,then the same request
+completed without retry;no live timing claim. Safe proof ../screens/2026-10-25-pr446-release.
 
 Official source contracts checked2026-10-25:
 https://imapflow.com/docs/guides/fetching-messages/ (BODY.PEEK,encoded partials,
