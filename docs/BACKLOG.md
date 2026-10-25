@@ -2,6 +2,17 @@
 
 ## Latest Run Summary
 
+2026-10-25 PR441 LIVE VERIFICATION FAILED442 after exact mergeded1ee8c
+automatically deployed563cd3de-8826-4c7d-90b8-9026b63c139b Active/source
+verified. Health/auth/public12 checks and same-merge synthetic3sizes passed,
+but actual signed1038x503 shows folder rail client41x432/scroll44x644,
+horizontal inner scroll and off-screen role filters;41px buttons below44.
+Green248 tests did not cover this short-desktop containment gap. No backend,
+auth,send or business-data failure. AGENTS7 rollback branch now reverts ONLY
+441 product to verified32c0c2a;prior proof/decisions retained as history.
+Do NOT call441 released/accepted.442 records failure and bounded repair.
+Rollback needs its own full gate/merge/exactdeploy/read-only verification first.
+
 2026-10-25 quota reset; actual-thread medium/default verified.441 preflight
 browser3 existing signed classic controls initially worked,then reload/same
 handle observations timed out;native dedicated WholesaleOS window fallback

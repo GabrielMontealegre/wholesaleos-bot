@@ -1,5 +1,16 @@
 # #412 Gmail-Structure Email Migration
 
+## Failed Live Acceptance: 442
+
+441 mergeded1ee8c/automatic563cd3de-8826-4c7d-90b8-9026b63c139b exact
+source Active/successful, but signed1038x503 rail measured client41x432 and
+scroll44x644; horizontal inner scrollbar,off-screen labels and41px targets
+fail containment/44px acceptance. Public12/health200 and same-merge synthetic
+journey do not override this evidence. No source/auth/send/business-data issue.
+AGENTS7 requires rollback to previously verified32c0c2a before bounded repair.
+442 records reproduction and recommended accessible drawer-based short-height
+fallback. Historical candidate proof/gates below are NOT release acceptance.
+
 ## Authoritative Scope
 
 Owner/architect6389032123 replaces the compact split-pane layout with Gmail's
