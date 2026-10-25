@@ -1,13 +1,22 @@
 'use strict';
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
+const { annotate } = require('../modules/email/thread-view');
 async function prove() {
   const { browser } = await launchChromiumWithResolvedBrowser(require('playwright'), { headless: true });
   const at = '2026-10-20T12:00:00Z';
   const row = (id, patch = {}) => ({ id, thread_key: id.repeat(64), source_kind: 'connected_mailbox', date: at,
     from: 'Synthetic Person <person@example.test>', sender_name: 'Fixture ' + id, subject: 'Source subject ' + id, snippet: 'Recorded source snippet', ...patch });
-  const linked = role => ({ link_status: 'linked', conversation: { role, role_source_kind: 'operator_input', role_recorded_at: at, refs: ['BUY-0001'] } });
-  const rows = [row('a', { link_status: 'unlinked', conversation: { refs: ['BUY-9999'], role: 'buyer' } }), row('b', { ...linked('buyer'), sender_name: 'Fixture needle-b' }), row('c', linked('seller')), row('d', linked('agent')),
+  const linked = role => ({ link_status: 'linked', conversation: { role, role_source_kind: 'operator_input', role_recorded_at: at, records: [] } });
+  const linkedStore = {
+    conversations: [{ id: 'fixture-conversation', role: 'buyer', refs: ['BUY-0001'], channels: ['email'], source_kind: 'operator_input', recorded_at: at, email_message_ids: ['<buyer@example.test>'] }],
+    buyers: [{ id: 'fixture-buyer', record_ref: 'BUY-0001' }]
+  };
+  const buyer = annotate([row('b', { sender_name: 'Fixture needle-b', message_id: '<buyer@example.test>' })], linkedStore, { now: at })[0];
+  assert.deepEqual(buyer.conversation.records, [{ kind: 'buyer', id: 'fixture-buyer', ref: 'BUY-0001' }]);
+  assert.equal(buyer.conversation.refs, undefined, 'Actual mailbox view intentionally exposes records, not stored conversation refs');
+  assert.deepEqual(annotate([buyer], { ...linkedStore, buyers: [...linkedStore.buyers, ...linkedStore.buyers] }, { now: at })[0].conversation.records, [], 'Ambiguous stored record identity does not create a context link');
+  const rows = [row('a', { link_status: 'unlinked', conversation: { refs: ['BUY-9999'], records: [{ kind: 'buyer', id: 'forged', ref: 'BUY-9999' }], role: 'buyer' } }), buyer, row('c', linked('seller')), row('d', linked('agent')),
     row('e', { from: 'alerts@redfin.com' }), row('f', { labels: ['WOS/Reports'] }), row('1', linked('holder'))];
   try {
     for (const width of [1366, 400, 412]) {
@@ -97,6 +106,11 @@ async function prove() {
       await labelScope.getByRole('button', { name: 'JV partners', exact: true }).click();
       assert.equal(await page.locator('.ws-mail-row').count(), 1);
       assert.equal(await page.locator('.ws-mail-row').getAttribute('title'), 'JV partner');
+      await page.locator('.ws-mail-row').click(); await page.locator('.ws-mail-body').waitFor();
+      await page.getByRole('button', { name: 'Conversation context', exact: true }).click();
+      assert.equal(await page.getByRole('complementary', { name: 'Conversation context', exact: true }).getByRole('link').count(), 0, 'A validated role without a unique annotated record is not a record link');
+      await page.getByRole('button', { name: 'Close conversation context', exact: true }).click();
+      await page.getByRole('button', { name: 'Back to messages', exact: true }).click();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       const toolbarFits = await page.locator('.ws-mail-list-tools').evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; });
       assert(toolbarFits);

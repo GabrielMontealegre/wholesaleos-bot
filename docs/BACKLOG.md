@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-25 quota reset; actual-thread medium/default verified.441 preflight
+browser3 existing signed classic controls initially worked,then reload/same
+handle observations timed out;native dedicated WholesaleOS window fallback
+requested app approval but timed out. No auth transfer/settings/merge/deploy.
+Trace found an UNMERGED context-link fixture gap: backend thread-view emits
+conversation.records,not stored refs. Fixed consumer against actual annotate
+output,canonical unique buyer/deal kind/id/ref only;forged/unlinked/missing/
+duplicate-record negatives and three-size chrome/loading tests pass. New
+final-head full gate required;prior9a5b3e8 green is historical,not borrowed.
+
 2026-10-25 phase-A final441 ready-for-review,UNMERGED/UNDEPLOYED.
 Architect439 APPROVED A->B->C; D-063 recorded. Final remote9a5b3e84efdc806ff0bbbfe498ac2ccf883f5c31
 hosted40155677969/job121056598346 passed248/0/0,600s/file,14m12s job.

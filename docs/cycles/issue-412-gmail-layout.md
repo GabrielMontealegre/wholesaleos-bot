@@ -179,3 +179,23 @@ Owner async request made,keep PIN private. Architecture hold is ANSWERED.
 No manual deployment/settings/auth transfer/outreach or business-data write.
 This subsequent LOCAL-ONLY evidence commit does not change tested product or
 authorize a docs-only CI rerun. PR441 is ready-for-review but UNMERGED.
+
+2026-10-25 resume: quota reset; medium/default verified from this thread's
+dated session fields. Existing signed classic tab AX/control initially works,
+but reload observation and the same-handle follow-up time out; no new merge
+or deploy. No new owner request spam or authentication transfer. This remains
+the release preflight tooling gate, not an application failure.
+
+Actual writer/reader trace then found an UNMERGED441 acceptance defect: the
+new context panel read conversation.refs, but modules/email/thread-view.js
+deliberately emits conversation.records (unique kind/id/ref) and deals, not
+the stored raw refs. The former UI positive fixture incorrectly invented that
+response field. Correct the consumer, not the backend contract: only one
+validated linked deal/buyer record with a strict ref creates a link. No raw
+legacy refs fallback, source guessing or record-body leak. The test now uses
+actual annotate output with canonical buyer storage and exact message anchor;
+forged/unlinked and role-without-record negatives remain, and duplicate stored
+identity yields no annotation link. Focused three-size fixture passed before
+the additive missing-record negative; new final-head gate required. Historical
+9a5b3e8 248green does not prove this changed candidate. No live regression or
+whole412 completion is claimed.

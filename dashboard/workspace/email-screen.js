@@ -41,8 +41,9 @@
         '<span class="ws-mail-subject">' + c.escape(row.latest.subject || '(No subject)') + (row.snippet ? ' <span class="ws-mail-snippet"> - ' + c.escape(row.snippet) + '</span>' : '') + '</span><time>' + c.escape(time(row.latest.date)) + '</time></button></div>';
     }
     function contextMarkup(thread) {
-      var refs = thread && thread.role && thread.latest.link_status === 'linked' && thread.latest.conversation && thread.latest.conversation.refs;
-      var href = Array.isArray(refs) && refs.length === 1 ? root.WOSWorkspaceNavigation.recordHref(refs[0]) : '';
+      var records = thread && thread.role && thread.latest.link_status === 'linked' && thread.latest.conversation && thread.latest.conversation.records;
+      var record = Array.isArray(records) && records.length === 1 ? records[0] : null;
+      var href = record && ['deal', 'buyer'].includes(record.kind) && typeof record.id === 'string' && record.id.length > 0 && record.id.length <= 200 && !/[\x00-\x1f\x7f]/.test(record.id) ? root.WOSWorkspaceNavigation.recordHref(record.ref) : '';
       return '<aside class="ws-mail-context" aria-label="Conversation context"' + (state.contextOpen ? '' : ' hidden') + '><header><h3>Conversation context</h3>' + c.button({ label: 'Close conversation context', icon: 'x', iconOnly: true, id: 'mail-context-close' }) + '</header>' +
         (thread ? roleChip(thread.role) : '') + '<p class="ws-muted">' + (thread && thread.role ? 'Role comes from the linked recorded conversation.' : 'A person role has not been recorded.') + '</p>' +
         (href ? '<a class="ws-button" href="' + c.escape(href) + '">Open linked record' + c.icon('arrow-up-right') + '</a>' : '<p class="ws-muted">No unique record link is available.</p>') + '</aside>';
