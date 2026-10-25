@@ -17,6 +17,8 @@ assert.equal(view.folder_total, null);
 assert.equal(view.can_load_older, false);
 assert.deepEqual(view.range, { start: 1, end: 2, total: 2, scope: 'loaded_threads' });
 assert.equal(project(messages, { now, category: 'buyers' }).rows[0].role, 'buyer');
+const jv = [row('p', { link_status: 'linked', conversation: role('holder') }), row('q', { link_status: 'linked', conversation: role('partner') })];
+assert.equal(project(jv, { now, role: 'jv' }).rows.length, 2, 'JV filter retains both recorded holder and partner roles');
 assert.equal(project(messages, { now, role: 'buyer', category: 'buyers' }).matching_loaded_threads, 1);
 assert.equal(project(messages, { now, query: 'ＳＯＵＲＣＥ snippet' }).matching_loaded_threads, 7);
 assert.equal(project(messages, { now, query: '.*' }).matching_loaded_threads, 0, 'Search is literal, not an executable pattern');

@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-25 next Gmail chrome slice PREPARED,not merged/deployed/approved.
+item/412-gmail-mailbox-chrome wires loaded-only search/five sourced categories,
+folder rail/drawer,dense rows,local selection and collapsible sourced context.
+Focused tests and pinned synthetic1366/400/412 proof pass;FCP56.6/47.3/65.5ms,
+Lighthouse98/98,zero external/writes. Full final-head gate remains pending.
+Affected439 commands/Compose/pagination need architect scope; no fake actions,
+no native Deals. See docs/cycles/issue-412-gmail-layout.md for trace/assertion
+changes and separate440 release proof. No local test process remains running.
+
 2026-10-25 reading foundation440 DONE/RELEASED (bounded slice ONLY).
 Final88987d1 hosted40148742280/job121035596735=247/0/0,600s/file,
 13m34s; exact merge32c0c2acb31770c9dfb72d454ff306eb8ba69a4d automatic

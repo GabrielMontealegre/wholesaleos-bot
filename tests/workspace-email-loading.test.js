@@ -33,6 +33,7 @@ async function prove() {
       await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
       assert.equal(await page.locator('#today-content').getAttribute('aria-busy'), 'true', 'Changing category must not pretend the outstanding folder read completed');
       if (scenario === 'folder') {
+        if (width !== 1366) await page.getByRole('button', { name: 'Mail folders', exact: true }).click();
         await page.getByRole('button', { name: 'Sent', exact: true }).click();
         await page.getByText('Synthetic sent thread', { exact: true }).waitFor();
       }
