@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-25 attachment-reader447 DONE/VERIFIED: tested534c7b2 full40218600583/
+job121245038216=253/0/0,600s/file,12m6s job,sum671.80s NOTwall. Exact
+merged/currentmain3d41e6d4160d625c9d99d35868ea7dc44f620658 automaticRailway
+68257cb1-7929-4930-8291-814a1131436d Active/successful,Details exactsource.
+Public12true1366/400/412 GETshealth200,unsignedidentity401;exactmerge-source
+attachment3size/chrome5size pass. Signed1038x559 metadata/bodyGET verifies
+parsed_mime_metadata origin,0parts confirmed,strict primitive-key shape;UI
+correctly hides knownempty manifests,4795charbody/no defaultcomposer,49rows,
+layoutmodelv3/Emailv12. EmptyPreview/Senddisabled/finalunavailable/Gmailstatus,
+allcontrolsfit,0consoleerrors. Real-MIME positive file display is SYNTHETIC,
+not a live private-file claim. Classic19Open deal/Back passed;signedGET stays
+disabled/configured/cap30/automaticfalse. No actualfiles opened/downloaded,no new provider
+requests/content/base64/headers/storage/writers/sends/settings/businesswrites.
+Proof/all253timings docs/screens/2026-10-25-pr447-release. Other B totals/
+cursors/labels/search and unopened-list metadata remain separate;412 OPEN.
+
 2026-10-25 explicit-reader attachment slice IN PROGRESS on
 item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
 Only metadata from existing MIME read;no new provider calls/download API/file
