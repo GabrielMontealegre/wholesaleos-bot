@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-25 next folder-count contract PREPARATION ONLY on local
+item/412-folder-count-contract from verified3d41e6d with447 proof preserved.
+Pure source-bound STATUS/label projection and hermetic sequence/UID/scope/
+estimate/count/clock negatives pass. No runtime reader/route/UI request,PR or
+deployment;do not call folder totals delivered. Trace specifies one bounded
+active-folder snapshot without blocking hydration/repainting drafts;no fanout,
+no message/thread denominator mixing. Full wiring/gates remain next work.
+
 2026-10-25 attachment-reader447 DONE/VERIFIED: tested534c7b2 full40218600583/
 job121245038216=253/0/0,600s/file,12m6s job,sum671.80s NOTwall. Exact
 merged/currentmain3d41e6d4160d625c9d99d35868ea7dc44f620658 automaticRailway
