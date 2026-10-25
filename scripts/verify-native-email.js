@@ -4,17 +4,20 @@ const { pathToFileURL } = require('node:url');
 const { createFixtureApp } = require('./verify-marketplace-ui');
 const { registerWorkspacePreview } = require('../modules/ui/workspace-preview');
 const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
-async function prove({ screenshots = false, lighthousePath, reply = false } = {}) {
+async function prove({ screenshots = false, lighthousePath, reply = false, layout: readingLayout = false } = {}) {
   const fixture = createFixtureApp(), app = express();
   let baseline = false;
-  if (reply) {
+  if (reply || readingLayout) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-screen.js'].map(file => [file, execFileSync('git', ['show', '5b8b89ec77e3563329b0719f04e81fe62cc36a7b:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-screen.js', 'design-system.css'].map(file => [file, execFileSync('git', ['show', '3d19945330db68ea980fc69acbffd5bde065b203:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
-      if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : 'js').send(files.get(file));
+      if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : file.endsWith('.css') ? 'css' : 'js').send(files.get(file));
       next();
     });
+  }
+  if (readingLayout && !reply) app.get('/api/dashboard/email/thread-replies/status', (req, res) => res.json({ enabled: false, configured: true }));
+  if (reply) {
     app.use(express.json());
     app.get('/api/dashboard/email/thread-replies/status', (req, res) => res.json({ enabled: true, configured: true }));
     app.get('/api/dashboard/email/thread-replies/context', (req, res) => res.json({ message_ids: ['earlier', 'latest'], thread_key: 'a'.repeat(64), to: ['person@example.test'], cc: [], participants: ['person@example.test'], subject: 'Re: Property details and next steps' }));
@@ -48,18 +51,24 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
     if (screenshots) fs.mkdirSync(dir, { recursive: true });
     for (const width of [1366, 400, 412]) {
       await page.setViewportSize({ width, height: width === 1366 ? 768 : 915 });
-      baseline = reply;
-      await page.goto(base + (reply ? '/app?preview=1&view=email' : '/dashboard/?workspace=email'));
-      await page.locator(reply ? '.ws-mail-row' : '[data-email-message]').first().waitFor();
-      await page.locator(reply ? '.ws-mail-row' : '[data-email-message]').first().click(); await page.locator(reply ? '.ws-mail-message .ws-mail-body' : '[data-email-body]').first().waitFor();
+      baseline = reply || readingLayout;
+      await page.goto(base + (baseline ? '/app?preview=1&view=email' : '/dashboard/?workspace=email'));
+      await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().waitFor();
+      await page.locator(baseline ? '.ws-mail-row' : '[data-email-message]').first().click(); await page.locator(baseline ? '.ws-mail-message .ws-mail-body' : '[data-email-body]').first().waitFor();
       if (reply) await page.getByRole('button', { name: 'Reply', exact: true }).click();
       if (screenshots) await page.screenshot({ path: path.join(dir, 'before-reader-' + width + '.png') });
       baseline = false;
       await page.goto(base + '/app?preview=1&view=email'); await page.locator('.ws-mail-row').first().waitFor();
+      if (readingLayout) assert.equal(await page.locator('.ws-composer').count(), 0);
       const paint = await page.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime || null);
       assert(paint !== null && paint < 2000);
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-list-' + width + '.png') });
       await page.locator('.ws-mail-row').click(); await page.locator('.ws-mail-message .ws-mail-body').waitFor();
+      if (readingLayout) {
+        assert.equal(await page.locator('.ws-mail-list').isVisible(), false);
+        assert.equal(await page.locator('.ws-composer').count(), 0);
+        assert(await page.locator('.ws-mail-reading').evaluate(el => el.getBoundingClientRect().width >= el.parentElement.getBoundingClientRect().width - 1));
+      }
       const reader = await page.locator('.ws-mail-thread').evaluate(el => ({ reading_height: el.clientHeight, reading_top: el.getBoundingClientRect().top, body_top: el.querySelector('.ws-mail-message .ws-mail-body').getBoundingClientRect().top }));
       if (screenshots) await page.screenshot({ path: path.join(dir, 'after-reader-' + width + '.png') });
       await page.getByRole('button', { name: 'Reply', exact: true }).click();
@@ -93,4 +102,4 @@ async function prove({ screenshots = false, lighthousePath, reply = false } = {}
   } finally { if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
 module.exports = { prove };
-if (require.main === module) prove({ screenshots: process.argv.includes('--screenshots'), reply: process.argv.includes('--reply'), lighthousePath: process.env.WOS_LIGHTHOUSE_PATH }).catch(e => { console.error(e.stack); process.exitCode = 1; });
+if (require.main === module) prove({ screenshots: process.argv.includes('--screenshots'), reply: process.argv.includes('--reply'), layout: process.argv.includes('--layout'), lighthousePath: process.env.WOS_LIGHTHOUSE_PATH }).catch(e => { console.error(e.stack); process.exitCode = 1; });

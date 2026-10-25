@@ -1,5 +1,12 @@
 # Decisions
 
+2026-10-25: architect/owner412 comment6389032123 is the current detailed
+Gmail-structure contract and supersedes the earlier clarification request.
+Implement its read-only visual foundations independently; unsupported mailbox
+mutation/new-thread Send capabilities remain affected-slice BLOCKED439.
+No visual request relaxes D-061 or authorizes production writes. Full Gmail
+comparison/owner approval and later native Deals gates remain outstanding.
+
 Owner2026-10-24: live compact Email still needs another layout adjustment.
 Technical427/425/424 releases are not design approval; keep new native Deals
 migration gated. Request the remaining space/width/control detail or marked
