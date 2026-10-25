@@ -5,7 +5,7 @@
   if (root) root.WOSMailLayoutModel = api;
 })(typeof window !== 'undefined' ? window : null, function (email) {
   var CATEGORIES = ['primary', 'buyers', 'sellers_agents', 'alerts', 'reports'];
-  var ROLES = ['', 'holder', 'buyer', 'partner', 'seller', 'title', 'attorney', 'lender', 'agent', 'other', 'jv'];
+  var ROLES = ['', 'holder', 'buyer', 'partner', 'seller', 'title', 'attorney', 'lender', 'agent', 'other'];
   function normalize(value) { return value.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim(); }
   function snippet(message, messages) {
     var value = message.snippet;
@@ -44,7 +44,7 @@
       return Object.assign({}, thread, { display_category: category(thread, messages), snippet: snippet(thread.latest, messages) });
     }).filter(function (thread) {
       var haystack = normalize([thread.sender, thread.latest.from, thread.latest.subject, thread.snippet].filter(function (value) { return typeof value === 'string'; }).join(' '));
-      return (!role || (role === 'jv' ? ['holder', 'partner'].includes(thread.role) : thread.role === role)) && terms.every(function (term) { return haystack.includes(term); });
+      return (!role || thread.role === role) && terms.every(function (term) { return haystack.includes(term); });
     });
     var counts = {};
     CATEGORIES.forEach(function (key) { counts[key] = rows.filter(function (row) { return row.display_category === key; }).length; });
