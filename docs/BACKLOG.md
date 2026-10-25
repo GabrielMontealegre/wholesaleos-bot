@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-25 explicit-reader attachment slice IN PROGRESS on
+item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
+Only metadata from existing MIME read;no new provider calls/download API/file
+content/storage/writers/send/CSS. Real-MIME adapter/annotation/pure projection
+and3size safe reader tests pass;existing source-snippet/chrome5size tests pass.
+Synthetic app FCP48.8/41.3/26.1ms,Lighthouse98/98,reading space unchanged.
+Full final-head and exact live proof pending. List-presence and other B pieces
+remain separate;no nativeDeals before owner design approval.
+
 2026-10-25 source-snippet446 DONE/VERIFIED: testeddb6c5b2 full40215946479/
 job121236979272=251/0/0,600s/file,11m56s job,sum661.98s NOTwall. Exact
 merged/currentmain327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8 automaticRailway

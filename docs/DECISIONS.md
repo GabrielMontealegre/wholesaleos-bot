@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-063B attachment manifests first expose only allowlisted metadata
+from an already explicit bounded MIME read. No download/content/base64/headers
+or unopened-list presence is implied. Unknown arrays/fields stay unknown;real
+zero-byte parts remain0. Inline parts are labeled,not rendered;filenames are
+escaped and unsafe names withheld. Reader uses shared styles,no new CSS layer;
+existing D-061 text-only send schema stays unchanged -- D-063,AGENTS privacy/
+source truth and official MailParser contract --2026-10-25.
+
 ASSUMED: D-063B snippets initially use already-returned Gmail provider preview
 or an exact-identity parsed body the operator explicitly opened. Native opened
 excerpts are500-character session-only derived text,cleared on request/session/

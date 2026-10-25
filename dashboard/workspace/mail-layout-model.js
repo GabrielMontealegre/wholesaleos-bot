@@ -16,11 +16,26 @@
   function safeText(value, max) {
     return typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
   }
+  function sameMessage(metadata, body, options) {
+    if (!identity(metadata) || identity(body) !== identity(metadata)) return false;
+    try { return email.list([metadata], options).threads.length === 1; } catch (_) { return false; }
+  }
   function openedSnippet(metadata, body, options) {
-    if (!identity(metadata) || identity(body) !== identity(metadata) || body.body_origin !== 'parsed_mime_text' || !safeText(body.body, 2 * 1024 * 1024)) return null;
-    try { if (email.list([metadata], options).threads.length !== 1) return null; } catch (_) { return null; }
+    if (!sameMessage(metadata, body, options) || body.body_origin !== 'parsed_mime_text' || !safeText(body.body, 2 * 1024 * 1024)) return null;
     var value = body.body.replace(/\s+/g, ' ').trim().slice(0, 500);
     return value ? { id: metadata.id, identity: identity(metadata), snippet: value, origin: 'parsed_mime_text' } : null;
+  }
+  function attachmentManifest(metadata, body, options) {
+    if (!sameMessage(metadata, body, options) || body.attachment_manifest_origin !== 'parsed_mime_metadata' || !Array.isArray(body.attachment_manifest) || body.attachment_manifest.length > 50) return null;
+    var fields = ['part_index', 'filename', 'content_type', 'size_bytes', 'disposition', 'related'];
+    if (Array.from(body.attachment_manifest).some(function (part, index) {
+      return !part || Object.keys(part).some(function (key) { return !fields.includes(key); }) || part.part_index !== index ||
+        !(part.filename === null || (safeText(part.filename, 200) && part.filename.length && !/[\\/\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/.test(part.filename) && !['.', '..'].includes(part.filename))) ||
+        !(part.content_type === null || (safeText(part.content_type, 127) && /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(part.content_type))) ||
+        !(part.size_bytes === null || (Number.isSafeInteger(part.size_bytes) && part.size_bytes >= 0 && part.size_bytes <= 2 * 1024 * 1024)) ||
+        !(part.disposition === null || ['attachment', 'inline'].includes(part.disposition)) || !(part.related === null || typeof part.related === 'boolean');
+    })) return null;
+    return body.attachment_manifest.map(function (part) { return Object.assign({}, part); });
   }
   function snippet(message, messages, opened) {
     var value = message.snippet;
@@ -74,5 +89,5 @@
       counts_scope: 'loaded_threads', folder_total: null, can_load_older: false,
       unavailable: source.unavailable, duplicate_count: source.duplicate_count, source_kind: 'derived_workflow' };
   }
-  return { project: project, openedSnippet: openedSnippet };
+  return { project: project, openedSnippet: openedSnippet, attachmentManifest: attachmentManifest };
 });
