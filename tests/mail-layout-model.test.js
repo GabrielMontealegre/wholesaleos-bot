@@ -4,7 +4,7 @@ const { project } = require('../dashboard/workspace/mail-layout-model');
 const now = '2026-10-25T00:00:00Z';
 const role = value => ({ role: value, role_source_kind: 'operator_input', role_recorded_at: '2026-10-20T00:00:00Z' });
 const row = (id, extra = {}) => ({ id, thread_key: id.repeat(64), date: '2026-10-24T12:00:00Z', source_kind: 'connected_mailbox',
-  sender_name: 'Synthetic person', from: 'Synthetic person <person@example.test>', subject: 'Recorded property discussion', snippet: 'Source snippet', ...extra });
+  sender_name: 'Synthetic person', from: 'Synthetic person <person@example.test>', subject: 'Recorded property discussion', snippet: 'Source snippet', snippet_origin: 'gmail_provider_snippet', ...extra });
 const messages = [row('a'), row('b', { conversation: role('buyer'), link_status: 'linked' }),
   row('c', { conversation: role('seller'), link_status: 'linked' }), row('d', { conversation: role('agent'), link_status: 'linked' }),
   row('e', { from: 'alerts@redfin.com' }), row('f', { labels: ['WOS/Reports'] }),

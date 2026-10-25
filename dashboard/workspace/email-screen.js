@@ -7,10 +7,10 @@
   function create(options) {
     var host = options.host, state = { folder: 'inbox', category: 'primary', messages: [], threads: [], unavailable: [], selected: '', body: [], busy: false, error: '', composing: false, query: '', role: '', contextOpen: false };
     var sequence = 0, folderSequence = 0, metadataBusy = false, disposed = false, drafts = new Map(), outcomes = new Map(), replyBinding = null;
-    var selectedRows = new Set();
+    var selectedRows = new Set(), openedSnippets = new Map();
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function time(value) { return root.wosCardClock.formatTime(value, now()); }
-    function projection() { return layout.project(state.messages, { now: now(), category: state.category, query: state.query, role: state.role }); }
+    function projection() { return layout.project(state.messages, { now: now(), category: state.category, query: state.query, role: state.role, openedSnippets: openedSnippets }); }
     function visible() { return projection().rows; }
     function chosen() { return state.threads.find(function (thread) { return thread.key === state.selected; }); }
     function gmail() {
@@ -88,7 +88,7 @@
         contextMarkup(thread) + categories.filter(function (item) { return item.key !== state.category; }).map(function (item) { return '<section id="mail-panel-' + item.key + '" role="tabpanel" aria-labelledby="mail-' + item.key + '" hidden></section>'; }).join('') + '</div></div>' + c.drawer('mail-folder-dialog', 'Mail folders') + '</section>';
       // The tab controller switches the list projection, not a second nested pane.
       host.querySelectorAll('[data-tab]').forEach(function (button) {
-        function select(key) { remember(); sequence++; state.category = key; state.role = ''; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
+        function select(key) { remember(); sequence++; openedSnippets.clear(); state.category = key; state.role = ''; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); host.querySelector('[data-tab="' + key + '"]').focus(); }
         button.addEventListener('click', function () { select(button.dataset.tab); });
         button.addEventListener('keydown', function (event) { if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) { event.preventDefault(); var index = categories.findIndex(function (item) { return item.key === button.dataset.tab; }); select(categories[event.key === 'Home' ? 0 : event.key === 'End' ? categories.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : categories.length - 1)) % categories.length].key); } });
       });
@@ -104,7 +104,7 @@
       });
       host.querySelectorAll('[data-mail-key]').forEach(function (button) { button.addEventListener('click', function () { open(button.dataset.mailKey); }); });
       host.querySelectorAll('[data-mail-folder-select]').forEach(function (select) { select.addEventListener('change', function (event) { if (Object.hasOwn(extraFolders, event.target.value)) { folderWidget.close(); remember(); state.folder = event.target.value; state.category = 'primary'; state.role = ''; load(); } }); });
-      host.querySelectorAll('[data-mail-role], [data-mail-category]').forEach(function (button) { button.addEventListener('click', function () { remember(); sequence++; state.role = button.dataset.mailRole || ''; state.category = button.dataset.mailCategory || (state.role === 'buyer' ? 'buyers' : ['seller', 'agent'].includes(state.role) ? 'sellers_agents' : 'primary'); state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); }); });
+      host.querySelectorAll('[data-mail-role], [data-mail-category]').forEach(function (button) { button.addEventListener('click', function () { remember(); sequence++; openedSnippets.clear(); state.role = button.dataset.mailRole || ''; state.category = button.dataset.mailCategory || (state.role === 'buyer' ? 'buyers' : ['seller', 'agent'].includes(state.role) ? 'sellers_agents' : 'primary'); state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); }); });
       function selectionStatus() {
         var count = items.filter(function (row) { return selectedRows.has(row.key); }).length, checkbox = host.querySelector('#mail-select-all');
         checkbox.checked = !!items.length && count === items.length; checkbox.indeterminate = count > 0 && count < items.length;
@@ -152,6 +152,7 @@
       // Changing People/Alerts cancels body selection, not this folder's metadata.
       var ticket = ++folderSequence;
       sequence++; metadataBusy = true;
+      openedSnippets.clear();
       selectedRows.clear(); state.messages = []; state.threads = []; state.unavailable = []; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = true; state.error = ''; paint();
       try {
         var value = await request('/api/gmail/messages?folder=' + state.folder + '&limit=50', ticket, true);
@@ -169,6 +170,7 @@
       var ticket = ++sequence;
       state.selected = key; state.body = []; state.composing = false; state.contextOpen = false; state.busy = true; state.error = ''; paint();
       var ids = thread.messages.map(function (row) { return row.id; });
+      ids.forEach(function (id) { openedSnippets.delete(id); });
       try {
         var value = await request(ids.length === 1 ? '/api/gmail/message/' + encodeURIComponent(ids[0]) : '/api/gmail/thread?ids=' + encodeURIComponent(JSON.stringify(ids)), ticket);
         if (!value) return;
@@ -176,6 +178,11 @@
         if (messages.length !== ids.length || messages.some(function (row) { return !row || !ids.includes(row.id) || row.source_kind !== 'connected_mailbox' || typeof row.body !== 'string'; }) || new Set(messages.map(function (row) { return row.id; })).size !== ids.length) throw Error('invalid');
         // Body transport order cannot change the canonical metadata chronology.
         state.body = ids.map(function (id) { return messages.find(function (row) { return row.id === id; }); });
+        state.body.forEach(function (body) {
+          var metadata = thread.messages.find(function (row) { return row.id === body.id; });
+          var preview = layout.openedSnippet(metadata, body, { now: now() });
+          if (preview) openedSnippets.set(body.id, preview); else openedSnippets.delete(body.id);
+        });
       } catch (_) { if (ticket === sequence && !disposed) state.error = 'This conversation could not be read. Your list is still available.'; }
       finally { if (ticket === sequence && !disposed) { state.busy = false; paint(); var heading = host.querySelector('.ws-mail-reading-head h2'); if (heading) { heading.tabIndex = -1; heading.focus(); } } }
     }
@@ -188,13 +195,13 @@
       else if (event.key === 'e') { event.preventDefault(); var earlier = host.querySelectorAll('.ws-mail-earlier'); earlier.forEach(function (item) { item.open = !item.open; }); }
     }
     function beforeUnload(event) { remember(); if (Array.from(drafts.values()).some(function (draft) { return draft.body.trim(); })) { event.preventDefault(); event.returnValue = ''; } }
-    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
+    function destroy() { disposed = true; sequence++; folderSequence++; metadataBusy = false; if (replyBinding) replyBinding.destroy(); drafts.clear(); outcomes.clear(); selectedRows.clear(); openedSnippets.clear(); state.messages = []; state.threads = []; state.body = []; state.query = ''; state.role = ''; host.classList.remove('ws-content--mail'); document.removeEventListener('keydown', keydown); root.removeEventListener('beforeunload', beforeUnload); host.replaceChildren(); }
     document.addEventListener('keydown', keydown);
     root.addEventListener('beforeunload', beforeUnload);
     return { mount: load, refresh: function () { remember(); return load(); }, search: function (query) {
       if (typeof query !== 'string' || query.length > 300 || /[\x00-\x1f\x7f]/.test(query)) return false;
       if (disposed || query === state.query) return true;
-      remember(); sequence++; state.query = query; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); return true;
+      remember(); sequence++; openedSnippets.clear(); state.query = query; state.selected = ''; state.body = []; state.composing = false; state.contextOpen = false; state.busy = metadataBusy; selectedRows.clear(); paint(); return true;
     }, destroy: destroy };
   }
   root.WOSEmailScreen = { create: create };

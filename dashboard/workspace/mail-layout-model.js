@@ -7,12 +7,29 @@
   var CATEGORIES = ['primary', 'buyers', 'sellers_agents', 'alerts', 'reports'];
   var ROLES = ['', 'holder', 'buyer', 'partner', 'seller', 'title', 'attorney', 'lender', 'agent', 'other', 'jv'];
   function normalize(value) { return value.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim(); }
-  function snippet(message, messages) {
+  function identity(message) {
+    if (!message || message.source_kind !== 'connected_mailbox') return null;
+    var fields = ['id', 'date', 'from', 'to', 'cc', 'subject', 'direction', 'message_id', 'in_reply_to', 'threadId'];
+    if (fields.some(function (key) { return message[key] !== undefined && (typeof message[key] !== 'string' || message[key].length > 4096); })) return null;
+    return JSON.stringify(fields.map(function (key) { return message[key] || ''; }));
+  }
+  function safeText(value, max) {
+    return typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
+  }
+  function openedSnippet(metadata, body, options) {
+    if (!identity(metadata) || identity(body) !== identity(metadata) || body.body_origin !== 'parsed_mime_text' || !safeText(body.body, 2 * 1024 * 1024)) return null;
+    try { if (email.list([metadata], options).threads.length !== 1) return null; } catch (_) { return null; }
+    var value = body.body.replace(/\s+/g, ' ').trim().slice(0, 500);
+    return value ? { id: metadata.id, identity: identity(metadata), snippet: value, origin: 'parsed_mime_text' } : null;
+  }
+  function snippet(message, messages, opened) {
     var value = message.snippet;
-    if (typeof value !== 'string' || value.length > 4096 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value)) return '';
     var copies = messages.filter(function (row) { return row && row.id === message.id; });
-    if (copies.some(function (row) { return row.source_kind !== 'connected_mailbox' || row.snippet !== value; })) return '';
-    return value.slice(0, 500);
+    if (copies.some(function (row) { return row.source_kind !== 'connected_mailbox' || row.snippet !== value || row.snippet_origin !== message.snippet_origin; })) return '';
+    if (message.snippet_origin === 'gmail_provider_snippet' && safeText(value, 4096) && value.trim()) return value.replace(/\s+/g, ' ').trim().slice(0, 500);
+    var saved = opened && typeof opened.get === 'function' && opened.get(message.id);
+    return saved && saved.origin === 'parsed_mime_text' && saved.identity === identity(message) &&
+      copies.every(function (row) { return identity(row) === saved.identity; }) && safeText(saved.snippet, 500) ? saved.snippet : '';
   }
   function category(thread, messages) {
     if (thread.category === 'alerts') return 'alerts';
@@ -41,7 +58,7 @@
     var source = email.list(messages, { now: options.now });
     var terms = normalize(query).split(' ').filter(Boolean);
     var rows = source.threads.map(function (thread) {
-      return Object.assign({}, thread, { display_category: category(thread, messages), snippet: snippet(thread.latest, messages) });
+      return Object.assign({}, thread, { display_category: category(thread, messages), snippet: snippet(thread.latest, messages, options.openedSnippets) });
     }).filter(function (thread) {
       var haystack = normalize([thread.sender, thread.latest.from, thread.latest.subject, thread.snippet].filter(function (value) { return typeof value === 'string'; }).join(' '));
       return (!role || (role === 'jv' ? ['holder', 'partner'].includes(thread.role) : thread.role === role)) && terms.every(function (term) { return haystack.includes(term); });
@@ -57,5 +74,5 @@
       counts_scope: 'loaded_threads', folder_total: null, can_load_older: false,
       unavailable: source.unavailable, duplicate_count: source.duplicate_count, source_kind: 'derived_workflow' };
   }
-  return { project: project };
+  return { project: project, openedSnippet: openedSnippet };
 });

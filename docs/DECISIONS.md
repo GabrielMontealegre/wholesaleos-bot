@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED: D-063B snippets initially use already-returned Gmail provider preview
+or an exact-identity parsed body the operator explicitly opened. Native opened
+excerpts are500-character session-only derived text,cleared on request/session/
+view invalidation;unopened IMAP previews remain unavailable. This avoids a50-body
+metadata batch and separates actual parser availability from fallback display
+strings. No new read request,writer,storage or send authority -- D-063,AGENTS
+source truth/privacy and bounded provider load --2026-10-25.
+
 ASSUMED: D-063B starts with a small read-state provenance prerequisite before
 folder totals. Already-returned IMAP flags/Gmail label IDs are the only evidence;
 absent/malformed values remain null, not inferred read/unread. Native grouping

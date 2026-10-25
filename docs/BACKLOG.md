@@ -2,6 +2,14 @@
 
 ## Latest Run Summary
 
+2026-10-25 source-snippet slice IN PROGRESS on item/412-source-backed-snippets
+from current74dfd39,preserving prior445 proof. Actual provider/parser origins,
+exact identity/clock pure500char projection and explicit-open-only native cache;
+no body batches/storage/newproviderrequests/writers/CSS/send changes. Source/
+UI negatives and existing chrome/loading/read-state suites pass;synthetic3size
+FCP51.5/49.1/27.5ms,Lighthouse98/98,reader unchanged. Full final-head and live
+proof pending. Unopened IMAP previews and other B pieces remain separate.
+
 2026-10-25 run checkpoint:445 release complete;clean retained branch includes
 safe proof/all249 timings. Usage75% at completion;retain release-verification
 reserve instead of starting another merge/deployment. Next snippet writer/
