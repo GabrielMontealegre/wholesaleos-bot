@@ -1,5 +1,30 @@
 # Decisions
 
+## D-063: Phased Gmail Capability Boundaries
+
+Architect439 comment6392281483 (2026-10-25) approves A -> B -> C and permits
+441 to finish gates/merge/release under A. A is read-only Gmail structure:
+rail/dense full-width list/replacing reader/collapsed history/bottom Reply/
+bounded search/categories/sourced context. Unsupported controls are visibly
+disabled icons with "Not available yet: open in Gmail" tooltips plus a Gmail
+fallback per thread. Counts/snippets/chips require sources; unknown is not0.
+D-061 remains unchanged; owner design approval is still required before Deals.
+
+B follows in separately traced/tested read-only pieces: sourced snippets,
+attachment manifests, provider unread totals/cursor pagination, provenanced
+provider/WOS labels and bounded mail search. Cross-search may only read existing
+read-only lead/buyer APIs, never provider discovery or fabricated totals.
+
+C follows B, one capability/PR/boundary/default-OFF owner switch. C1 reversible
+mark/star/archive/label/snooze(label+date)/Trash-only writes require idempotency,
+per-action audit,10-second Undo,1request/second,stop401/403/429. No permanent
+delete/empty Trash. C2 new-thread Compose/Forward must EXTEND D-061: exact
+preview/review/explicit message confirm,no automatic send,30/hour cap,recipient
+validation,operator-picked attachments <=10MB total,reviewed Profile signature.
+Legacy generic send/reply stays410. Each C PR needs forged/stale/duplicate/
+rate-limit/provider-error tests and stop policy. No production test sends,
+credential/settings changes or business writes are authorized for verification.
+
 2026-10-25: architect/owner412 comment6389032123 is the current detailed
 Gmail-structure contract and supersedes the earlier clarification request.
 Implement its read-only visual foundations independently; unsupported mailbox
