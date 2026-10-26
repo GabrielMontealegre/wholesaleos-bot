@@ -1,5 +1,13 @@
 # Decisions
 
+ASSUMED:454 Do this next orders nonempty reported needs_gabriel by newest
+reported deal updated_at,stable source order on ties;no missing urgency inferred.
+Calls/emails preserve reported rank;contact is never reply evidence (457 open).
+Rows without a source_file use the truthful snapshot filename,not an inferred
+related deal file. Private Today projection remains separate from canonical
+workflows and uses within-receipt server dates,not a cross-machine future test
+--owner454/AGENTS provenance and unchanged safety gates--2026-10-26.
+
 2026-10-26:454 backend prerequisite458 verified on exactmaindd04d98 with
 PR257/0/0+MAIN257/0/0 and approved435 GET-only mixedproof. Signed-admin private
 assistant receipts remain separate from canonical buyers/deals/POF/value gates.

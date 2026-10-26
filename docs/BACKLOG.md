@@ -2,6 +2,16 @@
 
 ## Latest Run Summary
 
+2026-10-26 next454 Today LOCAL preparation only:unwired assistant-model pure
+projection consumes actual synthetic importer receipts,keeps provenance/unknown
+money/reported POF/approval separate,ranked calls/text links/stage groups,buyer
+list without fabricated reply rank. Source/identity/date/ref/accessor/link/purity
+negatives and existing snapshot/Today model focused tests PASS. No HTML/app/CSS/
+cache/route/provider/read/upload/storage/UI/fullgate/PR/deploy change. Trace
+docs/cycles/issue-454-today-assistant-sheet.md. NEXT actual Today controller and
+escaped phone-first sheet;454NOTdone,457onlyreplyrank unanswered,455after454,
+456deferred. Live verified458dd04d98 unchanged;reserve release/rollback budget.
+
 2026-10-26 owner454 backend prerequisite DONE/VERIFIED via458;whole454 OPEN.
 Tested03bd898 full40370638496/job121740123029=257/0/0,600s/file;mergedmain
 dd04d989ebf74fe7c208554024b93f6a5bc4fd90 identicaltree,main40385719994/
