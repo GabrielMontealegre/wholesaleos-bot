@@ -16,26 +16,6 @@
   function safeText(value, max) {
     return typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
   }
-  function folderSummary(value, scope, options) {
-    options=options||{};
-    function instant(text) {
-      if(typeof text!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(text))return null;
-      var at=Date.parse(text);
-      return Number.isFinite(at)&&new Date(at).toISOString().slice(0,19)===text.slice(0,19)?at:null;
-    }
-    function object(item) {return item&&typeof item==='object'&&!Array.isArray(item);}
-    var at=instant(value&&value.captured_at), clock=instant(options.now), start=instant(options.startedAt);
-    if(!object(value)||!object(scope)||!['folder','origin','scope_id','uid_validity'].every(function(key){return Object.hasOwn(scope,key);})||
-      !['folder','source_kind','origin','scope_id','uid_validity','captured_at','scope','total_messages','unread_messages'].every(function(key){return Object.hasOwn(value,key);})||
-      !['imap_status','gmail_label_counts'].includes(scope.origin)||scope.folder!==options.folder||value.folder!==options.folder||value.origin!==scope.origin||
-      value.scope_id!==scope.scope_id||value.uid_validity!==scope.uid_validity||value.source_kind!=='connected_mailbox'||value.scope!=='messages'||
-      at===null||clock===null||start===null||at>clock||at<start||clock-at>=60000||
-      !Number.isSafeInteger(value.total_messages)||value.total_messages<0||
-      !(value.unread_messages===null||Number.isSafeInteger(value.unread_messages)&&value.unread_messages>=0&&value.unread_messages<=value.total_messages))return null;
-    if(scope.origin==='imap_status'&&(!safeText(scope.scope_id,200)||!scope.scope_id||/[\x00-\x1f\x7f]/.test(scope.scope_id)||typeof scope.uid_validity!=='string'||!/^[1-9]\d{0,9}$/.test(scope.uid_validity)||Number(scope.uid_validity)>4294967295))return null;
-    if(scope.origin==='gmail_label_counts'&&(typeof scope.scope_id!=='string'||!/^[a-zA-Z0-9_-]{1,200}$/.test(scope.scope_id)||scope.uid_validity!==null))return null;
-    return {total_messages:value.total_messages,unread_messages:value.unread_messages,captured_at:value.captured_at};
-  }
   function sameMessage(metadata, body, options) {
     if (!identity(metadata) || identity(body) !== identity(metadata)) return false;
     try { return email.list([metadata], options).threads.length === 1; } catch (_) { return false; }
@@ -109,5 +89,5 @@
       counts_scope: 'loaded_threads', folder_total: null, can_load_older: false,
       unavailable: source.unavailable, duplicate_count: source.duplicate_count, source_kind: 'derived_workflow' };
   }
-  return { project: project, openedSnippet: openedSnippet, attachmentManifest: attachmentManifest, folderSummary: folderSummary };
+  return { project: project, openedSnippet: openedSnippet, attachmentManifest: attachmentManifest };
 });

@@ -11,14 +11,13 @@ async function prove() {
       const key = 'a'.repeat(64), stamp = '2026-10-20T12:00:00Z';
       const source = { id: 'source1', thread_key: key, source_kind: 'connected_mailbox', direction: 'in', date: stamp, from: 'Synthetic Person <person@example.test>', sender_name: 'Synthetic Person', subject: 'Synthetic reply', body: 'Synthetic source message' };
       const context = { thread_key: key, message_ids: ['source1'], to: ['person@example.test'], cc: ['copy@example.test'], participants: ['person@example.test', 'copy@example.test'], subject: 'Re: Synthetic reply' };
-      const posts = [], external = [], errors = [], countRequests = []; let mode = 'accepted', delay = null, previewMode = 'valid';
+      const posts = [], external = [], errors = []; let mode = 'accepted', delay = null, previewMode = 'valid';
       page.on('pageerror', e => errors.push(e.message));
       await page.route('**/*', async route => {
         const req = route.request(), url = new URL(req.url());
         if (url.origin !== 'https://fixture.test') { external.push(url.origin); return route.abort(); }
         if (url.pathname === '/api/auth/session') return route.fulfill({ json: { authenticated: true, role: 'admin' } });
-        if (url.pathname === '/api/gmail/messages') return route.fulfill({ json: { ok: true, messages: [source],folder_summary_available:true,folder_scope:{folder:'inbox',origin:'gmail_label_counts',scope_id:'INBOX',uid_validity:null} } });
-        if(url.pathname==='/api/gmail/folder-summary')return new Promise(resolve=>countRequests.push(async()=>{await route.fulfill({json:{ok:true,summary:{folder:'inbox',origin:'gmail_label_counts',scope_id:'INBOX',uid_validity:null,scope:'messages',source_kind:'connected_mailbox',captured_at:new Date().toISOString(),total_messages:200,unread_messages:12}}});resolve();}));
+        if (url.pathname === '/api/gmail/messages') return route.fulfill({ json: { ok: true, messages: [source] } });
         if (url.pathname.startsWith('/api/gmail/message/')) return route.fulfill({ json: source });
         if (url.pathname.endsWith('/thread-replies/status')) return route.fulfill({ json: { enabled: true, configured: true, automatic_send_allowed: false } });
         if (url.pathname.endsWith('/thread-replies/context')) return route.fulfill({ json: context });
@@ -40,7 +39,6 @@ async function prove() {
         await page.locator('.ws-mail-row').click(); await page.locator('.ws-mail-body').waitFor();
         await page.getByRole('button', { name: 'Reply', exact: true }).click();
         await page.waitForFunction(() => !document.querySelector('#mail-preview').disabled);
-        if(countRequests.length>1&&mode!=='unknown')await countRequests.at(-1)();
       }
       await compose(); assert.equal(posts.length, 0, 'Opening Reply is GET-only');
       assert.equal(await page.getByLabel('To', { exact: true }).inputValue(), 'person@example.test');
@@ -50,11 +48,6 @@ async function prove() {
       await page.getByRole('checkbox', { name: 'I reviewed this message' }).waitFor();
       assert(await page.getByRole('button', { name: 'Send', exact: true }).isDisabled());
       await page.getByRole('checkbox', { name: 'I reviewed this message' }).check();
-      await page.locator('.ws-composer').evaluate(form=>{form.dataset.identity='reviewed-form';});
-      await countRequests[0]();await page.waitForFunction(()=>document.querySelector('[data-mail-folder-count]').textContent.includes('200 messages'));
-      assert.equal(await page.locator('.ws-composer').getAttribute('data-identity'),'reviewed-form');
-      assert(await page.getByRole('checkbox',{name:'I reviewed this message'}).isChecked());
-      assert(await page.getByRole('button',{name:'Send',exact:true}).isEnabled(),'Late counts preserve the exact reviewed preview');
       await page.getByRole('button', { name: 'Edit reply', exact: true }).click();
       assert(await page.getByRole('button', { name: 'Send', exact: true }).isDisabled());
       await page.getByLabel('To', { exact: true }).fill('typed@example.test');
@@ -92,10 +85,6 @@ async function prove() {
       await page.getByRole('button', { name: 'Preview reply', exact: true }).click(); await page.getByRole('checkbox', { name: 'I reviewed this message' }).check();
       await page.getByRole('button', { name: 'Send', exact: true }).click();
       await page.getByText('May have sent. Check Sent in Gmail; do not retry.', { exact: true }).waitFor();
-      await page.locator('.ws-composer').evaluate(form=>{form.dataset.identity='uncertain-form';});
-      await countRequests.at(-1)();await page.waitForFunction(()=>document.querySelector('[data-mail-folder-count]').textContent.includes('200 messages'));
-      assert.equal(await page.locator('.ws-composer').getAttribute('data-identity'),'uncertain-form');
-      assert(await page.getByText('May have sent. Check Sent in Gmail; do not retry.',{exact:true}).isVisible());
       assert(await page.getByRole('button', { name: 'Send', exact: true }).isDisabled());
       await page.getByRole('button', { name: 'Close reply', exact: true }).click(); await page.getByRole('button', { name: 'Reply', exact: true }).click();
       assert(await page.getByRole('button', { name: 'Preview reply', exact: true }).isDisabled());
