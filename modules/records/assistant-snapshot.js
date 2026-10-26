@@ -18,6 +18,11 @@ function text(value, max = 500, { nullable = false, multiline = false } = {}) {
 }
 function id(value) { if (typeof value !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value)) fail('id_invalid'); }
 function validActor(value) { return typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value && !/[\x00-\x1f\x7f]/.test(value); }
+function requestReceiptId(operatorId, requestId) {
+  if (!validActor(operatorId)) fail('actor_required', 403);
+  if (typeof requestId !== 'string' || !REQUEST_ID.test(requestId)) fail('request_invalid');
+  return crypto.createHash('sha256').update(JSON.stringify(['assistant_snapshot_transport_v1', operatorId, requestId])).digest('hex');
+}
 function time(value, limit = Infinity, code = 'date_invalid') {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) fail(code);
   const at = Date.parse(value);
@@ -100,25 +105,18 @@ function receipts(store) {
   const value = Object.hasOwn(store, 'assistant_snapshots') ? store.assistant_snapshots : undefined;
   if (value === undefined) return [];
   if (!Array.isArray(value)) fail('store_invalid', 503);
-  const seen = new Set(), requests = new Set(), fields = ['id', 'source_kind', 'imported_at', 'file_sha256', 'generated_at', 'filename', 'operator_id', 'snapshot'];
+  const seen = new Set(), fields = ['id', 'source_kind', 'imported_at', 'file_sha256', 'generated_at', 'filename', 'operator_id', 'snapshot'];
   for (let index = 0; index < value.length; index++) {
     if (!Object.hasOwn(value, index)) fail('store_invalid', 503);
     const row = value[index];
-    const rowFields = row && Object.hasOwn(row, 'request_id') ? fields.concat('request_id') : fields;
-    if (!row || typeof row !== 'object' || Array.isArray(row) || Reflect.ownKeys(row).length !== rowFields.length ||
-        rowFields.some(key => !Object.hasOwn(row, key) || !Object.hasOwn(Object.getOwnPropertyDescriptor(row, key), 'value')) ||
+    if (!row || typeof row !== 'object' || Array.isArray(row) || Reflect.ownKeys(row).length !== fields.length ||
+        fields.some(key => !Object.hasOwn(row, key) || !Object.hasOwn(Object.getOwnPropertyDescriptor(row, key), 'value')) ||
         row.source_kind !== 'assistant_snapshot_import' || typeof row.id !== 'string' || !/^[a-f0-9]{64}$/.test(row.id) || seen.has(row.id) ||
         typeof row.file_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(row.file_sha256) ||
         !validActor(row.operator_id) ||
         typeof row.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(row.filename) || row.filename.includes('..')) fail('store_invalid');
     try { validate(row.snapshot, time(row.imported_at)); if (row.generated_at !== row.snapshot.generated_at) fail('store_invalid'); }
     catch (_) { fail('store_invalid'); }
-    if (Object.hasOwn(row, 'request_id')) {
-      if (typeof row.request_id !== 'string' || !REQUEST_ID.test(row.request_id)) fail('store_invalid');
-      const requestKey = JSON.stringify([row.operator_id, row.request_id]);
-      if (requests.has(requestKey)) fail('store_invalid');
-      requests.add(requestKey);
-    }
     seen.add(row.id);
   }
   return value;
@@ -126,19 +124,18 @@ function receipts(store) {
 function appendSnapshot(store, bytes, { now, operatorId, filename, requestId } = {}) {
   if (!validActor(operatorId)) fail('actor_required', 403);
   if (typeof filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(filename) || filename.includes('..')) fail('filename_invalid');
-  if (requestId !== undefined && (typeof requestId !== 'string' || !REQUEST_ID.test(requestId))) fail('request_invalid');
+  const transportId = requestId === undefined ? null : requestReceiptId(operatorId, requestId);
   const previous = receipts(store), decoded = decodeSnapshot(bytes, { now }), imported_at = new Date(time(now)).toISOString();
   if (requestId !== undefined) {
-    const prior = previous.find(row => row.operator_id === operatorId && row.request_id === requestId);
+    const prior = previous.find(row => row.id === transportId);
     if (prior) {
-      if (prior.file_sha256 !== decoded.file_sha256 || prior.filename !== filename) fail('request_conflict', 409);
+      if (prior.operator_id !== operatorId || prior.file_sha256 !== decoded.file_sha256 || prior.filename !== filename) fail('request_conflict', 409);
       return store;
     }
   }
   if (previous.some(row => time(row.imported_at, Infinity, 'store_invalid') > Date.parse(imported_at))) fail('clock_invalid', 409);
-  const receipt = { id: crypto.createHash('sha256').update(JSON.stringify([previous.length, imported_at, operatorId, decoded.file_sha256])).digest('hex'),
-    source_kind: 'assistant_snapshot_import', imported_at, file_sha256: decoded.file_sha256, generated_at: decoded.snapshot.generated_at, filename, operator_id: operatorId, snapshot: decoded.snapshot,
-    ...(requestId === undefined ? {} : { request_id: requestId }) };
+  const receipt = { id: transportId || crypto.createHash('sha256').update(JSON.stringify([previous.length, imported_at, operatorId, decoded.file_sha256])).digest('hex'),
+    source_kind: 'assistant_snapshot_import', imported_at, file_sha256: decoded.file_sha256, generated_at: decoded.snapshot.generated_at, filename, operator_id: operatorId, snapshot: decoded.snapshot };
   return { ...store, assistant_snapshots: previous.concat(receipt) };
 }
 function latestSnapshot(store, { operatorId, now } = {}) {
@@ -148,4 +145,4 @@ function latestSnapshot(store, { operatorId, now } = {}) {
   if (rows.some(row => time(row.imported_at) > clock)) fail('store_invalid');
   return rows.length ? rows[rows.length - 1] : null;
 }
-module.exports = { decodeSnapshot, appendSnapshot, latestSnapshot, MAX_BYTES };
+module.exports = { decodeSnapshot, appendSnapshot, latestSnapshot, requestReceiptId, MAX_BYTES };

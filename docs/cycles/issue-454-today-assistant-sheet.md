@@ -20,10 +20,13 @@ clears it. Email's composer/source lifecycle is untouched.
 
 REAL browser experiment exposed transparent Chromium POST replays after a lost
 response:one click initially persisted twice. Add an OPTIONAL per-action UUID
-header/receipt request_id,scoped to signed actor/exact file SHA+filename. Exact
+header,scoped to signed actor/exact file SHA+filename through the existing opaque receipt ID. Exact
 replay returns the same receipt WITHOUT another disk write;conflicting reuse
 rejects409,new explicit action retains a new import,legacy no-ID calls remain
-distinct. Old nine-field receipts remain valid,no migration/deletion. Actual
+distinct. All receipts keep the original EIGHT fields,including those made by
+this UI,so the prior458 reader can read them on rollback. An intermediate
+unmerged extra-field design was removed during self-review;no production data
+or schema migration exists. Actual
 route tests cover replay/conflict/new action and preserve original assertions.
 Dropped-ALL-responses three-size test now persists one action and shows honest
 uncertainty until GET recovery. This is transport idempotency,not a push token.

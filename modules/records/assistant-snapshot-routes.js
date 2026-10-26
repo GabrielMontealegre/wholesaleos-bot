@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const crypto = require('node:crypto');
-const { appendSnapshot, latestSnapshot, MAX_BYTES } = require('./assistant-snapshot');
+const { appendSnapshot, latestSnapshot, requestReceiptId, MAX_BYTES } = require('./assistant-snapshot');
 const CODES = new Set(['fields_invalid', 'field_invalid', 'id_invalid', 'date_invalid', 'clock_invalid', 'money_invalid',
   'source_file_invalid', 'source_url_invalid', 'schema_invalid', 'version_invalid', 'generated_at_invalid', 'duplicate_id',
   'reference_invalid', 'array_invalid', 'rank_invalid', 'file_invalid', 'file_too_large', 'store_invalid', 'actor_required', 'filename_invalid', 'request_invalid', 'request_conflict']);
@@ -42,7 +42,7 @@ function registerAssistantSnapshotRoutes(app, { db, requireAdmin, now = () => ne
       const requestId = req.get('X-WOS-Assistant-Request') || undefined;
       const after = appendSnapshot(before, req.body, { now: at, operatorId, filename: req.get('X-WOS-Assistant-Filename'), requestId });
       if (after !== before) db.writeDB(after);
-      const receipt = after === before ? after.assistant_snapshots.find(row => row.operator_id === operatorId && row.request_id === requestId) : after.assistant_snapshots[after.assistant_snapshots.length - 1];
+      const receipt = after === before ? after.assistant_snapshots.find(row => row.id === requestReceiptId(operatorId, requestId)) : after.assistant_snapshots[after.assistant_snapshots.length - 1];
       res.json({ ok: true, id: receipt.id, imported_at: receipt.imported_at, generated_at: receipt.generated_at, file_sha256: receipt.file_sha256 });
     } catch (failure) { error(res, failure); }
   }, (failure, req, res, next) => {

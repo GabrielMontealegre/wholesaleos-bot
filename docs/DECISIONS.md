@@ -2,9 +2,11 @@
 
 ASSUMED:454 manual upload is one logical action with a fresh client UUID.
 Chromium transparently replays POST after a dropped response (reproduced in
-the actual local route),so an optional actor-scoped request_id returns the
+the actual local route),so an optional actor-scoped request UUID returns the
 same exact SHA/filename receipt without another write. New clicks remain new
-append-only imports;conflicts reject,legacy receipts/calls stay valid. Add only
+append-only imports;conflicts reject,legacy receipts/calls stay valid. Encode
+identity in the existing opaque id,NOT an extra receipt field;the original
+eight-field schema remains readable by verified458 on rollback. Add only
 private GET viewer_scope derived from the actual signed actor for anonymous
 device-check keys,because the existing browser helper uses generic admin ID.
 No authentication rewrite/token/provider authority or private text in storage

@@ -68,7 +68,8 @@ async function main() {
     assert.equal(writes, beforeReplay + 2, 'New explicit action retains an identical file as a new append');
     const otherActor = await request({ method: 'POST', headers: { ...onceHeaders, 'X-Test-Actor': 'owner-two' }, body: raw }, 200);
     assert.notEqual(otherActor.id, oneReceipt.id);assert.equal(writes, beforeReplay + 3, 'Request IDs are scoped by the real signed actor');
-    const oldHistory = structuredClone(store);store.assistant_snapshots[store.assistant_snapshots.length - 1].request_id = 'malformed';
+    assert.deepEqual(Object.keys(store.assistant_snapshots[store.assistant_snapshots.length - 1]).sort(),['id','source_kind','imported_at','file_sha256','generated_at','filename','operator_id','snapshot'].sort(),'Transport identity keeps the exact legacy receipt fields for rollback compatibility');
+    const oldHistory = structuredClone(store);store.assistant_snapshots[store.assistant_snapshots.length - 1].id = 'malformed';
     await request({ headers: session }, 503);assert.equal(writes, beforeReplay + 3);store = oldHistory;
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
   console.log('assistant-snapshot-routes: synthetic signed-admin guard/no-store,origin/type/raw byte hash/size rejection,private per-actor read,append-only writes,proxy HTTPS and safe storage errors passed;local synthetic registration only');
