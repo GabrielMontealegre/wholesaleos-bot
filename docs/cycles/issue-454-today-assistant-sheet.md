@@ -11,7 +11,9 @@ adds capability verification and retains eight-surface sentinel non-leakage.
 
 Manual file choice does not upload. Explicit import sends exact raw bytes to
 the existing origin/header/admin guard,then verifies the returned receipt ID
-through private GET. No canonical promotion or provider/paid/write-back action.
+AND locally computed exact-byte SHA/filename through private GET. A forged
+upload-receipt hash cannot claim success;the UI reports uncertainty and requires
+read-only recovery. No canonical promotion or provider/paid/write-back action.
 Static friendly rejection reasons never echo file contents. A30s deadline spans
 headers AND response-body JSON. Unknown outcome locks import until GET recovery;
 401/real403 clears private data,late responses cannot restore after destroy.

@@ -10,6 +10,7 @@
   function person(name,role){var token=String(role).trim().toLowerCase().split(/[ ,]/)[0];var color=['buyer','seller','holder','partner','title','attorney','lender','agent'].includes(token)?' ws-role--'+token:'';return '<strong>'+c.escape(name)+'</strong><span class="ws-assistant-role'+color+'">'+c.escape(role)+'</span>';}
   function section(title,body){return '<section class="ws-assistant-group"><h3>'+title+'</h3>'+body+'</section>';}
   function empty(){return '<p class="ws-muted">None in this assistant file.</p>';}
+  async function digest(bytes){var hash=await root.crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
   function create(options){
     var host=options.host,active=true,ticket=0,view=null,selected=null,busy=false,uncertain=false,message='',canImport=false,loaded=false;
     var checks=new Set(),markVersions=new Map(),drawer=null,buyerDrawer=null,query='',reading=false,controllers=new Set(),viewerScope=null;
@@ -59,7 +60,7 @@
       body.innerHTML='<h3>'+c.escape(d.name)+'</h3><p>'+c.escape(stageNames[d.stage])+'</p>'+source(d.provenance)+'<p>'+c.escape(fee(d))+'</p><h4>People</h4><ul class="ws-list ws-assistant-rows">'+d.people.map(function(p){return '<li>'+person(p.name,p.role)+'<p>Phone: '+c.escape(p.phone||'Not reported')+'</p><p>Email: '+c.escape(p.email||'Not reported')+'</p>'+source(d.provenance)+'</li>';}).join('')+'</ul><h4>Reported numbers</h4><dl class="ws-detail">'+Object.keys(labels).map(function(key){return '<div><dt>'+labels[key]+'</dt><dd>'+c.escape(dollars(d.numbers[key]))+'</dd></div>';}).join('')+'<div><dt>Buyer price</dt><dd>'+c.escape(dollars(d.numbers.buyer_number.amount))+' · '+c.escape(d.numbers.buyer_number.buyer||'Buyer not reported')+'</dd></div></dl><h4>Next moves</h4><p>Seller: '+c.escape(d.next_seller||'Not reported')+'</p><p>Buyer: '+c.escape(d.next_buyer||'Not reported')+'</p><h4>Reported log</h4><ul class="ws-list ws-assistant-rows">'+d.log.map(function(e){return '<li>'+c.escape(stamp(e.at))+'<p>'+c.escape(e.text)+'</p>'+source(d.provenance)+'</li>';}).join('')+'</ul>';
       drawer.open();
     }
-    async function storageKey(row){if(typeof viewerScope!=='string'||!/^[a-f0-9]{64}$/.test(viewerScope))throw Error('actor_required');var bytes=new TextEncoder().encode(JSON.stringify([viewerScope,row.device_key]));var hash=await root.crypto.subtle.digest('SHA-256',bytes);return 'wos-assistant-sent:'+Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+    async function storageKey(row){if(typeof viewerScope!=='string'||!/^[a-f0-9]{64}$/.test(viewerScope))throw Error('actor_required');return 'wos-assistant-sent:'+await digest(new TextEncoder().encode(JSON.stringify([viewerScope,row.device_key])));}
     async function restoreChecks(t){
       if(!view)return;var rows=view.texts.slice();
       for(var row of rows){try{var key=await storageKey(row);if(!alive(t))return;if(root.localStorage.getItem(key)==='1')checks.add(row.device_key);}catch(_){} }
@@ -72,7 +73,7 @@
         if(!alive(t))return;if(response.status===401||response.status===403){options.onUnauthorized();return;}if(!response.ok)throw Error();
         var data=result.data;if(!alive(t))return;
         if(data.ok!==true||data.capabilities?.can_import!==true||data.capabilities.schema!=='wos-assistant-snapshot'||data.capabilities.version!==1||data.capabilities.max_bytes!==1048576||typeof data.viewer_scope!=='string'||!/^[a-f0-9]{64}$/.test(data.viewer_scope))throw Error();
-        var next=model.project(data.latest);if(expected&&(!next||next.receipt_id!==expected))throw Error();
+        var next=model.project(data.latest);if(expected&&(!next||next.receipt_id!==expected.id||next.file_sha256!==expected.sha||next.filename!==expected.filename))throw Error();
         view=next;viewerScope=data.viewer_scope;canImport=true;loaded=true;uncertain=false;reading=false;message=expected?'Assistant file imported.':view?'':'No file imported yet.';
         await restoreChecks(t);if(alive(t))draw();
       }catch(_){if(!alive(t))return;reading=false;canImport=false;loaded=false;view=null;message=expected?'The import may be saved, but the sheet could not be verified. Refresh before importing again.':'Assistant data is unavailable. Refresh to try again.';draw();}
@@ -83,15 +84,15 @@
       try{
         if(!file.size||file.size>1048576){status('Choose an assistant JSON file smaller than 1 MB.');return;}
         if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.json$/.test(file.name)||file.name.includes('..')){status('Use a simple JSON filename without folders.');return;}
-        var bytes=await file.arrayBuffer();if(!alive(t))return;var requestId=root.crypto.randomUUID();
+        var bytes=await file.arrayBuffer();if(!alive(t))return;var expectedHash=await digest(bytes);if(!alive(t))return;var requestId=root.crypto.randomUUID();
         uncertain=true;
         var result=await request({method:'POST',headers:{'Content-Type':'application/octet-stream','X-WOS-Assistant-Import':'1','X-WOS-Assistant-Filename':file.name,'X-WOS-Assistant-Request':requestId},body:bytes}),response=result.response;bytes=null;
         if(!alive(t))return;if(response.status===401){options.onUnauthorized();return;}
         var data=result.data;if(!alive(t))return;
         if(response.status===403&&data.code!=='assistant_snapshot_origin_required'){options.onUnauthorized();return;}
         if(!response.ok){if(response.status>=500)throw Error();uncertain=false;var code=typeof data.code==='string'?data.code.replace(/^assistant_snapshot_/,''):'';status(rejection[code]||'The file was rejected. Ask for a corrected version 1 assistant file.');return;}
-        if(data.ok!==true||typeof data.id!=='string'||!/^[a-f0-9]{64}$/.test(data.id))throw Error();
-        busy=false;selected=null;await refresh(data.id);
+        if(data.ok!==true||typeof data.id!=='string'||!/^[a-f0-9]{64}$/.test(data.id)||data.file_sha256!==expectedHash)throw Error();
+        busy=false;selected=null;await refresh({id:data.id,sha:expectedHash,filename:file.name});
       }catch(_){if(alive(t)){uncertain=true;selected=null;status('The import outcome is unknown. Refresh before importing again.');}}
       finally{if(active){busy=false;actionsDisabled();}}
     }

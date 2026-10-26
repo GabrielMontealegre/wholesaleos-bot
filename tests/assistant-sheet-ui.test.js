@@ -8,7 +8,7 @@ async function main(){
  const {browser}=await launchChromiumWithResolvedBrowser(require('playwright'),{headless:true});
  const proof={synthetic_only:true,production_writes:0,cases:[]};
  try{for(const width of [1366,400,412]){
-  let store={buyers:[],reviewed_deals:[]},actor='synthetic-owner',authenticated=true,writes=0,reads=0,unknown=false,failRead=false,hold=false,release;
+  let store={buyers:[],reviewed_deals:[]},actor='synthetic-owner',authenticated=true,writes=0,reads=0,unknown=false,forgedReceipt=false,failRead=false,hold=false,release;
   const app=express();
   app.get('/api/auth/session',(_,res)=>res.json({authenticated,role:'admin'}));
   app.get('/api/dashboard/today-workspace',(_,res)=>res.json({source_kind:'derived_workflow',now,today:'2026-10-26',counts:{},actions:[],best_deals:[],last_24h:[],capabilities:{assistant_snapshot_import:true}}));
@@ -17,6 +17,7 @@ async function main(){
     reads++;if(failRead)return res.status(503).json({ok:false,code:'assistant_snapshot_unavailable'});
     if(hold){hold=false;const json=res.json.bind(res);res.json=body=>{release=()=>json(body);return res;};}
    }else if(req.method==='POST'&&unknown){res.json=()=>{res.destroy();return res;};}
+   else if(req.method==='POST'&&forgedReceipt){forgedReceipt=false;const json=res.json.bind(res);res.json=body=>json({...body,file_sha256:'0'.repeat(64)});}
    next();
   });
   registerAssistantSnapshotRoutes(app,{db:{readDBStrict:()=>store,writeDB:value=>{writes++;store=value;}},requireAdmin(req,res,next){if(!authenticated)return res.status(401).json({code:'SESSION_REQUIRED'});req.currentUser={id:actor,role:'admin'};next();},now:()=>now});
@@ -75,6 +76,8 @@ async function main(){
    try{await page.getByText('The import outcome is unknown. Refresh before importing again.',{exact:true}).waitFor();}catch(error){console.error(JSON.stringify({synthetic_only:true,writes,reads,status:await page.locator('#assistant-status').textContent()}));throw error;}
    assert.equal(writes,3,'Lost responses and Chromium transport replays still persist one explicit import');assert(await page.locator('#assistant-import').isDisabled());unknown=false;
    await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await check.waitFor();assert.equal(writes,3,'Recovery uses GET only,no blind repeat POST');
+   forgedReceipt=true;await choose(data);await page.locator('#assistant-import').click();await page.getByText('The import outcome is unknown. Refresh before importing again.',{exact:true}).waitFor();assert.equal(writes,4);assert(await page.locator('#assistant-import').isDisabled(),'Wrong receipt hash cannot claim a verified import');
+   await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await check.waitFor();assert.equal(writes,4);
    failRead=true;await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await page.getByText('Assistant data is unavailable. Refresh to try again.',{exact:true}).waitFor();assert.equal(await page.locator('.ws-assistant-deal').count(),0);assert(await page.getByRole('heading',{name:'Your action queue',exact:true}).isVisible());
    failRead=false;await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await check.waitFor();
    const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,fcp:performance.getEntriesByName('first-contentful-paint')[0]?.startTime}));assert.equal(geometry.overflow,false);assert(geometry.fcp<2000);
@@ -82,7 +85,7 @@ async function main(){
    hold=true;await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#assistant-status')?.textContent!==undefined);while(!release)await new Promise(r=>setTimeout(r,10));
    authenticated=false;await page.getByRole('button',{name:'Refresh recorded work',exact:true}).click();await page.getByRole('heading',{name:'Unlock your workspace',exact:true}).waitFor();release();
    await page.waitForTimeout(30);assert.equal(await page.locator('#assistant-slot').count(),0,'Late private response after401 cannot restore data');
-   assert.equal(writes,3);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(otherWrites,[]);
+   assert.equal(writes,4);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(otherWrites,[]);
    proof.cases.push({width,height,first_contentful_paint_ms:geometry.fcp,local_synthetic_imports:writes,external_requests:external.length,page_errors:errors.length});
   }finally{await context.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
  }}finally{await browser.close();}
