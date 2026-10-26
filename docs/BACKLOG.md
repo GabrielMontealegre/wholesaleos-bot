@@ -2,6 +2,22 @@
 
 ## Latest Run Summary
 
+2026-10-26 rollback449 DONE/VERIFIED after448 FAILED its live count gate.
+Currentmainca483e7042a6f77d16c6d36b9181ab572f9ff647 restores exact verified
+3d41e6d product/tree. Tested rollbacke52bbd3 full40247254613=253/0/0,
+600s/file,13m49s job,sum769.20s NOTwall. Restored main40248641002 also253/0/0.
+AutomaticRailwayfa95c112-05b8-436d-b8b5-eaf0746ac7f3 Active/successful,Details
+exactsource. Public12true3sizeGET/health200/unsigned401;actual signedChrome
+1038x55950rows/full740charbody/emptyReplydisabledPreviewSend/finalunavailable
+Gmail/Close restored,0consoleerrors. Exactsource5size mail/3size reply pass.
+No businesswrites/settings/authtransfer/manualbuild. Safe proof/all253+253
+timings docs/screens/2026-10-26-pr449-rollback.448 PR258/0/0 but MAIN257/1/0
+and live snapshot absent:valid source timestamp117ms ahead of browser clock;
+do not call448 verified. Count slice BLOCKED450 clock-authority answer.
+Independent451:classic19cards/Open deal works butBack did not visibly return;
+trace/reproduce before a separate bounded fix,not a nativeDeals rebuild.
+Whole412OPEN/unapproved. Primary64%;preserve verification/rollback reserve.
+
 2026-10-25 explicit-reader attachment slice IN PROGRESS on
 item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
 Only metadata from existing MIME read;no new provider calls/download API/file
