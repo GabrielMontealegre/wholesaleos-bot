@@ -2,6 +2,32 @@
 
 ## Latest Run Summary
 
+2026-10-26 independent451 LOCAL CANDIDATE ONLY on item/451-classic-back-results
+from verifiedca483e7,prior proof preserved. Actual production route fixture
+reproduces Back racing a pending record-only read;old helper ignored record_id
+and masked it. Minimal existing request-ticket/loading/data/focus reset passes
+three-size normal/late/hidden-price cases;no backend/auth/CSP/layout/writer
+change,classic asset16. No full gate/PR/merge/deploy/live fix claimed. Preserve
+release/rollback reserve at79% primary. Existing pipeline UI and actual
+navigation/exact-record/locked/nonadmin regressions also pass. Count450 still
+unanswered/BLOCKED;live449 unchanged. No local jobs or dependency changes.
+
+2026-10-26 rollback449 DONE/VERIFIED after448 FAILED its live count gate.
+Currentmainca483e7042a6f77d16c6d36b9181ab572f9ff647 restores exact verified
+3d41e6d product/tree. Tested rollbacke52bbd3 full40247254613=253/0/0,
+600s/file,13m49s job,sum769.20s NOTwall. Restored main40248641002 also253/0/0.
+AutomaticRailwayfa95c112-05b8-436d-b8b5-eaf0746ac7f3 Active/successful,Details
+exactsource. Public12true3sizeGET/health200/unsigned401;actual signedChrome
+1038x55950rows/full740charbody/emptyReplydisabledPreviewSend/finalunavailable
+Gmail/Close restored,0consoleerrors. Exactsource5size mail/3size reply pass.
+No businesswrites/settings/authtransfer/manualbuild. Safe proof/all253+253
+timings docs/screens/2026-10-26-pr449-rollback.448 PR258/0/0 but MAIN257/1/0
+and live snapshot absent:valid source timestamp117ms ahead of browser clock;
+do not call448 verified. Count slice BLOCKED450 clock-authority answer.
+Independent451:classic19cards/Open deal works butBack did not visibly return;
+trace/reproduce before a separate bounded fix,not a nativeDeals rebuild.
+Whole412OPEN/unapproved. Primary64%;preserve verification/rollback reserve.
+
 2026-10-25 explicit-reader attachment slice IN PROGRESS on
 item/412-attachment-manifests from verified327fd7c,prior446 proof preserved.
 Only metadata from existing MIME read;no new provider calls/download API/file
