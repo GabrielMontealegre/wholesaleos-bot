@@ -35,6 +35,11 @@ credential or authority. Device storage keys hash viewer_scope+fileSHA+textID;
 only boolean1 is stored,no names/phone/text/snapshot. Denied storage restores
 the previously saved check and reports failure,never a send/delivery receipt.
 Signed actor A/B tests prove separation despite the generic browser admin ID.
+Final self-review adds per-row toggle versions:asynchronous key generation for
+an older click cannot overwrite a newer checkbox intent. Three-size test holds
+the first digest,finishes the second toggle,then releases the old result;only
+the latest state survives. This changes the candidate head and requires a new
+exact-head full gate,not reuse of the earlier run.
 
 Phone-first unframed section precedes canonical work:Do this next,calls,explicit
 Messages links,Email fallback,stage cards and full reported detail drawer,

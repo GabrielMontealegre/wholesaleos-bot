@@ -66,6 +66,10 @@ async function main(){
    await page.reload();await check.waitFor();assert(await check.isChecked(),'Same signed operator/file/text restores its device check');
    actor='another-synthetic-owner';await page.getByRole('button',{name:'Refresh assistant sheet',exact:true}).click();await page.getByText('No file imported yet.',{exact:true}).waitFor();
    await choose(data);await page.locator('#assistant-import').click();await page.getByText('Assistant file imported.',{exact:true}).waitFor();assert(!(await check.isChecked()),'Actual server viewer scope prevents cross-operator markers despite generic browser admin ID');assert.equal(writes,2);
+   await page.evaluate(()=>{window.savedDigest=SubtleCrypto.prototype.digest;let calls=0;SubtleCrypto.prototype.digest=function(...args){if(++calls===1){const target=this;return new Promise(resolve=>{window.releaseFirstDigest=()=>window.savedDigest.apply(target,args).then(resolve);});}return window.savedDigest.apply(this,args);};});
+   await check.click();await check.click();await page.evaluate(()=>window.releaseFirstDigest());
+   await page.evaluate(()=>{SubtleCrypto.prototype.digest=window.savedDigest;delete window.savedDigest;delete window.releaseFirstDigest;});
+   assert(!(await check.isChecked()));assert.equal(await page.evaluate(()=>localStorage.length),1,'Stale first toggle cannot overwrite the latest unchecked intent for another actor');
    const bad=fixture();bad.version=2;await choose(bad);await page.locator('#assistant-import').click();await page.getByText(/different version/).waitFor();assert.equal(writes,2);assert(await card.isVisible(),'A rejected file does not replace the previous accepted sheet');
    unknown=true;await choose(data);await page.locator('#assistant-import').click();
    try{await page.getByText('The import outcome is unknown. Refresh before importing again.',{exact:true}).waitFor();}catch(error){console.error(JSON.stringify({synthetic_only:true,writes,reads,status:await page.locator('#assistant-status').textContent()}));throw error;}

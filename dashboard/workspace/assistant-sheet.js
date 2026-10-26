@@ -12,7 +12,7 @@
   function empty(){return '<p class="ws-muted">None in this assistant file.</p>';}
   function create(options){
     var host=options.host,active=true,ticket=0,view=null,selected=null,busy=false,uncertain=false,message='',canImport=false,loaded=false;
-    var checks=new Set(),drawer=null,buyerDrawer=null,query='',reading=false,controllers=new Set(),viewerScope=null;
+    var checks=new Set(),markVersions=new Map(),drawer=null,buyerDrawer=null,query='',reading=false,controllers=new Set(),viewerScope=null;
     async function request(init){var controller=new AbortController();controllers.add(controller);var timer=setTimeout(function(){controller.abort();},30000);try{var response=await root.fetch('/api/dashboard/assistant-snapshots',Object.assign({credentials:'include',cache:'no-store'},init||{},{signal:controller.signal}));return {response:response,data:await response.json()};}finally{clearTimeout(timer);controllers.delete(controller);}}
     function alive(t){return active&&t===ticket&&host.isConnected;}
     function status(text){message=text;var e=host.querySelector('[data-assistant-status]');if(e)e.textContent=text;}
@@ -64,9 +64,9 @@
       if(!view)return;var rows=view.texts.slice();
       for(var row of rows){try{var key=await storageKey(row);if(!alive(t))return;if(root.localStorage.getItem(key)==='1')checks.add(row.device_key);}catch(_){} }
     }
-    async function mark(box){var t=ticket,row=view&&view.texts[Number(box.dataset.assistantCheck)],checked=box.checked;if(!row)return;try{var key=await storageKey(row);if(!alive(t))return;if(checked)root.localStorage.setItem(key,'1');else root.localStorage.removeItem(key);if(checked)checks.add(row.device_key);else checks.delete(row.device_key);}catch(_){if(alive(t)){box.checked=checks.has(row.device_key);status('This device could not save the check. No message was sent.');}}}
+    async function mark(box){var t=ticket,row=view&&view.texts[Number(box.dataset.assistantCheck)],checked=box.checked;if(!row)return;var version=(markVersions.get(row.device_key)||0)+1;markVersions.set(row.device_key,version);function owned(){return alive(t)&&markVersions.get(row.device_key)===version;}try{var key=await storageKey(row);if(!owned())return;if(checked)root.localStorage.setItem(key,'1');else root.localStorage.removeItem(key);if(checked)checks.add(row.device_key);else checks.delete(row.device_key);}catch(_){if(owned()){box.checked=checks.has(row.device_key);status('This device could not save the check. No message was sent.');}}}
     async function refresh(expected){
-      if(!active||busy&&!expected)return;var t=++ticket;reading=true;view=null;checks.clear();selected=null;draw();
+      if(!active||busy&&!expected)return;var t=++ticket;reading=true;view=null;checks.clear();markVersions.clear();selected=null;draw();
       try{
         var result=await request(),response=result.response;
         if(!alive(t))return;if(response.status===401||response.status===403){options.onUnauthorized();return;}if(!response.ok)throw Error();
@@ -96,7 +96,7 @@
       finally{if(active){busy=false;actionsDisabled();}}
     }
     draw();
-    return {refresh:refresh,destroy:function(){active=false;++ticket;controllers.forEach(function(controller){controller.abort();});controllers.clear();view=null;viewerScope=null;selected=null;checks.clear();if(drawer)drawer.close();if(buyerDrawer)buyerDrawer.close();host.replaceChildren();}};
+    return {refresh:refresh,destroy:function(){active=false;++ticket;controllers.forEach(function(controller){controller.abort();});controllers.clear();view=null;viewerScope=null;selected=null;checks.clear();markVersions.clear();if(drawer)drawer.close();if(buyerDrawer)buyerDrawer.close();host.replaceChildren();}};
   }
   root.WOSAssistantSheet={create:create};
 })(window);
