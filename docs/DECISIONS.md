@@ -1,5 +1,11 @@
 # Decisions
 
+2026-10-26: PR453 source-label backend prerequisite verified atmainf7a7977,
+automatic14777ce0 exactsource;PR255/0/0 andMAIN255/0/0. Actual bounded signed
+metadata/body provenance agrees without exporting private labels. Native label
+consumption remains separately gated;no writer/send/native-cache change. Count
+clock repair450 remains unanswered;do not reintroduce failed448 unchanged.
+
 ASSUMED: D-063B provider labels first preserve bounded per-message IMAP names
 versus opaque REST label IDs in a separate provider_labels receipt. Add only
 the existing IMAP fetch's capability-gated label attribute; no registry request,

@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-26 provider-label BACKEND prerequisite453 DONE/VERIFIED. Tested91950fb
+full40315574581/job121547249062=255/0/0,600s/file,12m34s job,sum690.61s
+NOTwall;main40317308765/job121553036720 also255/0/0,12m54s,sum704.25s
+NOTwall. Currentmainf7a797781743f564d3a20db59be5826d0b2fb924 identical tested
+tree;automaticRailway14777ce0-8206-4695-9c77-d4b232f13b4a Active/exactsource.
+Public12true3sizeGETshealth200/unsigned401;exactsource pinned5size mail pass.
+Signed metadata1/exactbody receipt matches with only source/scope/count/boolean
+proof,private names/IDs/JSON never persisted. Native1280x52950rows/full3480char
+body/no defaultcomposer;emptyPreview/Senddisabled/finalunavailableGmail/Close
+restores,0consoleerrors;classic19->Open->Back->same19/0workbench. No writer,
+new request/registry lookup,auth/storage/count/native/cache/send/settings change.
+Safe proof/all255+255timings docs/screens/2026-10-26-pr453-release. WholeB,
+native source-label consumption and412designapproval NOTdone;450unanswered.
+Next bounded source-label projection must use genuine names vs opaque IDs and
+all-member/copy/identity/session negatives,not legacy raw-label guesses.
+
+Historical preparation:
 2026-10-26 D-063B provider-label BACKEND prerequisite local candidate:bounded
 message names (capability-gated existing IMAP fetch) versus opaque REST IDs,
 real adapter/MIME/annotation parity and malformed/unknown/empty/requestcount
