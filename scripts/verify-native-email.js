@@ -5,11 +5,13 @@ const { createFixtureApp } = require('./verify-marketplace-ui');
 const { registerWorkspacePreview } = require('../modules/ui/workspace-preview');
 const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
 async function prove({ screenshots = false, lighthousePath, reply = false, layout: readingLayout = false } = {}) {
+  const baselineRef = process.env.WOS_EMAIL_BASELINE_REF || '327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8';
+  assert.match(baselineRef, /^[a-f0-9]{40}$/, 'Baseline must be an exact local commit');
   const fixture = createFixtureApp(), app = express();
   let baseline = false;
   if (reply || readingLayout) {
     const { execFileSync } = require('node:child_process');
-    const files = new Map(['index.html', 'components.js', 'email-model.js', 'mail-layout-model.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', '327fd7c4ec5efcab8e63ef2a86ae7eb8213a68a8:dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
+    const files = new Map(['index.html', 'components.js', 'email-model.js', 'mail-layout-model.js', 'email-screen.js', 'design-system.css', 'app.js'].map(file => [file, execFileSync('git', ['show', baselineRef + ':dashboard/workspace/' + file], { cwd: path.resolve(__dirname, '..') })]));
     app.use((req, res, next) => {
       const file = req.path === '/app' ? 'index.html' : req.path.startsWith('/dashboard/workspace/') ? req.path.slice('/dashboard/workspace/'.length) : '';
       if (baseline && files.has(file)) return res.type(file.endsWith('.html') ? 'html' : file.endsWith('.css') ? 'css' : 'js').send(files.get(file));
@@ -33,7 +35,7 @@ async function prove({ screenshots = false, lighthousePath, reply = false, layou
   registerWorkspacePreview(app); app.use(fixture.app);
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   const base = 'http://127.0.0.1:' + server.address().port, dir = process.env.WOS_EMAIL_PROOF_DIR ? path.resolve(process.env.WOS_EMAIL_PROOF_DIR) : path.resolve(__dirname, reply ? '../docs/screens/2026-10-21-reply-composer' : '../docs/screens/2026-10-20-native-email');
-  let browser; const report = { synthetic_only: true, widths: [], accessibility: [] };
+  let browser; const report = { synthetic_only: true, baseline_source: baselineRef, widths: [], accessibility: [] };
   try {
     const portServer = require('node:net').createServer();
     await new Promise(resolve => portServer.listen(0, '127.0.0.1', resolve));
