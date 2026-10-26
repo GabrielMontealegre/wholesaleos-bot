@@ -64,3 +64,13 @@ actual Home/Deals/Email/exact-record/locked/nonadmin navigation tests pass. No
 original assertions changed. Primary79%;preserve the remaining release/rollback
 reserve. No full-suite rerun,PR,merge or deployment started for this candidate.
 Live remains verified449;450 still has no architectural answer.
+
+2026-10-26 release preparation after normal quota reset:bounded proof compares
+the exact ca483e7 classic HTML/module with this candidate using the actual route
+registrar and synthetic store. A deliberately delayed record response leaves
+one card after Back on the baseline and correctly restores two on the candidate
+at1366/400/412. Candidate FCP373.7/71.3/72.6ms;Lighthouse13.5.0 accessibility
+98/98. Journey has zero writes/external requests/console errors. All metrics and
+screenshots are SYNTHETIC,not live performance or private deal captures.
+Proof:docs/screens/2026-10-26-classic-back. Same signed Chrome and Railway source
+verification preflight are available;final-head full gate/live acceptance remain.
