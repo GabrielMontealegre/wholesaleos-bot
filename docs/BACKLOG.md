@@ -2,6 +2,23 @@
 
 ## Latest Run Summary
 
+2026-10-26 NEW OWNER PRIORITIES454FIRST(private assistant snapshot/Today8AM
+sheet),455SECOND(separate quick wins),ahead of Email polish except open safety
+fixes.456 native Reports candidate preserved DRAFT/UNMERGED/UNDEPLOYED;one
+final-head hosted gate allowed to finish,not a release. Current local454 branch
+starts deployedf7a7977,prior453proof preserved,NO456productcode. Trace
+docs/cycles/issue-454-assistant-snapshot-import.md covers raw-file hashing,
+existing admin/no-store/strict atomic store/Today boundaries and reported-only
+data separation. No private files or real snapshots read,implementation/import
+or454release claimed. Reply ranking needs actual reply evidence,notlast_contact.
+Count450stillBLOCKED;live453 unchanged. No login/credential/455work started.
+
+456 exacte114cd1 full40331220702/job121600826075 TERMINALGREEN256/0/0,
+600s/file,14m37s,sum816.95s NOTwall. Still DRAFT/UNMERGED,not release approval;
+no jobs running.457 asks ONLY454 buyer reply-ranking evidence vs contact wording;
+the importer and other sheet sections remain unblocked. Current454localtrace
+contains no runtime change,private snapshot data or production write.
+
 2026-10-26 provider-label BACKEND prerequisite453 DONE/VERIFIED. Tested91950fb
 full40315574581/job121547249062=255/0/0,600s/file,12m34s job,sum690.61s
 NOTwall;main40317308765/job121553036720 also255/0/0,12m54s,sum704.25s
