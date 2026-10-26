@@ -4,6 +4,7 @@
   var app = {}, generation = 0, current = null, pageSize = 25, helpTimer = null, detailWidget = null;
   var host = document.getElementById('workspace-root');
   var screen = new URLSearchParams(root.location.search).get('view') === 'email' ? 'email' : 'today', emailScreen = null;
+  var assistantSheet = null, assistantHost = null;
   document.title = 'WholesaleOS | ' + (screen === 'email' ? 'Email' : 'Today');
   var groups = [
     ['Today', [['today', 'Today', 'layout-dashboard', 'Your recorded actions and activity'], ['email', 'Email', 'mail', 'Read messages in your current Email workspace']]],
@@ -32,6 +33,8 @@
 
   function clearPrivate() {
     generation++;
+    if (assistantSheet) assistantSheet.destroy();
+    assistantSheet = null; assistantHost = null;
     if (emailScreen) { emailScreen.destroy(); emailScreen = null; }
     current = null;
     detailWidget = null;
@@ -194,6 +197,7 @@
   function render() {
     var data = current, content = document.getElementById('today-content');
     if (!content || !data) return;
+    if (assistantHost) assistantHost.remove();
     var groups = root.WOSTodayModel.groupActions(data.actions, data.today), events = data.last_24h.slice(0, pageSize);
     content.setAttribute('aria-busy', 'false');
     var actionCount = data.actions.length;
@@ -222,6 +226,13 @@
     content.querySelectorAll('[data-best-deal]').forEach(function (button) {
       button.addEventListener('click', function () { var deal = data.best_deals.find(function (item) { return item.id === button.dataset.bestDeal; }); if (deal) openRecord(deal); });
     });
+    if (data.capabilities && data.capabilities.assistant_snapshot_import === true && root.WOSAssistantSheet) {
+      if (!assistantHost) {
+        assistantHost = document.createElement('div'); assistantHost.id = 'assistant-slot'; content.prepend(assistantHost);
+        assistantSheet = root.WOSAssistantSheet.create({ host: assistantHost, actorId: app.userId, onUnauthorized: function () { locked('Your session expired. Unlock to continue.'); } });
+        assistantSheet.refresh();
+      } else content.prepend(assistantHost);
+    }
   }
 
   function openRecord(item) {
@@ -243,6 +254,8 @@
     }
     var sequence = ++generation, content = document.getElementById('today-content');
     if (!content || !app.unlocked) return;
+    if (assistantSheet) assistantSheet.destroy();
+    assistantSheet = null; assistantHost = null;
     var refresh = document.getElementById('refresh');
     refresh.disabled = true;
     if (detailWidget) detailWidget.close();

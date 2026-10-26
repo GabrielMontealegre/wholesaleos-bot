@@ -1,5 +1,65 @@
 # Owner454: Today Assistant Sheet
 
+## Current Integrated Candidate
+
+2026-10-26:the previously unwired local model is now connected to a separate
+assistant-sheet controller and the existing Today shell. Actual server passes
+an explicit assistantSnapshotImport capability ONLY where the private route
+is registered;old/standalone registrars omit it. Canonical Today JSON still
+contains no private contents. Existing assertions remain;actual server test
+adds capability verification and retains eight-surface sentinel non-leakage.
+
+Manual file choice does not upload. Explicit import sends exact raw bytes to
+the existing origin/header/admin guard,then verifies the returned receipt ID
+through private GET. No canonical promotion or provider/paid/write-back action.
+Static friendly rejection reasons never echo file contents. A30s deadline spans
+headers AND response-body JSON. Unknown outcome locks import until GET recovery;
+401/real403 clears private data,late responses cannot restore after destroy.
+Canonical Show more preserves the mounted sheet;explicit Refresh deliberately
+clears it. Email's composer/source lifecycle is untouched.
+
+REAL browser experiment exposed transparent Chromium POST replays after a lost
+response:one click initially persisted twice. Add an OPTIONAL per-action UUID
+header/receipt request_id,scoped to signed actor/exact file SHA+filename. Exact
+replay returns the same receipt WITHOUT another disk write;conflicting reuse
+rejects409,new explicit action retains a new import,legacy no-ID calls remain
+distinct. Old nine-field receipts remain valid,no migration/deletion. Actual
+route tests cover replay/conflict/new action and preserve original assertions.
+Dropped-ALL-responses three-size test now persists one action and shows honest
+uncertainty until GET recovery. This is transport idempotency,not a push token.
+
+Existing browser auth helper uses a generic admin ID. To avoid crossing device
+checks between actual operators,the private GET includes a one-way viewer_scope
+derived from the REAL signed req.currentUser.id. It is not an authentication
+credential or authority. Device storage keys hash viewer_scope+fileSHA+textID;
+only boolean1 is stored,no names/phone/text/snapshot. Denied storage restores
+the previously saved check and reports failure,never a send/delivery receipt.
+Signed actor A/B tests prove separation despite the generic browser admin ID.
+
+Phone-first unframed section precedes canonical work:Do this next,calls,explicit
+Messages links,Email fallback,stage cards and full reported detail drawer,
+reported buyer counts and a separate full/searchable buyer drawer. Source labels,
+unknown/real0,reported-only approvals/POF/amounts,estimate wording,escaped content,
+human dates,no visible internal IDs. Dead stage retained. Both drawers have X
+and explicit Escape capture,including when native search would consume Escape.
+No fake latest-reply ordering:457 remains only that unresolved acceptance gap.
+
+Cache changes only CSS10->11,app7->8,new assistant model/sheet1. Unchanged
+components5/nav2/emailmodel2/layout3/reply1/Email12/todaymodel1 retained. Failed
+448layout4/Email13 and deferred456layout5/Email14 are NOT reused or combined.
+
+Focused actual-import UI1366/400/412 PASS explicit choice/upload/raw hash,
+rejection/previous-sheet preservation,uncertainty/replay,scope/local storage,
+detail/buyer X/Escape/search,escaping/long text/null/0,read failure isolating
+canonical work,late401/zero external requests/page errors. Existing canonical
+Today action-center3size/navigation3size/mailbox5size pass. Synthetic before/
+after audit against verifieddd04d98:current FCP80.4/55.2/36.6ms;Lighthouse13.5
+accessibility100/100(before100/100),not live timing. Final-head full600s/file,
+self-review/PR/merge/exactautomaticdeploy/approved435liveproof STILL REQUIRED.
+No production upload/privatefile/send/settings/business write performed.
+
+## Historical Local Model Preparation
+
 2026-10-26 LOCAL preparation from verified maindd04d98;458 proof cherry438870d
 preserved. No456 product code. Live remains458;no new release claimed.
 

@@ -28,7 +28,10 @@ async function main() {
     assert.throws(() => registerAssistantSnapshotRoutes(express(), { db, now: () => now }), /dependencies_required/);
     await request({}, 401); await request({ headers: { 'x-user-id': 'admin' } }, 401);
     await request({ headers: { 'X-Test-Session': 'signed', 'X-Test-Role': 'agent' } }, 403);
-    assert.equal((await request({ headers: session }, 200)).latest, null);
+    const emptyRead = await request({ headers: session }, 200);
+    assert.equal(emptyRead.latest, null);assert.match(emptyRead.viewer_scope,/^[a-f0-9]{64}$/);
+    assert.equal((await request({ headers: session }, 200)).viewer_scope,emptyRead.viewer_scope);
+    assert.notEqual((await request({ headers: { ...session, 'X-Test-Actor': 'owner-two' } }, 200)).viewer_scope,emptyRead.viewer_scope);
     for (const headers of [{}, { ...session, Origin: 'https://other.example.test' }, { ...upload, Origin: 'null' },
       { ...upload, Origin: base + '/forged-path' }, { ...upload, 'X-WOS-Assistant-Import': '0' }]) await request({ method: 'POST', headers, body: raw }, headers['X-Test-Session'] ? 403 : 401);
     await request({ method: 'POST', headers: { ...upload, 'Content-Type': 'text/plain' }, body: raw }, 415);
@@ -53,6 +56,20 @@ async function main() {
     writeFailure = false;
     await request({ method: 'POST', headers: { ...upload, Origin: base.replace('http:', 'https:'), 'X-Forwarded-Proto': 'https' }, body: raw }, 200);
     assert.equal(writes, 3, 'Existing one-hop HTTPS proxy origin handling works without an auth rewrite');
+    const requestId = crypto.randomUUID(), onceHeaders = { ...upload, 'X-WOS-Assistant-Request': requestId };
+    const beforeReplay = writes, oneReceipt = await request({ method: 'POST', headers: onceHeaders, body: raw }, 200);
+    const replay = await request({ method: 'POST', headers: onceHeaders, body: raw }, 200);
+    assert.equal(writes, beforeReplay + 1);assert.equal(replay.id, oneReceipt.id, 'Exact transport replay returns the same receipt without another write');
+    await request({ method: 'POST', headers: { ...onceHeaders, 'X-WOS-Assistant-Filename': 'changed.json' }, body: raw }, 409);
+    await request({ method: 'POST', headers: onceHeaders, body: Buffer.from(JSON.stringify({ ...fixture, generated_at: '2026-10-26T13:00:00Z' })) }, 409);
+    await request({ method: 'POST', headers: { ...onceHeaders, 'X-WOS-Assistant-Request': '../forged' }, body: raw }, 400);
+    assert.equal(writes, beforeReplay + 1);
+    await request({ method: 'POST', headers: { ...onceHeaders, 'X-WOS-Assistant-Request': crypto.randomUUID() }, body: raw }, 200);
+    assert.equal(writes, beforeReplay + 2, 'New explicit action retains an identical file as a new append');
+    const otherActor = await request({ method: 'POST', headers: { ...onceHeaders, 'X-Test-Actor': 'owner-two' }, body: raw }, 200);
+    assert.notEqual(otherActor.id, oneReceipt.id);assert.equal(writes, beforeReplay + 3, 'Request IDs are scoped by the real signed actor');
+    const oldHistory = structuredClone(store);store.assistant_snapshots[store.assistant_snapshots.length - 1].request_id = 'malformed';
+    await request({ headers: session }, 503);assert.equal(writes, beforeReplay + 3);store = oldHistory;
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
   console.log('assistant-snapshot-routes: synthetic signed-admin guard/no-store,origin/type/raw byte hash/size rejection,private per-actor read,append-only writes,proxy HTTPS and safe storage errors passed;local synthetic registration only');
 }

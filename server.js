@@ -2763,7 +2763,7 @@ const ownerTelegram=require('./modules/agents/owner-telegram').createOwnerTelegr
 assistantFindRoutes.registerAssistantFindRoutes(app, { db, requireAdmin, pairingOptions: { env: process.env },onIncomingInteractions:events=>ownerTelegram.incoming(events) });
 require('./modules/deals/reviewed-deal-routes').registerReviewedDealRoutes(app, { db, requireAdmin });
 require('./modules/records/record-activity-routes').registerRecordActivityRoutes(app, { db, requireAdmin });
-require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin });
+require('./modules/records/conversation-routes').registerConversationRoutes(app, { db, requireAdmin, assistantSnapshotImport: true });
 require('./modules/records/assistant-snapshot-routes').registerAssistantSnapshotRoutes(app, { db, requireAdmin });
 
 app.get('/api/buyers', requireAuth, (req, res) => {

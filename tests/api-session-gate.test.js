@@ -157,6 +157,7 @@ async function request(base, method, route, options = {}) {
     for (const publicProjection of ['/api/stats', '/api/leads', '/api/buyers', '/api/dashboard/today-workspace', '/api/dashboard/operator-brief', '/api/dashboard/calendar-workspace', '/api/dashboard/approvals', '/api/dashboard/pipeline-workspace']) {
       const projected = await request(base, 'GET', publicProjection, { headers: { Cookie: cookie } });
       assert.strictEqual(projected.status, 200, publicProjection + ' remains available');
+      if (publicProjection === '/api/dashboard/today-workspace') assert.strictEqual(projected.body.capabilities.assistant_snapshot_import, true, 'The actual server advertises its registered private importer');
       assert.ok(!JSON.stringify(projected.body).includes('PRIVATE_SNAPSHOT_SENTINEL'), 'Private snapshot is not serialized by ' + publicProjection);
     }
 

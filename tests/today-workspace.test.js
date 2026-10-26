@@ -47,5 +47,8 @@ const routes={},admin=()=>{},db={readDBStrict:()=>store,writeDB:()=>{throw Error
 registerTodayWorkspace({get:(path,guard,handler)=>{assert.equal(guard,admin);routes[path]=handler;}},{db,requireAdmin:admin,now:()=>now});
 const res={statusCode:200,set(){return this;},status(n){this.statusCode=n;return this;},json(v){this.body=v;return this;}};
 routes['/api/dashboard/today-workspace']({},res);assert.equal(res.body.counts.replies,125);
+assert.equal(res.body.capabilities,undefined,'Standalone/old registrars do not invent an upload capability');
+registerTodayWorkspace({get:(path,guard,handler)=>{routes[path]=handler;}},{db,requireAdmin:admin,now:()=>now,assistantSnapshotImport:true});
+routes['/api/dashboard/today-workspace']({},res);assert.equal(res.body.capabilities.assistant_snapshot_import,true);
 db.readDBStrict=()=>{throw Error('PRIVATE TOKEN');};routes['/api/dashboard/today-workspace']({},res);assert.equal(res.statusCode,503);assert.deepEqual(res.body,{code:'today_store_unavailable'});
 console.log('Today workspace: uncapped canonical conversations, exact approvals/deadlines, unchanged value gates, no invented grades, 24h report truth, wrong-origin/future/missing/stale negatives, pure/no mutation, admin GET/error privacy and escaped human-time markup passed.');

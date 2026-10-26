@@ -1,5 +1,15 @@
 # Decisions
 
+ASSUMED:454 manual upload is one logical action with a fresh client UUID.
+Chromium transparently replays POST after a dropped response (reproduced in
+the actual local route),so an optional actor-scoped request_id returns the
+same exact SHA/filename receipt without another write. New clicks remain new
+append-only imports;conflicts reject,legacy receipts/calls stay valid. Add only
+private GET viewer_scope derived from the actual signed actor for anonymous
+device-check keys,because the existing browser helper uses generic admin ID.
+No authentication rewrite/token/provider authority or private text in storage
+--454 append-only truth/privacy and observed transport evidence--2026-10-26.
+
 ASSUMED:454 Do this next orders nonempty reported needs_gabriel by newest
 reported deal updated_at,stable source order on ties;no missing urgency inferred.
 Calls/emails preserve reported rank;contact is never reply evidence (457 open).
