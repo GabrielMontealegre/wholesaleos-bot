@@ -12,7 +12,7 @@ async function run(){
     for(const width of [1366,400,412]){
       const page=await browser.newPage({viewport:{width,height:width===1366?768:915}});
       const writes=[],external=[],errors=[],reads=[];
-      let holdRecord=false,resumeRecord=null;
+      let holdRecord=false,resumeRecord=null,holdList=false,resumeList=null;
       page.on('pageerror',error=>errors.push(error.message));
       await page.route('**/*',route=>{
         const request=route.request(),url=new URL(request.url());
@@ -23,6 +23,7 @@ async function run(){
         if(url.pathname==='/api/dashboard/todays-deals'){
           reads.push(Object.fromEntries(url.searchParams));
           if(holdRecord&&url.searchParams.get('record_id'))return new Promise(resolve=>{resumeRecord=async()=>{await route.continue();resolve();};});
+          if(holdList&&!url.searchParams.get('record_id'))return new Promise(resolve=>{resumeList=async()=>{await route.continue();resolve();};});
         }
         return route.continue();
       });
@@ -46,10 +47,18 @@ async function run(){
       await page.getByRole('button',{name:'Open deal',exact:true}).first().click();await pending;
       await page.locator('.td-open-view').waitFor();
       const raceBack=reads.length;
+      holdList=true;
+      const nextList=page.waitForRequest(r=>new URL(r.url()).pathname==='/api/dashboard/todays-deals'&&!new URL(r.url()).searchParams.get('record_id'));
       await page.getByRole('button',{name:'Back to results',exact:true}).click();
+      await nextList;
+      await page.getByText('Loading deals...',{exact:true}).waitFor();
+      assert.equal(await page.locator('.td-card').count(),0,'Pending list does not pretend to be empty or retain the single-record DTO');
       const late=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dashboard/todays-deals'&&!!new URL(r.url()).searchParams.get('record_id'));
       holdRecord=false;await resumeRecord();await (await late).finished();
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      assert(await page.getByText('Loading deals...',{exact:true}).isVisible(),'Obsolete record response cannot clear the current loading state');
+      const fullList=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dashboard/todays-deals'&&!new URL(r.url()).searchParams.get('record_id'));
+      holdList=false;await resumeList();await (await fullList).finished();
       await page.waitForFunction(expected=>!document.querySelector('.td-open-view')&&document.querySelectorAll('.td-card').length===expected,before,{timeout:5000});
       assert.equal(reads.slice(raceBack).filter(query=>!query.record_id).length,1,'Late record completion cannot trigger duplicate list reads');
       const filters=page.locator('.td-filter-bar');

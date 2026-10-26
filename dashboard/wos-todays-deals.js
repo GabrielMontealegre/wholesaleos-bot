@@ -136,7 +136,8 @@
       // A pending record-only read must not win after returning to results or
       // prevent the next list read through the shared loading guard.
       requestVersion++;loading=false;data=null;matchFocus='';
-      filters.record_id='';filters.hidden=previousHidden;active='';root.navigate('todays_deals',null);return;
+      filters.record_id='';filters.hidden=previousHidden;active='';root.navigate('todays_deals',null);
+      load();paint();return;
     }
     if(e.target.closest('[data-review-steps]')) { var fieldset=e.target.closest('[data-deal-id]').querySelector('fieldset');if(fieldset)fieldset.scrollIntoView({block:'start'});return; }
     var generate=e.target.closest('[data-jv-generate]');

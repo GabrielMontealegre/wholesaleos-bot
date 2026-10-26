@@ -20,7 +20,9 @@ merge,deployment or live fix is claimed. Count repair450 remains BLOCKED.
 - Candidate Back uses the existing version-ticket pattern:increment ticket,
   reset loading/data/matchFocus,then preserve the original filter restoration
   and navigation. The old response is ignored and exactly one fresh list read
-  can start. No route/schema/record/writer/auth/CSP/shell change or new CSS.
+  starts immediately with the existing load/paint pattern,so a pending list
+  says Loading instead of flashing a false empty state. No route/schema/record/
+  writer/auth/CSP/shell change or new CSS.
 - Classic asset version15->16 prevents keeping the old event handler. Native
   Email/assets/default-OFF transport,record links,location storage and backend
   acquisition/value logic are untouched.
@@ -74,3 +76,9 @@ at1366/400/412. Candidate FCP373.7/71.3/72.6ms;Lighthouse13.5.0 accessibility
 screenshots are SYNTHETIC,not live performance or private deal captures.
 Proof:docs/screens/2026-10-26-classic-back. Same signed Chrome and Railway source
 verification preflight are available;final-head full gate/live acceptance remain.
+
+Pre-merge self-review strengthened the delayed-list case:hold both the obsolete
+record and the returning list,require Loading deals throughout the old response,
+then release the list and assert two results. Explicit load/paint after Back
+uses the existing updateLocation pattern;the scheduled load sees loading=true
+and cannot duplicate the GET. No assertion is removed or weakened.
