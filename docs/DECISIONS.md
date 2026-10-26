@@ -1,5 +1,12 @@
 # Decisions
 
+ASSUMED: D-063B native Reports consumes only genuine per-message IMAP name
+receipts,with all-member/all-copy/identity agreement. Legacy raw labels and
+opaque REST IDs cannot prove custom names;REST mapping remains separate.
+Keep Alerts/recorded-role precedence and loaded-conversation counts unchanged;
+no provider calls,writers,new cache or async ownership path -- D-063,AGENTS
+source truth and453's verified adapter contract --2026-10-26.
+
 2026-10-26: PR453 source-label backend prerequisite verified atmainf7a7977,
 automatic14777ce0 exactsource;PR255/0/0 andMAIN255/0/0. Actual bounded signed
 metadata/body provenance agrees without exporting private labels. Native label

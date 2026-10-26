@@ -46,16 +46,36 @@
     return saved && saved.origin === 'parsed_mime_text' && saved.identity === identity(message) &&
       copies.every(function (row) { return identity(row) === saved.identity; }) && safeText(saved.snippet, 500) ? saved.snippet : '';
   }
+  function ownValue(object, key) {
+    var field = object && Object.getOwnPropertyDescriptor(object, key);
+    return field && Object.prototype.hasOwnProperty.call(field, 'value') ? field.value : undefined;
+  }
+  function providerLabelNames(message) {
+    if (!message || ownValue(message, 'source_kind') !== 'connected_mailbox') return null;
+    var receipt = ownValue(message, 'provider_labels');
+    if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt) ||
+        Object.keys(receipt).length !== 3 || Object.keys(receipt).some(function (key) { return !['origin', 'scope', 'names'].includes(key); }) ||
+        ownValue(receipt, 'origin') !== 'imap_gmail_labels' || ownValue(receipt, 'scope') !== 'message') return null;
+    var names = ownValue(receipt, 'names'), values = [];
+    if (!Array.isArray(names) || names.length > 100) return null;
+    for (var index = 0; index < names.length; index++) {
+      var value = ownValue(names, String(index));
+      if (typeof value !== 'string' || !value.trim() || value.length > 200 || /[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/.test(value)) return null;
+      values.push(value);
+    }
+    return new Set(values).size === values.length ? values.sort() : null;
+  }
   function category(thread, messages) {
     if (thread.category === 'alerts') return 'alerts';
     if (thread.role === 'buyer') return 'buyers';
     if (thread.role === 'seller' || thread.role === 'agent') return 'sellers_agents';
     var allReports = thread.messages.every(function (message) {
       var copies = messages.filter(function (row) { return row && row.id === message.id; });
-      return copies.length && copies.every(function (row) {
-        return row.source_kind === 'connected_mailbox' && Array.isArray(row.labels) &&
-          row.labels.some(function (label) { return label === 'WOS/Reports' || label === 'WOS Action'; });
-      });
+      var names = providerLabelNames(message), signature = identity(message);
+      return signature !== null && names !== null && names.some(function (label) { return label === 'WOS/Reports' || label === 'WOS Action'; }) &&
+        copies.length && copies.every(function (row) {
+          return identity(row) === signature && JSON.stringify(providerLabelNames(row)) === JSON.stringify(names);
+        });
     });
     return allReports ? 'reports' : 'primary';
   }

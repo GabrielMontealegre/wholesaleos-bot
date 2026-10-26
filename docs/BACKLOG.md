@@ -2,6 +2,15 @@
 
 ## Latest Run Summary
 
+2026-10-26 native source-backed Reports candidate from f7a7977. Strict actual
+IMAP-name receipt/identity/all-copy/all-member projection replaces legacy raw
+label guesses;REST IDs stay unknown names,no backend/requests/writer/auth/send/
+CSS/storage change. Original assertions retained,real adapter/annotate fixture
+plus negative tests and five-size chrome/loading/reply regressions pass. Cache
+layout5/Email14 skips failed448 keys. Fullgate/PR/deploy/live acceptance pending.
+Trace docs/cycles/issue-412-source-backed-report-category.md;450stillBLOCKED,
+whole412/designapproval open. Production453 unchanged.
+
 2026-10-26 provider-label BACKEND prerequisite453 DONE/VERIFIED. Tested91950fb
 full40315574581/job121547249062=255/0/0,600s/file,12m34s job,sum690.61s
 NOTwall;main40317308765/job121553036720 also255/0/0,12m54s,sum704.25s

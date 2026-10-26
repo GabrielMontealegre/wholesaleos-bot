@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { launchChromiumWithResolvedBrowser } = require('../modules/research/playwright-browser-resolver');
 const { annotate } = require('../modules/email/thread-view');
+const { sourceLabelledMail } = require('./helpers/source-labelled-mail');
 async function prove() {
   const { browser } = await launchChromiumWithResolvedBrowser(require('playwright'), { headless: true });
   const at = '2026-10-20T12:00:00Z';
@@ -16,8 +17,10 @@ async function prove() {
   assert.deepEqual(buyer.conversation.records, [{ kind: 'buyer', id: 'fixture-buyer', ref: 'BUY-0001' }]);
   assert.equal(buyer.conversation.refs, undefined, 'Actual mailbox view intentionally exposes records, not stored conversation refs');
   assert.deepEqual(annotate([buyer], { ...linkedStore, buyers: [...linkedStore.buyers, ...linkedStore.buyers] }, { now: at })[0].conversation.records, [], 'Ambiguous stored record identity does not create a context link');
+  const reportSource = await sourceLabelledMail([{ labels: new Set(['WOS/Reports']), name: 'Fixture f', subject: 'Source subject f' }], { now: at, date: at });
+  assert.deepEqual(reportSource.calls, ['metadata']);
   const rows = [row('a', { link_status: 'unlinked', conversation: { refs: ['BUY-9999'], records: [{ kind: 'buyer', id: 'forged', ref: 'BUY-9999' }], role: 'buyer' } }), buyer, row('c', linked('seller')), row('d', linked('agent')),
-    row('e', { from: 'alerts@redfin.com' }), row('f', { labels: ['WOS/Reports'] }), row('1', linked('holder'))];
+    row('e', { from: 'alerts@redfin.com' }), reportSource.messages[0], row('1', linked('holder'))];
   try {
     const sizes = process.argv.includes('--compact-only') ? [{ width: 1038, height: 503 }] : [{ width: 1366, height: 768 }, { width: 400, height: 915 }, { width: 412, height: 915 }, { width: 1038, height: 503 }, { width: 1366, height: 600 }];
     for (const { width, height } of sizes) {
